@@ -3842,6 +3842,85 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
       }
     })
 
+    it('serializes video meeting joins, deduplicates chat notices and enforces actor, lease and block boundaries', async () => {
+      if (!ownerPool || !runtimePool) throw new Error('Database not ready')
+      const trainer=randomUUID(), athlete=randomUUID(), stranger=randomUUID(), card=randomUUID(), conversation=randomUUID()
+      const tab1=randomUUID(),tab2=randomUUID(),tab3=randomUUID()
+      const owner=ownerPool
+      const runtimeUrl=new URL(requireLocalTestDatabaseUrl()); runtimeUrl.username='fit_api'; runtimeUrl.password=RUNTIME_PASSWORD
+      const runtime=new PgDatabasePool({ connectionString:runtimeUrl.toString(),max:2 })
+      type State = { available:boolean; meeting:{ id:string; participantCount:number } | null }
+      const command = (actor:string, action:string, tab?:string, meeting?:string) => withActorTransaction(runtime,actor,async client => {
+        const rows=await client.query<QueryResultRow & { state:State }>('select public.chat_meeting_command($1,$2,$3,$4) as state',[conversation,action,meeting??null,tab??null])
+        return rows[0]!.state
+      })
+      try {
+        await owner.query(`insert into public.profiles(id,first_name,account_role) values ($1,'Meeting trainer','trainer'),($2,'Meeting athlete','client'),($3,'Meeting outsider','trainer')`,[trainer,athlete,stranger])
+        await owner.query('insert into public.trainers(profile_id) values($1),($2)',[trainer,stranger])
+        await owner.query("insert into public.clients(id,trainer_id,auth_user_id,full_name) values($1,$2,$3,'Synthetic meeting client')",[card,trainer,athlete])
+        await owner.query('insert into public.client_trainer_relationships(client_id,trainer_id,connected_by) values($1,$2,$3)',[card,trainer,athlete])
+        await owner.query('insert into public.chat_conversations(id,client_id,client_user_id,trainer_id) values($1,$2,$3,$4)',[conversation,card,athlete,trainer])
+        await expect(command(stranger,'read')).rejects.toThrow('chat_forbidden')
+        let unlock=()=>{}, ready=()=>{}, secondPid=0
+        const held=new Promise<void>(resolve=>{ready=resolve})
+        const release=new Promise<void>(resolve=>{unlock=resolve})
+        const firstPreparing=withActorTransaction(runtime,trainer,async client=>{
+          const rows=await client.query<QueryResultRow & { state:State }>('select public.chat_meeting_command($1,$2,$3,$4) as state',[conversation,'prepare',null,tab1])
+          ready(); await release; return rows[0]!.state
+        })
+        let secondPreparing:Promise<State> | undefined
+        try {
+          await Promise.race([held,firstPreparing])
+          secondPreparing=withActorTransaction(runtime,athlete,async client=>{
+            secondPid=(await client.query<QueryResultRow & { pid:number }>('select pg_backend_pid() as pid'))[0]!.pid
+            const rows=await client.query<QueryResultRow & { state:State }>('select public.chat_meeting_command($1,$2,$3,$4) as state',[conversation,'prepare',null,tab2])
+            return rows[0]!.state
+          })
+          // Prove actual PostgreSQL blocking, not serialization in a one-slot pool.
+          await expect.poll(async()=>secondPid===0?0:Number((await owner.query<{ count:number }>('select cardinality(pg_blocking_pids($1)) as count',[secondPid])).rows[0]!.count),{timeout:5000}).toBeGreaterThan(0)
+        } finally { unlock() }
+        const [first,second]=await Promise.all([firstPreparing,secondPreparing])
+        const meeting=first.meeting!.id
+        expect(second.meeting!.id).toBe(meeting)
+        expect((await owner.query('select * from public.chat_messages where conversation_id=$1',[conversation])).rows).toHaveLength(0)
+        await command(trainer,'joined',tab1,meeting)
+        await command(trainer,'joined',tab1,meeting)
+        await command(trainer,'heartbeat',tab1,meeting)
+        await expect(command(athlete,'joined',tab1,meeting)).rejects.toThrow('chat_message_conflict')
+        await command(athlete,'joined',tab2,meeting)
+        expect((await command(athlete,'read')).meeting?.participantCount).toBe(2)
+        const notices=(await owner.query('select * from public.chat_meeting_notices where meeting_id=$1',[meeting])).rows
+        expect(notices).toHaveLength(2)
+        expect((await withActorTransaction(runtime,stranger,client=>client.query('select id from public.chat_meetings where id=$1',[meeting])))).toEqual([])
+        // Same participant reconnects from a fresh tab: no duplicate event.
+        await command(trainer,'prepare',tab3)
+        await command(trainer,'joined',tab3,meeting)
+        expect((await owner.query('select * from public.chat_meeting_notices where meeting_id=$1',[meeting])).rows).toHaveLength(2)
+        await command(trainer,'leave',tab1,meeting)
+        expect((await command(athlete,'read')).meeting?.participantCount).toBe(2)
+        await command(trainer,'leave',tab3,meeting)
+        expect((await command(athlete,'read')).meeting?.participantCount).toBe(1)
+        await owner.query('update public.chat_conversations set trainer_blocked_at=now() where id=$1',[conversation])
+        await expect(command(athlete,'heartbeat',tab2,meeting)).rejects.toThrow('chat_forbidden')
+        expect(await command(athlete,'read')).toMatchObject({ available:false,meeting:null })
+        await owner.query('update public.chat_conversations set trainer_blocked_at=null where id=$1',[conversation])
+        const fresh=await command(trainer,'prepare',randomUUID())
+        expect(fresh.meeting?.id).not.toBe(meeting)
+        await owner.query("update public.chat_meeting_sessions set expires_at=now()-interval '1 second' where meeting_id=$1",[fresh.meeting!.id])
+        expect((await command(trainer,'read')).meeting).toBeNull()
+        const lastTab=randomUUID(),last=(await command(trainer,'prepare',lastTab)).meeting!.id
+        await command(trainer,'joined',lastTab,last)
+        expect((await command(trainer,'leave',lastTab,last)).meeting).toBeNull()
+      } finally {
+        await runtime.end()
+        await owner.query('delete from public.chat_conversations where id=$1',[conversation])
+        await owner.query('delete from public.client_trainer_relationships where client_id=$1',[card])
+        await owner.query('delete from public.clients where id=$1',[card])
+        await owner.query('delete from public.trainers where profile_id=any($1::uuid[])',[[trainer,stranger]])
+        await owner.query('delete from public.profiles where id=any($1::uuid[])',[[trainer,athlete,stranger]])
+      }
+    })
+
     it('preserves original chat participants and history through unbinding, merge and reassignment', async () => {
       if (!ownerPool) throw new Error('Owner pool is not ready')
       const db = await ownerPool.connect()

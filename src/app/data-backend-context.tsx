@@ -1,3 +1,4 @@
+import type { ChatMeetingsRepository } from '../shared/meeting'
 import { getLocalDataBackend, localLegacyAvailable } from '#fit/local-data'
 import { createContext, use, useMemo, type PropsWithChildren } from 'react'
 import type { appFeedbackRepository } from '../data/repositories/app-feedback.repository'
@@ -29,6 +30,7 @@ import { useYandexAppSession } from './yandex-app-session-context'
 export interface DataBackend {
   source: 'supabase' | 'yandex'
   clients: typeof clientsRepository
+  meetings?: ChatMeetingsRepository
   chat: typeof chatRepository
   exercises: typeof exercisesRepository
   goals: typeof goalsRepository

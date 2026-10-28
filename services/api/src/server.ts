@@ -1,3 +1,4 @@
+import { DatabaseChatMeetings, readJitsiConfig } from './chat-meetings.js'
 import { DatabaseCorporateAdminLoginObserver } from './corporate-admin-login.js'
 import { CorporateAdminStore } from './corporate-admin.js'
 import { buildApp } from './app.js'
@@ -257,6 +258,7 @@ const legacyChatMediaBridge = yandexMediaStorage === undefined || supabaseBridge
     yandexMediaStorage,
     new SupabaseChatMediaStore(supabaseBridgeConfig),
   )
+const chatMeetings = databasePool === undefined ? undefined : new DatabaseChatMeetings(databasePool, readJitsiConfig(process.env))
 const pilotChat = databasePool === undefined ? undefined : new DatabasePilotChat(databasePool)
 const vitalMediaSigner = yandexMediaStorage === undefined
   ? undefined
@@ -276,6 +278,7 @@ const app = buildApp(
     ...(pilotAssistantState === undefined ? {} : { pilotAssistantState }),
     ...(pilotAssistantTurnRunner === undefined ? {} : { pilotAssistantTurnRunner }),
     ...(pilotPushNotifications === undefined ? {} : { pilotPushNotifications }),
+    ...(chatMeetings === undefined ? {} : { chatMeetings }),
     ...(pilotChat === undefined ? {} : { pilotChat }),
     ...(chatMediaStore === undefined ? {} : { chatMediaStore }),
     ...(pilotCustomExercisePhotos === undefined ? {} : { pilotCustomExercisePhotos }),

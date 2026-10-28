@@ -1,3 +1,4 @@
+import { VideoMeeting } from './VideoMeeting'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react'
 import { createPortal } from 'react-dom'
@@ -7,7 +8,7 @@ import { useDataBackend } from '../../app/data-backend-context'
 import { copyText } from '../../shared/clipboard'
 import type { ChatImageDraft, ChatMessage } from '../../shared/domain'
 import { FullscreenImageViewer } from '../../shared/FullscreenImageViewer'
-import { CloseIcon, MessageIcon, PhotoIcon, SearchIcon } from '../../shared/icons'
+import { CloseIcon, VideoIcon, MessageIcon, PhotoIcon, SearchIcon } from '../../shared/icons'
 import { AsyncView, OverflowMenu, Page, StatePanel, useConfirm } from '../../shared/ui'
 import { prepareChatImage } from './chat-image'
 import { useChatThreads } from './use-chat-threads'
@@ -146,7 +147,7 @@ export function ChatConversationPage() {
   const { conversationId = '' } = useParams()
   const { actor } = useAuth()
   const fitLimeConversation = actor?.role === 'trainer' && actor.experiments?.fitLime === true && isTrainerScheduleV2Enabled(actor)
-  const { chat } = useDataBackend()
+  const { chat, meetings } = useDataBackend()
   const queryClient = useQueryClient()
   const location = useLocation()
   const navigate = useNavigate()
@@ -154,6 +155,9 @@ export function ChatConversationPage() {
   const messages = useQuery({ queryKey: ['chat-messages', conversationId], queryFn: () => chat.listMessages(conversationId), enabled: Boolean(conversationId) })
   const unread = useQuery({ queryKey: ['chat-unread', conversationId], queryFn: () => chat.unreadState(conversationId), enabled: Boolean(conversationId), staleTime: Infinity })
   const connection = useQuery({ queryKey: ['chat-connection', conversationId], queryFn: () => chat.connectionState(conversationId), enabled: Boolean(conversationId) })
+  const [meetingOpen, setMeetingOpen] = useState(false)
+  const meetingState = useQuery({ queryKey: ['chat-meeting', conversationId], queryFn: () => meetings!.state(conversationId), enabled: Boolean(meetings && conversationId), refetchInterval: 5_000 })
+  useChatLayer(meetingOpen, () => setMeetingOpen(false))
   const [older, setOlder] = useState<ChatMessage[]>([])
   const [contextMessages, setContextMessages] = useState<ChatMessage[]>([])
   const pendingKey = `fit:chat-pending:${actor?.userId}:${conversationId}`
@@ -345,7 +349,7 @@ export function ChatConversationPage() {
   }
   const searchAction = <button type="button" className="chat-page-search" aria-label={searchOpen ? 'Закрыть поиск' : 'Поиск по переписке'} onClick={() => searchOpen ? window.history.back() : setSearchOpen(true)}>{searchOpen ? <CloseIcon /> : <SearchIcon />}</button>
   const blockedByMe = thread?.blockedByMe === true
-  const chatAction = <div className="chat-page-actions">{searchAction}<OverflowMenu label="Действия с диалогом" items={[{
+  const chatAction = <div className="chat-page-actions">{meetings && meetingState.data?.available && connection.data?.activeConnection && thread?.canMessage && <button type="button" className="chat-page-search" aria-label="Видеовстреча" onClick={() => setMeetingOpen(true)}><VideoIcon /></button>}{searchAction}<OverflowMenu label="Действия с диалогом" items={[{
     label: blockedByMe ? 'Разблокировать' : 'Заблокировать', danger: !blockedByMe, disabled: block.isPending,
     onClick: () => void (async () => {
       if (!blockedByMe && !await confirm({ message: 'Заблокировать этот диалог?', confirmLabel: 'Заблокировать', danger: true })) return
@@ -381,6 +385,14 @@ export function ChatConversationPage() {
         <div className="chat-messages">{visible.map((item) => {
           const local = pending.find((candidate) => candidate.id === item.id)
           const own = item.senderId === actor?.userId
+          if (item.meeting) {
+            const active = meetingState.data ? meetingState.data.meeting?.id === item.meeting.id : item.meeting.active
+            return <article key={item.id} data-message-id={item.id} className="chat-meeting-card">
+              <VideoIcon /><strong>{active ? item.body : 'Встреча завершена'}</strong>
+              <time>{timeLabel(item.createdAt)}</time>
+              {active && meetings && meetingState.data?.available && thread?.canMessage && <button type="button" className="secondary" onClick={() => setMeetingOpen(true)}>Присоединиться</button>}
+            </article>
+          }
           return <div key={item.id} className="chat-message-wrap">
             {unread.data?.firstMessageId === item.id && <div className="chat-unread-divider"><span>Новые сообщения</span></div>}
             <article data-message-id={item.id} className={`chat-message ${own ? 'own' : 'partner'} ${item.image ? 'with-photo' : ''} ${highlightedId === item.id ? 'highlighted' : ''}`}
@@ -415,5 +427,6 @@ export function ChatConversationPage() {
   {photoMessage?.image?.url && <FullscreenImageViewer src={photoMessage.image.url} alt="Фото в сообщении" label="Просмотр фото"
     saveFileName={`fit-${photoMessage.id}.jpg`} onClose={() => setPhotoMessage(null)} />}
   {notice && <div className="chat-notice" role="status">{notice}</div>}
+  {meetingOpen && meetings && meetingState.data?.mediaOrigin && <VideoMeeting repository={meetings} conversationId={conversationId} origin={meetingState.data.mediaOrigin} partnerName={thread?.partnerName ?? 'Собеседник'} onClose={() => window.history.back()} onJoined={() => { void messages.refetch(); void meetingState.refetch(); void queryClient.invalidateQueries({ queryKey: ['chat-threads'] }) }} />}
   {confirmDialog}</>
 }

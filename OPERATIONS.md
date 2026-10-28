@@ -2245,3 +2245,11 @@ Workflow отказывает при любом другом включённо�
 разрешённый login с проверенным OAuth subject; повторный bind к другому subject
 запрещён. Результат inspect содержит только enabled/bound/readyProfiles и
 otherEnabledAdmins, без UUID, контактов или токенов.
+
+## Видеовстречи из чата — YAFIT-669
+
+Собственный media adapter, runtime API-флаг JITSI_ENABLED (default off).
+Origin, XMPP/MUC domains, app id и server-only JWT secret — в защищённом API env.
+Без конфигурации вход скрыт; Supabase/public meet.jit.si fallback отсутствует.
+Сервер Jitsi, DNS/TLS, TURN и фактическое двухстороннее media этим кодом
+автоматически не создаются. [Контракт подготовки и приёмки](infra/jitsi/README.md).

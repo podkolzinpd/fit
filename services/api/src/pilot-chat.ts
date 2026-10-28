@@ -1,3 +1,4 @@
+import { readMeetingNotices, type MeetingNotice } from './chat-meetings.js'
 import type { QueryResultRow } from 'pg'
 import type { DatabaseClient, DatabasePool } from './db/types.js'
 import { withYandexActorSession, type YandexActorSessionInput } from './yandex-actor-session.js'
@@ -8,7 +9,7 @@ export type ChatBlockState = { canMessage: boolean; blockedByMe: boolean; blocke
 export type ChatConnectionState = { activeConnection: boolean; invitationPending: boolean; invitedAt: string | null; canInvite: boolean; canAccept: boolean; trainerSwitchRequired: boolean }
 export type ChatStoredImage = { path: string; mimeType: 'image/jpeg'; width: number; height: number; sizeBytes: number }
 export type ChatReplyPreview = { messageId: string; senderId: string | null; body: string | null; hasImage: boolean; deleted: boolean }
-export type ChatMessage = { id: string; conversationId: string; senderId: string; body: string; image: ChatStoredImage | null; createdAt: string; editedAt: string | null; replyTo: ChatReplyPreview | null }
+export type ChatMessage = { meeting?: MeetingNotice; id: string; conversationId: string; senderId: string; body: string; image: ChatStoredImage | null; createdAt: string; editedAt: string | null; replyTo: ChatReplyPreview | null }
 export type ChatUnreadState = { firstMessageId: string | null; firstCreatedAt: string | null; unreadCount: number }
 export type ChatCursor = { createdAt: string; id: string }
 type ThreadRow = QueryResultRow & { conversation_id: string | null; client_id: string; trainer_id: string; partner_user_id: string; partner_name: string; active_connection: boolean; last_message_body: string | null; last_message_at: string | null; last_message_sender_id: string | null; unread_count: string | number; can_message: boolean; blocked_by_me: boolean; blocked_by_partner: boolean }
@@ -131,7 +132,7 @@ export class DatabasePilotChat implements PilotChat {
     return this.run(session, async (client) => {
       const rows = await client.query<MessageRow>('select * from public.list_chat_messages_v3($1,$2,$3,$4)',[conversationId,cursor?.createdAt ?? null,cursor?.id ?? null,limit])
       const oldest = rows.at(-1)
-      return { messages: rows.map(message).reverse(), nextCursor: rows.length === limit && oldest ? { createdAt: oldest.created_at, id: oldest.id } : null }
+      return { messages: (await messagesWithMeetings(client, rows)).reverse(), nextCursor: rows.length === limit && oldest ? { createdAt: oldest.created_at, id: oldest.id } : null }
     })
   }
   authorize(session: YandexActorSessionInput, conversationId: string) {
@@ -151,6 +152,7 @@ export class DatabasePilotChat implements PilotChat {
   }
   edit(session: YandexActorSessionInput, conversationId: string, messageId: string, body: string) {
     return this.run(session, async (client) => {
+      await assertNotMeetingNotice(client, messageId)
       const rows = await client.query<MessageRow>('select * from public.edit_chat_message($1,$2,$3)',[conversationId,messageId,body])
       if (!rows[0]) throw new Error('Chat edit returned an unsupported format')
       return message(rows[0])
@@ -158,6 +160,7 @@ export class DatabasePilotChat implements PilotChat {
   }
   remove(session: YandexActorSessionInput, conversationId: string, messageId: string) {
     return this.run(session, async (client) => {
+      await assertNotMeetingNotice(client, messageId)
       const rows = await client.query<QueryResultRow & { image_path: string | null }>('select public.delete_chat_message($1,$2) as image_path',[conversationId,messageId])
       return rows[0]?.image_path ?? null
     })
@@ -172,9 +175,19 @@ export class DatabasePilotChat implements PilotChat {
     return this.run(session, async (client) => { await client.query('select public.mark_chat_read_v2($1,$2)',[conversationId,throughMessageId]) })
   }
   search(session: YandexActorSessionInput, conversationId: string, query: string) {
-    return this.run(session, async (client) => (await client.query<MessageRow>('select * from public.search_chat_messages($1,$2,$3)',[conversationId,query,50])).map(message))
+    return this.run(session, async (client) => messagesWithMeetings(client, await client.query<MessageRow>('select * from public.search_chat_messages($1,$2,$3)',[conversationId,query,50])))
   }
   window(session: YandexActorSessionInput, conversationId: string, messageId: string) {
-    return this.run(session, async (client) => (await client.query<MessageRow>('select * from public.get_chat_message_window($1,$2,$3)',[conversationId,messageId,25])).map(message))
+    return this.run(session, async (client) => messagesWithMeetings(client, await client.query<MessageRow>('select * from public.get_chat_message_window($1,$2,$3)',[conversationId,messageId,25])))
   }
+}
+
+async function assertNotMeetingNotice(client: DatabaseClient, messageId: string) {
+  const rows = await client.query('select 1 from public.chat_meeting_notices where message_id=$1', [messageId])
+  if (rows.length) throw new ChatCommandError('forbidden')
+}
+
+async function messagesWithMeetings(client: DatabaseClient, rows: readonly MessageRow[]): Promise<ChatMessage[]> {
+  const notices = await readMeetingNotices(client, rows.map((row) => row.id))
+  return rows.map((row) => ({ ...message(row), ...(notices.has(row.id) ? { meeting: notices.get(row.id)! } : {}) }))
 }
