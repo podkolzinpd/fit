@@ -148,10 +148,15 @@ P5/P6 закрываются только после фактическогоpro
 сессия, чужой host/path, истёкшая capability, недопустимый размер, отсутствие
 GitHub payload fallback. Интеграционный тест входит в test:db для PostgreSQL17.
 
-Локальная проверка этапа записи: lint/typecheck и2898frontend tests;54операционных
+Локальная проверка этапа записи: lint/typecheck и2902frontend tests;54операционных
 теста, остальныеinfra/calendar/hosting; API lint/typecheck/1537tests (206условных
 skip), отдельный новыйPG17тест реально выполнен; production build/docs/diff-check.
 Полныйcheck остановился на запрете loopback тестового HTTP-сервера в ограниченной
 среде; оставшиеся пункты выполнены с доступом к loopback и прошли. Отдельно
 проверена реальная подпись SDK без сети: signedHeaders=content-length;host;if-none-match,
 без ошибочной checksum пустого body. Тестовые ожидания/таймауты/гейты не менялись.
+
+Подпункты приёмки инструментаPR1860 (productionP5/P6 остаются открыты):
+P5A1 — атомарная запись новой карточки через штатные команды, RLS и replay;
+P6A1 — полный readback, сохранные приватные квитанции и отказ при изменённом факте;
+P5B1 — ручная ограниченная доставка только через Cloud.ru и гейты trustedmain/CI/ready.
