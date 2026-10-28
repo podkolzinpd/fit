@@ -15,11 +15,11 @@ const hash = (value: string) => createHash('sha256').update(value).digest('hex')
 
 // Actual commands/RLS, transaction rollback and packet replay are distinct from
 // the existing ordinary single-workout lifecycle coverage. No real journal/IDs.
-describe.skipIf(source === undefined)('one private journal into a new card', () => {
+describe.skipIf(source === undefined)('one private journal into a new card', { concurrent: false }, () => {
   let admin: Pool
   let pool: Pool
-  let owner: PoolClient
-  let runtime: PoolClient
+  const connections: PoolClient[] = []
+  let imported: Awaited<ReturnType<typeof prepareFixture>> | undefined
   let created = false
   beforeAll(async () => {
     const url = new URL(source ?? '')
@@ -37,22 +37,23 @@ describe.skipIf(source === undefined)('one private journal into a new card', () 
     await runner({ databaseUrl: url.href, dir: fileURLToPath(new URL('../../db/migrations', import.meta.url)),
       direction: 'up', migrationsTable: 'fit_migrations', migrationsSchema: 'app_private',
       createMigrationsSchema: true, verbose: false, log: () => {} })
-    pool = new Pool({ connectionString: url.href, max: 4 })
-    owner = await pool.connect()
-    runtime = await pool.connect()
-    // Test setup only. The production entrypoint connects as fit_api directly;
-    // the reviewed writer itself never changes roles or has owner privileges.
-    await runtime.query('set role fit_api')
+    pool = new Pool({ connectionString: url.href, max: 8 })
   })
   afterAll(async () => {
-    if (runtime) { await runtime.query('reset role'); runtime.release() }
-    if (owner) owner.release()
+    for (const connection of connections) connection.release(true)
     if (pool) await pool.end()
     if (created) await admin.query(`drop database ${database}`)
     if (admin) await admin.end()
   })
 
   async function prepareFixture(linked = true) {
+    const owner = await pool.connect()
+    connections.push(owner)
+    const runtime = await pool.connect()
+    connections.push(runtime)
+    // Fixture connections never cross scenario boundaries after a timed-out test.
+    // SET ROLE is test setup only; production connects as fit_api directly.
+    await runtime.query('set role fit_api')
     const coach = randomUUID(), other = randomUUID()
     await owner.query("insert into public.profiles(id,account_role) values($1,'trainer'),($2,'trainer')", [coach, other])
     await owner.query('insert into public.trainers(profile_id) values($1),($2)', [coach, other])
@@ -93,11 +94,11 @@ describe.skipIf(source === undefined)('one private journal into a new card', () 
       readRequest: readSavePlannedWorkoutRequest, saveCompleted: saveCompletedWorkout, createCard: createClientCard,
       persistReceipt: (state: string, receipt: JournalReceipt) => { receipts.push({ state, receipt }); return Promise.resolve() } }
     if (linked) await owner.query("insert into app_private.auth_identities(provider,provider_subject_sha256,profile_id,identity_origin) values('yandex',$1,$2,'native')", [hash(`synthetic-journal-subject-${coach}`), coach])
-    return { coach, other, oldWorkout, before, packet, receipts, options }
+    return { owner, runtime, coach, other, oldWorkout, before, packet, receipts, options }
   }
 
   it('refuses unlinked or conflicting identities and inspects without writing a card', async () => {
-    const { coach, other, options } = await prepareFixture(false)
+    const { owner, coach, other, options } = await prepareFixture(false)
     await expect(runPreparedNewCardImport(options)).rejects.toThrow('current_trainer_identity_required')
     await owner.query("insert into app_private.auth_identities(provider,provider_subject_sha256,profile_id,identity_origin) values('yandex',$1,$2,'native')", [hash(`synthetic-journal-subject-${coach}`), coach])
     await expect(runPreparedNewCardImport({ ...options, legacyId: other })).rejects.toThrow('trainer_ambiguous')
@@ -106,13 +107,12 @@ describe.skipIf(source === undefined)('one private journal into a new card', () 
     await expect(runPreparedNewCardImport({ ...options, approvedSha256: '0'.repeat(64) })).rejects.toThrow('private_payload_invalid')
   })
 
-  it('commits all snapshots, replays without duplicates and leaves unrelated history and finances unchanged', async () => {
-    const { coach, options, receipts, oldWorkout, before } = await prepareFixture()
+  it('commits all snapshots and leaves unrelated history and finances unchanged', async () => {
+    const fixture = await prepareFixture()
+    const { owner, options, receipts, oldWorkout, before } = fixture
     const saved = await runPreparedNewCardImport({ ...options, mode: 'apply' })
     expect(saved).toMatchObject({ status: 'imported', workouts: 137, exercises: 641, sets: 240, contentVerified: true, athleteLinked: false })
     expect(receipts.map(r => r.state)).toEqual(['prepared', 'committed', 'readback'])
-    expect((await runPreparedNewCardImport({ ...options, mode: 'apply' })).status).toBe('already_imported')
-    expect((await owner.query<{ n: number }>("select count(*)::int n from public.clients where trainer_id=$1 and full_name='Synthetic import'", [coach])).rows[0]?.n).toBe(1)
     expect((await owner.query('select to_jsonb(w) value from public.workouts w where id=$1', [oldWorkout])).rows).toEqual(before)
     const importedCard = receipts[0]?.receipt.clientId
     expect(importedCard).toBeTruthy()
@@ -120,18 +120,26 @@ describe.skipIf(source === undefined)('one private journal into a new card', () 
     for (const table of ['trainer_finance_packages', 'trainer_finance_payments', 'trainer_finance_sessions']) {
       expect((await owner.query<{ n: number }>(`select count(*)::int n from public.${table} where client_id=$1`, [importedCard])).rows[0]?.n).toBe(0)
     }
+    imported = fixture
+  })
+
+  it('replays the committed batch without a second card or duplicate workouts', async () => {
+    if (!imported) throw new Error('successful_import_fixture_required')
+    const { owner, coach, options } = imported
+    expect((await runPreparedNewCardImport({ ...options, mode: 'apply' })).status).toBe('already_imported')
+    expect((await owner.query<{ n: number }>("select count(*)::int n from public.clients where trainer_id=$1 and full_name='Synthetic import'", [coach])).rows[0]?.n).toBe(1)
   })
 
   it('rolls back the new card and every workout after a late receipt failure', async () => {
-    const { coach, options, packet } = await prepareFixture()
+    const { owner, coach, options, packet } = await prepareFixture()
     await expect(runPreparedNewCardImport({ ...options, mode: 'apply', ...packet('Synthetic rollback', true),
       persistReceipt: () => Promise.reject(new Error('synthetic receipt failure')) })).rejects.toThrow('failed_rolled_back')
     expect((await owner.query<{ n: number }>("select count(*)::int n from public.clients where trainer_id=$1 and full_name='Synthetic rollback'", [coach])).rows[0]?.n).toBe(0)
   })
 
   it('refuses to overwrite facts edited after the import', async () => {
-    const { options, receipts } = await prepareFixture()
-    await runPreparedNewCardImport({ ...options, mode: 'apply' })
+    if (!imported) throw new Error('successful_import_fixture_required')
+    const { owner, options, receipts } = imported
     const first = receipts[0]?.receipt.created[1]?.workoutId
     await owner.query("update public.workout_sets s set fact_weight_kg=99 from public.workout_exercises e where e.id=s.workout_exercise_id and e.workout_id=$1", [first])
     await expect(runPreparedNewCardImport({ ...options, mode: 'apply' })).rejects.toThrow('content_readback_failed')
