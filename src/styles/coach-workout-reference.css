@@ -61,6 +61,7 @@
 .coach-workout-reference .coach-reference-composer .fit-lime-plan-controls > :is(.fit-lime-plan-send, .fit-lime-plan-mic) { width: 44px; height: 44px; padding: 10px; border-radius: 99px; flex: 0 0 44px; margin-left: auto }
 .coach-workout-reference .coach-reference-composer .fit-lime-plan-exercises { min-height: 56px; margin: 0 -20px; width: calc(100% + 40px); border-color: #3b3b40; font-weight: 500; line-height: 14px }
 .coach-workout-reference .coach-reference-composer .coach-plan-options { border-top: 1px solid #3b3b40; margin-inline: -20px; padding-inline: 20px; font-size: 14px }
+.coach-workout-reference .coach-reference-composer .coach-plan-options > h3 { display: flex; align-items: center; justify-content: center; min-height: 44px; margin: 0; color: var(--lime-text-secondary); font-size: 14px; line-height: 20px; font-weight: 400 }
 .coach-workout-reference .coach-plan-options > summary { min-height: 44px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--lime-text-secondary) }
 .coach-workout-reference .coach-plan-options > summary:focus-visible { outline: 2px solid var(--lime-accent); outline-offset: -4px }
 .coach-workout-reference .coach-plan-options .fit-lime-plan-back { display: flex; align-items: center; gap: 8px; margin-block: 8px }
