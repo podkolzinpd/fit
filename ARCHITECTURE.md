@@ -3,7 +3,7 @@
 ## Направление зависимостей
 
 ```text
-route/page → feature UI/hooks → repository → query → Supabase Data API/RPC
+route/page → feature UI/hooks → domain repository → query/transport → Cloud.ru API/PostgreSQL
 ```
 
 - `app` собирает router/providers и не содержит бизнес-правил.
@@ -14,6 +14,11 @@ route/page → feature UI/hooks → repository → query → Supabase Data API/R
   ради helpers; type-only контракты не создают runtime-зависимость.
 - `queries` содержат явные select/insert/update/delete/RPC вызовы.
 - `shared` не импортирует features или data repositories.
+
+Это текущий production-путь. Имена Yandex в API и миграциях остаются кодовыми
+контрактами. Supabase Data API/RPC — только замороженный локальный/legacy-путь,
+не основание создавать новый production adapter. Подробности и границы rollback:
+[post-cutover playbook](docs/YANDEX_CUTOVER_PLAYBOOK.md).
 
 ## Граница локальных legacy adapters
 
@@ -37,15 +42,17 @@ legacy backend. Server-side bridges и frozen local tests пока сохран�
 ## База данных
 
 - Миграции — полная воспроизводимая история схемы и security objects.
-- Обычный CRUD одной таблицы — Data API через query module.
-- Workout/progress aggregates — explicit RPC, одна транзакция.
+- Обычный CRUD — query/transport через actor-scoped API.
+- Workout/progress aggregates — явные API-команды, одна серверная транзакция;
+  исторические RPC сохраняются в соответствующем legacy-контуре.
 - RLS — финальная граница tenant access; UUID не является механизмом авторизации.
 - `version` обеспечивает optimistic concurrency для mutable aggregate roots.
-- Основной Assistant выбирает backend один раз на уровне actor route. Вне
-  default-off rollout используется прежний Supabase repository; выбранный actor
-  использует Yandex repository для всей цепочки Assistant через одну read-write
-  app-session. Per-request fallback между БД запрещён: неоднозначный результат
-  mutation показывается как ошибка и не повторяется автоматически в другой БД.
+- Production Assistant использует native composition и одну app-session через
+  Cloud.ru API. Прежний выбор Supabase repository вне Yandex pilot был решением
+  миграционного этапа; он заменён native-only composition выше и playbook.
+  Локальный legacy adapter остаётся только для соответствующих тестов.
+  Per-request fallback между БД запрещён: неоднозначный результат mutation
+  показывается как ошибка и не повторяется автоматически в другой БД.
 - Frontend rollout UUID не является авторизацией. Sticky Yandex route требует
   совпадения UUID текущего FIT actor и восстановленной Yandex app-session, а API
   повторно устанавливает actor-context из server-side session digest и проверяет
