@@ -11,6 +11,7 @@ import struct
 import time
 from urllib.parse import urlencode
 import uuid
+import xml.etree.ElementTree as ET
 
 
 class WebSocket:
@@ -125,7 +126,10 @@ def probe(token, room, should_admit):
         if admitted:
             connection.send(f"<presence xmlns='jabber:client' to='{occupant}' type='unavailable'/>")
         if admitted != should_admit:
-            raise RuntimeError('Unexpected room admission decision')
+            root = ET.fromstring(presence)
+            conditions = [element.tag.rsplit('}', 1)[-1] for element in root.iter()
+                          if element.tag.startswith('{urn:ietf:params:xml:ns:xmpp-stanzas}')]
+            raise RuntimeError('Unexpected room admission decision; conditions=' + ','.join(conditions))
     except (EOFError, socket.timeout):
         if should_admit:
             raise RuntimeError('Valid token connection closed or timed out') from None
