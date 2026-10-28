@@ -36,3 +36,28 @@ describe('coach Live v79 original-pair presentation', () => {
     expect(isCoachLiveV79Enabled(actor())).toBe(true)
   })
 })
+
+describe('explicit all-trainer Live rollout', () => {
+  it('keeps roles, server admission, individual switches and rollback', () => {
+    configure()
+    vi.stubEnv('VITE_COACH_WORKOUT_ROLLOUT_MODE', 'all')
+    vi.stubEnv('VITE_COACH_LIVE_V79_PILOT_USER_IDS', '')
+    expect(isCoachLiveV79Enabled(actor('new-trainer'))).toBe(true)
+    expect(isCoachLiveV79Enabled(actor('new-trainer', 'client'))).toBe(false)
+    expect(isCoachLiveV79Enabled({ ...actor('new-trainer'), experiments: { trainerScheduleV2: true, fitLime: false } })).toBe(false)
+    expect(isCoachLiveV79Enabled(null)).toBe(false)
+    for (const feature of ['COACH_WORKOUT_REDESIGN', 'COACH_LIVE_DENSITY', 'COACH_LIVE_V79']) {
+      vi.stubEnv(`VITE_${feature}_ENABLED`, 'false')
+      expect(isCoachLiveV79Enabled(actor('new-trainer'))).toBe(false)
+      vi.stubEnv(`VITE_${feature}_ENABLED`, 'true')
+    }
+    for (const mode of ['off', '', 'ALL', 'typo']) {
+      vi.stubEnv('VITE_COACH_WORKOUT_ROLLOUT_MODE', mode)
+      expect(isCoachLiveV79Enabled(actor())).toBe(false)
+    }
+    vi.stubEnv('VITE_COACH_WORKOUT_ROLLOUT_MODE', 'pilot')
+    expect(isCoachLiveV79Enabled(actor('new-trainer'))).toBe(false)
+    vi.stubEnv('VITE_COACH_LIVE_V79_PILOT_USER_IDS', 'trainer-1,trainer-2')
+    expect(isCoachLiveV79Enabled(actor())).toBe(true)
+  })
+})

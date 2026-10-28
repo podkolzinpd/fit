@@ -11,7 +11,7 @@
 | Lime | [дизайн-код](design/FIT_LIME_DESIGN_CODE.md), [SVG-каталог](design/FIT_LIME_SOURCE_CATALOG.json) | Принятые исходники, параметры и scoped-адаптации; не общий перекрас |
 | Клиентские экраны | [SVG adoption](design/CLIENT_LIME_SVG_ADOPTION_20261018.md) | Независимая клиентская механика/темы; не заменять тренерской |
 | Клиентский Live | [v79 contract](design/CLIENT_LIVE_V79_CONTRACT.md), [interactions](design/CLIENT_LIVE_INTERACTIONS_20261027.md), [focus](design/CLIENT_LIVE_FOCUS_GUARD_20261026.md), [time](design/CLIENT_LIVE_TIME_PREFERENCE_20261026.md) | Ввод, клавиатура, фокус, таймеры и соседние изменения |
-| Тренерский Live | [v79 integration](design/COACH_LIVE_V79_INTEGRATION_20261025.md), [composition](design/COACH_LIVE_COMPOSITION_FIXED2_20261026.md), [supersets](design/COACH_SUPERSET_FIXED2_20261027.md) | Исходный fixed2, Original54/Compact48, одна механика, жесты/суперсеты/черновики |
+| Тренерский Live | [v79 integration](design/COACH_LIVE_V79_INTEGRATION_20261025.md), [composition](design/COACH_LIVE_COMPOSITION_FIXED2_20261026.md), [supersets](design/COACH_SUPERSET_FIXED2_20261027.md) | YAFIT-668: pilot→all после проверки; Original54/Compact48, одна механика, жесты/суперсеты/черновики |
 | Тренерские формы и каталог | [SVG parity](design/COACH_SVG_PARITY_FIXED2_20261020.md) | Оба recent-раздела с понятными названиями, цвета/состояния из источника, существующий выбор |
 | Ачивки | [progress states](design/ACHIEVEMENT_PROGRESS_STATES_20261004.md), [regularity](design/ACHIEVEMENT_REGULARITY_COPY_20261005.md) | Принятые изображения/условия; перед правкой сверить последующие решения и текущий каталог |
 | Backend/публикация | [playbook](YANDEX_CUTOVER_PLAYBOOK.md), [engineering](ENGINEERING_RULES.md), OPERATIONS.md в корне | Cloud.ru, ownership/RLS, forward migrations, отсутствие dual-write |
@@ -27,7 +27,9 @@
 - Старые планы v79/composition запрещали добавлять паузу тренеру в том этапе.
   После выпуска пользователь сообщил об отсутствии нужной паузы. Это открытое
   продуктовое расхождение, не правило «навсегда только клиенту».
-  Реализацию и переход paused→resume проверять в отдельной UI-задаче.
+  YAFIT-668 возвращает существующую паузу с учётом отдыха/длительности.
+  [Текущий план](design/COACH_LIVE_FINISH_AND_ROLLOUT_20261028.md) заменяет
+  прежний fixed2-запрет только для согласованного coach rollout после проверки.
 - Планы superset/Live не разрешают дублировать заметки, имена и действия в каждом
   круге. Последнее замечание о компактности сохраняется в [реестре ошибок](REGRESSION_LESSONS.md).
 - Сохранённая история не доказывает доступность реального OAuth/физического
