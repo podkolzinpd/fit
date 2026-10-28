@@ -7,7 +7,8 @@ import test from 'node:test'
 import { planMediaAclReadRepair } from './repair-cloudru-media-acl.mjs'
 import { createHash } from 'node:crypto'
 import { readHistoryTargets, readHistoryRegistry, readHistoryPages, summarizeHistory, inspectCurrentHistory,
-  readHistoryEvidenceSecret, resolveHistoryEvidence, readHistoryVisibility } from './cloudru-account-history-audit.mjs'
+  readHistoryEvidenceSecret, resolveHistoryEvidence, readHistoryVisibility,
+  readWorkoutHistoryTarget, inspectWorkoutHistoryTarget } from './cloudru-account-history-audit.mjs'
 import { probeRuntimeDatabase } from './cloudru-runtime-db-probe.mjs'
 
 const read = name => readFileSync(new URL(`../${name}`, import.meta.url), 'utf8')
@@ -77,7 +78,7 @@ test('account history registry requires an empty terminal page and keeps only re
   await assert.rejects(readHistoryRegistry(() => Promise.resolve({ users: pages[0] }), [target]), /registry_invalid/)
 })
 
-test('current history evidence accepts only two private hashes, never a raw ID or SQL', async () => {
+test('current history evidence accepts only private login/email/name hashes, never a raw ID or SQL', async () => {
   const hash = value => createHash('sha256').update(value).digest('hex')
   const secret = { idSha256: hash(historyFixtureIds[0]), messageSha256: hash('synthetic-support-marker') }
   assert.equal(readHistoryEvidenceSecret(undefined), null)
@@ -218,7 +219,7 @@ test('account history inspection uses scoped read-only SQL and restores the acto
 test('account history operation is manual, main-only, fixed-scope and does not enable repairs or expose contacts', () => {
   const workflow = read('.github/workflows/inspect-cloudru-operations.yml')
   const step = workflow.slice(workflow.indexOf('      - name: Inspect only the owner-approved account history'), workflow.indexOf('      - name: Verify certificate renewal'))
-  assert.match(step, /github.event_name == 'workflow_dispatch' && inputs.account_history/)
+  assert.match(step, /github.event_name == 'workflow_dispatch' && \(inputs.account_history \|\| inputs.workout_history_target\)/)
   assert.match(step, /test "\$GITHUB_REF" = refs\/heads\/main/)
   assert.match(step, /test "\$\(hostname\)" = fit-stage-app/)
   assert.match(step, /--read-only.*--timeout=120/)
@@ -230,6 +231,81 @@ test('account history operation is manual, main-only, fixed-scope and does not e
   assert.doesNotMatch(step, /ssh |psql|pg_restore|--privileged|workflow_dispatch.*email/)
   const script = read('scripts/cloudru-account-history-audit.mjs')
   assert.doesNotMatch(script, /@gmail|@yandex|@glitchy|method: '(?:POST|PUT|DELETE|PATCH)'/)
+})
+
+test('journal preflight accepts only private login/email/name hashes, never SQL, names or actor overrides', () => {
+  const value = { trainerLoginSha256: 'a'.repeat(64), trainerEmailSha256: 'c'.repeat(64), clientNameSha256: 'b'.repeat(64) }
+  assert.deepEqual(readWorkoutHistoryTarget(JSON.stringify(value)), value)
+  for (const bad of [null, [], {}, { ...value, actor: historyFixtureIds[0] }, { ...value, clientNameSha256: 'private name' }]) {
+    assert.throws(() => readWorkoutHistoryTarget(JSON.stringify(bad)), /target_invalid/)
+  }
+})
+
+function journalClients({ readonly = true, candidates = [historyFixtureIds[0]], role = 'trainer', runtimeRole = 'fit_api', cards = [] } = {}) {
+  const queries = []
+  const owner = { query: async (text, values) => {
+    queries.push({ actor: 'owner', text, values })
+    return { rows: text.includes('current_setting') ? [{ readonly: readonly ? 'on' : 'off' }]
+      : text.includes('select distinct profile_id') ? candidates.map(profile_id => ({ profile_id }))
+      : text.includes('select account_role') ? [{ account_role: role }] : [] }
+  } }
+  const runtime = { query: async (text, values) => {
+    queries.push({ actor: 'runtime', text, values })
+    return { rows: text.includes('from pg_roles') ? [{ readonly: 'on', name: runtimeRole, rolsuper: false, rolbypassrls: false }]
+      : text.includes('from public.clients c') ? cards
+      : text.includes('from public.workouts') ? [{ status: 'done', deleted: false, count: 2 }] : [] }
+  } }
+  return { owner, runtime, queries }
+}
+const journalTarget = { trainerLoginSha256: 'a'.repeat(64), trainerEmailSha256: 'c'.repeat(64), clientNameSha256: 'b'.repeat(64) }
+
+test('journal preflight refuses writable owner and conflicting trainer identities before client reads', async () => {
+  for (const [settings, legacy, code] of [
+    [{ readonly: false }, null, /readonly_required/],
+    [{ candidates: [historyFixtureIds[0], historyFixtureIds[1]] }, null, /trainer_ambiguous/],
+    [{}, historyFixtureIds[1], /trainer_ambiguous/],
+    [{ role: 'client' }, null, /trainer_role_invalid/],
+    [{ runtimeRole: 'fit_owner' }, null, /runtime_role_invalid/],
+  ]) {
+    const f = journalClients(settings)
+    await assert.rejects(inspectWorkoutHistoryTarget(f.owner, f.runtime, journalTarget, legacy), code)
+    assert.ok(!f.queries.some(q => q.text.includes('from public.clients')))
+    assert.equal(f.queries.at(-1).text, 'rollback')
+  }
+})
+
+test('journal preflight reads scoped counts through the real runtime role without exporting private IDs', async () => {
+  const f = journalClients({ cards: [{ id: historyFixtureIds[2], auth_user_id: historyFixtureIds[3], archived: false, merged: false }] })
+  const result = await inspectWorkoutHistoryTarget(f.owner, f.runtime, journalTarget)
+  assert.deepEqual(f.queries.find(q => q.text.includes('select distinct profile_id')).values, [['a'.repeat(64), 'c'.repeat(64)]])
+  assert.deepEqual(result, { event: 'workout_history_import_preflight', readOnly: true, trainerMatched: true,
+    matchingCards: 1, activeMatchingCards: 1, athleteLinked: true, existingWorkouts: [{ status: 'done', deleted: false, count: 2 }] })
+  assert.doesNotMatch(JSON.stringify(result), /a0000000|private name|[ab]{64}/)
+  assert.ok(f.queries.every(q => !/\b(?:insert|update|delete|alter|grant|truncate)\b/i.test(q.text)))
+  assert.ok(f.queries.some(q => q.actor === 'runtime' && q.text.includes('request.jwt.claim.sub') && q.values[0] === historyFixtureIds[0]))
+  assert.ok(f.queries.some(q => q.actor === 'runtime' && q.text.includes('relationship.client_id=c.id') && q.text.includes("relationship.status='active'")))
+})
+
+test('journal preflight preserves ambiguity and never chooses one of two active matching cards', async () => {
+  const f = journalClients({ cards: [2, 3].map(n => ({ id: historyFixtureIds[n], archived: false, merged: false })) })
+  const result = await inspectWorkoutHistoryTarget(f.owner, f.runtime, journalTarget)
+  assert.equal(result.activeMatchingCards, 2)
+  assert.deepEqual(result.existingWorkouts, [])
+  assert.ok(!f.queries.some(q => q.text.includes('from public.workouts')))
+})
+
+test('journal preflight reports a missing trainer without broadening to other trainers', async () => {
+  const f = journalClients({ candidates: [] })
+  assert.equal((await inspectWorkoutHistoryTarget(f.owner, f.runtime, journalTarget)).trainerMatched, false)
+  assert.ok(f.queries.every(q => q.actor === 'owner'))
+})
+
+test('journal preflight secret is isolated from the earlier history repair and cannot trigger both modes', () => {
+  const workflow = read('.github/workflows/inspect-cloudru-operations.yml')
+  assert.match(workflow, /FIT_WORKOUT_HISTORY_TARGET: \$\{\{ inputs.workout_history_target && secrets.FIT_WORKOUT_HISTORY_TARGET \|\| '' \}\}/)
+  assert.match(workflow, /test "\$ACCOUNT_HISTORY_MODE" != true/)
+  assert.match(workflow, /names\+=\(FIT_WORKOUT_HISTORY_TARGET\)/)
+  assert.match(workflow, /test "\$WORKOUT_HISTORY_TARGET_MODE" != true && test -n "\$FIT_ACCOUNT_HISTORY_EVIDENCE"/)
 })
 
 for (const name of configurations) {
