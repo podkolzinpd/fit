@@ -52,11 +52,11 @@ describe.skipIf(source === undefined)('one private journal into a new card', () 
     if (admin) await admin.end()
   })
 
-  it('inspects without writes, commits all snapshots, replays safely and rolls a late failure back', async () => {
+  async function prepareFixture(linked = true) {
     const coach = randomUUID(), other = randomUUID()
     await owner.query("insert into public.profiles(id,account_role) values($1,'trainer'),($2,'trainer')", [coach, other])
     await owner.query('insert into public.trainers(profile_id) values($1),($2)', [coach, other])
-    const loginHash = hash('synthetic-journal-login')
+    const loginHash = hash(`synthetic-journal-login-${coach}`)
     await owner.query('insert into app_private.fit_lime_pilot_allowlist(login_sha256,profile_id,enabled) values($1,$2,true)', [loginHash, coach])
     const existing = randomUUID(), oldWorkout = randomUUID()
     await owner.query("insert into public.clients(id,trainer_id,full_name) values($1,$2,'Unrelated synthetic card')", [existing, coach])
@@ -86,22 +86,33 @@ describe.skipIf(source === undefined)('one private journal into a new card', () 
       const raw = JSON.stringify(value), encoded = gzipSync(raw).toString('base64')
       const split = Math.min(47000, Math.ceil(encoded.length / 2))
       return { parts: [encoded.slice(0, split), encoded.slice(split)], approvedSha256: hash(raw),
-        target: { trainerLoginSha256: loginHash, trainerEmailSha256: hash('synthetic-journal-email'), clientNameSha256: hash(name.toLowerCase()) } }
+        target: { trainerLoginSha256: loginHash, trainerEmailSha256: hash(`synthetic-journal-email-${coach}`), clientNameSha256: hash(name.toLowerCase()) } }
     }
     const receipts: { state: string; receipt: JournalReceipt }[] = []
     const options = { mode: 'inspect' as const, owner, runtime, legacyId: coach, ...packet('Synthetic import'),
       readRequest: readSavePlannedWorkoutRequest, saveCompleted: saveCompletedWorkout, createCard: createClientCard,
       persistReceipt: (state: string, receipt: JournalReceipt) => { receipts.push({ state, receipt }); return Promise.resolve() } }
+    if (linked) await owner.query("insert into app_private.auth_identities(provider,provider_subject_sha256,profile_id,identity_origin) values('yandex',$1,$2,'native')", [hash(`synthetic-journal-subject-${coach}`), coach])
+    return { coach, other, oldWorkout, before, packet, receipts, options }
+  }
+
+  it('refuses unlinked or conflicting identities and inspects without writing a card', async () => {
+    const { coach, other, options } = await prepareFixture(false)
     await expect(runPreparedNewCardImport(options)).rejects.toThrow('current_trainer_identity_required')
-    await owner.query("insert into app_private.auth_identities(provider,provider_subject_sha256,profile_id,identity_origin) values('yandex',$1,$2,'native')", [hash('synthetic-journal-subject'), coach])
+    await owner.query("insert into app_private.auth_identities(provider,provider_subject_sha256,profile_id,identity_origin) values('yandex',$1,$2,'native')", [hash(`synthetic-journal-subject-${coach}`), coach])
     await expect(runPreparedNewCardImport({ ...options, legacyId: other })).rejects.toThrow('trainer_ambiguous')
     expect(await runPreparedNewCardImport(options)).toMatchObject({ status: 'ready', readOnly: true, workouts: 137 })
-    expect((await owner.query<{ n: number }>("select count(*)::int n from public.clients where full_name='Synthetic import'")).rows[0]?.n).toBe(0)
+    expect((await owner.query<{ n: number }>("select count(*)::int n from public.clients where trainer_id=$1 and full_name='Synthetic import'", [coach])).rows[0]?.n).toBe(0)
+    await expect(runPreparedNewCardImport({ ...options, approvedSha256: '0'.repeat(64) })).rejects.toThrow('private_payload_invalid')
+  })
+
+  it('commits all snapshots, replays without duplicates and leaves unrelated history and finances unchanged', async () => {
+    const { coach, options, receipts, oldWorkout, before } = await prepareFixture()
     const saved = await runPreparedNewCardImport({ ...options, mode: 'apply' })
     expect(saved).toMatchObject({ status: 'imported', workouts: 137, exercises: 641, sets: 240, contentVerified: true, athleteLinked: false })
     expect(receipts.map(r => r.state)).toEqual(['prepared', 'committed', 'readback'])
     expect((await runPreparedNewCardImport({ ...options, mode: 'apply' })).status).toBe('already_imported')
-    expect((await owner.query<{ n: number }>("select count(*)::int n from public.clients where full_name='Synthetic import'")).rows[0]?.n).toBe(1)
+    expect((await owner.query<{ n: number }>("select count(*)::int n from public.clients where trainer_id=$1 and full_name='Synthetic import'", [coach])).rows[0]?.n).toBe(1)
     expect((await owner.query('select to_jsonb(w) value from public.workouts w where id=$1', [oldWorkout])).rows).toEqual(before)
     const importedCard = receipts[0]?.receipt.clientId
     expect(importedCard).toBeTruthy()
@@ -109,10 +120,18 @@ describe.skipIf(source === undefined)('one private journal into a new card', () 
     for (const table of ['trainer_finance_packages', 'trainer_finance_payments', 'trainer_finance_sessions']) {
       expect((await owner.query<{ n: number }>(`select count(*)::int n from public.${table} where client_id=$1`, [importedCard])).rows[0]?.n).toBe(0)
     }
+  })
+
+  it('rolls back the new card and every workout after a late receipt failure', async () => {
+    const { coach, options, packet } = await prepareFixture()
     await expect(runPreparedNewCardImport({ ...options, mode: 'apply', ...packet('Synthetic rollback', true),
       persistReceipt: () => Promise.reject(new Error('synthetic receipt failure')) })).rejects.toThrow('failed_rolled_back')
-    expect((await owner.query<{ n: number }>("select count(*)::int n from public.clients where full_name='Synthetic rollback'")).rows[0]?.n).toBe(0)
-    await expect(runPreparedNewCardImport({ ...options, approvedSha256: '0'.repeat(64) })).rejects.toThrow('private_payload_invalid')
+    expect((await owner.query<{ n: number }>("select count(*)::int n from public.clients where trainer_id=$1 and full_name='Synthetic rollback'", [coach])).rows[0]?.n).toBe(0)
+  })
+
+  it('refuses to overwrite facts edited after the import', async () => {
+    const { options, receipts } = await prepareFixture()
+    await runPreparedNewCardImport({ ...options, mode: 'apply' })
     const first = receipts[0]?.receipt.created[1]?.workoutId
     await owner.query("update public.workout_sets s set fact_weight_kg=99 from public.workout_exercises e where e.id=s.workout_exercise_id and e.workout_id=$1", [first])
     await expect(runPreparedNewCardImport({ ...options, mode: 'apply' })).rejects.toThrow('content_readback_failed')
