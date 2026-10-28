@@ -21,6 +21,14 @@ YAFIT-667 завершён: PR1847/main91ce5582, общие правила и а
 - YAFIT-668: до public pilot QA — fixed2; затем явный coach mode=all. Original54/Compact48 сохраняются.
 - Локальные тесты не используют production-БД; полные макеты/пакет шрифтов не публикуются.
 
+## Видеовстречи / YAFIT-669
+
+[План](design/CHAT_VIDEO_MEETINGS_20261028.md): собственный UI, Jitsi как media.
+Default-off: видеосервер/DNS/TLS/TURN и credentials ещё не настроены.
+Локальный Podman падает с krunkit exit2; clean PG/RLS локально не проверены.
+WebKit UX проверен с SDK double; реальное media/физические устройства не проверены.
+Не включать/не объявлять выпущенным до закрытия этих пунктов.
+
 ## Параллельная работа и остатки
 
 На старте YAFIT-667 открыты PR1835 (Staff), PR1842 (питание).

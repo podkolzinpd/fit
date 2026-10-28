@@ -1,3 +1,4 @@
+import { createChatMeetingsRepository } from './chat-meetings.repository'
 import { z } from 'zod'
 import { isClientWorkoutRedesignEnabled } from '../../app/client-workout-redesign'
 import type { PreparedImage } from '../../shared/image-prep'
@@ -97,6 +98,7 @@ const chatConnectionSchema = z.object({
   canInvite: z.boolean(), canAccept: z.boolean(), trainerSwitchRequired: z.boolean(),
 })
 const chatMessageSchema = z.object({
+  meeting: z.object({ id: uuid, active: z.boolean() }).optional(),
   id: uuid, conversationId: uuid, senderId: uuid, body: z.string(), createdAt: yandexDateTimeSchema,
   editedAt: yandexDateTimeSchema.nullable(),
   replyTo: z.object({ messageId: uuid, senderId: uuid.nullable(), body: z.string().nullable(), hasImage: z.boolean(), deleted: z.boolean() }).nullable(),
@@ -1756,6 +1758,7 @@ export function createYandexMainRepository(
         return payload.feedback.id
       },
     },
+    meetings: createChatMeetingsRepository(queries),
     chat: {
       async listThreads(): Promise<ChatThread[]> {
         return (await readJson(queries, '/v1/chat/threads', z.object({ threads: z.array(chatThreadSchema) }))).threads
@@ -1806,7 +1809,7 @@ export function createYandexMainRepository(
         return (await readJson(queries, `/v1/chat/conversations/${conversationId}/messages/${messageId}/window`, z.object({ messages: z.array(chatMessageSchema) }))).messages
       },
       subscribe(_conversationId, onChange) {
-        const interval = window.setInterval(onChange, 15_000)
+        const interval = window.setInterval(onChange, 5_000)
         return () => window.clearInterval(interval)
       },
     },

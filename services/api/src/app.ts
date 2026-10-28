@@ -1,3 +1,4 @@
+import type { ChatMeetings, MeetingAction } from './chat-meetings.js'
 import { registerCorporateAdminRoutes, type CorporateAdminService } from './corporate-admin.js'
 import Fastify, { type FastifyInstance, type FastifyReply } from 'fastify'
 import { yandexAuthFailureDiagnostics, type YandexAuthStage } from './auth/yandex-auth-diagnostics.js'
@@ -209,6 +210,7 @@ interface BuildAppOptions {
   pilotAssistantState?: PilotAssistantState
   pilotAssistantTurnRunner?: PilotAssistantTurnRunner
   pilotPushNotifications?: PilotPushNotifications
+  chatMeetings?: ChatMeetings
   pilotChat?: PilotChat
   chatMediaStore?: ChatMediaStore
   pilotCustomExercisePhotos?: PilotCustomExercisePhotos
@@ -2339,6 +2341,31 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
       ),
       (result) => reply.header('cache-control', 'no-store').send({ result }),
     )
+  })
+
+  app.get('/v1/chat/conversations/:conversationId/meeting', async (request, reply) => {
+    const session = readYandexActorSession(request.headers)
+    if (!session) return reply.code(401).send({ error: 'unauthorized' })
+    const { conversationId } = request.params as { conversationId: string }
+    if (!uuidPattern.test(conversationId)) return reply.code(422).send({ error: 'invalid_request' })
+    if (!options.chatMeetings) return { available: false, meeting: null }
+    return sendPilotCommand(reply, () => options.chatMeetings!.command(session, conversationId, 'read'), (state) => state)
+  })
+  app.post('/v1/chat/conversations/:conversationId/meeting', async (request, reply) => {
+    const session = readYandexActorSession(request.headers)
+    if (!session || session.accessMode !== 'read_write') return reply.code(401).send({ error: 'unauthorized' })
+    const { conversationId } = request.params as { conversationId: string }
+    const body = request.body as { action?: unknown; meetingId?: unknown; tabId?: unknown } | null
+    if (!uuidPattern.test(conversationId) || !body || typeof body.action !== 'string'
+      || !['prepare', 'joined', 'heartbeat', 'leave'].includes(body.action)
+      || typeof body.tabId !== 'string' || !uuidPattern.test(body.tabId)
+      || (body.action !== 'prepare' && (typeof body.meetingId !== 'string' || !uuidPattern.test(body.meetingId)))) {
+      return reply.code(422).send({ error: 'invalid_request' })
+    }
+    reply.header('Cache-Control', 'no-store')
+    if (!options.chatMeetings) return reply.code(503).send({ error: 'service_unavailable' })
+    return sendPilotCommand(reply, () => options.chatMeetings!.command(session, conversationId,
+      body.action as MeetingAction, typeof body.meetingId === 'string' ? body.meetingId : undefined, body.tabId as string), (state) => state)
   })
 
   app.get('/v1/chat/threads', async (request, reply) => {

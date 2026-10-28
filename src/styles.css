@@ -7355,3 +7355,33 @@ details[open] > .progress-details-toggle svg { transform:rotate(180deg); }
 .live-set-work-timer { position:absolute; inset:0; width:100%; min-height:44px; padding:0 6px; border:1px solid var(--accent-strong); border-radius:inherit; background:var(--surface-raised); color:var(--fg); box-shadow:none; font-size:17px; font-weight:700; font-variant-numeric:tabular-nums }
 .live-set-work-timer.over { border-color:var(--warning-border); background:var(--warning-surface); color:var(--warning-fg) }
 .workout-timer-confirmed-note { display:block; margin-top:2px; color:var(--warning-fg); font-size:13px; font-weight:600 }
+
+/* Video meetings reuse the active role/theme semantic tokens. */
+.chat-meeting-card { align-self:center; display:grid; justify-items:center; gap:10px; padding:16px; width:min(100%,360px); border:1px solid var(--border); border-radius:var(--radius-md,16px); background:var(--surface); text-align:center }
+.chat-meeting-card > svg { width:24px; height:24px }
+.chat-meeting-card time { color:var(--text-muted); font-size:12px }
+.fit-video-meeting { position:fixed; inset:0; margin:auto; width:min(100%,960px); height:100dvh; max-height:100dvh; max-width:100%; padding: max(16px,env(safe-area-inset-top)) 16px max(16px,env(safe-area-inset-bottom)); border:0; color:var(--text); background:var(--bg); overflow:auto }
+.fit-video-meeting::backdrop { background:var(--bg) }
+.fit-video-meeting[open] { display:flex; flex-direction:column; gap:12px }
+.fit-video-meeting header { display:flex; align-items:center; justify-content:space-between; gap:12px }
+.fit-video-meeting h2 { margin:0; font-size:20px }
+.fit-video-meeting header p { margin:4px 0 0; color:var(--text-muted) }
+.fit-video-meeting header button { min-width:44px; min-height:44px }
+.meeting-stage { position:relative; flex:1; min-height:200px; background:var(--surface-sunken); border:1px solid var(--border); border-radius:var(--radius-md,16px); overflow:hidden }
+.meeting-stage video { object-fit:contain; background:var(--surface-sunken) }
+.meeting-partner-video { width:100%; height:100%; position:absolute; inset:0 }
+.meeting-self-video { position:absolute; z-index:1; right:12px; bottom:12px; width:28%; max-width:200px; height:30%; border-radius:var(--radius-sm,12px); border:1px solid var(--border); transform:scaleX(-1) }
+.meeting-placeholder { position:absolute; inset:0; display:flex; flex-direction:column; justify-content:center; align-items:center; gap:12px; padding:24px; text-align:center; color:var(--text-muted) }
+.meeting-placeholder svg { width:40px; height:40px }
+.meeting-camera-off { position:absolute; right:12px; bottom:12px; z-index:2; padding:8px; max-width:35%; background:var(--surface); font-size:12px }
+.meeting-status { text-align:center; margin:0; min-height:24px }
+.fit-video-meeting footer { display:grid; gap:10px }
+.meeting-controls { display:flex; gap:8px }
+.meeting-controls button { flex:1; min-width:0; min-height:48px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; padding:8px; font-size:12px; overflow-wrap:anywhere }
+.meeting-controls svg { width:22px; height:22px }
+.meeting-controls button[aria-pressed="true"] { border-color:var(--danger); color:var(--danger) }
+.fit-lime-shell .chat-meeting-card { background:var(--lime-surface); border-color:var(--lime-divider); color:var(--lime-text) }
+.fit-lime-shell .fit-video-meeting { background:var(--lime-bg); color:var(--lime-text) }
+@media (min-width:760px) { .fit-video-meeting { height:min(90dvh,900px); border:1px solid var(--border); border-radius:var(--radius-lg,24px) } }
+
+.meeting-stage[data-preview="true"] .meeting-self-video { inset:0; width:100%; height:100%; max-width:none; border:0; border-radius:0 }

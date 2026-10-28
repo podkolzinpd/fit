@@ -47,6 +47,7 @@ export interface ChatConnectionState {
 }
 
 export interface ChatMessage {
+  meeting?: { id: string; active: boolean }
   id: UUID
   conversationId: UUID
   senderId: UUID

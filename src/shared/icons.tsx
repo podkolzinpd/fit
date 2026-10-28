@@ -180,3 +180,7 @@ export function WhistleIcon(props: IconProps) {
 export function PhotoIcon(props: IconProps) {
   return <Icon data-icon="photo" {...props}><rect x="3" y="4" width="18" height="16" rx="3" /><circle cx="9" cy="9" r="1.5" /><path d="m5.5 17 4.2-4.2 3.1 3.1 2.1-2.1 3.6 3.2" /></Icon>
 }
+
+export function VideoIcon(props: IconProps) {
+  return <Icon data-icon="video" {...props}><rect x="3" y="6" width="12" height="12" rx="3" /><path d="m15 10 6-3v10l-6-3" /></Icon>
+}
