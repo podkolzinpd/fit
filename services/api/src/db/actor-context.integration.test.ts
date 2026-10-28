@@ -3879,7 +3879,7 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
           // Prove actual PostgreSQL blocking, not serialization in a one-slot pool.
           await expect.poll(async()=>secondPid===0?0:Number((await owner.query<{ count:number }>('select cardinality(pg_blocking_pids($1)) as count',[secondPid])).rows[0]!.count),{timeout:5000}).toBeGreaterThan(0)
         } finally { unlock() }
-        const [first,second]=await Promise.all([firstPreparing,secondPreparing!])
+        const [first,second]=await Promise.all([firstPreparing,secondPreparing])
         const meeting=first.meeting!.id
         expect(second.meeting!.id).toBe(meeting)
         expect((await owner.query('select * from public.chat_messages where conversation_id=$1',[conversation])).rows).toHaveLength(0)
