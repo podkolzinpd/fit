@@ -10,7 +10,7 @@ on:
       phase:
         type: choice
         default: prepare
-        options: [prepare, resume, ingress, diagnose, auth]
+        options: [prepare, resume, ingress, diagnose, auth, proxy]
   workflow_call:
     inputs:
       phase:
@@ -59,6 +59,7 @@ jobs:
             ingress) sudo bash infra/jitsi/activate-ingress.sh ;;
             diagnose) sudo python3 infra/jitsi/diagnose-host.py ;;
             auth) sudo python3 infra/jitsi/probe_auth.py ;;
+            proxy) sudo python3 infra/jitsi/refresh_proxy.py ;;
             *) exit 1 ;;
           esac
         env:

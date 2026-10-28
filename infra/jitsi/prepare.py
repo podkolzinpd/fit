@@ -86,49 +86,7 @@ def prepare(destination, public_ip, private_ip, domain):
         'JITSI_XMPP_DOMAIN=meet.jitsi', 'JITSI_MUC_DOMAIN=muc.meet.jitsi',
         'JITSI_APP_ID=fit', f'JITSI_JWT_SECRET={jwt_secret}', '',
     ]))
-    # No query strings or WebSocket URLs in access/error logs (they can carry JWT).
-    origins = ['https://fit-training.ru', 'https://www.fit-training.ru',
-               'capacitor://localhost', 'http://localhost', 'https://localhost']
-    allowed = '\n'.join(f'    "{origin}" 1;' for origin in origins)
-    write('nginx-origins.conf', f'''map $http_origin $fit_meeting_origin {{
-    default 0;
-{allowed}
-}}
-''')
-    write('nginx-locations.conf', '''
-    location ^~ /libs/ {{
-        access_log off;
-        error_log /dev/null crit;
-        proxy_pass http://127.0.0.1:8000;
-        proxy_hide_header Access-Control-Allow-Origin;
-        add_header Access-Control-Allow-Origin "*" always;
-        add_header X-Content-Type-Options nosniff always;
-    }}
-    location = /xmpp-websocket {{
-        access_log off;
-        error_log /dev/null crit;
-        if ($fit_meeting_origin = 0) {{ return 403; }}
-        proxy_pass http://127.0.0.1:8000;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection "upgrade";
-        proxy_set_header Host $host;
-        proxy_set_header X-Forwarded-Proto https;
-        proxy_read_timeout 90s;
-    }}
-    location ^~ /colibri-ws/ {{
-        access_log off;
-        error_log /dev/null crit;
-        if ($fit_meeting_origin = 0) {{ return 403; }}
-        proxy_pass http://127.0.0.1:8000;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection "upgrade";
-        proxy_set_header Host $host;
-        proxy_set_header X-Forwarded-Proto https;
-        proxy_read_timeout 90s;
-    }}
-'''.replace('{{', '{').replace('}}', '}'))
+    write_proxy(write)
     write('turnserver.conf', f'''listening-ip={private}
 relay-ip={private}
 external-ip={public}/{private}
@@ -205,6 +163,53 @@ nginx -t
 systemctl reload nginx
 systemctl restart coturn
 ''', 0o700)
+
+
+def write_proxy(write):
+    # No query strings or WebSocket URLs in access/error logs (they can carry JWT).
+    origins = ['https://fit-training.ru', 'https://www.fit-training.ru',
+               'capacitor://localhost', 'http://localhost', 'https://localhost']
+    allowed = '\n'.join(f'    "{origin}" 1;' for origin in origins)
+    write('nginx-origins.conf', f'''map $http_origin $fit_meeting_origin {{
+    default 0;
+{allowed}
+}}
+''')
+    write('nginx-locations.conf', '''
+    location ^~ /libs/ {{
+        proxy_buffering off;
+        access_log off;
+        error_log /dev/null crit;
+        proxy_pass http://127.0.0.1:8000;
+        proxy_hide_header Access-Control-Allow-Origin;
+        add_header Access-Control-Allow-Origin "*" always;
+        add_header X-Content-Type-Options nosniff always;
+    }}
+    location = /xmpp-websocket {{
+        access_log off;
+        error_log /dev/null crit;
+        if ($fit_meeting_origin = 0) {{ return 403; }}
+        proxy_pass http://127.0.0.1:8000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-Proto https;
+        proxy_read_timeout 90s;
+    }}
+    location ^~ /colibri-ws/ {{
+        access_log off;
+        error_log /dev/null crit;
+        if ($fit_meeting_origin = 0) {{ return 403; }}
+        proxy_pass http://127.0.0.1:8000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-Proto https;
+        proxy_read_timeout 90s;
+    }}
+'''.replace('{{', '{').replace('}}', '}'))
 
 
 if __name__ == '__main__':
