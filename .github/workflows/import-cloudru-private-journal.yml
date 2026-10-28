@@ -109,7 +109,9 @@ jobs:
           output="$RUNNER_TEMP/fit-journal-capability-$id"
           test ! -e "$output"
           test ! -L "$output"
-          install -d -m 700 "$output"
+          # Only encrypted capability metadata is exposed to the artifact uploader.
+          # UID0 with all capabilities dropped cannot write a runner-owned0700 mount.
+          sudo install -d -m 755 "$output"
           if test "$MODE" = inspect || test "$MODE" = apply; then
             jq -e '.MIGRATION_DATABASE_HOST == "10.70.10.67" and .MIGRATION_DATABASE_PORT == "5432" and
               .MIGRATION_DATABASE_NAME == "fit" and .MIGRATION_DATABASE_USER == "fit_owner" and

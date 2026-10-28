@@ -184,3 +184,15 @@ CI обновлённой ветки обязателен, admin/обход не
 production apply/readback ещё не выполнены, новая карточка unclaimed, отдельный
 worker/push SQLSTATE22023 внеscope. Далее: зелёный актуальныйPR/main, ограниченная
 доставка Cloud.ru, inspect/apply, локальная сверка квитанции и cleanup своей сессии.
+
+## Итерация 5 — 29.10.2026 — Codex / OpenAI
+
+Задача: проверить ограниченный служебный запуск перед production. Расхождение:
+UID0 приcap-dropALL не может записать capability в принадлежащую runner папку0700.
+На отдельном локальномLinux-томе воспроизведён отказ; root-owned0755 для одних
+зашифрованных capability исправляет запись и позволяет artifact uploader чтение.
+РешениеP5-D2: только metadata-папка root0755, ciphertext-файл0644; session/key
+остаются root0700/0600. Отвергнуты: добавлениеDAC-capability/privileged и раскрытие
+session-папки. Измененыworkflow и регрессионный guard;54операционных теста и
+реальная Podman-проверка прошли, тестовый том удалён. Production пока не запускали.
+Далее: финальный зелёныйCI/main и прежние inspect/apply/readback/cleanup.

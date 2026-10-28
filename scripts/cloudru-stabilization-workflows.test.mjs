@@ -816,6 +816,8 @@ test('private import is manual, main-only, CI guarded and GitHub receives only e
   assert.match(workflow, /\/capability\.encrypted\.json/)
   assert.doesNotMatch(workflow, /FIT_JOURNAL_IMPORT_PART_|\/receipts|private-journal-receipts/)
   assert.match(workflow, /CLOUDRU_MEDIA_MIGRATION_KEY_ID/)
+  assert.match(workflow, /sudo install -d -m 755 "\$output"/)
+  assert.match(workflow, /sudo install -d -m 700 "\$session"/)
   assert.match(workflow, /journal-upload-\$FIT_JOURNAL_UPLOAD_SESSION/)
   assert.match(workflow, /if: always\(\)/)
   assert.doesNotMatch(workflow, /PRIVATE_KEY|--privileged|Config\.Env|api\.env|pg_restore|psql/)
