@@ -1,6 +1,7 @@
 import { VideoMeeting } from './VideoMeeting'
+import { chatDayKey, chatDayLabel, chatListTimeLabel } from './chat-dates'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react'
+import { Fragment, useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react'
 import { createPortal } from 'react-dom'
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from '../../app/auth-context'
@@ -73,7 +74,7 @@ export function ChatListPage() {
         disabled={opening} onClick={() => void openChat(item)}>
         <span className="chat-avatar" aria-hidden="true">{item.partnerName.slice(0, 1).toUpperCase()}</span>
         <span className="chat-thread-copy"><strong>{item.partnerName}</strong><small>{item.lastMessageBody === '' ? 'Фото' : item.lastMessageBody ?? 'Начать диалог'}</small>{!item.activeConnection && <em>Не подключён</em>}</span>
-        <span className="chat-thread-meta">{item.lastMessageAt && <time>{timeLabel(item.lastMessageAt)}</time>}{item.unreadCount > 0 && <b>{item.unreadCount > 99 ? '99+' : item.unreadCount}</b>}</span>
+        <span className="chat-thread-meta">{item.lastMessageAt && <time dateTime={item.lastMessageAt}>{chatListTimeLabel(item.lastMessageAt)}</time>}{item.unreadCount > 0 && <b>{item.unreadCount > 99 ? '99+' : item.unreadCount}</b>}</span>
       </button>)}</div>
       {openError && <p className="error" role="alert">Не удалось открыть диалог. Попробуйте ещё раз.</p>}
     </AsyncView>
@@ -382,18 +383,23 @@ export function ChatConversationPage() {
         {nextCursor && <button type="button" className="link chat-load-older" disabled={loadingOlder} onClick={() => void loadOlder()}>{loadingOlder ? 'Загружаем…' : olderError && fitLimeConversation ? 'Повторить загрузку ранних сообщений' : 'Ранее'}</button>}
         {olderError && fitLimeConversation && <p className="chat-older-error" role="alert">Не удалось загрузить ранние сообщения</p>}
         {visible.length === 0 && <StatePanel compact tone="info" title="Начните диалог" description="Напишите первое сообщение." />}
-        <div className="chat-messages">{visible.map((item) => {
+        <div className="chat-messages">{visible.map((item, index) => {
           const local = pending.find((candidate) => candidate.id === item.id)
           const own = item.senderId === actor?.userId
+          // Перед первым сообщением каждого дня — плашка даты, в пузыре остаётся только время.
+          const previous = visible[index - 1]
+          const day = !previous || chatDayKey(previous.createdAt) !== chatDayKey(item.createdAt)
+            ? <p className="chat-day-divider"><time dateTime={item.createdAt}>{chatDayLabel(item.createdAt)}</time></p>
+            : null
           if (item.meeting) {
             const active = meetingState.data ? meetingState.data.meeting?.id === item.meeting.id : item.meeting.active
-            return <article key={item.id} data-message-id={item.id} className="chat-meeting-card">
+            return <Fragment key={item.id}>{day}<article data-message-id={item.id} className="chat-meeting-card">
               <VideoIcon /><strong>{active ? item.body : 'Встреча завершена'}</strong>
               <time>{timeLabel(item.createdAt)}</time>
               {active && meetings && meetingState.data?.available && thread?.canMessage && <button type="button" className="secondary" onClick={() => setMeetingOpen(true)}>Присоединиться</button>}
-            </article>
+            </article></Fragment>
           }
-          return <div key={item.id} className="chat-message-wrap">
+          return <Fragment key={item.id}>{day}<div className="chat-message-wrap">
             {unread.data?.firstMessageId === item.id && <div className="chat-unread-divider"><span>Новые сообщения</span></div>}
             <article data-message-id={item.id} className={`chat-message ${own ? 'own' : 'partner'} ${item.image ? 'with-photo' : ''} ${highlightedId === item.id ? 'highlighted' : ''}`}
               role="button" tabIndex={0} aria-label={`Открыть действия: ${item.body || 'Фото'}`} onClick={() => setActionMessage(item)}
@@ -403,7 +409,7 @@ export function ChatConversationPage() {
               {item.body && <p>{item.body}</p>}<small><time>{timeLabel(item.createdAt)}</time>{item.editedAt && <span>изменено</span>}{own && <span>{local?.state === 'sending' ? 'Отправляется' : local?.state === 'error' ? 'Ошибка' : 'Отправлено'}</span>}</small>
               {local?.state === 'error' && <button type="button" className="link" onClick={(event) => { event.stopPropagation(); void deliver(local) }}>Повторить</button>}
             </article>
-          </div>
+          </div></Fragment>
         })}<div ref={endRef} /></div>
         {unread.data && unread.data.unreadCount > 0 && <button type="button" className="chat-new-button" onClick={() => unread.data?.firstMessageId && void revealMessage(unread.data.firstMessageId)}>К новым <b>{unread.data.unreadCount}</b></button>}
       </section>
