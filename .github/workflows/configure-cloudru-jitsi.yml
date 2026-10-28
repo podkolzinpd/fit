@@ -30,6 +30,13 @@ jobs:
   check:
     runs-on: ${{ github.event_name == 'pull_request' && 'ubuntu-24.04' || fromJSON('["self-hosted","cloudru-stage"]') }}
     steps:
+      - name: Remove only the generated root-owned cache from prior meeting preparation
+        if: github.event_name != 'pull_request'
+        run: |
+          set -euo pipefail
+          test "$GITHUB_WORKSPACE" = /opt/actions-runner/_work/fit/fit
+          sudo rm -f "$GITHUB_WORKSPACE/infra/jitsi/__pycache__/prepare.cpython-312.pyc"
+          sudo rmdir "$GITHUB_WORKSPACE/infra/jitsi/__pycache__" 2>/dev/null || true
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
@@ -63,9 +70,9 @@ jobs:
             prepare) sudo bash infra/jitsi/prepare-host.sh ;;
             resume) sudo bash infra/jitsi/resume-host.sh ;;
             ingress) sudo bash infra/jitsi/activate-ingress.sh ;;
-            diagnose) sudo python3 infra/jitsi/diagnose-host.py ;;
-            auth) sudo python3 infra/jitsi/probe_auth.py ;;
-            proxy) sudo python3 infra/jitsi/refresh_proxy.py ;;
+            diagnose) sudo python3 -B infra/jitsi/diagnose-host.py ;;
+            auth) sudo python3 -B infra/jitsi/probe_auth.py ;;
+            proxy) sudo python3 -B infra/jitsi/refresh_proxy.py ;;
             qa)
               umask 077
               sudo --preserve-env=QA_PUBLIC_KEY "$(command -v node)" infra/jitsi/issue-qa.mjs > "$RUNNER_TEMP/fit-jitsi-qa.enc.json"
