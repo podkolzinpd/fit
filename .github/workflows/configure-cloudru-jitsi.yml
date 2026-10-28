@@ -10,12 +10,18 @@ on:
       phase:
         type: choice
         default: prepare
-        options: [prepare, resume, ingress, diagnose, auth, proxy]
+        options: [prepare, resume, ingress, diagnose, auth, proxy, qa]
+      qa_public_key:
+        type: string
+        default: ''
   workflow_call:
     inputs:
       phase:
         type: string
         default: prepare
+      qa_public_key:
+        type: string
+        default: ''
 
 permissions:
   contents: read
@@ -60,7 +66,18 @@ jobs:
             diagnose) sudo python3 infra/jitsi/diagnose-host.py ;;
             auth) sudo python3 infra/jitsi/probe_auth.py ;;
             proxy) sudo python3 infra/jitsi/refresh_proxy.py ;;
+            qa)
+              umask 077
+              sudo --preserve-env=QA_PUBLIC_KEY "$(command -v node)" infra/jitsi/issue-qa.mjs > "$RUNNER_TEMP/fit-jitsi-qa.enc.json"
+              ;;
             *) exit 1 ;;
           esac
         env:
           JITSI_PHASE: ${{ inputs.phase }}
+          QA_PUBLIC_KEY: ${{ inputs.qa_public_key }}
+      - if: inputs.phase == 'qa'
+        uses: actions/upload-artifact@v4
+        with:
+          name: fit-jitsi-qa-ciphertext
+          path: ${{ runner.temp }}/fit-jitsi-qa.enc.json
+          retention-days: 1

@@ -13,7 +13,11 @@ on:
         description: Optional meeting infrastructure action; never changes API feature flag
         type: choice
         default: prepare
-        options: [prepare, resume, ingress, diagnose, auth, proxy]
+        options: [prepare, resume, ingress, diagnose, auth, proxy, qa]
+      qa_public_key:
+        description: Ephemeral RSA public key for encrypted synthetic five-minute room credentials
+        type: string
+        default: ''
       capacity:
         description: Read only bounded host/container resource aggregates; skip application diagnostics
         type: boolean
@@ -60,6 +64,7 @@ jobs:
     uses: ./.github/workflows/configure-cloudru-jitsi.yml
     with:
       phase: ${{ inputs.jitsi_phase }}
+      qa_public_key: ${{ inputs.qa_public_key }}
   capacity:
     if: github.event_name == 'workflow_dispatch' && inputs.capacity && !inputs.prepare_jitsi
     runs-on: [self-hosted, cloudru-stage]
