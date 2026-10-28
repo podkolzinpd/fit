@@ -17,6 +17,17 @@ for service in web prosody jicofo jvb; do
   test "$limit" -gt 0
   printf '%s: memory limit %s bytes; parent fit-jitsi.slice\n' "$service" "$limit"
 done
+echo 'Checking JWT and internal credentials are configured (values suppressed)'
+prosody=$(podman ps --filter 'label=io.podman.compose.project=fit-jitsi' --filter 'label=com.docker.compose.service=prosody' --format '{{.ID}}')
+podman exec "$prosody" /bin/sh -c 'test "$ENABLE_AUTH" = 1 && test "$AUTH_TYPE" = jwt && test "$ENABLE_GUESTS" = 0 && test "$JWT_ALLOW_EMPTY" = 0 && test -n "$JWT_APP_SECRET"'
+for service in jicofo jvb; do
+  container=$(podman ps --filter 'label=io.podman.compose.project=fit-jitsi' --filter "label=com.docker.compose.service=$service" --format '{{.ID}}')
+  if test "$service" = jicofo; then
+    podman exec "$container" /bin/sh -c 'test -n "$JICOFO_AUTH_PASSWORD"'
+  else
+    podman exec "$container" /bin/sh -c 'test -n "$JVB_AUTH_PASSWORD"'
+  fi
+done
 for attempt in $(seq 1 30); do
   if curl --fail --silent --max-time 5 http://127.0.0.1:8000/libs/lib-jitsi-meet.min.js -o /dev/null; then
     curl --fail --silent --max-time 5 http://127.0.0.1:18080/ready >/dev/null

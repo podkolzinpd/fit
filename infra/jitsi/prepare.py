@@ -171,6 +171,7 @@ After=network-online.target
 Type=oneshot
 RemainAfterExit=yes
 WorkingDirectory=/opt/fit-jitsi
+EnvironmentFile=/opt/fit-jitsi/.env
 ExecStart=/usr/bin/podman-compose --podman-run-args=--cgroup-parent=fit-jitsi.slice -p fit-jitsi -f compose.yml -f compose.fit.yml up -d
 ExecStop=/usr/bin/podman-compose -p fit-jitsi -f compose.yml -f compose.fit.yml down
 TimeoutStartSec=300

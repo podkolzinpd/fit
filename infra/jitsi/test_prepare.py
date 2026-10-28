@@ -45,6 +45,7 @@ class BundleTest(unittest.TestCase):
             self.assertIn('MemoryMax=2G', (output / 'fit-jitsi.slice').read_text())
             self.assertIn('CPUQuota=100%', (output / 'fit-jitsi.slice').read_text())
             self.assertEqual((output / 'compose.fit.yml').read_text().count('cgroup_parent: fit-jitsi.slice'), 4)
+            self.assertIn('EnvironmentFile=/opt/fit-jitsi/.env', (output / 'fit-jitsi.service').read_text())
 
     def test_invalid_addresses_and_config_injection_create_nothing(self):
         with tempfile.TemporaryDirectory() as root:
