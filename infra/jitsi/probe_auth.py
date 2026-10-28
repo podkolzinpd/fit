@@ -27,10 +27,14 @@ class WebSocket:
                            f'Sec-WebSocket-Key: {key}\r\nSec-WebSocket-Version: 13\r\n'
                            'Sec-WebSocket-Protocol: xmpp\r\n\r\n').encode())
         while b'\r\n\r\n' not in self.buffer:
-            self.buffer += self.sock.recv(65536)
+            part = self.sock.recv(65536)
+            if not part:
+                raise RuntimeError('WebSocket upgrade connection closed')
+            self.buffer += part
         headers, self.buffer = self.buffer.split(b'\r\n\r\n', 1)
         if not headers.startswith(b'HTTP/1.1 101 '):
-            raise RuntimeError('XMPP WebSocket upgrade rejected')
+            status = headers.split(b'\r\n', 1)[0].split(b' ')[1].decode()
+            raise RuntimeError(f'XMPP WebSocket upgrade rejected: HTTP {status}')
 
     def exact(self, size):
         while len(self.buffer) < size:
