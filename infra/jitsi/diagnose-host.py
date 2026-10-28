@@ -22,7 +22,9 @@ def redact(text):
     return text
 
 
-run(['systemctl', 'start', 'fit-jitsi.service'], timeout=90)
+was_active = run(['systemctl', 'is-active', '--quiet', 'fit-jitsi.service']).returncode == 0
+if not was_active:
+    run(['systemctl', 'start', 'fit-jitsi.service'], timeout=90)
 try:
     ids = run(['podman', 'ps', '-a', '--filter', 'label=io.podman.compose.project=fit-jitsi', '--format', '{{.ID}}']).stdout.split()
     for container in ids:
@@ -34,6 +36,16 @@ try:
             'memory': data['HostConfig'].get('Memory'),
             'service': data['Config']['Labels'].get('com.docker.compose.service'),
         }))
+        print(redact(run(['podman', 'top', container, 'comm']).stdout))
+        service = data['Config']['Labels'].get('com.docker.compose.service')
+        if service == 'web':
+            print('XMPP DNS: ' + redact(run(['podman', 'exec', container, 'getent', 'hosts', 'xmpp.meet.jitsi']).stdout))
+            result = run(['podman', 'exec', container, 'curl', '--silent', '--max-time', '4', '-o', '/dev/null',
+                          '-w', '%{http_code}', 'http://xmpp.meet.jitsi:5280/xmpp-websocket'])
+            print('Internal XMPP HTTP status: ' + result.stdout + '; exit=' + str(result.returncode))
+        if service == 'prosody':
+            result = run(['podman', 'exec', container, 'prosodyctl', '--config', '/run/prosody/config/prosody.cfg.lua', 'check', 'config'])
+            print('Prosody config check: ' + redact(result.stdout + result.stderr)[-4000:])
         if data['State']['Status'] != 'running':
             try:
                 process = run(['podman', 'start', '--attach', container], timeout=8)
@@ -42,4 +54,5 @@ try:
                 output = (error.stdout or b'').decode() + (error.stderr or b'').decode()
             print(redact(output)[-6000:])
 finally:
-    run(['systemctl', 'stop', 'fit-jitsi.service'], timeout=60)
+    if not was_active:
+        run(['systemctl', 'stop', 'fit-jitsi.service'], timeout=60)
