@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Render a new dedicated-host bundle; never activate services or print secrets."""
+"""Render an isolated, bounded bundle for the existing Fit host; no activation."""
 import argparse
 import hashlib
 import ipaddress
@@ -51,7 +51,7 @@ def prepare(destination, public_ip, private_ip, domain):
         'ENABLE_XMPP_WEBSOCKET': '1',
         'JVB_ADVERTISE_IPS': str(public), 'JVB_ADVERTISE_PRIVATE_CANDIDATES': '0',
         'JVB_DISABLE_STUN': '1', 'JVB_PORT': '10000',
-        'JICOFO_MAX_MEMORY': '1024m', 'VIDEOBRIDGE_MAX_MEMORY': '2048m',
+        'JICOFO_MAX_MEMORY': '256m', 'VIDEOBRIDGE_MAX_MEMORY': '640m',
         'ENABLE_RECORDING': '0', 'ENABLE_TRANSCRIPTIONS': '0',
         'ENABLE_TRACING': '0', 'DISABLE_POLLS': '1',
         'TURNS_HOST': domain, 'TURNS_PORT': '5349', 'TURN_TTL': '600',
@@ -59,6 +59,28 @@ def prepare(destination, public_ip, private_ip, domain):
     }
     write('.env', ''.join(f'{key}={value}\n' for key, value in values.items()))
     shutil.copyfile(source, destination / 'compose.yml')
+    write('compose.fit.yml', '''services:
+  web:
+    mem_limit: 128m
+    cpus: 0.15
+    cgroup_parent: fit-jitsi.slice
+    logging: {driver: none}
+  prosody:
+    mem_limit: 256m
+    cpus: 0.25
+    cgroup_parent: fit-jitsi.slice
+    logging: {driver: none}
+  jicofo:
+    mem_limit: 512m
+    cpus: 0.25
+    cgroup_parent: fit-jitsi.slice
+    logging: {driver: none}
+  jvb:
+    mem_limit: 1024m
+    cpus: 0.75
+    cgroup_parent: fit-jitsi.slice
+    logging: {driver: none}
+''')
     write('api.env.fragment', '\n'.join([
         'JITSI_ENABLED=false', f'JITSI_ORIGIN=https://{domain}',
         'JITSI_XMPP_DOMAIN=meet.jitsi', 'JITSI_MUC_DOMAIN=muc.meet.jitsi',
@@ -68,42 +90,23 @@ def prepare(destination, public_ip, private_ip, domain):
     origins = ['https://fit-training.ru', 'https://www.fit-training.ru',
                'capacitor://localhost', 'http://localhost', 'https://localhost']
     allowed = '\n'.join(f'    "{origin}" 1;' for origin in origins)
-    acme = 'location ^~ /.well-known/acme-challenge/ { root /var/www/fit-acme; }'
-    write('nginx-http.conf', f'''server {{
-    listen 80;
-    server_name {domain};
-    access_log off;
-    {acme}
-    location / {{ return 404; }}
-}}
-''')
-    write('nginx.conf', f'''map $http_origin $fit_meeting_origin {{
+    write('nginx-origins.conf', f'''map $http_origin $fit_meeting_origin {{
     default 0;
 {allowed}
 }}
-server {{
-    listen 80;
-    server_name {domain};
-    access_log off;
-    {acme}
-    location / {{ return 301 https://$host$request_uri; }}
-}}
-server {{
-    listen 443 ssl;
-    server_name {domain};
-    ssl_certificate /etc/fit-jitsi/fullchain.pem;
-    ssl_certificate_key /etc/fit-jitsi/privkey.pem;
-    ssl_protocols TLSv1.2 TLSv1.3;
-    access_log off;
-    error_log /dev/null crit;
-    add_header Strict-Transport-Security "max-age=31536000" always;
+''')
+    write('nginx-locations.conf', '''
     location ^~ /libs/ {{
+        access_log off;
+        error_log /dev/null crit;
         proxy_pass http://127.0.0.1:8000;
         proxy_hide_header Access-Control-Allow-Origin;
         add_header Access-Control-Allow-Origin "*" always;
         add_header X-Content-Type-Options nosniff always;
     }}
     location = /xmpp-websocket {{
+        access_log off;
+        error_log /dev/null crit;
         if ($fit_meeting_origin = 0) {{ return 403; }}
         proxy_pass http://127.0.0.1:8000;
         proxy_http_version 1.1;
@@ -114,6 +117,8 @@ server {{
         proxy_read_timeout 90s;
     }}
     location ^~ /colibri-ws/ {{
+        access_log off;
+        error_log /dev/null crit;
         if ($fit_meeting_origin = 0) {{ return 403; }}
         proxy_pass http://127.0.0.1:8000;
         proxy_http_version 1.1;
@@ -123,9 +128,7 @@ server {{
         proxy_set_header X-Forwarded-Proto https;
         proxy_read_timeout 90s;
     }}
-    location / {{ return 404; }}
-}}
-''')
+'''.replace('{{', '{').replace('}}', '}'))
     write('turnserver.conf', f'''listening-ip={private}
 relay-ip={private}
 external-ip={public}/{private}
@@ -161,17 +164,35 @@ log-file=/dev/null
 ''')
     write('fit-jitsi.service', '''[Unit]
 Description=Fit meeting infrastructure
+Requires=fit-jitsi.slice
 Wants=network-online.target
 After=network-online.target
 [Service]
 Type=oneshot
 RemainAfterExit=yes
 WorkingDirectory=/opt/fit-jitsi
-ExecStart=/usr/bin/podman-compose -p fit-jitsi -f compose.yml up -d
-ExecStop=/usr/bin/podman-compose -p fit-jitsi -f compose.yml down
+ExecStart=/usr/bin/podman-compose -p fit-jitsi -f compose.yml -f compose.fit.yml up -d
+ExecStop=/usr/bin/podman-compose -p fit-jitsi -f compose.yml -f compose.fit.yml down
 TimeoutStartSec=300
+StandardOutput=null
+StandardError=null
 [Install]
 WantedBy=multi-user.target
+''')
+    write('fit-jitsi.slice', '''[Unit]
+Description=Fit meetings aggregate resource budget
+[Slice]
+CPUQuota=100%
+CPUWeight=20
+MemoryHigh=1800M
+MemoryMax=2G
+MemorySwapMax=0
+IOWeight=20
+''')
+    write('coturn-limits.conf', '''[Service]
+Slice=fit-jitsi.slice
+MemoryMax=128M
+CPUQuota=10%
 ''')
     write('renew-certificate', f'''#!/bin/sh
 set -eu
@@ -190,7 +211,7 @@ if __name__ == '__main__':
     parser.add_argument('--output', type=Path, required=True)
     parser.add_argument('--public-ip', required=True)
     parser.add_argument('--private-ip', required=True)
-    parser.add_argument('--domain', default='meet.fit-training.ru')
+    parser.add_argument('--domain', default='api.fit-training.ru')
     args = parser.parse_args()
     prepare(args.output, args.public_ip, args.private_ip, args.domain)
     print('Bundle prepared with mode 0700; credentials written only to protected files. No services activated.')

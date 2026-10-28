@@ -24,13 +24,16 @@ class BundleTest(unittest.TestCase):
             self.assertEqual(len(set(credentials)), 4)
             for credential in credentials:
                 self.assertEqual(len(bytes.fromhex(credential)), 32)
-                self.assertNotIn(credential, (output / 'nginx.conf').read_text())
+                self.assertNotIn(credential, (output / 'nginx-locations.conf').read_text())
             for name in ['.env', 'api.env.fragment', 'turnserver.conf']:
                 self.assertEqual(stat.S_IMODE((output / name).stat().st_mode), 0o600)
             before = (output / '.env').read_bytes()
             with self.assertRaises(FileExistsError):
                 module.prepare(output, '8.8.8.8', '10.70.10.8', 'meet.example.com')
             self.assertEqual(before, (output / '.env').read_bytes())
+            self.assertIn('MemoryMax=2G', (output / 'fit-jitsi.slice').read_text())
+            self.assertIn('CPUQuota=100%', (output / 'fit-jitsi.slice').read_text())
+            self.assertEqual((output / 'compose.fit.yml').read_text().count('cgroup_parent: fit-jitsi.slice'), 4)
 
     def test_invalid_addresses_and_config_injection_create_nothing(self):
         with tempfile.TemporaryDirectory() as root:

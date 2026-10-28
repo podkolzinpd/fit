@@ -1,0 +1,38 @@
+name: Prepare bounded Jitsi on the existing Cloud.ru VM
+
+on:
+  workflow_dispatch:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - run: python3 -B -m unittest discover -s infra/jitsi -p 'test_*.py'
+      - run: bash -n infra/jitsi/prepare-host.sh
+      - name: Validate bounded compose without credentials
+        run: |
+          ruby -e 'require "yaml"; YAML.load_file("infra/jitsi/compose.upstream.yml")'
+  prepare:
+    needs: check
+    runs-on: [self-hosted, cloudru-stage]
+    timeout-minutes: 15
+    concurrency:
+      group: cloudru-stage-vm
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Prepare isolated meeting containers without public ingress or API enablement
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REPOSITORY" = podkolzinpd/fit
+          test "$(hostname)" = fit-stage-app
+          sudo bash infra/jitsi/prepare-host.sh

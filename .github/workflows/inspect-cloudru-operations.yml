@@ -5,6 +5,10 @@ on:
     - cron: '43 * * * *'
   workflow_dispatch:
     inputs:
+      prepare_jitsi:
+        description: Prepare isolated bounded Jitsi containers on existing VM; no ingress, firewall or API activation
+        type: boolean
+        default: false
       capacity:
         description: Read only bounded host/container resource aggregates; skip application diagnostics
         type: boolean
@@ -45,15 +49,17 @@ on:
 permissions:
   contents: read
 
-concurrency:
-  group: cloudru-stage-vm
-  cancel-in-progress: false
-
 jobs:
+  prepare-jitsi:
+    if: github.event_name == 'workflow_dispatch' && inputs.prepare_jitsi
+    uses: ./.github/workflows/configure-cloudru-jitsi.yml
   capacity:
-    if: github.event_name == 'workflow_dispatch' && inputs.capacity
+    if: github.event_name == 'workflow_dispatch' && inputs.capacity && !inputs.prepare_jitsi
     runs-on: [self-hosted, cloudru-stage]
     timeout-minutes: 3
+    concurrency:
+      group: cloudru-stage-vm
+      cancel-in-progress: false
     steps:
       - name: Read host and container capacity without application data or credentials
         run: |
@@ -78,9 +84,12 @@ jobs:
           printf 'Listening port numbers (no addresses/process arguments)\n'
           ss -H -lntu | awk '{n=split($5,a,":"); print $1, a[n]}' | sort -u
   inspect:
-    if: github.event_name != 'workflow_dispatch' || !inputs.capacity
+    if: github.event_name != 'workflow_dispatch' || (!inputs.capacity && !inputs.prepare_jitsi)
     runs-on: [self-hosted, cloudru-stage]
     timeout-minutes: 8
+    concurrency:
+      group: cloudru-stage-vm
+      cancel-in-progress: false
     steps:
       - uses: actions/checkout@v4
         with:
