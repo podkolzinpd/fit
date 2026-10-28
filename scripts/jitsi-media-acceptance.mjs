@@ -11,6 +11,7 @@ const credentials = JSON.parse(Buffer.concat([decipher.update(Buffer.from(encryp
 if (credentials.expiresAt*1000 < Date.now()+30000) throw new Error('Synthetic room credentials expired')
 const browser = await chromium.launch({headless:true,args:['--use-fake-device-for-media-stream','--use-fake-ui-for-media-stream','--autoplay-policy=no-user-gesture-required']})
 let phase = 'default'
+let lastSamples = []
 try {
   for (const relay of [false,true]) {
     phase = relay ? 'forced-turn' : 'default'
@@ -38,6 +39,7 @@ try {
           state.connection=connection
           connection.addEventListener(sdk.events.connection.CONNECTION_FAILED,()=>{state.error='connection-failed'})
           connection.addEventListener(sdk.events.connection.CONNECTION_ESTABLISHED,async()=>{
+            state.state='signaling-connected'
             try {
               const conference=connection.initJitsiConference(room,{openBridgeChannel:true,p2p:{enabled:false},enableLayerSuspension:true})
               state.conference=conference
@@ -70,6 +72,7 @@ try {
       let received
       for(let attempt=0;attempt<120;attempt++) {
         received=await samples()
+        lastSamples=received
         if(received.some(peer=>peer.error))throw new Error('Controlled conference failure')
         if(received.every(peer=>peer.state==='joined'&&peer.frames>3&&peer.audio>500))break
         if(attempt===119)throw new Error('Bidirectional media not received')
@@ -91,6 +94,6 @@ try {
     }
   }
 } catch {
-  console.error(JSON.stringify({phase,result:'failed'}))
+  console.error(JSON.stringify({phase,result:'failed',peers:lastSamples}))
   process.exitCode=1
 } finally {await browser.close()}

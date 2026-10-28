@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
       - infra/jitsi/**
+      - scripts/jitsi-*.mjs
       - .github/workflows/configure-cloudru-jitsi.yml
   workflow_dispatch:
     inputs:
@@ -58,6 +59,10 @@ jobs:
       group: cloudru-stage-vm
       cancel-in-progress: false
     steps:
+      - if: inputs.phase == 'qa'
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
@@ -75,7 +80,7 @@ jobs:
             proxy) sudo python3 -B infra/jitsi/refresh_proxy.py ;;
             qa)
               umask 077
-              sudo --preserve-env=QA_PUBLIC_KEY "$(command -v node)" infra/jitsi/issue-qa.mjs > "$RUNNER_TEMP/fit-jitsi-qa.enc.json"
+              sudo --preserve-env=QA_PUBLIC_KEY "$(command -v node)" scripts/jitsi-issue-qa.mjs > "$RUNNER_TEMP/fit-jitsi-qa.enc.json"
               ;;
             *) exit 1 ;;
           esac
