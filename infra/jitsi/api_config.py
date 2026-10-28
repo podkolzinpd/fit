@@ -52,6 +52,11 @@ def merge(current, fragment, server, enabled):
 def protected_read(path):
     info = path.lstat()
     if not stat.S_ISREG(info.st_mode) or info.st_uid != 0 or info.st_mode & 0o077:
+        # File identity/permissions are safe diagnostics; no file content.
+        print(json.dumps({'event': 'meeting_protected_file_rejected',
+                          'file': path.name, 'uid': info.st_uid,
+                          'mode': oct(stat.S_IMODE(info.st_mode)),
+                          'regular': stat.S_ISREG(info.st_mode)}))
         raise ValueError('Expected root-owned protected regular file')
     return path.read_text()
 
@@ -102,5 +107,11 @@ def main():
 if __name__ == '__main__':
     try:
         main()
-    except Exception:
-        raise SystemExit('Meeting API configuration rejected; no secret diagnostics emitted')
+    except Exception as error:
+        safe_reasons = {'Unexpected execution target', 'Expected root-owned protected regular file',
+                        'Invalid or duplicate environment entry', 'Unexpected meeting target',
+                        'Invalid protected fragment', 'Provider credential mismatch',
+                        'Existing credential mismatch', 'Unrelated environment changed',
+                        'Stage cannot disable an enabled feature'}
+        reason = str(error) if str(error) in safe_reasons else type(error).__name__
+        raise SystemExit(f'Meeting API configuration rejected: {reason}')
