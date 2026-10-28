@@ -57,13 +57,13 @@ semantic tokens, icons.tsx. Новая feature-local палитра не соз�
 | P4 | Черновик сохраняется при входе/выходе | WebKit2/2, chat regression31/31; recovery4/4 | черновик проверен; real reconnect не проверен |
 | P5 | UI390/430 и trainer390/1440, client light/dark | просмотренные screenshots, SDK double | UI проверен; synthetic-device audio/video/mute проверены, физические устройства после включения |
 | P6 | Auth/validation/JWT room/expiry/config off | API boundary/credentials, PostgreSQL17 CI | API/DB/RLS и реальный Jitsi JWT admission проверены |
-| P7 | Выпуск/двустороннее media/физические устройства | Chromium peers: UDP и forced TURN/TLS; mute/unmute audio/video | media проверено; выпуск в работе; физические устройства после включения по решению пользователя28.10 |
+| P7 | Выпуск/двустороннее media/физические устройства | Chromium peers: UDP и forced TURN/TLS; mute/unmute audio/video | browser media и выпуск проверены; физические устройства после включения по решению пользователя28.10 |
 
 Полный frontend unit/coverage:323 файла,2897 тестов; statements81.82%,
 branches76.75%, functions81.63%, lines86.33%. API:1537 passed,205 skipped;
 в skipped входят локально не запущенные DB integration tests.
 Это не доказательство сквозного видео. PR1852 уже слит в main a612842a;
-JITSI_ENABLED пока off; включение согласовано после browser media. Пользователь согласовал настройку на существующей
+JITSI_ENABLED=true применён штатным release40699668008 на main a612842a. Пользователь согласовал настройку на существующей
 VM после замера ресурсов40680981611: доступно3110MiB RAM и35GiB диска,
 обычно CPU1–4%. Отдельная VM не создаётся. Публичный origin — действующий
 api.fit-training.ru с существующим TLS; внутренние XMPP names прежние.
@@ -81,7 +81,7 @@ MemAvailable2807MiB, свободно33GiB, OOM0; это idle после син�
 | I1 | Изолированный запуск на текущей VM,2GiB/1CPU | cgroup read-back40684659185; capacity40686705514 | проверено |
 | I2 | HTTPS SDK/XMPP и аутентифицированный TURN | Nginx integration; TLS40683762312; JWT40685710970; compressed SDK40686470729 | proxy/TLS/JWT и реальный TURN/TLS relay проверены |
 | I3 | Реальное двустороннее media и forced TURN | два независимых Chromium контекста, decoded video/audio bytes, relay policy и TLS; capacity40692320786 | browser media проверено; физические устройства перенесены после включения |
-| I4 | Включение через защищённый API env и штатный release | public app read-back | не проверено; flag off |
+| I4 | Включение через защищённый API env и штатный release | config40699453851; release40699668008; read-back40699988438; public health/ready и published JS | проверено; авторизованная проверка на телефонах ожидается |
 
 Внешняя сеть расширяется только на10000/UDP,5349/TCP,49160–49200/UDP;
 SSH и внутренние XMPP/metrics порты не открываются. Допустимая ёмкость
@@ -100,3 +100,20 @@ source0.0.0.0/0. Замер40692320786: MemAvailable2715MiB, OOM0.
 Локальные API/PG проверки не используют production credentials или БД.
 Реальный WebRTC между браузерами проверен; физические устройства ещё не проверены.
 SDK double в UI-тесте сам по себе не доказывает передачу видео.
+
+Выпуск28.10: protected env backup/merge проверены на VM; post-release status
+40699988438 подтвердил configuredEnabled=true, runtimeEnabled=true и совпадение
+всех шести runtime keys с защищённым env (значения не выводились). Image и
+RUNNING_SHA=a612842a3d38b2600b213e506ef13479883b3d03; текущий main CI40680091536
+успешен, release40699668008 успешен с обычной проверкой pending migrations.
+Публичные /api/health и /api/ready200, meeting route без сессии401.
+Published JS index-Cz3DP1-d.js содержит UI видеовстреч, SHA256
+675f4d1fa492a719c575cb62702a7cd83fc5e6b852683a68986e734d4f898b63.
+Повторная media-проверка использовала непосредственно адаптер
+src/data/queries/jitsi-media.ts через scripts/jitsi-media-acceptance.mjs
+(QA40699887135): оба клиента decoded16frames и audio>1100bytes normal UDP;
+forced relay/TLS decoded17/20frames и audio>1300bytes, policy=relay у обоих.
+Встроенный браузер открыт на auth: действующей Fit-сессии нет, поэтому
+авторизованный пользовательский диалог и фактическая доставка карточки в
+production не объявляются проверенными. Их DB/UI coverage и физическая
+проверка пользователя — разные свидетельства.

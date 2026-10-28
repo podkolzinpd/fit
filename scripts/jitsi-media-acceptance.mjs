@@ -2,6 +2,12 @@
 import { readFileSync } from 'node:fs'
 import { createDecipheriv, privateDecrypt } from 'node:crypto'
 import { chromium } from '@playwright/test'
+import ts from 'typescript'
+
+// Execute the application adapter itself against the published provider.
+const adapter = ts.transpileModule(readFileSync(new URL('../src/data/queries/jitsi-media.ts', import.meta.url), 'utf8'),
+  {compilerOptions:{module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022}}).outputText
+  .replace(/^export (?=(?:async )?function)/gm,'') + '\nwindow.FitMeetingMedia={createMeetingPreview};'
 
 const encrypted = JSON.parse(readFileSync(process.argv[2],'utf8'))
 const key = privateDecrypt({key:readFileSync(process.argv[3]),oaepHash:'sha256'},Buffer.from(encrypted.key,'base64'))
@@ -28,34 +34,24 @@ try {
           }
         },relay)
         await page.goto('https://fit-training.ru/__fit_video_qa__')
-        await page.addScriptTag({url:`${credentials.origin}/libs/lib-jitsi-meet.min.js`})
-        await page.evaluate(async ({origin,domain,muc,room,token})=>{
-          window.__qa={state:'starting',error:null,tracks:[],connection:null,conference:null}
+        await page.addScriptTag({content:adapter})
+        await page.evaluate(async credentials=>{
+          window.__qa={state:'starting',error:null,media:null,elements:new Map()}
           const state=window.__qa
-          const sdk=window.JitsiMeetJS
-          sdk.setLogLevel('error'); sdk.init({disableAudioLevels:true,disableSimulcast:true,analytics:{disabled:true}})
-          state.tracks=await sdk.createLocalTracks({devices:['audio','video'],resolution:180})
-          const connection=new sdk.JitsiConnection(null,token,{hosts:{domain,muc},serviceUrl:`${origin.replace('https:','wss:')}/xmpp-websocket`,enableWebsocketResume:true,p2p:{stunServers:[]}})
-          state.connection=connection
-          connection.addEventListener(sdk.events.connection.CONNECTION_FAILED,()=>{state.error='connection-failed'})
-          connection.addEventListener(sdk.events.connection.CONNECTION_ESTABLISHED,async()=>{
-            state.state='signaling-connected'
-            try {
-              const conference=connection.initJitsiConference(room,{openBridgeChannel:true,p2p:{enabled:false},enableLayerSuspension:true})
-              state.conference=conference
-              conference.on(sdk.events.conference.CONFERENCE_FAILED,()=>{state.error='conference-failed'})
-              conference.on(sdk.events.conference.CONFERENCE_JOINED,()=>{state.state='joined'})
-              conference.on(sdk.events.conference.TRACK_ADDED,track=>{
-                if(track.isLocal())return
-                const element=document.createElement(track.getType()==='video'?'video':'audio')
-                element.autoplay=true; element.muted=track.getType()==='video';document.body.append(element)
-                track.attach(element);element.play().catch(()=>{})
-              })
-              for(const track of state.tracks)await conference.addTrack(track)
-              conference.join()
-            } catch {state.error='setup-failed'}
-          })
-          connection.connect()
+          try {
+            const media=await window.FitMeetingMedia.createMeetingPreview(credentials.origin)
+            state.media=media
+            const attach=tracks=>{
+              for(const track of tracks){
+                if(track.local||state.elements.has(track.id))continue
+                const element=document.createElement(track.kind==='video'?'video':'audio')
+                element.autoplay=true;element.muted=track.kind==='video'
+                document.body.append(element);track.attach(element)
+                element.play().catch(()=>{});state.elements.set(track.id,element)
+              }
+            }
+            await media.connect(credentials,{tracks:attach,status:value=>{state.state=value}})
+          } catch {state.error='adapter-setup-failed'}
         },{...credentials,token:credentials.tokens[index]})
       }))
       const samples = async()=>Promise.all(pages.map(page=>page.evaluate(async()=>{
@@ -83,15 +79,16 @@ try {
       // nomination; enforce the actual relay policy and TLS transport instead.
       if(relay&&!received.every(peer=>peer.policies.length>0&&peer.policies.every(policy=>policy==='relay')&&peer.selected.some(candidate=>candidate.relayProtocol==='tls')))throw new Error('TURN TLS candidate not selected')
       await Promise.all(pages.map(page=>page.evaluate(async()=>{
-        for(const track of window.__qa.tracks){await track.mute();if(!track.isMuted())throw new Error('Mute failed');await track.unmute();if(track.isMuted())throw new Error('Unmute failed')}
+        for(const kind of ['audio','video']){
+          await window.__qa.media.mute(kind,true)
+          await window.__qa.media.mute(kind,false)
+        }
       })))
       console.log(JSON.stringify({phase,result:'passed',peers:received}))
     } finally {
       await Promise.all(pages.map(page=>page.evaluate(async()=>{
         if(!window.__qa)return
-        await Promise.allSettled(window.__qa.tracks.map(track=>track.dispose()))
-        if(window.__qa.conference)await Promise.race([window.__qa.conference.leave(),new Promise(resolve=>setTimeout(resolve,2000))])
-        if(window.__qa.connection)await Promise.resolve(window.__qa.connection.disconnect())
+        if(window.__qa.media)await window.__qa.media.dispose()
       }).catch(()=>{})))
       await Promise.all(contexts.map(context=>context.close()))
     }
