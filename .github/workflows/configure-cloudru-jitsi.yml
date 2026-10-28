@@ -1,6 +1,10 @@
 name: Prepare bounded Jitsi on the existing Cloud.ru VM
 
 on:
+  pull_request:
+    paths:
+      - infra/jitsi/**
+      - .github/workflows/configure-cloudru-jitsi.yml
   workflow_dispatch:
     inputs:
       phase:
@@ -32,6 +36,7 @@ jobs:
         run: |
           ruby -e 'require "yaml"; YAML.load_file("infra/jitsi/compose.upstream.yml")'
   prepare:
+    if: github.event_name == 'workflow_dispatch'
     needs: check
     runs-on: [self-hosted, cloudru-stage]
     timeout-minutes: 15
