@@ -1,8 +1,21 @@
 import unittest
-from api_config import merge, parse
+from pathlib import Path
+import stat
+import tempfile
+from unittest.mock import patch
+from api_config import backup_original, merge, parse
 
 
 class ApiConfigTests(unittest.TestCase):
+    def test_first_backup_is_private_and_rerun_preserves_original(self):
+        with tempfile.TemporaryDirectory() as root:
+            backup = Path(root) / 'before.env'
+            backup_original(backup, 'ORIGINAL=local-fixture\n')
+            self.assertEqual(stat.S_IMODE(backup.stat().st_mode), 0o600)
+            with patch('api_config.protected_read', side_effect=lambda path: path.read_text()):
+                backup_original(backup, 'NEW=must-not-replace\n')
+            self.assertEqual(backup.read_text(), 'ORIGINAL=local-fixture\n')
+
     def setUp(self):
         self.secret = 'a' * 64
         self.fragment = ('JITSI_ENABLED=false\nJITSI_ORIGIN=https://api.fit-training.ru\n'

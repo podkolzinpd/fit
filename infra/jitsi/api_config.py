@@ -61,6 +61,14 @@ def protected_read(path):
     return path.read_text()
 
 
+def backup_original(path, current):
+    if not path.exists():
+        with open(path, 'x', opener=lambda p, f: os.open(p, f, 0o600)) as handle:
+            handle.write(current)
+    else:
+        protected_read(path)
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('mode', choices=['status', 'stage', 'enable', 'disable'])
@@ -78,11 +86,7 @@ def main():
         if args.mode == 'stage' and parse(current).get('JITSI_ENABLED') == 'true':
             raise ValueError('Stage cannot disable an enabled feature')
         backup = Path('/opt/fit-jitsi/api-before-meetings.env')
-        if not backup.exists():
-            with backup.open('x', opener=lambda p, f: os.open(p, f, 0o600)) as handle:
-                handle.write(current)
-        else:
-            protected_read(backup)
+        backup_original(backup, current)
         descriptor, temporary = tempfile.mkstemp(prefix='.api-meetings-', dir=target.parent)
         try:
             with os.fdopen(descriptor, 'w') as handle:
