@@ -2344,6 +2344,7 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
   })
 
   app.get('/v1/chat/conversations/:conversationId/meeting', async (request, reply) => {
+    reply.header('Cache-Control', 'no-store')
     const session = readYandexActorSession(request.headers)
     if (!session) return reply.code(401).send({ error: 'unauthorized' })
     const { conversationId } = request.params as { conversationId: string }

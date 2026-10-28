@@ -1,3 +1,4 @@
+import { fileURLToPath } from 'node:url'
 import { expect, test } from '@playwright/test'
 import { nativeAiUrl } from './native-ai-fixture'
 import { mockPilot, clientId, conversationId, messageId, trainerId } from './fit-lime-fixtures'
@@ -16,6 +17,11 @@ window.JitsiMeetJS={init:()=>{},setLogLevel:()=>{},events,createLocalTracks:asyn
 `
 for (const role of ['client','trainer'] as const) {
   test(`video conference preserves ${role} chat draft and posts presence after entry`, async ({ page }, testInfo) => {
+    await page.route('**/*.woff2', route => {
+      const name=new URL(route.request().url()).pathname.split('/').at(-1) ?? ''
+      if (!/^onest-[a-z-]+-normal\.woff2$/.test(name)) return route.fallback()
+      return route.fulfill({ path:fileURLToPath(new URL(`../node_modules/@fontsource-variable/onest/files/${name}`,import.meta.url)),contentType:'font/woff2' })
+    })
     await mockPilot(page,{ role, profileId:role==='trainer'?trainerId:clientId, clientLime:true, fitLime:true, workouts:[] })
     const actorId=role==='trainer'?trainerId:clientId
     const meeting='10000000-0000-4000-8000-000000000099'
@@ -37,6 +43,7 @@ for (const role of ['client','trainer'] as const) {
     await page.route(`**/v1/chat/conversations/${conversationId}/messages?*`,route=>route.fulfill({json:{messages:notice?[{id:messageId,conversationId,senderId:actorId,body:`${role==='trainer'?'Тренер':'Спортсмен'} присоединился к видеовстрече`,createdAt:'2026-10-28T10:00:00Z',editedAt:null,replyTo:null,image:null,meeting:{id:meeting,active}}]:[],nextCursor:null}}))
     await page.route(`**/v1/chat/conversations/${conversationId}/unread`,route=>route.fulfill({json:{unread:{firstMessageId:null,firstCreatedAt:null,unreadCount:0}}}))
     await page.goto(nativeAiUrl(`/chat/${conversationId}`))
+    if(role==='trainer' || process.env.VITE_CLIENT_LIME_ENABLED==='true') await expect(page.locator('.phone-frame')).toHaveClass(/fit-lime/)
     const composer=page.getByRole('textbox',{name:'Сообщение',exact:true})
     await composer.fill('Черновик до видеовстречи')
     await page.getByRole('button',{name:'Видеовстреча',exact:true}).click()
@@ -58,7 +65,9 @@ for (const role of ['client','trainer'] as const) {
         await page.evaluate(()=>{document.documentElement.classList.remove('theme-light');document.querySelector('.phone-frame')?.classList.remove('theme-light')})
       }
     }
-    await dialog.getByRole('button',{name:'Выйти из встречи',exact:true}).click()
+    if(role==='trainer') await page.keyboard.press('Escape')
+    else await dialog.getByRole('button',{name:'Выйти из встречи',exact:true}).click()
+    await expect(page).toHaveURL(nativeAiUrl(`/chat/${conversationId}`))
     await expect(dialog).not.toBeVisible()
     await expect(composer).toHaveValue('Черновик до видеовстречи')
     await expect.poll(()=>commands.at(-1)).toBe('leave')

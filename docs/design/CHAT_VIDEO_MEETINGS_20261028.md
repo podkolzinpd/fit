@@ -40,6 +40,24 @@ semantic tokens, icons.tsx. Новая feature-local палитра не соз�
 
 ## Проверка
 
-Все P1–P7: не проверено. Состояние изменяется только после фактических проверок.
+Проверено локально: базовая регрессия на f4d2b71d, затем целевые проверки
+после правки восстановления и уточнения Lime-fixture. Final-head CI ещё не запущен.
+
+| ID | Результат | Проверка | Статус |
+| --- | --- | --- | --- |
+| P1 | Кнопка/preview/вход у обеих ролей | WebKit real route, SDK double | UI проверен; реальные устройства не проверены |
+| P2 | До media joined нет command joined/notice | component4/4, API boundary3/3, WebKit2/2 | порядок проверен; real media/DB не проверены |
+| P3 | One-room root lock, leases и завершение | добавлен PostgreSQL integration case | не проверено: krunkit exit2 |
+| P4 | Черновик сохраняется при входе/выходе | WebKit2/2, chat regression31/31; recovery4/4 | черновик проверен; real reconnect не проверен |
+| P5 | UI390/430 и trainer390/1440, client light/dark | просмотренные screenshots, SDK double | UI проверен; камера/звук не проверены |
+| P6 | Auth/validation/JWT room/expiry/config off | API boundary/credentials3/3 | unit проверен; DB/RLS не проверены |
+| P7 | Выпуск/двустороннее media/физические устройства | сервер ещё не настроен | не проверено |
+
+Полный frontend unit/coverage:323 файла,2897 тестов; statements81.82%,
+branches76.75%, functions81.63%, lines86.33%. API:1537 passed,205 skipped;
+в skipped входят локально не запущенные DB integration tests.
+Это не доказательство сквозного видео. Draft не готов к merge до P3/P6/P7.
+Автоматический approval reviewer отклонил push; до отдельного согласия
+пользователя внешняя публикация ветки не выполняется.
 Локальные API/PG проверки не используют production credentials или БД.
 Два браузера и реальные устройства нужны для приёмки media; mock не доказывает видео.

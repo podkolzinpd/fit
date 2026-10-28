@@ -92,6 +92,7 @@ export function VideoMeeting({ repository, conversationId, origin, partnerName, 
     const media = mediaRef.current
     if (!media || busyRef.current) return
     busyRef.current = true; setStatus('connecting'); setError(null)
+    let mediaConnected = false
     try {
       const result = await repository.command(conversationId, 'prepare', tabId)
       if (!result.available || !result.meeting || !result.credentials) throw new Error('Видеовстречи сейчас недоступны.')
@@ -107,14 +108,15 @@ export function VideoMeeting({ repository, conversationId, origin, partnerName, 
           if (value === 'failed' && joinedRef.current) {
             joinedRef.current = false
             void media.dispose()
-            const id = meetingRef.current
-            if (id) void repository.command(conversationId, 'leave', tabId, id).catch(() => undefined)
+            // A transport failure is not an explicit exit: retain the lease
+            // for the reconnection grace period, preserving notice dedupe.
             meetingRef.current = null
             if (aliveRef.current) { setError('Связь потеряна. Попробуйте присоединиться снова.'); setCanRetry(true) }
           }
           if (aliveRef.current && (value !== 'joined' || joinedRef.current)) setStatus(value)
         },
       })
+      mediaConnected = true
       if (!aliveRef.current) return
       const confirmed = await repository.command(conversationId, 'joined', tabId, result.meeting.id)
       if (!confirmed.available || !confirmed.meeting) throw new Error('Встреча завершилась.')
@@ -123,7 +125,9 @@ export function VideoMeeting({ repository, conversationId, origin, partnerName, 
     } catch (failure) {
       await media.dispose()
       const id = meetingRef.current
-      if (id) await repository.command(conversationId, 'leave', tabId, id).catch(() => undefined)
+      // A lost joined response may have committed. Preserve that room's lease
+      // so retry reuses the same meeting and its existing per-user notice.
+      if (id && (!mediaConnected || failure instanceof MeetingAccessError)) await repository.command(conversationId, 'leave', tabId, id).catch(() => undefined)
       meetingRef.current = null; setCanRetry(true)
       if (aliveRef.current) { setStatus('failed'); setError(failure instanceof Error ? failure.message : 'Не удалось присоединиться.') }
     } finally { busyRef.current = false }

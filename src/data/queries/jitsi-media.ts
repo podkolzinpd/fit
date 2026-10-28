@@ -57,9 +57,11 @@ async function loadSdk(origin: string): Promise<JitsiSdk> {
         window.clearTimeout(timer)
         const sdk = window.JitsiMeetJS
         if (!sdk) { fail(); return }
-        sdk.init({ disableAudioLevels: true, disableSimulcast: true, analytics: { disabled: true } })
-        sdk.setLogLevel('error')
-        resolve(sdk)
+        try {
+          sdk.init({ disableAudioLevels: true, disableSimulcast: true, analytics: { disabled: true } })
+          sdk.setLogLevel('error')
+          resolve(sdk)
+        } catch { fail() }
       }
       document.head.append(script)
     })

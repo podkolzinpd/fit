@@ -47,6 +47,8 @@ export class DatabaseChatMeetings implements ChatMeetings {
         return { ...row.state, mediaOrigin: config.origin, ...(action === 'prepare' && row.state.meeting
           ? { credentials: meetingCredentials(config, row.state.meeting.id, row.actor_id) } : {}) }
       } catch (error) {
+        if (error instanceof Error && error.message === 'chat_blocked') throw new ChatCommandError('blocked')
+        if (error instanceof Error && error.message === 'chat_rate_limited') throw new ChatCommandError('rate_limited')
         if (error instanceof Error && error.message === 'chat_forbidden') throw new ChatCommandError('forbidden')
         if (error instanceof Error && error.message === 'chat_message_conflict') throw new ChatCommandError('conflict')
         if (error instanceof Error && error.message === 'chat_message_invalid') throw new ChatCommandError('invalid')

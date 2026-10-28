@@ -57,4 +57,17 @@ describe('Fit conference UX', () => {
     expect(h.onJoined).not.toHaveBeenCalled()
     expect(h.media.dispose).toHaveBeenCalled()
   })
+  it('keeps the reconnection lease when a joined acknowledgement is lost', async () => {
+    const h = harness()
+    h.command.mockImplementation((_conversation, action) => action === 'joined' ? Promise.reject(new Error('Response lost')) : Promise.resolve(prepared))
+    fireEvent.click(await screen.findByRole('button',{ name:'Присоединиться' }))
+    await waitFor(() => expect(h.media.connect).toHaveBeenCalled())
+    await act(() => { h.connected(); return Promise.resolve() })
+    expect(await screen.findByRole('alert')).toHaveTextContent('Response lost')
+    expect(h.command.mock.calls.map(call => call[1])).toEqual(['prepare','joined'])
+    expect(h.media.dispose).toHaveBeenCalled()
+    h.unmount()
+    expect(h.command.mock.calls.map(call => call[1])).not.toContain('leave')
+  })
+
 })
