@@ -1,8 +1,6 @@
 import {createHash,createCipheriv,createPublicKey,publicEncrypt,randomBytes,constants,timingSafeEqual} from 'node:crypto'
 import {createRequire} from 'node:module'
 import {pathToFileURL} from 'node:url'
-import {writeFileSync,accessSync,constants as fsConstants} from 'node:fs'
-import {join} from 'node:path'
 import {gunzipSync} from 'node:zlib'
 
 // One owner-approved private journal, manual trusted-main operation only.
@@ -272,12 +270,6 @@ export function sealJournalReceipt(receipt,publicPem) {
   iv:iv.toString('base64'),tag:cipher.getAuthTag().toString('base64'),data:data.toString('base64')}
 }
 
-function persistJournalReceipt(directory,publicPem,state,receipt) {
- if(!['prepared','committed','readback'].includes(state))throw new Error('journal_receipt_state_invalid')
- const sealed=sealJournalReceipt({...receipt,state},publicPem)
- writeFileSync(join(directory,`${state}.encrypted.json`),JSON.stringify(sealed),{mode:0o600,flag:'wx'})
-}
-
 const failOrchestrator=code=>{throw new Error('journal_import_'+code)}
 async function ownerRead(owner,work) {
  await owner.query('begin transaction isolation level repeatable read read only')
@@ -386,8 +378,9 @@ async function main() {
  if(!['inspect','apply'].includes(mode))failBootstrap('mode_invalid')
  const {readWorkoutHistoryTarget,readHistoryRegistry}=await import('./cloudru-account-history-audit.mjs')
  const target=readWorkoutHistoryTarget(process.env.FIT_WORKOUT_HISTORY_TARGET)
- readJournalTransport([process.env.FIT_JOURNAL_IMPORT_PART_1,process.env.FIT_JOURNAL_IMPORT_PART_2],
-  process.env.FIT_JOURNAL_IMPORT_SHA256,target.clientNameSha256)
+ const {loadCloudruUpload}=await import('./cloudru-journal-upload.mjs')
+ const upload=await loadCloudruUpload(target,process.env.FIT_JOURNAL_IMPORT_SHA256,process.env.FIT_JOURNAL_UPLOAD_SESSION)
+ readJournalTransport(upload.parts,process.env.FIT_JOURNAL_IMPORT_SHA256,target.clientNameSha256)
  const {buildDatabaseConnectionConfig}=await import('/app/dist/db/connection-config.js')
  if(process.env.DATABASE_URL||process.env.MIGRATION_DATABASE_URL)failBootstrap('database_target_invalid')
  const ownerConfig=buildDatabaseConnectionConfig('MIGRATION_DATABASE'),runtimeConfig=buildDatabaseConnectionConfig('DATABASE')
@@ -395,9 +388,6 @@ async function main() {
   [runtimeConfig,'fit_api',process.env.DATABASE_SSL_MODE]]) {
   if(config?.host!=='10.70.10.67'||config.port!==5432||config.database!=='fit'||config.user!==user||ssl!=='require')failBootstrap('database_target_invalid')
  }
- const publicPem=Buffer.from(process.env.FIT_JOURNAL_RECEIPT_PUBLIC_KEY_B64??'','base64').toString('utf8')
- try { sealJournalReceipt({validation:true},publicPem) } catch { failBootstrap('receipt_key_invalid') }
- try { accessSync('/receipts',fsConstants.W_OK) } catch { failBootstrap('receipt_storage_unavailable') }
  const {readSavePlannedWorkoutRequest}=await import('/app/dist/planned-workout-request.js')
  const {saveCompletedWorkout}=await import('/app/dist/workout-commands.js')
  const {createClientCard}=await import('/app/dist/domain-commands.js')
@@ -412,15 +402,15 @@ async function main() {
   await owner.connect();await runtime.connect()
   const legacyId=await legacyProfileId(process.env,target,readHistoryRegistry)
   const result=await runPreparedNewCardImport({mode,owner,runtime,target,legacyId,
-   parts:[process.env.FIT_JOURNAL_IMPORT_PART_1,process.env.FIT_JOURNAL_IMPORT_PART_2],
+   parts:upload.parts,
    approvedSha256:process.env.FIT_JOURNAL_IMPORT_SHA256,
    readRequest:readSavePlannedWorkoutRequest,saveCompleted:saveCompletedWorkout,createCard:createClientCard,
-   persistReceipt:(state,receipt)=>persistJournalReceipt('/receipts',publicPem,state,receipt),
+   persistReceipt:(state,receipt)=>upload.persistReceipt(state,receipt,sealJournalReceipt),
   })
   if(connectionInterrupted)failBootstrap('outcome_requires_readback')
   // result deliberately contains only fixed statuses/counts, never IDs, text or hashes.
   console.log(JSON.stringify({event:'private_journal_import',...result}))
- }finally{await Promise.allSettled([owner.end(),runtime.end()])}
+ }finally{await Promise.allSettled([owner.end(),runtime.end()]);upload.close()}
 }
 const safeCodes=new Set(['source_invalid','mode_invalid','database_target_invalid','target_invalid',
  'legacy_registry_unavailable','legacy_registry_too_large','legacy_registry_invalid','legacy_registry_config_missing',

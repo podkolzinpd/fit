@@ -4,11 +4,24 @@ on:
   workflow_dispatch:
     inputs:
       mode:
-        description: Inspect privately approved packet; apply creates one unclaimed card and its reviewed history
+        description: Prepare a private Cloud.ru upload, inspect, atomically apply, or remove temporary files
         type: choice
-        options: [inspect, apply]
+        options: [prepare, inspect, apply, cleanup]
         default: inspect
         required: true
+
+      upload_session:
+        description: Session returned by prepare; unused for prepare
+        type: string
+        default: ''
+      approved_sha256:
+        description: Locally approved packet SHA256, never workout content
+        type: string
+        required: true
+      receipt_public_key_b64:
+        description: Local operator PUBLIC RSA key, only required for prepare
+        type: string
+        default: ''
 
 permissions:
   contents: read
@@ -33,7 +46,7 @@ jobs:
           test "$GITHUB_REPOSITORY" = podkolzinpd/fit
           test "$GITHUB_REF" = refs/heads/main
           test "$(hostname)" = fit-stage-app
-          test "$MODE" = inspect || test "$MODE" = apply
+          case "$MODE" in prepare|inspect|apply|cleanup) ;; *) exit 1 ;; esac
           github_api() {
             curl --fail --silent --show-error --max-time 15 \
               -H "Authorization: Bearer $GH_TOKEN" -H 'Accept: application/vnd.github+json' \
@@ -57,10 +70,11 @@ jobs:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
           SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
           FIT_WORKOUT_HISTORY_TARGET: ${{ secrets.FIT_WORKOUT_HISTORY_TARGET }}
-          FIT_JOURNAL_IMPORT_PART_1: ${{ secrets.FIT_JOURNAL_IMPORT_PART_1 }}
-          FIT_JOURNAL_IMPORT_PART_2: ${{ secrets.FIT_JOURNAL_IMPORT_PART_2 }}
-          FIT_JOURNAL_IMPORT_SHA256: ${{ secrets.FIT_JOURNAL_IMPORT_SHA256 }}
-          FIT_JOURNAL_RECEIPT_PUBLIC_KEY_B64: ${{ secrets.FIT_JOURNAL_RECEIPT_PUBLIC_KEY_B64 }}
+          FIT_JOURNAL_IMPORT_SHA256: ${{ inputs.approved_sha256 }}
+          FIT_JOURNAL_RECEIPT_PUBLIC_KEY_B64: ${{ inputs.receipt_public_key_b64 }}
+          FIT_JOURNAL_UPLOAD_SESSION: ${{ inputs.upload_session }}
+          CLOUDRU_MEDIA_KEY_ID: ${{ secrets.CLOUDRU_MEDIA_MIGRATION_KEY_ID }}
+          CLOUDRU_MEDIA_KEY_SECRET: ${{ secrets.CLOUDRU_MEDIA_MIGRATION_KEY_SECRET }}
           MODE: ${{ inputs.mode }}
         shell: bash
         run: |
@@ -68,32 +82,49 @@ jobs:
           test "$GITHUB_REPOSITORY" = podkolzinpd/fit
           test "$GITHUB_REF" = refs/heads/main
           test "$(hostname)" = fit-stage-app
-          test "$MODE" = inspect || test "$MODE" = apply
+          case "$MODE" in prepare|inspect|apply|cleanup) ;; *) exit 1 ;; esac
           umask 077
           id="$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
           [[ "$id" =~ ^[0-9]+-[0-9]+$ ]]
           sudo test ! -L /opt/fit/secrets
           test "$(sudo stat -c '%u:%a' /opt/fit/secrets)" = 0:700
+          [[ "$FIT_JOURNAL_IMPORT_SHA256" =~ ^[a-f0-9]{64}$ ]]
+          if test "$MODE" = prepare; then
+            FIT_JOURNAL_UPLOAD_SESSION="$id"
+            [[ "$FIT_JOURNAL_RECEIPT_PUBLIC_KEY_B64" =~ ^[A-Za-z0-9+/=]{400,11000}$ ]]
+          fi
+          [[ "$FIT_JOURNAL_UPLOAD_SESSION" =~ ^[0-9]{1,20}-[0-9]{1,4}$ ]]
+          session="/opt/fit/secrets/journal-upload-$FIT_JOURNAL_UPLOAD_SESSION"
+          if test "$MODE" = prepare; then
+            sudo test ! -e "$session"
+            sudo install -d -m 700 "$session"
+          fi
+          sudo test ! -L "$session"
+          test "$(sudo stat -c '%u:%a' "$session")" = 0:700
           env_file="/opt/fit/secrets/private-journal-$id.env"
           sudo test ! -e "$env_file"
           sudo test ! -L "$env_file"
           sudo install -m 600 /dev/null "$env_file"
           trap 'sudo rm -f -- "$env_file"' EXIT
-          output="$RUNNER_TEMP/fit-journal-receipts-$id"
+          output="$RUNNER_TEMP/fit-journal-capability-$id"
           test ! -e "$output"
           test ! -L "$output"
           install -d -m 700 "$output"
-          jq -e '.MIGRATION_DATABASE_HOST == "10.70.10.67" and .MIGRATION_DATABASE_PORT == "5432" and
-            .MIGRATION_DATABASE_NAME == "fit" and .MIGRATION_DATABASE_USER == "fit_owner" and
-            .DATABASE_HOST == "10.70.10.67" and .DATABASE_PORT == "5432" and
-            .DATABASE_NAME == "fit" and .DATABASE_USER == "fit_api" and
-            .MIGRATION_DATABASE_URL == null and .DATABASE_URL == null and
-            all(.[]; type == "string" and length > 0 and (test("[\u0000-\u001f\u007f]") | not))' \
-            <<<"$CLOUDRU_DATABASE_CONFIG_JSON" >/dev/null
-          jq -r 'to_entries[] | select(.key | test("^(MIGRATION_DATABASE|DATABASE)_(HOST|PORT|NAME|USER|PASSWORD)$")) | "\(.key)=\(.value)"' \
-            <<<"$CLOUDRU_DATABASE_CONFIG_JSON" | sudo tee "$env_file" >/dev/null
-          names=(SUPABASE_ACCESS_TOKEN SUPABASE_PROJECT_ID FIT_WORKOUT_HISTORY_TARGET
-            FIT_JOURNAL_IMPORT_PART_1 FIT_JOURNAL_IMPORT_PART_2 FIT_JOURNAL_IMPORT_SHA256 FIT_JOURNAL_RECEIPT_PUBLIC_KEY_B64)
+          if test "$MODE" = inspect || test "$MODE" = apply; then
+            jq -e '.MIGRATION_DATABASE_HOST == "10.70.10.67" and .MIGRATION_DATABASE_PORT == "5432" and
+              .MIGRATION_DATABASE_NAME == "fit" and .MIGRATION_DATABASE_USER == "fit_owner" and
+              .DATABASE_HOST == "10.70.10.67" and .DATABASE_PORT == "5432" and
+              .DATABASE_NAME == "fit" and .DATABASE_USER == "fit_api" and
+              .MIGRATION_DATABASE_URL == null and .DATABASE_URL == null and
+              all(.[]; type == "string" and length > 0 and (test("[\u0000-\u001f\u007f]") | not))' \
+              <<<"$CLOUDRU_DATABASE_CONFIG_JSON" >/dev/null
+            jq -r 'to_entries[] | select(.key | test("^(MIGRATION_DATABASE|DATABASE)_(HOST|PORT|NAME|USER|PASSWORD)$")) | "\(.key)=\(.value)"' \
+              <<<"$CLOUDRU_DATABASE_CONFIG_JSON" | sudo tee "$env_file" >/dev/null
+          fi
+          names=(FIT_WORKOUT_HISTORY_TARGET FIT_JOURNAL_IMPORT_SHA256 FIT_JOURNAL_UPLOAD_SESSION
+            CLOUDRU_MEDIA_KEY_ID CLOUDRU_MEDIA_KEY_SECRET)
+          if test "$MODE" = inspect || test "$MODE" = apply; then names+=(SUPABASE_ACCESS_TOKEN SUPABASE_PROJECT_ID); fi
+          if test "$MODE" = prepare; then names+=(FIT_JOURNAL_RECEIPT_PUBLIC_KEY_B64); fi
           for name in "${names[@]}"; do
             value=${!name}
             test -n "$value"
@@ -102,6 +133,7 @@ jobs:
             test "$value" = "${value//$'\r'/}"
             printf '%s=%s\n' "$name" "$value" | sudo tee -a "$env_file" >/dev/null
           done
+          printf 'FIT_JOURNAL_ATTEMPT=%s\n' "$id" | sudo tee -a "$env_file" >/dev/null
           printf 'MIGRATION_DATABASE_SSL_MODE=require\nDATABASE_SSL_MODE=require\nGITHUB_REF=refs/heads/main\nGITHUB_REPOSITORY=podkolzinpd/fit\nFIT_JOURNAL_IMPORT_MODE=%s\n' "$MODE" | sudo tee -a "$env_file" >/dev/null
           revision=$(cat /opt/fit/RUNNING_SHA)
           [[ "$revision" =~ ^[a-f0-9]{40}$ ]]
@@ -109,15 +141,18 @@ jobs:
           if test "$MODE" = apply; then
             curl --fail --silent --show-error --max-time 10 http://127.0.0.1:18080/ready >/dev/null
           fi
-          sudo podman run --rm --read-only --user "$(id -u):$(id -g)" --memory=384m --cpus=1 --timeout=180 \
+          script=cloudru-journal-import.mjs
+          if test "$MODE" = prepare || test "$MODE" = cleanup; then script=cloudru-journal-upload.mjs; fi
+          sudo podman run --rm --read-only --user 0 --memory=384m --cpus=1 --timeout=180 \
             --cap-drop=ALL --security-opt=no-new-privileges --env-file "$env_file" \
-            -v "$PWD/scripts:/journal:ro" -v "$output:/receipts:rw" \
-            "localhost/fit-api:$revision" node /journal/cloudru-journal-import.mjs | tee -a "$GITHUB_STEP_SUMMARY"
-      - name: Keep only encrypted receipts, including an uncertain commit outcome
+            -v "$PWD/scripts:/journal:ro" -v "$session:/session:rw" -v "$output:/capability:rw" \
+            "localhost/fit-api:$revision" node "/journal/$script" | tee -a "$GITHUB_STEP_SUMMARY"
+          if test "$MODE" = cleanup; then sudo rmdir -- "$session"; fi
+      - name: Keep only encrypted single-object capability metadata, never journal or receipts
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: private-journal-receipts-${{ github.run_id }}-${{ github.run_attempt }}
-          path: ${{ runner.temp }}/fit-journal-receipts-${{ github.run_id }}-${{ github.run_attempt }}/*.encrypted.json
-          if-no-files-found: warn
+          name: private-journal-capability-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/fit-journal-capability-${{ github.run_id }}-${{ github.run_attempt }}/capability.encrypted.json
+          if-no-files-found: ignore
           retention-days: 1
