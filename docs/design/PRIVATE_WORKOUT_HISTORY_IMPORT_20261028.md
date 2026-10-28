@@ -34,7 +34,7 @@ read-only operational workflow и секретные параметры пред
 сохранить весь неполный журнал без выдуманных параметров.
 
 Предыдущие FIT_ACCOUNT_HISTORY_TARGETS/EVIDENCE не меняются. Новый secret
-FIT_WORKOUT_HISTORY_TARGET содержит только trainerLoginSha256/clientNameSha256;
+FIT_WORKOUT_HISTORY_TARGET содержит только trainerLoginSha256/trainerEmailSha256/clientNameSha256;
 значения не публикуются. Workflow workout_history_target=true требует main,
 доверенный runner, общий VM lock; несовместим с account_history=true. Поиск
 принимает только точные hashes, не SQL/actor override/свободный запрос.
@@ -52,3 +52,8 @@ FIT_WORKOUT_HISTORY_TARGET содержит только trainerLoginSha256/clie
 после отключения связи карточка скрыта. Тестовая база удалена; пользовательские
 данные в репетицию не передавались. Целевые тесты повторяются после уточнения
 SQL-фильтра действующей связи; полный набор не повторяется без нового сигнала.
+
+Для Яндекс ID логин и почта проверяются раздельно: текущий auth-контракт
+хеширует identity.login, тогда как legacy registry сопоставляется по email.
+Preflight принимает три приватных hash и проверяет оба login-варианта на
+неоднозначность. Это только чтение соответствий; auth и настройки не меняются.

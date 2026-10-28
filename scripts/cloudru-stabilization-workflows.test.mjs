@@ -78,7 +78,7 @@ test('account history registry requires an empty terminal page and keeps only re
   await assert.rejects(readHistoryRegistry(() => Promise.resolve({ users: pages[0] }), [target]), /registry_invalid/)
 })
 
-test('current history evidence accepts only two private hashes, never a raw ID or SQL', async () => {
+test('current history evidence accepts only private login/email/name hashes, never a raw ID or SQL', async () => {
   const hash = value => createHash('sha256').update(value).digest('hex')
   const secret = { idSha256: hash(historyFixtureIds[0]), messageSha256: hash('synthetic-support-marker') }
   assert.equal(readHistoryEvidenceSecret(undefined), null)
@@ -233,8 +233,8 @@ test('account history operation is manual, main-only, fixed-scope and does not e
   assert.doesNotMatch(script, /@gmail|@yandex|@glitchy|method: '(?:POST|PUT|DELETE|PATCH)'/)
 })
 
-test('journal preflight accepts only two private hashes, never SQL, names or actor overrides', () => {
-  const value = { trainerLoginSha256: 'a'.repeat(64), clientNameSha256: 'b'.repeat(64) }
+test('journal preflight accepts only private login/email/name hashes, never SQL, names or actor overrides', () => {
+  const value = { trainerLoginSha256: 'a'.repeat(64), trainerEmailSha256: 'c'.repeat(64), clientNameSha256: 'b'.repeat(64) }
   assert.deepEqual(readWorkoutHistoryTarget(JSON.stringify(value)), value)
   for (const bad of [null, [], {}, { ...value, actor: historyFixtureIds[0] }, { ...value, clientNameSha256: 'private name' }]) {
     assert.throws(() => readWorkoutHistoryTarget(JSON.stringify(bad)), /target_invalid/)
@@ -257,7 +257,7 @@ function journalClients({ readonly = true, candidates = [historyFixtureIds[0]], 
   } }
   return { owner, runtime, queries }
 }
-const journalTarget = { trainerLoginSha256: 'a'.repeat(64), clientNameSha256: 'b'.repeat(64) }
+const journalTarget = { trainerLoginSha256: 'a'.repeat(64), trainerEmailSha256: 'c'.repeat(64), clientNameSha256: 'b'.repeat(64) }
 
 test('journal preflight refuses writable owner and conflicting trainer identities before client reads', async () => {
   for (const [settings, legacy, code] of [
@@ -277,6 +277,7 @@ test('journal preflight refuses writable owner and conflicting trainer identitie
 test('journal preflight reads scoped counts through the real runtime role without exporting private IDs', async () => {
   const f = journalClients({ cards: [{ id: historyFixtureIds[2], auth_user_id: historyFixtureIds[3], archived: false, merged: false }] })
   const result = await inspectWorkoutHistoryTarget(f.owner, f.runtime, journalTarget)
+  assert.deepEqual(f.queries.find(q => q.text.includes('select distinct profile_id')).values, [['a'.repeat(64), 'c'.repeat(64)]])
   assert.deepEqual(result, { event: 'workout_history_import_preflight', readOnly: true, trainerMatched: true,
     matchingCards: 1, activeMatchingCards: 1, athleteLinked: true, existingWorkouts: [{ status: 'done', deleted: false, count: 2 }] })
   assert.doesNotMatch(JSON.stringify(result), /a0000000|private name|[ab]{64}/)

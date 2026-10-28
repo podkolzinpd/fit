@@ -251,8 +251,8 @@ export async function inspectCurrentHistory(client, legacy, options = {}) {
 export function readWorkoutHistoryTarget(raw) {
   let target
   try { target = JSON.parse(raw) } catch { throw new Error('workout_history_target_invalid') }
-  if (!target || Object.keys(target).sort().join(',') !== 'clientNameSha256,trainerLoginSha256'
-    || ![target.clientNameSha256, target.trainerLoginSha256].every(value => typeof value === 'string' && /^[a-f0-9]{64}$/.test(value))) {
+  if (!target || Object.keys(target).sort().join(',') !== 'clientNameSha256,trainerEmailSha256,trainerLoginSha256'
+    || ![target.clientNameSha256, target.trainerEmailSha256, target.trainerLoginSha256].every(value => typeof value === 'string' && /^[a-f0-9]{64}$/.test(value))) {
     throw new Error('workout_history_target_invalid')
   }
   return target
@@ -268,17 +268,18 @@ export async function inspectWorkoutHistoryTarget(owner, runtime, target, legacy
     const mode = await owner.query("select current_setting('transaction_read_only') readonly")
     if (mode.rows[0]?.readonly !== 'on') throw new Error('history_audit_readonly_required')
     const candidates = requireBound((await owner.query(`select distinct profile_id from (
-      select profile_id from app_private.fit_lime_pilot_allowlist where login_sha256=$1
-      union select profile_id from app_private.trainer_schedule_v2_allowlist where login_sha256=$1
-      union select profile_id from app_private.nutrition_native_bindings where login_sha256=$1
-      ) matched where profile_id is not null limit 3`, [target.trainerLoginSha256])).rows, 2)
+      select profile_id from app_private.fit_lime_pilot_allowlist where login_sha256=any($1::text[])
+      union select profile_id from app_private.trainer_schedule_v2_allowlist where login_sha256=any($1::text[])
+      union select profile_id from app_private.nutrition_native_bindings where login_sha256=any($1::text[])
+      ) matched where profile_id is not null limit 3`, [[...new Set([target.trainerLoginSha256, target.trainerEmailSha256])]])).rows, 2)
     if (candidates.length > 1 || (legacyTrainerId && candidates.some(row => row.profile_id !== legacyTrainerId))) {
       throw new Error('workout_history_trainer_ambiguous')
     }
     trainerId = candidates[0]?.profile_id ?? legacyTrainerId
     if (!trainerId) {
       await owner.query('commit')
-      return { event: 'workout_history_import_preflight', readOnly: true, trainerMatched: false, matchingCards: 0 }
+      return { event: 'workout_history_import_preflight', readOnly: true, trainerMatched: false, matchingCards: 0,
+        limitation: 'A native profile outside retained login bindings cannot be resolved by email; no match does not prove account absence.' }
     }
     if (!uuid.test(trainerId)) throw new Error('workout_history_target_invalid')
     const profile = (await owner.query('select account_role from public.profiles where id=$1', [trainerId])).rows
@@ -303,6 +304,8 @@ export async function inspectWorkoutHistoryTarget(owner, runtime, target, legacy
       )) and (
         encode(sha256(convert_to(lower(btrim(c.full_name)), 'UTF8')), 'hex')=$2
         or encode(sha256(convert_to(lower(btrim(ct.alias)), 'UTF8')), 'hex')=$2
+        or encode(sha256(convert_to(split_part(lower(btrim(c.full_name)), ' ', 1), 'UTF8')), 'hex')=$2
+        or encode(sha256(convert_to(split_part(lower(btrim(ct.alias)), ' ', 1), 'UTF8')), 'hex')=$2
       ) order by c.id limit 11`, [trainerId, target.clientNameSha256])).rows, 10)
     const active = cards.filter(card => !card.archived && !card.merged)
     const counts = active.length === 1 ? (await runtime.query(`select status, deleted_at is not null deleted,
@@ -328,7 +331,7 @@ async function main() {
   if (!/^[a-z0-9]{20}$/.test(project) || !token) throw new Error('history_audit_source_config_missing')
   const importTarget = process.env.FIT_WORKOUT_HISTORY_TARGET
     ? readWorkoutHistoryTarget(process.env.FIT_WORKOUT_HISTORY_TARGET) : null
-  const targets = importTarget ? [{ emailHash: importTarget.trainerLoginSha256, label: 'importTrainer', role: 'trainer' }]
+  const targets = importTarget ? [{ emailHash: importTarget.trainerEmailSha256, label: 'importTrainer', role: 'trainer' }]
     : readHistoryTargets(process.env.FIT_ACCOUNT_HISTORY_TARGETS)
   const legacy = await readLegacy(project, token, targets)
   const { Client } = createRequire('/app/package.json')('pg')
