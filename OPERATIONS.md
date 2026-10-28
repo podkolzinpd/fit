@@ -2136,7 +2136,7 @@ It never force-removes that container or performs system/volume pruning.
 План: `docs/design/ANDROID_OTA_20261019.md`, протокол публикации/отката и Nginx:
 `infra/cloudru/mobile-updates/README.md`. `FIT_ANDROID_OTA_ENABLED` имеет default-off
 семантику (включено только при точном `true`); штатная web-сборка OTA не проверяет.
-Android APK1.1.1/code5 должен собираться с этим флагом, `FIT_SOURCE_COMMIT`
+Android APK1.1.2/code6 должен собираться с этим флагом, `FIT_SOURCE_COMMIT`
 и canonical API origin `https://api.fit-training.ru`; production env-файлы локально
 не создаются. Native-состав и **все lock-зависимости** входят в консервативный ABI:
 их изменение требует нового APK. Публичный OTA RSA-ключ закреплён в
@@ -2194,6 +2194,9 @@ on the device under its own preference key. The common design-code files are unc
 
 При новой ABI автоматическая публикация останавливается с `OTA_NATIVE_APK_REQUIRED`;
 требуется manual `make_apk=true`, native tests и фактическая подпись нового APK.
+Новая ABI требует увеличения `versionCode`: SDK сбрасывает старый OTA path по
+смене этого номера. Publisher отклоняет повторное использование/понижение code
+относительно подписанных alpha manifests с release (`OTA_NATIVE_VERSION_MUST_INCREASE`).
 Это не выдаётся за доставленное обновление старым оболочкам.
 
 ## Кабинет корпоративных тренеров — этап 1
