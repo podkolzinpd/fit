@@ -23,9 +23,6 @@ permissions:
 jobs:
   check:
     runs-on: ${{ github.event_name == 'pull_request' && 'ubuntu-24.04' || fromJSON('["self-hosted","cloudru-stage"]') }}
-    concurrency:
-      group: cloudru-stage-vm
-      cancel-in-progress: false
     steps:
       - uses: actions/checkout@v4
         with:
