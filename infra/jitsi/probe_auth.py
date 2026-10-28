@@ -119,6 +119,12 @@ def probe(token, room, should_admit):
         connection.until('features')
         connection.send("<iq xmlns='jabber:client' type='set' id='bind'><bind xmlns='urn:ietf:params:xml:ns:xmpp-bind'><resource>probe</resource></bind></iq>")
         connection.until('jid', 'error')
+        connection.send(f"<iq xmlns='jabber:client' to='focus.meet.jitsi' type='set' id='conference'><conference xmlns='http://jitsi.org/protocol/focus' room='{room}@muc.meet.jitsi' machine-uid='fit-infrastructure-probe' token='{token}'/></iq>")
+        allocation = connection.until('conference', 'error')
+        if 'type="error"' in allocation or "type='error'" in allocation:
+            if should_admit:
+                raise RuntimeError('Valid room focus allocation failed')
+            return
         occupant = f'{room}@muc.meet.jitsi/probe'
         connection.send(f"<presence xmlns='jabber:client' to='{occupant}'><x xmlns='http://jabber.org/protocol/muc'/></presence>")
         presence = connection.until('<presence')
