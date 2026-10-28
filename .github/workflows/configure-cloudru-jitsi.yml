@@ -76,7 +76,8 @@ jobs:
           fi
           if [[ "$JITSI_PHASE" == api-enable ]]; then
             sudo bash infra/jitsi/verify-host.sh
-            curl --fail --silent --max-time 10 https://fit-training.ru/api/ready >/dev/null
+            curl --fail --silent --max-time 10 --noproxy '*' \
+              --resolve fit-training.ru:443:127.0.0.1 https://fit-training.ru/api/ready >/dev/null
           fi
           case "$JITSI_PHASE" in
             prepare) sudo bash infra/jitsi/prepare-host.sh ;;

@@ -100,9 +100,12 @@ def main():
                 os.unlink(temporary)
     configured = parse(protected_read(target))
     # Capture inspect internally: output only the flag, image and SHA, never Env.
+    runtime_env = set(container['Config'].get('Env', []))
     print(json.dumps({'event': 'meeting_api_configuration', 'mode': args.mode,
                       'configuredEnabled': configured.get('JITSI_ENABLED') == 'true',
-                      'runtimeEnabled': 'JITSI_ENABLED=true' in container['Config'].get('Env', []),
+                      'runtimeEnabled': 'JITSI_ENABLED=true' in runtime_env,
+                      'runtimeMatchesConfigured': all(f'{key}={configured[key]}' in runtime_env
+                                                      for key in KEYS if key in configured),
                       'runtimeImage': container['Config']['Image'],
                       'runningSha': running_sha,
                       'restartPerformed': False}))
