@@ -150,13 +150,14 @@ describe('Yandex main repository', () => {
   it('refreshes trainer names on later reads while sharing simultaneous connections requests', async () => {
     let displayName = 'Татьяна'
     const fetchMock = vi.fn<typeof fetch>().mockImplementation(() => Promise.resolve(jsonResponse({
-      memberships: [{ clientId, trainerId: actor.userId, firstName: null, lastName: null, displayName,
+      memberships: [{ clientId, trainerId: actor.userId, firstName: null, lastName: null, displayName, publicProfileId: workoutId,
         joinedAt: '2026-10-07T10:00:00Z', isRoot: true }], invitations: [],
     })))
     vi.stubGlobal('fetch', fetchMock)
     const repository = createYandexMainRepository(apiBaseUrl, sessionToken, actor)
     const [trainers] = await Promise.all([repository.invitations.listTrainers(clientId), repository.invitations.list(clientId)])
     expect(trainers[0]?.displayName).toBe('Татьяна')
+    expect(trainers[0]?.publicProfileId).toBe(workoutId)
     expect(fetchMock).toHaveBeenCalledTimes(1)
     displayName = 'Татьяна Александровна'
     expect((await repository.invitations.listTrainers(clientId))[0]?.displayName).toBe(displayName)
