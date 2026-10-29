@@ -3,6 +3,12 @@ import {pathToFileURL} from 'node:url'
 import {readHistoryRegistry} from './cloudru-account-history-audit.mjs'
 export function readDeletionTarget(raw){if(typeof raw!=='string'||!/^[a-f0-9]{64}$/.test(raw))throw Error('deletion_target_invalid');return raw}
 export function selectDeletionProfile(legacyId,bindings){const ids=[...new Set([legacyId,...bindings.map(r=>r.profile_id)].filter(Boolean))];if(ids.length!==1||!/^[a-f0-9]{8}-[a-f0-9]{4}-[1-5][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/.test(ids[0]))throw Error('deletion_target_unresolved_or_ambiguous');return ids[0]}
+export function deletionResolution(legacyId,bindings){
+ const bound=[...new Set(bindings.map(row=>row.profile_id).filter(Boolean))]
+ const ids=[...new Set([legacyId,...bound].filter(Boolean))]
+ if(ids.some(id=>!/^[a-f0-9]{8}-[a-f0-9]{4}-[1-5][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/.test(id)))throw Error('deletion_target_unresolved_or_ambiguous')
+ return{state:ids.length===0?'missing':ids.length===1?'unique':'conflict',candidates:ids.length,bindingProfiles:bound.length}
+}
 const quote=v=>'"'+v.replaceAll('"','""')+'"'
 async function json(url,headers){const r=await fetch(url,{headers,redirect:'error',signal:AbortSignal.timeout(15000)});if(!r.ok)throw Error('deletion_registry_unavailable');const chunks=[];let size=0;for await(const c of r.body){size+=c.length;if(size>5*1024*1024)throw Error('deletion_registry_too_large');chunks.push(c)}return JSON.parse(Buffer.concat(chunks).toString('utf8'))}
 export async function inspectDeletion(client,hash,legacyId){
@@ -12,6 +18,13 @@ export async function inspectDeletion(client,hash,legacyId){
   const mode=(await client.query("select current_user username,current_setting('transaction_read_only') readonly")).rows[0]
   if(mode.username!=='fit_owner'||mode.readonly!=='on')throw Error('deletion_readonly_required')
   const bindings=(await client.query(`select profile_id from app_private.fit_lime_pilot_allowlist where login_sha256=$1 union select profile_id from app_private.trainer_schedule_v2_allowlist where login_sha256=$1 union select profile_id from app_private.nutrition_native_bindings where login_sha256=$1`,[hash])).rows
+  const resolution=deletionResolution(legacyId,bindings)
+  if(resolution.state!=='unique'){
+    await client.query('commit')
+    return{event:'account_deletion_preflight',readOnly:true,resolution:resolution.state,
+      legacyMatch:Boolean(legacyId),retainedBindingProfiles:resolution.bindingProfiles,
+      candidateProfiles:resolution.candidates,accountDeleted:false}
+  }
   const id=selectDeletionProfile(legacyId,bindings)
   const profiles=(await client.query('select account_role from public.profiles where id=$1',[id])).rows
   const cards=(await client.query('select id from public.clients where auth_user_id=$1 or trainer_id=$1',[id])).rows
