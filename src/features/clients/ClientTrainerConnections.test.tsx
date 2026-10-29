@@ -44,6 +44,25 @@ describe('ClientTrainerConnections safe disconnect', () => {
     expect(screen.getByRole('button', { name: 'Действия с тренером Татьяна Александровна' })).toBeVisible()
   })
 
+  it('links the avatar and name to the published profile without changing the connection', async () => {
+    repository.listTrainers.mockResolvedValue([{ ...connectedTrainer, publicProfileId: 'public-trainer-id' }])
+    renderConnections()
+    const link = await screen.findByRole('link', { name: 'Анкета тренера Александр Ситников' })
+    expect(link).toHaveAttribute('href', '/trainers/public-trainer-id')
+    expect(within(link).getByText('АС')).toBeVisible()
+    expect(within(link).getByText('Александр Ситников')).toBeVisible()
+    expect(repository.removeTrainer).not.toHaveBeenCalled()
+  })
+
+  it('explains an unpublished profile and keeps the connected trainer visible', async () => {
+    repository.listTrainers.mockResolvedValue([{ ...connectedTrainer, publicProfileId: null }])
+    renderConnections()
+    expect(await screen.findByText('Анкета не опубликована')).toBeVisible()
+    expect(screen.getByText('Александр Ситников')).toBeVisible()
+    expect(screen.queryByRole('link', { name: /Анкета тренера/ })).toBeNull()
+    expect(repository.removeTrainer).not.toHaveBeenCalled()
+  })
+
   it('disconnects the current trainer only after a clear confirmation and keeps the client data message', async () => {
     const user = userEvent.setup()
     repository.listTrainers.mockResolvedValueOnce([connectedTrainer]).mockResolvedValue([])

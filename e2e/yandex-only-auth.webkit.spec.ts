@@ -802,6 +802,7 @@ for (const lime of [false, true]) {
     const trainerId = '11e49d0a-78ac-4b5c-a2d1-b4c087f1d169'
     const conversationId = '44e49d0a-78ac-4b5c-a2d1-b4c087f1d169'
     let displayName = 'Татьяна'
+    let profilePublished = true
     let connectionsReads = 0
     let failConnections = false
     await page.route('https://stage.example.test/health', (route) => route.fulfill({ json: { status: 'ok' }, headers: {
@@ -824,11 +825,16 @@ for (const lime of [false, true]) {
       if (path === '/v1/me/finance') return route.fulfill({ json: { finance: { trainers: [] } } })
       if (path === '/v1/me/sport-profile') return route.fulfill({ json: { sport: { sports: [], bio: null } } })
       if (path === '/v1/chat/conversations') return route.fulfill({ json: { conversationId } })
+      if (path === `/v1/trainers/${publicTrainerId}/public-profile`) return route.fulfill({ json: {
+        publicId: publicTrainerId, draft: { ...publicTrainerDraft, displayName, acceptingClients: false },
+        published: { ...publicTrainerDraft, displayName, acceptingClients: false }, listedInCatalog: false,
+        publishedAt: '2026-10-29T09:00:00Z', updatedAt: '2026-10-29T09:00:00Z', version: 1, isBrandTrainer: false,
+      } })
       if (path === '/v1/connections') {
         connectionsReads += 1
         if (failConnections) return route.fulfill({ status: 403, json: { error: 'forbidden' } })
         return route.fulfill({ json: { memberships: [{ clientId, trainerId, firstName: null, lastName: null,
-          displayName, joinedAt: '2026-10-07T10:00:00Z', isRoot: true }], invitations: [] } })
+          displayName, publicProfileId: profilePublished ? publicTrainerId : null, joinedAt: '2026-10-07T10:00:00Z', isRoot: true }], invitations: [] } })
       }
       if (path === '/v1/chat/threads') return route.fulfill({ json: { threads: [{
         conversationId, clientId, trainerId, partnerUserId: trainerId, partnerName: displayName,
@@ -857,6 +863,13 @@ for (const lime of [false, true]) {
       await page.screenshot({ path: testInfo.outputPath(`trainer-name-profile-${width}.png`), fullPage: true })
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
     }
+    const profileLink = page.getByRole('link', { name: 'Анкета тренера Татьяна', exact: true })
+    await expect(profileLink).toHaveAttribute('href', `/trainers/${publicTrainerId}`)
+    await profileLink.locator('.client-trainer-avatar').click()
+    await expect(page.getByRole('heading', { name: 'Татьяна', exact: true })).toBeVisible()
+    await expect(page.getByText('Тренер временно не принимает новых клиентов')).toBeVisible()
+    await page.getByRole('button', { name: 'Назад', exact: true }).click()
+    await expect(page).toHaveURL(/\/me\/profile$/)
     await page.getByRole('link', { name: 'Настройки профиля' }).click()
     await expect(page).toHaveURL(/\/me\/settings$/)
     // URL changes before a cold lazy route commits. Wait until the profile really unmounts.
@@ -883,6 +896,11 @@ for (const lime of [false, true]) {
     await page.locator('.client-home-connections').getByRole('button', { name: 'Повторить', exact: true }).click()
     await expect(page.locator('.client-home-connections .error')).toHaveCount(0)
     await expect(page.locator('.client-trainer-person strong')).toHaveText(displayName)
+    profilePublished = false
+    await page.reload()
+    await expect(page.getByText('Анкета не опубликована', { exact: true })).toBeVisible()
+    await expect(page.locator('.client-trainer-profile-link')).toHaveCount(0)
+    await expect(page.getByRole('button', { name: 'Написать', exact: true })).toBeVisible()
   })
 }
 
