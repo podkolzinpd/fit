@@ -55,7 +55,7 @@ export function BookingHistorySheet({ target, onClose, onApplied, onReload }: {
         {replacementConfirmed && <p role="alert">В этой записи уже есть план. Заменить его упражнения выбранной тренировкой?</p>}
       </> : <>
         {history.isPending && <p role="status">Загружаем историю…</p>}
-        {!history.isPending && !history.isError && items.length === 0 && <p>Завершённых тренировок пока нет.</p>}
+        {!history.isPending && !history.isError && !history.hasNextPage && items.length === 0 && <p>Завершённых тренировок пока нет.</p>}
         {items.map(item => <button type="button" key={item.id} className="booking-history-item" onClick={() => { setSource(item); setConfirmReplacement(null) }}><time>{formatLocalDate(item.workoutDate)}</time><strong>{item.title || 'Тренировка'}</strong><span>{item.exercises.slice(0, 3).map(exercise => exercise.name).join(' · ')}{item.exercises.length > 3 ? ` · ещё ${item.exercises.length - 3}` : ''}</span></button>)}
         {history.hasNextPage && <button type="button" className="secondary wide" disabled={history.isFetchingNextPage} onClick={() => void history.fetchNextPage()}>{history.isFetchingNextPage ? 'Загружаем…' : 'Показать ещё'}</button>}
         {history.isError && <p className="error" role="alert">Не удалось загрузить историю. <button type="button" onClick={() => void history.refetch()}>Повторить</button></p>}
