@@ -108,7 +108,7 @@ import { AddIcon, ArrowDownIcon, ArrowUpIcon, BackIcon, BellIcon, CheckIcon, Che
 import { workoutVolumeComparison } from './workout-completion-insights'
 import { WorkoutChoice, WorkoutCta, WorkoutExercise, WorkoutExerciseCompact, WorkoutHeader, WorkoutRpeScale, WorkoutSetRow, WorkoutStatus, type WorkoutUiState } from './WorkoutSurface'
 import { liveSessionProgress } from './live-session-progress'
-import { chronicleExercisePreview } from './workout-chronicle'
+import { calendarExerciseResult, chronicleExercisePreview } from './workout-chronicle'
 import { compactScheduleEventLabel, formatScheduleDateLabel, layoutScheduleTimelineEvents, mondayWeekStart, scheduleDurationMinutes, scheduleEventStatus, scheduleExerciseLine, scheduleFocusMinutes, scheduleHourLabelCollidesWithNow, scheduleLaneClientName, scheduleTimelineScrollTop } from './schedule-presentation'
 import { InvitationCodeCard } from '../../shared/invitation-code-card'
 import { trackGoal } from '../../shared/yandex-metrika'
@@ -1112,7 +1112,7 @@ const chronicleReactionLabels: Record<TrainerReaction, string> = {
   strong: '💪',
 }
 
-export function WorkoutChronicleCard({ workout, contextLabel, returnTo, historyListActions = false }: { workout: Workout; contextLabel?: string | null; returnTo?: string; historyListActions?: boolean }) {
+export function WorkoutChronicleCard({ workout, contextLabel, returnTo, historyListActions = false, calendarDayDetails = false }: { workout: Workout; contextLabel?: string | null; returnTo?: string; historyListActions?: boolean; calendarDayDetails?: boolean }) {
   const done = workout.status === 'done'
   const duration = workoutDurationLabel(workout.startedAt, workout.completedAt, workout.actualDurationSec)
   const tonnage = workoutTonnage(workout)
@@ -1122,16 +1122,16 @@ export function WorkoutChronicleCard({ workout, contextLabel, returnTo, historyL
     workout.activeCaloriesKcal ? `≈ ${workout.activeCaloriesKcal} ккал` : null,
   ].filter(Boolean) : []
   const hasFeedback = workout.sessionRpe !== undefined && workout.wellbeing !== undefined
-  const exercisePreview = chronicleExercisePreview(workout.exercises)
+  const exercisePreview = chronicleExercisePreview(workout.exercises, calendarDayDetails ? workout.exercises.length : undefined)
   const musclePreview = chronicleExercisePreview(historyListActions && done ? performedMuscleGroupLabels(workout) : [], 3)
   const detailState = returnTo ? { returnTo } : undefined
   const formattedDate = formatLocalDate(workout.workoutDate)
   const muscleSummary = [...musclePreview.visible, ...(musclePreview.hiddenCount > 0 ? [`+${musclePreview.hiddenCount}`] : [])].join(' · ')
 
-  return <article className={`card workout-chronicle-card${workout.hasPr ? ' has-pr' : ''}${historyListActions && done ? ' has-history-actions' : ''}`}>
+  return <article className={`card workout-chronicle-card${workout.hasPr ? ' has-pr' : ''}${historyListActions && done ? ' has-history-actions' : ''}${calendarDayDetails ? ' calendar-day-details' : ''}`}>
     <Link className="workout-chronicle-open" aria-label={`Открыть тренировку за ${formattedDate}`} to={`/workouts/${workout.id}`} state={detailState}>
       <div className="workout-chronicle-head">
-        <strong>{formattedDate}</strong>
+        <strong>{calendarDayDetails ? `${workout.exercises.length} ${exerciseCountLabel(workout.exercises.length)}` : formattedDate}</strong>
         <div className="workout-chronicle-head-badges">
           {workout.hasPr && <span className="workout-pr-badge"><RecordIcon />Личный рекорд</span>}
           <WorkoutStatusBadge workout={workout} />
@@ -1140,12 +1140,13 @@ export function WorkoutChronicleCard({ workout, contextLabel, returnTo, historyL
       {contextLabel && <p className="card-author">{contextLabel}</p>}
       <div className="workout-chronicle-exercises">
         {exercisePreview.visible.length > 0 ? exercisePreview.visible.map((exercise) => {
-          const result = done
-            ? compactCompletedSetSummary(exercise.sets, false, exercise.ref)
-            : compactPlannedSetSummary(exercise.sets, false, exercise.ref)
+          const result = calendarDayDetails
+            ? done ? calendarExerciseResult(exercise) : null
+            : done ? compactCompletedSetSummary(exercise.sets, false, exercise.ref)
+              : compactPlannedSetSummary(exercise.sets, false, exercise.ref)
           return <div className="workout-chronicle-exercise" key={exercise.id}>
             <span className="workout-chronicle-exercise-name">{exercise.name}
-              {exercise.trainerComment && <small className="workout-exercise-comment">💬 {exercise.trainerComment}</small>}
+              {!calendarDayDetails && exercise.trainerComment && <small className="workout-exercise-comment">💬 {exercise.trainerComment}</small>}
             </span>
             {result && <strong>{result}</strong>}
           </div>
@@ -1226,7 +1227,8 @@ export function ClientWorkoutsPage() {
         </> : <ClientWorkoutHistoryCalendar month={calendar.state.month} today={today} workouts={calendarItems}
           selectedDate={calendar.state.selectedDate} loading={calendarHistory.isLoading} error={calendarHistory.error}
           returnTo={returnTo} contextLabel={contextLabel} onRetry={() => void calendarHistory.refetch()}
-          onMonthChange={calendar.shiftMonth} onDateSelect={calendar.selectDate} />}
+          onMonthChange={calendar.shiftMonth} onDateSelect={calendar.selectDate}
+          renderSelectedWorkout={(workout) => <WorkoutChronicleCard workout={workout} contextLabel={contextLabel(workout)} returnTo={returnTo} calendarDayDetails />} />}
       </section>
     </div> : <EmptyState
       title="Тренировка для клиента"
