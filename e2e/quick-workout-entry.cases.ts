@@ -195,6 +195,8 @@ export function quickWorkoutEntryCases() {
       expect(added.sets.map(set => set.durationSec)).toEqual([45, 60])
       expect(added.sets.every(set => set.confirmedAt === null && Object.keys(set.fact).length === 0)).toBe(true)
       await expect(page.getByText('Планка', { exact: true }).first()).toBeVisible()
+      await expect(page.locator('input[name="durationSec"]').first()).toHaveValue('45')
+      await expect(page.locator('input[name="durationSec"]').nth(1)).toHaveValue('60')
     })
   }
 }
