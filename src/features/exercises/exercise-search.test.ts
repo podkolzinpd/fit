@@ -80,3 +80,23 @@ describe('exercise search contract', () => {
     expect(performance.now() - startedAt).toBeLessThan(1_500)
   })
 })
+
+
+describe('quick-entry catalogue relevance opt-in', () => {
+  it('puts matching dumbbell lunges ahead of a recent bodyweight variation without changing voice defaults', () => {
+    const options = { preferredExerciseRefs: ['vital-bulgarian-split-squat-ex242'] }
+    const query = 'Выпады с га'
+    const legacy = rankExerciseSearch(SYSTEM_EXERCISE_CATALOG, query, options)
+    const catalogue = rankExerciseSearch(SYSTEM_EXERCISE_CATALOG, query, { ...options, relevanceBeforeRecency: true })
+    expect(legacy[0]?.exercise.ref).toBe('vital-bulgarian-split-squat-ex242')
+    expect(catalogue[0]?.exercise.ref).toBe('fedb-dumbbell-lunges')
+    expect(new Set(catalogue.map(item => item.exercise.ref))).toEqual(new Set(legacy.map(item => item.exercise.ref)))
+    expect(resolveExerciseSearch(SYSTEM_EXERCISE_CATALOG, query, options).matches).toEqual(legacy)
+  })
+  it('retains exact aliases, equal-relevance recency and custom exercises', () => {
+    const same = fixtures.filter(item => item.name === 'Планка')
+    const result = rankExerciseSearch(same, 'Планка', { relevanceBeforeRecency: true, preferredExerciseRefs: ['system-plank'] })
+    expect(result.map(item => item.exercise.ref)).toEqual(['system-plank', 'custom-plank'])
+    expect(result.every(item => item.match === 'exact')).toBe(true)
+  })
+})

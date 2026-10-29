@@ -1068,6 +1068,25 @@ describe('Yandex main repository', () => {
     }
   })
 
+  it.each(['trainer', 'client'] as const)('sends atomic history opt-in only for the selected %s account', async (role) => {
+    vi.stubEnv('VITE_QUICK_WORKOUT_ENTRY_ENABLED', 'true')
+    vi.stubEnv('VITE_QUICK_WORKOUT_ENTRY_PILOT_USER_IDS', `${actor.userId},second-fixture`)
+    vi.stubEnv('VITE_CLIENT_LIME_ENABLED', 'true')
+    vi.stubGlobal('fetch', installContractFetch())
+    installTrainingData()
+    const testActor = { ...actor, role, kind: role, experiments: { fitLime: true, clientLime: true } } as SessionActor
+    const repo = createYandexMainRepository(apiBaseUrl, sessionToken, testActor)
+    const item = await repo.workouts.get(workoutId)
+    const fetchMock = vi.mocked(fetch)
+    await repo.workouts.appendLiveExercise(item, exerciseSnapshot(), undefined, true)
+    let command = JSON.parse(String(fetchMock.mock.calls.at(-1)![1]?.body)) as { exercise: { prefillFromHistory?: boolean } }
+    expect(command.exercise.prefillFromHistory).toBe(true)
+    const outside = createYandexMainRepository(apiBaseUrl, sessionToken, { ...testActor, userId: 'outside' })
+    await outside.workouts.appendLiveExercise(item, exerciseSnapshot(), undefined, true)
+    command = JSON.parse(String(fetchMock.mock.calls.at(-1)![1]?.body)) as { exercise: { prefillFromHistory?: boolean } }
+    expect(command.exercise.prefillFromHistory).toBeUndefined()
+  })
+
   it('reuses the explicit Live append receipt and original version for uncertain retries', async () => {
     const fetchMock = installContractFetch()
     vi.stubGlobal('fetch', fetchMock)
