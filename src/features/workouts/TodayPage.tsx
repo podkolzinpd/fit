@@ -1,3 +1,4 @@
+import { isQuickWorkoutEntryEnabled } from '../../app/quick-workout-entry'
 import type { ReactNode } from 'react'
 import { exerciseCountText } from '../../shared/exercise-count'
 import { isClientWorkoutRedesignEnabled } from '../../app/client-workout-redesign'
@@ -1084,7 +1085,7 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
       </section></section>}
     </section>}
     {supplementalLoadError && <InlineRequestError error={supplementalLoadError} />}
-    {pickerOpen && <ExercisePicker clientLime={isClientLimeEnabled(actor)} referenceAppearance={clientReference} catalog={catalog} clientRecent={clientRecentExercises} initialMode={replaceIndex === null && items.length === 0 ? 'choose' : 'all'} techniqueActionLabel={replaceIndex === null ? 'Добавить упражнение' : 'Заменить упражнение'} onPick={(exercise, runningFormat) => pickExercises([exercise], runningFormat)} onPickMany={pickExercises} selectionDraft={replaceIndex === null ? pickerSelectionDraft : undefined} onSelectionDraftChange={replaceIndex === null ? setPickerSelectionDraft : undefined} multiple={replaceIndex === null} onClose={() => { setPickerOpen(false); setReplaceIndex(null); setPickerFromCompose(false) }} />}
+    {pickerOpen && <ExercisePicker quickEntry={isQuickWorkoutEntryEnabled(actor)} clientLime={isClientLimeEnabled(actor)} referenceAppearance={clientReference} catalog={catalog} clientRecent={clientRecentExercises} initialMode={replaceIndex === null && items.length === 0 ? 'choose' : 'all'} techniqueActionLabel={replaceIndex === null ? 'Добавить упражнение' : 'Заменить упражнение'} onPick={(exercise, runningFormat) => pickExercises([exercise], runningFormat)} onPickMany={pickExercises} selectionDraft={replaceIndex === null ? pickerSelectionDraft : undefined} onSelectionDraftChange={replaceIndex === null ? setPickerSelectionDraft : undefined} multiple={replaceIndex === null} onClose={() => { setPickerOpen(false); setReplaceIndex(null); setPickerFromCompose(false) }} />}
     {confirmDialog}
   </Page>
 }

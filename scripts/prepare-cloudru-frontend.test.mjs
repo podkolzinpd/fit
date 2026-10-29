@@ -189,7 +189,7 @@ test('candidate preserves legacy settings and reviewed coach controls with pilot
     .map((match) => [match[1], match[2]]))
   const original = settings(production)
   const next = settings(candidate)
-  const planPilot = ['VITE_COACH_PLAN_INPUT_ENABLED', 'VITE_COACH_PLAN_INPUT_PILOT_USER_IDS', 'VITE_COACH_PLAN_LAYOUT_ENABLED', 'VITE_COACH_PLAN_LAYOUT_PILOT_USER_IDS', 'VITE_COACH_LIVE_DENSITY_ENABLED', 'VITE_COACH_LIVE_DENSITY_PILOT_USER_IDS', 'VITE_COACH_WORKOUT_ROLLOUT_MODE']
+  const planPilot = ['VITE_COACH_PLAN_INPUT_ENABLED', 'VITE_COACH_PLAN_INPUT_PILOT_USER_IDS', 'VITE_COACH_PLAN_LAYOUT_ENABLED', 'VITE_COACH_PLAN_LAYOUT_PILOT_USER_IDS', 'VITE_COACH_LIVE_DENSITY_ENABLED', 'VITE_COACH_LIVE_DENSITY_PILOT_USER_IDS', 'VITE_COACH_WORKOUT_ROLLOUT_MODE', 'VITE_QUICK_WORKOUT_ENTRY_ENABLED', 'VITE_QUICK_WORKOUT_ENTRY_PILOT_USER_IDS']
   assert.deepEqual([...next.keys()].filter(name => name !== 'VITE_SPEECHKIT_RELAY_URL').sort(), [...original.keys(), ...planPilot].sort())
   assert.equal(next.get(planPilot[0]), "${{ vars.VITE_COACH_PLAN_INPUT_ENABLED || 'false' }}")
   assert.equal(next.get(planPilot[1]), "${{ vars.VITE_COACH_PLAN_INPUT_PILOT_USER_IDS || '' }}")
@@ -197,6 +197,8 @@ test('candidate preserves legacy settings and reviewed coach controls with pilot
   assert.equal(next.get(planPilot[3]), "${{ vars.VITE_COACH_PLAN_LAYOUT_PILOT_USER_IDS || '' }}")
   assert.equal(next.get(planPilot[4]), "${{ vars.VITE_COACH_LIVE_DENSITY_ENABLED || 'false' }}")
   assert.equal(next.get(planPilot[5]), "${{ vars.VITE_COACH_LIVE_DENSITY_PILOT_USER_IDS || '' }}")
+  assert.equal(next.get('VITE_QUICK_WORKOUT_ENTRY_ENABLED'), "${{ vars.VITE_QUICK_WORKOUT_ENTRY_ENABLED || 'false' }}")
+  assert.equal(next.get('VITE_QUICK_WORKOUT_ENTRY_PILOT_USER_IDS'), "${{ vars.VITE_QUICK_WORKOUT_ENTRY_PILOT_USER_IDS || '' }}")
   assert.equal(next.get('VITE_COACH_WORKOUT_ROLLOUT_MODE'), "${{ vars.VITE_COACH_WORKOUT_ROLLOUT_MODE || 'pilot' }}")
   for (const [name, value] of original) {
     // VITE_SERVICE_NOTICE_ENABLED: временная плашка о восстановлении ИИ, решение владельца 14.10.

@@ -72,6 +72,15 @@ describe('live workout request validation', () => {
       .toBeUndefined()
   })
 
+  it('accepts only an explicit boolean for atomic history prefill', () => {
+    const request = { operationId, expectedVersion: 1, exercise: { source: 'system', ref: 'squat', name: 'Приседание', muscleGroup: 'legs', inputKind: 'strength' } }
+    expect(readLiveExerciseRequest({ ...request, exercise: { ...request.exercise, prefillFromHistory: true } })?.exercise.prefillFromHistory).toBe(true)
+    for (const value of ['true', 1, null, {}, []]) {
+      expect(readLiveExerciseRequest({ ...request, exercise: { ...request.exercise, prefillFromHistory: value } })).toBeUndefined()
+    }
+    expect(readLiveExerciseRequest(request)?.exercise.prefillFromHistory).toBeUndefined()
+  })
+
   it('normalizes structural exercise, reorder and comment requests', () => {
     expect(readLiveExerciseRequest({
       operationId,
