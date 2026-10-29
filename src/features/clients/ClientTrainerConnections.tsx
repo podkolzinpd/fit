@@ -36,9 +36,11 @@ export function ClientTrainerConnections({ clientId, finance }: { clientId: stri
     {trainers.data?.length === 1 && trainers.data.map((trainer) => {
       const name = trainer.displayName?.trim() || [trainer.firstName, trainer.lastName].filter(Boolean).join(' ') || 'Тренер'
       const initials = name.split(/\s+/).slice(0, 2).map((part) => part[0]).join('').toUpperCase()
+      const person = <><span className="client-trainer-avatar" aria-hidden="true">{initials}</span>
+        <div className="client-trainer-person"><strong>{name}</strong><p>{trainer.publicProfileId === null ? 'Анкета не опубликована' : 'Ваш тренер'}</p></div></>
       return <article className="card client-trainer-connection-card" key={trainer.trainerId}>
-        <span className="client-trainer-avatar" aria-hidden="true">{initials}</span>
-        <div className="client-trainer-person"><strong>{name}</strong><p>Ваш тренер</p></div>
+        {trainer.publicProfileId ? <Link className="client-trainer-profile-link" aria-label={`Анкета тренера ${name}`}
+          to={`/trainers/${trainer.publicProfileId}`} state={{ from: '/me/profile' }}>{person}</Link> : person}
         <div className="client-trainer-actions"><ChatStartButton clientId={clientId} trainerId={trainer.trainerId} /><OverflowMenu label={`Действия с тренером ${name}`} items={[{
           label: disconnectTrainer.isPending ? 'Отключаем…' : 'Отключить',
           danger: true,

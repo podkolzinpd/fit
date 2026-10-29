@@ -802,13 +802,25 @@ export const limeClients = [
 
 export async function beginClientGesture(page: Page, surface: Locator, browserName: string, origin?: Locator) {
   await surface.scrollIntoViewIfNeeded()
-  const box = await surface.boundingBox()
-  if (!box) throw new Error('Client surface is not visible')
+  const initialBox = await surface.boundingBox()
+  if (!initialBox) throw new Error('Client surface is not visible')
+  let box = initialBox
   const originBox = origin ? await origin.boundingBox() : null
   if (origin && !originBox) throw new Error('Gesture origin is not visible')
-  const from = originBox ? { x: originBox.x + originBox.width / 2, y: originBox.y + originBox.height / 2 }
+  let from = originBox ? { x: originBox.x + originBox.width / 2, y: originBox.y + originBox.height / 2 }
     : { x: box.x + box.width * 0.88, y: box.y + box.height / 2 }
-  expect(await surface.evaluate((element, point) => element.contains(document.elementFromPoint(point.x, point.y)), from)).toBe(true)
+  // Expanded content can still be clipped by its height transition. Keep the
+  // hit-target assertion, but wait for the actual point before sending a touch.
+  await expect.poll(async () => {
+    const currentBox = await surface.boundingBox()
+    const currentOrigin = origin ? await origin.boundingBox() : null
+    if (!currentBox || (origin && !currentOrigin)) return false
+    const currentFrom = currentOrigin ? { x: currentOrigin.x + currentOrigin.width / 2, y: currentOrigin.y + currentOrigin.height / 2 }
+      : { x: currentBox.x + currentBox.width * 0.88, y: currentBox.y + currentBox.height / 2 }
+    const reachable = await surface.evaluate((element, point) => element.contains(document.elementFromPoint(point.x, point.y)), currentFrom)
+    if (reachable) { box = currentBox; from = currentFrom }
+    return reachable
+  }).toBe(true)
   const cdp = browserName === 'chromium' ? await page.context().newCDPSession(page) : null
   if (cdp) await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [from] })
   else { await page.mouse.move(from.x, from.y); await page.mouse.down() }
