@@ -223,7 +223,7 @@ export function ExercisePicker({ quickEntry = false, catalog, clientRecent = [],
     [clientRecent],
   )
   const filtered = useMemo(() => {
-    const matches = filterExercises(selectableCatalog, category, search, muscle, equipment, purpose, { preferredExerciseRefs: preferredSearchRefs, customFirst: true })
+    const matches = filterExercises(selectableCatalog, category, search, muscle, equipment, purpose, { preferredExerciseRefs: preferredSearchRefs, customFirst: true, relevanceBeforeRecency: quickEntry })
       .filter((exercise) => matchesPickerMode(exercise, activeMode))
       .filter((exercise) => !customOnly || exercise.source === 'custom')
       .filter((exercise) => search.trim()
@@ -233,7 +233,7 @@ export function ExercisePicker({ quickEntry = false, catalog, clientRecent = [],
         || (!hasVitalMainCatalog && isCatalogRoot(exercise)))
     if (!search.trim()) matches.sort(compareCatalogBrowseOrder)
     return groupCatalogResults(matches)
-  }, [activeMode, selectableCatalog, category, search, muscle, equipment, purpose, customOnly, preferredSearchRefs, hasVitalMainCatalog, vitalMainRefs])
+  }, [activeMode, selectableCatalog, category, search, muscle, equipment, purpose, customOnly, preferredSearchRefs, hasVitalMainCatalog, vitalMainRefs, quickEntry])
   const facetCatalog = useMemo(
     () => selectableCatalog
       .filter((exercise) => !customOnly || exercise.source === 'custom'),

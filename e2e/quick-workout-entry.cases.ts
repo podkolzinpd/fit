@@ -3,6 +3,18 @@ import { mockPilot, restTimerWorkout, workoutId } from './fit-lime-fixtures'
 
 export function quickWorkoutEntryCases() {
   test.skip(process.env.FIT_QUICK_WORKOUT_ENTRY_ACCEPTANCE !== '1', 'Dedicated native quick-entry harness')
+  test('quick-entry catalogue ranks dumbbells ahead of a less relevant recent lunge', async ({ page }) => {
+    const profileId = 'c0ac0000-6010-4000-8000-000000000001'
+    await page.clock.setFixedTime(new Date('2026-10-08T09:01:00Z'))
+    await mockPilot(page, { role: 'trainer', profileId, fitLime: true, workouts: [{ ...restTimerWorkout(), createdBy: profileId, exercises: [] }] })
+    await page.addInitScript(() => localStorage.setItem('fit.recent-exercises', JSON.stringify(['vital-bulgarian-split-squat-ex242'])))
+    await page.goto(`/workouts/${workoutId}/live`)
+    await page.getByRole('button', { name: 'Выбрать упражнение', exact: true }).click()
+    const picker = page.getByRole('dialog', { name: 'Добавить упражнение', exact: true })
+    await picker.getByLabel('Поиск упражнения').fill('Выпады с га')
+    await expect(picker.locator('.picker-item-copy').first()).toContainText(/гантел/)
+    await expect(picker.locator('.picker-item-copy').first()).not.toContainText(/собственн/)
+  })
   for (const role of ['trainer', 'client'] as const) test(`quick-entry ${role} catalogue leaves results visible above the keyboard`, async ({ page }, info) => {
     const profileId = `c0ac0000-6010-4000-8000-00000000000${role === 'trainer' ? 1 : 2}`
     await page.clock.setFixedTime(new Date('2026-10-08T09:01:00Z'))
