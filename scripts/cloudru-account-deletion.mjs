@@ -1,4 +1,3 @@
-import {createHash} from 'node:crypto'
 import {createRequire} from 'node:module'
 import {pathToFileURL} from 'node:url'
 import {readHistoryRegistry} from './cloudru-account-history-audit.mjs'
@@ -21,7 +20,7 @@ export async function inspectDeletion(client,hash,legacyId){
   const counts=[]
   for(const ref of refs){const values=ref.parent_table==='clients'?cards.map(c=>c.id):[id];const count=Number((await client.query(`select count(*) count from ${quote(ref.schema)}.${quote(ref.table_name)} where ${quote(ref.column_name)}=any($1::uuid[])`,[values])).rows[0].count);if(count)counts.push({...ref,count})}
   await client.query('commit')
-  return{event:'account_deletion_preflight',readOnly:true,legacyMatch:Boolean(legacyId),profilePresent:profiles.length===1,role:profiles[0]?.account_role??null,clientCards:cards.length,references:counts,targetFingerprint:createHash('sha256').update(id).digest('hex')}
+  return{event:'account_deletion_preflight',readOnly:true,legacyMatch:Boolean(legacyId),profilePresent:profiles.length===1,role:profiles[0]?.account_role??null,clientCards:cards.length,references:counts}
  }catch(e){await client.query('rollback');throw e}
 }
 async function main(){
