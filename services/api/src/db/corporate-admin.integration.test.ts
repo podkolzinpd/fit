@@ -107,6 +107,21 @@ describe.skipIf(!source)('corporate administration on real actor/RLS', () => {
       expect(await actor(coach,'select id from public.workouts where id=$1',[workout])).toEqual([{id:workout}])
     } finally {await runtime.end()}
   })
+  it('exposes only published identity metadata to the administrator, never the draft', async () => {
+    const published = { displayName: 'Published synthetic', photos: [{ thumbnailPath: 'synthetic/published.jpg' }], avatarDataUrl: null }
+    const draft = { displayName: 'Private draft', photos: [{ thumbnailPath: 'synthetic/private.jpg' }], avatarDataUrl: 'private-avatar' }
+    await pool.query(`insert into public.trainer_professional_profiles(trainer_id,draft_data,published_data)
+      values($1,$2::jsonb,$3::jsonb)`, [coach, JSON.stringify(draft), JSON.stringify(published)])
+    type Bundle = { trainers: Array<{ id: string; publicId: string | null; publishedName: string | null; photoPath: string | null; avatarDataUrl: string | null }> }
+    const read = async () => (await actor<{ bundle: Bundle }>(admin, 'select app_private.corporate_admin_bundle() bundle'))[0]!.bundle
+    const row = (await read()).trainers.find(t => t.id === coach)!
+    expect(row.publicId).toBeTruthy()
+    expect(row).toMatchObject({ publishedName: 'Published synthetic', photoPath: 'synthetic/published.jpg', avatarDataUrl: null })
+    expect(JSON.stringify(await read())).not.toContain('Private draft')
+    await pool.query('update public.trainer_professional_profiles set published_data=null where trainer_id=$1', [coach])
+    expect((await read()).trainers.find(t => t.id === coach)).toMatchObject({ publicId: null, publishedName: null, photoPath: null, avatarDataUrl: null })
+    await expect(actor(coach, 'select app_private.corporate_admin_bundle()')).rejects.toMatchObject({ code: 'PT403' })
+  })
   it('revokes an existing admin immediately and protects its audit', async () => {
     await expect(actor(admin,'delete from app_private.corporate_admin_audit')).rejects.toMatchObject({code:'42501'})
     await pool.query('update app_private.corporate_admins set enabled=false where profile_id=$1',[admin])

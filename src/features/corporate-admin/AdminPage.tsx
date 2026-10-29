@@ -8,6 +8,7 @@ import { corporateAdminRepository as repository } from '../../data/repositories/
 import type { CorporateAdminBundle, CorporateOffice, CorporateTrainer } from '../../shared/corporate-admin'
 import { AsyncView, EmptyState, Field, Page, SaveStatus, StatePanel, useConfirm } from '../../shared/ui'
 import './corporate-admin.css'
+import { matchesAdminTrainer } from './trainer-search'
 
 function useAdminAccess() {
   const { actor } = useAuth()
@@ -107,20 +108,33 @@ function Trainers({ data }: { data: CorporateAdminBundle }) {
   const [onlyYandex, setOnlyYandex] = useState(false)
   const [officeId, setOfficeId] = useState('')
   const [selected, setSelected] = useState<CorporateTrainer | null>(null)
-  const rows = data.trainers.filter(t => t.name.toLocaleLowerCase('ru').includes(search.trim().toLocaleLowerCase('ru')) && (!onlyYandex || t.isYandex) && (!officeId || t.officeIds.includes(officeId)))
+  const rows = data.trainers.filter(t => matchesAdminTrainer(t, search) && (!onlyYandex || t.isYandex) && (!officeId || t.officeIds.includes(officeId)))
   return <section className="corporate-admin-workspace">
     <h2>Тренеры</h2>
     <div className="corporate-admin-filters">
-      <Field label="Поиск тренера"><input type="search" value={search} onChange={e => setSearch(e.target.value)} /></Field>
+      <Field label="Поиск тренера"><input type="search" placeholder="Имя или ссылка на анкету" value={search} onChange={e => setSearch(e.target.value)} /></Field>
       <Field label="Офис"><select value={officeId} onChange={e => setOfficeId(e.target.value)}><option value="">Все офисы</option>{data.offices.map(o => <option key={o.id} value={o.id}>{o.city} · {o.name}{o.archived ? ' · Архив' : ''}</option>)}</select></Field>
       <label className="corporate-admin-checkbox"><input type="checkbox" checked={onlyYandex} onChange={e => setOnlyYandex(e.target.checked)} />Только тренеры Яндекса</label>
     </div>
     {selected && <TrainerForm key={selected.id} trainer={selected} offices={data.offices} onClose={() => setSelected(null)} />}
     {!rows.length ? <EmptyState title="Тренеры не найдены" description={data.trainers.length ? 'Измените поиск или фильтры.' : 'Здесь появятся зарегистрированные в ФИТ тренеры.'} /> : <ul className="corporate-admin-list">
-      {rows.map(t => <li key={t.id}><div><strong>{t.name}</strong><p>{t.isYandex ? 'Тренер Яндекса' : 'Без отметки'} · {t.officeIds.map(id => data.offices.find(o => o.id === id)).filter(o => o !== undefined).map(o => `${o.city}, ${o.name}${o.archived ? ' (архив)' : ''}`).join('; ') || 'Офисы не назначены'}</p></div>
+      {rows.map(t => <li key={t.id}><div className="corporate-admin-person"><AdminTrainerPhoto key={t.photoUrl ?? t.id} trainer={t} /><div><strong>{t.name}</strong>
+        {t.publishedName && t.publishedName !== t.name && <p>В анкете: {t.publishedName}</p>}
+        <p>{t.isYandex ? 'Тренер Яндекса' : 'Без отметки'} · {t.officeIds.map(id => data.offices.find(o => o.id === id)).filter(o => o !== undefined).map(o => `${o.city}, ${o.name}${o.archived ? ' (архив)' : ''}`).join('; ') || 'Офисы не назначены'}</p>
+        {t.publicId ? <Link to={`/trainers/${t.publicId}`} target="_blank" rel="noopener noreferrer">Открыть анкету</Link> : <p>Анкета не опубликована</p>}</div></div>
         <button type="button" className="secondary" aria-label={`Настроить тренера ${t.name}`} onClick={() => setSelected(t)}>Настроить</button></li>)}
     </ul>}
   </section>
+}
+
+function AdminTrainerPhoto({ trainer }: { trainer: CorporateTrainer }) {
+  const [failed, setFailed] = useState(false)
+  const initials = (trainer.publishedName || trainer.name).split(/\s+/).slice(0, 2).map(part => part[0]).join('').toUpperCase()
+  return <div className="corporate-admin-photo-wrap">
+    {trainer.photoUrl && !failed ? <img className="corporate-admin-photo" src={trainer.photoUrl} alt={`Фото тренера ${trainer.name}`} onError={() => setFailed(true)} />
+      : <span className="corporate-admin-photo" aria-hidden="true">{initials}</span>}
+    {(failed || trainer.photoUnavailable) && <small role="status">Фото недоступно</small>}
+  </div>
 }
 
 function TrainerForm({ trainer, offices, onClose }: { trainer: CorporateTrainer; offices: CorporateOffice[]; onClose: () => void }) {

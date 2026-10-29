@@ -84,6 +84,40 @@ test('admin manages offices and trainer flags on a laptop, including validation 
   await expect(page.getByText(/Пискарёвский проспект, 2 · Архив/)).toBeHidden()
 })
 
+test('admin identifies namesakes by published name, photo and profile link', async ({ page }, testInfo) => {
+  await page.setViewportSize({ width: 1366, height: 900 })
+  await mockNativeAiSession(page, 'client')
+  const publicId = '20000000-0000-4000-8000-000000000010'
+  const photoUrl = nativeAiUrl('/assets/startup-photo-983c93dc4df8.jpg')
+  await page.route('**/v1/admin/access', route => route.fulfill({ json: { allowed: true } }))
+  await page.route('**/v1/admin/bundle', route => route.fulfill({ json: { offices: [], trainers: [
+    { id: coachId, name: 'Тестовый тренер', publishedName: 'Тренер Север', publicId, photoUrl, isYandex: false, officeIds: [], version: 0 },
+    { id: officeId, name: 'Тестовый тренер', publishedName: null, publicId: null, photoUrl: null, isYandex: false, officeIds: [], version: 0 },
+  ] } }))
+  await page.goto(nativeAiUrl('/admin'))
+  const rows = page.locator('.corporate-admin-list > li')
+  await expect(rows).toHaveCount(2)
+  await expect(rows.first().getByRole('img', { name: 'Фото тренера Тестовый тренер' })).toBeVisible()
+  await expect.poll(() => rows.first().locator('img').evaluate((image: HTMLImageElement) => image.naturalWidth)).toBeGreaterThan(0)
+  await expect(rows.last().getByText('Анкета не опубликована')).toBeVisible()
+  await expect(rows.first().getByRole('link', { name: 'Открыть анкету' })).toHaveAttribute('href', `/trainers/${publicId}`)
+  await expect(rows.first().getByRole('link', { name: 'Открыть анкету' })).toHaveAttribute('target', '_blank')
+  const search = page.getByLabel('Поиск тренера', { exact: true })
+  await search.fill('Север')
+  await expect(rows).toHaveCount(1)
+  await search.fill(`https://fit-training.ru/trainers/${publicId}?source=copy`)
+  await expect(rows).toHaveCount(1)
+  await expect(rows).toContainText('Тренер Север')
+  await page.screenshot({ path: testInfo.outputPath('admin-profile-search-laptop.png'), fullPage: true })
+  await page.setViewportSize({ width: 390, height: 844 })
+  await search.fill('')
+  await expect(rows).toHaveCount(2)
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+  await page.screenshot({ path: testInfo.outputPath('admin-profile-search-mobile.png'), fullPage: true })
+  await search.fill('Нет такого тренера')
+  await expect(page.getByRole('heading', { name: 'Тренеры не найдены' })).toBeVisible()
+})
+
 for(const role of ['trainer','client'] as const) {
   test(`${role} without capability cannot see admin data or entry`,async({page})=>{
     await mockNativeAiSession(page,role)
