@@ -1,7 +1,7 @@
 import {test} from 'node:test'
 import assert from 'node:assert/strict'
 import {readFileSync} from 'node:fs'
-import {readDeletionTarget,selectDeletionProfile,inspectDeletion,deletionResolution} from './cloudru-account-deletion.mjs'
+import {readDeletionTarget,selectDeletionProfile,inspectDeletion,deletionResolution,readDeletionScope} from './cloudru-account-deletion.mjs'
 const id='11111111-1111-4111-8111-111111111111'
 test('target rejects contacts, SQL and malformed digests',()=>{for(const v of ['',null,'user@example.test','a'.repeat(63),'A'.repeat(64),'delete from profiles'])assert.throws(()=>readDeletionTarget(v));assert.equal(readDeletionTarget('a'.repeat(64)),'a'.repeat(64))})
 test('identity must resolve uniquely across legacy and retained bindings',()=>{assert.equal(selectDeletionProfile(id,[{profile_id:id}]),id);assert.throws(()=>selectDeletionProfile(null,[]));assert.throws(()=>selectDeletionProfile(id,[{profile_id:'22222222-2222-4222-8222-222222222222'}]));assert.throws(()=>selectDeletionProfile('not-a-uuid',[]))})
@@ -15,4 +15,11 @@ test('reports missing and conflicting matches distinctly without exposing identi
  assert.deepEqual(conflict,{state:'conflict',candidates:2,bindingProfiles:1})
  assert.ok(!JSON.stringify(conflict).includes(id))
  assert.throws(()=>deletionResolution('invalid',[]))
+})
+
+test('private feedback scope requires both exact evidence hashes and no extra fields',()=>{
+ const scope={emailHash:'a'.repeat(64),evidence:{idSha256:'b'.repeat(64),messageSha256:'c'.repeat(64)}}
+ assert.deepEqual(readDeletionScope(JSON.stringify(scope)),scope)
+ assert.deepEqual(readDeletionScope('a'.repeat(64)),{emailHash:'a'.repeat(64),evidence:null})
+ for(const bad of [{...scope,profileId:'unexpected'},{...scope,evidence:{idSha256:'b'.repeat(64)}},{...scope,evidence:{...scope.evidence,messageSha256:'wrong'}}])assert.throws(()=>readDeletionScope(JSON.stringify(bad)))
 })
