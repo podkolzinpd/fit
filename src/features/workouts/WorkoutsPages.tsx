@@ -1,5 +1,6 @@
 import { isQuickWorkoutEntryEnabled } from '../../app/quick-workout-entry'
 import { QuickDayBooking, dayBookingTime } from './QuickDayBooking'
+import { BookingHistorySheet } from './BookingHistorySheet'
 import { isClientWorkoutRedesignEnabled } from '../../app/client-workout-redesign'
 import { isCoachLiveV79Enabled } from '../../app/coach-live-v79'
 import { WorkoutFoldBody } from './WorkoutFoldBody'
@@ -1832,6 +1833,7 @@ export function WorkoutDetailPage() {
   const [askActiveWorkoutRecovery, activeWorkoutRecoveryDialog] = useConfirm()
   const [decisionSheet, setDecisionSheet] = useState<'actions' | 'reschedule' | null>(null)
   const [favoriteSheetOpen, setFavoriteSheetOpen] = useState(false)
+  const [bookingHistoryOpen, setBookingHistoryOpen] = useState(false)
   const [rescheduleDate, setRescheduleDate] = useState<LocalDate>(() => todayInTimeZone(actor?.timezone))
   const [rescheduleTime, setRescheduleTime] = useState('')
   const [firstPlanInviteCode, setFirstPlanInviteCode] = useState<string | null>(null)
@@ -2145,6 +2147,7 @@ export function WorkoutDetailPage() {
       {isFitLimeEnabled(actor) && workout.title && <p className="workout-plan-title">{workout.title}</p>}
       {isFitLimeEnabled(actor) && workout.plannedDate && <p className="workout-plan-title">Исходный план: {formatLocalDate(localDate(workout.plannedDate))}{workout.plannedStartTime ? ` · ${workout.plannedStartTime.slice(0, 5)}${workout.plannedEndTime ? `–${workout.plannedEndTime.slice(0, 5)}` : ''}` : ' · без времени'}</p>}
       {isFitLimeEnabled(actor) && workout.status === 'planned' && canExecute && workout.workoutDate !== today && <p className="workout-plan-title">При запуске сейчас тренировка начнётся сегодня, {formatLocalDate(today)}. Исходная дата плана сохранится отдельно.</p>}
+      {workout.status === 'planned' && trainerOwned && isQuickWorkoutEntryEnabled(actor) && <button type="button" className="secondary wide booking-history-open" onClick={() => setBookingHistoryOpen(true)}><HistoryIcon />Из истории</button>}
       {plannedActions && canExecute && <div className="workout-detail-primary-actions">
         {workout.workoutDate < today ? <Coachmark id="missed-workout-actions-2026-08" userId={actor?.userId} title="План можно закрыть спокойно" description="Запишите результат, перенесите тренировку или сохраните, что она не состоялась.">
           <WorkoutCta className="wide" pending={start.isPending || cancelPlanned.isPending || reschedule.isPending} pendingLabel="Сохраняем…" onClick={() => setDecisionSheet('actions')}>{plannedActions.primary}</WorkoutCta>
@@ -2206,6 +2209,7 @@ export function WorkoutDetailPage() {
       </div>}
       {favoriteSheetOpen && workout && <SaveFavoriteWorkoutSheet exercises={workout.exercises} pending={saveFavorite.isPending} error={saveFavorite.error}
         onSave={(title) => saveFavorite.mutate(title)} onClose={() => { saveFavorite.reset(); setFavoriteSheetOpen(false) }} />}
+      {bookingHistoryOpen && workout && <BookingHistorySheet key={workout.id} target={workout} onClose={() => setBookingHistoryOpen(false)} onApplied={invalidateWorkoutSurfaces} onReload={() => query.refetch()} />}
       {confirmDialog}{activeWorkoutRecoveryDialog}
     </>}</AsyncView>
   </Page>

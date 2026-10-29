@@ -1,8 +1,71 @@
+import type { WorkoutDraft } from '../src/shared/domain'
 import { expect, test } from '@playwright/test'
 import { mockPilot, restTimerWorkout, workoutId } from './fit-lime-fixtures'
 
 export function quickWorkoutEntryCases() {
   test.skip(process.env.FIT_QUICK_WORKOUT_ENTRY_ACCEPTANCE !== '1', 'Dedicated native quick-entry harness')
+  for (const hasPlan of [false, true]) test(`quick-entry booking history preserves appointment and requires replacement ${hasPlan}`, async ({ page }, info) => {
+    const profileId = 'c0ac0000-6010-4000-8000-000000000001'
+    const base = restTimerWorkout()
+    const target = { ...base, createdBy: profileId, status: 'planned' as const, workoutDate: '2026-11-02', startTime: '14:00', endTime: '15:00', startedAt: null, exercises: hasPlan ? base.exercises : [] }
+    const source = { ...base, id: '67500000-0000-4000-8000-000000000030', title: 'История суперсет', status: 'done' as const, workoutDate: '2026-10-02', completedAt: '2026-10-02T10:00:00Z', exercises: [0, 1].map(position => ({ ...base.exercises[0]!, id: `67500000-0000-4000-8000-00000000004${position}`, position, blockType: 'group' as const, blockRounds: 2, trainerComment: 'Держать корпус', sets: base.exercises[0]!.sets.map(set => ({ ...set, fact: { weightKg: 35, reps: 8 }, confirmedAt: '2026-10-02T10:00:00Z' })) })) }
+    const original = JSON.stringify(source)
+    const backend = await mockPilot(page, { profileId, fitLime: true, workouts: [target, source, { ...source, id: '67500000-0000-4000-8000-000000000050', clientId: '67500000-0000-4000-8000-000000000051', title: 'Другой клиент' }] })
+    const commands: WorkoutDraft[] = []
+    await page.route(`**/v1/workouts/${workoutId}`, async route => {
+      if (route.request().method() !== 'PUT') return route.fallback()
+      const draft = route.request().postDataJSON() as WorkoutDraft & { expectedVersion: number }
+      commands.push(draft)
+      const actual = backend.getWorkouts().find(item => item.id === workoutId)!
+      expect(draft.expectedVersion).toBe(actual.version)
+      Object.assign(actual, { workoutDate: draft.workoutDate, startTime: draft.startTime, endTime: draft.endTime, version: actual.version + 1,
+        exercises: draft.exercises.map((exercise, position) => ({ ...exercise, id: `67500000-0000-4000-8000-00000000006${position}`, sets: exercise.sets.map((set, index) => ({ ...set, id: `67500000-0000-4000-8000-0000000000${7 + position}${index}`, fact: {}, confirmedAt: null, version: 1 })) })) })
+      await route.fulfill({ status: 200, json: { workout: { id: workoutId } } })
+    })
+    await page.goto(`/workouts/${workoutId}`)
+    await page.getByRole('button', { name: 'Из истории', exact: true }).click()
+    const sheet = page.getByRole('dialog', { name: 'История тренировок клиента' })
+    await expect(sheet.getByText('Другой клиент')).toHaveCount(0)
+    await sheet.getByRole('button', { name: /История суперсет/ }).click()
+    await expect(sheet).toContainText('Держать корпус')
+    await sheet.screenshot({ path: info.outputPath(`booking-history-${hasPlan}.png`) })
+    await sheet.getByRole('button', { name: 'Повторить в этой записи', exact: true }).click()
+    if (hasPlan) {
+      expect(commands).toHaveLength(0)
+      await expect(sheet.getByRole('alert')).toContainText('уже есть план')
+      await sheet.getByRole('button', { name: 'Заменить план', exact: true }).click()
+    }
+    await expect(sheet).toHaveCount(0)
+    expect(commands).toHaveLength(1)
+    const actual = backend.getWorkouts().find(item => item.id === workoutId)!
+    expect([actual.clientId, actual.workoutDate, actual.startTime, actual.endTime, actual.status]).toEqual([target.clientId, '2026-11-02', '14:00', '15:00', 'planned'])
+    expect(actual.exercises).toHaveLength(2)
+    expect(actual.exercises.every(item => item.blockType === 'group' && item.blockRounds === 2 && item.sets.every(set => set.weightKg === 35 && set.reps === 8 && !set.confirmedAt))).toBe(true)
+    expect(actual.exercises[0]!.blockId).toBe(actual.exercises[1]!.blockId)
+    expect(JSON.stringify(backend.getWorkouts().find(item => item.id === source.id))).toBe(original)
+    expect(backend.getWorkouts()).toHaveLength(3)
+    await expect(page).toHaveURL(new RegExp(`/workouts/${workoutId}$`))
+  })
+  test('quick-entry day retains navigation and rejects moved or cancelled gestures', async ({ page }) => {
+    const profileId = 'c0ac0000-6010-4000-8000-000000000001'
+    await mockPilot(page, { profileId, fitLime: true, workouts: [] })
+    await page.goto('/today?date=2026-10-08')
+    const grid = page.locator('.schedule-v2-timeline .day-grid')
+    await expect(grid).toBeVisible()
+    await page.waitForTimeout(250)
+    await grid.evaluate(el => {
+      const r = el.parentElement!.getBoundingClientRect(), x = r.left + 160, y = r.top + 50
+      const target = document.elementFromPoint(x, y)!
+      const emit = (type: string, dx = 0) => target.dispatchEvent(new PointerEvent(type, { bubbles: true, cancelable: true, isPrimary: true, pointerId: 12, button: 0, clientX: x + dx, clientY: y }))
+      emit('pointerdown'); emit('pointermove', 20); emit('pointermove'); emit('pointerup')
+      emit('pointerdown'); emit('pointercancel'); emit('pointerup')
+    })
+    await expect(page.getByRole('dialog', { name: 'Записать клиента' })).toHaveCount(0)
+    const box = (await page.locator('.schedule-v2-timeline').boundingBox())!
+    await page.mouse.move(box.x + 200, box.y + 50); await page.mouse.down(); await page.mouse.move(box.x + 70, box.y + 50, { steps: 8 }); await page.mouse.up()
+    await expect(page).toHaveURL(/date=2026-10-09/)
+    await expect(page.getByRole('dialog', { name: 'Записать клиента' })).toHaveCount(0)
+  })
   for (const density of ['comfortable', 'compact'] as const) test(`quick-entry day booking ${density}: completed tap, scroll priority and retry`, async ({ page }, info) => {
     const profileId = 'c0ac0000-6010-4000-8000-000000000001'
     await page.clock.setFixedTime(new Date('2026-10-08T09:01:00Z'))
