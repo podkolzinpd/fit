@@ -106,6 +106,7 @@ export function purposesForSelection(
 }
 
 interface ExercisePickerProps {
+  quickEntry?: boolean
   catalog: ExerciseCatalogState
   clientRecent?: readonly ExerciseSnapshot[]
   onPick: (exercise: ExerciseSnapshot, runningFormat?: RunningFormat) => void
@@ -154,7 +155,7 @@ function pickerMuscleGroupLabel(group: MuscleGroup) {
   return group === 'core' ? 'Пресс' : MUSCLE_GROUP_LABELS[group]
 }
 
-export function ExercisePicker({ catalog, clientRecent = [], onPick, onPickMany, selectionDraft, onSelectionDraftChange, multiple = false, showEmptySelection = false, keepSelectionWhileAdding = false, initialSearch = '', initialMode = 'all', techniqueActionLabel = 'Добавить упражнение', reference = false, referenceAppearance = reference, clientLime = false, coachLiveV79 = false, clientLiveV79 = false, onClose: commitClose }: ExercisePickerProps) {
+export function ExercisePicker({ quickEntry = false, catalog, clientRecent = [], onPick, onPickMany, selectionDraft, onSelectionDraftChange, multiple = false, showEmptySelection = false, keepSelectionWhileAdding = false, initialSearch = '', initialMode = 'all', techniqueActionLabel = 'Добавить упражнение', reference = false, referenceAppearance = reference, clientLime = false, coachLiveV79 = false, clientLiveV79 = false, onClose: commitClose }: ExercisePickerProps) {
   const liveSheetMotion = coachLiveV79 || clientLiveV79
   const [closing, setClosing] = useState(false)
   const closeTimer = useRef<number | null>(null)
@@ -557,7 +558,7 @@ export function ExercisePicker({ catalog, clientRecent = [], onPick, onPickMany,
   const referenceList = referenceAppearance && !previewExercise && !creating
   // The closing client dialog is inert, but its backdrop must keep shielding
   // the cards until the existing animation commits the close.
-  return <div className={`sheet-overlay exercise-picker-overlay${keyboardOpen ? ' keyboard-open' : ''}${coachLiveV79 ? ' coach-v79-picker-overlay' : ''}${clientLiveV79 ? ' client-live-v79-picker-overlay' : ''}${closing ? ' closing' : ''}`} inert={closing && !clientLiveV79}
+  return <div className={`sheet-overlay exercise-picker-overlay${quickEntry ? ' quick-entry-picker-overlay' : ''}${keyboardOpen ? ' keyboard-open' : ''}${coachLiveV79 ? ' coach-v79-picker-overlay' : ''}${clientLiveV79 ? ' client-live-v79-picker-overlay' : ''}${closing ? ' closing' : ''}`} inert={closing && !clientLiveV79}
     onPointerDownCapture={(event) => { backdropStart.current = event.target === event.currentTarget }}
     onPointerCancel={() => { backdropStart.current = null }}
     onClick={(event) => {
@@ -566,7 +567,7 @@ export function ExercisePicker({ catalog, clientRecent = [], onPick, onPickMany,
       backdropStart.current = null
       if (intended && event.target === event.currentTarget && !addingSelected) onClose()
     }}>
-    <section ref={dialogRef} inert={clientLiveV79 && closing} {...(liveSheetMotion ? v79Drag : {})} tabIndex={referenceAppearance || clientLime ? -1 : undefined} onKeyDown={handleDialogKey} className={`exercise-picker${referenceAppearance ? ' coach-reference-sheet coach-reference-catalog' : ''}${clientLime ? ' client-lime-catalog' : ''}${clientLime && referenceAppearance ? ' client-reference-catalog' : ''}${clientLime && filtersOpen ? ' client-lime-filters' : ''}${visibleSelection.size ? ' has-selection' : ''}`} role="dialog" aria-modal="true" aria-label="Добавить упражнение" onClick={stopPropagation}>
+    <section ref={dialogRef} inert={clientLiveV79 && closing} {...(liveSheetMotion ? v79Drag : {})} tabIndex={referenceAppearance || clientLime ? -1 : undefined} onKeyDown={handleDialogKey} className={`exercise-picker${quickEntry ? ' quick-entry-catalog' : ''}${referenceAppearance ? ' coach-reference-sheet coach-reference-catalog' : ''}${clientLime ? ' client-lime-catalog' : ''}${clientLime && referenceAppearance ? ' client-reference-catalog' : ''}${clientLime && filtersOpen ? ' client-lime-filters' : ''}${visibleSelection.size ? ' has-selection' : ''}`} role="dialog" aria-modal="true" aria-label="Добавить упражнение" onClick={stopPropagation}>
       {clientLime || coachLiveV79 ? <FitLimeSheetHeader
         title={previewExercise ? 'Техника' : creating ? 'Своё упражнение' : filtersOpen ? <>Фильтры{referenceAppearance && activeFilterChips.length > 0 && <span className="coach-filter-count" aria-hidden="true">{activeFilterChips.length}</span>}</> : coachLiveV79 ? 'Добавить упражнение' : 'Выберите упражнения'}
         backLabel={previewExercise ? 'Назад к выбору' : creating ? 'Назад к упражнениям' : filtersOpen ? 'Назад к упражнениям' : 'Закрыть'}

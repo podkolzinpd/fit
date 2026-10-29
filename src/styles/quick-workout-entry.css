@@ -1,0 +1,40 @@
+/* Independent two-account experiment. Existing themes and catalogue actions own
+   their meaning; only this variant adapts composition to the visual viewport. */
+.phone-frame.fit-lime-shell .quick-entry-picker-overlay .exercise-picker.quick-entry-catalog { position: relative; }
+.phone-frame.fit-lime-shell .quick-entry-picker-overlay .quick-entry-catalog:not(.has-selection) .coach-catalog-create-bar {
+  position: absolute; inset: auto 20px max(16px, env(safe-area-inset-bottom)) auto;
+  display: block; min-height: 0; padding: 0; background: transparent;
+  pointer-events: none; z-index: 2;
+}
+.phone-frame.fit-lime-shell .quick-entry-picker-overlay .quick-entry-catalog .coach-catalog-create-floating { pointer-events: auto; }
+.phone-frame.fit-lime-shell .quick-entry-picker-overlay .quick-entry-catalog:not(.has-selection) .picker-list { padding-bottom: 96px; scroll-padding-bottom: 96px; }
+.phone-frame.fit-lime-shell .quick-entry-picker-overlay .quick-entry-catalog .picker-search:focus-visible {
+  outline: none; border-bottom: 1px solid var(--lime-accent); box-shadow: none;
+}
+.phone-frame.fit-lime-shell .quick-entry-picker-overlay.keyboard-open .exercise-picker.quick-entry-catalog {
+  height: 100%; max-height: 100%; padding-top: 0; padding-bottom: 8px; gap: 0;
+}
+.phone-frame.fit-lime-shell .quick-entry-picker-overlay.keyboard-open .quick-entry-catalog :is(.picker-header, .client-lime-sheet-header) {
+  min-height: 64px; padding: 10px 18px; margin: 0; flex-shrink: 0;
+}
+.phone-frame.fit-lime-shell .quick-entry-picker-overlay.keyboard-open .quick-entry-catalog .picker-search-control { margin: 12px 20px 8px; }
+.phone-frame.fit-lime-shell .quick-entry-picker-overlay.keyboard-open .quick-entry-catalog .picker-search {
+  min-height: 44px; margin: 0; padding: 8px 44px 8px 0;
+  border-radius: 0; font-size: 20px; line-height: 24px;
+}
+.phone-frame.fit-lime-shell .quick-entry-picker-overlay.keyboard-open .quick-entry-catalog .picker-toolbar { padding-bottom: 8px; }
+.phone-frame.fit-lime-shell .quick-entry-picker-overlay.keyboard-open .quick-entry-catalog:not(.has-selection) .coach-catalog-create-bar { bottom: 12px; }
+.phone-frame.fit-lime-shell .quick-entry-picker-overlay.keyboard-open .quick-entry-catalog:not(.has-selection) .coach-catalog-create-floating { width: 48px; height: 48px; min-width: 48px; padding: 12px; }
+.phone-frame.fit-lime-shell .quick-entry-picker-overlay.keyboard-open .quick-entry-catalog:not(.has-selection) .picker-list { padding-bottom: 72px; scroll-padding-bottom: 72px; }
+.phone-frame.fit-lime-shell .quick-entry-picker-overlay.keyboard-open .quick-entry-catalog.has-selection :is(.coach-catalog-create-bar, .picker-selection-bar) {
+  min-height: 60px; padding: 8px 20px;
+}
+.phone-frame.fit-lime-shell .quick-entry-picker-overlay.keyboard-open .quick-entry-catalog :is(.coach-catalog-add, .picker-selection-bar > button) { height: 44px; min-height: 44px; padding-block: 10px; }
+.phone-frame.fit-lime-shell .quick-entry-picker-overlay.keyboard-open .quick-entry-catalog .picker-item { min-height: 88px; }
+.phone-frame.fit-lime-shell .quick-entry-picker-overlay.keyboard-open .quick-entry-catalog .picker-item-technique { padding-block: 12px; gap: 12px; }
+.phone-frame.fit-lime-shell .quick-entry-picker-overlay.keyboard-open .quick-entry-catalog :is(.picker-item-media, .exercise-image-picker) { width: 48px; min-width: 48px; height: 56px; border-radius: 16px; }
+
+.phone-frame.fit-lime-shell .quick-entry-picker-overlay .quick-entry-catalog:not(.has-selection) .picker-selection-bar { display: none; }
+.phone-frame.fit-lime-shell .quick-entry-picker-overlay.keyboard-open .quick-entry-catalog.client-lime-catalog .client-lime-sheet-header { margin-inline: -20px; }
+.phone-frame.fit-lime-shell .quick-entry-picker-overlay.keyboard-open .quick-entry-catalog.client-lime-catalog .picker-search-control { margin-inline: 0; }
+.phone-frame.fit-lime-shell .quick-entry-picker-overlay.keyboard-open .quick-entry-catalog.client-lime-catalog .picker-list { padding-bottom: 16px; scroll-padding-bottom: 16px; }
