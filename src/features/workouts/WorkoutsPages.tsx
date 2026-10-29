@@ -1112,7 +1112,7 @@ const chronicleReactionLabels: Record<TrainerReaction, string> = {
   strong: '💪',
 }
 
-export function WorkoutChronicleCard({ workout, contextLabel, returnTo, historyListActions = false }: { workout: Workout; contextLabel?: string | null; returnTo?: string; historyListActions?: boolean }) {
+export function WorkoutChronicleCard({ workout, contextLabel, returnTo, historyListActions = false, showTitle = false }: { workout: Workout; contextLabel?: string | null; returnTo?: string; historyListActions?: boolean; showTitle?: boolean }) {
   const done = workout.status === 'done'
   const duration = workoutDurationLabel(workout.startedAt, workout.completedAt, workout.actualDurationSec)
   const tonnage = workoutTonnage(workout)
@@ -1137,6 +1137,7 @@ export function WorkoutChronicleCard({ workout, contextLabel, returnTo, historyL
           <WorkoutStatusBadge workout={workout} />
         </div>
       </div>
+      {showTitle && workout.title && <h2 className="workout-chronicle-title">{workout.title}</h2>}
       {contextLabel && <p className="card-author">{contextLabel}</p>}
       <div className="workout-chronicle-exercises">
         {exercisePreview.visible.length > 0 ? exercisePreview.visible.map((exercise) => {

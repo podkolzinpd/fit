@@ -105,3 +105,72 @@
   background: var(--lime-accent);
   color: var(--lime-text-on-accent);
 }
+
+/* CR2: the existing list/calendar and favorite commands keep their own markup. */
+.phone-frame.fit-client-lime.client-screen-reference .client-workouts-page
+  :is(.client-workout-card, .past-workout-plan-card, .favorite-workout-card, .preset-workout-card) {
+  min-width: 0;
+  padding: 20px;
+  border: 0;
+  border-radius: var(--lime-radius-card);
+  background: var(--lime-surface);
+  box-shadow: none;
+}
+.phone-frame.fit-client-lime.client-screen-reference .client-workouts-page
+  .workout-chronicle-card {
+  padding: 0;
+  border: 0;
+  border-radius: var(--lime-radius-card);
+  background: var(--lime-surface);
+  box-shadow: none;
+}
+.phone-frame.fit-client-lime.client-screen-reference .client-workouts-page .workout-chronicle-open {
+  gap: 12px;
+  padding: 20px;
+}
+.phone-frame.fit-client-lime.client-screen-reference .client-workouts-page
+  :is(.client-workout-card h2, .workout-chronicle-title, .favorite-workout-card-head strong) {
+  margin: 0;
+  color: var(--lime-text);
+  font-size: 22px;
+  line-height: 1.15;
+  letter-spacing: -.02em;
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+.phone-frame.fit-client-lime.client-screen-reference .client-workouts-page
+  :is(.client-workout-card-date, .card-author, .favorite-workout-preview, .past-workout-plan-copy small) {
+  color: var(--lime-text-secondary);
+  font-size: 14px;
+  line-height: 1.4;
+  font-weight: 400;
+}
+.phone-frame.fit-client-lime.client-screen-reference .client-workouts-page
+  :is(.favorite-workout-card-actions .secondary, .preset-workout-card > button, .workout-chronicle-copy) {
+  min-height: 44px;
+  border: 0;
+  border-radius: 18px;
+  background: var(--lime-surface-raised);
+  color: var(--lime-text);
+}
+.phone-frame.fit-client-lime.client-screen-reference .client-workouts-page
+  :is(.client-workout-cards, .favorite-workout-cards, .preset-workout-picker-list) { gap: 12px; }
+.phone-frame.fit-client-lime.client-screen-reference .client-workouts-page
+  :is(.progress-view-tabs, .client-workouts-view-toggle) {
+  padding: 4px;
+  gap: 4px;
+  border: 0;
+  border-radius: 24px;
+  background: var(--lime-surface-raised);
+}
+.phone-frame.fit-client-lime.client-screen-reference .client-workouts-page
+  :is(.progress-view-tabs, .client-workouts-view-toggle) button {
+  min-height: 44px;
+  border: 0;
+  border-radius: 20px;
+}
+.phone-frame.fit-client-lime.client-screen-reference .client-workouts-page
+  :is(.progress-view-tabs button[aria-selected='true'], .client-workouts-view-toggle button[aria-pressed='true']) {
+  background: var(--lime-accent);
+  color: var(--lime-text-on-accent);
+}

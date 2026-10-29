@@ -42,6 +42,7 @@ function useMine() {
 export function MyWorkoutsPage() {
   const { favoriteWorkouts: favoriteWorkoutsRepository, invitations: invitationsRepository, workouts: workoutsRepository } = useDataBackend()
   const { actor } = useAuth()
+  const referenceCards = isClientWorkoutRedesignEnabled(actor)
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const [confirmRemoveFavorite, confirmRemoveFavoriteDialog] = useConfirm()
@@ -137,7 +138,7 @@ export function MyWorkoutsPage() {
   const plannedReturnTo = `/me/workouts${plannedCalendar.search}`
   const renderPlannedCard = (workout: Workout, returnTo: string) => workout.status === 'planned' && workout.workoutDate < today
     ? <PastWorkoutPlanCard key={workout.id} workout={workout} contextLabel={clientWorkoutCardLabel(workout, actor?.userId, trainers.data)} returnTo={returnTo} />
-    : <Link className="card client-workout-card" key={workout.id} to={`/workouts/${workout.id}`} state={{ returnTo }}><div><strong>{formatLocalDate(workout.workoutDate)}</strong><p className="muted">{clientWorkoutCardLabel(workout, actor?.userId, trainers.data)}</p><WorkoutExercisesSummary workout={workout} maxItems={2} /></div><WorkoutStatusBadge workout={workout} /></Link>
+    : <Link className="card client-workout-card" key={workout.id} to={`/workouts/${workout.id}`} state={{ returnTo }}><div><strong className={referenceCards && workout.title ? 'client-workout-card-date' : undefined}>{formatLocalDate(workout.workoutDate)}</strong>{referenceCards && workout.title && <h2>{workout.title}</h2>}<p className="muted">{clientWorkoutCardLabel(workout, actor?.userId, trainers.data)}</p><WorkoutExercisesSummary workout={workout} maxItems={2} /></div><WorkoutStatusBadge workout={workout} /></Link>
   const renderViewToggle = (scope: 'current' | 'history') => {
     const current = scope === 'current' ? plannedCalendar : calendar
     return <div className="client-history-view-toggle client-workouts-view-toggle" role="group" aria-label={scope === 'current' ? 'Вид актуальных тренировок' : 'Вид истории тренировок'}><button type="button" aria-pressed={current.state.view === 'list'} onClick={current.showList}>Список</button><button type="button" aria-pressed={current.state.view === 'calendar'} onClick={() => scope === 'current' ? current.showCalendar(today) : showHistoryCalendar()}><ScheduleIcon />Календарь</button></div>
@@ -181,7 +182,7 @@ export function MyWorkoutsPage() {
         <section className="client-workout-section client-history-section">
           <div className="client-workout-section-head client-history-section-head"><div><p className="eyebrow">РЕЗУЛЬТАТЫ</p><h2>История</h2></div></div>
           {calendarState.view === 'list' ? historyItems.length > 0
-            ? <><div className="cards client-workout-cards workout-chronicle-list">{historyItems.map((workout) => <WorkoutChronicleCard key={workout.id} workout={workout} contextLabel={clientWorkoutCardLabel(workout, actor?.userId, trainers.data)} returnTo={calendarReturnTo} historyListActions />)}</div><LoadMoreButton hasMore={history.hasNextPage} loading={history.isFetchingNextPage} onLoadMore={() => void history.fetchNextPage()} /></>
+            ? <><div className="cards client-workout-cards workout-chronicle-list">{historyItems.map((workout) => <WorkoutChronicleCard key={workout.id} workout={workout} contextLabel={clientWorkoutCardLabel(workout, actor?.userId, trainers.data)} returnTo={calendarReturnTo} historyListActions showTitle={referenceCards} />)}</div><LoadMoreButton hasMore={history.hasNextPage} loading={history.isFetchingNextPage} onLoadMore={() => void history.fetchNextPage()} /></>
             : <EmptyState title="Пока нет результатов" description="Завершённые тренировки появятся здесь." />
             : <ClientWorkoutHistoryCalendar
                 month={calendarState.month}
@@ -192,6 +193,7 @@ export function MyWorkoutsPage() {
                 error={calendarHistory.error}
                 returnTo={calendarReturnTo}
                 contextLabel={(workout) => clientWorkoutCardLabel(workout, actor?.userId, trainers.data)}
+                renderSelectedWorkout={referenceCards ? (workout) => <WorkoutChronicleCard workout={workout} contextLabel={clientWorkoutCardLabel(workout, actor?.userId, trainers.data)} returnTo={calendarReturnTo} showTitle /> : undefined}
                 onRetry={() => void calendarHistory.refetch()}
                 onMonthChange={calendar.shiftMonth}
                 onDateSelect={calendar.selectDate}
