@@ -1028,7 +1028,7 @@ describe('Yandex main repository', () => {
     expect(await createYandexMainRepository(apiBaseUrl, sessionToken, staleClientActor()).clients.getMine()).toBeNull()
   })
 
-  it('reports an inaccessible confirmed card and lets the next read recover', async () => {
+  it('preserves a missing accessible card as null and lets the next read recover', async () => {
     const fetchMock = vi.fn().mockResolvedValueOnce(jsonResponse({ clients: [] }))
       .mockResolvedValueOnce(jsonResponse(ownProfile()))
       .mockResolvedValueOnce(jsonResponse({ clients: [] }))
@@ -1036,7 +1036,7 @@ describe('Yandex main repository', () => {
       .mockResolvedValueOnce(jsonResponse(ownProfile()))
     vi.stubGlobal('fetch', fetchMock)
     const repository = createYandexMainRepository(apiBaseUrl, sessionToken, staleClientActor())
-    await expect(repository.clients.getMine()).rejects.toMatchObject({ code: 'client_profile_unavailable' })
+    expect(await repository.clients.getMine()).toBeNull()
     expect((await repository.clients.getMine())?.id).toBe(clientId)
   })
 

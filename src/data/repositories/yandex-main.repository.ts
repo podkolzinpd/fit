@@ -1308,10 +1308,9 @@ export function createYandexMainRepository(
         const currentId = profile.client.id
         const current = available.find((item) => item.id === currentId)
           ?? (await clients()).find((item) => item.id === currentId)
-        if (!current) {
-          throw new RepositoryError('client_profile_unavailable', 'Не удалось загрузить профиль спортсмена. Попробуйте ещё раз.')
-        }
-        return current
+        // No accessible card is the existing first-run contract. Transport
+        // failures and a mismatched own profile still propagate above.
+        return current ?? null
       },
       async resolveId(id) {
         if ((await clients()).some((item) => item.id === id)) return id
