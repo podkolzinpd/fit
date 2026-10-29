@@ -1,6 +1,6 @@
 import { z } from 'zod'
 import { expect, test, type Page } from '@playwright/test'
-import { beginClientGesture, coachGestureWorkout, restTimerWorkout, holdClientLiveCard, mockClientStreamingVoice, mockPilot, newWorkoutId, workoutId, conversationId, messageId, clientId } from './fit-lime-fixtures'
+import { beginClientGesture, coachGestureWorkout, restTimerWorkout, holdClientLiveCard, mockClientStreamingVoice, mockPilot, mockPublicTrainer, publicTrainerDraft, publicTrainerId, newWorkoutId, workoutId, conversationId, messageId, clientId } from './fit-lime-fixtures'
 
 test.skip(process.env.FIT_CLIENT_WORKOUT_ACCEPTANCE !== '1', 'Dedicated native client-workout harness')
 
@@ -100,6 +100,38 @@ for (const theme of ['light', 'dark']) test(`client reference workout lists reta
   await page.getByRole('tab', { name: 'Готовые тренировки', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Избранное', exact: true })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Тренировки Fit', exact: true })).toBeVisible()
+})
+
+for (const theme of ['light', 'dark']) test(`client reference people rows retain chat and trainer filters ${theme}`, async ({ page }, info) => {
+  await page.addInitScript(({ id, theme }) => localStorage.setItem(`fit.clientLime.theme.${id}`, theme), { id: pilotId, theme })
+  await mockPilot(page, { role: 'client', profileId: pilotId, clientLime: true })
+  await mockPublicTrainer(page)
+  await page.route('**/v1/trainers/catalog*', route => route.fulfill({ json: { items: [{ publicId: publicTrainerId, profile: { ...publicTrainerDraft, photos: [] }, isBrandTrainer: false }], totalCount: 1, nextOffset: null } }))
+  await page.goto('/chat')
+  const thread = page.locator('.chat-thread').first()
+  await expect(thread.locator('.chat-avatar')).toHaveCSS('width', '40px')
+  await expect(thread.locator('.chat-thread-meta b')).toBeVisible()
+  await page.screenshot({ path: info.outputPath(`messages-${theme}.png`) })
+  await thread.click()
+  await expect(page).toHaveURL(new RegExp(`/chat/${conversationId}$`))
+  await expect(page.locator('.chat-conversation-page')).toBeVisible()
+  await page.goto('/me/trainers')
+  await expect(page.getByRole('heading', { name: 'Тестовый тренер', exact: true })).toBeVisible()
+  for (const width of [390, 430]) {
+    await page.setViewportSize({ width, height: 844 })
+    await expect(page.locator('.trainer-catalog-card')).toHaveCSS('border-radius', '32px')
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+    await page.screenshot({ path: info.outputPath(`trainers-${theme}-${width}.png`) })
+  }
+  await page.getByLabel('Имя тренера', { exact: true }).fill('Тестовый')
+  await page.getByRole('button', { name: 'Найти', exact: true }).click()
+  await page.getByRole('button', { name: 'Фильтры', exact: true }).click()
+  const sheet = page.getByRole('dialog', { name: 'Фильтры тренеров' })
+  await expect(sheet).toHaveCSS('border-top-left-radius', '40px')
+  await sheet.getByLabel('Город', { exact: true }).fill('Москва')
+  await sheet.getByRole('button', { name: 'Показать тренеров', exact: true }).click()
+  await expect(sheet).toHaveCount(0)
+  await expect(page.getByLabel('Имя тренера', { exact: true })).toHaveValue('Тестовый')
 })
 
 // Z-order is density-independent; both themes exercise different halo surfaces.
