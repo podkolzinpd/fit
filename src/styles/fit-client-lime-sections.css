@@ -165,6 +165,10 @@ html.fit-client-lime-document .athlete-achievement-detail :focus-visible,
 }
 
 /* Public client destinations reuse the same card/control contract. */
+.phone-frame.fit-client-lime-public > .content:has(> .public-trainer-page) {
+  padding-bottom: 0;
+  overflow: hidden;
+}
 .phone-frame.fit-client-lime-public :is(.legal-screen, .auth-flow-identity) {
   width: 100%;
   min-height: 100%;
