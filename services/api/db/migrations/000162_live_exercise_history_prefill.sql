@@ -79,4 +79,11 @@ revoke all on function public.append_live_exercise(uuid, jsonb, bigint, uuid) fr
 grant execute on function public.append_live_exercise(uuid, jsonb, bigint, uuid) to fit_api;
 
 -- Down Migration
--- Forward-only. Old callers omit prefillFromHistory and retain the empty set.
+-- Restore only the previous command body; existing business rows stay intact.
+drop function public.append_live_exercise(uuid, jsonb, bigint, uuid);
+alter function app_private.append_live_exercise_without_history_prefill(uuid, jsonb, bigint, uuid)
+  set schema public;
+alter function public.append_live_exercise_without_history_prefill(uuid, jsonb, bigint, uuid)
+  rename to append_live_exercise;
+revoke all on function public.append_live_exercise(uuid, jsonb, bigint, uuid) from public;
+grant execute on function public.append_live_exercise(uuid, jsonb, bigint, uuid) to fit_api;
