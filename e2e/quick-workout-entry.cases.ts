@@ -89,6 +89,7 @@ export function quickWorkoutEntryCases() {
   })
   test('quick-entry catalogue ranks dumbbells ahead of a less relevant recent lunge', async ({ page }) => {
     const profileId = 'c0ac0000-6010-4000-8000-000000000001'
+    await page.clock.setFixedTime(new Date('2026-10-08T09:01:00Z'))
     await mockPilot(page, { role: 'trainer', profileId, fitLime: true, workouts: [{ ...restTimerWorkout(), createdBy: profileId, exercises: [] }] })
     await page.addInitScript(() => localStorage.setItem('fit.recent-exercises', JSON.stringify(['vital-bulgarian-split-squat-ex242'])))
     await page.goto(`/workouts/${workoutId}/live`)
