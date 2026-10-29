@@ -1,3 +1,4 @@
+import { isQuickWorkoutEntryEnabled } from '../../app/quick-workout-entry'
 import { isClientWorkoutRedesignEnabled } from '../../app/client-workout-redesign'
 import { isCoachLiveV79Enabled } from '../../app/coach-live-v79'
 import { WorkoutFoldBody } from './WorkoutFoldBody'
@@ -3616,7 +3617,20 @@ export function LiveWorkoutPage() {
       void queryClient.invalidateQueries({ queryKey: ['clients'] })
     },
   })
-  const appendExercise = useMutation({ mutationFn: (exercise: ExerciseSnapshot) => runLiveWorkoutMutation(`append-exercise:${exercise.ref}`, (workout) => workoutsRepository.appendLiveExercise(workout, exercise)), onSuccess: async () => { await query.refetch() } })
+  const appendExercise = useMutation({ mutationFn: (exercise: ExerciseSnapshot) => runLiveWorkoutMutation(`append-exercise:${exercise.ref}`, async (workout) => {
+    if (!isQuickWorkoutEntryEnabled(actor)) return workoutsRepository.appendLiveExercise(workout, exercise)
+    const key = `${workoutId}:${exercise.source}:${exercise.ref}`
+    const pending = pendingLiveExerciseAdds.current.get(key) ?? { operationId: crypto.randomUUID(), expectedVersion: workout.version }
+    pendingLiveExerciseAdds.current.set(key, pending)
+    try {
+      const version = await workoutsRepository.appendLiveExercise({ ...workout, version: pending.expectedVersion }, exercise, pending.operationId, true)
+      pendingLiveExerciseAdds.current.delete(key)
+      return version
+    } catch (error) {
+      if (!(error instanceof RepositoryError && ['live_workout_network', 'service_unavailable', 'invalid_response'].includes(error.code))) pendingLiveExerciseAdds.current.delete(key)
+      throw error
+    }
+  }), onSuccess: async () => { await query.refetch() } })
   const appendSelection = useMutation({
     mutationFn: async (exercises: ExerciseSnapshot[]) => {
       await liveSets.waitForIdle()
@@ -3626,7 +3640,7 @@ export function LiveWorkoutPage() {
           await runLiveWorkoutMutation(`append-exercise:${exercise.source}:${exercise.ref}`, (workout) => {
             const operation = pendingLiveExerciseAdds.current.get(key) ?? { operationId: crypto.randomUUID(), expectedVersion: workout.version }
             pendingLiveExerciseAdds.current.set(key, operation)
-            return workoutsRepository.appendLiveExercise({ ...workout, version: operation.expectedVersion }, exercise, operation.operationId)
+            return workoutsRepository.appendLiveExercise({ ...workout, version: operation.expectedVersion }, exercise, operation.operationId, isQuickWorkoutEntryEnabled(actor))
           })
         } catch (error) {
           if (!(error instanceof RepositoryError && ['live_workout_network', 'service_unavailable', 'invalid_response'].includes(error.code))) pendingLiveExerciseAdds.current.delete(key)
