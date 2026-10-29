@@ -121,7 +121,7 @@ function Trainers({ data }: { data: CorporateAdminBundle }) {
       {rows.map(t => <li key={t.id}><div className="corporate-admin-person"><AdminTrainerPhoto key={t.photoUrl ?? t.id} trainer={t} /><div><strong>{t.name}</strong>
         {t.publishedName && t.publishedName !== t.name && <p>В анкете: {t.publishedName}</p>}
         <p>{t.isYandex ? 'Тренер Яндекса' : 'Без отметки'} · {t.officeIds.map(id => data.offices.find(o => o.id === id)).filter(o => o !== undefined).map(o => `${o.city}, ${o.name}${o.archived ? ' (архив)' : ''}`).join('; ') || 'Офисы не назначены'}</p>
-        {t.publicId ? <Link to={`/trainers/${t.publicId}`} target="_blank" rel="noopener noreferrer">Открыть анкету</Link> : <p>Анкета не опубликована</p>}</div></div>
+        {t.publicId ? <Link to={`/trainers/${t.publicId}`} target="_blank" rel="noopener noreferrer">Открыть анкету</Link> : t.publicId === null ? <p>Анкета не опубликована</p> : null}</div></div>
         <button type="button" className="secondary" aria-label={`Настроить тренера ${t.name}`} onClick={() => setSelected(t)}>Настроить</button></li>)}
     </ul>}
   </section>
