@@ -9,7 +9,7 @@ export function quickWorkoutEntryCases() {
     const backend = await mockPilot(page, { profileId, fitLime: true, workouts: [], scheduleDensity: density, failFirstSave: true })
     const commands: Array<{ requestId: string; exercises: unknown[]; startTime: string }> = []
     page.on('request', request => {
-      if (new URL(request.url()).pathname === '/v1/workouts' && request.method() === 'POST') commands.push(request.postDataJSON())
+      if (new URL(request.url()).pathname === '/v1/workouts' && request.method() === 'POST') commands.push(request.postDataJSON() as typeof commands[number])
     })
     await page.goto('/today?date=2026-10-08')
     const viewport = page.locator('.schedule-v2-timeline'), grid = viewport.locator('.day-grid')
