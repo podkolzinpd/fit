@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { chronicleExercisePreview } from './workout-chronicle'
+import type { WorkoutSet } from '../../shared/domain'
+import { calendarExerciseResult, chronicleExercisePreview } from './workout-chronicle'
 
 describe('chronicleExercisePreview', () => {
   it('оставляет в карточке истории только два первых упражнения', () => {
@@ -18,5 +19,37 @@ describe('chronicleExercisePreview', () => {
 
   it('безопасно обрабатывает пустую тренировку', () => {
     expect(chronicleExercisePreview([])).toEqual({ visible: [], hiddenCount: 0 })
+  })
+})
+
+function recordedSet(overrides: Partial<WorkoutSet> = {}): WorkoutSet {
+  return { id: 'set-1', position: 0, fact: {}, confirmedAt: null, version: 1, ...overrides }
+}
+
+describe('calendarExerciseResult', () => {
+  it('leaves absent, unconfirmed and empty facts unnamed instead of claiming a missed exercise', () => {
+    for (const sets of [[], [recordedSet({ weightKg: 80, reps: 10 })], [recordedSet({ fact: { reps: 12 } })], [recordedSet({ confirmedAt: '2026-10-02T10:00:00Z', weightKg: 80, reps: 10 })]]) {
+      expect(calendarExerciseResult({ ref: 'squat', sets })).toBeNull()
+    }
+  })
+
+  it('compacts matching recorded sets without filling missing fact fields from the plan', () => {
+    const sets = [0, 1, 2].map((position) => recordedSet({ position, weightKg: 80, reps: 10, confirmedAt: '2026-10-02T10:00:00Z', fact: { reps: 8 } }))
+    expect(calendarExerciseResult({ ref: 'squat', sets })).toBe('3 × 8 повт.')
+  })
+
+  it('keeps different facts in order and omits unrecorded sets without an invented skip count', () => {
+    const sets = [
+      recordedSet({ confirmedAt: '2026-10-02T10:00:00Z', fact: { weightKg: 40, reps: 12 } }),
+      recordedSet({ confirmedAt: '2026-10-02T10:01:00Z', fact: { weightKg: 45, reps: 10 } }),
+      recordedSet({ weightKg: 50, reps: 10 }),
+    ]
+    expect(calendarExerciseResult({ ref: 'squat', sets })).toBe('40 кг × 12 повт. · 45 кг × 10 повт.')
+  })
+
+  it('retains recorded timed, cardio and bodyweight results through the existing formatter', () => {
+    expect(calendarExerciseResult({ ref: 'plank', sets: [recordedSet({ confirmedAt: '2026-10-02T10:00:00Z', fact: { durationSec: 90 } })] })).toBe('1:30')
+    expect(calendarExerciseResult({ ref: 'running', sets: [recordedSet({ confirmedAt: '2026-10-02T10:00:00Z', fact: { distanceKm: 5, durationSec: 1800 } })] })).toContain('5 км × 30:00')
+    expect(calendarExerciseResult({ ref: 'push-up', sets: [recordedSet({ confirmedAt: '2026-10-02T10:00:00Z', fact: { weightKg: 0, reps: 15 } })] })).toBe('15 повт.')
   })
 })
