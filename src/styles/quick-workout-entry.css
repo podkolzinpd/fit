@@ -38,3 +38,15 @@
 .phone-frame.fit-lime-shell .quick-entry-picker-overlay.keyboard-open .quick-entry-catalog.client-lime-catalog .client-lime-sheet-header { margin-inline: -20px; }
 .phone-frame.fit-lime-shell .quick-entry-picker-overlay.keyboard-open .quick-entry-catalog.client-lime-catalog .picker-search-control { margin-inline: 0; }
 .phone-frame.fit-lime-shell .quick-entry-picker-overlay.keyboard-open .quick-entry-catalog.client-lime-catalog .picker-list { padding-bottom: 16px; scroll-padding-bottom: 16px; }
+
+/* New booking composition uses the existing 359px/r32 quick-sheet vocabulary. */
+.fit-lime-shell .quick-day-booking { width: min(calc(100% - 16px), 359px); border-radius: 32px; padding: 24px 20px 20px; }
+.fit-lime-shell .quick-day-booking header { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 24px; }
+.fit-lime-shell .quick-day-booking h2 { margin: 0; font-size: 22px; line-height: 28px; font-weight: 500; }
+.fit-lime-shell .quick-day-booking header button { width: 44px; height: 44px; padding: 10px; border: 0; background: transparent; color: var(--lime-text); }
+.fit-lime-shell .quick-day-booking fieldset { display: flex; flex-direction: column; align-items: stretch; gap: 16px; padding: 0; margin: 0; border: 0; min-width: 0; }
+.fit-lime-shell .quick-day-booking .quick-booking-client { display: flex; align-items: center; gap: 12px; min-height: 48px; padding: 4px 0; border: 0; background: transparent; text-align: left; color: var(--lime-text); }
+.fit-lime-shell .quick-day-booking .quick-booking-client > span:last-child { overflow-wrap: anywhere; }
+.fit-lime-shell .quick-day-booking .schedule-v2-calendar { display: flex; gap: 12px; justify-content: flex-start; min-height: 44px; width: auto; padding: 10px 16px; border: 1px solid var(--lime-divider); border-radius: 999px; color: var(--lime-accent); background: transparent; }
+.fit-lime-shell .quick-booking-format { margin: 0; color: var(--lime-text-secondary); font-size: 14px; line-height: 20px; }
+.fit-lime-shell .quick-day-booking .primary { min-height: 54px; border-radius: 20px; }

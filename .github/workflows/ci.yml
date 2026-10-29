@@ -154,6 +154,17 @@ jobs:
     if: needs.e2e-scope.outputs.database_required == 'true'
     runs-on: ubuntu-latest
     steps:
+      # Keep Docker service ports out of automatic outbound socket allocation.
+      # This changes only the disposable GitHub-hosted test VM.
+      - name: Reserve local Supabase ports before network setup
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_ACTIONS" = true
+          test "$RUNNER_OS" = Linux
+          test "$RUNNER_ENVIRONMENT" = github-hosted
+          reserved=$(sysctl -n net.ipv4.ip_local_reserved_ports)
+          sudo sysctl -q -w "net.ipv4.ip_local_reserved_ports=${reserved:+$reserved,}54320-54329"
       - uses: actions/checkout@v4
       - uses: supabase/setup-cli@v1
         with:
@@ -357,6 +368,17 @@ jobs:
       PLAYWRIGHT_IMAGE: mcr.microsoft.com/playwright:v1.61.1-noble
       PLAYWRIGHT_SHARD: ${{ matrix.shard }}
     steps:
+      # Keep Docker service ports out of automatic outbound socket allocation.
+      # This changes only the disposable GitHub-hosted test VM.
+      - name: Reserve local Supabase ports before network setup
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_ACTIONS" = true
+          test "$RUNNER_OS" = Linux
+          test "$RUNNER_ENVIRONMENT" = github-hosted
+          reserved=$(sysctl -n net.ipv4.ip_local_reserved_ports)
+          sudo sysctl -q -w "net.ipv4.ip_local_reserved_ports=${reserved:+$reserved,}54320-54329"
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
@@ -417,6 +439,17 @@ jobs:
       PLAYWRIGHT_IMAGE: mcr.microsoft.com/playwright:v1.61.1-noble
       PLAYWRIGHT_SHARD: ${{ matrix.shard }}
     steps:
+      # Keep Docker service ports out of automatic outbound socket allocation.
+      # This changes only the disposable GitHub-hosted test VM.
+      - name: Reserve local Supabase ports before network setup
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_ACTIONS" = true
+          test "$RUNNER_OS" = Linux
+          test "$RUNNER_ENVIRONMENT" = github-hosted
+          reserved=$(sysctl -n net.ipv4.ip_local_reserved_ports)
+          sudo sysctl -q -w "net.ipv4.ip_local_reserved_ports=${reserved:+$reserved,}54320-54329"
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
@@ -479,6 +512,17 @@ jobs:
       VITE_SUPABASE_PUBLISHABLE_KEY: sb_publishable_ACJWlzQHlZjBrEguHvfOxg_3BJgxAaH
       PLAYWRIGHT_IMAGE: mcr.microsoft.com/playwright:v1.61.1-noble
     steps:
+      # Keep Docker service ports out of automatic outbound socket allocation.
+      # This changes only the disposable GitHub-hosted test VM.
+      - name: Reserve local Supabase ports before network setup
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_ACTIONS" = true
+          test "$RUNNER_OS" = Linux
+          test "$RUNNER_ENVIRONMENT" = github-hosted
+          reserved=$(sysctl -n net.ipv4.ip_local_reserved_ports)
+          sudo sysctl -q -w "net.ipv4.ip_local_reserved_ports=${reserved:+$reserved,}54320-54329"
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:

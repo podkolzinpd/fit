@@ -1,8 +1,114 @@
-import { expect, test } from '@playwright/test'
-import { mockPilot, restTimerWorkout, workoutId } from './fit-lime-fixtures'
+import { expect, test, type Locator } from '@playwright/test'
+import { clientId, mockPilot, restTimerWorkout, workoutId } from './fit-lime-fixtures'
+
+/** Prepare a deliberate tap only after real scroll delivery and the existing quiet period. */
+async function scrollDayForBooking(viewport: Locator) {
+  await viewport.evaluate(async element => {
+    await document.fonts.ready
+    await new Promise<void>(resolve => {
+      const top = element.querySelector<HTMLElement>('.day-grid')!.offsetHeight / 24 * 13
+      let observed = Math.abs(element.scrollTop - top) < 1
+      let previous = element.scrollTop
+      let changedAt = performance.now()
+      const scroll = () => { observed = true; previous = element.scrollTop; changedAt = performance.now() }
+      element.addEventListener('scroll', scroll)
+      element.scrollTop = top
+      const frame = () => {
+        if (element.scrollTop !== previous) { observed = false; previous = element.scrollTop; changedAt = performance.now() }
+        if (observed && performance.now() - changedAt >= 200) {
+          element.removeEventListener('scroll', scroll)
+          resolve()
+        } else requestAnimationFrame(frame)
+      }
+      requestAnimationFrame(frame)
+    })
+  })
+}
 
 export function quickWorkoutEntryCases() {
   test.skip(process.env.FIT_QUICK_WORKOUT_ENTRY_ACCEPTANCE !== '1', 'Dedicated native quick-entry harness')
+  test('quick-entry restored booking requires a client still in the active list', async ({ page }, info) => {
+    const profileId = 'c0ac0000-6010-4000-8000-000000000001'
+    const activeId = '10000000-0000-4000-8000-000000000088'
+    const requestId = '67500000-0000-4000-8000-000000009001'
+    await page.clock.setFixedTime(new Date('2026-10-08T09:01:00Z'))
+    const backend = await mockPilot(page, { profileId, fitLime: true, workouts: [], clientRecords: [{ id: activeId, fullName: 'Борис Тестовый', archivedAt: null, version: 1 }] })
+    await page.addInitScript(({ profileId, clientId, requestId }) => {
+      localStorage.setItem(`fit.workout-form-draft.${profileId}.booking--2026-10-08--14:00`, JSON.stringify({ clientId, requestId, workoutDate: '2026-10-08', startTime: '14:00', endTime: '15:00', notes: '', stageId: '', recordCompleted: false, exercises: [] }))
+    }, { profileId, clientId, requestId })
+    const commands: Array<{ clientId: string; requestId: string }> = []
+    page.on('request', request => {
+      if (new URL(request.url()).pathname === '/v1/workouts' && request.method() === 'POST') commands.push(request.postDataJSON() as typeof commands[number])
+    })
+    await page.goto('/today?date=2026-10-08')
+    const viewport = page.locator('.schedule-v2-timeline'), grid = viewport.locator('.day-grid')
+    await expect(grid).toBeVisible()
+    await scrollDayForBooking(viewport)
+    const point = await grid.evaluate(el => { const box = el.getBoundingClientRect(); return { x: box.left + 140, y: box.top + el.clientHeight / 24 * 14 + 2 } })
+    await page.touchscreen.tap(point.x, point.y)
+    const booking = page.getByRole('dialog', { name: 'Записать клиента', exact: true })
+    await expect(booking.getByRole('button', { name: 'Выбрать клиента', exact: true })).toBeVisible()
+    await expect(booking).toContainText('14:00–15:00')
+    await booking.screenshot({ path: info.outputPath('restored-booking-range.png') })
+    await booking.getByRole('button', { name: 'Записать', exact: true }).click()
+    const picker = page.getByRole('dialog', { name: 'Выбор клиента', exact: true })
+    await expect(picker).toBeVisible()
+    expect(commands).toHaveLength(0)
+    await picker.locator(`[data-client-id="${activeId}"]`).click()
+    await picker.getByRole('button', { name: 'Применить клиента' }).click()
+    await booking.getByRole('button', { name: 'Записать', exact: true }).click()
+    await expect(booking).toHaveCount(0)
+    expect(commands).toHaveLength(1)
+    expect(commands[0]).toMatchObject({ clientId: activeId, requestId, endTime: '15:00' })
+    expect(backend.getWorkouts()).toHaveLength(1)
+    expect(backend.getWorkouts()[0]!.clientId).toBe(activeId)
+  })
+  for (const density of ['comfortable', 'compact'] as const) test(`quick-entry day booking ${density}: completed tap, scroll priority and retry`, async ({ page }, info) => {
+    const profileId = 'c0ac0000-6010-4000-8000-000000000001'
+    await page.clock.setFixedTime(new Date('2026-10-08T09:01:00Z'))
+    const backend = await mockPilot(page, { profileId, fitLime: true, workouts: [], scheduleDensity: density, failFirstSave: true })
+    const commands: Array<{ requestId: string; exercises: unknown[]; startTime: string }> = []
+    page.on('request', request => {
+      if (new URL(request.url()).pathname === '/v1/workouts' && request.method() === 'POST') commands.push(request.postDataJSON() as typeof commands[number])
+    })
+    await page.goto('/today?date=2026-10-08')
+    const viewport = page.locator('.schedule-v2-timeline'), grid = viewport.locator('.day-grid')
+    await expect(grid).toBeVisible()
+    await scrollDayForBooking(viewport)
+    const position = await grid.evaluate(el => { const r = el.getBoundingClientRect(); return { x: r.left + 140, y: r.top + el.clientHeight / 24 * 14 + 2 } })
+    const booking = page.getByRole('dialog', { name: 'Записать клиента', exact: true })
+    // A scroll event invalidates contact, including a contact stopping inertia.
+    await viewport.evaluate(el => { el.scrollTop += 1 })
+    await page.touchscreen.tap(position.x, position.y)
+    await expect(booking).toHaveCount(0)
+    await page.waitForTimeout(250)
+    const before = await viewport.evaluate(el => el.scrollTop)
+    await page.touchscreen.tap(position.x, position.y)
+    await expect(booking).toBeVisible()
+    await expect(booking).toContainText('14:00')
+    await expect(booking.locator('input:focus')).toHaveCount(0)
+    await booking.getByRole('button', { name: 'Закрыть запись' }).click()
+    await expect(booking).toHaveCount(0)
+    expect(await viewport.evaluate(el => el.scrollTop)).toBe(before)
+    await page.touchscreen.tap(position.x, position.y)
+    await booking.getByRole('button', { name: 'Выбрать клиента', exact: true }).click()
+    await page.locator('.client-picker-item').first().click()
+    await page.getByRole('button', { name: 'Применить клиента' }).click()
+    await booking.screenshot({ path: info.outputPath(`booking-${density}.png`) })
+    await booking.getByRole('button', { name: 'Записать', exact: true }).click()
+    await expect(booking.getByRole('alert')).toBeVisible()
+    await booking.getByRole('button', { name: 'Записать', exact: true }).click()
+    await expect(booking).toHaveCount(0)
+    expect(commands).toHaveLength(2)
+    expect(commands[0]!.requestId).toBeTruthy()
+    expect(commands[1]!.requestId).toBe(commands[0]!.requestId)
+    expect(commands[1]!.exercises).toEqual([])
+    const created = backend.getWorkouts()[0]!
+    expect(created.status).toBe('planned')
+    expect(created.startTime).toBe('14:00')
+    expect(created.workoutDate).toBe('2026-10-08')
+    await expect(page.locator('.schedule-v2-event')).toHaveCount(1)
+  })
   test('quick-entry catalogue ranks dumbbells ahead of a less relevant recent lunge', async ({ page }) => {
     const profileId = 'c0ac0000-6010-4000-8000-000000000001'
     await page.clock.setFixedTime(new Date('2026-10-08T09:01:00Z'))
