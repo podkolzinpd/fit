@@ -75,7 +75,7 @@ export function QuickDayBooking({ date, time, returnTo, onClose }: { date: Local
       <header><h2>Записать клиента</h2><button type="button" aria-label="Закрыть запись" disabled={save.isPending} onClick={() => dialog.current?.close()}><CloseIcon /></button></header>
       <fieldset disabled={save.isPending}>
         <button type="button" className="quick-booking-client" onClick={() => setPickerOpen(true)}><span className="fit-lime-plan-avatar">{client?.fullName.slice(0, 1) ?? <AddIcon />}</span><span>{client?.fullName ?? 'Выбрать клиента'}</span></button>
-        <FitLimeDatePicker today={todayInTimeZone(actor.timezone)} value={selectedDate} onChange={setSelectedDate} time={selectedTime} onTimeChange={setSelectedTime} reference triggerLabel={`${formatRelativeLocalDate(selectedDate, todayInTimeZone(actor.timezone))} · ${selectedTime.start || 'Время'}`} />
+        <FitLimeDatePicker today={todayInTimeZone(actor.timezone)} value={selectedDate} onChange={setSelectedDate} time={selectedTime} onTimeChange={setSelectedTime} reference triggerLabel={`${formatRelativeLocalDate(selectedDate, todayInTimeZone(actor.timezone))} · ${selectedTime.start || 'Время'}${selectedTime.end ? `–${selectedTime.end}` : ''}`} />
         <p className="quick-booking-format">С тренером</p>
         <button type="submit" className="primary wide" aria-busy={save.isPending}>{save.isPending ? 'Сохраняем…' : 'Записать'}</button>
       </fieldset>

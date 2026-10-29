@@ -81,14 +81,14 @@ export function quickWorkoutEntryCases() {
     await expect(page).toHaveURL(/date=2026-10-09/)
     await expect(page.getByRole('dialog', { name: 'Записать клиента' })).toHaveCount(0)
   })
-  test('quick-entry restored booking requires a client still in the active list', async ({ page }) => {
+  test('quick-entry restored booking requires a client still in the active list', async ({ page }, info) => {
     const profileId = 'c0ac0000-6010-4000-8000-000000000001'
     const activeId = '10000000-0000-4000-8000-000000000088'
     const requestId = '67500000-0000-4000-8000-000000009001'
     await page.clock.setFixedTime(new Date('2026-10-08T09:01:00Z'))
     const backend = await mockPilot(page, { profileId, fitLime: true, workouts: [], clientRecords: [{ id: activeId, fullName: 'Борис Тестовый', archivedAt: null, version: 1 }] })
     await page.addInitScript(({ profileId, clientId, requestId }) => {
-      localStorage.setItem(`fit.workout-form-draft.${profileId}.booking--2026-10-08--14:00`, JSON.stringify({ clientId, requestId, workoutDate: '2026-10-08', startTime: '14:00', endTime: '', notes: '', stageId: '', recordCompleted: false, exercises: [] }))
+      localStorage.setItem(`fit.workout-form-draft.${profileId}.booking--2026-10-08--14:00`, JSON.stringify({ clientId, requestId, workoutDate: '2026-10-08', startTime: '14:00', endTime: '15:00', notes: '', stageId: '', recordCompleted: false, exercises: [] }))
     }, { profileId, clientId, requestId })
     const commands: Array<{ clientId: string; requestId: string }> = []
     page.on('request', request => {
@@ -103,6 +103,8 @@ export function quickWorkoutEntryCases() {
     await page.touchscreen.tap(point.x, point.y)
     const booking = page.getByRole('dialog', { name: 'Записать клиента', exact: true })
     await expect(booking.getByRole('button', { name: 'Выбрать клиента', exact: true })).toBeVisible()
+    await expect(booking).toContainText('14:00–15:00')
+    await booking.screenshot({ path: info.outputPath('restored-booking-range.png') })
     await booking.getByRole('button', { name: 'Записать', exact: true }).click()
     const picker = page.getByRole('dialog', { name: 'Выбор клиента', exact: true })
     await expect(picker).toBeVisible()
@@ -112,7 +114,7 @@ export function quickWorkoutEntryCases() {
     await booking.getByRole('button', { name: 'Записать', exact: true }).click()
     await expect(booking).toHaveCount(0)
     expect(commands).toHaveLength(1)
-    expect(commands[0]).toMatchObject({ clientId: activeId, requestId })
+    expect(commands[0]).toMatchObject({ clientId: activeId, requestId, endTime: '15:00' })
     expect(backend.getWorkouts()).toHaveLength(1)
     expect(backend.getWorkouts()[0]!.clientId).toBe(activeId)
   })
