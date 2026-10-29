@@ -3,6 +3,48 @@ import { mockPilot, restTimerWorkout, workoutId } from './fit-lime-fixtures'
 
 export function quickWorkoutEntryCases() {
   test.skip(process.env.FIT_QUICK_WORKOUT_ENTRY_ACCEPTANCE !== '1', 'Dedicated native quick-entry harness')
+  for (const role of ['trainer', 'client'] as const) test(`quick-entry ${role} catalogue leaves results visible above the keyboard`, async ({ page }, info) => {
+    const profileId = `c0ac0000-6010-4000-8000-00000000000${role === 'trainer' ? 1 : 2}`
+    await page.clock.setFixedTime(new Date('2026-10-08T09:01:00Z'))
+    await mockPilot(page, { role, profileId, fitLime: true, clientLime: true, workouts: [{ ...restTimerWorkout(), createdBy: profileId, exercises: [] }] })
+    await page.goto(`/workouts/${workoutId}/live`)
+    await page.getByRole('button', { name: 'Выбрать упражнение', exact: true }).click()
+    const picker = page.getByRole('dialog', { name: 'Добавить упражнение', exact: true })
+    await expect(picker).toHaveClass(/quick-entry-catalog/)
+    const search = picker.getByLabel('Поиск упражнения')
+    await search.fill('планка')
+    await search.focus()
+    // A visual-viewport simulation checks layout, not a physical iOS keyboard.
+    await page.evaluate(() => {
+      const viewport = window.visualViewport!
+      Object.defineProperty(viewport, 'height', { configurable: true, value: 400 })
+      viewport.dispatchEvent(new Event('resize'))
+    })
+    await expect(page.locator('.quick-entry-picker-overlay')).toHaveClass(/keyboard-open/)
+    await expect(search).toHaveCSS('outline-style', 'none')
+    const list = picker.locator('.picker-list')
+    await expect.poll(async () => (await list.boundingBox())!.height).toBeGreaterThan(120)
+    const first = picker.locator('.picker-item').first()
+    const listBox = (await list.boundingBox())!, rowBox = (await first.boundingBox())!
+    expect(rowBox.y + rowBox.height).toBeLessThanOrEqual(listBox.y + listBox.height)
+    if (role === 'trainer') await expect(picker.locator('.coach-catalog-create-bar')).toHaveCSS('position', 'absolute')
+    await picker.screenshot({ path: info.outputPath(`${role}-catalogue-keyboard.png`) })
+    await list.evaluate(el => { el.scrollTop = el.scrollHeight })
+    const last = picker.locator('.picker-item').last()
+    await expect(last).toBeInViewport({ ratio: 1 })
+    await list.evaluate(el => { el.scrollTop = 0 })
+    if (role === 'client') {
+      await picker.getByRole('button', { name: 'Выбрать: Планка', exact: true }).click()
+      await expect(picker).toHaveClass(/has-selection/)
+      await expect(picker.getByRole('button', { name: /^Добавить (?:1|\(1\))$/ })).toBeInViewport({ ratio: 1 })
+    }
+    await page.evaluate(() => { Reflect.deleteProperty(window.visualViewport!, 'height'); window.visualViewport!.dispatchEvent(new Event('resize')) })
+    await expect(page.locator('.quick-entry-picker-overlay')).not.toHaveClass(/keyboard-open/)
+    await expect(search).toHaveValue('планка')
+    await picker.getByRole('button', { name: 'Закрыть', exact: true }).click()
+    await expect(picker).toHaveCount(0)
+  })
+
   for (const role of ['trainer', 'client'] as const) {
     test(`quick-entry pilot ${role} adds an exercise with atomic planned values`, async ({ page }) => {
       await page.clock.setFixedTime(new Date('2026-10-08T09:01:00Z'))
