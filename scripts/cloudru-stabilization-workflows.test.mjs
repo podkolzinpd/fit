@@ -8,7 +8,7 @@ import { planMediaAclReadRepair } from './repair-cloudru-media-acl.mjs'
 import { createHash, generateKeyPairSync, privateDecrypt, createDecipheriv, constants } from 'node:crypto'
 import { gzipSync } from 'node:zlib'
 import { readJournalTransport, sealJournalReceipt } from './cloudru-journal-import.mjs'
-import { sealUpload, openUpload, journalObject, validateUploadCapability, uploadBytes } from './cloudru-journal-upload.mjs'
+import { sealUpload, openUpload, journalObject, validateUploadCapability, uploadBytes, probeCiphertextStore, safeJournalUploadFailure } from './cloudru-journal-upload.mjs'
 import { readHistoryTargets, readHistoryRegistry, readHistoryPages, summarizeHistory, inspectCurrentHistory,
   readHistoryEvidenceSecret, resolveHistoryEvidence, readHistoryVisibility,
   readWorkoutHistoryTarget, inspectWorkoutHistoryTarget } from './cloudru-account-history-audit.mjs'
@@ -863,14 +863,55 @@ test('Cloud.ru payload and all customer-derived receipts stay on Cloud.ru; runti
   const uploader = read('scripts/cloudru-journal-upload.mjs'), runner = read('scripts/cloudru-journal-import.mjs')
   assert.match(uploader, /requestChecksumCalculation:'WHEN_REQUIRED'/)
   assert.match(uploader, /chmodSync\('\/capability\/capability\.encrypted\.json',0o644\)/)
-  assert.match(uploader, /GetBucketPolicyCommand/)
-  assert.match(uploader, /GetBucketAclCommand/)
-  assert.doesNotMatch(uploader, /PutBucketAclCommand|PutBucketPolicyCommand|ListObjects|console\.(?:log|error)\([^\n]*(?:url|parts|receipt|manifest|error)/)
+  assert.doesNotMatch(uploader, /GetBucketAclCommand|GetBucketPolicyCommand|PutBucketAclCommand|PutBucketPolicyCommand|CreateBucket|ListObjects/)
+  assert.doesNotMatch(uploader, /JSON\.stringify\(error|console\.error\(error|error\.message|error\.stack|console\.(?:log|error)\([^\n]*(?:url|parts|receipt|manifest)/)
   assert.match(uploader, /ContentLength:uploadBytes,IfNoneMatch:'\*'/)
   assert.match(uploader, /durableFile\(`/)
   assert.match(uploader, /fsyncSync/)
   assert.match(uploader, /HeadObjectCommand/)
+  assert.ok(uploader.indexOf('await probeCiphertextStore({client,sdk},session,keys)') < uploader.indexOf("durableFile('/session/manifest.json'"))
   assert.match(runner, /parts:upload.parts/)
   assert.doesNotMatch(runner, /FIT_JOURNAL_IMPORT_PART_|\/receipts/)
   assert.match(read('services/api/package.json'), /test:db[^\n]*private-journal-import\.integration\.test\.ts/)
+})
+
+
+test('encrypted staging verifies only object Put/Get/Delete without requiring ACL administration', async () => {
+  const keys = generateKeyPairSync('rsa', { modulusLength: 3072,
+    publicKeyEncoding: { type: 'spki', format: 'pem' }, privateKeyEncoding: { type: 'pkcs8', format: 'pem' } })
+  const sdk = Object.fromEntries(['PutObject', 'GetObject', 'DeleteObject'].map(kind => [kind + 'Command',
+    class { constructor(input) { this.kind = kind; this.input = input } }]))
+  const calls = []; let stored
+  const client = { send: async command => {
+    calls.push(command.kind)
+    assert.equal(command.input.Key, 'operations/private-journal-import/123-1/probe.encrypted.json')
+    if (command.kind === 'PutObject') {
+      assert.equal(command.input.IfNoneMatch, '*')
+      stored = Buffer.from(command.input.Body)
+      const envelope = JSON.parse(stored.toString('utf8'))
+      assert.equal(envelope.version, 1); assert.equal(typeof envelope.data, 'string')
+      assert.equal(Object.hasOwn(envelope, 'challenge'), false)
+      return {}
+    }
+    if (command.kind === 'GetObject') return { ContentLength: stored.length, Body: [stored] }
+    stored = undefined; return {}
+  } }
+  await probeCiphertextStore({ client, sdk }, '123-1', keys)
+  assert.deepEqual(calls, ['PutObject', 'GetObject', 'DeleteObject'])
+  assert.equal(stored, undefined)
+  const denied = { send: async command => {
+    if (command.kind === 'DeleteObject') throw Object.assign(new Error('private-path-and-credential'),
+      { name: 'AccessDenied', $metadata: { httpStatusCode: 403 } })
+    return client.send(command)
+  } }
+  await assert.rejects(probeCiphertextStore({ client: denied, sdk }, '123-1', keys), error => {
+    assert.deepEqual(safeJournalUploadFailure(error), { reason: 'AccessDenied', stage: 'probe_delete', httpStatus: 403 })
+    assert.doesNotMatch(JSON.stringify(safeJournalUploadFailure(error)), /private-path-and-credential/)
+    return true
+  })
+})
+test('upload error reporting never serializes SDK messages, private URLs, paths or unreviewed codes', () => {
+  assert.deepEqual(safeJournalUploadFailure(Object.assign(new Error('private-journal-and-secret'),
+    { stage: 'private-stage', name: 'private-error', $metadata: { httpStatusCode: 1234567 } })), { reason: 'operation_rejected' })
+  assert.deepEqual(safeJournalUploadFailure(Object.assign(new Error('private-file-path'), { code: 'EACCES' })), { reason: 'EACCES' })
 })

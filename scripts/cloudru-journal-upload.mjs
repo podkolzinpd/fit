@@ -2,7 +2,6 @@ import {createCipheriv,createDecipheriv,createHash,createPublicKey,createPrivate
 import {readFileSync,writeFileSync,chmodSync,lstatSync,unlinkSync,readdirSync,fsyncSync,openSync,closeSync} from 'node:fs'
 import {createRequire} from 'node:module'
 import {pathToFileURL} from 'node:url'
-import {planMediaAclReadRepair} from './repair-cloudru-media-acl.mjs'
 
 const bucket='fit-cloudru-stage-media-c2ad3760',tenant='f071c7d5-cf0f-4538-9415-bbf9a9c94338'
 export const uploadBytes=131072
@@ -13,7 +12,7 @@ export function journalSession(value) {
 }
 export function journalObject(session,name) {
  journalSession(session)
- if(!['payload','prepared','committed','readback'].includes(name))fail()
+ if(!['payload','prepared','committed','readback','probe'].includes(name))fail()
  return `operations/private-journal-import/${session}/${name}.encrypted.json`
 }
 const context=session=>Buffer.from(`fit-cloudru-private-journal-v1:${journalSession(session)}`)
@@ -63,11 +62,49 @@ async function storage() {
  const {getSignedUrl}=requireApi('@aws-sdk/s3-request-presigner')
  const client=new sdk.S3Client({endpoint:'https://s3.cloud.ru',forcePathStyle:true,region:'ru-central-1',maxAttempts:2,requestChecksumCalculation:'WHEN_REQUIRED',
   requestHandler:{connectionTimeout:5000,requestTimeout:15000},credentials:{accessKeyId:`${tenant}:${keyId}`,secretAccessKey}})
- try {
-  try{await client.send(new sdk.GetBucketPolicyCommand({Bucket:bucket}));fail()}catch(e){if(e?.name!=='NoSuchBucketPolicy')throw e}
-  planMediaAclReadRepair(await client.send(new sdk.GetBucketAclCommand({Bucket:bucket}))) // read only: never apply ACL repair
- }catch(e){client.destroy();throw e}
+ // This staging area never receives plaintext. Confidentiality is provided by
+ // the VM-only RSA key, not by granting this object credential ACL/IAM read rights.
  return {client,sdk,getSignedUrl}
+}
+const stages=new Set(['probe_put','probe_get','probe_verify','probe_delete','payload_get','receipt_put','cleanup_readback','cleanup_delete'])
+async function stage(name,work) {
+ try{return await work()}catch(cause){const error=new Error('journal_upload_rejected',{cause});error.stage=name;throw error}
+}
+export function safeJournalUploadFailure(error) {
+ const cause=error?.cause??error
+ const codes=new Set(['AccessDenied','InvalidAccessKeyId','SignatureDoesNotMatch','NoSuchBucket','NotFound','NoSuchKey','RequestTimeout','ServiceUnavailable'])
+ const fsCodes=new Set(['EACCES','EPERM','ENOENT','EEXIST'])
+ const reason=codes.has(cause?.name)?cause.name:fsCodes.has(cause?.code)?cause.code:'operation_rejected'
+ const http=cause?.$metadata?.httpStatusCode
+ return {reason,...(stages.has(error?.stage)?{stage:error.stage}:{}),
+  ...(Number.isInteger(http)&&http>=400&&http<=599?{httpStatus:http}:{})}
+}
+async function readCiphertext(client,sdk,key,expected,phase) {
+ return stage(phase,async()=>{
+  const object=await client.send(new sdk.GetObjectCommand({Bucket:bucket,Key:key}))
+  if(object.ContentLength!==expected||expected<1||expected>uploadBytes)fail()
+  let size=0;const chunks=[]
+  for await(const chunk of object.Body){size+=chunk.length;if(size>expected)fail();chunks.push(chunk)}
+  if(size!==expected)fail()
+  return Buffer.concat(chunks)
+ })
+}
+export async function probeCiphertextStore({client,sdk},session,keys) {
+ const challenge=randomBytes(32).toString('base64'),key=journalObject(session,'probe')
+ const bytes=Buffer.from(JSON.stringify(sealUpload({session,challenge},keys.publicKey,session)))
+ let uploaded=false
+ try {
+  await stage('probe_put',()=>client.send(new sdk.PutObjectCommand({Bucket:bucket,Key:key,Body:bytes,ContentType:'application/octet-stream',IfNoneMatch:'*'})))
+  uploaded=true
+  const readback=await readCiphertext(client,sdk,key,bytes.length,'probe_get')
+  await stage('probe_verify',()=>{
+   const plain=openUpload(JSON.parse(readback.toString('utf8')),keys.privateKey,session)
+   if(plain.session!==session||plain.challenge!==challenge)fail()
+   return Promise.resolve()
+  })
+ } finally {
+  if(uploaded)await stage('probe_delete',()=>client.send(new sdk.DeleteObjectCommand({Bucket:bucket,Key:key})))
+ }
 }
 function sessionDirectory() {
  const s=lstatSync('/session')
@@ -97,31 +134,28 @@ export async function prepareCloudruUpload(target,digest,session,operatorPublicP
  try {
   const keys=generateKeyPairSync('rsa',{modulusLength:3072,publicKeyEncoding:{type:'spki',format:'pem'},privateKeyEncoding:{type:'pkcs8',format:'pem'}})
   const manifest={version:1,session,digest,target:digestTarget(target),operatorPublicPem,expiresAt:Date.now()+2*60*60*1000}
+  await probeCiphertextStore({client,sdk},session,keys)
   durableFile('/session/server.private.pem',keys.privateKey)
   durableFile('/session/manifest.json',JSON.stringify(manifest))
   const url=await getSignedUrl(client,new sdk.PutObjectCommand({Bucket:bucket,Key:journalObject(session,'payload'),
    ContentType:'application/octet-stream',ContentLength:uploadBytes,IfNoneMatch:'*'}),{expiresIn:600})
   capability({session,digest,url,bytes:uploadBytes,publicKey:keys.publicKey,expiresAt:Date.now()+600000},operatorPublicPem,session)
-  return {status:'upload_prepared'}
+  return {status:'upload_prepared',objectAccessVerified:true,privacyBoundary:'vm_only_encryption_key',bucketPermissionsInspected:false}
  }finally{client.destroy()}
 }
 export async function loadCloudruUpload(target,digest,session) {
  journalSession(process.env.FIT_JOURNAL_ATTEMPT)
  const manifest=readManifest(target,digest,journalSession(session)),{client,sdk,getSignedUrl}=await storage()
  try {
-  const object=await client.send(new sdk.GetObjectCommand({Bucket:bucket,Key:journalObject(session,'payload')}))
-  if(object.ContentLength!==uploadBytes)fail()
-  let size=0;const chunks=[]
-  for await(const chunk of object.Body){size+=chunk.length;if(size>uploadBytes)fail();chunks.push(chunk)}
-  if(size!==uploadBytes)fail()
-  const plain=openUpload(JSON.parse(Buffer.concat(chunks).toString('utf8')),readFileSync('/session/server.private.pem','utf8'),session)
+  const encrypted=await readCiphertext(client,sdk,journalObject(session,'payload'),uploadBytes,'payload_get')
+  const plain=openUpload(JSON.parse(encrypted.toString('utf8')),readFileSync('/session/server.private.pem','utf8'),session)
   if(plain.session!==session||plain.digest!==digest||!Array.isArray(plain.parts)||plain.parts.length!==2)fail()
   return {parts:plain.parts,publicPem:manifest.operatorPublicPem,
    persistReceipt:async(state,receipt,sealReceipt)=>{
     const key=journalObject(session,state),bytes=JSON.stringify(sealReceipt({...receipt,state},manifest.operatorPublicPem))
     // Both primary-provider disk and S3 must hold the receipt before a database commit.
     durableFile(`/session/${state}-${process.env.FIT_JOURNAL_ATTEMPT}.encrypted.json`,bytes)
-    await client.send(new sdk.PutObjectCommand({Bucket:bucket,Key:key,Body:bytes,ContentType:'application/octet-stream'}))
+    await stage('receipt_put',()=>client.send(new sdk.PutObjectCommand({Bucket:bucket,Key:key,Body:bytes,ContentType:'application/octet-stream'})))
     if(state==='readback') {
      const url=await getSignedUrl(client,new sdk.GetObjectCommand({Bucket:bucket,Key:key}),{expiresIn:600})
      capability({session,digest,url,kind:'readback',expiresAt:Date.now()+600000},manifest.operatorPublicPem,session)
@@ -130,12 +164,14 @@ export async function loadCloudruUpload(target,digest,session) {
  }catch(e){client.destroy();throw e}
 }
 export async function cleanupCloudruUpload(target,digest,session) {
- readManifest(target,digest,journalSession(session),{allowExpired:true})
+ journalSession(session);sessionDirectory()
+ if(readdirSync('/session').length===0)return {status:'empty_upload_removed'}
+ readManifest(target,digest,session,{allowExpired:true})
  const {client,sdk}=await storage()
  try {
   // Cleanup is an explicit post-readback action; never run on a failed/uncertain import.
-  await client.send(new sdk.HeadObjectCommand({Bucket:bucket,Key:journalObject(session,'readback')}))
-  for(const name of ['payload','prepared','committed','readback'])await client.send(new sdk.DeleteObjectCommand({Bucket:bucket,Key:journalObject(session,name)}))
+  await stage('cleanup_readback',()=>client.send(new sdk.HeadObjectCommand({Bucket:bucket,Key:journalObject(session,'readback')})))
+  for(const name of ['payload','prepared','committed','readback'])await stage('cleanup_delete',()=>client.send(new sdk.DeleteObjectCommand({Bucket:bucket,Key:journalObject(session,name)})))
   for(const file of readdirSync('/session')) {
    if(!['manifest.json','server.private.pem'].includes(file)&&! /^(prepared|committed|readback)-\d{1,20}-\d{1,4}\.encrypted\.json$/.test(file))fail()
   }
@@ -152,6 +188,6 @@ async function main() {
   :mode==='cleanup'?await cleanupCloudruUpload(target,digest,session):fail()
  console.log(JSON.stringify({event:'private_journal_upload',...result}))
 }
-if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href)main().catch(()=>{
- console.error(JSON.stringify({event:'private_journal_upload_failed',code:'upload_rejected'}));process.exitCode=1
+if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href)main().catch(error=>{
+ console.error(JSON.stringify({event:'private_journal_upload_failed',code:'upload_rejected',...safeJournalUploadFailure(error)}));process.exitCode=1
 })
