@@ -658,7 +658,7 @@ export async function mockPilot(page: Page, options: { role?: 'trainer' | 'clien
         return
       }
       const completed = url.pathname.endsWith('/completed')
-      const draft = route.request().postDataJSON() as { workoutDate: string; startTime?: string | null; endTime?: string | null; title?: string | null; trainingFormat?: 'self' | 'with_trainer'; prepSeconds?: number; executionMode?: 'timer' | 'manual'; actualDurationSec?: number | null; exercises?: WorkoutExerciseDraft[] }
+      const draft = route.request().postDataJSON() as { clientId?: string; workoutDate: string; startTime?: string | null; endTime?: string | null; title?: string | null; trainingFormat?: 'self' | 'with_trainer'; prepSeconds?: number; executionMode?: 'timer' | 'manual'; actualDurationSec?: number | null; exercises?: WorkoutExerciseDraft[] }
       lastSavedStartTime = draft.startTime ?? null
       const exercises: WorkoutExercise[] = (draft.exercises ?? []).map((exercise, index) => ({ ...exercise,
         id: `10000000-0000-4000-8000-${String(100 + index).padStart(12, '0')}`, blockId: `10000000-0000-4000-8000-${String(200 + index).padStart(12, '0')}`,
@@ -666,7 +666,7 @@ export async function mockPilot(page: Page, options: { role?: 'trainer' | 'clien
         restBetweenExercisesSec: exercise.restBetweenExercisesSec ?? 0, restBetweenRoundsSec: exercise.restBetweenRoundsSec ?? 0, restBetweenSetsSec: exercise.restBetweenSetsSec ?? 60,
         sets: exercise.sets.map((set, setIndex) => ({ ...set, id: `10000000-0000-4000-8000-${String(300 + index * 10 + setIndex).padStart(12, '0')}`, fact: completed ? set : {}, confirmedAt: completed ? '2026-09-24T12:00:00Z' : null, version: 1 })),
       }))
-      workouts = [...workouts.filter((item) => item.id !== newWorkoutId), { ...workout, exercises, trainingFormat: draft.trainingFormat, id: newWorkoutId, title: draft.title, workoutDate: draft.workoutDate, startTime: draft.startTime ?? null, endTime: draft.endTime ?? null,
+      workouts = [...workouts.filter((item) => item.id !== newWorkoutId), { ...workout, clientId: draft.clientId ?? workout.clientId, exercises, trainingFormat: draft.trainingFormat, id: newWorkoutId, title: draft.title, workoutDate: draft.workoutDate, startTime: draft.startTime ?? null, endTime: draft.endTime ?? null,
         createdBy: profileId, status: completed ? 'done' : 'planned', ...(draft.prepSeconds ? { prepSeconds: draft.prepSeconds } : {}), ...(draft.executionMode ? { executionMode: draft.executionMode } : {}), actualDurationSec: draft.actualDurationSec,
         completedAt: completed ? '2026-09-24T12:00:00Z' : null }]
       body = { workout: { id: newWorkoutId } }
@@ -802,13 +802,25 @@ export const limeClients = [
 
 export async function beginClientGesture(page: Page, surface: Locator, browserName: string, origin?: Locator) {
   await surface.scrollIntoViewIfNeeded()
-  const box = await surface.boundingBox()
-  if (!box) throw new Error('Client surface is not visible')
+  const initialBox = await surface.boundingBox()
+  if (!initialBox) throw new Error('Client surface is not visible')
+  let box = initialBox
   const originBox = origin ? await origin.boundingBox() : null
   if (origin && !originBox) throw new Error('Gesture origin is not visible')
-  const from = originBox ? { x: originBox.x + originBox.width / 2, y: originBox.y + originBox.height / 2 }
+  let from = originBox ? { x: originBox.x + originBox.width / 2, y: originBox.y + originBox.height / 2 }
     : { x: box.x + box.width * 0.88, y: box.y + box.height / 2 }
-  expect(await surface.evaluate((element, point) => element.contains(document.elementFromPoint(point.x, point.y)), from)).toBe(true)
+  // Expanded content can still be clipped by its height transition. Keep the
+  // hit-target assertion, but wait for the actual point before sending a touch.
+  await expect.poll(async () => {
+    const currentBox = await surface.boundingBox()
+    const currentOrigin = origin ? await origin.boundingBox() : null
+    if (!currentBox || (origin && !currentOrigin)) return false
+    const currentFrom = currentOrigin ? { x: currentOrigin.x + currentOrigin.width / 2, y: currentOrigin.y + currentOrigin.height / 2 }
+      : { x: currentBox.x + currentBox.width * 0.88, y: currentBox.y + currentBox.height / 2 }
+    const reachable = await surface.evaluate((element, point) => element.contains(document.elementFromPoint(point.x, point.y)), currentFrom)
+    if (reachable) { box = currentBox; from = currentFrom }
+    return reachable
+  }).toBe(true)
   const cdp = browserName === 'chromium' ? await page.context().newCDPSession(page) : null
   if (cdp) await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [from] })
   else { await page.mouse.move(from.x, from.y); await page.mouse.down() }
