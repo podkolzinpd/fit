@@ -474,3 +474,128 @@
   border-radius: 0;
   background: transparent;
 }
+
+/* CR6: the existing assistant draft keeps its controls and scroll ownership. */
+.phone-frame.fit-client-lime.client-screen-reference .assistant-context-panel:has(> .assistant-workout-draft) {
+  border: 0;
+  border-radius: 32px;
+  background: var(--surface-raised);
+}
+.phone-frame.fit-client-lime.client-screen-reference .assistant-context-panel > .assistant-workout-draft {
+  padding: 20px;
+  gap: 16px;
+  border-radius: 32px;
+}
+.phone-frame.fit-client-lime.client-screen-reference .assistant-workout-heading small {
+  font-size: 12px !important;
+}
+.phone-frame.fit-client-lime.client-screen-reference .assistant-workout-heading strong {
+  font-size: 22px !important;
+  line-height: 1.2 !important;
+}
+.phone-frame.fit-client-lime.client-screen-reference .assistant-workout-draft .assistant-flow-status {
+  min-height: 32px;
+  padding: 6px 10px;
+  font-size: 14px;
+}
+.phone-frame.fit-client-lime.client-screen-reference .assistant-workout-meta {
+  gap: 12px;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+}
+.phone-frame.fit-client-lime.client-screen-reference .assistant-workout-meta label {
+  min-height: 76px;
+  padding: 12px;
+  border: 0;
+  border-radius: 16px;
+  background: var(--input);
+  font-size: 14px;
+  font-weight: 400;
+}
+.phone-frame.fit-client-lime.client-screen-reference .assistant-workout-meta input {
+  min-width: 0;
+  min-height: 32px;
+  font-size: 16px;
+  font-weight: 500;
+}
+.phone-frame.fit-client-lime.client-screen-reference .assistant-workout-fragment-count,
+.phone-frame.fit-client-lime.client-screen-reference .assistant-workout-draft-content > .assistant-flow-guidance {
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 1.4;
+}
+.phone-frame.fit-client-lime.client-screen-reference .assistant-workout-result-row {
+  grid-template-columns: minmax(0, 1fr) 44px;
+  gap: 8px 12px;
+  padding: 16px 0;
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  border-radius: 0;
+  background: transparent;
+}
+.phone-frame.fit-client-lime.client-screen-reference .assistant-workout-exercise-name strong {
+  font-size: 16px;
+  line-height: 1.3;
+}
+.phone-frame.fit-client-lime.client-screen-reference .assistant-workout-exercise-name small {
+  font-size: 13px;
+}
+.phone-frame.fit-client-lime.client-screen-reference .assistant-workout-result-row > .assistant-workout-remove {
+  grid-column: 2;
+  grid-row: 1;
+}
+.phone-frame.fit-client-lime.client-screen-reference .assistant-workout-result-row > .assistant-workout-metrics {
+  grid-column: 1 / -1;
+}
+.phone-frame.fit-client-lime.client-screen-reference .assistant-workout-draft .assistant-workout-metrics {
+  width: 100%;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+.phone-frame.fit-client-lime.client-screen-reference .assistant-workout-draft .assistant-workout-metrics label {
+  min-height: 64px;
+  padding: 8px;
+  border: 0;
+  border-radius: 16px;
+  background: var(--input);
+}
+.phone-frame.fit-client-lime.client-screen-reference .assistant-workout-draft .assistant-workout-metrics input {
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  min-height: 32px;
+  font-size: 20px;
+  font-weight: 500;
+}
+.phone-frame.fit-client-lime.client-screen-reference .assistant-workout-draft .assistant-workout-remove {
+  width: 44px;
+  min-width: 44px;
+  min-height: 44px;
+}
+.phone-frame.fit-client-lime.client-screen-reference .assistant-workout-draft .assistant-exercise-choice {
+  padding: 16px;
+  border-width: 1px;
+  border-radius: 24px;
+}
+.phone-frame.fit-client-lime.client-screen-reference .assistant-workout-draft .assistant-exercise-options button {
+  min-height: 48px;
+  padding: 12px;
+  border-width: 1px;
+  border-radius: 18px;
+  font-size: 16px;
+}
+.phone-frame.fit-client-lime.client-screen-reference .assistant-workout-draft > .assistant-flow-actions {
+  gap: 8px;
+  padding-top: 0;
+}
+.phone-frame.fit-client-lime.client-screen-reference .assistant-workout-draft > .assistant-flow-actions > .primary,
+.phone-frame.fit-client-lime.client-screen-reference .assistant-workout-draft-content > .assistant-workout-result > .primary {
+  width: 100%;
+  min-height: 48px;
+  border-radius: 18px;
+  font-size: 16px;
+}
+.phone-frame.fit-client-lime.client-screen-reference .assistant-workout-draft .assistant-action-cancel {
+  min-height: 44px;
+  font-size: 14px;
+}
