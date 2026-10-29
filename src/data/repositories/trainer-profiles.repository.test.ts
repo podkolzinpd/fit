@@ -75,7 +75,7 @@ describe('public trainer profile backend selection', () => {
     vi.stubGlobal('fetch', fetch)
 
     await expect(getPublicTrainerProfile(publicId)).resolves.toEqual(profile)
-    expect(fetch).toHaveBeenCalledWith(`https://api.example.test/v1/trainers/${publicId}/public-profile`)
+    expect(fetch).toHaveBeenCalledWith(`https://api.example.test/v1/trainers/${publicId}/public-profile`, { cache: 'no-store' })
     expect(mocks.rpc).not.toHaveBeenCalled()
   })
 
