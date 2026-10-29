@@ -218,6 +218,7 @@ const membershipSchema = z.object({
   firstName: z.string().nullable(),
   lastName: z.string().nullable(),
   displayName: z.string().optional(),
+  publicProfileId: uuid.nullable().optional(),
   joinedAt: yandexDateTimeSchema,
   isRoot: z.boolean(),
 })
@@ -1727,6 +1728,7 @@ export function createYandexMainRepository(
             firstName: item.firstName,
             lastName: item.lastName,
             displayName: item.displayName,
+            publicProfileId: item.publicProfileId,
             joinedAt: item.joinedAt,
             isRoot: item.isRoot,
           }))
