@@ -1,5 +1,29 @@
-import { expect, test } from '@playwright/test'
+import { expect, test, type Locator } from '@playwright/test'
 import { clientId, mockPilot, restTimerWorkout, workoutId } from './fit-lime-fixtures'
+
+/** Prepare a deliberate tap only after real scroll delivery and the existing quiet period. */
+async function scrollDayForBooking(viewport: Locator) {
+  await viewport.evaluate(async element => {
+    await document.fonts.ready
+    await new Promise<void>(resolve => {
+      const top = element.querySelector<HTMLElement>('.day-grid')!.offsetHeight / 24 * 13
+      let observed = Math.abs(element.scrollTop - top) < 1
+      let previous = element.scrollTop
+      let changedAt = performance.now()
+      const scroll = () => { observed = true; previous = element.scrollTop; changedAt = performance.now() }
+      element.addEventListener('scroll', scroll)
+      element.scrollTop = top
+      const frame = () => {
+        if (element.scrollTop !== previous) { observed = false; previous = element.scrollTop; changedAt = performance.now() }
+        if (observed && performance.now() - changedAt >= 200) {
+          element.removeEventListener('scroll', scroll)
+          resolve()
+        } else requestAnimationFrame(frame)
+      }
+      requestAnimationFrame(frame)
+    })
+  })
+}
 
 export function quickWorkoutEntryCases() {
   test.skip(process.env.FIT_QUICK_WORKOUT_ENTRY_ACCEPTANCE !== '1', 'Dedicated native quick-entry harness')
@@ -19,8 +43,7 @@ export function quickWorkoutEntryCases() {
     await page.goto('/today?date=2026-10-08')
     const viewport = page.locator('.schedule-v2-timeline'), grid = viewport.locator('.day-grid')
     await expect(grid).toBeVisible()
-    await viewport.evaluate(el => { el.scrollTop = el.querySelector<HTMLElement>('.day-grid')!.offsetHeight / 24 * 13 })
-    await page.waitForTimeout(250)
+    await scrollDayForBooking(viewport)
     const point = await grid.evaluate(el => { const box = el.getBoundingClientRect(); return { x: box.left + 140, y: box.top + el.clientHeight / 24 * 14 + 2 } })
     await page.touchscreen.tap(point.x, point.y)
     const booking = page.getByRole('dialog', { name: 'Записать клиента', exact: true })
@@ -51,8 +74,7 @@ export function quickWorkoutEntryCases() {
     await page.goto('/today?date=2026-10-08')
     const viewport = page.locator('.schedule-v2-timeline'), grid = viewport.locator('.day-grid')
     await expect(grid).toBeVisible()
-    await viewport.evaluate(el => { el.scrollTop = el.querySelector<HTMLElement>('.day-grid')!.offsetHeight / 24 * 13 })
-    await page.waitForTimeout(250)
+    await scrollDayForBooking(viewport)
     const position = await grid.evaluate(el => { const r = el.getBoundingClientRect(); return { x: r.left + 140, y: r.top + el.clientHeight / 24 * 14 + 2 } })
     const booking = page.getByRole('dialog', { name: 'Записать клиента', exact: true })
     // A scroll event invalidates contact, including a contact stopping inertia.
