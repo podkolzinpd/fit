@@ -6,6 +6,67 @@ import { trainerId, clientId, workoutId, conversationId, newWorkoutId, coachGest
 // Behavior-only acceptance. Visual/mixed state matrices live in the visual spec.
 test.skip(!process.env.FIT_SCHEDULE_V2_VISUAL, 'Dedicated server-backed pilot harness')
 
+function calendarHistoryFixture(withResults = false): MockWorkout {
+  const source = coachGestureWorkout(false, 4)
+  Object.assign(source, { status: 'done', workoutDate: '2026-10-02', startedAt: null, completedAt: null })
+  const names = ['Горизонтальная тяга блока', 'Подтягивания с резинкой', 'Тяга гантели в наклоне', 'Гиперэкстензия']
+  source.exercises = source.exercises.map((exercise, index) => ({ ...exercise, name: names[index]!,
+    trainerComment: `Исходная запись: ${names[index]}. Число подходов и параметры не указаны.`,
+    sets: withResults && index < 2 ? Array.from({ length: 3 }, (_, position) => ({
+      id: `30000000-0000-4000-8000-${String(index * 10 + position + 1).padStart(12, '0')}`,
+      position, weightKg: 80, reps: 10, fact: index === 0 ? { weightKg: 40, reps: 12 } : { reps: 8 },
+      confirmedAt: '2026-10-02T10:00:00Z', version: 1,
+    })) : [],
+  }))
+  return source
+}
+
+test('Lime coach calendar shows full recorded history and preserves return, list and source data', { tag: ['@lime-critical'] }, async ({ page }) => {
+  await page.clock.setFixedTime(new Date('2026-10-29T12:00:00Z'))
+  const source = calendarHistoryFixture(true)
+  const backend = await mockPilot(page, { role: 'trainer', profileId: trainerId, fitLime: true,
+    workouts: [source, { ...source, id: newWorkoutId, exercises: [] }],
+  })
+  const original = JSON.stringify(backend.getWorkouts())
+  const path = `/clients/${clientId}/workouts?view=calendar&month=2026-10`
+  await page.goto(path)
+  await page.locator('.coachmark-bubble').filter({ hasText: 'История по датам' }).getByRole('button', { name: 'Понятно' }).click()
+  await page.getByRole('button', { name: '2 октября 2026 г., 2 тренировки', exact: true }).click()
+  const selection = page.locator('.client-history-calendar-selection')
+  await expect(selection.locator('.workout-chronicle-card')).toHaveCount(2)
+  const card = selection.locator('.workout-chronicle-card').first()
+  await expect(card.locator('.workout-chronicle-exercise-name')).toHaveText(source.exercises.map((exercise) => exercise.name))
+  await expect(card).toContainText('4 упражнения')
+  await expect(card).toContainText('3 × 40 кг × 12 повт.')
+  await expect(card).toContainText('3 × 8 повт.')
+  await expect(card).not.toContainText(/80 кг|Не выполнено|Исходная запись|Ещё 2 упражнения/)
+  await expect(selection.locator('.workout-chronicle-card').last()).toContainText('Без упражнений')
+  await card.getByRole('link', { name: 'Открыть тренировку за 2 октября 2026 г.' }).click()
+  await expect(page).toHaveURL(`/workouts/${source.id}`)
+  await expect(page.getByText(source.exercises[0]!.trainerComment!, { exact: true })).toBeVisible()
+  await page.getByRole('button', { name: 'Назад', exact: true }).click()
+  await expect(page).toHaveURL(`${path}&date=2026-10-02`)
+  await expect(selection.locator('.workout-chronicle-card').first().locator('.workout-chronicle-exercise')).toHaveCount(4)
+  await page.getByRole('button', { name: 'Список', exact: true }).click()
+  await expect(page.locator('.workout-chronicle-card').first().locator('.workout-chronicle-exercise')).toHaveCount(2)
+  await expect(page.locator('.workout-chronicle-card').first()).toContainText('Ещё 2 упражнения')
+  expect(JSON.stringify(backend.getWorkouts())).toBe(original)
+})
+
+test('Lime athlete calendar retains its existing compact history preview', { tag: ['@lime-critical'] }, async ({ page }) => {
+  await page.clock.setFixedTime(new Date('2026-10-29T12:00:00Z'))
+  const source = calendarHistoryFixture()
+  const backend = await mockPilot(page, { role: 'client', profileId: clientId, clientLime: true, workouts: [source] })
+  const original = JSON.stringify(backend.getWorkouts())
+  await page.goto('/me/workouts?tab=history&view=calendar&month=2026-10')
+  await page.getByRole('button', { name: '2 октября 2026 г., 1 тренировка', exact: true }).click()
+  const card = page.locator('.client-history-calendar-selection .workout-chronicle-card')
+  await expect(card.locator('.workout-chronicle-exercise')).toHaveCount(2)
+  await expect(card).toContainText('Ещё 2 упражнения')
+  await expect(card).not.toHaveClass(/calendar-day-details/)
+  expect(JSON.stringify(backend.getWorkouts())).toBe(original)
+})
+
 // Client and trainer have distinct confirmation markup and completion behavior.
 // One flow per role; theme/size are not multiplied into this behavior check.
 for (const role of ['client', 'trainer'] as const) test(`Lime Live direct input keeps confirmed facts editable ${role}`, { tag: ['@lime-critical'] }, async ({ page }) => {
