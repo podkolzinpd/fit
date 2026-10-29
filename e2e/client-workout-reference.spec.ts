@@ -6,6 +6,33 @@ test.skip(process.env.FIT_CLIENT_WORKOUT_ACCEPTANCE !== '1', 'Dedicated native c
 
 const pilotId = 'c11e0000-6010-4000-8000-000000000001'
 
+// Home geometry differs with the palette and narrow viewport. Existing Live
+// behavior remains covered below; do not multiply its transitions here.
+for (const theme of ['light', 'dark']) test(`client reference home preserves entry actions ${theme}`, async ({ page }, info) => {
+  await page.addInitScript(({ id, theme }) => localStorage.setItem(`fit.clientLime.theme.${id}`, theme), { id: pilotId, theme })
+  const source = coachGestureWorkout(false, 1)
+  await mockPilot(page, { role: 'client', profileId: pilotId, clientLime: true, workouts: [source] })
+  await page.goto('/me')
+  await expect(page.locator('.client-screen-reference')).toBeVisible()
+  const quick = page.getByRole('region', { name: 'Тренировка сейчас' })
+  const continueButton = quick.getByRole('button', { name: 'Продолжить тренировку', exact: true })
+  await expect(continueButton).toBeVisible()
+  for (const width of [390, 430]) {
+    await page.setViewportSize({ width, height: 844 })
+    await expect(quick).toHaveCSS('border-radius', '32px')
+    expect(await continueButton.evaluate(element => element.getBoundingClientRect().height)).toBeGreaterThanOrEqual(48)
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+    await page.screenshot({ path: info.outputPath(`home-${theme}-${width}.png`) })
+  }
+  await page.getByRole('button', { name: 'Ввести текстом', exact: true }).click()
+  await expect(page.getByRole('button', { name: 'Разобрать тренировку', exact: true })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Выбрать упражнения вручную', exact: true })).toBeVisible()
+  await page.getByRole('button', { name: 'Скрыть', exact: true }).click()
+  await continueButton.click()
+  await expect(page).toHaveURL(new RegExp(`/workouts/${workoutId}/live$`))
+  await expect(page.locator('.live-workout-page')).toBeVisible()
+})
+
 for (const theme of ['light', 'dark']) test(`client inactivity actions share Lime geometry ${theme}`, async ({ page }, info) => {
   await page.addInitScript(({ id, theme, workoutId }) => {
     localStorage.setItem(`fit.clientLime.theme.${id}`, theme)
