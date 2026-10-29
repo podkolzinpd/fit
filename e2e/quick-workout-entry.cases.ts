@@ -1,6 +1,6 @@
 import type { WorkoutDraft } from '../src/shared/domain'
 import { expect, test } from '@playwright/test'
-import { mockPilot, restTimerWorkout, workoutId } from './fit-lime-fixtures'
+import { clientId, mockPilot, restTimerWorkout, workoutId } from './fit-lime-fixtures'
 
 export function quickWorkoutEntryCases() {
   test.skip(process.env.FIT_QUICK_WORKOUT_ENTRY_ACCEPTANCE !== '1', 'Dedicated native quick-entry harness')
@@ -80,6 +80,41 @@ export function quickWorkoutEntryCases() {
     await page.mouse.move(box.x + 200, box.y + 50); await page.mouse.down(); await page.mouse.move(box.x + 70, box.y + 50, { steps: 8 }); await page.mouse.up()
     await expect(page).toHaveURL(/date=2026-10-09/)
     await expect(page.getByRole('dialog', { name: 'Записать клиента' })).toHaveCount(0)
+  })
+  test('quick-entry restored booking requires a client still in the active list', async ({ page }) => {
+    const profileId = 'c0ac0000-6010-4000-8000-000000000001'
+    const activeId = '10000000-0000-4000-8000-000000000088'
+    const requestId = '67500000-0000-4000-8000-000000009001'
+    await page.clock.setFixedTime(new Date('2026-10-08T09:01:00Z'))
+    const backend = await mockPilot(page, { profileId, fitLime: true, workouts: [], clientRecords: [{ id: activeId, fullName: 'Борис Тестовый', archivedAt: null, version: 1 }] })
+    await page.addInitScript(({ profileId, clientId, requestId }) => {
+      localStorage.setItem(`fit.workout-form-draft.${profileId}.booking--2026-10-08--14:00`, JSON.stringify({ clientId, requestId, workoutDate: '2026-10-08', startTime: '14:00', endTime: '', notes: '', stageId: '', recordCompleted: false, exercises: [] }))
+    }, { profileId, clientId, requestId })
+    const commands: Array<{ clientId: string; requestId: string }> = []
+    page.on('request', request => {
+      if (new URL(request.url()).pathname === '/v1/workouts' && request.method() === 'POST') commands.push(request.postDataJSON() as typeof commands[number])
+    })
+    await page.goto('/today?date=2026-10-08')
+    const viewport = page.locator('.schedule-v2-timeline'), grid = viewport.locator('.day-grid')
+    await expect(grid).toBeVisible()
+    await viewport.evaluate(el => { el.scrollTop = el.querySelector<HTMLElement>('.day-grid')!.offsetHeight / 24 * 13 })
+    await page.waitForTimeout(250)
+    const point = await grid.evaluate(el => { const box = el.getBoundingClientRect(); return { x: box.left + 140, y: box.top + el.clientHeight / 24 * 14 + 2 } })
+    await page.touchscreen.tap(point.x, point.y)
+    const booking = page.getByRole('dialog', { name: 'Записать клиента', exact: true })
+    await expect(booking.getByRole('button', { name: 'Выбрать клиента', exact: true })).toBeVisible()
+    await booking.getByRole('button', { name: 'Записать', exact: true }).click()
+    const picker = page.getByRole('dialog', { name: 'Выбор клиента', exact: true })
+    await expect(picker).toBeVisible()
+    expect(commands).toHaveLength(0)
+    await picker.locator(`[data-client-id="${activeId}"]`).click()
+    await picker.getByRole('button', { name: 'Применить клиента' }).click()
+    await booking.getByRole('button', { name: 'Записать', exact: true }).click()
+    await expect(booking).toHaveCount(0)
+    expect(commands).toHaveLength(1)
+    expect(commands[0]).toMatchObject({ clientId: activeId, requestId })
+    expect(backend.getWorkouts()).toHaveLength(1)
+    expect(backend.getWorkouts()[0]!.clientId).toBe(activeId)
   })
   for (const density of ['comfortable', 'compact'] as const) test(`quick-entry day booking ${density}: completed tap, scroll priority and retry`, async ({ page }, info) => {
     const profileId = 'c0ac0000-6010-4000-8000-000000000001'
