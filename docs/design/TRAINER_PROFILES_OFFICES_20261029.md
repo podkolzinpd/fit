@@ -290,3 +290,22 @@ types/lint/migration policy passed. После интеграции следую
 проверки и обязательный CI точного нового head. Физический iPhone не проверен.
 Открыто: P2 publication, P3 CI/publication и P4. P3 ещё не публиковался.
 Дальше: проверить P3 от7d061bc5; новый CI → дождаться P2 → выпустить P3/P4.
+
+## Итерация 13 — 2026-10-29 — Codex / OpenAI
+
+Задача: проверить P3 от фактического main7d061bc5 перед новым CI.
+Расхождения: нет; единственная новая DB-функция сохраняет старый private bundle.
+Сделано: merge51bcfba4 содержит только P3 diff относительно main. Сборка
+готового frontend проверена с синтетической Yandex composition, без публикации.
+Решение: фото из опубликованной анкеты, прежние capability/commands и офисные
+привязки. Новый metadata helper нужен только новому API, rollback безопасен.
+Отвергнуто: возврат к изменению старой функции ради сокращения SQL.
+Проверка на51bcfba4: UI/repository8/8; Chromium+WebKit14/14 готового bundle,
+имя публикации/ссылка/тёзки/фото, старый ответ API, non-admin, CRUD/retry и
+laptop/mobile390/430/1440 в обеих темах. Снимки нового списка laptop/mobile
+просмотрены; root build/types/startup, API types, targeted lint и migration
+safety(1 new migration)/diff-check passed. SQL/API из1794f691 не изменились:
+clean PG17 corporate10/10 + API8/8, включая old/new API и Down-Up.
+Открыто: P2 main CI40887431840 и публикация ещё ожидаются; P3 требует
+обязательного CI нового head и выпуска после P2. Физический iPhone не проверен.
+Дальше: PR1881 от main → CI → подтвердить P2 → выпустить P3 → P4.
