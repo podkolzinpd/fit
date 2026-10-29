@@ -75,7 +75,7 @@ jobs:
           printf 'MIGRATION_DATABASE_SSL_MODE=require\nGITHUB_REF=refs/heads/main\nGITHUB_REPOSITORY=podkolzinpd/fit\n' | sudo tee -a "$owner" >/dev/null
           revision=$(cat /opt/fit/RUNNING_SHA)
           [[ "$revision" =~ ^[a-f0-9]{40}$ ]]
-          sudo podman run --rm --read-only --memory=256m --cpus=0.5 --timeout=240 --cap-drop=ALL --security-opt=no-new-privileges \
+          sudo podman run --rm --read-only --user 0 --memory=256m --cpus=0.5 --timeout=240 --cap-drop=ALL --security-opt=no-new-privileges \
             --env-file "$owner" -v "$receipts:/erasure-receipts:rw" \
             -v "$PWD/scripts/cloudru-native-account-erasure-cli.mjs:/erasure-cli.mjs:ro" \
             -v "$PWD/scripts/cloudru-native-account-erasure.mjs:/cloudru-native-account-erasure.mjs:ro" \
