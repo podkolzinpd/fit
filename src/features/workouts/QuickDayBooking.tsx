@@ -61,7 +61,8 @@ export function QuickDayBooking({ date, time, returnTo, onClose }: { date: Local
   function submit(event: FormEvent) {
     event.preventDefault()
     if (submitting.current || !isQuickWorkoutEntryEnabled(actor) || actor?.role !== 'trainer') return
-    if (!clientId) { setError('Выберите клиента'); setPickerOpen(true); return }
+    // Restored drafts can reference a client no longer present in the active list.
+    if (!client) { setError('Выберите клиента'); setPickerOpen(true); return }
     if (!selectedTime.start) { setError('Укажите время записи'); return }
     const minutes = (value: string) => Number(value.slice(0, 2)) * 60 + Number(value.slice(3, 5))
     const duration = (minutes(selectedTime.end) - minutes(selectedTime.start) + 1440) % 1440

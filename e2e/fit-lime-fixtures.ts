@@ -658,7 +658,7 @@ export async function mockPilot(page: Page, options: { role?: 'trainer' | 'clien
         return
       }
       const completed = url.pathname.endsWith('/completed')
-      const draft = route.request().postDataJSON() as { workoutDate: string; startTime?: string | null; endTime?: string | null; title?: string | null; trainingFormat?: 'self' | 'with_trainer'; prepSeconds?: number; executionMode?: 'timer' | 'manual'; actualDurationSec?: number | null; exercises?: WorkoutExerciseDraft[] }
+      const draft = route.request().postDataJSON() as { clientId?: string; workoutDate: string; startTime?: string | null; endTime?: string | null; title?: string | null; trainingFormat?: 'self' | 'with_trainer'; prepSeconds?: number; executionMode?: 'timer' | 'manual'; actualDurationSec?: number | null; exercises?: WorkoutExerciseDraft[] }
       lastSavedStartTime = draft.startTime ?? null
       const exercises: WorkoutExercise[] = (draft.exercises ?? []).map((exercise, index) => ({ ...exercise,
         id: `10000000-0000-4000-8000-${String(100 + index).padStart(12, '0')}`, blockId: `10000000-0000-4000-8000-${String(200 + index).padStart(12, '0')}`,
@@ -666,7 +666,7 @@ export async function mockPilot(page: Page, options: { role?: 'trainer' | 'clien
         restBetweenExercisesSec: exercise.restBetweenExercisesSec ?? 0, restBetweenRoundsSec: exercise.restBetweenRoundsSec ?? 0, restBetweenSetsSec: exercise.restBetweenSetsSec ?? 60,
         sets: exercise.sets.map((set, setIndex) => ({ ...set, id: `10000000-0000-4000-8000-${String(300 + index * 10 + setIndex).padStart(12, '0')}`, fact: completed ? set : {}, confirmedAt: completed ? '2026-09-24T12:00:00Z' : null, version: 1 })),
       }))
-      workouts = [...workouts.filter((item) => item.id !== newWorkoutId), { ...workout, exercises, trainingFormat: draft.trainingFormat, id: newWorkoutId, title: draft.title, workoutDate: draft.workoutDate, startTime: draft.startTime ?? null, endTime: draft.endTime ?? null,
+      workouts = [...workouts.filter((item) => item.id !== newWorkoutId), { ...workout, clientId: draft.clientId ?? workout.clientId, exercises, trainingFormat: draft.trainingFormat, id: newWorkoutId, title: draft.title, workoutDate: draft.workoutDate, startTime: draft.startTime ?? null, endTime: draft.endTime ?? null,
         createdBy: profileId, status: completed ? 'done' : 'planned', ...(draft.prepSeconds ? { prepSeconds: draft.prepSeconds } : {}), ...(draft.executionMode ? { executionMode: draft.executionMode } : {}), actualDurationSec: draft.actualDurationSec,
         completedAt: completed ? '2026-09-24T12:00:00Z' : null }]
       body = { workout: { id: newWorkoutId } }
