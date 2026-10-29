@@ -1573,6 +1573,13 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .workout-chronicle-exercise-name .workout-exercise-comment { display:block; color:var(--fg); font-size:12px; line-height:1.35 }
 .workout-chronicle-exercise > strong { min-width:0; overflow-wrap:anywhere; text-align:right; font-size:14px; line-height:1.35 }
 .workout-chronicle-more { margin:var(--space-1) 0 0; color:var(--muted); font-size:var(--type-caption-size); font-weight:var(--weight-semibold) }
+.client-workout-cards .workout-chronicle-card.calendar-day-details { padding:0 }
+.calendar-day-details .workout-chronicle-open { padding:20px }
+.calendar-day-details .workout-chronicle-exercises { gap:0; padding:0; border-bottom:0 }
+.calendar-day-details .workout-chronicle-exercise { grid-template-columns:minmax(0,1fr); gap:4px; padding:14px 0; border-bottom:1px solid var(--border) }
+.calendar-day-details .workout-chronicle-exercise:last-child { border-bottom:0; padding-bottom:0 }
+.workout-chronicle-card.calendar-day-details .workout-chronicle-exercise-name { color:var(--fg); font-size:16px; line-height:1.4; font-weight:400 }
+.workout-chronicle-card.calendar-day-details .workout-chronicle-exercise > strong { color:var(--secondary-label-fg); text-align:left; font-weight:400 }
 .workout-chronicle-muscles { margin:0; overflow-wrap:anywhere; color:var(--secondary-label-fg); font-size:12px; font-weight:500; line-height:1.4 }
 .workout-chronicle-muscles span { color:var(--fg); font-weight:600 }
 .workout-chronicle-facts { display:flex; flex-wrap:wrap; gap:6px }
@@ -4252,6 +4259,7 @@ button.workout-duration-trigger:disabled { cursor:default; opacity:1 }
 .client-profile-shell-identity .client-home-connections .card strong { color:var(--fg); font-size:14px; font-weight:600 }
 .client-profile-shell-identity .client-home-connections .card p { color:var(--secondary-label-fg); font-size:12px; font-weight:500 }
 .client-profile-shell-identity .client-trainer-connection-card { display:flex; align-items:center; gap:10px; min-width:0; padding:12px }
+.client-trainer-profile-link { display:flex; align-items:center; flex:1; gap:10px; min-width:0; min-height:44px; color:inherit; text-decoration:none; }
 .client-profile-shell-identity .client-trainer-avatar { width:40px; height:40px; flex:0 0 40px; display:grid; place-items:center; border:1px solid var(--border); border-radius:14px; background:var(--surface-sunken); color:var(--fg); font-size:12px; font-weight:600 }
 .client-profile-shell-identity .client-trainer-person { min-width:0; flex:1 }
 .client-profile-shell-identity .client-trainer-person strong { display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap }
