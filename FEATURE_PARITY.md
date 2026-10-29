@@ -1,5 +1,13 @@
 # Feature parity с trainer-app
 
+## Coach athlete calendar history — YAFIT-673
+
+Selected-day cards reuse the shared history card with the complete ordered
+exercise list and recorded confirmed facts below names. Missing results do not
+become missed-exercise labels or planned values. Exercise comments remain in
+details, date/back state is retained; coach list and athlete calendar stay compact.
+Acceptance and release: `docs/design/COACH_CALENDAR_FULL_EXERCISES_20261029.md`.
+
 ## Athlete ready workouts management — YAFIT-642
 
 Approved Lime extension: personal favorites support in-place versioned editing,
