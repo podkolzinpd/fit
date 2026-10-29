@@ -46,12 +46,13 @@ async function loadPublicTrainerProfile(publicId: string): Promise<TrainerProfes
   return result.data === null ? null : parseTrainerProfile(result.data)
 }
 
-export function getPublicTrainerProfile(publicId: string): Promise<TrainerProfessionalProfile | null> {
+export function getPublicTrainerProfile(publicId: string, options: { fresh?: boolean } = {}): Promise<TrainerProfessionalProfile | null> {
+  if (options.fresh) publicProfileRequests.delete(publicId)
   const existing = publicProfileRequests.get(publicId)
   if (existing && existing.expiresAt > Date.now()) return existing.request
   if (existing) publicProfileRequests.delete(publicId)
   const request = loadPublicTrainerProfile(publicId).catch((error: unknown) => {
-    publicProfileRequests.delete(publicId)
+    if (publicProfileRequests.get(publicId)?.request === request) publicProfileRequests.delete(publicId)
     throw error
   })
   publicProfileRequests.set(publicId, { expiresAt: Date.now() + PUBLIC_PROFILE_CACHE_TTL_MS, request })

@@ -782,6 +782,7 @@ describe('trainer professional profile', () => {
   it('serves only the public profile without a session', async () => {
     const app = buildApp({ pilotTrainerProfiles: profiles(), logger: false }); apps.push(app)
     const response = await app.inject({ method: 'GET', url: `/v1/trainers/${value.publicId}/public-profile` })
+    expect(response.headers['cache-control']).toBe('no-store')
     expect(response.statusCode).toBe(200)
     expect(response.json()).toEqual(value)
   })

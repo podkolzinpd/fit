@@ -1124,6 +1124,7 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
   })
 
   app.get('/v1/trainers/:publicId/public-profile', async (request, reply) => {
+    reply.header('cache-control', 'no-store')
     const { publicId } = request.params as { publicId?: unknown }
     if (typeof publicId !== 'string' || !uuidPattern.test(publicId)) return reply.code(400).send({ error: 'invalid_request' })
     if (options.pilotTrainerProfiles === undefined) return reply.code(503).send({ error: 'service_unavailable' })

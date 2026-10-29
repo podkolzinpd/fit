@@ -122,6 +122,27 @@ describe.skipIf(!source)('corporate administration on real actor/RLS', () => {
     expect((await read()).trainers.find(t => t.id === coach)).toMatchObject({ publicId: null, publishedName: null, photoPath: null, avatarDataUrl: null })
     await expect(actor(coach, 'select app_private.corporate_admin_bundle()')).rejects.toMatchObject({ code: 'PT403' })
   })
+  it('publishes active offices only for an approved trainer, with immediate removal on the next read', async () => {
+    await pool.query(`update public.trainer_professional_profiles set published_data=$2::jsonb where trainer_id=$1`,
+      [coach, JSON.stringify({ displayName: 'Synthetic', bio: 'Яндекс', customLocations: ['Яндекс, частный текст'] })])
+    const publicId = (await pool.query<{ public_id: string }>('select public_id from public.trainer_professional_profiles where trainer_id=$1', [coach])).rows[0]!.public_id
+    const read = async () => (await actor<{ offices: unknown }>('', 'select app_private.public_yandex_trainer_offices($1) offices', [publicId]))[0]!.offices
+    expect(await read()).toEqual([{ city: 'Санкт-Петербург', name: 'Бенуа' }])
+    const additional = randomUUID()
+    await saveOffice(additional, 0, false, 'Третий офис')
+    const version = Number((await pool.query<{ version: string }>('select version from public.corporate_trainers where trainer_id=$1', [coach])).rows[0]!.version)
+    await saveTrainer(true, [officeId, additional], version)
+    expect(await read()).toHaveLength(2)
+    await saveOffice(additional, 1, true, 'Третий офис')
+    expect(await read()).toEqual([{ city: 'Санкт-Петербург', name: 'Бенуа' }])
+    await saveTrainer(false, [officeId], version + 1)
+    expect(await read()).toBeNull()
+    await saveTrainer(true, [officeId], version + 2)
+    await pool.query('update public.trainer_professional_profiles set published_data=null where trainer_id=$1', [coach])
+    expect(await read()).toBeNull()
+    expect(await actor<{ offices: unknown }>('', 'select app_private.public_yandex_trainer_offices($1) offices', [randomUUID()])).toEqual([{ offices: null }])
+    await expect(actor('', 'select id from public.corporate_offices')).rejects.toMatchObject({ code: '42501' })
+  })
   it('revokes an existing admin immediately and protects its audit', async () => {
     await expect(actor(admin,'delete from app_private.corporate_admin_audit')).rejects.toMatchObject({code:'42501'})
     await pool.query('update app_private.corporate_admins set enabled=false where profile_id=$1',[admin])
