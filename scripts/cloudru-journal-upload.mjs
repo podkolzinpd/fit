@@ -66,7 +66,7 @@ async function storage() {
  // the VM-only RSA key, not by granting this object credential ACL/IAM read rights.
  return {client,sdk,getSignedUrl}
 }
-const stages=new Set(['probe_put','probe_get','probe_verify','probe_delete','payload_get','receipt_put','cleanup_readback','cleanup_delete'])
+const stages=new Set(['probe_put','probe_get','probe_verify','payload_get','receipt_put','cleanup_readback'])
 async function stage(name,work) {
  try{return await work()}catch(cause){const error=new Error('journal_upload_rejected',{cause});error.stage=name;throw error}
 }
@@ -92,19 +92,13 @@ async function readCiphertext(client,sdk,key,expected,phase) {
 export async function probeCiphertextStore({client,sdk},session,keys) {
  const challenge=randomBytes(32).toString('base64'),key=journalObject(session,'probe')
  const bytes=Buffer.from(JSON.stringify(sealUpload({session,challenge},keys.publicKey,session)))
- let uploaded=false
- try {
-  await stage('probe_put',()=>client.send(new sdk.PutObjectCommand({Bucket:bucket,Key:key,Body:bytes,ContentType:'application/octet-stream',IfNoneMatch:'*'})))
-  uploaded=true
-  const readback=await readCiphertext(client,sdk,key,bytes.length,'probe_get')
-  await stage('probe_verify',()=>{
-   const plain=openUpload(JSON.parse(readback.toString('utf8')),keys.privateKey,session)
-   if(plain.session!==session||plain.challenge!==challenge)fail()
-   return Promise.resolve()
-  })
- } finally {
-  if(uploaded)await stage('probe_delete',()=>client.send(new sdk.DeleteObjectCommand({Bucket:bucket,Key:key})))
- }
+ await stage('probe_put',()=>client.send(new sdk.PutObjectCommand({Bucket:bucket,Key:key,Body:bytes,ContentType:'application/octet-stream',IfNoneMatch:'*'})))
+ const readback=await readCiphertext(client,sdk,key,bytes.length,'probe_get')
+ await stage('probe_verify',()=>{
+  const plain=openUpload(JSON.parse(readback.toString('utf8')),keys.privateKey,session)
+  if(plain.session!==session||plain.challenge!==challenge)fail()
+  return Promise.resolve()
+ })
 }
 function sessionDirectory() {
  const s=lstatSync('/session')
@@ -140,7 +134,8 @@ export async function prepareCloudruUpload(target,digest,session,operatorPublicP
   const url=await getSignedUrl(client,new sdk.PutObjectCommand({Bucket:bucket,Key:journalObject(session,'payload'),
    ContentType:'application/octet-stream',ContentLength:uploadBytes,IfNoneMatch:'*'}),{expiresIn:600})
   capability({session,digest,url,bytes:uploadBytes,publicKey:keys.publicKey,expiresAt:Date.now()+600000},operatorPublicPem,session)
-  return {status:'upload_prepared',objectAccessVerified:true,privacyBoundary:'vm_only_encryption_key',bucketPermissionsInspected:false}
+  return {status:'upload_prepared',objectAccessVerified:true,objectDeletionRequired:false,
+   privacyBoundary:'vm_only_encryption_key',bucketPermissionsInspected:false}
  }finally{client.destroy()}
 }
 export async function loadCloudruUpload(target,digest,session) {
@@ -169,14 +164,14 @@ export async function cleanupCloudruUpload(target,digest,session) {
  readManifest(target,digest,session,{allowExpired:true})
  const {client,sdk}=await storage()
  try {
-  // Cleanup is an explicit post-readback action; never run on a failed/uncertain import.
+  // Only retire the local decryption key after verified readback. The owner
+  // requested writes without object deletion or any storage permission change.
   await stage('cleanup_readback',()=>client.send(new sdk.HeadObjectCommand({Bucket:bucket,Key:journalObject(session,'readback')})))
-  for(const name of ['payload','prepared','committed','readback'])await stage('cleanup_delete',()=>client.send(new sdk.DeleteObjectCommand({Bucket:bucket,Key:journalObject(session,name)})))
   for(const file of readdirSync('/session')) {
    if(!['manifest.json','server.private.pem'].includes(file)&&! /^(prepared|committed|readback)-\d{1,20}-\d{1,4}\.encrypted\.json$/.test(file))fail()
   }
   for(const file of readdirSync('/session'))unlinkSync(`/session/${file}`)
-  return {status:'temporary_upload_removed'}
+  return {status:'local_key_removed_encrypted_objects_retained'}
  }finally{client.destroy()}
 }
 async function main() {

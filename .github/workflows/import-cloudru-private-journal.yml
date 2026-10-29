@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       mode:
-        description: Prepare a private Cloud.ru upload, inspect, atomically apply, or remove temporary files
+        description: Prepare a private Cloud.ru upload, inspect, atomically apply, or retire local keys after readback
         type: choice
         options: [prepare, inspect, apply, cleanup]
         default: inspect

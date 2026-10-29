@@ -864,6 +864,9 @@ test('Cloud.ru payload and all customer-derived receipts stay on Cloud.ru; runti
   assert.match(uploader, /requestChecksumCalculation:'WHEN_REQUIRED'/)
   assert.match(uploader, /chmodSync\('\/capability\/capability\.encrypted\.json',0o644\)/)
   assert.doesNotMatch(uploader, /GetBucketAclCommand|GetBucketPolicyCommand|PutBucketAclCommand|PutBucketPolicyCommand|CreateBucket|ListObjects/)
+  assert.doesNotMatch(uploader, /DeleteObjectCommand|DeleteObjectsCommand/)
+  assert.match(uploader, /objectDeletionRequired:false/)
+  assert.match(uploader, /local_key_removed_encrypted_objects_retained/)
   assert.doesNotMatch(uploader, /JSON\.stringify\(error|console\.error\(error|error\.message|error\.stack|console\.(?:log|error)\([^\n]*(?:url|parts|receipt|manifest)/)
   assert.match(uploader, /ContentLength:uploadBytes,IfNoneMatch:'\*'/)
   assert.match(uploader, /durableFile\(`/)
@@ -876,10 +879,10 @@ test('Cloud.ru payload and all customer-derived receipts stay on Cloud.ru; runti
 })
 
 
-test('encrypted staging verifies only object Put/Get/Delete without requiring ACL administration', async () => {
+test('encrypted staging requires Put/Get/decryption without object deletion or ACL administration', async () => {
   const keys = generateKeyPairSync('rsa', { modulusLength: 3072,
     publicKeyEncoding: { type: 'spki', format: 'pem' }, privateKeyEncoding: { type: 'pkcs8', format: 'pem' } })
-  const sdk = Object.fromEntries(['PutObject', 'GetObject', 'DeleteObject'].map(kind => [kind + 'Command',
+  const sdk = Object.fromEntries(['PutObject', 'GetObject'].map(kind => [kind + 'Command',
     class { constructor(input) { this.kind = kind; this.input = input } }]))
   const calls = []; let stored
   const client = { send: async command => {
@@ -893,19 +896,19 @@ test('encrypted staging verifies only object Put/Get/Delete without requiring AC
       assert.equal(Object.hasOwn(envelope, 'challenge'), false)
       return {}
     }
-    if (command.kind === 'GetObject') return { ContentLength: stored.length, Body: [stored] }
-    stored = undefined; return {}
+    assert.equal(command.kind, 'GetObject')
+    return { ContentLength: stored.length, Body: [stored] }
   } }
   await probeCiphertextStore({ client, sdk }, '123-1', keys)
-  assert.deepEqual(calls, ['PutObject', 'GetObject', 'DeleteObject'])
-  assert.equal(stored, undefined)
+  assert.deepEqual(calls, ['PutObject', 'GetObject'])
+  assert.equal(typeof JSON.parse(stored.toString('utf8')).data, 'string')
   const denied = { send: async command => {
-    if (command.kind === 'DeleteObject') throw Object.assign(new Error('private-path-and-credential'),
+    if (command.kind === 'GetObject') throw Object.assign(new Error('private-path-and-credential'),
       { name: 'AccessDenied', $metadata: { httpStatusCode: 403 } })
     return client.send(command)
   } }
   await assert.rejects(probeCiphertextStore({ client: denied, sdk }, '123-1', keys), error => {
-    assert.deepEqual(safeJournalUploadFailure(error), { reason: 'AccessDenied', stage: 'probe_delete', httpStatus: 403 })
+    assert.deepEqual(safeJournalUploadFailure(error), { reason: 'AccessDenied', stage: 'probe_get', httpStatus: 403 })
     assert.doesNotMatch(JSON.stringify(safeJournalUploadFailure(error)), /private-path-and-credential/)
     return true
   })
