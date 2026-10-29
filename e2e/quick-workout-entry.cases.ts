@@ -4,6 +4,21 @@ import { mockPilot, restTimerWorkout, workoutId } from './fit-lime-fixtures'
 
 export function quickWorkoutEntryCases() {
   test.skip(process.env.FIT_QUICK_WORKOUT_ENTRY_ACCEPTANCE !== '1', 'Dedicated native quick-entry harness')
+  for (const role of ['trainer', 'client'] as const) test(`quick-entry explicit running format keeps its existing path ${role}`, async ({ page }) => {
+    const profileId = `c0ac0000-6010-4000-8000-00000000000${role === 'trainer' ? 1 : 2}`
+    const backend = await mockPilot(page, { role, profileId, fitLime: true, clientLime: true, workouts: [{ ...restTimerWorkout(), createdBy: profileId, exercises: [] }] })
+    await page.goto(`/workouts/${workoutId}/live`)
+    await page.getByRole('button', { name: 'Выбрать упражнение', exact: true }).click()
+    const picker = page.getByRole('dialog', { name: 'Добавить упражнение', exact: true })
+    await picker.locator('.picker-filter-trigger').click()
+    await picker.getByRole('group', { name: 'Тип упражнения', exact: true }).getByRole('button', { name: 'Бег', exact: true }).click()
+    await picker.getByRole('button', { name: /^(Применить фильтры|Показать упражнения)$/ }).first().click()
+    await picker.locator('.running-format-option[data-running-format="easy"]').click()
+    await expect(picker).toHaveCount(0)
+    await expect.poll(() => backend.getAppendCommands().length).toBe(1)
+    const command = backend.getAppendCommands()[0] as { exercise: { prefillFromHistory?: boolean } }
+    expect(command.exercise.prefillFromHistory).toBeUndefined()
+  })
   for (const hasPlan of [false, true]) test(`quick-entry booking history preserves appointment and requires replacement ${hasPlan}`, async ({ page }, info) => {
     const profileId = 'c0ac0000-6010-4000-8000-000000000001'
     const base = restTimerWorkout()

@@ -3622,8 +3622,8 @@ export function LiveWorkoutPage() {
       void queryClient.invalidateQueries({ queryKey: ['clients'] })
     },
   })
-  const appendExercise = useMutation({ mutationFn: (exercise: ExerciseSnapshot) => runLiveWorkoutMutation(`append-exercise:${exercise.ref}`, async (workout) => {
-    if (!isQuickWorkoutEntryEnabled(actor)) return workoutsRepository.appendLiveExercise(workout, exercise)
+  const appendExercise = useMutation({ mutationFn: ({ exercise, useHistory }: { exercise: ExerciseSnapshot; useHistory: boolean }) => runLiveWorkoutMutation(`append-exercise:${exercise.ref}`, async (workout) => {
+    if (!useHistory || !isQuickWorkoutEntryEnabled(actor)) return workoutsRepository.appendLiveExercise(workout, exercise)
     const key = `${workoutId}:${exercise.source}:${exercise.ref}`
     const pending = pendingLiveExerciseAdds.current.get(key) ?? { operationId: crypto.randomUUID(), expectedVersion: workout.version }
     pendingLiveExerciseAdds.current.set(key, pending)
@@ -3755,10 +3755,10 @@ export function LiveWorkoutPage() {
     await appendSelection.mutateAsync(exercises)
     closePicker()
   }
-  async function pickLiveExercise(exercise: ExerciseSnapshot) {
+  async function pickLiveExercise(exercise: ExerciseSnapshot, runningFormat?: RunningFormat) {
     const targetId = replaceExerciseId
     if (!targetId) {
-      appendExercise.mutate(exercise)
+      appendExercise.mutate({ exercise, useHistory: !runningFormat })
       closePicker()
       return
     }
