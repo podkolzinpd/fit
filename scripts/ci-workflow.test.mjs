@@ -156,6 +156,7 @@ test('runs required Yandex-only browser auth without starting local Supabase', (
   assert.match(job, /needs: e2e-scope\n    if: needs\.e2e-scope\.outputs\.required == 'true'/)
   assert.match(job, /FIT_YANDEX_E2E_REQUIRED: 'true'/)
   assert.match(job, /--env FIT_TEST_PRODUCTION_BUILD=true/)
+  assert.match(job, /--env FIT_QUICK_WORKOUT_ENTRY_ACCEPTANCE=1/)
   assert.match(job, /npm run build && npx playwright test/)
   assert.match(job, /--env VITE_NUTRITION_ENABLED=true/)
   assert.match(job, /--env VITE_NUTRITION_NATIVE_COHORT=true/)
