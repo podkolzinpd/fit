@@ -64,7 +64,7 @@ export class CorporateAdminStore {
   }
   bundle(session: YandexActorSession) {
     return withYandexActorSession(this.pool, session, async client => {
-      const rows = await client.query<{ bundle: AdminBundle }>('select app_private.corporate_admin_bundle() bundle')
+      const rows = await client.query<{ bundle: AdminBundle }>('select app_private.corporate_admin_bundle_with_identity() bundle')
       if (!rows[0]?.bundle) throw new Error('corporate_bundle_missing')
       return exposeAdminTrainerPhotos(rows[0].bundle, this.media)
     })
