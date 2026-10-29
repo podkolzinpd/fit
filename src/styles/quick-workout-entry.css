@@ -52,7 +52,7 @@
 .fit-lime-shell .quick-day-booking .primary { min-height: 54px; border-radius: 20px; }
 
 .fit-lime-shell .booking-history-open { display: flex; gap: 8px; justify-content: center; align-items: center; }
-.fit-lime-shell .booking-history-sheet { position: fixed; inset: auto 0 0; width: min(100%, 430px); height: min(752px, calc(var(--app-visible-height, 100dvh) - 24px)); max-height: calc(var(--app-visible-height, 100dvh) - 24px); margin: 0 auto; padding: 0; border: 0; border-radius: 40px 40px 0 0; background: var(--lime-surface); color: var(--lime-text); overflow: hidden; }
+.fit-lime-shell .booking-history-sheet { outline: none; position: fixed; inset: auto 0 0; width: min(100%, 430px); height: min(752px, calc(var(--app-visible-height, 100dvh) - 24px)); max-height: calc(var(--app-visible-height, 100dvh) - 24px); margin: 0 auto; padding: 0; border: 0; border-radius: 40px 40px 0 0; background: var(--lime-surface); color: var(--lime-text); overflow: hidden; }
 .fit-lime-shell .booking-history-sheet[open] { display: flex; flex-direction: column; }
 .fit-lime-shell .booking-history-sheet::backdrop { background: var(--overlay); }
 .fit-lime-shell .booking-history-sheet > header { display: grid; grid-template-columns: 44px minmax(0, 1fr) 44px; align-items: center; min-height: 88px; padding: 20px; border-bottom: 1px solid var(--lime-divider); flex-shrink: 0; }

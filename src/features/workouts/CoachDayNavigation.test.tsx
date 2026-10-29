@@ -112,3 +112,36 @@ it('opens one booking on release and gives scroll, inertia, swipe, cancellation 
   expect(book).toHaveBeenCalledTimes(1)
   vi.restoreAllMocks()
 })
+
+it('blocks a booking when scroll position changes before its queued scroll event', () => {
+  let now = 1000
+  const clock = vi.spyOn(performance, 'now').mockImplementation(() => now)
+  try {
+    const book = vi.fn()
+    render(<Surface tap={{ resolve: () => '14:00', open: book }} />)
+    const space = screen.getByTestId('space')
+    const tap = () => { pointer(space, 'pointerdown', 180); pointer(space, 'pointerup', 180) }
+    // WebKit can update the position before delivering the scroll notification.
+    space.scrollTop = 1
+    tap()
+    expect(book).not.toHaveBeenCalled()
+    now += 201
+    tap()
+    expect(book).toHaveBeenCalledExactlyOnceWith('14:00')
+    book.mockClear()
+    pointer(space, 'pointerdown', 180)
+    space.scrollTop = 2
+    pointer(space, 'pointerup', 180)
+    tap()
+    expect(book).not.toHaveBeenCalled()
+    now += 201
+    tap()
+    expect(book).toHaveBeenCalledTimes(1)
+    book.mockClear()
+    space.scrollLeft = 1
+    tap()
+    expect(book).not.toHaveBeenCalled()
+  } finally {
+    clock.mockRestore()
+  }
+})

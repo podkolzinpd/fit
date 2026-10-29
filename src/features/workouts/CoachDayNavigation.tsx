@@ -17,7 +17,24 @@ export function useCoachDaySwipe(enabled: boolean, date: LocalDate, openDay: (da
     let gesture: { id: number; x: number; y: number; horizontal: boolean; tap: string | null; started: number; scrollTop: number; viewport: HTMLElement | null } | null = null
     let suppressClick = false
     let lastScroll = -Infinity
-    const scroll = () => { lastScroll = performance.now(); if (gesture) gesture.tap = null }
+    const scrollPositions = new WeakMap<HTMLElement, { top: number; left: number }>()
+    const position = (viewport: HTMLElement) => ({ top: viewport.scrollTop, left: viewport.scrollLeft })
+    const markScroll = () => { lastScroll = performance.now(); if (gesture) gesture.tap = null }
+    const readScrollTop = (viewport: HTMLElement | null) => {
+      if (!viewport) return 0
+      const next = position(viewport), previous = scrollPositions.get(viewport)
+      // WebKit may deliver scroll after pointerup. Observe the position itself
+      // before accepting contact, including the contact that stops inertia.
+      if (previous && (previous.top !== next.top || previous.left !== next.left)) markScroll()
+      scrollPositions.set(viewport, next)
+      return next.top
+    }
+    root.querySelectorAll<HTMLElement>('.schedule-v2-timeline').forEach(viewport => scrollPositions.set(viewport, position(viewport)))
+    const scroll = (event: Event) => {
+      markScroll()
+      const viewport = event.target instanceof Element ? event.target.closest<HTMLElement>('.schedule-v2-timeline') : null
+      if (viewport) scrollPositions.set(viewport, position(viewport))
+    }
     const reset = () => { gesture = null }
     const cancel = (event: PointerEvent) => { if (gesture?.id === event.pointerId) reset() }
     // Touch implicitly captures the initial child. Transferring that capture
@@ -36,9 +53,10 @@ export function useCoachDaySwipe(enabled: boolean, date: LocalDate, openDay: (da
       // that heading is user-select:none. It must not disable the next swipe.
       if (selection?.isCollapsed === false && !anchor?.closest('.coach-day-heading')) return
       const viewport = target.closest<HTMLElement>('.schedule-v2-timeline')
+      const scrollTop = readScrollTop(viewport)
       gesture = { id: event.pointerId, x: event.clientX, y: event.clientY, horizontal: false,
         tap: performance.now() - lastScroll >= 200 ? current.current.slotTap?.resolve(target, event.clientX, event.clientY) ?? null : null,
-        started: performance.now(), viewport, scrollTop: viewport?.scrollTop ?? 0 }
+        started: performance.now(), viewport, scrollTop }
 
     }
     const move = (event: PointerEvent) => {
@@ -54,10 +72,11 @@ export function useCoachDaySwipe(enabled: boolean, date: LocalDate, openDay: (da
     }
     const up = (event: PointerEvent) => {
       if (!gesture || gesture.id !== event.pointerId) return
+      const scrollTop = readScrollTop(gesture.viewport)
       const dx = event.clientX - gesture.x, dy = event.clientY - gesture.y
       const commit = gesture.horizontal && Math.abs(dx) >= 56 && Math.abs(dx) > Math.abs(dy) * 1.4
       const tap = !gesture.horizontal && Math.hypot(dx, dy) <= 10 && performance.now() - gesture.started < 450
-        && performance.now() - lastScroll >= 200 && (gesture.viewport?.scrollTop ?? 0) === gesture.scrollTop ? gesture.tap : null
+        && performance.now() - lastScroll >= 200 && scrollTop === gesture.scrollTop ? gesture.tap : null
       reset()
       if (!commit) {
         if (tap) { suppressClick = true; current.current.slotTap?.open(tap) }
