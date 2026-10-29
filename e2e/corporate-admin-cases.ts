@@ -37,6 +37,7 @@ test('admin manages offices and trainer flags on a laptop, including validation 
   })
   await page.goto(nativeAiUrl('/admin'))
   await expect(page.getByRole('heading',{name:'Администрирование'})).toBeVisible()
+  await expect(page.getByText('Анкета не опубликована', { exact: true })).toHaveCount(0)
   await page.getByRole('button',{name:'Настроить тренера Тестовый тренер'}).click()
   await page.getByRole('checkbox',{name:'Тренер Яндекса',exact:true}).check()
   await page.getByRole('button',{name:'Сохранить тренера'}).click()
