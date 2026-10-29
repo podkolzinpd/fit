@@ -1,16 +1,23 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { addDays, type LocalDate } from '../../shared/local-date'
 
+export interface DaySlotTap {
+  resolve: (target: Element, x: number, y: number) => string | null
+  open: (time: string) => void
+}
+
 /** One calendar source: a completed gesture calls the existing openDay. */
-export function useCoachDaySwipe(enabled: boolean, date: LocalDate, openDay: (date: LocalDate) => void) {
+export function useCoachDaySwipe(enabled: boolean, date: LocalDate, openDay: (date: LocalDate) => void, slotTap?: DaySlotTap) {
   const [header, setHeader] = useState<HTMLElement | null>(null)
-  const current = useRef({ date, openDay })
-  useLayoutEffect(() => { current.current = { date, openDay } })
+  const current = useRef({ date, openDay, slotTap })
+  useLayoutEffect(() => { current.current = { date, openDay, slotTap } })
   useLayoutEffect(() => {
     const root = header?.closest<HTMLElement>('.schedule-day-view')
     if (!enabled || !root) return
-    let gesture: { id: number; x: number; y: number; horizontal: boolean } | null = null
+    let gesture: { id: number; x: number; y: number; horizontal: boolean; tap: string | null; started: number; scrollTop: number; viewport: HTMLElement | null } | null = null
     let suppressClick = false
+    let lastScroll = -Infinity
+    const scroll = () => { lastScroll = performance.now(); if (gesture) gesture.tap = null }
     const reset = () => { gesture = null }
     const cancel = (event: PointerEvent) => { if (gesture?.id === event.pointerId) reset() }
     // Touch implicitly captures the initial child. Transferring that capture
@@ -28,11 +35,16 @@ export function useCoachDaySwipe(enabled: boolean, date: LocalDate, openDay: (da
       // WebKit Back may restore a range in the non-editable date even though
       // that heading is user-select:none. It must not disable the next swipe.
       if (selection?.isCollapsed === false && !anchor?.closest('.coach-day-heading')) return
-      gesture = { id: event.pointerId, x: event.clientX, y: event.clientY, horizontal: false }
+      const viewport = target.closest<HTMLElement>('.schedule-v2-timeline')
+      gesture = { id: event.pointerId, x: event.clientX, y: event.clientY, horizontal: false,
+        tap: performance.now() - lastScroll >= 200 ? current.current.slotTap?.resolve(target, event.clientX, event.clientY) ?? null : null,
+        started: performance.now(), viewport, scrollTop: viewport?.scrollTop ?? 0 }
+
     }
     const move = (event: PointerEvent) => {
       if (!gesture || gesture.id !== event.pointerId) return
       const dx = event.clientX - gesture.x, dy = event.clientY - gesture.y
+      if (Math.hypot(dx, dy) > 10) gesture.tap = null
       if (!gesture.horizontal && Math.abs(dy) > 12 && Math.abs(dy) >= Math.abs(dx)) { reset(); return }
       if (Math.abs(dx) >= 16 && Math.abs(dx) > Math.abs(dy) * 1.4) {
         gesture.horizontal = true
@@ -44,8 +56,13 @@ export function useCoachDaySwipe(enabled: boolean, date: LocalDate, openDay: (da
       if (!gesture || gesture.id !== event.pointerId) return
       const dx = event.clientX - gesture.x, dy = event.clientY - gesture.y
       const commit = gesture.horizontal && Math.abs(dx) >= 56 && Math.abs(dx) > Math.abs(dy) * 1.4
+      const tap = !gesture.horizontal && Math.hypot(dx, dy) <= 10 && performance.now() - gesture.started < 450
+        && performance.now() - lastScroll >= 200 && (gesture.viewport?.scrollTop ?? 0) === gesture.scrollTop ? gesture.tap : null
       reset()
-      if (!commit) return
+      if (!commit) {
+        if (tap) { suppressClick = true; current.current.slotTap?.open(tap) }
+        return
+      }
       suppressClick = true
       event.preventDefault()
       const next = addDays(current.current.date, dx < 0 ? 1 : -1)
@@ -59,6 +76,7 @@ export function useCoachDaySwipe(enabled: boolean, date: LocalDate, openDay: (da
       event.stopPropagation()
     }
     const key = () => { suppressClick = false }
+    root.addEventListener('scroll', scroll, true)
     root.addEventListener('pointerdown', down)
     root.addEventListener('pointermove', move, { passive: false })
     root.addEventListener('pointerup', up)
@@ -67,6 +85,7 @@ export function useCoachDaySwipe(enabled: boolean, date: LocalDate, openDay: (da
     root.addEventListener('click', click, true)
     root.addEventListener('keydown', key)
     return () => {
+      root.removeEventListener('scroll', scroll, true)
       root.removeEventListener('pointerdown', down)
       root.removeEventListener('pointermove', move)
       root.removeEventListener('pointerup', up)

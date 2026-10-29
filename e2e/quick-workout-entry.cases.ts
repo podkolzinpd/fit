@@ -3,6 +3,53 @@ import { mockPilot, restTimerWorkout, workoutId } from './fit-lime-fixtures'
 
 export function quickWorkoutEntryCases() {
   test.skip(process.env.FIT_QUICK_WORKOUT_ENTRY_ACCEPTANCE !== '1', 'Dedicated native quick-entry harness')
+  for (const density of ['comfortable', 'compact'] as const) test(`quick-entry day booking ${density}: completed tap, scroll priority and retry`, async ({ page }, info) => {
+    const profileId = 'c0ac0000-6010-4000-8000-000000000001'
+    await page.clock.setFixedTime(new Date('2026-10-08T09:01:00Z'))
+    const backend = await mockPilot(page, { profileId, fitLime: true, workouts: [], scheduleDensity: density, failFirstSave: true })
+    const commands: Array<{ requestId: string; exercises: unknown[]; startTime: string }> = []
+    page.on('request', request => {
+      if (new URL(request.url()).pathname === '/v1/workouts' && request.method() === 'POST') commands.push(request.postDataJSON())
+    })
+    await page.goto('/today?date=2026-10-08')
+    const viewport = page.locator('.schedule-v2-timeline'), grid = viewport.locator('.day-grid')
+    await expect(grid).toBeVisible()
+    await viewport.evaluate(el => { el.scrollTop = el.querySelector<HTMLElement>('.day-grid')!.offsetHeight / 24 * 13 })
+    await page.waitForTimeout(250)
+    const position = await grid.evaluate(el => { const r = el.getBoundingClientRect(); return { x: r.left + 140, y: r.top + el.clientHeight / 24 * 14 + 2 } })
+    const booking = page.getByRole('dialog', { name: 'Записать клиента', exact: true })
+    // A scroll event invalidates contact, including a contact stopping inertia.
+    await viewport.evaluate(el => { el.scrollTop += 1 })
+    await page.touchscreen.tap(position.x, position.y)
+    await expect(booking).toHaveCount(0)
+    await page.waitForTimeout(250)
+    const before = await viewport.evaluate(el => el.scrollTop)
+    await page.touchscreen.tap(position.x, position.y)
+    await expect(booking).toBeVisible()
+    await expect(booking).toContainText('14:00')
+    await expect(booking.locator('input:focus')).toHaveCount(0)
+    await booking.getByRole('button', { name: 'Закрыть запись' }).click()
+    await expect(booking).toHaveCount(0)
+    expect(await viewport.evaluate(el => el.scrollTop)).toBe(before)
+    await page.touchscreen.tap(position.x, position.y)
+    await booking.getByRole('button', { name: 'Выбрать клиента', exact: true }).click()
+    await page.locator('.client-picker-item').first().click()
+    await page.getByRole('button', { name: 'Применить клиента' }).click()
+    await booking.screenshot({ path: info.outputPath(`booking-${density}.png`) })
+    await booking.getByRole('button', { name: 'Записать', exact: true }).click()
+    await expect(booking.getByRole('alert')).toBeVisible()
+    await booking.getByRole('button', { name: 'Записать', exact: true }).click()
+    await expect(booking).toHaveCount(0)
+    expect(commands).toHaveLength(2)
+    expect(commands[0]!.requestId).toBeTruthy()
+    expect(commands[1]!.requestId).toBe(commands[0]!.requestId)
+    expect(commands[1]!.exercises).toEqual([])
+    const created = backend.getWorkouts()[0]!
+    expect(created.status).toBe('planned')
+    expect(created.startTime).toBe('14:00')
+    expect(created.workoutDate).toBe('2026-10-08')
+    await expect(page.locator('.schedule-v2-event')).toHaveCount(1)
+  })
   test('quick-entry catalogue ranks dumbbells ahead of a less relevant recent lunge', async ({ page }) => {
     const profileId = 'c0ac0000-6010-4000-8000-000000000001'
     await mockPilot(page, { role: 'trainer', profileId, fitLime: true, workouts: [{ ...restTimerWorkout(), createdBy: profileId, exercises: [] }] })

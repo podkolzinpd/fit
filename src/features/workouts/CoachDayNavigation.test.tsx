@@ -1,7 +1,7 @@
 import { act, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { localDate, type LocalDate } from '../../shared/local-date'
-import { CoachDayHeading, useCoachDaySwipe } from './CoachDayNavigation'
+import { CoachDayHeading, useCoachDaySwipe, type DaySlotTap } from './CoachDayNavigation'
 
 beforeEach(() => {
   HTMLElement.prototype.hasPointerCapture = vi.fn(() => false)
@@ -14,9 +14,9 @@ function pointer(target: Element, type: string, x: number, y = 100, primary = tr
   Object.defineProperties(event, { pointerId: { value: id }, isPrimary: { value: primary } })
   fireEvent(target, event)
 }
-function Surface({ enabled = true, open = vi.fn() }: { enabled?: boolean; open?: (date: LocalDate) => void }) {
-  const ref = useCoachDaySwipe(enabled, localDate('2026-12-31'), open)
-  return <div className="schedule-day-view"><header ref={ref}><span className="coach-day-heading">Дата</span></header><main data-testid="space">Пустое место</main><button>Календарь</button><a href="/workouts/id">Тренировка</a></div>
+function Surface({ enabled = true, open = vi.fn(), tap }: { enabled?: boolean; open?: (date: LocalDate) => void; tap?: DaySlotTap }) {
+  const ref = useCoachDaySwipe(enabled, localDate('2026-12-31'), open, tap)
+  return <div className="schedule-day-view"><header ref={ref}><span className="coach-day-heading">Дата</span></header><main data-testid="space" className="schedule-v2-timeline">Пустое место</main><button>Календарь</button><a href="/workouts/id">Тренировка</a></div>
 }
 function swipe(target: Element, from = 220, to = 80, dy = 0) {
   pointer(target, 'pointerdown', from)
@@ -82,4 +82,33 @@ it('keeps one accessible date, replaces the outgoing label on reversal and honor
   rerender(<CoachDayHeading {...labels('2026-10-19')} />)
   expect(container.querySelector('[aria-hidden]')).toBeNull()
   expect(screen.getByRole('heading')).toHaveTextContent('2026-10-19')
+})
+
+it('opens one booking on release and gives scroll, inertia, swipe, cancellation and hold priority', () => {
+  let now = 1000
+  vi.spyOn(performance, 'now').mockImplementation(() => now)
+  const book = vi.fn(), open = vi.fn()
+  render(<Surface open={open} tap={{ resolve: () => '14:00', open: book }} />)
+  const space = screen.getByTestId('space')
+  const tap = () => { pointer(space, 'pointerdown', 180); pointer(space, 'pointerup', 182) }
+  pointer(space, 'pointerdown', 180)
+  expect(book).not.toHaveBeenCalled()
+  pointer(space, 'pointerup', 182)
+  expect(book).toHaveBeenCalledExactlyOnceWith('14:00')
+  fireEvent.click(space)
+  expect(book).toHaveBeenCalledTimes(1)
+  book.mockClear()
+  pointer(space, 'pointerdown', 180); pointer(space, 'pointermove', 200); pointer(space, 'pointermove', 180); pointer(space, 'pointerup', 180)
+  pointer(space, 'pointerdown', 180); space.scrollTop = 2; fireEvent.scroll(space); pointer(space, 'pointerup', 180)
+  tap() // Contact stopping the scroll cannot turn into a tap.
+  now += 201
+  pointer(space, 'pointerdown', 180); now += 451; pointer(space, 'pointerup', 180)
+  pointer(space, 'pointerdown', 180); pointer(space, 'pointercancel', 180); pointer(space, 'pointerup', 180)
+  pointer(space, 'pointerdown', 180); pointer(space, 'pointerdown', 180, 100, false, 2); pointer(space, 'pointerup', 180)
+  swipe(space)
+  expect(open).toHaveBeenCalledTimes(1)
+  expect(book).not.toHaveBeenCalled()
+  tap()
+  expect(book).toHaveBeenCalledTimes(1)
+  vi.restoreAllMocks()
 })

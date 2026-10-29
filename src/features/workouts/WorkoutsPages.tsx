@@ -1,4 +1,5 @@
 import { isQuickWorkoutEntryEnabled } from '../../app/quick-workout-entry'
+import { QuickDayBooking, dayBookingTime } from './QuickDayBooking'
 import { isClientWorkoutRedesignEnabled } from '../../app/client-workout-redesign'
 import { isCoachLiveV79Enabled } from '../../app/coach-live-v79'
 import { WorkoutFoldBody } from './WorkoutFoldBody'
@@ -780,7 +781,8 @@ function TrainerScheduleV2({ forceDayView = false }: { forceDayView?: boolean })
   const compactScheduleFilters = fitLimeSchedule && isCoachWorkoutRedesignEnabled(actor)
   const singleScheduleGuide = compactScheduleFilters && fitLimeSchedule
   const singleDayGuide = fitLimeToday && isCoachWorkoutRedesignEnabled(actor)
-  const daySwipeRef = useCoachDaySwipe(singleDayGuide, selected, openDay)
+  const [bookingTime, setBookingTime] = useState<string | null>(null)
+  const daySwipeRef = useCoachDaySwipe(singleDayGuide, selected, openDay, isQuickWorkoutEntryEnabled(actor) && isDayView ? { resolve: (target, x, y) => dayBookingTime(target, x, y, hourHeight), open: setBookingTime } : undefined)
   const homeClients = useQuery({
     queryKey: ['clients', false],
     queryFn: () => clientsRepository.list(false),
@@ -1011,6 +1013,7 @@ function TrainerScheduleV2({ forceDayView = false }: { forceDayView?: boolean })
     {isFitLimeEnabled(actor)
       ? <button type="button" className="schedule-v2-fab" aria-label="Новая тренировка" onClick={() => { trackGoal('schedule_v2_workout_create_started'); setPlanComposerOpen(true) }}><AddIcon /></button>
       : <Link className="schedule-v2-fab" aria-label={`Запланировать тренировку на ${selected}`} to={`/workouts/new?date=${selected}`} state={{ returnTo }} onClick={() => trackGoal('schedule_v2_workout_create_started')}><AddIcon /></Link>}
+    {bookingTime && <QuickDayBooking date={selected} time={bookingTime} returnTo={returnTo} onClose={() => setBookingTime(null)} />}
     {planComposerOpen && <FitLimeWorkoutEntry date={selected} returnTo={returnTo} onClose={() => setPlanComposerOpen(false)} />}
     {inboxOpen && <ScheduleV2InboxSheet
       questions={workspace.data?.questions ?? []}
