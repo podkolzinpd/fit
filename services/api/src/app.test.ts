@@ -5071,12 +5071,12 @@ describe('pilot post-workout commands', () => {
     const app = buildApp({ pilotWorkoutsWriter: writer.pilotWorkoutsWriter, logger: false })
     apps.push(app)
     const url = `/v1/workouts/${WORKOUT_ID}/title`
-    const headers = { 'x-fit-pilot-session': sessionToken }
+    const headers = { 'x-fit-session': sessionToken }
     for (const title of ['  Ноги и спина  ', 'я'.repeat(120)]) {
       const response = await app.inject({ method: 'PUT', url, headers, payload: { title, expectedVersion: 1, exercises: ['ignored'] } })
       expect(response.statusCode).toBe(200)
       expect(response.headers['cache-control']).toBe('no-store')
-      expect(writer.rename).toHaveBeenLastCalledWith(sessionToken, WORKOUT_ID, title.trim(), 1)
+      expect(writer.rename).toHaveBeenLastCalledWith({ accessMode: 'read_write', token: sessionToken }, WORKOUT_ID, title.trim(), 1)
     }
     writer.rename.mockClear()
     for (const title of [null, '', '  ', 'я'.repeat(121), 12]) {
@@ -5086,6 +5086,8 @@ describe('pilot post-workout commands', () => {
       expect((await app.inject({ method: 'PUT', url, headers, payload: { title: 'Ноги', expectedVersion } })).statusCode).toBe(400)
     }
     expect((await app.inject({ method: 'PUT', url, payload: { title: 'Ноги', expectedVersion: 1 } })).statusCode).toBe(401)
+    expect((await app.inject({ method: 'PUT', url, headers: { 'x-fit-pilot-session': sessionToken }, payload: { title: 'Ноги', expectedVersion: 1 } })).statusCode).toBe(403)
+    expect((await app.inject({ method: 'PUT', url, headers: { 'x-fit-session': sessionToken, 'x-fit-pilot-session': sessionToken }, payload: { title: 'Ноги', expectedVersion: 1 } })).statusCode).toBe(401)
     expect(writer.rename).not.toHaveBeenCalled()
     for (const [failure, status] of [['forbidden', 403], ['conflict', 409], ['invalid', 422]] as const) {
       writer.rename.mockRejectedValueOnce(new PilotWorkoutCommandError(failure))
