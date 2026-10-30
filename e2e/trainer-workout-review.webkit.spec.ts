@@ -354,6 +354,7 @@ test('iPhone: trainer review and client post-workout feedback stay visible to th
   // а ответ на явный вопрос уже сохранён.
   await page.goto(ownWorkoutUrl)
   await expect(page.getByText('Создано клиентом · упражнения только для просмотра', { exact: true })).toBeVisible()
+  await page.locator('.coach-workout-summary > summary').click()
   await expect(page.locator('.workout-actual-duration').getByRole('button')).toBeVisible()
   await expect(ownTrainerReviewCard).toHaveClass(/workout-review-readonly/)
   await expect(ownTrainerReviewCard.getByText(ownTrainerReview, { exact: true })).toBeVisible()
