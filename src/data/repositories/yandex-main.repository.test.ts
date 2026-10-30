@@ -1167,6 +1167,10 @@ describe('Yandex main repository', () => {
     await repository.workouts.setWorkoutReview(item, { reaction: 'fire', review: 'Отлично' })
     await repository.workouts.setClientWorkoutComment(item, 'Сложно')
     await repository.workouts.submitFeedback(item, { sessionRpe: 8, wellbeing: 'normal', discomfort: false, comment: 'Хорошо' })
+    await repository.workouts.rename(item, 'Ноги и спина')
+    const titleCall = fetchMock.mock.calls.find(([url]) => String(url).endsWith(`/v1/workouts/${workoutId}/title`))
+    expect(titleCall?.[1]?.method).toBe('PUT')
+    expect(JSON.parse(String(titleCall?.[1]?.body))).toEqual({ title: 'Ноги и спина', expectedVersion: item.version })
     await repository.workouts.setActualDuration(item, 3000)
     expect(fetchMock).toHaveBeenCalledWith(`${apiBaseUrl}/v1/workouts/${item.id}/duration`, expect.objectContaining({
       method: 'PUT', body: JSON.stringify({ actualDurationSec: 3000, expectedVersion: item.version }),

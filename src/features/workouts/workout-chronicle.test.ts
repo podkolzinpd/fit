@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { WorkoutSet } from '../../shared/domain'
-import { calendarExerciseResult, chronicleExercisePreview } from './workout-chronicle'
+import { calendarExerciseResult, chronicleExercisePreview, workoutDisplayTitle, workoutExerciseBrief } from './workout-chronicle'
 
 describe('chronicleExercisePreview', () => {
   it('оставляет в карточке истории только два первых упражнения', () => {
@@ -51,5 +51,19 @@ describe('calendarExerciseResult', () => {
     expect(calendarExerciseResult({ ref: 'plank', sets: [recordedSet({ confirmedAt: '2026-10-02T10:00:00Z', fact: { durationSec: 90 } })] })).toBe('1:30')
     expect(calendarExerciseResult({ ref: 'running', sets: [recordedSet({ confirmedAt: '2026-10-02T10:00:00Z', fact: { distanceKm: 5, durationSec: 1800 } })] })).toContain('5 км × 30:00')
     expect(calendarExerciseResult({ ref: 'push-up', sets: [recordedSet({ confirmedAt: '2026-10-02T10:00:00Z', fact: { weightKg: 0, reps: 15 } })] })).toBe('15 повт.')
+  })
+})
+
+describe('shared workout title and brief', () => {
+  it('keeps a real title ahead of a favorite snapshot and uses a display-only fallback', () => {
+    expect(workoutDisplayTitle({ title: '  Спина  ', favoriteTitle: 'Источник' })).toBe('Спина')
+    expect(workoutDisplayTitle({ title: null, favoriteTitle: 'Источник' })).toBe('Источник')
+    expect(workoutDisplayTitle({ title: '  ', favoriteTitle: '  ' })).toBe('Тренировка')
+  })
+  it('shows the same first three names and remaining count without plan/result guesses', () => {
+    const names = ['Присед', 'Тяга', 'Планка', 'Бег', 'Жим'].map(name => ({ name }))
+    expect(workoutExerciseBrief(names)).toBe('Присед · Тяга · Планка · ещё 2')
+    expect(workoutExerciseBrief(names.slice(0, 3))).toBe('Присед · Тяга · Планка')
+    expect(workoutExerciseBrief([])).toBe('Без упражнений')
   })
 })

@@ -272,7 +272,7 @@ test(`${role}: current and future plans remain visible beside history`, async ({
   for (const width of [390, 430, ...(role === 'trainer' ? [1440] : [])]) {
     await page.setViewportSize({ width, height: width === 1440 ? 1000 : 844 })
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
-    await upcoming.getByRole('heading').scrollIntoViewIfNeeded()
+    await upcoming.getByRole('heading', { name: 'Предстоит', exact: true }).scrollIntoViewIfNeeded()
     for (const card of await upcoming.locator('.client-workout-card').all()) {
       const bounds = await card.boundingBox()
       expect(bounds).not.toBeNull()
