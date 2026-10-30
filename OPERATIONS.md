@@ -2265,3 +2265,14 @@ Origin, XMPP/MUC domains, app id и server-only JWT secret — в защищён
 `prepare-cloudru-frontend.yml`; после изменения нужна новая сборка.
 Подстановка истории — opt-in существующей атомарной append-команды,
 ownership/RLS и идемпотентность сохраняются. Старые вызовы создают пустой подход.
+
+## Общий выпуск quick-entry / YAFIT-692
+
+Решение30.10.2026 заменяет ограничение YAFIT-675 исходной парой для этого пакета.
+`VITE_QUICK_WORKOUT_ENTRY_ENABLED=true` вместе с
+`VITE_QUICK_WORKOUT_ENTRY_ROLLOUT_MODE=all` допускают обе авторизованные роли,
+независимо от темы/Lime-допуска. `pilot` сохраняет прежний allowlist, `off`
+и неизвестное значение закрывают функцию; отсутствие mode означает `pilot`.
+Веб/Android получают одинаковые переменные; требуется новая сборка. Права/данные
+проверяет backend, общий режим не включает иные пилоты или клиентский reference.
+[План и проверки](docs/design/WORKOUT_NAMES_AND_PUBLIC_QUICK_ENTRY_20261030.md). Фактический статус выпуска — YAFIT-692.
