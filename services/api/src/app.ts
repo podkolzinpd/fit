@@ -3495,10 +3495,11 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
   })
 
   app.put('/v1/workouts/:workoutId/title', async (request, reply) => {
-    const sessionToken = readCompatibleYandexActorSession(request.headers)
+    const sessionToken = readYandexActorSession(request.headers)
     const { workoutId } = request.params as { workoutId?: unknown }
     const command = readWorkoutTitleRequest(request.body)
     if (sessionToken === undefined) return reply.code(401).send({ error: 'unauthorized' })
+    if (sessionToken.accessMode !== 'read_write') return reply.code(403).send({ error: 'read_write_session_required' })
     if (typeof workoutId !== 'string' || !uuidPattern.test(workoutId) || command === undefined) {
       return reply.code(400).send({ error: 'invalid_request' })
     }
