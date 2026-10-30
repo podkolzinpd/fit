@@ -131,3 +131,18 @@
   .fit-lime-shell.client-workouts-identity .trainer-client-workouts-page { padding: 16px 16px calc(116px + env(safe-area-inset-bottom)) }
   .fit-lime-shell.trainer-progress-identity .trainer-measurements-workspace { padding: 18px }
 }
+
+/* Explicit trainer presentation; the shared athlete history stays unchanged. */
+.phone-frame .coach-chronicle-card .workout-chronicle-response {
+  display: grid; grid-template-columns: minmax(0, 1fr); gap: 4px;
+  margin: 10px 0; padding: 10px 12px; border-radius: 14px;
+  background: var(--surface-raised); font-size: 14px; line-height: 1.45;
+}
+.phone-frame .coach-chronicle-card .workout-chronicle-response .workout-chronicle-note-label {
+  font-size: 12px; color: var(--secondary-label-fg); font-weight: 400;
+}
+.phone-frame .coach-chronicle-card .workout-chronicle-response .workout-chronicle-note-text {
+  display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden;
+}
+.phone-frame .coach-chronicle-card .workout-chronicle-brief { font-size: 14px; line-height: 1.5; }
+.phone-frame .coach-chronicle-card .workout-chronicle-exercises { border-bottom: 0; padding-bottom: 0; }

@@ -77,7 +77,7 @@ export function workoutTitleCases() {
   for (const role of ['trainer', 'client'] as const) test(`named history remains compact for ${role}`, async ({ page }, info) => {
     const profileId = '69200000-0000-4000-8000-000000000001'
     await page.clock.setFixedTime(new Date('2026-10-30T09:00:00Z'))
-    const source = { ...coachGestureWorkout(false, 5), title: 'Спина и ноги — тренировка с длинным названием', createdBy: profileId, startedAt: '2026-10-29T09:00:00Z', status: 'done' as const, workoutDate: '2026-10-29', completedAt: '2026-10-29T10:00:00Z' }
+    const source = { ...coachGestureWorkout(false, 5), title: 'Спина и ноги — тренировка с длинным названием', trainerReview: 'Хорошая техника, в следующий раз сохраняем вес.', trainerReaction: 'strong' as const, createdBy: profileId, startedAt: '2026-10-29T09:00:00Z', status: 'done' as const, workoutDate: '2026-10-29', completedAt: '2026-10-29T10:00:00Z' }
     await mockPilot(page, { role, profileId, fitLime: true, clientLime: true, workouts: [source] })
     const base = `http://127.0.0.1:${Number(process.env.FIT_TEST_PORT ?? 5173) + 1000}`
     await page.goto(base + (role === 'trainer' ? `/clients/${clientId}/workouts?view=list` : '/me/workouts?tab=history&view=list'))
@@ -85,6 +85,10 @@ export function workoutTitleCases() {
     const card = page.locator('.workout-chronicle-card').first()
     await expect(card.getByRole('heading', { name: source.title, exact: true })).toBeVisible()
     await expect(card.locator('.workout-chronicle-brief')).toHaveText(source.exercises.slice(0, 3).map(exercise => exercise.name).join(' · ') + ' · ещё 2')
+    await expect(card.locator('.workout-chronicle-response')).toContainText(source.trainerReview)
+    expect(await card.evaluate(element => Boolean(element.querySelector('.workout-chronicle-response')!.compareDocumentPosition(element.querySelector('.workout-chronicle-exercises')!) & Node.DOCUMENT_POSITION_FOLLOWING))).toBe(role === 'trainer')
+    if (role === 'trainer') await expect(card.locator('.workout-chronicle-facts')).toHaveCount(0)
+    else await expect(card.locator('.workout-chronicle-facts')).toContainText('1 ч 00 мин')
     const geometry = await card.evaluate(element => {
       const title = element.querySelector('h2')!, date = element.querySelector('time')!
       return { titleSize: parseFloat(getComputedStyle(title).fontSize), dateSize: parseFloat(getComputedStyle(date).fontSize), titleTop: title.getBoundingClientRect().top, dateTop: date.getBoundingClientRect().top }

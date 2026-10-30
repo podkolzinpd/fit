@@ -1121,23 +1121,27 @@ const chronicleReactionLabels: Record<TrainerReaction, string> = {
   strong: '💪',
 }
 
-export function WorkoutChronicleCard({ workout, contextLabel, returnTo, historyListActions = false, showTitle = true, calendarDayDetails = false }: { workout: Workout; contextLabel?: string | null; returnTo?: string; historyListActions?: boolean; showTitle?: boolean; calendarDayDetails?: boolean }) {
+export function WorkoutChronicleCard({ workout, contextLabel, returnTo, historyListActions = false, showTitle = true, calendarDayDetails = false, coachView = false }: { workout: Workout; contextLabel?: string | null; returnTo?: string; historyListActions?: boolean; showTitle?: boolean; calendarDayDetails?: boolean; coachView?: boolean }) {
   const done = workout.status === 'done'
   const duration = workoutDurationLabel(workout.startedAt, workout.completedAt, workout.actualDurationSec)
   const tonnage = workoutTonnage(workout)
-  const meta = done ? [
+  const meta = done && !coachView ? [
     duration,
     tonnage > 0 ? tonnageLabel(tonnage) : null,
     workout.activeCaloriesKcal ? `≈ ${workout.activeCaloriesKcal} ккал` : null,
   ].filter(Boolean) : []
   const hasFeedback = workout.sessionRpe !== undefined && workout.wellbeing !== undefined
   const exercisePreview = chronicleExercisePreview(workout.exercises, calendarDayDetails ? workout.exercises.length : undefined)
-  const musclePreview = chronicleExercisePreview(historyListActions && done ? performedMuscleGroupLabels(workout) : [], 3)
+  const musclePreview = chronicleExercisePreview(historyListActions && done && !coachView ? performedMuscleGroupLabels(workout) : [], 3)
   const detailState = returnTo ? { returnTo } : undefined
   const formattedDate = formatLocalDate(workout.workoutDate)
   const muscleSummary = [...musclePreview.visible, ...(musclePreview.hiddenCount > 0 ? [`+${musclePreview.hiddenCount}`] : [])].join(' · ')
+  const trainerReview = workout.trainerReview && <p className="workout-chronicle-response">
+    <span className="workout-chronicle-note-label">{coachView ? 'Отзыв тренера' : workout.trainerReaction ? chronicleReactionLabels[workout.trainerReaction] : 'Тренер'}</span>
+    <span className="workout-chronicle-note-text">{coachView && workout.trainerReaction ? `${chronicleReactionLabels[workout.trainerReaction]} ` : ''}{workout.trainerReview}</span>
+  </p>
 
-  return <article className={`card workout-chronicle-card${workout.hasPr ? ' has-pr' : ''}${historyListActions && done ? ' has-history-actions' : ''}${calendarDayDetails ? ' calendar-day-details' : ''}`}>
+  return <article className={`card workout-chronicle-card${workout.hasPr ? ' has-pr' : ''}${historyListActions && done ? ' has-history-actions' : ''}${calendarDayDetails ? ' calendar-day-details' : ''}${coachView ? ' coach-chronicle-card' : ''}`}>
     <Link className="workout-chronicle-open" aria-description={showTitle ? workoutDisplayTitle(workout) : undefined} aria-label={`Открыть тренировку за ${formattedDate}`} to={`/workouts/${workout.id}`} state={detailState}>
       <div className="workout-chronicle-head">
         <div className="workout-chronicle-heading">
@@ -1151,6 +1155,7 @@ export function WorkoutChronicleCard({ workout, contextLabel, returnTo, historyL
         </div>
       </div>
       {contextLabel && <p className="card-author">{contextLabel}</p>}
+      {coachView && trainerReview}
       <div className="workout-chronicle-exercises">
         {historyListActions && !calendarDayDetails ? <p className="workout-chronicle-brief">{workoutExerciseBrief(workout.exercises)}</p> : <>
         {exercisePreview.visible.length > 0 ? exercisePreview.visible.map((exercise) => {
@@ -1176,10 +1181,7 @@ export function WorkoutChronicleCard({ workout, contextLabel, returnTo, historyL
         {workout.discomfort && <span className="attention">Дискомфорт</span>}
       </div>}
       {workout.clientComment && <p className="workout-chronicle-comment"><span className="workout-chronicle-note-label">Клиент</span><span className="workout-chronicle-note-text">{workout.clientComment}</span></p>}
-      {workout.trainerReview && <p className="workout-chronicle-response">
-        <span className="workout-chronicle-note-label">{workout.trainerReaction ? chronicleReactionLabels[workout.trainerReaction] : 'Тренер'}</span>
-        <span className="workout-chronicle-note-text">{workout.trainerReview}</span>
-      </p>}
+      {!coachView && trainerReview}
     </Link>
     {historyListActions && done && <Link className="workout-chronicle-copy" aria-label={`Скопировать тренировку за ${formattedDate}`} title="Скопировать тренировку" to={`/workouts/new?copy=${workout.id}`} state={detailState}><CopyIcon /></Link>}
   </article>
@@ -1236,14 +1238,14 @@ export function ClientWorkoutsPage() {
           </Coachmark>
         </div>
         {calendar.state.view === 'list' ? <>
-          <div className="cards workout-chronicle-list">{split.history.map((workout) => <WorkoutChronicleCard key={workout.id} workout={workout} contextLabel={contextLabel(workout)} returnTo={returnTo} historyListActions />)}</div>
+          <div className="cards workout-chronicle-list">{split.history.map((workout) => <WorkoutChronicleCard key={workout.id} workout={workout} contextLabel={contextLabel(workout)} returnTo={returnTo} historyListActions coachView />)}</div>
           {split.history.length === 0 && <p className="muted">Здесь появятся завершённые тренировки.</p>}
           <LoadMoreButton hasMore={query.hasNextPage} loading={query.isFetchingNextPage} onLoadMore={() => void query.fetchNextPage()} />
         </> : <ClientWorkoutHistoryCalendar month={calendar.state.month} today={today} workouts={calendarItems}
           selectedDate={calendar.state.selectedDate} loading={calendarHistory.isLoading} error={calendarHistory.error}
           returnTo={returnTo} contextLabel={contextLabel} onRetry={() => void calendarHistory.refetch()}
           onMonthChange={calendar.shiftMonth} onDateSelect={calendar.selectDate}
-          renderSelectedWorkout={(workout) => <WorkoutChronicleCard workout={workout} contextLabel={contextLabel(workout)} returnTo={returnTo} calendarDayDetails />} />}
+          renderSelectedWorkout={(workout) => <WorkoutChronicleCard workout={workout} contextLabel={contextLabel(workout)} returnTo={returnTo} calendarDayDetails coachView />} />}
       </section>
     </div> : <EmptyState
       title="Тренировка для клиента"
