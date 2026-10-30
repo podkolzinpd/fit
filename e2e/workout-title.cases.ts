@@ -99,9 +99,9 @@ export function workoutTitleCases() {
     await card.screenshot({ path: info.outputPath(`${role}-named-card.png`) })
   })
 
-  test('trainer preserves editable names through copy and source template', async ({ page }) => {
+  test('trainer preserves editable names through copy and source template', async ({ page }, info) => {
     const profileId = '69200000-0000-4000-8000-000000000001'
-    const source = { ...coachGestureWorkout(false, 2), title: 'я'.repeat(120), createdBy: profileId, status: 'done' as const, workoutDate: '2026-10-29', completedAt: '2026-10-29T10:00:00Z' }
+    const source = { ...coachGestureWorkout(false, 2), title: 'я'.repeat(120), trainerReview: 'Сохранить технику, не торопиться с увеличением веса.', createdBy: profileId, status: 'done' as const, workoutDate: '2026-10-29', completedAt: '2026-10-29T10:00:00Z' }
     const backend = await mockPilot(page, { profileId, fitLime: true, workouts: [source] })
     const original = JSON.stringify(backend.getWorkouts()[0])
     const creations: Array<{ title?: string }> = []
@@ -117,6 +117,13 @@ export function workoutTitleCases() {
       await route.fulfill({ json: { template: { ...stored, ...body.draft } } })
     })
     const base = `http://127.0.0.1:${Number(process.env.FIT_TEST_PORT ?? 5173) + 1000}`
+    await page.goto(`${base}/schedule/templates/from-workout`)
+    const sourceCard = page.locator('.template-source-workout').first()
+    await expect(sourceCard.locator('strong')).toHaveText(source.title)
+    await expect(sourceCard.locator('.workout-source-review')).toContainText(source.trainerReview)
+    await expect(sourceCard.locator('.template-source-exercises')).toHaveText(source.exercises.map(exercise => exercise.name).join(' · '))
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+    await sourceCard.screenshot({ path: info.outputPath('template-source-context.png') })
     await page.goto(`${base}/workouts/new?copy=${source.id}`)
     await expect(page.getByLabel('Название тренировки', { exact: true })).toHaveValue(source.title)
     await page.getByLabel('Название тренировки', { exact: true }).fill('Самостоятельная копия')
@@ -133,6 +140,7 @@ export function workoutTitleCases() {
     await page.getByRole('button', { name: 'Сохранить шаблон', exact: true }).click()
     await expect.poll(() => templateWrites.length).toBe(1)
     expect(templateWrites[0]!.name).toBe('Шаблон на завтра')
+    expect(templateWrites[0]).not.toHaveProperty('trainerReview')
     await page.goto(`${base}/workouts/new?template=${templateId}&client=${clientId}`)
     await expect(page.getByLabel('Название тренировки', { exact: true })).toHaveValue(stored.name)
     await page.getByLabel('Название тренировки', { exact: true }).fill('Тренировка из шаблона')
