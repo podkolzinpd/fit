@@ -149,6 +149,7 @@ export interface TrainerMembership {
   lastName: string | null
   /** Server-resolved public identity; optional during rollout and in legacy adapters. */
   displayName?: string
+  publicProfileId?: UUID | null
   joinedAt: string
   isRoot: boolean
 }
