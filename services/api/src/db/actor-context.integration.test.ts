@@ -1296,6 +1296,15 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
       afterEach(async () => {
         await ownerPool?.query('delete from public.workout_templates where id=any($1::uuid[])', [templateIds.splice(0)])
       })
+      it('preserves a 120-character workout name in a template without changing replay or owner rules', async () => {
+        const value = { ...draft(), name: 'я'.repeat(120) }
+        expect(await save(value)).toBe(value.id)
+        expect(await save(value)).toBe(value.id)
+        const saved = await ownerPool?.query('select name,version from public.workout_templates where id=$1', [value.id])
+        expect(saved?.rows).toEqual([{ name: value.name, version: '1' }])
+        await expect(save({ ...draft(), name: 'я'.repeat(121) })).rejects.toThrow('invalid_workout_template')
+        await expect(save(value, null, OUTSIDE_TRAINER_ID)).rejects.toThrow('workout_template_conflict')
+      })
       it('replays a committed create without another row or version bump', async () => {
         const value = draft()
         expect(await save(value)).toBe(value.id)
@@ -5740,7 +5749,7 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
       }
     })
 
-    it('keeps Lime plan titles, empty creation and retry receipts actor-scoped', async () => {
+    it('keeps public plan titles and retry receipts actor-scoped without widening Lime', async () => {
       if (!ownerPool || !runtimePool) throw new Error('Database pools are not ready')
       const db = runtimePool
       const pilotHash = '1'.repeat(64)
@@ -5752,6 +5761,7 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
         notes: null, exercises: [],
       }
       let savedId: string | undefined
+      let publicSavedId: string | undefined
       try {
         const saved = await withActorTransaction(db, ACTOR_ID, (client) => savePlannedWorkout(client, draft, null))
         savedId = saved.id
@@ -5773,8 +5783,13 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
         const cleared = await withActorTransaction(db, ACTOR_ID, readAccessibleTrainingData)
         expect(cleared.workouts.find((item) => item.id === saved.id)?.title).toBeNull()
         await ownerPool.query('update app_private.fit_lime_pilot_allowlist set enabled=false where login_sha256=$1', [pilotHash])
-        await expect(withActorTransaction(db, ACTOR_ID, (client) => savePlannedWorkout(client, { ...draft, requestId: randomUUID() }, null))).rejects.toThrow()
+        expect(await withActorTransaction(db, ACTOR_ID, client => client.query('select app_private.fit_lime_enabled() as allowed'))).toEqual([{ allowed: false }])
+        const publicSaved = await withActorTransaction(db, ACTOR_ID, client => savePlannedWorkout(client, { ...draft, requestId: randomUUID() }, null))
+        publicSavedId = publicSaved.id
+        const publicRead = await withActorTransaction(db, ACTOR_ID, readAccessibleTrainingData)
+        expect(publicRead.workouts.find(item => item.id === publicSaved.id)?.title).toBe('Всё тело')
       } finally {
+        if (publicSavedId) await ownerPool.query('delete from public.workouts where id=$1', [publicSavedId])
         if (savedId) await ownerPool.query('delete from public.workouts where id=$1', [savedId])
         await ownerPool.query('delete from app_private.fit_lime_pilot_allowlist where login_sha256=$1', [pilotHash])
       }
@@ -6117,6 +6132,22 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
           await ownerPool.query('update public.workouts set deleted_at=now() where id=$1', [id])
           await expect(rename(athleteId, 'Deleted', 4)).rejects.toMatchObject({ failure: 'forbidden' })
         }
+        const draft: PlannedWorkoutDraft = { id: null, requestId: randomUUID(), clientId: cardId, workoutDate: '2026-10-30', startTime: null, endTime: null, notes: null, title: 'Именной план спортсмена', exercises: [{
+          position: 0, source: 'system', ref: 'squat', customExerciseId: null, name: 'Присед', muscleGroup: 'legs', inputKind: 'strength', blockId: randomUUID(), blockType: 'single', blockPreset: 'set', blockRounds: 1,
+          restBetweenExercisesSec: 0, restBetweenRoundsSec: 0, restBetweenSetsSec: 90, trainerComment: null,
+          sets: [{ position: 0, weightKg: 30, reps: 10, durationSec: null, durationMin: null, distanceKm: null, rpe: null }],
+        }] }
+        const eligibility = await withActorTransaction(runtimePool, athleteId, client => client.query('select app_private.fit_lime_enabled() as allowed'))
+        expect(eligibility).toEqual([{ allowed: false }])
+        const planned = await withActorTransaction(runtimePool, athleteId, client => savePlannedWorkout(client, draft, null)); ids.push(planned.id)
+        const completed = await withActorTransaction(runtimePool, athleteId, client => saveCompletedWorkout(client, { ...draft, requestId: randomUUID(), title: 'Именной результат' }, null)); ids.push(completed.id)
+        const edited = await withActorTransaction(runtimePool, athleteId, client => saveCompletedWorkout(client, { ...draft, id: completed.id, title: 'Изменённый результат' }, completed.version))
+        expect(edited.version).toBeGreaterThan(completed.version)
+        const recorded = await withActorTransaction(runtimePool, athleteId, client => recordPlannedWorkoutResult(client, { ...draft, id: planned.id, title: 'Записанный план' }, planned.version))
+        expect(recorded.id).toBe(planned.id)
+        const titles = await ownerPool.query('select id,title from public.workouts where id=any($1::uuid[]) order by title', [[planned.id, completed.id]])
+        expect(titles.rows).toEqual([{ id: planned.id, title: 'Записанный план' }, { id: completed.id, title: 'Изменённый результат' }])
+
       } finally {
         await ownerPool.query('delete from public.workouts where id=any($1::uuid[])', [ids])
         await ownerPool.query('delete from public.client_trainer_relationships where client_id=$1', [cardId])

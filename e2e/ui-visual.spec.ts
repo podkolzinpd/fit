@@ -2147,6 +2147,9 @@ test('client card edit keeps its visual baseline', async ({ page }, testInfo) =>
 })
 
 async function openWorkoutCreate(page: import('@playwright/test').Page, dark = false) {
+  await page.clock.setFixedTime(new Date('2026-08-29T18:00:00+03:00'))
+  // The empty-form baseline must not inherit a goal from earlier local scenarios.
+  await page.route('**/rest/v1/rpc/get_client_goal', (route) => route.fulfill({ json: null }))
   await signIn(page, 'client@fit.local', /\/me$/)
   await gotoStable(page, '/me/settings')
   const darkTheme = page.getByRole('switch', { name: 'Тёмная тема' })
@@ -2155,6 +2158,8 @@ async function openWorkoutCreate(page: import('@playwright/test').Page, dark = f
   await gotoStable(page, '/workouts/new')
   await expect(page.getByRole('heading', { name: 'Новая тренировка' })).toBeVisible()
   await expect(page.locator('.phone-frame')).toHaveClass(/workout-create-edit-identity/)
+  await expect(page.getByLabel('Название тренировки', { exact: true })).toBeVisible()
+  await expect(page.getByLabel('Название тренировки', { exact: true })).toHaveValue('')
 }
 
 async function addCompletedBenchPress(page: import('@playwright/test').Page) {

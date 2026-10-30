@@ -79,3 +79,19 @@
 :is(.fit-lime-shell, .phone-frame) .booking-history-sheet > footer button { min-height: 54px; border-radius: 20px; }
 
 :is(.fit-lime-shell, .phone-frame) .booking-history-item time { font-size:12px; line-height:18px; font-weight:400; color:var(--lime-text-secondary, var(--muted)); }
+
+/* Neutral presentation retains readable date/time controls for public entry. */
+.phone-frame:not(.fit-lime-shell) .quick-day-booking .schedule-v2-calendar { color:var(--fg); }
+.phone-frame:not(.fit-lime-shell) .quick-day-booking .fit-lime-plan-avatar { display:grid; place-items:center; flex:0 0 44px; width:44px; height:44px; border-radius:50%; background:var(--surface-raised); color:var(--fg); }
+.phone-frame:not(.fit-lime-shell) .quick-day-booking .fit-lime-date-picker { position:fixed; inset:0; margin:auto; width:min(calc(100% - 24px),375px); max-height:calc(var(--app-visible-height,100dvh) - 24px); overflow:auto; padding:16px; border:1px solid var(--border); border-radius:24px; background:var(--surface-elevated); color:var(--fg); }
+.phone-frame:not(.fit-lime-shell) .quick-day-booking .fit-lime-date-picker header { display:grid; grid-template-columns:44px minmax(0,1fr) 44px; gap:8px; margin:0; }
+.phone-frame:not(.fit-lime-shell) .quick-day-booking .fit-lime-date-picker h2 { text-align:center; font-size:16px; line-height:22px; }
+.phone-frame:not(.fit-lime-shell) .quick-day-booking .fit-lime-date-picker h3 { margin:16px 0 8px; font-size:14px; }
+.phone-frame:not(.fit-lime-shell) .quick-day-booking .fit-lime-date-picker button { display:grid; place-items:center; min-width:0; min-height:44px; padding:0; border:0; background:transparent; color:var(--fg); font-size:14px; }
+.phone-frame:not(.fit-lime-shell) .quick-day-booking .fit-lime-date-selected { margin:16px 0; color:var(--muted); }
+.phone-frame:not(.fit-lime-shell) .quick-day-booking .fit-lime-month-navigation { display:grid; grid-template-columns:44px minmax(0,1fr) 44px; align-items:center; text-align:center; }
+.phone-frame:not(.fit-lime-shell) .quick-day-booking .fit-lime-month-grid { display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); }
+.phone-frame:not(.fit-lime-shell) .quick-day-booking .fit-lime-month-weekday { text-align:center; color:var(--muted); font-size:12px; }
+.phone-frame:not(.fit-lime-shell) .quick-day-booking .fit-lime-month-grid button[aria-pressed='true'] { border-radius:50%; background:var(--fg); color:var(--bg); }
+.phone-frame:not(.fit-lime-shell) .quick-day-booking .fit-lime-date-times { display:grid; gap:12px; margin-top:16px; }
+.phone-frame:not(.fit-lime-shell) .quick-day-booking .fit-lime-date-times input { min-width:0; font-size:16px; }
