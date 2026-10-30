@@ -1,9 +1,5 @@
 import { expect, test } from '@playwright/test'
-<<<<<<< HEAD
 import { mockPilot, restTimerWorkout, workoutId, coachGestureWorkout, clientId } from './fit-lime-fixtures'
-=======
-import { mockPilot, restTimerWorkout, workoutId } from './fit-lime-fixtures'
->>>>>>> origin/main
 
 export function workoutTitleCases() {
   test('title rename changes metadata and the athlete reads the same title without author controls', async ({ page }, info) => {
@@ -42,7 +38,6 @@ export function workoutTitleCases() {
     await page.keyboard.press('Escape')
     await page.screenshot({ path: info.outputPath('athlete-shared-title.png') })
   })
-<<<<<<< HEAD
   for (const role of ['trainer', 'client'] as const) test(`named history remains compact for ${role}`, async ({ page }, info) => {
     const profileId = '69200000-0000-4000-8000-000000000001'
     await page.clock.setFixedTime(new Date('2026-10-30T09:00:00Z'))
@@ -64,6 +59,4 @@ export function workoutTitleCases() {
     await card.screenshot({ path: info.outputPath(`${role}-named-card.png`) })
   })
 
-=======
->>>>>>> origin/main
 }
