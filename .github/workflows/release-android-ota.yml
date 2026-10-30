@@ -164,19 +164,19 @@ jobs:
           tools=$(dirname "$signer")
           mkdir signed-apk
           "$tools/zipalign" -P 16 -f 4 android/app/build/outputs/apk/release/app-release-unsigned.apk "$RUNNER_TEMP/fit-aligned.apk"
-          "$signer" sign --ks "$keyfile" --ks-key-alias fit-release --ks-pass env:FIT_ANDROID_RELEASE_STORE_PASSWORD --key-pass env:FIT_ANDROID_RELEASE_STORE_PASSWORD --out signed-apk/fit-1.1.1-ota-release.apk "$RUNNER_TEMP/fit-aligned.apk"
-          "$signer" verify --verbose --print-certs signed-apk/fit-1.1.1-ota-release.apk > signed-apk/signature.txt
+          "$signer" sign --ks "$keyfile" --ks-key-alias fit-release --ks-pass env:FIT_ANDROID_RELEASE_STORE_PASSWORD --key-pass env:FIT_ANDROID_RELEASE_STORE_PASSWORD --out signed-apk/fit-1.1.2-ota-release.apk "$RUNNER_TEMP/fit-aligned.apk"
+          "$signer" verify --verbose --print-certs signed-apk/fit-1.1.2-ota-release.apk > signed-apk/signature.txt
           node scripts/verify-android-apk-signature.mjs signed-apk/signature.txt a933c356832d86e306408963056e3662094c3cd2cd7d779118dad86a79bb6978
-          "$tools/zipalign" -c -P 16 4 signed-apk/fit-1.1.1-ota-release.apk
-          "$tools/aapt" dump badging signed-apk/fit-1.1.1-ota-release.apk > signed-apk/package-info.txt
-          grep -q "package: name='com.coachspace.fit' versionCode='5' versionName='1.1.1'" signed-apk/package-info.txt
+          "$tools/zipalign" -c -P 16 4 signed-apk/fit-1.1.2-ota-release.apk
+          "$tools/aapt" dump badging signed-apk/fit-1.1.2-ota-release.apk > signed-apk/package-info.txt
+          grep -q "package: name='com.coachspace.fit' versionCode='6' versionName='1.1.2'" signed-apk/package-info.txt
           if grep -q '^application-debuggable' signed-apk/package-info.txt; then exit 1; fi
           sha256sum signed-apk/*.apk > signed-apk/SHA256SUMS
           cp dist/android-ota-build.json signed-apk/
       - uses: actions/upload-artifact@v4
         if: inputs.make_apk == true
         with:
-          name: fit-android-signed-1.1.1
+          name: fit-android-signed-1.1.2
           path: signed-apk/
           if-no-files-found: error
           retention-days: 30
