@@ -50,7 +50,7 @@ export function readWorkoutTemplateRequest(body: unknown, routeId?: string): { d
   const exercises = draft?.exercises
   const expected = input?.expectedVersion
   const expectedVersion = expected === null || expected === undefined ? null : Number.isSafeInteger(expected) && Number(expected) >= 1 ? Number(expected) : undefined
-  if (typeof id !== 'string' || !UUID_PATTERN.test(id) || name.length < 1 || name.length > 80
+  if (typeof id !== 'string' || !UUID_PATTERN.test(id) || name.length < 1 || name.length > 120
     || notes === undefined || (notes?.length ?? 0) > 5_000 || !Array.isArray(exercises)
     || exercises.length > 100 || expectedVersion === undefined) return undefined
   return { draft: { id, name, notes, exercises }, expectedVersion }

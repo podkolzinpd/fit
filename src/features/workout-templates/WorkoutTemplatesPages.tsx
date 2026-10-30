@@ -228,7 +228,7 @@ function WorkoutTemplateEditor({ templateId, sourceWorkoutId, draftKey }: { temp
     <WorkoutHeader eyebrow="ШАБЛОН ТРЕНИРОВКИ" title={pageTitle} meta={headerMeta} state="planned" showStatus={false} />
     <AsyncView loading={!ready && !error} error={error} onRetry={() => { if (templateId) void templateQuery.refetch(); if (sourceWorkoutId) void sourceQuery.refetch() }}>
       <form className="stack workout-form workout-template-form" onSubmit={submit}>
-        <section className="workout-form-section template-basics"><Field label="Название шаблона"><input value={name} onChange={(event) => { setName(event.target.value); setDirty(true) }} placeholder="Например, Силовая · всё тело" maxLength={80} required /></Field>
+        <section className="workout-form-section template-basics"><Field label="Название шаблона"><input value={name} onChange={(event) => { setName(event.target.value); setDirty(true) }} placeholder="Например, Силовая · всё тело" maxLength={120} required /></Field>
           <details className="workout-notes" open={Boolean(notes)}>
             <summary>Заметка для спортсмена <span>Необязательно</span></summary>
             <VoiceNoteField name="notes" source="workout_template_form" value={notes} onValueChange={(value) => { setNotes(value); setDirty(true) }} placeholder="Общие подсказки к тренировке" hideLabel />

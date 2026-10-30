@@ -46,11 +46,13 @@ import './styles/coach-live-v79-superset.css'
 import './styles/fit-client-lime-sections.css'
 import './styles/fit-client-lime-type.css'
 import './styles/fit-client-lime-sheets.css'
+import './styles/quick-workout-entry.css'
 import './styles/fit-client-lime-calendar.css'
 import './styles/fit-client-lime-review.css'
 import './styles/fit-client-lime-date.css'
 import './styles/fit-lime-registration.css'
 import './styles/fit-lime-auth-entry.css'
+import './styles/client-screen-reference.css'
 
 declare global {
   interface Window {
