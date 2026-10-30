@@ -36,6 +36,7 @@ type MuscleGroup =
 type InputKind = 'strength' | 'distance' | 'reps' | 'duration'
 
 export interface LiveExerciseSnapshot {
+  prefillFromHistory?: boolean
   customExerciseId: string | null
   inputKind: InputKind
   muscleGroup: MuscleGroup
@@ -207,6 +208,7 @@ export function readLiveExerciseRequest(
   const input = record(body)
   const exerciseInput = record(input?.exercise)
   if (operation === undefined || exerciseInput === undefined) return undefined
+  if (exerciseInput.prefillFromHistory !== undefined && typeof exerciseInput.prefillFromHistory !== 'boolean') return undefined
 
   const source = enumValue(exerciseInput.source, ['system', 'custom'] as const)
   const ref = text(exerciseInput.ref, 300)
@@ -236,6 +238,7 @@ export function readLiveExerciseRequest(
   return {
     ...operation,
     exercise: {
+      ...(exerciseInput.prefillFromHistory === true ? { prefillFromHistory: true } : {}),
       customExerciseId,
       inputKind,
       muscleGroup,
