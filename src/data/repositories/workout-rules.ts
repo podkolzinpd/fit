@@ -935,7 +935,7 @@ export function copyWorkout(source: Workout, workoutDate = source.workoutDate, o
   }
   return {
     clientId: source.clientId, workoutDate, startTime: source.startTime ?? undefined,
-    title: source.title,
+    title: source.title?.trim() ? source.title : source.favoriteTitle?.trim() || source.title,
     endTime: source.endTime ?? undefined, notes: source.notes ?? undefined,
     trainingFormat: source.trainingFormat,
     exercises: source.exercises.map((exercise) => {
@@ -1029,7 +1029,7 @@ export function favoriteTemplateToWorkoutDraft(exercises: WorkoutExerciseDraft[]
     return fresh
   }
   return {
-    clientId, workoutDate, favoriteTitle,
+    clientId, workoutDate, favoriteTitle, title: favoriteTitle,
     exercises: exercises.map((exercise, position) => {
       const inputKind = correctedExerciseInputKind(exercise)
       return {

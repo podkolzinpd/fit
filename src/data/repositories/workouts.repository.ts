@@ -355,6 +355,10 @@ export const workoutsRepository = {
     if (result.error) throw repositoryError(result.error)
     return result.data
   },
+  rename(workout: Workout, title: string): Promise<number> {
+    void workout; void title
+    return Promise.reject(new Error('Переименование доступно на новом сервере'))
+  },
   setActualDuration(workout: Workout, durationSec: number | null): Promise<number> {
     // Frozen legacy adapter: production duration correction uses the Yandex implementation.
     void workout

@@ -13,4 +13,10 @@ describe('workout template request', () => {
     expect(readWorkoutTemplateRequest({ draft: { id: '10000000-0000-4000-8000-000000000001', name: '', exercises: [] }, expectedVersion: null })).toBeUndefined()
     expect(readWorkoutTemplateVersion({ expectedVersion: 0 })).toBeUndefined()
   })
+  it('accepts a complete workout title through 120 characters and rejects overflow', () => {
+    const draft = { id: '10000000-0000-4000-8000-000000000001', name: 'я'.repeat(120), exercises: [] }
+    expect(readWorkoutTemplateRequest({ draft })?.draft.name).toBe(draft.name)
+    expect(readWorkoutTemplateRequest({ draft: { ...draft, name: 'я'.repeat(121) } })).toBeUndefined()
+  })
+
 })

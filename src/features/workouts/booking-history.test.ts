@@ -25,3 +25,14 @@ it('rejects another client or non-completed source and an already started target
   expect(() => historyPlanForAppointment(target(), { ...source(), status: 'planned' })).toThrow()
   expect(() => historyPlanForAppointment({ ...target(), status: 'in_progress' }, source())).toThrow()
 })
+
+it('inherits a source title only when the target has no explicitly named appointment', () => {
+  const history = source()
+  for (const title of [undefined, null, '', '  ']) {
+    expect(historyPlanForAppointment({ ...target(), title }, history).title).toBe(history.title)
+  }
+  const result = historyPlanForAppointment({ ...target(), title: 'Ноги на завтра' }, history)
+  expect(result.title).toBe('Ноги на завтра')
+  result.title = 'Новая запись'
+  expect(history.title).toBe('Прошлая')
+})
