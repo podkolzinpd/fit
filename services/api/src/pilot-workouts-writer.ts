@@ -39,6 +39,7 @@ import {
   submitWorkoutFeedback,
   setWorkoutActualDuration,
   renameWorkout,
+  PilotWorkoutCommandError,
   setWorkoutReview,
   askWorkoutQuestion,
   answerWorkoutQuestion,
@@ -244,6 +245,7 @@ export class DatabasePilotWorkoutsWriter implements PilotWorkoutsWriter {
   }
 
   rename(sessionToken: YandexActorSessionInput, workoutId: string, title: string, expectedVersion: number) {
+    if (typeof sessionToken === 'string' || sessionToken.accessMode !== 'read_write') return Promise.reject(new PilotWorkoutCommandError('forbidden'))
     return this.withSession(sessionToken, client => renameWorkout(client, workoutId, title, expectedVersion))
   }
 

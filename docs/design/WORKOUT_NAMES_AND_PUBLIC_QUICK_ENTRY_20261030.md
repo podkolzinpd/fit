@@ -126,6 +126,8 @@ current-main CI. Для PR1 явно включить all в production-сбор
 Сделано: root lock, существующий author/active-connection helper, версия и
 идемпотентный повтор одинакового названия; меняются только title/version/update metadata.
 Меню доступно существующему автору, обе роли читают одно поле независимо от темы.
+Новая команда принимает только native read_write сессию; pilot/read_only
+и неоднозначные двойные credentials отклоняются до вызова БД.
 При сбое текст остаётся; перед повтором пользователь явно перечитывает запись.
 Отвергнуто: aggregate save, расширение прав спортсмена на чужой план, авто-rename.
 Проверка:78 repository/component tests,260 API-route tests, отдельный PostgreSQL17
