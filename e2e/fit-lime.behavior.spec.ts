@@ -8,7 +8,7 @@ test.skip(!process.env.FIT_SCHEDULE_V2_VISUAL, 'Dedicated server-backed pilot ha
 
 function calendarHistoryFixture(withResults = false): MockWorkout {
   const source = coachGestureWorkout(false, 4)
-  Object.assign(source, { status: 'done', workoutDate: '2026-10-02', startedAt: null, completedAt: null })
+  Object.assign(source, { title: 'Спина и руки', status: 'done', workoutDate: '2026-10-02', startedAt: null, completedAt: null })
   const names = ['Горизонтальная тяга блока', 'Подтягивания с резинкой', 'Тяга гантели в наклоне', 'Гиперэкстензия']
   source.exercises = source.exercises.map((exercise, index) => ({ ...exercise, name: names[index]!,
     trainerComment: `Исходная запись: ${names[index]}. Число подходов и параметры не указаны.`,
@@ -36,6 +36,7 @@ test('Lime coach calendar shows full recorded history and preserves return, list
   await expect(selection.locator('.workout-chronicle-card')).toHaveCount(2)
   const card = selection.locator('.workout-chronicle-card').first()
   await expect(card.locator('.workout-chronicle-exercise-name')).toHaveText(source.exercises.map((exercise) => exercise.name))
+  await expect(card.getByRole('heading', { name: 'Спина и руки', exact: true })).toBeVisible()
   await expect(card).toContainText('4 упражнения')
   await expect(card).toContainText('3 × 40 кг × 12 повт.')
   await expect(card).toContainText('3 × 8 повт.')
@@ -48,8 +49,7 @@ test('Lime coach calendar shows full recorded history and preserves return, list
   await expect(page).toHaveURL(`${path}&date=2026-10-02`)
   await expect(selection.locator('.workout-chronicle-card').first().locator('.workout-chronicle-exercise')).toHaveCount(4)
   await page.getByRole('button', { name: 'Список', exact: true }).click()
-  await expect(page.locator('.workout-chronicle-card').first().locator('.workout-chronicle-exercise')).toHaveCount(2)
-  await expect(page.locator('.workout-chronicle-card').first()).toContainText('Ещё 2 упражнения')
+  await expect(page.locator('.workout-chronicle-card').first().locator('.workout-chronicle-brief')).toHaveText(source.exercises.slice(0, 3).map(exercise => exercise.name).join(' · ') + ' · ещё 1')
   expect(JSON.stringify(backend.getWorkouts())).toBe(original)
 })
 
