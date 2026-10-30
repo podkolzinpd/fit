@@ -1,10 +1,90 @@
 import { z } from 'zod'
 import { expect, test, type Page } from '@playwright/test'
-import { beginClientGesture, coachGestureWorkout, restTimerWorkout, holdClientLiveCard, mockClientStreamingVoice, mockPilot, newWorkoutId, workoutId, conversationId, messageId, clientId } from './fit-lime-fixtures'
+import { beginClientGesture, coachGestureWorkout, restTimerWorkout, holdClientLiveCard, mockClientStreamingVoice, mockPilot, mockPublicTrainer, publicTrainerDraft, publicTrainerId, newWorkoutId, workoutId, conversationId, messageId, clientId } from './fit-lime-fixtures'
 
 test.skip(process.env.FIT_CLIENT_WORKOUT_ACCEPTANCE !== '1', 'Dedicated native client-workout harness')
 
 const pilotId = 'c11e0000-6010-4000-8000-000000000001'
+
+// Restore the real assistant surface through its supported draft contract.
+for (const theme of ['light', 'dark']) test(`client reference assistant draft retains edits and failed-save recovery ${theme}`, async ({ page }, info) => {
+  await page.clock.setFixedTime(new Date('2026-09-24T12:00:00Z'))
+  const actionId = 'c11e0000-6010-4000-8000-000000000090'
+  const storageKey = `fit:assistant-workout-draft:v1:${pilotId}:${conversationId}:${clientId}`
+  await page.addInitScript(({ id, theme, storageKey }) => {
+    localStorage.setItem(`fit.clientLime.theme.${id}`, theme)
+    localStorage.setItem(storageKey, JSON.stringify({ transcript: '', rawFragments: ['Присед 3 по 10', 'Присед 2 по 8'], workoutDate: '2026-09-24', startTime: '15:00', requestId: 'c11e0000-6010-4000-8000-000000000091', result: { items: [
+      { sourceText: 'Присед 3 по 10', exerciseRef: 'barbell-squat', confidence: 1, sets: Array.from({ length: 3 }, () => ({ reps: 10, weightKg: 50 })) },
+      { sourceText: 'Присед 2 по 8', exerciseRef: 'barbell-squat', confidence: 1, sets: Array.from({ length: 2 }, () => ({ reps: 8, weightKg: 40 })) },
+    ], unmatched: [] } }))
+  }, { id: pilotId, theme, storageKey })
+  await mockPilot(page, { role: 'client', profileId: pilotId, clientLime: true })
+  await page.route('**/v1/assistant/conversations', route => route.fulfill({ json: { conversations: [{ id: conversationId, title: 'Сегодня', createdAt: '2026-09-24T10:00:00Z' }] } }))
+  await page.route(`**/v1/assistant/conversations/${conversationId}/messages`, route => route.fulfill({ json: { messages: [{ id: messageId, conversationId, turnId: null, author: 'assistant', content: 'Проверьте тренировку', createdAt: '2026-09-24T10:01:00Z', action: { id: actionId, tool: 'record_workout', status: 'proposed', title: 'Тренировка', description: 'Проверьте тренировку', payload: { step: 'confirm', clientId, clientName: 'Тестовый спортсмен' } } }] } }))
+  const commands: Array<{ input: { workout: { requestId: string; workoutDate: string; startTime: string; exercises: Array<{ blockId: string; sets: Array<{ weightKg?: number }> }> } } }> = []
+  await page.route(`**/v1/assistant/actions/${actionId}/apply`, route => {
+    commands.push(route.request().postDataJSON() as typeof commands[number])
+    return route.fulfill(commands.length === 1 ? { status: 503, json: { error: 'unavailable' } } : { json: { result: { status: 'applied', version: 2 } } })
+  })
+  await page.goto('/assistant')
+  const draft = page.locator('.assistant-workout-draft')
+  await expect(draft).toBeVisible()
+  await expect(page.locator('.client-screen-reference')).toBeVisible()
+  await expect(draft.locator('.assistant-workout-result-row')).toHaveCount(2)
+  for (const width of [390, 430]) {
+    await page.setViewportSize({ width, height: 844 })
+    await expect(draft).toHaveCSS('border-radius', '32px')
+    expect(await draft.getByRole('button', { name: /Удалить/ }).first().evaluate(element => element.getBoundingClientRect().width)).toBeGreaterThanOrEqual(44)
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+    await page.screenshot({ path: info.outputPath(`assistant-${theme}-${width}.png`) })
+  }
+  await draft.getByLabel('Вес', { exact: true }).first().fill('55')
+  await draft.getByLabel('Дата', { exact: true }).fill('2026-09-25')
+  await draft.getByLabel('Время', { exact: true }).fill('16:30')
+  await draft.getByRole('button', { name: /Удалить/ }).last().click()
+  await expect(draft.locator('.assistant-workout-result-row')).toHaveCount(1)
+  await draft.getByRole('button', { name: 'Сохранить тренировку', exact: true }).click()
+  await expect(draft.getByRole('alert')).toContainText('Не удалось сохранить тренировку')
+  await expect(draft.getByLabel('Вес', { exact: true })).toHaveValue('55')
+  await draft.getByRole('button', { name: 'Сохранить тренировку', exact: true }).click()
+  await expect(draft).toHaveCount(0)
+  expect(commands).toHaveLength(2)
+  // Block UUIDs are transient composer IDs; the command requestId and all
+  // user-entered data must survive retry unchanged. Validate both UUIDs too.
+  for (const command of commands) expect(z.uuid().safeParse(command.input.workout.exercises[0]!.blockId).success).toBe(true)
+  const normalized = commands.map(command => ({ ...command, input: { workout: { ...command.input.workout, exercises: command.input.workout.exercises.map(exercise => ({ ...exercise, blockId: 'transient-block' })) } } }))
+  expect(normalized[1]).toEqual(normalized[0])
+  expect(commands[1]!.input.workout).toMatchObject({ workoutDate: '2026-09-25', startTime: '16:30' })
+  expect(commands[1]!.input.workout.exercises[0]!.sets[0]!.weightKg).toBe(55)
+  expect(await page.evaluate(key => localStorage.getItem(key), storageKey)).toBeNull()
+})
+
+// Home geometry differs with the palette and narrow viewport. Existing Live
+// behavior remains covered below; do not multiply its transitions here.
+for (const theme of ['light', 'dark']) test(`client reference home preserves entry actions ${theme}`, async ({ page }, info) => {
+  await page.addInitScript(({ id, theme }) => localStorage.setItem(`fit.clientLime.theme.${id}`, theme), { id: pilotId, theme })
+  const source = coachGestureWorkout(false, 1)
+  await mockPilot(page, { role: 'client', profileId: pilotId, clientLime: true, workouts: [source] })
+  await page.goto('/me')
+  await expect(page.locator('.client-screen-reference')).toBeVisible()
+  const quick = page.getByRole('region', { name: 'Тренировка сейчас' })
+  const continueButton = quick.getByRole('button', { name: 'Продолжить тренировку', exact: true })
+  await expect(continueButton).toBeVisible()
+  for (const width of [390, 430]) {
+    await page.setViewportSize({ width, height: 844 })
+    await expect(quick).toHaveCSS('border-radius', '32px')
+    expect(await continueButton.evaluate(element => element.getBoundingClientRect().height)).toBeGreaterThanOrEqual(48)
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+    await page.screenshot({ path: info.outputPath(`home-${theme}-${width}.png`) })
+  }
+  await page.getByRole('button', { name: 'Ввести текстом', exact: true }).click()
+  await expect(page.getByRole('button', { name: 'Разобрать тренировку', exact: true })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Выбрать упражнения вручную', exact: true })).toBeVisible()
+  await page.getByRole('button', { name: 'Скрыть', exact: true }).click()
+  await continueButton.click()
+  await expect(page).toHaveURL(new RegExp(`/workouts/${workoutId}/live$`))
+  await expect(page.locator('.live-workout-page')).toBeVisible()
+})
 
 for (const theme of ['light', 'dark']) test(`client inactivity actions share Lime geometry ${theme}`, async ({ page }, info) => {
   await page.addInitScript(({ id, theme, workoutId }) => {
@@ -44,6 +124,124 @@ for (const theme of ['light', 'dark']) test(`client inactivity actions share Lim
   await expect(page.locator('.live-workout-page')).toBeVisible()
 })
 
+
+// List titles and calendar markers share tokens but retain separate navigation.
+for (const theme of ['light', 'dark']) test(`client reference workout lists retain calendar and history ${theme}`, async ({ page }, info) => {
+  await page.clock.setFixedTime(new Date('2026-09-24T12:00:00Z'))
+  await page.addInitScript(({ id, theme }) => localStorage.setItem(`fit.clientLime.theme.${id}`, theme), { id: pilotId, theme })
+  const planned = { ...coachGestureWorkout(false, 1), status: 'planned', title: 'Грудь и плечи', workoutDate: '2026-09-24' } as ReturnType<typeof coachGestureWorkout>
+  const completed = { ...planned, id: newWorkoutId, status: 'done', title: 'Спина и руки', completedAt: '2026-09-24T11:00:00Z' } as ReturnType<typeof coachGestureWorkout>
+  await mockPilot(page, { role: 'client', profileId: pilotId, clientLime: true, workouts: [planned, completed] })
+  await page.goto('/me/workouts')
+  await expect(page.getByRole('heading', { name: planned.title!, exact: true })).toBeVisible()
+  for (const width of [390, 430]) {
+    await page.setViewportSize({ width, height: 844 })
+    await expect(page.locator('.client-workout-card')).toHaveCSS('border-radius', '32px')
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+    await page.screenshot({ path: info.outputPath(`workouts-${theme}-${width}.png`) })
+  }
+  await page.getByRole('button', { name: 'Календарь', exact: true }).click()
+  await expect(page.locator('.client-history-calendar')).toBeVisible()
+  await page.getByRole('button', { name: '24 сентября 2026 г., 1 тренировка', exact: true }).click()
+  const marker = page.locator('.client-history-calendar-day.selected .lime-calendar-day-marker')
+  await expect(marker).toHaveCSS('width', '36px')
+  await expect(marker).toHaveCSS('height', '36px')
+  await page.screenshot({ path: info.outputPath(`calendar-control-${theme}.png`) })
+  await page.getByRole('tab', { name: 'История', exact: true }).click()
+  await page.getByRole('button', { name: 'Список', exact: true }).click()
+  await expect(page.getByRole('heading', { name: completed.title!, exact: true })).toBeVisible()
+  await expect(page.locator('.workout-chronicle-copy')).toHaveAttribute('href', `/workouts/new?copy=${newWorkoutId}`)
+  await page.getByRole('tab', { name: 'Готовые тренировки', exact: true }).click()
+  await expect(page.getByRole('heading', { name: 'Избранное', exact: true })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Тренировки Fit', exact: true })).toBeVisible()
+})
+
+for (const theme of ['light', 'dark']) test(`client reference people rows retain chat and trainer filters ${theme}`, async ({ page }, info) => {
+  await page.addInitScript(({ id, theme }) => localStorage.setItem(`fit.clientLime.theme.${id}`, theme), { id: pilotId, theme })
+  await mockPilot(page, { role: 'client', profileId: pilotId, clientLime: true })
+  await mockPublicTrainer(page)
+  await page.route('**/v1/trainers/catalog*', route => route.fulfill({ json: { items: [{ publicId: publicTrainerId, profile: { ...publicTrainerDraft, photos: [] }, isBrandTrainer: false }], totalCount: 1, nextOffset: null } }))
+  await page.goto('/chat')
+  const thread = page.locator('.chat-thread').first()
+  await expect(thread.locator('.chat-avatar')).toHaveCSS('width', '40px')
+  await expect(thread.locator('.chat-thread-meta b')).toBeVisible()
+  await page.screenshot({ path: info.outputPath(`messages-${theme}.png`) })
+  await thread.click()
+  await expect(page).toHaveURL(new RegExp(`/chat/${conversationId}$`))
+  await expect(page.locator('.chat-conversation-page')).toBeVisible()
+  await page.goto('/me/trainers')
+  await expect(page.getByRole('heading', { name: 'Тестовый тренер', exact: true })).toBeVisible()
+  for (const width of [390, 430]) {
+    await page.setViewportSize({ width, height: 844 })
+    await expect(page.locator('.trainer-catalog-card')).toHaveCSS('border-radius', '32px')
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+    await page.screenshot({ path: info.outputPath(`trainers-${theme}-${width}.png`) })
+  }
+  await page.getByLabel('Имя тренера', { exact: true }).fill('Тестовый')
+  await page.getByRole('button', { name: 'Найти', exact: true }).click()
+  await page.getByRole('button', { name: 'Фильтры', exact: true }).click()
+  const sheet = page.getByRole('dialog', { name: 'Фильтры тренеров' })
+  await expect(sheet).toHaveCSS('border-top-left-radius', '40px')
+  await sheet.getByLabel('Город', { exact: true }).fill('Москва')
+  await sheet.getByRole('button', { name: 'Показать тренеров', exact: true }).click()
+  await expect(sheet).toHaveCount(0)
+  await expect(page.getByLabel('Имя тренера', { exact: true })).toHaveValue('Тестовый')
+})
+
+for (const theme of ['light', 'dark']) test(`client reference profile settings retain independent preferences ${theme}`, async ({ page }, info) => {
+  await page.addInitScript(({ id, theme }) => localStorage.setItem(`fit.clientLime.theme.${id}`, theme), { id: pilotId, theme })
+  await mockPilot(page, { role: 'client', profileId: pilotId, clientLime: true, clientGender: 'male' })
+  await page.goto('/me/profile')
+  await expect(page.locator('.client-profile-avatar')).toHaveCSS('width', '56px')
+  await page.screenshot({ path: info.outputPath(`profile-${theme}.png`) })
+  await page.getByRole('link', { name: 'Настройки профиля', exact: true }).click()
+  await expect(page).toHaveURL(/\/me\/settings$/)
+  const animation = page.getByRole('switch', { name: 'Анимация в Live', exact: true })
+  await expect(animation).toBeChecked()
+  await page.getByRole('radio', { name: 'Компактный', exact: true }).click()
+  await expect(animation).toBeChecked()
+  await animation.click()
+  await expect(animation).not.toBeChecked()
+  await page.getByRole('radio', { name: 'Список', exact: true }).click()
+  await page.reload()
+  await expect(page.getByRole('radio', { name: 'Компактный', exact: true })).toHaveAttribute('aria-checked', 'true')
+  await expect(animation).not.toBeChecked()
+  await expect(page.getByRole('radio', { name: 'Список', exact: true })).toHaveAttribute('aria-checked', 'true')
+  await expect(page.getByLabel('Тема оформления')).toHaveValue(theme)
+  for (const width of [390, 430]) {
+    await page.setViewportSize({ width, height: 844 })
+    await animation.scrollIntoViewIfNeeded()
+    expect((await animation.boundingBox())!.width).toBeGreaterThanOrEqual(44)
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+    await page.screenshot({ path: info.outputPath(`settings-${theme}-${width}.png`) })
+  }
+})
+
+for (const theme of ['light', 'dark']) test(`client reference progress keeps overview pro and measurement editing ${theme}`, async ({ page }, info) => {
+  await page.clock.setFixedTime(new Date('2026-09-24T12:00:00Z'))
+  await page.addInitScript(({ id, theme }) => localStorage.setItem(`fit.clientLime.theme.${id}`, theme), { id: pilotId, theme })
+  await mockPilot(page, { role: 'client', profileId: pilotId, clientLime: true, withGoal: true, withMeasurements: true })
+  await page.goto('/me/progress')
+  await expect(page.getByRole('heading', { name: 'Мой прогресс', exact: true })).toBeVisible()
+  await expect(page.locator('.client-current-week')).toHaveCSS('border-radius', '32px')
+  for (const width of [390, 430]) {
+    await page.setViewportSize({ width, height: 844 })
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+    await page.screenshot({ path: info.outputPath(`progress-${theme}-${width}.png`) })
+  }
+  await page.getByRole('tab', { name: 'ПРО', exact: true }).click()
+  await expect(page.locator('.progress-pro-list')).toBeVisible()
+  await page.getByRole('tab', { name: 'Обзор', exact: true }).click()
+  await page.getByRole('button', { name: /^История замеров/ }).click()
+  const history = page.locator('.client-progress-history')
+  await expect(history).toBeVisible()
+  await history.getByRole('button', { name: 'Изменить', exact: true }).click()
+  await expect(history.getByRole('heading', { name: 'Изменить замер', exact: true })).toBeVisible()
+  await history.getByLabel('Вес, кг', { exact: true }).fill('71.5')
+  await expect(history.getByLabel('Вес, кг', { exact: true })).toHaveValue('71.5')
+  await history.getByRole('button', { name: 'Отмена', exact: true }).click()
+  await expect(history.getByRole('heading', { name: 'Изменить замер', exact: true })).toHaveCount(0)
+})
 
 // Z-order is density-independent; both themes exercise different halo surfaces.
 for (const theme of ['light', 'dark']) test(`client v79 glow keeps reminder and header above the clock ${theme}`, async ({ page }, info) => {

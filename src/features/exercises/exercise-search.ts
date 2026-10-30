@@ -351,6 +351,8 @@ export interface RankedExerciseMatch {
 }
 
 export interface ExerciseSearchOptions {
+  /** Explicit catalogue-only ordering; voice resolution keeps its default. */
+  relevanceBeforeRecency?: boolean
   /** Самое недавнее упражнение идёт первым, но не становится от этого точным. */
   preferredExerciseRefs?: readonly string[]
   /** Пользовательские упражнения выше равных системных вариантов. */
@@ -421,6 +423,7 @@ export function rankExerciseSearch(catalog: readonly ExerciseSnapshot[], search:
     return [{ exercise, score, match: exactName || exactAlias ? 'exact' as const : 'search' as const }]
   }).sort((left, right) => {
     if (left.match !== right.match) return left.match === 'exact' ? -1 : 1
+    if (options.relevanceBeforeRecency && left.score !== right.score) return right.score - left.score
     const leftPreferred = preferredIndex.get(left.exercise.ref)
     const rightPreferred = preferredIndex.get(right.exercise.ref)
     if (leftPreferred !== undefined || rightPreferred !== undefined) {
