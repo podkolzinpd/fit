@@ -1,3 +1,4 @@
+import { WorkoutRenameSheet } from './WorkoutRenameSheet'
 import { isQuickWorkoutEntryEnabled } from '../../app/quick-workout-entry'
 import { QuickDayBooking, dayBookingTime } from './QuickDayBooking'
 import { BookingHistorySheet } from './BookingHistorySheet'
@@ -1835,6 +1836,8 @@ export function WorkoutDetailPage() {
   const [confirm, confirmDialog] = useConfirm()
   const [askActiveWorkoutRecovery, activeWorkoutRecoveryDialog] = useConfirm()
   const [decisionSheet, setDecisionSheet] = useState<'actions' | 'reschedule' | null>(null)
+  const [renameSheetOpen, setRenameSheetOpen] = useState(false)
+  const [renameVersion, setRenameVersion] = useState(0)
   const [favoriteSheetOpen, setFavoriteSheetOpen] = useState(false)
   const [bookingHistoryOpen, setBookingHistoryOpen] = useState(false)
   const [rescheduleDate, setRescheduleDate] = useState<LocalDate>(() => todayInTimeZone(actor?.timezone))
@@ -2057,6 +2060,7 @@ export function WorkoutDetailPage() {
   }
   const manageMenuInHeader = Boolean(clientMode && canManage && workout && !done)
   const workoutManageItems = [
+    { label: 'Переименовать тренировку', onClick: () => { setRenameVersion(query.data!.version); setRenameSheetOpen(true) } },
     ...(clientMode ? [{ label: 'В избранное', onClick: () => setFavoriteSheetOpen(true) }] : []),
     { label: 'Копировать тренировку', onClick: () => navigate(`/workouts/new?copy=${workoutId}`, { state: childNavigationState }) },
     ...(!clientMode ? [{ label: 'Сохранить как шаблон', onClick: () => navigate(`/schedule/templates/new/editor?sourceWorkout=${workoutId}`) }] : []),
@@ -2147,7 +2151,7 @@ export function WorkoutDetailPage() {
         showStatus={detailState !== 'completed'}
         action={manageMenuInHeader ? <OverflowMenu label="Другие действия с тренировкой" items={workoutManageItems} /> : undefined}
         meta={<><span>{formatLocalDate(workout.workoutDate)} · {workout.startTime?.slice(0, 5) ?? 'без времени'}</span><span>{workoutTrainingFormatLabel(workout.trainingFormat ?? 'self')}</span>{clientMode && !done && authorLabel && <span>{authorLabel}</span>}{clientAuthoredReadOnly && <span>Создано клиентом · упражнения только для просмотра</span>}{stageTitle && <span>Цель: {stageTitle}</span>}</>} />}
-      {isFitLimeEnabled(actor) && workout.title && <p className="workout-plan-title">{workout.title}</p>}
+      {workout.title && <p className="workout-plan-title">{workout.title}</p>}
       {isFitLimeEnabled(actor) && workout.plannedDate && <p className="workout-plan-title">Исходный план: {formatLocalDate(localDate(workout.plannedDate))}{workout.plannedStartTime ? ` · ${workout.plannedStartTime.slice(0, 5)}${workout.plannedEndTime ? `–${workout.plannedEndTime.slice(0, 5)}` : ''}` : ' · без времени'}</p>}
       {isFitLimeEnabled(actor) && workout.status === 'planned' && canExecute && workout.workoutDate !== today && <p className="workout-plan-title">При запуске сейчас тренировка начнётся сегодня, {formatLocalDate(today)}. Исходная дата плана сохранится отдельно.</p>}
       {workout.status === 'planned' && trainerOwned && isQuickWorkoutEntryEnabled(actor) && <button type="button" className="secondary wide booking-history-open" onClick={() => setBookingHistoryOpen(true)}><HistoryIcon />Из истории</button>}
@@ -2210,6 +2214,10 @@ export function WorkoutDetailPage() {
           </form>}
         </section>
       </div>}
+      {renameSheetOpen && workout && canManage && <WorkoutRenameSheet workout={{ ...workout, version: renameVersion }} lime={isFitLimeEnabled(actor) || isClientLimeEnabled(actor)}
+        onSave={async (title, expectedVersion) => { await workoutsRepository.rename({ ...workout, version: expectedVersion }, title); await invalidateWorkoutSurfaces() }}
+        onReload={async () => { const fresh = await query.refetch(); if (!fresh.data || fresh.error) throw fresh.error ?? new Error('Не удалось перечитать тренировку'); return fresh.data }}
+        onClose={() => setRenameSheetOpen(false)} />}
       {favoriteSheetOpen && workout && <SaveFavoriteWorkoutSheet exercises={workout.exercises} pending={saveFavorite.isPending} error={saveFavorite.error}
         onSave={(title) => saveFavorite.mutate(title)} onClose={() => { saveFavorite.reset(); setFavoriteSheetOpen(false) }} />}
       {bookingHistoryOpen && workout && <BookingHistorySheet key={workout.id} target={workout} onClose={() => setBookingHistoryOpen(false)} onApplied={invalidateWorkoutSurfaces} onReload={() => query.refetch()} />}

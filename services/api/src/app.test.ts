@@ -2776,6 +2776,7 @@ function buildWorkoutsWriter(error?: Error): {
   pilotWorkoutsWriter: PilotWorkoutsWriter
   quickStart: ReturnType<typeof vi.fn>
   cancelEmpty: ReturnType<typeof vi.fn>
+  rename: ReturnType<typeof vi.fn>
   setActualDuration: ReturnType<typeof vi.fn>
   appendLiveExercise: ReturnType<typeof vi.fn>
   appendLiveSet: ReturnType<typeof vi.fn>
@@ -2813,6 +2814,7 @@ function buildWorkoutsWriter(error?: Error): {
     : Promise.reject(error)
   const quickStart = vi.fn(() => result({ id: WORKOUT_ID, resumed: false }))
   const cancelEmpty = vi.fn(() => result(2))
+  const rename = vi.fn(() => result(2))
   const setActualDuration = vi.fn(() => result(2))
   const deletePlanned = vi.fn(() => result(3))
   const deleteWorkout = vi.fn(() => result(3))
@@ -2888,6 +2890,7 @@ function buildWorkoutsWriter(error?: Error): {
     pilotWorkoutsWriter: {
       quickStart,
       cancelEmpty,
+      rename,
       setActualDuration,
       submitFeedback,
       setReview,
@@ -2922,6 +2925,7 @@ function buildWorkoutsWriter(error?: Error): {
     },
     quickStart,
     cancelEmpty,
+    rename,
     setActualDuration,
     appendLiveExercise,
     appendLiveSet,
@@ -5061,6 +5065,35 @@ describe('pilot completed workout lifecycle commands', () => {
 
 describe('pilot post-workout commands', () => {
   const sessionToken = 's'.repeat(43)
+
+  it('renames metadata with validated title, session and version errors', async () => {
+    const writer = buildWorkoutsWriter()
+    const app = buildApp({ pilotWorkoutsWriter: writer.pilotWorkoutsWriter, logger: false })
+    apps.push(app)
+    const url = `/v1/workouts/${WORKOUT_ID}/title`
+    const headers = { 'x-fit-session': sessionToken }
+    for (const title of ['  Ноги и спина  ', 'я'.repeat(120)]) {
+      const response = await app.inject({ method: 'PUT', url, headers, payload: { title, expectedVersion: 1, exercises: ['ignored'] } })
+      expect(response.statusCode).toBe(200)
+      expect(response.headers['cache-control']).toBe('no-store')
+      expect(writer.rename).toHaveBeenLastCalledWith({ accessMode: 'read_write', token: sessionToken }, WORKOUT_ID, title.trim(), 1)
+    }
+    writer.rename.mockClear()
+    for (const title of [null, '', '  ', 'я'.repeat(121), 12]) {
+      expect((await app.inject({ method: 'PUT', url, headers, payload: { title, expectedVersion: 1 } })).statusCode).toBe(400)
+    }
+    for (const expectedVersion of [0, -1, 1.5, '1']) {
+      expect((await app.inject({ method: 'PUT', url, headers, payload: { title: 'Ноги', expectedVersion } })).statusCode).toBe(400)
+    }
+    expect((await app.inject({ method: 'PUT', url, payload: { title: 'Ноги', expectedVersion: 1 } })).statusCode).toBe(401)
+    expect((await app.inject({ method: 'PUT', url, headers: { 'x-fit-pilot-session': sessionToken }, payload: { title: 'Ноги', expectedVersion: 1 } })).statusCode).toBe(403)
+    expect((await app.inject({ method: 'PUT', url, headers: { 'x-fit-session': sessionToken, 'x-fit-pilot-session': sessionToken }, payload: { title: 'Ноги', expectedVersion: 1 } })).statusCode).toBe(401)
+    expect(writer.rename).not.toHaveBeenCalled()
+    for (const [failure, status] of [['forbidden', 403], ['conflict', 409], ['invalid', 422]] as const) {
+      writer.rename.mockRejectedValueOnce(new PilotWorkoutCommandError(failure))
+      expect((await app.inject({ method: 'PUT', url, headers, payload: { title: 'Ноги', expectedVersion: 1 } })).statusCode).toBe(status)
+    }
+  })
 
   it('corrects duration alone with validated units, session and command errors', async () => {
     const writer = buildWorkoutsWriter()

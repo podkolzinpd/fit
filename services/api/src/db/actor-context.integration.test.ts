@@ -107,6 +107,7 @@ import {
   snoozeClientAttention,
   submitWorkoutFeedback,
   setWorkoutActualDuration,
+  renameWorkout,
   resolveWorkoutQuestion,
   setClientWorkoutComment,
   setLiveExerciseComment,
@@ -6072,6 +6073,56 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
       expect(afterUpdate.rows).toEqual([{ favorite_title: 'Ноги и спина' }])
 
       await ownerPool.query('delete from public.workouts where id = $1', [created.id])
+    })
+
+    it('renames only metadata across lifecycle states and preserves author permissions and concurrent writes', async () => {
+      if (!ownerPool || !runtimePool) throw new Error('Database pools are not ready')
+      const athleteId = randomUUID(), cardId = randomUUID()
+      await ownerPool.query("insert into public.profiles(id,first_name,account_role) values($1,'Title athlete','client')", [athleteId])
+      await ownerPool.query("insert into public.clients(id,trainer_id,auth_user_id,full_name) values($1,$2,$3,'Title fixture')", [cardId, ACTOR_ID, athleteId])
+      await ownerPool.query('insert into public.client_trainer_relationships(client_id,trainer_id,connected_by) values($1,$2,$3)', [cardId, ACTOR_ID, athleteId])
+      const ids: string[] = []
+      try {
+        for (const status of ['planned', 'in_progress', 'done']) {
+          const id = randomUUID(); ids.push(id)
+          await ownerPool.query(`insert into public.workouts(id,client_id,trainer_id,created_by,workout_date,status,notes,started_at,completed_at)
+            values($1,$2,$3,$3,'2026-10-29',$4,'Unchanged note',case when $4<>'planned' then now() end,case when $4='done' then now() end)`, [id, cardId, ACTOR_ID, status])
+          const exercise = randomUUID()
+          await ownerPool.query(`insert into public.workout_exercises(id,workout_id,trainer_id,client_id,position,exercise_source,exercise_ref,exercise_name,muscle_group,input_kind)
+            values($1,$2,$3,$4,0,'system','title-fixture','Unchanged exercise','legs','strength')`, [exercise, id, ACTOR_ID, cardId])
+          await ownerPool.query(`insert into public.workout_sets(workout_exercise_id,trainer_id,client_id,position,plan_weight_kg,plan_reps,fact_weight_kg,fact_reps,confirmed_at)
+            values($1,$2,$3,0,30,10,35,8,now())`, [exercise, ACTOR_ID, cardId])
+          const snapshot = async () => (await ownerPool!.query<{ root: unknown; exercises: unknown; sets: unknown }>(`select to_jsonb(w)-array['title','version','updated_at','updated_by'] as root,
+            (select jsonb_agg(to_jsonb(e)) from public.workout_exercises e where e.workout_id=w.id) as exercises,
+            (select jsonb_agg(to_jsonb(s)) from public.workout_sets s join public.workout_exercises e on e.id=s.workout_exercise_id where e.workout_id=w.id) as sets
+            from public.workouts w where id=$1`, [id])).rows[0]
+          const before = await snapshot()
+          const rename = (actorId: string, title: string, version: number) => withActorTransaction(runtimePool!, actorId, client => renameWorkout(client, id, title, version))
+          await expect(rename(OUTSIDE_TRAINER_ID, 'Forbidden', 1)).rejects.toMatchObject({ failure: 'forbidden' })
+          // The athlete reads a trainer plan, but cannot rename someone else's work.
+          await expect(rename(athleteId, 'Forbidden', 1)).rejects.toMatchObject({ failure: 'forbidden' })
+          expect(await rename(ACTOR_ID, '  Ноги и спина  ', 1)).toBe(2)
+          expect(await rename(ACTOR_ID, 'Ноги и спина', 1)).toBe(2)
+          await expect(rename(ACTOR_ID, 'Stale title', 1)).rejects.toMatchObject({ failure: 'conflict' })
+          await expect(rename(ACTOR_ID, '  ', 2)).rejects.toMatchObject({ failure: 'invalid' })
+          expect(await snapshot()).toEqual(before)
+          const read = await withActorTransaction(runtimePool, athleteId, client => client.query('select title from public.workouts where id=$1', [id]))
+          expect(read).toEqual([{ title: 'Ноги и спина' }])
+          await ownerPool.query('update public.workouts set created_by=$2 where id=$1', [id, athleteId])
+          await expect(rename(ACTOR_ID, 'Not author', 2)).rejects.toMatchObject({ failure: 'forbidden' })
+          expect(await rename(athleteId, 'Своя тренировка', 2)).toBe(3)
+          const results = await Promise.allSettled([rename(athleteId, 'Первый вариант', 3), rename(athleteId, 'Второй вариант', 3)])
+          expect(results.filter(result => result.status === 'fulfilled')).toHaveLength(1)
+          expect(results.filter(result => result.status === 'rejected')).toHaveLength(1)
+          await ownerPool.query('update public.workouts set deleted_at=now() where id=$1', [id])
+          await expect(rename(athleteId, 'Deleted', 4)).rejects.toMatchObject({ failure: 'forbidden' })
+        }
+      } finally {
+        await ownerPool.query('delete from public.workouts where id=any($1::uuid[])', [ids])
+        await ownerPool.query('delete from public.client_trainer_relationships where client_id=$1', [cardId])
+        await ownerPool.query('delete from public.clients where id=$1', [cardId])
+        await ownerPool.query('delete from public.profiles where id=$1', [athleteId])
+      }
     })
 
     it('corrects only duration for the athlete and accessible trainer history without rewriting the plan', async () => {
