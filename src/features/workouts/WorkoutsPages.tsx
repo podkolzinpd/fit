@@ -784,7 +784,9 @@ function TrainerScheduleV2({ forceDayView = false }: { forceDayView?: boolean })
   const singleScheduleGuide = compactScheduleFilters && fitLimeSchedule
   const singleDayGuide = fitLimeToday && isCoachWorkoutRedesignEnabled(actor)
   const [bookingTime, setBookingTime] = useState<string | null>(null)
-  const daySwipeRef = useCoachDaySwipe(singleDayGuide, selected, openDay, isQuickWorkoutEntryEnabled(actor) && isDayView ? { resolve: (target, x, y) => dayBookingTime(target, x, y, hourHeight), open: setBookingTime } : undefined)
+  const quickDayEntry = isDayView && isQuickWorkoutEntryEnabled(actor)
+  const dayInteractions = singleDayGuide || quickDayEntry
+  const daySwipeRef = useCoachDaySwipe(dayInteractions, selected, openDay, quickDayEntry ? { resolve: (target, x, y) => dayBookingTime(target, x, y, hourHeight), open: setBookingTime } : undefined)
   const homeClients = useQuery({
     queryKey: ['clients', false],
     queryFn: () => clientsRepository.list(false),
@@ -915,7 +917,7 @@ function TrainerScheduleV2({ forceDayView = false }: { forceDayView?: boolean })
   }
 
   return <Page
-    className={`schedule-page schedule-v2 ${isDayView ? 'schedule-day-view' : 'schedule-week-view'}${isDayView && densityPreference.density === 'compact' ? ' schedule-density-compact' : ''}${fitLimeToday ? ' fit-lime-today' : ''}${fitLimeSchedule ? ' fit-lime-schedule' : ''}${compactScheduleFilters && fitLimeSchedule ? ' coach-schedule-polish' : ''}${singleDayGuide ? ' coach-day-swipe' : ''}`}
+    className={`schedule-page schedule-v2 ${isDayView ? 'schedule-day-view' : 'schedule-week-view'}${isDayView && densityPreference.density === 'compact' ? ' schedule-density-compact' : ''}${fitLimeToday ? ' fit-lime-today' : ''}${fitLimeSchedule ? ' fit-lime-schedule' : ''}${compactScheduleFilters && fitLimeSchedule ? ' coach-schedule-polish' : ''}${dayInteractions ? ' coach-day-swipe' : ''}`}
     title="Расписание"
     hideTitle
   >
