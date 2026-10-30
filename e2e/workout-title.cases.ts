@@ -97,6 +97,22 @@ export function workoutTitleCases() {
     expect(geometry.dateTop).toBeGreaterThan(geometry.titleTop)
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
     await card.screenshot({ path: info.outputPath(`${role}-named-card.png`) })
+    if (role === 'trainer') {
+      await page.goto(`${base}/schedule?mode=list`)
+      const row = page.locator('.fit-lime-history-row').first()
+      await expect(row.locator('.schedule-list-workout-title')).toHaveText(source.title)
+      await expect(row.locator('.schedule-list-exercises')).toHaveText(source.exercises.slice(0, 3).map(exercise => exercise.name).join(' · ') + ' · ещё 2')
+      await row.screenshot({ path: info.outputPath('schedule-title-and-exercises.png') })
+      await page.goto(`${base}/today?date=2026-10-29`)
+      const event = page.locator('.schedule-v2-event').first()
+      await expect(event.locator('.schedule-event-workout-title')).toHaveText(source.title)
+      await expect(event.locator('.schedule-event-exercises')).toContainText(source.exercises[0]!.name)
+      const eventBounds = await event.evaluate(element => ({ actual: element.getBoundingClientRect().height, assigned: parseFloat((element as HTMLElement).style.height), fits: element.scrollWidth <= element.clientWidth }))
+      expect(eventBounds.actual).toBeCloseTo(eventBounds.assigned, 0)
+      expect(eventBounds.fits).toBe(true)
+      expect((await event.locator('.schedule-event-exercises').boundingBox())!.width).toBeGreaterThan(20)
+      await event.screenshot({ path: info.outputPath('day-title-and-exercises.png') })
+    }
   })
 
   test('trainer preserves editable names through copy and source template', async ({ page }, info) => {
