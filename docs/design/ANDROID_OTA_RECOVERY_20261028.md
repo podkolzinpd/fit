@@ -45,3 +45,22 @@ R2 проверяет подписанные существующие alpha mani
 - `node scripts/check-workflow-docs.mjs`, `git diff --check`: passed.
 - UI/схема/данные не меняются. Физический Android и новый native build ещё
   не проверены; native tests/подпись/metadata обязательны в release workflow.
+
+## Итерация2 — 30.10.2026 — Codex / OpenAI
+
+Задача: обновить PR1855 от main, устранить конфликты и выпустить новую версию.
+Расхождение: GitHub показывал BEHIND/MERGEABLE, ручных конфликтов нет;
+merge main ea454134 выполнен штатно, код OTA/native versioning не изменён.
+Сохранены новые feature flags из main. Старый PR CI40693790135 упал до
+WebKit assertions: порт54322 уже занят на disposable runner.
+Решение: повторная проверка объединённой ветки и обычный выпуск после green CI;
+обход обязательных проверок и выпуск APK с прежним code5 отвергнуты.
+Проверка: OTA15/15 и workflow-docs/diff-check passed; frontend2932/2932,
+lint/typecheck passed. Полный локальный check остановился на неизменённом
+CI-test375/376: дочерний bash на этом Mac переписывает PATH при запуске,
+поэтому вместо fixture sysctl вызывается системный macOS sysctl, где нет
+Linux oid net.ipv4.ip_local_reserved_ports. Системные настройки не менялись.
+Тест/CI не ослаблены; Linux repository-quality остаётся обязательным gate.
+Остальные check-стадии проверяются отдельно; CI/release ещё не завершены.
+Открыто: реальное применение на телефоне по-прежнему не подтверждено.
+Дальше: green CI, merge, main CI, подписанный APK1.1.2/code6 и новый feed.
