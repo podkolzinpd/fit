@@ -20,9 +20,28 @@ export function workoutTitleCases() {
     const base = `http://127.0.0.1:${Number(process.env.FIT_TEST_PORT ?? 5173) + 1000}`
     await page.goto(`${base}/workouts/${workoutId}`)
     await page.getByRole('button', { name: 'Другие действия с тренировкой', exact: true }).click()
+    const content = page.locator('.content')
+    const beforeRename = await content.evaluate(element => element.scrollTop)
     await page.getByRole('menuitem', { name: 'Переименовать тренировку', exact: true }).click()
     const sheet = page.getByRole('dialog', { name: 'Переименовать тренировку', exact: true })
     await expect(sheet.getByLabel('Название', { exact: true })).toHaveValue('Ноги')
+    // Viewport geometry is simulated; this is not a physical keyboard test.
+    await page.evaluate(() => {
+      Object.defineProperty(window.visualViewport, 'height', { configurable: true, value: 400 })
+      Object.defineProperty(window.visualViewport, 'offsetTop', { configurable: true, value: 70 })
+      window.visualViewport!.dispatchEvent(new Event('resize'))
+    })
+    await expect.poll(() => sheet.getByLabel('Название', { exact: true }).evaluate(element => element.getBoundingClientRect().bottom)).toBeLessThanOrEqual(470)
+    await sheet.getByRole('button', { name: 'Закрыть', exact: true }).click()
+    await expect(sheet).toHaveCount(0)
+    await page.evaluate(() => {
+      Object.defineProperty(window.visualViewport, 'height', { configurable: true, value: innerHeight })
+      Object.defineProperty(window.visualViewport, 'offsetTop', { configurable: true, value: 0 })
+      window.visualViewport!.dispatchEvent(new Event('resize'))
+    })
+    await expect.poll(() => content.evaluate(element => element.scrollTop)).toBe(beforeRename)
+    await page.getByRole('button', { name: 'Другие действия с тренировкой', exact: true }).click()
+    await page.getByRole('menuitem', { name: 'Переименовать тренировку', exact: true }).click()
     await sheet.getByLabel('Название', { exact: true }).fill('Ноги и спина')
     await sheet.getByRole('button', { name: 'Сохранить', exact: true }).click()
     await expect(sheet).toHaveCount(0)

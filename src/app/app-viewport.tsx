@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useMemo, useRef, useState, type PropsWithChildren } from 'react'
+import { createContext, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, type PropsWithChildren } from 'react'
 
 const KEYBOARD_THRESHOLD = 160
 
@@ -35,13 +35,29 @@ export function AppViewportProvider({ children }: PropsWithChildren) {
   const initialHeight = typeof window === 'undefined' ? 0 : Math.round(window.innerHeight)
   const stableHeightRef = useRef(initialHeight)
   const recoveryTimersRef = useRef<number[]>([])
+  const closingScrollRef = useRef<Array<{ element: HTMLElement; top: number; left: number }>>([])
   const [keyboardOpen, setKeyboardOpen] = useState(false)
+
+  useLayoutEffect(() => {
+    if (keyboardOpen) return
+    // Expanding the viewport can clamp scroll before React restores the normal
+    // bottom padding. Restore after both geometry and shell classes agree.
+    for (const { element, top, left } of closingScrollRef.current) {
+      if (element.isConnected) { element.scrollTop = top; element.scrollLeft = left }
+    }
+    closingScrollRef.current = []
+  }, [keyboardOpen])
 
   useEffect(() => {
     const root = document.documentElement
     const viewport = window.visualViewport
     const mobile = window.matchMedia('(max-width: 480px)')
     const pointers = new Set<number>()
+
+    const rememberClosingScroll = (nextKeyboardOpen: boolean) => {
+      if (nextKeyboardOpen || !root.classList.contains('app-keyboard-open')) return
+      closingScrollRef.current = Array.from(document.querySelectorAll<HTMLElement>('.phone-frame .content'), (element) => ({ element, top: element.scrollTop, left: element.scrollLeft }))
+    }
 
     const clearRecoveryTimers = () => {
       for (const timer of recoveryTimersRef.current) window.clearTimeout(timer)
@@ -66,6 +82,7 @@ export function AppViewportProvider({ children }: PropsWithChildren) {
       // when both reported heights remained collapsed after the gesture.
       const metrics = appViewportMetrics(window.innerHeight, viewport?.height ?? window.innerHeight, stableHeightRef.current)
       if (metrics.keyboardOpen && window.innerHeight >= stableHeightRef.current - KEYBOARD_THRESHOLD) return
+      rememberClosingScroll(false)
       setKeyboardOpen(false)
       root.classList.remove('app-keyboard-open')
       applyDimensions(stableHeightRef.current, stableHeightRef.current)
@@ -82,6 +99,7 @@ export function AppViewportProvider({ children }: PropsWithChildren) {
 
     const update = () => {
       if (!mobile.matches) {
+        rememberClosingScroll(false)
         setKeyboardOpen(false)
         root.classList.remove('app-keyboard-open')
         root.style.removeProperty('--app-viewport-height')
@@ -101,6 +119,7 @@ export function AppViewportProvider({ children }: PropsWithChildren) {
         stableHeightRef.current = Math.round(Math.max(window.innerHeight, visualHeight))
       }
 
+      rememberClosingScroll(nextKeyboardOpen)
       applyDimensions(
         stableHeightRef.current,
         nextKeyboardOpen ? metrics.visibleHeight : stableHeightRef.current,
