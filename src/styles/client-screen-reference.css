@@ -383,6 +383,12 @@
   font-size: 16px;
 }
 
+/* Active controls use the same dark original SVG treatment as primary actions. */
+.phone-frame.fit-client-lime.client-screen-reference .client-workouts-page
+  .client-workouts-view-toggle button[aria-pressed='true'] svg[data-original-icon] {
+  filter: brightness(0);
+}
+
 /* CR5: existing progress sections; chart/map markup and numerical scales stay intact. */
 .phone-frame.fit-client-lime.client-screen-reference .client-progress-page .progress-story-period {
   gap: 12px;

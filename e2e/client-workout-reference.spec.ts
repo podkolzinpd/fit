@@ -146,6 +146,7 @@ for (const theme of ['light', 'dark']) test(`client reference workout lists reta
   const marker = page.locator('.client-history-calendar-day.selected .lime-calendar-day-marker')
   await expect(marker).toHaveCSS('width', '36px')
   await expect(marker).toHaveCSS('height', '36px')
+  await page.screenshot({ path: info.outputPath(`calendar-control-${theme}.png`) })
   await page.getByRole('tab', { name: 'История', exact: true }).click()
   await page.getByRole('button', { name: 'Список', exact: true }).click()
   await expect(page.getByRole('heading', { name: completed.title!, exact: true })).toBeVisible()
