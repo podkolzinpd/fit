@@ -289,7 +289,8 @@ export const workoutsRepository = {
     if (result.error) throw repositoryError(result.error)
     return result.data
   },
-  async appendLiveExercise(workout: Workout, exercise: ExerciseSnapshot, _operationId?: string): Promise<number> {
+  async appendLiveExercise(workout: Workout, exercise: ExerciseSnapshot, _operationId?: string, prefillFromHistory = false): Promise<number> {
+    if (prefillFromHistory) throw new Error('Подстановка истории в Live доступна только в основной версии ФИТ.')
     // Legacy RPC has no receipt parameter; its existing transport stays unchanged.
     void _operationId
     const result = await workoutQueries.appendLiveExercise(workout.id, exercise, workout.version)
