@@ -1171,7 +1171,7 @@ export function WorkoutChronicleCard({ workout, contextLabel, returnTo, historyL
         </>}
       </div>
       {muscleSummary && <p className="workout-chronicle-muscles" aria-label={`Основные группы мышц: ${muscleSummary}`}><span>Мышцы:</span> {muscleSummary}</p>}
-      {(meta.length > 0 || hasFeedback || workout.discomfort) && <div className="card-meta workout-chronicle-facts">
+      {(meta.length > 0 || hasFeedback || (coachView && Boolean(workout.wellbeing)) || workout.discomfort) && <div className="card-meta workout-chronicle-facts">
         {meta.map((item) => <span key={item}>{item}</span>)}
         {hasFeedback && <span>RPE {workout.sessionRpe}/10</span>}
         {workout.wellbeing && <span>{chronicleWellbeingLabels[workout.wellbeing]}</span>}
