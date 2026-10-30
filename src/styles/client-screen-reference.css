@@ -388,3 +388,95 @@
   .client-workouts-view-toggle button[aria-pressed='true'] svg[data-original-icon] {
   filter: brightness(0);
 }
+
+/* CR5: existing progress sections; chart/map markup and numerical scales stay intact. */
+.phone-frame.fit-client-lime.client-screen-reference .client-progress-page .progress-story-period {
+  gap: 12px;
+  padding: 4px;
+}
+.phone-frame.fit-client-lime.client-screen-reference .client-progress-page .progress-overview-panel >
+  :is(.progress-analysis-preview, .client-current-week, .client-progress-goal-story.standalone,
+    .client-progress-measurements-story, .period-exercise-results) {
+  gap: 12px;
+  padding: 20px;
+  border: 0;
+  border-radius: var(--lime-radius-card);
+  background: var(--lime-surface);
+  box-shadow: none;
+}
+.phone-frame.fit-client-lime.client-screen-reference .client-progress-page
+  :is(.progress-analysis-preview-head h3, .client-current-week > h3,
+    .client-progress-goal-story.standalone h3, .client-progress-measurements-story > header h3,
+    .period-exercise-results > h3) {
+  color: var(--lime-text);
+  font-size: 20px;
+  line-height: 1.2;
+  font-weight: 500;
+}
+.phone-frame.fit-client-lime.client-screen-reference .client-progress-page
+  :is(.progress-period-dates, .client-current-week > p, .progress-analysis-preview > p,
+    .client-progress-goal-story.standalone > p, .measurement-story-explanation p) {
+  color: var(--lime-text-secondary);
+  font-size: 14px;
+  line-height: 1.4;
+}
+.phone-frame.fit-client-lime.client-screen-reference .client-progress-page
+  :is(.progress-view-tabs, .ai-progress-periods:not(.period-count-1)) {
+  gap: 4px;
+  padding: 4px;
+  border: 0;
+  border-radius: 24px;
+  background: var(--lime-surface-raised);
+}
+.phone-frame.fit-client-lime.client-screen-reference .client-progress-page
+  :is(.progress-view-tabs, .ai-progress-periods:not(.period-count-1)) button {
+  min-height: 44px;
+  border: 0;
+  border-radius: 20px;
+  font-size: 14px;
+}
+.phone-frame.fit-client-lime.client-screen-reference .client-progress-page
+  .ai-progress-periods:not(.period-count-1) button::before { content: none; }
+.phone-frame.fit-client-lime.client-screen-reference .client-progress-page
+  :is(.progress-view-tabs button[aria-selected='true'], .ai-progress-periods:not(.period-count-1) button.active) {
+  background: var(--lime-accent);
+  color: var(--lime-text-on-accent);
+}
+.phone-frame.fit-client-lime.client-screen-reference .client-progress-page
+  .progress-pro-list > details:not([open]) > summary.progress-details-toggle {
+  min-height: 60px;
+  padding: 16px 20px;
+  border: 0;
+  border-radius: var(--lime-radius-card);
+  background: var(--lime-surface);
+}
+.phone-frame.fit-client-lime.client-screen-reference .client-progress-page
+  :is(.measurement-actions .secondary, .progress-analysis-actions .secondary,
+    .client-progress-form .actions button) {
+  min-height: 48px;
+  border-radius: 18px;
+}
+.phone-frame.fit-client-lime.client-screen-reference .client-progress-page
+  .client-progress-form :is(input, select, textarea) {
+  min-width: 0;
+  min-height: 48px;
+  border-radius: 16px;
+  font-size: 16px;
+}
+.phone-frame.fit-client-lime.client-screen-reference .client-progress-page
+  .measurement-story-management :is(.client-progress-form, .client-progress-history) {
+  padding: 16px 0 0;
+  border: 0;
+  border-top: 1px solid var(--lime-divider);
+  border-radius: 0;
+  background: transparent;
+}
+.phone-frame.fit-client-lime.client-screen-reference .client-progress-page
+  .client-progress-history .cards > .card:not(.editing) {
+  gap: 12px;
+  padding: 14px 0;
+  border: 0;
+  border-top: 1px solid var(--lime-divider);
+  border-radius: 0;
+  background: transparent;
+}

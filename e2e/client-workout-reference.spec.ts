@@ -164,6 +164,32 @@ for (const theme of ['light', 'dark']) test(`client reference profile settings r
   }
 })
 
+for (const theme of ['light', 'dark']) test(`client reference progress keeps overview pro and measurement editing ${theme}`, async ({ page }, info) => {
+  await page.clock.setFixedTime(new Date('2026-09-24T12:00:00Z'))
+  await page.addInitScript(({ id, theme }) => localStorage.setItem(`fit.clientLime.theme.${id}`, theme), { id: pilotId, theme })
+  await mockPilot(page, { role: 'client', profileId: pilotId, clientLime: true, withGoal: true, withMeasurements: true })
+  await page.goto('/me/progress')
+  await expect(page.getByRole('heading', { name: 'Мой прогресс', exact: true })).toBeVisible()
+  await expect(page.locator('.client-current-week')).toHaveCSS('border-radius', '32px')
+  for (const width of [390, 430]) {
+    await page.setViewportSize({ width, height: 844 })
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+    await page.screenshot({ path: info.outputPath(`progress-${theme}-${width}.png`) })
+  }
+  await page.getByRole('tab', { name: 'ПРО', exact: true }).click()
+  await expect(page.locator('.progress-pro-list')).toBeVisible()
+  await page.getByRole('tab', { name: 'Обзор', exact: true }).click()
+  await page.getByRole('button', { name: /^История замеров/ }).click()
+  const history = page.locator('.client-progress-history')
+  await expect(history).toBeVisible()
+  await history.getByRole('button', { name: 'Изменить', exact: true }).click()
+  await expect(history.getByRole('heading', { name: 'Изменить замер', exact: true })).toBeVisible()
+  await history.getByLabel('Вес, кг', { exact: true }).fill('71.5')
+  await expect(history.getByLabel('Вес, кг', { exact: true })).toHaveValue('71.5')
+  await history.getByRole('button', { name: 'Отмена', exact: true }).click()
+  await expect(history.getByRole('heading', { name: 'Изменить замер', exact: true })).toHaveCount(0)
+})
+
 // Z-order is density-independent; both themes exercise different halo surfaces.
 for (const theme of ['light', 'dark']) test(`client v79 glow keeps reminder and header above the clock ${theme}`, async ({ page }, info) => {
   await page.addInitScript(({ id, theme, workoutId }) => {
