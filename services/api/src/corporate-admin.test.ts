@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import { buildApp } from './app.js'
-import { officeCommand, trainerCommand } from './corporate-admin.js'
+import { exposeAdminTrainerPhotos, officeCommand, trainerCommand } from './corporate-admin.js'
 
 const id = '10000000-0000-4000-8000-000000000001'
 const office = { id, city:' Санкт-Петербург ',name:'Бенуа',address:'Адрес',archived:false,version:0 }
@@ -43,5 +43,33 @@ describe('corporate admin API isolation', () => {
     const app=buildApp({logger:false,corporateAdmin:store})
     const result=await app.inject({url:'/v1/admin/offices',method:'PUT',headers:session,payload:office})
     expect(result.statusCode).toBe(409); expect(result.json()).toEqual({error:'corporate_conflict'}); await app.close()
+  })
+})
+
+
+describe('admin published trainer photos', () => {
+  const row = { id, name: 'Synthetic', isYandex: false, officeIds: [], version: 0, publicId: id,
+    publishedName: 'Public name', photoPath: 'synthetic/thumbnail.jpg', avatarDataUrl: null }
+  it('signs published thumbnails without exposing storage paths or draft fields', async () => {
+    const sign = vi.fn().mockResolvedValue('https://media.example.test/signed.jpg')
+    const result = await exposeAdminTrainerPhotos({ offices: [], trainers: [row] }, { sign })
+    expect(sign).toHaveBeenCalledWith('trainer-profile-media', row.photoPath)
+    expect(result.trainers[0]).toMatchObject({ photoUrl: 'https://media.example.test/signed.jpg', photoUnavailable: false })
+    expect(result.trainers[0]).not.toHaveProperty('photoPath')
+    expect(result.trainers[0]).not.toHaveProperty('avatarDataUrl')
+  })
+  it('reports an unavailable photo without blocking administrative work or leaking errors', async () => {
+    const sign = vi.fn().mockRejectedValue(new Error('private storage details'))
+    const result = await exposeAdminTrainerPhotos({ offices: [], trainers: [row] }, { sign })
+    expect(result.trainers[0]).toMatchObject({ photoUrl: null, photoUnavailable: true })
+    expect(JSON.stringify(result)).not.toContain('private storage')
+    const unavailable = await exposeAdminTrainerPhotos({ offices: [], trainers: [row] })
+    expect(unavailable.trainers[0]?.photoUnavailable).toBe(true)
+  })
+  it('never signs or exposes a photo when no published profile is present', async () => {
+    const sign = vi.fn()
+    const result = await exposeAdminTrainerPhotos({ offices: [], trainers: [{ ...row, publicId: null }] }, { sign })
+    expect(sign).not.toHaveBeenCalled()
+    expect(result.trainers[0]).toMatchObject({ photoUrl: null, photoUnavailable: false })
   })
 })

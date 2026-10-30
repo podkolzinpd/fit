@@ -16,6 +16,7 @@
 | Тренерский Live | [актуальное решение о паузе и rollout](design/COACH_LIVE_FINISH_AND_ROLLOUT_20261028.md); история: [v79](design/COACH_LIVE_V79_INTEGRATION_20261025.md), [composition](design/COACH_LIVE_COMPOSITION_FIXED2_20261026.md), [supersets](design/COACH_SUPERSET_FIXED2_20261027.md) | YAFIT-668 / PR1848–1851 в main; Original54/Compact48, одна механика, жесты/суперсеты/черновики; actual runtime mode проверяется отдельно |
 | Тренерские формы и каталог | [SVG parity](design/COACH_SVG_PARITY_FIXED2_20261020.md) | Оба recent-раздела с понятными названиями, цвета/состояния из источника, существующий выбор |
 | Ачивки | [progress states](design/ACHIEVEMENT_PROGRESS_STATES_20261004.md), [regularity](design/ACHIEVEMENT_REGULARITY_COPY_20261005.md) | Принятые изображения/условия; перед правкой сверить последующие решения и текущий каталог |
+| Корпоративные тренеры | [кабинет](design/CORPORATE_ADMIN_20261027.md), [анкеты/офисы](design/TRAINER_PROFILES_OFFICES_20261029.md) | Права отдельно от роли; фото из публикации; статус/офисы утверждает администратор; клуб отдельно |
 | Backend/публикация | [playbook](YANDEX_CUTOVER_PLAYBOOK.md), [engineering](ENGINEERING_RULES.md), OPERATIONS.md в корне | Cloud.ru, ownership/RLS, forward migrations, отсутствие dual-write |
 | Decommission | [план](design/SUPABASE_DECOMMISSION_PLAN_20261023.md), [P0](design/SUPABASE_P0_RESOURCE_AUDIT_20261024.md) | Не удалять rollback/legacy по возрасту; проверить фактические незакрытые гейты |
 
