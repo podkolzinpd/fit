@@ -174,3 +174,100 @@
   background: var(--lime-accent);
   color: var(--lime-text-on-accent);
 }
+
+/* CR3: compact people rows from the adopted client-picker sheet. */
+.phone-frame.fit-client-lime.client-screen-reference .chat-list-page .chat-thread-list {
+  gap: 0;
+  padding: 8px 20px;
+  border-radius: var(--lime-radius-card);
+  background: var(--lime-surface);
+}
+.phone-frame.fit-client-lime.client-screen-reference .chat-list-page .chat-thread {
+  grid-template-columns: 40px minmax(0, 1fr) auto;
+  min-height: 72px;
+  gap: 12px;
+  padding: 12px 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--lime-text);
+}
+.phone-frame.fit-client-lime.client-screen-reference .chat-list-page .chat-thread + .chat-thread {
+  border-top: 1px solid var(--lime-divider);
+}
+.phone-frame.fit-client-lime.client-screen-reference .chat-list-page .chat-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--lime-surface-raised);
+  color: var(--lime-text-secondary);
+  font-size: 16px;
+}
+.phone-frame.fit-client-lime.client-screen-reference .chat-list-page .chat-thread-copy strong {
+  font-size: 16px;
+  font-weight: 500;
+}
+.phone-frame.fit-client-lime.client-screen-reference .chat-list-page
+  :is(.chat-thread-copy small, .chat-thread-meta) { font-size: 13px; }
+.phone-frame.fit-client-lime.client-screen-reference .trainer-catalog-page
+  :is(.trainer-catalog-search, .trainer-catalog-card) {
+  gap: 12px;
+  padding: 20px;
+  border: 0;
+  border-radius: var(--lime-radius-card);
+  background: var(--lime-surface);
+  box-shadow: none;
+}
+.phone-frame.fit-client-lime.client-screen-reference .trainer-catalog-page .trainer-catalog-card-head {
+  align-items: center;
+}
+.phone-frame.fit-client-lime.client-screen-reference .trainer-catalog-page
+  .trainer-catalog-card-head .trainer-card-avatar {
+  width: 40px;
+  height: 40px;
+  flex-basis: 40px;
+  border-radius: 50%;
+  background: var(--lime-surface-raised);
+  color: var(--lime-text-secondary);
+  font-size: 18px;
+}
+.phone-frame.fit-client-lime.client-screen-reference .trainer-catalog-page .trainer-catalog-card-head h2 {
+  font-size: 20px;
+  line-height: 1.2;
+  font-weight: 500;
+}
+.phone-frame.fit-client-lime.client-screen-reference .trainer-catalog-page
+  :is(.trainer-catalog-facts, .trainer-catalog-locations, .trainer-catalog-bio) {
+  color: var(--lime-text-secondary);
+  font-size: 14px;
+  line-height: 1.4;
+}
+.phone-frame.fit-client-lime.client-screen-reference .trainer-catalog-page
+  :is(.trainer-catalog-search-actions button, .trainer-catalog-card > .button) {
+  min-height: 48px;
+  border-radius: 18px;
+}
+.phone-frame.fit-client-lime.client-screen-reference .trainer-catalog-page .trainer-catalog-search input,
+.phone-frame.fit-client-lime.client-screen-reference .trainer-catalog-filters :is(input, select) {
+  min-width: 0;
+  min-height: 48px;
+  border: 1px solid var(--lime-divider);
+  border-radius: 16px;
+  background-color: var(--lime-surface-raised);
+  color: var(--lime-text);
+  font-size: 16px;
+}
+/* The existing sheet portals into phone-frame; keep its viewport/focus logic. */
+.phone-frame.fit-client-lime.client-screen-reference .trainer-catalog-filter-sheet {
+  border: 0;
+  border-radius: var(--lime-radius-sheet) var(--lime-radius-sheet) 0 0;
+  background: var(--lime-surface);
+}
+.phone-frame.fit-client-lime.client-screen-reference
+  .trainer-catalog-filter-overlay.keyboard-open .trainer-catalog-filter-sheet {
+  border-radius: 24px 24px 0 0;
+}
+.phone-frame.fit-client-lime.client-screen-reference .trainer-catalog-filter-actions button {
+  min-height: 48px;
+  border-radius: 18px;
+}
