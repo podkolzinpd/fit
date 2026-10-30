@@ -129,6 +129,14 @@ describe('public trainer profiles', () => {
     expect(release).toHaveBeenCalledOnce()
   })
 
+  it('adds only the server-resolved office list, not a self-declared corporate field', async () => {
+    const offices = [{ city: 'Санкт-Петербург', name: 'Тестовый офис' }]
+    const { pool, query } = poolWithRows([[{ public_id: publicId, published_data: { ...published, yandexOffices: [{ city: 'Fake', name: 'Self declared' }] },
+      yandex_offices: offices, listed_in_catalog: false, published_at: null, updated_at: '2026-10-29T09:00:00Z', version: 1, is_brand_trainer: false }]])
+    expect(await new DatabasePilotTrainerProfiles(pool).getPublic(publicId)).toMatchObject({ yandexOffices: offices })
+    expect(query.mock.calls[0]?.[0]).toContain('app_private.public_yandex_trainer_offices(public_id)')
+  })
+
   it('returns a compact bounded catalog response below the Yandex response limit', async () => {
     const prefix = 'data:image/png;base64,'
     const largeProfile = {
