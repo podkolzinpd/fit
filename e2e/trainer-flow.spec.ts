@@ -1321,6 +1321,7 @@ test('комментарий тренера к упражнению: план �
   await expect(page).toHaveURL(/\/clients\/[0-9a-f-]+\/workouts$/)
   await expect(page.locator('.card').first()).toBeVisible({ timeout: 15000 })
   await expect(page.locator('.cards .card').first()).toContainText('Присед')
+  await page.getByRole('status').filter({ hasText: 'История по датам' }).getByRole('button', { name: 'Понятно' }).click()
   await page.locator('.cards .card').first().click()
   await expect(page.getByRole('heading', { name: 'Тренировка', exact: true })).toBeVisible()
   await expect(page.locator('.completed-exercise .exercise-comment-note').first()).toContainText('Держи спину прямо')
