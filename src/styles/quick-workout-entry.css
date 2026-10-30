@@ -60,7 +60,21 @@
 :is(.fit-lime-shell, .phone-frame) .quick-booking-format { margin: 0; color: var(--lime-text-secondary, var(--muted)); font-size: 14px; line-height: 20px; }
 :is(.fit-lime-shell, .phone-frame) .quick-day-booking .primary { min-height: 54px; border-radius: 20px; }
 
-:is(.fit-lime-shell, .phone-frame) .booking-history-open { display: flex; gap: 8px; justify-content: center; align-items: center; }
+:is(.fit-lime-shell, .phone-frame) .booking-history-open { display: flex; gap: 12px; align-items: center; min-height: 54px; padding: 14px 16px; border-radius: 20px; text-align: left; font-size: 16px; line-height: 20px; font-weight: 500; }
+:is(.fit-lime-shell, .phone-frame) .booking-history-open > svg { width: 24px; height: 24px; flex: 0 0 24px; }
+:is(.fit-lime-shell, .phone-frame) .booking-history-open > svg:first-child { color: var(--lime-accent, var(--fg)); }
+:is(.fit-lime-shell, .phone-frame) .booking-history-open > span { flex: 1; min-width: 0; }
+:is(.fit-lime-shell, .phone-frame) .booking-history-open > svg:last-child { width: 18px; height: 18px; flex-basis: 18px; color: var(--lime-text-secondary, var(--muted)); }
+.phone-frame.fit-lime-shell .booking-history-layout .workout-detail-primary-actions .wide { min-height: 54px; border-radius: 20px; font-size: 16px; line-height: 20px; }
+.phone-frame.fit-lime-shell .booking-history-layout .workout-header-contract { border: 0; }
+.phone-frame.fit-lime-shell .booking-history-layout .workout-detail-exercise-overview { border: 0; padding-bottom: 0; }
+.phone-frame.fit-lime-shell .booking-history-layout .workout-detail-exercise-overview p { color: var(--lime-text); font-size: 15px; line-height: 20px; font-weight: 500; letter-spacing: 0; }
+.phone-frame.fit-lime-shell .booking-history-layout > .planned-exercise-list { gap: 8px; padding: 0; border: 0; background: transparent; }
+.phone-frame.fit-lime-shell .booking-history-layout > .planned-exercise-list > .planned-detail-exercise { padding: 14px 12px; border: 0; border-radius: 22px; background: var(--lime-surface); }
+.phone-frame.fit-lime-shell .booking-plan-is-empty .workout-detail-actions > .button { min-height: 48px; border: 1px solid var(--lime-divider); border-radius: 18px; background: transparent; }
+.booking-history-layout .booking-plan-empty { margin: 0; color: var(--lime-text-secondary, var(--muted)); }
+.booking-history-layout .workout-detail-actions > .button { display: flex; justify-content: center; align-items: center; gap: 8px; }
+.booking-history-layout .workout-detail-actions > .button svg { width: 18px; height: 18px; flex: 0 0 18px; }
 :is(.fit-lime-shell, .phone-frame) .booking-history-sheet { outline: none; position: fixed; inset: auto 0 0; width: min(100%, 430px); height: min(752px, calc(var(--app-visible-height, 100dvh) - 24px)); max-height: calc(var(--app-visible-height, 100dvh) - 24px); margin: 0 auto; padding: 0; border: 0; border-radius: 40px 40px 0 0; background: var(--lime-surface, var(--surface-elevated)); color: var(--lime-text, var(--fg)); overflow: hidden; }
 :is(.fit-lime-shell, .phone-frame) .booking-history-sheet[open] { display: flex; flex-direction: column; }
 :is(.fit-lime-shell, .phone-frame) .booking-history-sheet::backdrop { background: var(--overlay); }
@@ -68,12 +82,32 @@
 :is(.fit-lime-shell, .phone-frame) .booking-history-sheet > header h2 { margin: 0; text-align: center; font-size: 16px; line-height: 20px; font-weight: 500; }
 :is(.fit-lime-shell, .phone-frame) .booking-history-sheet > header button { width: 44px; height: 44px; padding: 10px; background: transparent; color: inherit; border: 0; }
 :is(.fit-lime-shell, .phone-frame) .booking-history-scroll { overflow-y: auto; overscroll-behavior: contain; min-height: 0; flex: 1; padding: 20px; }
+:is(.fit-lime-shell, .phone-frame) .booking-history-scroll > h3 { min-width: 0; overflow-wrap: anywhere; }
 :is(.fit-lime-shell, .phone-frame) .booking-history-client { color: var(--lime-text-secondary, var(--muted)); margin: 0 0 20px; }
 :is(.fit-lime-shell, .phone-frame) .booking-history-item { display: flex; flex-direction: column; gap: 8px; width: 100%; margin-bottom: 4px; padding: 24px 20px; text-align: left; border: 0; border-radius: 32px; background: var(--lime-surface-raised, var(--surface-raised)); color: var(--lime-text, var(--fg)); }
 :is(.fit-lime-shell, .phone-frame) .booking-history-item :is(time, span) { color: var(--lime-text-secondary, var(--muted)); font-size: 14px; line-height: 20px; overflow-wrap: anywhere; }
-:is(.fit-lime-shell, .phone-frame) .booking-history-item strong { font-size: 18px; line-height: 24px; font-weight: 500; }
+:is(.fit-lime-shell, .phone-frame) .booking-history-item strong { min-width: 0; max-width: 100%; overflow-wrap: anywhere; font-size: 18px; line-height: 24px; font-weight: 500; }
 :is(.fit-lime-shell, .phone-frame) .booking-history-preview-block { margin-bottom: 12px; padding: 20px; border-radius: 24px; background: var(--lime-surface-raised, var(--surface-raised)); }
 :is(.fit-lime-shell, .phone-frame) .booking-history-preview-block article + article { margin-top: 20px; }
 :is(.fit-lime-shell, .phone-frame) .booking-history-preview-block p { color: var(--lime-text-secondary, var(--muted)); font-size: 14px; line-height: 20px; margin-bottom: 0; }
 :is(.fit-lime-shell, .phone-frame) .booking-history-sheet > footer { display: flex; gap: 8px; justify-content: center; padding: 16px 20px max(20px, env(safe-area-inset-bottom)); flex-shrink: 0; }
 :is(.fit-lime-shell, .phone-frame) .booking-history-sheet > footer button { min-height: 54px; border-radius: 20px; }
+:is(.fit-lime-shell, .phone-frame) .booking-history-sheet > footer .primary { flex: 1; min-width: 0; }
+
+:is(.fit-lime-shell, .phone-frame) .booking-history-item time { font-size:12px; line-height:18px; font-weight:400; color:var(--lime-text-secondary, var(--muted)); }
+
+/* Neutral presentation retains readable date/time controls for public entry. */
+.phone-frame:not(.fit-lime-shell) .quick-day-booking .schedule-v2-calendar { color:var(--fg); }
+.phone-frame:not(.fit-lime-shell) .quick-day-booking .fit-lime-plan-avatar { display:grid; place-items:center; flex:0 0 44px; width:44px; height:44px; border-radius:50%; background:var(--surface-raised); color:var(--fg); }
+.phone-frame:not(.fit-lime-shell) .quick-day-booking .fit-lime-date-picker { position:fixed; inset:0; margin:auto; width:min(calc(100% - 24px),375px); max-height:calc(var(--app-visible-height,100dvh) - 24px); overflow:auto; padding:16px; border:1px solid var(--border); border-radius:24px; background:var(--surface-elevated); color:var(--fg); }
+.phone-frame:not(.fit-lime-shell) .quick-day-booking .fit-lime-date-picker header { display:grid; grid-template-columns:44px minmax(0,1fr) 44px; gap:8px; margin:0; }
+.phone-frame:not(.fit-lime-shell) .quick-day-booking .fit-lime-date-picker h2 { text-align:center; font-size:16px; line-height:22px; }
+.phone-frame:not(.fit-lime-shell) .quick-day-booking .fit-lime-date-picker h3 { margin:16px 0 8px; font-size:14px; }
+.phone-frame:not(.fit-lime-shell) .quick-day-booking .fit-lime-date-picker button { display:grid; place-items:center; min-width:0; min-height:44px; padding:0; border:0; background:transparent; color:var(--fg); font-size:14px; }
+.phone-frame:not(.fit-lime-shell) .quick-day-booking .fit-lime-date-selected { margin:16px 0; color:var(--muted); }
+.phone-frame:not(.fit-lime-shell) .quick-day-booking .fit-lime-month-navigation { display:grid; grid-template-columns:44px minmax(0,1fr) 44px; align-items:center; text-align:center; }
+.phone-frame:not(.fit-lime-shell) .quick-day-booking .fit-lime-month-grid { display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); }
+.phone-frame:not(.fit-lime-shell) .quick-day-booking .fit-lime-month-weekday { text-align:center; color:var(--muted); font-size:12px; }
+.phone-frame:not(.fit-lime-shell) .quick-day-booking .fit-lime-month-grid button[aria-pressed='true'] { border-radius:50%; background:var(--fg); color:var(--bg); }
+.phone-frame:not(.fit-lime-shell) .quick-day-booking .fit-lime-date-times { display:grid; gap:12px; margin-top:16px; }
+.phone-frame:not(.fit-lime-shell) .quick-day-booking .fit-lime-date-times input { min-width:0; font-size:16px; }

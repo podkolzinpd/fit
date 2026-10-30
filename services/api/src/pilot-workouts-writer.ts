@@ -38,6 +38,8 @@ import {
   cancelEmptyLiveWorkout,
   submitWorkoutFeedback,
   setWorkoutActualDuration,
+  renameWorkout,
+  PilotWorkoutCommandError,
   setWorkoutReview,
   askWorkoutQuestion,
   answerWorkoutQuestion,
@@ -54,6 +56,7 @@ import type {
 } from './post-workout-request.js'
 
 export interface PilotWorkoutsWriter {
+  rename(sessionToken: YandexActorSessionInput, workoutId: string, title: string, expectedVersion: number): Promise<number>
   setActualDuration(sessionToken: YandexActorSessionInput, workoutId: string, durationSec: number | null, expectedVersion: number): Promise<number>
   quickStart(sessionToken: YandexActorSessionInput, clientId: string | null, operationId: string, trainingFormat?: 'self' | 'with_trainer'): Promise<PilotQuickStartResult>
   cancelEmpty(sessionToken: YandexActorSessionInput, workoutId: string, expectedVersion: number): Promise<number>
@@ -239,6 +242,11 @@ export class DatabasePilotWorkoutsWriter implements PilotWorkoutsWriter {
 
   cancelEmpty(sessionToken: YandexActorSessionInput, workoutId: string, expectedVersion: number) {
     return this.withSession(sessionToken, (client) => cancelEmptyLiveWorkout(client, workoutId, expectedVersion))
+  }
+
+  rename(sessionToken: YandexActorSessionInput, workoutId: string, title: string, expectedVersion: number) {
+    if (typeof sessionToken === 'string' || sessionToken.accessMode !== 'read_write') return Promise.reject(new PilotWorkoutCommandError('forbidden'))
+    return this.withSession(sessionToken, client => renameWorkout(client, workoutId, title, expectedVersion))
   }
 
   setActualDuration(sessionToken: YandexActorSessionInput, workoutId: string, durationSec: number | null, expectedVersion: number) {
