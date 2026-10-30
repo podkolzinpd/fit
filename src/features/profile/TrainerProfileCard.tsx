@@ -31,9 +31,10 @@ function Locations({ metroStationIds, customLocations }: { metroStationIds: stri
   </div>
 }
 
-export function TrainerProfileCard({ profile, isBrandTrainer = false, publicView = false, compact = false, action, primaryAction, footer, onAvatarClick }: {
+export function TrainerProfileCard({ profile, isBrandTrainer = false, yandexOffices = [], publicView = false, compact = false, action, primaryAction, footer, onAvatarClick }: {
   profile: TrainerProfileDraft
   isBrandTrainer?: boolean
+  yandexOffices?: ReadonlyArray<{ city: string; name: string }>
   publicView?: boolean
   compact?: boolean
   action?: ReactNode
@@ -58,6 +59,7 @@ export function TrainerProfileCard({ profile, isBrandTrainer = false, publicView
         : <span className="trainer-card-avatar trainer-card-avatar-placeholder" aria-hidden="true">{profile.displayName.slice(0, 1).toUpperCase() || 'Ф'}</span>}
       <div className="trainer-card-identity"><h2>{profile.displayName || 'Имя тренера'}</h2>
         <p>{profile.acceptingClients ? 'Берёт новых клиентов' : 'Сейчас без новых клиентов'}</p>
+        {publicView && yandexOffices.length > 0 && <span className="trainer-yandex-badge">Тренер Яндекса</span>}
         {isBrandTrainer && <span className="trainer-brand-badge">👑 Бренд-тренер</span>}</div>
       {action && <div className="trainer-card-action">{action}</div>}
     </header>
@@ -79,6 +81,8 @@ export function TrainerProfileCard({ profile, isBrandTrainer = false, publicView
       {experience !== null && <div><dt>Опыт</dt><dd>{experience}</dd></div>}
       {profile.price && <div><dt>Стоимость</dt><dd>{profile.price}</dd></div>}
     </dl>
+    {publicView && yandexOffices.length > 0 && <section className="trainer-yandex-offices" aria-label="Офисы Яндекса"><h3>Офисы Яндекса</h3>
+      <ul>{yandexOffices.map((office, index) => <li key={`${office.city}-${office.name}-${index}`}>{office.city} · {office.name}</li>)}</ul></section>}
     {locationCount > 0 && (compact
       ? <details className="trainer-card-disclosure"><summary><span>Где тренирует · {locationCount}</span><ChevronDownIcon /></summary><Locations metroStationIds={metroStationIds} customLocations={profile.customLocations} /></details>
       : <section><h3>Где тренирует</h3><Locations metroStationIds={metroStationIds} customLocations={profile.customLocations} /></section>)}
