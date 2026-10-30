@@ -955,6 +955,7 @@ for (const fitLime of [true, false]) {
   test(`calorie basis stays readable and pilot scoped: ${fitLime}`, async ({ page }) => {
     await mockPilot(page, { fitLime, workouts: [{ ...workout, status: 'done', activeCaloriesKcal: 220, calorieEstimateBasis: 'Оценка по времени и фактической нагрузке' }] })
     await page.goto(`/workouts/${workoutId}`)
+    await page.locator('.coach-workout-summary > summary').click()
     await expect(page.getByRole('region', { name: 'Сводка тренировки' })).toContainText('220 ккал')
     await expect(page.locator('.workout-calorie-explanation')).toHaveCount(fitLime ? 1 : 0)
     if (!fitLime) await expect(page.getByRole('region', { name: 'Сводка тренировки' })).toContainText('Оценка по времени и фактической нагрузке')

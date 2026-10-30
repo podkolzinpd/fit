@@ -19,6 +19,23 @@ export function workoutTitleCases() {
     })
     const base = `http://127.0.0.1:${Number(process.env.FIT_TEST_PORT ?? 5173) + 1000}`
     await page.goto(`${base}/workouts/${workoutId}`)
+    const detail = page.locator('.coach-exercise-first')
+    const summary = detail.locator('.coach-workout-summary')
+    await expect(detail.getByRole('heading', { name: 'Ноги', exact: true })).toHaveCSS('font-size', '32px')
+    await expect(detail.locator('.workout-header-meta')).toHaveCSS('font-size', '15px')
+    await expect(summary).toHaveJSProperty('open', false)
+    await expect(detail.locator('.workout-fact-summary')).toBeHidden()
+    expect(await detail.evaluate(element => {
+      const review = element.querySelector('.coach-trainer-review')!, exercises = element.querySelector('.completed-exercise-list')!, totals = element.querySelector('.coach-workout-summary')!
+      return Boolean(review.compareDocumentPosition(exercises) & Node.DOCUMENT_POSITION_FOLLOWING)
+        && Boolean(exercises.compareDocumentPosition(totals) & Node.DOCUMENT_POSITION_FOLLOWING)
+    })).toBe(true)
+    await summary.locator('summary').click()
+    await expect(detail.locator('.workout-fact-summary')).toBeVisible()
+    await expect(summary.getByRole('button', { name: /^(Указать|Изменить) длительность$/ })).toBeVisible()
+    await summary.locator('summary').click()
+    await page.locator('.content').evaluate(element => { element.scrollTop = 0 })
+    await page.screenshot({ path: info.outputPath('coach-exercises-before-totals.png') })
     await page.getByRole('button', { name: 'Другие действия с тренировкой', exact: true }).click()
     const content = page.locator('.content')
     const beforeRename = await content.evaluate(element => element.scrollTop)

@@ -108,3 +108,62 @@
 .fit-lime-shell.workout-detail-history-identity .workout-fact-summary > p > span { font-size: .875rem; line-height: 1.35; }
 .fit-lime-shell.workout-detail-history-identity .workout-fact-summary > p > strong { font-size: 1.25rem; line-height: 1.4; overflow-wrap: anywhere; }
 .fit-lime-shell.workout-detail-history-identity :is(.workout-header-meta, .workout-plan-title) { font-size: .875rem; line-height: 1.5; color: var(--lime-text-secondary); overflow-wrap: anywhere; }
+
+/* Trainer detail: the workout and its exercises take precedence over totals.
+   The athlete completion/report surfaces retain their own composition. */
+.phone-frame .workout-detail-page.coach-exercise-first .workout-header-contract h2 {
+  font-size: 32px; line-height: 1.12; font-weight: 500; overflow-wrap: anywhere;
+}
+.phone-frame .workout-detail-page.coach-exercise-first .workout-header-eyebrow {
+  font-size: 15px; line-height: 1.4; text-transform: none; letter-spacing: 0;
+}
+.phone-frame .workout-detail-page.coach-exercise-first .workout-header-meta {
+  font-size: 15px; line-height: 1.4;
+}
+.phone-frame .workout-detail-page.coach-exercise-first .coach-trainer-review h2 {
+  font-size: 19px; line-height: 1.3;
+}
+.phone-frame .workout-detail-page.coach-exercise-first .coach-trainer-review.is-empty {
+  padding: 12px 16px;
+}
+.phone-frame .workout-detail-page.coach-exercise-first .coach-trainer-review.is-empty .workout-review-head {
+  margin: 0;
+}
+.phone-frame .workout-detail-page.coach-exercise-first .coach-trainer-review .workout-review-text {
+  font-size: 15px; line-height: 1.5;
+}
+.coach-workout-summary {
+  margin-block: 16px; border: 1px solid var(--border); border-radius: 20px;
+  background: var(--surface-raised); overflow: hidden;
+}
+.coach-workout-summary > summary {
+  min-height: 48px; padding: 14px 16px; font-size: 15px; cursor: pointer;
+}
+.phone-frame .coach-exercise-first .coach-workout-summary .workout-fact-summary {
+  border: 0; border-radius: 0; margin-bottom: 0;
+}
+.phone-frame .coach-exercise-first .coach-workout-summary .workout-fact-summary strong {
+  font-size: 15px;
+}
+.phone-frame .coach-exercise-first .coach-workout-summary .workout-fact-summary-groups strong {
+  font-size: 13px; line-height: 1.4; font-weight: 400;
+}
+.phone-frame .coach-exercise-first .coach-workout-summary .workout-duration-surface {
+  margin: 0; border: 0; border-radius: 0;
+}
+.phone-frame .coach-exercise-first .workout-completion {
+  grid-template-columns: 28px minmax(0, 1fr); gap: 10px; padding: 12px 16px;
+}
+.phone-frame .coach-exercise-first .workout-completion-mark { width: 28px; height: 28px; }
+.phone-frame .coach-exercise-first .workout-completion-mark svg { width: 20px; height: 20px; }
+.phone-frame .coach-exercise-first .workout-completion-body h2 { font-size: 19px; line-height: 1.3; }
+.phone-frame .coach-exercise-first .workout-completion-body > p { font-size: 13px; }
+.phone-frame .workout-detail-page.coach-exercise-first > :is(.completed-exercise-list, .planned-exercise-list) {
+  gap: 8px; padding: 0; border: 0; background: transparent; overflow: visible;
+}
+.phone-frame .workout-detail-page.coach-exercise-first > :is(.completed-exercise-list, .planned-exercise-list) > :is(.completed-exercise, .planned-detail-exercise) {
+  padding: 0; border: 0; background: transparent;
+}
+.phone-frame .workout-detail-page.coach-exercise-first .workout-detail-exercise-heading strong {
+  font-size: 19px; line-height: 1.3;
+}
