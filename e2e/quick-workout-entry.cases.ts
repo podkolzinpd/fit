@@ -47,7 +47,7 @@ export function quickWorkoutEntryCases() {
     const profileId = 'c0ac0000-6010-4000-8000-000000000001'
     const base = restTimerWorkout()
     const target = { ...base, createdBy: profileId, status: 'planned' as const, workoutDate: '2026-11-02', startTime: '14:00', endTime: '15:00', startedAt: null, exercises: hasPlan ? base.exercises : [] }
-    const source = { ...base, id: '67500000-0000-4000-8000-000000000030', title: 'История суперсет', status: 'done' as const, workoutDate: '2026-10-02', completedAt: '2026-10-02T10:00:00Z', exercises: [0, 1].map(position => ({ ...base.exercises[0]!, id: `67500000-0000-4000-8000-00000000004${position}`, position, blockType: 'group' as const, blockRounds: 2, trainerComment: 'Держать корпус', sets: base.exercises[0]!.sets.map(set => ({ ...set, fact: { weightKg: 35, reps: 8 }, confirmedAt: '2026-10-02T10:00:00Z' })) })) }
+    const source = { ...base, id: '67500000-0000-4000-8000-000000000030', title: hasPlan ? 'История суперсет' : 'я'.repeat(120), status: 'done' as const, workoutDate: '2026-10-02', completedAt: '2026-10-02T10:00:00Z', exercises: [0, 1].map(position => ({ ...base.exercises[0]!, id: `67500000-0000-4000-8000-00000000004${position}`, position, blockType: 'group' as const, blockRounds: 2, trainerComment: 'Держать корпус', sets: base.exercises[0]!.sets.map(set => ({ ...set, fact: { weightKg: 35, reps: 8 }, confirmedAt: '2026-10-02T10:00:00Z' })) })) }
     const original = JSON.stringify(source)
     const backend = await mockPilot(page, { profileId, fitLime: true, workouts: [target, source, { ...source, id: '67500000-0000-4000-8000-000000000050', clientId: '67500000-0000-4000-8000-000000000051', title: 'Другой клиент' }] })
     const commands: WorkoutDraft[] = []
@@ -62,20 +62,51 @@ export function quickWorkoutEntryCases() {
       await route.fulfill({ status: 200, json: { workout: { id: workoutId } } })
     })
     await page.goto(`/workouts/${workoutId}`)
-    await page.getByRole('button', { name: 'Из истории', exact: true }).click()
+    const historyAction = page.locator('.booking-history-open')
+    await expect(historyAction).toBeVisible()
+    expect(await historyAction.locator('svg').first().evaluate(icon => ({ width: icon.getBoundingClientRect().width, height: icon.getBoundingClientRect().height }))).toEqual({ width: 24, height: 24 })
+    expect((await historyAction.boundingBox())!.height).toBe(54)
+    const startAction = page.locator('.workout-detail-primary-actions').getByRole('button').first()
+    await expect(startAction).toBeEnabled()
+    const startBox = (await startAction.boundingBox())!
+    expect((await historyAction.boundingBox())!.y).toBeGreaterThanOrEqual(startBox.y + startBox.height)
+    await expect(page.getByRole('link', { name: hasPlan ? 'Изменить план' : 'Добавить упражнения', exact: true })).toHaveAttribute('href', `/workouts/${workoutId}/edit`)
+    await expect(page.getByRole('button', { name: 'Другие действия с тренировкой', exact: true })).toBeVisible()
+    if (!hasPlan) {
+      await expect(page.getByText('Упражнения ещё не добавлены', { exact: true })).toBeVisible()
+      await expect(page.locator('.workout-detail-exercise-overview')).not.toContainText('0 упражнений')
+    }
+    await historyAction.click()
     const sheet = page.getByRole('dialog', { name: 'История тренировок клиента' })
+    await sheet.getByRole('button', { name: 'Закрыть историю', exact: true }).click()
+    await expect(sheet).toHaveCount(0)
+    expect(commands).toHaveLength(0)
+    await historyAction.click()
     await expect(sheet.getByText('Другой клиент')).toHaveCount(0)
-    await sheet.getByRole('button', { name: /История суперсет/ }).click()
+    await expect(sheet.locator('.booking-history-item strong')).toHaveText(source.title)
+    expect(await sheet.locator('.booking-history-scroll').evaluate(element => element.scrollWidth <= element.clientWidth)).toBe(true)
+    await sheet.getByRole('button', { name: new RegExp(source.title) }).click()
+    await expect(sheet.getByRole('heading', { name: source.title, exact: true })).toBeVisible()
+    expect(await sheet.locator('.booking-history-scroll').evaluate(element => element.scrollWidth <= element.clientWidth)).toBe(true)
     await expect(sheet).toContainText('Держать корпус')
+    const footer = sheet.locator('footer')
+    const availableFooterWidth = await footer.evaluate(element => element.clientWidth - parseFloat(getComputedStyle(element).paddingLeft) - parseFloat(getComputedStyle(element).paddingRight))
+    expect((await sheet.getByRole('button', { name: 'Использовать план', exact: true }).boundingBox())!.width).toBeCloseTo(availableFooterWidth, 0)
     await sheet.screenshot({ path: info.outputPath(`booking-history-${hasPlan}.png`) })
-    await sheet.getByRole('button', { name: 'Повторить в этой записи', exact: true }).click()
+    await sheet.getByRole('button', { name: 'Использовать план', exact: true }).click()
     if (hasPlan) {
       expect(commands).toHaveLength(0)
       await expect(sheet.getByRole('alert')).toContainText('уже есть план')
+      await sheet.getByRole('button', { name: 'Отмена', exact: true }).click()
+      await expect(sheet.getByRole('alert')).toHaveCount(0)
+      expect(commands).toHaveLength(0)
+      await sheet.getByRole('button', { name: 'Использовать план', exact: true }).click()
       await sheet.getByRole('button', { name: 'Заменить план', exact: true }).click()
     }
     await expect(sheet).toHaveCount(0)
     expect(commands).toHaveLength(1)
+    await expect(page.getByRole('link', { name: 'Изменить план', exact: true })).toBeVisible()
+    await expect(page.locator('.booking-plan-empty')).toHaveCount(0)
     const actual = backend.getWorkouts().find(item => item.id === workoutId)!
     expect([actual.clientId, actual.workoutDate, actual.startTime, actual.endTime, actual.status]).toEqual([target.clientId, '2026-11-02', '14:00', '15:00', 'planned'])
     expect(actual.exercises).toHaveLength(2)
@@ -84,6 +115,8 @@ export function quickWorkoutEntryCases() {
     expect(JSON.stringify(backend.getWorkouts().find(item => item.id === source.id))).toBe(original)
     expect(backend.getWorkouts()).toHaveLength(3)
     await expect(page).toHaveURL(new RegExp(`/workouts/${workoutId}$`))
+    await startAction.click()
+    await expect(page).toHaveURL(new RegExp(`/workouts/${workoutId}/live$`))
   })
   test('quick-entry day retains navigation and rejects moved or cancelled gestures', async ({ page }) => {
     const profileId = 'c0ac0000-6010-4000-8000-000000000001'

@@ -51,6 +51,7 @@ describe.skipIf(!source)('corporate administration on real actor/RLS', () => {
     for(const id of [coach,athlete]) {
       expect(await actor(id,'select app_private.is_corporate_admin() allowed')).toEqual([{allowed:false}])
       await expect(actor(id,'select app_private.corporate_admin_bundle()')).rejects.toMatchObject({code:'PT403'})
+      await expect(actor(id,'select app_private.corporate_admin_bundle_with_identity()')).rejects.toMatchObject({code:'PT403'})
       await expect(actor(id,'select app_private.save_corporate_office($1,\'a\',\'b\',\'c\',false,0)',[officeId])).rejects.toMatchObject({code:'PT403'})
       await expect(actor(id,'select app_private.save_corporate_trainer($1,true,$2::uuid[],0)',[coach,[officeId]])).rejects.toMatchObject({code:'PT403'})
       await expect(actor(id,'insert into app_private.corporate_admins(profile_id) values($1)',[id])).rejects.toMatchObject({code:'42501'})
@@ -107,10 +108,73 @@ describe.skipIf(!source)('corporate administration on real actor/RLS', () => {
       expect(await actor(coach,'select id from public.workouts where id=$1',[workout])).toEqual([{id:workout}])
     } finally {await runtime.end()}
   })
+  it('exposes only published identity metadata to the administrator, never the draft', async () => {
+    const published = { displayName: 'Published synthetic', photos: [{ thumbnailPath: 'synthetic/published.jpg' }], avatarDataUrl: null }
+    const draft = { displayName: 'Private draft', photos: [{ thumbnailPath: 'synthetic/private.jpg' }], avatarDataUrl: 'private-avatar' }
+    await pool.query(`insert into public.trainer_professional_profiles(trainer_id,draft_data,published_data)
+      values($1,$2::jsonb,$3::jsonb)`, [coach, JSON.stringify(draft), JSON.stringify(published)])
+    type Bundle = { trainers: Array<{ id: string; publicId: string | null; publishedName: string | null; photoPath: string | null; avatarDataUrl: string | null }> }
+    const read = async () => (await actor<{ bundle: Bundle }>(admin, 'select app_private.corporate_admin_bundle_with_identity() bundle'))[0]!.bundle
+    const row = (await read()).trainers.find(t => t.id === coach)!
+    expect(row.publicId).toBeTruthy()
+    expect(row).toMatchObject({ publishedName: 'Published synthetic', photoPath: 'synthetic/published.jpg', avatarDataUrl: null })
+    expect(JSON.stringify(await read())).not.toContain('Private draft')
+    await pool.query('update public.trainer_professional_profiles set published_data=null where trainer_id=$1', [coach])
+    expect((await read()).trainers.find(t => t.id === coach)).toMatchObject({ publicId: null, publishedName: null, photoPath: null, avatarDataUrl: null })
+    await expect(actor(coach, 'select app_private.corporate_admin_bundle_with_identity()')).rejects.toMatchObject({ code: 'PT403' })
+  })
+  it('keeps an old API safe across migration and rollback while the new API signs photos', async () => {
+    const published = { displayName: 'Rollout public name', photos: [{ thumbnailPath: 'synthetic/rollout.jpg' }] }
+    await pool.query('update public.trainer_professional_profiles set published_data=$2::jsonb where trainer_id=$1', [coach, JSON.stringify(published)])
+    const url = new URL(source ?? ''); url.pathname = `/${database}`
+    const options = { databaseUrl: url.href, dir: directory, migrationsTable: 'fit_migrations', migrationsSchema: 'app_private', verbose: false, log: () => {} }
+    const target = await pool.query<{ id: number }>("select id from app_private.fit_migrations where name ~ '_corporate_trainer_identity$'")
+    expect(target.rows).toHaveLength(1)
+    const count = Number((await pool.query<{ n: number }>('select count(*)::int n from app_private.fit_migrations where id >= $1', [target.rows[0]!.id])).rows[0]!.n)
+    const readLegacy = async () => (await actor<{ bundle: { trainers: Array<Record<string, unknown>> } }>(admin, 'select app_private.corporate_admin_bundle() bundle'))[0]!.bundle
+    await runner({ ...options, direction: 'down', count })
+    const before = await readLegacy()
+    await runner({ ...options, direction: 'up' })
+    expect(await readLegacy()).toEqual(before)
+    const oldRow = before.trainers.find(t => t.id === coach)!
+    expect(oldRow).not.toHaveProperty('photoPath')
+    expect(oldRow).not.toHaveProperty('avatarDataUrl')
+    const runtime = new PgDatabasePool({ connectionString, max: 1 })
+    try {
+      const store = new CorporateAdminStore(runtime, { sign: () => Promise.resolve('https://media.example.test/rollout.jpg') })
+      const result = await store.bundle({ accessMode: 'read_write', token: 'a'.repeat(43) })
+      expect(result.trainers.find(t => t.id === coach)).toMatchObject({ publishedName: 'Rollout public name', photoUrl: 'https://media.example.test/rollout.jpg' })
+      expect(JSON.stringify(result)).not.toContain('synthetic/rollout.jpg')
+      expect(result.trainers.find(t => t.id === coach)).not.toHaveProperty('photoPath')
+    } finally { await runtime.end() }
+    await pool.query('update public.trainer_professional_profiles set published_data=null where trainer_id=$1', [coach])
+  })
+  it('publishes active offices only for an approved trainer, with immediate removal on the next read', async () => {
+    await pool.query(`update public.trainer_professional_profiles set published_data=$2::jsonb where trainer_id=$1`,
+      [coach, JSON.stringify({ displayName: 'Synthetic', bio: 'Яндекс', customLocations: ['Яндекс, частный текст'] })])
+    const publicId = (await pool.query<{ public_id: string }>('select public_id from public.trainer_professional_profiles where trainer_id=$1', [coach])).rows[0]!.public_id
+    const read = async () => (await actor<{ offices: unknown }>('', 'select app_private.public_yandex_trainer_offices($1) offices', [publicId]))[0]!.offices
+    expect(await read()).toEqual([{ city: 'Санкт-Петербург', name: 'Бенуа' }])
+    const additional = randomUUID()
+    await saveOffice(additional, 0, false, 'Третий офис')
+    const version = Number((await pool.query<{ version: string }>('select version from public.corporate_trainers where trainer_id=$1', [coach])).rows[0]!.version)
+    await saveTrainer(true, [officeId, additional], version)
+    expect(await read()).toHaveLength(2)
+    await saveOffice(additional, 1, true, 'Третий офис')
+    expect(await read()).toEqual([{ city: 'Санкт-Петербург', name: 'Бенуа' }])
+    await saveTrainer(false, [officeId], version + 1)
+    expect(await read()).toBeNull()
+    await saveTrainer(true, [officeId], version + 2)
+    await pool.query('update public.trainer_professional_profiles set published_data=null where trainer_id=$1', [coach])
+    expect(await read()).toBeNull()
+    expect(await actor<{ offices: unknown }>('', 'select app_private.public_yandex_trainer_offices($1) offices', [randomUUID()])).toEqual([{ offices: null }])
+    await expect(actor('', 'select id from public.corporate_offices')).rejects.toMatchObject({ code: '42501' })
+  })
   it('revokes an existing admin immediately and protects its audit', async () => {
     await expect(actor(admin,'delete from app_private.corporate_admin_audit')).rejects.toMatchObject({code:'42501'})
     await pool.query('update app_private.corporate_admins set enabled=false where profile_id=$1',[admin])
     await expect(actor(admin,'select app_private.corporate_admin_bundle()')).rejects.toMatchObject({code:'PT403'})
+    await expect(actor(admin,'select app_private.corporate_admin_bundle_with_identity()')).rejects.toMatchObject({code:'PT403'})
   })
   it('grants only the owner-approved login after verified binding, before or after account creation', async () => {
     const login='c'.repeat(64), subject='d'.repeat(64)
@@ -142,6 +206,7 @@ describe.skipIf(!source)('corporate administration on real actor/RLS', () => {
     expect((await pool.query("select to_regclass('public.corporate_offices') present")).rows).toEqual([{present:null}])
     expect((await pool.query('select status from public.workouts where id=$1',[workout])).rows).toEqual([{status:'done'}])
     await runner({...options,direction:'up'})
+    await expect(actor(coach,'select app_private.corporate_admin_bundle_with_identity()')).rejects.toMatchObject({code:'PT403'})
     expect(await actor(coach,'select app_private.is_corporate_admin() allowed')).toEqual([{allowed:false}])
   })
 })

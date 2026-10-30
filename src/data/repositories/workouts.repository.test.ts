@@ -247,7 +247,12 @@ describe('workouts repository rules', () => {
       exercises: [{ id: 'e1', source: 'system', ref: 'squat', name: 'Присед', muscleGroup: 'legs', inputKind: 'strength', position: 0, blockId: 'b1', blockType: 'single', blockPreset: 'set', blockRounds: 1, restBetweenExercisesSec: 0, restBetweenRoundsSec: 90, restBetweenSetsSec: 90,
         sets: [{ id: 's1', position: 0, weightKg: 50, reps: 10, fact: { weightKg: 55, reps: 9 }, confirmedAt: 'now', version: 2 }] }],
     }
-    const copy = copyWorkout(source, localDate('2026-07-22'))
+    const namedSource = { ...source, title: 'Ноги и спина' }
+    const copy = copyWorkout(namedSource, localDate('2026-07-22'))
+    expect(copy.title).toBe('Ноги и спина')
+    copy.title = 'Самостоятельная тренировка'
+    expect(namedSource.title).toBe('Ноги и спина')
+    expect(copyWorkout({ ...source, favoriteTitle: 'Историческое имя избранного' }).title).toBe('Историческое имя избранного')
     expect(copy.id).toBeUndefined()
     expect(copy.exercises[0]?.sets[0]).toEqual({ position: 0, weightKg: 55, reps: 9, durationMin: undefined, distanceKm: undefined })
   })
@@ -728,6 +733,9 @@ describe('favoriteTemplateToWorkoutDraft', () => {
     const result = favoriteTemplateToWorkoutDraft(template, 'client-1', localDate('2026-09-25'), 'Ноги и спина')
     expect(result.clientId).toBe('client-1')
     expect(result.workoutDate).toBe(localDate('2026-09-25'))
+    expect(result.favoriteTitle).toBe('Ноги и спина')
+    expect(result.title).toBe('Ноги и спина')
+    result.title = 'Моё новое название'
     expect(result.favoriteTitle).toBe('Ноги и спина')
     expect(result.exercises[0]?.blockId).toBe(result.exercises[1]?.blockId)
     expect(result.exercises[0]?.blockId).not.toBe('b1')

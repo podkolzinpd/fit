@@ -5,8 +5,17 @@ export function isMaintenanceModeEnabled(): boolean {
   return import.meta.env.VITE_MAINTENANCE_MODE === 'true'
 }
 
+/** Public expansion is explicit; a missing mode keeps the original pilot. */
+export function quickWorkoutEntryRolloutMode(): 'pilot' | 'all' | 'off' {
+  const mode: unknown = import.meta.env.VITE_QUICK_WORKOUT_ENTRY_ROLLOUT_MODE ?? 'pilot'
+  return mode === 'pilot' || mode === 'all' ? mode : 'off'
+}
+
 export function isQuickWorkoutEntryPilotEnabled(userId: string): boolean {
-  if (import.meta.env.VITE_QUICK_WORKOUT_ENTRY_ENABLED !== 'true') return false
+  if (import.meta.env.VITE_QUICK_WORKOUT_ENTRY_ENABLED !== 'true' || !userId.trim()) return false
+  const mode = quickWorkoutEntryRolloutMode()
+  if (mode === 'all') return true
+  if (mode !== 'pilot') return false
   const ids = String(import.meta.env.VITE_QUICK_WORKOUT_ENTRY_PILOT_USER_IDS ?? '').split(',').map(id => id.trim()).filter(Boolean)
   return ids.length === 2 && new Set(ids).size === 2 && ids.includes(userId)
 }

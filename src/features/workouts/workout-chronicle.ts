@@ -1,4 +1,4 @@
-import type { WorkoutExercise } from '../../shared/domain'
+import type { Workout, WorkoutExercise } from '../../shared/domain'
 import { factLine } from '../../data/repositories/workout-rules'
 
 export interface ChronicleExercisePreview<T> {
@@ -21,4 +21,16 @@ export function calendarExerciseResult(exercise: Pick<WorkoutExercise, 'ref' | '
   if (!first) return null
   return lines.length > 1 && lines.every((line) => line === first)
     ? `${lines.length} × ${first}` : lines.join(' · ')
+}
+
+/** Display-only fallback; never backfill a legacy workout in storage. */
+export function workoutDisplayTitle(workout: Pick<Workout, 'title' | 'favoriteTitle'>): string {
+  return workout.title?.trim() || workout.favoriteTitle?.trim() || 'Тренировка'
+}
+
+/** One compact summary for history cards and appointment history selection. */
+export function workoutExerciseBrief(exercises: ReadonlyArray<Pick<WorkoutExercise, 'name'>>): string {
+  const names = exercises.slice(0, 3).map(exercise => exercise.name)
+  if (exercises.length > 3) names.push(`ещё ${exercises.length - 3}`)
+  return names.join(' · ') || 'Без упражнений'
 }

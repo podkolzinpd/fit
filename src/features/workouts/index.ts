@@ -12,3 +12,5 @@ export { RunMetricsFields } from './RunMetricsFields'
 export { WorkoutCta, WorkoutHeader } from './WorkoutSurface'
 export type { ParsedWorkoutExercise } from './quick-workout-entry'
 export { FavoriteWorkoutNameSheet } from './FavoriteWorkoutNameSheet'
+
+export { workoutDisplayTitle, workoutExerciseBrief } from './workout-chronicle'

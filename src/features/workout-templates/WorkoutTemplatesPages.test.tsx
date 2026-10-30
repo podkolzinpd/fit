@@ -44,6 +44,18 @@ beforeEach(() => {
   backend.workoutTemplates.save.mockResolvedValue(template.id)
 })
 describe('template save commands', () => {
+  it('prefills the complete source workout title and allows editing it independently', async () => {
+    const title = 'я'.repeat(120)
+    backend.workouts.get.mockResolvedValue({ ...template, title, exercises: template.exercises })
+    open()
+    const input = await screen.findByLabelText('Название шаблона')
+    await waitFor(() => expect(input).toHaveValue(title))
+    expect(input).toHaveAttribute('maxlength', '120')
+    fireEvent.change(input, { target: { value: 'Отредактированный шаблон' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Сохранить шаблон' }))
+    await waitFor(() => expect(backend.workoutTemplates.save).toHaveBeenCalledWith(expect.objectContaining({ name: 'Отредактированный шаблон' })))
+    expect(title).toHaveLength(120)
+  })
   it('shows safe save diagnostics without dropping the draft or submitting through the copy button', async () => {
     const error = attachRequestDiagnostics(new Error('Нет соединения'), {
       requestId: '10000000-0000-4000-8000-000000000099', occurredAt: '2026-10-08T09:00:00Z',

@@ -24,6 +24,13 @@ describe('workout templates', () => {
     expect(JSON.stringify(draft)).not.toContain('confirmedAt')
     expect(JSON.stringify(draft)).not.toContain(workout.clientId)
     expect(workoutTemplateFromWorkout(workout).name).toBe('Новый шаблон')
+    expect(workoutTemplateFromWorkout({ ...workout, favoriteTitle: 'Историческое имя' }).name).toBe('Историческое имя')
+    const named = { ...workout, title: 'Спина и ноги' }
+    const inherited = workoutTemplateFromWorkout(named)
+    expect(inherited.name).toBe('Спина и ноги')
+    inherited.name = 'Шаблон на завтра'
+    expect(named.title).toBe('Спина и ноги')
+    expect(workoutTemplateFromWorkout(named, 'Явное название').name).toBe('Явное название')
   })
 
   it('duplicates as an independent snapshot', () => {
@@ -32,6 +39,10 @@ describe('workout templates', () => {
     expect(copy.name).toBe('Всё тело — копия')
     expect(copy.id).not.toBeUndefined()
     expect(copy.exercises[0]?.blockId).not.toBe(source.exercises[0]?.blockId)
+    const longName = 'я'.repeat(120)
+    const longCopy = cloneWorkoutTemplate({ ...source, name: longName })
+    expect(longCopy.name).toBe(longName)
+    expect(longCopy.exercises[0]?.blockId).not.toBe(source.exercises[0]?.blockId)
   })
 
   it('appends an independent template plan without changing existing exercises or group links', () => {
