@@ -237,3 +237,19 @@ test('first Nginx activation waits for exact ZIP after stale workers and remains
   assert.equal(calls, 40)
   await assert.rejects(verifyPublicArchive(verified, async () => new Response('wrong bytes')), /MISMATCH/)
 })
+
+
+test('a replacement native ABI cannot reuse or lower the installed versionCode', async t => {
+  const f = await fixture(t)
+  const target = join(f.root, 'target')
+  const previous = await f.verified()
+  await activateOtaManifest(previous, target)
+  const abi = 'c'.repeat(64)
+  const replacement = { ...previous, policy: { ...previous.policy, abi },
+    payload: { ...previous.payload, abi }, manifestPath: `android/alpha/${abi}/latest.json` }
+  await assert.rejects(requireKnownNativeShell(replacement, target, true), /VERSION_MUST_INCREASE/)
+  await assert.rejects(requireKnownNativeShell({ ...replacement, nativeBuild: 4 }, target, true), /VERSION_MUST_INCREASE/)
+  await requireKnownNativeShell({ ...replacement, nativeBuild: 6 }, target, true)
+  // Existing compatible channels continue to work without a native rebuild.
+  await requireKnownNativeShell(previous, target)
+})

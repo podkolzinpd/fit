@@ -2136,7 +2136,7 @@ It never force-removes that container or performs system/volume pruning.
 План: `docs/design/ANDROID_OTA_20261019.md`, протокол публикации/отката и Nginx:
 `infra/cloudru/mobile-updates/README.md`. `FIT_ANDROID_OTA_ENABLED` имеет default-off
 семантику (включено только при точном `true`); штатная web-сборка OTA не проверяет.
-Android APK1.1.1/code5 должен собираться с этим флагом, `FIT_SOURCE_COMMIT`
+Android APK1.1.2/code6 должен собираться с этим флагом, `FIT_SOURCE_COMMIT`
 и canonical API origin `https://api.fit-training.ru`; production env-файлы локально
 не создаются. Native-состав и **все lock-зависимости** входят в консервативный ABI:
 их изменение требует нового APK. Публичный OTA RSA-ключ закреплён в
@@ -2194,6 +2194,9 @@ on the device under its own preference key. The common design-code files are unc
 
 При новой ABI автоматическая публикация останавливается с `OTA_NATIVE_APK_REQUIRED`;
 требуется manual `make_apk=true`, native tests и фактическая подпись нового APK.
+Новая ABI требует увеличения `versionCode`: SDK сбрасывает старый OTA path по
+смене этого номера. Publisher отклоняет повторное использование/понижение code
+относительно подписанных alpha manifests с release (`OTA_NATIVE_VERSION_MUST_INCREASE`).
 Это не выдаётся за доставленное обновление старым оболочкам.
 
 ## Кабинет корпоративных тренеров — этап 1
@@ -2253,3 +2256,26 @@ Origin, XMPP/MUC domains, app id и server-only JWT secret — в защищён
 Без конфигурации вход скрыт; Supabase/public meet.jit.si fallback отсутствует.
 Сервер Jitsi, DNS/TLS, TURN и фактическое двухстороннее media этим кодом
 автоматически не создаются. [Контракт подготовки и приёмки](infra/jitsi/README.md).
+
+## Пилот быстрой записи и истории YAFIT-675
+
+`VITE_QUICK_WORKOUT_ENTRY_ENABLED=true` и собственный
+`VITE_QUICK_WORKOUT_ENTRY_PILOT_USER_IDS` включают пять согласованных доработок
+только для ровно двух различных auth UUID. По умолчанию выключено; пустой,
+повторённый или расширенный список закрывает функцию. Coach rollout `all`
+не расширяет этот пилот. Пара берётся из разрешённой приватной конфигурации,
+контакты в документацию не копируются. Переменные передаются через
+`prepare-cloudru-frontend.yml`; после изменения нужна новая сборка.
+Подстановка истории — opt-in существующей атомарной append-команды,
+ownership/RLS и идемпотентность сохраняются. Старые вызовы создают пустой подход.
+
+## Общий выпуск quick-entry / YAFIT-692
+
+Решение30.10.2026 заменяет ограничение YAFIT-675 исходной парой для этого пакета.
+`VITE_QUICK_WORKOUT_ENTRY_ENABLED=true` вместе с
+`VITE_QUICK_WORKOUT_ENTRY_ROLLOUT_MODE=all` допускают обе авторизованные роли,
+независимо от темы/Lime-допуска. `pilot` сохраняет прежний allowlist, `off`
+и неизвестное значение закрывают функцию; отсутствие mode означает `pilot`.
+Веб/Android получают одинаковые переменные; требуется новая сборка. Права/данные
+проверяет backend, общий режим не включает иные пилоты или клиентский reference.
+[План и проверки](docs/design/WORKOUT_NAMES_AND_PUBLIC_QUICK_ENTRY_20261030.md). Фактический статус выпуска — YAFIT-692.

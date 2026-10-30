@@ -289,7 +289,8 @@ export const workoutsRepository = {
     if (result.error) throw repositoryError(result.error)
     return result.data
   },
-  async appendLiveExercise(workout: Workout, exercise: ExerciseSnapshot, _operationId?: string): Promise<number> {
+  async appendLiveExercise(workout: Workout, exercise: ExerciseSnapshot, _operationId?: string, prefillFromHistory = false): Promise<number> {
+    if (prefillFromHistory) throw new Error('Подстановка истории в Live доступна только в основной версии ФИТ.')
     // Legacy RPC has no receipt parameter; its existing transport stays unchanged.
     void _operationId
     const result = await workoutQueries.appendLiveExercise(workout.id, exercise, workout.version)
@@ -353,6 +354,10 @@ export const workoutsRepository = {
     const result = await workoutQueries.setClientWorkoutComment(workout.id, comment, workout.version)
     if (result.error) throw repositoryError(result.error)
     return result.data
+  },
+  rename(workout: Workout, title: string): Promise<number> {
+    void workout; void title
+    return Promise.reject(new Error('Переименование доступно на новом сервере'))
   },
   setActualDuration(workout: Workout, durationSec: number | null): Promise<number> {
     // Frozen legacy adapter: production duration correction uses the Yandex implementation.
