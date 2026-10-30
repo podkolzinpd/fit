@@ -72,6 +72,36 @@ for (const theme of ['light', 'dark']) test(`client inactivity actions share Lim
 })
 
 
+// List titles and calendar markers share tokens but retain separate navigation.
+for (const theme of ['light', 'dark']) test(`client reference workout lists retain calendar and history ${theme}`, async ({ page }, info) => {
+  await page.clock.setFixedTime(new Date('2026-09-24T12:00:00Z'))
+  await page.addInitScript(({ id, theme }) => localStorage.setItem(`fit.clientLime.theme.${id}`, theme), { id: pilotId, theme })
+  const planned = { ...coachGestureWorkout(false, 1), status: 'planned', title: 'Грудь и плечи', workoutDate: '2026-09-24' } as ReturnType<typeof coachGestureWorkout>
+  const completed = { ...planned, id: newWorkoutId, status: 'done', title: 'Спина и руки', completedAt: '2026-09-24T11:00:00Z' } as ReturnType<typeof coachGestureWorkout>
+  await mockPilot(page, { role: 'client', profileId: pilotId, clientLime: true, workouts: [planned, completed] })
+  await page.goto('/me/workouts')
+  await expect(page.getByRole('heading', { name: planned.title!, exact: true })).toBeVisible()
+  for (const width of [390, 430]) {
+    await page.setViewportSize({ width, height: 844 })
+    await expect(page.locator('.client-workout-card')).toHaveCSS('border-radius', '32px')
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+    await page.screenshot({ path: info.outputPath(`workouts-${theme}-${width}.png`) })
+  }
+  await page.getByRole('button', { name: 'Календарь', exact: true }).click()
+  await expect(page.locator('.client-history-calendar')).toBeVisible()
+  await page.getByRole('button', { name: '24 сентября 2026 г., 1 тренировка', exact: true }).click()
+  const marker = page.locator('.client-history-calendar-day.selected .lime-calendar-day-marker')
+  await expect(marker).toHaveCSS('width', '36px')
+  await expect(marker).toHaveCSS('height', '36px')
+  await page.getByRole('tab', { name: 'История', exact: true }).click()
+  await page.getByRole('button', { name: 'Список', exact: true }).click()
+  await expect(page.getByRole('heading', { name: completed.title!, exact: true })).toBeVisible()
+  await expect(page.locator('.workout-chronicle-copy')).toHaveAttribute('href', `/workouts/new?copy=${newWorkoutId}`)
+  await page.getByRole('tab', { name: 'Готовые тренировки', exact: true }).click()
+  await expect(page.getByRole('heading', { name: 'Избранное', exact: true })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Тренировки Fit', exact: true })).toBeVisible()
+})
+
 // Z-order is density-independent; both themes exercise different halo surfaces.
 for (const theme of ['light', 'dark']) test(`client v79 glow keeps reminder and header above the clock ${theme}`, async ({ page }, info) => {
   await page.addInitScript(({ id, theme, workoutId }) => {
