@@ -101,6 +101,8 @@ export function quickWorkoutEntryCases() {
     }
     await expect(sheet).toHaveCount(0)
     expect(commands).toHaveLength(1)
+    await expect(page.getByRole('link', { name: 'Изменить план', exact: true })).toBeVisible()
+    await expect(page.locator('.booking-plan-empty')).toHaveCount(0)
     const actual = backend.getWorkouts().find(item => item.id === workoutId)!
     expect([actual.clientId, actual.workoutDate, actual.startTime, actual.endTime, actual.status]).toEqual([target.clientId, '2026-11-02', '14:00', '15:00', 'planned'])
     expect(actual.exercises).toHaveLength(2)
