@@ -1,0 +1,51 @@
+name: Inspect one privately approved account deletion
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: cloudru-stage-vm
+  cancel-in-progress: false
+jobs:
+  inspect:
+    runs-on: [self-hosted, cloudru-stage]
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Read only the approved account and dependency counts
+        env:
+          CLOUDRU_DATABASE_CONFIG_JSON: ${{ secrets.CLOUDRU_STAGE_DATABASE_CONFIG_JSON }}
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
+          FIT_ACCOUNT_DELETION_TARGET_SHA256: ${{ secrets.FIT_ACCOUNT_DELETION_TARGET_SHA256 }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REPOSITORY" = podkolzinpd/fit
+          test "$GITHUB_REF" = refs/heads/main
+          test "$(hostname)" = fit-stage-app
+          umask 077
+          sudo test ! -L /opt/fit/secrets
+          test "$(sudo stat -c '%u:%a' /opt/fit/secrets)" = 0:700
+          owner="/opt/fit/secrets/account-deletion-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT.env"
+          sudo test ! -e "$owner"
+          sudo test ! -L "$owner"
+          sudo install -m 600 /dev/null "$owner"
+          trap 'sudo rm -f -- "$owner"' EXIT
+          jq -e '.MIGRATION_DATABASE_HOST == "10.70.10.67" and .MIGRATION_DATABASE_PORT == "5432" and .MIGRATION_DATABASE_NAME == "fit" and .MIGRATION_DATABASE_USER == "fit_owner" and .MIGRATION_DATABASE_URL == null and all(.[]; type == "string" and length > 0 and (test("[\u0000-\u001f\u007f]") | not))' <<<"$CLOUDRU_DATABASE_CONFIG_JSON" >/dev/null
+          jq -r 'to_entries[] | select(.key | test("^MIGRATION_DATABASE_(HOST|PORT|NAME|USER|PASSWORD)$")) | "\(.key)=\(.value)"' <<<"$CLOUDRU_DATABASE_CONFIG_JSON" | sudo tee "$owner" >/dev/null
+          test -n "$FIT_ACCOUNT_DELETION_TARGET_SHA256" # The script validates the strict private scope before querying.
+          for name in SUPABASE_ACCESS_TOKEN SUPABASE_PROJECT_ID FIT_ACCOUNT_DELETION_TARGET_SHA256; do
+            value=${!name}
+            test -n "$value"
+            echo "::add-mask::$value"
+            test "$value" = "${value//$'\n'/}"
+            test "$value" = "${value//$'\r'/}"
+            printf '%s=%s\n' "$name" "$value" | sudo tee -a "$owner" >/dev/null
+          done
+          printf 'MIGRATION_DATABASE_SSL_MODE=require\nGITHUB_REF=refs/heads/main\nGITHUB_REPOSITORY=podkolzinpd/fit\n' | sudo tee -a "$owner" >/dev/null
+          revision=$(cat /opt/fit/RUNNING_SHA)
+          [[ "$revision" =~ ^[a-f0-9]{40}$ ]]
+          sudo podman run --rm --read-only --memory=256m --cpus=0.5 --timeout=180 --cap-drop=ALL --security-opt=no-new-privileges --env-file "$owner" -v "$PWD/scripts/cloudru-account-deletion.mjs:/inspection.mjs:ro" -v "$PWD/scripts/cloudru-account-history-audit.mjs:/cloudru-account-history-audit.mjs:ro" "localhost/fit-api:$revision" node /inspection.mjs | tee -a "$GITHUB_STEP_SUMMARY"

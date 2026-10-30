@@ -139,9 +139,11 @@ docs/CURRENT_STATE.md
 подтверждённого merge агент сам обновляет rolling snapshot в
 `docs/CURRENT_STATE.md`, не накапливая в нём историю.
 
-До завершения перехода задачи по auth, БД, repositories/queries, media,
+Для задач по auth, БД, repositories/queries, media,
 Assistant, SpeechKit, push, backend routing и переносимым продуктовым данным
-также требуют полного чтения `docs/YANDEX_CUTOVER_PLAYBOOK.md`.
+также прочитать соответствующие разделы `docs/YANDEX_CUTOVER_PLAYBOOK.md`.
+Общий порядок работы задаёт AGENTS; FIT_WORKFLOW хранит только карту контекста
+и записей. Отдельный журнал DEVLOG не создаётся.
 
 Затем устанавливает точные зависимости из lock-файла и запускает проект:
 
@@ -202,7 +204,9 @@ git diff --cached
 
 ## 7. Проверка готовности и первый PR
 
-Полная локальная проверка:
+Полная локальная проверка приложения; применимость определяется фактическими
+изменениями по `docs/ENGINEERING_RULES.md`. Первичная проверка готовности среды
+не означает повторный полный прогон для каждой правки документации:
 
 ```bash
 npm run check

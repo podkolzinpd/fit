@@ -1573,6 +1573,13 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .workout-chronicle-exercise-name .workout-exercise-comment { display:block; color:var(--fg); font-size:12px; line-height:1.35 }
 .workout-chronicle-exercise > strong { min-width:0; overflow-wrap:anywhere; text-align:right; font-size:14px; line-height:1.35 }
 .workout-chronicle-more { margin:var(--space-1) 0 0; color:var(--muted); font-size:var(--type-caption-size); font-weight:var(--weight-semibold) }
+.client-workout-cards .workout-chronicle-card.calendar-day-details { padding:0 }
+.calendar-day-details .workout-chronicle-open { padding:20px }
+.calendar-day-details .workout-chronicle-exercises { gap:0; padding:0; border-bottom:0 }
+.calendar-day-details .workout-chronicle-exercise { grid-template-columns:minmax(0,1fr); gap:4px; padding:14px 0; border-bottom:1px solid var(--border) }
+.calendar-day-details .workout-chronicle-exercise:last-child { border-bottom:0; padding-bottom:0 }
+.workout-chronicle-card.calendar-day-details .workout-chronicle-exercise-name { color:var(--fg); font-size:16px; line-height:1.4; font-weight:400 }
+.workout-chronicle-card.calendar-day-details .workout-chronicle-exercise > strong { color:var(--secondary-label-fg); text-align:left; font-weight:400 }
 .workout-chronicle-muscles { margin:0; overflow-wrap:anywhere; color:var(--secondary-label-fg); font-size:12px; font-weight:500; line-height:1.4 }
 .workout-chronicle-muscles span { color:var(--fg); font-weight:600 }
 .workout-chronicle-facts { display:flex; flex-wrap:wrap; gap:6px }
@@ -4252,6 +4259,7 @@ button.workout-duration-trigger:disabled { cursor:default; opacity:1 }
 .client-profile-shell-identity .client-home-connections .card strong { color:var(--fg); font-size:14px; font-weight:600 }
 .client-profile-shell-identity .client-home-connections .card p { color:var(--secondary-label-fg); font-size:12px; font-weight:500 }
 .client-profile-shell-identity .client-trainer-connection-card { display:flex; align-items:center; gap:10px; min-width:0; padding:12px }
+.client-trainer-profile-link { display:flex; align-items:center; flex:1; gap:10px; min-width:0; min-height:44px; color:inherit; text-decoration:none; }
 .client-profile-shell-identity .client-trainer-avatar { width:40px; height:40px; flex:0 0 40px; display:grid; place-items:center; border:1px solid var(--border); border-radius:14px; background:var(--surface-sunken); color:var(--fg); font-size:12px; font-weight:600 }
 .client-profile-shell-identity .client-trainer-person { min-width:0; flex:1 }
 .client-profile-shell-identity .client-trainer-person strong { display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap }
@@ -6668,6 +6676,7 @@ details[open] > .progress-details-toggle svg { transform:rotate(180deg); }
 .chat-reply-quote { width:100%; display:grid; gap:1px; margin-bottom:7px; padding:5px 8px; border-left:3px solid var(--accent); border-radius:5px 9px 9px 5px; background:color-mix(in srgb,var(--surface-raised) 60%,transparent); color:var(--fg); text-align:left; }
 .chat-reply-quote strong { font-size:11px; }
 .chat-reply-quote span { overflow:hidden; color:var(--muted); font-size:12px; text-overflow:ellipsis; white-space:nowrap; }
+.chat-day-divider { align-self:center; margin:10px 0 2px; padding:3px 12px; border-radius:var(--radius-pill); background:var(--surface-raised); color:var(--muted); font-size:12px; font-weight:var(--weight-semibold, 600); font-variant-numeric:tabular-nums; }
 .chat-unread-divider { display:flex; align-items:center; gap:10px; margin:8px 0 4px; color:var(--accent); font-size:11px; font-weight:var(--weight-bold); }
 .chat-unread-divider::before, .chat-unread-divider::after { height:1px; flex:1; background:color-mix(in srgb,var(--accent) 35%,transparent); content:""; }
 .chat-new-button { position:sticky; z-index:2; bottom:8px; align-self:center; min-height:38px; display:flex; align-items:center; gap:7px; padding:8px 12px; border:1px solid var(--border); border-radius:var(--radius-pill); background:var(--surface-raised); color:var(--fg); font-size:12px; }
@@ -7385,3 +7394,9 @@ details[open] > .progress-details-toggle svg { transform:rotate(180deg); }
 @media (min-width:760px) { .fit-video-meeting { height:min(90dvh,900px); border:1px solid var(--border); border-radius:var(--radius-lg,24px) } }
 
 .meeting-stage[data-preview="true"] .meeting-self-video { inset:0; width:100%; height:100%; max-width:none; border:0; border-radius:0 }
+
+/* Shared workout metadata hierarchy; preserves both existing appearances. */
+.phone-frame .workout-chronicle-heading { display:grid; min-width:0; gap:4px }
+.phone-frame :is(.workout-chronicle-title, .workout-card-title) { margin:0; min-width:0; color:var(--fg); font-size:18px; line-height:1.3; font-weight:600; overflow-wrap:anywhere }
+.phone-frame .workout-card-date, .phone-frame .workout-chronicle-heading > small { display:block; color:var(--muted); font-size:12px; line-height:1.4; font-weight:400; overflow-wrap:anywhere }
+.phone-frame .workout-chronicle-brief { margin:0; color:var(--muted); font-size:14px; line-height:1.5; overflow-wrap:anywhere }

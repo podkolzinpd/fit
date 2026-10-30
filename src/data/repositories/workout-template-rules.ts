@@ -38,7 +38,7 @@ function cloneExercises(exercises: WorkoutExerciseDraft[]): WorkoutExerciseDraft
   }))
 }
 
-export function workoutTemplateFromWorkout(workout: Workout, name = 'Новый шаблон'): WorkoutTemplateDraft {
+export function workoutTemplateFromWorkout(workout: Workout, name = workout.title?.trim() || workout.favoriteTitle?.trim() || 'Новый шаблон'): WorkoutTemplateDraft {
   return {
     id: crypto.randomUUID(),
     name,
@@ -59,7 +59,9 @@ export function workoutTemplateFromWorkout(workout: Workout, name = 'Новый 
 }
 
 export function cloneWorkoutTemplate(template: Pick<WorkoutTemplateDraft, 'name' | 'notes' | 'exercises'>): WorkoutTemplateDraft {
-  return { id: crypto.randomUUID(), name: `${template.name} — копия`, notes: template.notes, exercises: cloneExercises(template.exercises) }
+  const suffix = ' — копия'
+  const name = template.name.length + suffix.length <= 120 ? `${template.name}${suffix}` : template.name
+  return { id: crypto.randomUUID(), name, notes: template.notes, exercises: cloneExercises(template.exercises) }
 }
 
 export function appendWorkoutTemplateExercises(existing: WorkoutExerciseDraft[], template: Pick<WorkoutTemplateDraft, 'exercises'>): WorkoutExerciseDraft[] {

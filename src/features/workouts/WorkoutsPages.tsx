@@ -1,3 +1,7 @@
+import { WorkoutRenameSheet } from './WorkoutRenameSheet'
+import { isQuickWorkoutEntryEnabled } from '../../app/quick-workout-entry'
+import { QuickDayBooking, dayBookingTime } from './QuickDayBooking'
+import { BookingHistorySheet } from './BookingHistorySheet'
 import { isClientWorkoutRedesignEnabled } from '../../app/client-workout-redesign'
 import { isCoachLiveV79Enabled } from '../../app/coach-live-v79'
 import { WorkoutFoldBody } from './WorkoutFoldBody'
@@ -108,7 +112,7 @@ import { AddIcon, ArrowDownIcon, ArrowUpIcon, BackIcon, BellIcon, CheckIcon, Che
 import { workoutVolumeComparison } from './workout-completion-insights'
 import { WorkoutChoice, WorkoutCta, WorkoutExercise, WorkoutExerciseCompact, WorkoutHeader, WorkoutRpeScale, WorkoutSetRow, WorkoutStatus, type WorkoutUiState } from './WorkoutSurface'
 import { liveSessionProgress } from './live-session-progress'
-import { chronicleExercisePreview } from './workout-chronicle'
+import { calendarExerciseResult, chronicleExercisePreview, workoutDisplayTitle, workoutExerciseBrief } from './workout-chronicle'
 import { compactScheduleEventLabel, formatScheduleDateLabel, layoutScheduleTimelineEvents, mondayWeekStart, scheduleDurationMinutes, scheduleEventStatus, scheduleExerciseLine, scheduleFocusMinutes, scheduleHourLabelCollidesWithNow, scheduleLaneClientName, scheduleTimelineScrollTop } from './schedule-presentation'
 import { InvitationCodeCard } from '../../shared/invitation-code-card'
 import { trackGoal } from '../../shared/yandex-metrika'
@@ -779,7 +783,10 @@ function TrainerScheduleV2({ forceDayView = false }: { forceDayView?: boolean })
   const compactScheduleFilters = fitLimeSchedule && isCoachWorkoutRedesignEnabled(actor)
   const singleScheduleGuide = compactScheduleFilters && fitLimeSchedule
   const singleDayGuide = fitLimeToday && isCoachWorkoutRedesignEnabled(actor)
-  const daySwipeRef = useCoachDaySwipe(singleDayGuide, selected, openDay)
+  const [bookingTime, setBookingTime] = useState<string | null>(null)
+  const quickDayEntry = isDayView && isQuickWorkoutEntryEnabled(actor)
+  const dayInteractions = singleDayGuide || quickDayEntry
+  const daySwipeRef = useCoachDaySwipe(dayInteractions, selected, openDay, quickDayEntry ? { resolve: (target, x, y) => dayBookingTime(target, x, y, hourHeight), open: setBookingTime } : undefined)
   const homeClients = useQuery({
     queryKey: ['clients', false],
     queryFn: () => clientsRepository.list(false),
@@ -910,7 +917,7 @@ function TrainerScheduleV2({ forceDayView = false }: { forceDayView?: boolean })
   }
 
   return <Page
-    className={`schedule-page schedule-v2 ${isDayView ? 'schedule-day-view' : 'schedule-week-view'}${isDayView && densityPreference.density === 'compact' ? ' schedule-density-compact' : ''}${fitLimeToday ? ' fit-lime-today' : ''}${fitLimeSchedule ? ' fit-lime-schedule' : ''}${compactScheduleFilters && fitLimeSchedule ? ' coach-schedule-polish' : ''}${singleDayGuide ? ' coach-day-swipe' : ''}`}
+    className={`schedule-page schedule-v2 ${isDayView ? 'schedule-day-view' : 'schedule-week-view'}${isDayView && densityPreference.density === 'compact' ? ' schedule-density-compact' : ''}${fitLimeToday ? ' fit-lime-today' : ''}${fitLimeSchedule ? ' fit-lime-schedule' : ''}${compactScheduleFilters && fitLimeSchedule ? ' coach-schedule-polish' : ''}${dayInteractions ? ' coach-day-swipe' : ''}`}
     title="Расписание"
     hideTitle
   >
@@ -1010,6 +1017,7 @@ function TrainerScheduleV2({ forceDayView = false }: { forceDayView?: boolean })
     {isFitLimeEnabled(actor)
       ? <button type="button" className="schedule-v2-fab" aria-label="Новая тренировка" onClick={() => { trackGoal('schedule_v2_workout_create_started'); setPlanComposerOpen(true) }}><AddIcon /></button>
       : <Link className="schedule-v2-fab" aria-label={`Запланировать тренировку на ${selected}`} to={`/workouts/new?date=${selected}`} state={{ returnTo }} onClick={() => trackGoal('schedule_v2_workout_create_started')}><AddIcon /></Link>}
+    {bookingTime && <QuickDayBooking date={selected} time={bookingTime} returnTo={returnTo} onClose={() => setBookingTime(null)} />}
     {planComposerOpen && <FitLimeWorkoutEntry date={selected} returnTo={returnTo} onClose={() => setPlanComposerOpen(false)} />}
     {inboxOpen && <ScheduleV2InboxSheet
       questions={workspace.data?.questions ?? []}
@@ -1092,9 +1100,9 @@ export function WorkoutExercisesSummary({ workout, maxItems }: { workout: Workou
 export function PastWorkoutPlanCard({ workout, contextLabel, returnTo }: { workout: Workout; contextLabel?: string | null; returnTo?: string }) {
   return <Link className="past-workout-plan-card" to={`/workouts/${workout.id}`} state={returnTo ? { returnTo } : undefined}>
     <span className="past-workout-plan-copy">
-      <strong>План на {formatLocalDate(workout.workoutDate)}</strong>
+      <strong>{workoutDisplayTitle(workout)}</strong><time className="workout-card-date" dateTime={workout.workoutDate}>План на {formatLocalDate(workout.workoutDate)}</time>
       {contextLabel && <small>{contextLabel}</small>}
-      <WorkoutExercisesSummary workout={workout} maxItems={2} />
+      <p className="workout-chronicle-brief">{workoutExerciseBrief(workout.exercises)}</p>
     </span>
     <span className="past-workout-plan-action">Выбрать действие <ChevronRightIcon /></span>
   </Link>
@@ -1112,7 +1120,7 @@ const chronicleReactionLabels: Record<TrainerReaction, string> = {
   strong: '💪',
 }
 
-export function WorkoutChronicleCard({ workout, contextLabel, returnTo, historyListActions = false }: { workout: Workout; contextLabel?: string | null; returnTo?: string; historyListActions?: boolean }) {
+export function WorkoutChronicleCard({ workout, contextLabel, returnTo, historyListActions = false, showTitle = true, calendarDayDetails = false }: { workout: Workout; contextLabel?: string | null; returnTo?: string; historyListActions?: boolean; showTitle?: boolean; calendarDayDetails?: boolean }) {
   const done = workout.status === 'done'
   const duration = workoutDurationLabel(workout.startedAt, workout.completedAt, workout.actualDurationSec)
   const tonnage = workoutTonnage(workout)
@@ -1122,16 +1130,20 @@ export function WorkoutChronicleCard({ workout, contextLabel, returnTo, historyL
     workout.activeCaloriesKcal ? `≈ ${workout.activeCaloriesKcal} ккал` : null,
   ].filter(Boolean) : []
   const hasFeedback = workout.sessionRpe !== undefined && workout.wellbeing !== undefined
-  const exercisePreview = chronicleExercisePreview(workout.exercises)
+  const exercisePreview = chronicleExercisePreview(workout.exercises, calendarDayDetails ? workout.exercises.length : undefined)
   const musclePreview = chronicleExercisePreview(historyListActions && done ? performedMuscleGroupLabels(workout) : [], 3)
   const detailState = returnTo ? { returnTo } : undefined
   const formattedDate = formatLocalDate(workout.workoutDate)
   const muscleSummary = [...musclePreview.visible, ...(musclePreview.hiddenCount > 0 ? [`+${musclePreview.hiddenCount}`] : [])].join(' · ')
 
-  return <article className={`card workout-chronicle-card${workout.hasPr ? ' has-pr' : ''}${historyListActions && done ? ' has-history-actions' : ''}`}>
-    <Link className="workout-chronicle-open" aria-label={`Открыть тренировку за ${formattedDate}`} to={`/workouts/${workout.id}`} state={detailState}>
+  return <article className={`card workout-chronicle-card${workout.hasPr ? ' has-pr' : ''}${historyListActions && done ? ' has-history-actions' : ''}${calendarDayDetails ? ' calendar-day-details' : ''}`}>
+    <Link className="workout-chronicle-open" aria-description={showTitle ? workoutDisplayTitle(workout) : undefined} aria-label={`Открыть тренировку за ${formattedDate}`} to={`/workouts/${workout.id}`} state={detailState}>
       <div className="workout-chronicle-head">
-        <strong>{formattedDate}</strong>
+        <div className="workout-chronicle-heading">
+          {showTitle && <h2 className="workout-chronicle-title">{workoutDisplayTitle(workout)}</h2>}
+          {calendarDayDetails ? <small>{workout.exercises.length} {exerciseCountLabel(workout.exercises.length)}</small>
+            : <time className="workout-card-date" dateTime={workout.workoutDate}>{formattedDate}</time>}
+        </div>
         <div className="workout-chronicle-head-badges">
           {workout.hasPr && <span className="workout-pr-badge"><RecordIcon />Личный рекорд</span>}
           <WorkoutStatusBadge workout={workout} />
@@ -1139,18 +1151,21 @@ export function WorkoutChronicleCard({ workout, contextLabel, returnTo, historyL
       </div>
       {contextLabel && <p className="card-author">{contextLabel}</p>}
       <div className="workout-chronicle-exercises">
+        {historyListActions && !calendarDayDetails ? <p className="workout-chronicle-brief">{workoutExerciseBrief(workout.exercises)}</p> : <>
         {exercisePreview.visible.length > 0 ? exercisePreview.visible.map((exercise) => {
-          const result = done
-            ? compactCompletedSetSummary(exercise.sets, false, exercise.ref)
-            : compactPlannedSetSummary(exercise.sets, false, exercise.ref)
+          const result = calendarDayDetails
+            ? done ? calendarExerciseResult(exercise) : null
+            : done ? compactCompletedSetSummary(exercise.sets, false, exercise.ref)
+              : compactPlannedSetSummary(exercise.sets, false, exercise.ref)
           return <div className="workout-chronicle-exercise" key={exercise.id}>
             <span className="workout-chronicle-exercise-name">{exercise.name}
-              {exercise.trainerComment && <small className="workout-exercise-comment">💬 {exercise.trainerComment}</small>}
+              {!calendarDayDetails && exercise.trainerComment && <small className="workout-exercise-comment">💬 {exercise.trainerComment}</small>}
             </span>
             {result && <strong>{result}</strong>}
           </div>
         }) : <p className="muted">Без упражнений</p>}
         {exercisePreview.hiddenCount > 0 && <p className="workout-chronicle-more">Ещё {exercisePreview.hiddenCount} {exerciseCountLabel(exercisePreview.hiddenCount)}</p>}
+        </>}
       </div>
       {muscleSummary && <p className="workout-chronicle-muscles" aria-label={`Основные группы мышц: ${muscleSummary}`}><span>Мышцы:</span> {muscleSummary}</p>}
       {(meta.length > 0 || hasFeedback || workout.discomfort) && <div className="card-meta workout-chronicle-facts">
@@ -1204,7 +1219,7 @@ export function ClientWorkoutsPage() {
       {upcomingItems.length > 0 && <section className="client-workout-section">
         <div className="client-workout-section-head"><p className="eyebrow">БЛИЖАЙШЕЕ</p><h2>Предстоит</h2></div>
         <div className="cards client-workout-cards">{upcomingItems.map((workout) => <Link className="card client-workout-card" key={workout.id} to={`/workouts/${workout.id}`} state={{ returnTo }}>
-          <div><strong>{formatLocalDate(workout.workoutDate)}</strong>{workout.startTime && <p className="muted">{workout.startTime.slice(0, 5)}</p>}<WorkoutExercisesSummary workout={workout} maxItems={2} /></div>
+          <div><h2 className="workout-card-title">{workoutDisplayTitle(workout)}</h2><time className="workout-card-date" dateTime={workout.workoutDate}>{formatLocalDate(workout.workoutDate)}{workout.startTime ? ` · ${workout.startTime.slice(0, 5)}` : ''}</time><p className="workout-chronicle-brief">{workoutExerciseBrief(workout.exercises)}</p></div>
           <WorkoutStatusBadge workout={workout} />
         </Link>)}</div>
       </section>}
@@ -1226,7 +1241,8 @@ export function ClientWorkoutsPage() {
         </> : <ClientWorkoutHistoryCalendar month={calendar.state.month} today={today} workouts={calendarItems}
           selectedDate={calendar.state.selectedDate} loading={calendarHistory.isLoading} error={calendarHistory.error}
           returnTo={returnTo} contextLabel={contextLabel} onRetry={() => void calendarHistory.refetch()}
-          onMonthChange={calendar.shiftMonth} onDateSelect={calendar.selectDate} />}
+          onMonthChange={calendar.shiftMonth} onDateSelect={calendar.selectDate}
+          renderSelectedWorkout={(workout) => <WorkoutChronicleCard workout={workout} contextLabel={contextLabel(workout)} returnTo={returnTo} calendarDayDetails />} />}
       </section>
     </div> : <EmptyState
       title="Тренировка для клиента"
@@ -1320,7 +1336,7 @@ export function WorkoutFormPage() {
   // Индекс упражнения, которое заменяем через пикер; null — режим добавления.
   const [replaceIndex, setReplaceIndex] = useState<number | null>(null)
   const initial = templateSource.data && templateDraft
-    ? { clientId: routeClientId, workoutDate: localDate(params.get('date') ?? today), notes: templateSource.data.notes, exercises: templateDraft.exercises }
+    ? { clientId: routeClientId, title: templateSource.data.name, workoutDate: localDate(params.get('date') ?? today), notes: templateSource.data.notes, exercises: templateDraft.exercises }
     : source.data
     ? (workoutId ? { ...(source.data.status === 'done' || recordPlannedResult ? completedWorkoutDraft(source.data) : copyWorkout(source.data)), id: source.data.id, version: source.data.version } : copyWorkout(source.data, today, { refreshCatalogNames: true }))
     : favorite ? favoriteTemplateToWorkoutDraft(favorite.exercises, mine.data?.id ?? '', today, favorite.title)
@@ -1367,6 +1383,7 @@ export function WorkoutFormPage() {
       setNotes(template.notes)
       if (notesDetailsRef.current) notesDetailsRef.current.open = true
     }
+    if (!title.trim()) setTitle(template.name)
     setAddedTemplateName(template.name)
     closeTemplatePicker()
   }
@@ -1389,7 +1406,7 @@ export function WorkoutFormPage() {
       setActualDurationMinutes(saved.actualDurationMinutes ?? '')
       setShowEndTime(Boolean(saved.endTime))
       setNotes(saved.notes)
-      setTitle(saved.title ?? '')
+      setTitle(saved.title ?? initial?.title ?? '')
       setPrepSeconds(saved.prepSeconds ?? 0)
       setExecutionMode(saved.executionMode)
       setStageId(saved.stageId)
@@ -1411,7 +1428,7 @@ export function WorkoutFormPage() {
       setActualDurationMinutes(workoutId && source.data?.actualDurationSec ? String(source.data.actualDurationSec / 60) : '')
       setShowEndTime(Boolean(initial.endTime))
       setNotes(initial.notes ?? '')
-      setTitle(source.data?.title ?? '')
+      setTitle(initial.title ?? '')
       // Подготовка — настройка хода тренировки, копия забирает её вместе с отдыхом.
       setPrepSeconds(source.data?.prepSeconds ?? 0)
       // Старая тренировка без режима ведётся вручную — правка это сохраняет;
@@ -1627,7 +1644,7 @@ export function WorkoutFormPage() {
     mutation.mutate({ id: workoutId, requestId: workoutId ? undefined : createRequestId.current, clientId: submitClientId, workoutDate: date, startTime: submittedStartTime || undefined,
       endTime: submittedEndTime || undefined,
       ...(completedMode ? { actualDurationSec } : { prepSeconds: prepSeconds || null, executionMode: executionMode ?? DEFAULT_EXECUTION_MODE }),
-      ...(limePlan ? { title: title.trim() || null } : {}),
+      title: title.trim() || null,
       notes: notes || undefined, stageId: stageId || null, exercises, version: safePlanInput && workoutId ? editSourceVersion.current : source.data?.version,
       favoriteTitle: initial?.favoriteTitle, trainingFormat: clientMode ? 'self' : trainingFormat ?? 'self' })
   }
@@ -1697,7 +1714,7 @@ export function WorkoutFormPage() {
           {formTimeError && <p className="error" role="alert">{formTimeError}</p>}
           {refinedPlan && mutation.error && <InlineRequestError error={mutation.error} message={saveErrorMessage} />}
         </div> : <>
-        {limePlan && <Field label="Название тренировки"><input name="title" value={title} maxLength={120} placeholder="Название тренировки" onChange={(event) => setTitle(event.target.value)} /></Field>}
+        <Field label="Название тренировки"><input name="title" value={title} maxLength={120} placeholder="Название тренировки" onChange={(event) => setTitle(event.target.value)} /></Field>
         {clientMode
           ? <input type="hidden" name="clientId" value={mine.data?.id ?? ''} />
           : clientContextLocked
@@ -1760,7 +1777,7 @@ export function WorkoutFormPage() {
       {coachReference && mutation.isPending && <p role="status" className="coach-plan-saving">Сохраняем план…</p>}
     </form>}</AsyncView>
     {coachReference && referenceClientPickerOpen && <ClientPicker reference initialOpen hideTrigger autoFocusSearch={false} userId={actor?.userId} clients={availableClients ?? []} selectedId={clientId} onChange={(id) => { setClientSelectionError(null); trainingFormatTouched.current = false; setTrainingFormat(undefined); setSelectedClientId(id); setReferenceClientPickerOpen(false) }} onDismiss={() => setReferenceClientPickerOpen(false)} selectionError={clientSelectionError} loading={clients.isLoading} error={clients.error} onRetry={() => void clients.refetch()} onCreate={createQuickClient} />}
-    {pickerOpen && <ExercisePicker clientLime={isClientLimeEnabled(actor)} reference={!completedMode && isCoachWorkoutRedesignEnabled(actor)} referenceAppearance={(!completedMode && isCoachWorkoutRedesignEnabled(actor)) || clientReference} catalog={catalog} clientRecent={clientRecentExercises} initialSearch={pickerSearch} initialMode={parsedExerciseSelection.current ? 'all' : replaceIndex === null && exercises.length === 0 ? 'choose' : 'all'} techniqueActionLabel={parsedExerciseSelection.current ? 'Выбрать упражнение' : replaceIndex === null ? 'Добавить упражнение' : 'Заменить упражнение'} onPick={pickExercise} onPickMany={pickExercises} selectionDraft={replaceIndex === null && !parsedExerciseSelection.current ? pickerSelectionDraft : undefined} onSelectionDraftChange={replaceIndex === null && !parsedExerciseSelection.current ? setPickerSelectionDraft : undefined} multiple={replaceIndex === null && !parsedExerciseSelection.current} onClose={closePicker} />}
+    {pickerOpen && <ExercisePicker quickEntry={isQuickWorkoutEntryEnabled(actor)} clientLime={isClientLimeEnabled(actor)} reference={!completedMode && isCoachWorkoutRedesignEnabled(actor)} referenceAppearance={(!completedMode && isCoachWorkoutRedesignEnabled(actor)) || clientReference} catalog={catalog} clientRecent={clientRecentExercises} initialSearch={pickerSearch} initialMode={parsedExerciseSelection.current ? 'all' : replaceIndex === null && exercises.length === 0 ? 'choose' : 'all'} techniqueActionLabel={parsedExerciseSelection.current ? 'Выбрать упражнение' : replaceIndex === null ? 'Добавить упражнение' : 'Заменить упражнение'} onPick={pickExercise} onPickMany={pickExercises} selectionDraft={replaceIndex === null && !parsedExerciseSelection.current ? pickerSelectionDraft : undefined} onSelectionDraftChange={replaceIndex === null && !parsedExerciseSelection.current ? setPickerSelectionDraft : undefined} multiple={replaceIndex === null && !parsedExerciseSelection.current} onClose={closePicker} />}
     {templatePickerOpen && <WorkoutTemplatePicker templates={templates.data ?? []} loading={templates.isLoading} error={templates.error} onRetry={() => void templates.refetch()} onSelect={addTemplate} onClose={closeTemplatePicker} />}
     {techniqueExercise && <ExerciseTechniqueSheet exercise={techniqueExercise} onClose={() => setTechniqueExercise(null)} />}
     {confirmLeaveDialog}
@@ -1805,7 +1822,8 @@ function WorkoutTemplatePicker({ templates, loading, error, onRetry, onSelect, o
   </div>
 }
 
-function SaveFavoriteWorkoutSheet({ exercises, pending, error, onSave, onClose }: {
+function SaveFavoriteWorkoutSheet({ title, exercises, pending, error, onSave, onClose }: {
+  title?: string | null
   exercises: readonly WorkoutExerciseModel[]
   pending: boolean
   error: Error | null
@@ -1813,7 +1831,7 @@ function SaveFavoriteWorkoutSheet({ exercises, pending, error, onSave, onClose }
   onClose: () => void
 }) {
   const { actor } = useAuth()
-  return <FavoriteWorkoutNameSheet heading="Сохранить в избранное" lime={isClientLimeEnabled(actor)}
+  return <FavoriteWorkoutNameSheet heading="Сохранить в избранное" lime={isClientLimeEnabled(actor)} initialTitle={title ?? ''}
     placeholder={workoutFocusTitle(muscleGroupLabels(exercises))} pending={pending} error={error} onSave={onSave} onClose={onClose} />
 }
 
@@ -1827,7 +1845,10 @@ export function WorkoutDetailPage() {
   const [confirm, confirmDialog] = useConfirm()
   const [askActiveWorkoutRecovery, activeWorkoutRecoveryDialog] = useConfirm()
   const [decisionSheet, setDecisionSheet] = useState<'actions' | 'reschedule' | null>(null)
+  const [renameSheetOpen, setRenameSheetOpen] = useState(false)
+  const [renameVersion, setRenameVersion] = useState(0)
   const [favoriteSheetOpen, setFavoriteSheetOpen] = useState(false)
+  const [bookingHistoryOpen, setBookingHistoryOpen] = useState(false)
   const [rescheduleDate, setRescheduleDate] = useState<LocalDate>(() => todayInTimeZone(actor?.timezone))
   const [rescheduleTime, setRescheduleTime] = useState('')
   const [firstPlanInviteCode, setFirstPlanInviteCode] = useState<string | null>(null)
@@ -1990,6 +2011,8 @@ export function WorkoutDetailPage() {
   const completedSets = sets.filter((set) => set.confirmedAt).length
   const clientOwned = clientMode && workout?.createdBy === actor.userId
   const trainerOwned = !clientMode && Boolean(workout && (!workout.createdBy || workout.createdBy === actor?.userId))
+  const bookingHistoryAvailable = workout?.status === 'planned' && trainerOwned && isQuickWorkoutEntryEnabled(actor)
+  const emptyBookingPlan = bookingHistoryAvailable && workout.exercises.length === 0
   const canManage = clientMode ? clientOwned : trainerOwned
   const canRemoveCompletedExercise = Boolean(done && workout && (clientMode || trainerOwned))
   const canExecute = clientMode || trainerOwned
@@ -2048,6 +2071,7 @@ export function WorkoutDetailPage() {
   }
   const manageMenuInHeader = Boolean(clientMode && canManage && workout && !done)
   const workoutManageItems = [
+    { label: 'Переименовать тренировку', onClick: () => { setRenameVersion(query.data!.version); setRenameSheetOpen(true) } },
     ...(clientMode ? [{ label: 'В избранное', onClick: () => setFavoriteSheetOpen(true) }] : []),
     { label: 'Копировать тренировку', onClick: () => navigate(`/workouts/new?copy=${workoutId}`, { state: childNavigationState }) },
     ...(!clientMode ? [{ label: 'Сохранить как шаблон', onClick: () => navigate(`/schedule/templates/new/editor?sourceWorkout=${workoutId}`) }] : []),
@@ -2085,7 +2109,7 @@ export function WorkoutDetailPage() {
     if (block.blockType === 'single' || block.exercises.length === 1) return articles
     return <div className={`exercise-block view${done ? ' completed-exercise-block' : ''}`} key={block.blockId}><span className="block-badge">{blockLabel(block.blockType, block.blockPreset)} · {block.blockRounds} кр.</span>{articles}</div>
   })}</div>
-  return <Page title="Тренировка" hideTitle className={`workout-detail-page${clientCompletionReport ? ' workout-completion-page' : ''}`} back={backTo} onBack={goBack}>
+  return <Page title="Тренировка" hideTitle className={`workout-detail-page${clientCompletionReport ? ' workout-completion-page' : ''}${bookingHistoryAvailable ? ' booking-history-layout' : ''}${emptyBookingPlan ? ' booking-plan-is-empty' : ''}`} back={backTo} onBack={goBack}>
     <AsyncView loading={query.isLoading} error={query.error} onRetry={() => void query.refetch()}>{workout && <>
       {!clientMode && navigationState?.firstPlanClient && <section className="first-plan-success" aria-labelledby="first-plan-success-title">
         <div><p className="eyebrow">ГОТОВО</p><h2 id="first-plan-success-title">Тренировка запланирована</h2><p>Первый план для {navigationState.firstPlanClient.fullName} готов.</p></div>
@@ -2138,7 +2162,7 @@ export function WorkoutDetailPage() {
         showStatus={detailState !== 'completed'}
         action={manageMenuInHeader ? <OverflowMenu label="Другие действия с тренировкой" items={workoutManageItems} /> : undefined}
         meta={<><span>{formatLocalDate(workout.workoutDate)} · {workout.startTime?.slice(0, 5) ?? 'без времени'}</span><span>{workoutTrainingFormatLabel(workout.trainingFormat ?? 'self')}</span>{clientMode && !done && authorLabel && <span>{authorLabel}</span>}{clientAuthoredReadOnly && <span>Создано клиентом · упражнения только для просмотра</span>}{stageTitle && <span>Цель: {stageTitle}</span>}</>} />}
-      {isFitLimeEnabled(actor) && workout.title && <p className="workout-plan-title">{workout.title}</p>}
+      {workout.title && <p className="workout-plan-title">{workout.title}</p>}
       {isFitLimeEnabled(actor) && workout.plannedDate && <p className="workout-plan-title">Исходный план: {formatLocalDate(localDate(workout.plannedDate))}{workout.plannedStartTime ? ` · ${workout.plannedStartTime.slice(0, 5)}${workout.plannedEndTime ? `–${workout.plannedEndTime.slice(0, 5)}` : ''}` : ' · без времени'}</p>}
       {isFitLimeEnabled(actor) && workout.status === 'planned' && canExecute && workout.workoutDate !== today && <p className="workout-plan-title">При запуске сейчас тренировка начнётся сегодня, {formatLocalDate(today)}. Исходная дата плана сохранится отдельно.</p>}
       {plannedActions && canExecute && <div className="workout-detail-primary-actions">
@@ -2146,6 +2170,7 @@ export function WorkoutDetailPage() {
           <WorkoutCta className="wide" pending={start.isPending || cancelPlanned.isPending || reschedule.isPending} pendingLabel="Сохраняем…" onClick={() => setDecisionSheet('actions')}>{plannedActions.primary}</WorkoutCta>
         </Coachmark> : <WorkoutCta className="wide" pending={start.isPending} pendingLabel={plannedActions.pending} onClick={() => start.mutate()}>{plannedActions.primary}</WorkoutCta>}
       </div>}
+      {bookingHistoryAvailable && <button type="button" className="secondary wide booking-history-open" onClick={() => setBookingHistoryOpen(true)}><HistoryIcon /><span>Выбрать из истории</span><ChevronRightIcon /></button>}
       {workout.status === 'cancelled' && canExecute && <div className="workout-detail-primary-actions"><WorkoutCta className="wide" variant="secondary" onClick={openReschedule}>Вернуть в план</WorkoutCta></div>}
       {start.error && !(start.error instanceof Error && 'code' in start.error && start.error.code === 'active_workout_exists') && <p className="error">{start.error.message}</p>}
       {workout.status === 'in_progress' && canExecute && <Link className="button primary wide" to={`/workouts/${workoutId}/live`} onClick={(event) => {
@@ -2168,8 +2193,9 @@ export function WorkoutDetailPage() {
       {done && !clientMode && workout.clientQuestion && <WorkoutTrainerQuestion workout={workout} canReply={canReview} startEditing={new URLSearchParams(location.search).get('reply') === '1'} authorName={responseAuthorName} saving={questionAnswer.isPending} error={questionAnswer.error} onSave={(value) => questionAnswer.mutateAsync(value)} />}
       {done && (clientMode || !workout.clientQuestion) && <WorkoutTrainerReview workout={workout} canEdit={canReview} authorName={responseAuthorName} saving={review.isPending} error={review.error} onSave={(value) => review.mutateAsync(value)} />}
       {!clientMode && workout.clientComment && workout.sessionRpe === undefined && <WorkoutClientComment workout={workout} />}
-      {!done && <div className="workout-detail-exercise-overview"><p>ПЛАН ТРЕНИРОВКИ</p><span>{workout.exercises.length} {exerciseCountLabel(workout.exercises.length)} · {sets.length} {setCountLabel(sets.length)}</span></div>}
-      {!clientCompletionReport && exerciseCards}
+      {!done && <div className="workout-detail-exercise-overview"><p>{bookingHistoryAvailable ? 'План тренировки' : 'ПЛАН ТРЕНИРОВКИ'}</p>{!emptyBookingPlan && <span>{workout.exercises.length} {exerciseCountLabel(workout.exercises.length)} · {sets.length} {setCountLabel(sets.length)}</span>}</div>}
+      {emptyBookingPlan && <p className="booking-plan-empty">Упражнения ещё не добавлены</p>}
+      {!clientCompletionReport && !emptyBookingPlan && exerciseCards}
       {removeCompletedExercise.error && <p className="error workout-exercise-removal-error" role="alert">Не удалось удалить упражнение. <button type="button" className="link" disabled={removeCompletedExercise.isPending} onClick={async () => {
         if (!removeCompletedExercise.variables) return
         const refreshed = await query.refetch()
@@ -2178,7 +2204,7 @@ export function WorkoutDetailPage() {
       {workout.notes && !clientCompletionReport && <section className="workout-review workout-review-readonly"><div className="workout-review-head"><div><p className="eyebrow">{clientMode && !clientOwned ? 'ОТ ТРЕНЕРА' : 'К ТРЕНИРОВКЕ'}</p><h2>{clientMode && !clientOwned ? 'Инструкции' : 'Заметка'}</h2></div></div><p className="workout-review-text">{workout.notes}</p></section>}
 
       {canManage && !clientCompletionReport && <div className="actions workout-detail-actions">
-        {(workout.status === 'planned' || done) && <Link className="button secondary" to={`/workouts/${workoutId}/edit`} state={childNavigationState}>{done ? 'Изменить результат' : 'Изменить'}</Link>}
+        {(workout.status === 'planned' || done) && <Link className="button secondary" to={`/workouts/${workoutId}/edit`} state={childNavigationState}>{done ? 'Изменить результат' : emptyBookingPlan ? <><AddIcon />Добавить упражнения</> : bookingHistoryAvailable ? 'Изменить план' : 'Изменить'}</Link>}
         {!manageMenuInHeader && <OverflowMenu placement="top" label="Другие действия с тренировкой" items={workoutManageItems} />}
       </div>}
       {clientAuthoredReadOnly && <div className="actions"><Link className="button secondary" to={`/workouts/new?copy=${workoutId}`} state={childNavigationState}>Скопировать и отправить план</Link></div>}
@@ -2200,8 +2226,13 @@ export function WorkoutDetailPage() {
           </form>}
         </section>
       </div>}
-      {favoriteSheetOpen && workout && <SaveFavoriteWorkoutSheet exercises={workout.exercises} pending={saveFavorite.isPending} error={saveFavorite.error}
+      {renameSheetOpen && workout && canManage && <WorkoutRenameSheet workout={{ ...workout, version: renameVersion }} lime={isFitLimeEnabled(actor) || isClientLimeEnabled(actor)}
+        onSave={async (title, expectedVersion) => { await workoutsRepository.rename({ ...workout, version: expectedVersion }, title); await invalidateWorkoutSurfaces() }}
+        onReload={async () => { const fresh = await query.refetch(); if (!fresh.data || fresh.error) throw fresh.error ?? new Error('Не удалось перечитать тренировку'); return fresh.data }}
+        onClose={() => setRenameSheetOpen(false)} />}
+      {favoriteSheetOpen && workout && <SaveFavoriteWorkoutSheet title={workout.title ?? workout.favoriteTitle} exercises={workout.exercises} pending={saveFavorite.isPending} error={saveFavorite.error}
         onSave={(title) => saveFavorite.mutate(title)} onClose={() => { saveFavorite.reset(); setFavoriteSheetOpen(false) }} />}
+      {bookingHistoryOpen && workout && <BookingHistorySheet key={workout.id} target={workout} onClose={() => setBookingHistoryOpen(false)} onApplied={invalidateWorkoutSurfaces} onReload={() => query.refetch()} />}
       {confirmDialog}{activeWorkoutRecoveryDialog}
     </>}</AsyncView>
   </Page>
@@ -3614,7 +3645,20 @@ export function LiveWorkoutPage() {
       void queryClient.invalidateQueries({ queryKey: ['clients'] })
     },
   })
-  const appendExercise = useMutation({ mutationFn: (exercise: ExerciseSnapshot) => runLiveWorkoutMutation(`append-exercise:${exercise.ref}`, (workout) => workoutsRepository.appendLiveExercise(workout, exercise)), onSuccess: async () => { await query.refetch() } })
+  const appendExercise = useMutation({ mutationFn: ({ exercise, useHistory }: { exercise: ExerciseSnapshot; useHistory: boolean }) => runLiveWorkoutMutation(`append-exercise:${exercise.ref}`, async (workout) => {
+    if (!useHistory || !isQuickWorkoutEntryEnabled(actor)) return workoutsRepository.appendLiveExercise(workout, exercise)
+    const key = `${workoutId}:${exercise.source}:${exercise.ref}`
+    const pending = pendingLiveExerciseAdds.current.get(key) ?? { operationId: crypto.randomUUID(), expectedVersion: workout.version }
+    pendingLiveExerciseAdds.current.set(key, pending)
+    try {
+      const version = await workoutsRepository.appendLiveExercise({ ...workout, version: pending.expectedVersion }, exercise, pending.operationId, true)
+      pendingLiveExerciseAdds.current.delete(key)
+      return version
+    } catch (error) {
+      if (!(error instanceof RepositoryError && ['live_workout_network', 'service_unavailable', 'invalid_response'].includes(error.code))) pendingLiveExerciseAdds.current.delete(key)
+      throw error
+    }
+  }), onSuccess: async () => { await query.refetch() } })
   const appendSelection = useMutation({
     mutationFn: async (exercises: ExerciseSnapshot[]) => {
       await liveSets.waitForIdle()
@@ -3624,7 +3668,7 @@ export function LiveWorkoutPage() {
           await runLiveWorkoutMutation(`append-exercise:${exercise.source}:${exercise.ref}`, (workout) => {
             const operation = pendingLiveExerciseAdds.current.get(key) ?? { operationId: crypto.randomUUID(), expectedVersion: workout.version }
             pendingLiveExerciseAdds.current.set(key, operation)
-            return workoutsRepository.appendLiveExercise({ ...workout, version: operation.expectedVersion }, exercise, operation.operationId)
+            return workoutsRepository.appendLiveExercise({ ...workout, version: operation.expectedVersion }, exercise, operation.operationId, isQuickWorkoutEntryEnabled(actor))
           })
         } catch (error) {
           if (!(error instanceof RepositoryError && ['live_workout_network', 'service_unavailable', 'invalid_response'].includes(error.code))) pendingLiveExerciseAdds.current.delete(key)
@@ -3734,10 +3778,10 @@ export function LiveWorkoutPage() {
     await appendSelection.mutateAsync(exercises)
     closePicker()
   }
-  async function pickLiveExercise(exercise: ExerciseSnapshot) {
+  async function pickLiveExercise(exercise: ExerciseSnapshot, runningFormat?: RunningFormat) {
     const targetId = replaceExerciseId
     if (!targetId) {
-      appendExercise.mutate(exercise)
+      appendExercise.mutate({ exercise, useHistory: !runningFormat })
       closePicker()
       return
     }
@@ -4449,7 +4493,7 @@ export function LiveWorkoutPage() {
   }
   const exerciseCount = query.data?.exercises.length ?? 0
   const exerciseCountLabel = `${exerciseCount} ${exerciseCount % 100 >= 11 && exerciseCount % 100 <= 14 ? 'упражнений' : exerciseCount % 10 === 1 ? 'упражнение' : exerciseCount % 10 >= 2 && exerciseCount % 10 <= 4 ? 'упражнения' : 'упражнений'}`
-  const liveHeader = query.data && <WorkoutHeader eyebrow={visualReference ? exerciseCountLabel : 'LIVE'} title={visualReference ? query.data.title || workoutFocusTitle(muscleGroupLabels(query.data.exercises)) : query.data.clientName} state="current" showStatus={!visualReference && query.data.exercises.length > 0} className="live-session-header" meta={<>{coachReference && <span className="coach-live-client">{query.data.clientName}</span>}<span>{workoutTrainingFormatLabel(query.data.trainingFormat ?? 'self')}</span>{visualReference && exerciseCount > 0 && <span className="coach-live-exercise-markers" aria-label="Состояния упражнений">{query.data.exercises.map((exercise, index) => <span key={exercise.id} className={exercise.sets.length > 0 && exercise.sets.every((set) => set.confirmedAt) ? 'done' : exercise.id === activeLiveExercise?.id ? 'current' : ''} aria-label={`Упражнение ${index + 1}: ${exercise.sets.length > 0 && exercise.sets.every((set) => set.confirmedAt) ? 'выполнено' : exercise.id === activeLiveExercise?.id ? 'текущее' : 'ожидает'}`} />)}</span>}{sessionProgress.setCount > 0 ? <div className="live-session-progress">
+  const liveHeader = query.data && <WorkoutHeader eyebrow={visualReference ? exerciseCountLabel : 'LIVE'} title={visualReference ? query.data.title || workoutFocusTitle(muscleGroupLabels(query.data.exercises)) : query.data.clientName} state="current" showStatus={!visualReference && query.data.exercises.length > 0} className="live-session-header" meta={<>{coachReference && <span className="coach-live-client">{query.data.clientName}</span>}<span>{workoutTrainingFormatLabel(query.data.trainingFormat ?? 'self')}</span>{!visualReference && query.data.title && <span>{query.data.title}</span>}{visualReference && exerciseCount > 0 && <span className="coach-live-exercise-markers" aria-label="Состояния упражнений">{query.data.exercises.map((exercise, index) => <span key={exercise.id} className={exercise.sets.length > 0 && exercise.sets.every((set) => set.confirmedAt) ? 'done' : exercise.id === activeLiveExercise?.id ? 'current' : ''} aria-label={`Упражнение ${index + 1}: ${exercise.sets.length > 0 && exercise.sets.every((set) => set.confirmedAt) ? 'выполнено' : exercise.id === activeLiveExercise?.id ? 'текущее' : 'ожидает'}`} />)}</span>}{sessionProgress.setCount > 0 ? <div className="live-session-progress">
     <span className="live-session-progress-copy"><span>{sessionProgress.complete ? 'Все упражнения выполнены' : activeLiveExercise ? `Сейчас: ${activeLiveExercise.name} · подход ${sessionProgress.activeSetNumber} из ${sessionProgress.activeExerciseSetCount}` : 'Выберите упражнение'}</span><strong>Готово {sessionProgress.completedSetCount} из {sessionProgress.setCount}</strong></span>
     <span className="live-session-progress-track" role="progressbar" aria-label="Выполненные подходы" aria-valuemin={0} aria-valuemax={sessionProgress.setCount} aria-valuenow={sessionProgress.completedSetCount}><span style={{ width: `${sessionProgress.percent}%` }} /></span>
   </div> : null}</>} />
@@ -4792,7 +4836,7 @@ export function LiveWorkoutPage() {
           : !visualReference && <WorkoutCta variant={hasIncompleteLiveSets ? 'secondary' : 'primary'} className="wide" pending={finish.isPending} pendingLabel="Завершаем…" disabled={rootMutationPending || save.isPending || confirm.isPending} onClick={() => { if (hasIncompleteLiveSets || cardioSetMissingTime || timerConfirmedSets.length > 0) setConfirmFinish(true); else finish.mutate() }}>Завершить тренировку</WorkoutCta>)}
       </div>}
     </>}</AsyncView>
-    {canManageLiveStructure && pickerOpen && <ExercisePicker coachLiveV79={coachV79} clientLiveV79={clientReference} clientLime={isClientLimeEnabled(actor)} reference={coachReference} referenceAppearance={visualReference} catalog={catalog} clientRecent={clientRecentExercises} techniqueActionLabel={replaceExerciseId ? 'Заменить упражнение' : 'Добавить упражнение'} onPick={pickLiveExercise} onPickMany={pickLiveExercises} multiple={clientLime && !replaceExerciseId} showEmptySelection={clientLime && !replaceExerciseId} keepSelectionWhileAdding={clientLime && !replaceExerciseId} selectionDraft={clientLime && !replaceExerciseId ? livePickerSelection : undefined} onSelectionDraftChange={clientLime && !replaceExerciseId ? setLivePickerSelection : undefined} onClose={closePicker} />}
+    {canManageLiveStructure && pickerOpen && <ExercisePicker quickEntry={isQuickWorkoutEntryEnabled(actor)} coachLiveV79={coachV79} clientLiveV79={clientReference} clientLime={isClientLimeEnabled(actor)} reference={coachReference} referenceAppearance={visualReference} catalog={catalog} clientRecent={clientRecentExercises} techniqueActionLabel={replaceExerciseId ? 'Заменить упражнение' : 'Добавить упражнение'} onPick={pickLiveExercise} onPickMany={pickLiveExercises} multiple={clientLime && !replaceExerciseId} showEmptySelection={clientLime && !replaceExerciseId} keepSelectionWhileAdding={clientLime && !replaceExerciseId} selectionDraft={clientLime && !replaceExerciseId ? livePickerSelection : undefined} onSelectionDraftChange={clientLime && !replaceExerciseId ? setLivePickerSelection : undefined} onClose={closePicker} />}
     {techniqueExercise && <ExerciseTechniqueSheet exercise={techniqueExercise} onClose={() => setTechniqueExercise(null)} />}
     {confirmDialog}
   </Page>

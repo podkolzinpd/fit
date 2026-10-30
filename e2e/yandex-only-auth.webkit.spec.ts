@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test'
 import { z } from 'zod'
-import { clientId, coachGestureWorkout, mockPilot } from './fit-lime-fixtures'
+import { clientId, coachGestureWorkout, mockPilot, publicTrainerDraft, publicTrainerId } from './fit-lime-fixtures'
 import type { WorkoutExerciseDraft } from '../src/shared/domain'
 
 async function readyPlanEditorFixture(page: Page, theme = 'dark') {
@@ -802,6 +802,7 @@ for (const lime of [false, true]) {
     const trainerId = '11e49d0a-78ac-4b5c-a2d1-b4c087f1d169'
     const conversationId = '44e49d0a-78ac-4b5c-a2d1-b4c087f1d169'
     let displayName = 'Татьяна'
+    let profilePublished = true
     let connectionsReads = 0
     let failConnections = false
     await page.route('https://stage.example.test/health', (route) => route.fulfill({ json: { status: 'ok' }, headers: {
@@ -824,11 +825,16 @@ for (const lime of [false, true]) {
       if (path === '/v1/me/finance') return route.fulfill({ json: { finance: { trainers: [] } } })
       if (path === '/v1/me/sport-profile') return route.fulfill({ json: { sport: { sports: [], bio: null } } })
       if (path === '/v1/chat/conversations') return route.fulfill({ json: { conversationId } })
+      if (path === `/v1/trainers/${publicTrainerId}/public-profile`) return route.fulfill({ json: {
+        publicId: publicTrainerId, draft: { ...publicTrainerDraft, displayName, acceptingClients: false },
+        published: { ...publicTrainerDraft, displayName, acceptingClients: false }, listedInCatalog: false,
+        publishedAt: '2026-10-29T09:00:00Z', updatedAt: '2026-10-29T09:00:00Z', version: 1, isBrandTrainer: false,
+      } })
       if (path === '/v1/connections') {
         connectionsReads += 1
         if (failConnections) return route.fulfill({ status: 403, json: { error: 'forbidden' } })
         return route.fulfill({ json: { memberships: [{ clientId, trainerId, firstName: null, lastName: null,
-          displayName, joinedAt: '2026-10-07T10:00:00Z', isRoot: true }], invitations: [] } })
+          displayName, publicProfileId: profilePublished ? publicTrainerId : null, joinedAt: '2026-10-07T10:00:00Z', isRoot: true }], invitations: [] } })
       }
       if (path === '/v1/chat/threads') return route.fulfill({ json: { threads: [{
         conversationId, clientId, trainerId, partnerUserId: trainerId, partnerName: displayName,
@@ -857,6 +863,13 @@ for (const lime of [false, true]) {
       await page.screenshot({ path: testInfo.outputPath(`trainer-name-profile-${width}.png`), fullPage: true })
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
     }
+    const profileLink = page.getByRole('link', { name: 'Анкета тренера Татьяна', exact: true })
+    await expect(profileLink).toHaveAttribute('href', `/trainers/${publicTrainerId}`)
+    await profileLink.locator('.client-trainer-avatar').click()
+    await expect(page.getByRole('heading', { name: 'Татьяна', exact: true })).toBeVisible()
+    await expect(page.getByText('Тренер временно не принимает новых клиентов')).toBeVisible()
+    await page.getByRole('button', { name: 'Назад', exact: true }).click()
+    await expect(page).toHaveURL(/\/me\/profile$/)
     await page.getByRole('link', { name: 'Настройки профиля' }).click()
     await expect(page).toHaveURL(/\/me\/settings$/)
     // URL changes before a cold lazy route commits. Wait until the profile really unmounts.
@@ -883,6 +896,11 @@ for (const lime of [false, true]) {
     await page.locator('.client-home-connections').getByRole('button', { name: 'Повторить', exact: true }).click()
     await expect(page.locator('.client-home-connections .error')).toHaveCount(0)
     await expect(page.locator('.client-trainer-person strong')).toHaveText(displayName)
+    profilePublished = false
+    await page.reload()
+    await expect(page.getByText('Анкета не опубликована', { exact: true })).toBeVisible()
+    await expect(page.locator('.client-trainer-profile-link')).toHaveCount(0)
+    await expect(page.getByRole('button', { name: 'Написать', exact: true })).toBeVisible()
   })
 }
 
@@ -1557,3 +1575,44 @@ test('Yandex trainer detail keeps automatic exercise menu placement', async ({ p
   await page.keyboard.press('Escape')
   await expect(menu).toHaveCount(0)
 })
+
+// The two mobile widths cover the iPhone clipping report and responsive wrapping;
+// desktop covers the compact public shell. Themes share the same scroll contract.
+for (const { width, height, theme } of [
+  { width: 390, height: 844, theme: 'dark' },
+  { width: 430, height: 932, theme: 'light' },
+  { width: 1440, height: 1000, theme: 'dark' },
+]) {
+  test(`public trainer uses the full viewport and reaches its end ${width} ${theme}`, async ({ page }, testInfo) => {
+    test.skip(process.env.VITE_YANDEX_ONLY_AUTH_ENABLED !== 'true', 'Requires production Yandex composition.')
+    await page.setViewportSize({ width, height })
+    await mockPilot(page, { role: 'client', profileId: clientId })
+    await page.addInitScript(({ id, theme }) => localStorage.setItem(`fit.clientLime.theme.${id}`, theme), { id: clientId, theme })
+    const imageUrl = new URL('/assets/startup-photo-983c93dc4df8.jpg', testInfo.project.use.baseURL).href
+    const published = { ...publicTrainerDraft, photos: publicTrainerDraft.photos.map(photo => ({ ...photo, url: imageUrl, thumbnailUrl: imageUrl })), bio: 'Длинное описание тренировок и опыта. '.repeat(30),
+      certificates: [{ title: 'Конец анкеты', organization: 'Тест', year: 2026 }] }
+    await page.route(`**/v1/trainers/${publicTrainerId}/public-profile`, route => route.fulfill({
+      json: { publicId: publicTrainerId, draft: published, published, listedInCatalog: true,
+        version: 1, isBrandTrainer: false, publishedAt: '2026-10-29T09:00:00Z', updatedAt: '2026-10-29T09:00:00Z' },
+    }))
+    await page.goto(`/trainers/${publicTrainerId}`)
+    const profile = page.locator('.public-trainer-page')
+    await expect(profile.getByRole('heading', { name: 'Тестовый тренер' })).toBeVisible()
+    await expect.poll(() => profile.locator('img.trainer-card-avatar').evaluate((image: HTMLImageElement) => image.naturalWidth)).toBeGreaterThan(0)
+    await page.screenshot({ path: testInfo.outputPath('public-trainer-top.png') })
+    const unusedBottom = await profile.evaluate(element => {
+      const content = element.parentElement!
+      return content.getBoundingClientRect().bottom - element.getBoundingClientRect().bottom
+    })
+    expect(unusedBottom, 'No tab bar is present: its reserved space must not clip the public page').toBeLessThanOrEqual(1)
+    await profile.evaluate(element => element.scrollTo({ top: element.scrollHeight }))
+    await expect(profile.getByText('Конец анкеты', { exact: true })).toBeInViewport()
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+    await page.screenshot({ path: testInfo.outputPath('public-trainer-bottom.png') })
+    await profile.evaluate(element => element.scrollTo({ top: 0 }))
+    await profile.getByRole('button', { name: 'Открыть фото тренера Тестовый тренер' }).click()
+    await expect(page.getByRole('dialog', { name: 'Фотографии тренера' })).toBeVisible()
+    await page.getByRole('button', { name: 'Закрыть фото' }).click()
+    await expect(profile.getByRole('button', { name: 'Написать тренеру' })).toBeVisible()
+  })
+}

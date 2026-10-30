@@ -1,3 +1,4 @@
+import { isQuickWorkoutEntryEnabled } from '../../app/quick-workout-entry'
 import { createChatMeetingsRepository } from './chat-meetings.repository'
 import { z } from 'zod'
 import { isClientWorkoutRedesignEnabled } from '../../app/client-workout-redesign'
@@ -217,6 +218,7 @@ const membershipSchema = z.object({
   firstName: z.string().nullable(),
   lastName: z.string().nullable(),
   displayName: z.string().optional(),
+  publicProfileId: uuid.nullable().optional(),
   joinedAt: yandexDateTimeSchema,
   isRoot: z.boolean(),
 })
@@ -1609,7 +1611,9 @@ export function createYandexMainRepository(
         const completed = (await this.list(undefined, undefined, clientId)).filter((item) => item.status === 'done')
         for (const item of completed) for (const exercise of item.exercises) {
           if (!refs.has(exercise.ref) || result.has(exercise.ref)) continue
-          result.set(exercise.ref, { workoutDate: item.workoutDate, sets: exercise.sets.filter((set) => set.confirmedAt !== null).map((set) => ({ position: set.position, ...set.fact })) })
+          const sets = exercise.sets.filter((set) => set.confirmedAt !== null).map((set, position) => ({ position: isQuickWorkoutEntryEnabled(actor) ? position : set.position, ...set.fact }))
+          if (isQuickWorkoutEntryEnabled(actor) && sets.length === 0) continue
+          result.set(exercise.ref, { workoutDate: item.workoutDate, sets })
         }
         return result
       },
@@ -1641,7 +1645,7 @@ export function createYandexMainRepository(
       async reschedule(item, date, startTime) { return commandVersion(`/v1/workouts/${item.id}/reschedule`, 'POST', { workoutDate: date, startTime, expectedVersion: item.version }) },
       async saveLiveSet(id, draft, version) { return liveCommand(`/v1/workout-sets/${id}/draft`, 'PUT', version, { draft: { weightKg: draft.weightKg ?? null, reps: draft.reps ?? null, durationMin: draft.durationMin ?? null, durationSec: draft.durationSec ?? null, distanceKm: draft.distanceKm ?? null, rpe: draft.rpe ?? null, metricSources: draft.metricSources ?? null, ...(draft.timerConfirmed ? { timerConfirmed: true } : {}) } }) },
       async confirmLiveSet(id, version) { return liveCommand(`/v1/workout-sets/${id}/confirm`, 'POST', version) },
-      async appendLiveExercise(item, exercise: ExerciseSnapshot, operationId?: string) { return liveCommand(`/v1/workouts/${item.id}/exercises`, 'POST', item.version, { exercise: { source: exercise.source, ref: exercise.ref, customExerciseId: exercise.customExerciseId ?? null, name: exercise.name, muscleGroup: exercise.muscleGroup, inputKind: exercise.inputKind } }, operationId) },
+      async appendLiveExercise(item, exercise: ExerciseSnapshot, operationId?: string, prefillFromHistory = false) { return liveCommand(`/v1/workouts/${item.id}/exercises`, 'POST', item.version, { exercise: { source: exercise.source, ref: exercise.ref, customExerciseId: exercise.customExerciseId ?? null, name: exercise.name, muscleGroup: exercise.muscleGroup, inputKind: exercise.inputKind, ...(prefillFromHistory && isQuickWorkoutEntryEnabled(actor) ? { prefillFromHistory: true } : {}) } }, operationId) },
       async appendLiveSet(item, exerciseId) { return liveCommand(`/v1/workout-exercises/${exerciseId}/sets`, 'POST', item.version) },
       async appendLiveRound(item: Workout, blockId: string, operationId: string) { return liveCommand(`/v1/workouts/${item.id}/blocks/${blockId}/rounds`, 'POST', item.version, {}, operationId) },
       async removeLastLiveRound(item: Workout, blockId: string, position: number, operationId: string) { return liveCommand(`/v1/workouts/${item.id}/blocks/${blockId}/rounds/${position}`, 'DELETE', item.version, {}, operationId) },
@@ -1657,6 +1661,7 @@ export function createYandexMainRepository(
       async setExerciseComment(item, exerciseId, comment) { return liveCommand(`/v1/workout-exercises/${exerciseId}/comment`, 'PUT', item.version, { comment }) },
       async setWorkoutReview(item, value) { return commandVersion(`/v1/workouts/${item.id}/review`, 'PUT', { reaction: value.reaction, review: value.review, expectedVersion: item.version }) },
       async setClientWorkoutComment(item, comment) { return commandVersion(`/v1/workouts/${item.id}/comment`, 'PUT', { comment, expectedVersion: item.version }) },
+      async rename(item, title) { return commandVersion(`/v1/workouts/${item.id}/title`, 'PUT', { title, expectedVersion: item.version }) },
       async setActualDuration(item, actualDurationSec) { return commandVersion(`/v1/workouts/${item.id}/duration`, 'PUT', { actualDurationSec, expectedVersion: item.version }) },
       async submitFeedback(item, value) { return commandVersion(`/v1/workouts/${item.id}/feedback`, 'PUT', { ...value, expectedVersion: item.version }) },
       async askQuestion(item, question) { return commandVersion(`/v1/workouts/${item.id}/question`, 'PUT', { question, expectedVersion: item.version }) },
@@ -1724,6 +1729,7 @@ export function createYandexMainRepository(
             firstName: item.firstName,
             lastName: item.lastName,
             displayName: item.displayName,
+            publicProfileId: item.publicProfileId,
             joinedAt: item.joinedAt,
             isRoot: item.isRoot,
           }))
