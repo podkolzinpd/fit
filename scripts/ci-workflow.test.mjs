@@ -156,6 +156,7 @@ test('runs required Yandex-only browser auth without starting local Supabase', (
   assert.match(job, /needs: e2e-scope\n    if: needs\.e2e-scope\.outputs\.required == 'true'/)
   assert.match(job, /FIT_YANDEX_E2E_REQUIRED: 'true'/)
   assert.match(job, /--env FIT_TEST_PRODUCTION_BUILD=true/)
+  assert.match(job, /--env FIT_QUICK_WORKOUT_ENTRY_ACCEPTANCE=1/)
   assert.match(job, /npm run build && npx playwright test/)
   assert.match(job, /--env VITE_NUTRITION_ENABLED=true/)
   assert.match(job, /--env VITE_NUTRITION_NATIVE_COHORT=true/)
@@ -171,7 +172,7 @@ test('runs required Yandex-only browser auth without starting local Supabase', (
     assert.match(job, new RegExp(`${flag}: 'true'`))
     assert.match(job, new RegExp(`--env ${flag}`))
   }
-  assert.match(job, /playwright test e2e\/yandex-only-auth\.webkit\.spec\.ts e2e\/nutrition-diary\.webkit\.spec\.ts e2e\/nutrition-home\.webkit\.spec\.ts e2e\/client-workout-reference\.spec\.ts e2e\/coach-live-v79\.spec\.ts --project=iphone-13-webkit --project=mobile-chromium --workers=1 --fail-on-flaky-tests/)
+  assert.match(job, /playwright test e2e\/yandex-only-auth\.webkit\.spec\.ts e2e\/nutrition-diary\.webkit\.spec\.ts e2e\/nutrition-home\.webkit\.spec\.ts e2e\/client-workout-reference\.spec\.ts e2e\/coach-live-v79\.spec\.ts e2e\/quick-workout-entry\.spec\.ts e2e\/quick-workout-entry\.webkit\.spec\.ts --project=iphone-13-webkit --project=mobile-chromium --workers=1 --fail-on-flaky-tests/)
   assert.match(job, /--env FIT_COACH_LIVE_V79_ACCEPTANCE=1/)
   assert.match(job, /--env VITE_COACH_LIVE_V79_ENABLED=true/)
   assert.match(job, /--env VITE_COACH_LIVE_DENSITY_ENABLED=true/)
@@ -315,6 +316,51 @@ test('clears the setup-cli override to retain official registry fallback in ever
     )
     assert.doesNotMatch(body, /SUPABASE_INTERNAL_IMAGE_REGISTRY=docker\.io/)
   }
+})
+
+test('reserves Supabase ports before checkout on disposable GitHub hosts only', () => {
+  const scripts = []
+  for (const name of ['database', 'e2e-visual', 'e2e-chromium', 'e2e-webkit']) {
+    const start = workflow.indexOf(`  ${name}:\n`)
+    const job = workflow.slice(start).split(/\n  [a-z][a-z0-9-]*:\n/, 1)[0]
+    const setup = job.indexOf('Reserve local Supabase ports before network setup')
+    assert.ok(setup > 0 && setup < job.indexOf('uses: actions/checkout@v4'), name)
+    const script = inlineShell(job).find(value => value.includes('ip_local_reserved_ports'))
+    assert.ok(script, name)
+    scripts.push(script)
+  }
+  assert.equal(new Set(scripts).size, 1)
+  const root = mkdtempSync(join(tmpdir(), 'fit-ci-ports-'))
+  try {
+    const log = join(root, 'calls')
+    writeFileSync(join(root, 'sysctl'), `#!/bin/bash
+if [ "$1" = -n ]; then
+  printf '%s' "$FIT_TEST_RESERVED"
+  exit "\${FIT_TEST_READ_STATUS:-0}"
+fi
+printf '%s\\n' "$*" >> "$FIT_TEST_CALLS"
+exit "\${FIT_TEST_WRITE_STATUS:-0}"
+`, { mode: 0o755 })
+    writeFileSync(join(root, 'sudo'), '#!/bin/bash\nexec "$@"\n', { mode: 0o755 })
+    const run = overrides => spawnSync('bash', ['-c', scripts[0]], {
+      encoding: 'utf8',
+      env: { PATH: `${root}:${process.env.PATH}`, GITHUB_ACTIONS: 'true', RUNNER_OS: 'Linux',
+        RUNNER_ENVIRONMENT: 'github-hosted', FIT_TEST_RESERVED: '', FIT_TEST_CALLS: log, ...overrides },
+    })
+    for (const prior of ['', '40000-40010,55000']) {
+      assert.equal(run({ FIT_TEST_RESERVED: prior }).status, 0)
+      const calls = readFileSync(log, 'utf8').trim().split('\n')
+      assert.equal(calls.at(-1), `-q -w net.ipv4.ip_local_reserved_ports=${prior ? `${prior},` : ''}54320-54329`)
+    }
+    const before = readFileSync(log, 'utf8')
+    for (const env of [{ RUNNER_ENVIRONMENT: 'self-hosted' }, { RUNNER_OS: 'macOS' }, { GITHUB_ACTIONS: 'false' }]) {
+      assert.notEqual(run(env).status, 0)
+      assert.equal(readFileSync(log, 'utf8'), before)
+    }
+    assert.equal(run({ FIT_TEST_READ_STATUS: '7' }).status, 7)
+    assert.equal(readFileSync(log, 'utf8'), before)
+    assert.equal(run({ FIT_TEST_WRITE_STATUS: '8' }).status, 8)
+  } finally { rmSync(root, { recursive: true, force: true }) }
 })
 
 test('uses the identical pinned PostgreSQL17 image without changing health or migration checks', () => {

@@ -154,6 +154,17 @@ jobs:
     if: needs.e2e-scope.outputs.database_required == 'true'
     runs-on: ubuntu-latest
     steps:
+      # Keep Docker service ports out of automatic outbound socket allocation.
+      # This changes only the disposable GitHub-hosted test VM.
+      - name: Reserve local Supabase ports before network setup
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_ACTIONS" = true
+          test "$RUNNER_OS" = Linux
+          test "$RUNNER_ENVIRONMENT" = github-hosted
+          reserved=$(sysctl -n net.ipv4.ip_local_reserved_ports)
+          sudo sysctl -q -w "net.ipv4.ip_local_reserved_ports=${reserved:+$reserved,}54320-54329"
       - uses: actions/checkout@v4
       - uses: supabase/setup-cli@v1
         with:
@@ -297,12 +308,15 @@ jobs:
             --env FIT_YANDEX_E2E_REQUIRED \
             --env FIT_CLIENT_WORKOUT_ACCEPTANCE=1 \
             --env FIT_COACH_LIVE_V79_ACCEPTANCE=1 \
+            --env FIT_QUICK_WORKOUT_ENTRY_ACCEPTANCE=1 \
             --env VITE_COACH_LIVE_DENSITY_ENABLED=true \
             --env VITE_COACH_LIVE_DENSITY_PILOT_USER_IDS=c0ac0000-6010-4000-8000-000000000001,c0ac0000-6010-4000-8000-000000000002 \
             --env VITE_COACH_LIVE_V79_ENABLED=true \
             --env VITE_COACH_LIVE_V79_PILOT_USER_IDS=c0ac0000-6010-4000-8000-000000000001,c0ac0000-6010-4000-8000-000000000002 \
             --env VITE_CLIENT_WORKOUT_REDESIGN_ENABLED=true \
             --env VITE_CLIENT_WORKOUT_REDESIGN_PILOT_USER_IDS=c11e0000-6010-4000-8000-000000000001 \
+            --env VITE_QUICK_WORKOUT_ENTRY_ENABLED=true \
+            --env VITE_QUICK_WORKOUT_ENTRY_PILOT_USER_IDS=c0ac0000-6010-4000-8000-000000000001,c0ac0000-6010-4000-8000-000000000002 \
             --env VITE_COACH_WORKOUT_REDESIGN_ENABLED=true \
             --env VITE_COACH_WORKOUT_REDESIGN_PILOT_USER_IDS=c0ac0000-6010-4000-8000-000000000001,c0ac0000-6010-4000-8000-000000000002 \
             --env VITE_CLIENT_LIME_ENABLED \
@@ -315,7 +329,7 @@ jobs:
             --volume "${{ github.workspace }}:/work" \
             --workdir /work \
             "$PLAYWRIGHT_IMAGE" \
-            sh -c 'npm run build && npx playwright test e2e/yandex-only-auth.webkit.spec.ts e2e/nutrition-diary.webkit.spec.ts e2e/nutrition-home.webkit.spec.ts e2e/client-workout-reference.spec.ts e2e/coach-live-v79.spec.ts --project=iphone-13-webkit --project=mobile-chromium --workers=1 --fail-on-flaky-tests'
+            sh -c 'npm run build && npx playwright test e2e/yandex-only-auth.webkit.spec.ts e2e/nutrition-diary.webkit.spec.ts e2e/nutrition-home.webkit.spec.ts e2e/client-workout-reference.spec.ts e2e/coach-live-v79.spec.ts e2e/quick-workout-entry.spec.ts e2e/quick-workout-entry.webkit.spec.ts --project=iphone-13-webkit --project=mobile-chromium --workers=1 --fail-on-flaky-tests'
       - name: Upload Yandex-only browser diagnostics
         if: failure()
         uses: actions/upload-artifact@v4
@@ -354,6 +368,17 @@ jobs:
       PLAYWRIGHT_IMAGE: mcr.microsoft.com/playwright:v1.61.1-noble
       PLAYWRIGHT_SHARD: ${{ matrix.shard }}
     steps:
+      # Keep Docker service ports out of automatic outbound socket allocation.
+      # This changes only the disposable GitHub-hosted test VM.
+      - name: Reserve local Supabase ports before network setup
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_ACTIONS" = true
+          test "$RUNNER_OS" = Linux
+          test "$RUNNER_ENVIRONMENT" = github-hosted
+          reserved=$(sysctl -n net.ipv4.ip_local_reserved_ports)
+          sudo sysctl -q -w "net.ipv4.ip_local_reserved_ports=${reserved:+$reserved,}54320-54329"
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
@@ -414,6 +439,17 @@ jobs:
       PLAYWRIGHT_IMAGE: mcr.microsoft.com/playwright:v1.61.1-noble
       PLAYWRIGHT_SHARD: ${{ matrix.shard }}
     steps:
+      # Keep Docker service ports out of automatic outbound socket allocation.
+      # This changes only the disposable GitHub-hosted test VM.
+      - name: Reserve local Supabase ports before network setup
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_ACTIONS" = true
+          test "$RUNNER_OS" = Linux
+          test "$RUNNER_ENVIRONMENT" = github-hosted
+          reserved=$(sysctl -n net.ipv4.ip_local_reserved_ports)
+          sudo sysctl -q -w "net.ipv4.ip_local_reserved_ports=${reserved:+$reserved,}54320-54329"
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
@@ -476,6 +512,17 @@ jobs:
       VITE_SUPABASE_PUBLISHABLE_KEY: sb_publishable_ACJWlzQHlZjBrEguHvfOxg_3BJgxAaH
       PLAYWRIGHT_IMAGE: mcr.microsoft.com/playwright:v1.61.1-noble
     steps:
+      # Keep Docker service ports out of automatic outbound socket allocation.
+      # This changes only the disposable GitHub-hosted test VM.
+      - name: Reserve local Supabase ports before network setup
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_ACTIONS" = true
+          test "$RUNNER_OS" = Linux
+          test "$RUNNER_ENVIRONMENT" = github-hosted
+          reserved=$(sysctl -n net.ipv4.ip_local_reserved_ports)
+          sudo sysctl -q -w "net.ipv4.ip_local_reserved_ports=${reserved:+$reserved,}54320-54329"
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
