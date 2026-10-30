@@ -5,9 +5,9 @@ import { Field, InlineRequestError } from '../../shared/ui'
 import { WorkoutCta } from './WorkoutSurface'
 
 /** The two favorite-name actions share focus, pending and Lime composition. */
-export function FavoriteWorkoutNameSheet({ heading, lime, initialTitle = '', placeholder, pending, error, recovery, onSave, onClose }: {
+export function FavoriteWorkoutNameSheet({ heading, lime, initialTitle = '', placeholder, pending, error, recovery, notice, onSave, onClose }: {
   heading: string; lime: boolean; initialTitle?: string; placeholder?: string; pending: boolean
-  error: Error | null; recovery?: ReactNode; onSave: (title: string) => void; onClose: () => void
+  error: Error | null; recovery?: ReactNode; notice?: ReactNode; onSave: (title: string) => void; onClose: () => void
 }) {
   const [title, setTitle] = useState(initialTitle)
   const ref = useRef<HTMLElement>(null)
@@ -31,6 +31,7 @@ export function FavoriteWorkoutNameSheet({ heading, lime, initialTitle = '', pla
       <form className="stack compact" onSubmit={(event) => { event.preventDefault(); const value = title.trim() || placeholder; if (!pending && !recovery && value) onSave(value) }}>
         <Field label="Название"><input value={title} maxLength={120} placeholder={placeholder} required={!placeholder} disabled={pending} onChange={(event) => setTitle(event.target.value)} /></Field>
         {error && <InlineRequestError error={error} />}
+        {notice}
         {recovery}
         <div className="actions workout-action-row"><WorkoutCta type="button" variant="tertiary" disabled={pending} onClick={onClose}>Отмена</WorkoutCta><WorkoutCta type="submit" pending={pending} pendingLabel="Сохраняем…" disabled={!title.trim() && !placeholder || Boolean(recovery)}>Сохранить</WorkoutCta></div>
       </form>

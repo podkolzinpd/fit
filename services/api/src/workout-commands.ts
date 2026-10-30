@@ -338,6 +338,10 @@ export function setClientWorkoutComment(
   )
 }
 
+export function renameWorkout(client: DatabaseClient, workoutId: string, title: string, expectedVersion: number): Promise<number> {
+  return runVersionCommand(client, 'select public.rename_workout($1, $2, $3) as version', [workoutId, title, expectedVersion])
+}
+
 export function setWorkoutActualDuration(
   client: DatabaseClient,
   workoutId: string,

@@ -1,3 +1,4 @@
+import { readWorkoutTitleRequest } from './workout-title-request.js'
 import type { ChatMeetings, MeetingAction } from './chat-meetings.js'
 import { registerCorporateAdminRoutes, type CorporateAdminService } from './corporate-admin.js'
 import Fastify, { type FastifyInstance, type FastifyReply } from 'fastify'
@@ -3490,6 +3491,22 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
       (version) => reply
         .header('cache-control', 'no-store')
         .send({ workout: { id: workoutId, version } }),
+    )
+  })
+
+  app.put('/v1/workouts/:workoutId/title', async (request, reply) => {
+    const sessionToken = readCompatibleYandexActorSession(request.headers)
+    const { workoutId } = request.params as { workoutId?: unknown }
+    const command = readWorkoutTitleRequest(request.body)
+    if (sessionToken === undefined) return reply.code(401).send({ error: 'unauthorized' })
+    if (typeof workoutId !== 'string' || !uuidPattern.test(workoutId) || command === undefined) {
+      return reply.code(400).send({ error: 'invalid_request' })
+    }
+    const writer = options.pilotWorkoutsWriter
+    if (writer === undefined) return reply.code(503).send({ error: 'service_unavailable' })
+    return sendPilotCommand(reply,
+      () => writer.rename(sessionToken, workoutId, command.title, command.expectedVersion),
+      version => reply.header('cache-control', 'no-store').send({ workout: { id: workoutId, version } }),
     )
   })
 
