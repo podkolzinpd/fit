@@ -202,7 +202,7 @@ test('client registers, starts without a profile questionnaire and creates an ow
   await page.getByLabel('Вес, подход 2').fill('40')
   await page.getByLabel('Повторы, подход 2').fill('10')
   await saveCompactClientPlan(page)
-  await expect(page.getByRole('heading', { name: 'Тренировка', exact: true })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Тренировка', level: 1, exact: true })).toBeVisible()
   await expect(page.locator('.planned-set-summary')).toHaveText(/2 × 40 кг × 10/)
   await page.getByRole('button', { name: 'Другие действия с тренировкой' }).click()
   await page.getByRole('menuitem', { name: 'Копировать тренировку' }).click()
@@ -224,7 +224,7 @@ test('client registers, starts without a profile questionnaire and creates an ow
     page.waitForURL(/\/workouts\/[0-9a-f-]+$/),
     page.getByRole('button', { name: 'Сохранить' }).click(),
   ])
-  await expect(page.getByRole('heading', { name: 'Тренировка', exact: true })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Тренировка', level: 1, exact: true })).toBeVisible()
 
   await page.goto('/clients')
   await expect(page).toHaveURL(/\/me$/)
@@ -636,7 +636,7 @@ test('trainer invitation links a client account', async ({ page }, testInfo) => 
     page.waitForURL(ownWorkoutUrl),
     page.getByRole('button', { name: 'Сохранить изменения' }).click(),
   ])
-  await expect(page.getByRole('heading', { name: 'Тренировка', exact: true })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Тренировка', level: 1, exact: true })).toBeVisible()
 
   // Завершённая тренировка, которую клиент записал сам, входит в общую
   // историю тренера, но её упражнения остаются недоступны для редактирования
@@ -658,6 +658,7 @@ test('trainer invitation links a client account', async ({ page }, testInfo) => 
   await page.getByRole('status').filter({ hasText: 'История по датам' }).getByRole('button', { name: 'Понятно' }).click()
   await clientAuthoredCard.click()
   await expect(page.getByText('Создано клиентом · упражнения только для просмотра')).toBeVisible()
+  await page.locator('.coach-workout-summary > summary').click()
   await expect(page.locator('.workout-actual-duration').getByRole('button')).toBeVisible()
   await expect(page.getByRole('link', { name: 'Изменить результат' })).toHaveCount(0)
   await expect(page.getByRole('button', { name: 'Удалить тренировку' })).toHaveCount(0)
