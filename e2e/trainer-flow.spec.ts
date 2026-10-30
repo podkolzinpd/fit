@@ -518,7 +518,7 @@ test('trainer can create client, complete workout and save progress', async ({ p
   await expect(page.locator('.card').first()).toBeVisible()
   // На карточке истории — список упражнений (а не группы мышц) и тоннаж.
   await expect(page.locator('.cards .card').first()).toContainText('Болгарский сплит-присед')
-  await expect(page.locator('.cards .card').first()).toContainText('45 кг × 9 повт.')
+  await expect(page.locator('.cards .card').first().locator('.workout-chronicle-brief')).toContainText('Берпи')
   const personalRecordCard = page.locator('.cards .card').first()
   // Первая тренировка после правки остаётся точкой отсчёта, не новым PR.
   await expect(personalRecordCard).not.toHaveClass(/has-pr/)
@@ -528,6 +528,8 @@ test('trainer can create client, complete workout and save progress', async ({ p
   await expect(page.locator('.card-meta').first()).toContainText('405 кг')
   await page.locator('.card').first().click()
   await expect(page.getByRole('heading', { name: 'Тренировка', exact: true })).toBeVisible()
+  // Compact history keeps names; the opened workout retains the exact fact.
+  await expect(page.locator('.completed-exercise').first()).toContainText('45 кг × 9 повт.')
   // Заходим в аналитику упражнения и возвращаемся: «назад» с упражнения ведёт
   // на тренировку, «назад» с тренировки — в исходную историю (без петли).
   await page.locator('.exercise-history-link').first().click()
@@ -1306,7 +1308,7 @@ test('комментарий тренера к упражнению: план �
   await page.getByRole('tab', { name: 'История' }).click()
   await expect(page.getByText('💬 Держи спину прямо', { exact: true }).first()).toBeVisible()
 
-  // Комментарий виден и в карточке истории тренировок клиента (список упр.).
+  // Brief history opens the full workout without losing the trainer comment.
   // В параллельных прогонах уже могут существовать одноимённые клиенты, поэтому
   // возвращаемся в только что созданную карточку по её точному URL, а не по
   // первому совпавшему тексту из списка.
@@ -1318,7 +1320,10 @@ test('комментарий тренера к упражнению: план �
   // list_workouts под нагрузкой (иначе .card ловил таймаут до ответа RPC).
   await expect(page).toHaveURL(/\/clients\/[0-9a-f-]+\/workouts$/)
   await expect(page.locator('.card').first()).toBeVisible({ timeout: 15000 })
-  await expect(page.locator('.workout-exercise-comment').first()).toContainText('Держи спину прямо')
+  await expect(page.locator('.cards .card').first()).toContainText('Присед')
+  await page.locator('.cards .card').first().click()
+  await expect(page.getByRole('heading', { name: 'Тренировка', exact: true })).toBeVisible()
+  await expect(page.locator('.completed-exercise .exercise-comment-note').first()).toContainText('Держи спину прямо')
 })
 
 test('live: удаление подхода и наследование факта при добавлении', async ({ page }, testInfo) => {
