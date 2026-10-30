@@ -1576,6 +1576,29 @@ test('Yandex trainer detail keeps automatic exercise menu placement', async ({ p
   await expect(menu).toHaveCount(0)
 })
 
+test('public trainer remains public while the private app session is restoring', async ({ page }) => {
+  test.skip(process.env.VITE_YANDEX_ONLY_AUTH_ENABLED !== 'true', 'Requires production Yandex composition.')
+  await mockPilot(page, { role: 'client', profileId: clientId })
+  let releaseSession!: () => void
+  const sessionReady = new Promise<void>(resolve => { releaseSession = resolve })
+  await page.route('**/v1/auth/yandex/session', async route => {
+    await sessionReady
+    await route.fallback()
+  })
+  await page.route(`**/v1/trainers/${publicTrainerId}/public-profile`, route => route.fulfill({
+    json: { publicId: publicTrainerId, draft: publicTrainerDraft, published: publicTrainerDraft,
+      listedInCatalog: true, version: 1, isBrandTrainer: false,
+      publishedAt: '2026-10-29T09:00:00Z', updatedAt: '2026-10-29T09:00:00Z' },
+  }))
+  try {
+    await page.goto(`/trainers/${publicTrainerId}`)
+    await expect(page.locator('.public-trainer-page').getByRole('heading', { name: 'Тестовый тренер' })).toBeVisible()
+    await expect(page.getByRole('link', { name: 'Войти, чтобы написать', exact: true })).toHaveAttribute('href', '/auth')
+    await expect(page.getByRole('heading', { name: 'Unexpected Application Error!', exact: true })).toHaveCount(0)
+  } finally { releaseSession() }
+  await expect(page.getByRole('button', { name: 'Написать тренеру', exact: true })).toBeVisible()
+})
+
 // The two mobile widths cover the iPhone clipping report and responsive wrapping;
 // desktop covers the compact public shell. Themes share the same scroll contract.
 for (const { width, height, theme } of [

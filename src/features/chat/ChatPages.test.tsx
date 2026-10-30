@@ -28,7 +28,10 @@ type MockWorkspace = { read: ReturnType<typeof vi.fn<() => Promise<TrainerWorksp
 const backend = vi.hoisted(() => vi.fn<() => { chat: MockChat; trainerWorkspace?: MockWorkspace }>())
 const auth = vi.hoisted(() => vi.fn<() => { actor: MockActor | null }>())
 const prepareChatImage = vi.hoisted(() => vi.fn())
-vi.mock('../../app/data-backend-context', () => ({ useDataBackend: () => backend() }))
+vi.mock('../../app/data-backend-context', () => ({
+  useDataBackend: () => backend(),
+  useOptionalDataBackend: () => backend(),
+}))
 vi.mock('../../app/auth-context', () => ({ useAuth: () => auth() }))
 vi.mock('./chat-image', () => ({ prepareChatImage }))
 
