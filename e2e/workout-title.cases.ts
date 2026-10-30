@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { mockPilot, restTimerWorkout, workoutId } from './fit-lime-fixtures'
+import { mockPilot, restTimerWorkout, workoutId, coachGestureWorkout, clientId } from './fit-lime-fixtures'
 
 export function workoutTitleCases() {
   test('title rename changes metadata and the athlete reads the same title without author controls', async ({ page }, info) => {
@@ -38,4 +38,25 @@ export function workoutTitleCases() {
     await page.keyboard.press('Escape')
     await page.screenshot({ path: info.outputPath('athlete-shared-title.png') })
   })
+  for (const role of ['trainer', 'client'] as const) test(`named history remains compact for ${role}`, async ({ page }, info) => {
+    const profileId = '69200000-0000-4000-8000-000000000001'
+    await page.clock.setFixedTime(new Date('2026-10-30T09:00:00Z'))
+    const source = { ...coachGestureWorkout(false, 5), title: 'Спина и ноги — тренировка с длинным названием', createdBy: profileId, startedAt: '2026-10-29T09:00:00Z', status: 'done' as const, workoutDate: '2026-10-29', completedAt: '2026-10-29T10:00:00Z' }
+    await mockPilot(page, { role, profileId, fitLime: true, clientLime: true, workouts: [source] })
+    const base = `http://127.0.0.1:${Number(process.env.FIT_TEST_PORT ?? 5173) + 1000}`
+    await page.goto(base + (role === 'trainer' ? `/clients/${clientId}/workouts?view=list` : '/me/workouts?tab=history&view=list'))
+    if (role === 'trainer') await page.locator('.coachmark-bubble').filter({ hasText: 'История по датам' }).getByRole('button', { name: 'Понятно' }).click()
+    const card = page.locator('.workout-chronicle-card').first()
+    await expect(card.getByRole('heading', { name: source.title, exact: true })).toBeVisible()
+    await expect(card.locator('.workout-chronicle-brief')).toHaveText(source.exercises.slice(0, 3).map(exercise => exercise.name).join(' · ') + ' · ещё 2')
+    const geometry = await card.evaluate(element => {
+      const title = element.querySelector('h2')!, date = element.querySelector('time')!
+      return { titleSize: parseFloat(getComputedStyle(title).fontSize), dateSize: parseFloat(getComputedStyle(date).fontSize), titleTop: title.getBoundingClientRect().top, dateTop: date.getBoundingClientRect().top }
+    })
+    expect(geometry.dateSize).toBeLessThan(geometry.titleSize)
+    expect(geometry.dateTop).toBeGreaterThan(geometry.titleTop)
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+    await card.screenshot({ path: info.outputPath(`${role}-named-card.png`) })
+  })
+
 }

@@ -100,7 +100,7 @@ test('client always has a preset workout tab on My Workouts, before and after th
   await page.getByRole('tab', { name: 'История' }).click()
   await expect(page.getByRole('heading', { name: 'История' })).toBeVisible()
   await page.getByRole('tab', { name: 'Готовые тренировки' }).click()
-  await expect(page.getByText('Всё тело без инвентаря')).toBeVisible()
+  await expect(page.getByRole('region', { name: 'Готовые тренировки', exact: true }).getByText('Всё тело без инвентаря', { exact: true })).toBeVisible()
 })
 
 test('client switches workout history to a month calendar and returns to the selected date', async ({ page }, testInfo) => {

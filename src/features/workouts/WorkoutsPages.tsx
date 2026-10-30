@@ -112,7 +112,7 @@ import { AddIcon, ArrowDownIcon, ArrowUpIcon, BackIcon, BellIcon, CheckIcon, Che
 import { workoutVolumeComparison } from './workout-completion-insights'
 import { WorkoutChoice, WorkoutCta, WorkoutExercise, WorkoutExerciseCompact, WorkoutHeader, WorkoutRpeScale, WorkoutSetRow, WorkoutStatus, type WorkoutUiState } from './WorkoutSurface'
 import { liveSessionProgress } from './live-session-progress'
-import { calendarExerciseResult, chronicleExercisePreview } from './workout-chronicle'
+import { calendarExerciseResult, chronicleExercisePreview, workoutDisplayTitle, workoutExerciseBrief } from './workout-chronicle'
 import { compactScheduleEventLabel, formatScheduleDateLabel, layoutScheduleTimelineEvents, mondayWeekStart, scheduleDurationMinutes, scheduleEventStatus, scheduleExerciseLine, scheduleFocusMinutes, scheduleHourLabelCollidesWithNow, scheduleLaneClientName, scheduleTimelineScrollTop } from './schedule-presentation'
 import { InvitationCodeCard } from '../../shared/invitation-code-card'
 import { trackGoal } from '../../shared/yandex-metrika'
@@ -1098,9 +1098,9 @@ export function WorkoutExercisesSummary({ workout, maxItems }: { workout: Workou
 export function PastWorkoutPlanCard({ workout, contextLabel, returnTo }: { workout: Workout; contextLabel?: string | null; returnTo?: string }) {
   return <Link className="past-workout-plan-card" to={`/workouts/${workout.id}`} state={returnTo ? { returnTo } : undefined}>
     <span className="past-workout-plan-copy">
-      <strong>План на {formatLocalDate(workout.workoutDate)}</strong>
+      <strong>{workoutDisplayTitle(workout)}</strong><time className="workout-card-date" dateTime={workout.workoutDate}>План на {formatLocalDate(workout.workoutDate)}</time>
       {contextLabel && <small>{contextLabel}</small>}
-      <WorkoutExercisesSummary workout={workout} maxItems={2} />
+      <p className="workout-chronicle-brief">{workoutExerciseBrief(workout.exercises)}</p>
     </span>
     <span className="past-workout-plan-action">Выбрать действие <ChevronRightIcon /></span>
   </Link>
@@ -1118,7 +1118,7 @@ const chronicleReactionLabels: Record<TrainerReaction, string> = {
   strong: '💪',
 }
 
-export function WorkoutChronicleCard({ workout, contextLabel, returnTo, historyListActions = false, showTitle = false, calendarDayDetails = false }: { workout: Workout; contextLabel?: string | null; returnTo?: string; historyListActions?: boolean; showTitle?: boolean; calendarDayDetails?: boolean }) {
+export function WorkoutChronicleCard({ workout, contextLabel, returnTo, historyListActions = false, showTitle = true, calendarDayDetails = false }: { workout: Workout; contextLabel?: string | null; returnTo?: string; historyListActions?: boolean; showTitle?: boolean; calendarDayDetails?: boolean }) {
   const done = workout.status === 'done'
   const duration = workoutDurationLabel(workout.startedAt, workout.completedAt, workout.actualDurationSec)
   const tonnage = workoutTonnage(workout)
@@ -1135,17 +1135,21 @@ export function WorkoutChronicleCard({ workout, contextLabel, returnTo, historyL
   const muscleSummary = [...musclePreview.visible, ...(musclePreview.hiddenCount > 0 ? [`+${musclePreview.hiddenCount}`] : [])].join(' · ')
 
   return <article className={`card workout-chronicle-card${workout.hasPr ? ' has-pr' : ''}${historyListActions && done ? ' has-history-actions' : ''}${calendarDayDetails ? ' calendar-day-details' : ''}`}>
-    <Link className="workout-chronicle-open" aria-label={`Открыть тренировку за ${formattedDate}`} to={`/workouts/${workout.id}`} state={detailState}>
+    <Link className="workout-chronicle-open" aria-description={showTitle ? workoutDisplayTitle(workout) : undefined} aria-label={`Открыть тренировку за ${formattedDate}`} to={`/workouts/${workout.id}`} state={detailState}>
       <div className="workout-chronicle-head">
-        <strong>{calendarDayDetails ? `${workout.exercises.length} ${exerciseCountLabel(workout.exercises.length)}` : formattedDate}</strong>
+        <div className="workout-chronicle-heading">
+          {showTitle && <h2 className="workout-chronicle-title">{workoutDisplayTitle(workout)}</h2>}
+          {calendarDayDetails ? <small>{workout.exercises.length} {exerciseCountLabel(workout.exercises.length)}</small>
+            : <time className="workout-card-date" dateTime={workout.workoutDate}>{formattedDate}</time>}
+        </div>
         <div className="workout-chronicle-head-badges">
           {workout.hasPr && <span className="workout-pr-badge"><RecordIcon />Личный рекорд</span>}
           <WorkoutStatusBadge workout={workout} />
         </div>
       </div>
-      {showTitle && workout.title && <h2 className="workout-chronicle-title">{workout.title}</h2>}
       {contextLabel && <p className="card-author">{contextLabel}</p>}
       <div className="workout-chronicle-exercises">
+        {historyListActions && !calendarDayDetails ? <p className="workout-chronicle-brief">{workoutExerciseBrief(workout.exercises)}</p> : <>
         {exercisePreview.visible.length > 0 ? exercisePreview.visible.map((exercise) => {
           const result = calendarDayDetails
             ? done ? calendarExerciseResult(exercise) : null
@@ -1159,6 +1163,7 @@ export function WorkoutChronicleCard({ workout, contextLabel, returnTo, historyL
           </div>
         }) : <p className="muted">Без упражнений</p>}
         {exercisePreview.hiddenCount > 0 && <p className="workout-chronicle-more">Ещё {exercisePreview.hiddenCount} {exerciseCountLabel(exercisePreview.hiddenCount)}</p>}
+        </>}
       </div>
       {muscleSummary && <p className="workout-chronicle-muscles" aria-label={`Основные группы мышц: ${muscleSummary}`}><span>Мышцы:</span> {muscleSummary}</p>}
       {(meta.length > 0 || hasFeedback || workout.discomfort) && <div className="card-meta workout-chronicle-facts">
@@ -1212,7 +1217,7 @@ export function ClientWorkoutsPage() {
       {upcomingItems.length > 0 && <section className="client-workout-section">
         <div className="client-workout-section-head"><p className="eyebrow">БЛИЖАЙШЕЕ</p><h2>Предстоит</h2></div>
         <div className="cards client-workout-cards">{upcomingItems.map((workout) => <Link className="card client-workout-card" key={workout.id} to={`/workouts/${workout.id}`} state={{ returnTo }}>
-          <div><strong>{formatLocalDate(workout.workoutDate)}</strong>{workout.startTime && <p className="muted">{workout.startTime.slice(0, 5)}</p>}<WorkoutExercisesSummary workout={workout} maxItems={2} /></div>
+          <div><h2 className="workout-card-title">{workoutDisplayTitle(workout)}</h2><time className="workout-card-date" dateTime={workout.workoutDate}>{formatLocalDate(workout.workoutDate)}{workout.startTime ? ` · ${workout.startTime.slice(0, 5)}` : ''}</time><p className="workout-chronicle-brief">{workoutExerciseBrief(workout.exercises)}</p></div>
           <WorkoutStatusBadge workout={workout} />
         </Link>)}</div>
       </section>}
@@ -4481,7 +4486,7 @@ export function LiveWorkoutPage() {
   }
   const exerciseCount = query.data?.exercises.length ?? 0
   const exerciseCountLabel = `${exerciseCount} ${exerciseCount % 100 >= 11 && exerciseCount % 100 <= 14 ? 'упражнений' : exerciseCount % 10 === 1 ? 'упражнение' : exerciseCount % 10 >= 2 && exerciseCount % 10 <= 4 ? 'упражнения' : 'упражнений'}`
-  const liveHeader = query.data && <WorkoutHeader eyebrow={visualReference ? exerciseCountLabel : 'LIVE'} title={visualReference ? query.data.title || workoutFocusTitle(muscleGroupLabels(query.data.exercises)) : query.data.clientName} state="current" showStatus={!visualReference && query.data.exercises.length > 0} className="live-session-header" meta={<>{coachReference && <span className="coach-live-client">{query.data.clientName}</span>}<span>{workoutTrainingFormatLabel(query.data.trainingFormat ?? 'self')}</span>{visualReference && exerciseCount > 0 && <span className="coach-live-exercise-markers" aria-label="Состояния упражнений">{query.data.exercises.map((exercise, index) => <span key={exercise.id} className={exercise.sets.length > 0 && exercise.sets.every((set) => set.confirmedAt) ? 'done' : exercise.id === activeLiveExercise?.id ? 'current' : ''} aria-label={`Упражнение ${index + 1}: ${exercise.sets.length > 0 && exercise.sets.every((set) => set.confirmedAt) ? 'выполнено' : exercise.id === activeLiveExercise?.id ? 'текущее' : 'ожидает'}`} />)}</span>}{sessionProgress.setCount > 0 ? <div className="live-session-progress">
+  const liveHeader = query.data && <WorkoutHeader eyebrow={visualReference ? exerciseCountLabel : 'LIVE'} title={visualReference ? query.data.title || workoutFocusTitle(muscleGroupLabels(query.data.exercises)) : query.data.clientName} state="current" showStatus={!visualReference && query.data.exercises.length > 0} className="live-session-header" meta={<>{coachReference && <span className="coach-live-client">{query.data.clientName}</span>}<span>{workoutTrainingFormatLabel(query.data.trainingFormat ?? 'self')}</span>{!visualReference && query.data.title && <span>{query.data.title}</span>}{visualReference && exerciseCount > 0 && <span className="coach-live-exercise-markers" aria-label="Состояния упражнений">{query.data.exercises.map((exercise, index) => <span key={exercise.id} className={exercise.sets.length > 0 && exercise.sets.every((set) => set.confirmedAt) ? 'done' : exercise.id === activeLiveExercise?.id ? 'current' : ''} aria-label={`Упражнение ${index + 1}: ${exercise.sets.length > 0 && exercise.sets.every((set) => set.confirmedAt) ? 'выполнено' : exercise.id === activeLiveExercise?.id ? 'текущее' : 'ожидает'}`} />)}</span>}{sessionProgress.setCount > 0 ? <div className="live-session-progress">
     <span className="live-session-progress-copy"><span>{sessionProgress.complete ? 'Все упражнения выполнены' : activeLiveExercise ? `Сейчас: ${activeLiveExercise.name} · подход ${sessionProgress.activeSetNumber} из ${sessionProgress.activeExerciseSetCount}` : 'Выберите упражнение'}</span><strong>Готово {sessionProgress.completedSetCount} из {sessionProgress.setCount}</strong></span>
     <span className="live-session-progress-track" role="progressbar" aria-label="Выполненные подходы" aria-valuemin={0} aria-valuemax={sessionProgress.setCount} aria-valuenow={sessionProgress.completedSetCount}><span style={{ width: `${sessionProgress.percent}%` }} /></span>
   </div> : null}</>} />

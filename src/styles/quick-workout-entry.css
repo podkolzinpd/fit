@@ -77,3 +77,5 @@
 :is(.fit-lime-shell, .phone-frame) .booking-history-preview-block p { color: var(--lime-text-secondary, var(--muted)); font-size: 14px; line-height: 20px; margin-bottom: 0; }
 :is(.fit-lime-shell, .phone-frame) .booking-history-sheet > footer { display: flex; gap: 8px; justify-content: center; padding: 16px 20px max(20px, env(safe-area-inset-bottom)); flex-shrink: 0; }
 :is(.fit-lime-shell, .phone-frame) .booking-history-sheet > footer button { min-height: 54px; border-radius: 20px; }
+
+:is(.fit-lime-shell, .phone-frame) .booking-history-item time { font-size:12px; line-height:18px; font-weight:400; color:var(--lime-text-secondary, var(--muted)); }
