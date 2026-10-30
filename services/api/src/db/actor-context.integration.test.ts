@@ -6092,7 +6092,7 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
             values($1,$2,$3,$4,0,'system','title-fixture','Unchanged exercise','legs','strength')`, [exercise, id, ACTOR_ID, cardId])
           await ownerPool.query(`insert into public.workout_sets(workout_exercise_id,trainer_id,client_id,position,plan_weight_kg,plan_reps,fact_weight_kg,fact_reps,confirmed_at)
             values($1,$2,$3,0,30,10,35,8,now())`, [exercise, ACTOR_ID, cardId])
-          const snapshot = async () => (await ownerPool!.query(`select to_jsonb(w)-array['title','version','updated_at','updated_by'] as root,
+          const snapshot = async () => (await ownerPool!.query<{ root: unknown; exercises: unknown; sets: unknown }>(`select to_jsonb(w)-array['title','version','updated_at','updated_by'] as root,
             (select jsonb_agg(to_jsonb(e)) from public.workout_exercises e where e.workout_id=w.id) as exercises,
             (select jsonb_agg(to_jsonb(s)) from public.workout_sets s join public.workout_exercises e on e.id=s.workout_exercise_id where e.workout_id=w.id) as sets
             from public.workouts w where id=$1`, [id])).rows[0]
