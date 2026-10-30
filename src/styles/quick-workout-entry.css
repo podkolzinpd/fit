@@ -82,10 +82,11 @@
 :is(.fit-lime-shell, .phone-frame) .booking-history-sheet > header h2 { margin: 0; text-align: center; font-size: 16px; line-height: 20px; font-weight: 500; }
 :is(.fit-lime-shell, .phone-frame) .booking-history-sheet > header button { width: 44px; height: 44px; padding: 10px; background: transparent; color: inherit; border: 0; }
 :is(.fit-lime-shell, .phone-frame) .booking-history-scroll { overflow-y: auto; overscroll-behavior: contain; min-height: 0; flex: 1; padding: 20px; }
+:is(.fit-lime-shell, .phone-frame) .booking-history-scroll > h3 { min-width: 0; overflow-wrap: anywhere; }
 :is(.fit-lime-shell, .phone-frame) .booking-history-client { color: var(--lime-text-secondary, var(--muted)); margin: 0 0 20px; }
 :is(.fit-lime-shell, .phone-frame) .booking-history-item { display: flex; flex-direction: column; gap: 8px; width: 100%; margin-bottom: 4px; padding: 24px 20px; text-align: left; border: 0; border-radius: 32px; background: var(--lime-surface-raised, var(--surface-raised)); color: var(--lime-text, var(--fg)); }
 :is(.fit-lime-shell, .phone-frame) .booking-history-item :is(time, span) { color: var(--lime-text-secondary, var(--muted)); font-size: 14px; line-height: 20px; overflow-wrap: anywhere; }
-:is(.fit-lime-shell, .phone-frame) .booking-history-item strong { font-size: 18px; line-height: 24px; font-weight: 500; }
+:is(.fit-lime-shell, .phone-frame) .booking-history-item strong { min-width: 0; max-width: 100%; overflow-wrap: anywhere; font-size: 18px; line-height: 24px; font-weight: 500; }
 :is(.fit-lime-shell, .phone-frame) .booking-history-preview-block { margin-bottom: 12px; padding: 20px; border-radius: 24px; background: var(--lime-surface-raised, var(--surface-raised)); }
 :is(.fit-lime-shell, .phone-frame) .booking-history-preview-block article + article { margin-top: 20px; }
 :is(.fit-lime-shell, .phone-frame) .booking-history-preview-block p { color: var(--lime-text-secondary, var(--muted)); font-size: 14px; line-height: 20px; margin-bottom: 0; }
