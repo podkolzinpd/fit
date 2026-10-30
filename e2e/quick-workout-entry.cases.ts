@@ -47,7 +47,7 @@ export function quickWorkoutEntryCases() {
     const profileId = 'c0ac0000-6010-4000-8000-000000000001'
     const base = restTimerWorkout()
     const target = { ...base, createdBy: profileId, status: 'planned' as const, workoutDate: '2026-11-02', startTime: '14:00', endTime: '15:00', startedAt: null, exercises: hasPlan ? base.exercises : [] }
-    const source = { ...base, id: '67500000-0000-4000-8000-000000000030', title: 'История суперсет', status: 'done' as const, workoutDate: '2026-10-02', completedAt: '2026-10-02T10:00:00Z', exercises: [0, 1].map(position => ({ ...base.exercises[0]!, id: `67500000-0000-4000-8000-00000000004${position}`, position, blockType: 'group' as const, blockRounds: 2, trainerComment: 'Держать корпус', sets: base.exercises[0]!.sets.map(set => ({ ...set, fact: { weightKg: 35, reps: 8 }, confirmedAt: '2026-10-02T10:00:00Z' })) })) }
+    const source = { ...base, id: '67500000-0000-4000-8000-000000000030', title: hasPlan ? 'История суперсет' : 'я'.repeat(120), status: 'done' as const, workoutDate: '2026-10-02', completedAt: '2026-10-02T10:00:00Z', exercises: [0, 1].map(position => ({ ...base.exercises[0]!, id: `67500000-0000-4000-8000-00000000004${position}`, position, blockType: 'group' as const, blockRounds: 2, trainerComment: 'Держать корпус', sets: base.exercises[0]!.sets.map(set => ({ ...set, fact: { weightKg: 35, reps: 8 }, confirmedAt: '2026-10-02T10:00:00Z' })) })) }
     const original = JSON.stringify(source)
     const backend = await mockPilot(page, { profileId, fitLime: true, workouts: [target, source, { ...source, id: '67500000-0000-4000-8000-000000000050', clientId: '67500000-0000-4000-8000-000000000051', title: 'Другой клиент' }] })
     const commands: WorkoutDraft[] = []
@@ -65,7 +65,11 @@ export function quickWorkoutEntryCases() {
     await page.getByRole('button', { name: 'Из истории', exact: true }).click()
     const sheet = page.getByRole('dialog', { name: 'История тренировок клиента' })
     await expect(sheet.getByText('Другой клиент')).toHaveCount(0)
-    await sheet.getByRole('button', { name: /История суперсет/ }).click()
+    await expect(sheet.locator('.booking-history-item strong')).toHaveText(source.title)
+    expect(await sheet.locator('.booking-history-scroll').evaluate(element => element.scrollWidth <= element.clientWidth)).toBe(true)
+    await sheet.getByRole('button', { name: new RegExp(source.title) }).click()
+    await expect(sheet.getByRole('heading', { name: source.title, exact: true })).toBeVisible()
+    expect(await sheet.locator('.booking-history-scroll').evaluate(element => element.scrollWidth <= element.clientWidth)).toBe(true)
     await expect(sheet).toContainText('Держать корпус')
     await sheet.screenshot({ path: info.outputPath(`booking-history-${hasPlan}.png`) })
     await sheet.getByRole('button', { name: 'Повторить в этой записи', exact: true }).click()
