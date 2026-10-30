@@ -511,3 +511,39 @@ YAFIT-675 не является текущим блокером: актуаль�
 public recovery after-probe. Уже зелёный CI d7e856f7 не объявляется
 проверкой будущего main. Записи 11–13 локальные и пока не отправлены,
 чтобы не заменять проверенный head документационными checkpoint.
+
+
+## Итерация 14 — 2026-10-30 — GPT / OpenAI — интеграция с новым пакетом ФИТ 14
+
+Перед локальной интеграцией сверены инструкции и зависимости main f015886c:
+AGENTS/FIT_WORKFLOW/ENGINEERING_RULES и оба dependency lock не изменились.
+В ACTIVE_CONTRACTS явно подтверждён общий выпуск quick-entry и названий
+YAFIT-692; остальные пилоты сохраняют свои границы. Записи 11–13 закреплены
+локально в 38e1a88b, затем f015886c объединён без конфликтов в e819d363.
+Продуктовая правка getMine/cache не менялась; общие repository tests
+объединены автоматически, собственный recovery browser case сохранён.
+Фактический scope f015886c..e819d363 требует frontend/browser.
+
+Полный локальный check — exit 0: 2943 frontend tests; API 1543 passed,
+218 условных DB skips; lint/types/policies/build/startup прошли.
+Лог: `/private/tmp/fit-profile-recovery-mainf015-check-20261030.log`.
+Отдельно собрана production fixture версия с явным новым общим режимом
+`VITE_QUICK_WORKOUT_ENTRY_ENABLED=true` и
+`VITE_QUICK_WORKOUT_ENTRY_ROLLOUT_MODE=all`. Сборка прошла. На её preview
+шесть целевых browser cases прошли без retries: четыре body-map first-run
+Chromium/WebKit light/dark, nutrition first-run WebKit и canonical recovery.
+API и identities синтетические; реальные флаги и данные не менялись.
+Логи: `/private/tmp/fit-profile-recovery-mainf015-native-all-build-20261030.log`,
+`/private/tmp/fit-profile-recovery-mainf015-browser-all-20261030.log`.
+Заимствованные dependency symlinks после проверки удалены только из нашего
+checkout; внешние зависимости и чужой код не менялись.
+
+Координатор подтвердил новый дополнительный приоритетный PR 1891:
+переполнение валидного 120-символьного названия в истории исправляется
+двумя CSS-правилами с assertions. Исходные четыре PR слиты, но этого
+недостаточно для снятия YAFIT-692 hold. Нужны CI1891, current-main CI,
+официальная публикация, общий режим и production-приёмка, затем явное
+подтверждение снятия паузы. После ФИТ 14 прежняя очередь остаётся
+1877→1878→1879→1881→1882→1883→1885→1886. Наша ветка обновлена и проверена
+только локально; remote1886 остаётся на ранее зелёном d7e856f7.
+Новых push/remote CI, merge/deploy или production-операций ФИТ 19 не было.
