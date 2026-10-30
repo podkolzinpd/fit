@@ -77,6 +77,24 @@ afterEach(() => {
 
 describe('AppLayout: единственная UI Identity', () => {
   it.each([
+    ['client', 'c11e0000-6010-4000-8000-000000000001', true, true],
+    ['client', 'c11e0000-6010-4000-8000-000000000002', true, false],
+    ['client', 'c11e0000-6010-4000-8000-000000000001', false, false],
+    ['trainer', 'c11e0000-6010-4000-8000-000000000001', true, false],
+  ] as const)('ограничивает новые клиентские карточки пилотом %s/%s/%s', (role, userId, clientLime, enabled) => {
+    vi.stubEnv('VITE_CLIENT_LIME_ENABLED', 'true')
+    vi.stubEnv('VITE_CLIENT_WORKOUT_REDESIGN_ENABLED', 'true')
+    vi.stubEnv('VITE_CLIENT_WORKOUT_REDESIGN_PILOT_USER_IDS', 'c11e0000-6010-4000-8000-000000000001')
+    authState.role = role
+    authState.userId = userId
+    authState.clientLime = clientLime
+    renderLayout('/me')
+    const frame = document.querySelector('.phone-frame')
+    if (enabled) expect(frame).toHaveClass('client-screen-reference')
+    else expect(frame).not.toHaveClass('client-screen-reference')
+  })
+
+  it.each([
     ['client', '/me', 'client-home-identity'],
     ['client', '/me/progress', 'progress-identity'],
     ['client', '/me/workouts', 'client-workouts-identity'],

@@ -1,0 +1,390 @@
+/* Client test cohort only. Geometry comes from the adopted schedule cards and
+   compact composer; existing route content, handlers and shared Live stay intact. */
+.phone-frame.fit-client-lime.client-screen-reference .client-home-overview {
+  gap: 12px;
+}
+.phone-frame.fit-client-lime.client-screen-reference .client-home-overview
+  :is(.client-home-next, .client-home-past-plan, .client-home-week,
+    .client-home-highlight, .personal-workout-result) {
+  min-width: 0;
+  padding: 20px;
+  border: 0;
+  border-radius: var(--lime-radius-card);
+  background: var(--lime-surface);
+  box-shadow: none;
+}
+.phone-frame.fit-client-lime.client-screen-reference .client-home-overview
+  :is(.client-home-next h2, .client-home-week h2, .personal-workout-result h2) {
+  color: var(--lime-text);
+  font-size: 22px;
+  line-height: 1.15;
+  letter-spacing: -.02em;
+  font-weight: 500;
+}
+.phone-frame.fit-client-lime.client-screen-reference .client-home-overview
+  :is(.client-home-next.compact h2, .client-home-highlight h2) {
+  font-size: 18px;
+  line-height: 1.25;
+}
+.phone-frame.fit-client-lime.client-screen-reference .client-home-overview
+  :is(.client-home-next-time, .client-home-next-exercises, .client-home-week > p,
+    .client-home-next-link small, .client-home-next-link strong, .client-home-highlight small) {
+  color: var(--lime-text-secondary);
+  font-size: 14px;
+  line-height: 1.4;
+  font-weight: 400;
+}
+.phone-frame.fit-client-lime.client-screen-reference .client-home-next { gap: 12px; }
+.phone-frame.fit-client-lime.client-screen-reference .client-home-next .button {
+  min-height: 48px;
+  margin-top: 4px;
+  padding: 12px 16px;
+  border-radius: 18px;
+}
+.phone-frame.fit-client-lime.client-screen-reference .client-home-next.active .button.primary {
+  border-color: var(--lime-accent);
+  background: var(--lime-accent);
+  color: var(--lime-text-on-accent);
+}
+.phone-frame.fit-client-lime.client-screen-reference .client-home-overview
+  :is(.client-home-week .client-home-section-head > a, .client-home-highlight > a,
+    .client-home-next-link, .client-home-past-plan > a) {
+  min-height: 44px;
+}
+.phone-frame.fit-client-lime.client-screen-reference .client-home-overview
+  :is(.client-home-section-head > a, .personal-workout-result > .actions .link) {
+  color: var(--lime-accent-ink);
+}
+.phone-frame.fit-client-lime.client-screen-reference .today-voice-hero-compact .voice-action {
+  padding: 20px;
+  border-radius: var(--lime-radius-card);
+  background: var(--lime-surface);
+  color: var(--lime-text);
+  box-shadow: none;
+}
+.phone-frame.fit-client-lime.client-screen-reference .today-voice-hero-compact
+  :is(.voice-action-copy h2, .voice-action-label strong, .voice-action-label span) {
+  color: var(--lime-text);
+  font-weight: 500;
+}
+.phone-frame.fit-client-lime.client-screen-reference .today-voice-hero-compact .voice-action-copy h2 {
+  font-size: 22px;
+  line-height: 1.15;
+}
+.phone-frame.fit-client-lime.client-screen-reference .today-voice-hero-compact
+  :is(.voice-action-guidance, .voice-action-transcript) {
+  color: var(--lime-text-secondary);
+  opacity: 1;
+}
+.phone-frame.fit-client-lime.client-screen-reference .today-voice-hero-compact .voice-action-button {
+  background: var(--lime-accent);
+  color: var(--lime-text-on-accent);
+  border-radius: 18px;
+}
+.phone-frame.fit-client-lime.client-screen-reference .today-voice-hero-compact
+  .voice-action-button svg[data-original-icon] { filter: brightness(0); }
+.phone-frame.fit-client-lime.client-screen-reference .today-voice-text-inline {
+  border-radius: 18px;
+  background: var(--lime-surface-raised);
+  color: var(--lime-text);
+}
+.phone-frame.fit-client-lime.client-screen-reference .client-home-self-training > .quick-start-workout {
+  padding: 20px;
+  border: 0;
+  border-radius: var(--lime-radius-card);
+  background: var(--lime-surface);
+  color: var(--lime-text);
+}
+.phone-frame.fit-client-lime.client-screen-reference .client-home-self-training .quick-start-copy h2 {
+  font-size: 22px;
+  line-height: 1.15;
+}
+.phone-frame.fit-client-lime.client-screen-reference .client-home-self-training .quick-start-button:not(:disabled) {
+  border-color: var(--lime-accent);
+  border-radius: 18px;
+  background: var(--lime-accent);
+  color: var(--lime-text-on-accent);
+}
+
+/* CR2: the existing list/calendar and favorite commands keep their own markup. */
+.phone-frame.fit-client-lime.client-screen-reference .client-workouts-page
+  :is(.client-workout-card, .past-workout-plan-card, .favorite-workout-card, .preset-workout-card) {
+  min-width: 0;
+  padding: 20px;
+  border: 0;
+  border-radius: var(--lime-radius-card);
+  background: var(--lime-surface);
+  box-shadow: none;
+}
+.phone-frame.fit-client-lime.client-screen-reference .client-workouts-page
+  .workout-chronicle-card {
+  padding: 0;
+  border: 0;
+  border-radius: var(--lime-radius-card);
+  background: var(--lime-surface);
+  box-shadow: none;
+}
+.phone-frame.fit-client-lime.client-screen-reference .client-workouts-page .workout-chronicle-open {
+  gap: 12px;
+  padding: 20px;
+}
+.phone-frame.fit-client-lime.client-screen-reference .client-workouts-page
+  :is(.client-workout-card h2, .workout-chronicle-title, .favorite-workout-card-head strong) {
+  margin: 0;
+  color: var(--lime-text);
+  font-size: 22px;
+  line-height: 1.15;
+  letter-spacing: -.02em;
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+.phone-frame.fit-client-lime.client-screen-reference .client-workouts-page
+  :is(.client-workout-card-date, .card-author, .favorite-workout-preview, .past-workout-plan-copy small) {
+  color: var(--lime-text-secondary);
+  font-size: 14px;
+  line-height: 1.4;
+  font-weight: 400;
+}
+.phone-frame.fit-client-lime.client-screen-reference .client-workouts-page
+  :is(.favorite-workout-card-actions .secondary, .preset-workout-card > button, .workout-chronicle-copy) {
+  min-height: 44px;
+  border: 0;
+  border-radius: 18px;
+  background: var(--lime-surface-raised);
+  color: var(--lime-text);
+}
+.phone-frame.fit-client-lime.client-screen-reference .client-workouts-page
+  :is(.client-workout-cards, .favorite-workout-cards, .preset-workout-picker-list) { gap: 12px; }
+.phone-frame.fit-client-lime.client-screen-reference .client-workouts-page
+  :is(.progress-view-tabs, .client-workouts-view-toggle) {
+  padding: 4px;
+  gap: 4px;
+  border: 0;
+  border-radius: 24px;
+  background: var(--lime-surface-raised);
+}
+.phone-frame.fit-client-lime.client-screen-reference .client-workouts-page
+  :is(.progress-view-tabs, .client-workouts-view-toggle) button {
+  min-height: 44px;
+  border: 0;
+  border-radius: 20px;
+}
+.phone-frame.fit-client-lime.client-screen-reference .client-workouts-page
+  :is(.progress-view-tabs button[aria-selected='true'], .client-workouts-view-toggle button[aria-pressed='true']) {
+  background: var(--lime-accent);
+  color: var(--lime-text-on-accent);
+}
+
+/* CR3: compact people rows from the adopted client-picker sheet. */
+.phone-frame.fit-client-lime.client-screen-reference .chat-list-page .chat-thread-list {
+  gap: 0;
+  padding: 8px 20px;
+  border-radius: var(--lime-radius-card);
+  background: var(--lime-surface);
+}
+.phone-frame.fit-client-lime.client-screen-reference .chat-list-page .chat-thread {
+  grid-template-columns: 40px minmax(0, 1fr) auto;
+  min-height: 72px;
+  gap: 12px;
+  padding: 12px 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--lime-text);
+}
+.phone-frame.fit-client-lime.client-screen-reference .chat-list-page .chat-thread + .chat-thread {
+  border-top: 1px solid var(--lime-divider);
+}
+.phone-frame.fit-client-lime.client-screen-reference .chat-list-page .chat-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--lime-surface-raised);
+  color: var(--lime-text-secondary);
+  font-size: 16px;
+}
+.phone-frame.fit-client-lime.client-screen-reference .chat-list-page .chat-thread-copy strong {
+  font-size: 16px;
+  font-weight: 500;
+}
+.phone-frame.fit-client-lime.client-screen-reference .chat-list-page
+  :is(.chat-thread-copy small, .chat-thread-meta) { font-size: 13px; }
+.phone-frame.fit-client-lime.client-screen-reference .trainer-catalog-page
+  :is(.trainer-catalog-search, .trainer-catalog-card) {
+  gap: 12px;
+  padding: 20px;
+  border: 0;
+  border-radius: var(--lime-radius-card);
+  background: var(--lime-surface);
+  box-shadow: none;
+}
+.phone-frame.fit-client-lime.client-screen-reference .trainer-catalog-page .trainer-catalog-card-head {
+  align-items: center;
+}
+.phone-frame.fit-client-lime.client-screen-reference .trainer-catalog-page
+  .trainer-catalog-card-head .trainer-card-avatar {
+  width: 40px;
+  height: 40px;
+  flex-basis: 40px;
+  border-radius: 50%;
+  background: var(--lime-surface-raised);
+  color: var(--lime-text-secondary);
+  font-size: 18px;
+}
+.phone-frame.fit-client-lime.client-screen-reference .trainer-catalog-page .trainer-catalog-card-head h2 {
+  font-size: 20px;
+  line-height: 1.2;
+  font-weight: 500;
+}
+.phone-frame.fit-client-lime.client-screen-reference .trainer-catalog-page
+  :is(.trainer-catalog-facts, .trainer-catalog-locations, .trainer-catalog-bio) {
+  color: var(--lime-text-secondary);
+  font-size: 14px;
+  line-height: 1.4;
+}
+.phone-frame.fit-client-lime.client-screen-reference .trainer-catalog-page
+  :is(.trainer-catalog-search-actions button, .trainer-catalog-card > .button) {
+  min-height: 48px;
+  border-radius: 18px;
+}
+.phone-frame.fit-client-lime.client-screen-reference .trainer-catalog-page .trainer-catalog-search input,
+.phone-frame.fit-client-lime.client-screen-reference .trainer-catalog-filters :is(input, select) {
+  min-width: 0;
+  min-height: 48px;
+  border: 1px solid var(--lime-divider);
+  border-radius: 16px;
+  background-color: var(--lime-surface-raised);
+  color: var(--lime-text);
+  font-size: 16px;
+}
+/* The existing sheet portals into phone-frame; keep its viewport/focus logic. */
+.phone-frame.fit-client-lime.client-screen-reference .trainer-catalog-filter-sheet {
+  border: 0;
+  border-radius: var(--lime-radius-sheet) var(--lime-radius-sheet) 0 0;
+  background: var(--lime-surface);
+}
+.phone-frame.fit-client-lime.client-screen-reference
+  .trainer-catalog-filter-overlay.keyboard-open .trainer-catalog-filter-sheet {
+  border-radius: 24px 24px 0 0;
+}
+.phone-frame.fit-client-lime.client-screen-reference .trainer-catalog-filter-actions button {
+  min-height: 48px;
+  border-radius: 18px;
+}
+
+/* CR4: parameter rows reuse the form/sheet spacing without replacing controls. */
+.phone-frame.fit-client-lime.client-screen-reference .client-profile-page
+  :is(.client-profile-card, .client-home-connections, .profile-settings,
+    .body-map-appearance-setting, .account-settings-card, .menu) {
+  border: 0;
+  border-radius: var(--lime-radius-card);
+  background: var(--lime-surface);
+  box-shadow: none;
+}
+.phone-frame.fit-client-lime.client-screen-reference .client-profile-page
+  :is(.client-profile-card, .client-home-connections, .body-map-appearance-setting) { padding: 20px; }
+.phone-frame.fit-client-lime.client-screen-reference .client-profile-page .client-profile-avatar {
+  width: 56px;
+  height: 56px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--lime-surface-raised);
+  color: var(--lime-text-secondary);
+  font-size: 22px;
+}
+.phone-frame.fit-client-lime.client-screen-reference .client-profile-page .client-profile-identity strong {
+  color: var(--lime-text);
+  font-size: 22px;
+  line-height: 1.15;
+}
+.phone-frame.fit-client-lime.client-screen-reference .client-profile-page .client-profile-identity p {
+  font-size: 14px;
+  font-weight: 400;
+}
+.phone-frame.fit-client-lime.client-screen-reference .client-profile-page .client-profile-edit {
+  color: var(--lime-accent-ink);
+}
+.phone-frame.fit-client-lime.client-screen-reference .client-profile-page .client-trainer-connection-card {
+  padding: 12px 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+.phone-frame.fit-client-lime.client-screen-reference .client-profile-page .client-trainer-avatar {
+  width: 40px;
+  height: 40px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--lime-surface-raised);
+  color: var(--lime-text-secondary);
+}
+.phone-frame.fit-client-lime.client-screen-reference .client-profile-page
+  .client-home-connections > .client-finance-home {
+  margin-top: 12px;
+  padding: 16px 0 0;
+  border: 0;
+  border-top: 1px solid var(--lime-divider);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+.phone-frame.fit-client-lime.client-screen-reference .client-profile-page
+  :is(.profile-settings-link, .client-trainer-search, .client-trainer-invite-button) {
+  border-radius: 18px;
+}
+.phone-frame.fit-client-lime.client-screen-reference .client-settings-page .profile-settings {
+  padding: 0 20px;
+}
+.phone-frame.fit-client-lime.client-screen-reference .client-settings-page
+  :is(.profile-settings > .field, .profile-settings > .schedule-density-setting) {
+  padding: 16px 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+.phone-frame.fit-client-lime.client-screen-reference .client-settings-page
+  .profile-settings > .field:has(select)::after { right: 12px; }
+.phone-frame.fit-client-lime.client-screen-reference .client-settings-page .switch-row {
+  min-height: 56px;
+  padding: 14px 0;
+}
+.phone-frame.fit-client-lime.client-screen-reference .client-settings-page .switch-input { right: 0; }
+.phone-frame.fit-client-lime.client-screen-reference .client-settings-page .switch-label {
+  font-size: 16px;
+  font-weight: 400;
+}
+.phone-frame.fit-client-lime.client-screen-reference .client-settings-page
+  :is(.schedule-density-options, .body-map-appearance-options) {
+  gap: 4px;
+  padding: 4px;
+  border: 0;
+  border-radius: 20px;
+  background: var(--lime-surface-raised);
+}
+.phone-frame.fit-client-lime.client-screen-reference .client-settings-page
+  :is(.schedule-density-options, .body-map-appearance-options) button {
+  min-height: 44px;
+  border: 0;
+  border-radius: 16px;
+  font-size: 14px;
+}
+.phone-frame.fit-client-lime.client-screen-reference .client-settings-page
+  :is(.schedule-density-options, .body-map-appearance-options) button[aria-checked='true'] {
+  background: var(--lime-accent);
+  color: var(--lime-text-on-accent);
+}
+.phone-frame.fit-client-lime.client-screen-reference .client-settings-page .menu {
+  padding: 0 20px;
+}
+.phone-frame.fit-client-lime.client-screen-reference .client-settings-page .menu > :is(a, button) {
+  min-height: 56px;
+  padding-inline: 0;
+  border-radius: 0;
+  font-size: 16px;
+}
+
+/* Active controls use the same dark original SVG treatment as primary actions. */
+.phone-frame.fit-client-lime.client-screen-reference .client-workouts-page
+  .client-workouts-view-toggle button[aria-pressed='true'] svg[data-original-icon] {
+  filter: brightness(0);
+}
