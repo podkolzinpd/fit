@@ -1,0 +1,51 @@
+import { pathToFileURL } from 'node:url'
+import { buildLimeRolloutRequest, verifyLimeRolloutResponse, verifyLimeRolloutReadback } from './lime-rollout-request.mjs'
+
+export function readClientLimeOperation(env) {
+  if (env.GITHUB_REPOSITORY !== 'podkolzinpd/fit' || env.GITHUB_REF !== 'refs/heads/main'
+      || env.LIME_TARGET !== 'client') throw new Error('client_rollout_environment_invalid')
+  return buildLimeRolloutRequest(env)
+}
+
+export async function runClientLimeOperation(manager, env) {
+  const request = readClientLimeOperation(env)
+  const inspect = { target: 'client', mode: 'inspect' }
+  const before = verifyLimeRolloutResponse({ status: 'lime_rollout_inspected', ...await manager.apply(inspect) }, inspect)
+  if (request.mode === 'inspect') return { event: 'client_lime_rollout', operation: 'inspect', ...before }
+  if (before.revision !== request.expectedRevision) throw new Error('client_rollout_revision_conflict')
+  // One atomic existing setter. An uncertain response must never replay a write.
+  const after = { status: 'lime_rollout_updated', ...await manager.apply({
+    target: 'client', mode: request.mode, expectedRevision: request.expectedRevision,
+  }) }
+  verifyLimeRolloutResponse(after, request)
+  if (after.trainerMode !== before.trainerMode || after.scheduleMode !== before.scheduleMode) {
+    throw new Error('client_rollout_other_roles_changed')
+  }
+  const readback = { status: 'lime_rollout_inspected', ...await manager.apply(inspect) }
+  return { event: 'client_lime_rollout', operation: request.mode, ...verifyLimeRolloutReadback(after, readback) }
+}
+
+async function main() {
+  readClientLimeOperation(process.env)
+  if (process.env.MIGRATION_DATABASE_HOST !== '10.70.10.67'
+      || process.env.MIGRATION_DATABASE_PORT !== '5432'
+      || process.env.MIGRATION_DATABASE_NAME !== 'fit'
+      || process.env.MIGRATION_DATABASE_USER !== 'fit_owner'
+      || process.env.MIGRATION_DATABASE_SSL_MODE !== 'require'
+      || process.env.MIGRATION_DATABASE_URL !== undefined) throw new Error('client_rollout_database_invalid')
+  const { buildDatabaseConnectionConfig } = await import('/app/dist/db/connection-config.js')
+  const { PgDatabasePool } = await import('/app/dist/db/pg-pool.js')
+  const { DatabaseLimeRolloutManager } = await import('/app/dist/db/lime-rollout.js')
+  const config = buildDatabaseConnectionConfig('MIGRATION_DATABASE')
+  if (!config) throw new Error('client_rollout_database_invalid')
+  const pool = new PgDatabasePool({ ...config, max: 1, query_timeout: 10000, statement_timeout: 10000 }, 'migration-owner')
+  try { console.log(JSON.stringify(await runClientLimeOperation(new DatabaseLimeRolloutManager(pool), process.env))) }
+  finally { await pool.end() }
+}
+
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  main().catch(() => {
+    console.error('Client rollout failed or outcome is uncertain; inspect before any retry.')
+    process.exitCode = 1
+  })
+}

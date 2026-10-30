@@ -413,6 +413,31 @@ describe('single-account client Lime pilot', () => {
 
 describe('independent client workout reference pilot', () => {
   const id = 'c11e0000-6010-4000-8000-000000000001'
+  it('allows a client outside the old cohort only with explicit all and enabled', () => {
+    vi.stubEnv('VITE_CLIENT_WORKOUT_REDESIGN_ENABLED', 'true')
+    vi.stubEnv('VITE_CLIENT_WORKOUT_ROLLOUT_MODE', 'all')
+    vi.stubEnv('VITE_CLIENT_WORKOUT_REDESIGN_PILOT_USER_IDS', '')
+    expect(isClientWorkoutRedesignPilotEnabled(id)).toBe(true)
+    expect(isClientWorkoutRedesignPilotEnabled('')).toBe(false)
+    vi.stubEnv('VITE_CLIENT_WORKOUT_REDESIGN_ENABLED', 'false')
+    expect(isClientWorkoutRedesignPilotEnabled(id)).toBe(false)
+  })
+  it.each(['off', '', 'ALL', 'invalid'])('closes explicit mode %s even for an old pilot member', mode => {
+    vi.stubEnv('VITE_CLIENT_WORKOUT_REDESIGN_ENABLED', 'true')
+    vi.stubEnv('VITE_CLIENT_WORKOUT_ROLLOUT_MODE', mode)
+    vi.stubEnv('VITE_CLIENT_WORKOUT_REDESIGN_PILOT_USER_IDS', id)
+    expect(isClientWorkoutRedesignPilotEnabled(id)).toBe(false)
+  })
+  it('can return from all to the unchanged pilot without changing stored data', () => {
+    vi.stubEnv('VITE_CLIENT_WORKOUT_REDESIGN_ENABLED', 'true')
+    vi.stubEnv('VITE_CLIENT_WORKOUT_REDESIGN_PILOT_USER_IDS', id)
+    vi.stubEnv('VITE_CLIENT_WORKOUT_ROLLOUT_MODE', 'all')
+    const outside = 'c11e0000-6010-4000-8000-000000000002'
+    expect(isClientWorkoutRedesignPilotEnabled(outside)).toBe(true)
+    vi.stubEnv('VITE_CLIENT_WORKOUT_ROLLOUT_MODE', 'pilot')
+    expect(isClientWorkoutRedesignPilotEnabled(outside)).toBe(false)
+    expect(isClientWorkoutRedesignPilotEnabled(id)).toBe(true)
+  })
   it('requires its own explicit flag and a valid distinct nonempty cohort', () => {
     vi.stubEnv('VITE_CLIENT_WORKOUT_REDESIGN_PILOT_USER_IDS', id)
     expect(isClientWorkoutRedesignPilotEnabled(id)).toBe(false)
