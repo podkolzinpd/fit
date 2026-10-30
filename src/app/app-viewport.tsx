@@ -35,15 +35,15 @@ export function AppViewportProvider({ children }: PropsWithChildren) {
   const initialHeight = typeof window === 'undefined' ? 0 : Math.round(window.innerHeight)
   const stableHeightRef = useRef(initialHeight)
   const recoveryTimersRef = useRef<number[]>([])
-  const closingScrollRef = useRef<Array<{ element: HTMLElement; top: number; left: number }>>([])
+  const closingScrollRef = useRef<Array<{ element: HTMLElement; route?: string; top: number; left: number }>>([])
   const [keyboardOpen, setKeyboardOpen] = useState(false)
 
   useLayoutEffect(() => {
     if (keyboardOpen) return
     // Expanding the viewport can clamp scroll before React restores the normal
     // bottom padding. Restore after both geometry and shell classes agree.
-    for (const { element, top, left } of closingScrollRef.current) {
-      if (element.isConnected) { element.scrollTop = top; element.scrollLeft = left }
+    for (const { element, route, top, left } of closingScrollRef.current) {
+      if (element.isConnected && element.dataset.viewportRoute === route) { element.scrollTop = top; element.scrollLeft = left }
     }
     closingScrollRef.current = []
   }, [keyboardOpen])
@@ -56,7 +56,7 @@ export function AppViewportProvider({ children }: PropsWithChildren) {
 
     const rememberClosingScroll = (nextKeyboardOpen: boolean) => {
       if (nextKeyboardOpen || !root.classList.contains('app-keyboard-open')) return
-      closingScrollRef.current = Array.from(document.querySelectorAll<HTMLElement>('.phone-frame .content'), (element) => ({ element, top: element.scrollTop, left: element.scrollLeft }))
+      closingScrollRef.current = Array.from(document.querySelectorAll<HTMLElement>('.phone-frame .content'), (element) => ({ element, route: element.dataset.viewportRoute, top: element.scrollTop, left: element.scrollLeft }))
     }
 
     const clearRecoveryTimers = () => {
