@@ -59,4 +59,78 @@ export function workoutTitleCases() {
     await card.screenshot({ path: info.outputPath(`${role}-named-card.png`) })
   })
 
+  test('trainer preserves editable names through copy and source template', async ({ page }) => {
+    const profileId = '69200000-0000-4000-8000-000000000001'
+    const source = { ...coachGestureWorkout(false, 2), title: 'я'.repeat(120), createdBy: profileId, status: 'done' as const, workoutDate: '2026-10-29', completedAt: '2026-10-29T10:00:00Z' }
+    const backend = await mockPilot(page, { profileId, fitLime: true, workouts: [source] })
+    const original = JSON.stringify(backend.getWorkouts()[0])
+    const creations: Array<{ title?: string }> = []
+    page.on('request', request => { if (new URL(request.url()).pathname === '/v1/workouts' && request.method() === 'POST') creations.push(request.postDataJSON() as { title?: string }) })
+    const templateId = '69200000-0000-4000-8000-000000000010'
+    const stored = { id: templateId, trainerId: profileId, name: 'Шаблон: Спина и ноги', notes: '', version: 1, createdAt: '2026-10-30T09:00:00Z', updatedAt: '2026-10-30T09:00:00Z', exercises: source.exercises.map(exercise => ({ ...exercise, sets: exercise.sets.map(set => ({ position: set.position, weightKg: set.weightKg, reps: set.reps })) })) }
+    await page.route(`**/v1/workout-templates/${templateId}`, route => route.fulfill({ json: { template: stored } }))
+    const templateWrites: Array<{ name: string }> = []
+    await page.route('**/v1/workout-templates', async route => {
+      if (route.request().method() !== 'POST') return route.fallback()
+      const body = route.request().postDataJSON() as { draft: typeof stored }
+      templateWrites.push(body.draft)
+      await route.fulfill({ json: { template: { ...stored, ...body.draft } } })
+    })
+    const base = `http://127.0.0.1:${Number(process.env.FIT_TEST_PORT ?? 5173) + 1000}`
+    await page.goto(`${base}/workouts/new?copy=${source.id}`)
+    await expect(page.getByLabel('Название тренировки', { exact: true })).toHaveValue(source.title)
+    await page.getByLabel('Название тренировки', { exact: true }).fill('Самостоятельная копия')
+    await page.getByRole('button', { name: 'Сохранить план', exact: true }).click()
+    await expect.poll(() => creations.length).toBe(1)
+    expect(creations[0]!.title).toBe('Самостоятельная копия')
+    await page.goto(`${base}/workouts/${source.id}`)
+    await page.getByRole('button', { name: 'Другие действия с тренировкой', exact: true }).click()
+    await page.getByRole('menuitem', { name: 'Сохранить как шаблон', exact: true }).click()
+    const name = page.getByLabel('Название шаблона', { exact: true })
+    await expect(name).toHaveValue(source.title)
+    await expect(name).toHaveAttribute('maxlength', '120')
+    await name.fill('Шаблон на завтра')
+    await page.getByRole('button', { name: 'Сохранить шаблон', exact: true }).click()
+    await expect.poll(() => templateWrites.length).toBe(1)
+    expect(templateWrites[0]!.name).toBe('Шаблон на завтра')
+    await page.goto(`${base}/workouts/new?template=${templateId}&client=${clientId}`)
+    await expect(page.getByLabel('Название тренировки', { exact: true })).toHaveValue(stored.name)
+    await page.getByLabel('Название тренировки', { exact: true }).fill('Тренировка из шаблона')
+    expect(JSON.stringify(backend.getWorkouts().find(item => item.id === source.id))).toBe(original)
+    expect(stored.name).toBe('Шаблон: Спина и ноги')
+  })
+
+  test('athlete keeps an editable source name in favorite and a new workout outside the reference pilot', async ({ page }) => {
+    const profileId = '69200000-0000-4000-8000-000000000002'
+    const source = { ...coachGestureWorkout(false, 2), title: 'Спина и ноги', createdBy: profileId, status: 'done' as const, workoutDate: '2026-10-29', completedAt: '2026-10-29T10:00:00Z' }
+    await mockPilot(page, { role: 'client', profileId, clientLime: false, workouts: [source] })
+    const favoriteId = '69200000-0000-4000-8000-000000000011'
+    let favorite: { id: string; title: string; exercises: unknown[]; version: number; createdAt: string } | null = null
+    await page.route('**/v1/favorite-workouts', async route => {
+      if (route.request().method() === 'POST') {
+        const command = route.request().postDataJSON() as { title: string; exercises: unknown[] }
+        favorite = { ...command, id: favoriteId, version: 1, createdAt: '2026-10-30T09:00:00Z' }
+        return route.fulfill({ json: favorite })
+      }
+      return route.fulfill({ json: { favorites: favorite ? [favorite] : [] } })
+    })
+    const base = `http://127.0.0.1:${Number(process.env.FIT_TEST_PORT ?? 5173) + 1000}`
+    await page.goto(`${base}/workouts/${source.id}`)
+    await page.getByRole('button', { name: 'Другие действия с тренировкой', exact: true }).click()
+    await page.getByRole('menuitem', { name: 'В избранное', exact: true }).click()
+    const sheet = page.getByRole('dialog', { name: 'Сохранить в избранное', exact: true })
+    await expect(sheet.getByLabel('Название', { exact: true })).toHaveValue(source.title)
+    await sheet.getByLabel('Название', { exact: true }).fill('Мой вариант')
+    await sheet.getByRole('button', { name: 'Сохранить', exact: true }).click()
+    await expect(sheet).toHaveCount(0)
+    await page.goto(`${base}/workouts/new?favorite=${favoriteId}`)
+    await expect(page.getByLabel('Название тренировки', { exact: true })).toHaveValue('Мой вариант')
+    await page.getByLabel('Название тренировки', { exact: true }).fill('Новая тренировка')
+    await page.getByRole('button', { name: 'Сохранить план', exact: true }).click()
+    await expect(page).toHaveURL(/\/workouts\/[0-9a-f-]+$/)
+    await expect(page.getByText('Новая тренировка', { exact: true })).toBeVisible()
+    expect(favorite).toMatchObject({ title: 'Мой вариант' })
+    expect(source.title).toBe('Спина и ноги')
+  })
+
 }

@@ -1334,7 +1334,7 @@ export function WorkoutFormPage() {
   // Индекс упражнения, которое заменяем через пикер; null — режим добавления.
   const [replaceIndex, setReplaceIndex] = useState<number | null>(null)
   const initial = templateSource.data && templateDraft
-    ? { clientId: routeClientId, workoutDate: localDate(params.get('date') ?? today), notes: templateSource.data.notes, exercises: templateDraft.exercises }
+    ? { clientId: routeClientId, title: templateSource.data.name, workoutDate: localDate(params.get('date') ?? today), notes: templateSource.data.notes, exercises: templateDraft.exercises }
     : source.data
     ? (workoutId ? { ...(source.data.status === 'done' || recordPlannedResult ? completedWorkoutDraft(source.data) : copyWorkout(source.data)), id: source.data.id, version: source.data.version } : copyWorkout(source.data, today, { refreshCatalogNames: true }))
     : favorite ? favoriteTemplateToWorkoutDraft(favorite.exercises, mine.data?.id ?? '', today, favorite.title)
@@ -1381,6 +1381,7 @@ export function WorkoutFormPage() {
       setNotes(template.notes)
       if (notesDetailsRef.current) notesDetailsRef.current.open = true
     }
+    if (!title.trim()) setTitle(template.name)
     setAddedTemplateName(template.name)
     closeTemplatePicker()
   }
@@ -1403,7 +1404,7 @@ export function WorkoutFormPage() {
       setActualDurationMinutes(saved.actualDurationMinutes ?? '')
       setShowEndTime(Boolean(saved.endTime))
       setNotes(saved.notes)
-      setTitle(saved.title ?? '')
+      setTitle(saved.title ?? initial?.title ?? '')
       setPrepSeconds(saved.prepSeconds ?? 0)
       setExecutionMode(saved.executionMode)
       setStageId(saved.stageId)
@@ -1425,7 +1426,7 @@ export function WorkoutFormPage() {
       setActualDurationMinutes(workoutId && source.data?.actualDurationSec ? String(source.data.actualDurationSec / 60) : '')
       setShowEndTime(Boolean(initial.endTime))
       setNotes(initial.notes ?? '')
-      setTitle(source.data?.title ?? '')
+      setTitle(initial.title ?? '')
       // Подготовка — настройка хода тренировки, копия забирает её вместе с отдыхом.
       setPrepSeconds(source.data?.prepSeconds ?? 0)
       // Старая тренировка без режима ведётся вручную — правка это сохраняет;
@@ -1641,7 +1642,7 @@ export function WorkoutFormPage() {
     mutation.mutate({ id: workoutId, requestId: workoutId ? undefined : createRequestId.current, clientId: submitClientId, workoutDate: date, startTime: submittedStartTime || undefined,
       endTime: submittedEndTime || undefined,
       ...(completedMode ? { actualDurationSec } : { prepSeconds: prepSeconds || null, executionMode: executionMode ?? DEFAULT_EXECUTION_MODE }),
-      ...(limePlan ? { title: title.trim() || null } : {}),
+      title: title.trim() || null,
       notes: notes || undefined, stageId: stageId || null, exercises, version: safePlanInput && workoutId ? editSourceVersion.current : source.data?.version,
       favoriteTitle: initial?.favoriteTitle, trainingFormat: clientMode ? 'self' : trainingFormat ?? 'self' })
   }
@@ -1711,7 +1712,7 @@ export function WorkoutFormPage() {
           {formTimeError && <p className="error" role="alert">{formTimeError}</p>}
           {refinedPlan && mutation.error && <InlineRequestError error={mutation.error} message={saveErrorMessage} />}
         </div> : <>
-        {limePlan && <Field label="Название тренировки"><input name="title" value={title} maxLength={120} placeholder="Название тренировки" onChange={(event) => setTitle(event.target.value)} /></Field>}
+        <Field label="Название тренировки"><input name="title" value={title} maxLength={120} placeholder="Название тренировки" onChange={(event) => setTitle(event.target.value)} /></Field>
         {clientMode
           ? <input type="hidden" name="clientId" value={mine.data?.id ?? ''} />
           : clientContextLocked
@@ -1819,7 +1820,8 @@ function WorkoutTemplatePicker({ templates, loading, error, onRetry, onSelect, o
   </div>
 }
 
-function SaveFavoriteWorkoutSheet({ exercises, pending, error, onSave, onClose }: {
+function SaveFavoriteWorkoutSheet({ title, exercises, pending, error, onSave, onClose }: {
+  title?: string | null
   exercises: readonly WorkoutExerciseModel[]
   pending: boolean
   error: Error | null
@@ -1827,7 +1829,7 @@ function SaveFavoriteWorkoutSheet({ exercises, pending, error, onSave, onClose }
   onClose: () => void
 }) {
   const { actor } = useAuth()
-  return <FavoriteWorkoutNameSheet heading="Сохранить в избранное" lime={isClientLimeEnabled(actor)}
+  return <FavoriteWorkoutNameSheet heading="Сохранить в избранное" lime={isClientLimeEnabled(actor)} initialTitle={title ?? ''}
     placeholder={workoutFocusTitle(muscleGroupLabels(exercises))} pending={pending} error={error} onSave={onSave} onClose={onClose} />
 }
 
@@ -2223,7 +2225,7 @@ export function WorkoutDetailPage() {
         onSave={async (title, expectedVersion) => { await workoutsRepository.rename({ ...workout, version: expectedVersion }, title); await invalidateWorkoutSurfaces() }}
         onReload={async () => { const fresh = await query.refetch(); if (!fresh.data || fresh.error) throw fresh.error ?? new Error('Не удалось перечитать тренировку'); return fresh.data }}
         onClose={() => setRenameSheetOpen(false)} />}
-      {favoriteSheetOpen && workout && <SaveFavoriteWorkoutSheet exercises={workout.exercises} pending={saveFavorite.isPending} error={saveFavorite.error}
+      {favoriteSheetOpen && workout && <SaveFavoriteWorkoutSheet title={workout.title ?? workout.favoriteTitle} exercises={workout.exercises} pending={saveFavorite.isPending} error={saveFavorite.error}
         onSave={(title) => saveFavorite.mutate(title)} onClose={() => { saveFavorite.reset(); setFavoriteSheetOpen(false) }} />}
       {bookingHistoryOpen && workout && <BookingHistorySheet key={workout.id} target={workout} onClose={() => setBookingHistoryOpen(false)} onApplied={invalidateWorkoutSurfaces} onReload={() => query.refetch()} />}
       {confirmDialog}{activeWorkoutRecoveryDialog}

@@ -24,6 +24,13 @@ describe('workout templates', () => {
     expect(JSON.stringify(draft)).not.toContain('confirmedAt')
     expect(JSON.stringify(draft)).not.toContain(workout.clientId)
     expect(workoutTemplateFromWorkout(workout).name).toBe('Новый шаблон')
+    expect(workoutTemplateFromWorkout({ ...workout, favoriteTitle: 'Историческое имя' }).name).toBe('Историческое имя')
+    const named = { ...workout, title: 'Спина и ноги' }
+    const inherited = workoutTemplateFromWorkout(named)
+    expect(inherited.name).toBe('Спина и ноги')
+    inherited.name = 'Шаблон на завтра'
+    expect(named.title).toBe('Спина и ноги')
+    expect(workoutTemplateFromWorkout(named, 'Явное название').name).toBe('Явное название')
   })
 
   it('duplicates as an independent snapshot', () => {

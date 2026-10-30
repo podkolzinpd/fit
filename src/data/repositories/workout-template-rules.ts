@@ -38,7 +38,7 @@ function cloneExercises(exercises: WorkoutExerciseDraft[]): WorkoutExerciseDraft
   }))
 }
 
-export function workoutTemplateFromWorkout(workout: Workout, name = 'Новый шаблон'): WorkoutTemplateDraft {
+export function workoutTemplateFromWorkout(workout: Workout, name = workout.title?.trim() || workout.favoriteTitle?.trim() || 'Новый шаблон'): WorkoutTemplateDraft {
   return {
     id: crypto.randomUUID(),
     name,
