@@ -1,4 +1,5 @@
 import { act, render, screen } from '@testing-library/react'
+import { useLayoutEffect, useRef } from 'react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { AppViewportProvider, appViewportMetrics, useAppViewport } from './app-viewport'
 
@@ -51,6 +52,27 @@ afterEach(() => {
 })
 
 describe('AppViewportProvider', () => {
+  it.each([false, true])('restores the same screen scroll but respects a new route (%s)', (navigate) => {
+    const mobileViewport = installMobileViewport()
+    function Content() {
+      const { keyboardOpen } = useAppViewport()
+      const ref = useRef<HTMLDivElement>(null)
+      useLayoutEffect(() => {
+        if (!keyboardOpen && ref.current) ref.current.scrollTop = 0
+      }, [keyboardOpen])
+      return <div className="phone-frame"><div className="content" data-viewport-route={navigate && !keyboardOpen ? '/next' : '/current'} ref={ref}><input aria-label="Ввод" /></div></div>
+    }
+    render(<AppViewportProvider><Content /></AppViewportProvider>)
+    act(() => screen.getByRole('textbox').focus())
+    mobileViewport.viewport.height = 420
+    act(() => mobileViewport.emit('resize'))
+    const content = document.querySelector<HTMLElement>('.content')!
+    content.scrollTop = 200
+    mobileViewport.viewport.height = 844
+    act(() => mobileViewport.emit('resize'))
+    expect(content.scrollTop).toBe(navigate ? 0 : 200)
+  })
+
   it('не принимает уменьшившийся innerHeight за новую постоянную высоту', () => {
     expect(appViewportMetrics(508, 508, 844)).toEqual({
       height: 844,
