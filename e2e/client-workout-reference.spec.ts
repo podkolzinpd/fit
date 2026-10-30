@@ -6,6 +6,59 @@ test.skip(process.env.FIT_CLIENT_WORKOUT_ACCEPTANCE !== '1', 'Dedicated native c
 
 const pilotId = 'c11e0000-6010-4000-8000-000000000001'
 
+// Restore the real assistant surface through its supported draft contract.
+for (const theme of ['light', 'dark']) test(`client reference assistant draft retains edits and failed-save recovery ${theme}`, async ({ page }, info) => {
+  await page.clock.setFixedTime(new Date('2026-09-24T12:00:00Z'))
+  const actionId = 'c11e0000-6010-4000-8000-000000000090'
+  const storageKey = `fit:assistant-workout-draft:v1:${pilotId}:${conversationId}:${clientId}`
+  await page.addInitScript(({ id, theme, storageKey }) => {
+    localStorage.setItem(`fit.clientLime.theme.${id}`, theme)
+    localStorage.setItem(storageKey, JSON.stringify({ transcript: '', rawFragments: ['Присед 3 по 10', 'Присед 2 по 8'], workoutDate: '2026-09-24', startTime: '15:00', requestId: 'c11e0000-6010-4000-8000-000000000091', result: { items: [
+      { sourceText: 'Присед 3 по 10', exerciseRef: 'barbell-squat', confidence: 1, sets: Array.from({ length: 3 }, () => ({ reps: 10, weightKg: 50 })) },
+      { sourceText: 'Присед 2 по 8', exerciseRef: 'barbell-squat', confidence: 1, sets: Array.from({ length: 2 }, () => ({ reps: 8, weightKg: 40 })) },
+    ], unmatched: [] } }))
+  }, { id: pilotId, theme, storageKey })
+  await mockPilot(page, { role: 'client', profileId: pilotId, clientLime: true })
+  await page.route('**/v1/assistant/conversations', route => route.fulfill({ json: { conversations: [{ id: conversationId, title: 'Сегодня', createdAt: '2026-09-24T10:00:00Z' }] } }))
+  await page.route(`**/v1/assistant/conversations/${conversationId}/messages`, route => route.fulfill({ json: { messages: [{ id: messageId, conversationId, turnId: null, author: 'assistant', content: 'Проверьте тренировку', createdAt: '2026-09-24T10:01:00Z', action: { id: actionId, tool: 'record_workout', status: 'proposed', title: 'Тренировка', description: 'Проверьте тренировку', payload: { step: 'confirm', clientId, clientName: 'Тестовый спортсмен' } } }] } }))
+  const commands: Array<{ input: { workout: { requestId: string; workoutDate: string; startTime: string; exercises: Array<{ blockId: string; sets: Array<{ weightKg?: number }> }> } } }> = []
+  await page.route(`**/v1/assistant/actions/${actionId}/apply`, route => {
+    commands.push(route.request().postDataJSON() as typeof commands[number])
+    return route.fulfill(commands.length === 1 ? { status: 503, json: { error: 'unavailable' } } : { json: { result: { status: 'applied', version: 2 } } })
+  })
+  await page.goto('/assistant')
+  const draft = page.locator('.assistant-workout-draft')
+  await expect(draft).toBeVisible()
+  await expect(page.locator('.client-screen-reference')).toBeVisible()
+  await expect(draft.locator('.assistant-workout-result-row')).toHaveCount(2)
+  for (const width of [390, 430]) {
+    await page.setViewportSize({ width, height: 844 })
+    await expect(draft).toHaveCSS('border-radius', '32px')
+    expect(await draft.getByRole('button', { name: /Удалить/ }).first().evaluate(element => element.getBoundingClientRect().width)).toBeGreaterThanOrEqual(44)
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+    await page.screenshot({ path: info.outputPath(`assistant-${theme}-${width}.png`) })
+  }
+  await draft.getByLabel('Вес', { exact: true }).first().fill('55')
+  await draft.getByLabel('Дата', { exact: true }).fill('2026-09-25')
+  await draft.getByLabel('Время', { exact: true }).fill('16:30')
+  await draft.getByRole('button', { name: /Удалить/ }).last().click()
+  await expect(draft.locator('.assistant-workout-result-row')).toHaveCount(1)
+  await draft.getByRole('button', { name: 'Сохранить тренировку', exact: true }).click()
+  await expect(draft.getByRole('alert')).toContainText('Не удалось сохранить тренировку')
+  await expect(draft.getByLabel('Вес', { exact: true })).toHaveValue('55')
+  await draft.getByRole('button', { name: 'Сохранить тренировку', exact: true }).click()
+  await expect(draft).toHaveCount(0)
+  expect(commands).toHaveLength(2)
+  // Block UUIDs are transient composer IDs; the command requestId and all
+  // user-entered data must survive retry unchanged. Validate both UUIDs too.
+  for (const command of commands) expect(z.uuid().safeParse(command.input.workout.exercises[0]!.blockId).success).toBe(true)
+  const normalized = commands.map(command => ({ ...command, input: { workout: { ...command.input.workout, exercises: command.input.workout.exercises.map(exercise => ({ ...exercise, blockId: 'transient-block' })) } } }))
+  expect(normalized[1]).toEqual(normalized[0])
+  expect(commands[1]!.input.workout).toMatchObject({ workoutDate: '2026-09-25', startTime: '16:30' })
+  expect(commands[1]!.input.workout.exercises[0]!.sets[0]!.weightKg).toBe(55)
+  expect(await page.evaluate(key => localStorage.getItem(key), storageKey)).toBeNull()
+})
+
 // Home geometry differs with the palette and narrow viewport. Existing Live
 // behavior remains covered below; do not multiply its transitions here.
 for (const theme of ['light', 'dark']) test(`client reference home preserves entry actions ${theme}`, async ({ page }, info) => {
