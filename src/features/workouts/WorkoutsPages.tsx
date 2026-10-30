@@ -22,6 +22,7 @@ import { useCoachLiveDensity } from '../../app/coach-live-density'
 import { useCoachLiveHalo } from './use-coach-live-halo'
 import { CoachDayHeading, useCoachDaySwipe } from './CoachDayNavigation'
 import { advancePlanField } from './plan-input-navigation'
+import { useWorkoutFieldVisibility } from './workout-field-visibility'
 import { coachWorkoutReferenceAssets } from '../../shared/coach-workout-reference-assets'
 import { WorkoutDragBlock, WorkoutDragHandle, WorkoutGestureList, WorkoutSwipe } from './WorkoutGestures'
 import { invalidateWorkoutResults } from '../../app/invalidate-workout-results'
@@ -1369,6 +1370,7 @@ export function WorkoutFormPage() {
   const selectedStageId = clientReference ? stageId ?? defaultStageId : stageId || defaultStageId
   const stageLoading = clientReference && stageId === undefined && !source.data?.stageId && goal.isLoading
   const safePlanInput = coachReference && isCoachPlanInputEnabled(actor) && (!workoutId || source.data?.status === 'planned')
+  useWorkoutFieldVisibility(safePlanInput, '.coach-reference-form .workout-form :is(input, select, textarea)')
   const readyPlan = clientLime && !workoutId && Boolean(favoriteId || presetId) && !completedMode
   const refinedPlan = coachReference && isCoachPlanLayoutEnabled(actor) && (!workoutId || source.data?.status === 'planned')
   const planDraftKey = safePlanInput && workoutId ? workoutFormDraftKey(actor?.userId ?? 'anonymous', `edit-${workoutId}`) : draftKey
@@ -2425,6 +2427,7 @@ function WorkoutTrainerQuestion({ workout, canReply, startEditing = false, autho
   const [value, setValue] = useState(currentReview)
   const [reaction, setReaction] = useState<TrainerReaction | undefined>(currentReaction)
   const valid = value.trim().length > 0 && value.trim().length <= 500
+  useWorkoutFieldVisibility(editing, '.workout-question-answer textarea')
 
   useEffect(() => {
     if (startEditing && canReply && unresolved) setEditing(true)
@@ -2447,21 +2450,7 @@ function WorkoutTrainerQuestion({ workout, canReply, startEditing = false, autho
   return <section className="workout-review workout-question workout-review-readonly" aria-labelledby="trainer-workout-question-title">
     <div className="workout-review-head"><div><p className="eyebrow">ВОПРОС КЛИЕНТА</p><h2 id="trainer-workout-question-title">По этой тренировке</h2></div>{canReply && unresolved && !editing && <button type="button" className="secondary" disabled={saving} onClick={() => setEditing(true)}>Ответить</button>}</div>
     <p className="workout-review-text">{workout.clientQuestion}</p>
-    {editing ? <form className="workout-question-answer" onFocusCapture={(event) => {
-      const target = event.target
-      if (!(target instanceof HTMLTextAreaElement)) return
-      // iOS can scroll the root document together with scrollIntoView and keep
-      // that offset after the keyboard closes. Move only the app content: the
-      // shell itself must stay pinned to the viewport without a grey tail.
-      window.setTimeout(() => {
-        const content = target.closest('.content')
-        if (!(content instanceof HTMLElement)) return
-        const targetRect = target.getBoundingClientRect()
-        const contentRect = content.getBoundingClientRect()
-        const centeredTop = content.scrollTop + targetRect.top - contentRect.top - Math.max(16, (content.clientHeight - targetRect.height) / 2)
-        content.scrollTo({ top: Math.max(0, centeredTop), behavior: 'smooth' })
-      }, 180)
-    }} onSubmit={async (event) => {
+    {editing ? <form className="workout-question-answer" onSubmit={async (event) => {
       event.preventDefault()
       if (!valid) return
       try {
