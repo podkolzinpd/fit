@@ -738,7 +738,8 @@ test('trainer: direct detail link falls back to this client history', async ({ p
   // page.route mocks do not apply to the new tab.
   await mockNavigationWorkouts(direct)
   await direct.goto(detailPath)
-  await expect(direct.getByRole('heading', { name: 'Анна Смирнова', exact: true })).toBeVisible()
+  await expect(direct.locator('.workout-header-eyebrow')).toHaveText('Анна Смирнова')
+  await expect(direct.locator('.workout-header-contract h2')).toBeVisible()
   await direct.getByRole('button', { name: 'Назад', exact: true }).click()
   await expect(direct).toHaveURL(clientHistoryPath)
   await direct.close()
