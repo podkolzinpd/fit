@@ -93,6 +93,7 @@ for (const theme of ['light', 'dark']) test(`client reference workout lists reta
   const marker = page.locator('.client-history-calendar-day.selected .lime-calendar-day-marker')
   await expect(marker).toHaveCSS('width', '36px')
   await expect(marker).toHaveCSS('height', '36px')
+  await page.screenshot({ path: info.outputPath(`calendar-control-${theme}.png`) })
   await page.getByRole('tab', { name: 'История', exact: true }).click()
   await page.getByRole('button', { name: 'Список', exact: true }).click()
   await expect(page.getByRole('heading', { name: completed.title!, exact: true })).toBeVisible()
@@ -132,6 +133,35 @@ for (const theme of ['light', 'dark']) test(`client reference people rows retain
   await sheet.getByRole('button', { name: 'Показать тренеров', exact: true }).click()
   await expect(sheet).toHaveCount(0)
   await expect(page.getByLabel('Имя тренера', { exact: true })).toHaveValue('Тестовый')
+})
+
+for (const theme of ['light', 'dark']) test(`client reference profile settings retain independent preferences ${theme}`, async ({ page }, info) => {
+  await page.addInitScript(({ id, theme }) => localStorage.setItem(`fit.clientLime.theme.${id}`, theme), { id: pilotId, theme })
+  await mockPilot(page, { role: 'client', profileId: pilotId, clientLime: true, clientGender: 'male' })
+  await page.goto('/me/profile')
+  await expect(page.locator('.client-profile-avatar')).toHaveCSS('width', '56px')
+  await page.screenshot({ path: info.outputPath(`profile-${theme}.png`) })
+  await page.getByRole('link', { name: 'Настройки профиля', exact: true }).click()
+  await expect(page).toHaveURL(/\/me\/settings$/)
+  const animation = page.getByRole('switch', { name: 'Анимация в Live', exact: true })
+  await expect(animation).toBeChecked()
+  await page.getByRole('radio', { name: 'Компактный', exact: true }).click()
+  await expect(animation).toBeChecked()
+  await animation.click()
+  await expect(animation).not.toBeChecked()
+  await page.getByRole('radio', { name: 'Список', exact: true }).click()
+  await page.reload()
+  await expect(page.getByRole('radio', { name: 'Компактный', exact: true })).toHaveAttribute('aria-checked', 'true')
+  await expect(animation).not.toBeChecked()
+  await expect(page.getByRole('radio', { name: 'Список', exact: true })).toHaveAttribute('aria-checked', 'true')
+  await expect(page.getByLabel('Тема оформления')).toHaveValue(theme)
+  for (const width of [390, 430]) {
+    await page.setViewportSize({ width, height: 844 })
+    await animation.scrollIntoViewIfNeeded()
+    expect((await animation.boundingBox())!.width).toBeGreaterThanOrEqual(44)
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+    await page.screenshot({ path: info.outputPath(`settings-${theme}-${width}.png`) })
+  }
 })
 
 // Z-order is density-independent; both themes exercise different halo surfaces.
