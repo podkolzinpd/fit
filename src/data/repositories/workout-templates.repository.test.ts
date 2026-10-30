@@ -39,6 +39,10 @@ describe('workout templates', () => {
     expect(copy.name).toBe('Всё тело — копия')
     expect(copy.id).not.toBeUndefined()
     expect(copy.exercises[0]?.blockId).not.toBe(source.exercises[0]?.blockId)
+    const longName = 'я'.repeat(120)
+    const longCopy = cloneWorkoutTemplate({ ...source, name: longName })
+    expect(longCopy.name).toBe(longName)
+    expect(longCopy.exercises[0]?.blockId).not.toBe(source.exercises[0]?.blockId)
   })
 
   it('appends an independent template plan without changing existing exercises or group links', () => {
