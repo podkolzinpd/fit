@@ -44,7 +44,7 @@ export function BookingHistorySheet({ target, onClose, onApplied, onReload }: {
   }
   if (!isQuickWorkoutEntryEnabled(actor) || actor?.role !== 'trainer') return null
   return <dialog ref={dialog} tabIndex={-1} className="booking-history-sheet" aria-label="История тренировок клиента" onClose={event => { if (event.target === event.currentTarget) onClose() }} onCancel={event => { if (apply.isPending) event.preventDefault() }}>
-    <header className="coach-reference-sheet-header"><button type="button" aria-label={source ? 'К списку истории' : 'Закрыть историю'} disabled={apply.isPending} onClick={() => { if (source) { setSource(null); setConfirmReplacement(null); apply.reset() } else dialog.current?.close() }}>{source ? <BackIcon /> : <CloseIcon />}</button><h2>{source ? 'Повторить тренировку' : 'Из истории'}</h2><span /></header>
+    <header className="coach-reference-sheet-header"><button type="button" aria-label={source ? 'К списку истории' : 'Закрыть историю'} disabled={apply.isPending} onClick={() => { if (source) { setSource(null); setConfirmReplacement(null); apply.reset() } else dialog.current?.close() }}>{source ? <BackIcon /> : <CloseIcon />}</button><h2>{source ? 'Использовать план' : 'Из истории'}</h2><span /></header>
     <div className="booking-history-scroll">
       <p className="booking-history-client">{target.clientName}</p>
       {source ? <>
@@ -63,6 +63,6 @@ export function BookingHistorySheet({ target, onClose, onApplied, onReload }: {
       </>}
       {apply.error && <p className="error" role="alert">{apply.error.message}<button type="button" disabled={apply.isPending} onClick={() => void onReload()}>Обновить запись</button></p>}
     </div>
-    {source && <footer>{replacementConfirmed && <button type="button" className="secondary" disabled={apply.isPending} onClick={() => setConfirmReplacement(null)}>Отмена</button>}<button type="button" className="primary" disabled={apply.isPending || target.status !== 'planned'} onClick={repeat}>{apply.isPending ? 'Сохраняем…' : replacementConfirmed ? 'Заменить план' : 'Повторить в этой записи'}</button></footer>}
+    {source && <footer>{replacementConfirmed && <button type="button" className="secondary" disabled={apply.isPending} onClick={() => setConfirmReplacement(null)}>Отмена</button>}<button type="button" className="primary" disabled={apply.isPending || target.status !== 'planned'} onClick={repeat}>{apply.isPending ? 'Сохраняем…' : replacementConfirmed ? 'Заменить план' : 'Использовать план'}</button></footer>}
   </dialog>
 }

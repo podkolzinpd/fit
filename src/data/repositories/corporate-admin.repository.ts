@@ -4,7 +4,8 @@ import { corporateAdminRequest } from '../queries/corporate-admin.queries'
 import { RepositoryError } from './error'
 
 const office = z.object({ id: z.uuid(), city: z.string(), name: z.string(), address: z.string(), archived: z.boolean(), version: z.number().int().nonnegative() })
-const trainer = z.object({ id: z.uuid(), name: z.string(), isYandex: z.boolean(), officeIds: z.array(z.uuid()), version: z.number().int().nonnegative() })
+const trainer = z.object({ id: z.uuid(), name: z.string(), isYandex: z.boolean(), officeIds: z.array(z.uuid()), version: z.number().int().nonnegative(),
+  publicId: z.uuid().nullable().optional(), publishedName: z.string().nullable().optional(), photoUrl: z.string().nullable().optional(), photoUnavailable: z.boolean().optional() })
 const bundle = z.object({ offices: z.array(office), trainers: z.array(trainer) })
 
 async function response(path: Parameters<typeof corporateAdminRequest>[0], body?: object): Promise<unknown> {

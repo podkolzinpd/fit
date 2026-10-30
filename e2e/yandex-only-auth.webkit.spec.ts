@@ -1589,15 +1589,28 @@ for (const { width, height, theme } of [
     await mockPilot(page, { role: 'client', profileId: clientId })
     await page.addInitScript(({ id, theme }) => localStorage.setItem(`fit.clientLime.theme.${id}`, theme), { id: clientId, theme })
     const imageUrl = new URL('/assets/startup-photo-983c93dc4df8.jpg', testInfo.project.use.baseURL).href
+    let offices = width === 430 ? [] : [{ city: 'Санкт-Петербург', name: 'БЦ Бенуа' }, { city: 'Москва', name: 'Тестовый офис' }]
+    let publicReads = 0
     const published = { ...publicTrainerDraft, photos: publicTrainerDraft.photos.map(photo => ({ ...photo, url: imageUrl, thumbnailUrl: imageUrl })), bio: 'Длинное описание тренировок и опыта. '.repeat(30),
       certificates: [{ title: 'Конец анкеты', organization: 'Тест', year: 2026 }] }
-    await page.route(`**/v1/trainers/${publicTrainerId}/public-profile`, route => route.fulfill({
+    await page.route('**/v1/trainers/catalog*', route => route.fulfill({ json: { items: [{ publicId: publicTrainerId, profile: published, isBrandTrainer: false }], totalCount: 1, nextOffset: null } }))
+    await page.route(`**/v1/trainers/${publicTrainerId}/public-profile`, route => {
+      publicReads += 1
+      return route.fulfill({
       json: { publicId: publicTrainerId, draft: published, published, listedInCatalog: true,
-        version: 1, isBrandTrainer: false, publishedAt: '2026-10-29T09:00:00Z', updatedAt: '2026-10-29T09:00:00Z' },
-    }))
-    await page.goto(`/trainers/${publicTrainerId}`)
+        version: 1, isBrandTrainer: false, yandexOffices: offices, publishedAt: '2026-10-29T09:00:00Z', updatedAt: '2026-10-29T09:00:00Z' },
+    }) })
+    await page.goto('/me/trainers')
+    await page.getByRole('link', { name: 'Посмотреть анкету' }).click()
     const profile = page.locator('.public-trainer-page')
     await expect(profile.getByRole('heading', { name: 'Тестовый тренер' })).toBeVisible()
+    if (offices.length) {
+      await expect(profile.getByText('Тренер Яндекса', { exact: true })).toBeVisible()
+      await expect(profile.getByRole('region', { name: 'Офисы Яндекса' })).toContainText('Санкт-Петербург · БЦ Бенуа')
+    } else {
+      await expect(profile.getByText('Тренер Яндекса', { exact: true })).toHaveCount(0)
+      await expect(profile.getByRole('region', { name: 'Офисы Яндекса' })).toHaveCount(0)
+    }
     await expect.poll(() => profile.locator('img.trainer-card-avatar').evaluate((image: HTMLImageElement) => image.naturalWidth)).toBeGreaterThan(0)
     await page.screenshot({ path: testInfo.outputPath('public-trainer-top.png') })
     const unusedBottom = await profile.evaluate(element => {
@@ -1614,6 +1627,15 @@ for (const { width, height, theme } of [
     await expect(page.getByRole('dialog', { name: 'Фотографии тренера' })).toBeVisible()
     await page.getByRole('button', { name: 'Закрыть фото' }).click()
     await expect(profile.getByRole('button', { name: 'Написать тренеру' })).toBeVisible()
+    if (width === 390) {
+      offices = []
+      await profile.getByRole('button', { name: 'Назад', exact: true }).click()
+      await page.getByRole('link', { name: 'Посмотреть анкету' }).click()
+      await expect(profile.getByRole('heading', { name: 'Тестовый тренер' })).toBeVisible()
+      await expect(profile.getByText('Тренер Яндекса', { exact: true })).toHaveCount(0)
+      await expect(profile.getByRole('region', { name: 'Офисы Яндекса' })).toHaveCount(0)
+      expect(publicReads).toBeGreaterThan(1)
+    }
   })
 }
 
