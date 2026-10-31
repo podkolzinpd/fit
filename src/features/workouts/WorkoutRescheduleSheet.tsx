@@ -12,8 +12,8 @@ import { CoachPlanTimeField } from './CoachPlanTimeField'
 import './workout-reschedule.css'
 
 /** One slot editor is shared by detail and calendar; it never saves the plan. */
-export function WorkoutRescheduleSheet({ workout: sourceWorkout, initialSlot, onSaved, onClose }: {
-  workout: Workout; initialSlot?: WorkoutSlotDraft
+export function WorkoutRescheduleSheet({ workout: sourceWorkout, initialSlot, onSaved, onClose, onReloaded }: {
+  workout: Workout; initialSlot?: WorkoutSlotDraft; onReloaded?: (workout: Workout) => void
   onSaved: (slot: WorkoutSlotDraft) => Promise<void>; onClose: () => void
 }) {
   const [workout] = useState(sourceWorkout)
@@ -49,7 +49,8 @@ export function WorkoutRescheduleSheet({ workout: sourceWorkout, initialSlot, on
   const conflict = isRepositoryConflict(save.error)
   const reload = useMutation({ mutationFn: () => workouts.get(workout.id), onSuccess: fresh => {
     queryClient.setQueryData(['workout', fresh.id], fresh)
-    onClose()
+    if (onReloaded) onReloaded(fresh)
+    else onClose()
   }, onSettled: () => setReloading(false) })
   const busy = save.isPending || reloading
   return <dialog ref={dialog} className="workout-reschedule-sheet" aria-label="Дата и время"
