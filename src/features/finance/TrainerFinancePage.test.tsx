@@ -386,7 +386,6 @@ describe('TrainerFinancePage', () => {
     expect(screen.getByLabelText('Название')).toHaveValue('Онлайн-сопровождение')
     await user.clear(screen.getByLabelText('Стоимость, ₽'))
     await user.type(screen.getByLabelText('Стоимость, ₽'), '12000')
-    // The fixed end date must be paired with a fixed start, not today's date.
     await user.clear(screen.getByLabelText('Начало'))
     await user.type(screen.getByLabelText('Начало'), '2026-10-01')
     await user.type(screen.getByLabelText('Окончание'), '2026-10-31')
