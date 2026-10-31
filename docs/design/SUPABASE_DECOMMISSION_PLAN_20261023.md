@@ -191,3 +191,12 @@ scope, оставлено без изменения). Local stack по-преж�
 frontend env при этом всегда native. Linux ARM Podman/WebKit прогон локально
 нестабилен, не объявлен зелёным; source/базы production не использовались.
 Дальше в рамках этого же PR: завершить exact-head CI и передать готовый PR.
+
+Linux visual fixtures получены в pinned CI runtime, manual run41237810794:
+57/56/32 passed,4/5/29 skipped по профилям390/430/1440 соответственно
+(145 проверенных случаев,38 штатных role/browser skips). Это генерация эталонов
+с действующими assertions, не финальный CI gate. Временный manual job удалён;
+финальный PR обязан пройти обычный CI без update-snapshots.
+Darwin native control сохранён; в reference для form snapshots применены только
+те же две touch-правки, остальные UI/CSS без изменений. Нет сопоставимого замера
+полного старого suite; ускорение общей CI матрицы не заявляется.
