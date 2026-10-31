@@ -99,7 +99,7 @@ npm run check
 5. После любых изменений в `src/` перезапустите `npm run ios:sync` (или `ios:open`) — Xcode не пересобирает веб-бандл сам.
 
 Для локальной проверки интерфейса используйте native API/PostgreSQL из
-`npm run dev`. Browser fixtures создают отдельную native БД на каждый сценарий
+`npm run dev`. Browser fixtures создают отдельную native БД на каждый worker с изолированным reset перед сценарием
 и synthetic app-session; GoTrue, PostgREST и Supabase SDK для них не нужны.
 Перед `npx playwright test` установите зависимости API и выполните
 `npm --prefix services/api run build`; PostgreSQL 17 должен быть запущен через
