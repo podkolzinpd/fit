@@ -21,7 +21,7 @@ export function PublicTrainerProfilePage() {
   useEffect(() => {
     let active = true
     setLoading(true); setError(null)
-    void getPublicTrainerProfile(publicId).then((value) => {
+    void getPublicTrainerProfile(publicId, { fresh: true }).then((value) => {
       if (active) { setProfile(value); setLoading(false) }
     }, (caught: unknown) => {
       if (active) { setError(caught instanceof Error ? caught : new Error('Не удалось открыть анкету.')); setLoading(false) }
@@ -40,8 +40,8 @@ export function PublicTrainerProfilePage() {
   return <Page title="Тренер Fit" back={back} swipeBack className="public-trainer-page ui-identity">
     <AsyncView loading={loading} error={error} empty={!profile?.published}
       emptyTitle="Анкета недоступна" emptyDescription="Тренер снял её с публикации или ссылка устарела."
-      emptyAction={<Link className="button secondary" to="/auth">Открыть Fit</Link>} onRetry={() => { setLoading(true); setError(null); void getPublicTrainerProfile(publicId).then((value) => { setProfile(value); setLoading(false) }, (caught: unknown) => { setError(caught instanceof Error ? caught : new Error('Не удалось открыть анкету.')); setLoading(false) }) }}>
-      {published && <TrainerProfileCard profile={published} isBrandTrainer={profile.isBrandTrainer} publicView
+      emptyAction={<Link className="button secondary" to="/auth">Открыть Fit</Link>} onRetry={() => { setLoading(true); setError(null); void getPublicTrainerProfile(publicId, { fresh: true }).then((value) => { setProfile(value); setLoading(false) }, (caught: unknown) => { setError(caught instanceof Error ? caught : new Error('Не удалось открыть анкету.')); setLoading(false) }) }}>
+      {published && <TrainerProfileCard profile={published} isBrandTrainer={profile.isBrandTrainer} yandexOffices={profile.yandexOffices} publicView
         onAvatarClick={photoItems.length ? (index) => setPhotoIndex(index) : undefined} primaryAction={published.acceptingClients
         ? <PublicTrainerChatButton publicProfileId={publicId} />
         : <p className="trainer-contact-unavailable">Тренер временно не принимает новых клиентов</p>} />}

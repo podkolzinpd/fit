@@ -97,6 +97,7 @@ interface PublicTrainerProfileRow extends QueryResultRow {
   updated_at: string
   version: string | number
   is_brand_trainer: boolean
+  yandex_offices?: Array<{ city: string; name: string }> | null
 }
 
 interface TrainerCatalogRow extends QueryResultRow {
@@ -121,6 +122,7 @@ export type TrainerProfessionalProfileResponse = {
   updatedAt: string
   version: number
   isBrandTrainer: boolean
+  yandexOffices?: Array<{ city: string; name: string }>
 }
 
 function storedPhotos(draft: StoredTrainerProfileDraft | null): StoredTrainerProfilePhoto[] {
@@ -168,6 +170,7 @@ function publicResponse(row: PublicTrainerProfileRow, profile: TrainerProfileDra
     updatedAt: row.updated_at,
     version: Number(row.version),
     isBrandTrainer: row.is_brand_trainer,
+    ...(row.yandex_offices?.length ? { yandexOffices: row.yandex_offices } : {}),
   }
 }
 
@@ -521,7 +524,8 @@ export class DatabasePilotTrainerProfiles implements PilotTrainerProfiles {
     try {
       const rows = await connection.query<PublicTrainerProfileRow>(`
         select public_id, published_data, listed_in_catalog, published_at,
-          updated_at, version, is_brand_trainer
+          updated_at, version, is_brand_trainer,
+          app_private.public_yandex_trainer_offices(public_id) as yandex_offices
         from public.trainer_professional_profiles
         where public_id = $1 and published_data is not null
       `, [publicId])

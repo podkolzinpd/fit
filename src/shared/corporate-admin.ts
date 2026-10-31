@@ -9,6 +9,10 @@ export interface CorporateOffice {
 export interface CorporateTrainer {
   id: string
   name: string
+  publicId?: string | null
+  publishedName?: string | null
+  photoUrl?: string | null
+  photoUnavailable?: boolean
   isYandex: boolean
   officeIds: string[]
   version: number
