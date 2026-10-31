@@ -1,7 +1,7 @@
 -- Up Migration
 
 -- The existing finish operation owns both strict Live and explicit attendance.
-create function app_private.finish_live_workout_without_pause(
+create or replace function app_private.finish_live_workout_without_pause(
   p_workout_id uuid, p_expected_version bigint, p_operation_id uuid,
   p_attendance boolean, p_disposition text, p_package_id uuid
 )
@@ -93,7 +93,7 @@ language sql security definer set search_path='' as $$
 $$;
 
 -- One public finalizer preserves the existing pause/duration accounting.
-create function public.finish_live_workout(
+create or replace function public.finish_live_workout(
   p_workout_id uuid,p_expected_version bigint,p_operation_id uuid,
   p_attendance boolean,p_disposition text,p_package_id uuid
 )
