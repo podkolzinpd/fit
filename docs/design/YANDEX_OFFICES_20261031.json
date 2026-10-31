@@ -1,0 +1,246 @@
+{
+  "source": "Список из текущего чата от27.10; повторная сверка официальных Yandex contacts/jobs31.10.2026",
+  "existingPreserved": {
+    "city": "Москва",
+    "name": "Лотте",
+    "address": "Новинский 8",
+    "result": "preserved without editing or duplication"
+  },
+  "toAdd": [
+    {
+      "city": "Санкт-Петербург",
+      "name": "Бенуа",
+      "address": "Пискаревский проспект, 2к2, литер Щ",
+      "sourceUrl": "https://yandex.ru/company/contacts/spb",
+      "result": "added; verified after page reload"
+    },
+    {
+      "city": "Санкт-Петербург",
+      "name": "Феррум",
+      "address": "Свердловская набережная, 44с1, 2–5 этаж",
+      "sourceUrl": "https://yandex.ru/company/contacts/spb",
+      "result": "added; verified after page reload"
+    },
+    {
+      "city": "Москва",
+      "name": "Красная Роза",
+      "address": "ул. Льва Толстого, 16",
+      "sourceUrl": "https://yandex.ru/company/contacts/moscow",
+      "result": "added; verified after page reload"
+    },
+    {
+      "city": "Москва",
+      "name": "Аврора",
+      "address": "ул. Садовническая, 82с2",
+      "sourceUrl": "https://yandex.ru/company/contacts/moscow",
+      "result": "added; verified after page reload"
+    },
+    {
+      "city": "Москва",
+      "name": "ОКО",
+      "address": "1-й Красногвардейский проезд, 21с1, подъезд В",
+      "sourceUrl": "https://yandex.ru/company/contacts/moscow",
+      "result": "added; verified after page reload"
+    },
+    {
+      "city": "Москва",
+      "name": "Нева",
+      "address": "1-й Красногвардейский проезд, 22с1",
+      "sourceUrl": "https://yandex.ru/company/contacts/moscow",
+      "result": "added; verified after page reload"
+    },
+    {
+      "city": "Москва",
+      "name": "Центр робототехники",
+      "address": "ул. Лобачевского, 130Г",
+      "sourceUrl": "https://yandex.ru/company/contacts/moscow",
+      "result": "added; verified after page reload"
+    },
+    {
+      "city": "Москва",
+      "name": "Центр сборки автономного транспорта",
+      "address": "Точный адрес не опубликован на официальной странице",
+      "sourceUrl": "https://yandex.ru/jobs/locations/moscow",
+      "result": "added; verified after page reload"
+    },
+    {
+      "city": "Владивосток",
+      "name": "Fresh Plaza",
+      "address": "Океанский проспект, 17",
+      "sourceUrl": "https://yandex.ru/jobs/locations/vladivostok",
+      "result": "added; verified after page reload"
+    },
+    {
+      "city": "Воронеж",
+      "name": "Мегион",
+      "address": "проспект Труда, 65/2",
+      "sourceUrl": "https://yandex.ru/jobs/locations/voronezh",
+      "result": "added; verified after page reload"
+    },
+    {
+      "city": "Воронеж",
+      "name": "Парламент",
+      "address": "Красноармейский переулок, 3а",
+      "sourceUrl": "https://yandex.ru/jobs/locations/voronezh",
+      "result": "added; verified after page reload"
+    },
+    {
+      "city": "Екатеринбург",
+      "name": "Палладиум",
+      "address": "ул. Хохрякова, 10",
+      "sourceUrl": "https://yandex.ru/jobs/locations/ekaterinburg",
+      "result": "added; verified after page reload"
+    },
+    {
+      "city": "Иннополис",
+      "name": "Технопарк",
+      "address": "ул. Университетская, 7",
+      "sourceUrl": "https://yandex.ru/jobs/locations/innopolis",
+      "result": "added; verified after page reload"
+    },
+    {
+      "city": "Казань",
+      "name": "Сувар Плаза",
+      "address": "ул. Спартаковская, 6",
+      "sourceUrl": "https://yandex.ru/jobs/locations/kazan",
+      "result": "added; verified after page reload"
+    },
+    {
+      "city": "Краснодар",
+      "name": "Капитал",
+      "address": "ул. Красных Партизан, 200",
+      "sourceUrl": "https://yandex.ru/jobs/locations/krasnodar",
+      "result": "added; verified after page reload"
+    },
+    {
+      "city": "Нижний Новгород",
+      "name": "Лобачевский Plaza",
+      "address": "ул. Алексеевская, 10/16",
+      "sourceUrl": "https://yandex.ru/jobs/locations/nizhniy-novgorod",
+      "result": "added; verified after page reload"
+    },
+    {
+      "city": "Нижний Новгород",
+      "name": "Ульянова, 13",
+      "address": "ул. Ульянова, 13",
+      "sourceUrl": "https://yandex.ru/jobs/locations/nizhniy-novgorod",
+      "result": "added; verified after page reload"
+    },
+    {
+      "city": "Новосибирск",
+      "name": "Гринвич",
+      "address": "ул. Красноярская, 35",
+      "sourceUrl": "https://yandex.ru/company/contacts/nsk",
+      "result": "added; verified after page reload"
+    },
+    {
+      "city": "Новосибирск",
+      "name": "Академпарк / Технопарк",
+      "address": "ул. Николаева, 11, 2 этаж",
+      "sourceUrl": "https://yandex.ru/company/contacts/nsk",
+      "result": "added; verified after page reload"
+    },
+    {
+      "city": "Пермь",
+      "name": "Чернышевского, 15Б",
+      "address": "ул. Чернышевского, 15б",
+      "sourceUrl": "https://yandex.ru/jobs/locations/perm",
+      "result": "added; verified after page reload"
+    },
+    {
+      "city": "Ростов-на-Дону",
+      "name": "Пять морей",
+      "address": "ул. Нижнебульварная, 6",
+      "sourceUrl": "https://yandex.ru/jobs/locations/rostov-on-don",
+      "result": "added; verified after page reload"
+    },
+    {
+      "city": "Самара",
+      "name": "Вертикаль",
+      "address": "Московское шоссе, 17",
+      "sourceUrl": "https://yandex.ru/jobs/locations/samara",
+      "result": "added; verified after page reload"
+    },
+    {
+      "city": "Сириус",
+      "name": "Дельта Сириус",
+      "address": "Триумфальный проезд, 1",
+      "sourceUrl": "https://yandex.ru/jobs/locations/sochi",
+      "result": "added; verified after page reload"
+    },
+    {
+      "city": "Тула",
+      "name": "Троицкий",
+      "address": "ул. Советская, 67, пом. 501–502",
+      "sourceUrl": "https://yandex.ru/jobs/locations/tula",
+      "result": "added; verified after page reload"
+    },
+    {
+      "city": "Уфа",
+      "name": "Нестеров",
+      "address": "Верхнеторговая площадь, 6",
+      "sourceUrl": "https://yandex.ru/jobs/locations/ufa",
+      "result": "added; verified after page reload"
+    },
+    {
+      "city": "Челябинск",
+      "name": "Бовид",
+      "address": "проспект Ленина, 26а, стр. 2",
+      "sourceUrl": "https://yandex.ru/jobs/locations/chelyabinsk",
+      "result": "added; verified after page reload"
+    },
+    {
+      "city": "Белград",
+      "name": "Сербская Роза",
+      "address": "бульвар Войводы Бойовича, 12",
+      "sourceUrl": "https://yandex.ru/jobs/locations/belgrade",
+      "result": "added; verified after page reload"
+    },
+    {
+      "city": "Белград",
+      "name": "Скайлайн",
+      "address": "ул. Князя Милоша, 90",
+      "sourceUrl": "https://yandex.ru/jobs/locations/belgrade",
+      "result": "added; verified after page reload"
+    },
+    {
+      "city": "Минск",
+      "name": "Рубин Плаза",
+      "address": "проспект Дзержинского, 5",
+      "sourceUrl": "https://yandex.ru/jobs/locations/minsk",
+      "result": "added; verified after page reload"
+    },
+    {
+      "city": "Ереван",
+      "name": "Красный Гранат",
+      "address": "ул. Московян, 35",
+      "sourceUrl": "https://yandex.ru/company/contacts/yerevan",
+      "result": "added; verified after page reload"
+    },
+    {
+      "city": "Алматы",
+      "name": "БАО — Большой Алматинский Офис",
+      "address": "проспект Аль-Фараби, 11/1",
+      "sourceUrl": "https://yandex.kz/company/ru/contacts/almaty",
+      "result": "added; verified after page reload"
+    },
+    {
+      "city": "Ташкент",
+      "name": "Regent — Yandex Uzbekistan",
+      "address": "Мирабадский район, ул. Фидокор, 30, БЦ Regent",
+      "sourceUrl": "https://yandex.ru/company/contacts/tashkent",
+      "result": "added; verified after page reload"
+    }
+  ],
+  "verification": {
+    "date": "2026-10-31",
+    "productionUrl": "https://fit-training.ru/admin?tab=offices",
+    "method": "Existing authenticated admin UI only; full page reload and DOM readback including archived offices",
+    "expectedTotal": 33,
+    "actualTotal": 33,
+    "missing": [],
+    "added": 32,
+    "existingPreserved": 1,
+    "trainerAssignmentsChanged": false
+  }
+}
