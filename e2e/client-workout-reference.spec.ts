@@ -1305,7 +1305,9 @@ for (const density of ['original', 'compact']) test(`client reference pause cloc
   const clock = page.locator('.client-reference-pause').and(page.getByRole('button'))
   await expect(clock).toHaveCount(1)
   await expect(clock).toHaveAttribute('aria-pressed', 'false')
-  await page.clock.pauseAt((await page.evaluate(() => Date.now())) + 500)
+  // Stay off a second rollover: notification ticks below deliberately advance
+  // active time by 1 ms after resume. Keep the original half-second delay.
+  await page.clock.pauseAt(Math.ceil(((await page.evaluate(() => Date.now())) + 500) / 100) * 100)
   const cardTop = await page.locator('.live-exercise').first().evaluate(el => el.getBoundingClientRect().top)
   await clock.click()
   // The test clock is frozen; deliver the existing query notification timer.
