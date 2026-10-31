@@ -176,7 +176,7 @@ export function AppLayout() {
   >
     <NavLink to="/assistant"><AssistantIcon />Ассистент</NavLink>
   </Coachmark>
-  if (actor?.role === 'client') return <ClientWorkoutReferenceContext value={clientLimeShell && isClientWorkoutRedesignEnabled(actor)}><FitLimeIconsContext value={clientLimeShell}><div className={frameClass}><div className={contentClass} ref={contentRef}>{serviceNotice}<Outlet /></div>{contestWinnerDialog}{!immersive && <nav className="tab-bar client-tab-bar" aria-label="Основная навигация">
+  if (actor?.role === 'client') return <ClientWorkoutReferenceContext value={clientLimeShell && isClientWorkoutRedesignEnabled(actor)}><FitLimeIconsContext value={clientLimeShell}><div className={frameClass}><div className={contentClass} data-viewport-route={`${pathname}|${routeStep}`} ref={contentRef}>{serviceNotice}<Outlet /></div>{contestWinnerDialog}{!immersive && <nav className="tab-bar client-tab-bar" aria-label="Основная навигация">
     {monochromeClientFinance || pathname === '/me/nutrition'
       ? <Link to="/me" className="active" aria-current="page"><HomeIcon />Кабинет</Link>
       : <NavLink to="/me" end><HomeIcon />Кабинет</NavLink>}
@@ -192,7 +192,7 @@ export function AppLayout() {
     <NavLink to="/me/progress"><AnalyticsIcon />Прогресс</NavLink>
     <NavLink to="/me/profile"><ProfileIcon />Профиль</NavLink>
   </nav>}</div></FitLimeIconsContext></ClientWorkoutReferenceContext>
-  return <FitLimeIconsContext value={fitLimeShell}><div className={frameClass}><div className={contentClass} ref={contentRef}>{serviceNotice}<Outlet /></div>{contestWinnerDialog}{!immersive && <nav className="tab-bar trainer-tab-bar" aria-label="Основная навигация">
+  return <FitLimeIconsContext value={fitLimeShell}><div className={frameClass}><div className={contentClass} data-viewport-route={`${pathname}|${routeStep}`} ref={contentRef}>{serviceNotice}<Outlet /></div>{contestWinnerDialog}{!immersive && <nav className="tab-bar trainer-tab-bar" aria-label="Основная навигация">
     <NavLink to="/today"><TodayIcon />{trainerScheduleV2 && isFitLimeEnabled(actor) ? 'День' : 'Сегодня'}</NavLink>
     {trainerScheduleV2 && <NavLink to="/schedule"><ScheduleIcon />Расписание</NavLink>}
     {(redesignedStart || trainerScheduleV2) && ((fitLimeShell && /^\/progress\/[^/]+$/.test(pathname)) || monochromeTrainerFinance
