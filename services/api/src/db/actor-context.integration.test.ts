@@ -7303,6 +7303,17 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
             .toEqual([{id,status:'done',title:'Unchanged title',start_time:'10:15:00',started_at:null}])
           expect((await ownerPool.query(`select disposition,package_id from public.trainer_finance_sessions where workout_id=$1 and voided_at is null`,[id])).rows)
             .toEqual([{disposition:disposition==='auto'?'charged':disposition,package_id:['auto','charged'].includes(disposition)?pack:null}])
+          const accounting = (await ownerPool.query('select id,disposition,package_id,version from public.trainer_finance_sessions where workout_id=$1',[id])).rows
+          const draft: PlannedWorkoutDraft = { id, clientId:card, title:'Unchanged title',
+            workoutDate:new Date().toISOString().slice(0,10), startTime:'10:15', endTime:null, notes:null, trainingFormat:'with_trainer',
+            exercises:[{position:0,source:'system',ref:'barbell-squat',customExerciseId:null,name:'Приседания со штангой',
+              muscleGroup:'legs',inputKind:'strength',blockId:randomUUID(),blockType:'single',blockPreset:'set',blockRounds:1,
+              restBetweenExercisesSec:0,restBetweenRoundsSec:90,restBetweenSetsSec:90,trainerComment:null,
+              sets:[{position:0,weightKg:40,reps:10,durationMin:null,durationSec:null,distanceKm:null,rpe:null}]}] }
+          expect(await withActorTransaction(runtimePool,ACTOR_ID,c=>saveCompletedWorkout(c,draft,2))).toEqual({id,version:3})
+          expect((await ownerPool.query('select id,disposition,package_id,version from public.trainer_finance_sessions where workout_id=$1',[id])).rows).toEqual(accounting)
+          expect((await ownerPool.query('select count(*)::int n from public.workout_exercises where workout_id=$1',[id])).rows).toEqual([{n:1}])
+
         }
         const id = randomUUID()
         await ownerPool.query(`insert into public.workouts(id,trainer_id,client_id,created_by,workout_date,status,training_format)
