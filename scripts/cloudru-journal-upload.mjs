@@ -1,5 +1,5 @@
 import {createCipheriv,createDecipheriv,createHash,createPublicKey,createPrivateKey,generateKeyPairSync,randomBytes,publicEncrypt,privateDecrypt,constants} from 'node:crypto'
-import {readFileSync,writeFileSync,chmodSync,lstatSync,unlinkSync,readdirSync,fsyncSync,openSync,closeSync} from 'node:fs'
+import {readFileSync,writeFileSync,chmodSync,lstatSync,unlinkSync,readdirSync,fsyncSync,openSync,closeSync,existsSync} from 'node:fs'
 import {createRequire} from 'node:module'
 import {pathToFileURL} from 'node:url'
 
@@ -146,6 +146,16 @@ export async function loadCloudruUpload(target,digest,session) {
   const plain=openUpload(JSON.parse(encrypted.toString('utf8')),readFileSync('/session/server.private.pem','utf8'),session)
   if(plain.session!==session||plain.digest!==digest||!Array.isArray(plain.parts)||plain.parts.length!==2)fail()
   return {parts:plain.parts,publicPem:manifest.operatorPublicPem,
+   selectionBinding:async(mode,binding)=>{
+    const path='/session/append-selection.json'
+    if(!['inspect','apply'].includes(mode)||!/^[a-f0-9]{64}$/.test(binding))fail()
+    if(existsSync(path)) {
+     const f=lstatSync(path)
+     if(!f.isFile()||f.isSymbolicLink()||f.uid!==0||(f.mode&0o777)!==0o600||f.size>200)fail()
+     if(JSON.parse(readFileSync(path,'utf8')).binding!==binding)throw new Error('journal_import_selection_changed')
+    } else if(mode==='inspect')durableFile(path,JSON.stringify({binding}))
+    else throw new Error('journal_import_selection_changed')
+   },
    persistReceipt:async(state,receipt,sealReceipt)=>{
     const key=journalObject(session,state),bytes=JSON.stringify(sealReceipt({...receipt,state},manifest.operatorPublicPem))
     // Both primary-provider disk and S3 must hold the receipt before a database commit.
@@ -168,7 +178,7 @@ export async function cleanupCloudruUpload(target,digest,session) {
   // requested writes without object deletion or any storage permission change.
   await stage('cleanup_readback',()=>client.send(new sdk.HeadObjectCommand({Bucket:bucket,Key:journalObject(session,'readback')})))
   for(const file of readdirSync('/session')) {
-   if(!['manifest.json','server.private.pem'].includes(file)&&! /^(prepared|committed|readback)-\d{1,20}-\d{1,4}\.encrypted\.json$/.test(file))fail()
+   if(!['manifest.json','server.private.pem','append-selection.json'].includes(file)&&! /^(prepared|committed|readback)-\d{1,20}-\d{1,4}\.encrypted\.json$/.test(file))fail()
   }
   for(const file of readdirSync('/session'))unlinkSync(`/session/${file}`)
   return {status:'local_key_removed_encrypted_objects_retained'}

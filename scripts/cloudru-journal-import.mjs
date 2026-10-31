@@ -29,7 +29,8 @@ export function readJournalTransport(parts,approvedSha256,targetNameSha256) {
   // packet. Their names/hashes never require a new GitHub target secret. The
   // existing trainer binding remains mandatory; legacy packets retain their
   // separate name-hash check unchanged.
-  const packetTarget=data?.schemaVersion===2&&scope?.sets===0
+  const appendExisting=data?.schemaVersion===3&&scope?.workouts===85
+  const packetTarget=(data?.schemaVersion===2&&scope?.sets===0)||appendExisting
   if(!data||Object.keys(data).sort().join(',')!=='batchId,clientName,schemaVersion,workouts'
    ||!(packetTarget||(data.schemaVersion===1&&scope?.workouts===137))||typeof data.batchId!=='string'||!/^[a-z0-9][a-z0-9:_-]{0,99}$/i.test(data.batchId)
    ||typeof data.clientName!=='string'||data.clientName.length<2||data.clientName.length>120
@@ -75,6 +76,50 @@ const uuid=/^[a-f0-9]{8}-[a-f0-9]{4}-[1-5][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]
 const failWriter=code=>{throw new Error('journal_import_'+code)}
 const hash=value=>createHash('sha256').update(JSON.stringify(value)).digest('hex')
 
+// Fingerprint the old card and complete workout graphs, including edited facts
+// and finance rows. Only these fingerprints enter the encrypted receipt.
+async function preservedJournalState(connection,clientId,excludedIds=[]) {
+ const state={}
+ const queries=[
+  ['card','select to_jsonb(c) value from public.clients c where id=$1',1],
+  ['memberships','select to_jsonb(c) value from public.client_trainers c where client_id=$1 order by trainer_id limit 5001',5000],
+  ['relationships','select to_jsonb(c) value from public.client_trainer_relationships c where client_id=$1 order by id limit 5001',5000],
+  ['workouts','select to_jsonb(w) value from public.workouts w where client_id=$1 and not(id=any($2::uuid[])) order by id limit 5001',5000],
+  ['exercises',`select to_jsonb(e) value from public.workout_exercises e join public.workouts w on w.id=e.workout_id
+   where w.client_id=$1 and not(w.id=any($2::uuid[])) order by e.id limit 20001`,20000],
+  ['sets',`select to_jsonb(s) value from public.workout_sets s join public.workout_exercises e on e.id=s.workout_exercise_id
+   join public.workouts w on w.id=e.workout_id where w.client_id=$1 and not(w.id=any($2::uuid[])) order by s.id limit 100001`,100000],
+  ...['trainer_finance_packages','trainer_finance_payments','trainer_finance_sessions'].map(table=>
+   [table,`select to_jsonb(x) value from public.${table} x where client_id=$1
+    ${table==='trainer_finance_sessions'?'and not(workout_id=any($2::uuid[]))':''} order by id limit 5001`,5000]),
+ ]
+ for(const [key,sql,limit] of queries) {
+  const singleArgument=['card','memberships','relationships','trainer_finance_packages','trainer_finance_payments'].includes(key)
+  const rows=(await connection.query(sql,singleArgument?[clientId]:[clientId,excludedIds])).rows
+  if(rows.length>limit||(key==='card'&&rows.length!==1))failWriter('state_invalid')
+  state[key]={count:rows.length,fingerprint:hash(rows)}
+ }
+ return state
+}
+async function verifyPreservedState(connection,clientId,excludedIds,expected) {
+ if(JSON.stringify(await preservedJournalState(connection,clientId,excludedIds))!==JSON.stringify(expected))failWriter('previous_state_changed')
+ const finance=(await connection.query(`select count(*)::int n from public.trainer_finance_sessions
+  where client_id=$1 and workout_id=any($2::uuid[]) and (voided_at is not null or disposition<>'unassigned' or package_id is not null)`,[clientId,excludedIds])).rows[0]
+ if(finance?.n!==0)failWriter('unexpected_finance_change')
+}
+
+async function keepImportedWorkoutUnassigned(connection,clientId,workoutId,workoutDate) {
+ const sessions=(await connection.query(`select id,version::text version,disposition,package_id from public.trainer_finance_sessions
+  where client_id=$1 and workout_id=$2 and voided_at is null limit 2`,[clientId,workoutId])).rows
+ if(sessions.length>1)failWriter('unexpected_finance_change')
+ const session=sessions[0]
+ // Use the same authorized command as the app, on a newly created workout only.
+ // Never manufacture payment/free/trial facts or modify an old session.
+ if(session&&(session.disposition!=='unassigned'||session.package_id!==null))await connection.query(
+  `select public.update_trainer_finance_session_details_v2($1,$2,'unassigned',null,$3,$4::date)`,
+  [session.id,session.version,'Перенос истории: без списания абонемента',workoutDate])
+}
+
 // Detect an older deployed parser silently dropping a supplied source field.
 function sourceContent(d) {
  const exerciseKeys=['position','source','ref','customExerciseId','name','muscleGroup','inputKind','blockId','blockType',
@@ -112,7 +157,7 @@ export function validateJournalDrafts(workouts,clientId,readRequest) {
 // never accept actor/client IDs or SQL through workflow inputs. readState reads
 // only this card using a distinct owner READ ONLY transaction. No owner writes.
 async function insertReviewedJournal({runtime,trainerId,clientId,athleteId,workouts,
- readRequest,saveCompleted,readState,persistReceipt,newCard=null,verifyContent=null}) {
+ readRequest,saveCompleted,readState,persistReceipt,newCard=null,existingCard=null,verifyContent=null}) {
  if(!uuid.test(trainerId)||(newCard===null&&!uuid.test(clientId))||(athleteId!==null&&!uuid.test(athleteId)))failWriter('selection_invalid')
  if(newCard && (clientId!==null||athleteId!==null||typeof newCard.draft?.fullName!=='string'
   ||Object.keys(newCard.draft).some(k=>!['fullName','gender','ageYears','ageUpdatedAt','heightCm','goal','note'].includes(k))
@@ -150,12 +195,18 @@ async function insertReviewedJournal({runtime,trainerId,clientId,athleteId,worko
   if(card.length!==1||card[0].archived_at!==null||card[0].merged_into_client_id!==null
    ||card[0].auth_user_id!==athleteId
    ||(newCard&&(card[0].trainer_id!==trainerId||card[0].full_name!==newCard.draft.fullName)))failWriter('selection_changed')
+  if(existingCard) {
+   const selected=await existingCard.resolve(runtime)
+   if(selected.id!==clientId||selected.auth_user_id!==athleteId||selected.trainer_id!==existingCard.partition)failWriter('selection_changed')
+  }
   const before=await readState({trainerId,clientId,requestIds:entries.map(e=>e.draft.requestId)})
   if(!Array.isArray(before.workouts)||before.workouts.length>5000||!Array.isArray(before.requests)
    ||before.requests.length>entries.length||before.workouts.some(w=>w.client_id!==clientId))failWriter('state_invalid')
   if(createdCard&&before.workouts.length)failWriter('new_card_postcondition_failed')
   const priorIds=new Set(before.workouts.map(w=>w.id));const priorRequests=new Map(before.requests.map(r=>[r.request_id,r.workout_id]))
   if(priorRequests.size!==before.requests.length)failWriter('receipt_invalid')
+  const preservedState=existingCard?await preservedJournalState(runtime,clientId,[...priorRequests.values()]):null
+  const ownerPreservedState=existingCard?await existingCard.readPreserved(clientId,[...priorRequests.values()]):null
   const created=[];let replayed=false
   if(priorRequests.size) {
    if(priorRequests.size!==entries.length)failWriter('partial_prior_batch')
@@ -169,7 +220,9 @@ async function insertReviewedJournal({runtime,trainerId,clientId,athleteId,worko
    replayed=true
   } else {
    const dates=new Set(entries.map(e=>e.draft.workoutDate))
-   if(before.workouts.some(w=>dates.has(w.workout_date)))failWriter('existing_date_requires_review')
+   // Explicit schema3 appends independent records; a date is not an identity.
+   // Legacy/new-card imports retain their original overlap guard unchanged.
+   if(!existingCard&&before.workouts.some(w=>dates.has(w.workout_date)))failWriter('existing_date_requires_review')
    const adapter={query:async(sql,args)=>(await runtime.query(sql,args)).rows}
    for(const {ordinal,draft} of entries) {
     const saved=await saveCompleted(adapter,draft,null)
@@ -179,13 +232,16 @@ async function insertReviewedJournal({runtime,trainerId,clientId,athleteId,worko
     if(!actual||actual.client_id!==clientId||actual.created_by!==trainerId||actual.status!=='done'
      ||actual.workout_date!==draft.workoutDate||actual.start_time!==null||actual.end_time!==null
      ||actual.actual_duration_sec!==null||actual.notes!==draft.notes)failWriter('save_postcondition_failed')
-    created.push({ordinal,workoutId:saved.id,requestId:draft.requestId,workoutDate:draft.workoutDate,version:saved.version})
+    if(existingCard)await keepImportedWorkoutUnassigned(runtime,clientId,saved.id,draft.workoutDate)
+    created.push({ordinal,workoutId:saved.id,requestId:draft.requestId,workoutDate:draft.workoutDate,
+     ...(existingCard?{}:{version:saved.version})})
    }
   }
   if(createdCard)for(const table of ['trainer_finance_packages','trainer_finance_payments','trainer_finance_sessions']) {
    if((await runtime.query(`select count(*)::int n from public.${table} where client_id=$1`,[clientId])).rows[0]?.n!==0)failWriter('unexpected_finance_change')
   }
   if(verifyContent)await verifyContent(runtime,{trainerId,clientId,entries,created})
+  if(preservedState)await verifyPreservedState(runtime,clientId,created.map(c=>c.workoutId),preservedState)
   const ids=created.map(e=>e.workoutId)
   const teacherCount=(await runtime.query('select count(*)::int n from public.workouts where id=any($1::uuid[])',[ids])).rows[0]?.n
   if(teacherCount!==entries.length)failWriter('trainer_visibility_failed')
@@ -197,7 +253,8 @@ async function insertReviewedJournal({runtime,trainerId,clientId,athleteId,worko
    await runtime.query("select set_config('request.jwt.claim.sub',$1,true)",[trainerId])
   }
   const receipt={schemaVersion:1,trainerId,clientId,athleteId,created,replayed,createdCard,
-   previousWorkouts:before.workouts.map(w=>({id:w.id,fingerprint:hash(w)})),teacherCount,athleteCount}
+   previousWorkouts:before.workouts.filter(w=>!existingCard||!created.some(c=>c.workoutId===w.id)).map(w=>({id:w.id,fingerprint:hash(w)})),
+   ...(preservedState?{appendOnly:true,preservedState,ownerPreservedState}:{}),teacherCount,athleteCount}
   // Keep a private receipt before commit so unknown outcomes remain reconcilable.
   await persistReceipt('prepared',receipt)
   commitAttempted=true
@@ -294,11 +351,30 @@ async function ownerRead(owner,work) {
  }catch(e){await owner.query('rollback');throw e}
 }
 export async function runPreparedNewCardImport({mode,owner,runtime,target,legacyId=null,parts,approvedSha256,
- readRequest,saveCompleted,createCard,persistReceipt}) {
+ readRequest,saveCompleted,createCard,persistReceipt,selectionBinding}) {
  if(!['inspect','apply'].includes(mode))failOrchestrator('mode_invalid')
  const payload=readJournalTransport(parts,approvedSha256,target.clientNameSha256)
  const scope=reviewedScope(payload.workouts)
+ const appendExisting=payload.schemaVersion===3
  const {trainerId}=await resolveJournalTrainer(owner,target,legacyId)
+ const matchingCards=async connection=>(await connection.query(`select distinct c.id,c.trainer_id,c.auth_user_id,
+  (case when c.auth_user_id is null then c.trainer_id=$1 else exists(select 1 from public.client_trainer_relationships r
+   where r.client_id=c.id and r.trainer_id=$1 and r.status='active') end) connected from public.clients c
+  left join public.client_trainers ct on ct.client_id=c.id and ct.trainer_id=$1
+  where c.archived_at is null and c.merged_into_client_id is null
+  and (c.trainer_id=$1 or ct.trainer_id=$1 or exists(select 1 from public.client_trainer_relationships r
+   where r.client_id=c.id and r.trainer_id=$1 and r.status='active'))
+  and (lower(btrim(c.full_name))=lower($2) or lower(btrim(ct.alias))=lower($2)
+   or split_part(lower(btrim(c.full_name)),' ',1)=lower($2)
+   or split_part(lower(btrim(ct.alias)),' ',1)=lower($2)) limit 11`,[trainerId,payload.clientName.toLowerCase()])).rows
+ const resolveExisting=async connection=>{
+  const matches=await matchingCards(connection)
+  if(matches.length!==1)failOrchestrator(matches.length?'existing_card_ambiguous':'existing_card_missing')
+  if(matches[0].connected!==true)failOrchestrator('selection_changed')
+  return matches[0]
+ }
+ const selected=appendExisting?await ownerRead(owner,()=>resolveExisting(owner)):null
+ if(appendExisting&&typeof selectionBinding!=='function')failOrchestrator('selection_changed')
  const requestIds=validateJournalDrafts(payload.workouts,'00000000-0000-4000-8000-000000000001',readRequest).map(e=>e.draft.requestId)
  let lastBatchRows=[]
  const readBatch=async()=>ownerRead(owner,async()=>{
@@ -308,8 +384,9 @@ export async function runPreparedNewCardImport({mode,owner,runtime,target,legacy
    where r.actor_id=$1 and r.request_id=any($2::uuid[]) limit 138`,[trainerId,requestIds])).rows
   if(!rows.length)return null
   if(rows.length!==scope.workouts||new Set(rows.map(r=>r.request_id)).size!==scope.workouts||new Set(rows.map(r=>r.client_id)).size!==1
-   ||rows.some(r=>!r.workout_id||r.full_name!==payload.clientName||r.trainer_id!==trainerId
-    ||r.auth_user_id!==null||r.archived_at!==null||r.merged_into_client_id!==null))failOrchestrator('prior_batch_changed')
+   ||rows.some(r=>!r.workout_id||r.trainer_id!==(selected?.trainer_id??trainerId)||r.archived_at!==null||r.merged_into_client_id!==null
+    ||(appendExisting?(r.client_id!==selected.id||r.auth_user_id!==selected.auth_user_id)
+     :(r.full_name!==payload.clientName||r.auth_user_id!==null))))failOrchestrator('prior_batch_changed')
   lastBatchRows=rows
   return rows[0].client_id
  })
@@ -328,27 +405,30 @@ export async function runPreparedNewCardImport({mode,owner,runtime,target,legacy
    rolsuper,rolbypassrls from pg_roles where rolname=current_user`)).rows[0]
   if(role?.readonly!=='on'||role.name!=='fit_api'||role.rolsuper!==false||role.rolbypassrls!==false)failOrchestrator('runtime_role_invalid')
   await runtime.query("select set_config('request.jwt.claim.sub',$1,true)",[trainerId])
-  const matching=(await runtime.query(`select c.id from public.clients c
-   left join public.client_trainers ct on ct.client_id=c.id and ct.trainer_id=$1
-   where c.archived_at is null and c.merged_into_client_id is null
-   and (c.trainer_id=$1 or ct.trainer_id=$1 or exists(select 1 from public.client_trainer_relationships r
-    where r.client_id=c.id and r.trainer_id=$1 and r.status='active'))
-   and (lower(btrim(c.full_name))=lower($2) or lower(btrim(ct.alias))=lower($2)
-    or split_part(lower(btrim(c.full_name)),' ',1)=lower($2)
-    or split_part(lower(btrim(ct.alias)),' ',1)=lower($2)) limit 11`,[trainerId,payload.clientName])).rows
-  if(matching.length>10||matching.some(c=>c.id!==priorCard))failOrchestrator('existing_name_requires_review')
+  if(appendExisting) {
+   const current=await resolveExisting(runtime)
+   if(current.id!==selected.id||current.auth_user_id!==selected.auth_user_id||current.trainer_id!==selected.trainer_id)failOrchestrator('selection_changed')
+  } else {
+   const matching=await matchingCards(runtime)
+   if(matching.length>10||matching.some(c=>c.id!==priorCard))failOrchestrator('existing_name_requires_review')
+  }
   if(priorCard)await verifyJournalContent(runtime,{trainerId,clientId:priorCard,
    entries:validateJournalDrafts(payload.workouts,priorCard,readRequest),
    created:lastBatchRows.map(r=>({ordinal:requestIds.indexOf(r.request_id)+1,workoutId:r.workout_id}))})
   await runtime.query('commit')
  }catch(e){await runtime.query('rollback');throw e}
+ if(appendExisting)await selectionBinding(mode,hash({trainerId,clientId:selected.id,athleteId:selected.auth_user_id,partition:selected.trainer_id}))
  if(mode==='inspect')return {status:priorCard?'already_imported':'ready',trainerVerified:true,
-  willCreateCard:priorCard===null,workouts:scope.workouts,exercises:scope.exercises,sets:scope.sets,athleteLinked:false,readOnly:true}
+  willCreateCard:!appendExisting&&priorCard===null,workouts:scope.workouts,exercises:scope.exercises,sets:scope.sets,
+  athleteLinked:selected?.auth_user_id!=null,readOnly:true,
+  ...(appendExisting?{appendOnly:true,existingWorkouts:(await readState({clientId:selected.id})).workouts.length}:{}),}
  if(typeof persistReceipt!=='function')failOrchestrator('receipt_required')
  let committedReceipt
- const result=await insertReviewedJournal({runtime,trainerId,clientId:null,athleteId:null,workouts:payload.workouts,
+ const result=await insertReviewedJournal({runtime,trainerId,clientId:selected?.id??null,athleteId:selected?.auth_user_id??null,workouts:payload.workouts,
   readRequest,saveCompleted,readState,verifyContent:verifyJournalContent,
-  newCard:{draft:{fullName:payload.clientName,gender:null,ageYears:null,ageUpdatedAt:null,heightCm:null,goal:null,note:null},
+  existingCard:appendExisting?{resolve:resolveExisting,partition:selected.trainer_id,
+   readPreserved:(clientId,excludedIds)=>ownerRead(owner,()=>preservedJournalState(owner,clientId,excludedIds))}:null,
+  newCard:appendExisting?null:{draft:{fullName:payload.clientName,gender:null,ageYears:null,ageUpdatedAt:null,heightCm:null,goal:null,note:null},
    readBatch,create:createCard},
   persistReceipt:async(state,receipt)=>{await persistReceipt(state,receipt);if(state==='committed')committedReceipt=receipt},
  })
@@ -358,9 +438,16 @@ export async function runPreparedNewCardImport({mode,owner,runtime,target,legacy
   await runtime.query("select set_config('request.jwt.claim.sub',$1,true)",[trainerId])
   const content=await verifyJournalContent(runtime,{trainerId,clientId:committedReceipt.clientId,
    entries:validateJournalDrafts(payload.workouts,committedReceipt.clientId,readRequest),created:committedReceipt.created})
+  if(committedReceipt.preservedState)await verifyPreservedState(runtime,committedReceipt.clientId,
+   committedReceipt.created.map(c=>c.workoutId),committedReceipt.preservedState)
   await runtime.query('commit')
-  await persistReceipt('readback',{...committedReceipt,content})
-  return {...result,...content,athleteLinked:false}
+  if(committedReceipt.ownerPreservedState)await ownerRead(owner,()=>verifyPreservedState(owner,committedReceipt.clientId,
+   committedReceipt.created.map(c=>c.workoutId),committedReceipt.ownerPreservedState))
+  await persistReceipt('readback',{...committedReceipt,content,
+   ...(committedReceipt.preservedState?{previousStateVerified:true,preservedWorkouts:committedReceipt.ownerPreservedState.workouts.count}:{}),})
+  return {...result,...content,athleteLinked:selected?.auth_user_id!=null,
+   ...(committedReceipt.preservedState?{appendOnly:true,previousStateVerified:true,
+    preservedWorkouts:committedReceipt.ownerPreservedState.workouts.count}:{}),}
  }catch {
   await runtime.query('rollback');failOrchestrator('outcome_requires_readback')
  }
@@ -420,7 +507,7 @@ async function main() {
    parts:upload.parts,
    approvedSha256:process.env.FIT_JOURNAL_IMPORT_SHA256,
    readRequest:readSavePlannedWorkoutRequest,saveCompleted:saveCompletedWorkout,createCard:createClientCard,
-   persistReceipt:(state,receipt)=>upload.persistReceipt(state,receipt,sealJournalReceipt),
+   persistReceipt:(state,receipt)=>upload.persistReceipt(state,receipt,sealJournalReceipt),selectionBinding:upload.selectionBinding,
   })
   if(connectionInterrupted)failBootstrap('outcome_requires_readback')
   // result deliberately contains only fixed statuses/counts, never IDs, text or hashes.
@@ -433,7 +520,7 @@ const safeCodes=new Set(['source_invalid','mode_invalid','database_target_invali
  'readonly_required','private_payload_invalid','prior_batch_changed','existing_name_requires_review','runtime_role_invalid',
  'receipt_required','receipt_key_invalid','receipt_storage_unavailable','parser_would_drop_source_data','scope_invalid','draft_invalid','request_invalid','dates_invalid','selection_invalid','new_card_invalid',
  'busy','prior_batch_invalid','new_card_postcondition_failed','selection_changed','state_invalid','receipt_invalid',
- 'partial_prior_batch','existing_date_requires_review','save_postcondition_failed','unexpected_finance_change',
+ 'partial_prior_batch','existing_date_requires_review','existing_card_missing','existing_card_ambiguous','previous_state_changed','save_postcondition_failed','unexpected_finance_change',
  'content_readback_failed','trainer_visibility_failed','athlete_visibility_failed','outcome_requires_readback','failed_rolled_back'])
 if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href) {
  main().catch(error=>{

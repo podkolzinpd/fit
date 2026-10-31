@@ -1,9 +1,9 @@
 import { createHash, randomUUID } from 'node:crypto'
 import { gzipSync } from 'node:zlib'
 import { fileURLToPath } from 'node:url'
-import { Pool, type PoolClient } from 'pg'
+import { Pool, type PoolClient, type QueryResultRow } from 'pg'
 import { runner } from 'node-pg-migrate'
-import { afterAll, beforeAll, describe, expect, it } from 'vitest'
+import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest'
 import { runPreparedNewCardImport, type JournalReceipt } from '../../../../scripts/cloudru-journal-import.mjs'
 import { readSavePlannedWorkoutRequest } from '../planned-workout-request.js'
 import { saveCompletedWorkout } from '../workout-commands.js'
@@ -45,8 +45,17 @@ describe.skipIf(source === undefined)('one private journal into a new card', { c
     if (created) await admin.query(`drop database ${database}`)
     if (admin) await admin.end()
   })
+  afterEach(() => {
+    for (let i = connections.length - 1; i >= 0; i--) {
+      const connection = connections[i]!
+      if (connection !== imported?.owner && connection !== imported?.runtime) {
+        connection.release(true)
+        connections.splice(i, 1)
+      }
+    }
+  })
 
-  async function prepareFixture(linked = true) {
+  async function prepareFixture(linked = true, foreignPartition = false) {
     const owner = await pool.connect()
     connections.push(owner)
     const runtime = await pool.connect()
@@ -60,8 +69,9 @@ describe.skipIf(source === undefined)('one private journal into a new card', { c
     const loginHash = hash(`synthetic-journal-login-${coach}`)
     await owner.query('insert into app_private.fit_lime_pilot_allowlist(login_sha256,profile_id,enabled) values($1,$2,true)', [loginHash, coach])
     const existing = randomUUID(), oldWorkout = randomUUID()
-    await owner.query("insert into public.clients(id,trainer_id,full_name) values($1,$2,'Unrelated synthetic card')", [existing, coach])
-    await owner.query("insert into public.workouts(id,trainer_id,created_by,client_id,workout_date,status,completed_at,notes) values($1,$2,$2,$3,'2020-01-01','done',now(),'Keep existing')", [oldWorkout, coach, existing])
+    const partition = foreignPartition ? other : coach
+    await owner.query("insert into public.clients(id,trainer_id,full_name) values($1,$2,'Unrelated synthetic card')", [existing, partition])
+    await owner.query("insert into public.workouts(id,trainer_id,created_by,client_id,workout_date,status,completed_at,notes) values($1,$2,$2,$3,'2020-01-01','done',now(),'Keep existing')", [oldWorkout, partition, existing])
     const before = (await owner.query('select to_jsonb(w) value from public.workouts w where id=$1', [oldWorkout])).rows
     const workouts = Array.from({ length: 137 }, (_, index) => ({
       sourceOrdinal: index + 1, clientId: existing, requestId: randomUUID(),
@@ -94,7 +104,7 @@ describe.skipIf(source === undefined)('one private journal into a new card', { c
       readRequest: readSavePlannedWorkoutRequest, saveCompleted: saveCompletedWorkout, createCard: createClientCard,
       persistReceipt: (state: string, receipt: JournalReceipt) => { receipts.push({ state, receipt }); return Promise.resolve() } }
     if (linked) await owner.query("insert into app_private.auth_identities(provider,provider_subject_sha256,profile_id,identity_origin) values('yandex',$1,$2,'native')", [hash(`synthetic-journal-subject-${coach}`), coach])
-    return { owner, runtime, coach, other, oldWorkout, before, packet, receipts, options, workouts }
+    return { owner, runtime, coach, other, existing, oldWorkout, before, packet, receipts, options, workouts }
   }
 
   it('refuses unlinked or conflicting identities and inspects without writing a card', async () => {
@@ -183,5 +193,154 @@ describe.skipIf(source === undefined)('one private journal into a new card', { c
     expect((await owner.query<{ n: number }>("select count(*)::int n from public.workouts w join public.clients c on c.id=w.client_id where c.trainer_id=$1 and c.full_name='Synthetic import'", [coach])).rows[0]?.n).toBe(137)
     const first = receipts[0]?.receipt.created[1]?.workoutId
     expect((await owner.query<{ n: number }>('select count(*)::int n from public.workout_sets s join public.workout_exercises e on e.id=s.workout_exercise_id where e.workout_id=$1 and s.fact_weight_kg=99', [first])).rows[0]?.n).toBe(4)
+  })
+
+  async function appendFixture(linked = false, foreignPartition = false) {
+    const f = await prepareFixture(true, foreignPartition)
+    const name = 'Synthetic existing'
+    await f.owner.query('update public.clients set full_name=$2,goal=$3 where id=$1', [f.existing, name, 'Keep goal'])
+    await f.owner.query('insert into public.client_trainers(client_id,trainer_id,note) values($1,$2,$3)',
+      [f.existing, f.coach, 'Keep private note'])
+    const athlete = linked ? randomUUID() : null
+    if (athlete) {
+      await f.owner.query("insert into public.profiles(id,account_role) values($1,'client')", [athlete])
+      await f.owner.query('update public.clients set auth_user_id=$2 where id=$1', [f.existing, athlete])
+      await f.owner.query('insert into public.client_trainer_relationships(client_id,trainer_id,connected_by) values($1,$2,$3)',
+        [f.existing, f.coach, athlete])
+    }
+    await f.owner.query("update public.workouts set workout_date='2025-06-08' where id=$1", [f.oldWorkout])
+    const packetWorkouts = Array.from({ length: 85 }, (_, i) => ({ ...f.workouts[0]!,
+      requestId: randomUUID(), sourceOrdinal: i + 1,
+      workoutDate: new Date(Date.UTC(2025, 5, 8 + i)).toISOString().slice(0, 10),
+      exercises: Array.from({ length: i < 65 ? 5 : i === 84 ? 0 : 4 }, (_, position) => ({
+        ...f.workouts[0]!.exercises[0]!, position, name: `Synthetic literal ${i}/${position}`,
+        inputKind: 'strength', blockId: randomUUID(), ref: `snapshot:journal:${randomUUID()}`, sets: [],
+      })),
+    }))
+    const encode = (schemaVersion: number) => {
+      const raw = JSON.stringify({ schemaVersion, batchId: 'synthetic-append', clientName: name, workouts: packetWorkouts })
+      const data = gzipSync(raw).toString('base64'), middle = Math.ceil(data.length / 2)
+      return { parts: [data.slice(0, middle), data.slice(middle)], approvedSha256: hash(raw) }
+    }
+    await f.runtime.query('begin')
+    await f.runtime.query("select set_config('request.jwt.claim.sub',$1,true)", [f.coach])
+    const request = readSavePlannedWorkoutRequest({ ...f.workouts[1]!, requestId: randomUUID(), workoutDate: '2026-10-30' }, null)
+    if (!request) throw new Error('fixture_request_required')
+    const old = await saveCompletedWorkout({ query: async <Row extends QueryResultRow>(sql: string, args?: readonly unknown[]) =>
+      (await f.runtime.query<Row>(sql, args ? [...args] : undefined)).rows }, request.draft, null)
+    await f.runtime.query('commit')
+    await f.owner.query('update public.workout_sets s set fact_weight_kg=99 from public.workout_exercises e where e.id=s.workout_exercise_id and e.workout_id=$1', [old.id])
+    const packageId = randomUUID()
+    if (!foreignPartition) {
+    await f.owner.query(`insert into public.trainer_finance_packages(id,trainer_id,client_id,title,sessions_total,price_cents,starts_on)
+      values($1,$2,$3,'Keep finance',10,50000,'2025-01-01')`, [packageId, f.coach, f.existing])
+    await f.owner.query(`insert into public.trainer_finance_payments(package_id,trainer_id,client_id,amount_cents,received_on)
+      values($1,$2,$3,50000,'2025-01-01')`, [packageId, f.coach, f.existing])
+    await f.owner.query(`insert into public.trainer_finance_sessions(package_id,trainer_id,client_id,workout_id,disposition,source)
+      values($1,$2,$3,$4,'charged','manual')`, [packageId, f.coach, f.existing, f.oldWorkout])
+    }
+    const oldIds = [f.oldWorkout, old.id]
+    const oldState = async () => {
+      const state: unknown[] = []
+      state.push((await f.owner.query('select to_jsonb(c) value from public.clients c where id=$1', [f.existing])).rows)
+      state.push((await f.owner.query('select to_jsonb(c) value from public.client_trainers c where client_id=$1 order by trainer_id', [f.existing])).rows)
+      state.push((await f.owner.query('select to_jsonb(c) value from public.client_trainer_relationships c where client_id=$1 order by id', [f.existing])).rows)
+      state.push((await f.owner.query('select to_jsonb(w) value from public.workouts w where id=any($1::uuid[]) order by id', [oldIds])).rows)
+      state.push((await f.owner.query('select to_jsonb(e) value from public.workout_exercises e where workout_id=any($1::uuid[]) order by id', [oldIds])).rows)
+      state.push((await f.owner.query('select to_jsonb(s) value from public.workout_sets s join public.workout_exercises e on e.id=s.workout_exercise_id where e.workout_id=any($1::uuid[]) order by s.id', [oldIds])).rows)
+      for (const table of ['trainer_finance_packages', 'trainer_finance_payments', 'trainer_finance_sessions']) {
+        const where = table === 'trainer_finance_sessions' ? 'and workout_id=any($2::uuid[])' : ''
+        state.push((await f.owner.query(`select to_jsonb(x) value from public.${table} x where client_id=$1 ${where} order by id`,
+          table === 'trainer_finance_sessions' ? [f.existing, oldIds] : [f.existing])).rows)
+      }
+      return state
+    }
+    const before = await oldState()
+    let selected: string | undefined
+    const selectionBinding = (mode: 'inspect' | 'apply', fingerprint: string) => {
+      if ((selected !== undefined && selected !== fingerprint) || (mode === 'apply' && selected === undefined)) throw new Error('journal_import_selection_changed')
+      selected = fingerprint
+      return Promise.resolve()
+    }
+    return { ...f, athlete, oldIds, oldState, before, encode, packageId, oldVersion: old.version,
+      oldDraft: { ...request.draft, id: old.id, notes: 'Changed by faulty writer' },
+      options: { ...f.options, ...encode(3), selectionBinding } }
+  }
+
+  it('appends into the unique confirmed linked card and preserves full old graphs and finances, including overlapping dates', async () => {
+    const f = await appendFixture(true)
+    expect(await runPreparedNewCardImport(f.options)).toMatchObject({ status: 'ready', readOnly: true, appendOnly: true,
+      willCreateCard: false, existingWorkouts: 2, athleteLinked: true })
+    expect(await runPreparedNewCardImport({ ...f.options, mode: 'apply' })).toMatchObject({ status: 'imported',
+      workouts: 85, contentVerified: true, appendOnly: true, previousStateVerified: true, preservedWorkouts: 2, athleteLinked: true })
+    expect(await f.oldState()).toEqual(f.before)
+    expect(f.receipts.at(-1)?.receipt).toMatchObject({ createdCard: false, athleteId: f.athlete, appendOnly: true })
+    expect(f.receipts.at(-1)?.receipt.clientId).toBe(f.existing)
+    expect(await runPreparedNewCardImport({ ...f.options, mode: 'apply' })).toMatchObject({ status: 'already_imported', preservedWorkouts: 2 })
+    expect(await f.oldState()).toEqual(f.before)
+    expect((await f.owner.query<{ n: number }>('select count(*)::int n from public.workouts where client_id=$1', [f.existing])).rows[0]?.n).toBe(87)
+    expect((await f.owner.query<{ n: number }>("select count(*)::int n from public.trainer_finance_sessions where client_id=$1 and disposition='charged' and voided_at is null", [f.existing])).rows[0]?.n).toBe(1)
+    expect((await f.owner.query<{ n: number }>("select count(*)::int n from public.trainer_finance_sessions where client_id=$1 and disposition='unassigned' and package_id is null and voided_at is null", [f.existing])).rows[0]?.n).toBe(85)
+    const edited = f.receipts.at(-1)?.receipt.created[0]?.workoutId
+    await f.owner.query("update public.trainer_finance_sessions set disposition='charged',package_id=$2 where workout_id=$1", [edited, f.packageId])
+    await expect(runPreparedNewCardImport({ ...f.options, mode: 'apply' })).rejects.toThrow('unexpected_finance_change')
+    expect((await f.owner.query<{ disposition: string }>('select disposition from public.trainer_finance_sessions where workout_id=$1', [edited])).rows[0]?.disposition).toBe('charged')
+    await f.owner.query("update public.workouts set notes='Keep later human edit' where id=$1", [edited])
+    await expect(runPreparedNewCardImport({ ...f.options, mode: 'apply' })).rejects.toThrow('content_readback_failed')
+    expect((await f.owner.query<{ notes: string }>('select notes from public.workouts where id=$1', [edited])).rows[0]?.notes).toBe('Keep later human edit')
+  })
+
+  it('keeps schema2 collision protection and refuses ambiguous or missing append targets', async () => {
+    const f = await appendFixture()
+    await expect(runPreparedNewCardImport({ ...f.options, ...f.encode(2) })).rejects.toThrow('existing_name_requires_review')
+    const extra = randomUUID()
+    await f.owner.query("insert into public.clients(id,trainer_id,full_name) values($1,$2,'Synthetic existing')", [extra, f.coach])
+    await expect(runPreparedNewCardImport(f.options)).rejects.toThrow('existing_card_ambiguous')
+    await f.owner.query('update public.clients set archived_at=now() where trainer_id=$1', [f.coach])
+    await expect(runPreparedNewCardImport(f.options)).rejects.toThrow('existing_card_missing')
+    expect((await f.owner.query<{ n: number }>('select count(*)::int n from public.workouts where client_id=$1', [f.existing])).rows[0]?.n).toBe(2)
+  })
+
+  it('rolls back the complete append if an existing fact is changed by the writer', async () => {
+    const f = await appendFixture()
+    await runPreparedNewCardImport(f.options)
+    let first = true
+    await expect(runPreparedNewCardImport({ ...f.options, mode: 'apply', saveCompleted: async (...args: Parameters<typeof saveCompletedWorkout>) => {
+      if (first) {
+        first = false
+        await saveCompletedWorkout(args[0], f.oldDraft, f.oldVersion)
+      }
+      return saveCompletedWorkout(...args)
+    } })).rejects.toThrow('previous_state_changed')
+    expect(await f.oldState()).toEqual(f.before)
+    expect((await f.owner.query<{ n: number }>('select count(*)::int n from public.workouts where client_id=$1', [f.existing])).rows[0]?.n).toBe(2)
+  })
+
+  it('uses the active coaching relationship without reassigning a historical partition', async () => {
+    const f = await appendFixture(true, true)
+    await expect(runPreparedNewCardImport({ ...f.options, mode: 'apply' })).rejects.toThrow('selection_changed')
+    await runPreparedNewCardImport(f.options)
+    expect(await runPreparedNewCardImport({ ...f.options, mode: 'apply' })).toMatchObject({
+      status: 'imported', athleteLinked: true, previousStateVerified: true, preservedWorkouts: 2 })
+    expect(await f.oldState()).toEqual(f.before)
+    expect((await f.owner.query<{ trainer_id: string }>('select trainer_id from public.clients where id=$1', [f.existing])).rows[0]?.trainer_id).toBe(f.other)
+  })
+
+  it('does not treat a private note membership as active coaching after disconnection', async () => {
+    const f = await appendFixture(true)
+    await f.owner.query("update public.client_trainer_relationships set status='disconnected',disconnected_at=now(),disconnected_by=$2 where client_id=$1", [f.existing, f.coach])
+    await expect(runPreparedNewCardImport({ ...f.options, mode: 'apply' })).rejects.toThrow('selection_changed')
+    expect((await f.owner.query<{ n: number }>('select count(*)::int n from public.workouts where client_id=$1', [f.existing])).rows[0]?.n).toBe(2)
+  })
+
+  it('binds apply to the card verified by inspect instead of a later name match', async () => {
+    const f = await appendFixture()
+    await runPreparedNewCardImport(f.options)
+    await f.owner.query("update public.clients set full_name='Renamed after inspect' where id=$1", [f.existing])
+    const replacement = randomUUID()
+    await f.owner.query("insert into public.clients(id,trainer_id,full_name) values($1,$2,'Synthetic existing')", [replacement, f.coach])
+    await expect(runPreparedNewCardImport({ ...f.options, mode: 'apply' })).rejects.toThrow('selection_changed')
+    expect((await f.owner.query<{ n: number }>('select count(*)::int n from public.workouts where client_id=$1', [replacement])).rows[0]?.n).toBe(0)
+    expect((await f.owner.query<{ n: number }>('select count(*)::int n from public.workouts where client_id=$1', [f.existing])).rows[0]?.n).toBe(2)
   })
 })
