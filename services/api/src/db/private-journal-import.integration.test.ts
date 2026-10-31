@@ -20,6 +20,7 @@ describe.skipIf(source === undefined)('one private journal into a new card', { c
   let pool: Pool
   const connections: PoolClient[] = []
   let imported: Awaited<ReturnType<typeof prepareFixture>> | undefined
+  let appended: Awaited<ReturnType<typeof appendFixture>> | undefined
   let created = false
   beforeAll(async () => {
     const url = new URL(source ?? '')
@@ -48,7 +49,7 @@ describe.skipIf(source === undefined)('one private journal into a new card', { c
   afterEach(() => {
     for (let i = connections.length - 1; i >= 0; i--) {
       const connection = connections[i]!
-      if (connection !== imported?.owner && connection !== imported?.runtime) {
+      if (connection !== imported?.owner && connection !== imported?.runtime && connection !== appended?.owner && connection !== appended?.runtime) {
         connection.release(true)
         connections.splice(i, 1)
       }
@@ -276,15 +277,32 @@ describe.skipIf(source === undefined)('one private journal into a new card', { c
     expect(await f.oldState()).toEqual(f.before)
     expect(f.receipts.at(-1)?.receipt).toMatchObject({ createdCard: false, athleteId: f.athlete, appendOnly: true })
     expect(f.receipts.at(-1)?.receipt.clientId).toBe(f.existing)
+    appended = f
+  })
+
+  it('replays the appended batch without duplicate workouts or package deductions', async () => {
+    if (!appended) throw new Error('successful_append_fixture_required')
+    const f = appended
     expect(await runPreparedNewCardImport({ ...f.options, mode: 'apply' })).toMatchObject({ status: 'already_imported', preservedWorkouts: 2 })
     expect(await f.oldState()).toEqual(f.before)
     expect((await f.owner.query<{ n: number }>('select count(*)::int n from public.workouts where client_id=$1', [f.existing])).rows[0]?.n).toBe(87)
     expect((await f.owner.query<{ n: number }>("select count(*)::int n from public.trainer_finance_sessions where client_id=$1 and disposition='charged' and voided_at is null", [f.existing])).rows[0]?.n).toBe(1)
     expect((await f.owner.query<{ n: number }>("select count(*)::int n from public.trainer_finance_sessions where client_id=$1 and disposition='unassigned' and package_id is null and voided_at is null", [f.existing])).rows[0]?.n).toBe(85)
+  })
+
+  it('does not undo a later manual billing decision on an imported workout', async () => {
+    if (!appended) throw new Error('successful_append_fixture_required')
+    const f = appended
     const edited = f.receipts.at(-1)?.receipt.created[0]?.workoutId
     await f.owner.query("update public.trainer_finance_sessions set disposition='charged',package_id=$2 where workout_id=$1", [edited, f.packageId])
     await expect(runPreparedNewCardImport({ ...f.options, mode: 'apply' })).rejects.toThrow('unexpected_finance_change')
     expect((await f.owner.query<{ disposition: string }>('select disposition from public.trainer_finance_sessions where workout_id=$1', [edited])).rows[0]?.disposition).toBe('charged')
+  })
+
+  it('does not overwrite a later edit to the appended workout', async () => {
+    if (!appended) throw new Error('successful_append_fixture_required')
+    const f = appended
+    const edited = f.receipts.at(-1)?.receipt.created[0]?.workoutId
     await f.owner.query("update public.workouts set notes='Keep later human edit' where id=$1", [edited])
     await expect(runPreparedNewCardImport({ ...f.options, mode: 'apply' })).rejects.toThrow('content_readback_failed')
     expect((await f.owner.query<{ notes: string }>('select notes from public.workouts where id=$1', [edited])).rows[0]?.notes).toBe('Keep later human edit')
