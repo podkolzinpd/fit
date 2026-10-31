@@ -7298,7 +7298,10 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
           await ownerPool.query('update public.profiles set timezone=$2 where id=$1', [athlete, zone])
           const operation = randomUUID()
           const first = await withActorTransaction(runtimePool, actor, client => quickStartLiveWorkout(client, card, operation))
-          const snapshot = async () => (await ownerPool!.query(`select workout_date::text,start_time::text,started_at::text,version,
+          const snapshot = async () => (await ownerPool!.query<{
+            workout_date: string; start_time: string | null; started_at: string; version: string
+            same_date: boolean; same_time: boolean
+          }>(`select workout_date::text,start_time::text,started_at::text,version,
             workout_date=(started_at at time zone $2)::date as same_date,
             start_time=(started_at at time zone $2)::time as same_time
             from public.workouts where id=$1`, [first.id, zone])).rows[0]!
