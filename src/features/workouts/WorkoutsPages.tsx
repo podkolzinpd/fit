@@ -1,6 +1,7 @@
 import { WorkoutRenameSheet } from './WorkoutRenameSheet'
 import { isQuickWorkoutEntryEnabled } from '../../app/quick-workout-entry'
 import { QuickDayBooking, dayBookingTime } from './QuickDayBooking'
+import { WorkoutAttendanceSheet } from './WorkoutAttendanceSheet'
 import { BookingHistorySheet } from './BookingHistorySheet'
 import { isClientWorkoutRedesignEnabled } from '../../app/client-workout-redesign'
 import { isCoachLiveV79Enabled } from '../../app/coach-live-v79'
@@ -1850,6 +1851,7 @@ export function WorkoutDetailPage() {
   const [renameVersion, setRenameVersion] = useState(0)
   const [favoriteSheetOpen, setFavoriteSheetOpen] = useState(false)
   const [bookingHistoryOpen, setBookingHistoryOpen] = useState(false)
+  const [attendanceAction, setAttendanceAction] = useState<'complete' | 'cancel' | null>(null)
   const [rescheduleDate, setRescheduleDate] = useState<LocalDate>(() => todayInTimeZone(actor?.timezone))
   const [rescheduleTime, setRescheduleTime] = useState('')
   const [firstPlanInviteCode, setFirstPlanInviteCode] = useState<string | null>(null)
@@ -1887,10 +1889,11 @@ export function WorkoutDetailPage() {
     queryFn: () => workoutsRepository.personalRecords(workoutId),
     enabled: actor?.role !== 'client' && navigationState?.justCompleted === true && query.data?.status === 'done',
   })
+  const attendanceResult = actor?.role === 'trainer' && Boolean(workoutsRepository.confirmAttendance && query.data?.status === 'done' && query.data.exercises.length === 0)
   const completionFinance = useQuery({
     queryKey: ['trainer-finance', query.data?.clientId],
     queryFn: () => trainerFinance.listClient(query.data!.clientId),
-    enabled: actor?.role !== 'client' && justCompleted && Boolean(query.data?.clientId),
+    enabled: actor?.role !== 'client' && (justCompleted || attendanceResult) && Boolean(query.data?.clientId),
   })
   useClientRealtime(query.data?.clientId)
   // Этап тренировки: get() отдаёт stageId, название берём из цели клиента.
@@ -2165,10 +2168,10 @@ export function WorkoutDetailPage() {
           <Link className="button secondary wide" to="/me/progress">Посмотреть прогресс</Link>
         </>}
       />}
-      {justCompleted && !clientMode && <WorkoutCompletionCard completedSets={completedSets} totalSets={sets.length} record={completionRecords.data?.[0]} clientMode={false} clientId={workout.clientId} />}
+      {justCompleted && !clientMode && !attendanceResult && <WorkoutCompletionCard completedSets={completedSets} totalSets={sets.length} record={completionRecords.data?.[0]} clientMode={false} clientId={workout.clientId} />}
       {!clientCompletionReport && <WorkoutHeader eyebrow={clientMode && done ? 'ТРЕНИРОВКА ЗАВЕРШЕНА' : clientMode ? 'ВАША ТРЕНИРОВКА' : workout.clientName} title={clientMode ? (done ? workoutFocusTitle(groups) : 'Ваша тренировка') : workoutDisplayTitle(workout)} state={detailState}
-        statusLabel={statusPresentation?.label}
-        showStatus={detailState !== 'completed'}
+        statusLabel={attendanceResult ? 'Проведена' : statusPresentation?.label}
+        showStatus={detailState !== 'completed' || attendanceResult}
         action={manageMenuInHeader ? <OverflowMenu label="Другие действия с тренировкой" items={workoutManageItems} /> : undefined}
         meta={<><span>{formatLocalDate(workout.workoutDate)} · {workout.startTime?.slice(0, 5) ?? 'без времени'}</span><span>{workoutTrainingFormatLabel(workout.trainingFormat ?? 'self')}</span>{clientMode && !done && authorLabel && <span>{authorLabel}</span>}{clientAuthoredReadOnly && <span>Создано клиентом · упражнения только для просмотра</span>}{stageTitle && <span>Цель: {stageTitle}</span>}</>} />}
       {clientMode && workout.title && <p className="workout-plan-title">{workout.title}</p>}
@@ -2178,6 +2181,10 @@ export function WorkoutDetailPage() {
         {workout.workoutDate < today ? <Coachmark id="missed-workout-actions-2026-08" userId={actor?.userId} title="План можно закрыть спокойно" description="Запишите результат, перенесите тренировку или сохраните, что она не состоялась.">
           <WorkoutCta className="wide" pending={start.isPending || cancelPlanned.isPending || reschedule.isPending} pendingLabel="Сохраняем…" onClick={() => setDecisionSheet('actions')}>{plannedActions.primary}</WorkoutCta>
         </Coachmark> : <WorkoutCta className="wide" pending={start.isPending} pendingLabel={plannedActions.pending} onClick={() => start.mutate()}>{plannedActions.primary}</WorkoutCta>}
+      </div>}
+      {!clientMode && canManage && workout.status === 'planned' && workoutsRepository.confirmAttendance && <div className="workout-attendance-actions">
+        {workout.exercises.length === 0 && <button type="button" onClick={() => setAttendanceAction('complete')}>Отметить проведённой</button>}
+        <button type="button" onClick={() => setAttendanceAction('cancel')}>Не состоялась</button>
       </div>}
       {bookingHistoryAvailable && <button type="button" className="secondary wide booking-history-open" onClick={() => setBookingHistoryOpen(true)}><HistoryIcon /><span>Выбрать из истории</span><ChevronRightIcon /></button>}
       {workout.status === 'cancelled' && canExecute && <div className="workout-detail-primary-actions"><WorkoutCta className="wide" variant="secondary" onClick={openReschedule}>Вернуть в план</WorkoutCta></div>}
@@ -2197,7 +2204,9 @@ export function WorkoutDetailPage() {
       {!done && <div className="workout-detail-exercise-overview"><p>{bookingHistoryAvailable ? 'План тренировки' : 'ПЛАН ТРЕНИРОВКИ'}</p>{!emptyBookingPlan && <span>{workout.exercises.length} {exerciseCountLabel(workout.exercises.length)} · {sets.length} {setCountLabel(sets.length)}</span>}</div>}
       {emptyBookingPlan && <p className="booking-plan-empty">Упражнения ещё не добавлены</p>}
       {!clientCompletionReport && !emptyBookingPlan && exerciseCards}
-      {justCompleted && !clientMode && <WorkoutFinanceConfirmation bundle={completionFinance.data} workoutId={workout.id} clientId={workout.clientId} trainingFormat={workout.trainingFormat ?? 'self'} />}
+      {attendanceResult && <section className="completed-empty-attendance"><h3>Упражнения</h3><p>Упражнения не записаны</p>{canManage && <Link className="button secondary" to={`/workouts/${workoutId}/edit`} state={childNavigationState}>Добавить результат</Link>}</section>}
+      {(justCompleted || attendanceResult) && !clientMode && <WorkoutFinanceConfirmation bundle={completionFinance.data} workoutId={workout.id} clientId={workout.clientId} trainingFormat={workout.trainingFormat ?? 'self'} />}
+      {attendanceResult && completionFinance.isError && <p className="error" role="alert">Не удалось загрузить учёт занятия. <button type="button" className="link" onClick={() => void completionFinance.refetch()}>Повторить</button></p>}
       {done && !clientMode && !workout.discomfort && <WorkoutClientFeedback workout={workout} canEdit={false} saving={feedback.isPending} error={feedback.error} onSave={(value) => feedback.mutateAsync(value)} />}
       {done && !clientMode && <details className="coach-workout-summary"><summary>Сводка тренировки</summary>{factSummary}<section className="workout-review workout-duration-surface">{durationControl}</section></details>}
       {removeCompletedExercise.error && <p className="error workout-exercise-removal-error" role="alert">Не удалось удалить упражнение. <button type="button" className="link" disabled={removeCompletedExercise.isPending} onClick={async () => {
@@ -2208,7 +2217,7 @@ export function WorkoutDetailPage() {
       {workout.notes && !clientCompletionReport && <section className="workout-review workout-review-readonly"><div className="workout-review-head"><div><p className="eyebrow">{clientMode && !clientOwned ? 'ОТ ТРЕНЕРА' : 'К ТРЕНИРОВКЕ'}</p><h2>{clientMode && !clientOwned ? 'Инструкции' : 'Заметка'}</h2></div></div><p className="workout-review-text">{workout.notes}</p></section>}
 
       {canManage && !clientCompletionReport && <div className="actions workout-detail-actions">
-        {(workout.status === 'planned' || done) && <Link className="button secondary" to={`/workouts/${workoutId}/edit`} state={childNavigationState}>{done ? 'Изменить результат' : emptyBookingPlan ? <><AddIcon />Добавить упражнения</> : bookingHistoryAvailable ? 'Изменить план' : 'Изменить'}</Link>}
+        {(workout.status === 'planned' || done && !attendanceResult) && <Link className="button secondary" to={`/workouts/${workoutId}/edit`} state={childNavigationState}>{done ? attendanceResult ? 'Добавить результат' : 'Изменить результат' : emptyBookingPlan ? <><AddIcon />Добавить упражнения</> : bookingHistoryAvailable ? 'Изменить план' : 'Изменить'}</Link>}
         {!manageMenuInHeader && <OverflowMenu placement="top" label="Другие действия с тренировкой" items={workoutManageItems} />}
       </div>}
       {clientAuthoredReadOnly && <div className="actions"><Link className="button secondary" to={`/workouts/new?copy=${workoutId}`} state={childNavigationState}>Скопировать и отправить план</Link></div>}
@@ -2237,6 +2246,8 @@ export function WorkoutDetailPage() {
       {favoriteSheetOpen && workout && <SaveFavoriteWorkoutSheet title={workout.title ?? workout.favoriteTitle} exercises={workout.exercises} pending={saveFavorite.isPending} error={saveFavorite.error}
         onSave={(title) => saveFavorite.mutate(title)} onClose={() => { saveFavorite.reset(); setFavoriteSheetOpen(false) }} />}
       {bookingHistoryOpen && workout && <BookingHistorySheet key={workout.id} target={workout} onClose={() => setBookingHistoryOpen(false)} onApplied={invalidateWorkoutSurfaces} onReload={() => query.refetch()} />}
+      {attendanceAction && workout && <WorkoutAttendanceSheet workout={workout} action={attendanceAction} onClose={() => setAttendanceAction(null)}
+        onCompleted={async () => { await invalidateWorkoutSurfaces(); setAttendanceAction(null) }} />}
       {confirmDialog}{activeWorkoutRecoveryDialog}
     </>}</AsyncView>
   </Page>
@@ -2788,6 +2799,7 @@ export function LiveWorkoutPage() {
   const { source: dataSource, pushNotifications: pushNotificationsRepository, workouts: workoutsRepository } = useDataBackend()
   const { workoutId = '' } = useParams()
   const { actor } = useAuth()
+  const [attendanceOpen, setAttendanceOpen] = useState(false)
   const clientLime = isClientLimeEnabled(actor)
   const clientReference = isClientWorkoutRedesignEnabled(actor)
   const clientLiveDensity = useClientLiveDensity(actor?.userId)
@@ -3833,7 +3845,9 @@ export function LiveWorkoutPage() {
     const version = await runLiveWorkoutMutation('finish', (workout) => workoutsRepository.finish(workout))
     completedLocally.current = true
     return version
-  }, onSuccess: async () => {
+  }, onSuccess: onLiveFinished })
+  async function onLiveFinished() {
+    completedLocally.current = true
     const clientId = query.data?.clientId
     if (clientMode && actor?.userId) markAchievementCompletion(actor.userId, workoutId)
     if (actor?.userId) {
@@ -3851,10 +3865,12 @@ export function LiveWorkoutPage() {
       queryClient.invalidateQueries({ queryKey: ['workout', workoutId] }),
       invalidateWorkoutResults(queryClient),
       queryClient.invalidateQueries({ queryKey: ['clients'] }),
+      queryClient.invalidateQueries({ queryKey: ['trainer-finance'] }),
+      queryClient.invalidateQueries({ queryKey: ['trainer-finance-overview'] }),
       clientId ? queryClient.invalidateQueries({ queryKey: ['client-stats', clientId] }) : Promise.resolve(),
     ])
     showCompletedWorkout(true)
-  } })
+  }
   const cancelEmpty = useMutation({
     mutationFn: async () => {
       const workout = query.data
@@ -4485,6 +4501,7 @@ export function LiveWorkoutPage() {
   }
   const exerciseCount = query.data?.exercises.length ?? 0
   const exerciseCountLabel = `${exerciseCount} ${exerciseCount % 100 >= 11 && exerciseCount % 100 <= 14 ? 'упражнений' : exerciseCount % 10 === 1 ? 'упражнение' : exerciseCount % 10 >= 2 && exerciseCount % 10 <= 4 ? 'упражнения' : 'упражнений'}`
+  const canConfirmEmptyAttendance = actor?.role === 'trainer' && Boolean(workoutsRepository.confirmAttendance && query.data && query.data.status === 'in_progress' && query.data.exercises.length === 0 && (!query.data.createdBy || query.data.createdBy === actor.userId))
   const liveHeader = query.data && <WorkoutHeader eyebrow={visualReference ? exerciseCountLabel : 'LIVE'} title={visualReference ? query.data.title || workoutFocusTitle(muscleGroupLabels(query.data.exercises)) : query.data.clientName} state="current" showStatus={!visualReference && query.data.exercises.length > 0} className="live-session-header" meta={<>{coachReference && <span className="coach-live-client">{query.data.clientName}</span>}<span>{workoutTrainingFormatLabel(query.data.trainingFormat ?? 'self')}</span>{!visualReference && query.data.title && <span>{query.data.title}</span>}{visualReference && exerciseCount > 0 && <span className="coach-live-exercise-markers" aria-label="Состояния упражнений">{query.data.exercises.map((exercise, index) => <span key={exercise.id} className={exercise.sets.length > 0 && exercise.sets.every((set) => set.confirmedAt) ? 'done' : exercise.id === activeLiveExercise?.id ? 'current' : ''} aria-label={`Упражнение ${index + 1}: ${exercise.sets.length > 0 && exercise.sets.every((set) => set.confirmedAt) ? 'выполнено' : exercise.id === activeLiveExercise?.id ? 'текущее' : 'ожидает'}`} />)}</span>}{sessionProgress.setCount > 0 ? <div className="live-session-progress">
     <span className="live-session-progress-copy"><span>{sessionProgress.complete ? 'Все упражнения выполнены' : activeLiveExercise ? `Сейчас: ${activeLiveExercise.name} · подход ${sessionProgress.activeSetNumber} из ${sessionProgress.activeExerciseSetCount}` : 'Выберите упражнение'}</span><strong>Готово {sessionProgress.completedSetCount} из {sessionProgress.setCount}</strong></span>
     <span className="live-session-progress-track" role="progressbar" aria-label="Выполненные подходы" aria-valuemin={0} aria-valuemax={sessionProgress.setCount} aria-valuenow={sessionProgress.completedSetCount}><span style={{ width: `${sessionProgress.percent}%` }} /></span>
@@ -4495,7 +4512,7 @@ export function LiveWorkoutPage() {
     action={visualReference && query.data ? <>
       <span className={`coach-live-status${referenceRestActive && !livePhase ? ' resting' : ''}`}><span aria-hidden="true" />{livePhase?.kind === 'prep' ? 'Подготовка' : livePhase?.kind === 'work' ? 'Подход' : referenceRestActive ? 'Отдых' : 'Live'}</span>
       {(coachV79 || clientReference) && <span className="coach-v79-header-slot" ref={setCoachClockSlot} />}
-        <button type="button" className="coach-live-finish" aria-label={finish.isPending ? 'Завершаем тренировку' : 'Завершить тренировку'} title={finish.isPending ? 'Завершаем…' : 'Завершить тренировку'} aria-busy={finish.isPending} disabled={!query.data.exercises.length || rootMutationPending || save.isPending || confirm.isPending} onClick={() => { if (document.activeElement instanceof HTMLElement) document.activeElement.blur(); if (hasIncompleteLiveSets || cardioSetMissingTime || clientReference && timerConfirmedSets.length > 0) setConfirmFinish(true); else finish.mutate() }}><CheckSmallIcon /></button>
+        <button type="button" className="coach-live-finish" aria-label={finish.isPending ? 'Завершаем тренировку' : 'Завершить тренировку'} title={finish.isPending ? 'Завершаем…' : 'Завершить тренировку'} aria-busy={finish.isPending} disabled={(!query.data.exercises.length && !canConfirmEmptyAttendance) || rootMutationPending || save.isPending || confirm.isPending} onClick={() => { if (document.activeElement instanceof HTMLElement) document.activeElement.blur(); if (!query.data!.exercises.length && canConfirmEmptyAttendance) { setAttendanceOpen(true); return }; if (hasIncompleteLiveSets || cardioSetMissingTime || clientReference && timerConfirmedSets.length > 0) setConfirmFinish(true); else finish.mutate() }}><CheckSmallIcon /></button>
     </> : undefined}>
     <AsyncView loading={query.isLoading} error={query.error}
       errorDescription={clientReference && getRequestDiagnostics(query.error)?.status === 503 ? 'Сервис временно недоступен. Попробуйте ещё раз.' : undefined}
@@ -4795,6 +4812,7 @@ export function LiveWorkoutPage() {
           Подтверждение частичного завершения — inline (не нативный confirm,
           который не работает в WKWebView и блокировал выход). */}
       {(!visualReference || query.data.exercises.length === 0 || liveSyncError || recoveredSetIds.size > 0 || confirmFinish) && <div className={`live-bottom-bar${query.data.exercises.length === 0 ? ' live-bottom-bar-empty' : ''}`}>
+        {canConfirmEmptyAttendance && <button type="button" className="primary workout-attendance-finish" disabled={rootMutationPending} onClick={() => setAttendanceOpen(true)}>Завершить тренировку</button>}
         {query.data.exercises.length === 0 && <button type="button" className="live-empty-delete" aria-label={cancelEmpty.isPending ? 'Удаляем тренировку' : 'Удалить тренировку'} title="Удалить тренировку" aria-busy={cancelEmpty.isPending} disabled={cancelEmpty.isPending} onClick={async () => {
           if (await askConfirm({ message: 'Удалить эту пустую тренировку?', confirmLabel: 'Удалить', danger: true })) cancelEmpty.mutate()
         }}><TrashIcon /></button>}
@@ -4828,6 +4846,7 @@ export function LiveWorkoutPage() {
           : !visualReference && <WorkoutCta variant={hasIncompleteLiveSets ? 'secondary' : 'primary'} className="wide" pending={finish.isPending} pendingLabel="Завершаем…" disabled={rootMutationPending || save.isPending || confirm.isPending} onClick={() => { if (hasIncompleteLiveSets || cardioSetMissingTime || timerConfirmedSets.length > 0) setConfirmFinish(true); else finish.mutate() }}>Завершить тренировку</WorkoutCta>)}
       </div>}
     </>}</AsyncView>
+    {attendanceOpen && canConfirmEmptyAttendance && query.data && <WorkoutAttendanceSheet workout={query.data} action="complete" onClose={() => setAttendanceOpen(false)} onCompleted={async () => { setAttendanceOpen(false); await onLiveFinished() }} />}
     {canManageLiveStructure && pickerOpen && <ExercisePicker quickEntry={isQuickWorkoutEntryEnabled(actor)} coachLiveV79={coachV79} clientLiveV79={clientReference} clientLime={isClientLimeEnabled(actor)} reference={coachReference} referenceAppearance={visualReference} catalog={catalog} clientRecent={clientRecentExercises} techniqueActionLabel={replaceExerciseId ? 'Заменить упражнение' : 'Добавить упражнение'} onPick={pickLiveExercise} onPickMany={pickLiveExercises} multiple={clientLime && !replaceExerciseId} showEmptySelection={clientLime && !replaceExerciseId} keepSelectionWhileAdding={clientLime && !replaceExerciseId} selectionDraft={clientLime && !replaceExerciseId ? livePickerSelection : undefined} onSelectionDraftChange={clientLime && !replaceExerciseId ? setLivePickerSelection : undefined} onClose={closePicker} />}
     {techniqueExercise && <ExerciseTechniqueSheet exercise={techniqueExercise} onClose={() => setTechniqueExercise(null)} />}
     {confirmDialog}

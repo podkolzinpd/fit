@@ -1,0 +1,27 @@
+.workout-attendance-sheet { width:min(440px,calc(100% - 24px)); max-height:calc(100dvh - 40px); overflow:auto; margin:auto auto max(12px,env(safe-area-inset-bottom)); padding:24px 20px 14px; border:1px solid var(--border); border-radius:28px; background:var(--surface); color:var(--text); font-family:inherit }
+.workout-attendance-sheet::backdrop { background:rgb(0 0 0 / .7) }
+.fit-lime-shell .workout-attendance-sheet { background:var(--lime-surface); color:var(--lime-text); border-color:var(--lime-divider) }
+.workout-attendance-sheet header { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:20px }
+.workout-attendance-sheet h2 { margin:0; font-size:22px; line-height:1.2; font-weight:500; letter-spacing:-.03em }
+.workout-attendance-sheet header button { display:grid; place-items:center; width:44px; min-width:44px; height:44px; padding:10px; background:transparent; border:0; color:inherit }
+.workout-attendance-client { margin:0 0 6px; font-size:19px; font-weight:500; overflow-wrap:anywhere }
+.workout-attendance-date,.workout-attendance-note { color:var(--muted); font-size:14px; line-height:1.5 }
+.workout-attendance-date { margin:0 0 22px }
+.workout-attendance-accounting { margin:0 0 20px; padding:18px 0; border-block:1px solid var(--border); font-size:15px; line-height:1.5 }
+.workout-attendance-accounting strong { display:flex; align-items:center; gap:10px; font-weight:500 }
+.workout-attendance-accounting strong svg { width:19px; height:19px; color:var(--accent) }
+.workout-attendance-accounting p { margin:8px 0; color:var(--muted); font-size:14px }
+.workout-attendance-accounting .link { min-height:44px; padding:8px 0; color:inherit; text-align:left }
+.workout-attendance-accounting label { display:grid; gap:8px; font-size:14px }
+.workout-attendance-accounting select { width:100%; min-height:48px; font-size:16px }
+.workout-attendance-note { margin:0 0 18px }
+.workout-attendance-sheet form>.primary { min-height:52px; border-radius:18px; margin-top:12px }
+.workout-attendance-cancel { display:block; margin:8px auto 0; min-height:44px; color:var(--muted) }
+.workout-attendance-actions { display:flex; flex-wrap:wrap; justify-content:center; gap:8px; margin:8px 0 16px }
+.workout-attendance-actions button { min-height:44px; padding:8px 12px; background:transparent; border:0; color:inherit; font-size:14px }
+.live-bottom-bar-empty .workout-attendance-finish { flex:1; min-height:48px }
+
+.completed-empty-attendance { margin:20px 0; padding:0 0 16px }
+.completed-empty-attendance h3 { margin:0 0 8px; font-size:17px; font-weight:500 }
+.completed-empty-attendance p { margin:0 0 16px; font-size:15px; color:var(--muted) }
+.completed-empty-attendance .button { min-height:48px }

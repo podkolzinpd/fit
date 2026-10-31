@@ -35,6 +35,7 @@ import type {
   ExerciseProgressCursor,
   ExerciseProgressPage,
   WorkoutDraft,
+  WorkoutAttendanceDraft,
   LiveSetDraft,
   WorkoutTrainerResponseDraft,
   WorkoutFeedbackDraft,
@@ -160,6 +161,7 @@ export interface DataBackend {
     setMetricArchived(metric: CustomMetric, archived: boolean): Promise<CustomMetric>
   }
   workouts: {
+    confirmAttendance?: (workout: Workout, draft: WorkoutAttendanceDraft, operationId: string) => Promise<number>
     supportsAtomicLiveRounds: boolean
     supportsLiveSupersetSplit: boolean
     get: (id: string) => Promise<Workout>

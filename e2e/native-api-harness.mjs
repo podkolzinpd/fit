@@ -143,16 +143,16 @@ try {
     // This prevents reset/actor transaction deadlocks without retrying SQL errors.
     const barrier = await runtime.connect()
     try {
-    await owner.query('truncate table public.profiles cascade')
-    await owner.query(seed)
-    mediaObjects.clear()
-    profiles.clear()
-    resetId += 1
-    profiles.set('trainer', trainerId)
-    profiles.set('client', clientId)
-    await owner.query(`insert into app_private.profile_rollout_assignments(profile_id,target_backend,access_mode,enabled) select id,'yandex','read_write',true from public.profiles on conflict(profile_id) do update set enabled=true,target_backend='yandex',access_mode='read_write'`)
-    await owner.query(`insert into public.user_legal_acceptances(user_id,terms_version,privacy_version,source) select id,$1,$2,'existing_user' from public.profiles on conflict do nothing`, [terms, privacy])
-    return { ok: true }
+      await owner.query('truncate table public.profiles cascade')
+      await owner.query(seed)
+      mediaObjects.clear()
+      profiles.clear()
+      resetId += 1
+      profiles.set('trainer', trainerId)
+      profiles.set('client', clientId)
+      await owner.query(`insert into app_private.profile_rollout_assignments(profile_id,target_backend,access_mode,enabled) select id,'yandex','read_write',true from public.profiles on conflict(profile_id) do update set enabled=true,target_backend='yandex',access_mode='read_write'`)
+      await owner.query(`insert into public.user_legal_acceptances(user_id,terms_version,privacy_version,source) select id,$1,$2,'existing_user' from public.profiles on conflict do nothing`, [terms, privacy])
+      return { ok: true }
     } finally { barrier.release() }
   })
   app.post('/__fixtures/session', async request => {

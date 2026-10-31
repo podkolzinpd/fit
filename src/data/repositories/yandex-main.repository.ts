@@ -1687,6 +1687,9 @@ export function createYandexMainRepository(
       },
       async replaceLiveExercise(item, exerciseId, exercise) { return liveCommand(`/v1/workouts/${item.id}/exercises/${exerciseId}`, 'PUT', item.version, { exercise: { source: exercise.source, ref: exercise.ref, customExerciseId: exercise.customExerciseId ?? null, name: exercise.name, muscleGroup: exercise.muscleGroup, inputKind: exercise.inputKind } }) },
       async finish(item) { return liveCommand(`/v1/workouts/${item.id}/finish`, 'POST', item.version) },
+      async confirmAttendance(item, attendance, operationId) {
+        return liveCommand(`/v1/workouts/${item.id}/finish`, 'POST', item.version, { attendance }, operationId)
+      },
       // Пауза — переключатель без ожидаемой версии (YAFIT-627); ответ несёт новую версию тренировки.
       async setLivePause(item, paused) {
         const payload = await writeJson(queries, `/v1/workouts/${item.id}/pause`, 'POST', { paused, operationId: crypto.randomUUID() },
