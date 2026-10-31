@@ -45,13 +45,19 @@ export function ChatStartButton({ clientId, trainerId, conversationId = null, cl
   </span>
 }
 
-export function PublicTrainerChatButton({ publicProfileId, className = 'primary wide' }: { publicProfileId: string; className?: string }) {
+type PublicTrainerChatButtonProps = { publicProfileId: string; className?: string }
+
+export function PublicTrainerChatButton({ publicProfileId, className = 'primary wide' }: PublicTrainerChatButtonProps) {
   const { actor } = useAuth()
+  if (actor?.role === 'trainer') return null
+  if (!actor) return <Link className={`button ${className}`} to="/auth" state={{ from: `/trainers/${publicProfileId}` }}>Войти, чтобы написать</Link>
+  return <AuthenticatedPublicTrainerChatButton publicProfileId={publicProfileId} className={className} />
+}
+
+function AuthenticatedPublicTrainerChatButton({ publicProfileId, className }: PublicTrainerChatButtonProps) {
   const { chat } = useDataBackend()
   const navigate = useNavigate()
   const open = useMutation({ mutationFn: () => chat.openPublicTrainer(publicProfileId), onSuccess: (id) => navigate(`/chat/${id}`, { state: { chatBack: 'profile' } }) })
-  if (actor?.role === 'trainer') return null
-  if (!actor) return <Link className={`button ${className}`} to="/auth" state={{ from: `/trainers/${publicProfileId}` }}>Войти, чтобы написать</Link>
   return <span className="chat-start-wrap">
     <button type="button" className={className} disabled={open.isPending} onClick={() => open.mutate()}>{open.isPending ? 'Открываем…' : 'Написать тренеру'}</button>
     {open.error && <small className="error">Не удалось открыть диалог</small>}

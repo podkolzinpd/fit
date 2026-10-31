@@ -612,6 +612,70 @@ describe('reliable chat screens', () => {
     expect(await screen.findByText('Не удалось открыть чат')).toBeVisible()
   })
 
+  it('keeps the public guest login link independent of a private backend', async () => {
+    const user = userEvent.setup()
+    auth.mockReturnValue({ actor: null })
+    backend.mockImplementation(() => { throw new Error('Сессия Yandex ID недоступна. Войдите снова.') })
+    function Destination() {
+      const location = useLocation()
+      const state: unknown = location.state
+      return <output aria-label="public destination">{JSON.stringify({ path: location.pathname, state })}</output>
+    }
+    render(<MemoryRouter initialEntries={['/trainers/public-profile-1']}><PublicTrainerChatButton publicProfileId="public-profile-1" /><Routes>
+      <Route path="*" element={<Destination />} />
+    </Routes></MemoryRouter>)
+
+    await user.click(screen.getByRole('link', { name: 'Войти, чтобы написать' }))
+    expect(screen.getByLabelText('public destination')).toHaveTextContent(JSON.stringify({ path: '/auth', state: { from: '/trainers/public-profile-1' } }))
+    expect(backend).not.toHaveBeenCalled()
+  })
+
+  it('does not request a private backend for the hidden trainer action', () => {
+    auth.mockReturnValue({ actor: { ...actor, kind: 'trainer', role: 'trainer' } })
+    backend.mockImplementation(() => { throw new Error('Сессия Yandex ID недоступна. Войдите снова.') })
+    const view = render(<MemoryRouter><PublicTrainerChatButton publicProfileId="public-profile-1" /></MemoryRouter>)
+    expect(view.container).toBeEmptyDOMElement()
+    expect(backend).not.toHaveBeenCalled()
+  })
+
+  it('survives session loading and sign-out while preserving the authenticated chat route', async () => {
+    const user = userEvent.setup()
+    const chat = chatBackend()
+    const queryClient = new QueryClient({ defaultOptions: { mutations: { retry: false } } })
+    auth.mockReturnValue({ actor: null })
+    backend.mockImplementation(() => { throw new Error('Сессия Yandex ID недоступна. Войдите снова.') })
+    function Destination() {
+      const location = useLocation()
+      const state: unknown = location.state
+      return <output aria-label="public destination">{JSON.stringify({ path: location.pathname, state })}</output>
+    }
+    const tree = () => <QueryClientProvider client={queryClient}><MemoryRouter initialEntries={['/trainers/public-profile-1']}>
+      <PublicTrainerChatButton publicProfileId="public-profile-1" /><Routes><Route path="*" element={<Destination />} /></Routes>
+    </MemoryRouter></QueryClientProvider>
+    const view = render(tree())
+    expect(screen.getByRole('link', { name: 'Войти, чтобы написать' })).toBeVisible()
+    expect(backend).not.toHaveBeenCalled()
+
+    auth.mockReturnValue({ actor })
+    backend.mockReturnValue({ chat })
+    view.rerender(tree())
+    await user.click(screen.getByRole('button', { name: 'Написать тренеру' }))
+    await waitFor(() => expect(screen.getByLabelText('public destination')).toHaveTextContent(JSON.stringify({ path: '/chat/conversation-1', state: { chatBack: 'profile' } })))
+    expect(chat.openPublicTrainer).toHaveBeenCalledExactlyOnceWith('public-profile-1')
+
+    auth.mockReturnValue({ actor: null })
+    backend.mockImplementation(() => { throw new Error('Сессия Yandex ID недоступна. Войдите снова.') })
+    view.rerender(tree())
+    expect(screen.getByRole('link', { name: 'Войти, чтобы написать' })).toBeVisible()
+    expect(chat.openPublicTrainer).toHaveBeenCalledTimes(1)
+  })
+
+  it('retains the mandatory backend guard for an authenticated client', () => {
+    backend.mockImplementation(() => { throw new Error('Сессия Yandex ID недоступна. Войдите снова.') })
+    expect(() => render(<MemoryRouter><PublicTrainerChatButton publicProfileId="public-profile-1" /></MemoryRouter>))
+      .toThrow('Сессия Yandex ID недоступна. Войдите снова.')
+  })
+
   it('opens an ordinary dialog from a public trainer profile', async () => {
     const user = userEvent.setup()
     const chat = chatBackend()
