@@ -32,7 +32,9 @@ describe.skipIf(source === undefined)('one private journal into a new card', { c
       perform pg_advisory_xact_lock(193635, 1);
       if not exists (select 1 from pg_roles where rolname='fit_api') then create role fit_api login; end if;
     end $$;`)
-    await admin.query(`create database ${database}`)
+    // Exercise the production-compatible C locale: lower() can leave Cyrillic
+    // unchanged, so JavaScript must not pre-fold only the supplied name.
+    await admin.query(`create database ${database} template template0 encoding 'UTF8' lc_collate 'C' lc_ctype 'C'`)
     created = true
     url.pathname = `/${database}`
     await runner({ databaseUrl: url.href, dir: fileURLToPath(new URL('../../db/migrations', import.meta.url)),
@@ -196,9 +198,8 @@ describe.skipIf(source === undefined)('one private journal into a new card', { c
     expect((await owner.query<{ n: number }>('select count(*)::int n from public.workout_sets s join public.workout_exercises e on e.id=s.workout_exercise_id where e.workout_id=$1 and s.fact_weight_kg=99', [first])).rows[0]?.n).toBe(4)
   })
 
-  async function appendFixture(linked = false, foreignPartition = false) {
+  async function appendFixture(linked = false, foreignPartition = false, name = 'Synthetic existing') {
     const f = await prepareFixture(true, foreignPartition)
-    const name = 'Synthetic existing'
     await f.owner.query('update public.clients set full_name=$2,goal=$3 where id=$1', [f.existing, name, 'Keep goal'])
     await f.owner.query('insert into public.client_trainers(client_id,trainer_id,note) values($1,$2,$3)',
       [f.existing, f.coach, 'Keep private note'])
@@ -306,6 +307,17 @@ describe.skipIf(source === undefined)('one private journal into a new card', { c
     await f.owner.query("update public.workouts set notes='Keep later human edit' where id=$1", [edited])
     await expect(runPreparedNewCardImport({ ...f.options, mode: 'apply' })).rejects.toThrow('content_readback_failed')
     expect((await f.owner.query<{ notes: string }>('select notes from public.workouts where id=$1', [edited])).rows[0]?.notes).toBe('Keep later human edit')
+  })
+
+  it('finds a Cyrillic name and alias under the C locale without changing card identity', async () => {
+    const name = 'Синтетическая'
+    const f = await appendFixture(false, false, name)
+    expect((await f.owner.query<{ matches: boolean }>('select lower($1) = lower($2) matches', [name, name.toLowerCase()])).rows[0]?.matches).toBe(false)
+    expect(await runPreparedNewCardImport(f.options)).toMatchObject({ status: 'ready', willCreateCard: false, existingWorkouts: 2 })
+    await f.owner.query("update public.clients set full_name='Different card name' where id=$1", [f.existing])
+    await f.owner.query('update public.client_trainers set alias=$2 where client_id=$1 and trainer_id=$3', [f.existing, `${name} Alias`, f.coach])
+    expect(await runPreparedNewCardImport(f.options)).toMatchObject({ status: 'ready', willCreateCard: false, existingWorkouts: 2 })
+    expect((await f.owner.query<{ n: number }>('select count(*)::int n from public.workouts where client_id=$1', [f.existing])).rows[0]?.n).toBe(2)
   })
 
   it('keeps schema2 collision protection and refuses ambiguous or missing append targets', async () => {
