@@ -2279,3 +2279,38 @@ ownership/RLS и идемпотентность сохраняются. Стар
 Веб/Android получают одинаковые переменные; требуется новая сборка. Права/данные
 проверяет backend, общий режим не включает иные пилоты или клиентский reference.
 [План и проверки](docs/design/WORKOUT_NAMES_AND_PUBLIC_QUICK_ENTRY_20261030.md). Фактический статус выпуска — YAFIT-692.
+
+
+## General client presentation rollout (YAFIT-693, 2026-10-30)
+
+The owner approved the complete client package for every client account.
+`VITE_CLIENT_WORKOUT_ROLLOUT_MODE=all|pilot|off` controls the existing client
+renderer, not authorization. Missing mode preserves the old pilot; invalid mode
+fails closed. The independent enabled flag must still be exactly true, and the
+actor must be a client with the server Client Lime assignment. Pilot validates
+its original distinct UUID list; all does not need that list. Preserve it for
+rollback instead of deleting it. Trainer/nutrition/AI flags remain independent.
+
+Build channels forward the mode: Cloud.ru hosted frontend, signed Android OTA,
+Android debug/APK and preserved legacy frontend builder. Set the effective
+`fit-frontend-candidate` environment (repository fallback applies only when absent)
+and applicable Android environment/repository variables, then rebuild. A variable
+edit alone is not publication. Locally built iOS uses the same Vite variable;
+web publication does not update a previously packaged native iOS binary.
+
+`Manage client Lime rollout` now runs on the protected Cloud.ru runner and
+current verified API image. It uses the existing DatabaseLimeRolloutManager
+and atomic revision-checked setter; there is no schema/data migration.
+Inspect first, then one explicit client all/pilot/off operation with its exact
+confirmation and expected revision. It checks trainer/schedule unchanged and
+independently reads back. If outcome is uncertain, inspect; never replay blindly.
+The public API cannot execute this owner operation; protected owner credentials
+are transient, never printed or downloaded. Other pilot assignments are untouched.
+
+Before all: verify ordinary/new client UI, both themes/densities and saved
+animation preferences, input/keyboard/confirmed edits, timer and gestures.
+Publish the verified combined package, verify public assets/API/signed OTA, then
+activate the server client mode in the coordinated release. Roll back by restoring
+server pilot/off and the frontend mode/kill switch with a verified rebuild; no
+user data or preferences are rolled back. Factual activation receipt and limits:
+YAFIT-693 and docs/design/CLIENT_REFERENCE_SCREENS_20261029.md.

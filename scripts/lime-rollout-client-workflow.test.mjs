@@ -10,13 +10,24 @@ test('client rollout is main-only manual, inspect by default and requires valida
   assert.match(workflow,/node scripts\/lime-rollout-request\.mjs request/)
   assert.match(workflow,/expected_revision:/)
   assert.match(workflow,/confirmation:/)
-  assert.match(workflow,/group: yandex-stage\n\s+cancel-in-progress: false/)
+  assert.match(workflow,/group: cloudru-stage-vm\n\s+cancel-in-progress: false/)
 })
-test('client rollout uses private Yandex IAM only, single write and independent verified readback',()=>{
-  assert.match(workflow,/scripts\/yandex-github-oidc\.sh/)
-  assert.match(workflow,/migration_container_url/)
-  assert.match(workflow,/\/stage\/experiments\/lime-rollout/)
-  assert.match(workflow,/LIME_MODE=inspect EXPECTED_REVISION= CONFIRMATION=/)
-  assert.match(workflow,/node scripts\/lime-rollout-request\.mjs verify/)
-  assert.doesNotMatch(workflow,/supabase|DATABASE_URL|terraform apply|--retry|set -x|curl -v/)
+test('client rollout uses the current private Cloud.ru owner and existing atomic manager',()=>{
+  assert.match(workflow,/runs-on: \[self-hosted, cloudru-stage\]/)
+  assert.match(workflow,/test "\$\(hostname\)" = fit-stage-app/)
+  assert.match(workflow,/CLOUDRU_STAGE_DATABASE_CONFIG_JSON/)
+  assert.match(workflow,/MIGRATION_DATABASE_USER == "fit_owner"/)
+  assert.match(workflow,/MIGRATION_DATABASE_URL == null/)
+  assert.match(workflow,/sudo install -m 600/)
+  assert.match(workflow,/RUNNING_SHA/)
+  assert.match(workflow,/Config.Image/)
+  assert.match(workflow,/--read-only/)
+  assert.match(workflow,/cloudru-client-lime-rollout\.mjs/)
+  assert.doesNotMatch(workflow,/supabase|terraform|yandex-github-oidc|DATABASE_URL:|--retry|set -x|curl -v/)
+})
+test('all build channels retain the client pilot until an explicit all',()=>{
+  for(const name of ['prepare-cloudru-frontend','release-android-ota','android-build','deploy-yandex-frontend']){
+    const text=readFileSync(new URL(`../.github/workflows/${name}.yml`,import.meta.url),'utf8')
+    assert.ok(text.includes("VITE_CLIENT_WORKOUT_ROLLOUT_MODE: ${{ vars.VITE_CLIENT_WORKOUT_ROLLOUT_MODE || 'pilot' }}"),name)
+  }
 })

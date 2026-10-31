@@ -1,6 +1,6 @@
 import { useMutation } from '@tanstack/react-query'
 import { Link, useNavigate } from 'react-router-dom'
-import { useDataBackend } from '../../app/data-backend-context'
+import { useDataBackend, useOptionalDataBackend } from '../../app/data-backend-context'
 import { useAuth } from '../../app/auth-context'
 import { MessageIcon } from '../../shared/icons'
 import { useChatThreads } from './use-chat-threads'
@@ -47,11 +47,18 @@ export function ChatStartButton({ clientId, trainerId, conversationId = null, cl
 
 export function PublicTrainerChatButton({ publicProfileId, className = 'primary wide' }: { publicProfileId: string; className?: string }) {
   const { actor } = useAuth()
+  const backend = useOptionalDataBackend()
+  if (actor?.role === 'trainer') return null
+  // The public profile can finish loading before the private session restores.
+  // Keep its login action available without mounting a protected chat consumer.
+  if (!actor || backend === null) return <Link className={`button ${className}`} to="/auth" state={{ from: `/trainers/${publicProfileId}` }}>Войти, чтобы написать</Link>
+  return <ReadyPublicTrainerChatButton publicProfileId={publicProfileId} className={className} />
+}
+
+function ReadyPublicTrainerChatButton({ publicProfileId, className }: { publicProfileId: string; className: string }) {
   const { chat } = useDataBackend()
   const navigate = useNavigate()
   const open = useMutation({ mutationFn: () => chat.openPublicTrainer(publicProfileId), onSuccess: (id) => navigate(`/chat/${id}`, { state: { chatBack: 'profile' } }) })
-  if (actor?.role === 'trainer') return null
-  if (!actor) return <Link className={`button ${className}`} to="/auth" state={{ from: `/trainers/${publicProfileId}` }}>Войти, чтобы написать</Link>
   return <span className="chat-start-wrap">
     <button type="button" className={className} disabled={open.isPending} onClick={() => open.mutate()}>{open.isPending ? 'Открываем…' : 'Написать тренеру'}</button>
     {open.error && <small className="error">Не удалось открыть диалог</small>}
