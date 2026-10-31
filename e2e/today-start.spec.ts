@@ -1,5 +1,6 @@
+import { nativeSignIn } from './native-local-fixture'
 import { mockNativeAiSession, nativeAiUrl } from './native-ai-fixture'
-import { expect, test } from '@playwright/test'
+import { expect, test } from './native-local-fixture'
 import { expectWorkoutTime } from './workout-time-wheel'
 
 async function mockWorkoutParser(page: import('@playwright/test').Page, items: unknown[]) {
@@ -246,9 +247,7 @@ test('today: быстрый старт ведёт к единому выбору
 
 test('today: пустой финальный шаг не оставляет пользователя с неактивной кнопкой', async ({ page }) => {
   await page.goto('/auth')
-  await page.getByLabel('Email').fill('trainer@fit.local')
-  await page.getByLabel('Пароль').fill('FitLocal123!')
-  await page.getByRole('button', { name: 'Войти' }).click()
+  await nativeSignIn(page, 'trainer@fit.local')
   await expect(page).toHaveURL(/\/(today|clients)$/)
   await page.evaluate(() => Object.keys(localStorage)
     .filter((key) => key.startsWith('fit.today-draft.'))
@@ -264,9 +263,7 @@ test('today: пустой финальный шаг не оставляет по
 
 test('today: беговая ветка сразу добавляет интервалы с активным восстановлением', async ({ page }) => {
   await page.goto('/auth')
-  await page.getByLabel('Email').fill('trainer@fit.local')
-  await page.getByLabel('Пароль').fill('FitLocal123!')
-  await page.getByRole('button', { name: 'Войти' }).click()
+  await nativeSignIn(page, 'trainer@fit.local')
   await expect(page).toHaveURL(/\/(today|clients)$/)
   await page.evaluate(() => Object.keys(localStorage)
     .filter((key) => key.startsWith('fit.today-draft.'))
@@ -308,9 +305,7 @@ test('today: беговая ветка сразу добавляет интер�
 
 test('создание из календаря: завершённая тренировка сохраняет выбранную будущую дату', async ({ page }) => {
   await page.goto('/auth')
-  await page.getByLabel('Email').fill('trainer@fit.local')
-  await page.getByLabel('Пароль').fill('FitLocal123!')
-  await page.getByRole('button', { name: 'Войти' }).click()
+  await nativeSignIn(page, 'trainer@fit.local')
   await expect(page).toHaveURL(/\/(today|clients)$/)
 
   await page.goto('/workouts/new?date=2099-01-01')

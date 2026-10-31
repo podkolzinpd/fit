@@ -1620,7 +1620,7 @@ for (const { width, height, theme } of [
     await page.route(`**/v1/trainers/${publicTrainerId}/public-profile`, route => {
       publicReads += 1
       return route.fulfill({
-      json: { publicId: publicTrainerId, draft: published, published, listedInCatalog: true,
+      json: { publicId: publicTrainerId, profile: published, listedInCatalog: true,
         version: 1, isBrandTrainer: false, yandexOffices: offices, publishedAt: '2026-10-29T09:00:00Z', updatedAt: '2026-10-29T09:00:00Z' },
     }) })
     await page.goto('/me/trainers')

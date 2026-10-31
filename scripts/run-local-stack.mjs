@@ -228,7 +228,12 @@ async function runDevelopmentServers() {
   await waitForApi(api)
   console.log('[local] API готов: http://127.0.0.1:8080')
   console.log('[local] Запускаю frontend…\n')
-  const frontend = spawnInherited(npmCommand, ['run', 'dev:frontend'])
+  const frontend = spawnInherited(npmCommand, ['run', 'dev:frontend'], {
+    ...process.env,
+    VITE_YANDEX_API_BASE_URL: 'http://127.0.0.1:8080',
+    VITE_YANDEX_ONLY_AUTH_ENABLED: 'true', VITE_YANDEX_NATIVE_REGISTRATION_ENABLED: 'true',
+    VITE_YANDEX_APP_SESSION_ENABLED: 'true', VITE_YANDEX_MAIN_ROUTING_ENABLED: 'true',
+  })
   const children = [api, frontend]
 
   const stop = () => {

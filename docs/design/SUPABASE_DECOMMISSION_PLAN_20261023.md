@@ -146,3 +146,16 @@ P1 и независимые части P2 допускают параллель
 ## Проверка самого планового PR
 
 Только Markdown: inventory path/count/coverage validation, относительные ссылки, `git diff --check`, штатный scope classifier и применимый CI. Runtime tests, native DB/browser acceptance, production smoke, remote/data audit и shutdown **не выполнялись этим PR** и не объявлены завершёнными. `npm run check` для документального diff заменяется утверждённой docs-only классификацией, если она подтверждена на точном head; обязательный CI не обходится.
+
+
+## P2 — удаление legacy frontend — итерация 31.10.2026 — GPT-6 / OpenAI
+
+Задача: удалить весь legacy frontend-контур и SDK, перевести оставшиеся сценарии на native fixtures. База main93784374. Серверный legacy chat/media migration, историческая Supabase БД, remote resources и secrets вне scope.
+
+Расхождения: DataBackend выводит контракт из legacy реализаций; до их удаления выделяется явный provider-neutral контракт. Production уже native; local/test composition ещё выбирает Supabase. Авторизация email/password — прекращённый контракт, её проверки не выдаются за native покрытие.
+
+Acceptance: (F1) native composition во всех режимах; (F2) явные DTO/repository contracts без SDK/DB rows; (F3) удалены legacy query/repository/auth/storage/realtime пути и frontend SDK; (F4) уникальные продуктовые assertions перенесены в native fixtures, obsolete transport/auth assertions отмечены отдельно; (F5) prompts/native поведение/media сохранены; (F6) полный check, Chromium/WebKit/visual и exact-head CI.
+
+Решение: переиспользовать существующий native repository/API и native browser fixtures. Не создавать второй fake Supabase protocol или production fallback. Удаление server SDK/CLI/старой БД отложено за границу этой задачи.
+
+Проверка/открыто: реализация и перенос сценариев выполняются; финальные результаты и соответствие старого покрытия будут записаны здесь до handoff. Production не изменялся.

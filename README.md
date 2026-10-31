@@ -30,7 +30,10 @@ npm run dev
 и отдельный PostgreSQL 17 для Yandex API. Команда применяет только ещё не
 применённые миграции, запускает Fastify API на `127.0.0.1:8080`, проверяет его
 `/ready`, а затем запускает frontend. Облачные ресурсы команда не меняет.
-Локальные значения Supabase уже зафиксированы в `.env.development`; production размещён в Cloud.ru; Vercel остаётся только legacy redirect.
+Frontend во всех режимах использует только native API; Supabase запускается
+общим local stack исключительно ради замороженной SQL-регрессии. Для ручного
+входа задайте публичный `VITE_YANDEX_OAUTH_CLIENT_ID` локального OAuth-клиента.
+Production размещён в Cloud.ru; Vercel остаётся только legacy redirect.
 Актуальный контур описан в docs/YANDEX_CUTOVER_PLAYBOOK.md.
 
 Если нужны только контейнеры и миграции без серверов разработки:
@@ -95,15 +98,17 @@ npm run check
    чтобы в Xcode не попал пустой экран. Запуск на симулятор/устройство — оттуда.
 5. После любых изменений в `src/` перезапустите `npm run ios:sync` (или `ios:open`) — Xcode не пересобирает веб-бандл сам.
 
-Для изолированной проверки интерфейса с локальной БД сначала запустите Supabase
-через `npm run db:start`, затем используйте `npm run ios:open:local`. Этот режим
-намеренно не подменяет обычную нативную сборку: без отдельно переданных
-настроек Yandex Cloud локальная Edge Function не выполняет живой LLM-разбор.
+Для локальной проверки интерфейса используйте native API/PostgreSQL из
+`npm run dev`. Browser fixtures создают отдельную native БД на каждый сценарий
+и synthetic app-session; GoTrue, PostgREST и Supabase SDK для них не нужны.
+Перед `npx playwright test` установите зависимости API и выполните
+`npm --prefix services/api run build`; PostgreSQL 17 должен быть запущен через
+Podman. По умолчанию fixtures используют только `127.0.0.1:55432/postgres`.
 
 Светлая тема используется по умолчанию во всех сборках. Для временного отката
 на тёмную соберите приложение с `VITE_APP_THEME=dark`.
 
-Вход через Google не показывается в веб- и iOS-интерфейсе. Существующие Google-аккаунты и серверный OAuth-провайдер не удалены. В production вход выполняется через Yandex ID; email/password остаются только в локальном legacy-режиме.
+Вход через Google не показывается в веб- и iOS-интерфейсе. Существующие Google-аккаунты и серверный OAuth-провайдер не удалены. Вход во всех frontend-сборках выполняется через Yandex ID. Локального email/password режима больше нет.
 
 ## Обязательные документы
 

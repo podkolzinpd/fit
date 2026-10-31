@@ -83,3 +83,5 @@
 [Актуальный план YAFIT-692](design/WORKOUT_NAMES_AND_PUBLIC_QUICK_ENTRY_20261030.md)
 заменяет fixed2-границу YAFIT-675 только для этого пакета; прочие пилоты прежние.
 Runtime all включается отдельным выпуском, текущий статус — в тикете.
+
+31.10 — frontend Supabase decommission: provider-neutral contracts, native-only composition во всех режимах; server legacy media и frozen SQL вне scope. [Решение и проверка P2](design/SUPABASE_DECOMMISSION_PLAN_20261023.md#p2--удаление-legacy-frontend--итерация-31102026--gpt-6--openai).

@@ -264,19 +264,18 @@ test('runs heavy legacy database checks only for relevant changes or a manual CI
   assert.match(workflow, /- run: supabase test db --local/)
 })
 
-test('waits for local auth readiness before auth-dependent E2E jobs', () => {
-  assert.match(
-    workflow,
-    /e2e-visual:[\s\S]*?- run: supabase db reset --local\n\s+- run: node scripts\/wait-for-local-auth\.mjs/,
-  )
-  assert.match(
-    workflow,
-    /e2e-chromium:[\s\S]*?- run: supabase db reset --local\n\s+- run: node scripts\/wait-for-local-auth\.mjs/,
-  )
-  assert.match(
-    workflow,
-    /e2e-webkit:[\s\S]*- run: supabase db reset --local\n\s+- run: node scripts\/wait-for-local-auth\.mjs/,
-  )
+test('browser lanes use isolated native API databases without Supabase auth or SDK credentials', () => {
+  for (const name of ['e2e-visual', 'e2e-chromium', 'e2e-webkit']) {
+    const start = workflow.indexOf(`  ${name}:\n`)
+    const body = workflow.slice(start).split(/\n  [a-z][a-z0-9-]*:\n/, 1)[0]
+    assert.match(body, /image: postgres:17@sha256:[a-f0-9]{64}/)
+    assert.match(body, /--health-cmd "pg_isready -U postgres -d fit_actor_test"/)
+    assert.match(body, /FIT_E2E_POSTGRES_URL: postgresql:\/\/postgres:postgres@127\.0\.0\.1:5432\/postgres/)
+    assert.match(body, /npm ci --prefix services\/api --ignore-scripts/)
+    assert.match(body, /npm --prefix services\/api run build/)
+    assert.match(body, /--env FIT_E2E_POSTGRES_URL/)
+    assert.doesNotMatch(body, /VITE_SUPABASE_|supabase\/setup-cli|supabase start|supabase db reset|wait-for-local-auth/)
+  }
 })
 
 test('does not start Supabase services that CI scenarios do not use', () => {
@@ -284,24 +283,15 @@ test('does not start Supabase services that CI scenarios do not use', () => {
     workflow,
     /SUPABASE_DATABASE_EXCLUDE: edge-runtime,gotrue,imgproxy,kong,logflare,mailpit,postgres-meta,postgrest,realtime,storage-api,studio,supavisor,vector/,
   )
-  assert.match(
-    workflow,
-    /SUPABASE_E2E_EXCLUDE: edge-runtime,imgproxy,logflare,mailpit,postgres-meta,storage-api,studio,supavisor,vector/,
-  )
 
   const databaseJob = workflow.slice(workflow.indexOf('  database:\n'), workflow.indexOf('  yandex-database:\n'))
   assert.match(databaseJob, /supabase start --exclude "\$SUPABASE_DATABASE_EXCLUDE"/)
 
-  for (const job of ['e2e-visual', 'e2e-chromium', 'e2e-webkit']) {
-    const start = workflow.indexOf(`  ${job}:\n`)
-    assert.notEqual(start, -1, `${job} job is missing`)
-    const body = workflow.slice(start).split(/\n  [a-z][a-z0-9-]*:\n/, 1)[0]
-    assert.match(body, /supabase start --exclude "\$SUPABASE_E2E_EXCLUDE"/)
-  }
+
 })
 
 test('clears the setup-cli override to retain official registry fallback in every database-backed CI job', () => {
-  for (const job of ['database', 'e2e-visual', 'e2e-chromium', 'e2e-webkit']) {
+  for (const job of ['database']) {
     const start = workflow.indexOf(`  ${job}:\n`)
     assert.notEqual(start, -1, `${job} job is missing`)
     const body = workflow.slice(start).split(/\n  [a-z][a-z0-9-]*:\n/, 1)[0]
@@ -320,7 +310,7 @@ test('clears the setup-cli override to retain official registry fallback in ever
 
 test('reserves Supabase ports before checkout on disposable GitHub hosts only', () => {
   const scripts = []
-  for (const name of ['database', 'e2e-visual', 'e2e-chromium', 'e2e-webkit']) {
+  for (const name of ['database']) {
     const start = workflow.indexOf(`  ${name}:\n`)
     const job = workflow.slice(start).split(/\n  [a-z][a-z0-9-]*:\n/, 1)[0]
     const setup = job.indexOf('Reserve local Supabase ports before network setup')
@@ -342,13 +332,14 @@ printf '%s\\n' "$*" >> "$FIT_TEST_CALLS"
 exit "\${FIT_TEST_WRITE_STATUS:-0}"
 `, { mode: 0o755 })
     writeFileSync(join(root, 'sudo'), '#!/bin/bash\nexec "$@"\n', { mode: 0o755 })
-    const run = overrides => spawnSync('bash', ['-c', scripts[0]], {
+    const run = overrides => spawnSync('bash', ['-c', 'export PATH="$FIT_TEST_BIN:$PATH"\n' + scripts[0]], {
       encoding: 'utf8',
       env: { PATH: `${root}:${process.env.PATH}`, GITHUB_ACTIONS: 'true', RUNNER_OS: 'Linux',
-        RUNNER_ENVIRONMENT: 'github-hosted', FIT_TEST_RESERVED: '', FIT_TEST_CALLS: log, ...overrides },
+        RUNNER_ENVIRONMENT: 'github-hosted', FIT_TEST_BIN: root, FIT_TEST_RESERVED: '', FIT_TEST_CALLS: log, ...overrides },
     })
     for (const prior of ['', '40000-40010,55000']) {
-      assert.equal(run({ FIT_TEST_RESERVED: prior }).status, 0)
+      const result = run({ FIT_TEST_RESERVED: prior })
+      assert.equal(result.status, 0, result.stderr)
       const calls = readFileSync(log, 'utf8').trim().split('\n')
       assert.equal(calls.at(-1), `-q -w net.ipv4.ip_local_reserved_ports=${prior ? `${prior},` : ''}54320-54329`)
     }

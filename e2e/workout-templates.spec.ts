@@ -1,30 +1,9 @@
-import { expect, test } from '@playwright/test'
+import { nativeSignIn } from './native-local-fixture'
+import { expect, test } from './native-local-fixture'
 
 async function signInTrainer(page: import('@playwright/test').Page, role: 'trainer' | 'client' = 'trainer') {
-  await page.goto('/auth')
-  await page.getByLabel('Email').fill(role === 'trainer' ? 'trainer@fit.local' : 'client@fit.local')
-  await page.getByLabel('Пароль').fill('FitLocal123!')
-  const submit = page.getByRole('button', { name: 'Войти' })
-  for (let attempt = 0; attempt < 5; attempt += 1) {
-    const response = page.waitForResponse((candidate) => candidate.request().method() === 'POST' && candidate.url().includes('/auth/v1/token?grant_type=password'))
-    await submit.click()
-    const result = await response
-    if (result.ok()) {
-      const destination = role === 'trainer' ? /\/(today|clients)$/ : /\/(me|today)$/
-      for (let recovery = 0; recovery < 5; recovery += 1) {
-        if (destination.test(new URL(page.url()).pathname)) return
-        await page.waitForTimeout(500 * (2 ** recovery))
-        await page.goto(role === 'trainer' ? '/today' : '/me')
-      }
-      await expect(page).toHaveURL(destination, { timeout: 15_000 })
-      return
-    }
-    if (![502, 503, 504].includes(result.status()) || attempt === 4) {
-      throw new Error(`Sign-in returned HTTP ${result.status()}`)
-    }
-    await expect(submit).toBeEnabled()
-    await page.waitForTimeout(500 * (2 ** attempt))
-  }
+  await nativeSignIn(page, role, role)
+  await expect(page).toHaveURL(role === 'trainer' ? /\/today$/ : /\/me$/)
 }
 
 async function resetScreenshotViewport(page: import('@playwright/test').Page) {
@@ -41,9 +20,9 @@ test('trainer creates, sees and assigns a reusable workout template', async ({ p
   const templateName = `Силовая · всё тело ${Date.now().toString(36)}`
   await signInTrainer(page)
   let templateListFails = true
-  await page.route('**/rest/v1/workout_templates?*', async (route) => route.fulfill(templateListFails
+  await page.route('**/v1/workout-templates', async (route) => route.fulfill(templateListFails
     ? { status: 503, contentType: 'application/json', body: '{"message":"temporary"}' }
-    : { status: 200, contentType: 'application/json', body: '[]' }))
+    : { status: 200, contentType: 'application/json', body: '{"templates":[]}' }))
   await page.goto('/workouts/new')
   await page.getByRole('button', { name: 'Завершённая' }).click()
   await expect(page.getByRole('button', { name: 'Добавить шаблон' })).toHaveCount(0)
@@ -56,7 +35,7 @@ test('trainer creates, sees and assigns a reusable workout template', async ({ p
   await expect(page.getByText('Шаблонов пока нет')).toBeVisible()
   await page.screenshot({ path: testInfo.outputPath('plan-template-empty-mobile.png'), fullPage: true, animations: 'disabled' })
   await page.getByRole('dialog', { name: 'Добавить шаблон тренировки' }).getByRole('button', { name: 'Закрыть' }).click()
-  await page.unroute('**/rest/v1/workout_templates?*')
+  await page.unroute('**/v1/workout-templates')
   await page.goto('/schedule/templates')
   await expect(page.getByRole('heading', { name: 'Шаблоны тренировок' })).toBeVisible()
 
@@ -108,7 +87,7 @@ test('trainer creates, sees and assigns a reusable workout template', async ({ p
   await page.getByRole('menuitem', { name: 'Сохранить как шаблон' }).click()
   await expect(page).toHaveURL(/\/schedule\/templates\/new\/editor\?sourceWorkout=/)
   await expect(page.getByRole('heading', { name: 'Новый шаблон', level: 2 })).toBeVisible()
-  await expect(page.getByLabel('Название шаблона')).toHaveValue('Новый шаблон')
+  await expect(page.getByLabel('Название шаблона')).toHaveValue(templateName)
   await expect(page.getByText('1 упражнение · 3 подхода').first()).toBeVisible()
   await expect(page.getByText('Анна Смирнова')).toHaveCount(0)
 

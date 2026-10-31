@@ -1,16 +1,16 @@
-import { expect, test } from '@playwright/test'
+import { mockTrainingSummaries } from './native-summary-fixture'
+import { nativeSignIn } from './native-local-fixture'
+import { expect, test } from './native-local-fixture'
 import { mockResultsHistory, verifyResultsSources } from './progress-results-fixture'
 
 test('iPhone results keep filters after source navigation while AI is unavailable', async ({ page }) => {
   await mockResultsHistory(page)
-  await page.route('**/rest/v1/client_published_training_summaries?*', (route) => route.fulfill({ json: [] }))
+  await mockTrainingSummaries(page, 'client', [])
   for (const url of ['**/v1/clients/*/training-summaries/generate']) {
     await page.route(url, (route) => route.fulfill({ status: 503, json: { error: 'temporarily unavailable' } }))
   }
   await page.goto('/auth')
-  await page.getByLabel('Email').fill('client@fit.local')
-  await page.getByLabel('Пароль').fill('FitLocal123!')
-  await page.getByRole('button', { name: 'Войти' }).click()
+  await nativeSignIn(page, 'client@fit.local')
   await expect(page).toHaveURL(/\/me$/)
   await page.clock.install({ time: new Date('2026-08-16T18:00:00+03:00') })
   await page.goto('/me/progress')

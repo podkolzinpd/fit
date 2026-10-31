@@ -1,4 +1,5 @@
-import { expect, test } from '@playwright/test'
+import { nativeSignIn, nativeRegister } from './native-local-fixture'
+import { expect, test } from './native-local-fixture'
 import { chooseWorkoutTime, expectWorkoutTime } from './workout-time-wheel'
 
 async function logoutFromProfile(page: import('@playwright/test').Page) {
@@ -29,30 +30,10 @@ async function saveCompactClientPlan(page: import('@playwright/test').Page) {
   ])
 }
 
-test('auth shell matches mobile baseline', async ({ page }) => {
-  await page.goto('/auth')
-  await expect(page.getByRole('heading', { name: 'Добро пожаловать' })).toBeVisible()
-  await expect(page.locator('.auth-flow-identity')).toBeVisible()
-  await expect(page.locator('html')).toHaveClass(/ui-identity/)
-  await expect(page.getByRole('button', { name: /Google/ })).toHaveCount(0)
-  await expect(page.getByRole('button', { name: 'Проверить Yandex ID' })).toHaveCount(0)
-  await expect(page).toHaveScreenshot('auth-mobile.png', { fullPage: true, maxDiffPixelRatio: 0.03 })
-})
-
-test('trainer registers without surname or email confirmation', async ({ page }, testInfo) => {
+test('native trainer edits a profile and retains it after signing in again', async ({ page }, testInfo) => {
   const email = `mvp-signup-${testInfo.workerIndex}-${Date.now()}@fit.local`
   await page.goto('/auth')
-  await page.getByRole('button', { name: 'Создать аккаунт' }).click()
-
-  await expect(page.getByRole('button', { name: /Google/ })).toHaveCount(0)
-  await expect(page.getByText(/Создавая аккаунт, вы принимаете/)).toBeVisible()
-
-  await expect(page.getByLabel('Имя')).toBeVisible()
-  await expect(page.getByLabel('Фамилия')).toHaveCount(0)
-  await page.getByLabel('Имя').fill('Тест')
-  await page.getByLabel('Email').fill(email)
-  await page.getByLabel('Пароль').fill('FitLocal123!')
-  await page.getByRole('button', { name: 'Создать аккаунт' }).click()
+  await nativeRegister(page, { key: email, firstName: 'Тест', role: 'trainer' })
 
   await expect(page.getByRole('heading', { level: 1, name: 'Сегодня' })).toBeVisible()
   await page.goto('/me/profile')
@@ -62,33 +43,23 @@ test('trainer registers without surname or email confirmation', async ({ page },
   await expect(page.getByLabel('Имя', { exact: true })).toHaveValue('Тест')
   await page.getByLabel('Имя', { exact: true }).fill('Тест Обновлённый')
   await page.getByRole('button', { name: 'Сохранить', exact: true }).click()
-  await expect(page.getByRole('status').filter({ hasText: 'Сохранено' })).toBeVisible()
+  await expect(page.getByText('Тест Обновлённый', { exact: true })).toBeVisible()
   await page.reload()
   await page.getByRole('button', { name: 'Изменить данные' }).click()
   await expect(page.getByLabel('Имя', { exact: true })).toHaveValue('Тест Обновлённый')
   const introduction = page.getByRole('button', { name: 'Понятно', exact: true })
   if (await introduction.isVisible()) await introduction.click()
   await logoutFromProfile(page)
-  await expect(page.getByRole('heading', { name: 'Добро пожаловать' })).toBeVisible()
-  await page.getByRole('button', { name: 'Создать аккаунт' }).click()
-  await page.getByLabel('Имя').fill('Тест')
-  await page.getByLabel('Email').fill(email)
-  await page.getByLabel('Пароль').fill('FitLocal123!')
-  await page.getByRole('button', { name: 'Создать аккаунт' }).click()
-
-  await expect(page.getByRole('alert')).toHaveText(
-    'Не удалось создать аккаунт. Попробуйте войти или используйте другой email.',
-  )
+  await nativeSignIn(page, email)
+  await page.goto('/profile/settings')
+  await page.getByRole('button', { name: 'Изменить данные' }).click()
+  await expect(page.getByLabel('Имя', { exact: true })).toHaveValue('Тест Обновлённый')
 })
 
 test('trainer adds the first client, plans a workout and gets an invitation code', async ({ page }, testInfo) => {
   const email = `first-run-trainer-${testInfo.workerIndex}-${Date.now()}@fit.local`
   await page.goto('/auth')
-  await page.getByRole('button', { name: 'Создать аккаунт' }).click()
-  await page.getByLabel('Имя').fill('Первый тренер')
-  await page.getByLabel('Email').fill(email)
-  await page.getByLabel('Пароль').fill('FitLocal123!')
-  await page.getByRole('button', { name: 'Создать аккаунт' }).click()
+  await nativeRegister(page, { key: email, firstName: 'Первый тренер', role: 'trainer' })
 
   await expect(page.getByRole('heading', { name: 'Планы и результаты спортсменов — в одном месте' })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Надиктовать тренировку' })).toBeVisible()
@@ -147,12 +118,7 @@ test('trainer adds the first client, plans a workout and gets an invitation code
 test('client registers, starts without a profile questionnaire and creates an own workout', async ({ page }, testInfo) => {
   const email = `client-signup-${testInfo.workerIndex}-${Date.now()}@fit.local`
   await page.goto('/auth')
-  await page.getByRole('button', { name: 'Создать аккаунт' }).click()
-  await page.getByLabel('Тип аккаунта').selectOption('client')
-  await page.getByLabel('Имя').fill('Клиент')
-  await page.getByLabel('Email').fill(email)
-  await page.getByLabel('Пароль').fill('FitLocal123!')
-  await page.getByRole('button', { name: 'Создать аккаунт' }).click()
+  await nativeRegister(page, { key: email, firstName: 'Клиент', role: 'client' })
 
   await expect(page).toHaveURL(/\/me$/)
   await expect(page.getByRole('heading', { name: 'Тренируйтесь и следите за прогрессом' })).toBeVisible()
@@ -238,11 +204,7 @@ test('invitation links reject the wrong role and revoked code without consuming 
   const clientEmail = `invite-guard-client-${suffix}@fit.local`
 
   await page.goto('/auth')
-  await page.getByRole('button', { name: 'Создать аккаунт' }).click()
-  await page.getByLabel('Имя').fill('Тренер приглашения')
-  await page.getByLabel('Email').fill(trainerEmail)
-  await page.getByLabel('Пароль').fill('FitLocal123!')
-  await page.getByRole('button', { name: 'Создать аккаунт' }).click()
+  await nativeRegister(page, { key: trainerEmail, firstName: 'Тренер приглашения', role: 'trainer' })
   await expect(page.getByRole('heading', { level: 1, name: 'Сегодня' })).toBeVisible()
   await page.goto('/clients')
   await page.getByRole('link', { name: 'Добавить', exact: true }).click()
@@ -265,29 +227,20 @@ test('invitation links reject the wrong role and revoked code without consuming 
   // правильного аккаунта и следующий переход по ссылке обрабатывается сам.
   await page.goto('/profile')
   await logoutFromProfile(page)
-  await page.getByRole('button', { name: 'Создать аккаунт' }).click()
-  await page.getByLabel('Имя').fill('Неверная роль')
-  await page.getByLabel('Email').fill(wrongRoleEmail)
-  await page.getByLabel('Пароль').fill('FitLocal123!')
-  await page.getByRole('button', { name: 'Создать аккаунт' }).click()
+  await nativeRegister(page, { key: wrongRoleEmail, firstName: 'Неверная роль', role: 'trainer' })
   await expect(page).toHaveURL(/\/(today|profile(?:\/settings)?)$/)
   await page.goto('/clients')
   await page.getByRole('link', { name: 'Ввести код' }).click()
   await expect(page.getByRole('heading', { name: 'Введите код клиента' })).toBeVisible()
   await page.getByLabel('Код приглашения').fill(clientCode!)
   await page.getByRole('button', { name: 'Присоединиться' }).click()
-  await expect(page.getByRole('alert')).toHaveText('Этот код приглашения предназначен для другого типа аккаунта.')
+  await expect(page.getByRole('alert')).toHaveText('Приглашение предназначено другой роли. Войдите под подходящим аккаунтом.')
 
   await page.goto('/profile')
   await logoutFromProfile(page)
   await page.goto(`/join?code=${clientCode}`)
   await expect(page).toHaveURL(/\/auth$/)
-  await page.getByRole('button', { name: 'Создать аккаунт' }).click()
-  await expect(page.getByLabel('Тип аккаунта')).toHaveValue('client')
-  await page.getByLabel('Имя').fill('Клиент приглашения')
-  await page.getByLabel('Email').fill(clientEmail)
-  await page.getByLabel('Пароль').fill('FitLocal123!')
-  await page.getByRole('button', { name: 'Создать аккаунт' }).click()
+  await nativeRegister(page, { key: clientEmail, firstName: 'Клиент приглашения', role: 'client' })
   await expect(page.getByRole('heading', { name: 'Тренер пригласил вас в Fit' })).toBeVisible()
   await page.getByRole('button', { name: 'Подключиться и открыть план' }).click()
   await expect(page.getByRole('heading', { name: 'Тренер подключён' })).toBeVisible()
@@ -314,16 +267,14 @@ test('invitation links reject the wrong role and revoked code without consuming 
 
   await page.goto('/me/profile')
   await logoutFromProfile(page)
-  await expect(page.getByRole('heading', { name: 'Добро пожаловать' })).toBeVisible()
-  await page.getByLabel('Email').fill(wrongRoleEmail)
-  await page.getByLabel('Пароль').fill('FitLocal123!')
-  await page.getByRole('button', { name: 'Войти' }).click()
+  await expect(page.getByRole('button', { name: 'Продолжить с Yandex ID' })).toBeVisible()
+  await nativeSignIn(page, wrongRoleEmail)
   await expect(page).toHaveURL(/\/(today|profile(?:\/settings)?)$/)
   await page.goto('/clients')
   await page.getByRole('link', { name: 'Ввести код' }).click()
   await page.getByLabel('Код приглашения').fill(trainerCode!)
   await page.getByRole('button', { name: 'Присоединиться' }).click()
-  await expect(page.getByRole('alert')).toHaveText('Приглашение недействительно или срок его действия истёк. Попросите новый код.')
+  await expect(page.getByRole('alert')).toHaveText('Запись не найдена или больше недоступна.')
 })
 
 test('client safely switches trainers after an explicit disconnect', async ({ page }, testInfo) => {
@@ -332,11 +283,7 @@ test('client safely switches trainers after an explicit disconnect', async ({ pa
 
   async function registerTrainer(name: string, email: string) {
     await page.goto('/auth')
-    await page.getByRole('button', { name: 'Создать аккаунт' }).click()
-    await page.getByLabel('Имя').fill(name)
-    await page.getByLabel('Email').fill(email)
-    await page.getByLabel('Пароль').fill('FitLocal123!')
-    await page.getByRole('button', { name: 'Создать аккаунт' }).click()
+    await nativeRegister(page, { key: email, firstName: name, role: 'trainer' })
     await expect(page).toHaveURL(/\/(today|profile(?:\/settings)?)$/)
   }
 
@@ -359,7 +306,7 @@ test('client safely switches trainers after an explicit disconnect', async ({ pa
   async function logoutTrainer() {
     await page.goto('/profile')
     await logoutFromProfile(page)
-    await expect(page.getByRole('heading', { name: 'Добро пожаловать' })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Продолжить с Yandex ID' })).toBeVisible()
   }
 
   await registerTrainer('Первый тренер', `reconnect-first-${suffix}@fit.local`)
@@ -372,12 +319,7 @@ test('client safely switches trainers after an explicit disconnect', async ({ pa
 
   await page.goto(`/join?code=${firstCode}`)
   await expect(page).toHaveURL(/\/auth$/)
-  await page.getByRole('button', { name: 'Создать аккаунт' }).click()
-  await page.getByLabel('Тип аккаунта').selectOption('client')
-  await page.getByLabel('Имя').fill('Самостоятельный клиент')
-  await page.getByLabel('Email').fill(`reconnect-client-${suffix}@fit.local`)
-  await page.getByLabel('Пароль').fill('FitLocal123!')
-  await page.getByRole('button', { name: 'Создать аккаунт' }).click()
+  await nativeRegister(page, { key: `reconnect-client-${suffix}@fit.local`, firstName: 'Самостоятельный клиент', role: 'client' })
   await expect(page.getByRole('heading', { name: 'Тренер пригласил вас в Fit' })).toBeVisible()
   await page.getByRole('button', { name: 'Подключиться и открыть план' }).click()
   await expect(page.getByRole('heading', { name: 'Тренер подключён' })).toBeVisible()
@@ -428,13 +370,7 @@ test('trainer invitation links a client account', async ({ page }, testInfo) => 
   const trainerEmail = `invite-trainer-${suffix}@fit.local`
   const clientEmail = `invite-client-${suffix}@fit.local`
   await page.goto('/auth')
-  await page.getByRole('button', { name: 'Создать аккаунт' }).click()
-  await page.getByLabel('Имя').fill('Тренер')
-  await page.getByLabel('Email').fill(trainerEmail)
-  await page.getByLabel('Пароль').fill('FitLocal123!')
-  const trainerSignUp = page.waitForResponse((response) => response.request().method() === 'POST' && response.url().includes('/auth/v1/signup'))
-  await page.getByRole('button', { name: 'Создать аккаунт' }).click()
-  expect((await trainerSignUp).ok()).toBe(true)
+  await nativeRegister(page, { key: trainerEmail, firstName: 'Тренер', role: 'trainer' })
   try {
     await expect(page).toHaveURL(/\/today$/, { timeout: 3_000 })
   } catch {
@@ -480,12 +416,7 @@ test('trainer invitation links a client account', async ({ page }, testInfo) => 
 
   await page.goto('/profile')
   await logoutFromProfile(page)
-  await page.getByRole('button', { name: 'Создать аккаунт' }).click()
-  await page.getByLabel('Тип аккаунта').selectOption('client')
-  await page.getByLabel('Имя').fill('Клиент')
-  await page.getByLabel('Email').fill(clientEmail)
-  await page.getByLabel('Пароль').fill('FitLocal123!')
-  await page.getByRole('button', { name: 'Создать аккаунт' }).click()
+  await nativeRegister(page, { key: clientEmail, firstName: 'Клиент', role: 'client' })
   await expect(page).toHaveURL(/\/me$/)
   await expect(page.getByRole('heading', { name: 'Тренируйтесь и следите за прогрессом' })).toBeVisible()
 
@@ -643,9 +574,7 @@ test('trainer invitation links a client account', async ({ page }, testInfo) => 
   // и запуска. Длительность исправляется отдельным точечным действием.
   await page.goto('/me/profile')
   await logoutFromProfile(page)
-  await page.getByLabel('Email').fill(trainerEmail)
-  await page.getByLabel('Пароль').fill('FitLocal123!')
-  await page.getByRole('button', { name: 'Войти' }).click()
+  await nativeSignIn(page, trainerEmail)
   await expect(page.getByRole('heading', { level: 1, name: 'Сегодня' })).toBeVisible()
   await page.goto('/clients')
   // В кабинете тренера карточка сохраняет заданное им имя клиента. После
@@ -689,9 +618,7 @@ test('trainer invitation links a client account', async ({ page }, testInfo) => 
 
   await page.goto('/profile')
   await logoutFromProfile(page)
-  await page.getByLabel('Email').fill(clientEmail)
-  await page.getByLabel('Пароль').fill('FitLocal123!')
-  await page.getByRole('button', { name: 'Войти' }).click()
+  await nativeSignIn(page, clientEmail)
   await expect(page).toHaveURL(/\/me$/)
   await page.goto('/me/workouts')
   await expect(page.locator(`a[href="${sentPlanPath}"]`)).toBeVisible()
@@ -782,11 +709,7 @@ test('trainer invitation links a client account', async ({ page }, testInfo) => 
 
   await page.goto('/me/profile')
   await logoutFromProfile(page)
-  await page.getByRole('button', { name: 'Создать аккаунт' }).click()
-  await page.getByLabel('Имя').fill('Второй тренер')
-  await page.getByLabel('Email').fill(`member-trainer-${suffix}@fit.local`)
-  await page.getByLabel('Пароль').fill('FitLocal123!')
-  await page.getByRole('button', { name: 'Создать аккаунт' }).click()
+  await nativeRegister(page, { key: `member-trainer-${suffix}@fit.local`, firstName: 'Второй тренер', role: 'trainer' })
   await expect(page.getByRole('heading', { level: 1, name: 'Сегодня' })).toBeVisible()
 
   await page.goto('/join')
@@ -809,9 +732,7 @@ test('trainer invitation links a client account', async ({ page }, testInfo) => 
   // the athlete still owns the complete history from both earlier phases.
   await page.goto('/profile')
   await logoutFromProfile(page)
-  await page.getByLabel('Email').fill(clientEmail)
-  await page.getByLabel('Пароль').fill('FitLocal123!')
-  await page.getByRole('button', { name: 'Войти' }).click()
+  await nativeSignIn(page, clientEmail)
   await expect(page).toHaveURL(/\/me$/)
   await page.setViewportSize({ width: 390, height: 844 })
   await page.goto('/me/profile')

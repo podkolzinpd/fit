@@ -902,12 +902,11 @@ Live она переезжает на фактический день и сра�
 
 Production web и мобильный release bundle используют Yandex ID/app-session/API
 без Supabase startup/auth-подписки и без frontend Supabase configuration.
-Release-сборка также исключает Supabase SDK из всех frontend chunks; локальные
-legacy adapters подключаются только в development/test. Отсутствие native
-сессии не переключает приложение на старый backend.
-Восстановление, expiry/retry, logout, роли и приглашения сохраняют прежний
-пользовательский контракт. Local legacy и server-side media/migration tooling
-ещё существуют; это не fallback после ошибки нового API.
+Все frontend-сборки, включая development/test, исключают Supabase SDK.
+Legacy frontend composition, queries/repositories и email/password auth удалены;
+сценарии проверяются через native fixtures/API PostgreSQL. Отсутствие native
+сессии не переключает приложение на старый backend. Серверные media/migration
+инструменты и замороженная SQL-регрессия остаются отдельным legacy-контуром.
 
 Пока запускается Fit и восстанавливается вход, показывается полноэкранная
 спортивная фотография вместо технических надписей, включая первичную проверку
@@ -994,15 +993,11 @@ CSS. Общие стили загружаются без блокировани�
   на запись в Supabase. Ранее отправленные `/invite#token=…&source=…`
   продолжают открываться. Bearer-token сразу сохраняется в browser session и
   удаляется из адресной строки; он исключён из referrer и аналитики. Browser
-  session сохраняет его на время Yandex OAuth, email login/registration и
-  восстановления пароля. После
+  session сохраняет его на время Yandex OAuth. После
   входа связанного аккаунта или нативной регистрации пользователь возвращается
   на приглашение и подтверждает подключение явно; bearer-token передаётся
   только в POST body и не попадает в Yandex OAuth URL. Старый `/join?code=…`
-  продолжает работать как fallback и также возвращается после Yandex OAuth. При
-  включённой Yandex app-session вход через Yandex ID является основным
-  действием, а email/password остаются вторичным fallback старых аккаунтов.
-  При выключенном флаге прежний email-first экран не меняется;
+  продолжает работать как fallback и также возвращается после Yandex OAuth. Вход выполняется через Yandex ID; email/password fallback отсутствует;
   Вход уже связанного профиля не очищает общую историю сессий.
   Просроченные и отозванные сессии сразу недействительны и удаляются отдельными
   ограниченными фоновыми порциями; действующие сессии и срок входа не меняются;
@@ -3523,9 +3518,7 @@ FCM; до этого интерфейс сообщает о фактическо
 - Интеграция с Apple Health находится в device-only PoC: нет фоновой или
   серверной синхронизации, истории и доступа тренера; требуется проверка на
   физическом iPhone с подписанным HealthKit entitlement.
-- Вход через Google не показывается в веб- и iOS-интерфейсе; email/password работает.
-- Доставка писем сброса пароля зависит от production SMTP и остаётся
-  операционной настройкой.
+- Вход выполняется через Yandex ID; старые email/password и recovery формы удалены.
 - Голосовой ввод использует браузерный whisper.cpp/WASM; при первом запуске
   требуется загрузка модели, real-device acceptance ещё не закрыт полностью.
 - Некоторые широкие visual и navigation acceptance-матрицы ещё не закрыты,

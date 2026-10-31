@@ -1,4 +1,5 @@
-import { expect, test } from '@playwright/test'
+import { nativeSignIn, nativeRegister } from './native-local-fixture'
+import { expect, test } from './native-local-fixture'
 
 test('invited trainer stays disconnected after profile reload and client card disappears', async ({ page }, testInfo) => {
   test.setTimeout(90_000)
@@ -7,12 +8,7 @@ test('invited trainer stays disconnected after profile reload and client card di
   const trainerEmail = `disconnect-trainer-${suffix}@fit.local`
   await page.setViewportSize({ width: 390, height: 844 })
   await page.goto('/auth')
-  await page.getByRole('button', { name: 'Создать аккаунт' }).click()
-  await page.getByLabel('Тип аккаунта').selectOption('client')
-  await page.getByLabel('Имя').fill('Клиент отвязки')
-  await page.getByLabel('Email').fill(clientEmail)
-  await page.getByLabel('Пароль').fill('FitLocal123!')
-  await page.getByRole('button', { name: 'Создать аккаунт' }).click()
+  await nativeRegister(page, { key: clientEmail, firstName: 'Клиент отвязки', role: 'client' })
   await expect(page).toHaveURL(/\/me$/)
   await page.goto('/me/edit')
   await page.getByLabel('Пол').selectOption('female')
@@ -27,11 +23,7 @@ test('invited trainer stays disconnected after profile reload and client card di
   await page.goto('/me/settings')
   await page.getByRole('button', { name: 'Выйти' }).click()
 
-  await page.getByRole('button', { name: 'Создать аккаунт' }).click()
-  await page.getByLabel('Имя').fill('Приглашённый тренер отвязки')
-  await page.getByLabel('Email').fill(trainerEmail)
-  await page.getByLabel('Пароль').fill('FitLocal123!')
-  await page.getByRole('button', { name: 'Создать аккаунт' }).click()
+  await nativeRegister(page, { key: trainerEmail, firstName: 'Приглашённый тренер отвязки', role: 'trainer' })
   await expect(page).toHaveURL(/\/today$/)
   await page.goto('/clients')
   await page.getByRole('link', { name: 'Ввести код' }).click()
@@ -43,9 +35,7 @@ test('invited trainer stays disconnected after profile reload and client card di
   await page.goto('/profile/settings')
   await page.getByRole('button', { name: 'Выйти' }).click()
 
-  await page.getByLabel('Email').fill(clientEmail)
-  await page.getByLabel('Пароль').fill('FitLocal123!')
-  await page.getByRole('button', { name: 'Войти' }).click()
+  await nativeSignIn(page, clientEmail)
   await expect(page).toHaveURL(/\/me$/)
   await page.goto('/me/profile')
   await expect(page.getByText('Приглашённый тренер отвязки', { exact: true })).toBeVisible()
@@ -61,9 +51,7 @@ test('invited trainer stays disconnected after profile reload and client card di
   await page.getByRole('switch', { name: 'Тёмная тема' }).check()
   await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
   await page.getByRole('button', { name: 'Выйти' }).click()
-  await page.getByLabel('Email').fill(clientEmail)
-  await page.getByLabel('Пароль').fill('FitLocal123!')
-  await page.getByRole('button', { name: 'Войти' }).click()
+  await nativeSignIn(page, clientEmail)
   // The auth guard may restore the profile route after signing out there.
   await expect(page).toHaveURL(/\/me(?:\/settings)?$/)
   await page.goto('/me/profile')
@@ -71,9 +59,7 @@ test('invited trainer stays disconnected after profile reload and client card di
   await page.goto('/me/settings')
   await page.getByRole('button', { name: 'Выйти' }).click()
 
-  await page.getByLabel('Email').fill(trainerEmail)
-  await page.getByLabel('Пароль').fill('FitLocal123!')
-  await page.getByRole('button', { name: 'Войти' }).click()
+  await nativeSignIn(page, trainerEmail)
   await expect(page).toHaveURL(/\/today$/)
   await page.setViewportSize({ width: 1440, height: 1000 })
   await page.goto('/clients')
@@ -83,9 +69,7 @@ test('invited trainer stays disconnected after profile reload and client card di
 
 test('client profile: trainer can complete a client profile from the detail page', async ({ page }) => {
   await page.goto('/auth')
-  await page.getByLabel('Email').fill('trainer@fit.local')
-  await page.getByLabel('Пароль').fill('FitLocal123!')
-  await page.getByRole('button', { name: 'Войти' }).click()
+  await nativeSignIn(page, 'trainer@fit.local')
   await expect(page).toHaveURL(/\/(today|clients)$/)
   await page.goto('/clients/11111111-1111-4111-8111-111111111111')
 
@@ -99,12 +83,7 @@ test('client profile: trainer can complete a client profile from the detail page
 
 test('global rollout gives a new client the Profile and Card Edit identity', async ({ page }, testInfo) => {
   await page.goto('/auth')
-  await page.getByRole('button', { name: 'Создать аккаунт' }).click()
-  await page.getByLabel('Тип аккаунта').selectOption('client')
-  await page.getByLabel('Имя').fill('Профиль без preview')
-  await page.getByLabel('Email').fill(`profile-no-preview-${testInfo.workerIndex}-${Date.now()}@fit.local`)
-  await page.getByLabel('Пароль').fill('FitLocal123!')
-  await page.getByRole('button', { name: 'Создать аккаунт' }).click()
+  await nativeRegister(page, { key: `profile-no-preview-${testInfo.workerIndex}-${Date.now()}@fit.local`, firstName: 'Профиль без preview', role: 'client' })
   await expect(page).toHaveURL(/\/me$/)
 
   await page.goto('/me/profile')
