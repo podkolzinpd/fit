@@ -66,3 +66,15 @@ runFor(1) после resume продвигает и активное время:
 границы вести с ожиданием следующей секунды; не расширять допуск/повторы и
 не менять продуктовый таймер ради CI. Воспроизведение4/4 и проверка12/12 —
 [клиентский журнал, итерация44](design/CLIENT_REFERENCE_SCREENS_20261029.md).
+
+
+## RL-CLOUDRU-ROLLOUT-STARTUP-20261031 — служебные операторы и pooler
+
+Новый clientrollout повторил прежний08P01 из SQLaudit/background/nutrition:
+statement_timeout в startup config отклоняется до SQL. Перед DBоператором
+сверять не только endpoint/owner/SSL, но и готовые Cloud.ru connection/transaction
+решения. Не отправлять statement_timeout/options при connect; serverdeadline
+задавать через существующий withBackgroundTransaction/SET LOCAL. После setter
+требуется отдельная committed транзакция inspect; неопределённый исход не
+повторяется. Защита: scripts/cloudru-client-lime-rollout.test.mjs проверяет
+startup/отдельныеcommit/остановку после uncertaincommit; журнал693, итерация46.

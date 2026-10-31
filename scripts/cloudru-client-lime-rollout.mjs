@@ -25,6 +25,20 @@ export async function runClientLimeOperation(manager, env) {
   return { event: 'client_lime_rollout', operation: request.mode, ...verifyLimeRolloutReadback(after, readback) }
 }
 
+// Each manager call commits before returning; the final inspect is a new
+// transaction. Reuse the existing transaction helper for pooler-safe limits.
+export function boundedClientLimeManager(pool, Manager, withTransaction) {
+  return {
+    apply: command => withTransaction(pool, connection => {
+      const leasedPool = { connect: async () => ({
+        query: (text, values) => connection.query(text, values),
+        release() {}, // The existing transaction helper owns this lease.
+      }) }
+      return new Manager(leasedPool).apply(command)
+    }),
+  }
+}
+
 async function main() {
   readClientLimeOperation(process.env)
   if (process.env.MIGRATION_DATABASE_HOST !== '10.70.10.67'
@@ -38,8 +52,11 @@ async function main() {
   const { DatabaseLimeRolloutManager } = await import('/app/dist/db/lime-rollout.js')
   const config = buildDatabaseConnectionConfig('MIGRATION_DATABASE')
   if (!config) throw new Error('client_rollout_database_invalid')
-  const pool = new PgDatabasePool({ ...config, max: 1, query_timeout: 10000, statement_timeout: 10000 }, 'migration-owner')
-  try { console.log(JSON.stringify(await runClientLimeOperation(new DatabaseLimeRolloutManager(pool), process.env))) }
+  const { withBackgroundTransaction } = await import('/app/dist/background-transaction.js')
+  // statement_timeout/options in startup packets are rejected by the pooler.
+  const pool = new PgDatabasePool({ ...config, max: 1, query_timeout: 10000 }, 'migration-owner')
+  const manager = boundedClientLimeManager(pool, DatabaseLimeRolloutManager, withBackgroundTransaction)
+  try { console.log(JSON.stringify(await runClientLimeOperation(manager, process.env))) }
   finally { await pool.end() }
 }
 
