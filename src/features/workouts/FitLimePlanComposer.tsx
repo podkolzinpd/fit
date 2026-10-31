@@ -91,6 +91,7 @@ function FitLimePlanForm({ date, returnTo, onClose, onBack, initialDraft }: {
   // Режим Live: явный выбор или по формату (с тренером — вручную, самостоятельно — таймер).
   const [executionMode, setExecutionMode] = useState<WorkoutExecutionMode | undefined>(saved?.executionMode)
   const effectiveMode = executionMode ?? DEFAULT_EXECUTION_MODE
+  const completeAfterSave = useRef(false)
   const submitting = useRef(false)
   const savedSuccessfully = useRef(false)
   const clients = useQuery({ queryKey: ['clients', false], queryFn: () => clientsRepository.list(false) })
@@ -121,12 +122,13 @@ function FitLimePlanForm({ date, returnTo, onClose, onBack, initialDraft }: {
       await invalidateWorkoutResults(queryClient)
       await queryClient.invalidateQueries({ queryKey: ['today-workouts'] })
       dialog.current?.close()
-      navigate(returnTo, { replace: true, state: { savedPlanId: id } })
+      navigate(completeAfterSave.current ? `/workouts/${id}` : returnTo, { replace: true, state: completeAfterSave.current ? { returnTo, confirmAttendance: true } : { savedPlanId: id } })
     },
     onSettled: () => { submitting.current = false },
   })
   function submit(event: FormEvent) {
     event.preventDefault()
+    completeAfterSave.current = (event.nativeEvent as SubmitEvent).submitter?.getAttribute('value') === 'complete'
     if (submitting.current || !isFitLimeEnabled(actor)) return
     if (!clientId) { setError('Выберите клиента для тренировки'); setPickerOpen(true); return }
     if (time.end && !time.start) { setError('Укажите начало тренировки или уберите время окончания.'); return }
@@ -195,6 +197,7 @@ function FitLimePlanForm({ date, returnTo, onClose, onBack, initialDraft }: {
         <Coachmark id="lime-quick-plan-2026-10" userId={actor?.userId} title="План можно сохранить сразу" description="Выберите клиента и дату, а упражнения добавьте сейчас или позже.">
           <button type="button" className="fit-lime-plan-exercises" onClick={openEditor}><AddIcon />{draft.exercises.length ? 'Продолжить редактирование' : 'Добавить упражнения'}</button>
         </Coachmark>
+        {actor?.role === 'trainer' && workouts.confirmAttendance && <button type="submit" name="attendance" value="complete" className="link wide">Отметить проведённой</button>}
         {reference ? <section className="coach-plan-options" aria-labelledby="coach-plan-options-title"><h3 id="coach-plan-options-title">Настройки и способы ввода</h3>{options}{onBack && <button type="button" className="fit-lime-plan-back" onClick={onBack}><BackIcon />Назад к выбору действия</button>}</section> : <button type="submit" className="primary wide fit-lime-plan-save" aria-busy={mutation.isPending}>{mutation.isPending ? 'Сохраняем…' : 'Сохранить план'}</button>}
       </fieldset>
       {(error || mutation.error) && <p className="error" role="alert">{error ?? mutation.error?.message}</p>}
