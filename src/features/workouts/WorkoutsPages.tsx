@@ -2176,8 +2176,8 @@ export function WorkoutDetailPage() {
       />}
       {justCompleted && !clientMode && !attendanceResult && <WorkoutCompletionCard completedSets={completedSets} totalSets={sets.length} record={completionRecords.data?.[0]} clientMode={false} clientId={workout.clientId} />}
       {!clientCompletionReport && <WorkoutHeader eyebrow={clientMode && done ? 'ТРЕНИРОВКА ЗАВЕРШЕНА' : clientMode ? 'ВАША ТРЕНИРОВКА' : workout.clientName} title={clientMode ? (done ? workoutFocusTitle(groups) : 'Ваша тренировка') : workoutDisplayTitle(workout)} state={detailState}
-        statusLabel={!clientMode && done ? 'Проведена' : statusPresentation?.label}
-        showStatus={detailState !== 'completed' || !clientMode && done}
+        statusLabel={!clientMode && done && workoutsRepository.confirmAttendance ? 'Проведена' : statusPresentation?.label}
+        showStatus={detailState !== 'completed' || !clientMode && done && Boolean(workoutsRepository.confirmAttendance)}
         action={manageMenuInHeader ? <OverflowMenu label="Другие действия с тренировкой" items={workoutManageItems} /> : undefined}
         meta={<><span>{formatLocalDate(workout.workoutDate)} · {workout.startTime?.slice(0, 5) ?? 'без времени'}</span><span>{workoutTrainingFormatLabel(workout.trainingFormat ?? 'self')}</span>{clientMode && !done && authorLabel && <span>{authorLabel}</span>}{clientAuthoredReadOnly && <span>Создано клиентом · упражнения только для просмотра</span>}{stageTitle && <span>Цель: {stageTitle}</span>}</>} />}
       {clientMode && workout.title && <p className="workout-plan-title">{workout.title}</p>}
