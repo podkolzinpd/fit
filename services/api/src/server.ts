@@ -313,7 +313,7 @@ const app = buildApp(
     ...(pilotTrainerProfiles === undefined ? {} : { pilotTrainerProfiles }),
     ...(pilotTrainerDiscovery === undefined ? {} : { pilotTrainerDiscovery }),
     ...(pilotFavoriteWorkouts === undefined ? {} : { pilotFavoriteWorkouts }),
-    ...(databasePool === undefined ? {} : { corporateAdmin: new CorporateAdminStore(databasePool) }),
+    ...(databasePool === undefined ? {} : { corporateAdmin: new CorporateAdminStore(databasePool, yandexMediaStorage) }),
     ...(pilotTrainerFinance === undefined ? {} : { pilotTrainerFinance }),
     ...(pilotWorkoutsWriter === undefined ? {} : { pilotWorkoutsWriter }),
     ...(pilotWorkoutTemplates === undefined ? {} : { pilotWorkoutTemplates }),
