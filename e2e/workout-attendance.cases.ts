@@ -70,7 +70,7 @@ export function workoutAttendanceCases() {
     const before=JSON.stringify(target.exercises)
     const backend=await mockPilot(page,{profileId,fitLime:true,workouts:[target]})
     await page.route(`**/v1/workouts/${workoutId}/finish`,async route=>{
-      expect(route.request().postDataJSON().attendance).toEqual({disposition:'auto',packageId:null})
+      expect((route.request().postDataJSON() as { attendance: WorkoutAttendanceDraft }).attendance).toEqual({disposition:'auto',packageId:null})
       Object.assign(backend.getWorkouts()[0]!,{status:'done',version:2,completedAt:new Date().toISOString()})
       await route.fulfill({json:{workout:{version:2,replayed:false}}})
     })
@@ -88,7 +88,7 @@ export function workoutAttendanceCases() {
     const before=JSON.stringify(target.exercises)
     const backend=await mockPilot(page,{profileId,fitLime:true,workouts:[target]})
     await page.route(`**/v1/workouts/${workoutId}/finish`,async route=>{
-      expect(route.request().postDataJSON().attendance).toEqual({disposition:'auto',packageId:null})
+      expect((route.request().postDataJSON() as { attendance: WorkoutAttendanceDraft }).attendance).toEqual({disposition:'auto',packageId:null})
       Object.assign(backend.getWorkouts()[0]!,{status:'done',version:2,completedAt:new Date().toISOString()})
       await route.fulfill({json:{workout:{version:2,replayed:false}}})
     })
