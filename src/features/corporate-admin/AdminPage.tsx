@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useLayoutEffect, useRef, useState } from 'react'
 import { useForm, useWatch } from 'react-hook-form'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link, useSearchParams } from 'react-router-dom'
@@ -122,7 +122,7 @@ function Trainers({ data }: { data: CorporateAdminBundle }) {
         {t.publishedName && t.publishedName !== t.name && <p>В анкете: {t.publishedName}</p>}
         <p>{t.isYandex ? 'Тренер Яндекса' : 'Без отметки'} · {t.officeIds.map(id => data.offices.find(o => o.id === id)).filter(o => o !== undefined).map(o => `${o.city}, ${o.name}${o.archived ? ' (архив)' : ''}`).join('; ') || 'Офисы не назначены'}</p>
         {t.publicId ? <Link to={`/trainers/${t.publicId}`} target="_blank" rel="noopener noreferrer">Открыть анкету</Link> : t.publicId === null ? <p>Анкета не опубликована</p> : null}</div></div>
-        <button type="button" className="secondary" aria-label={`Настроить тренера ${t.name}`} onClick={() => setSelected(t)}>Настроить</button></li>)}
+        <button type="button" className="secondary" aria-label={`Настроить тренера ${t.name}`} onClick={() => setSelected({ ...t })}>Настроить</button></li>)}
     </ul>}
   </section>
 }
@@ -138,14 +138,21 @@ function AdminTrainerPhoto({ trainer }: { trainer: CorporateTrainer }) {
 }
 
 function TrainerForm({ trainer, offices, onClose }: { trainer: CorporateTrainer; offices: CorporateOffice[]; onClose: () => void }) {
+  const editorRef = useRef<HTMLFormElement>(null)
+  const headingRef = useRef<HTMLHeadingElement>(null)
+  // Explicit selections reveal the editor again; edits keep their scroll position.
+  useLayoutEffect(() => {
+    editorRef.current?.scrollIntoView({ block: 'start', behavior: 'instant' })
+    headingRef.current?.focus({ preventScroll: true })
+  }, [trainer])
   const form = useForm({ defaultValues: { ...trainer, officeIds: trainer.officeIds.filter(id => offices.some(o => o.id === id && !o.archived)) } })
   const save = useSave()
   const enabled = useWatch({ control: form.control, name: 'isYandex' })
-  return <form className="corporate-admin-editor" aria-label={`Настройки ${trainer.name}`} onSubmit={form.handleSubmit(async value => {
+  return <form ref={editorRef} className="corporate-admin-editor" aria-label={`Настройки ${trainer.name}`} onSubmit={form.handleSubmit(async value => {
     if (value.isYandex && !value.officeIds.length) { form.setError('officeIds', { message: 'Выберите хотя бы один офис' }); return }
     try { await save.mutateAsync({ kind: 'trainer', value }); onClose() } catch { /* Retain unsaved edits; show server error below. */ }
   })}>
-    <h3>{trainer.name}</h3>
+    <h3 ref={headingRef} tabIndex={-1}>{trainer.name}</h3>
     <fieldset disabled={save.isPending}>
       <label className="corporate-admin-checkbox"><input type="checkbox" {...form.register('isYandex')} />Тренер Яндекса</label>
       <fieldset className="corporate-admin-office-options"><legend>Офисы тренера{enabled ? ' · выберите хотя бы один' : ''}</legend>
