@@ -10,6 +10,7 @@
 | --- | --- | --- |
 | Все экраны | [UI_IDENTITY](UI_IDENTITY.md), [UI_TASK_PROMPT](UI_TASK_PROMPT.md), [карта компонентов](UI_DESIGN_SYSTEM.md) | Семантика, механики, доступность, простота без новых несогласованных контролов |
 | Lime | [дизайн-код](design/FIT_LIME_DESIGN_CODE.md), [SVG-каталог](design/FIT_LIME_SOURCE_CATALOG.json) | Принятые исходники, параметры и scoped-адаптации; не общий перекрас |
+| Очистка монохрома MC1–MC8 | [План и правило MC-RELEASE-01](design/CLIENT_REFERENCE_SCREENS_20261029.md) | Только эта задача: сводка до каждого выпуска, явное разрешение владельца на слияние/публикацию, затем его проверка до следующего этапа; прежние разрешения других задач не заменяют это правило |
 | Клиентские экраны | [SVG adoption](design/CLIENT_LIME_SVG_ADOPTION_20261018.md) | Независимая клиентская механика/темы; не заменять тренерской |
 | Клиентский пакет YAFIT-676 | [Экраны и план выпуска](design/CLIENT_REFERENCE_SCREENS_20261029.md) | CR1–CR6: существующий клиентский пилот4 и прежние механики; CR7/YAFIT-693 — пакет опубликован и включён всем клиентам; результат/ограничения в журнале47 и тикете |
 | Клиентский Live | [v79 contract](design/CLIENT_LIVE_V79_CONTRACT.md), [interactions](design/CLIENT_LIVE_INTERACTIONS_20261027.md), [focus](design/CLIENT_LIVE_FOCUS_GUARD_20261026.md), [time](design/CLIENT_LIVE_TIME_PREFERENCE_20261026.md) | Ввод, клавиатура, фокус, таймеры и соседние изменения |
