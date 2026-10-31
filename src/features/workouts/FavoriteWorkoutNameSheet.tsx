@@ -13,8 +13,8 @@ export function FavoriteWorkoutNameSheet({ heading, lime, initialTitle = '', pla
   const ref = useRef<HTMLElement>(null)
   useEffect(() => {
     const previous = document.activeElement instanceof HTMLElement ? document.activeElement : null
-    ref.current?.querySelector('input')?.focus()
-    return () => { if (previous?.isConnected) previous.focus() }
+    ref.current?.querySelector('input')?.focus({ preventScroll: true })
+    return () => { if (previous?.isConnected) previous.focus({ preventScroll: true }) }
   }, [])
   return <div className="sheet-overlay favorite-workout-rename-overlay" onClick={() => !pending && onClose()}>
     <section ref={ref} className="workout-decision-sheet workout-favorite-save-sheet favorite-workout-rename-sheet" role="dialog" aria-modal="true" aria-label={heading} onClick={(event) => event.stopPropagation()} onKeyDown={(event) => {

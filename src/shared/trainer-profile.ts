@@ -106,6 +106,7 @@ export const trainerProfileDraftSchema = z.object({
 })
 
 export const trainerProfessionalProfileSchema = z.object({
+  yandexOffices: z.array(z.object({ city: z.string().min(1).max(100), name: z.string().min(1).max(160) })).max(100).optional(),
   publicId: z.uuid(),
   draft: trainerProfileDraftSchema,
   published: trainerProfileDraftSchema.nullable(),

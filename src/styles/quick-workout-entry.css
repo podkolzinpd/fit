@@ -111,3 +111,17 @@
 .phone-frame:not(.fit-lime-shell) .quick-day-booking .fit-lime-month-grid button[aria-pressed='true'] { border-radius:50%; background:var(--fg); color:var(--bg); }
 .phone-frame:not(.fit-lime-shell) .quick-day-booking .fit-lime-date-times { display:grid; gap:12px; margin-top:16px; }
 .phone-frame:not(.fit-lime-shell) .quick-day-booking .fit-lime-date-times input { min-width:0; font-size:16px; }
+
+/* Historical feedback is read-only context, never part of the copied plan. */
+.phone-frame :is(.booking-history-item, .booking-history-scroll, .template-source-workout) .workout-source-review {
+  display: grid; gap: 4px; margin: 8px 0; padding: 10px 12px;
+  border-left: 2px solid var(--border); font-size: 14px; line-height: 1.45;
+  color: var(--fg); overflow-wrap: anywhere;
+}
+.phone-frame .workout-source-review .workout-source-review-label { font-size: 12px; color: var(--secondary-label-fg); }
+.phone-frame .workout-template-source-page .template-source-workout strong {
+  font-size: 20px; line-height: 1.3; white-space: normal; overflow-wrap: anywhere;
+}
+.phone-frame .workout-template-source-page .template-source-copy { gap: 6px; }
+.phone-frame .workout-template-source-page .template-source-workout > span:last-child { align-self: start; padding-top: 4px; }
+.phone-frame .workout-template-source-page .template-source-exercises { font-size: 14px; line-height: 1.5; color: var(--secondary-label-fg); }

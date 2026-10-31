@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test'
 import { z } from 'zod'
-import { clientId, coachGestureWorkout, mockPilot, publicTrainerDraft, publicTrainerId } from './fit-lime-fixtures'
+import { clientId, coachGestureWorkout, mockPilot, publicTrainerDraft, publicTrainerId, trainerId } from './fit-lime-fixtures'
 import type { WorkoutExerciseDraft } from '../src/shared/domain'
 
 async function readyPlanEditorFixture(page: Page, theme = 'dark') {
@@ -1612,15 +1612,28 @@ for (const { width, height, theme } of [
     await mockPilot(page, { role: 'client', profileId: clientId })
     await page.addInitScript(({ id, theme }) => localStorage.setItem(`fit.clientLime.theme.${id}`, theme), { id: clientId, theme })
     const imageUrl = new URL('/assets/startup-photo-983c93dc4df8.jpg', testInfo.project.use.baseURL).href
+    let offices = width === 430 ? [] : [{ city: 'Санкт-Петербург', name: 'БЦ Бенуа' }, { city: 'Москва', name: 'Тестовый офис' }]
+    let publicReads = 0
     const published = { ...publicTrainerDraft, photos: publicTrainerDraft.photos.map(photo => ({ ...photo, url: imageUrl, thumbnailUrl: imageUrl })), bio: 'Длинное описание тренировок и опыта. '.repeat(30),
       certificates: [{ title: 'Конец анкеты', organization: 'Тест', year: 2026 }] }
-    await page.route(`**/v1/trainers/${publicTrainerId}/public-profile`, route => route.fulfill({
+    await page.route('**/v1/trainers/catalog*', route => route.fulfill({ json: { items: [{ publicId: publicTrainerId, profile: published, isBrandTrainer: false }], totalCount: 1, nextOffset: null } }))
+    await page.route(`**/v1/trainers/${publicTrainerId}/public-profile`, route => {
+      publicReads += 1
+      return route.fulfill({
       json: { publicId: publicTrainerId, draft: published, published, listedInCatalog: true,
-        version: 1, isBrandTrainer: false, publishedAt: '2026-10-29T09:00:00Z', updatedAt: '2026-10-29T09:00:00Z' },
-    }))
-    await page.goto(`/trainers/${publicTrainerId}`)
+        version: 1, isBrandTrainer: false, yandexOffices: offices, publishedAt: '2026-10-29T09:00:00Z', updatedAt: '2026-10-29T09:00:00Z' },
+    }) })
+    await page.goto('/me/trainers')
+    await page.getByRole('link', { name: 'Посмотреть анкету' }).click()
     const profile = page.locator('.public-trainer-page')
     await expect(profile.getByRole('heading', { name: 'Тестовый тренер' })).toBeVisible()
+    if (offices.length) {
+      await expect(profile.getByText('Тренер Яндекса', { exact: true })).toBeVisible()
+      await expect(profile.getByRole('region', { name: 'Офисы Яндекса' })).toContainText('Санкт-Петербург · БЦ Бенуа')
+    } else {
+      await expect(profile.getByText('Тренер Яндекса', { exact: true })).toHaveCount(0)
+      await expect(profile.getByRole('region', { name: 'Офисы Яндекса' })).toHaveCount(0)
+    }
     await expect.poll(() => profile.locator('img.trainer-card-avatar').evaluate((image: HTMLImageElement) => image.naturalWidth)).toBeGreaterThan(0)
     await page.screenshot({ path: testInfo.outputPath('public-trainer-top.png') })
     const unusedBottom = await profile.evaluate(element => {
@@ -1637,5 +1650,52 @@ for (const { width, height, theme } of [
     await expect(page.getByRole('dialog', { name: 'Фотографии тренера' })).toBeVisible()
     await page.getByRole('button', { name: 'Закрыть фото' }).click()
     await expect(profile.getByRole('button', { name: 'Написать тренеру' })).toBeVisible()
+    if (width === 390) {
+      offices = []
+      await profile.getByRole('button', { name: 'Назад', exact: true }).click()
+      await page.getByRole('link', { name: 'Посмотреть анкету' }).click()
+      await expect(profile.getByRole('heading', { name: 'Тестовый тренер' })).toBeVisible()
+      await expect(profile.getByText('Тренер Яндекса', { exact: true })).toHaveCount(0)
+      await expect(profile.getByRole('region', { name: 'Офисы Яндекса' })).toHaveCount(0)
+      expect(publicReads).toBeGreaterThan(1)
+    }
   })
 }
+
+test('client profile recovers a merged card and transient empty list without a new login', async ({ page }, testInfo) => {
+  test.skip(process.env.VITE_YANDEX_ONLY_AUTH_ENABLED !== 'true'
+    || process.env.VITE_YANDEX_MAIN_ROUTING_ENABLED !== 'true', 'Requires native Yandex composition.')
+  const profileId = '22222222-2222-4222-8222-222222222222'
+  const oldCardId = '44444444-4444-4444-8444-444444444444'
+  const writes: string[] = []
+  let sessionReads = 0
+  let clientReads = 0
+  await mockPilot(page, { role: 'client', profileId, clientLime: true })
+  page.on('request', request => {
+    if (request.url().includes('/v1/') && !['GET', 'OPTIONS'].includes(request.method())) {
+      writes.push(new URL(request.url()).pathname)
+    }
+  })
+  await page.route('**/v1/auth/yandex/session', route => {
+    sessionReads += 1
+    return route.fulfill({ json: { accessMode: 'read_write', profile: {
+      id: profileId, firstName: 'Алексей', lastName: 'Смирнов', timezone: 'Europe/Moscow', accountRole: 'client',
+      client: { id: sessionReads === 1 ? oldCardId : clientId, trainerId, fullName: 'Алексей Смирнов' },
+      experiments: { clientLime: true, fitLime: false, trainerScheduleV2: false },
+    } } })
+  })
+  await page.route('**/v1/clients', route => {
+    clientReads += 1
+    return clientReads === 1 ? route.fulfill({ json: { clients: [] } }) : route.fallback()
+  })
+  await page.goto('/me/profile')
+  await expect(page.locator('.client-profile-identity strong')).toHaveText('Алексей Смирнов')
+  await expect(page.getByRole('link', { name: 'Изменить данные' })).toBeVisible()
+  await expect(page.getByText('Пока ничего нет', { exact: true })).toHaveCount(0)
+  expect(sessionReads).toBeGreaterThanOrEqual(2)
+  expect(clientReads).toBeGreaterThanOrEqual(2)
+  // Restoring an existing session must not register, relink, or create a card.
+  expect(writes.filter(path => path.startsWith('/v1/auth/') || path === '/v1/clients')).toEqual([])
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+  await page.screenshot({ path: testInfo.outputPath('recovered-client-profile.png'), fullPage: true })
+})

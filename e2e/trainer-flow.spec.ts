@@ -386,7 +386,7 @@ test('trainer can create client, complete workout and save progress', async ({ p
   await page.getByLabel('Вес, подход 2').fill('35')
   await page.getByLabel('Повторы, подход 2').fill('12')
   await page.getByRole('button', { name: 'Сохранить' }).click()
-  await expect(page.getByRole('heading', { name: 'Тренировка', exact: true })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Тренировка', level: 1, exact: true })).toBeVisible()
   await page.getByRole('button', { name: 'Начать' }).click()
   await expect(page.locator('.live-timer')).toBeVisible()
   await page.keyboard.press('Escape')
@@ -516,7 +516,7 @@ test('trainer can create client, complete workout and save progress', async ({ p
   const workoutHistoryUrl = page.url()
   await page.getByRole('status').filter({ hasText: 'История по датам' }).getByRole('button', { name: 'Понятно' }).click()
   await expect(page.locator('.card').first()).toBeVisible()
-  // На карточке истории — список упражнений (а не группы мышц) и тоннаж.
+  // History keeps the exercise composition; aggregate facts remain in detail.
   await expect(page.locator('.cards .card').first()).toContainText('Болгарский сплит-присед')
   await expect(page.locator('.cards .card').first().locator('.workout-chronicle-brief')).toContainText('Берпи')
   const personalRecordCard = page.locator('.cards .card').first()
@@ -524,10 +524,13 @@ test('trainer can create client, complete workout and save progress', async ({ p
   await expect(personalRecordCard).not.toHaveClass(/has-pr/)
   await expect(personalRecordCard.locator('.workout-pr-badge')).toHaveCount(0)
   await expect(personalRecordCard.locator('[data-icon="record"]')).toHaveCount(0)
-  // Только исправленный подтверждённый подход: 45 × 9 = 405 кг.
-  await expect(page.locator('.card-meta').first()).toContainText('405 кг')
+  await expect(personalRecordCard.locator('.workout-chronicle-facts')).toHaveCount(0)
   await page.locator('.card').first().click()
-  await expect(page.getByRole('heading', { name: 'Тренировка', exact: true })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Тренировка', level: 1, exact: true })).toBeVisible()
+  // Only the corrected confirmed set contributes: 45 × 9 = 405 kg.
+  await page.locator('.coach-workout-summary > summary').click()
+  await expect(page.locator('.workout-fact-summary')).toContainText('405 кг')
+  await page.locator('.coach-workout-summary > summary').click()
   // Compact history keeps names; the opened workout retains the exact fact.
   await expect(page.locator('.completed-exercise').first()).toContainText('45 кг × 9 повт.')
   // Заходим в аналитику упражнения и возвращаемся: «назад» с упражнения ведёт
@@ -540,7 +543,7 @@ test('trainer can create client, complete workout and save progress', async ({ p
   await expect(progressProof).toContainText('ПРОГРЕСС ПО УПРАЖНЕНИЮ')
   await expect(progressProof).toContainText('45 кг × 9 повт.')
   await page.locator('.page-back').click()
-  await expect(page.getByRole('heading', { name: 'Тренировка', exact: true })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Тренировка', level: 1, exact: true })).toBeVisible()
   await page.locator('.page-back').click()
   await expect(page).toHaveURL(workoutHistoryUrl)
   await expect(page.getByRole('heading', { name: 'Тренировки клиента' })).toBeVisible()
@@ -597,7 +600,7 @@ test('live: планка вводится в секундах, таймер за
   await expectWorkoutTime(page, 'Время, подход 1', undefined)
   await chooseWorkoutTime(page, 'Время, подход 1', 60)
   await page.getByRole('button', { name: 'Сохранить' }).click()
-  await expect(page.getByRole('heading', { name: 'Тренировка', exact: true })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Тренировка', level: 1, exact: true })).toBeVisible()
 
   await page.getByRole('button', { name: 'Начать' }).click()
   await expect(page.locator('.live-timer')).toBeVisible()
@@ -655,7 +658,7 @@ test('план: порядок упражнений меняется в отде
   // Двигаем второе упражнение вверх → порядок меняется.
   await page.getByRole('button', { name: 'Вверх' }).nth(1).click()
   await page.getByRole('button', { name: 'Сохранить' }).click()
-  await expect(page.getByRole('heading', { name: 'Тренировка', exact: true })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Тренировка', level: 1, exact: true })).toBeVisible()
   // В просмотре первым идёт «Жим лёжа».
   await expect(page.locator('.cards .exercise strong').first()).toContainText('Жим штанги лёжа')
 })
@@ -690,7 +693,7 @@ test('live: порядок упражнений меняется в отдель
   await expect(page.locator('.planned-exercise .exercise-thumbnail')).toHaveCount(2)
   await expect(page.locator('.planned-exercise .exercise-thumbnail video')).toHaveCount(0)
   await page.getByRole('button', { name: 'Сохранить' }).click()
-  await expect(page.getByRole('heading', { name: 'Тренировка', exact: true })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Тренировка', level: 1, exact: true })).toBeVisible()
   await expect(page.locator('.planned-detail-exercise .exercise-thumbnail')).toHaveCount(2)
   await expect(page.locator('.planned-detail-exercise .exercise-thumbnail video')).toHaveCount(0)
 
@@ -796,7 +799,7 @@ test('замена упражнения: в форме плана и в live', a
   await expect(page.getByLabel('Вес, подход 1')).toHaveValue('50')
 
   await page.getByRole('button', { name: 'Сохранить' }).click()
-  await expect(page.getByRole('heading', { name: 'Тренировка', exact: true })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Тренировка', level: 1, exact: true })).toBeVisible()
 
   // Live: заменяем нетронутое упражнение на «Тяга верхнего блока».
   await page.getByRole('button', { name: 'Начать' }).click()
@@ -851,7 +854,7 @@ test('карточка упражнения: шапка с оборудован�
   await page.locator('.picker-item').filter({ hasText: 'Румынская тяга' }).first().locator('.picker-select-mark').click()
   await page.getByRole('button', { name: 'Добавить 1' }).click()
   await page.getByRole('button', { name: 'Сохранить' }).click()
-  await expect(page.getByRole('heading', { name: 'Тренировка', exact: true })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Тренировка', level: 1, exact: true })).toBeVisible()
 
   // Открываем карточку упражнения через отдельное действие «История».
   await page.getByRole('link', { name: /Румынская тяга/ }).first().click()
@@ -968,7 +971,7 @@ test('план: суперсет работает в Live без создани�
     await page.getByLabel('Повторы, подход 1').nth(index).fill('10')
   }
   await page.getByRole('button', { name: 'Сохранить' }).click()
-  await expect(page.getByRole('heading', { name: 'Тренировка', exact: true })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Тренировка', level: 1, exact: true })).toBeVisible()
   // В просмотре тренировки виден бейдж «Суперсет · 2 кр.».
   await expect(page.locator('.block-badge').first()).toContainText('Суперсет · 2 кр.')
 
@@ -1112,7 +1115,7 @@ test('расписание: тренировка без времени оста�
   await page.getByRole('button', { name: 'Выбрать: Присед со штангой', exact: true }).click()
   await page.getByRole('button', { name: 'Добавить 1' }).click()
   await page.getByRole('button', { name: 'Сохранить' }).click()
-  await expect(page.getByRole('heading', { name: 'Тренировка', exact: true })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Тренировка', level: 1, exact: true })).toBeVisible()
 
   await page.goto('/schedule')
   await page.locator('.schedule-week-day.is-today').click()
@@ -1166,7 +1169,7 @@ test('расписание: создание тренировки из расп�
   await page.getByRole('button', { name: 'Выбрать: Присед со штангой', exact: true }).click()
   await page.getByRole('button', { name: 'Добавить 1' }).click()
   await page.getByRole('button', { name: 'Сохранить' }).click()
-  await expect(page.getByRole('heading', { name: 'Тренировка', exact: true })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Тренировка', level: 1, exact: true })).toBeVisible()
 })
 
 test('расписание: отмена создания возвращает к выбранному дню', async ({ page }) => {
@@ -1220,7 +1223,7 @@ test('расписание: карточка события — время, им
     await page.getByRole('button', { name: 'Добавить 1' }).click()
   }
   await page.getByRole('button', { name: 'Сохранить' }).click()
-  await expect(page.getByRole('heading', { name: 'Тренировка', exact: true })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Тренировка', level: 1, exact: true })).toBeVisible()
 
   // Навигация таббара проверяется отдельно; здесь фиксируем только
   // отображение только что созданного события в расписании.
@@ -1276,7 +1279,7 @@ test('комментарий тренера к упражнению: план �
   await page.getByText('Заметка спортсмену').click()
   await page.getByLabel('Комментарий к упражнению').fill('Держи спину прямо')
   await page.getByRole('button', { name: 'Сохранить' }).click()
-  await expect(page.getByRole('heading', { name: 'Тренировка', exact: true })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Тренировка', level: 1, exact: true })).toBeVisible()
 
   // В live заметка не занимает место до явного раскрытия, но сохранённый текст
   // остаётся доступен для правки.
@@ -1300,7 +1303,7 @@ test('комментарий тренера к упражнению: план �
   // подтверждение частичного завершения (window.confirm) и не сработает.
   await expect(page.locator('.live-exercise-collapsed')).toBeVisible()
   await page.getByRole('button', { name: 'Завершить тренировку' }).click()
-  await expect(page.getByRole('heading', { name: 'Тренировка', exact: true })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Тренировка', level: 1, exact: true })).toBeVisible()
 
   // Комментарий виден в истории упражнения.
   await page.locator('.exercise-history-link').first().click()
@@ -1323,7 +1326,7 @@ test('комментарий тренера к упражнению: план �
   await expect(page.locator('.cards .card').first()).toContainText('Присед')
   await page.getByRole('status').filter({ hasText: 'История по датам' }).getByRole('button', { name: 'Понятно' }).click()
   await page.locator('.cards .card').first().click()
-  await expect(page.getByRole('heading', { name: 'Тренировка', exact: true })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Тренировка', level: 1, exact: true })).toBeVisible()
   await expect(page.locator('.completed-exercise .exercise-comment-note').first()).toContainText('Держи спину прямо')
 })
 
@@ -1353,7 +1356,7 @@ test('live: удаление подхода и наследование факт
   await page.getByLabel('Вес, подход 1').fill('90')
   await page.getByLabel('Повторы, подход 1').fill('8')
   await page.getByRole('button', { name: 'Сохранить' }).click()
-  await expect(page.getByRole('heading', { name: 'Тренировка', exact: true })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Тренировка', level: 1, exact: true })).toBeVisible()
 
   await page.getByRole('button', { name: 'Начать' }).click()
   await expect(page.locator('.live-timer')).toBeVisible()
@@ -1466,7 +1469,7 @@ test('live: «Готово» без ввода факта — подход сч�
   await page.getByLabel('Вес, подход 1').fill('100')
   await page.getByLabel('Повторы, подход 1').fill('5')
   await page.getByRole('button', { name: 'Сохранить' }).click()
-  await expect(page.getByRole('heading', { name: 'Тренировка', exact: true })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Тренировка', level: 1, exact: true })).toBeVisible()
 
   await page.getByRole('button', { name: 'Начать' }).click()
   await expect(page.locator('.live-timer')).toBeVisible()
@@ -1476,7 +1479,7 @@ test('live: «Готово» без ввода факта — подход сч�
   await page.getByRole('button', { name: 'Готово, отдых' }).first().click()
   await expect(page.locator('.live-exercise-collapsed')).toBeVisible()
   await page.getByRole('button', { name: 'Завершить тренировку' }).click()
-  await expect(page.getByRole('heading', { name: 'Тренировка', exact: true })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Тренировка', level: 1, exact: true })).toBeVisible()
 
   // В завершённой тренировке подход выполнен по плану, без пометки «не выполнено».
   await expect(page.getByText('не выполнено')).toHaveCount(0)

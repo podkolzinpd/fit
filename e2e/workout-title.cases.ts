@@ -19,10 +19,46 @@ export function workoutTitleCases() {
     })
     const base = `http://127.0.0.1:${Number(process.env.FIT_TEST_PORT ?? 5173) + 1000}`
     await page.goto(`${base}/workouts/${workoutId}`)
+    const detail = page.locator('.coach-exercise-first')
+    const summary = detail.locator('.coach-workout-summary')
+    await expect(detail.getByRole('heading', { name: 'Ноги', exact: true })).toHaveCSS('font-size', '32px')
+    await expect(detail.locator('.workout-header-meta')).toHaveCSS('font-size', '15px')
+    await expect(summary).toHaveJSProperty('open', false)
+    await expect(detail.locator('.workout-fact-summary')).toBeHidden()
+    expect(await detail.evaluate(element => {
+      const review = element.querySelector('.coach-trainer-review')!, exercises = element.querySelector('.completed-exercise-list')!, totals = element.querySelector('.coach-workout-summary')!
+      return Boolean(review.compareDocumentPosition(exercises) & Node.DOCUMENT_POSITION_FOLLOWING)
+        && Boolean(exercises.compareDocumentPosition(totals) & Node.DOCUMENT_POSITION_FOLLOWING)
+    })).toBe(true)
+    await summary.locator('summary').click()
+    await expect(detail.locator('.workout-fact-summary')).toBeVisible()
+    await expect(summary.getByRole('button', { name: /^(Указать|Изменить) длительность$/ })).toBeVisible()
+    await summary.locator('summary').click()
+    await page.locator('.content').evaluate(element => { element.scrollTop = 0 })
+    await page.screenshot({ path: info.outputPath('coach-exercises-before-totals.png') })
     await page.getByRole('button', { name: 'Другие действия с тренировкой', exact: true }).click()
+    const content = page.locator('.content')
+    const beforeRename = await content.evaluate(element => element.scrollTop)
     await page.getByRole('menuitem', { name: 'Переименовать тренировку', exact: true }).click()
     const sheet = page.getByRole('dialog', { name: 'Переименовать тренировку', exact: true })
     await expect(sheet.getByLabel('Название', { exact: true })).toHaveValue('Ноги')
+    // Viewport geometry is simulated; this is not a physical keyboard test.
+    await page.evaluate(() => {
+      Object.defineProperty(window.visualViewport, 'height', { configurable: true, value: 400 })
+      Object.defineProperty(window.visualViewport, 'offsetTop', { configurable: true, value: 70 })
+      window.visualViewport!.dispatchEvent(new Event('resize'))
+    })
+    await expect.poll(() => sheet.getByLabel('Название', { exact: true }).evaluate(element => element.getBoundingClientRect().bottom)).toBeLessThanOrEqual(470)
+    await sheet.getByRole('button', { name: 'Закрыть', exact: true }).click()
+    await expect(sheet).toHaveCount(0)
+    await page.evaluate(() => {
+      Object.defineProperty(window.visualViewport, 'height', { configurable: true, value: innerHeight })
+      Object.defineProperty(window.visualViewport, 'offsetTop', { configurable: true, value: 0 })
+      window.visualViewport!.dispatchEvent(new Event('resize'))
+    })
+    await expect.poll(() => content.evaluate(element => element.scrollTop)).toBe(beforeRename)
+    await page.getByRole('button', { name: 'Другие действия с тренировкой', exact: true }).click()
+    await page.getByRole('menuitem', { name: 'Переименовать тренировку', exact: true }).click()
     await sheet.getByLabel('Название', { exact: true }).fill('Ноги и спина')
     await sheet.getByRole('button', { name: 'Сохранить', exact: true }).click()
     await expect(sheet).toHaveCount(0)
@@ -41,7 +77,7 @@ export function workoutTitleCases() {
   for (const role of ['trainer', 'client'] as const) test(`named history remains compact for ${role}`, async ({ page }, info) => {
     const profileId = '69200000-0000-4000-8000-000000000001'
     await page.clock.setFixedTime(new Date('2026-10-30T09:00:00Z'))
-    const source = { ...coachGestureWorkout(false, 5), title: 'Спина и ноги — тренировка с длинным названием', createdBy: profileId, startedAt: '2026-10-29T09:00:00Z', status: 'done' as const, workoutDate: '2026-10-29', completedAt: '2026-10-29T10:00:00Z' }
+    const source = { ...coachGestureWorkout(false, 5), title: 'Спина и ноги — тренировка с длинным названием', trainerReview: 'Хорошая техника, в следующий раз сохраняем вес.', trainerReaction: 'strong' as const, createdBy: profileId, startedAt: '2026-10-29T09:00:00Z', status: 'done' as const, workoutDate: '2026-10-29', completedAt: '2026-10-29T10:00:00Z' }
     await mockPilot(page, { role, profileId, fitLime: true, clientLime: true, workouts: [source] })
     const base = `http://127.0.0.1:${Number(process.env.FIT_TEST_PORT ?? 5173) + 1000}`
     await page.goto(base + (role === 'trainer' ? `/clients/${clientId}/workouts?view=list` : '/me/workouts?tab=history&view=list'))
@@ -49,6 +85,10 @@ export function workoutTitleCases() {
     const card = page.locator('.workout-chronicle-card').first()
     await expect(card.getByRole('heading', { name: source.title, exact: true })).toBeVisible()
     await expect(card.locator('.workout-chronicle-brief')).toHaveText(source.exercises.slice(0, 3).map(exercise => exercise.name).join(' · ') + ' · ещё 2')
+    await expect(card.locator('.workout-chronicle-response')).toContainText(source.trainerReview)
+    expect(await card.evaluate(element => Boolean(element.querySelector('.workout-chronicle-response')!.compareDocumentPosition(element.querySelector('.workout-chronicle-exercises')!) & Node.DOCUMENT_POSITION_FOLLOWING))).toBe(role === 'trainer')
+    if (role === 'trainer') await expect(card.locator('.workout-chronicle-facts')).toHaveCount(0)
+    else await expect(card.locator('.workout-chronicle-facts')).toContainText('1 ч 00 мин')
     const geometry = await card.evaluate(element => {
       const title = element.querySelector('h2')!, date = element.querySelector('time')!
       return { titleSize: parseFloat(getComputedStyle(title).fontSize), dateSize: parseFloat(getComputedStyle(date).fontSize), titleTop: title.getBoundingClientRect().top, dateTop: date.getBoundingClientRect().top }
@@ -57,11 +97,27 @@ export function workoutTitleCases() {
     expect(geometry.dateTop).toBeGreaterThan(geometry.titleTop)
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
     await card.screenshot({ path: info.outputPath(`${role}-named-card.png`) })
+    if (role === 'trainer') {
+      await page.goto(`${base}/schedule?mode=list`)
+      const row = page.locator('.fit-lime-history-row').first()
+      await expect(row.locator('.schedule-list-workout-title')).toHaveText(source.title)
+      await expect(row.locator('.schedule-list-exercises')).toHaveText(source.exercises.slice(0, 3).map(exercise => exercise.name).join(' · ') + ' · ещё 2')
+      await row.screenshot({ path: info.outputPath('schedule-title-and-exercises.png') })
+      await page.goto(`${base}/today?date=2026-10-29`)
+      const event = page.locator('.schedule-v2-event').first()
+      await expect(event.locator('.schedule-event-workout-title')).toHaveText(source.title)
+      await expect(event.locator('.schedule-event-exercises')).toContainText(source.exercises[0]!.name)
+      const eventBounds = await event.evaluate(element => ({ actual: element.getBoundingClientRect().height, assigned: parseFloat((element as HTMLElement).style.height), fits: element.scrollWidth <= element.clientWidth }))
+      expect(eventBounds.actual).toBeCloseTo(eventBounds.assigned, 0)
+      expect(eventBounds.fits).toBe(true)
+      expect((await event.locator('.schedule-event-exercises').boundingBox())!.width).toBeGreaterThan(20)
+      await event.screenshot({ path: info.outputPath('day-title-and-exercises.png') })
+    }
   })
 
-  test('trainer preserves editable names through copy and source template', async ({ page }) => {
+  test('trainer preserves editable names through copy and source template', async ({ page }, info) => {
     const profileId = '69200000-0000-4000-8000-000000000001'
-    const source = { ...coachGestureWorkout(false, 2), title: 'я'.repeat(120), createdBy: profileId, status: 'done' as const, workoutDate: '2026-10-29', completedAt: '2026-10-29T10:00:00Z' }
+    const source = { ...coachGestureWorkout(false, 2), title: 'я'.repeat(120), trainerReview: 'Сохранить технику, не торопиться с увеличением веса.', createdBy: profileId, status: 'done' as const, workoutDate: '2026-10-29', completedAt: '2026-10-29T10:00:00Z' }
     const backend = await mockPilot(page, { profileId, fitLime: true, workouts: [source] })
     const original = JSON.stringify(backend.getWorkouts()[0])
     const creations: Array<{ title?: string }> = []
@@ -77,6 +133,13 @@ export function workoutTitleCases() {
       await route.fulfill({ json: { template: { ...stored, ...body.draft } } })
     })
     const base = `http://127.0.0.1:${Number(process.env.FIT_TEST_PORT ?? 5173) + 1000}`
+    await page.goto(`${base}/schedule/templates/from-workout`)
+    const sourceCard = page.locator('.template-source-workout').first()
+    await expect(sourceCard.locator('strong')).toHaveText(source.title)
+    await expect(sourceCard.locator('.workout-source-review')).toContainText(source.trainerReview)
+    await expect(sourceCard.locator('.template-source-exercises')).toHaveText(source.exercises.map(exercise => exercise.name).join(' · '))
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+    await sourceCard.screenshot({ path: info.outputPath('template-source-context.png') })
     await page.goto(`${base}/workouts/new?copy=${source.id}`)
     await expect(page.getByLabel('Название тренировки', { exact: true })).toHaveValue(source.title)
     await page.getByLabel('Название тренировки', { exact: true }).fill('Самостоятельная копия')
@@ -93,6 +156,7 @@ export function workoutTitleCases() {
     await page.getByRole('button', { name: 'Сохранить шаблон', exact: true }).click()
     await expect.poll(() => templateWrites.length).toBe(1)
     expect(templateWrites[0]!.name).toBe('Шаблон на завтра')
+    expect(templateWrites[0]).not.toHaveProperty('trainerReview')
     await page.goto(`${base}/workouts/new?template=${templateId}&client=${clientId}`)
     await expect(page.getByLabel('Название тренировки', { exact: true })).toHaveValue(stored.name)
     await page.getByLabel('Название тренировки', { exact: true }).fill('Тренировка из шаблона')
