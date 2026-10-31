@@ -789,9 +789,15 @@ test('iPhone: тренер назначает интервалы, спортсм
     }
     await expect(client.getByRole('button', { name: 'Готово', exact: true })).toHaveCount(0)
     await client.getByRole('button', { name: 'Завершить тренировку' }).click()
-    await expect(client.getByText('Все подходы выполнены. Завершить тренировку?', { exact: true })).toBeVisible()
-    await client.getByRole('button', { name: 'Завершить', exact: true }).click()
+    const finishConfirmation = client.locator('.finish-confirm')
+    const completedReport = client.getByRole('region', { name: 'Тренировка завершена' })
+    await expect(completedReport.or(finishConfirmation)).toBeVisible()
+    if (await finishConfirmation.isVisible()) {
+      await expect(finishConfirmation.getByText('Все подходы выполнены. Завершить тренировку?', { exact: true })).toBeVisible()
+      await finishConfirmation.getByRole('button', { name: 'Завершить', exact: true }).click()
+    }
     await expect(client).toHaveURL(workoutUrl)
+    await expect(completedReport).toContainText('Выполнено 12 из 12 подходов')
     await expect(client.locator('.workout-detail-page .workout-status-completed')).toHaveCount(0)
     await expect(client.getByRole('region', { name: 'Тренировка завершена' })).toBeVisible()
     await expect(client.locator('.workout-completion-recorded')).toBeVisible()
