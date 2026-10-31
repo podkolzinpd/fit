@@ -1031,8 +1031,7 @@ function TrainerScheduleV2({ forceDayView = false }: { forceDayView?: boolean })
               const cardTop = preview?.startTime ? minutesOf(preview.startTime) / 60 * hourHeight : top
               return <Link key={workout.id} draggable={false} data-workout-id={workout.id} className={`schedule-v2-event${preview ? ' is-slot-moving' : ''} schedule-event-${status.tone}${columns > 1 ? ' is-compact' : ''}${columns > 2 ? ' is-dense' : ''}${height <= 44 ? ' is-short' : ''}`} style={{ top: cardTop, height, left: `${column * 100 / columns}%`, width: `calc(${100 / columns}% - ${columns > 1 ? 4 : 0}px)` }} aria-label={`${eventTime(workout)} ${workout.clientName} · ${status.label}`} title={`${eventTime(workout)} · ${workout.clientName}`} to={`/workouts/${workout.id}`} state={{ returnTo }} onClick={() => trackGoal('schedule_v2_workout_opened')}>
                 <span className="schedule-v2-avatar">{clientInitials(workout.clientName)}</span>
-                {preview && <time className="schedule-slot-preview-time">{slotTimeLabel(preview)}</time>}
-                <span><b>{fitLimeToday && columns > 1 ? scheduleLaneClientName(workout.clientName) : workout.clientName}</b><small className="schedule-workout-line" title={scheduleV2WorkoutLine(workout)}>{workout.title && <span className="schedule-event-workout-title">{workout.title}</span>}<span className="schedule-event-exercises">{workoutExerciseBrief(workout.exercises)}</span></small><span className="sr-only">{status.label}</span></span>
+                <span><b>{fitLimeToday && columns > 1 ? scheduleLaneClientName(workout.clientName) : workout.clientName}</b><small className="schedule-workout-line" title={scheduleV2WorkoutLine(workout)}>{preview ? <time className="schedule-slot-preview-time">{slotTimeLabel(preview)}</time> : <>{workout.title && <span className="schedule-event-workout-title">{workout.title}</span>}<span className="schedule-event-exercises">{workoutExerciseBrief(workout.exercises)}</span></>}</small><span className="sr-only">{status.label}</span></span>
                 {workout.status === 'done' ? <CheckIcon /> : workout.status === 'cancelled' ? <span className="schedule-cancelled-mark" role="img" aria-label="Не состоялась"><CloseIcon /></span> : null}
               </Link>
             })}
@@ -1041,9 +1040,9 @@ function TrainerScheduleV2({ forceDayView = false }: { forceDayView?: boolean })
         </div>
       </>}
     </AsyncView>
-    {isFitLimeEnabled(actor)
+    {!dragPreview && (isFitLimeEnabled(actor)
       ? <button type="button" className="schedule-v2-fab" aria-label="Новая тренировка" onClick={() => { trackGoal('schedule_v2_workout_create_started'); setPlanComposerOpen(true) }}><AddIcon /></button>
-      : <Link className="schedule-v2-fab" aria-label={`Запланировать тренировку на ${selected}`} to={`/workouts/new?date=${selected}`} state={{ returnTo }} onClick={() => trackGoal('schedule_v2_workout_create_started')}><AddIcon /></Link>}
+      : <Link className="schedule-v2-fab" aria-label={`Запланировать тренировку на ${selected}`} to={`/workouts/new?date=${selected}`} state={{ returnTo }} onClick={() => trackGoal('schedule_v2_workout_create_started')}><AddIcon /></Link>)}
     {slotMove && <WorkoutRescheduleSheet workout={slotMove.workout} initialSlot={slotMove.slot} onClose={() => setSlotMove(null)} onReloaded={fresh => {
       setSlotMove(null)
       void navigate(`/workouts/${fresh.id}`, { state: { returnTo } })
