@@ -93,7 +93,7 @@ export function workoutAttendanceCases() {
     await page.goto('/schedule?week=2026-10-26')
     await expect(page.locator('.schedule-v2-day-events .schedule-cancelled-mark')).toHaveCount(1)
     await expect(page.locator('.schedule-v2-day-events .schedule-completed-mark')).toHaveCount(1)
-    await page.locator('.schedule-v2-day-card').filter({has:page.locator('.schedule-cancelled-mark')}).scrollIntoViewIfNeeded()
+    await page.locator('.schedule-v2-day-events .schedule-cancelled-mark').evaluate(element => element.scrollIntoView({block:'center',behavior:'instant'}))
     await page.screenshot({path:info.outputPath(`calendar-cross-week-${density}.png`)})
   })
 
