@@ -5,6 +5,7 @@ import type { Workout, WorkoutDraft } from '../../shared/domain'
 export function historyPlanForAppointment(target: Workout, source: Workout): WorkoutDraft {
   if (target.status !== 'planned') throw new Error('Эта тренировка уже начата или завершена. Обновите запись.')
   if (source.status !== 'done' || source.clientId !== target.clientId || source.id === target.id) throw new Error('Выберите завершённую тренировку этого клиента.')
+  if (source.exercises.length === 0) throw new Error('В этой тренировке нет упражнений для повторения.')
   const copied = copyWorkout(source, target.workoutDate)
   return { ...copied, id: target.id, version: target.version,
     clientId: target.clientId, startTime: target.startTime ?? undefined, endTime: target.endTime ?? undefined,

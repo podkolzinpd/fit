@@ -26,7 +26,7 @@ export function BookingHistorySheet({ target, onClose, onApplied, onReload }: {
     queryFn: ({ pageParam }) => workouts.listPage(undefined, undefined, target.clientId, pageParam, 30),
     getNextPageParam: page => page.nextOffset,
   })
-  const items = (history.data?.pages.flatMap(page => page.items) ?? []).filter(item => item.status === 'done' && item.clientId === target.clientId && item.id !== target.id)
+  const items = (history.data?.pages.flatMap(page => page.items) ?? []).filter(item => item.status === 'done' && item.clientId === target.clientId && item.id !== target.id && item.exercises.length > 0)
   useEffect(() => { dialog.current?.showModal(); dialog.current?.focus({ preventScroll: true }) }, [])
   const apply = useMutation({
     mutationFn: async () => {
@@ -57,7 +57,8 @@ export function BookingHistorySheet({ target, onClose, onApplied, onReload }: {
         {replacementConfirmed && <p role="alert">В этой записи уже есть план. Заменить его упражнения выбранной тренировкой?</p>}
       </> : <>
         {history.isPending && <p role="status">Загружаем историю…</p>}
-        {!history.isPending && !history.isError && !history.hasNextPage && items.length === 0 && <p>Завершённых тренировок пока нет.</p>}
+        {!history.isPending && !history.isError && !history.hasNextPage && items.length === 0 && <p>Тренировок с упражнениями для повторения пока нет.</p>}
+        {!history.isPending && !history.isError && history.hasNextPage && items.length === 0 && <p>На загруженной странице нет тренировок с упражнениями. Можно посмотреть более ранние.</p>}
         {items.map(item => <button type="button" key={item.id} className="booking-history-item" onClick={() => { setSource(item); setConfirmReplacement(null) }}><strong>{workoutDisplayTitle(item)}</strong><time dateTime={item.workoutDate}>{formatLocalDate(item.workoutDate)}</time>{item.trainerReview && <span className="workout-source-review"><span className="workout-source-review-label">Отзыв тренера</span>{item.trainerReview}</span>}<span>{workoutExerciseBrief(item.exercises)}</span></button>)}
         {history.hasNextPage && <button type="button" className="secondary wide" disabled={history.isFetchingNextPage} onClick={() => void history.fetchNextPage()}>{history.isFetchingNextPage ? 'Загружаем…' : 'Показать ещё'}</button>}
         {history.isError && <p className="error" role="alert">Не удалось загрузить историю. <button type="button" onClick={() => void history.refetch()}>Повторить</button></p>}

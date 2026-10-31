@@ -7,9 +7,9 @@ import { CheckSmallIcon, CloseIcon } from '../../shared/icons'
 import { workoutTrainingFormatLabel } from './workout-training-format'
 import './workout-attendance.css'
 
-export function WorkoutAttendanceSheet({ workout, action, onCompleted, onClose }: {
+export function WorkoutAttendanceSheet({ workout, action, onCompleted, onClose, beforeSave }: {
   workout: Workout; action: 'complete' | 'cancel'
-  onCompleted: () => Promise<void>; onClose: () => void
+  onCompleted: () => Promise<void>; onClose: () => void; beforeSave?: () => Promise<Workout>
 }) {
   const { workouts, trainerFinance } = useDataBackend()
   const queryClient = useQueryClient()
@@ -41,12 +41,13 @@ export function WorkoutAttendanceSheet({ workout, action, onCompleted, onClose }
   }, [])
   const save = useMutation({
     mutationFn: async () => {
-      if (!completed) { await workouts.cancelPlanned(target); return }
+      if (!completed) { const prepared = beforeSave ? await beforeSave() : target; await workouts.cancelPlanned(prepared); return }
       if (!workouts.confirmAttendance) throw new Error('Проведение занятия недоступно')
       if (selection.startsWith('charged:') && !selected) throw new Error('Обновите список абонементов')
       const disposition = selected ? 'charged' : selection === 'trial' ? 'trial' : selection === 'free' ? 'free' : selection === 'unassigned' ? 'unassigned' : 'auto'
       const draft: WorkoutAttendanceDraft = { disposition, packageId: selected?.id ?? null }
-      await workouts.confirmAttendance(target, draft, requestId.current)
+      const prepared = beforeSave ? await beforeSave() : target
+      await workouts.confirmAttendance(prepared, draft, requestId.current)
     },
     onSuccess: onCompleted,
     onError: () => setNeedsReload(true),
@@ -55,7 +56,7 @@ export function WorkoutAttendanceSheet({ workout, action, onCompleted, onClose }
   const reload = useMutation({ mutationFn: () => workouts.get(workout.id), onSuccess: async fresh => {
     queryClient.setQueryData(['workout', fresh.id], fresh)
     if (fresh.status === (completed ? 'done' : 'cancelled')) { await onCompleted(); return }
-    if (fresh.status !== target.status || completed && fresh.exercises.length > 0) { onClose(); return }
+    if (fresh.status !== target.status) { onClose(); return }
     setTarget(fresh); requestId.current = crypto.randomUUID(); setNeedsReload(false); save.reset()
     if (completed && withTrainer) await finance.refetch()
   } })
@@ -76,7 +77,8 @@ export function WorkoutAttendanceSheet({ workout, action, onCompleted, onClose }
             <option value="unassigned">Выбрать позже</option><option value="trial">Пробное</option><option value="free">Без списания</option>
           </select></label>}</>}
       </section> : <p className="workout-attendance-accounting">Запись и план сохранятся. Занятие не спишется.</p>}
-      {completed && <p className="workout-attendance-note">Упражнения можно добавить позже.</p>}
+      {!completed && target.exercises.some(exercise => exercise.sets.some(set => set.confirmedAt)) && <p className="workout-attendance-note">В тренировке есть записанные результаты. Они сохранятся, занятие не спишется.</p>}
+      {completed && <p className="workout-attendance-note">Записанные результаты сохранятся. Остальные можно добавить позже.</p>}
       {(save.error || reload.error) && <p className="error" role="alert">{(reload.error ?? save.error)?.message}</p>}
       {needsReload && <button type="button" className="secondary wide" disabled={busy} onClick={() => reload.mutate()}>Обновить запись</button>}
       <button type="submit" className="primary wide" disabled={busy || needsReload || financePending} aria-busy={save.isPending}>{save.isPending ? 'Сохраняем…' : completed ? 'Подтвердить проведение' : 'Отметить: не состоялась'}</button>
