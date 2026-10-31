@@ -10,12 +10,14 @@ function source(): Workout {
   return { ...target(), id: 'history', version: 3, workoutDate: localDate('2026-10-20'), startTime: '09:00', title: 'Прошлая', status: 'done', notes: 'Заметка истории', startedAt: 'then', completedAt: 'then', exercises: [0, 1].map(position => ({ id: `e${position}`, position, source: 'system', ref: `plank${position}`, name: 'Планка', muscleGroup: 'core', inputKind: 'duration', blockId: 'old-block', blockType: 'group', blockPreset: 'set', blockRounds: 2, restBetweenExercisesSec: 10, restBetweenRoundsSec: 90, restBetweenSetsSec: 30, trainerComment: 'Сохранять корпус', sets: [0, 1].map(index => ({ id: `s${position}${index}`, position: index, durationMin: 2, fact: { durationSec: 45 + index * 15 }, confirmedAt: 'then', version: 3 })) })) }
 }
 it('fills the same appointment with factual values as plan, keeping structure and target identity', () => {
-  const current = target(), historical = source(), snapshot = structuredClone(historical)
+  const current = target(), historical = { ...source(), trainerReview: 'Общий отзыв за прошлую тренировку', trainerReaction: 'strong' as const }, snapshot = structuredClone(historical)
   const result = historyPlanForAppointment(current, historical)
   expect(result).toMatchObject({ id: current.id, clientId: current.clientId, version: 7, workoutDate: current.workoutDate, startTime: '14:00', endTime: '15:00', title: 'Мой план', notes: 'Заметка записи', stageId: 'goal', trainingFormat: 'with_trainer', executionMode: 'manual' })
   expect(result.exercises.map(item => item.blockId)).toEqual([result.exercises[0]!.blockId, result.exercises[0]!.blockId])
   expect(result.exercises[0]!.blockId).not.toBe('old-block')
   expect(result.exercises[0]).toMatchObject({ blockType: 'group', blockRounds: 2, restBetweenRoundsSec: 90, restBetweenExercisesSec: 10, trainerComment: 'Сохранять корпус' })
+  expect(result).not.toHaveProperty('trainerReview')
+  expect(result).not.toHaveProperty('trainerReaction')
   expect(result.exercises[0]!.sets).toEqual([{ position: 0, durationSec: 45, durationMin: undefined }, { position: 1, durationSec: 60, durationMin: undefined }].map(set => ({ ...set, weightKg: undefined, reps: undefined, distanceKm: undefined, rpe: undefined })))
   expect(historical).toEqual(snapshot)
   expect(current.exercises).toEqual([])

@@ -256,9 +256,18 @@ export function isClientLimePilotEnabled(userId: string, serverAssigned = false)
     && userId.trim().length > 0 && serverAssigned === true
 }
 
-// Independent client workout UI. A missing/invalid cohort always fails closed.
+/** Missing mode preserves the client pilot; invalid configuration closes it. */
+export function clientWorkoutRolloutMode(): 'pilot' | 'all' | 'off' {
+  const mode: unknown = import.meta.env.VITE_CLIENT_WORKOUT_ROLLOUT_MODE ?? 'pilot'
+  return mode === 'pilot' || mode === 'all' ? mode : 'off'
+}
+
+// Role and server Client Lime assignment remain mandatory in the caller.
 export function isClientWorkoutRedesignPilotEnabled(userId: string): boolean {
-  if (import.meta.env.VITE_CLIENT_WORKOUT_REDESIGN_ENABLED !== 'true') return false
+  if (import.meta.env.VITE_CLIENT_WORKOUT_REDESIGN_ENABLED !== 'true' || !userId.trim()) return false
+  const mode = clientWorkoutRolloutMode()
+  if (mode === 'all') return true
+  if (mode !== 'pilot') return false
   const ids = String(import.meta.env.VITE_CLIENT_WORKOUT_REDESIGN_PILOT_USER_IDS ?? '')
     .split(',').map(id => id.trim().toLowerCase()).filter(Boolean)
   const uuid = /^[a-f0-9]{8}-[a-f0-9]{4}-[1-5][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/

@@ -22,6 +22,7 @@ import { useCoachLiveDensity } from '../../app/coach-live-density'
 import { useCoachLiveHalo } from './use-coach-live-halo'
 import { CoachDayHeading, useCoachDaySwipe } from './CoachDayNavigation'
 import { advancePlanField } from './plan-input-navigation'
+import { useWorkoutFieldVisibility } from './workout-field-visibility'
 import { coachWorkoutReferenceAssets } from '../../shared/coach-workout-reference-assets'
 import { WorkoutDragBlock, WorkoutDragHandle, WorkoutGestureList, WorkoutSwipe } from './WorkoutGestures'
 import { invalidateWorkoutResults } from '../../app/invalidate-workout-results'
@@ -536,10 +537,7 @@ function scheduleV2Range(start: LocalDate, end: LocalDate): string {
 }
 
 function scheduleV2WorkoutLine(workout: Workout): string {
-  if (workout.title) return workout.title
-  const duration = workout.startTime ? scheduleDurationMinutes(workout.startTime, workout.endTime) : 60
-  const durationLabel = duration % 60 === 0 ? `${duration / 60} ч` : `${duration} мин`
-  return `${durationLabel} · ${scheduleExerciseLine(exerciseSummary(workout).map((exercise) => exercise.name))}`
+  return [workout.title, workoutExerciseBrief(workout.exercises)].filter(Boolean).join(' · ')
 }
 
 function useScheduleV2MinuteTicker() {
@@ -987,7 +985,7 @@ function TrainerScheduleV2({ forceDayView = false }: { forceDayView?: boolean })
               <span className="schedule-v2-day-title"><span>{weekdayShort(day)}</span><strong>{dayOfMonth(day)}</strong></span>
               <span className="schedule-v2-day-events">{workouts.slice(0, 5).map((workout) => {
                 const status = scheduleEventStatus(workout, today)
-                return <span key={workout.id} className={`schedule-event-${status.tone}`}><time>{workout.startTime?.slice(0, 5) ?? '—'}</time><b>{workout.clientName}</b>{fitLimeSchedule && isIndependentScheduleWorkout(workout) && <small className="schedule-independent-label">Самостоятельно</small>}<span className="sr-only">{status.label}</span></span>
+                return <span key={workout.id} className={`schedule-event-${status.tone}`} title={scheduleV2WorkoutLine(workout)}><time>{workout.startTime?.slice(0, 5) ?? '—'}</time><b>{workout.clientName}</b>{fitLimeSchedule && isIndependentScheduleWorkout(workout) && <small className="schedule-independent-label">Самостоятельно</small>}<span className="sr-only">{status.label}</span></span>
               })}{workouts.length === 0 && (compactScheduleFilters ? <span className="sr-only">На этот день тренировок нет</span> : <em>Свободный день</em>)}{workouts.length > 5 && <em>Ещё {workouts.length - 5}</em>}</span>
             </button>
           })}
@@ -995,7 +993,7 @@ function TrainerScheduleV2({ forceDayView = false }: { forceDayView?: boolean })
       </> : <>
         {timelineEvents.length === 0 && untimed.length === 0 && independent.length === 0 && <p className="schedule-v2-empty-day" role="status">{fitLimeToday ? 'На этот день тренировок нет' : 'Свободный день'}</p>}
         {independent.length > 0 && <section className="schedule-v2-untimed" aria-label="Самостоятельные тренировки"><strong>Самостоятельно</strong>{independent.map((workout) => <Link key={workout.id} to={`/workouts/${workout.id}`} state={{ returnTo }}><span className="schedule-v2-avatar">{clientInitials(workout.clientName)}</span><span><b>{workout.clientName}</b><small>{eventTime(workout) || 'Без времени'} · {scheduleV2WorkoutLine(workout)}</small></span>{workout.status === 'done' && <CheckIcon />}</Link>)}</section>}
-        {untimed.length > 0 && <section className="schedule-v2-untimed" aria-labelledby="schedule-v2-untimed-title"><strong id="schedule-v2-untimed-title">Без времени</strong>{untimed.map((workout) => <Link key={workout.id} to={`/workouts/${workout.id}`} state={{ returnTo }}><span className="schedule-v2-avatar">{clientInitials(workout.clientName)}</span><span><b>{workout.clientName}</b><small>{scheduleExerciseLine(exerciseSummary(workout).map((exercise) => exercise.name))}</small></span>{workout.status === 'done' && <CheckIcon />}</Link>)}</section>}
+        {untimed.length > 0 && <section className="schedule-v2-untimed" aria-labelledby="schedule-v2-untimed-title"><strong id="schedule-v2-untimed-title">Без времени</strong>{untimed.map((workout) => <Link key={workout.id} to={`/workouts/${workout.id}`} state={{ returnTo }}><span className="schedule-v2-avatar">{clientInitials(workout.clientName)}</span><span><b>{workout.clientName}</b><small>{scheduleV2WorkoutLine(workout)}</small></span>{workout.status === 'done' && <CheckIcon />}</Link>)}</section>}
         <div className="day-grid-scroll schedule-v2-timeline" ref={scrollRef}>
           <div className="day-grid" style={{ height: timelineHeight }}>
             {HOURS.map((hour) => <div key={hour} className={`day-grid-hour${selected === today && scheduleHourLabelCollidesWithNow(hour, currentMinutes, fitLimeToday ? hourHeight : undefined) ? ' is-near-current-time' : ''}`} style={{ top: hour * hourHeight }}><span className="day-grid-hour-label">{String(hour).padStart(2, '0')}:00</span><div className="day-grid-hour-line" /></div>)}
@@ -1005,7 +1003,7 @@ function TrainerScheduleV2({ forceDayView = false }: { forceDayView?: boolean })
               const status = scheduleEventStatus(workout, today)
               return <Link key={workout.id} className={`schedule-v2-event schedule-event-${status.tone}${columns > 1 ? ' is-compact' : ''}${columns > 2 ? ' is-dense' : ''}${height <= 44 ? ' is-short' : ''}`} style={{ top, height, left: `${column * 100 / columns}%`, width: `calc(${100 / columns}% - ${columns > 1 ? 4 : 0}px)` }} aria-label={`${eventTime(workout)} ${workout.clientName} · ${status.label}`} title={`${eventTime(workout)} · ${workout.clientName}`} to={`/workouts/${workout.id}`} state={{ returnTo }} onClick={() => trackGoal('schedule_v2_workout_opened')}>
                 <span className="schedule-v2-avatar">{clientInitials(workout.clientName)}</span>
-                <span><b>{fitLimeToday && columns > 1 ? scheduleLaneClientName(workout.clientName) : workout.clientName}</b><small>{scheduleV2WorkoutLine(workout)}</small><span className="sr-only">{status.label}</span></span>
+                <span><b>{fitLimeToday && columns > 1 ? scheduleLaneClientName(workout.clientName) : workout.clientName}</b><small className="schedule-workout-line" title={scheduleV2WorkoutLine(workout)}>{workout.title && <span className="schedule-event-workout-title">{workout.title}</span>}<span className="schedule-event-exercises">{workoutExerciseBrief(workout.exercises)}</span></small><span className="sr-only">{status.label}</span></span>
                 {workout.status === 'done' && <CheckIcon />}
               </Link>
             })}
@@ -1120,23 +1118,27 @@ const chronicleReactionLabels: Record<TrainerReaction, string> = {
   strong: '💪',
 }
 
-export function WorkoutChronicleCard({ workout, contextLabel, returnTo, historyListActions = false, showTitle = true, calendarDayDetails = false }: { workout: Workout; contextLabel?: string | null; returnTo?: string; historyListActions?: boolean; showTitle?: boolean; calendarDayDetails?: boolean }) {
+export function WorkoutChronicleCard({ workout, contextLabel, returnTo, historyListActions = false, showTitle = true, calendarDayDetails = false, coachView = false }: { workout: Workout; contextLabel?: string | null; returnTo?: string; historyListActions?: boolean; showTitle?: boolean; calendarDayDetails?: boolean; coachView?: boolean }) {
   const done = workout.status === 'done'
   const duration = workoutDurationLabel(workout.startedAt, workout.completedAt, workout.actualDurationSec)
   const tonnage = workoutTonnage(workout)
-  const meta = done ? [
+  const meta = done && !coachView ? [
     duration,
     tonnage > 0 ? tonnageLabel(tonnage) : null,
     workout.activeCaloriesKcal ? `≈ ${workout.activeCaloriesKcal} ккал` : null,
   ].filter(Boolean) : []
   const hasFeedback = workout.sessionRpe !== undefined && workout.wellbeing !== undefined
   const exercisePreview = chronicleExercisePreview(workout.exercises, calendarDayDetails ? workout.exercises.length : undefined)
-  const musclePreview = chronicleExercisePreview(historyListActions && done ? performedMuscleGroupLabels(workout) : [], 3)
+  const musclePreview = chronicleExercisePreview(historyListActions && done && !coachView ? performedMuscleGroupLabels(workout) : [], 3)
   const detailState = returnTo ? { returnTo } : undefined
   const formattedDate = formatLocalDate(workout.workoutDate)
   const muscleSummary = [...musclePreview.visible, ...(musclePreview.hiddenCount > 0 ? [`+${musclePreview.hiddenCount}`] : [])].join(' · ')
+  const trainerReview = workout.trainerReview && <p className="workout-chronicle-response">
+    <span className="workout-chronicle-note-label">{coachView ? 'Отзыв тренера' : workout.trainerReaction ? chronicleReactionLabels[workout.trainerReaction] : 'Тренер'}</span>
+    <span className="workout-chronicle-note-text">{coachView && workout.trainerReaction ? `${chronicleReactionLabels[workout.trainerReaction]} ` : ''}{workout.trainerReview}</span>
+  </p>
 
-  return <article className={`card workout-chronicle-card${workout.hasPr ? ' has-pr' : ''}${historyListActions && done ? ' has-history-actions' : ''}${calendarDayDetails ? ' calendar-day-details' : ''}`}>
+  return <article className={`card workout-chronicle-card${workout.hasPr ? ' has-pr' : ''}${historyListActions && done ? ' has-history-actions' : ''}${calendarDayDetails ? ' calendar-day-details' : ''}${coachView ? ' coach-chronicle-card' : ''}`}>
     <Link className="workout-chronicle-open" aria-description={showTitle ? workoutDisplayTitle(workout) : undefined} aria-label={`Открыть тренировку за ${formattedDate}`} to={`/workouts/${workout.id}`} state={detailState}>
       <div className="workout-chronicle-head">
         <div className="workout-chronicle-heading">
@@ -1150,6 +1152,7 @@ export function WorkoutChronicleCard({ workout, contextLabel, returnTo, historyL
         </div>
       </div>
       {contextLabel && <p className="card-author">{contextLabel}</p>}
+      {coachView && trainerReview}
       <div className="workout-chronicle-exercises">
         {historyListActions && !calendarDayDetails ? <p className="workout-chronicle-brief">{workoutExerciseBrief(workout.exercises)}</p> : <>
         {exercisePreview.visible.length > 0 ? exercisePreview.visible.map((exercise) => {
@@ -1168,17 +1171,14 @@ export function WorkoutChronicleCard({ workout, contextLabel, returnTo, historyL
         </>}
       </div>
       {muscleSummary && <p className="workout-chronicle-muscles" aria-label={`Основные группы мышц: ${muscleSummary}`}><span>Мышцы:</span> {muscleSummary}</p>}
-      {(meta.length > 0 || hasFeedback || workout.discomfort) && <div className="card-meta workout-chronicle-facts">
+      {(meta.length > 0 || hasFeedback || (coachView && Boolean(workout.wellbeing)) || workout.discomfort) && <div className="card-meta workout-chronicle-facts">
         {meta.map((item) => <span key={item}>{item}</span>)}
         {hasFeedback && <span>RPE {workout.sessionRpe}/10</span>}
         {workout.wellbeing && <span>{chronicleWellbeingLabels[workout.wellbeing]}</span>}
         {workout.discomfort && <span className="attention">Дискомфорт</span>}
       </div>}
       {workout.clientComment && <p className="workout-chronicle-comment"><span className="workout-chronicle-note-label">Клиент</span><span className="workout-chronicle-note-text">{workout.clientComment}</span></p>}
-      {workout.trainerReview && <p className="workout-chronicle-response">
-        <span className="workout-chronicle-note-label">{workout.trainerReaction ? chronicleReactionLabels[workout.trainerReaction] : 'Тренер'}</span>
-        <span className="workout-chronicle-note-text">{workout.trainerReview}</span>
-      </p>}
+      {!coachView && trainerReview}
     </Link>
     {historyListActions && done && <Link className="workout-chronicle-copy" aria-label={`Скопировать тренировку за ${formattedDate}`} title="Скопировать тренировку" to={`/workouts/new?copy=${workout.id}`} state={detailState}><CopyIcon /></Link>}
   </article>
@@ -1235,14 +1235,14 @@ export function ClientWorkoutsPage() {
           </Coachmark>
         </div>
         {calendar.state.view === 'list' ? <>
-          <div className="cards workout-chronicle-list">{split.history.map((workout) => <WorkoutChronicleCard key={workout.id} workout={workout} contextLabel={contextLabel(workout)} returnTo={returnTo} historyListActions />)}</div>
+          <div className="cards workout-chronicle-list">{split.history.map((workout) => <WorkoutChronicleCard key={workout.id} workout={workout} contextLabel={contextLabel(workout)} returnTo={returnTo} historyListActions coachView />)}</div>
           {split.history.length === 0 && <p className="muted">Здесь появятся завершённые тренировки.</p>}
           <LoadMoreButton hasMore={query.hasNextPage} loading={query.isFetchingNextPage} onLoadMore={() => void query.fetchNextPage()} />
         </> : <ClientWorkoutHistoryCalendar month={calendar.state.month} today={today} workouts={calendarItems}
           selectedDate={calendar.state.selectedDate} loading={calendarHistory.isLoading} error={calendarHistory.error}
           returnTo={returnTo} contextLabel={contextLabel} onRetry={() => void calendarHistory.refetch()}
           onMonthChange={calendar.shiftMonth} onDateSelect={calendar.selectDate}
-          renderSelectedWorkout={(workout) => <WorkoutChronicleCard workout={workout} contextLabel={contextLabel(workout)} returnTo={returnTo} calendarDayDetails />} />}
+          renderSelectedWorkout={(workout) => <WorkoutChronicleCard workout={workout} contextLabel={contextLabel(workout)} returnTo={returnTo} calendarDayDetails coachView />} />}
       </section>
     </div> : <EmptyState
       title="Тренировка для клиента"
@@ -1369,6 +1369,7 @@ export function WorkoutFormPage() {
   const selectedStageId = clientReference ? stageId ?? defaultStageId : stageId || defaultStageId
   const stageLoading = clientReference && stageId === undefined && !source.data?.stageId && goal.isLoading
   const safePlanInput = coachReference && isCoachPlanInputEnabled(actor) && (!workoutId || source.data?.status === 'planned')
+  useWorkoutFieldVisibility(safePlanInput, '.coach-reference-form .workout-form :is(input, select, textarea)')
   const readyPlan = clientLime && !workoutId && Boolean(favoriteId || presetId) && !completedMode
   const refinedPlan = coachReference && isCoachPlanLayoutEnabled(actor) && (!workoutId || source.data?.status === 'planned')
   const planDraftKey = safePlanInput && workoutId ? workoutFormDraftKey(actor?.userId ?? 'anonymous', `edit-${workoutId}`) : draftKey
@@ -2109,7 +2110,16 @@ export function WorkoutDetailPage() {
     if (block.blockType === 'single' || block.exercises.length === 1) return articles
     return <div className={`exercise-block view${done ? ' completed-exercise-block' : ''}`} key={block.blockId}><span className="block-badge">{blockLabel(block.blockType, block.blockPreset)} · {block.blockRounds} кр.</span>{articles}</div>
   })}</div>
-  return <Page title="Тренировка" hideTitle className={`workout-detail-page${clientCompletionReport ? ' workout-completion-page' : ''}${bookingHistoryAvailable ? ' booking-history-layout' : ''}${emptyBookingPlan ? ' booking-plan-is-empty' : ''}`} back={backTo} onBack={goBack}>
+  const factSummary = workout && done && !clientCompletionReport && <><section className={`workout-fact-summary${factSummaryMetricCount >= 4 ? ' has-calories' : ''}${factSummaryMetricCount === 2 ? ' has-two-metrics' : ''}`} aria-label="Сводка тренировки">
+        <p><span>Тоннаж</span><strong>{tonnage > 0 ? tonnageLabel(tonnage) : '—'}</strong></p>
+        {workout.activeCaloriesKcal && <p><span>{limeHistory ? 'Калории FIT' : 'Оценка активных калорий FIT'}</span><strong>≈ {workout.activeCaloriesKcal} ккал</strong></p>}
+        {!limeHistory && workout.activeCaloriesKcal && workout.calorieEstimateBasis && <p><span>Основа оценки</span><strong>{workout.calorieEstimateBasis}</strong></p>}
+        {!limeHistory && !workout.activeCaloriesKcal && workout.calorieEstimateNotice && <p><span>Активные калории FIT</span><strong>{workout.calorieEstimateNotice}</strong></p>}
+        <p><span>Подходы</span><strong>{completedSets}</strong></p>
+        {groups.length > 0 && <p className="workout-fact-summary-groups"><span>Группы мышц</span><strong>{groups.join(' · ')}</strong></p>}
+        {clientMode && workout.hasPr && <p className="workout-fact-summary-record"><RecordIcon /><span>Личный рекорд</span><strong>Лучший результат тренировки</strong></p>}
+      </section>{limeHistory && (workout.activeCaloriesKcal ? workout.calorieEstimateBasis : workout.calorieEstimateNotice) && <p className="workout-calorie-explanation"><span>{workout.activeCaloriesKcal ? 'Основа оценки калорий FIT' : 'Активные калории FIT'}</span>{workout.activeCaloriesKcal ? workout.calorieEstimateBasis : workout.calorieEstimateNotice}</p>}</>
+  return <Page title="Тренировка" hideTitle className={`workout-detail-page${!clientMode ? ' coach-exercise-first' : ''}${clientCompletionReport ? ' workout-completion-page' : ''}${bookingHistoryAvailable ? ' booking-history-layout' : ''}${emptyBookingPlan ? ' booking-plan-is-empty' : ''}`} back={backTo} onBack={goBack}>
     <AsyncView loading={query.isLoading} error={query.error} onRetry={() => void query.refetch()}>{workout && <>
       {!clientMode && navigationState?.firstPlanClient && <section className="first-plan-success" aria-labelledby="first-plan-success-title">
         <div><p className="eyebrow">ГОТОВО</p><h2 id="first-plan-success-title">Тренировка запланирована</h2><p>Первый план для {navigationState.firstPlanClient.fullName} готов.</p></div>
@@ -2156,13 +2166,12 @@ export function WorkoutDetailPage() {
         </>}
       />}
       {justCompleted && !clientMode && <WorkoutCompletionCard completedSets={completedSets} totalSets={sets.length} record={completionRecords.data?.[0]} clientMode={false} clientId={workout.clientId} />}
-      {justCompleted && !clientMode && <WorkoutFinanceConfirmation bundle={completionFinance.data} workoutId={workout.id} clientId={workout.clientId} trainingFormat={workout.trainingFormat ?? 'self'} />}
-      {!clientCompletionReport && <WorkoutHeader eyebrow={clientMode && done ? 'ТРЕНИРОВКА ЗАВЕРШЕНА' : clientMode ? 'ВАША ТРЕНИРОВКА' : 'ТРЕНИРОВКА КЛИЕНТА'} title={clientMode ? (done ? workoutFocusTitle(groups) : 'Ваша тренировка') : workout.clientName} state={detailState}
+      {!clientCompletionReport && <WorkoutHeader eyebrow={clientMode && done ? 'ТРЕНИРОВКА ЗАВЕРШЕНА' : clientMode ? 'ВАША ТРЕНИРОВКА' : workout.clientName} title={clientMode ? (done ? workoutFocusTitle(groups) : 'Ваша тренировка') : workoutDisplayTitle(workout)} state={detailState}
         statusLabel={statusPresentation?.label}
         showStatus={detailState !== 'completed'}
         action={manageMenuInHeader ? <OverflowMenu label="Другие действия с тренировкой" items={workoutManageItems} /> : undefined}
         meta={<><span>{formatLocalDate(workout.workoutDate)} · {workout.startTime?.slice(0, 5) ?? 'без времени'}</span><span>{workoutTrainingFormatLabel(workout.trainingFormat ?? 'self')}</span>{clientMode && !done && authorLabel && <span>{authorLabel}</span>}{clientAuthoredReadOnly && <span>Создано клиентом · упражнения только для просмотра</span>}{stageTitle && <span>Цель: {stageTitle}</span>}</>} />}
-      {workout.title && <p className="workout-plan-title">{workout.title}</p>}
+      {clientMode && workout.title && <p className="workout-plan-title">{workout.title}</p>}
       {isFitLimeEnabled(actor) && workout.plannedDate && <p className="workout-plan-title">Исходный план: {formatLocalDate(localDate(workout.plannedDate))}{workout.plannedStartTime ? ` · ${workout.plannedStartTime.slice(0, 5)}${workout.plannedEndTime ? `–${workout.plannedEndTime.slice(0, 5)}` : ''}` : ' · без времени'}</p>}
       {isFitLimeEnabled(actor) && workout.status === 'planned' && canExecute && workout.workoutDate !== today && <p className="workout-plan-title">При запуске сейчас тренировка начнётся сегодня, {formatLocalDate(today)}. Исходная дата плана сохранится отдельно.</p>}
       {plannedActions && canExecute && <div className="workout-detail-primary-actions">
@@ -2178,24 +2187,19 @@ export function WorkoutDetailPage() {
         event.preventDefault()
         openLive(workoutId)
       }}>Продолжить тренировку</Link>}
-      {done && !clientCompletionReport && <><section className={`workout-fact-summary${factSummaryMetricCount >= 4 ? ' has-calories' : ''}${factSummaryMetricCount === 2 ? ' has-two-metrics' : ''}`} aria-label="Сводка тренировки">
-        <p><span>Тоннаж</span><strong>{tonnage > 0 ? tonnageLabel(tonnage) : '—'}</strong></p>
-        {workout.activeCaloriesKcal && <p><span>{limeHistory ? 'Калории FIT' : 'Оценка активных калорий FIT'}</span><strong>≈ {workout.activeCaloriesKcal} ккал</strong></p>}
-        {!limeHistory && workout.activeCaloriesKcal && workout.calorieEstimateBasis && <p><span>Основа оценки</span><strong>{workout.calorieEstimateBasis}</strong></p>}
-        {!limeHistory && !workout.activeCaloriesKcal && workout.calorieEstimateNotice && <p><span>Активные калории FIT</span><strong>{workout.calorieEstimateNotice}</strong></p>}
-        <p><span>Подходы</span><strong>{completedSets}</strong></p>
-        {groups.length > 0 && <p className="workout-fact-summary-groups"><span>Группы мышц</span><strong>{groups.join(' · ')}</strong></p>}
-        {clientMode && workout.hasPr && <p className="workout-fact-summary-record"><RecordIcon /><span>Личный рекорд</span><strong>Лучший результат тренировки</strong></p>}
-      </section>{limeHistory && (workout.activeCaloriesKcal ? workout.calorieEstimateBasis : workout.calorieEstimateNotice) && <p className="workout-calorie-explanation"><span>{workout.activeCaloriesKcal ? 'Основа оценки калорий FIT' : 'Активные калории FIT'}</span>{workout.activeCaloriesKcal ? workout.calorieEstimateBasis : workout.calorieEstimateNotice}</p>}</>}
-      {done && !clientCompletionReport && <section className="workout-review workout-duration-surface">{durationControl}</section>}
-      {done && !clientCompletionReport && <WorkoutClientFeedback workout={workout} canEdit={clientMode} saving={feedback.isPending} error={feedback.error} onSave={(value) => feedback.mutateAsync(value)} />}
+      {clientMode && factSummary}
+      {done && clientMode && !clientCompletionReport && <section className="workout-review workout-duration-surface">{durationControl}</section>}
+      {done && !clientCompletionReport && (clientMode || workout.discomfort) && <WorkoutClientFeedback workout={workout} canEdit={clientMode} saving={feedback.isPending} error={feedback.error} onSave={(value) => feedback.mutateAsync(value)} />}
       {done && clientMode && hasActiveTrainer && !clientCompletionReport && <WorkoutClientQuestion workout={workout} saving={question.isPending} error={question.error} onSave={(value) => question.mutateAsync(value)} />}
       {done && !clientMode && workout.clientQuestion && <WorkoutTrainerQuestion workout={workout} canReply={canReview} startEditing={new URLSearchParams(location.search).get('reply') === '1'} authorName={responseAuthorName} saving={questionAnswer.isPending} error={questionAnswer.error} onSave={(value) => questionAnswer.mutateAsync(value)} />}
-      {done && (clientMode || !workout.clientQuestion) && <WorkoutTrainerReview workout={workout} canEdit={canReview} authorName={responseAuthorName} saving={review.isPending} error={review.error} onSave={(value) => review.mutateAsync(value)} />}
+      {done && (clientMode || !workout.clientQuestion) && <WorkoutTrainerReview compact={!clientMode} workout={workout} canEdit={canReview} authorName={responseAuthorName} saving={review.isPending} error={review.error} onSave={(value) => review.mutateAsync(value)} />}
       {!clientMode && workout.clientComment && workout.sessionRpe === undefined && <WorkoutClientComment workout={workout} />}
       {!done && <div className="workout-detail-exercise-overview"><p>{bookingHistoryAvailable ? 'План тренировки' : 'ПЛАН ТРЕНИРОВКИ'}</p>{!emptyBookingPlan && <span>{workout.exercises.length} {exerciseCountLabel(workout.exercises.length)} · {sets.length} {setCountLabel(sets.length)}</span>}</div>}
       {emptyBookingPlan && <p className="booking-plan-empty">Упражнения ещё не добавлены</p>}
       {!clientCompletionReport && !emptyBookingPlan && exerciseCards}
+      {justCompleted && !clientMode && <WorkoutFinanceConfirmation bundle={completionFinance.data} workoutId={workout.id} clientId={workout.clientId} trainingFormat={workout.trainingFormat ?? 'self'} />}
+      {done && !clientMode && !workout.discomfort && <WorkoutClientFeedback workout={workout} canEdit={false} saving={feedback.isPending} error={feedback.error} onSave={(value) => feedback.mutateAsync(value)} />}
+      {done && !clientMode && <details className="coach-workout-summary"><summary>Сводка тренировки</summary>{factSummary}<section className="workout-review workout-duration-surface">{durationControl}</section></details>}
       {removeCompletedExercise.error && <p className="error workout-exercise-removal-error" role="alert">Не удалось удалить упражнение. <button type="button" className="link" disabled={removeCompletedExercise.isPending} onClick={async () => {
         if (!removeCompletedExercise.variables) return
         const refreshed = await query.refetch()
@@ -2425,6 +2429,7 @@ function WorkoutTrainerQuestion({ workout, canReply, startEditing = false, autho
   const [value, setValue] = useState(currentReview)
   const [reaction, setReaction] = useState<TrainerReaction | undefined>(currentReaction)
   const valid = value.trim().length > 0 && value.trim().length <= 500
+  useWorkoutFieldVisibility(editing, '.workout-question-answer textarea')
 
   useEffect(() => {
     if (startEditing && canReply && unresolved) setEditing(true)
@@ -2447,21 +2452,7 @@ function WorkoutTrainerQuestion({ workout, canReply, startEditing = false, autho
   return <section className="workout-review workout-question workout-review-readonly" aria-labelledby="trainer-workout-question-title">
     <div className="workout-review-head"><div><p className="eyebrow">ВОПРОС КЛИЕНТА</p><h2 id="trainer-workout-question-title">По этой тренировке</h2></div>{canReply && unresolved && !editing && <button type="button" className="secondary" disabled={saving} onClick={() => setEditing(true)}>Ответить</button>}</div>
     <p className="workout-review-text">{workout.clientQuestion}</p>
-    {editing ? <form className="workout-question-answer" onFocusCapture={(event) => {
-      const target = event.target
-      if (!(target instanceof HTMLTextAreaElement)) return
-      // iOS can scroll the root document together with scrollIntoView and keep
-      // that offset after the keyboard closes. Move only the app content: the
-      // shell itself must stay pinned to the viewport without a grey tail.
-      window.setTimeout(() => {
-        const content = target.closest('.content')
-        if (!(content instanceof HTMLElement)) return
-        const targetRect = target.getBoundingClientRect()
-        const contentRect = content.getBoundingClientRect()
-        const centeredTop = content.scrollTop + targetRect.top - contentRect.top - Math.max(16, (content.clientHeight - targetRect.height) / 2)
-        content.scrollTo({ top: Math.max(0, centeredTop), behavior: 'smooth' })
-      }, 180)
-    }} onSubmit={async (event) => {
+    {editing ? <form className="workout-question-answer" onSubmit={async (event) => {
       event.preventDefault()
       if (!valid) return
       try {
@@ -2499,7 +2490,8 @@ function WorkoutTrainerQuestion({ workout, canReply, startEditing = false, autho
   </section>
 }
 
-function WorkoutTrainerReview({ workout, canEdit, startEditing, authorName, saving, error, onSave }: {
+function WorkoutTrainerReview({ workout, canEdit, startEditing, authorName, saving, error, onSave, compact = false }: {
+  compact?: boolean
   workout: Workout
   canEdit: boolean
   startEditing?: boolean
@@ -2523,9 +2515,9 @@ function WorkoutTrainerReview({ workout, canEdit, startEditing, authorName, savi
 
   if (!canEdit && !hasReview) return null
 
-  return <section className={`workout-review ${editing ? '' : 'workout-review-readonly'}`} aria-labelledby="workout-review-title">
+  return <section className={`workout-review ${editing ? '' : 'workout-review-readonly'}${compact ? ' coach-trainer-review' : ''}${compact && !editing && !hasReview ? ' is-empty' : ''}`} aria-labelledby="workout-review-title">
     <div className="workout-review-head">
-      <div><p className="eyebrow">ПОСЛЕ ТРЕНИРОВКИ</p><h2 id="workout-review-title">Отзыв тренера</h2></div>
+      <div>{!compact && <p className="eyebrow">ПОСЛЕ ТРЕНИРОВКИ</p>}<h2 id="workout-review-title">Отзыв тренера</h2></div>
       {canEdit && !editing && <button type="button" className="secondary" onClick={() => setEditing(true)}>{hasReview ? 'Изменить' : 'Добавить'}</button>}
     </div>
     {editing ? <>
@@ -2556,7 +2548,7 @@ function WorkoutTrainerReview({ workout, canEdit, startEditing, authorName, savi
         <p className="workout-review-text">{workout.trainerReview}</p>
       </div>
       {(authorName || workout.trainerReviewedAt) && <p className="workout-response-meta">{[authorName || 'Тренер', trainerResponseTime(workout.trainerReviewedAt)].filter(Boolean).join(' · ')}</p>}
-    </> : <p className="muted">Добавьте реакцию и короткий ответ, пока впечатления свежие.</p>}
+    </> : !compact && <p className="muted">Добавьте реакцию и короткий ответ, пока впечатления свежие.</p>}
   </section>
 }
 

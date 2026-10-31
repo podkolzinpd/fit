@@ -1032,7 +1032,7 @@ test('iPhone: в live клиент видит те же действия с тр
   await page.locator('[data-exercise-ref="running"]').click()
   await page.getByRole('button', { name: 'Добавить 1' }).click()
   await saveCompactClientPlan(page)
-  await expect(page.getByRole('heading', { name: 'Тренировка', exact: true })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Тренировка', level: 1, exact: true })).toBeVisible()
   await page.getByRole('button', { name: 'Начать тренировку' }).click()
   await expect(page.locator('.live-timer')).toBeVisible()
   await page.keyboard.press('Escape')
@@ -1355,7 +1355,7 @@ async function createGroupedWorkout(page: Page, clientName: string, customRest =
     }
   }
   await page.getByRole('button', { name: 'Сохранить' }).click()
-  await expect(page.getByRole('heading', { name: 'Тренировка', exact: true })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Тренировка', level: 1, exact: true })).toBeVisible()
   await page.getByRole('button', { name: 'Начать' }).click()
   await expect(page.locator('.live-timer')).toBeVisible()
   await page.keyboard.press('Escape')
@@ -2403,7 +2403,7 @@ test('iPhone: результат прошлого плана записывае�
 
   await expect(page).toHaveURL(/\/workouts\/[0-9a-f-]+$/)
   await expect(page).not.toHaveURL(/\/live/)
-  await expect(page.getByRole('heading', { name: 'Тренировка', exact: true })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Тренировка', level: 1, exact: true })).toBeVisible()
   await expect(page.locator('.workout-detail-page .workout-status-completed')).toHaveCount(0)
   await expect(page.getByText('40 кг × 10', { exact: true }).first()).toBeVisible()
   await expectNoHorizontalOverflow(page)

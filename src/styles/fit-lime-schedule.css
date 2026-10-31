@@ -119,3 +119,11 @@
   font-size: 14px; line-height: 1.4;
 }
 .fit-lime-shell .fit-lime-plan-saved :is(a, button) { min-height: 44px; display: inline-flex; align-items: center; color: var(--lime-accent) }
+
+/* Titles never consume the exercise preview or resize the timed event. */
+.phone-frame .fit-lime-history-row .schedule-list-workout-title { font-size: 15px; line-height: 1.35; font-weight: 500; }
+.phone-frame .schedule-v2-event:not(.is-dense):not(.is-short) .schedule-workout-line { display: flex; gap: 6px; }
+.phone-frame .schedule-v2-event.is-short .schedule-workout-line { display: none; }
+.phone-frame .schedule-workout-line > span { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; min-width: 0; }
+.phone-frame .schedule-workout-line .schedule-event-workout-title { flex: 0 1 45%; }
+.phone-frame .schedule-workout-line .schedule-event-exercises { flex: 1 1 55%; }

@@ -49,6 +49,7 @@ export function BookingHistorySheet({ target, onClose, onApplied, onReload }: {
       <p className="booking-history-client">{target.clientName}</p>
       {source ? <>
         <h3>{workoutDisplayTitle(source)}</h3><time className="workout-card-date" dateTime={source.workoutDate}>{formatLocalDate(source.workoutDate)}</time>
+        {source.trainerReview && <p className="workout-source-review"><span className="workout-source-review-label">Отзыв тренера</span>{source.trainerReview}</p>}
         {groupIntoBlocks(source.exercises).map(block => <section key={block.blockId} className="booking-history-preview-block">
           {block.blockType !== 'single' && <p className="muted">{blockLabel(block.blockType, block.blockPreset)} · {block.blockRounds} кр.</p>}
           {block.exercises.map(exercise => <article key={exercise.id}><strong>{exercise.name}</strong><p>{compactCompletedSetSummary(exercise.sets, false, exercise.ref)}</p>{exercise.trainerComment && <p className="muted">{exercise.trainerComment}</p>}</article>)}
@@ -57,7 +58,7 @@ export function BookingHistorySheet({ target, onClose, onApplied, onReload }: {
       </> : <>
         {history.isPending && <p role="status">Загружаем историю…</p>}
         {!history.isPending && !history.isError && !history.hasNextPage && items.length === 0 && <p>Завершённых тренировок пока нет.</p>}
-        {items.map(item => <button type="button" key={item.id} className="booking-history-item" onClick={() => { setSource(item); setConfirmReplacement(null) }}><strong>{workoutDisplayTitle(item)}</strong><time dateTime={item.workoutDate}>{formatLocalDate(item.workoutDate)}</time><span>{workoutExerciseBrief(item.exercises)}</span></button>)}
+        {items.map(item => <button type="button" key={item.id} className="booking-history-item" onClick={() => { setSource(item); setConfirmReplacement(null) }}><strong>{workoutDisplayTitle(item)}</strong><time dateTime={item.workoutDate}>{formatLocalDate(item.workoutDate)}</time>{item.trainerReview && <span className="workout-source-review"><span className="workout-source-review-label">Отзыв тренера</span>{item.trainerReview}</span>}<span>{workoutExerciseBrief(item.exercises)}</span></button>)}
         {history.hasNextPage && <button type="button" className="secondary wide" disabled={history.isFetchingNextPage} onClick={() => void history.fetchNextPage()}>{history.isFetchingNextPage ? 'Загружаем…' : 'Показать ещё'}</button>}
         {history.isError && <p className="error" role="alert">Не удалось загрузить историю. <button type="button" onClick={() => void history.refetch()}>Повторить</button></p>}
       </>}

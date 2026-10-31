@@ -103,7 +103,7 @@ test('trainer creates, sees and assigns a reusable workout template', async ({ p
   await expect(page.getByRole('button', { name: 'Клиент: Анна Смирнова' })).toBeVisible()
   await page.getByRole('button', { name: 'Сохранить план' }).click()
 
-  await expect(page.getByText('ТРЕНИРОВКА КЛИЕНТА')).toBeVisible()
+  await expect(page.locator('.workout-header-eyebrow')).toHaveText('Анна Смирнова')
   await page.getByRole('button', { name: 'Другие действия с тренировкой' }).click()
   await page.getByRole('menuitem', { name: 'Сохранить как шаблон' }).click()
   await expect(page).toHaveURL(/\/schedule\/templates\/new\/editor\?sourceWorkout=/)
@@ -134,7 +134,7 @@ test('trainer creates, sees and assigns a reusable workout template', async ({ p
   await page.screenshot({ path: testInfo.outputPath('plan-template-applied-mobile.png'), fullPage: true, animations: 'disabled' })
   await page.getByRole('button', { name: 'Сохранить план' }).click()
   await expect(page).toHaveURL(/\/workouts\/[0-9a-f-]{36}$/)
-  await expect(page.getByText('ТРЕНИРОВКА КЛИЕНТА')).toBeVisible()
+  await expect(page.locator('.workout-header-eyebrow')).toHaveText('Анна Смирнова')
   await expect(page.getByText('Сохранить эту заметку')).toBeVisible()
   const savedWorkoutId = new URL(page.url()).pathname.split('/').at(-1)
   await page.goto(`/workouts/${savedWorkoutId}/edit`)

@@ -955,6 +955,7 @@ for (const fitLime of [true, false]) {
   test(`calorie basis stays readable and pilot scoped: ${fitLime}`, async ({ page }) => {
     await mockPilot(page, { fitLime, workouts: [{ ...workout, status: 'done', activeCaloriesKcal: 220, calorieEstimateBasis: 'Оценка по времени и фактической нагрузке' }] })
     await page.goto(`/workouts/${workoutId}`)
+    await page.locator('.coach-workout-summary > summary').click()
     await expect(page.getByRole('region', { name: 'Сводка тренировки' })).toContainText('220 ккал')
     await expect(page.locator('.workout-calorie-explanation')).toHaveCount(fitLime ? 1 : 0)
     if (!fitLime) await expect(page.getByRole('region', { name: 'Сводка тренировки' })).toContainText('Оценка по времени и фактической нагрузке')
@@ -1961,7 +1962,8 @@ test('untimed and near-midnight workouts remain reachable at the bottom of the d
   await expect(page.locator('.schedule-v2-untimed').getByText('Без времени', { exact: true })).toBeVisible()
   const late = page.locator('.schedule-v2-event')
   await expect(late).toHaveCount(1)
-  await expect(late).toContainText('30 мин')
+  await expect(late).toHaveAttribute('title', /^23:50–00:20 · /)
+  await expect(late.locator('.schedule-event-exercises')).toHaveText('Без упражнений')
   const bottom = await late.evaluate((element) => (element as HTMLElement).offsetTop + element.clientHeight)
   const gridHeight = await page.locator('.schedule-v2-timeline .day-grid').evaluate((element) => element.clientHeight)
   expect(gridHeight).toBeGreaterThanOrEqual(bottom)

@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test'
 import { z } from 'zod'
-import { clientId, coachGestureWorkout, mockPilot, publicTrainerDraft, publicTrainerId } from './fit-lime-fixtures'
+import { clientId, coachGestureWorkout, mockPilot, publicTrainerDraft, publicTrainerId, trainerId } from './fit-lime-fixtures'
 import type { WorkoutExerciseDraft } from '../src/shared/domain'
 
 async function readyPlanEditorFixture(page: Page, theme = 'dark') {
@@ -1576,6 +1576,29 @@ test('Yandex trainer detail keeps automatic exercise menu placement', async ({ p
   await expect(menu).toHaveCount(0)
 })
 
+test('public trainer remains public while the private app session is restoring', async ({ page }) => {
+  test.skip(process.env.VITE_YANDEX_ONLY_AUTH_ENABLED !== 'true', 'Requires production Yandex composition.')
+  await mockPilot(page, { role: 'client', profileId: clientId })
+  let releaseSession!: () => void
+  const sessionReady = new Promise<void>(resolve => { releaseSession = resolve })
+  await page.route('**/v1/auth/yandex/session', async route => {
+    await sessionReady
+    await route.fallback()
+  })
+  await page.route(`**/v1/trainers/${publicTrainerId}/public-profile`, route => route.fulfill({
+    json: { publicId: publicTrainerId, draft: publicTrainerDraft, published: publicTrainerDraft,
+      listedInCatalog: true, version: 1, isBrandTrainer: false,
+      publishedAt: '2026-10-29T09:00:00Z', updatedAt: '2026-10-29T09:00:00Z' },
+  }))
+  try {
+    await page.goto(`/trainers/${publicTrainerId}`)
+    await expect(page.locator('.public-trainer-page').getByRole('heading', { name: 'Тестовый тренер' })).toBeVisible()
+    await expect(page.getByRole('link', { name: 'Войти, чтобы написать', exact: true })).toHaveAttribute('href', '/auth')
+    await expect(page.getByRole('heading', { name: 'Unexpected Application Error!', exact: true })).toHaveCount(0)
+  } finally { releaseSession() }
+  await expect(page.getByRole('button', { name: 'Написать тренеру', exact: true })).toBeVisible()
+})
+
 // The two mobile widths cover the iPhone clipping report and responsive wrapping;
 // desktop covers the compact public shell. Themes share the same scroll contract.
 for (const { width, height, theme } of [
@@ -1638,3 +1661,41 @@ for (const { width, height, theme } of [
     }
   })
 }
+
+test('client profile recovers a merged card and transient empty list without a new login', async ({ page }, testInfo) => {
+  test.skip(process.env.VITE_YANDEX_ONLY_AUTH_ENABLED !== 'true'
+    || process.env.VITE_YANDEX_MAIN_ROUTING_ENABLED !== 'true', 'Requires native Yandex composition.')
+  const profileId = '22222222-2222-4222-8222-222222222222'
+  const oldCardId = '44444444-4444-4444-8444-444444444444'
+  const writes: string[] = []
+  let sessionReads = 0
+  let clientReads = 0
+  await mockPilot(page, { role: 'client', profileId, clientLime: true })
+  page.on('request', request => {
+    if (request.url().includes('/v1/') && !['GET', 'OPTIONS'].includes(request.method())) {
+      writes.push(new URL(request.url()).pathname)
+    }
+  })
+  await page.route('**/v1/auth/yandex/session', route => {
+    sessionReads += 1
+    return route.fulfill({ json: { accessMode: 'read_write', profile: {
+      id: profileId, firstName: 'Алексей', lastName: 'Смирнов', timezone: 'Europe/Moscow', accountRole: 'client',
+      client: { id: sessionReads === 1 ? oldCardId : clientId, trainerId, fullName: 'Алексей Смирнов' },
+      experiments: { clientLime: true, fitLime: false, trainerScheduleV2: false },
+    } } })
+  })
+  await page.route('**/v1/clients', route => {
+    clientReads += 1
+    return clientReads === 1 ? route.fulfill({ json: { clients: [] } }) : route.fallback()
+  })
+  await page.goto('/me/profile')
+  await expect(page.locator('.client-profile-identity strong')).toHaveText('Алексей Смирнов')
+  await expect(page.getByRole('link', { name: 'Изменить данные' })).toBeVisible()
+  await expect(page.getByText('Пока ничего нет', { exact: true })).toHaveCount(0)
+  expect(sessionReads).toBeGreaterThanOrEqual(2)
+  expect(clientReads).toBeGreaterThanOrEqual(2)
+  // Restoring an existing session must not register, relink, or create a card.
+  expect(writes.filter(path => path.startsWith('/v1/auth/') || path === '/v1/clients')).toEqual([])
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+  await page.screenshot({ path: testInfo.outputPath('recovered-client-profile.png'), fullPage: true })
+})

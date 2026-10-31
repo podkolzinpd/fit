@@ -10,7 +10,7 @@ import { formatLocalDate } from '../../shared/local-date'
 import { AddIcon, CopyIcon, ScheduleIcon } from '../../shared/icons'
 import { AsyncView, EmptyState, Field, InlineRequestError, OverflowMenu, Page, StatePanel, useConfirm } from '../../shared/ui'
 import { ExercisePicker, useExerciseCatalog } from '../exercises'
-import { QuickWorkoutEntry, WorkoutCta, WorkoutExerciseEditor, WorkoutHeader, type ParsedWorkoutExercise } from '../workouts'
+import { QuickWorkoutEntry, WorkoutCta, WorkoutExerciseEditor, WorkoutHeader, workoutDisplayTitle, workoutExerciseBrief, type ParsedWorkoutExercise } from '../workouts'
 import { VoiceNoteField } from '../voice-input'
 import { readWorkoutTemplateDraft, removeWorkoutTemplateDraft, workoutTemplateDraftKey, writeWorkoutTemplateDraft } from './workout-template-draft'
 
@@ -111,7 +111,7 @@ export function WorkoutTemplateSourcePage() {
       {query.data?.length ? <>
         <Field label="Клиент"><select value={clientId} onChange={(event) => setClientId(event.target.value)}><option value="">Все клиенты</option>{clients.map(([id, name]) => <option value={id} key={id}>{name}</option>)}</select></Field>
         <div className="template-source-workouts">{visible.map((workout) => <Link className="template-source-workout" key={workout.id} to={`/schedule/templates/new/editor?sourceWorkout=${workout.id}`}>
-          <span><strong>{workout.clientName}</strong><small>{formatLocalDate(workout.workoutDate)} · {templateMeta(workout.exercises)}</small></span><span>Выбрать</span>
+          <span className="template-source-copy"><strong>{workoutDisplayTitle(workout)}</strong><small>{workout.clientName} · {formatLocalDate(workout.workoutDate)}</small>{workout.trainerReview && <span className="workout-source-review"><span className="workout-source-review-label">Отзыв тренера</span>{workout.trainerReview}</span>}<span className="template-source-exercises">{workoutExerciseBrief(workout.exercises)}</span></span><span>Выбрать</span>
         </Link>)}</div>
       </> : <EmptyState title="Нет тренировок для основы" description="Создайте шаблон с нуля — тренировку клиента можно сохранить позже." action={<Link className="button primary" to="/schedule/templates/new/editor">Создать с нуля</Link>} />}
     </AsyncView>
