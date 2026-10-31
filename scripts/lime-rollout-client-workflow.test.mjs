@@ -7,7 +7,7 @@ test('client rollout is main-only manual, inspect by default and requires valida
   assert.doesNotMatch(workflow,/\n\s+(push|schedule|workflow_run|workflow_call):/)
   assert.match(workflow,/default: inspect/)
   assert.match(workflow,/test "\$GITHUB_REF" = refs\/heads\/main/)
-  assert.match(workflow,/node scripts\/lime-rollout-request\.mjs request/)
+  assert.match(workflow,/node \/request\.mjs request/)
   assert.match(workflow,/expected_revision:/)
   assert.match(workflow,/confirmation:/)
   assert.match(workflow,/group: cloudru-stage-vm\n\s+cancel-in-progress: false/)
@@ -30,4 +30,15 @@ test('all build channels retain the client pilot until an explicit all',()=>{
     const text=readFileSync(new URL(`../.github/workflows/${name}.yml`,import.meta.url),'utf8')
     assert.ok(text.includes("VITE_CLIENT_WORKOUT_ROLLOUT_MODE: ${{ vars.VITE_CLIENT_WORKOUT_ROLLOUT_MODE || 'pilot' }}"),name)
   }
+})
+
+// Cloud.ru runners provide Podman, not a host Node installation.
+test('input validation uses the verified API container before creating owner credentials',()=>{
+  assert.doesNotMatch(workflow,/^\s+node scripts\//m)
+  assert.match(workflow,/-v "\$PWD\/scripts\/lime-rollout-request\.mjs:\/request\.mjs:ro" "localhost\/fit-api:\$revision" node \/request\.mjs request/)
+  const verifiedImage=workflow.indexOf('test "$(sudo podman inspect fit-api-stage')
+  const validation=workflow.indexOf('node /request.mjs request')
+  const ownerCredentials=workflow.indexOf('sudo install -m 600')
+  assert.ok(verifiedImage>0 && verifiedImage<validation && validation<ownerCredentials)
+  assert.match(workflow,/-e LIME_TARGET=client -e "LIME_MODE=\$LIME_MODE" -e "EXPECTED_REVISION=\$EXPECTED_REVISION" -e "CONFIRMATION=\$CONFIRMATION"/)
 })
