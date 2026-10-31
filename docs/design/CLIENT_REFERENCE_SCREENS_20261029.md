@@ -1098,3 +1098,27 @@ WebKit-снимки просмотрены владельцем. Слот693 с�
 Production build-переменные и серверные режимы не менялись. После нового CI —
 только MODEall в candidateenv/repo, штатный merge/выпуск, serverinspect/all и
 независимая проверка обычного/нового клиента. До этого693 остаётся в работе.
+
+
+### Итерация 45 — 2026-10-31 — Codex / OpenAI
+
+PR1898/headce540 принят: CI41173382923 success32checks, Android41173382924
+success. Слит с match-head в mainff3665e82d7dd565e415244ff895eb32111e960c;
+Git-tree побайтно совпадает с проверенным head. Перед merge задан только
+VITE_CLIENT_WORKOUT_ROLLOUT_MODE=all в candidate/repository; остальные значения
+и прежний список сохранены. Стартовала штатная публикация main41175868819.
+Прямое разрешение человека на сообщение о publicChat guard получено;ФИТ14
+подтвердил сохранение нашего guard/regression и отказ от дублирующего1900.
+Сбой первого server inspect41175955115: на self-hosted runner нет hostNode,
+команда node scripts/lime-rollout-request.mjs завершилась127 до credentials/DB.
+Ни setter, ни даже чтение режима не выполнялись. Общее включение ещё не принято.
+Исправление ограничено служебным workflow: сначала проверяется текущий APIimage
+по RUNNING_SHA, затем существующий request-validator запускается внутри этого
+же контейнера без ownercredentials; только после него создаётся0600ownerfile.
+Установка Node на VM/изменение образа и ослабление входной проверки отвергнуты.
+Продуктовые исходники, таймер, ввод, темы, данные и права не меняются.
+Проверено:13/13 operator/request/workflow tests, в том числе container-preflight
+до создания credentials; bash -n и git diffcheck. Полный check запущен; новый CI
+fixPR обязателен, scope не ослабляется. Затем merge в следующем нашем слоте,
+фактический inspect, reuseall либо один expectedRevision clientall и независимый
+inspect; публичные46+16 и readback.693 остаётся в работе до этого результата.
