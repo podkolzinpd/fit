@@ -6,6 +6,24 @@ export interface LiveOperationRequest {
   operationId: string
 }
 
+export interface WorkoutAttendanceRequest {
+  disposition: 'auto' | 'charged' | 'unassigned' | 'free' | 'trial'
+  packageId: string | null
+}
+
+export function readFinishWorkoutRequest(body: unknown): (LiveOperationRequest & { attendance?: WorkoutAttendanceRequest }) | undefined {
+  const input = record(body), operation = readLiveOperationRequest(body)
+  if (!input || !operation) return undefined
+  if (input.attendance === undefined) return operation
+  const attendance = record(input.attendance)
+  if (!attendance) return undefined
+  const disposition = enumValue(attendance.disposition, ['auto', 'charged', 'unassigned', 'free', 'trial'] as const)
+  const packageId = attendance.packageId === null || attendance.packageId === undefined ? null
+    : typeof attendance.packageId === 'string' && UUID_PATTERN.test(attendance.packageId) ? attendance.packageId : undefined
+  if (!disposition || packageId === undefined || (disposition === 'charged') !== (packageId !== null)) return undefined
+  return { ...operation, attendance: { disposition, packageId } }
+}
+
 export interface LiveSetDraft {
   weightKg: number | null
   reps: number | null

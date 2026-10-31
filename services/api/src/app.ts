@@ -112,6 +112,7 @@ import {
   readLiveCommentRequest,
   readLiveExerciseRequest,
   readLiveOperationRequest,
+  readFinishWorkoutRequest,
   readLiveSetRemovalRequest,
   readLivePauseRequest,
   readLiveReorderRequest,
@@ -4123,7 +4124,7 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
   app.post('/v1/workouts/:workoutId/finish', async (request, reply) => {
     const sessionToken = readCompatibleYandexActorSession(request.headers)
     const { workoutId } = request.params as { workoutId?: unknown }
-    const command = readLiveOperationRequest(request.body)
+    const command = readFinishWorkoutRequest(request.body)
     if (sessionToken === undefined) {
       return reply.code(401).send({ error: 'unauthorized' })
     }
@@ -4145,6 +4146,7 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
         workoutId,
         command.expectedVersion,
         command.operationId,
+        ...(command.attendance ? [command.attendance] : []),
       ),
       (result) => reply
         .header('cache-control', 'no-store')
