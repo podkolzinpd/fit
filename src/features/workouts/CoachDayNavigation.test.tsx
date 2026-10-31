@@ -204,7 +204,7 @@ it('gives early vertical motion, outside release and cancel priority over hold',
 it('does not auto-scroll a held edge card before it is actually moved', () => {
   vi.useFakeTimers()
   let frame: FrameRequestCallback = () => undefined
-  vi.stubGlobal('requestAnimationFrame', vi.fn(callback => { frame = callback; return 1 }))
+  vi.stubGlobal('requestAnimationFrame', vi.fn((callback: FrameRequestCallback) => { frame = callback; return 1 }))
   vi.stubGlobal('cancelAnimationFrame', vi.fn())
   const drag = cardControls()
   render(<Surface drag={drag} />)
