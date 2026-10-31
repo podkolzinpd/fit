@@ -80,7 +80,7 @@ export function useCoachDaySwipe(enabled: boolean, date: LocalDate, openDay: (da
       else markScroll()
       if (gesture?.kind === 'drag') updateDrag()
     }
-    const cancel = (event: PointerEvent) => { if (gesture?.id === event.pointerId) { suppressClick = gesture.kind !== 'pending'; reset() } }
+    const cancel = (event: PointerEvent) => { if (gesture?.id === event.pointerId) { suppressClick = true; reset() } }
     const lost = (event: PointerEvent) => { if (event.target === root) cancel(event) }
     const down = (event: PointerEvent) => {
       suppressClick = false
@@ -154,9 +154,9 @@ export function useCoachDaySwipe(enabled: boolean, date: LocalDate, openDay: (da
       if (!suppressClick || event.detail === 0) return
       suppressClick = false; event.preventDefault(); event.stopPropagation()
     }
-    const key = (event: KeyboardEvent) => { suppressClick = false; if (event.key === 'Escape') reset() }
-    const background = () => { if (document.hidden) reset() }
-    const blur = () => reset()
+    const blur = () => { if (gesture) suppressClick = true; reset() }
+    const key = (event: KeyboardEvent) => { if (event.key === 'Escape') blur(); else suppressClick = false }
+    const background = () => { if (document.hidden) blur() }
     const contextMenu = (event: Event) => { if (gesture?.card) event.preventDefault() }
     root.addEventListener('scroll', scroll, true)
     root.addEventListener('pointerdown', down)
