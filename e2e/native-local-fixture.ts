@@ -28,7 +28,7 @@ async function attachNativeApi(context: BrowserContext): Promise<void> {
   })
 }
 
-export const test = base.extend<{ nativeIsolation: void; nativeApi: string }>({
+export const test = base.extend<{ nativeIsolation: void }, { nativeApi: string }>({
   nativeApi: [async ({ playwright }, provide, workerInfo) => {
     void playwright
     const child = spawn(process.execPath, [fileURLToPath(new URL('native-api-harness.mjs', import.meta.url))], {
@@ -65,13 +65,14 @@ export const test = base.extend<{ nativeIsolation: void; nativeApi: string }>({
         await exited
       }
     }
-  }, { timeout: 120_000 }],
+  }, { scope: 'worker', timeout: 120_000 }],
   nativeIsolation: [async ({ nativeApi, context }, use) => {
     fixtureOrigin = nativeApi
     await fixtureRequest('reset', {})
     await use()
     await Promise.all(context.pages().map(page => page.unrouteAll({ behavior: 'wait' })))
     await context.unrouteAll({ behavior: 'wait' })
+    await context.close()
   }, { auto: true }],
 })
 

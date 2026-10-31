@@ -55,7 +55,7 @@ process.once('SIGTERM', () => { void stop().then(() => process.exit(0)) })
 process.once('SIGINT', () => { void stop().then(() => process.exit(0)) })
 
 try {
-  // Scenarios share a local PostgreSQL cluster, but never a fixture database.
+  // Workers share a local PostgreSQL cluster, but never a fixture database.
   // Serialize initial role creation instead of racing the pg_authid unique key.
   await admin.query('select pg_advisory_lock(310312026)')
   try {
@@ -81,7 +81,7 @@ try {
   runtimeUrl.username = 'fit_api'
   runtimeUrl.password = 'fit-api-test-only'
   const { PgDatabasePool } = await nativeModule('db/pg-pool')
-  runtime = new PgDatabasePool({ connectionString: runtimeUrl.href, max: 5 }, 'api')
+  runtime = new PgDatabasePool({ connectionString: runtimeUrl.href, max: 1 }, 'api')
   const { buildApp } = await nativeModule('app')
   const services = [
     ['pilotClientsReader', 'pilot-clients-reader', 'DatabasePilotClientsReader'],
@@ -139,6 +139,10 @@ try {
   app = buildApp(options)
   // Fixture endpoints only exist in this loopback-only, isolated executable.
   app.post('/__fixtures/reset', async () => {
+    // Holding the only runtime connection drains earlier requests before TRUNCATE.
+    // This prevents reset/actor transaction deadlocks without retrying SQL errors.
+    const barrier = await runtime.connect()
+    try {
     await owner.query('truncate table public.profiles cascade')
     await owner.query(seed)
     mediaObjects.clear()
@@ -149,6 +153,7 @@ try {
     await owner.query(`insert into app_private.profile_rollout_assignments(profile_id,target_backend,access_mode,enabled) select id,'yandex','read_write',true from public.profiles on conflict(profile_id) do update set enabled=true,target_backend='yandex',access_mode='read_write'`)
     await owner.query(`insert into public.user_legal_acceptances(user_id,terms_version,privacy_version,source) select id,$1,$2,'existing_user' from public.profiles on conflict do nothing`, [terms, privacy])
     return { ok: true }
+    } finally { barrier.release() }
   })
   app.post('/__fixtures/session', async request => {
     const value = request.body

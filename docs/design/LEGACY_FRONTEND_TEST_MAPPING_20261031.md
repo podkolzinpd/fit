@@ -125,7 +125,7 @@
 
 - Общие login/register helpers теперь создают синтетическую native app-session;
   `native-api-harness.mjs` поднимает существующий API с `fit_api`/RLS и numbered
-  PostgreSQL migrations в отдельной БД каждого сценария. Реальные CRUD, reload,
+  PostgreSQL migrations в отдельной БД каждого worker с reset перед сценарием. Реальные CRUD, reload,
   приглашения, две роли, сообщения, профили и media проходят через native adapters.
   Только provider boundaries внешних AI/media и изолированные визуальные состояния
   остаются fixtures; production server не содержит fixture endpoints.
@@ -178,3 +178,9 @@ native route. Переносимые эталоны снимаются с refere
 Тайминги полного старого suite на сопоставимом окружении отсутствуют; сравнение
 скорости до/после не заявлено. Параметризации и CI shards не размножены; точные
 финальные результаты и ограничения публикуются в канонической записи P2/PR.
+
+Fixture isolation: reset ждёт единственное runtime connection, затем удерживает
+его до окончания seed. Предыдущие actor transactions завершены до TRUNCATE,
+старый browser context закрыт. SQL failures не повторяются/не скрываются.
+Это устраняет deadlock и повторные169 migrations на каждый тест; product pool
+и production runtime не меняются.
