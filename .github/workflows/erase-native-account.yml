@@ -1,0 +1,84 @@
+name: Erase one privately approved native client account
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        type: choice
+        required: true
+        default: inspect
+        options: [inspect, apply, verify]
+      receipt_run:
+        description: Previous apply run number, only for read-only verification
+        type: string
+        required: false
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: cloudru-stage-vm
+  cancel-in-progress: false
+jobs:
+  source:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Require successful current-main CI before deletion
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ERASURE_MODE: ${{ inputs.mode }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REPOSITORY" = podkolzinpd/fit
+          test "$GITHUB_REF" = refs/heads/main
+          case "$ERASURE_MODE" in inspect|verify) exit 0;; apply) ;; *) exit 1;; esac
+          test "$(gh api repos/podkolzinpd/fit/commits/main --jq .sha)" = "$GITHUB_SHA"
+          gh api 'repos/podkolzinpd/fit/actions/workflows/ci.yml/runs?branch=main&event=push&per_page=30' |
+            jq -e --arg sha "$GITHUB_SHA" 'any(.workflow_runs[]; .head_sha == $sha and .status == "completed" and .conclusion == "success")' >/dev/null
+  erase:
+    needs: source
+    runs-on: [self-hosted, cloudru-stage]
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Inspect, erase or verify only the approved native client
+        env:
+          CLOUDRU_DATABASE_CONFIG_JSON: ${{ secrets.CLOUDRU_STAGE_DATABASE_CONFIG_JSON }}
+          FIT_ACCOUNT_DELETION_TARGET_SHA256: ${{ secrets.FIT_ACCOUNT_DELETION_TARGET_SHA256 }}
+          ERASURE_MODE: ${{ inputs.mode }}
+          ERASURE_RECEIPT_RUN: ${{ inputs.receipt_run }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(hostname)" = fit-stage-app
+          case "$ERASURE_MODE" in inspect|apply) test -z "$ERASURE_RECEIPT_RUN";; verify) [[ "$ERASURE_RECEIPT_RUN" =~ ^[1-9][0-9]{0,19}$ ]];; *) exit 1;; esac
+          umask 077
+          sudo test ! -L /opt/fit/secrets
+          test "$(sudo stat -c '%u:%a' /opt/fit/secrets)" = 0:700
+          receipts=/opt/fit/secrets/account-erasure-receipts
+          sudo test ! -L "$receipts"
+          sudo install -d -m 700 "$receipts"
+          test "$(sudo stat -c '%u:%a' "$receipts")" = 0:700
+          owner="/opt/fit/secrets/account-erasure-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT.env"
+          sudo test ! -e "$owner"
+          sudo test ! -L "$owner"
+          sudo install -m 600 /dev/null "$owner"
+          trap 'sudo rm -f -- "$owner"' EXIT
+          jq -e '.MIGRATION_DATABASE_HOST == "10.70.10.67" and .MIGRATION_DATABASE_PORT == "5432" and .MIGRATION_DATABASE_NAME == "fit" and .MIGRATION_DATABASE_USER == "fit_owner" and .MIGRATION_DATABASE_URL == null and all(.[]; type == "string" and length > 0 and (test("[\u0000-\u001f\u007f]") | not))' <<<"$CLOUDRU_DATABASE_CONFIG_JSON" >/dev/null
+          jq -r 'to_entries[] | select(.key | test("^MIGRATION_DATABASE_(HOST|PORT|NAME|USER|PASSWORD)$")) | "\(.key)=\(.value)"' <<<"$CLOUDRU_DATABASE_CONFIG_JSON" | sudo tee "$owner" >/dev/null
+          test -n "$FIT_ACCOUNT_DELETION_TARGET_SHA256"
+          test "$FIT_ACCOUNT_DELETION_TARGET_SHA256" = "${FIT_ACCOUNT_DELETION_TARGET_SHA256//$'\n'/}"
+          test "$FIT_ACCOUNT_DELETION_TARGET_SHA256" = "${FIT_ACCOUNT_DELETION_TARGET_SHA256//$'\r'/}"
+          echo "::add-mask::$FIT_ACCOUNT_DELETION_TARGET_SHA256"
+          printf 'FIT_ACCOUNT_DELETION_TARGET_SHA256=%s\nERASURE_MODE=%s\nERASURE_RECEIPT_RUN=%s\nGITHUB_RUN_ID=%s\n' "$FIT_ACCOUNT_DELETION_TARGET_SHA256" "$ERASURE_MODE" "$ERASURE_RECEIPT_RUN" "$GITHUB_RUN_ID" | sudo tee -a "$owner" >/dev/null
+          printf 'MIGRATION_DATABASE_SSL_MODE=require\nGITHUB_REF=refs/heads/main\nGITHUB_REPOSITORY=podkolzinpd/fit\n' | sudo tee -a "$owner" >/dev/null
+          revision=$(cat /opt/fit/RUNNING_SHA)
+          [[ "$revision" =~ ^[a-f0-9]{40}$ ]]
+          sudo podman run --rm --read-only --user 0 --memory=256m --cpus=0.5 --timeout=240 --cap-drop=ALL --security-opt=no-new-privileges \
+            --env-file "$owner" -v "$receipts:/erasure-receipts:rw" \
+            -v "$PWD/scripts/cloudru-native-account-erasure-cli.mjs:/erasure-cli.mjs:ro" \
+            -v "$PWD/scripts/cloudru-native-account-erasure.mjs:/cloudru-native-account-erasure.mjs:ro" \
+            -v "$PWD/scripts/cloudru-account-deletion.mjs:/cloudru-account-deletion.mjs:ro" \
+            -v "$PWD/scripts/cloudru-account-history-audit.mjs:/cloudru-account-history-audit.mjs:ro" \
+            "localhost/fit-api:$revision" node /erasure-cli.mjs | tee -a "$GITHUB_STEP_SUMMARY"

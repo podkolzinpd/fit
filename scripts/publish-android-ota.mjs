@@ -1,5 +1,5 @@
 import { createHash, verify } from 'node:crypto'
-import { readFile, writeFile, mkdir, lstat, rename, unlink, statfs, chmod } from 'node:fs/promises'
+import { readFile, writeFile, mkdir, lstat, rename, unlink, statfs, chmod, readdir } from 'node:fs/promises'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { execFileSync } from 'node:child_process'
@@ -51,7 +51,7 @@ export async function verifyOtaDirectory(directory, commit, policy = androidOtaP
       throw new Error('OTA_ARCHIVE_SIGNATURE')
     }
   }
-  return { manifest, manifestPath, payload, archive, archivePath, policy }
+  return { manifest, manifestPath, payload, archive, archivePath, policy, nativeBuild: build }
 }
 
 async function safeDirectory(path, publicRoot) {
@@ -185,6 +185,25 @@ export async function requireKnownNativeShell(verified, root, newNativeApk = fal
   } catch (error) {
     if (error.code !== 'ENOENT') throw error
     if (!newNativeApk) throw new Error('OTA_NATIVE_APK_REQUIRED: build a signed APK for the changed native ABI')
+    // The SDK clears persisted OTA paths only when versionCode changes. A new
+    // native shell must not reuse a build number from an existing ABI channel.
+    const channels = resolve(root, 'android/alpha')
+    let entries
+    try { entries = await readdir(channels, { withFileTypes: true }) }
+    catch (readError) { if (readError.code === 'ENOENT') return; throw readError }
+    for (const entry of entries) {
+      if (!hash(entry.name)) continue
+      if (!entry.isDirectory() || entry.isSymbolicLink()) throw new Error('OTA_UNSAFE_DIRECTORY')
+      const previousPath = resolve(channels, entry.name, 'latest.json')
+      const info = await lstat(previousPath)
+      if (!info.isFile() || info.isSymbolicLink()) throw new Error('OTA_UNSAFE_MANIFEST')
+      const previous = decodeSignedManifest(await readFile(previousPath), verified.policy.publicKey)
+      const previousBuild = previous.release?.maxNativeBuild
+      if (previousBuild !== undefined && (!Number.isSafeInteger(previousBuild)
+          || !Number.isSafeInteger(verified.nativeBuild) || verified.nativeBuild <= previousBuild)) {
+        throw new Error('OTA_NATIVE_VERSION_MUST_INCREASE: changed ABI requires a higher versionCode')
+      }
+    }
   }
 }
 

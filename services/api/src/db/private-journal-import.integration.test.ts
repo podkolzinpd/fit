@@ -94,7 +94,7 @@ describe.skipIf(source === undefined)('one private journal into a new card', { c
       readRequest: readSavePlannedWorkoutRequest, saveCompleted: saveCompletedWorkout, createCard: createClientCard,
       persistReceipt: (state: string, receipt: JournalReceipt) => { receipts.push({ state, receipt }); return Promise.resolve() } }
     if (linked) await owner.query("insert into app_private.auth_identities(provider,provider_subject_sha256,profile_id,identity_origin) values('yandex',$1,$2,'native')", [hash(`synthetic-journal-subject-${coach}`), coach])
-    return { owner, runtime, coach, other, oldWorkout, before, packet, receipts, options }
+    return { owner, runtime, coach, other, oldWorkout, before, packet, receipts, options, workouts }
   }
 
   it('refuses unlinked or conflicting identities and inspects without writing a card', async () => {
@@ -143,6 +143,45 @@ describe.skipIf(source === undefined)('one private journal into a new card', { c
     const first = receipts[0]?.receipt.created[1]?.workoutId
     await owner.query("update public.workout_sets s set fact_weight_kg=99 from public.workout_exercises e where e.id=s.workout_exercise_id and e.workout_id=$1", [first])
     await expect(runPreparedNewCardImport({ ...options, mode: 'apply' })).rejects.toThrow('content_readback_failed')
+    expect((await owner.query<{ n: number }>('select count(*)::int n from public.workout_sets s join public.workout_exercises e on e.id=s.workout_exercise_id where e.workout_id=$1 and s.fact_weight_kg=99', [first])).rows[0]?.n).toBe(4)
+  })
+
+  for (const count of [85, 72]) it(`imports the reviewed ${count}-session packet with its name kept off GitHub configuration`, async () => {
+    if (!imported) throw new Error('successful_import_fixture_required')
+    const { owner, options, receipts, workouts: seed, coach } = imported
+    const total = count === 85 ? 401 : 413
+    const from = count === 85 ? '2025-06-08' : '2026-01-05'
+    const name = `Synthetic additional ${count}`
+    const workouts = Array.from({ length: count }, (_, index) => ({
+      ...seed[0]!, sourceOrdinal: index + 1, requestId: randomUUID(),
+      workoutDate: new Date(Date.parse(from + 'T00:00:00Z') + index * 86400000).toISOString().slice(0, 10),
+      notes: `Historical context, no invented sets ${index}`,
+      exercises: Array.from({ length: count === 85 ? index < 65 ? 5 : index === 84 ? 0 : 4 : index < 53 ? 6 : 5 }, (_, position) => ({
+        ...seed[0]!.exercises[0]!, position, ref: `snapshot:journal:${randomUUID()}`,
+        blockId: randomUUID(), name: `Historical literal ${index}/${position}`, sets: [],
+      })),
+    }))
+    const encode = (value: unknown) => {
+      const raw = JSON.stringify(value), encoded = gzipSync(raw).toString('base64'), middle = Math.ceil(encoded.length / 2)
+      return { parts: [encoded.slice(0, middle), encoded.slice(middle)], approvedSha256: hash(raw) }
+    }
+    const payload = { schemaVersion: 2, batchId: `synthetic-additional-${count}`, clientName: name, workouts }
+    const packet = encode(payload)
+    // The existing actor/legacy name hash remains unchanged. The newly approved
+    // name is authenticated by the complete packet digest, only on Cloud.ru.
+    expect(await runPreparedNewCardImport({ ...options, ...packet })).toMatchObject({ status: 'ready', workouts: count, exercises: total, sets: 0 })
+    const changedName = encode({ ...payload, clientName: 'Redirected' })
+    await expect(runPreparedNewCardImport({ ...options, parts: changedName.parts, approvedSha256: packet.approvedSha256 })).rejects.toThrow('private_payload_invalid')
+    const outOfRange = encode({ ...payload, workouts: workouts.map((w, i) => i ? w : { ...w, workoutDate: '2024-01-01' }) })
+    await expect(runPreparedNewCardImport({ ...options, ...outOfRange })).rejects.toThrow('dates_invalid')
+    expect(await runPreparedNewCardImport({ ...options, ...packet, mode: 'apply' })).toMatchObject({ status: 'imported', workouts: count, exercises: total, sets: 0, contentVerified: true })
+    const card = receipts.at(-1)?.receipt.clientId
+    expect((await owner.query<{ n: number }>('select count(*)::int n from public.workouts where client_id=$1', [card])).rows[0]?.n).toBe(count)
+    for (const table of ['trainer_finance_packages', 'trainer_finance_payments', 'trainer_finance_sessions']) {
+      expect((await owner.query<{ n: number }>(`select count(*)::int n from public.${table} where client_id=$1`, [card])).rows[0]?.n).toBe(0)
+    }
+    expect((await owner.query<{ n: number }>("select count(*)::int n from public.workouts w join public.clients c on c.id=w.client_id where c.trainer_id=$1 and c.full_name='Synthetic import'", [coach])).rows[0]?.n).toBe(137)
+    const first = receipts[0]?.receipt.created[1]?.workoutId
     expect((await owner.query<{ n: number }>('select count(*)::int n from public.workout_sets s join public.workout_exercises e on e.id=s.workout_exercise_id where e.workout_id=$1 and s.fact_weight_kg=99', [first])).rows[0]?.n).toBe(4)
   })
 })
