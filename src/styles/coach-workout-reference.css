@@ -152,6 +152,8 @@
 .coach-day-swipe .schedule-v2-event { -webkit-touch-callout: none; user-select: none; -webkit-user-select: none }
 .coach-day-swipe .schedule-v2-event.is-slot-moving { z-index: 5; box-shadow: 0 8px 24px rgb(0 0 0 / .2); outline: 2px solid var(--accent); transform: scale(1.015) }
 .schedule-slot-preview-time { font-variant-numeric: tabular-nums }
+.trainer-schedule-v2-shell .coach-day-swipe .schedule-v2-event.is-slot-moving .schedule-workout-line { display: block; font-size: 12px; line-height: 1.15 }
+.trainer-schedule-v2-shell .coach-day-swipe .schedule-v2-event.is-slot-moving.is-compact { grid-template-columns: minmax(0,1fr) }
 .coach-day-grid { animation: coach-day-content-in 160ms ease-out }
 @keyframes coach-day-content-in { from { opacity: .65; transform: translateY(3px) } to { opacity: 1; transform: none } }
 @media (prefers-reduced-motion: reduce) { .coach-day-grid { animation: none } }

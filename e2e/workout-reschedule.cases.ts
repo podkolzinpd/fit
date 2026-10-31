@@ -126,7 +126,8 @@ export function workoutRescheduleCases() {
     const profileId = 'c0ac0000-6010-4000-8000-000000000001'
     const target = { ...restTimerWorkout(), trainerId: profileId, createdBy: profileId, title: 'Тренировка с длинным названием', status: 'planned' as const,
       workoutDate: '2026-11-02', startTime: '10:00', endTime: '11:00', startedAt: null, trainingFormat: 'with_trainer' as const }
-    await mockPilot(page, { profileId, fitLime, scheduleDensity: density, workouts: [target] })
+    const overlap = { ...target, id: '12345678-1234-4234-8234-123456789012', clientName: 'Другой спортсмен', title: 'Другой план' }
+    await mockPilot(page, { profileId, fitLime, scheduleDensity: density, workouts: density === 'compact' ? [target, overlap] : [target] })
     if (density === 'compact') {
       await page.goto('/today?date=2026-11-02&week=2026-11-02')
       const card = page.locator(`[data-workout-id="${workoutId}"]`)
@@ -135,6 +136,9 @@ export function workoutRescheduleCases() {
       const hold = await beginClientGesture(page, card, browserName)
       await page.waitForTimeout(460)
       await expect(card).toHaveClass(/is-slot-moving/)
+      await expect(card.locator('time')).toBeVisible()
+      expect(await card.locator('time').evaluate(node => { const box = node.getBoundingClientRect(); return node.contains(document.elementFromPoint(box.x + box.width / 2, box.y + box.height / 2)) })).toBe(true)
+      await page.screenshot({ path: info.outputPath(`held-${theme}-${density}-${width}.png`) })
       await hold.move(0, 44); await hold.end()
     } else {
       await page.goto(`/workouts/${workoutId}`)
