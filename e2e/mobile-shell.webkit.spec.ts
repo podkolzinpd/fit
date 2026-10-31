@@ -82,7 +82,8 @@ async function saveCompactClientPlan(page: Page) {
 test('trainer invitation name stays inside the visible iPhone viewport above the keyboard', async ({ page }) => {
   await loginAsTrainer(page)
   await page.goto('/clients')
-  await page.getByRole('button', { name: 'Пригласить спортсмена' }).click()
+  await page.getByRole('button', { name: /^(Добавить|Добавить клиента)$/ }).click()
+  await page.getByRole('button', { name: 'Пригласить по ссылке' }).click()
   await page.getByLabel('Имя спортсмена').focus()
   await page.evaluate(() => {
     document.documentElement.style.setProperty('--app-visible-height', '420px')
@@ -691,7 +692,8 @@ test('iPhone: тренер назначает интервалы, спортсм
     await register(trainer, 'Интервальный тренер', `interval-trainer-${suffix}@fit.local`)
     await expect(trainer.getByRole('heading', { name: 'Сегодня' })).toBeVisible()
     await trainer.goto('/clients')
-    await trainer.getByRole('link', { name: 'Добавить' }).click()
+    await trainer.getByRole('button', { name: /^(Добавить|Добавить клиента)$/ }).click()
+    await trainer.getByRole('dialog', { name: 'Добавить клиента' }).getByRole('link', { name: 'Создать карточку', exact: true }).click()
     await trainer.getByLabel('Имя').fill('Интервальный спортсмен')
     await trainer.getByLabel('Пол').selectOption('female')
     await trainer.getByLabel('Возраст').fill('30')
@@ -787,6 +789,8 @@ test('iPhone: тренер назначает интервалы, спортсм
     }
     await expect(client.getByRole('button', { name: 'Готово', exact: true })).toHaveCount(0)
     await client.getByRole('button', { name: 'Завершить тренировку' }).click()
+    await expect(client.getByText('Все подходы выполнены. Завершить тренировку?', { exact: true })).toBeVisible()
+    await client.getByRole('button', { name: 'Завершить', exact: true }).click()
     await expect(client).toHaveURL(workoutUrl)
     await expect(client.locator('.workout-detail-page .workout-status-completed')).toHaveCount(0)
     await expect(client.getByRole('region', { name: 'Тренировка завершена' })).toBeVisible()
@@ -1437,7 +1441,7 @@ test('iPhone: header action stays vertically centered in trainer Clients', async
   await page.setViewportSize({ width: 390, height: 844 })
   await loginAsTrainer(page)
   await page.goto('/clients')
-  await expectActionTextVerticallyCentered(page.getByRole('link', { name: 'Добавить', exact: true }))
+  await expectActionTextVerticallyCentered(page.getByRole('button', { name: 'Добавить', exact: true }))
   await expectNoHorizontalOverflow(page)
 })
 
