@@ -938,6 +938,8 @@ export interface TrainerProfileDraft {
 }
 
 export interface TrainerProfessionalProfile {
+  /** Only server-approved corporate assignments; never part of the editable draft. */
+  yandexOffices?: Array<{ city: string; name: string }>
   publicId: UUID
   draft: TrainerProfileDraft
   published: TrainerProfileDraft | null

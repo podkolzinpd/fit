@@ -66,6 +66,26 @@ describe('PublicTrainerProfilePage', () => {
     mocks.getPublicTrainerProfile.mockResolvedValue(fullProfile)
   })
 
+  it('shows approved offices separately from manually entered training locations', async () => {
+    mocks.getPublicTrainerProfile.mockResolvedValue({ ...fullProfile, yandexOffices: [
+      { city: 'Санкт-Петербург', name: 'БЦ Бенуа' }, { city: 'Москва', name: 'Тестовый офис' },
+    ], published: { ...fullProfile.draft, customLocations: ['Частный фитнес-клуб'] } })
+    renderPage()
+    expect(await screen.findByText('Тренер Яндекса', { exact: true })).toBeVisible()
+    expect(screen.getByRole('region', { name: 'Офисы Яндекса' })).toHaveTextContent('Санкт-Петербург · БЦ Бенуа')
+    expect(screen.getByRole('region', { name: 'Офисы Яндекса' })).toHaveTextContent('Москва · Тестовый офис')
+    expect(screen.getByRole('list', { name: 'Места тренировок' })).toHaveTextContent('Частный фитнес-клуб')
+  })
+
+  it('does not treat a self-entered office name as approval', async () => {
+    mocks.getPublicTrainerProfile.mockResolvedValue({ ...fullProfile, yandexOffices: [],
+      published: { ...fullProfile.draft, customLocations: ['Яндекс, БЦ Бенуа'] } })
+    renderPage()
+    expect(await screen.findByText('Яндекс, БЦ Бенуа', { exact: true })).toBeVisible()
+    expect(screen.queryByText('Тренер Яндекса', { exact: true })).toBeNull()
+    expect(screen.queryByRole('region', { name: 'Офисы Яндекса' })).toBeNull()
+  })
+
   it('keeps the contact action before the long profile details and returns to the catalog', async () => {
     renderPage({ pathname: '/trainers/profile-id', state: { from: '/me/trainers' } })
 

@@ -777,6 +777,25 @@ test('private journal transport rejects corruption, redirected identity and deco
   assert.throws(() => readJournalTransport(redirected.parts, redirected.sha, name), /private_payload_invalid/)
   const large = Buffer.alloc(3 * 1024 * 1024, 32), zipped = gzipSync(large).toString('base64')
   assert.throws(() => readJournalTransport([zipped.slice(0, -4), zipped.slice(-4)], hash(large), name), /private_payload_invalid/)
+  for (const [count, total] of [[85, 401], [72, 413]]) {
+    const movements = Array.from({ length: count }, (_, i) => ({ trainingFormat: 'with_trainer',
+      exercises: Array.from({ length: Math.floor(total / count) + (i < total % count ? 1 : 0) }, () => ({ sets: [] })),
+    }))
+    const reviewed = { ...payload, schemaVersion: 2, clientName: 'Synthetic additional card', workouts: movements }
+    const encoded = encode(reviewed)
+    assert.deepEqual(readJournalTransport(encoded.parts, encoded.sha, name), reviewed)
+    const renamed = encode({ ...reviewed, clientName: 'Another card' })
+    assert.throws(() => readJournalTransport(renamed.parts, encoded.sha, name), /private_payload_invalid/)
+    for (const changed of [movements.slice(1), movements.map((w, i) => i ? w : { ...w, exercises: [] }),
+      movements.map((w, i) => i ? w : { ...w, exercises: w.exercises.map((e, j) => j ? e : { sets: [{}] }) })]) {
+      const invalid = encode({ ...reviewed, workouts: changed })
+      assert.throws(() => readJournalTransport(invalid.parts, invalid.sha, name), /private_payload_invalid/)
+    }
+    const redirected = encode({ ...reviewed, actorId: historyFixtureIds[0] })
+    assert.throws(() => readJournalTransport(redirected.parts, redirected.sha, name), /private_payload_invalid/)
+  }
+  const legacyAsAdditional = encode({ ...payload, schemaVersion: 2 })
+  assert.throws(() => readJournalTransport(legacyAsAdditional.parts, legacyAsAdditional.sha, name), /private_payload_invalid/)
 })
 
 test('private journal receipts are authenticated ciphertext and accept only a public RSA key', () => {
