@@ -366,7 +366,7 @@ export async function runPreparedNewCardImport({mode,owner,runtime,target,legacy
    where r.client_id=c.id and r.trainer_id=$1 and r.status='active'))
   and (lower(btrim(c.full_name))=lower($2) or lower(btrim(ct.alias))=lower($2)
    or split_part(lower(btrim(c.full_name)),' ',1)=lower($2)
-   or split_part(lower(btrim(ct.alias)),' ',1)=lower($2)) limit 11`,[trainerId,payload.clientName.toLowerCase()])).rows
+   or split_part(lower(btrim(ct.alias)),' ',1)=lower($2)) limit 11`,[trainerId,payload.clientName])).rows
  const resolveExisting=async connection=>{
   const matches=await matchingCards(connection)
   if(matches.length!==1)failOrchestrator(matches.length?'existing_card_ambiguous':'existing_card_missing')
