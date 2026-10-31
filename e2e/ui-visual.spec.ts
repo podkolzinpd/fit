@@ -743,7 +743,7 @@ fact: { weightKg: options.bestResults && index === 0 ? 40 : 35, reps: 10, durati
         blockId: `${workout.id}-${ref}-block`, sets: base.sets.map((set) => (setFixture({
 ...set,
 id: `${workout.id}-${ref}-set`,
-fact: { weightKg: index === 0 ? currentWeight : previousWeight }
+fact: { ...set.fact, weightKg: index === 0 ? currentWeight : previousWeight }
 }))) })
     })
   }
@@ -777,7 +777,7 @@ exercises: [{ ...exercise, id: exerciseId, blockId: exerciseId, sets: [setFixtur
 ...set,
 id: `b3000000-0000-4000-8000-${suffix}`,
 confirmedAt: `${workoutDate}T15:30:00Z`,
-fact: { weightKg: 40 + index }
+fact: { ...set.fact, weightKg: 40 + index }
 })] }]
 })
     })
