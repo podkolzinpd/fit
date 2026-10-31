@@ -590,6 +590,49 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
     let enrollmentPool: PgDatabasePool | undefined
     let runtimePool: PgDatabasePool | undefined
 
+    it('reschedules one coach plan with its interval, replay and all existing data intact', async () => {
+      if (!ownerPool || !runtimePool) throw new Error('Database not ready')
+      const id = randomUUID(), exercise = randomUUID(), set = randomUUID(), operation = randomUUID()
+      await ownerPool.query(`insert into public.workouts(id,trainer_id,client_id,created_by,workout_date,start_time,end_time,status,title,notes,training_format)
+        values($1,$2,$3,$2,current_date,'10:00','11:00','planned','Synthetic slot','Keep note','with_trainer')`, [id,ACTOR_ID,CLIENT_ID])
+      try {
+        await ownerPool.query(`insert into public.workout_exercises(id,workout_id,trainer_id,client_id,position,exercise_source,exercise_ref,exercise_name,muscle_group,input_kind)
+          values($1,$2,$3,$4,0,'system','slot-test','Synthetic exercise','legs','strength')`, [exercise,id,ACTOR_ID,CLIENT_ID])
+        await ownerPool.query(`insert into public.workout_sets(id,workout_exercise_id,trainer_id,client_id,position,plan_reps)
+          values($1,$2,$3,$4,0,12)`, [set,exercise,ACTOR_ID,CLIENT_ID])
+        const exercisesBefore = await ownerPool.query('select to_jsonb(e) as row from public.workout_exercises e where id=$1', [exercise])
+        const children = await ownerPool.query('select to_jsonb(s) as row from public.workout_sets s where id=$1', [set])
+        const finance = await ownerPool.query('select to_jsonb(s) as row from public.trainer_finance_sessions s where workout_id=$1', [id])
+        const move = (version:number, endTime:string|null='12:30', op=operation, actor=ACTOR_ID) => withActorTransaction(runtimePool!,actor,
+          client => rescheduleWorkout(client,id,'2099-01-01','11:30',version,{endTime,operationId:op}))
+        await expect(move(1,'12:30',randomUUID(),OUTSIDE_TRAINER_ID)).rejects.toMatchObject({failure:'forbidden'})
+        await expect(move(1,'12:30',randomUUID(),OTHER_ACTOR_ID)).rejects.toMatchObject({failure:'forbidden'})
+        expect(await move(1)).toBe(2)
+        expect(await move(1)).toBe(2)
+        await expect(move(1,'13:00')).rejects.toThrow()
+        await expect(move(1,'12:30',randomUUID())).rejects.toMatchObject({failure:'conflict'})
+        const result = await ownerPool.query(`select workout_date::text,start_time::text,end_time::text,status,title,notes,version::integer from public.workouts where id=$1`,[id])
+        expect(result.rows).toEqual([{workout_date:'2099-01-01',start_time:'11:30:00',end_time:'12:30:00',status:'planned',title:'Synthetic slot',notes:'Keep note',version:2}])
+        expect((await ownerPool.query('select to_jsonb(e) as row from public.workout_exercises e where id=$1',[exercise])).rows).toEqual(exercisesBefore.rows)
+        expect((await ownerPool.query('select to_jsonb(s) as row from public.workout_sets s where id=$1',[set])).rows).toEqual(children.rows)
+        expect((await ownerPool.query('select to_jsonb(s) as row from public.trainer_finance_sessions s where workout_id=$1',[id])).rows).toEqual(finance.rows)
+        expect(await move(2,null,randomUUID())).toBe(3)
+        expect(await withActorTransaction(runtimePool,ACTOR_ID,client => rescheduleWorkout(client,id,'2099-01-01','23:00',3,{endTime:'01:00',operationId:randomUUID()}))).toBe(4)
+        expect((await ownerPool.query('select start_time::text,end_time::text from public.workouts where id=$1',[id])).rows).toEqual([{start_time:'23:00:00',end_time:'01:00:00'}])
+        await ownerPool.query("update public.workouts set status='in_progress',started_at=now() where id=$1",[id])
+        await expect(move(4,null,randomUUID())).rejects.toThrow()
+        await ownerPool.query("update public.workouts set status='done',completed_at=now() where id=$1",[id])
+        await expect(move(4,null,randomUUID())).rejects.toThrow()
+        await ownerPool.query("update public.workouts set status='planned',started_at=null,completed_at=null where id=$1",[id])
+        await ownerPool.query('update public.clients set archived_at=now() where id=$1',[CLIENT_ID])
+        await expect(move(4,null,randomUUID())).rejects.toMatchObject({failure:'forbidden'})
+      } finally {
+        await ownerPool.query('update public.clients set archived_at=null where id=$1',[CLIENT_ID])
+        await ownerPool.query('delete from public.workouts where id=$1',[id])
+        await ownerPool.query("delete from app_private.live_workout_operations where resource_id=$1",[id])
+      }
+    })
+
     it('atomically checks the removed set version while preserving replay, ownership, facts and last-set guards', async () => {
       if (!ownerPool || !runtimePool) throw new Error('Database not ready')
       const id = randomUUID(), exercise = randomUUID(), target = randomUUID(), sibling = randomUUID(), op = randomUUID()

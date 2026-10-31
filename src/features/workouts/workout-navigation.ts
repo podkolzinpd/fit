@@ -5,6 +5,7 @@ export type WorkoutNavigationState = {
   confirmAttendance?: boolean
   returnTo?: string
   fromWorkoutDetailId?: string
+  scheduleFocus?: { workoutId: string; startTime: string | null }
   justCompleted?: boolean
   firstPlanClient?: { id: string; fullName: string }
 }
