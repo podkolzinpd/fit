@@ -178,7 +178,8 @@ for (const role of ['client', 'trainer'] as const) {
         await expect(page.getByRole('button', { name: 'Выбрать упражнение' })).toBeVisible();
         await expect(page.getByText('Пустую тренировку нельзя завершить как выполненную.')).toHaveCount(0);
         const deleteButton = page.locator('.live-bottom-bar').getByRole('button', { name: 'Удалить тренировку' });
-        await expect(page.locator('.live-bottom-bar button')).toHaveCount(1);
+        await expect(page.locator('.live-bottom-bar button')).toHaveCount(role === 'trainer' ? 2 : 1);
+        await expect(page.locator('.live-bottom-bar').getByRole('button', { name: 'Завершить тренировку', exact: true })).toHaveCount(role === 'trainer' ? 1 : 0);
         await expect(deleteButton.locator('[data-icon="trash"]')).toBeVisible();
         const hitTarget = await deleteButton.boundingBox();
         expect(hitTarget?.width).toBeGreaterThanOrEqual(44);
@@ -770,6 +771,8 @@ test('trainer: reload of finished Live does not pop past its detail', async ({ p
     await page.getByRole('button', { name: 'Начать тренировку', exact: true }).click();
     await expect(page).toHaveURL(`${detailPath}/live`);
     await expect.poll(() => state.status).toBe('in_progress');
+    // Let the start mutation and Live query settle before simulating an external finish.
+    await expect(page.getByText('LIVE', { exact: true })).toBeVisible();
     state.status = 'done';
     await page.reload();
     await expect(page).toHaveURL(detailPath);
