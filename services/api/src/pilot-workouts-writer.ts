@@ -6,6 +6,7 @@ import type { DatabasePool } from './db/types.js'
 import type {
   LiveExerciseSnapshot,
   LiveSetDraft,
+  WorkoutAttendanceRequest,
 } from './live-workout-request.js'
 import type { PlannedWorkoutDraft } from './planned-workout-request.js'
 import {
@@ -156,6 +157,7 @@ export interface PilotWorkoutsWriter {
     workoutId: string,
     expectedVersion: number,
     operationId: string,
+    attendance?: WorkoutAttendanceRequest,
   ): Promise<PilotLiveCommandResult>
   setLivePause(
     sessionToken: YandexActorSessionInput,
@@ -422,9 +424,10 @@ export class DatabasePilotWorkoutsWriter implements PilotWorkoutsWriter {
     workoutId: string,
     expectedVersion: number,
     operationId: string,
+    attendance?: WorkoutAttendanceRequest,
   ): Promise<PilotLiveCommandResult> {
     return this.withSession(sessionToken, (client) =>
-      finishLiveWorkout(client, workoutId, expectedVersion, operationId))
+      finishLiveWorkout(client, workoutId, expectedVersion, operationId, attendance))
   }
 
   setLivePause(
