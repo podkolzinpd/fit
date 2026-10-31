@@ -10,6 +10,49 @@ import { trainerId, clientId, workoutId, conversationId, messageId, newWorkoutId
 // Visual and mixed interaction/state acceptance; all original assertions are retained.
 test.skip(!process.env.FIT_SCHEDULE_V2_VISUAL, 'Dedicated server-backed pilot harness')
 
+// Narrow client rows and the one-add flow use the production route and fonts.
+test('Compact clients keep search, initials and one add flow in trainer Lime', { tag: ['@lime-clients', '@lime-critical'] }, async ({ page }, info) => {
+  const theme = 'light'
+  await page.setViewportSize({ width: 320, height: 844 })
+  await page.addInitScript(value => localStorage.setItem('fit.appTheme', value), theme)
+  await mockPilot(page, { fitLime: true, clientRecords: [
+    { id: clientId, fullName: 'Александра Константинопольская-Оченьдлиннаяфамилия', archivedAt: null, version: 1 },
+    { id: newWorkoutId, fullName: 'Марк', archivedAt: null, version: 1 },
+  ] })
+  await page.goto('/clients')
+  // Trainer Lime retains its existing fixed dark identity in either base theme.
+  await expect(page.locator('.phone-frame')).not.toHaveClass(/theme-light/)
+  await page.getByRole('button', { name: 'Понятно', exact: true }).click()
+  await expect(page.getByRole('searchbox', { name: 'Поиск клиента' })).toBeVisible()
+  const card = page.locator('.client-card').filter({ hasText: 'Александра' })
+  const shortCard = page.locator('.client-card').filter({ hasText: 'Марк' })
+  const shortHeight = (await shortCard.boundingBox())!.height
+  expect(shortHeight).toBeGreaterThanOrEqual(68)
+  expect(shortHeight).toBeLessThanOrEqual(84)
+  expect((await shortCard.locator('.client-avatar').boundingBox())!.width).toBe(36)
+  await expect(card.locator('.client-avatar')).toHaveText('АК')
+  await expect(card).not.toContainText(/ИМТ|Нужно дополнить профиль/)
+  await page.getByRole('searchbox', { name: 'Поиск клиента' }).fill('Нет совпадений')
+  await expect(card).toHaveCount(0)
+  await page.locator('.clients-search-empty').getByRole('button', { name: 'Очистить поиск' }).click()
+  await expect(card).toHaveCount(1)
+  await page.getByRole('button', { name: 'Добавить', exact: true }).click()
+  const dialog = page.getByRole('dialog', { name: 'Добавить клиента', exact: true })
+  expect((await dialog.getByRole('button', { name: 'Закрыть' }).locator('svg').boundingBox())!.width).toBe(24)
+  await expect(dialog.getByRole('link', { name: 'Создать карточку' })).toHaveAttribute('href', '/clients/new')
+  await page.screenshot({ path: info.outputPath(`clients-add-${theme}.png`) })
+  await dialog.getByRole('button', { name: 'Закрыть' }).click()
+  await expect(page.getByRole('button', { name: 'Добавить', exact: true })).toBeFocused()
+  await page.screenshot({ path: info.outputPath(`clients-compact-${theme}.png`) })
+  const title = card.locator('.client-card-copy strong')
+  expect(await title.evaluate(el => el.scrollWidth <= el.clientWidth + 1)).toBe(true)
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+  for (const width of [390, 736]) {
+    await page.setViewportSize({ width, height: 844 })
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+  }
+})
+
 const scheduleGuideId = 'coach-schedule-guide-fixed2-2026-10-17'
 const dayGuideId = 'lime-day-workspace-2026-10'
 const scheduleCoachmarks = [scheduleGuideId, 'lime-schedule-history-2026-10', 'lime-schedule-ownership-2026-10', 'coach-schedule-filters-2026-10-16']

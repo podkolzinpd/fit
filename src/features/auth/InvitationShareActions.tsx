@@ -60,12 +60,16 @@ export function InvitationShareButton({
   </>
 }
 
-export function InviteAthleteButton({ className, label = 'Пригласить спортсмена' }: { className?: string; label?: string }) {
+export function InviteAthleteButton({ className, label = 'Пригласить спортсмена', open: controlledOpen, onOpenChange }: {
+  className?: string; label?: string; open?: boolean; onOpenChange?: (open: boolean) => void
+}) {
   const { actor } = useAuth()
   const fitLimePilot = isFitLimeEnabled(actor) && isTrainerScheduleV2Enabled(actor)
   const backend = useDataBackend()
   const queryClient = useQueryClient()
-  const [open, setOpen] = useState(false)
+  const [internalOpen, setInternalOpen] = useState(false)
+  const open = controlledOpen ?? internalOpen
+  const setOpen = (value: boolean) => { setInternalOpen(value); onOpenChange?.(value) }
   const openerRef = useRef<HTMLButtonElement>(null)
   const nameDialogRef = useRef<HTMLElement>(null)
   const [fullName, setFullName] = useState('')
@@ -118,7 +122,7 @@ export function InviteAthleteButton({ className, label = 'Пригласить �
 
   const host = document.querySelector('.phone-frame') ?? document.body
   return <>
-    <button ref={openerRef} type="button" className={className} aria-label="Пригласить спортсмена" onClick={() => setOpen(true)}>{label}</button>
+    {controlledOpen === undefined && <button ref={openerRef} type="button" className={className} aria-label="Пригласить спортсмена" onClick={() => setOpen(true)}>{label}</button>}
     {open && invitation.data === undefined && createPortal(<div className="modal-overlay invitation-name-overlay" role="presentation" onPointerDown={(event) => {
       if (event.target === event.currentTarget) close()
     }}>

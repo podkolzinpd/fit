@@ -1,0 +1,12 @@
+.clients-add-sheet { position:fixed; inset:auto 0 max(12px,env(safe-area-inset-bottom)); width:min(420px,calc(100% - 32px)); max-height:calc(100% - 32px); margin:0 auto; padding:20px; border:1px solid var(--border); border-radius:var(--radius-lg); background:var(--surface-raised); color:var(--fg); font:inherit; }
+.clients-add-sheet::backdrop { background:var(--overlay); }
+.clients-add-sheet > header { display:flex; gap:12px; align-items:center; justify-content:space-between; margin-bottom:16px; }
+.clients-add-sheet h2 { margin:0; }
+.clients-add-sheet header > button { flex:0 0 44px; display:grid; place-items:center; width:44px; min-height:44px; padding:0; }
+.clients-add-sheet header > button svg { width:24px; height:24px; }
+.clients-add-sheet > .button,.clients-add-sheet > button { display:flex; align-items:center; justify-content:center; width:100%; min-height:48px; margin-top:8px; }
+.fit-lime-shell .clients-add-sheet { padding:20px; border-color:var(--lime-divider); border-radius:28px; background:var(--lime-surface); color:var(--lime-text); }
+.fit-lime-shell .clients-add-sheet h2 { font-size:24px; font-weight:500; letter-spacing:-.03em; }
+.fit-lime-shell .clients-add-sheet > .button,.fit-lime-shell .clients-add-sheet > button { border-radius:18px; min-height:52px; }
+.fit-lime-shell .clients-add-sheet > .primary { background:var(--lime-accent); color:var(--lime-text-on-accent); }
+.fit-lime-shell .clients-add-sheet > .secondary { background:var(--lime-surface-raised); color:var(--lime-text); border-color:var(--lime-divider); }
