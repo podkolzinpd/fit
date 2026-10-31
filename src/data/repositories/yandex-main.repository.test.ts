@@ -966,6 +966,87 @@ describe('Yandex main repository', () => {
     expect(fetchMock).toHaveBeenCalledTimes(2)
   })
 
+  it.each([false, true])('shares concurrent client reads but refreshes a completed response (archived=%s)', async (archived) => {
+    let name = 'До обновления'
+    const fetchMock = vi.fn<typeof fetch>().mockImplementation(() => Promise.resolve(jsonResponse({ clients: [ownCard(name)] })))
+    vi.stubGlobal('fetch', fetchMock)
+    const repository = createYandexMainRepository(apiBaseUrl, sessionToken, actor)
+    const read = () => repository.clients.list(archived)
+    const [first, concurrent] = await Promise.all([read(), read()])
+    expect(first[0]?.fullName).toBe(name)
+    expect(concurrent).toEqual(first)
+    expect(fetchMock).toHaveBeenCalledTimes(archived ? 2 : 1)
+    name = 'После обновления'
+    expect((await read())[0]?.fullName).toBe(name)
+    expect(fetchMock).toHaveBeenCalledTimes(archived ? 4 : 2)
+  })
+
+  it('does not retain a successful empty clients response for the session', async () => {
+    const fetchMock = vi.fn().mockResolvedValueOnce(jsonResponse({ clients: [] }))
+      .mockResolvedValueOnce(jsonResponse({ clients: [ownCard()] }))
+    vi.stubGlobal('fetch', fetchMock)
+    const repository = createYandexMainRepository(apiBaseUrl, sessionToken, actor)
+    expect(await repository.clients.list()).toEqual([])
+    expect((await repository.clients.list())[0]?.id).toBe(clientId)
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+  })
+
+  it.each(['merged', 'pre-card'] as const)('reads the server-confirmed own card for a stale %s actor', async (kind) => {
+    const fetchMock = vi.fn<typeof fetch>().mockImplementation((url) => Promise.resolve(String(url).endsWith('/v1/clients')
+      ? jsonResponse({ clients: [ownCard()] }) : jsonResponse(ownProfile())))
+    vi.stubGlobal('fetch', fetchMock)
+    const currentActor: SessionActor = kind === 'merged' ? staleClientActor() : { ...actor, role: 'client' }
+    const repository = createYandexMainRepository(apiBaseUrl, sessionToken, currentActor)
+    expect((await repository.clients.getMine())?.id).toBe(clientId)
+    expect(fetchMock.mock.calls.map(([url]) => url)).toEqual([
+      `${apiBaseUrl}/v1/clients`, `${apiBaseUrl}/v1/auth/yandex/session`,
+    ])
+  })
+
+  it('rechecks the list once when the own card appears during the server profile read', async () => {
+    const fetchMock = vi.fn().mockResolvedValueOnce(jsonResponse({ clients: [] }))
+      .mockResolvedValueOnce(jsonResponse(ownProfile()))
+      .mockResolvedValueOnce(jsonResponse({ clients: [ownCard()] }))
+    vi.stubGlobal('fetch', fetchMock)
+    expect((await createYandexMainRepository(apiBaseUrl, sessionToken, staleClientActor()).clients.getMine())?.id).toBe(clientId)
+    expect(fetchMock).toHaveBeenCalledTimes(3)
+  })
+
+  it.each([
+    { profile: { ...ownProfile().profile, id: archivedClientId } },
+    { profile: { ...ownProfile().profile, accountRole: 'trainer' } },
+  ])('rejects a server profile that does not confirm this client account: %j', async (payload) => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValueOnce(jsonResponse({ clients: [ownCard()] }))
+      .mockResolvedValueOnce(jsonResponse({ accessMode: 'read_write', ...payload })))
+    await expect(createYandexMainRepository(apiBaseUrl, sessionToken, staleClientActor()).clients.getMine())
+      .rejects.toMatchObject({ code: 'invalid_response' })
+  })
+
+  it('keeps an account without a client card empty instead of choosing an available card', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValueOnce(jsonResponse({ clients: [ownCard()] }))
+      .mockResolvedValueOnce(jsonResponse({ accessMode: 'read_write', profile: { ...ownProfile().profile, client: null } })))
+    expect(await createYandexMainRepository(apiBaseUrl, sessionToken, staleClientActor()).clients.getMine()).toBeNull()
+  })
+
+  it('preserves a missing accessible card as null and lets the next read recover', async () => {
+    const fetchMock = vi.fn().mockResolvedValueOnce(jsonResponse({ clients: [] }))
+      .mockResolvedValueOnce(jsonResponse(ownProfile()))
+      .mockResolvedValueOnce(jsonResponse({ clients: [] }))
+      .mockResolvedValueOnce(jsonResponse({ clients: [ownCard()] }))
+      .mockResolvedValueOnce(jsonResponse(ownProfile()))
+    vi.stubGlobal('fetch', fetchMock)
+    const repository = createYandexMainRepository(apiBaseUrl, sessionToken, staleClientActor())
+    expect(await repository.clients.getMine()).toBeNull()
+    expect((await repository.clients.getMine())?.id).toBe(clientId)
+  })
+
+  it('propagates session confirmation failure without treating it as an empty profile', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValueOnce(jsonResponse({ clients: [ownCard()] }))
+      .mockResolvedValueOnce(jsonResponse({ error: 'session_invalid' }, 401)))
+    await expect(createYandexMainRepository(apiBaseUrl, sessionToken, staleClientActor()).clients.getMine())
+      .rejects.toThrow()
+  })
+
   it('retries failed training data without keeping a rejected workout list', async () => {
     pilot.listTrainingData
       .mockRejectedValueOnce(new Error('offline'))
@@ -1661,4 +1742,20 @@ function installContractFetch() {
 
 function emptyResponse(): Response {
   return new Response(null, { status: 204 })
+}
+
+function ownCard(fullName = 'Свой профиль') {
+  return { id: clientId, canArchive: false, hasAccount: true, fullName, canonicalFullName: fullName,
+    gender: null, ageYears: null, ageUpdatedAt: null, heightCm: null, goal: null, note: null,
+    currentWeightKg: null, archivedAt: null, version: 1, membershipVersion: 1 }
+}
+
+function ownProfile() {
+  return { accessMode: 'read_write', profile: { id: actor.userId, firstName: 'Клиент', lastName: null,
+    timezone: 'Europe/Moscow', accountRole: 'client',
+    client: { id: clientId, trainerId: actor.userId, fullName: 'Свой профиль' } } }
+}
+
+function staleClientActor(): SessionActor {
+  return { ...actor, kind: 'client', role: 'client', clientId: archivedClientId, trainerId: actor.userId, fullName: 'Старый профиль' }
 }

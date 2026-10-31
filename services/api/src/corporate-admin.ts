@@ -2,6 +2,33 @@ import type { FastifyInstance } from 'fastify'
 import type { DatabasePool } from './db/types.js'
 import { readYandexActorSession, withYandexActorSession, type YandexActorSession } from './yandex-actor-session.js'
 import { YandexAppSessionInvalidError } from './db/yandex-app-transaction.js'
+import type { MediaObjectStorage } from './object-storage-media.js'
+
+interface AdminTrainer {
+  id: string; name: string; isYandex: boolean; officeIds: string[]; version: number
+  publicId?: string | null; publishedName?: string | null
+  photoPath?: string | null; avatarDataUrl?: string | null
+}
+interface AdminBundle { offices: unknown[]; trainers: AdminTrainer[] }
+
+export async function exposeAdminTrainerPhotos(bundle: AdminBundle, media?: Pick<MediaObjectStorage, 'sign'>) {
+  const trainers = await Promise.all(bundle.trainers.map(async row => {
+    const { photoPath, avatarDataUrl, ...trainer } = row
+    let photoUrl = trainer.publicId ? avatarDataUrl ?? null : null
+    let photoUnavailable = false
+    if (trainer.publicId && photoPath) {
+      try {
+        if (!media) throw new Error('media_unavailable')
+        photoUrl = await media.sign('trainer-profile-media', photoPath)
+      } catch {
+        photoUrl = null
+        photoUnavailable = true
+      }
+    }
+    return { ...trainer, photoUrl, photoUnavailable }
+  }))
+  return { offices: bundle.offices, trainers }
+}
 
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 const record = (v: unknown): Record<string, unknown> | null => typeof v === 'object' && v !== null && !Array.isArray(v) ? v as Record<string, unknown> : null
@@ -28,7 +55,7 @@ export function trainerCommand(body: unknown) {
 }
 
 export class CorporateAdminStore {
-  constructor(private readonly pool: DatabasePool) {}
+  constructor(private readonly pool: DatabasePool, private readonly media?: Pick<MediaObjectStorage, 'sign'>) {}
   access(session: YandexActorSession) {
     return withYandexActorSession(this.pool, session, async client => {
       const rows = await client.query<{ allowed: boolean }>('select app_private.is_corporate_admin() allowed')
@@ -37,9 +64,9 @@ export class CorporateAdminStore {
   }
   bundle(session: YandexActorSession) {
     return withYandexActorSession(this.pool, session, async client => {
-      const rows = await client.query<{ bundle: unknown }>('select app_private.corporate_admin_bundle() bundle')
+      const rows = await client.query<{ bundle: AdminBundle }>('select app_private.corporate_admin_bundle_with_identity() bundle')
       if (!rows[0]?.bundle) throw new Error('corporate_bundle_missing')
-      return rows[0].bundle
+      return exposeAdminTrainerPhotos(rows[0].bundle, this.media)
     })
   }
   saveOffice(session: YandexActorSession, draft: NonNullable<ReturnType<typeof officeCommand>>) {
