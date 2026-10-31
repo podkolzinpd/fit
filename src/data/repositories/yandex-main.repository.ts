@@ -1049,10 +1049,10 @@ export function createYandexMainRepository(
     const promise = archived ? archivedClientsPromise : activeClientsPromise
     const nextPromise = promise ?? readJson(queries, path, clientsSchema)
       .then((payload) => payload.clients.map(client))
-      .catch((error: unknown) => {
+      .finally(() => {
+        // TanStack Query owns completed responses; share only concurrent reads.
         if (archived && archivedClientsPromise === nextPromise) archivedClientsPromise = null
         if (!archived && activeClientsPromise === nextPromise) activeClientsPromise = null
-        throw error
       })
     if (archived) archivedClientsPromise = nextPromise
     else activeClientsPromise = nextPromise
@@ -1291,8 +1291,26 @@ export function createYandexMainRepository(
     },
     clients: {
       async getMine() {
-        if (actor.kind !== 'client') return null
-        return (await clients()).find((item) => item.id === actor.clientId) ?? null
+        if (actor.role !== 'client') return null
+        const available = await clients()
+        const stored = actor.kind === 'client'
+          ? available.find((item) => item.id === actor.clientId)
+          : undefined
+        if (stored) return stored
+
+        // A card can be created or merged while this tab keeps its old actor.
+        // Only the server's own-profile read may identify the replacement card.
+        const { profile } = await yandexPilotRepository.getAppSession(apiBaseUrl, sessionToken)
+        if (profile.id !== actor.userId || profile.accountRole !== 'client') {
+          throw new RepositoryError('invalid_response', 'Не удалось подтвердить профиль спортсмена. Попробуйте ещё раз.')
+        }
+        if (!profile.client) return null
+        const currentId = profile.client.id
+        const current = available.find((item) => item.id === currentId)
+          ?? (await clients()).find((item) => item.id === currentId)
+        // No accessible card is the existing first-run contract. Transport
+        // failures and a mismatched own profile still propagate above.
+        return current ?? null
       },
       async resolveId(id) {
         if ((await clients()).some((item) => item.id === id)) return id
