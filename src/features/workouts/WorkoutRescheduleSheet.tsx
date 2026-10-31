@@ -6,7 +6,7 @@ import { addDays, formatLocalDate } from '../../shared/local-date'
 import { CloseIcon } from '../../shared/icons'
 import { FitLimeDatePicker } from '../../shared/FitLimeDatePicker'
 import { isRepositoryConflict } from '../../data/repositories/error'
-import { overlappingWorkoutSlots, shiftWorkoutSlot, slotDurationMinutes, slotMinutes, slotTimeLabel, workoutSlot } from './workout-slot'
+import { overlappingWorkoutSlots, shiftWorkoutSlot, slotClock, slotDurationMinutes, slotMinutes, slotTimeLabel, workoutSlot } from './workout-slot'
 import { workoutDisplayTitle } from './workout-chronicle'
 import { CoachPlanTimeField } from './CoachPlanTimeField'
 import './workout-reschedule.css'
@@ -20,6 +20,7 @@ export function WorkoutRescheduleSheet({ workout: sourceWorkout, initialSlot, on
   const { workouts } = useDataBackend()
   const queryClient = useQueryClient()
   const [slot, setSlot] = useState(initialSlot ?? workoutSlot(workout))
+  const durationRef = useRef(slotDurationMinutes(slot.startTime, slot.endTime))
   const [reloading, setReloading] = useState(false)
   const dialog = useRef<HTMLDialogElement>(null)
   const submitting = useRef(false)
@@ -67,9 +68,15 @@ export function WorkoutRescheduleSheet({ workout: sourceWorkout, initialSlot, on
         reference disabled={busy || conflict} /></div>
       <fieldset className="workout-reschedule-times" aria-label="Время занятия" disabled={busy || conflict}>
         <div><span>Начало</span><CoachPlanTimeField name="slotStart" label="Начало" referencePolish value={slot.startTime ?? ''} onChange={value => {
-          setSlot(shiftWorkoutSlot(slot, value || null))
+          let next = shiftWorkoutSlot(slot, value || null)
+          if (value && !slot.startTime && slot.endTime && durationRef.current !== null && durationRef.current > 0) {
+            next = { ...next, endTime: slotClock((slotMinutes(value)! + durationRef.current) % 1440) }
+          }
+          durationRef.current = slotDurationMinutes(next.startTime, next.endTime) ?? durationRef.current
+          setSlot(next)
         }} /></div>
         <div><span>Окончание</span><CoachPlanTimeField name="slotEnd" label="Окончание" referencePolish value={slot.endTime ?? ''} onChange={value => {
+          durationRef.current = slotDurationMinutes(slot.startTime, value || null)
           setSlot({ ...slot, endTime: value || null })
         }} /></div>
       </fieldset>

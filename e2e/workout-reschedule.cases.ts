@@ -170,6 +170,7 @@ export function workoutRescheduleCases() {
     await page.goto(`/workouts/${workoutId}`)
     await page.getByRole('button', { name: 'Изменить дату и время тренировки' }).click()
     const sheet = page.getByRole('dialog', { name: 'Дата и время', exact: true })
+    await sheet.getByLabel('Начало', { exact: true }).fill('')
     await sheet.getByLabel('Начало', { exact: true }).fill('23:00')
     await expect(sheet.getByLabel('Окончание', { exact: true })).toHaveValue('01:00')
     await expect(sheet.getByText('Длительность — 120 минут', { exact: true })).toBeVisible()
