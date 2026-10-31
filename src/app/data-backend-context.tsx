@@ -1,4 +1,5 @@
 import type { ChatMeetingsRepository } from '../shared/meeting'
+import type { Workout, WorkoutAttendanceDraft } from '../shared/domain'
 import { getLocalDataBackend, localLegacyAvailable } from '#fit/local-data'
 import { createContext, use, useMemo, type PropsWithChildren } from 'react'
 import type { appFeedbackRepository } from '../data/repositories/app-feedback.repository'
@@ -37,7 +38,9 @@ export interface DataBackend {
   invitations: typeof invitationsRepository
   legal: typeof legalRepository
   progress: typeof progressRepository
-  workouts: typeof workoutsRepository
+  workouts: typeof workoutsRepository & {
+    confirmAttendance?: (workout: Workout, draft: WorkoutAttendanceDraft, operationId: string) => Promise<number>
+  }
   favoriteWorkouts: typeof favoriteWorkoutsRepository
   workoutTemplates: typeof workoutTemplatesRepository
   trainingSummaries: typeof trainingSummariesRepository

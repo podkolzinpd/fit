@@ -54,7 +54,7 @@ describe('schedule presentation', () => {
     expect(scheduleEventStatus(workout({ workoutDate: localDate('2026-08-25') }), today)).toEqual({ label: 'План', tone: 'decision' })
     expect(scheduleEventStatus(workout({ status: 'in_progress' }), today)).toEqual({ label: 'Идёт', tone: 'current' })
     expect(scheduleEventStatus(workout({ status: 'done' }), today)).toEqual({ label: 'Готово', tone: 'done' })
-    expect(scheduleEventStatus(workout({ status: 'cancelled' }), today)).toEqual({ label: 'Пропущена', tone: 'skipped' })
+    expect(scheduleEventStatus(workout({ status: 'cancelled' }), today)).toEqual({ label: 'Не состоялась', tone: 'skipped' })
   })
 
   it('marks only trainer-assigned workouts started and finished by the same athlete', () => {

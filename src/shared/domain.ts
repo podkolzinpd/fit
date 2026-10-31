@@ -180,6 +180,11 @@ export interface InvitationShare {
   expiresAt: string
 }
 
+export interface WorkoutAttendanceDraft {
+  disposition: 'auto' | 'charged' | 'unassigned' | 'free' | 'trial'
+  packageId: string | null
+}
+
 export interface Client {
   id: UUID
   /** Only the root trainer may archive or restore this client. */
