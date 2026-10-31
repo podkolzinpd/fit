@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { addDays, type LocalDate } from '../../shared/local-date'
 import type { Workout, WorkoutSlotDraft } from '../../shared/domain'
-import { slotClock, slotMinutes, workoutSlot } from './workout-slot'
+import { slotClock, slotDurationMinutes, slotMinutes, workoutSlot } from './workout-slot'
 
 export interface DaySlotTap {
   resolve: (target: Element, x: number, y: number) => string | null
@@ -54,12 +54,12 @@ export function useCoachDaySwipe(enabled: boolean, date: LocalDate, openDay: (da
     const updateDrag = () => {
       const active = gesture, controls = current.current.cardDrag
       if (active?.kind !== 'drag' || !active.card || !controls || !active.viewport) return
-      const original = workoutSlot(active.card), start = slotMinutes(original.startTime), end = slotMinutes(original.endTime)
+      const original = workoutSlot(active.card), start = slotMinutes(original.startTime)
       if (start === null) return
-      const duration = end !== null && end > start ? end - start : null
+      const duration = slotDurationMinutes(original.startTime, original.endTime)
       const delta = (active.lastY - active.y + active.viewport.scrollTop - active.scrollTop) / controls.hourHeight * 60
-      const next = Math.max(0, Math.min(1439 - (duration ?? 0), Math.round((start + delta) / 5) * 5))
-      active.slot = { ...original, startTime: slotClock(next), endTime: duration !== null ? slotClock(next + duration) : null }
+      const next = Math.max(0, Math.min(1439, Math.round((start + delta) / 5) * 5))
+      active.slot = { ...original, startTime: slotClock(next), endTime: duration !== null ? slotClock((next + duration) % 1440) : null }
       controls.preview({ workout: active.card, slot: active.slot })
     }
     const autoScroll = () => {

@@ -222,3 +222,16 @@ it('does not auto-scroll a held edge card before it is actually moved', () => {
   pointer(card, 'pointercancel', 180, 10)
   expect(drag.drop).not.toHaveBeenCalled()
 })
+
+it.each([['23:00', '01:00', '22:00', '00:00'], ['10:00', null, '09:00', null]])('preserves overnight or unknown duration during a drag from %s', (startTime, endTime, nextStart, nextEnd) => {
+  vi.useFakeTimers()
+  vi.stubGlobal('requestAnimationFrame', vi.fn(() => 1))
+  vi.stubGlobal('cancelAnimationFrame', vi.fn())
+  const workout = { ...cardWorkout, startTime, endTime }, drag = { ...cardControls(), resolve: () => workout }
+  render(<Surface drag={drag} />)
+  const target = screen.getByTestId('card')
+  pointer(target, 'pointerdown', 180)
+  act(() => vi.advanceTimersByTime(420))
+  pointer(target, 'pointermove', 180, 40); pointer(target, 'pointerup', 180, 40)
+  expect(drag.drop).toHaveBeenCalledExactlyOnceWith(workout, { workoutDate: '2026-12-31', startTime: nextStart, endTime: nextEnd })
+})

@@ -67,7 +67,7 @@ begin
     raise exception 'workout_forbidden' using errcode='PT403';
   end if;
   if p_workout_date is null or p_expected_version is null or p_expected_version<1
-    or (p_end_time is not null and (p_start_time is null or p_end_time<=p_start_time)) then
+    or (p_end_time is not null and (p_start_time is null or p_end_time=p_start_time)) then
     raise exception 'workout_invalid' using errcode='PT422';
   end if;
   replayed_version := app_private.claim_live_workout_operation(

@@ -2,11 +2,11 @@ import { useEffect, useRef, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useDataBackend } from '../../app/data-backend-context'
 import type { Workout, WorkoutSlotDraft } from '../../shared/domain'
-import { formatLocalDate } from '../../shared/local-date'
+import { addDays, formatLocalDate } from '../../shared/local-date'
 import { CloseIcon } from '../../shared/icons'
 import { FitLimeDatePicker } from '../../shared/FitLimeDatePicker'
 import { isRepositoryConflict } from '../../data/repositories/error'
-import { overlappingWorkoutSlots, shiftWorkoutSlot, slotMinutes, slotTimeLabel, workoutSlot } from './workout-slot'
+import { overlappingWorkoutSlots, shiftWorkoutSlot, slotDurationMinutes, slotMinutes, slotTimeLabel, workoutSlot } from './workout-slot'
 import { workoutDisplayTitle } from './workout-chronicle'
 import { CoachPlanTimeField } from './CoachPlanTimeField'
 import './workout-reschedule.css'
@@ -20,17 +20,16 @@ export function WorkoutRescheduleSheet({ workout: sourceWorkout, initialSlot, on
   const { workouts } = useDataBackend()
   const queryClient = useQueryClient()
   const [slot, setSlot] = useState(initialSlot ?? workoutSlot(workout))
-  const [overflow, setOverflow] = useState(false)
   const [reloading, setReloading] = useState(false)
   const dialog = useRef<HTMLDialogElement>(null)
   const submitting = useRef(false)
   const attempt = useRef<{ fingerprint: string; operationId: string } | null>(null)
   const collisions = useQuery({ queryKey: ['workout-slot-overlaps', slot.workoutDate],
-    queryFn: () => workouts.list(slot.workoutDate, slot.workoutDate) })
+    queryFn: () => workouts.list(addDays(slot.workoutDate, -1), addDays(slot.workoutDate, 1)) })
   const overlaps = overlappingWorkoutSlots(workout, slot, collisions.data ?? [])
   const start = slotMinutes(slot.startTime), end = slotMinutes(slot.endTime)
-  const invalid = overflow ? 'Интервал выходит за пределы дня. Измените начало или окончание.'
-    : end !== null && (start === null || end <= start) ? 'Окончание должно быть позже начала.' : null
+  const duration = slotDurationMinutes(slot.startTime, slot.endTime)
+  const invalid = end !== null && (start === null || end === start) ? 'Укажите начало и отличающееся от него окончание.' : null
   useEffect(() => {
     const previous = document.activeElement instanceof HTMLElement ? document.activeElement : null
     dialog.current?.showModal()
@@ -68,19 +67,18 @@ export function WorkoutRescheduleSheet({ workout: sourceWorkout, initialSlot, on
         reference disabled={busy || conflict} /></div>
       <fieldset className="workout-reschedule-times" aria-label="Время занятия" disabled={busy || conflict}>
         <div><span>Начало</span><CoachPlanTimeField name="slotStart" label="Начало" referencePolish value={slot.startTime ?? ''} onChange={value => {
-          const shifted = shiftWorkoutSlot(slot, value || null)
-          setSlot(shifted.slot); setOverflow(shifted.overflow)
+          setSlot(shiftWorkoutSlot(slot, value || null))
         }} /></div>
         <div><span>Окончание</span><CoachPlanTimeField name="slotEnd" label="Окончание" referencePolish value={slot.endTime ?? ''} onChange={value => {
-          setSlot({ ...slot, endTime: value || null }); setOverflow(false)
+          setSlot({ ...slot, endTime: value || null })
         }} /></div>
       </fieldset>
-      <p className="workout-reschedule-note">{start !== null && end !== null && !invalid ? `Длительность — ${end - start} минут` : 'Окончание можно не указывать'}</p>
+      <p className="workout-reschedule-note">{start !== null && end !== null && !invalid ? `Длительность — ${duration} минут` : 'Окончание можно не указывать'}</p>
       <p className="workout-reschedule-before">Было: {formatLocalDate(workout.workoutDate)} · {slotTimeLabel(workout)}</p>
       {collisions.isPending && <p role="status">Проверяем расписание…</p>}
       {collisions.isError && <p className="error" role="alert">Не удалось проверить расписание. <button type="button" className="link" onClick={() => void collisions.refetch()}>Повторить проверку</button></p>}
       {overlaps.length > 0 && <div className="workout-reschedule-overlap"><strong>На это время уже есть тренировка</strong>
-        {overlaps.map(item => <p key={item.id}>{item.clientName} · {slotTimeLabel(item)}</p>)}
+        {overlaps.map(item => <p key={item.id}>{item.clientName} · {item.workoutDate !== slot.workoutDate && `${formatLocalDate(item.workoutDate)} · `}{slotTimeLabel(item)}</p>)}
       </div>}
       {invalid && <p className="error" role="alert">{invalid}</p>}
       {save.error && <p className="error" role="alert">{conflict ? 'Запись уже изменена. Откройте актуальную тренировку и выберите время заново.' : `Не удалось перенести. ${save.error.message} Выбранные дата и время сохранены в этом окне.`}</p>}
