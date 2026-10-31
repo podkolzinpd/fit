@@ -1889,6 +1889,12 @@ export function WorkoutDetailPage() {
     queryFn: () => workoutsRepository.personalRecords(workoutId),
     enabled: actor?.role !== 'client' && navigationState?.justCompleted === true && query.data?.status === 'done',
   })
+  useEffect(() => {
+    if (navigationState?.confirmAttendance && query.data?.status === 'planned' && actor?.role === 'trainer' && workoutsRepository.confirmAttendance) {
+      setAttendanceAction('complete')
+      navigate(location.pathname + location.search, { replace: true, state: { ...navigationState, confirmAttendance: false } })
+    }
+  }, [navigationState, query.data?.status, actor?.role, workoutsRepository.confirmAttendance, navigate, location.pathname, location.search])
   const attendanceResult = actor?.role === 'trainer' && Boolean(workoutsRepository.confirmAttendance && query.data?.status === 'done' && query.data.exercises.length === 0)
   const completionFinance = useQuery({
     queryKey: ['trainer-finance', query.data?.clientId],
@@ -2170,8 +2176,8 @@ export function WorkoutDetailPage() {
       />}
       {justCompleted && !clientMode && !attendanceResult && <WorkoutCompletionCard completedSets={completedSets} totalSets={sets.length} record={completionRecords.data?.[0]} clientMode={false} clientId={workout.clientId} />}
       {!clientCompletionReport && <WorkoutHeader eyebrow={clientMode && done ? 'ТРЕНИРОВКА ЗАВЕРШЕНА' : clientMode ? 'ВАША ТРЕНИРОВКА' : workout.clientName} title={clientMode ? (done ? workoutFocusTitle(groups) : 'Ваша тренировка') : workoutDisplayTitle(workout)} state={detailState}
-        statusLabel={attendanceResult ? 'Проведена' : statusPresentation?.label}
-        showStatus={detailState !== 'completed' || attendanceResult}
+        statusLabel={!clientMode && done ? 'Проведена' : statusPresentation?.label}
+        showStatus={detailState !== 'completed' || !clientMode && done}
         action={manageMenuInHeader ? <OverflowMenu label="Другие действия с тренировкой" items={workoutManageItems} /> : undefined}
         meta={<><span>{formatLocalDate(workout.workoutDate)} · {workout.startTime?.slice(0, 5) ?? 'без времени'}</span><span>{workoutTrainingFormatLabel(workout.trainingFormat ?? 'self')}</span>{clientMode && !done && authorLabel && <span>{authorLabel}</span>}{clientAuthoredReadOnly && <span>Создано клиентом · упражнения только для просмотра</span>}{stageTitle && <span>Цель: {stageTitle}</span>}</>} />}
       {clientMode && workout.title && <p className="workout-plan-title">{workout.title}</p>}
@@ -2183,7 +2189,7 @@ export function WorkoutDetailPage() {
         </Coachmark> : <WorkoutCta className="wide" pending={start.isPending} pendingLabel={plannedActions.pending} onClick={() => start.mutate()}>{plannedActions.primary}</WorkoutCta>}
       </div>}
       {!clientMode && canManage && workout.status === 'planned' && workoutsRepository.confirmAttendance && <div className="workout-attendance-actions">
-        {workout.exercises.length === 0 && <button type="button" onClick={() => setAttendanceAction('complete')}>Отметить проведённой</button>}
+        <button type="button" onClick={() => setAttendanceAction('complete')}>Отметить проведённой</button>
         <button type="button" onClick={() => setAttendanceAction('cancel')}>Не состоялась</button>
       </div>}
       {bookingHistoryAvailable && <button type="button" className="secondary wide booking-history-open" onClick={() => setBookingHistoryOpen(true)}><HistoryIcon /><span>Выбрать из истории</span><ChevronRightIcon /></button>}
@@ -3832,7 +3838,7 @@ export function LiveWorkoutPage() {
       await save.mutateAsync({ set, draft })
     }
   }
-  const finish = useMutation({ mutationFn: async () => {
+  async function prepareLiveCompletion() {
     // Finishing must not downgrade a failed «Готово» to a plain draft save.
     // First replay every persisted confirmation intent; only then flush fields.
     await retryPendingLiveDrafts()
@@ -3842,6 +3848,9 @@ export function LiveWorkoutPage() {
     }
     await flushOpenLiveSetDrafts()
     await liveSets.waitForIdle()
+  }
+  const finish = useMutation({ mutationFn: async () => {
+    await prepareLiveCompletion()
     const version = await runLiveWorkoutMutation('finish', (workout) => workoutsRepository.finish(workout))
     completedLocally.current = true
     return version
@@ -3934,7 +3943,8 @@ export function LiveWorkoutPage() {
   }
   function finishFromInactivityReminder() {
     inactivityReminder.dismiss()
-    setConfirmFinish(true)
+    if (actor?.role === 'trainer' && workoutsRepository.confirmAttendance) setAttendanceOpen(true)
+    else setConfirmFinish(true)
   }
   const structureMutationPending = appendSet.isPending || appendRound.isPending || removeRound.isPending || removeSet.isPending || removeExercise.isPending || appendExercise.isPending || appendSelection.isPending
     || reorderBlock.isPending || moveLiveBlock.isPending || mergeBlock.isPending || splitSuperset.isPending || replaceLive.isPending || finish.isPending
@@ -4501,7 +4511,7 @@ export function LiveWorkoutPage() {
   }
   const exerciseCount = query.data?.exercises.length ?? 0
   const exerciseCountLabel = `${exerciseCount} ${exerciseCount % 100 >= 11 && exerciseCount % 100 <= 14 ? 'упражнений' : exerciseCount % 10 === 1 ? 'упражнение' : exerciseCount % 10 >= 2 && exerciseCount % 10 <= 4 ? 'упражнения' : 'упражнений'}`
-  const canConfirmEmptyAttendance = actor?.role === 'trainer' && Boolean(workoutsRepository.confirmAttendance && query.data && query.data.status === 'in_progress' && query.data.exercises.length === 0 && (!query.data.createdBy || query.data.createdBy === actor.userId))
+  const canConfirmAttendance = actor?.role === 'trainer' && Boolean(workoutsRepository.confirmAttendance && query.data && query.data.status === 'in_progress' && (!query.data.createdBy || query.data.createdBy === actor.userId))
   const liveHeader = query.data && <WorkoutHeader eyebrow={visualReference ? exerciseCountLabel : 'LIVE'} title={visualReference ? query.data.title || workoutFocusTitle(muscleGroupLabels(query.data.exercises)) : query.data.clientName} state="current" showStatus={!visualReference && query.data.exercises.length > 0} className="live-session-header" meta={<>{coachReference && <span className="coach-live-client">{query.data.clientName}</span>}<span>{workoutTrainingFormatLabel(query.data.trainingFormat ?? 'self')}</span>{!visualReference && query.data.title && <span>{query.data.title}</span>}{visualReference && exerciseCount > 0 && <span className="coach-live-exercise-markers" aria-label="Состояния упражнений">{query.data.exercises.map((exercise, index) => <span key={exercise.id} className={exercise.sets.length > 0 && exercise.sets.every((set) => set.confirmedAt) ? 'done' : exercise.id === activeLiveExercise?.id ? 'current' : ''} aria-label={`Упражнение ${index + 1}: ${exercise.sets.length > 0 && exercise.sets.every((set) => set.confirmedAt) ? 'выполнено' : exercise.id === activeLiveExercise?.id ? 'текущее' : 'ожидает'}`} />)}</span>}{sessionProgress.setCount > 0 ? <div className="live-session-progress">
     <span className="live-session-progress-copy"><span>{sessionProgress.complete ? 'Все упражнения выполнены' : activeLiveExercise ? `Сейчас: ${activeLiveExercise.name} · подход ${sessionProgress.activeSetNumber} из ${sessionProgress.activeExerciseSetCount}` : 'Выберите упражнение'}</span><strong>Готово {sessionProgress.completedSetCount} из {sessionProgress.setCount}</strong></span>
     <span className="live-session-progress-track" role="progressbar" aria-label="Выполненные подходы" aria-valuemin={0} aria-valuemax={sessionProgress.setCount} aria-valuenow={sessionProgress.completedSetCount}><span style={{ width: `${sessionProgress.percent}%` }} /></span>
@@ -4512,7 +4522,7 @@ export function LiveWorkoutPage() {
     action={visualReference && query.data ? <>
       <span className={`coach-live-status${referenceRestActive && !livePhase ? ' resting' : ''}`}><span aria-hidden="true" />{livePhase?.kind === 'prep' ? 'Подготовка' : livePhase?.kind === 'work' ? 'Подход' : referenceRestActive ? 'Отдых' : 'Live'}</span>
       {(coachV79 || clientReference) && <span className="coach-v79-header-slot" ref={setCoachClockSlot} />}
-        <button type="button" className="coach-live-finish" aria-label={finish.isPending ? 'Завершаем тренировку' : 'Завершить тренировку'} title={finish.isPending ? 'Завершаем…' : 'Завершить тренировку'} aria-busy={finish.isPending} disabled={(!query.data.exercises.length && !canConfirmEmptyAttendance) || rootMutationPending || save.isPending || confirm.isPending} onClick={() => { if (document.activeElement instanceof HTMLElement) document.activeElement.blur(); if (!query.data!.exercises.length && canConfirmEmptyAttendance) { setAttendanceOpen(true); return }; if (hasIncompleteLiveSets || cardioSetMissingTime || clientReference && timerConfirmedSets.length > 0) setConfirmFinish(true); else finish.mutate() }}><CheckSmallIcon /></button>
+        <button type="button" className="coach-live-finish" aria-label={finish.isPending ? 'Завершаем тренировку' : 'Завершить тренировку'} title={finish.isPending ? 'Завершаем…' : 'Завершить тренировку'} aria-busy={finish.isPending} disabled={(!query.data.exercises.length && !canConfirmAttendance) || rootMutationPending || save.isPending || confirm.isPending} onClick={() => { if (document.activeElement instanceof HTMLElement) document.activeElement.blur(); if (canConfirmAttendance) { setAttendanceOpen(true); return }; if (hasIncompleteLiveSets || cardioSetMissingTime || clientReference && timerConfirmedSets.length > 0) setConfirmFinish(true); else finish.mutate() }}><CheckSmallIcon /></button>
     </> : undefined}>
     <AsyncView loading={query.isLoading} error={query.error}
       errorDescription={clientReference && getRequestDiagnostics(query.error)?.status === 503 ? 'Сервис временно недоступен. Попробуйте ещё раз.' : undefined}
@@ -4812,7 +4822,7 @@ export function LiveWorkoutPage() {
           Подтверждение частичного завершения — inline (не нативный confirm,
           который не работает в WKWebView и блокировал выход). */}
       {(!visualReference || query.data.exercises.length === 0 || liveSyncError || recoveredSetIds.size > 0 || confirmFinish) && <div className={`live-bottom-bar${query.data.exercises.length === 0 ? ' live-bottom-bar-empty' : ''}`}>
-        {canConfirmEmptyAttendance && <button type="button" className="primary workout-attendance-finish" disabled={rootMutationPending} onClick={() => setAttendanceOpen(true)}>Завершить тренировку</button>}
+        {canConfirmAttendance && query.data.exercises.length === 0 && <button type="button" className="primary workout-attendance-finish" disabled={rootMutationPending} onClick={() => setAttendanceOpen(true)}>Завершить тренировку</button>}
         {query.data.exercises.length === 0 && <button type="button" className="live-empty-delete" aria-label={cancelEmpty.isPending ? 'Удаляем тренировку' : 'Удалить тренировку'} title="Удалить тренировку" aria-busy={cancelEmpty.isPending} disabled={cancelEmpty.isPending} onClick={async () => {
           if (await askConfirm({ message: 'Удалить эту пустую тренировку?', confirmLabel: 'Удалить', danger: true })) cancelEmpty.mutate()
         }}><TrashIcon /></button>}
@@ -4843,10 +4853,10 @@ export function LiveWorkoutPage() {
                 <WorkoutCta variant={cardioSetMissingTime ? 'secondary' : 'primary'} pending={finish.isPending} pendingLabel="Завершаем…" disabled={rootMutationPending || save.isPending || confirm.isPending} onClick={() => { setConfirmFinish(false); finish.mutate() }}>{cardioSetMissingTime ? 'Завершить без оценки' : 'Завершить'}</WorkoutCta>
               </div>
             </div>
-          : !visualReference && <WorkoutCta variant={hasIncompleteLiveSets ? 'secondary' : 'primary'} className="wide" pending={finish.isPending} pendingLabel="Завершаем…" disabled={rootMutationPending || save.isPending || confirm.isPending} onClick={() => { if (hasIncompleteLiveSets || cardioSetMissingTime || timerConfirmedSets.length > 0) setConfirmFinish(true); else finish.mutate() }}>Завершить тренировку</WorkoutCta>)}
+          : !visualReference && <WorkoutCta variant={hasIncompleteLiveSets ? 'secondary' : 'primary'} className="wide" pending={finish.isPending} pendingLabel="Завершаем…" disabled={rootMutationPending || save.isPending || confirm.isPending} onClick={() => { if (canConfirmAttendance) setAttendanceOpen(true); else if (hasIncompleteLiveSets || cardioSetMissingTime || timerConfirmedSets.length > 0) setConfirmFinish(true); else finish.mutate() }}>Завершить тренировку</WorkoutCta>)}
       </div>}
     </>}</AsyncView>
-    {attendanceOpen && canConfirmEmptyAttendance && query.data && <WorkoutAttendanceSheet workout={query.data} action="complete" onClose={() => setAttendanceOpen(false)} onCompleted={async () => { setAttendanceOpen(false); await onLiveFinished() }} />}
+    {attendanceOpen && canConfirmAttendance && query.data && <WorkoutAttendanceSheet workout={query.data} action="complete" onClose={() => setAttendanceOpen(false)} beforeSave={async () => { await prepareLiveCompletion(); return workoutsRepository.get(workoutId) }} onCompleted={async () => { setAttendanceOpen(false); await onLiveFinished() }} />}
     {canManageLiveStructure && pickerOpen && <ExercisePicker quickEntry={isQuickWorkoutEntryEnabled(actor)} coachLiveV79={coachV79} clientLiveV79={clientReference} clientLime={isClientLimeEnabled(actor)} reference={coachReference} referenceAppearance={visualReference} catalog={catalog} clientRecent={clientRecentExercises} techniqueActionLabel={replaceExerciseId ? 'Заменить упражнение' : 'Добавить упражнение'} onPick={pickLiveExercise} onPickMany={pickLiveExercises} multiple={clientLime && !replaceExerciseId} showEmptySelection={clientLime && !replaceExerciseId} keepSelectionWhileAdding={clientLime && !replaceExerciseId} selectionDraft={clientLime && !replaceExerciseId ? livePickerSelection : undefined} onSelectionDraftChange={clientLime && !replaceExerciseId ? setLivePickerSelection : undefined} onClose={closePicker} />}
     {techniqueExercise && <ExerciseTechniqueSheet exercise={techniqueExercise} onClose={() => setTechniqueExercise(null)} />}
     {confirmDialog}

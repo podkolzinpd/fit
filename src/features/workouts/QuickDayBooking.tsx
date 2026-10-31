@@ -39,6 +39,7 @@ export function QuickDayBooking({ date, time, returnTo, onClose }: { date: Local
   const [pickerOpen, setPickerOpen] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const dialog = useRef<HTMLDialogElement>(null)
+  const completeAfterSave = useRef(false)
   const submitting = useRef(false)
   const committed = useRef(false)
   const clients = useQuery({ queryKey: ['clients', false], queryFn: () => clientsRepository.list(false) })
@@ -55,12 +56,13 @@ export function QuickDayBooking({ date, time, returnTo, onClose }: { date: Local
       await invalidateWorkoutResults(queryClient)
       await queryClient.invalidateQueries({ queryKey: ['today-workouts'] })
       onClose()
-      navigate(returnTo, { replace: true, state: { savedPlanId: id } })
+      navigate(completeAfterSave.current ? `/workouts/${id}` : returnTo, { replace: true, state: completeAfterSave.current ? { returnTo, confirmAttendance: true } : { savedPlanId: id } })
     },
     onSettled: () => { submitting.current = false },
   })
   function submit(event: FormEvent) {
     event.preventDefault()
+    completeAfterSave.current = (event.nativeEvent as SubmitEvent).submitter?.getAttribute('value') === 'complete'
     if (submitting.current || !isQuickWorkoutEntryEnabled(actor) || actor?.role !== 'trainer') return
     // Restored drafts can reference a client no longer present in the active list.
     if (!client) { setError('Выберите клиента'); setPickerOpen(true); return }
@@ -79,6 +81,7 @@ export function QuickDayBooking({ date, time, returnTo, onClose }: { date: Local
         <FitLimeDatePicker today={todayInTimeZone(actor.timezone)} value={selectedDate} onChange={setSelectedDate} time={selectedTime} onTimeChange={setSelectedTime} reference={isFitLimeEnabled(actor)} triggerLabel={`${formatRelativeLocalDate(selectedDate, todayInTimeZone(actor.timezone))} · ${selectedTime.start || 'Время'}${selectedTime.end ? `–${selectedTime.end}` : ''}`} />
         <p className="quick-booking-format">С тренером</p>
         <button type="submit" className="primary wide" aria-busy={save.isPending}>{save.isPending ? 'Сохраняем…' : 'Записать'}</button>
+        {workouts.confirmAttendance && <button type="submit" name="attendance" value="complete" className="link wide">Отметить проведённой</button>}
       </fieldset>
       {(error || save.error) && <p className="error" role="alert">{error ?? save.error?.message}</p>}
     </form>

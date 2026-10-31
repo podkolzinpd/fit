@@ -7335,6 +7335,40 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
       }
     })
 
+    it('conducts trainer plans and partial Live without fabricating or replacing exercise facts', async () => {
+      if (!ownerPool || !runtimePool) throw new Error('Database pools are not ready')
+      const card=randomUUID(),pack=randomUUID()
+      await ownerPool.query("insert into public.clients(id,trainer_id,full_name) values($1,$2,'Quick completion fixture')",[card,ACTOR_ID])
+      await ownerPool.query("insert into public.trainer_finance_packages(id,trainer_id,client_id,title,sessions_total,price_cents,starts_on) values($1,$2,$3,'Sessions',10,10000,current_date-1)",[pack,ACTOR_ID,card])
+      try {
+        for(const status of ['planned','in_progress'] as const) {
+          const draft: PlannedWorkoutDraft={id:null,requestId:randomUUID(),clientId:card,workoutDate:new Date().toISOString().slice(0,10),startTime:'10:15',endTime:'11:15',notes:'Keep this plan',title:'History plan',trainingFormat:'with_trainer',
+            exercises:[{position:0,source:'system',ref:'barbell-squat',customExerciseId:null,name:'Приседания',muscleGroup:'legs',inputKind:'strength',blockId:randomUUID(),blockType:'single',blockPreset:'set',blockRounds:1,restBetweenExercisesSec:0,restBetweenRoundsSec:90,restBetweenSetsSec:90,trainerComment:'Keep note',
+              sets:[0,1].map(position=>({position,weightKg:40,reps:10,durationMin:null,durationSec:null,distanceKm:null,rpe:null}))}]}
+          const saved=await withActorTransaction(runtimePool,ACTOR_ID,c=>savePlannedWorkout(c,draft,null))
+          if(status==='in_progress') {
+            await ownerPool.query("update public.workouts set status='in_progress',started_at=now()-interval '10 minutes' where id=$1",[saved.id])
+            await ownerPool.query("update public.workout_sets set confirmed_at=now(),fact_weight_kg=35,fact_reps=8 where position=0 and workout_exercise_id in(select id from public.workout_exercises where workout_id=$1)",[saved.id])
+          }
+          const facts=()=>ownerPool!.query('select s.* from public.workout_sets s join public.workout_exercises e on e.id=s.workout_exercise_id where e.workout_id=$1 order by s.position',[saved.id])
+          const before=(await facts()).rows
+          const operation=randomUUID(),intent={disposition:'auto' as const,packageId:null}
+          await expect(withActorTransaction(runtimePool,DOMAIN_CLIENT_ACTOR_ID,c=>finishLiveWorkout(c,saved.id,saved.version,randomUUID(),intent))).rejects.toMatchObject({failure:'forbidden'})
+          expect(await withActorTransaction(runtimePool,ACTOR_ID,c=>finishLiveWorkout(c,saved.id,saved.version,operation,intent))).toEqual({version:saved.version+1,replayed:false})
+          expect(await withActorTransaction(runtimePool,ACTOR_ID,c=>finishLiveWorkout(c,saved.id,saved.version,operation,intent))).toEqual({version:saved.version+1,replayed:true})
+          expect((await facts()).rows).toEqual(before)
+          expect((await ownerPool.query("select status,title,start_time::text,end_time::text,notes from public.workouts where id=$1",[saved.id])).rows).toEqual([{status:'done',title:'History plan',start_time:'10:15:00',end_time:'11:15:00',notes:'Keep this plan'}])
+          expect((await ownerPool.query('select disposition,package_id from public.trainer_finance_sessions where workout_id=$1 and voided_at is null',[saved.id])).rows).toEqual([{disposition:'charged',package_id:pack}])
+        }
+      } finally {
+        await ownerPool.query('delete from public.trainer_finance_sessions where client_id=$1',[card])
+        await ownerPool.query('delete from public.workouts where client_id=$1',[card])
+        await ownerPool.query('delete from public.trainer_finance_packages where client_id=$1',[card])
+        await ownerPool.query('delete from public.trainer_finance_events where client_id=$1',[card])
+        await ownerPool.query('delete from public.clients where id=$1',[card])
+      }
+    })
+
     it('keeps attendance accounting safe with no, multiple, expired and online packages', async () => {
       if (!ownerPool || !runtimePool) throw new Error('Database pools are not ready')
       for(const scenario of ['none','multiple','expired','online'] as const) {
