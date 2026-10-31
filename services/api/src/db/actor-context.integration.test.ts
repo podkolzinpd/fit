@@ -7376,6 +7376,40 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
       }
     })
 
+    it('conducts trainer plans and partial Live without fabricating or replacing exercise facts', async () => {
+      if (!ownerPool || !runtimePool) throw new Error('Database pools are not ready')
+      const card=randomUUID(),pack=randomUUID()
+      await ownerPool.query("insert into public.clients(id,trainer_id,full_name) values($1,$2,'Quick completion fixture')",[card,ACTOR_ID])
+      await ownerPool.query("insert into public.trainer_finance_packages(id,trainer_id,client_id,title,sessions_total,price_cents,starts_on) values($1,$2,$3,'Sessions',10,10000,current_date-1)",[pack,ACTOR_ID,card])
+      try {
+        for(const status of ['planned','in_progress'] as const) {
+          const draft: PlannedWorkoutDraft={id:null,requestId:randomUUID(),clientId:card,workoutDate:new Date().toISOString().slice(0,10),startTime:'10:15',endTime:'11:15',notes:'Keep this plan',title:'History plan',trainingFormat:'with_trainer',
+            exercises:[{position:0,source:'system',ref:'barbell-squat',customExerciseId:null,name:'Приседания',muscleGroup:'legs',inputKind:'strength',blockId:randomUUID(),blockType:'single',blockPreset:'set',blockRounds:1,restBetweenExercisesSec:0,restBetweenRoundsSec:90,restBetweenSetsSec:90,trainerComment:'Keep note',
+              sets:[0,1].map(position=>({position,weightKg:40,reps:10,durationMin:null,durationSec:null,distanceKm:null,rpe:null}))}]}
+          const saved=await withActorTransaction(runtimePool,ACTOR_ID,c=>savePlannedWorkout(c,draft,null))
+          if(status==='in_progress') {
+            await ownerPool.query("update public.workouts set status='in_progress',started_at=now()-interval '10 minutes' where id=$1",[saved.id])
+            await ownerPool.query("update public.workout_sets set confirmed_at=now(),fact_weight_kg=35,fact_reps=8 where position=0 and workout_exercise_id in(select id from public.workout_exercises where workout_id=$1)",[saved.id])
+          }
+          const facts=()=>ownerPool!.query('select s.* from public.workout_sets s join public.workout_exercises e on e.id=s.workout_exercise_id where e.workout_id=$1 order by s.position',[saved.id])
+          const before=(await facts()).rows
+          const operation=randomUUID(),intent={disposition:'auto' as const,packageId:null}
+          await expect(withActorTransaction(runtimePool,DOMAIN_CLIENT_ACTOR_ID,c=>finishLiveWorkout(c,saved.id,saved.version,randomUUID(),intent))).rejects.toMatchObject({failure:'forbidden'})
+          expect(await withActorTransaction(runtimePool,ACTOR_ID,c=>finishLiveWorkout(c,saved.id,saved.version,operation,intent))).toEqual({version:saved.version+1,replayed:false})
+          expect(await withActorTransaction(runtimePool,ACTOR_ID,c=>finishLiveWorkout(c,saved.id,saved.version,operation,intent))).toEqual({version:saved.version+1,replayed:true})
+          expect((await facts()).rows).toEqual(before)
+          expect((await ownerPool.query("select status,title,start_time::text,end_time::text,notes from public.workouts where id=$1",[saved.id])).rows).toEqual([{status:'done',title:'History plan',start_time:'10:15:00',end_time:'11:15:00',notes:'Keep this plan'}])
+          expect((await ownerPool.query('select disposition,package_id from public.trainer_finance_sessions where workout_id=$1 and voided_at is null',[saved.id])).rows).toEqual([{disposition:'charged',package_id:pack}])
+        }
+      } finally {
+        await ownerPool.query('delete from public.trainer_finance_sessions where client_id=$1',[card])
+        await ownerPool.query('delete from public.workouts where client_id=$1',[card])
+        await ownerPool.query('delete from public.trainer_finance_packages where client_id=$1',[card])
+        await ownerPool.query('delete from public.trainer_finance_events where client_id=$1',[card])
+        await ownerPool.query('delete from public.clients where id=$1',[card])
+      }
+    })
+
     it('keeps attendance accounting safe with no, multiple, expired and online packages', async () => {
       if (!ownerPool || !runtimePool) throw new Error('Database pools are not ready')
       for(const scenario of ['none','multiple','expired','online'] as const) {
@@ -7419,6 +7453,42 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
         expect(row.paused_at).toBeNull();expect(row.paused_seconds).toBeGreaterThanOrEqual(120)
         expect(row.actual_duration_sec).toBeGreaterThanOrEqual(480);expect(row.actual_duration_sec).toBeLessThan(485)
       } finally { await ownerPool.query('delete from public.workouts where id=$1',[id]) }
+    })
+
+    it('cancels a trainer Live with facts and pause without charging or losing its plan', async () => {
+      if (!ownerPool || !runtimePool) throw new Error('Database pools are not ready')
+      const card=randomUUID(), athlete=randomUUID()
+      await ownerPool.query("insert into public.profiles(id,first_name,account_role) values($1,'Live cancel fixture','client')",[athlete])
+      await ownerPool.query("insert into public.clients(id,trainer_id,auth_user_id,full_name) values($1,$2,$3,'Live cancellation fixture')",[card,ACTOR_ID,athlete])
+      await ownerPool.query('insert into public.client_trainer_relationships(client_id,trainer_id,connected_by) values($1,$2,$3)',[card,ACTOR_ID,athlete])
+      try {
+        const draft: PlannedWorkoutDraft={id:null,requestId:randomUUID(),clientId:card,workoutDate:new Date().toISOString().slice(0,10),startTime:'10:15',endTime:'11:15',title:'Keep Live',notes:null,trainingFormat:'with_trainer',
+          exercises:[{position:0,source:'system',ref:'barbell-squat',customExerciseId:null,name:'Приседания',muscleGroup:'legs',inputKind:'strength',blockId:randomUUID(),blockType:'single',blockPreset:'set',blockRounds:1,restBetweenExercisesSec:0,restBetweenRoundsSec:90,restBetweenSetsSec:90,trainerComment:'Keep note',
+            sets:[0,1].map(position=>({position,weightKg:40,reps:10,durationMin:null,durationSec:null,distanceKm:null,rpe:null}))}]}
+        const saved=await withActorTransaction(runtimePool,ACTOR_ID,c=>savePlannedWorkout(c,draft,null))
+        await ownerPool.query("update public.workouts set status='in_progress',started_at=now()-interval '10 minutes',paused_at=now()-interval '2 minutes' where id=$1",[saved.id])
+        await ownerPool.query("update public.workout_sets set confirmed_at=now(),fact_weight_kg=35,fact_reps=8 where position=0 and workout_exercise_id in(select id from public.workout_exercises where workout_id=$1)",[saved.id])
+        const facts=()=>ownerPool!.query('select s.* from public.workout_sets s join public.workout_exercises e on e.id=s.workout_exercise_id where e.workout_id=$1 order by s.position',[saved.id])
+        const before=(await facts()).rows
+        await expect(withActorTransaction(runtimePool,athlete,c=>cancelPlannedWorkout(c,saved.id,saved.version))).rejects.toMatchObject({failure:'invalid'})
+        await expect(withActorTransaction(runtimePool,OUTSIDE_TRAINER_ID,c=>cancelPlannedWorkout(c,saved.id,saved.version))).rejects.toMatchObject({failure:'forbidden'})
+        await expect(withActorTransaction(runtimePool,ACTOR_ID,c=>cancelPlannedWorkout(c,saved.id,saved.version+1))).rejects.toMatchObject({failure:'conflict'})
+        expect(await withActorTransaction(runtimePool,ACTOR_ID,c=>cancelPlannedWorkout(c,saved.id,saved.version))).toBe(saved.version+1)
+        expect((await facts()).rows).toEqual(before)
+        const row=(await ownerPool.query<{status:string;title:string;start_time:string;paused_at:Date|null;paused_seconds:number;started_at:Date|null;completed_at:Date|null}>('select status,title,start_time::text,paused_at,paused_seconds,started_at,completed_at from public.workouts where id=$1',[saved.id])).rows[0]!
+        expect(row).toMatchObject({status:'cancelled',title:'Keep Live',start_time:'10:15:00',paused_at:null,completed_at:null})
+        expect(row.started_at).toBeNull();expect(row.paused_seconds).toBeGreaterThanOrEqual(120)
+        expect((await ownerPool.query('select count(*)::int n from public.trainer_finance_sessions where workout_id=$1',[saved.id])).rows).toEqual([{n:0}])
+        await expect(withActorTransaction(runtimePool,ACTOR_ID,c=>cancelPlannedWorkout(c,saved.id,saved.version))).rejects.toMatchObject({failure:'invalid'})
+        const next=await withActorTransaction(runtimePool,ACTOR_ID,c=>quickStartLiveWorkout(c,card,randomUUID()))
+        expect(next.id).not.toBe(saved.id);expect(next.resumed).toBe(false)
+        await withActorTransaction(runtimePool,ACTOR_ID,c=>cancelEmptyLiveWorkout(c,next.id,1))
+      } finally {
+        await ownerPool.query('delete from public.workouts where client_id=$1',[card])
+        await ownerPool.query('delete from public.client_trainer_relationships where client_id=$1',[card])
+        await ownerPool.query('delete from public.clients where id=$1',[card])
+        await ownerPool.query('delete from public.profiles where id=$1',[athlete])
+      }
     })
 
     it('marks current and future trainer plans as not held without losing exercises or charging a package', async () => {

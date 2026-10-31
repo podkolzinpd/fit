@@ -1840,7 +1840,7 @@ test('direct pilot workout link returns to its dated calendar instead of clients
 
 test('Lime complete lifecycle preserves one plan through start resume and finish', { tag: ["@lime-critical"] }, async ({ page }) => {
   await page.clock.setFixedTime(new Date('2026-09-24T12:00:00+03:00'))
-  await mockPilot(page, { fitLime: true, workouts: [] })
+  const backend = await mockPilot(page, { fitLime: true, workouts: [] })
   const writes: string[] = []
   page.on('request', (request) => { if (request.method() === 'POST' && new URL(request.url()).pathname.startsWith('/v1/workouts')) writes.push(new URL(request.url()).pathname) })
   await page.goto('/today?date=2026-09-24')
@@ -1866,9 +1866,13 @@ test('Lime complete lifecycle preserves one plan through start resume and finish
   await page.getByRole('button', { name: 'Начать сейчас', exact: true }).click()
   await page.getByRole('dialog', { name: 'Выбор клиента' }).getByRole('button', { name: /Алексей Смирнов/ }).click()
   await expect(page).toHaveURL(new RegExp(`/workouts/${newWorkoutId}/live$`))
+  const before = JSON.stringify(backend.getWorkouts()[0]!.exercises)
   await page.getByRole('button', { name: 'Завершить тренировку', exact: true }).click()
-  await page.getByRole('button', { name: 'Завершить', exact: true }).click()
-  await expect(page.getByRole('heading', { name: 'Тренировка завершена' })).toBeVisible()
+  await page.getByRole('dialog', { name: 'Отметить проведённой', exact: true }).getByRole('button', { name: 'Подтвердить проведение', exact: true }).click()
+  await expect(page).toHaveURL(new RegExp(`/workouts/${newWorkoutId}$`))
+  await expect(page.locator('.workout-header-contract')).toContainText('Проведена')
+  expect(backend.getWorkouts()).toHaveLength(1)
+  expect(JSON.stringify(backend.getWorkouts()[0]!.exercises)).toBe(before)
   await page.goto('/today?date=2026-09-24')
   await expect(page.locator('.schedule-v2-event.schedule-event-done')).toHaveCount(1)
   expect(writes).toEqual(['/v1/workouts', `/v1/workouts/${newWorkoutId}/start`, `/v1/workouts/${newWorkoutId}/finish`])
