@@ -4526,8 +4526,9 @@ for (const [account, profileId] of [
 test('Fit Lime invitation dialog keeps the existing invite entry and close', { tag: ["@lime-clients"] }, async ({ page }, testInfo) => {
   await mockPilot(page, { fitLime: true })
   await page.goto('/clients')
-  const invite = page.getByRole('button', { name: 'Пригласить спортсмена' })
+  const invite = page.getByRole('button', { name: 'Добавить', exact: true })
   await invite.click()
+  await page.getByRole('button', { name: 'Пригласить по ссылке' }).click()
   const dialog = page.getByRole('dialog', { name: 'Кого пригласить?' })
   await expect(dialog).toBeVisible()
   await expect(dialog).toHaveCSS('background-color', 'rgb(37, 37, 41)')
