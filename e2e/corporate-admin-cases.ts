@@ -14,6 +14,58 @@ test('existing trainer settings baseline stays available', async ({ page }) => {
 const officeId = '20000000-0000-4000-8000-000000000001'
 const coachId = '20000000-0000-4000-8000-000000000002'
 
+test('trainer settings stay visible when opened from a long list, including repeated selection', async ({ page }, testInfo) => {
+  await mockNativeAiSession(page, 'client')
+  const offices = Array.from({ length: 33 }, (_, index) => ({
+    id: `30000000-0000-4000-8000-${String(index + 1).padStart(12, '0')}`,
+    city: 'Тестовый город', name: `Офис ${index + 1}`, address: 'Тестовый адрес', archived: false, version: 1,
+  }))
+  const trainers = Array.from({ length: 60 }, (_, index) => ({
+    id: `40000000-0000-4000-8000-${String(index + 1).padStart(12, '0')}`,
+    name: `Тренер ${index + 1}`, isYandex: false, officeIds: [], version: 0,
+  }))
+  await page.route('**/v1/admin/access', route => route.fulfill({ json: { allowed: true } }))
+  await page.route('**/v1/admin/bundle', route => route.fulfill({ json: { offices, trainers } }))
+  let writes = 0
+  await page.route('**/v1/admin/trainers', route => { writes += 1; return route.abort() })
+  for (const width of [1366, 390]) {
+    await page.setViewportSize({ width, height: width > 700 ? 768 : 844 })
+    await page.goto(nativeAiUrl('/admin'))
+    await expect(page.getByRole('heading', { name: 'Администрирование', exact: true })).toBeVisible()
+    await page.evaluate(theme => localStorage.setItem('fit.appTheme', theme), width < 700 ? 'dark' : 'light')
+    await page.reload()
+    if (width < 700) await expect(page.locator('html')).not.toHaveClass(/theme-light/)
+    else await expect(page.locator('html')).toHaveClass(/theme-light/)
+    const trigger = page.getByRole('button', { name: 'Настроить тренера Тренер 60', exact: true })
+    await expect(trigger).toBeVisible()
+    expect((await trigger.boundingBox())?.y).toBeGreaterThan(1000)
+    await trigger.scrollIntoViewIfNeeded()
+    await expect(trigger).toBeInViewport()
+    await trigger.click()
+    const editor = page.getByRole('form', { name: 'Настройки Тренер 60', exact: true })
+    const heading = editor.getByRole('heading', { name: 'Тренер 60', exact: true })
+    await expect(heading).toBeInViewport()
+    await expect(heading).toBeFocused()
+    await page.screenshot({ path: testInfo.outputPath(`admin-editor-visible-${width}.png`) })
+    await editor.getByRole('checkbox', { name: 'Тренер Яндекса', exact: true }).check()
+    await editor.getByRole('checkbox', { name: 'Тестовый город · Офис 1', exact: true }).check()
+    await trigger.scrollIntoViewIfNeeded()
+    await trigger.click()
+    await expect(heading).toBeInViewport()
+    await expect(heading).toBeFocused()
+    await expect(editor.getByRole('checkbox', { name: 'Тренер Яндекса', exact: true })).toBeChecked()
+    await expect(editor.getByRole('checkbox', { name: 'Тестовый город · Офис 1', exact: true })).toBeChecked()
+    await page.getByRole('button', { name: 'Настроить тренера Тренер 59', exact: true }).click()
+    const nextEditor = page.getByRole('form', { name: 'Настройки Тренер 59', exact: true })
+    await expect(nextEditor.getByRole('heading', { name: 'Тренер 59', exact: true })).toBeInViewport()
+    await expect(nextEditor.getByRole('checkbox', { name: 'Тренер Яндекса', exact: true })).not.toBeChecked()
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+    await nextEditor.getByRole('button', { name: 'Отмена', exact: true }).click()
+    await expect(nextEditor).toHaveCount(0)
+  }
+  expect(writes).toBe(0)
+})
+
 test('admin manages offices and trainer flags on a laptop, including validation and retry', async ({ page }, testInfo) => {
   await page.setViewportSize({ width:1366,height:768 })
   await mockNativeAiSession(page,'trainer')
