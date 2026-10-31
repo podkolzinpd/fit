@@ -793,6 +793,11 @@ test('private journal transport rejects corruption, redirected identity and deco
     }
     const redirected = encode({ ...reviewed, actorId: historyFixtureIds[0] })
     assert.throws(() => readJournalTransport(redirected.parts, redirected.sha, name), /private_payload_invalid/)
+    const append = encode({ ...reviewed, schemaVersion: 3 })
+    if(count===85) {
+      assert.equal(readJournalTransport(append.parts, append.sha, name).schemaVersion,3)
+      assert.throws(() => readJournalTransport(append.parts, encoded.sha, name), /private_payload_invalid/)
+    } else assert.throws(() => readJournalTransport(append.parts, append.sha, name), /private_payload_invalid/)
   }
   const legacyAsAdditional = encode({ ...payload, schemaVersion: 2 })
   assert.throws(() => readJournalTransport(legacyAsAdditional.parts, legacyAsAdditional.sha, name), /private_payload_invalid/)

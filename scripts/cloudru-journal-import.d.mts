@@ -14,6 +14,11 @@ export interface JournalReceipt {
   created: { ordinal: number; workoutId: string; requestId: string; workoutDate: string }[]
   replayed: boolean
   createdCard: boolean
+  appendOnly?: boolean
+  preservedState?: Record<string, { count: number; fingerprint: string }>
+  ownerPreservedState?: Record<string, { count: number; fingerprint: string }>
+  previousStateVerified?: boolean
+  preservedWorkouts?: number
 }
 export function runPreparedNewCardImport(options: {
   mode: 'inspect' | 'apply'
@@ -27,6 +32,7 @@ export function runPreparedNewCardImport(options: {
   saveCompleted: (...args: never[]) => Promise<{ id: string; version: number }>
   createCard: (...args: never[]) => Promise<{ id: string; version: number; membershipVersion: number }>
   persistReceipt: (state: 'prepared' | 'committed' | 'readback', receipt: JournalReceipt) => Promise<void>
+  selectionBinding?: (mode: 'inspect' | 'apply', fingerprint: string) => Promise<void>
 }): Promise<{
   status: 'ready' | 'already_imported' | 'imported'
   workouts: number
@@ -35,4 +41,9 @@ export function runPreparedNewCardImport(options: {
   athleteLinked: boolean
   readOnly?: boolean
   contentVerified?: boolean
+  willCreateCard?: boolean
+  appendOnly?: boolean
+  existingWorkouts?: number
+  preservedWorkouts?: number
+  previousStateVerified?: boolean
 }>
