@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { readClientLimeOperation, runClientLimeOperation } from './cloudru-client-lime-rollout.mjs'
+import { readFileSync } from 'node:fs'
+import { boundedClientLimeManager, readClientLimeOperation, runClientLimeOperation } from './cloudru-client-lime-rollout.mjs'
 
 const env = { GITHUB_REPOSITORY: 'podkolzinpd/fit', GITHUB_REF: 'refs/heads/main', LIME_TARGET: 'client', LIME_MODE: 'inspect' }
 const state = { clientMode: 'pilot', trainerMode: 'all', scheduleMode: 'all', revision: 5 }
@@ -54,4 +55,56 @@ test('uncertain write and changed readback fail without replay', async () => {
     } }, all))
     assert.equal(calls.filter(command => command.mode !== 'inspect').length, 1)
   }
+})
+
+
+test('the operator keeps client deadlines without unsupported database startup parameters', () => {
+  const source = readFileSync(new URL('./cloudru-client-lime-rollout.mjs', import.meta.url), 'utf8')
+  assert.doesNotMatch(source, /statement_timeout\s*:|options\s*:/)
+  assert.match(source, /max: 1, query_timeout: 10000/)
+  assert.match(source, /import\('\/app\/dist\/background-transaction\.js'\)/)
+})
+
+test('existing manager calls finish their own bounded transaction before independent readback', async () => {
+  const events = []
+  let transactions = 0
+  let stateNow = state
+  const connection = { async query(command) {
+    events.push(command.mode)
+    if (command.mode !== 'inspect') stateNow = { ...stateNow, clientMode: command.mode, revision: stateNow.revision + 1 }
+    return stateNow
+  } }
+  class Manager {
+    constructor(pool) { this.pool = pool }
+    async apply(command) {
+      const lease = await this.pool.connect()
+      try { return await lease.query(command) } finally { lease.release() }
+    }
+  }
+  const withTransaction = async (pool, work) => {
+    assert.equal(pool, 'existing-owner-pool')
+    const tx = ++transactions
+    events.push(`begin${tx}`)
+    const result = await work(connection)
+    events.push(`commit${tx}`)
+    return result
+  }
+  const manager = boundedClientLimeManager('existing-owner-pool', Manager, withTransaction)
+  assert.deepEqual(await runClientLimeOperation(manager, all), { event: 'client_lime_rollout', operation: 'all', ...state, clientMode: 'all', revision: 6 })
+  assert.deepEqual(events, ['begin1', 'inspect', 'commit1', 'begin2', 'all', 'commit2', 'begin3', 'inspect', 'commit3'])
+})
+
+test('uncertain transaction commit stops without repeating the setter or starting readback', async () => {
+  let calls = 0
+  const commitFailure = new Error('uncertain commit')
+  class Manager {
+    async apply(command) { calls++; return command.mode === 'inspect' ? state : { ...state, clientMode: 'all', revision: 6 } }
+  }
+  const manager = boundedClientLimeManager(null, Manager, async (_pool, work) => {
+    const result = await work({})
+    if (calls === 2) throw commitFailure
+    return result
+  })
+  await assert.rejects(runClientLimeOperation(manager, all), error => error === commitFailure)
+  assert.equal(calls, 2)
 })

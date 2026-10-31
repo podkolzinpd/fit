@@ -1122,3 +1122,33 @@ VITE_CLIENT_WORKOUT_ROLLOUT_MODE=all в candidate/repository; остальные
 fixPR обязателен, scope не ослабляется. Затем merge в следующем нашем слоте,
 фактический inspect, reuseall либо один expectedRevision clientall и независимый
 inspect; публичные46+16 и readback.693 остаётся в работе до этого результата.
+
+
+### Итерация 46 — 2026-10-31 — Codex / OpenAI
+
+1898 опубликован как mainff3665e8: CI41175868819/API41177932608/
+web41177932548/OTA41178101203 success; публичные JS/CSS/fonts/index/SW хеши,
+подписи/ABI/OTAbytes и обе APIhealth точной версии сверены. Public46/46 и
+publicguest/session4/4 пройдены, реальные данные не менялись. Confirmed16 идут.
+1901 принят CI41176386769 success32 и слит574eae47: только workflow/test/журнал,
+приложение идентичноff. Полный check выполнен по шагам:2968frontend,1547API/
+223условныхDBskip, lint/types/infra/calendar/hosting/buildstartup. SocketEPERM
+локального ограничения разрешён запуском оставшейся цепочки с локальнымпортом.
+Исправленный inspect41180456252 дошёл до DBconnect, но получил08P01/acquired0
+до SQL. Режим не прочитан и не изменён. Это повтор уже известного ограничения
+Cloud.ru pooler: startup statement_timeout/options отклоняются; рабочие решения
+сохранены в NUTRITION_DIARY_PILOT_20261010 и CLOUDRU_STABILIZATION_20261014.
+Расхождение: новый оператор ошибочно передавал statement_timeout в Poolconfig.
+Решение: сохранён client querytimeout10s и один ownerpool; используется готовый
+withBackgroundTransaction с SET LOCAL server10s. Каждое обращение старого
+DatabaseLimeRolloutManager отдельно commit-ится до возврата; финальныйinspect
+в новой транзакции. Никаких SQL/schema/grants/данных или продуктовой механики.
+Отвергнуто: убрать лимит полностью, читать результат в той же транзакции,
+повторить setter после неопределённого commit, сменить endpoint/SSL/права.
+Проверено16/16 targeted. Дополнительно фактический pg.Client.getStartupConf
+не содержит statement_timeout/options, clientdeadline сохранён; существующие
+скомпилированные helper+manager с синтетическим pool дали точные12SQLшагов,
+3commit/3release, одинsetter и независимыйinspect. Первый ad-hocassert ошибся
+в индексах команд; исправлена точная ожидаемая последовательность, код не менялся.
+Открыто: полный check/CI нового узкогоfix, merge, actualinspect/all/readback,
+визуальныйпросмотр publicshots и финальная публикация;693 не закрыт.
