@@ -138,3 +138,10 @@ T301–T304: один WorkoutAttendanceSheet вызывает существую
 Итог локального check PR3:2972frontend/1549APIpassed, lint/types/policies/build/startup
 passed; DB cases отдельно проверены на PG17. Прежние DB-skips без URL не считаются
 DB-проверкой. Повторный CI PR2 уже подтвердил yandex-database.
+
+Уточнение проверки PR3: стандартные Chromium/WebKit lanes обслуживают legacy
+Supabase. Новые native-сценарии ошибочно запускались там. Они перенесены в
+обязательный существующий Yandex production-build lane с явным включением обоих
+spec; в legacy используется такой же harness guard, как у quick-entry/v79.
+Ни один прежний тест/таймаут/retry не удалён и не ослаблен. Новая production-сборка
+с native routing и v79 прошла8/8 в Chromium/WebKit без повторов и skips.

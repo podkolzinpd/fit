@@ -329,7 +329,7 @@ jobs:
             --volume "${{ github.workspace }}:/work" \
             --workdir /work \
             "$PLAYWRIGHT_IMAGE" \
-            sh -c 'npm run build && npx playwright test e2e/yandex-only-auth.webkit.spec.ts e2e/nutrition-diary.webkit.spec.ts e2e/nutrition-home.webkit.spec.ts e2e/client-workout-reference.spec.ts e2e/coach-live-v79.spec.ts e2e/quick-workout-entry.spec.ts e2e/quick-workout-entry.webkit.spec.ts --project=iphone-13-webkit --project=mobile-chromium --workers=1 --fail-on-flaky-tests'
+            sh -c 'npm run build && npx playwright test e2e/yandex-only-auth.webkit.spec.ts e2e/nutrition-diary.webkit.spec.ts e2e/nutrition-home.webkit.spec.ts e2e/client-workout-reference.spec.ts e2e/coach-live-v79.spec.ts e2e/quick-workout-entry.spec.ts e2e/quick-workout-entry.webkit.spec.ts e2e/workout-attendance.spec.ts e2e/workout-attendance.webkit.spec.ts --project=iphone-13-webkit --project=mobile-chromium --workers=1 --fail-on-flaky-tests'
       - name: Upload Yandex-only browser diagnostics
         if: failure()
         uses: actions/upload-artifact@v4

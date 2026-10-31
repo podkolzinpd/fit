@@ -4,6 +4,7 @@ import type { WorkoutAttendanceDraft } from '../src/shared/domain'
 
 const profileId = 'c0ac0000-6010-4000-8000-000000000001'
 export function workoutAttendanceCases() {
+  test.skip(process.env.FIT_YANDEX_E2E_REQUIRED !== 'true', 'Native attendance is verified in the mandatory Yandex production-build lane')
   test('attendance preserves the appointment, confirms once and offers later results', async ({ page }, info) => {
     await page.clock.setFixedTime(new Date('2026-10-31T09:00:00Z'))
     const target = { ...restTimerWorkout(), title:'Посещение без упражнений',createdBy:profileId,status:'planned' as const,
