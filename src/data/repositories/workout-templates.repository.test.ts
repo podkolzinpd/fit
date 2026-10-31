@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 import type { Workout } from '../../shared/domain'
 import { localDate } from '../../shared/local-date'
-import { appendWorkoutTemplateExercises, cloneWorkoutTemplate, workoutTemplateFromWorkout } from './workout-templates.repository'
+import { appendWorkoutTemplateExercises, cloneWorkoutTemplate, workoutTemplateFromWorkout } from './workout-template-rules'
 
 describe('workout templates', () => {
   it('keeps only the planned workout snapshot', () => {

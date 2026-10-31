@@ -1,4 +1,4 @@
-import type { TrainerFinancePackage } from '../../data/repositories/trainer-finance.repository'
+import type { TrainerFinancePackage } from '../../data/contracts/trainer-finance'
 import type { WorkoutTrainingFormat } from '../../shared/domain'
 
 export function defaultWorkoutTrainingFormat(

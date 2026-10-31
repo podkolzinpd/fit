@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import type { TrainerFinancePackage } from '../../data/repositories/trainer-finance.repository'
+import type { TrainerFinancePackage } from '../../data/contracts/trainer-finance'
 import { defaultWorkoutTrainingFormat, workoutTrainingFormatLabel } from './workout-training-format'
 
 function service(overrides: Partial<TrainerFinancePackage>): TrainerFinancePackage {

@@ -4,18 +4,15 @@ import { useDataBackend } from '../../app/data-backend-context'
 import { detectInstallPlatform, installPromptDismissed, isAppInstalled } from '../install'
 import { trackGoal } from '../../shared/yandex-metrika'
 import { markPushOnboardingSeen, pushOnboardingSeen } from './notification-onboarding-storage'
-import { getCurrentPushSubscription, isPushSupported } from './push-subscription'
-import { waitForTestPushConfirmation } from './wait-for-test-push-confirmation'
+import { isPushSupported } from './push-subscription'
 import {
   isNativeWorkoutInactivityReminderSupported,
   requestWorkoutInactivityNotificationPermission,
   workoutInactivityNotificationPermission,
 } from '../workouts/workout-inactivity-reminder'
 
-const TEST_PUSH_TIMEOUT_MS = 12_000
-
 export function NotificationOnboarding({ userId, role = 'client' }: { userId: string; role?: 'trainer' | 'client' }) {
-  const { pushNotifications: pushNotificationsRepository, source } = useDataBackend()
+  const { pushNotifications: pushNotificationsRepository } = useDataBackend()
   const queryClient = useQueryClient()
   const webSupported = isPushSupported()
   const nativeSupported = isNativeWorkoutInactivityReminderSupported()
@@ -71,20 +68,6 @@ export function NotificationOnboarding({ userId, role = 'client' }: { userId: st
       }
       await pushNotificationsRepository.enable(userId)
 
-      if (source === 'supabase') {
-        const local = await getCurrentPushSubscription()
-        if (local) {
-          const confirmation = waitForTestPushConfirmation(TEST_PUSH_TIMEOUT_MS)
-          await pushNotificationsRepository.sendTestPush(local.endpoint)
-          const received = await confirmation
-          trackGoal(received ? 'push_onboarding_confirmed' : 'push_onboarding_unconfirmed')
-          setMessage(received
-            ? 'Уведомления работают.'
-            : 'Уведомления включены. Если тестовое не пришло — проверьте настройки уведомлений телефона.')
-          setPhase('success')
-          return
-        }
-      }
       setMessage('Уведомления настроены.')
       setPhase('success')
     } catch (error) {

@@ -1,10 +1,7 @@
 import { invalidateWorkoutResults } from './invalidate-workout-results'
 import { type QueryClient, useQueryClient } from '@tanstack/react-query'
 import { useEffect } from 'react'
-import {
-  type ClientRealtimeChange,
-  type ClientRealtimeTable,
-} from '../data/repositories/realtime.repository'
+import { type ClientRealtimeChange, type ClientRealtimeTable } from '../data/contracts/realtime'
 import { useDataBackend } from './data-backend-context'
 
 const REALTIME_DEBOUNCE_MS = 120

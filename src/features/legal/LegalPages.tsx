@@ -141,6 +141,21 @@ export function LegalAcceptanceGate({ children }: PropsWithChildren) {
 }
 
 export function AccountDeletionPage() {
+  const { actor, loading } = useAuth()
+  if (loading) return <StartupSplash />
+  if (actor) return <AuthenticatedAccountDeletionPage />
+  return <LegalShell title="Удаление аккаунта">
+    <p>Здесь можно отправить запрос на удаление аккаунта Fit и связанных с ним данных.</p>
+    <StatePanel
+      tone="info"
+      title="Сначала войдите"
+      description="Вход нужен, чтобы подтвердить владельца аккаунта."
+      action={<Link className="button primary" to="/auth" state={{ from: LEGAL_PATHS.deleteAccount }}>Войти в Fit</Link>}
+    />
+  </LegalShell>
+}
+
+function AuthenticatedAccountDeletionPage() {
   const { actor } = useAuth()
   const { source, legal: legalRepository } = useDataBackend()
   const queryClient = useQueryClient()
@@ -161,12 +176,6 @@ export function AccountDeletionPage() {
 
   return <LegalShell title="Удаление аккаунта">
     <p>Здесь можно отправить запрос на удаление аккаунта Fit и связанных с ним данных.</p>
-    {!actor && <StatePanel
-      tone="info"
-      title="Сначала войдите"
-      description="Вход нужен, чтобы подтвердить владельца аккаунта."
-      action={<Link className="button primary" to="/auth" state={{ from: LEGAL_PATHS.deleteAccount }}>Войти в Fit</Link>}
-    />}
     {actor && status.isLoading && <p role="status">Проверяем запрос…</p>}
     {actor && status.error && <StatePanel tone="error" title="Не удалось проверить запрос" description={status.error.message} action={<button type="button" onClick={() => void status.refetch()}>Повторить</button>} />}
     {actor && status.data?.supported === false && <StatePanel tone="info" title="Напишите в поддержку" description="Откройте профиль Fit и выберите «Предложение или проблема»." />}

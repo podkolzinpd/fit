@@ -10,12 +10,7 @@ const repository = vi.hoisted(() => ({
   setCategoryEnabled: vi.fn(),
   sendTestPush: vi.fn(),
 }))
-vi.mock('../../data/repositories/push-notifications.repository', () => ({
-  pushNotificationsRepository: repository,
-  CHAT_MESSAGE_KIND: 'chat_message',
-  WORKOUT_REMINDER_KIND: 'workout_reminder',
-  WORKOUT_SCHEDULED_KIND: 'workout_scheduled',
-}))
+
 
 type LocalSubscription = { endpoint: string; p256dh: string; authKey: string }
 
@@ -132,7 +127,7 @@ describe('NotificationOnboarding', () => {
     expect(container).toBeEmptyDOMElement()
   })
 
-  it('enables both categories, sends a test push, and shows a confirmed message on success', async () => {
+  it('enables native notifications without issuing the retired automatic test push', async () => {
     primeHappyPathDefaults()
     const user = userEvent.setup()
     repository.enable.mockResolvedValue(undefined)
@@ -151,10 +146,10 @@ describe('NotificationOnboarding', () => {
     await screen.findByRole('button', { name: 'Включить уведомления' })
     await user.click(screen.getByRole('button', { name: 'Включить уведомления' }))
 
-    expect(await screen.findByText('Уведомления работают.')).toBeVisible()
+    expect(await screen.findByText('Уведомления настроены.')).toBeVisible()
     expect(repository.enable).toHaveBeenCalledWith(USER_ID)
     expect(repository.setCategoryEnabled).not.toHaveBeenCalled()
-    expect(repository.sendTestPush).toHaveBeenCalledWith(LOCAL_SUBSCRIPTION.endpoint)
+    expect(repository.sendTestPush).not.toHaveBeenCalled()
     expect(markPushOnboardingSeen).toHaveBeenCalledWith(USER_ID)
 
     Reflect.deleteProperty(navigator, 'serviceWorker')
@@ -201,4 +196,9 @@ describe('NotificationOnboarding', () => {
     expect(repository.enable).not.toHaveBeenCalled()
     expect(await screen.findByRole('status')).toHaveTextContent('Разрешение на уведомления получено. Настройки напоминаний сохранены.')
   })
+})
+
+vi.mock('../../app/data-backend-context', async () => {
+  const { nativeBackend } = await import('../../test/native-backend')
+  return { useDataBackend: () => ({ ...nativeBackend, pushNotifications: repository }) }
 })
