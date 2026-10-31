@@ -516,7 +516,7 @@ test('trainer can create client, complete workout and save progress', async ({ p
   const workoutHistoryUrl = page.url()
   await page.getByRole('status').filter({ hasText: 'История по датам' }).getByRole('button', { name: 'Понятно' }).click()
   await expect(page.locator('.card').first()).toBeVisible()
-  // На карточке истории — список упражнений (а не группы мышц) и тоннаж.
+  // History keeps the exercise composition; aggregate facts remain in detail.
   await expect(page.locator('.cards .card').first()).toContainText('Болгарский сплит-присед')
   await expect(page.locator('.cards .card').first().locator('.workout-chronicle-brief')).toContainText('Берпи')
   const personalRecordCard = page.locator('.cards .card').first()
@@ -524,10 +524,13 @@ test('trainer can create client, complete workout and save progress', async ({ p
   await expect(personalRecordCard).not.toHaveClass(/has-pr/)
   await expect(personalRecordCard.locator('.workout-pr-badge')).toHaveCount(0)
   await expect(personalRecordCard.locator('[data-icon="record"]')).toHaveCount(0)
-  // Только исправленный подтверждённый подход: 45 × 9 = 405 кг.
-  await expect(page.locator('.card-meta').first()).toContainText('405 кг')
+  await expect(personalRecordCard.locator('.workout-chronicle-facts')).toHaveCount(0)
   await page.locator('.card').first().click()
   await expect(page.getByRole('heading', { name: 'Тренировка', level: 1, exact: true })).toBeVisible()
+  // Only the corrected confirmed set contributes: 45 × 9 = 405 kg.
+  await page.locator('.coach-workout-summary > summary').click()
+  await expect(page.locator('.workout-fact-summary')).toContainText('405 кг')
+  await page.locator('.coach-workout-summary > summary').click()
   // Compact history keeps names; the opened workout retains the exact fact.
   await expect(page.locator('.completed-exercise').first()).toContainText('45 кг × 9 повт.')
   // Заходим в аналитику упражнения и возвращаемся: «назад» с упражнения ведёт

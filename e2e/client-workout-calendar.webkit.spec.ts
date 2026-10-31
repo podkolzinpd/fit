@@ -432,7 +432,14 @@ for (const role of ['trainer', 'client'] as const) {
     await dismissCalendarHint(page)
 
     const card = page.locator('.workout-chronicle-card').first()
-    await expect(card.getByLabel('Основные группы мышц: Кор · Ноги · Грудь · +1')).toContainText('Мышцы: Кор · Ноги · Грудь · +1')
+    const expectRoleContext = async () => {
+      const muscles = card.getByLabel('Основные группы мышц: Кор · Ноги · Грудь · +1')
+      if (role === 'trainer') {
+        await expect(muscles).toHaveCount(0)
+        await expect(card.locator('.workout-chronicle-brief')).toHaveText(`${fixtureExercise.exercise_name} · Присед · Жим лёжа · ещё 1`)
+      } else await expect(muscles).toContainText('Мышцы: Кор · Ноги · Грудь · +1')
+    }
+    await expectRoleContext()
     const copy = card.getByRole('link', { name: /Скопировать тренировку за/ })
     await expect(copy).toHaveAttribute('href', `/workouts/new?copy=${historyRow.id}`)
     await expect(copy).toHaveCSS('width', '44px')
@@ -445,7 +452,8 @@ for (const role of ['trainer', 'client'] as const) {
 
     await page.evaluate(() => window.localStorage.setItem('fit.appTheme', 'dark'))
     await page.reload()
-    await expect(card.getByLabel('Основные группы мышц: Кор · Ноги · Грудь · +1')).toBeVisible()
+    await expectRoleContext()
+    if (role === 'client') await expect(card.getByLabel('Основные группы мышц: Кор · Ноги · Грудь · +1')).toBeVisible()
     for (const width of [390, 430, ...(role === 'trainer' ? [1440] : [])]) {
       await page.setViewportSize({ width, height: width === 1440 ? 1000 : 932 })
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
