@@ -148,7 +148,13 @@
 .coach-workout-reference .coach-schedule-polish .schedule-v2-range-toggle[aria-label='Период расписания'] button { min-height: 44px; padding-block: 6px }
 .coach-workout-reference .coach-schedule-polish .schedule-v2-period { margin-bottom: 4px }
 .coach-workout-reference .coach-schedule-polish .schedule-v2-period-summary { margin-block: 8px 12px }
-.coach-day-swipe { touch-action: pan-y }
+.coach-day-swipe { touch-action: pan-y pinch-zoom }
+.coach-day-swipe .schedule-v2-event { -webkit-touch-callout: none; user-select: none; -webkit-user-select: none }
+.coach-day-swipe .schedule-v2-event.is-slot-moving { z-index: 5; box-shadow: 0 8px 24px rgb(0 0 0 / .2); outline: 2px solid var(--accent); transform: scale(1.015) }
+.schedule-slot-preview-time { position: absolute; right: 10px; bottom: 5px; font-size: 11px; font-variant-numeric: tabular-nums; background: var(--surface); border-radius: 4px; padding: 1px 4px }
+.coach-day-grid { animation: coach-day-content-in 160ms ease-out }
+@keyframes coach-day-content-in { from { opacity: .65; transform: translateY(3px) } to { opacity: 1; transform: none } }
+@media (prefers-reduced-motion: reduce) { .coach-day-grid { animation: none } }
 .coach-day-heading { display: grid; min-width: 0; overflow: hidden; -webkit-user-select: none; user-select: none; --day-enter: 18px; --day-exit: -18px }
 .coach-day-heading[data-direction='previous'] { --day-enter: -18px; --day-exit: 18px }
 .coach-day-heading > div { grid-area: 1 / 1; min-width: 0 }
