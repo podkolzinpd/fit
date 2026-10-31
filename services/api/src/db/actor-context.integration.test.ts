@@ -600,6 +600,7 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
           values($1,$2,$3,$4,0,'system','slot-test','Synthetic exercise','legs','strength')`, [exercise,id,ACTOR_ID,CLIENT_ID])
         await ownerPool.query(`insert into public.workout_sets(id,workout_exercise_id,trainer_id,client_id,position,plan_reps)
           values($1,$2,$3,$4,0,12)`, [set,exercise,ACTOR_ID,CLIENT_ID])
+        const exercisesBefore = await ownerPool.query('select to_jsonb(e) as row from public.workout_exercises e where id=$1', [exercise])
         const children = await ownerPool.query('select to_jsonb(s) as row from public.workout_sets s where id=$1', [set])
         const finance = await ownerPool.query('select to_jsonb(s) as row from public.trainer_finance_sessions s where workout_id=$1', [id])
         const move = (version:number, endTime:string|null='12:30', op=operation, actor=ACTOR_ID) => withActorTransaction(runtimePool!,actor,
@@ -612,6 +613,7 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
         await expect(move(1,'12:30',randomUUID())).rejects.toMatchObject({failure:'conflict'})
         const result = await ownerPool.query(`select workout_date::text,start_time::text,end_time::text,status,title,notes,version::integer from public.workouts where id=$1`,[id])
         expect(result.rows).toEqual([{workout_date:'2099-01-01',start_time:'11:30:00',end_time:'12:30:00',status:'planned',title:'Synthetic slot',notes:'Keep note',version:2}])
+        expect((await ownerPool.query('select to_jsonb(e) as row from public.workout_exercises e where id=$1',[exercise])).rows).toEqual(exercisesBefore.rows)
         expect((await ownerPool.query('select to_jsonb(s) as row from public.workout_sets s where id=$1',[set])).rows).toEqual(children.rows)
         expect((await ownerPool.query('select to_jsonb(s) as row from public.trainer_finance_sessions s where workout_id=$1',[id])).rows).toEqual(finance.rows)
         expect(await move(2,null,randomUUID())).toBe(3)
