@@ -537,10 +537,7 @@ function scheduleV2Range(start: LocalDate, end: LocalDate): string {
 }
 
 function scheduleV2WorkoutLine(workout: Workout): string {
-  if (workout.title) return workout.title
-  const duration = workout.startTime ? scheduleDurationMinutes(workout.startTime, workout.endTime) : 60
-  const durationLabel = duration % 60 === 0 ? `${duration / 60} ч` : `${duration} мин`
-  return `${durationLabel} · ${scheduleExerciseLine(exerciseSummary(workout).map((exercise) => exercise.name))}`
+  return [workout.title, workoutExerciseBrief(workout.exercises)].filter(Boolean).join(' · ')
 }
 
 function useScheduleV2MinuteTicker() {
@@ -988,7 +985,7 @@ function TrainerScheduleV2({ forceDayView = false }: { forceDayView?: boolean })
               <span className="schedule-v2-day-title"><span>{weekdayShort(day)}</span><strong>{dayOfMonth(day)}</strong></span>
               <span className="schedule-v2-day-events">{workouts.slice(0, 5).map((workout) => {
                 const status = scheduleEventStatus(workout, today)
-                return <span key={workout.id} className={`schedule-event-${status.tone}`}><time>{workout.startTime?.slice(0, 5) ?? '—'}</time><b>{workout.clientName}</b>{fitLimeSchedule && isIndependentScheduleWorkout(workout) && <small className="schedule-independent-label">Самостоятельно</small>}<span className="sr-only">{status.label}</span></span>
+                return <span key={workout.id} className={`schedule-event-${status.tone}`} title={scheduleV2WorkoutLine(workout)}><time>{workout.startTime?.slice(0, 5) ?? '—'}</time><b>{workout.clientName}</b>{fitLimeSchedule && isIndependentScheduleWorkout(workout) && <small className="schedule-independent-label">Самостоятельно</small>}<span className="sr-only">{status.label}</span></span>
               })}{workouts.length === 0 && (compactScheduleFilters ? <span className="sr-only">На этот день тренировок нет</span> : <em>Свободный день</em>)}{workouts.length > 5 && <em>Ещё {workouts.length - 5}</em>}</span>
             </button>
           })}
@@ -996,7 +993,7 @@ function TrainerScheduleV2({ forceDayView = false }: { forceDayView?: boolean })
       </> : <>
         {timelineEvents.length === 0 && untimed.length === 0 && independent.length === 0 && <p className="schedule-v2-empty-day" role="status">{fitLimeToday ? 'На этот день тренировок нет' : 'Свободный день'}</p>}
         {independent.length > 0 && <section className="schedule-v2-untimed" aria-label="Самостоятельные тренировки"><strong>Самостоятельно</strong>{independent.map((workout) => <Link key={workout.id} to={`/workouts/${workout.id}`} state={{ returnTo }}><span className="schedule-v2-avatar">{clientInitials(workout.clientName)}</span><span><b>{workout.clientName}</b><small>{eventTime(workout) || 'Без времени'} · {scheduleV2WorkoutLine(workout)}</small></span>{workout.status === 'done' && <CheckIcon />}</Link>)}</section>}
-        {untimed.length > 0 && <section className="schedule-v2-untimed" aria-labelledby="schedule-v2-untimed-title"><strong id="schedule-v2-untimed-title">Без времени</strong>{untimed.map((workout) => <Link key={workout.id} to={`/workouts/${workout.id}`} state={{ returnTo }}><span className="schedule-v2-avatar">{clientInitials(workout.clientName)}</span><span><b>{workout.clientName}</b><small>{scheduleExerciseLine(exerciseSummary(workout).map((exercise) => exercise.name))}</small></span>{workout.status === 'done' && <CheckIcon />}</Link>)}</section>}
+        {untimed.length > 0 && <section className="schedule-v2-untimed" aria-labelledby="schedule-v2-untimed-title"><strong id="schedule-v2-untimed-title">Без времени</strong>{untimed.map((workout) => <Link key={workout.id} to={`/workouts/${workout.id}`} state={{ returnTo }}><span className="schedule-v2-avatar">{clientInitials(workout.clientName)}</span><span><b>{workout.clientName}</b><small>{scheduleV2WorkoutLine(workout)}</small></span>{workout.status === 'done' && <CheckIcon />}</Link>)}</section>}
         <div className="day-grid-scroll schedule-v2-timeline" ref={scrollRef}>
           <div className="day-grid" style={{ height: timelineHeight }}>
             {HOURS.map((hour) => <div key={hour} className={`day-grid-hour${selected === today && scheduleHourLabelCollidesWithNow(hour, currentMinutes, fitLimeToday ? hourHeight : undefined) ? ' is-near-current-time' : ''}`} style={{ top: hour * hourHeight }}><span className="day-grid-hour-label">{String(hour).padStart(2, '0')}:00</span><div className="day-grid-hour-line" /></div>)}
@@ -1006,7 +1003,7 @@ function TrainerScheduleV2({ forceDayView = false }: { forceDayView?: boolean })
               const status = scheduleEventStatus(workout, today)
               return <Link key={workout.id} className={`schedule-v2-event schedule-event-${status.tone}${columns > 1 ? ' is-compact' : ''}${columns > 2 ? ' is-dense' : ''}${height <= 44 ? ' is-short' : ''}`} style={{ top, height, left: `${column * 100 / columns}%`, width: `calc(${100 / columns}% - ${columns > 1 ? 4 : 0}px)` }} aria-label={`${eventTime(workout)} ${workout.clientName} · ${status.label}`} title={`${eventTime(workout)} · ${workout.clientName}`} to={`/workouts/${workout.id}`} state={{ returnTo }} onClick={() => trackGoal('schedule_v2_workout_opened')}>
                 <span className="schedule-v2-avatar">{clientInitials(workout.clientName)}</span>
-                <span><b>{fitLimeToday && columns > 1 ? scheduleLaneClientName(workout.clientName) : workout.clientName}</b><small>{scheduleV2WorkoutLine(workout)}</small><span className="sr-only">{status.label}</span></span>
+                <span><b>{fitLimeToday && columns > 1 ? scheduleLaneClientName(workout.clientName) : workout.clientName}</b><small className="schedule-workout-line" title={scheduleV2WorkoutLine(workout)}>{workout.title && <span className="schedule-event-workout-title">{workout.title}</span>}<span className="schedule-event-exercises">{workoutExerciseBrief(workout.exercises)}</span></small><span className="sr-only">{status.label}</span></span>
                 {workout.status === 'done' && <CheckIcon />}
               </Link>
             })}
