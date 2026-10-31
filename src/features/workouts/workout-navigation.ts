@@ -4,6 +4,7 @@ import { useLocation, useNavigate } from 'react-router-dom'
 export type WorkoutNavigationState = {
   returnTo?: string
   fromWorkoutDetailId?: string
+  scheduleFocus?: { workoutId: string; startTime: string | null }
   justCompleted?: boolean
   firstPlanClient?: { id: string; fullName: string }
 }

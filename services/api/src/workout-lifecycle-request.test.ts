@@ -26,6 +26,15 @@ describe('workout lifecycle request', () => {
     expect(readRescheduleWorkoutRequest(request)).toBeUndefined()
   })
 
+  it('opts into a replay-safe interval only with paired valid options', () => {
+    const request = { expectedVersion: 3, workoutDate: '2026-11-02', startTime: '10:00', endTime: '11:00', operationId: '12345678-1234-4234-8234-123456789012' }
+    expect(readRescheduleWorkoutRequest(request)?.slot).toEqual({ endTime: '11:00', operationId: request.operationId })
+    for (const invalid of [{ ...request, operationId: undefined }, { ...request, endTime: undefined },
+      { ...request, endTime: '09:00' }, { ...request, endTime: '25:00' }, { ...request, startTime: null }]) {
+      expect(readRescheduleWorkoutRequest(invalid)).toBeUndefined()
+    }
+  })
+
   it('trims a client comment and permits clearing it', () => {
     expect(readWorkoutCommentRequest({
       comment: '  Было тяжело  ',
