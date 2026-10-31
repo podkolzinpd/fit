@@ -386,11 +386,14 @@ describe('TrainerFinancePage', () => {
     expect(screen.getByLabelText('Название')).toHaveValue('Онлайн-сопровождение')
     await user.clear(screen.getByLabelText('Стоимость, ₽'))
     await user.type(screen.getByLabelText('Стоимость, ₽'), '12000')
+    // The fixed end date must be paired with a fixed start, not today's date.
+    await user.clear(screen.getByLabelText('Начало'))
+    await user.type(screen.getByLabelText('Начало'), '2026-10-01')
     await user.type(screen.getByLabelText('Окончание'), '2026-10-31')
     await user.click(screen.getByRole('button', { name: 'Сохранить' }))
     await waitFor(() => expect(finance.createPackage).toHaveBeenCalledWith(clientId, expect.objectContaining({
       kind: 'online_coaching', sessionsTotal: 0, openingUsedSessions: 0,
-      priceCents: 1200000, endsOn: '2026-10-31',
+      priceCents: 1200000, startsOn: '2026-10-01', endsOn: '2026-10-31',
     })))
   })
 })

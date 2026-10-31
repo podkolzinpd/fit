@@ -82,7 +82,8 @@ async function saveCompactClientPlan(page: Page) {
 test('trainer invitation name stays inside the visible iPhone viewport above the keyboard', async ({ page }) => {
   await loginAsTrainer(page)
   await page.goto('/clients')
-  await page.getByRole('button', { name: 'Пригласить спортсмена' }).click()
+  await page.getByRole('button', { name: /^(Добавить|Добавить клиента)$/ }).click()
+  await page.getByRole('button', { name: 'Пригласить по ссылке' }).click()
   await page.getByLabel('Имя спортсмена').focus()
   await page.evaluate(() => {
     document.documentElement.style.setProperty('--app-visible-height', '420px')
