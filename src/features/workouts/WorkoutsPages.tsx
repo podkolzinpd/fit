@@ -2111,7 +2111,16 @@ export function WorkoutDetailPage() {
     if (block.blockType === 'single' || block.exercises.length === 1) return articles
     return <div className={`exercise-block view${done ? ' completed-exercise-block' : ''}`} key={block.blockId}><span className="block-badge">{blockLabel(block.blockType, block.blockPreset)} · {block.blockRounds} кр.</span>{articles}</div>
   })}</div>
-  return <Page title="Тренировка" hideTitle className={`workout-detail-page${clientCompletionReport ? ' workout-completion-page' : ''}${bookingHistoryAvailable ? ' booking-history-layout' : ''}${emptyBookingPlan ? ' booking-plan-is-empty' : ''}`} back={backTo} onBack={goBack}>
+  const factSummary = workout && done && !clientCompletionReport && <><section className={`workout-fact-summary${factSummaryMetricCount >= 4 ? ' has-calories' : ''}${factSummaryMetricCount === 2 ? ' has-two-metrics' : ''}`} aria-label="Сводка тренировки">
+        <p><span>Тоннаж</span><strong>{tonnage > 0 ? tonnageLabel(tonnage) : '—'}</strong></p>
+        {workout.activeCaloriesKcal && <p><span>{limeHistory ? 'Калории FIT' : 'Оценка активных калорий FIT'}</span><strong>≈ {workout.activeCaloriesKcal} ккал</strong></p>}
+        {!limeHistory && workout.activeCaloriesKcal && workout.calorieEstimateBasis && <p><span>Основа оценки</span><strong>{workout.calorieEstimateBasis}</strong></p>}
+        {!limeHistory && !workout.activeCaloriesKcal && workout.calorieEstimateNotice && <p><span>Активные калории FIT</span><strong>{workout.calorieEstimateNotice}</strong></p>}
+        <p><span>Подходы</span><strong>{completedSets}</strong></p>
+        {groups.length > 0 && <p className="workout-fact-summary-groups"><span>Группы мышц</span><strong>{groups.join(' · ')}</strong></p>}
+        {clientMode && workout.hasPr && <p className="workout-fact-summary-record"><RecordIcon /><span>Личный рекорд</span><strong>Лучший результат тренировки</strong></p>}
+      </section>{limeHistory && (workout.activeCaloriesKcal ? workout.calorieEstimateBasis : workout.calorieEstimateNotice) && <p className="workout-calorie-explanation"><span>{workout.activeCaloriesKcal ? 'Основа оценки калорий FIT' : 'Активные калории FIT'}</span>{workout.activeCaloriesKcal ? workout.calorieEstimateBasis : workout.calorieEstimateNotice}</p>}</>
+  return <Page title="Тренировка" hideTitle className={`workout-detail-page${!clientMode ? ' coach-exercise-first' : ''}${clientCompletionReport ? ' workout-completion-page' : ''}${bookingHistoryAvailable ? ' booking-history-layout' : ''}${emptyBookingPlan ? ' booking-plan-is-empty' : ''}`} back={backTo} onBack={goBack}>
     <AsyncView loading={query.isLoading} error={query.error} onRetry={() => void query.refetch()}>{workout && <>
       {!clientMode && navigationState?.firstPlanClient && <section className="first-plan-success" aria-labelledby="first-plan-success-title">
         <div><p className="eyebrow">ГОТОВО</p><h2 id="first-plan-success-title">Тренировка запланирована</h2><p>Первый план для {navigationState.firstPlanClient.fullName} готов.</p></div>
@@ -2158,13 +2167,12 @@ export function WorkoutDetailPage() {
         </>}
       />}
       {justCompleted && !clientMode && <WorkoutCompletionCard completedSets={completedSets} totalSets={sets.length} record={completionRecords.data?.[0]} clientMode={false} clientId={workout.clientId} />}
-      {justCompleted && !clientMode && <WorkoutFinanceConfirmation bundle={completionFinance.data} workoutId={workout.id} clientId={workout.clientId} trainingFormat={workout.trainingFormat ?? 'self'} />}
-      {!clientCompletionReport && <WorkoutHeader eyebrow={clientMode && done ? 'ТРЕНИРОВКА ЗАВЕРШЕНА' : clientMode ? 'ВАША ТРЕНИРОВКА' : 'ТРЕНИРОВКА КЛИЕНТА'} title={clientMode ? (done ? workoutFocusTitle(groups) : 'Ваша тренировка') : workout.clientName} state={detailState}
+      {!clientCompletionReport && <WorkoutHeader eyebrow={clientMode && done ? 'ТРЕНИРОВКА ЗАВЕРШЕНА' : clientMode ? 'ВАША ТРЕНИРОВКА' : workout.clientName} title={clientMode ? (done ? workoutFocusTitle(groups) : 'Ваша тренировка') : workoutDisplayTitle(workout)} state={detailState}
         statusLabel={statusPresentation?.label}
         showStatus={detailState !== 'completed'}
         action={manageMenuInHeader ? <OverflowMenu label="Другие действия с тренировкой" items={workoutManageItems} /> : undefined}
         meta={<><span>{formatLocalDate(workout.workoutDate)} · {workout.startTime?.slice(0, 5) ?? 'без времени'}</span><span>{workoutTrainingFormatLabel(workout.trainingFormat ?? 'self')}</span>{clientMode && !done && authorLabel && <span>{authorLabel}</span>}{clientAuthoredReadOnly && <span>Создано клиентом · упражнения только для просмотра</span>}{stageTitle && <span>Цель: {stageTitle}</span>}</>} />}
-      {workout.title && <p className="workout-plan-title">{workout.title}</p>}
+      {clientMode && workout.title && <p className="workout-plan-title">{workout.title}</p>}
       {isFitLimeEnabled(actor) && workout.plannedDate && <p className="workout-plan-title">Исходный план: {formatLocalDate(localDate(workout.plannedDate))}{workout.plannedStartTime ? ` · ${workout.plannedStartTime.slice(0, 5)}${workout.plannedEndTime ? `–${workout.plannedEndTime.slice(0, 5)}` : ''}` : ' · без времени'}</p>}
       {isFitLimeEnabled(actor) && workout.status === 'planned' && canExecute && workout.workoutDate !== today && <p className="workout-plan-title">При запуске сейчас тренировка начнётся сегодня, {formatLocalDate(today)}. Исходная дата плана сохранится отдельно.</p>}
       {plannedActions && canExecute && <div className="workout-detail-primary-actions">
@@ -2180,24 +2188,19 @@ export function WorkoutDetailPage() {
         event.preventDefault()
         openLive(workoutId)
       }}>Продолжить тренировку</Link>}
-      {done && !clientCompletionReport && <><section className={`workout-fact-summary${factSummaryMetricCount >= 4 ? ' has-calories' : ''}${factSummaryMetricCount === 2 ? ' has-two-metrics' : ''}`} aria-label="Сводка тренировки">
-        <p><span>Тоннаж</span><strong>{tonnage > 0 ? tonnageLabel(tonnage) : '—'}</strong></p>
-        {workout.activeCaloriesKcal && <p><span>{limeHistory ? 'Калории FIT' : 'Оценка активных калорий FIT'}</span><strong>≈ {workout.activeCaloriesKcal} ккал</strong></p>}
-        {!limeHistory && workout.activeCaloriesKcal && workout.calorieEstimateBasis && <p><span>Основа оценки</span><strong>{workout.calorieEstimateBasis}</strong></p>}
-        {!limeHistory && !workout.activeCaloriesKcal && workout.calorieEstimateNotice && <p><span>Активные калории FIT</span><strong>{workout.calorieEstimateNotice}</strong></p>}
-        <p><span>Подходы</span><strong>{completedSets}</strong></p>
-        {groups.length > 0 && <p className="workout-fact-summary-groups"><span>Группы мышц</span><strong>{groups.join(' · ')}</strong></p>}
-        {clientMode && workout.hasPr && <p className="workout-fact-summary-record"><RecordIcon /><span>Личный рекорд</span><strong>Лучший результат тренировки</strong></p>}
-      </section>{limeHistory && (workout.activeCaloriesKcal ? workout.calorieEstimateBasis : workout.calorieEstimateNotice) && <p className="workout-calorie-explanation"><span>{workout.activeCaloriesKcal ? 'Основа оценки калорий FIT' : 'Активные калории FIT'}</span>{workout.activeCaloriesKcal ? workout.calorieEstimateBasis : workout.calorieEstimateNotice}</p>}</>}
-      {done && !clientCompletionReport && <section className="workout-review workout-duration-surface">{durationControl}</section>}
-      {done && !clientCompletionReport && <WorkoutClientFeedback workout={workout} canEdit={clientMode} saving={feedback.isPending} error={feedback.error} onSave={(value) => feedback.mutateAsync(value)} />}
+      {clientMode && factSummary}
+      {done && clientMode && !clientCompletionReport && <section className="workout-review workout-duration-surface">{durationControl}</section>}
+      {done && !clientCompletionReport && (clientMode || workout.discomfort) && <WorkoutClientFeedback workout={workout} canEdit={clientMode} saving={feedback.isPending} error={feedback.error} onSave={(value) => feedback.mutateAsync(value)} />}
       {done && clientMode && hasActiveTrainer && !clientCompletionReport && <WorkoutClientQuestion workout={workout} saving={question.isPending} error={question.error} onSave={(value) => question.mutateAsync(value)} />}
       {done && !clientMode && workout.clientQuestion && <WorkoutTrainerQuestion workout={workout} canReply={canReview} startEditing={new URLSearchParams(location.search).get('reply') === '1'} authorName={responseAuthorName} saving={questionAnswer.isPending} error={questionAnswer.error} onSave={(value) => questionAnswer.mutateAsync(value)} />}
-      {done && (clientMode || !workout.clientQuestion) && <WorkoutTrainerReview workout={workout} canEdit={canReview} authorName={responseAuthorName} saving={review.isPending} error={review.error} onSave={(value) => review.mutateAsync(value)} />}
+      {done && (clientMode || !workout.clientQuestion) && <WorkoutTrainerReview compact={!clientMode} workout={workout} canEdit={canReview} authorName={responseAuthorName} saving={review.isPending} error={review.error} onSave={(value) => review.mutateAsync(value)} />}
       {!clientMode && workout.clientComment && workout.sessionRpe === undefined && <WorkoutClientComment workout={workout} />}
       {!done && <div className="workout-detail-exercise-overview"><p>{bookingHistoryAvailable ? 'План тренировки' : 'ПЛАН ТРЕНИРОВКИ'}</p>{!emptyBookingPlan && <span>{workout.exercises.length} {exerciseCountLabel(workout.exercises.length)} · {sets.length} {setCountLabel(sets.length)}</span>}</div>}
       {emptyBookingPlan && <p className="booking-plan-empty">Упражнения ещё не добавлены</p>}
       {!clientCompletionReport && !emptyBookingPlan && exerciseCards}
+      {justCompleted && !clientMode && <WorkoutFinanceConfirmation bundle={completionFinance.data} workoutId={workout.id} clientId={workout.clientId} trainingFormat={workout.trainingFormat ?? 'self'} />}
+      {done && !clientMode && !workout.discomfort && <WorkoutClientFeedback workout={workout} canEdit={false} saving={feedback.isPending} error={feedback.error} onSave={(value) => feedback.mutateAsync(value)} />}
+      {done && !clientMode && <details className="coach-workout-summary"><summary>Сводка тренировки</summary>{factSummary}<section className="workout-review workout-duration-surface">{durationControl}</section></details>}
       {removeCompletedExercise.error && <p className="error workout-exercise-removal-error" role="alert">Не удалось удалить упражнение. <button type="button" className="link" disabled={removeCompletedExercise.isPending} onClick={async () => {
         if (!removeCompletedExercise.variables) return
         const refreshed = await query.refetch()
@@ -2488,7 +2491,8 @@ function WorkoutTrainerQuestion({ workout, canReply, startEditing = false, autho
   </section>
 }
 
-function WorkoutTrainerReview({ workout, canEdit, startEditing, authorName, saving, error, onSave }: {
+function WorkoutTrainerReview({ workout, canEdit, startEditing, authorName, saving, error, onSave, compact = false }: {
+  compact?: boolean
   workout: Workout
   canEdit: boolean
   startEditing?: boolean
@@ -2512,9 +2516,9 @@ function WorkoutTrainerReview({ workout, canEdit, startEditing, authorName, savi
 
   if (!canEdit && !hasReview) return null
 
-  return <section className={`workout-review ${editing ? '' : 'workout-review-readonly'}`} aria-labelledby="workout-review-title">
+  return <section className={`workout-review ${editing ? '' : 'workout-review-readonly'}${compact ? ' coach-trainer-review' : ''}${compact && !editing && !hasReview ? ' is-empty' : ''}`} aria-labelledby="workout-review-title">
     <div className="workout-review-head">
-      <div><p className="eyebrow">ПОСЛЕ ТРЕНИРОВКИ</p><h2 id="workout-review-title">Отзыв тренера</h2></div>
+      <div>{!compact && <p className="eyebrow">ПОСЛЕ ТРЕНИРОВКИ</p>}<h2 id="workout-review-title">Отзыв тренера</h2></div>
       {canEdit && !editing && <button type="button" className="secondary" onClick={() => setEditing(true)}>{hasReview ? 'Изменить' : 'Добавить'}</button>}
     </div>
     {editing ? <>
@@ -2545,7 +2549,7 @@ function WorkoutTrainerReview({ workout, canEdit, startEditing, authorName, savi
         <p className="workout-review-text">{workout.trainerReview}</p>
       </div>
       {(authorName || workout.trainerReviewedAt) && <p className="workout-response-meta">{[authorName || 'Тренер', trainerResponseTime(workout.trainerReviewedAt)].filter(Boolean).join(' · ')}</p>}
-    </> : <p className="muted">Добавьте реакцию и короткий ответ, пока впечатления свежие.</p>}
+    </> : !compact && <p className="muted">Добавьте реакцию и короткий ответ, пока впечатления свежие.</p>}
   </section>
 }
 

@@ -2466,7 +2466,8 @@ test('workout detail, completion and exercise history keep their visual baseline
   await gotoStable(page, detailPath)
   await expect(page.locator('.phone-frame')).toHaveClass(/workout-detail-history-identity/)
   if (!trainer) await expect(page.locator('.workout-completion-report')).toHaveCount(0)
-  await expectVisualBaseline(page, `workout-detail-dark-${process.platform}.png`, [], false, '#1d1e21')
+  // The trainer detail changed materially; the large desktop canvas must not hide a reordered card.
+  await expectVisualBaseline(page, `workout-detail-dark-${process.platform}.png`, [], false, '#1d1e21', trainer ? 0.005 : 0.03)
   await gotoStable(page, historyPath)
   await expectVisualBaseline(page, `workout-exercise-history-dark-${process.platform}.png`, [], false, '#1d1e21')
 
