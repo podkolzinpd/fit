@@ -66,7 +66,9 @@ export function useCoachDaySwipe(enabled: boolean, date: LocalDate, openDay: (da
       const active = gesture
       if (active?.kind !== 'drag' || !active.viewport) return
       const viewport = active.viewport, rect = viewport.getBoundingClientRect()
-      const top = Math.max(0, rect.top), bottom = Math.min(innerHeight, rect.bottom)
+      const navigation = root.closest('.phone-frame')?.querySelector<HTMLElement>('.tab-bar')?.getBoundingClientRect()
+      const visibleBottom = navigation && navigation.top > rect.top && navigation.top < rect.bottom ? navigation.top : innerHeight
+      const top = Math.max(0, rect.top), bottom = Math.min(innerHeight, rect.bottom, visibleBottom)
       const dy = !active.dragMoved ? 0 : active.lastY < top + 48 ? -8 : active.lastY > bottom - 48 ? 8 : 0
       const next = Math.max(0, Math.min(viewport.scrollHeight - viewport.clientHeight, viewport.scrollTop + dy))
       if (dy && next !== viewport.scrollTop) { viewport.scrollTop = next; updateDrag() }
