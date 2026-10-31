@@ -97,6 +97,27 @@ export function workoutAttendanceCases() {
     await page.screenshot({path:info.outputPath(`calendar-cross-week-${density}.png`)})
   })
 
+  test('history skips empty visits, reaches older exercises and keeps empty visits in client history',async({page})=>{
+    const base=restTimerWorkout()
+    const target={...base,createdBy:profileId,status:'planned' as const,workoutDate:'2026-11-02',startedAt:null,exercises:[]}
+    const empty=Array.from({length:30},(_,index)=>({...base,id:`67500000-0000-4000-8000-${String(100+index).padStart(12,'0')}`,createdBy:profileId,status:'done' as const,workoutDate:'2026-10-31',title:`Посещение без упражнений ${index+1}`,completedAt:'2026-10-31T10:00:00Z',exercises:[]}))
+    const source={...base,id:'67500000-0000-4000-8000-000000000300',createdBy:profileId,status:'done' as const,workoutDate:'2026-10-20',title:'План без записанных результатов',completedAt:'2026-10-20T10:00:00Z'}
+    await mockPilot(page,{profileId,fitLime:true,workouts:[target,...empty,source]})
+    await page.goto(`/workouts/${workoutId}`)
+    await page.locator('.booking-history-open').click()
+    const sheet=page.getByRole('dialog',{name:'История тренировок клиента'})
+    await expect(sheet).toContainText('На загруженной странице нет тренировок с упражнениями')
+    await expect(sheet.locator('.booking-history-item')).toHaveCount(0)
+    await sheet.getByRole('button',{name:'Показать ещё',exact:true}).click()
+    await expect(sheet.locator('.booking-history-item')).toHaveCount(1)
+    await expect(sheet.locator('.booking-history-item')).toContainText(source.title)
+    await expect(sheet).not.toContainText('Посещение без упражнений')
+    await sheet.locator('.booking-history-item').click()
+    await expect(sheet.getByRole('button',{name:'Использовать план',exact:true})).toBeEnabled()
+    await page.goto(`/clients/${clientId}/workouts`)
+    await expect(page.getByText('Посещение без упражнений 1',{exact:true})).toBeVisible()
+  })
+
   test('trainer conducts a historical plan without confirming its sets', async ({ page }) => {
     const target={...restTimerWorkout(),createdBy:profileId,status:'planned' as const,startedAt:null,title:'План из истории'}
     const before=JSON.stringify(target.exercises)
