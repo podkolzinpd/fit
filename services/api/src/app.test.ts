@@ -5296,6 +5296,21 @@ describe('pilot live workout core commands', () => {
     expect(writer.cancelEmpty).toHaveBeenCalledWith(sessionToken, WORKOUT_ID, 1)
   })
 
+  it('passes explicit attendance accounting only after validating the finish payload', async () => {
+    const writer = buildWorkoutsWriter()
+    const app = buildApp({ pilotWorkoutsWriter: writer.pilotWorkoutsWriter, logger: false })
+    apps.push(app)
+    const attendance = { disposition: 'trial', packageId: null }
+    const response = await app.inject({ method: 'POST', url: `/v1/workouts/${WORKOUT_ID}/finish`,
+      headers: { 'x-fit-pilot-session': sessionToken }, payload: { expectedVersion: 1, operationId: OPERATION_IDS.finish, attendance } })
+    expect(response.statusCode).toBe(200)
+    expect(writer.finishLive).toHaveBeenCalledWith(sessionToken, WORKOUT_ID, 1, OPERATION_IDS.finish, attendance)
+    const bad = await app.inject({ method: 'POST', url: `/v1/workouts/${WORKOUT_ID}/finish`,
+      headers: { 'x-fit-pilot-session': sessionToken }, payload: { expectedVersion: 1, operationId: OPERATION_IDS.finish, attendance: true } })
+    expect(bad.statusCode).toBe(400)
+    expect(writer.finishLive).toHaveBeenCalledOnce()
+  })
+
   it('starts, records, confirms and finishes with operation identities', async () => {
     const writer = buildWorkoutsWriter()
     const app = buildApp({

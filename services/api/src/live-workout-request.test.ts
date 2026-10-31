@@ -4,6 +4,7 @@ import {
   readLiveCommentRequest,
   readLiveExerciseRequest,
   readLiveOperationRequest,
+  readFinishWorkoutRequest,
   readLiveSetRemovalRequest,
   readLiveReorderRequest,
   readLiveSetRequest,
@@ -12,6 +13,15 @@ import {
 const operationId = '9a69ea77-cab3-4ea6-b3f2-76593d03c084'
 
 describe('live workout request validation', () => {
+  it('requires an explicit valid accounting intent for attendance while preserving strict finish', () => {
+    const operation = { operationId, expectedVersion: 2 }
+    expect(readFinishWorkoutRequest(operation)).toEqual(operation)
+    expect(readFinishWorkoutRequest({ ...operation, attendance: { disposition: 'charged', packageId: operationId } }))
+      .toEqual({ ...operation, attendance: { disposition: 'charged', packageId: operationId } })
+    for (const attendance of [null, true, { disposition: 'charged' }, { disposition: 'auto', packageId: operationId }, { disposition: 'free', packageId: 'bad' }, { disposition: 'unknown' }]) {
+      expect(readFinishWorkoutRequest({ ...operation, attendance })).toBeUndefined()
+    }
+  })
   it('reads an operation identity and expected version', () => {
     expect(readLiveOperationRequest({ operationId, expectedVersion: 3 }))
       .toEqual({ operationId, expectedVersion: 3 })

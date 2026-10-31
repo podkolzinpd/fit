@@ -4,6 +4,7 @@ import type { DatabaseClient } from './db/types.js'
 import type {
   LiveExerciseSnapshot,
   LiveSetDraft,
+  WorkoutAttendanceRequest,
 } from './live-workout-request.js'
 import type { PlannedWorkoutDraft } from './planned-workout-request.js'
 import type {
@@ -82,7 +83,7 @@ function commandError(error: unknown): PilotWorkoutCommandError | undefined {
   if (message === 'workout_not_found') {
     return new PilotWorkoutCommandError('not_found')
   }
-  if (message === 'workout_conflict') {
+  if (message === 'workout_conflict' || message === 'trainer_finance_conflict') {
     return new PilotWorkoutCommandError('conflict')
   }
   if (message === 'live_set_conflict') {
@@ -96,6 +97,7 @@ function commandError(error: unknown): PilotWorkoutCommandError | undefined {
   }
   if (
     message === 'workout_invalid'
+    || message === 'trainer_finance_invalid'
     || message === 'operation_reused'
     || message === 'workout_not_completed'
     || message === 'workout_feedback_invalid'
@@ -528,11 +530,14 @@ export function finishLiveWorkout(
   workoutId: string,
   expectedVersion: number,
   operationId: string,
+  attendance?: WorkoutAttendanceRequest,
 ): Promise<PilotLiveCommandResult> {
   return runLiveCommand(
     client,
-    'select version, replayed from public.finish_live_workout($1, $2, $3)',
-    [workoutId, expectedVersion, operationId],
+    attendance ? 'select version, replayed from public.finish_live_workout($1, $2, $3, true, $4, $5)'
+      : 'select version, replayed from public.finish_live_workout($1, $2, $3)',
+    attendance ? [workoutId, expectedVersion, operationId, attendance.disposition, attendance.packageId]
+      : [workoutId, expectedVersion, operationId],
   )
 }
 
