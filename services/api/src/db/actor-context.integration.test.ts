@@ -7284,6 +7284,42 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
       await ownerPool.query('delete from public.workouts where id = $1', [POST_WORKOUT_ID])
     })
 
+    it('records quick-start calendar time from the same instant for both roles and preserves it on replay', async () => {
+      if (!ownerPool || !runtimePool) throw new Error('Database pools are not ready')
+      const athlete = randomUUID(), card = randomUUID()
+      await ownerPool.query(`insert into public.profiles(id,first_name,account_role,timezone)
+        values($1,'Clock fixture','client','Pacific/Kiritimati')`, [athlete])
+      await ownerPool.query(`insert into public.clients(id,trainer_id,auth_user_id,full_name)
+        values($1,$2,$3,'Clock fixture')`, [card, ACTOR_ID, athlete])
+      await ownerPool.query(`insert into public.client_trainer_relationships(client_id,trainer_id,connected_by)
+        values($1,$2,$3)`, [card, ACTOR_ID, athlete])
+      try {
+        for (const [actor, zone] of [[ACTOR_ID, 'Pacific/Kiritimati'], [athlete, 'America/Adak']] as const) {
+          await ownerPool.query('update public.profiles set timezone=$2 where id=$1', [athlete, zone])
+          const operation = randomUUID()
+          const first = await withActorTransaction(runtimePool, actor, client => quickStartLiveWorkout(client, card, operation))
+          const snapshot = async () => (await ownerPool!.query(`select workout_date::text,start_time::text,started_at::text,version,
+            workout_date=(started_at at time zone $2)::date as same_date,
+            start_time=(started_at at time zone $2)::time as same_time
+            from public.workouts where id=$1`, [first.id, zone])).rows[0]!
+          const before = await snapshot()
+          expect(before).toMatchObject({ same_date: true, same_time: true })
+          expect(before.start_time).not.toBeNull()
+          expect(await withActorTransaction(runtimePool, actor, client => quickStartLiveWorkout(client, card, operation)))
+            .toEqual({ id: first.id, resumed: true })
+          expect(await withActorTransaction(runtimePool, actor, client => quickStartLiveWorkout(client, card, randomUUID())))
+            .toEqual({ id: first.id, resumed: true })
+          expect(await snapshot()).toEqual(before)
+          await withActorTransaction(runtimePool, actor, client => cancelEmptyLiveWorkout(client, first.id, Number(before.version)))
+        }
+      } finally {
+        await ownerPool.query('delete from public.workouts where client_id=$1', [card])
+        await ownerPool.query('delete from public.client_trainer_relationships where client_id=$1', [card])
+        await ownerPool.query('delete from public.clients where id=$1', [card])
+        await ownerPool.query('delete from public.profiles where id=$1', [athlete])
+      }
+    })
+
     it('keeps the selected quick-start format across replay and resume', async () => {
       if (!ownerPool || !runtimePool) throw new Error('Database pools are not ready')
       const clientId = randomUUID()
