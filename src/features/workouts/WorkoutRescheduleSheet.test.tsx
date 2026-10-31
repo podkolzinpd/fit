@@ -58,7 +58,7 @@ it('blocks stale writes and opens the fresh record after a version conflict', as
   expect(backend.rescheduleSlot).toHaveBeenCalledOnce(); expect(backend.get).toHaveBeenCalledWith(workout.id)
 })
 
-it('preserves the known interval through an empty native start-time edit', async () => {
+it('preserves the known interval through an empty native start-time edit', () => {
   show()
   const start = screen.getByLabelText('Начало', { exact: true }), end = screen.getByLabelText('Окончание', { exact: true })
   fireEvent.change(start, { target: { value: '' } })
