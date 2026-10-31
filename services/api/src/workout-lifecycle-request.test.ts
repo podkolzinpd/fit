@@ -29,8 +29,9 @@ describe('workout lifecycle request', () => {
   it('opts into a replay-safe interval only with paired valid options', () => {
     const request = { expectedVersion: 3, workoutDate: '2026-11-02', startTime: '10:00', endTime: '11:00', operationId: '12345678-1234-4234-8234-123456789012' }
     expect(readRescheduleWorkoutRequest(request)?.slot).toEqual({ endTime: '11:00', operationId: request.operationId })
+    expect(readRescheduleWorkoutRequest({ ...request, startTime: '23:00', endTime: '01:00' })?.slot?.endTime).toBe('01:00')
     for (const invalid of [{ ...request, operationId: undefined }, { ...request, endTime: undefined },
-      { ...request, endTime: '09:00' }, { ...request, endTime: '25:00' }, { ...request, startTime: null }]) {
+      { ...request, endTime: '10:00' }, { ...request, endTime: '25:00' }, { ...request, startTime: null }]) {
       expect(readRescheduleWorkoutRequest(invalid)).toBeUndefined()
     }
   })

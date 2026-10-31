@@ -1,3 +1,4 @@
+import { daysBetween } from '../../shared/local-date'
 import type { Workout, WorkoutSlotDraft } from '../../shared/domain'
 
 export function slotMinutes(value: string | null): number | null {
@@ -10,25 +11,29 @@ export function slotClock(minutes: number): string {
 export function workoutSlot(workout: Workout): WorkoutSlotDraft {
   return { workoutDate: workout.workoutDate, startTime: workout.startTime?.slice(0, 5) ?? null, endTime: workout.endTime?.slice(0, 5) ?? null }
 }
-export function shiftWorkoutSlot(slot: WorkoutSlotDraft, startTime: string | null): { slot: WorkoutSlotDraft; overflow: boolean } {
-  const previous = slotMinutes(slot.startTime), end = slotMinutes(slot.endTime), next = slotMinutes(startTime)
-  const duration = previous !== null && end !== null ? end - previous : null
-  const shiftedEnd = duration !== null && duration > 0 && next !== null ? next + duration : null
-  const overflow = shiftedEnd !== null && shiftedEnd >= 1440
-  return { slot: { ...slot, startTime, endTime: shiftedEnd !== null && !overflow ? slotClock(shiftedEnd) : slot.endTime }, overflow }
+export function slotDurationMinutes(startTime: string | null, endTime: string | null): number | null {
+  const start = slotMinutes(startTime), end = slotMinutes(endTime)
+  return start === null || end === null ? null : (end - start + 1440) % 1440
+}
+export function shiftWorkoutSlot(slot: WorkoutSlotDraft, startTime: string | null): WorkoutSlotDraft {
+  const duration = slotDurationMinutes(slot.startTime, slot.endTime), next = slotMinutes(startTime)
+  return { ...slot, startTime, endTime: duration !== null && duration > 0 && next !== null
+    ? slotClock((next + duration) % 1440) : slot.endTime }
 }
 export function overlappingWorkoutSlots(workout: Workout, slot: WorkoutSlotDraft, items: Workout[]): Workout[] {
-  const start = slotMinutes(slot.startTime), end = slotMinutes(slot.endTime)
+  const start = slotMinutes(slot.startTime), duration = slotDurationMinutes(slot.startTime, slot.endTime)
   if (start === null) return []
   return items.filter(other => {
-    if (other.id === workout.id || other.workoutDate !== slot.workoutDate || other.status === 'cancelled'
+    if (other.id === workout.id || other.status === 'cancelled'
       || other.trainingFormat === 'self' || (other.createdBy ?? other.trainerId) !== (workout.createdBy ?? workout.trainerId)) return false
-    const otherStart = slotMinutes(other.startTime), otherEnd = slotMinutes(other.endTime)
-    if (otherStart === null) return false
-    if (end === null && otherEnd === null) return start === otherStart
-    if (end === null) return start >= otherStart && start < otherEnd!
-    if (otherEnd === null) return otherStart >= start && otherStart < end
-    return start < otherEnd && end > otherStart
+    const clock = slotMinutes(other.startTime)
+    if (clock === null) return false
+    const otherStart = clock + daysBetween(slot.workoutDate, other.workoutDate) * 1440
+    const otherDuration = slotDurationMinutes(other.startTime, other.endTime)
+    if (duration === null && otherDuration === null) return start === otherStart
+    if (duration === null) return start >= otherStart && start < otherStart + otherDuration!
+    if (otherDuration === null) return otherStart >= start && otherStart < start + duration
+    return start < otherStart + otherDuration && start + duration > otherStart
   })
 }
 export function slotTimeLabel(slot: Pick<WorkoutSlotDraft, 'startTime' | 'endTime'>): string {

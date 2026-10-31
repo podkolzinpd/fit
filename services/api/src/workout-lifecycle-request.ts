@@ -53,7 +53,7 @@ export function readRescheduleWorkoutRequest(
   const endTime = nullableTime(input.endTime)
   const operationId = typeof input.operationId === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(input.operationId) ? input.operationId : undefined
   if (hasSlot && (!Object.hasOwn(input, 'endTime') || input.endTime === undefined || endTime === undefined || !operationId
-    || (endTime !== null && (startTime === null || startTime === undefined || endTime <= startTime)))) return undefined
+    || (endTime !== null && (startTime === null || startTime === undefined || endTime === startTime)))) return undefined
   return version === undefined
     || workoutDate === undefined
     || startTime === undefined
