@@ -1,0 +1,61 @@
+name: Generate native frontend visual fixtures
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  snapshots:
+    if: startsWith(github.ref, 'refs/heads/codex/remove-legacy-frontend')
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        project: [visual-client-390, visual-client-430, visual-trainer-1440]
+    services:
+      postgres:
+        image: postgres:17@sha256:3cec7eb015ba8adb28139fa5c83b8489cdf0e666e53dfdf20f598ae0cc8739e3
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm ci --prefix services/api --ignore-scripts
+      - run: npm --prefix services/api run build
+      - run: docker pull mcr.microsoft.com/playwright:v1.61.1-noble
+      - name: Generate native fixture images with unchanged assertions
+        env:
+          PLAYWRIGHT_PROJECT: ${{ matrix.project }}
+        run: |
+          docker run --rm --init --ipc=host --network host \
+            --env CI=true \
+            --env FIT_E2E_POSTGRES_URL=postgresql://postgres:postgres@127.0.0.1:5432/postgres \
+            --env PLAYWRIGHT_PROJECT \
+            --volume "${{ github.workspace }}:/work" \
+            --volume "/usr/share/fonts:/usr/share/fonts:ro" \
+            --workdir /work \
+            mcr.microsoft.com/playwright:v1.61.1-noble \
+            bash -lc 'fc-cache -f >/dev/null && exec npx playwright test e2e/ui-visual.spec.ts --project="$PLAYWRIGHT_PROJECT" --workers=1 --update-snapshots=all'
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: native-fixtures-${{ matrix.project }}
+          path: e2e/ui-visual.spec.ts-snapshots/*-linux-*.png
+          retention-days: 2
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: native-fixture-errors-${{ matrix.project }}
+          path: test-results/
+          retention-days: 2
