@@ -41,7 +41,7 @@ export function WorkoutAttendanceSheet({ workout, action, onCompleted, onClose, 
   }, [])
   const save = useMutation({
     mutationFn: async () => {
-      if (!completed) { await workouts.cancelPlanned(target); return }
+      if (!completed) { const prepared = beforeSave ? await beforeSave() : target; await workouts.cancelPlanned(prepared); return }
       if (!workouts.confirmAttendance) throw new Error('Проведение занятия недоступно')
       if (selection.startsWith('charged:') && !selected) throw new Error('Обновите список абонементов')
       const disposition = selected ? 'charged' : selection === 'trial' ? 'trial' : selection === 'free' ? 'free' : selection === 'unassigned' ? 'unassigned' : 'auto'
@@ -77,6 +77,7 @@ export function WorkoutAttendanceSheet({ workout, action, onCompleted, onClose, 
             <option value="unassigned">Выбрать позже</option><option value="trial">Пробное</option><option value="free">Без списания</option>
           </select></label>}</>}
       </section> : <p className="workout-attendance-accounting">Запись и план сохранятся. Занятие не спишется.</p>}
+      {!completed && target.exercises.some(exercise => exercise.sets.some(set => set.confirmedAt)) && <p className="workout-attendance-note">В тренировке есть записанные результаты. Они сохранятся, занятие не спишется.</p>}
       {completed && <p className="workout-attendance-note">Записанные результаты сохранятся. Остальные можно добавить позже.</p>}
       {(save.error || reload.error) && <p className="error" role="alert">{(reload.error ?? save.error)?.message}</p>}
       {needsReload && <button type="button" className="secondary wide" disabled={busy} onClick={() => reload.mutate()}>Обновить запись</button>}
