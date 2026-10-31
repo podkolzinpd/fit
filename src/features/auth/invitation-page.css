@@ -21,7 +21,7 @@
 .invitation-page .invitation-account { margin:0; padding:12px 0; border-block:1px solid var(--lime-divider); color:var(--lime-text-secondary); font-size:14px; overflow-wrap:anywhere; }
 .invitation-account strong { color:var(--lime-text); }
 .invitation-page .state-panel-error .state-panel-mark { color:var(--danger); }
-.phone-frame.fit-client-lime-public .invitation-page :is(button.primary,button.secondary,.button) { width:100%; min-height:52px; border-radius:18px; }
+.phone-frame.fit-client-lime-public .invitation-page :is(button.primary,button.secondary,.button) { width:100%; min-height:52px; border-radius:999px; }
 .invitation-page .invitation-continuation-note { margin:0; padding-top:8px; text-align:center; color:var(--lime-text-secondary); font-size:13px; }
 .invitation-page .invitation-change-account,.invitation-page .auth-back-link { display:block; width:100%; min-height:44px; padding:10px; text-align:center; color:var(--lime-text-secondary); font-size:14px; }
 @media(max-width:359px) {
