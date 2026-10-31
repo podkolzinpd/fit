@@ -121,8 +121,9 @@ test('protected invitation link previews and survives Yandex registration at 390
     await page.setViewportSize(viewport)
     await page.goto(`/invite?token=${token}&source=yandex`)
 
-    await expect(page.getByRole('heading', { name: 'Анастасия приглашает вас стать спортсменом' })).toBeVisible()
-    await expect(page.getByText('После подключения вы увидите общие тренировки и сможете общаться в Fit.')).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Тренировки вместе с тренером' })).toBeVisible()
+    await expect(page.getByRole('region', { name: 'Отправитель приглашения' })).toContainText('Анастасия')
+    await expect(page.getByText('После подключения вы увидите общие тренировки и сможете общаться в Fit.', { exact: false })).toBeVisible()
     await expect(page.getByRole('button', { name: 'Войти и подключиться' })).toHaveClass(/primary/)
     await expect(page.getByRole('button', { name: 'Создать аккаунт' })).toHaveClass(/secondary/)
     await expect(page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).resolves.toBe(true)

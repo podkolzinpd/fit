@@ -8,13 +8,14 @@ import { FitLimeIconsContext } from '../shared/fit-lime-icons'
 import { ClientLimeStandaloneThemeContext } from './client-lime-standalone-context'
 
 // Public routes stay public. The approved auth entry and registration are the
-// only pre-actor exceptions to AppLayout's server-confirmed client gate.
-export function ClientLimeStandaloneLayout({ children, registration = false, authEntry = false }: PropsWithChildren<{ registration?: boolean; authEntry?: boolean }>) {
+// pre-actor exceptions to AppLayout's server-confirmed client gate. Invitation
+// presentation is scoped to /invite and never grants access to another route.
+export function ClientLimeStandaloneLayout({ children, registration = false, authEntry = false, invitation = false }: PropsWithChildren<{ registration?: boolean; authEntry?: boolean; invitation?: boolean }>) {
   const { actor } = useAuth()
   const inherited = useContext(ClientLimeStandaloneThemeContext) !== null
   // The approved welcome/registration screens precede the actor response.
   // Other public routes continue to require the server-confirmed client gate.
-  const enabled = registration || authEntry || isClientLimeEnabled(actor)
+  const enabled = registration || authEntry || invitation || isClientLimeEnabled(actor)
   const baseTheme = useAppTheme()
   const { theme: clientTheme } = useClientLimeTheme(actor?.userId ?? '')
   // The public welcome screen has a fixed dark identity. Never persist this
