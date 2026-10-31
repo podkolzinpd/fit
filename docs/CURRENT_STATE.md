@@ -1,7 +1,7 @@
 28.10 — Чат: плашка даты перед первым сообщением дня («Сегодня», «Вчера», «26 октября», «12 марта 2025»), раньше «Новые сообщения»; в списке чатов дата по давности. День по часам телефона. chat-dates.ts + тесты.
 # Fit — текущий индекс
 
-31.10 — удаление legacy frontend Supabase: native composition/fixtures, явные контракты и удаление frontend SDK. [Каноническая запись P2](design/SUPABASE_DECOMMISSION_PLAN_20261023.md#p2--удаление-legacy-frontend--итерация-31102026--gpt-6--openai); CI/visual ещё в работе. Server legacy media и замороженная SQL-цепочка остаются вне этого этапа.
+31.10 — удаление legacy frontend Supabase: native composition/fixtures, явные контракты и удаление frontend SDK. [Каноническая запись P2](design/SUPABASE_DECOMMISSION_PLAN_20261023.md#p2--удаление-legacy-frontend--итерация-31102026--gpt-6--openai); Результаты проверок и текущий CI — в PR1909. Server legacy media и замороженная SQL-цепочка остаются вне этого этапа.
 31.10 — YAFIT-697: время быстрого старта обеим ролям, проведение пустой записи
 и «Не состоялась» тренеру. [План, проверки и выпуск](design/COACH_ATTENDANCE_AND_START_TIME_20261031.md).
 PR1906/1907 слиты; PR1908 и опубликованная приёмка ещё в работе.

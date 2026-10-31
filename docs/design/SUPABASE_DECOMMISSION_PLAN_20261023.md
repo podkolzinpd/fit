@@ -175,7 +175,7 @@ E2E TypeScript и workflow docs checks passed. Уникальные browser asse
 прекращённые SDK/GoTrue/PostgREST контракты: [карта соответствия](LEGACY_FRONTEND_TEST_MAPPING_20261031.md).
 Native CRUD/auth/приглашения/chat, обе роли, записи и проверки прав используют
 реальный локальный API/PostgreSQL; дальнейший exact-head browser/visual CI остаётся
-гейтом. Draft PR1909: https://github.com/podkolzinpd/fit/pull/1909.
+гейтом. PR1909: https://github.com/podkolzinpd/fit/pull/1909.
 
 Обнаруженная совместимость при переносе: WebKit отображал native preparation
 select ниже обязательной touch-высоты, native sport options имели40px.
