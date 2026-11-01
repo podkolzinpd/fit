@@ -65,6 +65,59 @@ export function workoutAttendanceCases() {
     await expect(page.locator('.fit-lime-history-row')).toContainText('Не состоялась')
   })
 
+  for(const density of ['original','compact'] as const) test(`trainer cancels Live and calendar keeps a cross ${density}`,async({page},info)=>{
+    await page.clock.setFixedTime(new Date('2026-10-31T09:00:00Z'))
+    await page.addInitScript(({id,density})=>localStorage.setItem(`fit.coachLiveDensity.${id}`,density),{id:profileId,density})
+    const target={...restTimerWorkout(),createdBy:profileId,workoutDate:'2026-10-31',startTime:'10:00',executionMode:'manual' as const,pausedAt:'2026-10-31T08:59:00Z'}
+    Object.assign(target.exercises[0]!.sets[0]!,{confirmedAt:'2026-10-31T08:58:00Z',fact:{weightKg:15,reps:8}})
+    const before=JSON.stringify(target.exercises)
+    const done={...target,id:'c0ac0000-6010-4000-8000-000000000099',status:'done' as const,startTime:'12:00',completedAt:'2026-10-31T09:00:00Z'}
+    const backend=await mockPilot(page,{profileId,fitLime:true,workouts:[target,done]})
+    await page.route(`**/v1/workouts/${workoutId}/cancel`,async route=>{
+      Object.assign(backend.getWorkouts()[0]!,{status:'cancelled',version:target.version+1,pausedAt:undefined})
+      await route.fulfill({json:{workout:{version:target.version+1}}})
+    })
+    await page.goto(`/workouts/${workoutId}/live`)
+    await page.getByRole('button',{name:'Действия с тренировкой',exact:true}).click()
+    await page.getByRole('menuitem',{name:'Не состоялась',exact:true}).click()
+    const sheet=page.getByRole('dialog',{name:'Тренировка не состоялась',exact:true})
+    await expect(sheet).toContainText('В тренировке есть записанные результаты')
+    await sheet.getByRole('button',{name:'Отметить: не состоялась',exact:true}).click()
+    await expect(page).toHaveURL(new RegExp(`/workouts/${workoutId}$`))
+    await expect(page.getByRole('button',{name:'Вернуть в план',exact:true})).toBeVisible()
+    expect(JSON.stringify(backend.getWorkouts()[0]!.exercises)).toBe(before)
+    await page.goto('/today?date=2026-10-31')
+    await expect(page.locator('.schedule-v2-event .schedule-cancelled-mark')).toHaveCount(1)
+    await expect(page.locator('.schedule-v2-event').filter({has:page.locator('svg') })).toHaveCount(2)
+    await page.screenshot({path:info.outputPath(`calendar-cross-day-${density}.png`)})
+    await page.goto('/schedule?week=2026-10-26')
+    await expect(page.locator('.schedule-v2-day-events .schedule-cancelled-mark')).toHaveCount(1)
+    await expect(page.locator('.schedule-v2-day-events .schedule-completed-mark')).toHaveCount(1)
+    await page.locator('.schedule-v2-day-events .schedule-cancelled-mark').evaluate(element => element.scrollIntoView({block:'center',behavior:'instant'}))
+    await page.screenshot({path:info.outputPath(`calendar-cross-week-${density}.png`)})
+  })
+
+  test('history skips empty visits, reaches older exercises and keeps empty visits in client history',async({page})=>{
+    const base=restTimerWorkout()
+    const target={...base,createdBy:profileId,status:'planned' as const,workoutDate:'2026-11-02',startedAt:null,exercises:[]}
+    const empty=Array.from({length:30},(_,index)=>({...base,id:`67500000-0000-4000-8000-${String(100+index).padStart(12,'0')}`,createdBy:profileId,status:'done' as const,workoutDate:'2026-10-31',title:`Посещение без упражнений ${index+1}`,completedAt:'2026-10-31T10:00:00Z',exercises:[]}))
+    const source={...base,id:'67500000-0000-4000-8000-000000000300',createdBy:profileId,status:'done' as const,workoutDate:'2026-10-20',title:'План без записанных результатов',completedAt:'2026-10-20T10:00:00Z'}
+    await mockPilot(page,{profileId,fitLime:true,workouts:[target,...empty,source]})
+    await page.goto(`/workouts/${workoutId}`)
+    await page.locator('.booking-history-open').click()
+    const sheet=page.getByRole('dialog',{name:'История тренировок клиента'})
+    await expect(sheet).toContainText('На загруженной странице нет тренировок с упражнениями')
+    await expect(sheet.locator('.booking-history-item')).toHaveCount(0)
+    await sheet.getByRole('button',{name:'Показать ещё',exact:true}).click()
+    await expect(sheet.locator('.booking-history-item')).toHaveCount(1)
+    await expect(sheet.locator('.booking-history-item')).toContainText(source.title)
+    await expect(sheet).not.toContainText('Посещение без упражнений')
+    await sheet.locator('.booking-history-item').click()
+    await expect(sheet.getByRole('button',{name:'Использовать план',exact:true})).toBeEnabled()
+    await page.goto(`/clients/${clientId}/workouts`)
+    await expect(page.getByText('Посещение без упражнений 1',{exact:true})).toBeVisible()
+  })
+
   test('trainer conducts a historical plan without confirming its sets', async ({ page }) => {
     const target={...restTimerWorkout(),createdBy:profileId,status:'planned' as const,startedAt:null,title:'План из истории'}
     const before=JSON.stringify(target.exercises)

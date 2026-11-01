@@ -38,3 +38,12 @@ it('inherits a source title only when the target has no explicitly named appoint
   result.title = 'Новая запись'
   expect(history.title).toBe('Прошлая')
 })
+
+it('rejects an empty attendance source but accepts exercises without recorded facts', () => {
+  expect(() => historyPlanForAppointment(target(), {...source(),exercises:[]})).toThrow('нет упражнений')
+  const history=source()
+  history.exercises=history.exercises.map(exercise=>({...exercise,sets:exercise.sets.map(set=>({...set,fact:{},confirmedAt:null}))}))
+  const result=historyPlanForAppointment(target(),history)
+  expect(result.exercises).toHaveLength(2)
+  expect(result.id).toBe(target().id)
+})
