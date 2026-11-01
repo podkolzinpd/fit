@@ -10,6 +10,8 @@ const reviewedScopes=[
  {workouts:137,exercises:641,sets:240,from:'2025-08-17',to:'2026-10-27'},
  {workouts:85,exercises:401,sets:0,from:'2025-06-08',to:'2026-10-26'},
  {workouts:72,exercises:413,sets:0,from:'2026-01-05',to:'2026-10-24'},
+ {workouts:104,exercises:499,sets:0,from:'2025-09-23',to:'2026-10-30'},
+ {workouts:11,exercises:55,sets:0,from:'2026-08-23',to:'2026-10-21'},
 ]
 const reviewedScope=workouts=>Array.isArray(workouts)?reviewedScopes.find(s=>s.workouts===workouts.length):undefined
 const failTransport=()=>{throw new Error('journal_import_private_payload_invalid')}
@@ -29,7 +31,7 @@ export function readJournalTransport(parts,approvedSha256,targetNameSha256) {
   // packet. Their names/hashes never require a new GitHub target secret. The
   // existing trainer binding remains mandatory; legacy packets retain their
   // separate name-hash check unchanged.
-  const appendExisting=data?.schemaVersion===3&&scope?.workouts===85
+  const appendExisting=data?.schemaVersion===3&&[85,104,11].includes(scope?.workouts)
   const packetTarget=(data?.schemaVersion===2&&scope?.sets===0)||appendExisting
   if(!data||Object.keys(data).sort().join(',')!=='batchId,clientName,schemaVersion,workouts'
    ||!(packetTarget||(data.schemaVersion===1&&scope?.workouts===137))||typeof data.batchId!=='string'||!/^[a-z0-9][a-z0-9:_-]{0,99}$/i.test(data.batchId)
