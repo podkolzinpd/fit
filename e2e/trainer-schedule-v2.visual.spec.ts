@@ -261,12 +261,18 @@ for (const width of [320, 390, 736]) test(`Figma calendar Coach compact header g
         const views = el.querySelector('.coach-calendar-views')!, box = views.getBoundingClientRect()
         const buttons = [...views.querySelectorAll('button')].map(b => ({ width: b.getBoundingClientRect().width, height: b.getBoundingClientRect().height, clipped: b.scrollWidth > b.clientWidth }))
         const tile = el.querySelector('.schedule-v2-summary button')!, paint = () => ({ background: getComputedStyle(tile).backgroundImage, glow: getComputedStyle(tile, '::before').backgroundImage, shadow: getComputedStyle(tile, '::after').boxShadow })
+        const summaryCenters = [...el.querySelectorAll('.schedule-v2-summary button')].map(button => {
+          const tileBox = button.getBoundingClientRect(), countBox = button.querySelector('strong')!.getBoundingClientRect(), iconBox = button.querySelector('.schedule-v2-summary-icon')!.getBoundingClientRect()
+          const center = (rect: DOMRect) => rect.top + rect.height / 2
+          return { countOffset: Math.abs(center(countBox) - center(tileBox)), iconOffset: Math.abs(center(iconBox) - center(tileBox)) }
+        })
         const compactPaint = paint();el.classList.remove('coach-calendar-navigation');const originalPaint = paint();el.classList.add('coach-calendar-navigation')
-        return { overlap: h.right > s.left || s.right > g.left, titleClipped: [...heading.querySelectorAll('h1,p')].some(t => t.scrollWidth > t.clientWidth), slotWidth: s.width, viewHeight: box.height, barHeight: box.height - 10, buttons, tileHeight: tile.getBoundingClientRect().height, compactPaint, originalPaint, overflow: document.documentElement.scrollWidth > innerWidth }
+        return { overlap: h.right > s.left || s.right > g.left, titleClipped: [...heading.querySelectorAll('h1,p')].some(t => t.scrollWidth > t.clientWidth), slotWidth: s.width, viewHeight: box.height, barHeight: box.height - 10, buttons, tileHeight: tile.getBoundingClientRect().height, summaryCenters, compactPaint, originalPaint, overflow: document.documentElement.scrollWidth > innerWidth }
       })
       expect(geometry.overlap).toBe(false); expect(geometry.titleClipped).toBe(false);expect(geometry.overflow).toBe(false)
       expect(geometry.slotWidth).toBe(78);expect(geometry.viewHeight).toBe(44);expect(geometry.barHeight).toBe(34)
       expect(geometry.tileHeight).toBe(88);expect(geometry.compactPaint).toEqual(geometry.originalPaint)
+      for (const summary of geometry.summaryCenters) { expect(summary.countOffset).toBeLessThanOrEqual(1);expect(summary.iconOffset).toBeLessThanOrEqual(1) }
       for (const button of geometry.buttons) { expect(button.height).toBeGreaterThanOrEqual(44);expect(button.width).toBeGreaterThanOrEqual(44);expect(button.clipped).toBe(false) }
       expect(Math.max(...geometry.buttons.map(b => b.width)) - Math.min(...geometry.buttons.map(b => b.width))).toBeLessThan(1)
     }
