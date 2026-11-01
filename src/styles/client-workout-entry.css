@@ -30,11 +30,14 @@
   box-shadow: none;
 }
 .phone-frame.fit-client-lime .client-workout-entry .workout-composer-card .voice-input {
-  min-height: 48px;
-  padding: 4px 0 0;
-  border: 0;
+  /* Keep clear/dictate on the control row, and let notices span the field. */
+  display: contents;
 }
 .phone-frame.fit-client-lime .client-workout-entry .workout-composer-card .voice-input-button {
+  grid-column: 2;
+  grid-row: 3;
+  justify-self: end;
+  margin-top: 4px;
   min-height: 44px;
   padding: 8px 14px;
   border: 1px solid var(--lime-divider);
@@ -43,6 +46,35 @@
   color: var(--lime-text);
   font-size: 14px;
   font-weight: 500;
+}
+.phone-frame.fit-client-lime .client-workout-entry .workout-composer-card .voice-note-field > .voice-input-status,
+.phone-frame.fit-client-lime .client-workout-entry .workout-composer-card .voice-input > :not(.voice-input-button) {
+  grid-column: 1 / -1;
+}
+.phone-frame.fit-client-lime .client-workout-entry .workout-composer-card .voice-input .voice-input-status {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 44px;
+  align-items: center;
+  gap: 0 8px;
+  max-width: none;
+  text-align: left;
+}
+.phone-frame.fit-client-lime .client-workout-entry .workout-composer-card .voice-input-status small {
+  grid-column: 1;
+  grid-row: 1;
+}
+.phone-frame.fit-client-lime .client-workout-entry .workout-composer-card .voice-input-status .link {
+  grid-column: 1;
+  grid-row: 2;
+  justify-self: start;
+  min-width: 44px;
+  min-height: 44px;
+}
+.phone-frame.fit-client-lime .client-workout-entry .workout-composer-card .voice-status-dismiss {
+  grid-column: 2;
+  grid-row: 1;
+  width: 44px;
+  min-height: 44px;
 }
 .phone-frame.fit-client-lime .client-workout-entry .workout-composer-card .voice-input-button.recording {
   border-color: var(--lime-pink);

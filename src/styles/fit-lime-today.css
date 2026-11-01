@@ -86,7 +86,7 @@
 .fit-lime-shell .coach-calendar-navigation .schedule-v2-summary-icon,
 .fit-lime-shell .coach-calendar-navigation .schedule-v2-summary-icon svg { width: 40px; height: 40px; }
 .fit-lime-shell .coach-calendar-navigation .schedule-v2-summary-icon { left: 14px; transform: translateY(-50%); }
-.fit-lime-shell .coach-calendar-navigation .schedule-v2-summary strong { font-size: 28px; line-height: 30px; right: 14px; bottom: 12px; }
+.fit-lime-shell .coach-calendar-navigation .schedule-v2-summary strong { font-size: 28px; line-height: 30px; right: 14px; top: 50%; bottom: auto; transform: translateY(-50%); }
 .fit-lime-shell .coach-calendar-navigation .coach-calendar-views { position: relative; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); min-height: 44px; margin: 0 16px 6px; isolation: isolate; }
 .fit-lime-shell .coach-calendar-navigation .coach-calendar-views::before { content: ''; position: absolute; inset: 5px 0; background: var(--lime-surface-raised); border-radius: 999px; z-index: -1; }
 .fit-lime-shell .coach-calendar-navigation .coach-calendar-views > button { position: relative; min-width: 0; min-height: 44px; padding: 0 2px; border: 0; border-radius: 999px; background: transparent; color: var(--lime-text); font-size: 14px; line-height: 18px; white-space: nowrap; isolation: isolate; }
