@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useMutation, useQuery } from '@tanstack/react-query'
-import { Link, useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../app/auth-context'
 import { corporateInvitationsRepository as repository } from '../../data/repositories/corporate-invitations.repository'
 import { AuthIdentityScreen } from '../auth'
@@ -21,7 +21,7 @@ export function CorporateInvitationPage() {
   const claim=useMutation({mutationFn:()=>repository.claim(token!),onSuccess:()=>void preview.refetch()})
   const changeAccount=async()=>{setSwitching(true);setSwitchError(null);try{await signOut();navigate('/auth',{state:{from:'/corporate-invite',mode:'login',inviteRole:'trainer'}})}catch{setSwitchError('Не удалось выйти из аккаунта. Повторите попытку.')}finally{setSwitching(false)}}
   const status=preview.data?.status
-  return <AuthIdentityScreen className="invitation-page">
+  return <AuthIdentityScreen className="invitation-page ym-hide-content">
     <header className="auth-entry-head"><FitLogo/><p className="eyebrow">КАБИНЕТ ЯНДЕКСА</p><h1>Приглашение тренера</h1></header>
     {!token?<StatePanel tone="info" title="Приглашение не найдено" description="Откройте ссылку или QR-код от администратора."/>:<AsyncView loading={preview.isPending||loading} error={preview.error} onRetry={()=>void preview.refetch()}>
       {preview.data&&<>
@@ -41,6 +41,7 @@ export function CorporateInvitationPage() {
         {switchError&&<p role="alert">{switchError}</p>}
       </>}
     </AsyncView>}
-    <Link className="auth-back-link" to={actor?.role==='trainer'?'/profile/settings':actor?'/me/settings':'/auth'}>Вернуться в ФИТ</Link>
+    {/* A fresh document restores normal analytics after this private entry. */}
+    <a className="auth-back-link" href={actor?.role==='trainer'?'/profile/settings':actor?'/me/settings':'/auth'}>Вернуться в ФИТ</a>
   </AuthIdentityScreen>
 }

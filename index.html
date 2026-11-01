@@ -284,7 +284,8 @@
     <script type="text/javascript">
       const isFitProduction = window.location.hostname === 'fit-training.ru'
         || window.location.protocol === 'capacitor:';
-      if (isFitProduction) {
+      const isCorporateInvitationEntry = window.location.pathname === '/corporate-invite';
+      if (isFitProduction && !isCorporateInvitationEntry) {
         function fitMetrikaSafeUrl(rawUrl) {
           if (!rawUrl) return '';
           try {

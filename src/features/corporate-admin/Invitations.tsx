@@ -19,7 +19,7 @@ export function CorporateInvitations({data,initialCreate=false}:{data:CorporateA
   const create=useMutation({mutationFn:()=>repository.create(operationId,officeIds),onSuccess:async value=>{setShare(value);setCreating(false);setOfficeIds([]);setOperationId(crypto.randomUUID());await refresh()}})
   const decide=useMutation({mutationFn:({id,approve}:{id:string;approve:boolean})=>repository.decide(id,approve),onSuccess:refresh})
   const open=()=>{create.reset();setShare(null);setOfficeIds([]);setOperationId(crypto.randomUUID());setCreating(true)}
-  return <section className="corporate-admin-workspace">
+  return <section className="corporate-admin-workspace ym-hide-content">
     <div className="corporate-admin-toolbar"><h2>Приглашения</h2><button type="button" className="primary" disabled={create.isPending} onClick={open}>Пригласить тренера</button></div>
     {creating&&<form className="corporate-admin-editor" aria-label="Новое приглашение" onSubmit={e=>{e.preventDefault();create.mutate()}}>
       <h3>Офисы тренера</h3>
@@ -49,9 +49,9 @@ function CorporateInvitationShare({token,onClose}:{token:string;onClose:()=>void
     void QRCode.toDataURL(url,{width:480,margin:2,errorCorrectionLevel:'M'}).then(image=>{if(active)setQr(image)}).catch(()=>{if(active)setQrError(true)})
     return()=>{active=false}
   },[showQr,url])
-  return <section className="corporate-admin-editor corporate-invitation-share" aria-label="Ссылка приглашения"><h3>Приглашение готово</h3><p>Отправьте ссылку тренеру. Срок — 7 дней. После принятия подтвердите заявку.</p><p>Если ссылка потеряется, отмените приглашение и создайте новое.</p>
+  return <section className="corporate-admin-editor corporate-invitation-share ym-hide-content" aria-label="Ссылка приглашения"><h3>Приглашение готово</h3><p>Отправьте ссылку тренеру. Срок — 7 дней. После принятия подтвердите заявку.</p><p>Если ссылка потеряется, отмените приглашение и создайте новое.</p>
     <div className="actions"><button type="button" className="primary" onClick={async()=>{try{await copyText(url);setCopied(true);setCopyError(false)}catch{setCopyError(true)}}}>{copied?'Ссылка скопирована':'Скопировать ссылку'}</button><button type="button" className="secondary" onClick={()=>setShowQr(true)}>Показать QR</button><button type="button" className="secondary" onClick={onClose}>Закрыть</button></div>
-    {copyError&&<p role="alert">Не удалось скопировать. Выделите ссылку ниже.</p>}<Field label="Ссылка приглашения"><input readOnly value={url} onFocus={e=>e.target.select()}/></Field>
+    {copyError&&<p role="alert">Не удалось скопировать. Выделите ссылку ниже.</p>}<Field label="Ссылка приглашения"><input className="ym-disable-keys" readOnly value={url} onFocus={e=>e.target.select()}/></Field>
     {showQr&&(qr?<img className="corporate-invitation-qr" src={qr} alt="QR-код приглашения тренера"/>:qrError?<p role="alert">Не удалось создать QR. Используйте ссылку.</p>:<p role="status">Создаём QR…</p>)}
   </section>
 }
