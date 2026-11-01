@@ -45,7 +45,7 @@ import { WorkoutActualDuration, WorkoutActualDurationField } from './WorkoutActu
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ChangeEvent, type FormEvent, type ReactNode, type KeyboardEvent as ReactKeyboardEvent } from 'react'
 import { createPortal } from 'react-dom'
-import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
+import { Link, Navigate, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { currentStage, orderedStages } from '../../shared/goal-rules'
 import { copiedExerciseName } from '../../shared/exercise-catalog-curation'
@@ -130,7 +130,7 @@ import { useWorkoutInactivityReminder } from './use-workout-inactivity-reminder'
 import { LiveExerciseTechnique } from './LiveExerciseTechnique'
 import { acknowledgePendingLiveNote, readPendingLiveNotes, writePendingLiveNote } from './live-note-draft-storage'
 import { useAppViewport } from '../../app/app-viewport'
-import { isTrainerScheduleV2Enabled } from '../../app/trainer-schedule-v2'
+import { isTrainerScheduleV2CalendarRoute, isTrainerScheduleV2Enabled } from '../../app/trainer-schedule-v2'
 import { isFitLimeEnabled } from '../../app/fit-lime'
 import { useTrainerWorkspace } from './use-trainer-workspace'
 import { ChatHeaderAction, useChatThreads } from '../chat'
@@ -193,12 +193,15 @@ function useTrainerScheduleModel(forceDayView = false, hourHeight = HOUR_HEIGHT)
   const { actor } = useAuth()
   const navigate = useNavigate()
   const pilot = isTrainerScheduleV2Enabled(actor)
+  const unifiedCalendar = pilot && isCoachWorkoutRedesignEnabled(actor)
+  const scheduleLocation = useLocation()
   const today = todayInTimeZone(actor?.timezone)
   const dateParam = safeScheduleDate(params.get('date'))
   const weekParam = safeScheduleDate(params.get('week'))
   const scheduleRange = params.get('range') === '2w' ? '2w' : 'week'
   const isTwoWeekView = scheduleRange === '2w'
-  const isDayView = forceDayView || Boolean(dateParam)
+  const isDayView = (forceDayView && !unifiedCalendar) || Boolean(dateParam)
+    || unifiedCalendar && scheduleLocation.pathname === '/today' && !weekParam && params.get('mode') !== 'list'
   const lime = pilot && isFitLimeEnabled(actor)
   const independentPreference = useIndependentSchedule(lime && !isDayView ? actor?.userId : undefined)
   const isListView = lime && !isDayView && params.get('mode') === 'list'
@@ -206,7 +209,7 @@ function useTrainerScheduleModel(forceDayView = false, hourHeight = HOUR_HEIGHT)
   const statusFilter = lime && !isDayView ? scheduleStatusFilter(params.get('status')) : 'all'
   const overviewDayCount = isTwoWeekView ? 14 : 7
   const anchor = lime && isCoachWorkoutRedesignEnabled(actor) ? safeScheduleDate(params.get('anchor')) : null
-  const selected = dateParam ?? (forceDayView ? today : anchor ?? weekParam ?? today)
+  const selected = dateParam ?? (forceDayView && !unifiedCalendar ? today : anchor ?? weekParam ?? today)
   const validWeekStart = weekParam ? mondayWeekStart(weekParam) : null
   const weekStart = validWeekStart && (!isDayView || (daysBetween(validWeekStart, selected) >= 0 && daysBetween(validWeekStart, selected) < overviewDayCount))
     ? validWeekStart : mondayWeekStart(selected)
@@ -214,7 +217,6 @@ function useTrainerScheduleModel(forceDayView = false, hourHeight = HOUR_HEIGHT)
   const todayWeekStart = mondayWeekStart(today)
   const overviewDays = Array.from({ length: overviewDayCount }, (_, offset) => addDays(weekStart, offset))
   const scrollRef = useRef<HTMLDivElement>(null)
-  const scheduleLocation = useLocation()
   const scheduleFocus = (scheduleLocation.state as WorkoutNavigationState | null)?.scheduleFocus
   const autoScrolledDateRef = useRef<LocalDate | null>(null)
   const consumedFocusRef = useRef<string | null>(null)
@@ -238,7 +240,7 @@ function useTrainerScheduleModel(forceDayView = false, hourHeight = HOUR_HEIGHT)
     if (range === '2w') next.range = '2w'
     if (lime && isCoachWorkoutRedesignEnabled(actor)) next.anchor = date
     if (lime && !isDayView) for (const key of ['client', 'status', 'mode']) { const value = params.get(key); if (value) next[key] = value }
-    if (pilot) navigate(`/schedule?${new URLSearchParams(next)}`)
+    if (pilot) navigate(`${unifiedCalendar ? '/today' : '/schedule'}?${new URLSearchParams(next)}`)
     else setParams(next)
   }
   function shiftOverview(direction: -1 | 1) { showOverview(addDays(weekStart, direction * overviewDayCount)) }
@@ -320,12 +322,19 @@ function useTrainerScheduleModel(forceDayView = false, hourHeight = HOUR_HEIGHT)
 
 export function SchedulePage() {
   const { actor } = useAuth()
+  const location = useLocation()
   const [claimToken] = useState(() => {
     const match = /^#trainer-schedule-v2=([A-Za-z0-9_-]{43})$/.exec(window.location.hash)
     return match?.[1] ?? null
   })
   if (claimToken !== null && !isTrainerScheduleV2Enabled(actor)) {
     return <TrainerScheduleV2Claim token={claimToken} />
+  }
+  if (isTrainerScheduleV2Enabled(actor) && isCoachWorkoutRedesignEnabled(actor)
+    && isTrainerScheduleV2CalendarRoute('/today', location.search)) {
+    const next = new URLSearchParams(location.search)
+    if (!next.has('date') && !next.has('week')) next.set('week', mondayWeekStart(todayInTimeZone(actor?.timezone)))
+    return <Navigate to={`/today?${next}`} replace state={location.state as unknown} />
   }
   return isTrainerScheduleV2Enabled(actor) ? <TrainerScheduleV2 /> : <TrainerScheduleV1 />
 }
@@ -823,7 +832,7 @@ function TrainerScheduleV2({ forceDayView = false }: { forceDayView?: boolean })
     else if (view === 'week') next.delete('range')
     if (view === 'list') next.set('mode', 'list')
     else next.delete('mode')
-    navigate(`/schedule?${next}`, { flushSync: true })
+    navigate(`/today?${next}`, { flushSync: true })
   }
   const chooseCalendarDate = (date: LocalDate) => {
     if (isDayView) { openDay(date); return }

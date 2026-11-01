@@ -578,3 +578,36 @@ describe('single-account client Lime shell', () => {
     localStorage.removeItem('fit.clientLime.theme.user-1')
   })
 })
+
+
+it.each([
+  ['/today?date=2026-09-24', 'День'], ['/clients', 'Клиенты'],
+  ['/finance', 'Финансы'], ['/clients/client-1/finance', 'Финансы'], ['/schedule/templates', 'День'],
+])('unifies coach navigation and keeps the correct active destination on %s', (route, active) => {
+  vi.stubEnv('VITE_COACH_WORKOUT_REDESIGN_ENABLED', 'true')
+  vi.stubEnv('VITE_COACH_WORKOUT_REDESIGN_PILOT_USER_IDS', 'coach-navigation-test,coach-navigation-second')
+  vi.stubEnv('VITE_ASSISTANT_NAV_ENABLED', 'true')
+  vi.stubEnv('VITE_ASSISTANT_NAV_PILOT_USER_IDS', 'coach-navigation-test')
+  authState.role = 'trainer'; authState.userId = 'coach-navigation-test'
+  authState.trainerScheduleV2 = true; authState.fitLime = true
+  vi.stubGlobal('ResizeObserver', class { observe() {} disconnect() {} })
+  const layout = renderLayout(route)
+  const links = within(screen.getByRole('navigation', { name: 'Основная навигация' })).getAllByRole('link')
+  expect(links.map(link => link.textContent)).toEqual(['День', 'Клиенты', '₽Финансы', 'Ассистент'])
+  expect(links.filter(link => link.getAttribute('aria-current') === 'page')).toHaveLength(1)
+  expect(links.find(link => link.getAttribute('aria-current') === 'page')).toHaveAccessibleName(active)
+  layout.unmount(); vi.unstubAllGlobals()
+})
+
+it('keeps finance and assistant availability gates in unified coach navigation', () => {
+  vi.stubEnv('VITE_COACH_WORKOUT_REDESIGN_ENABLED', 'true')
+  vi.stubEnv('VITE_COACH_WORKOUT_REDESIGN_PILOT_USER_IDS', 'coach-navigation-test,coach-navigation-second')
+  vi.stubEnv('VITE_TRAINER_FINANCE_ENABLED', 'false')
+  vi.stubEnv('VITE_ASSISTANT_NAV_ENABLED', 'false')
+  authState.role = 'trainer'; authState.userId = 'coach-navigation-test'
+  authState.trainerScheduleV2 = true; authState.fitLime = true
+  renderLayout('/today?date=2026-09-24')
+  const nav = screen.getByRole('navigation', { name: 'Основная навигация' })
+  expect(within(nav).queryByRole('link', { name: 'Финансы' })).not.toBeInTheDocument()
+  expect(within(nav).queryByRole('link', { name: 'Ассистент' })).not.toBeInTheDocument()
+})
