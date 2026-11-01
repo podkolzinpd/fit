@@ -16,6 +16,7 @@ async function response(path: Parameters<typeof corporateAdminRequest>[0], body?
     const messages: Record<string, string> = {
       corporate_forbidden: 'Нет доступа к кабинету администратора.',
       unauthorized: 'Сессия завершена. Войдите в ФИТ снова.',
+      corporate_not_found: 'Тренер больше не входит в кабинет Яндекса. Обновите список.',
       corporate_conflict: 'Данные уже изменены. Обновите список и повторите изменение.',
       corporate_office_in_use: 'Это единственный активный офис у тренера Яндекса. Сначала назначьте другой офис или отключите отметку тренера.',
       corporate_office_duplicate: 'Такой офис уже есть в справочнике.',
