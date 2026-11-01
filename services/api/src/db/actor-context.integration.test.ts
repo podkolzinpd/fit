@@ -7359,6 +7359,43 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
       await ownerPool.query('delete from public.workouts where id = $1', [POST_WORKOUT_ID])
     })
 
+    it('guards new future completion atomically while retaining done rescheduling and local dates', async () => {
+      if (!ownerPool || !runtimePool) throw new Error('Database pools are not ready')
+      const card=randomUUID(), athlete=randomUUID(), pack=randomUUID()
+      await ownerPool.query("insert into public.profiles(id,first_name,account_role,timezone) values($1,'Completion date fixture','client','Pacific/Kiritimati')",[athlete])
+      await ownerPool.query("insert into public.clients(id,trainer_id,auth_user_id,full_name) values($1,$2,$3,'Date fixture')",[card,ACTOR_ID,athlete])
+      await ownerPool.query('insert into public.client_trainer_relationships(client_id,trainer_id,connected_by) values($1,$2,$3)',[card,ACTOR_ID,athlete])
+      await ownerPool.query("insert into public.trainer_finance_packages(id,trainer_id,client_id,title,sessions_total,price_cents,starts_on) values($1,$2,$3,'Date package',10,0,current_date-2)",[pack,ACTOR_ID,card])
+      try {
+        const id=randomUUID(), op=randomUUID()
+        await ownerPool.query("insert into public.workouts(id,trainer_id,client_id,created_by,workout_date,status,training_format) values($1,$2,$3,$2,current_date+3,'planned','with_trainer')",[id,ACTOR_ID,card])
+        await expect(withActorTransaction(runtimePool,ACTOR_ID,c=>finishLiveWorkout(c,id,1,op,{disposition:'auto',packageId:null}))).rejects.toMatchObject({failure:'invalid'})
+        expect((await ownerPool.query('select status,version::int from public.workouts where id=$1',[id])).rows).toEqual([{status:'planned',version:1}])
+        expect((await ownerPool.query('select count(*)::int n from public.trainer_finance_sessions where workout_id=$1',[id])).rows).toEqual([{n:0}])
+        const today=(await ownerPool.query<{day:string}>("select (now() at time zone coalesce((select timezone from public.profiles where id=$1),'Europe/Moscow'))::date::text as day",[ACTOR_ID])).rows[0]!.day
+        const moved=await withActorTransaction(runtimePool,ACTOR_ID,c=>rescheduleWorkout(c,id,today,null,1,{endTime:null,operationId:randomUUID()}))
+        const finish=()=>withActorTransaction(runtimePool!,ACTOR_ID,c=>finishLiveWorkout(c,id,moved,op,{disposition:'auto',packageId:null}))
+        expect((await finish()).replayed).toBe(false);expect((await finish()).replayed).toBe(true)
+        const finance=(await ownerPool.query('select to_jsonb(s) row from public.trainer_finance_sessions s where workout_id=$1',[id])).rows
+        expect(finance).toHaveLength(1)
+        await withActorTransaction(runtimePool,ACTOR_ID,c=>rescheduleWorkout(c,id,'2099-01-01',null,moved+1,{endTime:null,operationId:randomUUID()}))
+        expect((await ownerPool.query('select to_jsonb(s) row from public.trainer_finance_sessions s where workout_id=$1',[id])).rows).toEqual(finance)
+        const day=(await ownerPool.query<{day:string}>("select (now() at time zone 'Pacific/Kiritimati')::date::text as day")).rows[0]!.day
+        const draft:PlannedWorkoutDraft={id:null,requestId:randomUUID(),clientId:card,workoutDate:'2099-01-01',startTime:null,endTime:null,notes:null,trainingFormat:'self',exercises:[{position:0,source:'system',ref:'squat',customExerciseId:null,name:'Присед',muscleGroup:'legs',inputKind:'strength',blockId:randomUUID(),blockType:'single',blockPreset:'set',blockRounds:1,restBetweenExercisesSec:0,restBetweenRoundsSec:0,restBetweenSetsSec:90,trainerComment:null,sets:[{position:0,weightKg:30,reps:10,durationSec:null,durationMin:null,distanceKm:null,rpe:null}]}]}
+        await expect(withActorTransaction(runtimePool,athlete,c=>saveCompletedWorkout(c,draft,null))).rejects.toMatchObject({failure:'invalid'})
+        const saved=await withActorTransaction(runtimePool,athlete,c=>saveCompletedWorkout(c,{...draft,workoutDate:day,requestId:randomUUID()},null))
+        expect((await ownerPool.query('select status,workout_date::text as day from public.workouts where id=$1',[saved.id])).rows).toEqual([{status:'done',day}])
+      } finally {
+        await ownerPool.query('delete from public.trainer_finance_sessions where client_id=$1',[card])
+        await ownerPool.query('delete from public.workouts where client_id=$1',[card])
+        await ownerPool.query('delete from public.trainer_finance_packages where client_id=$1',[card])
+        await ownerPool.query('delete from public.trainer_finance_events where client_id=$1',[card])
+        await ownerPool.query('delete from public.client_trainer_relationships where client_id=$1',[card])
+        await ownerPool.query('delete from public.clients where id=$1',[card])
+        await ownerPool.query('delete from public.profiles where id=$1',[athlete])
+      }
+    })
+
     it('confirms the same empty appointment atomically with existing package accounting and replay', async () => {
       if (!ownerPool || !runtimePool) throw new Error('Database pools are not ready')
       const card = randomUUID(), pack = randomUUID()

@@ -312,7 +312,7 @@ test('Figma workout Coach reference full editor is absent for non-pilot trainer'
   await expect(page.getByLabel('Запись тренировки')).toBeVisible()
 })
 
-test('Figma workout Coach reference second trainer starts immediately after client choice', async ({ page }) => {
+test('Figma workout Coach reference second trainer starts explicitly after client and format choice', async ({ page }) => {
   await mockPilot(page, { profileId: 'c0ac0000-6010-4000-8000-000000000002', fitLime: true, workouts: [] })
   await page.goto('/today?date=2026-09-24')
   await page.getByRole('button', { name: 'Новая тренировка', exact: true }).click()
@@ -321,6 +321,8 @@ test('Figma workout Coach reference second trainer starts immediately after clie
   await expect(picker).toHaveClass(/coach-reference-sheet/)
   await expect(picker.getByRole('button', { name: 'Применить клиента' })).toHaveCount(0)
   await picker.getByRole('button', { name: /Алексей Смирнов/ }).click()
+  await expect(page.locator('.quick-start-format')).toBeVisible()
+  await page.getByRole('button', { name: 'Начать тренировку', exact: true }).click()
   await expect(page).toHaveURL(/\/live$/)
   await expect(page.locator('.quick-start-format')).toHaveCount(0)
 })
@@ -997,7 +999,7 @@ for (const fitLime of [true, false]) {
   })
 }
 
-test('Lime direct start opens Live immediately after choosing the client', async ({ page }) => {
+test('Lime direct start requires explicit confirmation after choosing the client', async ({ page }) => {
   await mockPilot(page, { fitLime: true, workouts: [] })
   const commands: unknown[] = []
   page.on('request', (request) => { if (request.url().endsWith('/workouts/quick-start')) commands.push(request.postDataJSON() as unknown) })
@@ -1005,6 +1007,8 @@ test('Lime direct start opens Live immediately after choosing the client', async
   await page.getByRole('button', { name: 'Новая тренировка', exact: true }).click()
   await page.getByRole('button', { name: 'Начать сейчас', exact: true }).click()
   await page.getByRole('dialog', { name: 'Выбор клиента' }).getByRole('button', { name: /Алексей Смирнов/ }).click()
+  expect(commands).toHaveLength(0)
+  await page.getByRole('button', { name: 'Начать тренировку', exact: true }).click()
   await expect(page).toHaveURL(new RegExp(`/workouts/${newWorkoutId}/live$`))
   await expect(page.locator('.live-workout-page')).toBeVisible()
   expect(commands).toHaveLength(1)
@@ -1058,7 +1062,8 @@ test('Lime start now retries one command without using the selected future date'
   await page.getByRole('button', { name: 'Новая тренировка', exact: true }).click()
   await page.getByRole('button', { name: 'Начать сейчас' }).click()
   await page.getByRole('dialog', { name: 'Выбор клиента' }).getByRole('button', { name: /Алексей Смирнов/ }).click()
-  await expect(page.getByRole('button', { name: 'Начать', exact: true })).toHaveCount(0)
+  expect(commands).toHaveLength(0)
+  await page.getByRole('button', { name: 'Начать тренировку', exact: true }).click()
   await expect(page.getByRole('button', { name: 'Запланировать', exact: true })).toHaveCount(0)
   await expect(page.getByRole('alert')).toContainText('Не удалось начать тренировку')
   await page.getByRole('button', { name: 'Повторить', exact: true }).click()
@@ -1899,6 +1904,7 @@ test('Lime complete lifecycle preserves one plan through start resume and finish
   await page.getByRole('button', { name: 'Новая тренировка', exact: true }).click()
   await page.getByRole('button', { name: 'Начать сейчас', exact: true }).click()
   await page.getByRole('dialog', { name: 'Выбор клиента' }).getByRole('button', { name: /Алексей Смирнов/ }).click()
+  await page.getByRole('button', { name: 'Продолжить тренировку', exact: true }).click()
   await expect(page).toHaveURL(new RegExp(`/workouts/${newWorkoutId}/live$`))
   const before = JSON.stringify(backend.getWorkouts()[0]!.exercises)
   await page.getByRole('button', { name: 'Завершить тренировку', exact: true }).click()
@@ -2175,7 +2181,7 @@ for (const entry of ['slot', 'start', 'quick-plan', 'full-plan'] as const) test(
   expect(backend.getSaveAttempts()).toBe(0)
   if (entry === 'start') {
     await expect(page.locator('.quick-start-format')).toContainText('Новая спортсменка')
-    await expect(page.getByRole('button', { name: 'Начать', exact: true })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Начать тренировку', exact: true })).toBeVisible()
   } else if (entry === 'slot') {
     const booking = page.getByRole('dialog', { name: 'Записать клиента', exact: true })
     await expect(booking).toContainText('Новая спортсменка')
@@ -2298,4 +2304,68 @@ test('Lifecycle P2 completed result has a direct entry and never saves on mode s
   await page.getByRole('button', { name: 'Завершённая', exact: true }).click()
   expect(backend.getSaveAttempts()).toBe(0)
   await page.screenshot({ path: testInfo.outputPath('lifecycle-p2-result.png') })
+})
+
+const lifecycleTrainer = 'c0ac0000-6010-4000-8000-000000000001'
+for (const role of ['trainer', 'client'] as const) test(`Lifecycle P3 future plan explains today's start for ${role}`, {tag:['@lime-critical']}, async ({page},testInfo) => {
+  await page.clock.setFixedTime(new Date('2026-11-01T09:00:00Z'))
+  const source={...workout,status:'planned' as const,workoutDate:'2026-11-03',...(role==='trainer'?{trainerId:lifecycleTrainer,createdBy:lifecycleTrainer}:{})}
+  await mockPilot(page,{role,profileId:role==='trainer'?lifecycleTrainer:clientId,fitLime:true,clientLime:role==='client',workouts:[source]})
+  const writes:string[]=[]
+  page.on('request',r=>{if(r.method()==='POST'&&r.url().includes('/workouts/'))writes.push(r.url())})
+  await page.goto(`/workouts/${workoutId}`)
+  await expect(page.getByText('Тренировка начнётся сегодня. Исходная дата плана сохранится.')).toBeVisible()
+  await expect(page.getByRole('button',{name:'Начать сегодня',exact:true})).toBeVisible()
+  expect(writes).toHaveLength(0)
+  await page.screenshot({path:testInfo.outputPath(`p3-future-${role}.png`)})
+  await page.getByRole('button',{name:'Начать сегодня',exact:true}).click()
+  await expect(page).toHaveURL(/\/live$/)
+  expect(writes.filter(u=>u.endsWith('/start'))).toHaveLength(1)
+})
+
+test('Lifecycle P3 future attendance changes date then confirms the same appointment', {tag:['@lime-critical']},async({page},testInfo)=>{
+  await page.clock.setFixedTime(new Date('2026-11-01T09:00:00Z'))
+  const backend=await mockPilot(page,{profileId:lifecycleTrainer,fitLime:true,workouts:[{...workout,trainerId:lifecycleTrainer,createdBy:lifecycleTrainer,status:'planned',workoutDate:'2026-11-03',trainingFormat:'with_trainer',exercises:[]}]})
+  const finishes:unknown[]=[]
+  page.on('request',r=>{if(r.method()==='POST'&&r.url().endsWith('/finish'))finishes.push(r.postDataJSON() as unknown)})
+  await page.goto(`/workouts/${workoutId}`)
+  await page.getByRole('button',{name:'Отметить проведённой',exact:true}).click()
+  let sheet=page.getByRole('dialog',{name:'Отметить проведённой',exact:true})
+  await expect(sheet.getByText('Дата занятия ещё не наступила')).toBeVisible()
+  await expect(sheet.getByRole('button',{name:'Подтвердить проведение'})).toBeDisabled()
+  await page.screenshot({path:testInfo.outputPath('p3-future-attendance.png')})
+  await sheet.getByRole('button',{name:'Отмена',exact:true}).click()
+  expect(finishes).toHaveLength(0)
+  expect(backend.getWorkouts()[0]).toMatchObject({status:'planned',workoutDate:'2026-11-03'})
+  await page.getByRole('button',{name:'Отметить проведённой',exact:true}).click()
+  await sheet.getByRole('button',{name:'Изменить дату',exact:true}).click()
+  const slot=page.getByRole('dialog',{name:'Дата и время',exact:true})
+  await expect(slot.getByRole('button',{name:'Сохранить дату'})).toBeDisabled()
+  await slot.getByRole('button',{name:'Выбрать дату',exact:true}).click()
+  const calendar=page.getByRole('dialog',{name:'Дата',exact:true})
+  await calendar.getByRole('button',{name:'1 ноября 2026 г.',exact:true}).click()
+  await calendar.getByRole('button',{name:'Применить дату'}).click()
+  await slot.getByRole('button',{name:'Сохранить дату'}).click()
+  sheet=page.getByRole('dialog',{name:'Отметить проведённой',exact:true})
+  await expect(sheet.getByText('Дата занятия ещё не наступила')).toHaveCount(0)
+  await expect(sheet.getByRole('button',{name:'Подтвердить проведение'})).toBeEnabled()
+  expect(finishes).toHaveLength(0)
+  await sheet.getByRole('button',{name:'Подтвердить проведение'}).click()
+  await expect(sheet).toHaveCount(0)
+  expect(finishes).toHaveLength(1)
+  expect(backend.getWorkouts()).toHaveLength(1)
+  expect(backend.getWorkouts()[0]).toMatchObject({id:workoutId,status:'done',workoutDate:'2026-11-01'})
+})
+
+test('Lifecycle P3 rejects a new future result before any save', {tag:['@lime-critical']},async({page})=>{
+  await page.clock.setFixedTime(new Date('2026-11-01T09:00:00Z'))
+  const backend=await mockPilot(page,{profileId:lifecycleTrainer,fitLime:true,workouts:[]})
+  await page.goto(`/workouts/new?mode=completed&date=2026-11-03&client=${clientId}`)
+  await page.getByRole('button',{name:'Выбрать упражнения',exact:true}).click()
+  await page.getByLabel('Поиск упражнения').fill('присед со штангой')
+  await page.getByRole('button',{name:'Выбрать: Присед со штангой',exact:true}).click()
+  await page.getByRole('button',{name:'Добавить 1',exact:true}).click()
+  await page.getByRole('button',{name:'Записать тренировку',exact:true}).click()
+  await expect(page.getByRole('alert').filter({hasText:'Нельзя записать результат на будущую дату'}).first()).toBeVisible()
+  expect(backend.getSaveAttempts()).toBe(0)
 })

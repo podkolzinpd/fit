@@ -394,6 +394,7 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
   const save = useMutation({
     mutationFn: async (mode: RecordMode) => {
       if (clientMode && !effectiveClientId) throw new Error('Не удалось открыть профиль спортсмена. Повторите загрузку профиля.')
+      if (mode === 'completed' && workoutDate > today) throw new Error('Нельзя записать результат на будущую дату. Выберите сегодня или прошедший день.')
       const draft = { ...(limePlanning && mode === 'planned' ? { title: planMetadata.title?.trim() || null, requestId: planMetadata.requestId, endTime: planMetadata.endTime || undefined } : {}), clientId: effectiveClientId, workoutDate, startTime: startTime || undefined, ...(mode === 'completed' ? { actualDurationSec: actualWorkoutDurationSeconds(actualDurationMinutes) } : { prepSeconds: prepSeconds || null, executionMode: executionMode ?? DEFAULT_EXECUTION_MODE }), trainingFormat: clientMode ? 'self' as const : trainingFormat ?? 'with_trainer', exercises: planOnly ? planExercises : items.map(draftExercise) }
       return mode === 'planned' ? workoutsRepository.save(draft) : workoutsRepository.saveCompleted(draft)
     },

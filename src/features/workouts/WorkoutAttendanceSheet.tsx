@@ -1,18 +1,21 @@
 import { useEffect, useRef, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useAuth } from '../../app/auth-context'
 import { useDataBackend } from '../../app/data-backend-context'
 import type { Workout, WorkoutAttendanceDraft } from '../../shared/domain'
-import { formatLocalDate } from '../../shared/local-date'
+import { formatLocalDate, todayInTimeZone } from '../../shared/local-date'
 import { CheckSmallIcon, CloseIcon } from '../../shared/icons'
 import { FitLimeSheetHeader } from '../../shared/FitLimeSheetHeader'
 import { workoutTrainingFormatLabel } from './workout-training-format'
 import './workout-attendance.css'
 
-export function WorkoutAttendanceSheet({ workout, action, onCompleted, onClose, beforeSave, onDelete }: {
+export function WorkoutAttendanceSheet({ workout, action, onCompleted, onClose, beforeSave, onDelete, onChangeDate }: {
+  onChangeDate?: () => void
   workout: Workout; action: 'complete' | 'cancel' | 'choose'
   onCompleted: (action: 'complete' | 'cancel') => Promise<void>; onClose: () => void; beforeSave?: () => Promise<Workout>; onDelete?: () => Promise<unknown>
 }) {
   const { workouts, trainerFinance } = useDataBackend()
+  const { actor } = useAuth()
   const queryClient = useQueryClient()
   const [target, setTarget] = useState(workout)
   const [selection, setSelection] = useState('auto')
@@ -26,10 +29,11 @@ export function WorkoutAttendanceSheet({ workout, action, onCompleted, onClose, 
   const currentAction = action === 'choose' ? choice : action
   const completed = currentAction === 'complete'
   const deleting = currentAction === 'delete'
+  const futureCompletion = completed && target.workoutDate > todayInTimeZone(actor?.timezone)
   const canDelete = live && Boolean(onDelete) && target.status === 'in_progress' && target.exercises.length === 0
   const withTrainer = (target.trainingFormat ?? 'self') === 'with_trainer'
   const finance = useQuery({ queryKey: ['trainer-finance', target.clientId],
-    queryFn: () => trainerFinance.listClient(target.clientId), enabled: completed && withTrainer })
+    queryFn: () => trainerFinance.listClient(target.clientId), enabled: completed && withTrainer && !futureCompletion })
   const eligible = finance.data?.packages.filter(p => p.kind === 'session_pack' && !p.closedAt
     && p.startsOn <= target.workoutDate && (!p.endsOn || p.endsOn >= target.workoutDate) && p.sessionsRemaining > 0) ?? []
   const selected = selection.startsWith('charged:') ? eligible.find(p => p.id === selection.slice(8)) : undefined
@@ -52,6 +56,7 @@ export function WorkoutAttendanceSheet({ workout, action, onCompleted, onClose, 
         await onDelete(); return
       }
       if (intent === 'cancel') { const prepared = beforeSave ? await beforeSave() : target; await workouts.cancelPlanned(prepared); return }
+      if (futureCompletion) throw new Error('Сначала выберите фактическую дату занятия')
       if (!workouts.confirmAttendance) throw new Error('Проведение занятия недоступно')
       if (selection.startsWith('charged:') && !selected) throw new Error('Обновите список абонементов')
       const disposition = selected ? 'charged' : selection === 'trial' ? 'trial' : selection === 'free' ? 'free' : selection === 'unassigned' ? 'unassigned' : 'auto'
@@ -78,14 +83,14 @@ export function WorkoutAttendanceSheet({ workout, action, onCompleted, onClose, 
     {live ? <FitLimeSheetHeader title="Завершение тренировки" backLabel="Закрыть" onBack={onClose} disabled={busy} /> : <header><h2>{completed ? 'Отметить проведённой' : 'Не состоялась'}</h2><button type="button" aria-label="Закрыть" disabled={busy} onClick={onClose}><CloseIcon /></button></header>}
     <p className="workout-attendance-client">{target.clientName}</p>
     <p className="workout-attendance-date">{formatLocalDate(target.workoutDate)} · {target.startTime?.slice(0, 5) ?? 'без времени'} · {workoutTrainingFormatLabel(target.trainingFormat ?? 'self')}</p>
-    <form onSubmit={event => { event.preventDefault(); if (!busy && !submitting.current && !needsReload && !financePending && (!deleting || canDelete)) { submitting.current = true; save.mutate(currentAction) } }}>
+    <form onSubmit={event => { event.preventDefault(); if (!busy && !submitting.current && !needsReload && !futureCompletion && !financePending && (!deleting || canDelete)) { submitting.current = true; save.mutate(currentAction) } }}>
       {live && <fieldset className="workout-live-exit-choices" disabled={busy || needsReload}>
         <legend className="sr-only">Действие с тренировкой</legend>
         {([{ value: 'complete', label: 'Завершить тренировку' }, { value: 'cancel', label: 'Отметить как несостоявшуюся' }, ...(canDelete ? [{ value: 'delete', label: 'Удалить пустую тренировку' }] : [])] as const).map(item => <label key={item.value} className={item.value === 'delete' ? 'workout-live-exit-delete' : undefined}>
           <input type="radio" name="live-exit-action" value={item.value} checked={currentAction === item.value} onChange={() => { if (item.value === 'complete' || item.value === 'cancel' || item.value === 'delete') setChoice(item.value) }} /><span>{item.label}</span>
         </label>)}
       </fieldset>}
-      {completed ? <section className="workout-attendance-accounting" aria-label="Учёт занятия">
+      {futureCompletion ? <section className="workout-attendance-accounting" role="status"><strong>Дата занятия ещё не наступила</strong><p>Выберите сегодня или прошедший день перед проведением.</p>{onChangeDate && <button type="button" className="secondary" disabled={busy} onClick={onChangeDate}>Изменить дату</button>}</section> : completed ? <section className="workout-attendance-accounting" aria-label="Учёт занятия">
         {financePending ? <p role={finance.isError ? 'alert' : 'status'}>{finance.isError ? 'Не удалось загрузить абонементы.' : 'Проверяем абонементы…'}{finance.isError && <button type="button" className="link" onClick={() => void finance.refetch()}>Повторить</button>}</p>
           : <><strong><CheckSmallIcon />{accountingTitle}</strong><p>{accountingDetail}</p></>}
         {withTrainer && !financePending && <><button type="button" className="link" disabled={busy} onClick={() => setEditing(!editing)}>Изменить учёт</button>
@@ -98,7 +103,7 @@ export function WorkoutAttendanceSheet({ workout, action, onCompleted, onClose, 
       {!live && completed && <p className="workout-attendance-note">Записанные результаты сохранятся. Остальные можно добавить позже.</p>}
       {(save.error || reload.error) && <p className="error" role="alert">{(reload.error ?? save.error)?.message}</p>}
       {needsReload && <button type="button" className="secondary wide" disabled={busy} onClick={() => reload.mutate()}>Обновить запись</button>}
-      <button type="submit" className={`primary wide${live && deleting ? ' danger' : ''}`} disabled={busy || needsReload || financePending || (deleting && !canDelete)} aria-busy={save.isPending}>{save.isPending ? 'Сохраняем…' : live ? 'Подтвердить' : completed ? 'Подтвердить проведение' : 'Отметить: не состоялась'}</button>
+      <button type="submit" className={`primary wide${live && deleting ? ' danger' : ''}`} disabled={busy || needsReload || futureCompletion || financePending || (deleting && !canDelete)} aria-busy={save.isPending}>{save.isPending ? 'Сохраняем…' : live ? 'Подтвердить' : completed ? 'Подтвердить проведение' : 'Отметить: не состоялась'}</button>
       <button type="button" className="link workout-attendance-cancel" disabled={busy} onClick={onClose}>{live ? 'Продолжить тренировку' : 'Отмена'}</button>
     </form>
   </dialog>
