@@ -2106,3 +2106,51 @@ b2f711bf3a4c39e8838ea5cf0c385bd091327a52,2026-11-01T21:29:13Z.
 18браузерныхсценариев и визуальнаяпроверка; F5физическийSafari/PWAiPhone.
 Дальше: довести фактический выпускb2f до приёмки, затем дать владельцу
 конкретныеэкранныепроверки. MC2доегоответа не начинать.
+
+### Итерация 75 — 2026-11-02 — Codex / OpenAI
+
+Задача: довести разрешённое исправлениеMC1 до фактического выпуска и приёмки.
+Расхождения: runtimeнет; внешний публичный стенд требовал адаптацииproxy/api.
+Сделано: b2f711bf3a4c39e8838ea5cf0c385bd091327a52 опубликован штатно.
+MainCI41352244767SUCCESS:31success,2штатныхskip (migration-safetyтолькоPR;
+database поexisting scope). Native860passed37.1мин/8прежнихopt-in
+Assistantduration skips,0flaky; /tmp/fit-mc1-b2f-main-native-ci.log.
+Androiddebug41352244754SUCCESS. API41357384232/web41357384230/
+signedOTA41357608541SUCCESS, все относятся кb2f.
+Независимая проверка официальногоwebартефакта:213/213publicfiles size/SHA,
+0ошибок; /tmp/fit-mc1-followup-public-files.json. DNS3/3 иhealth/auth8/8:
+обеAPIточкиrelease=b2f,ready200,anonymous401;
+/tmp/fit-mc1-b2f-public-health.json.
+Подписиmanifest/ZIP,provenance/ABI/nativebuild и publicreadback проверены
+экспортами verifyOtaDirectory/readbackOta, без локальныхprivatekeys/publish.
+ZIP15103822bytes,SHA1cb040b981b61d4db95fda7b0c8cabd88256b39f7dc209a63a154f1d00bcf8d6,
+sequence1793572455157,nativebuild6; /tmp/fit-mc1-b2f-ota-readback.json.
+На самом опубликованном сайте18/18 focusedcases19.0с, Chromium/WebKit,
+retries0/--fail-on-flaky-tests/безskip. Обе темы390/430: successnotice,
+44pxhittargets,fullrowpending,Undo/dismiss/draft; finish/lostresponse/
+heldfreshGET/lateoldGET/другаяactive/одинвозврат. РеальныеAPI/STT/записи
+заблокированы, только синтетическиеfixtures.
+Просмотрены5актуальныхWebKitснимков:4success(две темы×две ширины)+pending.
+Нет76px/73pxсжатия,перекрытийкнопок иливыходазаграницы; pendingчитабелен.
+Артефакты: /tmp/fit-mc1-followup-public-results,
+/tmp/fit-mc1-b2f-public-browser.log.
+Честная история стенда: первый запуск не учитывал/api в копииdispatcher
+и не восстанавливал fakeсессию; остановлен только свой процесс SIGINT.
+Во втором12pass/6fail: observerfinish тоже неучитывал/api и отсутствовал
+import newWorkoutId во внешнейкопии. Исправлены только оснастка/import;
+всеassertions/таймауты/числотестов сохранены, productionкод не менялся.
+Логи и каталоги обоих неуспешныхзапусков сохранены отдельно ссуффиксами
+-prefix-failed/-observer-failed; они не объявляются успешными.
+Финальный полный18/18 прошёл одним запуском после этих исправлений.
+ВладелецФИТ20 отдельно подтвердил26/26publicweb и26/26signedZIP календаря
+наb2f:Finance/NAV212/цвета/Пн↔Пн/переносы ипросмотрснимков. Это его
+доказательства совместимости, не наши48локальных или18публичныхcases.
+Решение: F4техническаяпубликация закрыта; квитанция локальнымкоммитом и
+вPR1927, безновоговыпускарадижурнала. Входящиестатусы неявляются
+разрешениемнаответные сообщения; нами ничеговдругиечаты неотправлялось.
+Отвергнуто: приписатьфизическийiPhone/реальныйSpeechKit илиприменениеOTA
+браузернымтестам; скрытьсбойстенда; расширитьMC2/flags; назвать18cases48.
+Открыто:F5 — физическийSafari/PWAiPhone владельца: надиктовать→Отменить/
+закрытьсообщение; завершитьLive→главнаябезустаревшего«Продолжить».
+Дальше: получитьприёмкувладельца. MC2 не начинать и не выпускать до неё
+поMC-RELEASE-01. Новых runtimeошибок в согласованной области не выявлено.
