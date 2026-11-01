@@ -1733,7 +1733,7 @@ for (const theme of ['light', 'dark']) test(`client compose voice notice keeps r
   await expect(text).toHaveValue(dictated)
 })
 
-test('client compose undo cancels a pending formatter without overwriting the restored text', async ({ page }) => {
+test('client compose undo cancels a pending formatter without overwriting the restored text', async ({ page }, info) => {
   await mockPilot(page, { role: 'client', profileId: pilotId, clientLime: true, workouts: [] })
   const transcript = 'Упражнение которое показал тренер один подход десять повторений'
   await mockClientStreamingVoice(page, transcript)
@@ -1752,7 +1752,11 @@ test('client compose undo cancels a pending formatter without overwriting the re
     await card.getByRole('button', { name: /^Остановить/ }).click()
     const status = card.locator('.voice-input > .voice-input-status[role="status"]')
     await expect(status).toContainText('Текст добавлен')
-    await expect(card.getByText('Текст распознан. Обрабатываем упражнения…', { exact: true })).toBeVisible()
+    const processing = card.getByText('Текст распознан. Обрабатываем упражнения…', { exact: true })
+    await expect(processing).toBeVisible()
+    expect(await processing.evaluate(element => element.getBoundingClientRect().width)).toBeGreaterThanOrEqual(200)
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+    await card.screenshot({ path: info.outputPath('voice-processing.png') })
     await status.getByRole('button', { name: 'Отменить', exact: true }).click()
     await expect(text).toHaveValue('Мой исходный текст')
     const parsed = page.waitForResponse('**/v1/assistant/yandex/parse-workout')

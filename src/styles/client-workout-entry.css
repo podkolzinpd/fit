@@ -47,6 +47,7 @@
   font-size: 14px;
   font-weight: 500;
 }
+.phone-frame.fit-client-lime .client-workout-entry .workout-composer-card .voice-note-field > .voice-input-status,
 .phone-frame.fit-client-lime .client-workout-entry .workout-composer-card .voice-input > :not(.voice-input-button) {
   grid-column: 1 / -1;
 }
