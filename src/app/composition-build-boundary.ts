@@ -1,7 +1,3 @@
-export function isLocalLegacyBuild(mode: string): boolean {
-  return mode === 'development' || mode === 'test'
-}
-
 export function assertNativeFrontendModules(moduleIds: Iterable<string>): void {
   for (const id of moduleIds) {
     const path = id.replaceAll('\\', '/')

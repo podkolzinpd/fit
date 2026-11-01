@@ -2,7 +2,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { render, screen, waitFor } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import type { ClientFinanceSummary } from '../../data/repositories/client-finance.repository'
+import type { ClientFinanceSummary } from '../../data/contracts/client-finance'
 import { ClientFinanceHomeCard, ClientFinancePage } from './ClientFinancePage'
 
 const trainerId = 'd2b80c5e-f60b-42b0-ae3f-308e91bbcb9b'

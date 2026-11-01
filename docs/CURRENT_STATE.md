@@ -1,7 +1,7 @@
 28.10 — Чат: плашка даты перед первым сообщением дня («Сегодня», «Вчера», «26 октября», «12 марта 2025»), раньше «Новые сообщения»; в списке чатов дата по давности. День по часам телефона. chat-dates.ts + тесты.
 # Fit — текущий индекс
 
-01.11 — legacy frontend разделён на два этапа: [native browser fixtures](design/NATIVE_FRONTEND_FIXTURES_20261101.md), затем удаление SDK/composition. На первом этапе legacy runtime и его unit-тесты сохраняются; исходный большой PR1909 закрыт, ветка сохранена.
+01.11 — большой PR1909 закрыт и сохранён в ветке. Frontend выводится двумя PR: [native fixtures](design/NATIVE_FRONTEND_FIXTURES_20261101.md), затем SDK/composition cleanup поверх первого. [Канонический P2](design/SUPABASE_DECOMMISSION_PLAN_20261023.md#p2--разделение-frontend-работы--01112026); server media и frozen SQL остаются вне этапа.
 
 31.10 — YAFIT-697: время быстрого старта обеим ролям, проведение пустой записи
 и «Не состоялась» тренеру. [План, проверки и выпуск](design/COACH_ATTENDANCE_AND_START_TIME_20261031.md).

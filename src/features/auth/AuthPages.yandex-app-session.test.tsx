@@ -161,13 +161,13 @@ describe('Yandex app session auth flow', () => {
     expect(window.location.search).toBe('')
   })
 
-  it('uses Yandex ID as the primary login while keeping email sign-in available', () => {
+  it('uses only the native Yandex entry even without the retired email cutover switch', () => {
     render(<MemoryRouter><AuthPage /></MemoryRouter>)
 
     expect(screen.getByRole('button', { name: 'Продолжить с Yandex ID' })).toHaveClass('primary')
-    expect(screen.getByLabelText('Email')).toBeVisible()
-    expect(screen.getByLabelText('Пароль')).toBeVisible()
-    expect(screen.getByRole('button', { name: 'Войти по email' })).toHaveClass('secondary')
+    expect(screen.queryByLabelText('Email')).not.toBeInTheDocument()
+    expect(screen.queryByLabelText('Пароль')).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Войти по email' })).not.toBeInTheDocument()
   })
 
   it.each([AuthPage, YandexAppSessionPage])('shows the startup photo during restoration, with a missing-image fallback', (Page) => {
@@ -296,40 +296,9 @@ describe('Yandex app session auth flow', () => {
     expect(await screen.findByText('trainer home')).toBeVisible()
   })
 
-  it('explains the pending invitation and prepares client registration', () => {
-    vi.stubEnv('VITE_YANDEX_NATIVE_REGISTRATION_ENABLED', 'true')
-    vi.stubEnv('VITE_YANDEX_MAIN_ROUTING_ENABLED', 'true')
-    render(<MemoryRouter initialEntries={[{
-      pathname: '/auth',
-      state: { from: '/join?code=AB12CD34EF56' },
-    }]}><AuthPage /></MemoryRouter>)
 
-    expect(screen.getByText('Войдите или создайте аккаунт, чтобы продолжить по приглашению.')).toBeVisible()
-    fireEvent.click(screen.getByRole('button', { name: 'Создать аккаунт' }))
-    expect(screen.getByLabelText('Тип аккаунта')).toHaveValue('client')
-    expect(screen.getByRole('button', { name: 'Продолжить с Yandex ID' })).toHaveClass('primary')
-  })
 
-  it('opens native registration with the role from a protected invitation preview', () => {
-    const token = `AB12CD34EF56.${'a'.repeat(64)}`
-    captureInvitationLink(`#token=${token}&source=yandex`)
-    vi.stubEnv('VITE_YANDEX_NATIVE_REGISTRATION_ENABLED', 'true')
-    vi.stubEnv('VITE_YANDEX_MAIN_ROUTING_ENABLED', 'true')
-    render(<MemoryRouter initialEntries={[{
-      pathname: '/auth',
-      state: {
-        from: '/invite',
-        inviteRole: 'client',
-        mode: 'register',
-      },
-    }]}><AuthPage /></MemoryRouter>)
 
-    expect(screen.getByRole('heading', { name: 'Регистрация' })).toBeVisible()
-    expect(screen.getByLabelText('Тип аккаунта')).toHaveValue('client')
-    expect(screen.queryByText(token)).not.toBeInTheDocument()
-    expect(readInvitationAuthReturn()).toBe('/invite')
-    expect(readPendingInvitationLink()?.token).toBe(token)
-  })
 
   it('returns a restored Yandex session to the pending invitation once', async () => {
     vi.stubEnv('VITE_YANDEX_MAIN_ROUTING_ENABLED', 'true')
@@ -377,19 +346,7 @@ describe('Yandex app session auth flow', () => {
     await waitFor(() => expect(readInvitationAuthReturn()).toBeNull())
   })
 
-  it('uses Yandex ID as the only primary registration action when the native flow is enabled', () => {
-    vi.stubEnv('VITE_YANDEX_NATIVE_REGISTRATION_ENABLED', 'true')
-    vi.stubEnv('VITE_YANDEX_MAIN_ROUTING_ENABLED', 'true')
-    render(<MemoryRouter><AuthPage /></MemoryRouter>)
 
-    fireEvent.click(screen.getByRole('button', { name: 'Создать аккаунт' }))
-    expect(screen.getByLabelText('Тип аккаунта')).toBeVisible()
-    expect(screen.getByLabelText('Имя')).toBeVisible()
-    expect(screen.queryByLabelText('Email')).not.toBeInTheDocument()
-    expect(screen.queryByLabelText('Пароль')).not.toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Продолжить с Yandex ID' })).toHaveClass('primary')
-    expect(screen.getByRole('button', { name: 'Создать по email' })).toBeVisible()
-  })
 
   it('registers after the PKCE callback and clears the pending profile draft', async () => {
     vi.stubEnv('VITE_YANDEX_NATIVE_REGISTRATION_ENABLED', 'true')
@@ -806,22 +763,5 @@ describe('Yandex app session auth flow', () => {
     expect(reset).toHaveBeenCalledOnce()
   })
 
-  it('allows resetting a failed restored session from the regular sign-in page', () => {
-    appSessionState.mockReturnValue({
-      session: null,
-      loading: false,
-      error: 'Проверка сессии Yandex ID заняла слишком много времени.',
-      establish,
-      retry,
-      reset,
-      signOut,
-    })
-    render(<MemoryRouter><AuthPage /></MemoryRouter>)
 
-    expect(screen.getByRole('alert')).toHaveTextContent(
-      'Проверка сессии Yandex ID заняла слишком много времени.',
-    )
-    fireEvent.click(screen.getByRole('button', { name: 'Сбросить сессию Yandex ID' }))
-    expect(reset).toHaveBeenCalledOnce()
-  })
 })

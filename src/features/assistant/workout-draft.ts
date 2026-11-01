@@ -1,5 +1,5 @@
 import type { WorkoutDraft } from '../../shared/domain'
-import type { WorkoutParseResponse } from '../../data/repositories/exercises.repository'
+import type { WorkoutParseResponse } from '../../shared/workout-parse-response'
 
 export type AssistantWorkoutDraftSnapshot = {
   transcript: string

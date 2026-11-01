@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { LIVE_WORKOUT_REQUEST_TIMEOUT_MS } from './auth-fetch'
+const LIVE_WORKOUT_REQUEST_TIMEOUT_MS = 12_000
 import { getRequestDiagnostics } from '../../shared/request-diagnostics'
 import {
   getResponseDiagnostics,

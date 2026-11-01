@@ -1,8 +1,30 @@
-import type { Database } from '../database.types'
+import type { Json } from '../queries/json'
 import type { ExerciseProgressPage, ExerciseProgressSet, InputKind } from '../../shared/domain'
 import { localDate } from '../../shared/local-date'
 
-export type ExerciseProgressRow = Database['public']['Functions']['list_exercise_progress']['Returns'][number]
+export interface ExerciseProgressRow {
+  all_time_best_weight_kg: number
+  all_time_best_weight_reps: number
+  all_time_primary_value: number
+  best_weight_kg: number
+  best_weight_reps: number
+  completed_at: string
+  confirmed_set_count: number
+  exercise_name: string
+  input_kind: string
+  is_primary_pr: boolean
+  is_weight_pr: boolean
+  is_weight_reps_pr: boolean
+  previous_primary_value: number
+  primary_change: number
+  primary_value: number
+  reps_at_best_weight: number
+  sets: Json
+  total_count: number
+  trainer_comment: string | null
+  workout_date: string
+  workout_id: string
+}
 
 export const EXERCISE_PROGRESS_PAGE_SIZE = 20
 

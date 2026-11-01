@@ -1,7 +1,7 @@
 import type { TrainerProfessionalProfile } from '../../shared/domain'
 import { parseTrainerProfile } from '../../shared/trainer-profile'
 import { getYandexMainRoutingConfig } from '../../app/feature-flags'
-import { localPublicTrainerProfileQuery, publicTrainerProfileQuery } from '../queries/public-trainer-profile.queries'
+import { publicTrainerProfileQuery } from '../queries/public-trainer-profile.queries'
 import { RepositoryError, repositoryError } from './error'
 
 async function readYandexPublicProfile(publicId: string, apiBaseUrl: string): Promise<TrainerProfessionalProfile | null> {
@@ -41,9 +41,7 @@ async function loadPublicTrainerProfile(publicId: string): Promise<TrainerProfes
   const yandex = getYandexMainRoutingConfig()
   if (yandex !== null) return readYandexPublicProfile(publicId, yandex.apiBaseUrl)
 
-  const result = await localPublicTrainerProfileQuery(publicId)
-  if (result.error) throw repositoryError(result.error)
-  return result.data === null ? null : parseTrainerProfile(result.data)
+  throw new RepositoryError('service_unavailable', 'Анкета временно недоступна. Попробуйте ещё раз.')
 }
 
 export function getPublicTrainerProfile(publicId: string, options: { fresh?: boolean } = {}): Promise<TrainerProfessionalProfile | null> {

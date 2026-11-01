@@ -1,6 +1,6 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { exercisesRepository } from '../../data/repositories/exercises.repository'
+import { exercisesRepository } from '../../test/native-backend'
 import { ExerciseImage, exerciseMediaPresentationKey } from './ExerciseImage'
 
 const mediaBackend = vi.hoisted(() => ({ mode: 'public' as 'public' | 'signed' }))

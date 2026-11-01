@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useMemo, useState, type FormEvent, type MouseEvent } from 'react'
-import type { CustomExercise } from '../../data/repositories/exercises.repository'
+import type { CustomExercise } from '../../data/contracts/exercises'
 import { useDataBackend } from '../../app/data-backend-context'
 import { useAuth } from '../../app/auth-context'
 import { isFitLimeShellRoute } from '../../app/fit-lime'

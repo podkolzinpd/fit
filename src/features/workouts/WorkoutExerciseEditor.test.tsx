@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, screen, waitFor } from '@testing-library/react'
+import { render } from '../../test/native-render'
 import userEvent from '@testing-library/user-event'
 import { vi } from 'vitest'
 import { useState } from 'react'

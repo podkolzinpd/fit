@@ -2,17 +2,14 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const mocks = vi.hoisted(() => ({
   config: null as { apiBaseUrl: string; clientId: string } | null,
-  rpc: vi.fn(),
 }))
 
 vi.mock('../../app/feature-flags', () => ({
   getYandexMainRoutingConfig: () => mocks.config,
 }))
-vi.mock('../queries/client', () => ({
-  supabase: { rpc: mocks.rpc },
-}))
 
-import { forgetPublicTrainerProfile, getPublicTrainerProfile, trainerProfilesRepository } from './trainer-profiles.repository'
+
+import { forgetPublicTrainerProfile, getPublicTrainerProfile } from './public-trainer-profile.repository'
 
 const publicId = '1594d7d6-9532-494f-8497-b0745de99ab0'
 const profile = {
@@ -37,34 +34,13 @@ const profile = {
 describe('public trainer profile backend selection', () => {
   beforeEach(() => {
     mocks.config = null
-    mocks.rpc.mockReset()
     vi.unstubAllGlobals()
     forgetPublicTrainerProfile(publicId)
   })
 
-  it('reads only Supabase while Yandex main routing is disabled', async () => {
-    const fetch = vi.fn()
-    vi.stubGlobal('fetch', fetch)
-    mocks.rpc.mockResolvedValue({ data: profile, error: null })
 
-    await expect(getPublicTrainerProfile(publicId)).resolves.toEqual(profile)
-    expect(mocks.rpc).toHaveBeenCalledWith('get_public_trainer_profile', { p_public_id: publicId })
-    expect(fetch).not.toHaveBeenCalled()
-  })
 
-  it('keeps the existing single-photo path in local Supabase development', async () => {
-    mocks.rpc.mockResolvedValue({ data: profile, error: null })
-    const image = {
-      dataUrl: 'data:image/jpeg;base64,/9j/', mimeType: 'image/jpeg' as const,
-      width: 1, height: 1, sizeBytes: 3,
-    }
 
-    await trainerProfilesRepository.uploadPhoto(profile.draft, { image, thumbnail: image })
-
-    expect(mocks.rpc).toHaveBeenCalledWith('save_trainer_profile_draft', {
-      p_draft: { ...profile.draft, avatarDataUrl: image.dataUrl, photos: [] },
-    })
-  })
 
   it('reads only Yandex when main routing is enabled', async () => {
     mocks.config = { apiBaseUrl: 'https://api.example.test', clientId: 'client-id' }
@@ -76,7 +52,6 @@ describe('public trainer profile backend selection', () => {
 
     await expect(getPublicTrainerProfile(publicId)).resolves.toEqual(profile)
     expect(fetch).toHaveBeenCalledWith(`https://api.example.test/v1/trainers/${publicId}/public-profile`, { cache: 'no-store' })
-    expect(mocks.rpc).not.toHaveBeenCalled()
   })
 
   it('refreshes Yandex signed photo links before their one-hour expiry', async () => {
@@ -107,7 +82,6 @@ describe('public trainer profile backend selection', () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify({ error: 'not_found' }), { status: 404 })))
 
     await expect(getPublicTrainerProfile(publicId)).resolves.toBeNull()
-    expect(mocks.rpc).not.toHaveBeenCalled()
   })
 
   it('surfaces a Yandex outage without falling back to Supabase', async () => {
@@ -115,50 +89,11 @@ describe('public trainer profile backend selection', () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify({ error: 'service_unavailable' }), { status: 503 })))
 
     await expect(getPublicTrainerProfile(publicId)).rejects.toMatchObject({ code: 'service_unavailable' })
-    expect(mocks.rpc).not.toHaveBeenCalled()
   })
 
-  it('maps the Supabase catalog RPC to the compact published profile contract', async () => {
-    const unpublishedDraft = { ...profile.draft, displayName: 'Неопубликованное имя' }
-    mocks.rpc.mockResolvedValue({
-      data: {
-        items: [{ ...profile, draft: unpublishedDraft }],
-        totalCount: 1,
-        nextOffset: null,
-      },
-      error: null,
-    })
 
-    await expect(trainerProfilesRepository.listCatalog({
-      query: '', specialties: [], city: '', metroStationIds: [], mode: '', acceptingClients: null, brandTrainerOnly: false,
-    }, { offset: 0, limit: 3 })).resolves.toEqual({
-      items: [{ publicId, profile: profile.published, isBrandTrainer: false }],
-      totalCount: 1,
-      nextOffset: null,
-    })
-  })
 
-  it('also searches the pre-split legacy specialty so anketas that never re-selected still surface', async () => {
-    mocks.rpc.mockResolvedValue({ data: { items: [], totalCount: 0, nextOffset: null }, error: null })
 
-    await trainerProfilesRepository.listCatalog({
-      query: '', specialties: ['Реабилитация после травм и операций'], city: '', metroStationIds: [], mode: '', acceptingClients: null, brandTrainerOnly: false,
-    }, { offset: 0, limit: 3 })
 
-    expect(mocks.rpc).toHaveBeenCalledWith('list_public_trainer_profiles_page', expect.objectContaining({
-      p_specialties: ['Реабилитация после травм и операций', 'Реабилитация и адаптивная физкультура (после травм, ограничения по здоровью)'],
-    }))
-  })
 
-  it('does not add the legacy specialty when the search has nothing to do with the split', async () => {
-    mocks.rpc.mockResolvedValue({ data: { items: [], totalCount: 0, nextOffset: null }, error: null })
-
-    await trainerProfilesRepository.listCatalog({
-      query: '', specialties: ['Кроссфит'], city: '', metroStationIds: [], mode: '', acceptingClients: null, brandTrainerOnly: false,
-    }, { offset: 0, limit: 3 })
-
-    expect(mocks.rpc).toHaveBeenCalledWith('list_public_trainer_profiles_page', expect.objectContaining({
-      p_specialties: ['Кроссфит'],
-    }))
-  })
 })
