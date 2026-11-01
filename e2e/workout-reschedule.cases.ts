@@ -3,6 +3,42 @@ import { beginClientGesture, mockPilot, restTimerWorkout, workoutId } from './fi
 
 export function workoutRescheduleCases() {
   test.skip(process.env.FIT_YANDEX_E2E_REQUIRED !== 'true', 'Uses the mandatory native appointment lane')
+  for (const [height, keepNotice] of [[520, false], [672, true]] as const) test(`coach sees the moved appointment above navigation on a short screen ${height} after a next-week move`, async ({ page }, info) => {
+    await page.setViewportSize({ width: 390, height })
+    const profileId = 'c0ac0000-6010-4000-8000-000000000001'
+    if (!keepNotice) await page.addInitScript(id => localStorage.setItem(`fit.serviceNotice.dismissed.ai-recovery-2026-10-14.${id}`, '1'), profileId)
+    const target = { ...restTimerWorkout(), trainerId: profileId, createdBy: profileId, title: 'Перенос на другую неделю', status: 'planned' as const,
+      workoutDate: '2026-11-02', startTime: '10:00', endTime: '11:00', startedAt: null, trainingFormat: 'with_trainer' as const }
+    const backend = await mockPilot(page, { profileId, fitLime: true, workouts: [target] })
+    const commands: unknown[] = []
+    await page.route(`**/v1/workouts/${workoutId}/reschedule`, async route => {
+      const command = route.request().postDataJSON() as { workoutDate: string; startTime: string; endTime: string; expectedVersion: number }
+      commands.push(command)
+      Object.assign(backend.getWorkouts()[0]!, { workoutDate: command.workoutDate, startTime: command.startTime, endTime: command.endTime, version: command.expectedVersion + 1 })
+      await route.fulfill({ json: { workout: { id: workoutId, version: command.expectedVersion + 1 } } })
+    })
+    await page.goto(`/workouts/${workoutId}`)
+    await page.getByRole('button', { name: 'Изменить дату и время тренировки' }).click()
+    const sheet = page.getByRole('dialog', { name: 'Дата и время', exact: true })
+    await sheet.getByLabel('Начало', { exact: true }).fill('18:00')
+    await sheet.getByRole('button', { name: 'Выбрать дату', exact: true }).click()
+    const calendar = page.getByRole('dialog', { name: 'Дата', exact: true })
+    await calendar.getByRole('button', { name: /^9 ноября 2026/ }).click()
+    await calendar.getByRole('button', { name: 'Применить дату', exact: true }).click()
+    await sheet.getByRole('button', { name: 'Перенести', exact: true }).click()
+    await expect(sheet).toHaveCount(0)
+    await expect(page).toHaveURL(/date=2026-11-09/)
+    const card = page.locator(`[data-workout-id="${workoutId}"]`)
+    await expect(card).toHaveAttribute('aria-label', /^18:00/)
+    await expect.poll(() => card.evaluate(node => {
+      const box = node.getBoundingClientRect()
+      const nav = document.querySelector('.trainer-tab-bar')!.getBoundingClientRect()
+      return box.bottom <= nav.top && [.25, .5, .75].every(fraction => node.contains(document.elementFromPoint(box.x + box.width / 2, box.y + box.height * fraction)))
+    })).toBe(true)
+    expect(commands).toHaveLength(1)
+    expect(backend.getWorkouts()).toHaveLength(1)
+    await page.screenshot({ path: info.outputPath('next-week-short-screen.png') })
+  })
   test('coach reschedules the same appointment from its header with overlap and network retry', async ({ page }, info) => {
     const profileId = 'c0ac0000-6010-4000-8000-000000000001'
     const target = { ...restTimerWorkout(), trainerId: profileId, createdBy: profileId, title: 'Силовая тренировка', status: 'planned' as const,
