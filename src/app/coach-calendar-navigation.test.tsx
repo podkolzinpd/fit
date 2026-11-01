@@ -1,6 +1,6 @@
 import { renderHook } from '@testing-library/react'
-import { beforeEach, expect, it } from 'vitest'
-import { readCoachCalendarRoute, useCoachCalendarDestination, useCoachFinanceDestination } from './coach-calendar-navigation'
+import { beforeEach, expect, it, vi } from 'vitest'
+import { readCoachCalendarRoute, useCoachCalendarDestination, useCoachFinanceDestination, useCoachNavigationScroll } from './coach-calendar-navigation'
 
 beforeEach(() => sessionStorage.clear())
 
@@ -36,4 +36,31 @@ it('does not retain a composer or disabled actor and remembers finance month/fil
   })
   finance.rerender({ path: '/clients/client/finance', search: '' })
   expect(finance.result.current).toBe('/finance?month=2026-09&filter=overdue')
+})
+
+
+it('does not reset an immediate scroll in a delayed initial frame', () => {
+  const viewport = document.createElement('div')
+  Object.defineProperties(viewport, {
+    scrollHeight: { value: 2000 }, clientHeight: { value: 800 },
+  })
+  const frames: FrameRequestCallback[] = []
+  const frame = vi.spyOn(globalThis, 'requestAnimationFrame').mockImplementation(callback => {
+    frames.push(callback)
+    return frames.length
+  })
+  const previousObserver = globalThis.ResizeObserver
+  vi.stubGlobal('ResizeObserver', class { observe() {} disconnect() {} })
+  const hook = renderHook(() => useCoachNavigationScroll({ current: viewport }, 'initial'))
+  try {
+    viewport.scrollTop = 520
+    viewport.dispatchEvent(new Event('scroll'))
+    for (const callback of frames) callback(0)
+    expect(viewport.scrollTop).toBe(520)
+    expect(sessionStorage.getItem('fit.coach-route-scroll.initial')).toBe('520')
+  } finally {
+    hook.unmount()
+    frame.mockRestore()
+    vi.stubGlobal('ResizeObserver', previousObserver)
+  }
 })

@@ -81,7 +81,7 @@ export function useCoachNavigationScroll(content: RefObject<HTMLDivElement | nul
     mutations.observe(viewport, { childList: true, subtree: true })
     viewport.addEventListener('scroll', save, { passive: true })
     for (const type of ['wheel', 'touchstart', 'pointerdown', 'keydown']) viewport.addEventListener(type, userTakesOver, { passive: true })
-    schedule()
+    restore()
     return () => {
       resize.disconnect(); mutations.disconnect()
       if (pendingFrame.current !== null) cancelAnimationFrame(pendingFrame.current)
