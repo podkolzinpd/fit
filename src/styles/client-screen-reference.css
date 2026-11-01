@@ -128,6 +128,19 @@
   gap: 12px;
   padding: 20px;
 }
+/* Keep record/status badges from squeezing the title beside the copy action. */
+.phone-frame.fit-client-lime.client-screen-reference .client-workouts-page .workout-chronicle-head {
+  flex-wrap: wrap;
+}
+.phone-frame.fit-client-lime.client-screen-reference .client-workouts-page .workout-chronicle-heading {
+  flex: 1 1 auto;
+  max-width: 100%;
+}
+.phone-frame.fit-client-lime.client-screen-reference .client-workouts-page .workout-chronicle-head-badges {
+  max-width: 100%;
+  flex-wrap: wrap;
+  justify-content: flex-start;
+}
 .phone-frame.fit-client-lime.client-screen-reference .client-workouts-page
   :is(.client-workout-card h2, .workout-chronicle-title, .favorite-workout-card-head strong) {
   margin: 0;

@@ -156,6 +156,63 @@ for (const theme of ['light', 'dark']) test(`client reference workout lists reta
   await expect(page.getByRole('heading', { name: 'Тренировки Fit', exact: true })).toBeVisible()
 })
 
+// The record/status/copy controls must not squeeze the default Russian title.
+// Widths cover the reported iPhone, the wider client layout and narrow WebKit.
+for (const theme of ['light', 'dark']) test(`client history record badges leave room for workout titles ${theme}`, async ({ page }, info) => {
+  await page.clock.setFixedTime(new Date('2026-11-01T09:00:00Z'))
+  await page.addInitScript(({ id, theme }) => localStorage.setItem(`fit.clientLime.theme.${id}`, theme), { id: pilotId, theme })
+  const completed = {
+    ...coachGestureWorkout(false, 1), status: 'done', title: null, hasPr: true,
+    createdBy: pilotId, workoutDate: '2026-10-27', startedAt: '2026-10-27T10:23:00Z',
+    completedAt: '2026-10-27T11:00:00Z', actualDurationSec: 2220, activeCaloriesKcal: 100,
+  }
+  const longTitle = 'Длинноеназваниетренировки'.repeat(6).slice(0, 120)
+  const longWorkout = { ...completed, id: newWorkoutId, title: longTitle, hasPr: false }
+  await mockPilot(page, { role: 'client', profileId: pilotId, clientLime: true, workouts: [
+    completed, longWorkout,
+  ] })
+  await page.goto('/me/workouts?tab=history&view=list')
+  await expect(page.locator('.client-screen-reference')).toBeVisible()
+  const card = page.locator('.workout-chronicle-card.has-pr')
+  const title = card.getByRole('heading', { name: 'Тренировка', exact: true })
+  await expect(title).toBeVisible()
+  await expect(card.getByText('Личный рекорд', { exact: true })).toBeVisible()
+  await expect(card.getByText('Создана вами', { exact: true })).toBeVisible()
+  for (const width of [390, 430, 360]) {
+    await page.setViewportSize({ width, height: 844 })
+    await page.evaluate(() => document.fonts.ready)
+    if (width === 390) await card.screenshot({ path: info.outputPath(`record-title-${theme}-390.png`) })
+    const geometry = await card.evaluate(element => {
+      const title = element.querySelector<HTMLElement>('.workout-chronicle-title')!
+      const date = element.querySelector<HTMLElement>('.workout-card-date')!
+      const badges = element.querySelector<HTMLElement>('.workout-chronicle-head-badges')!
+      const copy = element.querySelector<HTMLElement>('.workout-chronicle-copy')!
+      const rect = (node: HTMLElement) => {
+        const { left, right, top, bottom, width, height } = node.getBoundingClientRect()
+        return { left, right, top, bottom, width, height }
+      }
+      const copyBox = copy.getBoundingClientRect()
+      return { title: rect(title), date: rect(date), badges: rect(badges), copy: rect(copy),
+        lineHeight: Number.parseFloat(getComputedStyle(title).lineHeight),
+        copyHittable: copy.contains(document.elementFromPoint(copyBox.x + copyBox.width / 2, copyBox.y + copyBox.height / 2)),
+        pageFits: document.documentElement.scrollWidth <= innerWidth }
+    })
+    expect(geometry.title.height).toBeLessThanOrEqual(geometry.lineHeight + 1)
+    expect(geometry.title.right).toBeLessThanOrEqual(geometry.copy.left)
+    expect(geometry.badges.top).toBeGreaterThanOrEqual(geometry.date.bottom)
+    expect(geometry.copy.width).toBeGreaterThanOrEqual(44)
+    expect(geometry.copy.height).toBeGreaterThanOrEqual(44)
+    expect(geometry.copyHittable).toBe(true)
+    expect(geometry.pageFits).toBe(true)
+    const longHeading = page.getByRole('heading', { name: longTitle, exact: true })
+    expect(await longHeading.evaluate(element => element.scrollWidth <= element.clientWidth)).toBe(true)
+  }
+  const copy = card.getByRole('link', { name: /Скопировать тренировку/ })
+  await expect(copy).toHaveAttribute('href', `/workouts/new?copy=${workoutId}`)
+  await copy.click()
+  await expect(page).toHaveURL(new RegExp(`/workouts/new\\?copy=${workoutId}$`))
+})
+
 for (const theme of ['light', 'dark']) test(`client reference people rows retain chat and trainer filters ${theme}`, async ({ page }, info) => {
   await page.addInitScript(({ id, theme }) => localStorage.setItem(`fit.clientLime.theme.${id}`, theme), { id: pilotId, theme })
   await mockPilot(page, { role: 'client', profileId: pilotId, clientLime: true })
