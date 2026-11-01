@@ -535,6 +535,7 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
         }
         trackGoal('voice_workout_parse_completed')
       }
+      return normalizedText
     } catch {
       if (version !== voiceParseVersion.current) return
       setVoiceRefinement({ state: 'error', message: 'Не удалось обработать диктовку. Исходный текст сохранён.' })

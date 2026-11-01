@@ -2960,17 +2960,30 @@ export function LiveWorkoutPage() {
   const goBack = useWorkoutBack(`/workouts/${workoutId}`)
   const fromDetail = navigationState?.fromWorkoutDetailId === workoutId
   const sourceReturnTo = safeWorkoutReturnTo(navigationState?.returnTo)
+  const queryClient = useQueryClient()
   const completionNavigated = useRef(false)
-  const showCompletedWorkout = useCallback((justCompleted: boolean) => {
+  const showCompletedWorkout = useCallback(async (justCompleted: boolean) => {
     // Refetch and StrictMode may repeat the completion effect. POP is not
     // idempotent: a second call would skip the detail and lose the source.
     if (completionNavigated.current) return
     completionNavigated.current = true
+    const completed = queryClient.getQueryData<Workout>(['workout', workoutId])
+    if (clientReference && completed?.status === 'done') {
+      const homeKey = ['workouts', completed.clientId]
+      // A home GET can outlive its screen. Do not let that old response turn
+      // a server-confirmed completion back into an enabled Continue action.
+      await queryClient.cancelQueries({ queryKey: homeKey, exact: true })
+      // Keep the list stale: other workouts still need their normal refresh.
+      queryClient.setQueryData<Workout[]>(
+        homeKey,
+        (items) => items?.map(item => item.id === completed.id && item.version <= completed.version ? completed : item),
+        { updatedAt: 0 },
+      )
+    }
     if (fromDetail && hasWorkoutBackEntry()) void navigate(-1)
     else void navigate(`/workouts/${workoutId}`, { replace: true, state: { justCompleted, returnTo: sourceReturnTo } })
-  }, [fromDetail, navigate, sourceReturnTo, workoutId])
+  }, [clientReference, fromDetail, navigate, queryClient, sourceReturnTo, workoutId])
   const [askConfirm, confirmDialog] = useConfirm()
-  const queryClient = useQueryClient()
   const query = useQuery({ queryKey: ['workout', workoutId], queryFn: async () => {
     const incoming = await workoutsRepository.get(workoutId)
     return reconcileLiveWorkout(queryClient.getQueryData<Workout>(['workout', workoutId]), incoming)
@@ -3212,7 +3225,7 @@ export function LiveWorkoutPage() {
     // justCompleted. Этот fallback нужен только когда ответ потерялся, но
     // refetch уже увидел завершённую тренировку, либо после reload live URL.
     if (completedLocally.current) return
-    showCompletedWorkout(false)
+    void showCompletedWorkout(false)
   }, [actor?.userId, query.data?.status, showCompletedWorkout, workoutId])
   function rememberLiveDraft(setId: string, draft: LiveSetDraft, updateVisibleDraft = true) {
     inactivityReminder.noteActivity(restEndsAt)
@@ -3340,7 +3353,7 @@ export function LiveWorkoutPage() {
     storeLivePhase(workoutId, null)
     void cancelNativeRestTimerNotification(workoutId)
     if (actor?.userId) clearWorkoutInactivityReminder(actor.userId, workoutId)
-    showCompletedWorkout(false)
+    void showCompletedWorkout(false)
   }, [actor?.userId, query.data?.status, showCompletedWorkout, workoutId])
   // При правке ПОДТВЕРЖДЁННОГО подхода (карандаш → «Сохранить») значение пишется
   // в БД, но без refetch локальный set остаётся старым и поле возвращает прежнее
@@ -3992,7 +4005,7 @@ export function LiveWorkoutPage() {
       queryClient.invalidateQueries({ queryKey: ['trainer-finance-overview'] }),
       clientId ? queryClient.invalidateQueries({ queryKey: ['client-stats', clientId] }) : Promise.resolve(),
     ])
-    showCompletedWorkout(completed)
+    await showCompletedWorkout(completed)
   }
   const cancelEmpty = useMutation({
     mutationFn: async () => {
