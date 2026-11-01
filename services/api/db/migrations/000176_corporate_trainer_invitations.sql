@@ -17,6 +17,9 @@ create table app_private.corporate_trainer_invitations (
   approved_at timestamptz,
   revoked_at timestamptz
 );
+create index corporate_invitation_pending_expiry on app_private.corporate_trainer_invitations(expires_at)
+  where revoked_at is null and approved_at is null;
+create index corporate_invitation_created on app_private.corporate_trainer_invitations(created_at desc);
 create table app_private.corporate_invitation_audit (
   id uuid primary key default gen_random_uuid(),
   invitation_id uuid not null references app_private.corporate_trainer_invitations(id),
@@ -85,7 +88,8 @@ begin
   return coalesce((select jsonb_agg(jsonb_build_object('id',i.id,'status',app_private.corporate_invitation_status(i),
     'createdAt',i.created_at,'expiresAt',i.expires_at,'officeIds',i.office_ids,
     'trainerName',case when i.claimed_at is not null then coalesce(nullif(btrim(concat_ws(' ',p.first_name,p.last_name)),''),'Аккаунт недоступен') else null end)
-    order by i.created_at desc) from (select * from app_private.corporate_trainer_invitations order by created_at desc limit 200) i
+    order by (i.approved_at is null and i.revoked_at is null and i.expires_at>now()) desc,i.created_at desc) from (select * from app_private.corporate_trainer_invitations
+      order by (approved_at is null and revoked_at is null and expires_at>now()) desc,created_at desc limit 400) i
     left join public.profiles p on p.id=i.claimed_by),'[]'::jsonb);
 end $$;
 

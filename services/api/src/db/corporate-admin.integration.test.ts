@@ -2,6 +2,7 @@ import { createHash, randomUUID } from 'node:crypto'
 import { fileURLToPath } from 'node:url'
 import { Pool, type QueryResultRow } from 'pg'
 import { runner } from 'node-pg-migrate'
+import { CorporateInvitationsStore } from '../corporate-invitations.js'
 import { CorporateAdminStore } from '../corporate-admin.js'
 import { PgDatabasePool } from './pg-pool.js'
 import { beforeAll, afterAll, describe, expect, it } from 'vitest'
@@ -302,6 +303,28 @@ describe.skipIf(!source)('corporate administration on real actor/RLS', () => {
     await saveOffice(archiveOffice,1,true,'Invitation archive fixture')
     await expect(actor(admin,'select app_private.decide_corporate_trainer_invitation($1,true)',[archived])).rejects.toMatchObject({code:'PT422'})
     expect((await pool.query('select is_yandex from public.corporate_trainers where trainer_id=$1',[otherInvited])).rows).toEqual([])
+    await pool.query(`insert into app_private.corporate_trainer_invitations(id,token_sha256,created_by,office_ids,created_at,approved_at)
+      select gen_random_uuid(),repeat(lpad(seq::text,4,'0'),16),$1,$2::uuid[],now()+interval '1 hour',now() from generate_series(1,401) seq`,[admin,[officeId]])
+    const history=(await actor<{v:Array<{id:string}>}>(admin,'select app_private.list_corporate_trainer_invitations() v'))[0]!.v
+    expect(history).toHaveLength(400)
+    expect(history.some(i=>i.id===archived)).toBe(true)
+    expect(history[0]!.id).toBe(archived)
+
+  })
+
+  it('issues only a fresh opaque secret while storing its digest and invalidating a lost create response',async()=>{
+    const runtime=new PgDatabasePool({connectionString,max:1})
+    try {
+      const store=new CorporateInvitationsStore(runtime), id=randomUUID(), session={accessMode:'read_write' as const,token:'a'.repeat(43)}
+      const first=await store.create(session,{id,officeIds:[officeId]})
+      expect(first.token).toMatch(/^[a-zA-Z0-9_-]{43}$/)
+      const stored=(await pool.query<{token_sha256:string}>('select token_sha256 from app_private.corporate_trainer_invitations where id=$1',[id])).rows[0]!.token_sha256
+      expect(stored).toBe(createHash('sha256').update(first.token).digest('hex'))
+      const second=await store.create(session,{id,officeIds:[officeId]})
+      expect(second.id).toBe(first.id);expect(second.token).not.toBe(first.token)
+      expect(await store.preview(first.token)).toBeNull()
+      expect(await store.preview(second.token)).toMatchObject({status:'active'})
+    } finally {await runtime.end()}
   })
 
 })

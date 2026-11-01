@@ -27,12 +27,12 @@ export function CorporateInvitationPage() {
       {preview.data&&<>
         <p>{preview.data.offices.map(o=>`${o.city}, ${o.name}`).join('; ')}</p>
         {status==='revoked'||status==='expired'?<StatePanel tone="info" title={status==='revoked'?'Приглашение отменено':'Срок приглашения истёк'} description="Попросите администратора создать новое приглашение."/>:
-          status==='approved'||claim.data==='already_member'?<StatePanel tone="info" title="Тренер добавлен" description="Аккаунт подключён к кабинету Яндекса."/>:
+          status==='approved'||claim.data==='already_member'?<StatePanel tone="info" title={status==='approved'?'Приглашение подтверждено':'Тренер уже добавлен'} description={status==='approved'?'Добавление было подтверждено администратором.':'Аккаунт уже подключён к кабинету Яндекса.'}/>:
           status==='claimed'?<StatePanel tone="info" title="Ожидает подтверждения" description="Приглашение принято. Администратор проверит заявку и подтвердит добавление."/>:<>
             <p>Администратор приглашает вас в кабинет Яндекса. После принятия он подтвердит ваш аккаунт и назначенные офисы.</p>
             {!persisted&&<p>После входа откройте исходную ссылку приглашения ещё раз.</p>}
-            {!actor?<div className="auth-actions"><Link className="primary" to="/auth" state={{from:'/corporate-invite',mode:'login',inviteRole:'trainer'}}>Войти в ФИТ</Link><Link className="secondary" to="/auth" state={{from:'/corporate-invite',mode:'register',inviteRole:'trainer'}}>Зарегистрироваться тренером</Link></div>:<>
-              <p>Текущий аккаунт: <strong>{[actor.firstName,actor.lastName].filter(Boolean).join(' ')||'Без имени'}</strong> · {actor.role==='trainer'?'тренер':'спортсмен'}</p>
+            {!actor?<div className="stack invitation-actions"><button type="button" className="primary" onClick={()=>navigate('/auth',{state:{from:'/corporate-invite',mode:'login',inviteRole:'trainer'}})}>Войти в ФИТ</button><button type="button" className="secondary" onClick={()=>navigate('/auth',{state:{from:'/corporate-invite',mode:'register',inviteRole:'trainer'}})}>Зарегистрироваться тренером</button></div>:<>
+              <p className="invitation-account">Текущий аккаунт: <strong>{[actor.firstName,actor.lastName].filter(Boolean).join(' ')||'Без имени'}</strong> · {actor.role==='trainer'?'тренер':'спортсмен'}</p>
               {actor.role==='trainer'?<button type="button" className="primary" disabled={claim.isPending||switching} aria-busy={claim.isPending} onClick={()=>claim.mutate()}>Присоединиться к кабинету Яндекса</button>:<p>Для принятия приглашения войдите в аккаунт тренера.</p>}
               <button type="button" className="secondary" disabled={claim.isPending||switching} onClick={()=>void changeAccount()}>Войти другим аккаунтом</button>
             </>}
