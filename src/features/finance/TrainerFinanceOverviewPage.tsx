@@ -1,6 +1,8 @@
 import { useQuery } from '@tanstack/react-query'
 import { useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useLocation, useSearchParams } from 'react-router-dom'
+import { isCoachWorkoutRedesignEnabled } from '../../app/coach-workout-redesign'
+import { readCoachCalendarRoute } from '../../app/coach-calendar-navigation'
 import { useAuth } from '../../app/auth-context'
 import { useDataBackend } from '../../app/data-backend-context'
 import type { TrainerFinanceOverview, TrainerFinanceOverviewClient } from '../../data/repositories/trainer-finance.repository'
@@ -51,22 +53,45 @@ function monthStart(value: LocalDate) {
   return localDate(`${value.slice(0, 7)}-01`)
 }
 
+function selectedMonth(value: string | null, today: LocalDate): LocalDate {
+  if (value && /^\d{4}-(0[1-9]|1[0-2])$/.test(value)) {
+    try { return localDate(`${value}-01`) } catch { /* Invalid URL dates use the current month. */ }
+  }
+  return monthStart(today)
+}
+
 export function TrainerFinanceOverviewPage() {
   const { actor } = useAuth()
   const { trainerFinance } = useDataBackend()
-  const [month, setMonth] = useState(() => monthStart(todayInTimeZone(actor?.timezone)))
+  const [params, setParams] = useSearchParams()
+  const location = useLocation()
+  const monthParam = params.get('month')
+  const month = selectedMonth(monthParam, todayInTimeZone(actor?.timezone))
+  const filter = FILTERS.find((item) => item.id === params.get('filter'))?.id ?? 'all'
+  const change = (nextMonth: LocalDate, nextFilter: FinanceFilter) => {
+    const next = new URLSearchParams(params)
+    next.set('month', nextMonth.slice(0, 7))
+    if (nextFilter === 'all') next.delete('filter'); else next.set('filter', nextFilter)
+    setParams(next, { replace: true })
+  }
   const monthValue = month.slice(0, 7)
   const query = useQuery({
     queryKey: ['trainer-finance-overview', monthValue],
     queryFn: () => trainerFinance.listOverview(monthValue),
   })
   return <TrainerFinanceOverviewView month={month} data={query.data} loading={query.isLoading} error={query.error}
-    onPreviousMonth={() => setMonth((value) => addMonths(value, -1))}
-    onNextMonth={() => setMonth((value) => addMonths(value, 1))}
+    filter={filter} onFilterChange={(value) => change(month, value)} returnTo={`${location.pathname}${location.search}`}
+    back={isCoachWorkoutRedesignEnabled(actor) ? readCoachCalendarRoute(actor?.userId) ?? '/today' : '/clients'}
+    onPreviousMonth={() => change(addMonths(month, -1), filter)}
+    onNextMonth={() => change(addMonths(month, 1), filter)}
     onRetry={() => void query.refetch()} />
 }
 
-export function TrainerFinanceOverviewView({ month, data, loading = false, error = null, onPreviousMonth, onNextMonth, onRetry }: {
+export function TrainerFinanceOverviewView({ month, data, loading = false, error = null, onPreviousMonth, onNextMonth, onRetry, filter: controlledFilter, onFilterChange, returnTo = '/finance', back = '/clients' }: {
+  filter?: FinanceFilter
+  onFilterChange?: (filter: FinanceFilter) => void
+  returnTo?: string
+  back?: string
   month: LocalDate
   data?: TrainerFinanceOverview
   loading?: boolean
@@ -75,9 +100,11 @@ export function TrainerFinanceOverviewView({ month, data, loading = false, error
   onNextMonth: () => void
   onRetry?: () => void
 }) {
-  const [filter, setFilter] = useState<FinanceFilter>('all')
+  const [localFilter, setLocalFilter] = useState<FinanceFilter>('all')
+  const filter = controlledFilter ?? localFilter
+  const setFilter = onFilterChange ?? setLocalFilter
   const clients = useMemo(() => (data?.clients ?? []).filter((client) => matchesFilter(client, filter)), [filter, data?.clients])
-  return <Page title="Финансы" back="/clients" swipeBack className="finance-overview-page">
+  return <Page title="Финансы" back={back} swipeBack className="finance-overview-page">
     <div className="finance-period-block">
       <span>Период</span>
       <div className="finance-month-switcher" aria-label="Месяц финансов">
@@ -94,7 +121,7 @@ export function TrainerFinanceOverviewView({ month, data, loading = false, error
           <p><span>Требуют внимания сейчас</span><strong>{data.attentionCount}</strong></p>
         </section>
         <div className="finance-filter-row" role="group" aria-label="Фильтр клиентов">{FILTERS.map((item) => <button key={item.id} type="button" className={filter === item.id ? 'is-active' : ''} aria-pressed={filter === item.id} onClick={() => setFilter(item.id)}>{item.label}</button>)}</div>
-        <div className="finance-overview-list">{clients.map((client) => <Link className={`card finance-overview-client${client.needsAttention ? ' needs-attention' : ''}`} to={`/clients/${client.clientId}/finance`} state={{ financeBackTo: '/finance' }} key={client.clientId}><span><strong>{client.fullName}</strong>{client.archivedAt && <small>В архиве</small>}</span><span>{trainerFinanceClientLabel(client)}</span><ChevronRightIcon /></Link>)}</div>
+        <div className="finance-overview-list">{clients.map((client) => <Link className={`card finance-overview-client${client.needsAttention ? ' needs-attention' : ''}`} to={`/clients/${client.clientId}/finance`} state={{ financeBackTo: returnTo }} key={client.clientId}><span><strong>{client.fullName}</strong>{client.archivedAt && <small>В архиве</small>}</span><span>{trainerFinanceClientLabel(client)}</span><ChevronRightIcon /></Link>)}</div>
         {clients.length === 0 && <p className="finance-empty">В этом разделе клиентов нет.</p>}
       </>}
     </AsyncView>

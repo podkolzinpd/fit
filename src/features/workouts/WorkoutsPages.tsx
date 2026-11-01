@@ -25,6 +25,7 @@ import { useCoachLiveDensity } from '../../app/coach-live-density'
 import { useCoachLiveHalo } from './use-coach-live-halo'
 import { CoachDayHeading, useCoachDaySwipe } from './CoachDayNavigation'
 import { CoachCalendarViews, type CoachCalendarView } from './CoachCalendarViews'
+import { CoachFortnightComparison } from './CoachFortnightComparison'
 import { advancePlanField } from './plan-input-navigation'
 import { useWorkoutFieldVisibility } from './workout-field-visibility'
 import { coachWorkoutReferenceAssets } from '../../shared/coach-workout-reference-assets'
@@ -44,7 +45,7 @@ import { WorkoutActualDuration, WorkoutActualDurationField } from './WorkoutActu
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ChangeEvent, type FormEvent, type ReactNode, type KeyboardEvent as ReactKeyboardEvent } from 'react'
 import { createPortal } from 'react-dom'
-import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
+import { Link, Navigate, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { currentStage, orderedStages } from '../../shared/goal-rules'
 import { copiedExerciseName } from '../../shared/exercise-catalog-curation'
@@ -129,7 +130,7 @@ import { useWorkoutInactivityReminder } from './use-workout-inactivity-reminder'
 import { LiveExerciseTechnique } from './LiveExerciseTechnique'
 import { acknowledgePendingLiveNote, readPendingLiveNotes, writePendingLiveNote } from './live-note-draft-storage'
 import { useAppViewport } from '../../app/app-viewport'
-import { isTrainerScheduleV2Enabled } from '../../app/trainer-schedule-v2'
+import { isTrainerScheduleV2CalendarRoute, isTrainerScheduleV2Enabled } from '../../app/trainer-schedule-v2'
 import { isFitLimeEnabled } from '../../app/fit-lime'
 import { useTrainerWorkspace } from './use-trainer-workspace'
 import { ChatHeaderAction, useChatThreads } from '../chat'
@@ -192,12 +193,15 @@ function useTrainerScheduleModel(forceDayView = false, hourHeight = HOUR_HEIGHT)
   const { actor } = useAuth()
   const navigate = useNavigate()
   const pilot = isTrainerScheduleV2Enabled(actor)
+  const unifiedCalendar = pilot && isCoachWorkoutRedesignEnabled(actor)
+  const scheduleLocation = useLocation()
   const today = todayInTimeZone(actor?.timezone)
   const dateParam = safeScheduleDate(params.get('date'))
   const weekParam = safeScheduleDate(params.get('week'))
   const scheduleRange = params.get('range') === '2w' ? '2w' : 'week'
   const isTwoWeekView = scheduleRange === '2w'
-  const isDayView = forceDayView || Boolean(dateParam)
+  const isDayView = (forceDayView && !unifiedCalendar) || Boolean(dateParam)
+    || unifiedCalendar && scheduleLocation.pathname === '/today' && !weekParam && params.get('mode') !== 'list'
   const lime = pilot && isFitLimeEnabled(actor)
   const independentPreference = useIndependentSchedule(lime && !isDayView ? actor?.userId : undefined)
   const isListView = lime && !isDayView && params.get('mode') === 'list'
@@ -205,7 +209,7 @@ function useTrainerScheduleModel(forceDayView = false, hourHeight = HOUR_HEIGHT)
   const statusFilter = lime && !isDayView ? scheduleStatusFilter(params.get('status')) : 'all'
   const overviewDayCount = isTwoWeekView ? 14 : 7
   const anchor = lime && isCoachWorkoutRedesignEnabled(actor) ? safeScheduleDate(params.get('anchor')) : null
-  const selected = dateParam ?? (forceDayView ? today : anchor ?? weekParam ?? today)
+  const selected = dateParam ?? (forceDayView && !unifiedCalendar ? today : anchor ?? weekParam ?? today)
   const validWeekStart = weekParam ? mondayWeekStart(weekParam) : null
   const weekStart = validWeekStart && (!isDayView || (daysBetween(validWeekStart, selected) >= 0 && daysBetween(validWeekStart, selected) < overviewDayCount))
     ? validWeekStart : mondayWeekStart(selected)
@@ -213,7 +217,6 @@ function useTrainerScheduleModel(forceDayView = false, hourHeight = HOUR_HEIGHT)
   const todayWeekStart = mondayWeekStart(today)
   const overviewDays = Array.from({ length: overviewDayCount }, (_, offset) => addDays(weekStart, offset))
   const scrollRef = useRef<HTMLDivElement>(null)
-  const scheduleLocation = useLocation()
   const scheduleFocus = (scheduleLocation.state as WorkoutNavigationState | null)?.scheduleFocus
   const autoScrolledDateRef = useRef<LocalDate | null>(null)
   const consumedFocusRef = useRef<string | null>(null)
@@ -237,7 +240,7 @@ function useTrainerScheduleModel(forceDayView = false, hourHeight = HOUR_HEIGHT)
     if (range === '2w') next.range = '2w'
     if (lime && isCoachWorkoutRedesignEnabled(actor)) next.anchor = date
     if (lime && !isDayView) for (const key of ['client', 'status', 'mode']) { const value = params.get(key); if (value) next[key] = value }
-    if (pilot) navigate(`/schedule?${new URLSearchParams(next)}`)
+    if (pilot) navigate(`${unifiedCalendar ? '/today' : '/schedule'}?${new URLSearchParams(next)}`)
     else setParams(next)
   }
   function shiftOverview(direction: -1 | 1) { showOverview(addDays(weekStart, direction * overviewDayCount)) }
@@ -319,12 +322,19 @@ function useTrainerScheduleModel(forceDayView = false, hourHeight = HOUR_HEIGHT)
 
 export function SchedulePage() {
   const { actor } = useAuth()
+  const location = useLocation()
   const [claimToken] = useState(() => {
     const match = /^#trainer-schedule-v2=([A-Za-z0-9_-]{43})$/.exec(window.location.hash)
     return match?.[1] ?? null
   })
   if (claimToken !== null && !isTrainerScheduleV2Enabled(actor)) {
     return <TrainerScheduleV2Claim token={claimToken} />
+  }
+  if (isTrainerScheduleV2Enabled(actor) && isCoachWorkoutRedesignEnabled(actor)
+    && isTrainerScheduleV2CalendarRoute('/today', location.search)) {
+    const next = new URLSearchParams(location.search)
+    if (!next.has('date') && !next.has('week')) next.set('week', mondayWeekStart(todayInTimeZone(actor?.timezone)))
+    return <Navigate to={`/today?${next}`} replace state={location.state as unknown} />
   }
   return isTrainerScheduleV2Enabled(actor) ? <TrainerScheduleV2 /> : <TrainerScheduleV1 />
 }
@@ -822,7 +832,7 @@ function TrainerScheduleV2({ forceDayView = false }: { forceDayView?: boolean })
     else if (view === 'week') next.delete('range')
     if (view === 'list') next.set('mode', 'list')
     else next.delete('mode')
-    navigate(`/schedule?${next}`, { flushSync: true })
+    navigate(`/today?${next}`, { flushSync: true })
   }
   const chooseCalendarDate = (date: LocalDate) => {
     if (isDayView) { openDay(date); return }
@@ -840,7 +850,7 @@ function TrainerScheduleV2({ forceDayView = false }: { forceDayView?: boolean })
       resolve: target => {
         const id = target.closest<HTMLElement>('[data-workout-id]')?.dataset.workoutId
         const workout = timed.find(item => item.id === id)
-        return actor?.role === 'trainer' && workout?.status === 'planned' && (!workout.createdBy || workout.createdBy === actor.userId) ? workout : null
+        return actor?.role === 'trainer' && workout && (!workout.createdBy || workout.createdBy === actor.userId) ? workout : null
       },
       preview: setDragPreview,
       drop: (workout, slot) => setSlotMove({ workout, slot }),
@@ -1030,14 +1040,14 @@ function TrainerScheduleV2({ forceDayView = false }: { forceDayView?: boolean })
           <button type="button" aria-pressed={!isTwoWeekView} onClick={() => showOverview(weekStart, 'week')}>Неделя</button>
           <button type="button" aria-pressed={isTwoWeekView} onClick={() => showOverview(weekStart, '2w')}>2 недели</button>
         </div>}
-        <section className={`schedule-v2-period${isTwoWeekView ? ' is-two-week' : ''}`} aria-label="Навигация по расписанию">
+        {!(compactCalendar && isTwoWeekView) && <section className={`schedule-v2-period${isTwoWeekView ? ' is-two-week' : ''}`} aria-label="Навигация по расписанию">
           <button type="button" aria-label={isTwoWeekView ? 'Предыдущие 2 недели' : 'Предыдущая неделя'} onClick={() => shiftOverview(-1)}><BackIcon /></button>
           <strong aria-label={periodLabel}>{isTwoWeekView
             ? <><span>{periodLabel.replace(/ \d{4} г\.$/, '')}</span><small>{periodEnd.slice(0, 4)} г.</small></>
             : periodLabel}</strong>
           <button type="button" aria-label={isTwoWeekView ? 'Следующие 2 недели' : 'Следующая неделя'} onClick={() => shiftOverview(1)}><ChevronRightIcon /></button>
-        </section>
-        <div className="schedule-v2-weekstrip" aria-label="Дни периода">
+        </section>}
+        {compactCalendar && isTwoWeekView ? <CoachFortnightComparison weekStart={weekStart} today={today} itemsByDay={itemsByDay} onOpenDay={openDay} onShift={shiftOverview} /> : <><div className="schedule-v2-weekstrip" aria-label="Дни периода">
           {Array.from({ length: isTwoWeekView ? 2 : 1 }, (_, weekIndex) => <div key={weekIndex} className="schedule-v2-weekdays">
             {overviewDays.slice(weekIndex * 7, (weekIndex + 1) * 7).map((day) => <button key={day} type="button" className={`${day === selected ? 'is-selected' : ''}${day === today ? ' is-today' : ''}`} aria-label={formatScheduleDateLabel(day)} onClick={() => openDay(day, weekStart)}><span>{weekdayShort(day)}</span><strong>{dayOfMonth(day)}</strong></button>)}
           </div>)}
@@ -1054,7 +1064,7 @@ function TrainerScheduleV2({ forceDayView = false }: { forceDayView?: boolean })
               })}{workouts.length === 0 && (compactScheduleFilters ? <span className="sr-only">На этот день тренировок нет</span> : <em>Свободный день</em>)}{workouts.length > 5 && <em>Ещё {workouts.length - 5}</em>}</span>
             </button>
           })}
-        </section>
+        </section></>}
       </> : <>
         {timelineEvents.length === 0 && untimed.length === 0 && independent.length === 0 && <p className="schedule-v2-empty-day" role="status">{fitLimeToday ? 'На этот день тренировок нет' : 'Свободный день'}</p>}
         {independent.length > 0 && <section className="schedule-v2-untimed" aria-label="Самостоятельные тренировки"><strong>Самостоятельно</strong>{independent.map((workout) => <Link key={workout.id} data-status={workout.status} to={`/workouts/${workout.id}`} state={{ returnTo }}><span className="schedule-v2-avatar">{clientInitials(workout.clientName)}</span><span><b>{workout.clientName}</b><small>{eventTime(workout) || 'Без времени'} · {scheduleV2WorkoutLine(workout)}</small></span>{workout.status === 'done' ? <CheckIcon /> : workout.status === 'cancelled' ? <span className="schedule-cancelled-mark" role="img" aria-label="Не состоялась"><CloseIcon /></span> : null}</Link>)}</section>}
@@ -2264,7 +2274,7 @@ export function WorkoutDetailPage() {
         statusLabel={!clientMode && done && workoutsRepository.confirmAttendance ? 'Проведена' : statusPresentation?.label}
         showStatus={detailState !== 'completed' || !clientMode && done && Boolean(workoutsRepository.confirmAttendance)}
         action={manageMenuInHeader ? <OverflowMenu label="Другие действия с тренировкой" items={workoutManageItems} /> : undefined}
-        meta={<>{actor?.role === 'trainer' && trainerOwned && workout.status === 'planned' && workoutsRepository.rescheduleSlot
+        meta={<>{actor?.role === 'trainer' && trainerOwned && workoutsRepository.rescheduleSlot
           ? <button type="button" className="workout-slot-trigger" aria-label="Изменить дату и время тренировки" onClick={() => setSlotSheetOpen(true)}><ScheduleIcon /><span>{formatLocalDate(workout.workoutDate)} · {slotTimeLabel(workout)}</span><ChevronRightIcon /></button>
           : <span>{formatLocalDate(workout.workoutDate)} · {workout.startTime?.slice(0, 5) ?? 'без времени'}</span>}<span>{workoutTrainingFormatLabel(workout.trainingFormat ?? 'self')}</span>{clientMode && !done && authorLabel && <span>{authorLabel}</span>}{clientAuthoredReadOnly && <span>Создано клиентом · упражнения только для просмотра</span>}{stageTitle && <span>Цель: {stageTitle}</span>}</>} />}
       {clientMode && workout.title && <p className="workout-plan-title">{workout.title}</p>}
@@ -2317,7 +2327,7 @@ export function WorkoutDetailPage() {
       {clientMode && !clientOwned && <div className="actions"><Link className="button secondary" to={`/workouts/new?copy=${workoutId}`} state={childNavigationState}>Создать свою копию</Link>{workout.exercises.length > 0 && (workout.status === 'planned' || done) && <OverflowMenu placement="top" label="Другие действия с тренировкой" items={[{ label: 'В избранное', onClick: () => setFavoriteSheetOpen(true) }]} />}</div>}
       {remove.error && <p className="error">{remove.error.message}</p>}
       {cancelPlanned.error && <p className="error" role="alert">{cancelPlanned.error.message}</p>}
-      {slotSheetOpen && actor?.role === 'trainer' && trainerOwned && workout.status === 'planned' && <WorkoutRescheduleSheet workout={workout} onClose={() => setSlotSheetOpen(false)} onSaved={async slot => {
+      {slotSheetOpen && actor?.role === 'trainer' && trainerOwned && <WorkoutRescheduleSheet workout={workout} onClose={() => setSlotSheetOpen(false)} onSaved={async slot => {
         setSlotSheetOpen(false)
         await invalidateWorkoutSurfaces()
         const path = isTrainerScheduleV2Enabled(actor) ? '/today' : '/schedule'
@@ -2898,7 +2908,8 @@ export function LiveWorkoutPage() {
   const { source: dataSource, pushNotifications: pushNotificationsRepository, workouts: workoutsRepository } = useDataBackend()
   const { workoutId = '' } = useParams()
   const { actor } = useAuth()
-  const [liveAttendanceAction, setLiveAttendanceAction] = useState<'complete' | 'cancel' | null>(null)
+  const [liveAttendanceAction, setLiveAttendanceAction] = useState<'complete' | 'cancel' | 'choose' | null>(null)
+  const liveFinishTriggerRef = useRef<HTMLButtonElement>(null)
   const clientLime = isClientLimeEnabled(actor)
   const clientReference = isClientWorkoutRedesignEnabled(actor)
   const clientLiveDensity = useClientLiveDensity(actor?.userId)
@@ -4615,7 +4626,8 @@ export function LiveWorkoutPage() {
   const exerciseCount = query.data?.exercises.length ?? 0
   const exerciseCountLabel = `${exerciseCount} ${exerciseCount % 100 >= 11 && exerciseCount % 100 <= 14 ? 'упражнений' : exerciseCount % 10 === 1 ? 'упражнение' : exerciseCount % 10 >= 2 && exerciseCount % 10 <= 4 ? 'упражнения' : 'упражнений'}`
   const canConfirmAttendance = actor?.role === 'trainer' && Boolean(workoutsRepository.confirmAttendance && query.data && query.data.status === 'in_progress' && (!query.data.createdBy || query.data.createdBy === actor.userId))
-  const liveHeader = query.data && <WorkoutHeader eyebrow={visualReference ? exerciseCountLabel : 'LIVE'} title={visualReference ? query.data.title || workoutFocusTitle(muscleGroupLabels(query.data.exercises)) : query.data.clientName} state="current" showStatus={!visualReference && query.data.exercises.length > 0} className="live-session-header" action={canConfirmAttendance ? <OverflowMenu label="Действия с тренировкой" items={[{ label: 'Не состоялась', onClick: () => setLiveAttendanceAction('cancel') }]} /> : undefined} meta={<>{coachReference && <span className="coach-live-client">{query.data.clientName}</span>}<span>{workoutTrainingFormatLabel(query.data.trainingFormat ?? 'self')}</span>{!visualReference && query.data.title && <span>{query.data.title}</span>}{visualReference && exerciseCount > 0 && <span className="coach-live-exercise-markers" aria-label="Состояния упражнений">{query.data.exercises.map((exercise, index) => <span key={exercise.id} className={exercise.sets.length > 0 && exercise.sets.every((set) => set.confirmedAt) ? 'done' : exercise.id === activeLiveExercise?.id ? 'current' : ''} aria-label={`Упражнение ${index + 1}: ${exercise.sets.length > 0 && exercise.sets.every((set) => set.confirmedAt) ? 'выполнено' : exercise.id === activeLiveExercise?.id ? 'текущее' : 'ожидает'}`} />)}</span>}{sessionProgress.setCount > 0 ? <div className="live-session-progress">
+  const trainerLiveExit = coachReference && canConfirmAttendance
+  const liveHeader = query.data && <WorkoutHeader eyebrow={visualReference ? exerciseCountLabel : 'LIVE'} title={visualReference ? query.data.title || workoutFocusTitle(muscleGroupLabels(query.data.exercises)) : query.data.clientName} state="current" showStatus={!visualReference && query.data.exercises.length > 0} className="live-session-header" action={canConfirmAttendance && !trainerLiveExit ? <OverflowMenu label="Действия с тренировкой" items={[{ label: 'Не состоялась', onClick: () => setLiveAttendanceAction('cancel') }]} /> : undefined} meta={<>{coachReference && <span className="coach-live-client">{query.data.clientName}</span>}<span>{workoutTrainingFormatLabel(query.data.trainingFormat ?? 'self')}</span>{!visualReference && query.data.title && <span>{query.data.title}</span>}{visualReference && exerciseCount > 0 && <span className="coach-live-exercise-markers" aria-label="Состояния упражнений">{query.data.exercises.map((exercise, index) => <span key={exercise.id} className={exercise.sets.length > 0 && exercise.sets.every((set) => set.confirmedAt) ? 'done' : exercise.id === activeLiveExercise?.id ? 'current' : ''} aria-label={`Упражнение ${index + 1}: ${exercise.sets.length > 0 && exercise.sets.every((set) => set.confirmedAt) ? 'выполнено' : exercise.id === activeLiveExercise?.id ? 'текущее' : 'ожидает'}`} />)}</span>}{sessionProgress.setCount > 0 ? <div className="live-session-progress">
     <span className="live-session-progress-copy"><span>{sessionProgress.complete ? 'Все упражнения выполнены' : activeLiveExercise ? `Сейчас: ${activeLiveExercise.name} · подход ${sessionProgress.activeSetNumber} из ${sessionProgress.activeExerciseSetCount}` : 'Выберите упражнение'}</span><strong>Готово {sessionProgress.completedSetCount} из {sessionProgress.setCount}</strong></span>
     <span className="live-session-progress-track" role="progressbar" aria-label="Выполненные подходы" aria-valuemin={0} aria-valuemax={sessionProgress.setCount} aria-valuenow={sessionProgress.completedSetCount}><span style={{ width: `${sessionProgress.percent}%` }} /></span>
   </div> : null}</>} />
@@ -4625,7 +4637,7 @@ export function LiveWorkoutPage() {
     action={visualReference && query.data ? <>
       <span className={`coach-live-status${referenceRestActive && !livePhase ? ' resting' : ''}`}><span aria-hidden="true" />{livePhase?.kind === 'prep' ? 'Подготовка' : livePhase?.kind === 'work' ? 'Подход' : referenceRestActive ? 'Отдых' : 'Live'}</span>
       {(coachV79 || clientReference) && <span className="coach-v79-header-slot" ref={setCoachClockSlot} />}
-        <button type="button" className="coach-live-finish" aria-label={finish.isPending ? 'Завершаем тренировку' : 'Завершить тренировку'} title={finish.isPending ? 'Завершаем…' : 'Завершить тренировку'} aria-busy={finish.isPending} disabled={(!query.data.exercises.length && !canConfirmAttendance) || rootMutationPending || save.isPending || confirm.isPending} onClick={() => { if (document.activeElement instanceof HTMLElement) document.activeElement.blur(); if (canConfirmAttendance) { setLiveAttendanceAction('complete'); return }; if (hasIncompleteLiveSets || cardioSetMissingTime || clientReference && timerConfirmedSets.length > 0) setConfirmFinish(true); else finish.mutate() }}><CheckSmallIcon /></button>
+        <button ref={liveFinishTriggerRef} type="button" className="coach-live-finish" aria-label={finish.isPending ? 'Завершаем тренировку' : 'Завершить тренировку'} title={finish.isPending ? 'Завершаем…' : 'Завершить тренировку'} aria-busy={finish.isPending} disabled={(!query.data.exercises.length && !canConfirmAttendance) || rootMutationPending || save.isPending || confirm.isPending} onClick={() => { if (document.activeElement instanceof HTMLElement) document.activeElement.blur(); if (canConfirmAttendance) { setLiveAttendanceAction(trainerLiveExit ? 'choose' : 'complete'); return }; if (hasIncompleteLiveSets || cardioSetMissingTime || clientReference && timerConfirmedSets.length > 0) setConfirmFinish(true); else finish.mutate() }}><CheckSmallIcon /></button>
     </> : undefined}>
     <AsyncView loading={query.isLoading} error={query.error}
       errorDescription={clientReference && getRequestDiagnostics(query.error)?.status === 503 ? 'Сервис временно недоступен. Попробуйте ещё раз.' : undefined}
@@ -4910,7 +4922,7 @@ export function LiveWorkoutPage() {
         return liveDrag ? <>{clientLime && canManageLiveStructure && liveBlocks.length > 1 && <Coachmark id="client-live-card-drag-2026-10" userId={actor?.userId} title="Меняйте порядок упражнений" description="Удерживайте карточку за название или свободное место, затем перетащите. Поля и кнопки работают как обычно. В меню также есть «Изменить порядок»."><span className="sr-only">Перенос карточек</span></Coachmark>}<WorkoutGestureList nativeSwipe={liveSwipeEnabled} blocks={liveBlocks.map((block) => block.blockId)} disabled={gestureDisabled} holdCards={clientLime}
           onMove={(blockId, targetIndex) => moveLiveBlock.mutate({ blockId, targetIndex })}>{cards}</WorkoutGestureList></> : cards
       })()}
-      {canManageLiveStructure && query.data.exercises.length === 0 && liveExerciseEntry(<section className="live-empty-start"><h2>Добавьте первое упражнение</h2><button type="button" className="primary wide" disabled={rootMutationPending} onClick={event => { if (clientReference) event.currentTarget.focus({ preventScroll: true }); setReplaceExerciseId(null); setPickerOpen(true) }}>Выбрать упражнение</button>{cancelEmpty.error && <p className="live-empty-error" role="alert">Не удалось удалить тренировку. Попробуйте ещё раз.</p>}</section>)}
+      {canManageLiveStructure && query.data.exercises.length === 0 && liveExerciseEntry(<section className="live-empty-start">{!trainerLiveExit && <h2>Добавьте первое упражнение</h2>}<button type="button" className="primary wide" disabled={rootMutationPending} onClick={event => { if (clientReference) event.currentTarget.focus({ preventScroll: true }); setReplaceExerciseId(null); setPickerOpen(true) }}>Выбрать упражнение</button>{cancelEmpty.error && <p className="live-empty-error" role="alert">Не удалось удалить тренировку. Попробуйте ещё раз.</p>}</section>)}
       {canManageLiveStructure && query.data.exercises.length > 0 && liveExerciseEntry(<button type="button" className="secondary wide live-add-exercise" disabled={rootMutationPending} onClick={event => { if (clientReference) event.currentTarget.focus({ preventScroll: true }); setReplaceExerciseId(null); setPickerOpen(true) }}><AddActionLabel>{coachReference ? 'Упражнение' : 'Ещё упражнение'}</AddActionLabel></button>)}
       {coachReference && <FitLogo className="coach-live-footer-brand" />}
       {error && <p className="error">{error.message}</p>}
@@ -4924,9 +4936,9 @@ export function LiveWorkoutPage() {
           конкурировать с primary-подтверждением подхода в карточке.
           Подтверждение частичного завершения — inline (не нативный confirm,
           который не работает в WKWebView и блокировал выход). */}
-      {(!visualReference || query.data.exercises.length === 0 || liveSyncError || recoveredSetIds.size > 0 || confirmFinish) && <div className={`live-bottom-bar${query.data.exercises.length === 0 ? ' live-bottom-bar-empty' : ''}`}>
-        {canConfirmAttendance && query.data.exercises.length === 0 && <button type="button" className="primary workout-attendance-finish" disabled={rootMutationPending} onClick={() => setLiveAttendanceAction('complete')}>Завершить тренировку</button>}
-        {query.data.exercises.length === 0 && <button type="button" className="live-empty-delete" aria-label={cancelEmpty.isPending ? 'Удаляем тренировку' : 'Удалить тренировку'} title="Удалить тренировку" aria-busy={cancelEmpty.isPending} disabled={cancelEmpty.isPending} onClick={async () => {
+      {(!visualReference || (!trainerLiveExit && query.data.exercises.length === 0) || liveSyncError || recoveredSetIds.size > 0 || confirmFinish) && <div className={`live-bottom-bar${query.data.exercises.length === 0 ? ' live-bottom-bar-empty' : ''}`}>
+        {canConfirmAttendance && !trainerLiveExit && query.data.exercises.length === 0 && <button type="button" className="primary workout-attendance-finish" disabled={rootMutationPending} onClick={() => setLiveAttendanceAction('complete')}>Завершить тренировку</button>}
+        {!trainerLiveExit && query.data.exercises.length === 0 && <button type="button" className="live-empty-delete" aria-label={cancelEmpty.isPending ? 'Удаляем тренировку' : 'Удалить тренировку'} title="Удалить тренировку" aria-busy={cancelEmpty.isPending} disabled={cancelEmpty.isPending} onClick={async () => {
           if (await askConfirm({ message: 'Удалить эту пустую тренировку?', confirmLabel: 'Удалить', danger: true })) cancelEmpty.mutate()
         }}><TrashIcon /></button>}
         {(liveSyncError || recoveredSetIds.size > 0) && <div className={`live-sync-state ${liveSyncError ? 'error' : ''}`} role={liveSyncError ? 'alert' : 'status'}>
@@ -4959,7 +4971,7 @@ export function LiveWorkoutPage() {
           : !visualReference && <WorkoutCta variant={hasIncompleteLiveSets ? 'secondary' : 'primary'} className="wide" pending={finish.isPending} pendingLabel="Завершаем…" disabled={rootMutationPending || save.isPending || confirm.isPending} onClick={() => { if (canConfirmAttendance) setLiveAttendanceAction('complete'); else if (hasIncompleteLiveSets || cardioSetMissingTime || timerConfirmedSets.length > 0) setConfirmFinish(true); else finish.mutate() }}>Завершить тренировку</WorkoutCta>)}
       </div>}
     </>}</AsyncView>
-    {liveAttendanceAction && canConfirmAttendance && query.data && <WorkoutAttendanceSheet workout={query.data} action={liveAttendanceAction} onClose={() => setLiveAttendanceAction(null)} beforeSave={async () => { await prepareLiveCompletion(); return workoutsRepository.get(workoutId) }} onCompleted={async () => { const completed = liveAttendanceAction === 'complete'; setLiveAttendanceAction(null); await onLiveEnded(completed) }} />}
+    {liveAttendanceAction && canConfirmAttendance && query.data && <WorkoutAttendanceSheet workout={query.data} action={liveAttendanceAction} onClose={() => { setLiveAttendanceAction(null); if (trainerLiveExit) window.requestAnimationFrame(() => liveFinishTriggerRef.current?.focus({ preventScroll: true })) }} beforeSave={async () => { await prepareLiveCompletion(); return workoutsRepository.get(workoutId) }} onDelete={trainerLiveExit ? () => cancelEmpty.mutateAsync() : undefined} onCompleted={async action => { setLiveAttendanceAction(null); await onLiveEnded(action === 'complete') }} />}
     {canManageLiveStructure && pickerOpen && <ExercisePicker quickEntry={isQuickWorkoutEntryEnabled(actor)} coachLiveV79={coachV79} clientLiveV79={clientReference} clientLime={isClientLimeEnabled(actor)} reference={coachReference} referenceAppearance={visualReference} catalog={catalog} clientRecent={clientRecentExercises} techniqueActionLabel={replaceExerciseId ? 'Заменить упражнение' : 'Добавить упражнение'} onPick={pickLiveExercise} onPickMany={pickLiveExercises} multiple={clientLime && !replaceExerciseId} showEmptySelection={clientLime && !replaceExerciseId} keepSelectionWhileAdding={clientLime && !replaceExerciseId} selectionDraft={clientLime && !replaceExerciseId ? livePickerSelection : undefined} onSelectionDraftChange={clientLime && !replaceExerciseId ? setLivePickerSelection : undefined} onClose={closePicker} />}
     {techniqueExercise && <ExerciseTechniqueSheet exercise={techniqueExercise} onClose={() => setTechniqueExercise(null)} />}
     {confirmDialog}
