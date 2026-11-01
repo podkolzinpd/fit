@@ -14,7 +14,7 @@ interface WorkoutComposerProps {
   onClear: () => void
   onManualValueChange?: (value: string) => void
   onTranscriptValueChange?: (value: string) => void
-  onTranscriptAppended?: (event: { previousValue: string; value: string; transcript: string }) => void | Promise<void>
+  onTranscriptAppended?: (event: { previousValue: string; value: string; transcript: string }) => string | void | Promise<string | void>
   primaryAction: ReactNode
   secondaryAction?: ReactNode
   children?: ReactNode
