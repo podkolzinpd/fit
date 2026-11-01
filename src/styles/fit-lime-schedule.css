@@ -127,3 +127,9 @@
 .phone-frame .schedule-workout-line > span { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; min-width: 0; }
 .phone-frame .schedule-workout-line .schedule-event-workout-title { flex: 0 1 45%; }
 .phone-frame .schedule-workout-line .schedule-event-exercises { flex: 1 1 55%; }
+
+/* Lifecycle marks stay neutral for cancelled visits and compact in week rows. */
+.trainer-schedule-v2-shell .schedule-cancelled-mark { display:inline-flex; flex:none; color:var(--muted); }
+.trainer-schedule-v2-shell .schedule-cancelled-mark svg,.trainer-schedule-v2-shell .schedule-completed-mark svg { width:18px; height:18px; }
+.trainer-schedule-v2-shell .schedule-v2-day-events > span:has(.schedule-cancelled-mark),
+.trainer-schedule-v2-shell .schedule-v2-day-events > span:has(.schedule-completed-mark) { grid-template-columns:38px minmax(0,1fr) 18px; }

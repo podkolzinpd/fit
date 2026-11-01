@@ -3457,6 +3457,7 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
         command.workoutDate,
         command.startTime,
         command.expectedVersion,
+        command.slot,
       ),
       (version) => reply
         .header('cache-control', 'no-store')

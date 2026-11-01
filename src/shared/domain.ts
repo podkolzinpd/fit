@@ -180,6 +180,12 @@ export interface InvitationShare {
   expiresAt: string
 }
 
+export interface WorkoutSlotDraft {
+  workoutDate: LocalDate
+  startTime: string | null
+  endTime: string | null
+}
+
 export interface WorkoutAttendanceDraft {
   disposition: 'auto' | 'charged' | 'unassigned' | 'free' | 'trial'
   packageId: string | null
