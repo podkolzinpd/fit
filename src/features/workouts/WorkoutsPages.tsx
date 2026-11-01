@@ -1506,7 +1506,7 @@ export function WorkoutFormPage() {
       setPrepSeconds(saved.prepSeconds ?? 0)
       setExecutionMode(saved.executionMode)
       setStageId(saved.stageId)
-      setRecordCompleted(params.get('mode') === 'completed' || saved.recordCompleted)
+      setRecordCompleted(saved.recordCompleted)
       setTrainingFormat(clientMode ? 'self' : saved.trainingFormat ?? defaultWorkoutTrainingFormat('trainer'))
       trainingFormatTouched.current = Boolean(saved.trainingFormat)
       setDraftExercises(copiedWorkout || plannedFromFavorite || Boolean(templateId)
