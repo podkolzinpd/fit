@@ -1,3 +1,4 @@
+import { useCreateWorkoutClient } from './use-create-workout-client'
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
@@ -73,6 +74,7 @@ function FitLimePlanForm({ date, returnTo, onClose, onBack, initialDraft }: {
   initialDraft: WorkoutFormDraft | null
 }) {
   const { actor } = useAuth()
+  const createClient = useCreateWorkoutClient()
   const reference = isCoachWorkoutRedesignEnabled(actor)
   const { clients: clientsRepository, workouts } = useDataBackend()
   const queryClient = useQueryClient()
@@ -203,6 +205,6 @@ function FitLimePlanForm({ date, returnTo, onClose, onBack, initialDraft }: {
       {(error || mutation.error) && <p className="error" role="alert">{error ?? mutation.error?.message}</p>}
       {mutation.isPending && <p role="status">Сохраняем…</p>}
     </form>
-    {pickerOpen && <ClientPicker userId={actor?.userId} clients={clients.data ?? []} selectedId={clientId} onChange={(id) => { setClientId(id); setError(null) }} loading={clients.isLoading} error={clients.error} onRetry={() => void clients.refetch()} reference={reference} autoFocusSearch={false} initialOpen hideTrigger onDismiss={() => setPickerOpen(false)} />}
+    {pickerOpen && <ClientPicker userId={actor?.userId} clients={clients.data ?? []} selectedId={clientId} onChange={(id) => { setClientId(id); setError(null) }} loading={clients.isLoading} error={clients.error} onRetry={() => void clients.refetch()} onCreate={createClient} reference={reference} autoFocusSearch={false} initialOpen hideTrigger onDismiss={() => setPickerOpen(false)} />}
   </dialog>
 }

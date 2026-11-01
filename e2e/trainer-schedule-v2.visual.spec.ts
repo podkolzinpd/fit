@@ -1,3 +1,4 @@
+import { workoutLifecycleCases } from './workout-lifecycle.cases'
 import { writeFile } from 'node:fs/promises'
 import { expect, test, type Locator, type Page } from '@playwright/test'
 import { buildFitLimeCalendarPlan } from '../services/api/src/db/fit-lime-calendar-plan'
@@ -7327,3 +7328,5 @@ for (const theme of ['light', 'dark']) for (const width of [390, 430]) {
     await page.screenshot({ path: info.outputPath('history-calendar.png') })
   })
 }
+
+workoutLifecycleCases()

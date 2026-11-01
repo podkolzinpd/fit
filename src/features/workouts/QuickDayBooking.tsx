@@ -1,3 +1,4 @@
+import { useCreateWorkoutClient } from './use-create-workout-client'
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
@@ -28,6 +29,7 @@ export function dayBookingTime(target: Element, x: number, y: number, hourHeight
 export function QuickDayBooking({ date, time, returnTo, onClose }: { date: LocalDate; time: string; returnTo: string; onClose: () => void }) {
   const { actor } = useAuth()
   const { clients: clientsRepository, workouts } = useDataBackend()
+  const createClient = useCreateWorkoutClient()
   const queryClient = useQueryClient()
   const navigate = useNavigate()
   const key = workoutFormDraftKey(actor?.userId ?? 'anonymous', `booking--${date}--${time}`)
@@ -85,6 +87,6 @@ export function QuickDayBooking({ date, time, returnTo, onClose }: { date: Local
       </fieldset>
       {(error || save.error) && <p className="error" role="alert">{error ?? save.error?.message}</p>}
     </form>
-    {pickerOpen && <ClientPicker userId={actor.userId} clients={clients.data ?? []} selectedId={clientId} onChange={id => { setClientId(id); setError(null) }} loading={clients.isLoading} error={clients.error} onRetry={() => void clients.refetch()} reference autoFocusSearch={false} initialOpen hideTrigger onDismiss={() => setPickerOpen(false)} />}
+    {pickerOpen && <ClientPicker userId={actor.userId} clients={clients.data ?? []} selectedId={clientId} onChange={id => { setClientId(id); setError(null) }} loading={clients.isLoading} error={clients.error} onRetry={() => void clients.refetch()} onCreate={createClient} reference autoFocusSearch={false} initialOpen hideTrigger onDismiss={() => setPickerOpen(false)} />}
   </dialog>
 }
