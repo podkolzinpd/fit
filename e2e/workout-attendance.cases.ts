@@ -182,6 +182,7 @@ export function workoutAttendanceCases() {
   })
 
   for(const density of ['original','compact'] as const) test(`empty trainer Live confirms attendance in ${density} without changing its renderer`,async({page},info)=>{
+    await page.clock.setFixedTime(new Date('2026-10-08T09:01:00Z'))
     // Pair the second density with light to check both theme tokens without a full product matrix.
     await page.addInitScript(({id,density})=>{localStorage.setItem(`fit.coachLiveDensity.${id}`,density);localStorage.setItem('fit.appTheme',density==='compact'?'light':'dark')},{id:profileId,density})
     const backend=await mockPilot(page,{profileId,fitLime:true,workouts:[{...restTimerWorkout(),createdBy:profileId,startTime:'10:10',exercises:[]}]})
@@ -197,8 +198,9 @@ export function workoutAttendanceCases() {
     await expect(page.locator('.workout-attendance-finish, .live-empty-delete, .live-bottom-bar')).toHaveCount(0)
     await expect(page.getByText('Добавьте первое упражнение',{exact:true})).toHaveCount(0)
     await expect(page.getByRole('button',{name:'Действия с тренировкой',exact:true})).toHaveCount(0)
-    await expect(page.locator('.brand')).toBeInViewport()
+    await expect(page.locator('.brand')).toBeInViewport({ratio:1})
     const centered=await page.locator('.live-session-header').evaluate(el=>{const box=el.getBoundingClientRect();const title=el.querySelector('h2')!.getBoundingClientRect();return Math.abs(title.left+title.width/2-(box.left+box.width/2))});expect(centered).toBeLessThan(1)
+    await page.screenshot({path:info.outputPath(`live-empty-${density}.png`)})
     await page.getByRole('button',{name:'Завершить тренировку',exact:true}).click()
     const sheet=page.getByRole('dialog',{name:'Завершение тренировки',exact:true})
     await expect(sheet).toBeVisible()
@@ -207,7 +209,7 @@ export function workoutAttendanceCases() {
     await expect(sheet.getByRole('radio',{name:'Завершить тренировку',exact:true})).toBeChecked()
     await expect(sheet.getByRole('radio',{name:'Отметить как несостоявшуюся',exact:true})).toBeVisible()
     await expect(sheet.getByRole('radio',{name:'Удалить пустую тренировку',exact:true})).toBeVisible()
-    expect(await sheet.evaluate(el=>getComputedStyle(el).fontFamily.replace(/[\s'"]/g,''))).toBe(await page.locator('.phone-frame').evaluate(el=>getComputedStyle(el).getPropertyValue('--lime-font').replace(/[\s'"]/g,'')))
+    expect(await sheet.evaluate(el=>getComputedStyle(el).fontFamily.replace(/[\s'"]/g,''))).toBe(await page.locator('.phone-frame').evaluate(el=>getComputedStyle(el).fontFamily.replace(/[\s'"]/g,'')))
     await expect(sheet.locator('.workout-attendance-note')).toHaveCount(0)
     await sheet.getByRole('button',{name:'Продолжить тренировку',exact:true}).click()
     expect(calls).toHaveLength(0)
