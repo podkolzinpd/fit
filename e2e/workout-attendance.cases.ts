@@ -197,7 +197,7 @@ export function workoutAttendanceCases() {
     await expect(page.locator('.workout-attendance-finish, .live-empty-delete, .live-bottom-bar')).toHaveCount(0)
     await expect(page.getByText('Добавьте первое упражнение',{exact:true})).toHaveCount(0)
     await expect(page.getByRole('button',{name:'Действия с тренировкой',exact:true})).toHaveCount(0)
-    await expect(page.locator('.brand')).toBeVisible()
+    await expect(page.locator('.brand')).toBeInViewport()
     const centered=await page.locator('.live-session-header').evaluate(el=>{const box=el.getBoundingClientRect();const title=el.querySelector('h2')!.getBoundingClientRect();return Math.abs(title.left+title.width/2-(box.left+box.width/2))});expect(centered).toBeLessThan(1)
     await page.getByRole('button',{name:'Завершить тренировку',exact:true}).click()
     const sheet=page.getByRole('dialog',{name:'Завершение тренировки',exact:true})
