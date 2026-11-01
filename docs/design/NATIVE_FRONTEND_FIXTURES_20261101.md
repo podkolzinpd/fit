@@ -162,3 +162,17 @@ coverage81.48/76.48/81.05/86.07 при прежних порогах; API1551 pa
 lint/typecheck/policies/build passed. Profile Chromium6/6; связанные3 локально
 не проверены из-за Podman, обязательные Chromium/WebKit CI lanes сохраняются.
 Workflow docs и diff whitespace passed. Итог нового CI — в PR1928.
+
+После внешнего merge main f1648bd0 полный локальный check выявил независимую
+гонку ProgramFeedbackForm.test: ожидание spy submit уже выполнено, но React
+ещё показывает «Сохраняем…» до commit результата. Существующий status assertion
+теперь ожидает UI через waitFor; payload assertion и оба случая сохраняются.
+Продуктовый Assistant/промпты не меняются. Это конкретный локальный failure,
+а не основание отключать проверку или увеличивать её таймаут. Новый полный
+check выполняется после исправления, итог head/CI остаётся в PR1928.
+
+Итог после f1648bd0 и исправления async assertion: полный `npm run check`
+passed —337 files/3031 unit tests, coverage81.52/76.53/81.09/86.12;
+API1551 passed/242 skipped, lint/typecheck/policies/build passed.
+Целевые ProgramFeedbackForm2/2, workflow docs и diff whitespace passed.
+Новые сценарии не добавлены; прежние состояния, роли и проверки сохранены.
