@@ -4,6 +4,7 @@ MC1/PR1916: [проверки и ручной выпуск](design/CLIENT_REFERE
 YAFIT-699: компактный список клиентов и гостевое приглашение,2PR. [План/проверки](design/COACH_CLIENTS_AND_INVITATION_20261031.md); [статус выпуска](https://st.yandex-team.ru/YAFIT-699).
 ФИТ20: [перенос и жесты — выпущено](design/COACH_RESCHEDULE_AND_DAY_GESTURES_20261031.md); [навигация — три PR в работе](design/COACH_WORKFLOW_AUDIT_20261031.md).
 31.10 — YAFIT-698: проведение с планом/без, отмена Live/крестик, фильтр истории. [План](design/COACH_QUICK_COMPLETION_20261031.md); [статус](https://st.yandex-team.ru/YAFIT-698).
+YAFIT-700: [статусы тренера](design/COACH_WORKOUT_STATUS_DISPLAY_20261101.md), выпуск в работе.
 31.10 — YAFIT-697: время быстрого старта обеим ролям, проведение пустой записи
 и «Не состоялась» тренеру. [План, проверки и выпуск](design/COACH_ATTENDANCE_AND_START_TIME_20261031.md).
 PR1906–1908 опубликованы db96685e; итог в YAFIT-697.

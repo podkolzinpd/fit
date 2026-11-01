@@ -52,7 +52,7 @@ export function BookingHistorySheet({ target, onClose, onApplied, onReload }: {
         {source.trainerReview && <p className="workout-source-review"><span className="workout-source-review-label">Отзыв тренера</span>{source.trainerReview}</p>}
         {groupIntoBlocks(source.exercises).map(block => <section key={block.blockId} className="booking-history-preview-block">
           {block.blockType !== 'single' && <p className="muted">{blockLabel(block.blockType, block.blockPreset)} · {block.blockRounds} кр.</p>}
-          {block.exercises.map(exercise => <article key={exercise.id}><strong>{exercise.name}</strong><p>{compactCompletedSetSummary(exercise.sets, false, exercise.ref)}</p>{exercise.trainerComment && <p className="muted">{exercise.trainerComment}</p>}</article>)}
+          {block.exercises.map(exercise => <article key={exercise.id}><strong>{exercise.name}</strong><p>{compactCompletedSetSummary(exercise.sets, false, exercise.ref, 'trainer')}</p>{exercise.trainerComment && <p className="muted">{exercise.trainerComment}</p>}</article>)}
         </section>)}
         {replacementConfirmed && <p role="alert">В этой записи уже есть план. Заменить его упражнения выбранной тренировкой?</p>}
       </> : <>
