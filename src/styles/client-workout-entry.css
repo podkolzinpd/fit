@@ -1,0 +1,142 @@
+/* MC1: the existing client compose/review/save controls own their Lime
+   presentation. Shared layout, DOM, input and submission behavior stay in
+   their existing components. Other forms still use their current scopes. */
+.phone-frame.fit-client-lime .client-workout-entry .workout-composer-card {
+  padding: 16px;
+  border: 0;
+  border-radius: 16px;
+  background: var(--lime-surface-raised);
+  box-shadow: none;
+}
+.phone-frame.fit-client-lime .client-workout-entry .workout-composer-card .voice-note-field > label {
+  color: var(--lime-text-secondary);
+  font-size: 12px;
+  font-weight: 500;
+}
+.phone-frame.fit-client-lime .client-workout-entry .workout-composer-card .voice-note-field textarea {
+  min-height: 144px;
+  padding: 10px 12px;
+  border: 0;
+  border-radius: 16px;
+  background: transparent;
+  color: var(--lime-text);
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 22px;
+}
+.phone-frame.fit-client-lime .client-workout-entry .workout-composer-card .voice-note-field textarea:focus {
+  outline: 2px solid var(--accent-ring);
+  outline-offset: 1px;
+  box-shadow: none;
+}
+.phone-frame.fit-client-lime .client-workout-entry .workout-composer-card .voice-input {
+  min-height: 48px;
+  padding: 4px 0 0;
+  border: 0;
+}
+.phone-frame.fit-client-lime .client-workout-entry .workout-composer-card .voice-input-button {
+  min-height: 44px;
+  padding: 8px 14px;
+  border: 1px solid var(--lime-divider);
+  border-radius: 999px;
+  background: var(--lime-surface);
+  color: var(--lime-text);
+  font-size: 14px;
+  font-weight: 500;
+}
+.phone-frame.fit-client-lime .client-workout-entry .workout-composer-card .voice-input-button.recording {
+  border-color: var(--lime-pink);
+  background: var(--lime-pink);
+  color: var(--lime-text-on-accent);
+}
+.phone-frame.fit-client-lime .client-workout-entry .workout-composer-clear {
+  min-height: 44px;
+  border-color: var(--lime-divider);
+}
+.phone-frame.fit-client-lime .client-workout-entry .workout-composer-clear .link {
+  min-height: 44px;
+  color: var(--lime-text);
+  font-size: 12px;
+  font-weight: 500;
+}
+.phone-frame.fit-client-lime .client-workout-entry .workout-composer-actions { gap: 8px; }
+.phone-frame.fit-client-lime .client-workout-entry .workout-composer-actions > button { min-height: 48px; }
+.phone-frame.fit-client-lime .client-workout-entry .today-review-back {
+  justify-self: start;
+  min-height: 44px;
+  color: var(--lime-accent-ink);
+  font-size: 12px;
+  font-weight: 500;
+}
+.phone-frame.fit-client-lime .client-workout-entry .today-review-next {
+  min-height: 48px;
+  border-radius: 999px;
+}
+.phone-frame.fit-client-lime .client-workout-entry .today-assignment {
+  gap: 16px;
+  padding: 16px;
+  border: 1px solid var(--lime-divider);
+  border-radius: var(--lime-radius-card);
+  background: var(--lime-surface);
+  box-shadow: none;
+}
+.phone-frame.fit-client-lime .client-workout-entry .today-assignment-self {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--lime-text-secondary);
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 20px;
+}
+.phone-frame.fit-client-lime .client-workout-entry .today-save-question {
+  color: var(--lime-text);
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.4;
+}
+.phone-frame.fit-client-lime .client-workout-entry .today-save-actions { gap: 16px; }
+.phone-frame.fit-client-lime .client-workout-entry .today-record-mode {
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid var(--lime-divider);
+  border-radius: 28px;
+  background: var(--lime-surface-raised);
+}
+.phone-frame.fit-client-lime .client-workout-entry .today-record-mode button {
+  min-height: 44px;
+  border: 0;
+  border-radius: 24px;
+  background: transparent;
+  color: var(--lime-text-secondary);
+  font-size: 14px;
+  font-weight: 500;
+  box-shadow: none;
+}
+.phone-frame.fit-client-lime .client-workout-entry .today-record-mode button.active {
+  background: var(--lime-accent);
+  color: var(--lime-text-on-accent);
+}
+.phone-frame.fit-client-lime .client-workout-entry .today-date-field {
+  gap: 6px;
+  color: var(--lime-text-secondary);
+  font-size: 12px;
+  font-weight: 500;
+}
+.phone-frame.fit-client-lime .client-workout-entry .today-date-field input {
+  min-height: 48px;
+  border-color: var(--lime-divider);
+  border-radius: 16px;
+  background: var(--lime-surface-raised);
+  color: var(--lime-text);
+  font-size: 16px;
+  font-weight: 400;
+}
+.phone-frame.fit-client-lime .client-workout-entry .today-save-actions .workout-cta {
+  min-height: 48px;
+  border-radius: 999px;
+  font-size: 16px;
+  font-weight: 500;
+}

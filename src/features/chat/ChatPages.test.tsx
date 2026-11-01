@@ -370,7 +370,7 @@ describe('reliable chat screens', () => {
     renderAt('/chat/conversation-1', chat)
 
     expect(await screen.findByRole('textbox', { name: 'Сообщение' })).toHaveValue('Сохранённый текст')
-    await user.click(screen.getByRole('button', { name: 'Ранее' }))
+    await user.click(await screen.findByRole('button', { name: 'Ранее' }))
     expect(await screen.findByText('Старое сообщение')).toBeVisible()
     window.dispatchEvent(new Event('online'))
     await waitFor(() => expect(chat.listMessages.mock.calls.length).toBeGreaterThanOrEqual(3))

@@ -719,12 +719,15 @@ test('Live mode switch in the timer settings stops the timer flow for this sessi
 
 test('Live rest failure and retry preserve the countdown and a manual adjustment', { tag: ["@lime-critical"] }, async ({ page }) => {
   await page.clock.install({ time: new Date('2026-10-08T09:00:00Z') })
+  // Keep Date deterministic while asynchronous UI and request timers continue to run.
+  await page.clock.setFixedTime(new Date('2026-10-08T09:00:00Z'))
   const source = restTimerWorkout(); source.exercises[0]!.restBetweenSetsSec = 90
   await mockPilot(page, { role: 'client', profileId: clientId, workouts: [source], failFirstSetConfirm: true })
   await page.goto(`/workouts/${workoutId}/live`)
   await page.getByRole('button', { name: 'Готово, отдых', exact: true }).first().click()
   const retry = page.getByRole('button', { name: 'Готово, отдых', exact: true }).filter({ hasText: 'Повтор' })
   await expect(retry).toBeVisible()
+  await page.clock.setFixedTime(new Date('2026-10-08T09:00:05Z'))
   await page.clock.fastForward(5_000)
   await expect(page.locator('.live-rest-trigger')).toContainText('Отдых 1:25')
   await page.locator('.live-rest-trigger').click()
@@ -734,6 +737,9 @@ test('Live rest failure and retry preserve the countdown and a manual adjustment
   await retry.click()
   await expect(page.locator('.live-session-progress-copy')).toContainText('Готово 1 из 2')
   await expect(page.locator('.live-rest-trigger')).toContainText('Отдых 1:40')
+  await page.clock.setFixedTime(new Date('2026-10-08T09:00:10Z'))
+  await page.clock.fastForward(5_000)
+  await expect(page.locator('.live-rest-trigger')).toContainText('Отдых 1:35')
 })
 
 test('Live rest phase expiry waits for a pending confirmation without timing the same set twice', async ({ page }) => {
