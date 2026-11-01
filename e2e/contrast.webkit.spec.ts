@@ -36,7 +36,7 @@ for (const appearance of appearances) {
     await page.setViewportSize({ width: appearance.width, height: 844 })
     const theme = appearance.classes.includes('theme-light') ? 'light' : 'dark'
     await page.addInitScript((value) => localStorage.setItem('fit.appTheme', value), theme)
-    await page.goto('/auth')
+    await page.goto('/legal/terms')
     if (theme === 'light') await expect(page.locator('html')).toHaveClass(/theme-light/)
     else await expect(page.locator('html')).not.toHaveClass(/theme-light/)
     await page.evaluate((classes) => {

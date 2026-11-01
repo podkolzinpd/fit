@@ -1,22 +1,16 @@
-import { expect, test } from '@playwright/test'
+import { nativeSignIn, nativeRegister } from './native-local-fixture'
+import { expect, test } from './native-local-fixture'
 import { randomUUID } from 'node:crypto'
 
 async function signInPreviewTrainer(page: import('@playwright/test').Page) {
   await page.goto('/auth')
-  await page.getByLabel('Email').fill('trainer@fit.local')
-  await page.getByLabel('Пароль').fill('FitLocal123!')
-  await page.getByRole('button', { name: 'Войти' }).click()
+  await nativeSignIn(page, 'trainer@fit.local')
   await expect(page).toHaveURL(/\/(today|clients)$/)
 }
 
 test('global rollout gives a new trainer the monochrome profile', async ({ page }) => {
   await page.goto('/auth')
-  await page.getByRole('button', { name: 'Создать аккаунт' }).click()
-  await page.getByLabel('Тип аккаунта').selectOption('trainer')
-  await page.getByLabel('Имя').fill('Trainer profile flag off')
-  await page.getByLabel('Email').fill(`trainer-profile-flag-off-${randomUUID()}@fit.local`)
-  await page.getByLabel('Пароль').fill('FitLocal123!')
-  await page.getByRole('button', { name: 'Создать аккаунт' }).click()
+  await nativeRegister(page, { key: `trainer-profile-flag-off-${randomUUID()}@fit.local`, firstName: 'Trainer profile flag off', role: 'trainer' })
   await expect(page).toHaveURL(/\/(today|clients)$/)
 
   await page.goto('/profile')

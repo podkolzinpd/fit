@@ -1,10 +1,8 @@
-import { expect, test } from '@playwright/test'
+import { nativeSignIn } from './native-local-fixture'
+import { expect, test } from './native-local-fixture'
 
 test('trainer publishes a profile and athlete finds it in the catalog', async ({ page }) => {
-  await page.goto('/auth')
-  await page.getByLabel('Email').fill('trainer@fit.local')
-  await page.getByLabel('Пароль').fill('FitLocal123!')
-  await page.getByRole('button', { name: 'Войти' }).click()
+  await nativeSignIn(page, 'trainer@fit.local')
   await expect(page).toHaveURL(/\/(today|clients)$/)
 
   await page.goto('/profile/trainer')
@@ -19,7 +17,7 @@ test('trainer publishes a profile and athlete finds it in the catalog', async ({
   const existingUnpublishButton = profile.locator('button', { hasText: 'Снять с публикации' })
   if (await existingUnpublishButton.count()) {
     await expect(existingUnpublishButton).toBeVisible()
-    const unpublishRequest = page.waitForResponse((response) => response.url().includes('/rpc/unpublish_trainer_profile'))
+    const unpublishRequest = page.waitForResponse((response) => response.url().includes('/v1/trainer-profile/unpublish'))
     await existingUnpublishButton.click()
     await page.getByRole('button', { name: 'Снять', exact: true }).click()
     expect((await unpublishRequest).status()).toBe(200)
@@ -96,7 +94,7 @@ test('trainer publishes a profile and athlete finds it in the catalog', async ({
   await expect(publication.getByRole('switch', { name: 'Показывать в каталоге' })).toBeChecked()
   const publicLink = await publication.getByRole('link', { name: 'Открыть анкету' }).getAttribute('href')
   expect(publicLink).toMatch(/^\/trainers\/[0-9a-f-]+$/)
-  const publicRequest = page.waitForResponse((response) => response.url().includes('/rpc/get_public_trainer_profile'))
+  const publicRequest = page.waitForResponse((response) => response.url().includes('/public-profile'))
   await page.goto(publicLink!)
   const publicResponse = await publicRequest
   expect(publicResponse.status()).toBe(200)
@@ -122,9 +120,7 @@ test('trainer publishes a profile and athlete finds it in the catalog', async ({
   await expect(page).toHaveURL(/\/profile\/settings$/)
   await page.getByRole('button', { name: 'Выйти' }).click()
   await expect(page).toHaveURL(/\/auth$/)
-  await page.getByLabel('Email').fill('client@fit.local')
-  await page.getByLabel('Пароль').fill('FitLocal123!')
-  await page.getByRole('button', { name: 'Войти' }).click()
+  await nativeSignIn(page, 'client@fit.local')
   await expect(page).toHaveURL(/\/me$/)
 
   await page.goto('/me/profile')
@@ -170,9 +166,7 @@ test('trainer publishes a profile and athlete finds it in the catalog', async ({
   await page.goto(publicLink!)
   await page.getByRole('link', { name: 'Войти, чтобы написать' }).click()
   await expect(page).toHaveURL(/\/auth$/)
-  await page.getByLabel('Email').fill('client@fit.local')
-  await page.getByLabel('Пароль').fill('FitLocal123!')
-  await page.getByRole('button', { name: 'Войти' }).click()
+  await nativeSignIn(page, 'client@fit.local')
   await expect(page).toHaveURL(new RegExp(`${publicLink}$`))
   await expect(page.getByRole('heading', { name: 'Анна Иванова' })).toBeVisible()
 })
@@ -186,22 +180,18 @@ test('athlete loads every page of the trainer catalog', async ({ page }) => {
     const published = draft(`Тренер ${String(index).padStart(2, '0')}`)
     return {
       publicId: `92000000-0000-4000-8000-${String(index).padStart(12, '0')}`,
-      draft: published, published, listedInCatalog: true,
+      profile: published, listedInCatalog: true,
       publishedAt: '2026-09-13T01:00:00Z', updatedAt: '2026-09-13T01:00:00Z', version: 1,
       isBrandTrainer: false,
     }
   }
-  await page.route('**/rest/v1/rpc/list_public_trainer_profiles_page', (route) => {
-    const request = route.request().postDataJSON() as { p_offset?: number }
-    const offset = request.p_offset ?? 0
+  await page.route("**/v1/trainers/catalog*", (route) => {
+    const offset = Number(new URL(route.request().url()).searchParams.get('offset') ?? 0)
     const items = offset === 0 ? Array.from({ length: 20 }, (_, index) => profile(index + 1)) : [profile(21)]
-    return route.fulfill({ contentType: 'application/json', body: JSON.stringify({ items, totalCount: 21, nextOffset: offset === 0 ? 20 : null }) })
+    return route.fulfill({ json: { items: items.map(item => ({ publicId: item.publicId, profile: item.profile, isBrandTrainer: item.isBrandTrainer })), totalCount: 21, nextOffset: offset === 0 ? 20 : null } })
   })
 
-  await page.goto('/auth')
-  await page.getByLabel('Email').fill('client@fit.local')
-  await page.getByLabel('Пароль').fill('FitLocal123!')
-  await page.getByRole('button', { name: 'Войти' }).click()
+  await nativeSignIn(page, 'client@fit.local')
   await expect(page).toHaveURL(/\/me$/)
   await page.goto('/me/trainers')
 

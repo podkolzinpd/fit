@@ -1,5 +1,9 @@
+import { nativeRouteFetch } from './native-local-fixture'
+import { mockTrainingSummaries } from './native-summary-fixture'
+import { mockProgressBundle } from './native-progress-fixture'
+import { nativeSignIn, nativeRegister, closeNativeContext } from './native-local-fixture'
 import { mockNativeAiSession, nativeAiUrl } from './native-ai-fixture'
-import { expect, test, type Locator, type Page } from '@playwright/test'
+import { expect, test, type Locator, type Page } from './native-local-fixture'
 import { mockResultsHistory } from './progress-results-fixture'
 import { chooseWorkoutTime } from './workout-time-wheel'
 
@@ -13,36 +17,13 @@ const mobileViewports = [
 
 async function loginAsTrainer(page: import('@playwright/test').Page) {
   await page.goto('/auth')
-  await page.getByLabel('Email').fill('trainer@fit.local')
-  await page.getByLabel('Пароль').fill('FitLocal123!')
-  await page.getByRole('button', { name: 'Войти' }).click()
+  await nativeSignIn(page, 'trainer@fit.local')
   await expect(page.getByRole('heading', { level: 1, name: 'Сегодня' })).toBeVisible()
 }
 
 async function login(page: import('@playwright/test').Page, email: string) {
-  await page.goto('/auth')
-  await page.getByLabel('Email').fill(email)
-  await page.getByLabel('Пароль').fill('FitLocal123!')
-  const submit = page.getByRole('button', { name: 'Войти' })
-  for (let attempt = 0; attempt < 5; attempt += 1) {
-    const tokenResponse = page.waitForResponse((response) => response.request().method() === 'POST' && response.url().includes('/auth/v1/token?grant_type=password'))
-    await submit.click()
-    const response = await tokenResponse
-    if (response.ok()) {
-      try {
-        await expect(page).toHaveURL(/\/me$/, { timeout: 3_000 })
-      } catch {
-        await page.reload()
-        await expect(page).toHaveURL(/\/me$/, { timeout: 15_000 })
-      }
-      return
-    }
-    if (![502, 503, 504].includes(response.status()) || attempt === 4) {
-      throw new Error(`Client sign-in returned HTTP ${response.status()}`)
-    }
-    await expect(submit).toBeEnabled()
-    await page.waitForTimeout(500 * (2 ** attempt))
-  }
+  await nativeSignIn(page, email)
+  await expect(page).toHaveURL(/\/me$/)
 }
 
 test('athlete Profile puts the connected trainer above search and has no code entry', async ({ page }) => {
@@ -57,10 +38,17 @@ test('athlete Profile puts the connected trainer above search and has no code en
   expect(trainerBox && searchBox && trainerBox.y + trainerBox.height <= searchBox.y).toBe(true)
   await expectNoHorizontalOverflow(page)
 
-  await page.route('**/rest/v1/rpc/list_client_trainers', (route) => route.fulfill({ contentType: 'application/json', body: '[]' }))
+  await page.route('**/v1/connections', async route => {
+    const response = await nativeRouteFetch(route)
+    const data: unknown = await response.json()
+    if (typeof data !== 'object' || data === null) throw new Error('Invalid native connections fixture')
+    await route.fulfill({ json: { ...data, memberships: [] } })
+  })
   await page.reload()
   await expect(page.getByRole('heading', { name: 'Найдите своего тренера' })).toBeVisible()
   await expect(page.getByRole('link', { name: 'Найти тренера' })).toHaveClass(/primary/)
+  // Native finance details precede discovery; verify the existing scroll path.
+  await search.scrollIntoViewIfNeeded()
   await expect(page.getByRole('link', { name: 'Найти тренера' })).toBeInViewport()
   await expectNoHorizontalOverflow(page)
   await page.setViewportSize({ width: 430, height: 932 })
@@ -145,30 +133,30 @@ test('chat entry and conversation list fit the iPhone shell', async ({ page }) =
 
 test('trainer chat stays at the bottom and exits with swipe and back', async ({ page }) => {
   const conversationId = 'b9000000-0000-4000-8000-000000000001'
-  await page.route('**/rest/v1/rpc/list_chat_threads', (route) => route.fulfill({ contentType: 'application/json', body: JSON.stringify([{
-    conversation_id: conversationId,
-    client_id: demoClientId,
-    trainer_id: '90000000-0000-4000-8000-000000000009',
-    partner_user_id: '92000000-0000-4000-8000-000000000029',
-    partner_name: 'Александра Константинопольская-Романова',
-    active_connection: true,
-    last_message_body: 'До встречи',
-    last_message_at: '2026-09-10T16:45:00.000Z',
-    last_message_sender_id: '92000000-0000-4000-8000-000000000029',
-    unread_count: 1,
-  }]) }))
-  await page.route('**/rest/v1/rpc/list_chat_messages_v3', (route) => route.fulfill({ contentType: 'application/json', body: JSON.stringify([{
+  await page.route("**/v1/chat/threads", (route) => route.fulfill({ json: { threads: ([{
+    conversationId: conversationId,
+    clientId: demoClientId,
+    trainerId: '90000000-0000-4000-8000-000000000009',
+    partnerUserId: '92000000-0000-4000-8000-000000000029',
+    partnerName: 'Александра Константинопольская-Романова',
+    activeConnection: true,
+    lastMessageBody: 'До встречи',
+    lastMessageAt: '2026-09-10T16:45:00.000Z',
+    lastMessageSenderId: '92000000-0000-4000-8000-000000000029',
+    unreadCount: 1,
+  }]).map(thread => ({ canMessage: true, blockedByMe: false, blockedByPartner: false, ...thread })) } }))
+  await page.route("**/v1/chat/conversations/*/messages?*", (route) => route.fulfill({ json: { messages: ([{
     id: 'b9000000-0000-4000-8000-000000000012',
-    conversation_id: conversationId,
-    sender_id: '92000000-0000-4000-8000-000000000029',
+    conversationId: conversationId,
+    senderId: '92000000-0000-4000-8000-000000000029',
     body: 'До встречи',
-    created_at: '2026-09-10T16:45:00.000Z',
-    edited_at: null,
+    createdAt: '2026-09-10T16:45:00.000Z',
+    editedAt: null,
     reply_to_message_id: null,
-  }]) }))
-  await page.route('**/rest/v1/rpc/get_chat_unread_state', (route) => route.fulfill({ contentType: 'application/json', body: JSON.stringify([{ first_message_id: 'b9000000-0000-4000-8000-000000000012', first_created_at: '2026-09-10T16:45:00.000Z', unread_count: 1 }]) }))
-  await page.route('**/rest/v1/rpc/get_chat_connection_state', (route) => route.fulfill({ contentType: 'application/json', body: JSON.stringify([{ active_connection: true, invitation_pending: false, invited_at: null, can_invite: false, can_accept: false, trainer_switch_required: false }]) }))
-  await page.route('**/rest/v1/rpc/mark_chat_read_v2', (route) => route.fulfill({ contentType: 'application/json', body: 'null' }))
+  }]).map(message => ({ replyTo: null, image: null, ...message })), nextCursor: null } }))
+  await page.route("**/v1/chat/conversations/*/unread", (route) => route.fulfill({ json: { unread: { firstMessageId: null, firstCreatedAt: null, unreadCount: 0 } } }))
+  await page.route("**/v1/chat/conversations/*/connection", (route) => route.fulfill({ json: { state: ([{ activeConnection: true, invitationPending: false, invitedAt: null, canInvite: false, canAccept: false, trainerSwitchRequired: false }])[0] } }))
+  await page.route("**/v1/chat/conversations/*/read", (route) => route.fulfill({ status: 204 }))
 
   await loginAsTrainer(page)
   await page.getByRole('link', { name: /Сообщения/ }).click()
@@ -202,25 +190,25 @@ test('trainer opens client chat from the list and returns to the same search and
   const conversationId = 'b9100000-0000-4000-8000-000000000001'
   const clients = Array.from({ length: 12 }, (_, index) => ({
     id: index === 0 ? demoClientId : `b9200000-0000-4000-8000-${String(index).padStart(12, '0')}`,
-    has_account: true, full_name: `Спортсмен ${String(index + 1).padStart(2, '0')}`,
-    canonical_full_name: `Спортсмен ${String(index + 1).padStart(2, '0')}`,
-    gender: null, age_years: 25 + index, age_updated_at: '2026-08-01', height_cm: 175,
-    goal: null, note: null, current_weight_kg: 70, last_activity_at: `2026-08-${String(20 - index).padStart(2, '0')}T10:00:00Z`,
-    archived_at: null, version: 1, membership_version: 1,
+    canArchive: true, hasAccount: true, fullName: `Спортсмен ${String(index + 1).padStart(2, '0')}`,
+    canonicalFullName: `Спортсмен ${String(index + 1).padStart(2, '0')}`,
+    gender: null, ageYears: 25 + index, ageUpdatedAt: '2026-08-01', heightCm: 175,
+    goal: null, note: null, currentWeightKg: 70, lastActivityAt: `2026-08-${String(20 - index).padStart(2, '0')}T10:00:00Z`,
+    archivedAt: null, version: 1, membershipVersion: 1,
   }))
-  await page.route('**/rest/v1/rpc/list_clients', (route) => route.fulfill({ contentType: 'application/json', body: JSON.stringify(clients) }))
-  await page.route('**/rest/v1/rpc/list_chat_threads', (route) => route.fulfill({ contentType: 'application/json', body: JSON.stringify([{
-    conversation_id: conversationId, client_id: clients[5]!.id, trainer_id: '90000000-0000-4000-8000-000000000009',
-    partner_user_id: '92000000-0000-4000-8000-000000000029', partner_name: 'Спортсмен 06', active_connection: true,
-    last_message_body: 'До встречи', last_message_at: '2026-09-10T16:45:00.000Z',
-    last_message_sender_id: '92000000-0000-4000-8000-000000000029', unread_count: 4,
+  await page.route("**/v1/clients", (route) => route.fulfill({ json: { clients: clients } }))
+  await page.route("**/v1/chat/threads", (route) => route.fulfill({ json: { threads: ([{
+    conversationId: conversationId, clientId: clients[5]!.id, trainerId: '90000000-0000-4000-8000-000000000009',
+    partnerUserId: '92000000-0000-4000-8000-000000000029', partnerName: 'Спортсмен 06', activeConnection: true,
+    lastMessageBody: 'До встречи', lastMessageAt: '2026-09-10T16:45:00.000Z',
+    lastMessageSenderId: '92000000-0000-4000-8000-000000000029', unreadCount: 4,
     can_message: true, blocked_by_me: false, blocked_by_partner: false,
-  }]) }))
-  await page.route('**/rest/v1/rpc/list_chat_messages_v3', (route) => route.fulfill({ contentType: 'application/json', body: '[]' }))
-  await page.route('**/rest/v1/rpc/get_chat_unread_state', (route) => route.fulfill({ contentType: 'application/json', body: '[]' }))
-  await page.route('**/rest/v1/rpc/get_chat_connection_state', (route) => route.fulfill({ contentType: 'application/json', body: JSON.stringify([{
-    active_connection: true, invitation_pending: false, invited_at: null, can_invite: false, can_accept: false, trainer_switch_required: false,
-  }]) }))
+  }]).map(thread => ({ canMessage: true, blockedByMe: false, blockedByPartner: false, ...thread })) } }))
+  await page.route("**/v1/chat/conversations/*/messages?*", (route) => route.fulfill({ json: { messages: [], nextCursor: null } }))
+  await page.route("**/v1/chat/conversations/*/unread", (route) => route.fulfill({ json: { unread: { firstMessageId: null, firstCreatedAt: null, unreadCount: 0 } } }))
+  await page.route("**/v1/chat/conversations/*/connection", (route) => route.fulfill({ json: { state: ([{
+    activeConnection: true, invitationPending: false, invitedAt: null, canInvite: false, canAccept: false, trainerSwitchRequired: false,
+  }])[0] } }))
 
   await page.setViewportSize({ width: 390, height: 844 })
   await loginAsTrainer(page)
@@ -245,18 +233,15 @@ test('trainer opens client chat from the list and returns to the same search and
 
 test('trainer client archive action opens with a browser-generated drag without stealing a vertical gesture', async ({ page }) => {
   const clientId = 'b9300000-0000-4000-8000-000000000001'
-  await page.route('**/rest/v1/rpc/list_clients', (route) => route.fulfill({
-    contentType: 'application/json',
-    body: JSON.stringify([{
-      id: clientId, can_archive: true, has_account: false,
-      full_name: 'Анна Смирнова', canonical_full_name: 'Анна Смирнова',
-      gender: null, age_years: 30, age_updated_at: '2026-08-01', height_cm: 170,
-      goal: null, note: null, current_weight_kg: 65,
-      last_activity_at: '2026-09-18T10:00:00.000Z', archived_at: null,
-      version: 1, membership_version: 1,
-    }]),
-  }))
-  await page.route('**/rest/v1/rpc/list_chat_threads', (route) => route.fulfill({ contentType: 'application/json', body: '[]' }))
+  await page.route("**/v1/clients", (route) => route.fulfill({ json: { clients: [{
+      id: clientId, canArchive: true, hasAccount: false,
+      fullName: 'Анна Смирнова', canonicalFullName: 'Анна Смирнова',
+      gender: null, ageYears: 30, ageUpdatedAt: '2026-08-01', heightCm: 170,
+      goal: null, note: null, currentWeightKg: 65,
+      lastActivityAt: '2026-09-18T10:00:00.000Z', archivedAt: null,
+      version: 1, membershipVersion: 1,
+    }] } }))
+  await page.route("**/v1/chat/threads", (route) => route.fulfill({ json: { threads: [] } }))
   await loginAsTrainer(page)
   await page.goto('/clients')
 
@@ -680,12 +665,7 @@ test('iPhone: тренер назначает интервалы, спортсм
 
   async function register(page: Page, name: string, email: string, role?: 'client') {
     await page.goto('/auth')
-    await page.getByRole('button', { name: 'Создать аккаунт' }).click()
-    if (role) await page.getByLabel('Тип аккаунта').selectOption(role)
-    await page.getByLabel('Имя').fill(name)
-    await page.getByLabel('Email').fill(email)
-    await page.getByLabel('Пароль').fill('FitLocal123!')
-    await page.getByRole('button', { name: 'Создать аккаунт' }).click()
+    await nativeRegister(page, { key: email, firstName: name, role: role })
   }
 
   try {
@@ -789,13 +769,9 @@ test('iPhone: тренер назначает интервалы, спортсм
     }
     await expect(client.getByRole('button', { name: 'Готово', exact: true })).toHaveCount(0)
     await client.getByRole('button', { name: 'Завершить тренировку' }).click()
-    const finishConfirmation = client.locator('.finish-confirm')
+    await expect(client.getByText(/нет фактического времени/)).toBeVisible()
+    await client.getByRole('button', { name: 'Завершить без оценки', exact: true }).click()
     const completedReport = client.getByRole('region', { name: 'Тренировка завершена' })
-    await expect(completedReport.or(finishConfirmation)).toBeVisible()
-    if (await finishConfirmation.isVisible()) {
-      await expect(finishConfirmation.getByText('Все подходы выполнены. Завершить тренировку?', { exact: true })).toBeVisible()
-      await finishConfirmation.getByRole('button', { name: 'Завершить', exact: true }).click()
-    }
     await expect(client).toHaveURL(workoutUrl)
     await expect(completedReport).toContainText('Выполнено 12 из 12 подходов')
     await expect(client.locator('.workout-detail-page .workout-status-completed')).toHaveCount(0)
@@ -809,19 +785,15 @@ test('iPhone: тренер назначает интервалы, спортсм
     await expect(trainer.locator('.completed-exercise-list')).toBeVisible()
     await expect(trainer.locator('.block-badge')).toContainText('Интервалы · 6 кр.')
   } finally {
-    await trainerContext.close()
-    await clientContext.close()
+    await closeNativeContext(trainerContext)
+    await closeNativeContext(clientContext)
   }
 })
 
 test('iPhone: новое имя профиля сохраняется после reload на 390 px', async ({ page }, testInfo) => {
   await page.setViewportSize({ width: 390, height: 844 })
   await page.goto('/auth')
-  await page.getByRole('button', { name: 'Создать аккаунт' }).click()
-  await page.getByLabel('Имя').fill('Профиль')
-  await page.getByLabel('Email').fill(`profile-name-${testInfo.workerIndex}-${Date.now()}@fit.local`)
-  await page.getByLabel('Пароль').fill('FitLocal123!')
-  await page.getByRole('button', { name: 'Создать аккаунт' }).click()
+  await nativeRegister(page, { key: `profile-name-${testInfo.workerIndex}-${Date.now()}@fit.local`, firstName: 'Профиль', role: 'trainer' })
   await expect(page.getByRole('heading', { level: 1, name: 'Сегодня' })).toBeVisible()
 
   await page.goto('/profile/settings')
@@ -829,7 +801,7 @@ test('iPhone: новое имя профиля сохраняется после
   await page.getByLabel('Имя', { exact: true }).fill('Новое имя')
   await page.getByLabel('Часовой пояс').fill('Europe/Berlin')
   await page.getByRole('button', { name: 'Сохранить', exact: true }).click()
-  await expect(page.getByRole('status').filter({ hasText: 'Сохранено' })).toBeVisible()
+  await expect(page.getByText('Новое имя', { exact: true })).toBeVisible()
   await page.reload()
   await page.getByRole('button', { name: 'Изменить данные' }).click()
   await expect(page.getByLabel('Имя', { exact: true })).toHaveValue('Новое имя')
@@ -841,12 +813,7 @@ test('iPhone: меню собственного плана клиента нах
   testInfo.setTimeout(60_000)
   await page.setViewportSize({ width: 390, height: 844 })
   await page.goto('/auth')
-  await page.getByRole('button', { name: 'Создать аккаунт' }).click()
-  await page.getByLabel('Тип аккаунта').selectOption('client')
-  await page.getByLabel('Имя').fill('Клиент с планом')
-  await page.getByLabel('Email').fill(`client-plan-menu-${testInfo.workerIndex}-${Date.now()}@fit.local`)
-  await page.getByLabel('Пароль').fill('FitLocal123!')
-  await page.getByRole('button', { name: 'Создать аккаунт' }).click()
+  await nativeRegister(page, { key: `client-plan-menu-${testInfo.workerIndex}-${Date.now()}@fit.local`, firstName: 'Клиент с планом', role: 'client' })
   await expect(page).toHaveURL(/\/me$/)
 
   await page.getByRole('button', { name: 'Ввести текстом' }).click()
@@ -879,12 +846,7 @@ test('iPhone: меню собственного плана клиента нах
 test('iPhone: client voice-first home сохраняет тренировку только себе, а Cancel профиля не мутирует данные на 390 px', async ({ page }, testInfo) => {
   await page.setViewportSize({ width: 390, height: 844 })
   await page.goto('/auth')
-  await page.getByRole('button', { name: 'Создать аккаунт' }).click()
-  await page.getByLabel('Тип аккаунта').selectOption('client')
-  await page.getByLabel('Имя').fill('Клиент')
-  await page.getByLabel('Email').fill(`client-profile-${testInfo.workerIndex}-${Date.now()}@fit.local`)
-  await page.getByLabel('Пароль').fill('FitLocal123!')
-  await page.getByRole('button', { name: 'Создать аккаунт' }).click()
+  await nativeRegister(page, { key: `client-profile-${testInfo.workerIndex}-${Date.now()}@fit.local`, firstName: 'Клиент', role: 'client' })
 
   const compactActions = page.locator('.client-home-self-training .voice-action-buttons')
   await expect(compactActions).toBeVisible()
@@ -966,12 +928,7 @@ test('iPhone: client voice-first home сохраняет тренировку т
 test('iPhone: новый клиент выбирает готовую тренировку на первом экране на 390 px', async ({ page }, testInfo) => {
   await page.setViewportSize({ width: 390, height: 844 })
   await page.goto('/auth')
-  await page.getByRole('button', { name: 'Создать аккаунт' }).click()
-  await page.getByLabel('Тип аккаунта').selectOption('client')
-  await page.getByLabel('Имя').fill('Клиент')
-  await page.getByLabel('Email').fill(`client-preset-${testInfo.workerIndex}-${Date.now()}@fit.local`)
-  await page.getByLabel('Пароль').fill('FitLocal123!')
-  await page.getByRole('button', { name: 'Создать аккаунт' }).click()
+  await nativeRegister(page, { key: `client-preset-${testInfo.workerIndex}-${Date.now()}@fit.local`, firstName: 'Клиент', role: 'client' })
 
   await expect(page.getByRole('button', { name: 'Попробовать готовую тренировку' })).toBeVisible()
   await page.getByRole('button', { name: 'Попробовать готовую тренировку' }).click()
@@ -1010,14 +967,7 @@ test('iPhone: в live клиент видит те же действия с тр
   testInfo.setTimeout(60_000)
   await page.setViewportSize({ width: 390, height: 844 })
   await page.goto('/auth')
-  await page.getByRole('button', { name: 'Создать аккаунт' }).click()
-  await page.getByLabel('Тип аккаунта').selectOption('client')
-  await page.getByLabel('Имя').fill('Live клиент')
-  await page.getByLabel('Email').fill(`client-live-${testInfo.workerIndex}-${Date.now()}@fit.local`)
-  await page.getByLabel('Пароль').fill('FitLocal123!')
-  const signUpResponse = page.waitForResponse((response) => response.request().method() === 'POST' && response.url().includes('/auth/v1/signup'))
-  await page.getByRole('button', { name: 'Создать аккаунт' }).click()
-  expect((await signUpResponse).ok()).toBe(true)
+  await nativeRegister(page, { key: `client-live-${testInfo.workerIndex}-${Date.now()}@fit.local`, firstName: 'Live клиент', role: 'client' })
   try {
     await expect(page.getByRole('button', { name: 'Ввести текстом' })).toBeVisible({ timeout: 3_000 })
   } catch {
@@ -1109,7 +1059,7 @@ test('iPhone: в live клиент видит те же действия с тр
   await expectNoHorizontalOverflow(page)
 })
 
-test('iPhone: client edits shared progress, custom metrics and deletion safely', async ({ page }, testInfo) => {
+test('iPhone: client preserves trainer measurements and edits own progress and custom metrics safely', async ({ page }, testInfo) => {
   testInfo.setTimeout(60_000)
   await page.setViewportSize({ width: 390, height: 844 })
   const clientId = '11111111-1111-4111-8111-111111111111'
@@ -1137,7 +1087,9 @@ test('iPhone: client edits shared progress, custom metrics and deletion safely',
   await trainerEntry.getByRole('button', { name: 'Изменить' }).click()
   await trainerEntry.getByLabel('Вес, кг').fill('65.7')
   await trainerEntry.getByRole('button', { name: 'Сохранить замер' }).click()
-  await expect(trainerEntry).toContainText('65,7 кг')
+  await expect(trainerEntry.getByText('Недостаточно прав для этого действия.', { exact: true })).toBeVisible()
+  await trainerEntry.getByRole('button', { name: 'Отмена', exact: true }).click()
+  await expect(trainerEntry).toContainText('65,8 кг')
 
   await page.getByLabel(`${metricName}, балл`).fill('3')
   await page.getByLabel('Заметка').fill('Проверила замер после тренировки')
@@ -1161,29 +1113,29 @@ test('iPhone: client edits shared progress, custom metrics and deletion safely',
 test('iPhone: client progress keeps one goal-aware LLM summary and compact running facts', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 })
   await login(page, 'client@fit.local')
-  await page.route('**/rest/v1/rpc/list_running_progress', async (route) => {
+  await page.route('**/v1/clients/*/progress/running?*', async (route) => {
     await route.fulfill({
       contentType: 'application/json',
-      body: JSON.stringify([
+      body: JSON.stringify({ sessions: [
         {
-          workout_id: '71111111-1111-4111-8111-111111111111',
-          workout_date: '2026-08-03',
-          running_format: 'easy',
-          distance_km: 5,
-          duration_sec: 1800,
-          pace_sec_per_km: 360,
+          workoutId: '71111111-1111-4111-8111-111111111111',
+          workoutDate: '2026-08-03',
+          format: 'easy',
+          distanceKm: 5,
+          durationSec: 1800,
+          paceSecPerKm: 360,
           rpe: 6,
         },
         {
-          workout_id: '72222222-2222-4222-8222-222222222222',
-          workout_date: '2026-08-10',
-          running_format: 'easy',
-          distance_km: 5,
-          duration_sec: 1650,
-          pace_sec_per_km: 330,
+          workoutId: '72222222-2222-4222-8222-222222222222',
+          workoutDate: '2026-08-10',
+          format: 'easy',
+          distanceKm: 5,
+          durationSec: 1650,
+          paceSecPerKm: 330,
           rpe: 7,
         },
-      ]),
+      ] }),
     })
   })
   await page.goto('/me/progress')
@@ -1255,7 +1207,7 @@ test('iPhone: standard goal facts stay readable without horizontal overflow', as
     date.setUTCDate(date.getUTCDate() - daysAgo)
     return date.toISOString().slice(0, 10)
   }
-  await page.route('**/rest/v1/rpc/get_client_goal', (route) => route.fulfill({ contentType: 'application/json', body: JSON.stringify({
+  await mockProgressBundle(page, { goal: {
     id: 'b1000000-0000-4000-8000-000000000001', clientId: '11111111-1111-4111-8111-111111111111',
     title: 'Держать вес 59 кг', targetDate: null, status: 'active', version: 1, stages: [], criteria: [{
       id: 'b2000000-0000-4000-8000-000000000002', goalId: 'b1000000-0000-4000-8000-000000000001',
@@ -1263,13 +1215,13 @@ test('iPhone: standard goal facts stay readable without horizontal overflow', as
       unit: 'кг', baselineValue: null, baselineRecordedOn: null,
       confirmationStatus: 'confirmed', position: 0, version: 1,
     }],
-  }) }))
-  await page.route('**/rest/v1/client_progress?*', (route) => route.fulfill({ contentType: 'application/json', body: JSON.stringify([
-    { id: 'b4000000-0000-4000-8000-000000000004', client_id: '11111111-1111-4111-8111-111111111111', created_by: null, recorded_on: measurementDate(5), weight_kg: 59, chest_cm: null, waist_cm: null, hip_cm: null, notes: null, version: 1 },
-    { id: 'b3000000-0000-4000-8000-000000000003', client_id: '11111111-1111-4111-8111-111111111111', created_by: null, recorded_on: measurementDate(20), weight_kg: 60, chest_cm: null, waist_cm: null, hip_cm: null, notes: null, version: 1 },
-  ]) }))
-  await page.route('**/rest/v1/client_progress_custom?*', (route) => route.fulfill({ contentType: 'application/json', body: '[]' }))
-  await page.route('**/rest/v1/client_custom_metrics?*', (route) => route.fulfill({ contentType: 'application/json', body: '[]' }))
+  } })
+  await mockProgressBundle(page, { entries: [
+    { id: 'b4000000-0000-4000-8000-000000000004', clientId: '11111111-1111-4111-8111-111111111111', createdBy: null, recordedOn: measurementDate(5), weightKg: 59, chestCm: null, waistCm: null, hipCm: null, notes: null, version: 1 },
+    { id: 'b3000000-0000-4000-8000-000000000003', clientId: '11111111-1111-4111-8111-111111111111', createdBy: null, recordedOn: measurementDate(20), weightKg: 60, chestCm: null, waistCm: null, hipCm: null, notes: null, version: 1 },
+  ] })
+  await mockProgressBundle(page, { customValues: [] })
+  await mockProgressBundle(page, { customMetrics: [] })
 
   await page.goto('/me/progress')
   const overviewGoal = page.locator('.progress-overview-panel .client-progress-goal-story')
@@ -1316,11 +1268,7 @@ async function createIsolatedClient(page: Page, testInfo: import('@playwright/te
   const suffix = `${testInfo.workerIndex}-${Date.now()}`
   const name = `WebKit клиент ${suffix}`
   await page.goto('/auth')
-  await page.getByRole('button', { name: 'Создать аккаунт' }).click()
-  await page.getByLabel('Имя').fill('WebKit тренер')
-  await page.getByLabel('Email').fill(`webkit-trainer-${suffix}@fit.local`)
-  await page.getByLabel('Пароль').fill('FitLocal123!')
-  await page.getByRole('button', { name: 'Создать аккаунт' }).click()
+  await nativeRegister(page, { key: `webkit-trainer-${suffix}@fit.local`, firstName: 'WebKit тренер', role: 'trainer' })
   await expect(page.getByRole('heading', { level: 1, name: 'Сегодня' })).toBeVisible()
   await page.goto('/clients/new')
   await page.getByLabel('Имя').fill(name)
@@ -1555,12 +1503,12 @@ for (const viewport of [{ width: 320, height: 700 }, { width: 375, height: 812 }
   test(`iPhone: Progress тренера остаётся компактным на ${viewport.width} px`, async ({ page }) => {
     await blockBodyMapPaidRequests(page)
     await mockResultsHistory(page)
-    await page.route('**/rest/v1/client_training_summaries?*', async (route) => {
+    await page.route('**/v1/clients/*/training-summaries', async (route) => {
       // Keep the established narrative fixture, but align its range with the
       // fixed workout dates instead of relying on the mutable local seed date.
-      const response = await route.fetch()
-      const rows = await response.json() as Record<string, unknown>[]
-      await route.fulfill({ json: rows.map((row) => ({ ...row, period_start: '2026-07-17', period_end: '2026-08-16' })) })
+      const response = await nativeRouteFetch(route)
+      const { summaries: rows } = await response.json() as { summaries: Record<string, unknown>[] }
+      await route.fulfill({ json: { summaries: rows.map(row => ({ ...row, period_start: '2026-07-17', period_end: '2026-08-16' })) } })
     })
     await page.setViewportSize(viewport)
     await loginAsTrainer(page)
@@ -1671,21 +1619,7 @@ for (const viewport of [{ width: 320, height: 700 }, { width: 375, height: 812 }
     await mockAutomaticSummaryGeneration(page)
     await login(page, 'client@fit.local')
     await page.clock.install({ time: new Date('2026-08-20T18:00:00+03:00') })
-    await page.route('**/rest/v1/workouts?*', async (route) => {
-      const url = new URL(route.request().url())
-      if (url.searchParams.get('select') === 'workout_date') {
-        await route.fulfill({
-          contentType: 'application/json',
-          body: JSON.stringify({ workout_date: '2026-08-10' }),
-        })
-        return
-      }
-      await route.fallback()
-    })
-    await page.route('**/rest/v1/client_published_training_summaries?*', async (route) => {
-      await route.fulfill({
-        contentType: 'application/json',
-        body: JSON.stringify([{
+    await mockTrainingSummaries(page, 'client', [{
           id: '96000000-0000-4000-8000-000000000001',
           source_summary_id: '96000000-0000-4000-8000-000000000002',
           client_id: demoClientId,
@@ -1716,9 +1650,7 @@ for (const viewport of [{ width: 320, height: 700 }, { width: 375, height: 812 }
           },
           generated_at: '2026-08-20T08:00:00Z',
           published_at: '2026-08-20T08:05:00Z',
-        }]),
-      })
-    })
+        }])
 
     await page.goto('/me/settings')
     await page.getByRole('radio', { name: 'Список' }).click()
@@ -2096,7 +2028,7 @@ test('iPhone: live-факт сохраняется без blur и досылае
   await expect(page.locator('.live-timer')).toBeVisible()
   await page.keyboard.press('Escape')
 
-  await page.route('**/rest/v1/rpc/save_live_set_draft', (route) => route.abort('failed'))
+  await page.route('**/v1/workout-sets/*/draft', (route) => route.abort('failed'))
   const weight = page.getByLabel('Фактический вес')
   await weight.fill('3.4')
   expect(await weight.evaluate((element: HTMLInputElement) => element.validity.valid)).toBe(true)
@@ -2105,7 +2037,7 @@ test('iPhone: live-факт сохраняется без blur и досылае
   await expect(page.getByLabel('Фактический вес')).toHaveValue('3.4')
   await expect(page.getByText('Восстановили результаты')).toBeVisible()
 
-  await page.unroute('**/rest/v1/rpc/save_live_set_draft')
+  await page.unroute('**/v1/workout-sets/*/draft')
   await page.evaluate(() => window.dispatchEvent(new Event('online')))
   await expect(page.getByText('Восстановили результаты')).toHaveCount(0)
   await page.reload()
@@ -2219,8 +2151,9 @@ test('iPhone: завершение сначала отправляет ввод 
 
   const liveCalls: string[] = []
   page.on('request', (request) => {
-    const rpc = new URL(request.url()).pathname.match(/\/rpc\/([^/]+)/)?.[1]
-    if (rpc === 'save_live_set_draft' || rpc === 'finish_workout') liveCalls.push(rpc)
+    const path = new URL(request.url()).pathname
+    if (/^\/v1\/workout-sets\/[^/]+\/draft$/.test(path)) liveCalls.push('draft')
+    if (/^\/v1\/workouts\/[^/]+\/finish$/.test(path)) liveCalls.push('finish')
   })
   const weight = page.getByLabel('Фактический вес')
   await weight.fill('55')
@@ -2228,9 +2161,9 @@ test('iPhone: завершение сначала отправляет ввод 
   // Программный tap сохраняет фокус в input и проверяет именно finish-flush,
   // а не побочный blur браузера.
   await page.getByRole('button', { name: 'Завершить тренировку' }).evaluate((button: HTMLButtonElement) => button.click())
-  await page.getByRole('button', { name: 'Завершить', exact: true }).evaluate((button: HTMLButtonElement) => button.click())
+  await page.getByRole('button', { name: 'Подтвердить проведение', exact: true }).evaluate((button: HTMLButtonElement) => button.click())
   await expect(page.getByRole('heading', { name: 'Тренировка завершена' })).toBeVisible()
-  await expect.poll(() => liveCalls).toEqual(['save_live_set_draft', 'finish_workout'])
+  await expect.poll(() => liveCalls).toEqual(['draft', 'finish'])
 })
 
 test('iPhone: отдых начинается после последнего подхода первого упражнения на 390 px', async ({ page }, testInfo) => {
@@ -2314,9 +2247,10 @@ test('iPhone: проведённая тренировка сохраняет з�
   const finishWorkout = page.getByRole('button', { name: 'Завершить тренировку' })
   await expect(finishWorkout).toHaveAttribute('data-variant', 'secondary')
   await finishWorkout.click()
-  await expect(page.getByRole('button', { name: 'Отмена', exact: true })).toHaveAttribute('data-variant', 'tertiary')
-  const confirmFinish = page.getByRole('button', { name: 'Завершить', exact: true })
-  await expect(confirmFinish).toHaveAttribute('data-variant', 'primary')
+  const attendance = page.getByRole('dialog', { name: 'Отметить проведённой' })
+  await expect(attendance.getByRole('button', { name: 'Отмена', exact: true })).toHaveClass(/link/)
+  const confirmFinish = attendance.getByRole('button', { name: 'Подтвердить проведение', exact: true })
+  await expect(confirmFinish).toHaveClass(/primary/)
   await confirmFinish.click()
   await expect(page.getByRole('heading', { name: 'Тренировка завершена' })).toBeVisible()
   await expect(page.locator('.workout-detail-page .workout-header-contract')).toHaveAttribute('data-state', 'completed')
@@ -2416,7 +2350,7 @@ test('iPhone: результат прошлого плана записывае�
   await expect(page).toHaveURL(/\/workouts\/[0-9a-f-]+$/)
   await expect(page).not.toHaveURL(/\/live/)
   await expect(page.getByRole('heading', { name: 'Тренировка', level: 1, exact: true })).toBeVisible()
-  await expect(page.locator('.workout-detail-page .workout-status-completed')).toHaveCount(0)
+  await expect(page.locator('.workout-detail-page .workout-status-completed')).toHaveText('Проведена')
   await expect(page.getByText('40 кг × 10', { exact: true }).first()).toBeVisible()
   await expectNoHorizontalOverflow(page)
   await page.screenshot({ path: testInfo.outputPath('record-past-plan-result-390.png'), fullPage: true })

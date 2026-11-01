@@ -18,7 +18,7 @@ test('athlete opens and closes a trainer photo inside the iPhone viewport', asyn
       education: '', formats: '', price: '', acceptingClients: true, avatarDataUrl: null, photos, certificates: [] },
     listedInCatalog: true, publishedAt: '2026-09-20T10:00:00.000Z', updatedAt: '2026-09-20T10:00:00.000Z', version: 1, isBrandTrainer: false,
   }
-  await page.route('**/rest/v1/rpc/get_public_trainer_profile', (route) => route.fulfill({ contentType: 'application/json', body: JSON.stringify(profile) }))
+  await page.route("**/v1/trainers/*/public-profile", (route) => route.fulfill({ json: profile }))
   await page.goto(`/trainers/${publicId}`)
 
   await page.getByRole('button', { name: 'Открыть фото тренера Анна Иванова' }).click()

@@ -1,24 +1,17 @@
-import { expect, test, type Page } from '@playwright/test'
+import { nativeSignIn, nativeRegister, nativeRequest } from './native-local-fixture'
+import { expect, test, type Page } from './native-local-fixture'
 
 
-const password = 'FitLocal123!'
 
 async function register(page: Page, name: string, email: string, role: 'trainer' | 'client') {
   await page.goto('/auth')
-  await page.getByRole('button', { name: 'Создать аккаунт' }).click()
-  if (role === 'client') await page.getByLabel('Тип аккаунта').selectOption('client')
-  await page.getByLabel('Имя').fill(name)
-  await page.getByLabel('Email').fill(email)
-  await page.getByLabel('Пароль').fill(password)
-  await page.getByRole('button', { name: 'Создать аккаунт' }).click()
+  await nativeRegister(page, { key: email, firstName: name, role })
   await expect(page).toHaveURL(role === 'client' ? /\/me$/ : /\/today$/)
 }
 
 async function login(page: Page, email: string) {
   await page.goto('/auth')
-  await page.getByLabel('Email').fill(email)
-  await page.getByLabel('Пароль').fill(password)
-  await page.getByRole('button', { name: 'Войти' }).click()
+  await nativeSignIn(page, email)
 }
 
 async function logout(page: Page, role: 'trainer' | 'client') {
@@ -136,17 +129,9 @@ test('workout result stays neutral with and without an active trainer', async ({
   await page.screenshot({ path: testInfo.outputPath('feedback-after-disconnect-430.png'), fullPage: true })
 
   await logout(page, 'client')
-  const workoutRead = page.waitForRequest((request) => request.url().includes('/rest/v1/rpc/list_workouts'))
   await login(page, trainerEmail)
   await expect(page).toHaveURL(/\/today$/)
-  const request = await workoutRead
-  const api = new URL('/rest/v1/', request.url()).href
-  const response = await page.request.get(`${api}workouts?id=eq.${new URL(workoutUrl).pathname.split('/').at(-1)}&select=id,session_rpe,wellbeing,discomfort`, {
-    headers: {
-      apikey: (await request.headerValue('apikey'))!,
-      authorization: (await request.headerValue('authorization'))!,
-    },
-  })
-  expect(response.ok()).toBe(true)
-  expect(await response.json()).toEqual([])
+  const response = await nativeRequest(page, `/v1/training-data?scope=workouts&workoutId=${new URL(workoutUrl).pathname.split('/').at(-1)}`)
+  expect(response.ok).toBe(true)
+  expect(await response.json()).toMatchObject({ workouts: [] })
 })
