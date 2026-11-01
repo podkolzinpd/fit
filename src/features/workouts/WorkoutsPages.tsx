@@ -841,7 +841,7 @@ function TrainerScheduleV2({ forceDayView = false }: { forceDayView?: boolean })
       resolve: target => {
         const id = target.closest<HTMLElement>('[data-workout-id]')?.dataset.workoutId
         const workout = timed.find(item => item.id === id)
-        return actor?.role === 'trainer' && workout?.status === 'planned' && (!workout.createdBy || workout.createdBy === actor.userId) ? workout : null
+        return actor?.role === 'trainer' && workout && (!workout.createdBy || workout.createdBy === actor.userId) ? workout : null
       },
       preview: setDragPreview,
       drop: (workout, slot) => setSlotMove({ workout, slot }),
@@ -2265,7 +2265,7 @@ export function WorkoutDetailPage() {
         statusLabel={!clientMode && done && workoutsRepository.confirmAttendance ? 'Проведена' : statusPresentation?.label}
         showStatus={detailState !== 'completed' || !clientMode && done && Boolean(workoutsRepository.confirmAttendance)}
         action={manageMenuInHeader ? <OverflowMenu label="Другие действия с тренировкой" items={workoutManageItems} /> : undefined}
-        meta={<>{actor?.role === 'trainer' && trainerOwned && workout.status === 'planned' && workoutsRepository.rescheduleSlot
+        meta={<>{actor?.role === 'trainer' && trainerOwned && workoutsRepository.rescheduleSlot
           ? <button type="button" className="workout-slot-trigger" aria-label="Изменить дату и время тренировки" onClick={() => setSlotSheetOpen(true)}><ScheduleIcon /><span>{formatLocalDate(workout.workoutDate)} · {slotTimeLabel(workout)}</span><ChevronRightIcon /></button>
           : <span>{formatLocalDate(workout.workoutDate)} · {workout.startTime?.slice(0, 5) ?? 'без времени'}</span>}<span>{workoutTrainingFormatLabel(workout.trainingFormat ?? 'self')}</span>{clientMode && !done && authorLabel && <span>{authorLabel}</span>}{clientAuthoredReadOnly && <span>Создано клиентом · упражнения только для просмотра</span>}{stageTitle && <span>Цель: {stageTitle}</span>}</>} />}
       {clientMode && workout.title && <p className="workout-plan-title">{workout.title}</p>}
@@ -2318,7 +2318,7 @@ export function WorkoutDetailPage() {
       {clientMode && !clientOwned && <div className="actions"><Link className="button secondary" to={`/workouts/new?copy=${workoutId}`} state={childNavigationState}>Создать свою копию</Link>{workout.exercises.length > 0 && (workout.status === 'planned' || done) && <OverflowMenu placement="top" label="Другие действия с тренировкой" items={[{ label: 'В избранное', onClick: () => setFavoriteSheetOpen(true) }]} />}</div>}
       {remove.error && <p className="error">{remove.error.message}</p>}
       {cancelPlanned.error && <p className="error" role="alert">{cancelPlanned.error.message}</p>}
-      {slotSheetOpen && actor?.role === 'trainer' && trainerOwned && workout.status === 'planned' && <WorkoutRescheduleSheet workout={workout} onClose={() => setSlotSheetOpen(false)} onSaved={async slot => {
+      {slotSheetOpen && actor?.role === 'trainer' && trainerOwned && <WorkoutRescheduleSheet workout={workout} onClose={() => setSlotSheetOpen(false)} onSaved={async slot => {
         setSlotSheetOpen(false)
         await invalidateWorkoutSurfaces()
         const path = isTrainerScheduleV2Enabled(actor) ? '/today' : '/schedule'
