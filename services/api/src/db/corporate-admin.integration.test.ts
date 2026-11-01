@@ -105,6 +105,13 @@ describe.skipIf(!source)('corporate administration on real actor/RLS', () => {
       await expect(store.bundle({accessMode:'read_write',token:otherToken})).rejects.toMatchObject({code:'PT403'})
       expect(await store.bundle({accessMode:'read_write',token})).toHaveProperty('trainers')
       await expect(store.saveTrainer({accessMode:'read_write',token},{id:athlete,isYandex:true,officeIds:[officeId],version:0})).rejects.toMatchObject({code:'PT404'})
+      const currentVersion=Number((await pool.query<{version:string}>('select version from public.corporate_trainers where trainer_id=$1',[coach])).rows[0]!.version)
+      const removal={id:coach,isYandex:false,officeIds:[officeId],version:currentVersion}
+      await store.saveTrainer({accessMode:'read_write',token},removal)
+      await store.saveTrainer({accessMode:'read_write',token},removal)
+      expect((await store.bundle({accessMode:'read_write',token})).trainers).toEqual([])
+      await saveTrainer(true,[officeId],currentVersion+1)
+
       expect(await actor(admin,'select id from public.workouts where id=$1',[workout])).toEqual([])
       expect(await actor(coach,'select id from public.workouts where id=$1',[workout])).toEqual([{id:workout}])
     } finally {await runtime.end()}
