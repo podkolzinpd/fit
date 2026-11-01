@@ -87,7 +87,7 @@ test('finance/template visual matrices cannot grow back into full business chain
   assert.doesNotMatch(bodies.get('template'), /page\.clock|page\.reload|commands|\/health|rows\.size/)
 })
 
-test('real Playwright partitions preserve the 686-case union without duplicates in either engine', () => {
+test('real Playwright partitions preserve the 690-case union without duplicates in either engine', () => {
   const collect = (args) => {
     const result = spawnSync(process.execPath, [join(root, 'node_modules/playwright/cli.js'), ...args, '--list', '--reporter=json'],
       { cwd: root, encoding: 'utf8', timeout: 60000, env: { ...process.env, FIT_SCHEDULE_V2_VISUAL: '1' } })
@@ -103,7 +103,7 @@ test('real Playwright partitions preserve the 686-case union without duplicates 
   }
   for (const { project } of engines) {
     const full = collect(fitLimeArgs(project, 'full').args)
-    assert.equal(full.length, 686) // Previous679 + navigation, three widths, fortnight, return context and isolated filters.
+    assert.equal(full.length, 690) // Existing686 plus four lifecycle client-creation cases; every previous case remains.
     for (const title of ['Compact clients keep search, initials and one add flow in trainer Lime', 'First-client invitation survives the empty-to-list transition', 'Lime coach calendar shows full recorded history and preserves return, list and source data', 'Lime athlete calendar retains its existing compact history preview']) {
       assert.equal(full.filter(key => key.endsWith(title)).length, 1, title)
     }
