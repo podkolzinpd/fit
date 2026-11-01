@@ -93,4 +93,3 @@ end;
 $$;
 revoke all on function public.reschedule_workout(uuid,date,time,bigint,time,uuid) from public;
 grant execute on function public.reschedule_workout(uuid,date,time,bigint,time,uuid) to fit_api;
-
