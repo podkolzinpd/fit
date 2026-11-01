@@ -87,7 +87,7 @@ test('finance/template visual matrices cannot grow back into full business chain
   assert.doesNotMatch(bodies.get('template'), /page\.clock|page\.reload|commands|\/health|rows\.size/)
 })
 
-test('real Playwright partitions preserve the 679-case union without duplicates in either engine', () => {
+test('real Playwright partitions preserve the 681-case union without duplicates in either engine', () => {
   const collect = (args) => {
     const result = spawnSync(process.execPath, [join(root, 'node_modules/playwright/cli.js'), ...args, '--list', '--reporter=json'],
       { cwd: root, encoding: 'utf8', timeout: 60000, env: { ...process.env, FIT_SCHEDULE_V2_VISUAL: '1' } })
@@ -103,11 +103,12 @@ test('real Playwright partitions preserve the 679-case union without duplicates 
   }
   for (const { project } of engines) {
     const full = collect(fitLimeArgs(project, 'full').args)
-    assert.equal(full.length, 679) // Previous677 + two public-invitation token-pair states.
+    assert.equal(full.length, 681) // Previous679 + two compact calendar cases.
     for (const title of ['Compact clients keep search, initials and one add flow in trainer Lime', 'First-client invitation survives the empty-to-list transition', 'Lime coach calendar shows full recorded history and preserves return, list and source data', 'Lime athlete calendar retains its existing compact history preview']) {
       assert.equal(full.filter(key => key.endsWith(title)).length, 1, title)
     }
     for (const theme of ['light', 'dark']) assert.equal(full.filter(key => key.endsWith(`Public invitation identity and controls ${theme}`)).length, 1)
+    for (const title of ['Figma calendar Coach compact navigation keeps date access, menu and all views', 'Figma calendar Coach compact header geometry and unchanged summary paint']) assert.equal(full.filter(key => key.endsWith(title)).length, 1, title)
     for (const width of [375, 390, 430, 1440]) {
       assert.equal(full.filter(key => key.endsWith(`Figma workout Coach reference full editor ${width}`)).length, 1)
       assert.equal(full.filter(key => key.endsWith(`Figma workout Coach reference schedule guides and filters ${width}`)).length, 1)
@@ -140,7 +141,7 @@ test('real Playwright partitions preserve the 679-case union without duplicates 
     const scoped = collect(fitLimeArgs(project, 'scoped', 'critical,finance').args)
     const scopedParts = fitLimePartitions('scoped').flatMap(({ lane, shard }) =>
       collect(fitLimeArgs(project, 'scoped', 'critical,finance', lane, shard).args))
-    assert.equal(scoped.length, 112) // Previous110 + two critical public-invitation states.
+    assert.equal(scoped.length, 114) // Previous112 + the same two critical calendar cases.
     assert.equal(new Set(scopedParts).size, scopedParts.length)
     assert.deepEqual(scopedParts.sort(), scoped.sort())
   }
