@@ -166,7 +166,7 @@ Email-поиск, адресный справочник и отдельный д
 Расхождения: прежний unique index разрешает одного admin, оператор запрещает
 второго; заменяется двумя независимыми enabled slots. Неотмеченные раньше
 передавались целиком в UI; фильтр перенесён в обе DB bundle и оставлен в UI.
-Сделано: migration174, title/filter, API membership check под общей блокировкой,
+Сделано: migration175, title/filter, API membership check под общей блокировкой,
 owner-оператор с primary/additional и отдельными private targets. Старые office,
 public identity и существующие логины/subject остаются прежними.
 Решения: ADM-CABINET-YANDEX-20261101 — текущий кабинет принадлежит Яндексу;
@@ -180,3 +180,16 @@ corporate13/13; Chromium/WebKit16/16 в dev. Типы и frontend build passed.
 не доказывает native identity. Owner grant разрешает только точное будущее
 provider-verified совпадение, не переносит существующий доступ другому subject.
 Дальше: завершить локальные проверки PR1, полный CI и последовательный выпуск.
+
+
+### Итерация 2 нового выпуска — 2026-11-01 — GPT / OpenAI
+
+Расхождения: предшествующий PR1923 резервирует174_coach_reschedule_all_statuses.
+Наша ещё не выпущенная migration174 переименована в175 без изменения SQL;
+приглашения будут176. Проверены файлы1923–1929, чужие миграции не менялись.
+Проверка PR1: полный check passed (frontend3007/3007, API1551/1551,
+244 DB conditional skips), clean PG17 отдельно13/13; production-build
+Chromium/WebKit16/16, desktop/mobile screenshots просмотрены. PR1930,
+первый CI41318604727 на3083c0b1 больше не является итоговым после перенумерации;
+требуется CI нового head. Нет нового frontend/runtime поведения.
+Дальше: свежий CI и обычная очередь; до этого merge/release не выполнять.
