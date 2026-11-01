@@ -122,12 +122,11 @@ test('Figma calendar Coach compact navigation keeps date access, menu and all vi
 })
 
 // Header text, hit targets and selected-segment geometry depend on viewport width.
-test('Figma calendar Coach compact header geometry and unchanged summary paint', { tag: ['@lime-critical'] }, async ({ page }, info) => {
+for (const width of [320, 390, 736]) test(`Figma calendar Coach compact header geometry and unchanged summary paint ${width}`, { tag: ['@lime-critical'] }, async ({ page }, info) => {
   await page.clock.setFixedTime(new Date('2026-09-24T12:00:00+03:00'))
   await mockPilot(page, { fitLime: true, profileId: 'c0ac0000-6010-4000-8000-000000000001' })
-  for (const width of [320, 390, 736]) {
-    await page.setViewportSize({ width, height: 844 })
-    for (const date of ['2026-09-24', '2026-09-30', '2026-11-02', '2026-11-08']) {
+  await page.setViewportSize({ width, height: 844 })
+  for (const date of ['2026-09-24', '2026-09-30', '2026-11-02', '2026-11-08']) {
       await page.goto(`/today?date=${date}`)
       await expect(page.locator('.coach-calendar-views')).toBeVisible()
       await page.evaluate(() => document.fonts.ready)
@@ -146,8 +145,7 @@ test('Figma calendar Coach compact header geometry and unchanged summary paint',
       for (const button of geometry.buttons) { expect(button.height).toBeGreaterThanOrEqual(44);expect(button.width).toBeGreaterThanOrEqual(44);expect(button.clipped).toBe(false) }
       expect(Math.max(...geometry.buttons.map(b => b.width)) - Math.min(...geometry.buttons.map(b => b.width))).toBeLessThan(1)
     }
-    await page.screenshot({ path: info.outputPath(`compact-calendar-${width}.png`) })
-  }
+  await page.screenshot({ path: info.outputPath(`compact-calendar-${width}.png`) })
 })
 
 // Two engines are intentional: native implicit submit and pointer selection differ in Safari.
