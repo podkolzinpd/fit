@@ -1209,8 +1209,9 @@ const chronicleReactionLabels: Record<TrainerReaction, string> = {
   strong: '💪',
 }
 
-export function WorkoutChronicleCard({ workout, contextLabel, returnTo, historyListActions = false, showTitle = true, calendarDayDetails = false, coachView = false }: { workout: Workout; contextLabel?: string | null; returnTo?: string; historyListActions?: boolean; showTitle?: boolean; calendarDayDetails?: boolean; coachView?: boolean }) {
+export function WorkoutChronicleCard({ workout, contextLabel, returnTo, historyListActions = false, showTitle = true, calendarDayDetails = false, coachView = false, compactHistory = false }: { workout: Workout; contextLabel?: string | null; returnTo?: string; historyListActions?: boolean; showTitle?: boolean; calendarDayDetails?: boolean; coachView?: boolean; compactHistory?: boolean }) {
   const done = workout.status === 'done'
+  const compact = compactHistory && historyListActions && done && !coachView && !calendarDayDetails
   const duration = workoutDurationLabel(workout.startedAt, workout.completedAt, workout.actualDurationSec)
   const tonnage = workoutTonnage(workout)
   const meta = done && !coachView ? [
@@ -1229,20 +1230,21 @@ export function WorkoutChronicleCard({ workout, contextLabel, returnTo, historyL
     <span className="workout-chronicle-note-text">{coachView && workout.trainerReaction ? `${chronicleReactionLabels[workout.trainerReaction]} ` : ''}{workout.trainerReview}</span>
   </p>
 
-  return <article className={`card workout-chronicle-card${workout.hasPr ? ' has-pr' : ''}${historyListActions && done ? ' has-history-actions' : ''}${calendarDayDetails ? ' calendar-day-details' : ''}${coachView ? ' coach-chronicle-card' : ''}`}>
+  return <article className={`card workout-chronicle-card${workout.hasPr ? ' has-pr' : ''}${historyListActions && done ? ' has-history-actions' : ''}${calendarDayDetails ? ' calendar-day-details' : ''}${coachView ? ' coach-chronicle-card' : ''}${compact ? ' compact-client-history' : ''}`}>
     <Link className="workout-chronicle-open" aria-description={showTitle ? workoutDisplayTitle(workout) : undefined} aria-label={`Открыть тренировку за ${formattedDate}`} to={`/workouts/${workout.id}`} state={detailState}>
       <div className="workout-chronicle-head">
         <div className="workout-chronicle-heading">
           {showTitle && <h2 className="workout-chronicle-title">{workoutDisplayTitle(workout)}</h2>}
-          {calendarDayDetails ? <small>{workout.exercises.length} {exerciseCountLabel(workout.exercises.length)}</small>
-            : <time className="workout-card-date" dateTime={workout.workoutDate}>{formattedDate}</time>}
+          {!compact && (calendarDayDetails ? <small>{workout.exercises.length} {exerciseCountLabel(workout.exercises.length)}</small>
+            : <time className="workout-card-date" dateTime={workout.workoutDate}>{formattedDate}</time>)}
         </div>
         <div className="workout-chronicle-head-badges">
-          {workout.hasPr && <span className="workout-pr-badge"><RecordIcon />Личный рекорд</span>}
+          {workout.hasPr && !compact && <span className="workout-pr-badge"><RecordIcon />Личный рекорд</span>}
           <WorkoutStatusBadge workout={workout} />
         </div>
       </div>
-      {contextLabel && <p className="card-author">{contextLabel}</p>}
+      {compact ? <p className="workout-chronicle-byline"><time className="workout-card-date" dateTime={workout.workoutDate}>{formattedDate}</time>{contextLabel && <><span aria-hidden="true"> · </span><span className="card-author">{contextLabel}</span></>}</p>
+        : contextLabel && <p className="card-author">{contextLabel}</p>}
       {coachView && trainerReview}
       <div className="workout-chronicle-exercises">
         {historyListActions && !calendarDayDetails ? <p className="workout-chronicle-brief">{workoutExerciseBrief(workout.exercises)}</p> : <>
@@ -1262,8 +1264,9 @@ export function WorkoutChronicleCard({ workout, contextLabel, returnTo, historyL
         </>}
       </div>
       {muscleSummary && <p className="workout-chronicle-muscles" aria-label={`Основные группы мышц: ${muscleSummary}`}><span>Мышцы:</span> {muscleSummary}</p>}
-      {(meta.length > 0 || hasFeedback || (coachView && Boolean(workout.wellbeing)) || workout.discomfort) && <div className="card-meta workout-chronicle-facts">
+      {(meta.length > 0 || (compact && workout.hasPr) || hasFeedback || (coachView && Boolean(workout.wellbeing)) || workout.discomfort) && <div className="card-meta workout-chronicle-facts">
         {meta.map((item) => <span key={item}>{item}</span>)}
+        {compact && workout.hasPr && <span className="workout-pr-badge" aria-label="Личный рекорд"><RecordIcon /><span className="workout-pr-label-full" aria-hidden="true">Личный рекорд</span><span className="workout-pr-label-short" aria-hidden="true">Рекорд</span></span>}
         {hasFeedback && <span>RPE {workout.sessionRpe}/10</span>}
         {workout.wellbeing && <span>{chronicleWellbeingLabels[workout.wellbeing]}</span>}
         {workout.discomfort && <span className="attention">Дискомфорт</span>}

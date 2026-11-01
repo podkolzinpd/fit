@@ -153,6 +153,71 @@
   background: var(--lime-surface-raised);
   color: var(--lime-text);
 }
+/* Athlete history keeps metadata and records out of the title's row. */
+.phone-frame.fit-client-lime.client-screen-reference .compact-client-history .workout-chronicle-open {
+  gap: 8px;
+  padding: 16px;
+}
+.phone-frame.fit-client-lime.client-screen-reference .compact-client-history .workout-chronicle-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  padding-right: 52px;
+  min-height: 36px;
+}
+.phone-frame.fit-client-lime.client-screen-reference .compact-client-history .workout-chronicle-title {
+  font-size: 18px;
+  line-height: 1.25;
+  word-break: normal;
+}
+.phone-frame.fit-client-lime.client-screen-reference .compact-client-history .workout-chronicle-copy {
+  top: 12px;
+  right: 12px;
+}
+.phone-frame.fit-client-lime.client-screen-reference .compact-client-history .workout-chronicle-byline {
+  margin: 0;
+  color: var(--lime-text-secondary);
+  font-size: 12px;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+.phone-frame.fit-client-lime.client-screen-reference .compact-client-history .workout-chronicle-byline :is(.workout-card-date, .card-author) {
+  display: inline;
+  margin: 0;
+  font-size: inherit;
+  line-height: inherit;
+}
+.phone-frame.fit-client-lime.client-screen-reference .compact-client-history .workout-chronicle-exercises {
+  padding: 10px 0 0;
+  border-bottom: 0;
+}
+.phone-frame.fit-client-lime.client-screen-reference .compact-client-history .workout-chronicle-facts {
+  align-items: center;
+}
+.phone-frame.fit-client-lime.client-screen-reference .compact-client-history .workout-chronicle-facts > span {
+  padding: 6px 8px;
+  font-size: 12px;
+  line-height: 1.4;
+}
+.phone-frame.fit-client-lime.client-screen-reference .compact-client-history .workout-chronicle-facts > .workout-pr-badge {
+  min-height: 0;
+  border: 1px solid var(--success-border);
+  background: transparent;
+  color: var(--success-fg);
+  letter-spacing: 0;
+}
+.phone-frame.fit-client-lime.client-screen-reference .compact-client-history .workout-pr-badge > span {
+  padding: 0;
+  background: transparent;
+  color: inherit;
+  font-size: inherit;
+}
+.phone-frame.fit-client-lime.client-screen-reference .compact-client-history .workout-pr-label-short { display: none; }
+@media (max-width: 374px) {
+  .phone-frame.fit-client-lime.client-screen-reference .compact-client-history .workout-pr-label-full { display: none; }
+  .phone-frame.fit-client-lime.client-screen-reference .compact-client-history .workout-pr-label-short { display: inline; }
+}
 .phone-frame.fit-client-lime.client-screen-reference .client-workouts-page
   :is(.client-workout-cards, .favorite-workout-cards, .preset-workout-picker-list) { gap: 12px; }
 .phone-frame.fit-client-lime.client-screen-reference .client-workouts-page
