@@ -104,6 +104,14 @@ describe.skipIf(!source)('corporate administration on real actor/RLS', () => {
       expect(await store.access({accessMode:'read_write',token:otherToken})).toEqual({allowed:false})
       await expect(store.bundle({accessMode:'read_write',token:otherToken})).rejects.toMatchObject({code:'PT403'})
       expect(await store.bundle({accessMode:'read_write',token})).toHaveProperty('trainers')
+      await expect(store.saveTrainer({accessMode:'read_write',token},{id:athlete,isYandex:true,officeIds:[officeId],version:0})).rejects.toMatchObject({code:'PT404'})
+      const currentVersion=Number((await pool.query<{version:string}>('select version from public.corporate_trainers where trainer_id=$1',[coach])).rows[0]!.version)
+      const removal={id:coach,isYandex:false,officeIds:[officeId],version:currentVersion}
+      await store.saveTrainer({accessMode:'read_write',token},removal)
+      await store.saveTrainer({accessMode:'read_write',token},removal)
+      expect((await store.bundle({accessMode:'read_write',token})).trainers).toEqual([])
+      await saveTrainer(true,[officeId],currentVersion+1)
+
       expect(await actor(admin,'select id from public.workouts where id=$1',[workout])).toEqual([])
       expect(await actor(coach,'select id from public.workouts where id=$1',[workout])).toEqual([{id:workout}])
     } finally {await runtime.end()}
@@ -170,11 +178,37 @@ describe.skipIf(!source)('corporate administration on real actor/RLS', () => {
     expect(await actor<{ offices: unknown }>('', 'select app_private.public_yandex_trainer_offices($1) offices', [randomUUID()])).toEqual([{ offices: null }])
     await expect(actor('', 'select id from public.corporate_offices')).rejects.toMatchObject({ code: '42501' })
   })
+  it('hides unmarked trainers in both bundle generations without changing their accounts or offices', async () => {
+    const outsider = randomUUID()
+    await pool.query(`insert into public.profiles(id,first_name,account_role) values($1,'Unmarked synthetic','trainer')`, [outsider])
+    await pool.query('insert into public.trainers(profile_id) values($1)', [outsider])
+    await pool.query('insert into public.corporate_trainers(trainer_id,is_yandex) values($1,false)', [outsider])
+    await pool.query('insert into public.corporate_trainer_offices(trainer_id,office_id) values($1,$2)', [outsider,officeId])
+    for (const name of ['corporate_admin_bundle', 'corporate_admin_bundle_with_identity']) {
+      const rows = await actor<{ bundle: { trainers: Array<{ id: string }>; offices: Array<{ id: string }> } }>(admin, `select app_private.${name}() bundle`)
+      expect(rows[0]!.bundle.trainers.map(t => t.id)).toEqual([coach])
+      expect(rows[0]!.bundle.offices).toContainEqual(expect.objectContaining({ id: officeId }))
+    }
+    expect((await pool.query('select account_role from public.profiles where id=$1',[outsider])).rows).toEqual([{ account_role:'trainer' }])
+    expect((await pool.query('select office_id from public.corporate_trainer_offices where trainer_id=$1',[outsider])).rows).toEqual([{ office_id:officeId }])
+  })
   it('revokes an existing admin immediately and protects its audit', async () => {
     await expect(actor(admin,'delete from app_private.corporate_admin_audit')).rejects.toMatchObject({code:'42501'})
     await pool.query('update app_private.corporate_admins set enabled=false where profile_id=$1',[admin])
     await expect(actor(admin,'select app_private.corporate_admin_bundle()')).rejects.toMatchObject({code:'PT403'})
     await expect(actor(admin,'select app_private.corporate_admin_bundle_with_identity()')).rejects.toMatchObject({code:'PT403'})
+  })
+  it('allows a second approved administrator without replacing the first and bounds enabled slots', async () => {
+    const first='1'.repeat(64), second='2'.repeat(64), subject='3'.repeat(64)
+    await pool.query('insert into app_private.corporate_admin_logins(login_sha256,access_slot) values($1,1),($2,2)',[first,second])
+    await expect(pool.query('insert into app_private.corporate_admin_logins(login_sha256,access_slot) values($1,2)',['4'.repeat(64)])).rejects.toMatchObject({code:'23505'})
+    await expect(actor(coach,'update app_private.corporate_admin_logins set access_slot=2')).rejects.toMatchObject({code:'42501'})
+    await actor(coach,'select app_private.bind_corporate_admin_login($1,$2)',[subject,second])
+    await pool.query("insert into app_private.auth_identities(provider,provider_subject_sha256,profile_id) values('yandex',$1,$2)",[subject,coach])
+    expect(await actor(coach,'select app_private.is_corporate_admin() allowed')).toEqual([{allowed:true}])
+    expect((await pool.query('select enabled from app_private.corporate_admin_logins where login_sha256=$1',[first])).rows).toEqual([{enabled:true}])
+    await pool.query('delete from app_private.auth_identities where profile_id=$1',[coach])
+    await pool.query('delete from app_private.corporate_admin_logins where login_sha256=any($1::text[])',[[first,second]])
   })
   it('grants only the owner-approved login after verified binding, before or after account creation', async () => {
     const login='c'.repeat(64), subject='d'.repeat(64)

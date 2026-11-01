@@ -26,7 +26,7 @@ export function CorporateAdminPage() {
   const { actor } = useAuth()
   const theme = useAppTheme()
   return <div className={`corporate-admin-shell ui-identity ${theme === 'light' ? 'theme-light' : ''}`}>
-    <Page title="Администрирование" action={<Link className="secondary" to={actor?.role === 'client' ? '/me/settings' : '/profile/settings'}>Вернуться в ФИТ</Link>}>
+    <Page title="Кабинет Яндекса" action={<Link className="secondary" to={actor?.role === 'client' ? '/me/settings' : '/profile/settings'}>Вернуться в ФИТ</Link>}>
       <AsyncView loading={access.isPending} error={access.error} onRetry={() => void access.refetch()}>
         {access.data === true ? <AdminWorkspace /> : <StatePanel tone="info" title="Нет доступа"
           description="Кабинет доступен назначенным администраторам. Вход выполняется через обычную учётную запись ФИТ; регистрация сама по себе не даёт прав администратора." />}
@@ -105,19 +105,17 @@ function OfficeForm({ office, onClose }: { office: CorporateOffice; onClose: () 
 
 function Trainers({ data }: { data: CorporateAdminBundle }) {
   const [search, setSearch] = useState('')
-  const [onlyYandex, setOnlyYandex] = useState(false)
   const [officeId, setOfficeId] = useState('')
   const [selected, setSelected] = useState<CorporateTrainer | null>(null)
-  const rows = data.trainers.filter(t => matchesAdminTrainer(t, search) && (!onlyYandex || t.isYandex) && (!officeId || t.officeIds.includes(officeId)))
+  const rows = data.trainers.filter(t => t.isYandex && matchesAdminTrainer(t, search) && (!officeId || t.officeIds.includes(officeId)))
   return <section className="corporate-admin-workspace">
     <h2>Тренеры</h2>
     <div className="corporate-admin-filters">
       <Field label="Поиск тренера"><input type="search" placeholder="Имя или ссылка на анкету" value={search} onChange={e => setSearch(e.target.value)} /></Field>
       <Field label="Офис"><select value={officeId} onChange={e => setOfficeId(e.target.value)}><option value="">Все офисы</option>{data.offices.map(o => <option key={o.id} value={o.id}>{o.city} · {o.name}{o.archived ? ' · Архив' : ''}</option>)}</select></Field>
-      <label className="corporate-admin-checkbox"><input type="checkbox" checked={onlyYandex} onChange={e => setOnlyYandex(e.target.checked)} />Только тренеры Яндекса</label>
     </div>
     {selected && <TrainerForm key={selected.id} trainer={selected} offices={data.offices} onClose={() => setSelected(null)} />}
-    {!rows.length ? <EmptyState title="Тренеры не найдены" description={data.trainers.length ? 'Измените поиск или фильтры.' : 'Здесь появятся зарегистрированные в ФИТ тренеры.'} /> : <ul className="corporate-admin-list">
+    {!rows.length ? <EmptyState title="Тренеры не найдены" description={data.trainers.length ? 'Измените поиск или фильтры.' : 'В кабинете пока нет тренеров Яндекса.'} /> : <ul className="corporate-admin-list">
       {rows.map(t => <li key={t.id}><div className="corporate-admin-person"><AdminTrainerPhoto key={t.photoUrl ?? t.id} trainer={t} /><div><strong>{t.name}</strong>
         {t.publishedName && t.publishedName !== t.name && <p>В анкете: {t.publishedName}</p>}
         <p>{t.isYandex ? 'Тренер Яндекса' : 'Без отметки'} · {t.officeIds.map(id => data.offices.find(o => o.id === id)).filter(o => o !== undefined).map(o => `${o.city}, ${o.name}${o.archived ? ' (архив)' : ''}`).join('; ') || 'Офисы не назначены'}</p>
