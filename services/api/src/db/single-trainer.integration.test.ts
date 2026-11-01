@@ -209,6 +209,45 @@ describe.skipIf(source === undefined)('one active trainer through every connecti
     expect((await pool.query('select note from public.client_trainers where client_id=$1', [f.card])).rows).toEqual([{ note: 'kept private note' }])
   })
 
+  it('binds a first athlete account to the manual card without replacing history, schedule or finance on replay', async () => {
+    const f = await fixture(), athlete = randomUUID(), card = randomUUID(), done = randomUUID(), plan = randomUUID()
+    const exercise = randomUUID(), set = randomUUID(), packageId = randomUUID()
+    await pool.query("insert into public.profiles(id,first_name,account_role) values($1,'Synthetic new athlete','client')", [athlete])
+    await pool.query("insert into public.clients(id,trainer_id,full_name) values($1,$2,'Synthetic manual card')", [card, f.first])
+    await pool.query('insert into public.client_trainers(client_id,trainer_id) values($1,$2)', [card, f.first])
+    await pool.query(`insert into public.trainer_finance_packages(id,trainer_id,client_id,title,sessions_total,price_cents,starts_on)
+      values($1,$2,$3,'Synthetic retained package',10,123450,current_date)`, [packageId, f.first, card])
+    await pool.query(`insert into public.trainer_finance_payments(package_id,trainer_id,client_id,amount_cents,received_on)
+      values($1,$2,$3,12345,current_date)`, [packageId, f.first, card])
+    await pool.query(`insert into public.workouts(id,trainer_id,client_id,created_by,workout_date,status,started_at,completed_at,training_format)
+      values($1,$2,$3,$2,current_date,'done',now()-interval '1 hour',now(),'with_trainer')`, [done, f.first, card])
+    await pool.query(`insert into public.workouts(id,trainer_id,client_id,created_by,workout_date,start_time,end_time,status)
+      values($1,$2,$3,$2,current_date+1,'10:00','11:00','planned')`, [plan, f.first, card])
+    await pool.query(`insert into public.workout_exercises(id,workout_id,trainer_id,client_id,position,exercise_source,exercise_ref,exercise_name,muscle_group,input_kind)
+      values($1,$2,$3,$4,0,'system','synthetic-strength','Synthetic exercise','legs','strength')`, [exercise, done, f.first, card])
+    await pool.query(`insert into public.workout_sets(id,workout_exercise_id,trainer_id,client_id,position,plan_weight_kg,plan_reps,fact_weight_kg,fact_reps,confirmed_at)
+      values($1,$2,$3,$4,0,20,12,22.5,10,now())`, [set, exercise, f.first, card])
+    const snapshot = async () => (await pool.query<{
+      workouts: unknown; exercises: unknown; sets: unknown; packages: unknown; payments: unknown; sessions: unknown
+    }>(`select
+      (select jsonb_agg(to_jsonb(w) order by w.id) from public.workouts w where client_id=$1) workouts,
+      (select jsonb_agg(to_jsonb(e) order by e.id) from public.workout_exercises e where client_id=$1) exercises,
+      (select jsonb_agg(to_jsonb(s) order by s.id) from public.workout_sets s where client_id=$1) sets,
+      (select jsonb_agg(to_jsonb(p) order by p.id) from public.trainer_finance_packages p where client_id=$1) packages,
+      (select jsonb_agg(to_jsonb(p) order by p.id) from public.trainer_finance_payments p where client_id=$1) payments,
+      (select jsonb_agg(to_jsonb(s) order by s.id) from public.trainer_finance_sessions s where client_id=$1) sessions`, [card])).rows
+    const before = await snapshot()
+    const [share] = await actor(f.first, "select * from public.create_client_invitation_share($1,'client')", [card])
+    if (!share) throw new Error('fixture_invitation_missing')
+    for (let attempt = 0; attempt < 2; attempt++) {
+      expect(await actor(athlete, 'select public.claim_client_invitation_link($1) id', [share.invitation_token])).toEqual([{ id: card }])
+      expect(await snapshot()).toEqual(before)
+    }
+    expect((await pool.query('select id from public.clients where auth_user_id=$1', [athlete])).rows).toEqual([{ id: card }])
+    for (const viewer of [athlete, f.first]) expect(await actor(viewer, 'select id from public.workouts where client_id=$1 order by id', [card])).toHaveLength(2)
+    expect(await actor(f.outsider, 'select id from public.workouts where client_id=$1', [card])).toEqual([])
+  })
+
   it.each(['code', 'link'] as const)('merges a trainer plan through %s without losing own history, amounts or authorship', async (entry) => {
     const f = await fixture(), sourceCard = randomUUID(), ownWorkout = randomUUID(), plan = randomUUID(), sourceDone = randomUUID(), packageId = randomUUID()
     await pool.query("insert into public.clients(id,trainer_id,full_name) values($1,$2,'Synthetic trainer card')", [sourceCard, f.first])
