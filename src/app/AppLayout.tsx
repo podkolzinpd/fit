@@ -6,7 +6,8 @@ import { AnalyticsIcon, AssistantIcon, ClientsIcon, HomeIcon, ProfileIcon, Sched
 import { useAuth } from './auth-context'
 import { Coachmark } from '../shared/ui'
 import { applyAppTheme, applyMonochromeThemeColor, applyThemeVariant, resolveThemeVariant, themeVariantClass, useAppTheme } from './theme'
-import { isAssistantNavPilotEnabled, isServiceNoticeEnabled, isTodayStartRedesignEnabled } from './feature-flags'
+import { isAssistantNavPilotEnabled, isServiceNoticeEnabled, isTodayStartRedesignEnabled, isTrainerFinancePilotEnabled } from './feature-flags'
+import { useCoachCalendarDestination, useCoachFinanceDestination, useCoachNavigationScroll } from './coach-calendar-navigation'
 import { ServiceNotice } from './service-notice'
 import { useAppViewport } from './app-viewport'
 import { isTrainerScheduleV2CalendarRoute, isTrainerScheduleV2Enabled } from './trainer-schedule-v2'
@@ -30,6 +31,15 @@ export function AppLayout() {
   const { keyboardOpen } = useAppViewport()
   const trainerScheduleV2 = isTrainerScheduleV2Enabled(actor)
   const trainerScheduleV2Route = trainerScheduleV2 && isTrainerScheduleV2CalendarRoute(pathname, search)
+  const unifiedCoachCalendar = trainerScheduleV2 && isCoachWorkoutRedesignEnabled(actor)
+  const calendarDestination = useCoachCalendarDestination(actor?.userId, unifiedCoachCalendar, pathname, search)
+  const financeDestination = useCoachFinanceDestination(actor?.userId, unifiedCoachCalendar, pathname, search)
+  const calendarParams = new URLSearchParams(search)
+  const retainedOverview = pathname === '/today' && trainerScheduleV2Route && !calendarParams.has('date')
+    && (calendarParams.has('week') || calendarParams.get('mode') === 'list')
+  const retainedScrollKey = unifiedCoachCalendar && (retainedOverview || pathname === '/finance')
+    ? `${actor?.userId}:${pathname}${search}` : null
+  useCoachNavigationScroll(contentRef, retainedScrollKey)
   const clientLimeShell = isClientLimeShellRoute(actor, pathname)
   const fitLimeShell = isFitLimeShellRoute(actor, pathname, search) || clientLimeShell
   const theme = clientLimeShell ? clientTheme.theme : baseTheme
@@ -110,9 +120,10 @@ export function AppLayout() {
     const clientsScrollKey = pathname === '/clients' ? 'fit.clientsListScroll'
       : pathname === '/clients/archive' ? 'fit.clientsArchiveListScroll' : null
     if (clientsScrollKey && window.sessionStorage?.getItem(clientsScrollKey)) return
+    if (retainedScrollKey) return
     const frame = window.requestAnimationFrame(() => contentRef.current?.scrollTo(0, 0))
     return () => window.cancelAnimationFrame(frame)
-  }, [pathname, routeStep])
+  }, [pathname, routeStep, retainedScrollKey])
 
   // Создание, проверка, редактирование и live — один сфокусированный путь
   // тренировки. Нижняя навигация возвращается на списках и после выхода из
@@ -193,12 +204,16 @@ export function AppLayout() {
     <NavLink to="/me/progress"><AnalyticsIcon />Прогресс</NavLink>
     <NavLink to="/me/profile"><ProfileIcon />Профиль</NavLink>
   </nav>}</div></FitLimeIconsContext></ClientWorkoutReferenceContext>
-  return <FitLimeIconsContext value={fitLimeShell}><div className={frameClass}><div className={contentClass} data-viewport-route={`${pathname}|${routeStep}`} ref={contentRef}>{serviceNotice}<Outlet /></div>{contestWinnerDialog}{!immersive && <nav className="tab-bar trainer-tab-bar" aria-label="Основная навигация">
-    <NavLink to="/today"><TodayIcon />{trainerScheduleV2 && isFitLimeEnabled(actor) ? 'День' : 'Сегодня'}</NavLink>
-    {trainerScheduleV2 && <NavLink to="/schedule"><ScheduleIcon />Расписание</NavLink>}
-    {(redesignedStart || trainerScheduleV2) && ((fitLimeShell && /^\/progress\/[^/]+$/.test(pathname)) || monochromeTrainerFinance
+  return <FitLimeIconsContext value={fitLimeShell}><div className={frameClass}><div className={contentClass} data-viewport-route={`${pathname}|${routeStep}`} ref={contentRef} style={retainedScrollKey ? { overflowAnchor: 'none' } : undefined}>{serviceNotice}<Outlet /></div>{contestWinnerDialog}{!immersive && <nav className="tab-bar trainer-tab-bar" aria-label="Основная навигация">
+    {unifiedCoachCalendar ? <Link to={calendarDestination} className={trainerScheduleV2Route || pathname.startsWith('/schedule/templates') ? 'active' : undefined} aria-current={trainerScheduleV2Route || pathname.startsWith('/schedule/templates') ? 'page' : undefined}><TodayIcon />День</Link>
+      : <NavLink to="/today"><TodayIcon />{trainerScheduleV2 && isFitLimeEnabled(actor) ? 'День' : 'Сегодня'}</NavLink>}
+    {trainerScheduleV2 && !unifiedCoachCalendar && <NavLink to="/schedule"><ScheduleIcon />Расписание</NavLink>}
+    {(redesignedStart || trainerScheduleV2) && (unifiedCoachCalendar && monochromeTrainerFinance
+      ? <Link to="/clients"><ClientsIcon />Клиенты</Link>
+      : (fitLimeShell && /^\/progress\/[^/]+$/.test(pathname)) || monochromeTrainerFinance && !unifiedCoachCalendar
       ? <Link to="/clients" className="active" aria-current="page"><ClientsIcon />Клиенты</Link>
       : <NavLink to="/clients"><ClientsIcon />Клиенты</NavLink>)}
+    {unifiedCoachCalendar && actor && isTrainerFinancePilotEnabled(actor.userId) && <Link to={financeDestination} className={monochromeTrainerFinance ? 'active' : undefined} aria-current={monochromeTrainerFinance ? 'page' : undefined}><span className="coach-finance-nav-icon" aria-hidden="true">₽</span>Финансы</Link>}
     {trainerAssistantNav}
     {!trainerScheduleV2 && <NavLink to="/schedule"><ScheduleIcon />Расписание</NavLink>}
     {!redesignedStart && !trainerScheduleV2 && <NavLink to="/profile"><ProfileIcon />Профиль</NavLink>}

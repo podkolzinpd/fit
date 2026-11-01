@@ -3,6 +3,8 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link, Navigate, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useDataBackend } from '../../app/data-backend-context'
 import { useAuth } from '../../app/auth-context'
+import { isCoachWorkoutRedesignEnabled } from '../../app/coach-workout-redesign'
+import { readCoachCalendarRoute } from '../../app/coach-calendar-navigation'
 import { cloneWorkoutTemplate, workoutTemplateFromWorkout } from '../../data/repositories/workout-template-rules'
 import { replaceExercise } from '../../data/repositories/workout-rules'
 import type { ExerciseSnapshot, WorkoutExerciseDraft, WorkoutTemplateDraft } from '../../shared/domain'
@@ -44,6 +46,10 @@ export function WorkoutTemplatesPage() {
 }
 
 function WorkoutTemplates() {
+  const { actor } = useAuth()
+  const calendarBack = isCoachWorkoutRedesignEnabled(actor) ? readCoachCalendarRoute(actor?.userId) ?? '/today' : '/schedule'
+  const calendarParams = new URLSearchParams(calendarBack.split('?')[1])
+  const assignmentDate = calendarParams.get('date') ?? calendarParams.get('anchor')
   const { workoutTemplates } = useDataBackend()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
@@ -66,7 +72,7 @@ function WorkoutTemplates() {
     mutationFn: (template: NonNullable<typeof query.data>[number]) => workoutTemplates.archive(template),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['workout-templates'] }),
   })
-  return <Page className="workout-templates-page" title="Шаблоны тренировок" back="/schedule"
+  return <Page className="workout-templates-page" title="Шаблоны тренировок" back={calendarBack}
     action={<div className="template-create-menu"><OverflowMenu label="Создать шаблон" trigger={<AddIcon />} items={[
       { label: 'Создать с нуля', onClick: () => navigate('/schedule/templates/new/editor') },
       { label: 'Из тренировки клиента', onClick: () => navigate('/schedule/templates/from-workout') },
@@ -83,7 +89,7 @@ function WorkoutTemplates() {
         </div>
         <p className="template-exercise-preview">{template.exercises.slice(0, 3).map((exercise) => exercise.name).join(' · ')}{template.exercises.length > 3 ? ` · ещё ${template.exercises.length - 3}` : ''}</p>
         <div className="template-card-footer"><span>Обновлён {new Intl.DateTimeFormat('ru-RU', { day: 'numeric', month: 'short' }).format(new Date(template.updatedAt))}</span>
-          <Link className="button secondary" to={`/workouts/new?template=${template.id}`}><ScheduleIcon />Назначить</Link></div>
+          <Link className="button secondary" to={`/workouts/new?${new URLSearchParams({ template: template.id, ...(assignmentDate ? { date: assignmentDate } : {}) })}`} state={{ returnTo: calendarBack }}><ScheduleIcon />Назначить</Link></div>
       </article>)}</div> : <EmptyState title="Создайте первый шаблон" description="Соберите тренировку с нуля или сохраните готовый план клиента."
         action={<div className="template-empty-actions"><Link className="button primary" to="/schedule/templates/new/editor">Создать с нуля</Link><Link className="button secondary" to="/schedule/templates/from-workout"><CopyIcon />Из тренировки</Link></div>} />}
       {(duplicate.error || archive.error) && <InlineRequestError error={(duplicate.error ?? archive.error)!} />}

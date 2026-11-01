@@ -447,7 +447,6 @@ for (const [role, profileId, expected] of [
     if (role === 'trainer') {
       await page.goto('/schedule?week=2026-09-21')
       await expect(page.locator('.coach-schedule-filter-options')).toHaveCount(expected ? 1 : 0)
-      if (expected) await checkCoachScheduleFilters(page)
     }
   })
 }
@@ -856,6 +855,10 @@ test('Achievement collection restores earned badges after signing in again', asy
   await expect(first.locator('.athlete-achievement-badge')).toHaveClass(/is-earned/)
 })
 
+test('Figma calendar Coach filters retain selection through unified route history', { tag: ['@lime-critical'] }, async ({ page }) => {
+  await checkCoachScheduleFilters(page)
+})
+
 async function checkCoachScheduleFilters(page: Page) {
   await page.setViewportSize({ width: 390, height: 844 })
   await page.clock.setFixedTime(new Date('2026-09-24T09:00:00+03:00'))
@@ -912,7 +915,7 @@ async function checkCoachScheduleFilters(page: Page) {
   await expect(page.locator('.schedule-v2-event')).toHaveCount(2)
   await page.goBack()
   await page.goBack()
-  await expect(page).toHaveURL(/\/schedule\?/)
+  await expect(page).toHaveURL(/\/today\?/)
   await expect(summary).toHaveText('Фильтры · 3')
   await expect(filters).not.toHaveAttribute('open')
   await summary.click()
