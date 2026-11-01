@@ -459,11 +459,12 @@ export interface WorkoutStatusPresentation {
   tone: WorkoutStatusTone
 }
 
-// Частичное завершение остаётся производным представлением по подтверждённым
-// подходам. «Не состоялась» — отдельное сохранённое решение по прошлому плану.
-export function workoutStatusPresentation(workout: Workout, today: LocalDate): WorkoutStatusPresentation {
+// The athlete presentation retains recorded-set progress. Trainer attendance
+// follows the saved workout status, independently of recorded results.
+export function workoutStatusPresentation(workout: Workout, today: LocalDate, audience: 'client' | 'trainer' = 'client'): WorkoutStatusPresentation {
   if (workout.status === 'cancelled') return { label: 'Не состоялась', tone: 'cancelled' }
   if (workout.status === 'done') {
+    if (audience === 'trainer') return { label: 'Проведена', tone: 'done' }
     const sets = workout.exercises.flatMap((exercise) => exercise.sets)
     const confirmed = sets.filter((set) => set.confirmedAt).length
     if (confirmed > 0 && confirmed < sets.length) return { label: 'Частично', tone: 'partial' }
@@ -595,7 +596,7 @@ export function compactPlannedSetOverview(sets: readonly WorkoutSet[], showRpe =
 // Итог тренировки — это чтение факта, а не таблица для редактирования. Одинаковые
 // подтверждённые подходы сворачиваются в одну строку; разные остаются в порядке
 // выполнения, но без служебных номера и статуса каждой строки.
-export function compactCompletedSetSummary(sets: readonly WorkoutSet[], showRpe = false, exerciseRef?: string): string {
+export function compactCompletedSetSummary(sets: readonly WorkoutSet[], showRpe = false, exerciseRef?: string, audience: 'client' | 'trainer' = 'client'): string {
   const completed = sets.filter((set) => Boolean(set.confirmedAt))
   const lines = completed.map((set) => {
     const weight = set.fact.weightKg ?? set.weightKg
@@ -608,11 +609,11 @@ export function compactCompletedSetSummary(sets: readonly WorkoutSet[], showRpe 
   })
   const first = lines[0]
   // Ничего не сделано — одно короткое «Не выполнено», без счётчика пропусков.
-  if (!first) return 'Не выполнено'
+  if (!first) return audience === 'trainer' ? '—' : 'Не выполнено'
   const fact = lines.every((line) => line === first) && lines.length > 1 ? `${lines.length} × ${first}`
     : lines.join(' · ')
   const missed = sets.length - completed.length
-  return missed > 0 ? `${fact} · не выполнено: ${missed}` : fact
+  return missed > 0 && audience !== 'trainer' ? `${fact} · не выполнено: ${missed}` : fact
 }
 
 type ExerciseDetailMode = 'planned' | 'completed'
@@ -649,8 +650,9 @@ export function compactExerciseDetailSummary(
   mode: ExerciseDetailMode,
   showRpe = false,
   exerciseRef?: string,
+  audience: 'client' | 'trainer' = 'client',
 ): string {
-  if (sets.length === 0) return 'Без значений'
+  if (sets.length === 0) return mode === 'completed' && audience === 'trainer' ? '—' : 'Без значений'
 
   const values: ExerciseDetailValue[] = sets.map((set) => {
     const savedSet = 'fact' in set ? set : null
@@ -671,7 +673,7 @@ export function compactExerciseDetailSummary(
   })
 
   const completed = values.filter((value) => !value.skipped)
-  if (completed.length === 0) return 'Не выполнено'
+  if (completed.length === 0) return audience === 'trainer' ? '—' : 'Не выполнено'
 
   let summary: string
   if (inputKind === 'strength') {

@@ -156,6 +156,110 @@ for (const theme of ['light', 'dark']) test(`client reference workout lists reta
   await expect(page.getByRole('heading', { name: 'Тренировки Fit', exact: true })).toBeVisible()
 })
 
+// The record/status/copy controls must not squeeze the default Russian title.
+// Widths cover the reported iPhone, the wider client layout and narrow WebKit.
+for (const theme of ['light', 'dark']) test(`client history record badges leave room for workout titles ${theme}`, async ({ page }, info) => {
+  await page.clock.setFixedTime(new Date('2026-11-01T09:00:00Z'))
+  await page.addInitScript(({ id, theme }) => localStorage.setItem(`fit.clientLime.theme.${id}`, theme), { id: pilotId, theme })
+  const completed = {
+    ...coachGestureWorkout(false, 3), status: 'done', title: null, hasPr: true,
+    createdBy: pilotId, workoutDate: '2026-10-27', startedAt: '2026-10-27T10:23:00Z',
+    completedAt: '2026-10-27T11:00:00Z', actualDurationSec: 2220, activeCaloriesKcal: 100,
+  }
+  completed.exercises = completed.exercises.map((exercise, index) => ({ ...exercise,
+    name: ['Скручивания', 'Планка', 'Велосипедные'][index]!, muscleGroup: 'core',
+    sets: exercise.sets.map(set => ({ ...set, fact: { reps: 20 }, confirmedAt: completed.completedAt })),
+  }))
+  const walking = { ...completed, id: 'c11e0000-6010-4000-8000-000000000092', workoutDate: '2026-10-28', hasPr: false,
+    exercises: [{ ...completed.exercises[0]!, name: 'Ходьба на беговой дорожке', ref: 'vital-gym-pro-r355-1427',
+      muscleGroup: 'cardio' as const, inputKind: 'distance' as const }],
+  }
+  const longTitle = 'Длинноеназваниетренировки'.repeat(6).slice(0, 120)
+  const longWorkout = { ...completed, id: newWorkoutId, title: longTitle, hasPr: false }
+  await mockPilot(page, { role: 'client', profileId: pilotId, clientLime: true, workouts: [
+    completed, walking, longWorkout,
+  ] })
+  await page.goto('/me/workouts?tab=history&view=list')
+  await expect(page.locator('.client-screen-reference')).toBeVisible()
+  const card = page.locator('.workout-chronicle-card.has-pr')
+  const title = card.getByRole('heading', { name: 'Тренировка', exact: true })
+  await expect(title).toBeVisible()
+  await expect(card.getByText('Личный рекорд', { exact: true })).toBeVisible()
+  await expect(card.getByText('Создана вами', { exact: true })).toBeVisible()
+  for (const width of [390, 430, 360]) {
+    await page.setViewportSize({ width, height: 844 })
+    await page.evaluate(() => document.fonts.ready)
+    await page.screenshot({ path: info.outputPath(`history-screen-${theme}-${width}.png`) })
+    const geometry = await card.evaluate(element => {
+      const title = element.querySelector<HTMLElement>('.workout-chronicle-title')!
+      const date = element.querySelector<HTMLElement>('.workout-card-date')!
+      const badges = element.querySelector<HTMLElement>('.workout-chronicle-head-badges')!
+      const byline = element.querySelector<HTMLElement>('.workout-chronicle-byline')!
+      const facts = element.querySelector<HTMLElement>('.workout-chronicle-facts')!
+      const record = element.querySelector<HTMLElement>('.workout-pr-badge')!
+      const copy = element.querySelector<HTMLElement>('.workout-chronicle-copy')!
+      const rect = (node: HTMLElement) => {
+        const { left, right, top, bottom, width, height } = node.getBoundingClientRect()
+        return { left, right, top, bottom, width, height }
+      }
+      const copyBox = copy.getBoundingClientRect()
+      return { title: rect(title), date: rect(date), badges: rect(badges), byline: rect(byline), facts: rect(facts), record: rect(record), copy: rect(copy),
+        cardHeight: element.getBoundingClientRect().height,
+        bylineLineHeight: Number.parseFloat(getComputedStyle(byline).lineHeight),
+        lineHeight: Number.parseFloat(getComputedStyle(title).lineHeight),
+        copyHittable: copy.contains(document.elementFromPoint(copyBox.x + copyBox.width / 2, copyBox.y + copyBox.height / 2)),
+        pageFits: document.documentElement.scrollWidth <= innerWidth }
+    })
+    expect(geometry.title.height).toBeLessThanOrEqual(geometry.lineHeight + 1)
+    expect(geometry.title.right).toBeLessThanOrEqual(geometry.badges.left)
+    expect(geometry.badges.right).toBeLessThanOrEqual(geometry.copy.left)
+    expect(geometry.byline.height).toBeLessThanOrEqual(geometry.bylineLineHeight + 1)
+    expect(geometry.record.bottom).toBeLessThanOrEqual(geometry.facts.top + geometry.record.height + 1)
+    // The ordinary card keeps its existing metrics row instead of adding a header row.
+    expect(geometry.cardHeight).toBeLessThanOrEqual(230)
+    expect(geometry.copy.width).toBeGreaterThanOrEqual(44)
+    expect(geometry.copy.height).toBeGreaterThanOrEqual(44)
+    expect(geometry.copyHittable).toBe(true)
+    expect(geometry.pageFits).toBe(true)
+    const longHeading = page.getByRole('heading', { name: longTitle, exact: true })
+    expect(await longHeading.evaluate(element => element.scrollWidth <= element.clientWidth)).toBe(true)
+  }
+  const copy = card.getByRole('link', { name: /Скопировать тренировку/ })
+  await expect(copy).toHaveAttribute('href', `/workouts/new?copy=${workoutId}`)
+  await copy.click()
+  await expect(page).toHaveURL(new RegExp(`/workouts/new\\?copy=${workoutId}$`))
+})
+
+// One behavior case covers the existing athlete ownership/rename path; it is
+// independent of the palette/width matrix above.
+test('client history displays a renamed own workout after returning from details', async ({ page }) => {
+  const source = { ...restTimerWorkout(), status: 'done' as const, title: null, createdBy: pilotId, completedAt: '2026-10-27T11:00:00Z', workoutDate: '2026-10-27' }
+  const backend = await mockPilot(page, { role: 'client', profileId: pilotId, clientLime: true, workouts: [source] })
+  const original = structuredClone(source)
+  const writes: Array<{ title: string; expectedVersion: number }> = []
+  await page.route(`**/v1/workouts/${workoutId}/title`, async route => {
+    const body = route.request().postDataJSON() as typeof writes[number]
+    writes.push(body)
+    const current = backend.getWorkouts()[0]!
+    expect(body.expectedVersion).toBe(current.version)
+    Object.assign(current, { title: body.title, version: current.version + 1 })
+    await route.fulfill({ json: { workout: { id: workoutId, version: current.version } } })
+  })
+  await page.goto('/me/workouts?tab=history&view=list')
+  await page.locator('.workout-chronicle-open').click()
+  await page.getByRole('button', { name: 'Другие действия с тренировкой', exact: true }).click()
+  await page.getByRole('menuitem', { name: 'Переименовать тренировку', exact: true }).click()
+  const sheet = page.getByRole('dialog', { name: 'Переименовать тренировку', exact: true })
+  await sheet.getByLabel('Название', { exact: true }).fill('Ноги и спина')
+  await sheet.getByRole('button', { name: 'Сохранить', exact: true }).click()
+  await expect(sheet).toHaveCount(0)
+  await expect(page.getByText('Ноги и спина', { exact: true })).toBeVisible()
+  await page.getByRole('button', { name: 'Назад', exact: true }).click()
+  await expect(page.locator('.workout-chronicle-card').getByRole('heading', { name: 'Ноги и спина', exact: true })).toBeVisible()
+  expect(writes).toEqual([{ title: 'Ноги и спина', expectedVersion: original.version }])
+  expect(backend.getWorkouts()[0]!.exercises).toEqual(original.exercises)
+})
+
 for (const theme of ['light', 'dark']) test(`client reference people rows retain chat and trainer filters ${theme}`, async ({ page }, info) => {
   await page.addInitScript(({ id, theme }) => localStorage.setItem(`fit.clientLime.theme.${id}`, theme), { id: pilotId, theme })
   await mockPilot(page, { role: 'client', profileId: pilotId, clientLime: true })
@@ -1523,6 +1627,62 @@ for (const theme of ['dark', 'light']) for (const width of [390, 430]) test(`cli
   await page.screenshot({ path: info.outputPath('save.png') })
 })
 
+test('client entry from workout list preserves controls while parsing and saving', async ({ page }) => {
+  const backend = await mockPilot(page, { role: 'client', profileId: pilotId, clientLime: true, workouts: [], failFirstSave: true })
+  // A locally resolved line never calls the remote parser. Use an unmatched
+  // synthetic phrase so the pending-state assertion exercises a real request.
+  const transcript = 'Тестовое движение MC1 один подход десять повторений'
+  let releaseParse = () => {}
+  const parseGate = new Promise<void>(resolve => { releaseParse = resolve })
+  await page.route('**/v1/assistant/yandex/parse-workout', async route => {
+    await parseGate
+    await route.fulfill({ json: { items: [{ sourceText: transcript, exerciseRef: 'barbell-squat', confidence: 1, sets: [{ weightKg: 40, reps: 10 }] }], unmatched: [] } })
+  })
+  let releaseSave = () => {}
+  const saveGate = new Promise<void>(resolve => { releaseSave = resolve })
+  await page.route('**/v1/workouts', async route => {
+    if (route.request().method() === 'POST') await saveGate
+    await route.fallback()
+  })
+  try {
+    await page.goto('/me/workouts')
+    await expect(page.locator('.client-workout-entry-shell, .client-workout-entry')).toHaveCount(0)
+    await page.getByRole('link', { name: 'Добавить', exact: true }).click()
+    await expect(page.locator('.client-workout-entry-shell .client-workout-entry')).toBeVisible()
+    const text = page.getByLabel('Тренировка', { exact: true })
+    const input = await text.elementHandle()
+    await text.fill(transcript)
+    const parse = page.getByRole('button', { name: 'Разобрать тренировку', exact: true })
+    const parseHeight = await parse.evaluate(element => element.getBoundingClientRect().height)
+    await parse.click()
+    const parsing = page.getByRole('button', { name: 'Разбираю тренировку…', exact: true })
+    await expect(parsing).toBeDisabled()
+    expect(await parsing.evaluate(element => element.getBoundingClientRect().height)).toBe(parseHeight)
+    expect(await input!.evaluate(element => element.isConnected)).toBe(true)
+    releaseParse()
+    await page.getByRole('button', { name: 'Далее', exact: true }).click()
+    const save = page.getByRole('button', { name: 'Запланировать тренировку', exact: true })
+    const saveHeight = await save.evaluate(element => element.getBoundingClientRect().height)
+    await save.click()
+    const pending = page.getByRole('button', { name: 'Сохраняем…', exact: true })
+    await expect(pending).toBeDisabled()
+    await expect(pending).toHaveAttribute('aria-busy', 'true')
+    expect(await pending.evaluate(element => element.getBoundingClientRect().height)).toBe(saveHeight)
+    await expect(page.getByRole('button', { name: 'Выбрать дату и время', exact: true })).toBeDisabled()
+    releaseSave()
+    await expect.poll(() => backend.getSaveAttempts()).toBe(1)
+    await expect(save).toBeEnabled()
+    await expect(page.locator('.client-workout-entry')).toBeVisible()
+    await save.click()
+    await expect(page).toHaveURL(new RegExp(`/workouts/${newWorkoutId}`))
+    expect(backend.getSaveAttempts()).toBe(2)
+    await expect(page.locator('.client-workout-entry-shell, .client-workout-entry')).toHaveCount(0)
+  } finally {
+    releaseParse()
+    releaseSave()
+  }
+})
+
 test('client reference voice cancel, review edits and failed save retain the draft', async ({ page }) => {
   const backend = await mockPilot(page, { role: 'client', profileId: pilotId, clientLime: true, workouts: [], failFirstSave: true })
   await mockClientStreamingVoice(page, 'Приседания один подход десять повторений')
@@ -1638,10 +1798,16 @@ test('another client and a trainer never receive client editor geometry', async 
   await page.goto('/workouts/new')
   await expect(page.locator('.workout-form')).toBeVisible()
   await expect(page.locator('.client-reference-form, .client-reference-flow')).toHaveCount(0)
+  await page.goto('/me?entry=workout')
+  await expect(page.locator('.today-start-page')).toBeVisible()
+  await expect(page.locator('.client-workout-entry-shell, .client-workout-entry')).toHaveCount(0)
   await mockPilot(page, { profileId: pilotId, fitLime: true, workouts: [] })
   await page.goto('/workouts/new')
   await expect(page.locator('.workout-form')).toBeVisible()
   await expect(page.locator('.client-reference-form, .client-reference-flow')).toHaveCount(0)
+  await page.goto('/today?view=compose&entry=text')
+  await expect(page.locator('.today-start-page')).toBeVisible()
+  await expect(page.locator('.client-workout-entry-shell, .client-workout-entry')).toHaveCount(0)
 })
 
 

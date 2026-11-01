@@ -2,8 +2,10 @@ import { useCallback } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 
 export type WorkoutNavigationState = {
+  confirmAttendance?: boolean
   returnTo?: string
   fromWorkoutDetailId?: string
+  scheduleFocus?: { workoutId: string; startTime: string | null }
   justCompleted?: boolean
   firstPlanClient?: { id: string; fullName: string }
 }

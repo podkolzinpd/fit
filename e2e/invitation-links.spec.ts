@@ -12,7 +12,8 @@ test('trainer invites a new athlete by protected link without entering a code', 
   await expect(page).toHaveURL(/\/(today|clients)$/)
 
   await page.goto('/clients')
-  await page.getByRole('button', { name: 'Пригласить спортсмена' }).click()
+  await page.getByRole('button', { name: /^(Добавить|Добавить клиента)$/ }).click()
+  await page.getByRole('button', { name: 'Пригласить по ссылке' }).click()
   await page.getByLabel('Имя спортсмена').fill(athleteName)
   await page.getByRole('button', { name: 'Создать приглашение' }).click()
   await expect(page.getByRole('dialog', { name: 'Ссылка готова' })).toBeVisible()
@@ -26,7 +27,8 @@ test('trainer invites a new athlete by protected link without entering a code', 
   await page.getByRole('button', { name: 'Выйти' }).click()
   await page.goto(invitationUrl)
 
-  await expect(page.getByRole('heading', { name: `${trainerName} приглашает вас стать спортсменом` })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Тренировки вместе с тренером' })).toBeVisible()
+  await expect(page.getByRole('region', { name: 'Отправитель приглашения' })).toContainText(trainerName)
   await nativeRegister(page, { key: `link-athlete-${suffix}@fit.local`, firstName: athleteName, role: 'client' })
 
   await expect(page).toHaveURL(/\/invite$/)
@@ -70,7 +72,8 @@ test('athlete invites a trainer by the same protected link shown in the QR code'
   await page.goto('/me/settings')
   await page.getByRole('button', { name: 'Выйти' }).click()
   await page.goto(invitationUrl)
-  await expect(page.getByRole('heading', { name: `${athleteName} приглашает вас стать тренером` })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Приглашение стать тренером' })).toBeVisible()
+  await expect(page.getByRole('region', { name: 'Отправитель приглашения' })).toContainText(athleteName)
   await nativeRegister(page, { key: `link-trainer-${suffix}@fit.local`, firstName: trainerName, role: 'trainer' })
   await expect(page).toHaveURL(/\/invite$/)
   await page.getByRole('button', { name: 'Стать тренером' }).click()

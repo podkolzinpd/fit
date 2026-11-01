@@ -17,6 +17,7 @@ import {
   type PendingInvitationLink,
 } from './invitation-link-continuation'
 import { AuthIdentityScreen } from './AuthPages'
+import './invitation-page.css'
 
 function invitationTitle(inviterName: string, targetRole: 'client' | 'trainer'): string {
   return targetRole === 'trainer'
@@ -102,6 +103,9 @@ export function InvitationPage() {
   const requiresDisconnect = claim.error instanceof RepositoryError
     && (claim.error.code === 'trainer_disconnect_required' || claim.error.code === 'trainer_switch_required')
   const homePath = actor?.role === 'client' ? '/me' : '/clients'
+  const accountName = actor === null ? null
+    : [actor.firstName, actor.lastName].filter(Boolean).join(' ').trim()
+      || actor.email || (actor.role === 'client' ? 'Аккаунт спортсмена' : 'Аккаунт тренера')
 
   async function changeAccount(): Promise<void> {
     setSigningOut(true)
@@ -168,14 +172,19 @@ export function InvitationPage() {
     <header className="auth-entry-head">
       <FitLogo />
       <p className="eyebrow">ПРИГЛАШЕНИЕ В FIT</p>
-      <h1>{invitationTitle(invitation.inviterName, invitation.targetRole)}</h1>
-      <p className="muted">После подключения вы увидите общие тренировки и сможете общаться в Fit.</p>
+      <h1>{invitation.targetRole === 'client' ? 'Тренировки вместе с тренером' : 'Приглашение стать тренером'}</h1>
+      <p className="muted">{invitationTitle(invitation.inviterName, invitation.targetRole)}. После подключения вы увидите общие тренировки и сможете общаться в Fit.</p>
     </header>
+    <section className="invitation-sender" aria-label="Отправитель приглашения">
+      <span className="invitation-sender-avatar" aria-hidden="true">{[...invitation.inviterName.trim()][0]?.toLocaleUpperCase('ru') || 'Ф'}</span>
+      <div><strong>{invitation.inviterName}</strong><span>Приглашает вас в Fit</span></div>
+    </section>
     {invitation.status === 'claimed' && <StatePanel tone="info" title="Приглашение уже принято" description="Войдите в тот же аккаунт и проверьте подключение. Повторная проверка не меняет тренера." />}
     <section className="compact stack invitation-summary" aria-label="Приглашение">
       <div><span>Ваша роль</span><strong>{invitation.targetRole === 'trainer' ? 'Тренер' : 'Спортсмен'}</strong></div>
       <div><span>Действует до</span><strong>{expiresAt}</strong></div>
     </section>
+    {accountName !== null && <p className="invitation-account">Вы вошли как <strong>{accountName}</strong></p>}
     {requiresStoredContinuation ? <StatePanel
       tone="error"
       title="Откройте ссылку в Safari или Chrome"
@@ -187,6 +196,7 @@ export function InvitationPage() {
       <button type="button" className="secondary" onClick={() => { trackGoal('invitation_registration_started'); navigate('/auth', {
         state: { from: '/invite', mode: 'register', inviteRole: invitation.targetRole },
       }) }}>Создать аккаунт</button>
+      <p className="invitation-continuation-note">Продолжим подключение после входа.</p>
     </div> : roleMismatch ? <StatePanel
       tone="error"
       title={`Это приглашение предназначено ${invitation.targetRole === 'trainer' ? 'тренеру' : 'спортсмену'}`}
@@ -197,6 +207,7 @@ export function InvitationPage() {
         : claim.error && <p className="error" role="alert">{claim.error.message}</p>}
       <button type="button" className="primary" aria-busy={claim.isPending} disabled={claim.isPending || requiresDisconnect || backend === null} onClick={() => claim.mutate()}>{claim.isPending ? 'Проверяем…' : invitation.status === 'claimed' ? 'Проверить подключение' : invitation.targetRole === 'trainer' ? 'Стать тренером' : 'Подключиться к тренеру'}</button>
       {backend === null && <StatePanel tone="error" title="Войдите в аккаунт снова" description="Приглашение сохранено." action={<button type="button" className="secondary" onClick={() => void changeAccount()}>Перейти ко входу</button>} />}
+      <button type="button" className="link invitation-change-account" disabled={signingOut || claim.isPending} onClick={() => void changeAccount()}>{signingOut ? 'Выходим…' : 'Войти под другим аккаунтом'}</button>
     </div>}
   </AuthIdentityScreen>
 }

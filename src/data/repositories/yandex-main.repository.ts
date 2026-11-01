@@ -1653,6 +1653,7 @@ export function createYandexMainRepository(
       },
       async start(item) { return liveCommand(`/v1/workouts/${item.id}/start`, 'POST', item.version) },
       async cancelPlanned(item) { return commandVersion(`/v1/workouts/${item.id}/cancel`, 'POST', { expectedVersion: item.version }) },
+      async rescheduleSlot(item, draft, operationId) { return commandVersion(`/v1/workouts/${item.id}/reschedule`, 'POST', { ...draft, expectedVersion: item.version, operationId }) },
       async reschedule(item, date, startTime) { return commandVersion(`/v1/workouts/${item.id}/reschedule`, 'POST', { workoutDate: date, startTime, expectedVersion: item.version }) },
       async saveLiveSet(id, draft, version) { return liveCommand(`/v1/workout-sets/${id}/draft`, 'PUT', version, { draft: { weightKg: draft.weightKg ?? null, reps: draft.reps ?? null, durationMin: draft.durationMin ?? null, durationSec: draft.durationSec ?? null, distanceKm: draft.distanceKm ?? null, rpe: draft.rpe ?? null, metricSources: draft.metricSources ?? null, ...(draft.timerConfirmed ? { timerConfirmed: true } : {}) } }) },
       async confirmLiveSet(id, version) { return liveCommand(`/v1/workout-sets/${id}/confirm`, 'POST', version) },

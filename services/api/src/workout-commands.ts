@@ -319,11 +319,14 @@ export function rescheduleWorkout(
   workoutDate: string,
   startTime: string | null,
   expectedVersion: number,
+  slot?: { endTime: string | null; operationId: string },
 ): Promise<number> {
   return runVersionCommand(
     client,
-    'select public.reschedule_workout($1, $2, $3, $4) as version',
-    [workoutId, workoutDate, startTime, expectedVersion],
+    slot ? 'select public.reschedule_workout($1, $2, $3, $4, $5, $6) as version'
+      : 'select public.reschedule_workout($1, $2, $3, $4) as version',
+    slot ? [workoutId, workoutDate, startTime, expectedVersion, slot.endTime, slot.operationId]
+      : [workoutId, workoutDate, startTime, expectedVersion],
   )
 }
 

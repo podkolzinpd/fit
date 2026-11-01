@@ -48,6 +48,25 @@ describe('shared workout attendance confirmation', () => {
     fireEvent.click(screen.getByRole('button',{name:'Подтвердить проведение'}))
     await waitFor(()=>expect(backend.confirmAttendance).toHaveBeenCalledWith(workout,{disposition:'trial',packageId:null},expect.any(String)))
   })
+  it('uses the version after Live drafts have been flushed', async () => {
+    const fresh={...workout,status:'in_progress' as const,version:9}
+    const prepare=vi.fn().mockResolvedValue(fresh)
+    render(<QueryClientProvider client={new QueryClient({defaultOptions:{queries:{retry:false}}})}><WorkoutAttendanceSheet workout={workout} action="complete" beforeSave={prepare} onClose={vi.fn()} onCompleted={vi.fn().mockResolvedValue(undefined)} /></QueryClientProvider>)
+    await screen.findByText('Нет подходящего абонемента')
+    fireEvent.click(screen.getByRole('button',{name:'Подтвердить проведение'}))
+    await waitFor(()=>expect(backend.confirmAttendance).toHaveBeenCalledWith(fresh,{disposition:'auto',packageId:null},expect.any(String)))
+    expect(prepare).toHaveBeenCalledOnce()
+  })
+  it('flushes Live before cancellation, warns about retained facts and uses the fresh version', async () => {
+    const fresh={...workout,status:'in_progress' as const,version:9}
+    const live={...fresh,exercises:[{sets:[{confirmedAt:'2026-10-31T10:00:00Z'}]}]} as Workout
+    const prepare=vi.fn().mockResolvedValue(fresh)
+    render(<QueryClientProvider client={new QueryClient()}><WorkoutAttendanceSheet workout={live} action="cancel" beforeSave={prepare} onClose={vi.fn()} onCompleted={vi.fn().mockResolvedValue(undefined)} /></QueryClientProvider>)
+    expect(screen.getByText(/В тренировке есть записанные результаты/)).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button',{name:'Отметить: не состоялась'}))
+    await waitFor(()=>expect(backend.cancelPlanned).toHaveBeenCalledWith(fresh))
+    expect(prepare).toHaveBeenCalledOnce();expect(backend.listClient).not.toHaveBeenCalled()
+  })
   it('requires fresh data after failure and recognizes an already committed result', async () => {
     backend.confirmAttendance.mockRejectedValueOnce(new Error('Нет сети'))
     backend.get.mockResolvedValue({...workout,status:'done',version:8})

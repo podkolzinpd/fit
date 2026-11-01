@@ -6,7 +6,8 @@ import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const state = vi.hoisted(() => ({
-  actor: null as null | { userId: string; email: string; role: 'client' | 'trainer' },
+  actor: null as null | { userId: string; email: string; role: 'client' | 'trainer'; firstName?: string; lastName?: string },
+  backendAvailable: true,
   backendSource: 'supabase' as 'supabase' | 'yandex',
 }))
 const claimLink = vi.hoisted(() => vi.fn())
@@ -17,7 +18,7 @@ vi.mock('../../app/auth-context', () => ({
   useAuth: () => ({ actor: state.actor, loading: false, error: null, signOut }),
 }))
 vi.mock('../../app/data-backend-context', () => ({
-  useOptionalDataBackend: () => ({ source: state.backendSource, invitations: { claimLink } }),
+  useOptionalDataBackend: () => state.backendAvailable ? { source: state.backendSource, invitations: { claimLink } } : null,
 }))
 vi.mock('../../data/repositories/invitations.repository', () => ({
   invitationsRepository: { claimLink },
@@ -58,6 +59,7 @@ function renderPage() {
       <Route path="/invite" element={<InvitationPage />} />
       <Route path="/auth" element={<LocationProbe />} />
       <Route path="/clients/:clientId" element={<LocationProbe />} />
+      <Route path="/me" element={<LocationProbe />} />
     </Routes>
   </MemoryRouter></QueryClientProvider>)
 }
@@ -65,6 +67,7 @@ function renderPage() {
 describe('InvitationPage', () => {
   beforeEach(() => {
     state.actor = null
+    state.backendAvailable = true
     state.backendSource = 'supabase'
     claimLink.mockReset()
     preview.mockReset()
@@ -81,7 +84,8 @@ describe('InvitationPage', () => {
     const user = userEvent.setup()
     renderPage()
 
-    expect(await screen.findByRole('heading', { name: 'Антон приглашает вас стать тренером' })).toBeVisible()
+    expect(await screen.findByRole('heading', { name: 'Приглашение стать тренером' })).toBeVisible()
+    expect(screen.getByRole('region', { name: 'Отправитель приглашения' })).toHaveTextContent('Антон')
     expect(window.location.search).toBe('')
     expect(window.location.hash).toBe('')
     await user.click(screen.getByRole('button', { name: 'Создать аккаунт' }))
@@ -99,7 +103,7 @@ describe('InvitationPage', () => {
 
     const firstRender = renderPage()
 
-    expect(await screen.findByRole('heading', { name: 'Антон приглашает вас стать тренером' })).toBeVisible()
+    expect(await screen.findByRole('heading', { name: 'Приглашение стать тренером' })).toBeVisible()
     expect(screen.getByText('Откройте ссылку в Safari или Chrome')).toBeVisible()
     expect(screen.queryByRole('button', { name: 'Создать аккаунт' })).not.toBeInTheDocument()
     expect(window.location.search).toBe(`?token=${token}&source=supabase`)
@@ -107,7 +111,7 @@ describe('InvitationPage', () => {
     firstRender.unmount()
     renderPage()
 
-    expect(await screen.findByRole('heading', { name: 'Антон приглашает вас стать тренером' })).toBeVisible()
+    expect(await screen.findByRole('heading', { name: 'Приглашение стать тренером' })).toBeVisible()
     expect(window.location.search).toBe(`?token=${token}&source=supabase`)
   })
 
@@ -115,7 +119,7 @@ describe('InvitationPage', () => {
     window.history.replaceState(null, '', `/invite#token=${token}&source=supabase`)
     renderPage()
 
-    expect(await screen.findByRole('heading', { name: 'Антон приглашает вас стать тренером' })).toBeVisible()
+    expect(await screen.findByRole('heading', { name: 'Приглашение стать тренером' })).toBeVisible()
     expect(window.location.hash).toBe('')
   })
 
@@ -158,5 +162,52 @@ describe('InvitationPage', () => {
 
     expect(await screen.findByRole('heading', { name: 'Спортсмен подключён' })).toBeVisible()
     expect(claimLink).toHaveBeenCalledWith(token)
+  })
+
+  it.each(['expired', 'revoked'] as const)('shows terminal %s without offering a claim or a network retry', async status => {
+    preview.mockResolvedValue({ targetRole: 'client', inviterName: 'Антон', expiresAt: '2026-09-25T12:00:00.000Z', status })
+    renderPage()
+    expect(await screen.findByText(status === 'expired' ? 'Срок приглашения истёк' : 'Приглашение отменено')).toBeVisible()
+    expect(screen.queryByRole('button')).not.toBeInTheDocument()
+    expect(claimLink).not.toHaveBeenCalled()
+    expect(window.sessionStorage.getItem('fit.pendingInvitationLink.v1')).toBeNull()
+  })
+
+  it('retries a failed preview while preserving the captured invitation', async () => {
+    preview.mockRejectedValueOnce(new Error('Network unavailable'))
+    const user = userEvent.setup()
+    renderPage()
+    expect(await screen.findByText('Не удалось проверить приглашение')).toBeVisible()
+    expect(window.sessionStorage.getItem('fit.pendingInvitationLink.v1')).toContain(token)
+    await user.click(screen.getByRole('button', { name: 'Повторить' }))
+    expect(await screen.findByRole('heading', { name: 'Приглашение стать тренером' })).toBeVisible()
+    expect(preview).toHaveBeenCalledTimes(2)
+    expect(claimLink).not.toHaveBeenCalled()
+  })
+
+  it('identifies the current athlete and claims once during a slow response', async () => {
+    state.actor = { userId: 'client-1', email: 'client@example.test', role: 'client', firstName: 'Анна', lastName: 'Лесная' }
+    preview.mockResolvedValue({ targetRole: 'client', inviterName: 'Антон', expiresAt: '2026-09-25T12:00:00.000Z', status: 'claimed' })
+    let resolve: (id: string) => void = () => { throw new Error('claim_not_started') }
+    claimLink.mockImplementation(() => new Promise<string>(done => { resolve = done }))
+    const user = userEvent.setup()
+    renderPage()
+    expect(await screen.findByText('Вы вошли как', { exact: false })).toHaveTextContent('Анна Лесная')
+    await user.dblClick(screen.getByRole('button', { name: 'Проверить подключение' }))
+    expect(claimLink).toHaveBeenCalledTimes(1)
+    expect(screen.getByRole('button', { name: 'Проверяем…' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Войти под другим аккаунтом' })).toBeDisabled()
+    resolve('client-1')
+    await user.click(await screen.findByRole('button', { name: 'Открыть кабинет' }))
+    expect(screen.getByRole('status')).toHaveTextContent('"path":"/me"')
+  })
+
+  it('does not claim when the signed-in backend is unavailable', async () => {
+    state.actor = { userId: 'trainer-1', email: 'trainer@example.test', role: 'trainer' }
+    state.backendAvailable = false
+    renderPage()
+    expect(await screen.findByRole('button', { name: 'Стать тренером' })).toBeDisabled()
+    expect(screen.getByText('Войдите в аккаунт снова')).toBeVisible()
+    expect(claimLink).not.toHaveBeenCalled()
   })
 })

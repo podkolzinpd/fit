@@ -207,7 +207,8 @@ test('invitation links reject the wrong role and revoked code without consuming 
   await nativeRegister(page, { key: trainerEmail, firstName: 'Тренер приглашения', role: 'trainer' })
   await expect(page.getByRole('heading', { level: 1, name: 'Сегодня' })).toBeVisible()
   await page.goto('/clients')
-  await page.getByRole('link', { name: 'Добавить', exact: true }).click()
+  await page.getByRole('button', { name: /^(Добавить|Добавить клиента)$/ }).click()
+  await page.getByRole('dialog', { name: 'Добавить клиента' }).getByRole('link', { name: 'Создать карточку', exact: true }).click()
   await page.getByLabel('Имя').fill('Клиент приглашения')
   await fillClientProfileDetails(page)
   await page.getByLabel('Начальный вес, кг').fill('60')
@@ -289,7 +290,8 @@ test('client safely switches trainers after an explicit disconnect', async ({ pa
 
   async function createClientInvitation(clientName: string) {
     await page.goto('/clients')
-    await page.getByRole('link', { name: 'Добавить', exact: true }).click()
+    await page.getByRole('button', { name: /^(Добавить|Добавить клиента)$/ }).click()
+    await page.getByRole('dialog', { name: 'Добавить клиента' }).getByRole('link', { name: 'Создать карточку', exact: true }).click()
     await page.getByLabel('Имя').fill(clientName)
     await fillClientProfileDetails(page)
     await page.getByLabel('Начальный вес, кг').fill('60')
@@ -378,7 +380,8 @@ test('trainer invitation links a client account', async ({ page }, testInfo) => 
     await expect(page).toHaveURL(/\/today$/, { timeout: 15_000 })
   }
   await page.goto('/clients')
-  await page.getByRole('link', { name: 'Добавить', exact: true }).click()
+  await page.getByRole('button', { name: /^(Добавить|Добавить клиента)$/ }).click()
+  await page.getByRole('dialog', { name: 'Добавить клиента' }).getByRole('link', { name: 'Создать карточку', exact: true }).click()
   await page.getByLabel('Имя').fill('Связанный клиент')
   await fillClientProfileDetails(page)
   await page.getByLabel('Начальный вес, кг').fill('60')

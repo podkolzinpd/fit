@@ -1,0 +1,29 @@
+/* Approved public invitation only; no auth, role or rollout decisions here. */
+.phone-frame.fit-client-lime-public .invitation-page {
+  width:100%; max-width:456px; min-height:100%; margin:0 auto;
+  padding:28px 22px max(28px,env(safe-area-inset-bottom)); gap:18px;
+}
+.phone-frame.fit-client-lime-public .invitation-page .auth-entry-head { gap:12px; padding:0; }
+.phone-frame.fit-client-lime-public .invitation-page .auth-entry-head .brand { height:49px; margin-bottom:28px; }
+.phone-frame.fit-client-lime-public .invitation-page .auth-entry-head h1 {
+  font-size:30px; line-height:1.1; letter-spacing:-.025em; overflow-wrap:anywhere;
+}
+.phone-frame.fit-client-lime-public .invitation-page .auth-entry-head .muted { font-size:14px; line-height:1.45; }
+.invitation-sender { display:flex; align-items:center; gap:12px; padding:16px; border:1px solid var(--lime-divider); border-radius:22px; background:var(--lime-surface); }
+.invitation-sender-avatar { display:grid; place-items:center; flex:0 0 46px; width:46px; height:46px; border-radius:50%; background:var(--lime-surface-raised); font-size:18px; font-weight:500; }
+.invitation-sender > div { min-width:0; }
+.invitation-sender strong { display:block; font-size:18px; overflow-wrap:anywhere; }
+.invitation-sender div > span { display:block; margin-top:2px; color:var(--lime-text-secondary); font-size:13px; }
+.phone-frame.fit-client-lime-public .invitation-page .invitation-summary { gap:14px; padding:18px; border-radius:22px; background:var(--lime-surface-raised); }
+.invitation-page .invitation-summary > div { min-height:0; border:0; align-items:flex-start; gap:12px; }
+.invitation-page .invitation-summary span { flex:0 1 45%; color:var(--lime-text-secondary); font-size:14px; }
+.invitation-page .invitation-summary strong { min-width:0; font-size:14px; overflow-wrap:anywhere; }
+.invitation-page .invitation-account { margin:0; padding:12px 0; border-block:1px solid var(--lime-divider); color:var(--lime-text-secondary); font-size:14px; overflow-wrap:anywhere; }
+.invitation-account strong { color:var(--lime-text); }
+.invitation-page .state-panel-error .state-panel-mark { color:var(--danger); }
+.phone-frame.fit-client-lime-public .invitation-page :is(button.primary,button.secondary,.button) { width:100%; min-height:52px; border-radius:999px; }
+.invitation-page .invitation-continuation-note { margin:0; padding-top:8px; text-align:center; color:var(--lime-text-secondary); font-size:13px; }
+.invitation-page .invitation-change-account,.invitation-page .auth-back-link { display:block; width:100%; min-height:44px; padding:10px; text-align:center; color:var(--lime-text-secondary); font-size:14px; }
+@media(max-width:359px) {
+  .phone-frame.fit-client-lime-public .invitation-page { padding-inline:16px; }
+}

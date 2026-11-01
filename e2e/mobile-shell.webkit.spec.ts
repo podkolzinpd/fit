@@ -70,7 +70,8 @@ async function saveCompactClientPlan(page: Page) {
 test('trainer invitation name stays inside the visible iPhone viewport above the keyboard', async ({ page }) => {
   await loginAsTrainer(page)
   await page.goto('/clients')
-  await page.getByRole('button', { name: 'Пригласить спортсмена' }).click()
+  await page.getByRole('button', { name: /^(Добавить|Добавить клиента)$/ }).click()
+  await page.getByRole('button', { name: 'Пригласить по ссылке' }).click()
   await page.getByLabel('Имя спортсмена').focus()
   await page.evaluate(() => {
     document.documentElement.style.setProperty('--app-visible-height', '420px')
@@ -671,7 +672,8 @@ test('iPhone: тренер назначает интервалы, спортсм
     await register(trainer, 'Интервальный тренер', `interval-trainer-${suffix}@fit.local`)
     await expect(trainer.getByRole('heading', { name: 'Сегодня' })).toBeVisible()
     await trainer.goto('/clients')
-    await trainer.getByRole('link', { name: 'Добавить' }).click()
+    await trainer.getByRole('button', { name: /^(Добавить|Добавить клиента)$/ }).click()
+    await trainer.getByRole('dialog', { name: 'Добавить клиента' }).getByRole('link', { name: 'Создать карточку', exact: true }).click()
     await trainer.getByLabel('Имя').fill('Интервальный спортсмен')
     await trainer.getByLabel('Пол').selectOption('female')
     await trainer.getByLabel('Возраст').fill('30')
@@ -769,7 +771,9 @@ test('iPhone: тренер назначает интервалы, спортсм
     await client.getByRole('button', { name: 'Завершить тренировку' }).click()
     await expect(client.getByText(/нет фактического времени/)).toBeVisible()
     await client.getByRole('button', { name: 'Завершить без оценки', exact: true }).click()
+    const completedReport = client.getByRole('region', { name: 'Тренировка завершена' })
     await expect(client).toHaveURL(workoutUrl)
+    await expect(completedReport).toContainText('Выполнено 12 из 12 подходов')
     await expect(client.locator('.workout-detail-page .workout-status-completed')).toHaveCount(0)
     await expect(client.getByRole('region', { name: 'Тренировка завершена' })).toBeVisible()
     await expect(client.locator('.workout-completion-recorded')).toBeVisible()
@@ -1391,7 +1395,7 @@ test('iPhone: header action stays vertically centered in trainer Clients', async
   await page.setViewportSize({ width: 390, height: 844 })
   await loginAsTrainer(page)
   await page.goto('/clients')
-  await expectActionTextVerticallyCentered(page.getByRole('link', { name: 'Добавить', exact: true }))
+  await expectActionTextVerticallyCentered(page.getByRole('button', { name: 'Добавить', exact: true }))
   await expectNoHorizontalOverflow(page)
 })
 
@@ -2219,7 +2223,7 @@ test('iPhone: live-меню остаётся непрозрачным и не у
   await expectNoHorizontalOverflow(page)
 })
 
-test('iPhone: частично завершённая тренировка помечена на 390 и 430 px', async ({ page }, testInfo) => {
+test('iPhone: проведённая тренировка сохраняет записанные и незаписанные результаты на 390 и 430 px', async ({ page }, testInfo) => {
   await page.setViewportSize({ width: 390, height: 844 })
   const clientName = await createIsolatedClient(page, testInfo)
   await page.goto('/workouts/new')
@@ -2248,7 +2252,8 @@ test('iPhone: частично завершённая тренировка по�
   await expect(confirmFinish).toHaveAttribute('data-variant', 'primary')
   await confirmFinish.click()
   await expect(page.getByRole('heading', { name: 'Тренировка завершена' })).toBeVisible()
-  await expect(page.locator('.workout-detail-page .badge.partial')).toHaveText('Частично')
+  await expect(page.locator('.workout-detail-page .workout-header-contract')).toHaveAttribute('data-state', 'completed')
+  await expect(page.locator('.workout-detail-page .badge.partial')).toHaveCount(0)
   await expect(page.locator('.completed-set-summary')).toContainText('—')
   const completedDetails = page.locator('.completed-exercise-details').first()
   await expect(completedDetails).not.toHaveAttribute('open')
@@ -2268,7 +2273,8 @@ test('iPhone: частично завершённая тренировка по�
   await expect(deleteConfirmation).toBeVisible()
   await deleteConfirmation.getByRole('button', { name: 'Отмена' }).click()
   await expect(deleteConfirmation).toHaveCount(0)
-  await expect(completedDetails).toContainText('не выполнено')
+  await expect(completedDetails.locator('.workout-history-set.missed .workout-history-set-result > strong')).toHaveText('—')
+  await expect(completedDetails.locator('.workout-history-set.missed .plan-note')).toHaveCount(0)
   await expectNoHorizontalOverflow(page)
 })
 

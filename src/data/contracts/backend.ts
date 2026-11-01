@@ -36,6 +36,7 @@ import type {
   ExerciseProgressPage,
   WorkoutDraft,
   WorkoutAttendanceDraft,
+  WorkoutSlotDraft,
   LiveSetDraft,
   WorkoutTrainerResponseDraft,
   WorkoutFeedbackDraft,
@@ -161,6 +162,7 @@ export interface DataBackend {
     setMetricArchived(metric: CustomMetric, archived: boolean): Promise<CustomMetric>
   }
   workouts: {
+    rescheduleSlot?: (workout: Workout, draft: WorkoutSlotDraft, operationId: string) => Promise<number>
     confirmAttendance?: (workout: Workout, draft: WorkoutAttendanceDraft, operationId: string) => Promise<number>
     supportsAtomicLiveRounds: boolean
     supportsLiveSupersetSplit: boolean
