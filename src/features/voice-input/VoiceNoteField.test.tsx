@@ -5,9 +5,13 @@ import { describe, expect, it, vi } from 'vitest'
 import { VoiceNoteField, replaceWithTranscript } from './VoiceNoteField'
 
 vi.mock('./VoiceInputButton', () => ({
-  VoiceInputButton: ({ onTranscript }: { onTranscript: (text: string) => void }) => (
-    <button type="button" onClick={() => onTranscript('Жим лёжа 40 кг')}>Надиктовать заметку</button>
-  ),
+  VoiceInputButton: ({ onTranscript }: { onTranscript: (text: string) => void | (() => void) }) => {
+    const [undo, setUndo] = useState<(() => void) | null>(null)
+    return <>
+      <button type="button" onClick={() => { const revert = onTranscript('Жим лёжа 40 кг'); setUndo(() => revert ?? null) }}>Надиктовать заметку</button>
+      {undo && <button type="button" onClick={undo}>Отменить диктовку</button>}
+    </>
+  },
 }))
 
 describe('appendTranscript', () => {
@@ -61,6 +65,27 @@ describe('appendTranscript', () => {
     await user.type(screen.getByRole('textbox'), 'Жим лёжа')
 
     expect(onManualValueChange).toHaveBeenLastCalledWith('Жим лёжа')
+  })
+
+  it.each([false, true])('undoes the owned formatted transcript without removing later typing (edited=%s)', async (edited) => {
+    const user = userEvent.setup()
+    const formatted = 'Старый текст\nЖим штанги лёжа — 1 × 10 повт. × 40 кг'
+    const manualChange = vi.fn()
+    function FormattedField() {
+      const [value, setValue] = useState('Старый текст')
+      return <VoiceNoteField name="workout" source="today" value={value}
+        onValueChange={(next) => { manualChange(next); setValue(next) }}
+        onTranscriptValueChange={setValue}
+        onTranscriptAppended={async () => { await Promise.resolve(); setValue(formatted); return formatted }} />
+    }
+    render(<FormattedField />)
+    const text = screen.getByRole('textbox')
+    await user.click(screen.getByRole('button', { name: 'Надиктовать заметку' }))
+    await waitFor(() => expect(text).toHaveValue(formatted))
+    if (edited) await user.type(text, ' моя правка')
+    await user.click(screen.getByRole('button', { name: 'Отменить диктовку' }))
+    expect(text).toHaveValue(edited ? `${formatted} моя правка` : 'Старый текст')
+    if (!edited) expect(manualChange).toHaveBeenLastCalledWith('Старый текст')
   })
 
   it('shows processing status until the workout parser finishes', async () => {
