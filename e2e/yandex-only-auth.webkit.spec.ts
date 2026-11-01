@@ -748,7 +748,12 @@ for (const role of ['client', 'trainer'] as const) {
     const form = page.getByRole('main', { name: 'Регистрация' })
     await expect(form.getByRole('radio', { name: role === 'client' ? 'Я спортсмен' : 'Я тренер' })).toBeChecked()
     await expect(form.getByRole('radio', { name: role === 'client' ? 'Я тренер' : 'Я спортсмен' })).toBeDisabled()
-    await form.getByRole('textbox', { name: 'Имя' }).fill('Тестовый пользователь')
+    // Establish focus explicitly before filling this cold WebKit registration form.
+    const firstName = form.getByRole('textbox', { name: 'Имя' })
+    await firstName.click()
+    await expect(firstName).toBeFocused()
+    await firstName.fill('Тестовый пользователь')
+    await expect(firstName).toHaveValue('Тестовый пользователь')
     await form.getByRole('button', { name: 'Создать аккаунт' }).click()
     await expect(form.getByRole('alert')).toBeVisible()
     expect(submittedRole).toBe(role)

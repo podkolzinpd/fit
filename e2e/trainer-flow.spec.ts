@@ -1271,10 +1271,10 @@ test('комментарий тренера к упражнению: план �
   await page.getByLabel('Фактический вес').first().fill('92.5')
   await page.getByLabel('Фактические повторы').first().fill('8')
   await page.getByRole('button', { name: 'Готово, отдых' }).first().click()
-  // Ждём, пока подход реально подтвердится (RPC), иначе «Завершить» словит
-  // подтверждение частичного завершения (window.confirm) и не сработает.
+  // Дожидаемся сохранённого факта до подтверждения проведения тренером.
   await expect(page.locator('.live-exercise-collapsed')).toBeVisible()
   await page.getByRole('button', { name: 'Завершить тренировку' }).click()
+  await page.getByRole('button', { name: 'Подтвердить проведение', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Тренировка', level: 1, exact: true })).toBeVisible()
 
   // Комментарий виден в истории упражнения.
@@ -1449,6 +1449,7 @@ test('live: «Готово» без ввода факта — подход сч�
   await page.getByRole('button', { name: 'Готово, отдых' }).first().click()
   await expect(page.locator('.live-exercise-collapsed')).toBeVisible()
   await page.getByRole('button', { name: 'Завершить тренировку' }).click()
+  await page.getByRole('button', { name: 'Подтвердить проведение', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Тренировка', level: 1, exact: true })).toBeVisible()
 
   // В завершённой тренировке подход выполнен по плану, без пометки «не выполнено».

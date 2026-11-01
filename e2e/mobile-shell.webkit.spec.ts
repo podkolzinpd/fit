@@ -2161,7 +2161,7 @@ test('iPhone: завершение сначала отправляет ввод 
   // Программный tap сохраняет фокус в input и проверяет именно finish-flush,
   // а не побочный blur браузера.
   await page.getByRole('button', { name: 'Завершить тренировку' }).evaluate((button: HTMLButtonElement) => button.click())
-  await page.getByRole('button', { name: 'Завершить', exact: true }).evaluate((button: HTMLButtonElement) => button.click())
+  await page.getByRole('button', { name: 'Подтвердить проведение', exact: true }).evaluate((button: HTMLButtonElement) => button.click())
   await expect(page.getByRole('heading', { name: 'Тренировка завершена' })).toBeVisible()
   await expect.poll(() => liveCalls).toEqual(['draft', 'finish'])
 })

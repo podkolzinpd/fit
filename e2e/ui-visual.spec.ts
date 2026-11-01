@@ -2189,8 +2189,12 @@ test('workout detail, completion and exercise history keep their visual baseline
   }
   exposeCompletionComparison = !trainer
   await page.getByRole('button', { name: 'Завершить тренировку' }).click()
-  const partialFinish = page.getByRole('button', { name: 'Завершить', exact: true })
-  if (await partialFinish.isVisible()) await partialFinish.click()
+  if (trainer) {
+    await page.getByRole('button', { name: 'Подтвердить проведение', exact: true }).click()
+  } else {
+    const partialFinish = page.getByRole('button', { name: 'Завершить', exact: true })
+    if (await partialFinish.isVisible()) await partialFinish.click()
+  }
   if (trainer) await expect(page.getByRole('heading', { name: 'Тренировка завершена' })).toBeVisible()
   else await expect(page.getByText(/Тренировка завершена ·/)).toBeVisible()
   await expect(page.locator('.phone-frame')).toHaveClass(/workout-detail-history-identity/)

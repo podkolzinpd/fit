@@ -4,8 +4,9 @@
 01.11 — P2/PR1928: native fixtures → SDK. PR1909 закрыт.
 MC1/PR1916: [проверки и ручной выпуск](design/CLIENT_REFERENCE_SCREENS_20261029.md); исправление CI.
 YAFIT-699: компактный список клиентов и гостевое приглашение,2PR. [План/проверки](design/COACH_CLIENTS_AND_INVITATION_20261031.md); [статус выпуска](https://st.yandex-team.ru/YAFIT-699).
-ФИТ20: перенос собственной плановой тренировки и жесты календаря; [план и журнал](design/COACH_RESCHEDULE_AND_DAY_GESTURES_20261031.md). Реализация и фактический выпуск — [PR1911](https://github.com/podkolzinpd/fit/pull/1911), [PR1914](https://github.com/podkolzinpd/fit/pull/1914).
-YAFIT-700: статусы тренера,1PR. [План](design/COACH_WORKOUT_STATUS_DISPLAY_20261101.md), [статус](https://st.yandex-team.ru/YAFIT-700).
+ФИТ20: [перенос и жесты — выпущено](design/COACH_RESCHEDULE_AND_DAY_GESTURES_20261031.md); [навигация — три PR в работе](design/COACH_WORKFLOW_AUDIT_20261031.md).
+31.10 — YAFIT-698: проведение с планом/без, отмена Live/крестик, фильтр истории. [План](design/COACH_QUICK_COMPLETION_20261031.md); [статус](https://st.yandex-team.ru/YAFIT-698).
+YAFIT-700: [статусы тренера](design/COACH_WORKOUT_STATUS_DISPLAY_20261101.md), выпуск в работе.
 31.10 — YAFIT-697: время быстрого старта обеим ролям, проведение пустой записи
 и «Не состоялась» тренеру. [План, проверки и выпуск](design/COACH_ATTENDANCE_AND_START_TIME_20261031.md).
 PR1906–1908 опубликованы db96685e; итог в YAFIT-697.
@@ -88,12 +89,10 @@ audio/video и forced TURN/TLS проверены в Chromium с синтети�
 
 ## Параллельная работа и остатки
 
-Прежняя запись об открытом PR1842 устарела: он слит в main8f254a3b.
-Перед своей интеграцией проверять актуальные PR/head, не старый список очереди.
-YAFIT-659/PR1842: поиск базовой еды и единый импорт штрихкода.
+YAFIT-659/PR1842 слит в main8f254a3b: поиск еды и единый импорт штрихкода.
 [План и проверки](design/NUTRITION_COVERAGE_AND_SINGLE_IMPORT_20261027.md).
-PR1842 есть в проверенном main; прежняя приёмка не заменяет CI нового head.
-Production/физическое сканирование не подтверждены; пилот питания прежний.
+Сверять актуальные PR/head и новый CI; production/физическое сканирование
+не подтверждены, пилот питания прежний.
 Main включает клиентские PR1845/1846, их изменения сохраняются.
 YAFIT-662/PR1844 слит; последующий UX-аудит выявил отдельные замечания.
 Задача про правила их не исправляет: [реестр](REGRESSION_LESSONS.md).

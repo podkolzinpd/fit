@@ -358,6 +358,7 @@ test('trainer: a plan stays visible through Live and completion from the client 
     await upcoming.click();
     await page.getByRole('link', { name: 'Продолжить тренировку' }).click();
     await page.getByRole('button', { name: 'Завершить тренировку', exact: true }).click();
+    await page.getByRole('button', { name: 'Подтвердить проведение', exact: true }).click();
     await expect(page).toHaveURL(detailPath);
     await page.getByRole('button', { name: 'Назад', exact: true }).click();
     await expect(page).toHaveURL(clientHistoryPath);
@@ -700,6 +701,7 @@ test('trainer: Live completion returns to the original detail, then its source',
     await expect(page).toHaveURL(detailPath);
     await page.getByRole('link', { name: 'Продолжить тренировку' }).click();
     await page.getByRole('button', { name: 'Завершить тренировку', exact: true }).click();
+    await page.getByRole('button', { name: 'Подтвердить проведение', exact: true }).click();
     await expect(page).toHaveURL(detailPath);
     await expect(page.getByRole('region', { name: 'Тренировка завершена' })).toBeVisible();
     await page.getByRole('button', { name: 'Назад', exact: true }).click();
@@ -758,6 +760,7 @@ test('trainer: Today detail and direct Live keep Today as their source', async (
     await expect(page).toHaveURL('/today');
     await page.locator(`a[href="${detailPath}/live"]`).first().click();
     await page.getByRole('button', { name: 'Завершить тренировку', exact: true }).click();
+    await page.getByRole('button', { name: 'Подтвердить проведение', exact: true }).click();
     await expect(page).toHaveURL(detailPath);
     await page.getByRole('button', { name: 'Назад', exact: true }).click();
     await expect(page).toHaveURL('/today');

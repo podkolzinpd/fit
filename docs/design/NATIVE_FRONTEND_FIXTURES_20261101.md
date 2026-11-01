@@ -55,3 +55,25 @@ API1549 passed/238 skipped, lint/typecheck/policies/build passed. E2E TypeScript
 и Node syntax check fixture executable прошли. Chromium create-client/workout/
 progress и WebKit empty Live обеих ролей/reload:4/4. Native welcome visual390
 без update:1/1, обе сохранённые theme preferences. CI публикуется в PR.
+
+## Исправление CI и синхронизация main — 01.11.2026
+
+Repository-quality упал в merge checkout из-за превышения бюджета
+CURRENT_STATE после параллельных обновлений main. Подлит main dba30d2b
+с новым верхом календаря/четырьмя видами. Повторные сведения об уже слитом
+PR1842 сжаты в индексе без изменения статуса, ссылок и ограничений проверки.
+Лимиты документа и CI gates сохранены. Точные проверки нового head — в PR1928.
+
+Дополнительные CI failures: desktop completion оставлял native attendance
+confirmation открытым; push diagnostics не доходил до browser failure без
+VAPID public key. Browser-only env теперь получает существующий synthetic
+public key из unit fixtures; trainer сценарии подтверждают проведение через
+действующую кнопку. Product runtime, PNG, thresholds, retries и protected
+Fit Lime spec не изменены.
+
+Локально на main dba30d2b: полный `npm run check` —336 files/3007 unit tests,
+coverage81.52/76.54/81.13/86.11; API1551 passed/242 skipped; build, lint,
+typecheck и policies passed. Browser TypeScript/targeted lint passed; Node
+workflow/doc policy52/52; desktop completion visual1/1 без update; push
+diagnostics с FIT_SCHEDULE_V2_VISUAL=1 —1/1; связанные native trainer finish/
+calendar Back/active-input flush Chromium/WebKit —6/6. Финальный CI — в PR1928.
