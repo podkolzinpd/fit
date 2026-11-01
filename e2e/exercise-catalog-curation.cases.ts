@@ -1,13 +1,12 @@
-import { expect, test } from '@playwright/test'
+import { nativeSignIn } from './native-local-fixture'
+import { expect, test } from './native-local-fixture'
 
 export function exerciseCatalogCurationCases() {
 for (const role of ['trainer', 'client'] as const) {
   test(`curated catalog keeps ${role} variants, aliases and forms usable in light/dark`, async ({ page }, testInfo) => {
     await page.setViewportSize({ width: role === 'client' ? 430 : 390, height: 844 })
     await page.goto('/auth')
-    await page.getByLabel('Email').fill(`${role}@fit.local`)
-    await page.getByLabel('Пароль').fill('FitLocal123!')
-    await page.getByRole('button', { name: 'Войти', exact: true }).click()
+    await nativeSignIn(page, `${role}@fit.local`)
     await expect(page).toHaveURL(role === 'client' ? /\/me$/ : /\/(today|clients)$/)
     const profile = role === 'client' ? '/me/settings' : '/profile/settings'
     for (const dark of [false, true]) {

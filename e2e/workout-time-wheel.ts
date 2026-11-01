@@ -38,11 +38,22 @@ export async function chooseWorkoutTime(page: Page, label: string, totalSeconds:
 }
 
 export async function expectWorkoutTime(page: Page, label: string, totalSeconds: number | undefined, occurrence = 0) {
-  const { fields, trigger, keyboard } = await waitForDurationControl(page, label, occurrence)
-  if (keyboard) {
-    await expect(fields.getByRole('textbox', { name: `${label}: минуты` })).toHaveValue(totalSeconds === undefined ? '' : String(Math.floor(totalSeconds / 60)))
-    await expect(fields.getByRole('textbox', { name: `${label}: секунды` })).toHaveValue(totalSeconds === undefined ? '' : String(totalSeconds % 60).padStart(2, '0'))
-    return
-  }
-  await expect(trigger).toHaveText(totalSeconds === undefined ? 'Добавить время' : `${Math.floor(totalSeconds / 60)}:${String(totalSeconds % 60).padStart(2, '0')}`)
+  const { fields, trigger } = await waitForDurationControl(page, label, occurrence)
+  // Native preferences can arrive after the workout. Read the currently visible
+  // representation instead of retaining the initial wheel/keyboard choice.
+  await expect.poll(async () => {
+    if (await fields.isVisible()) {
+      const minutes = await fields.getByRole('textbox', { name: `${label}: минуты` }).inputValue()
+      const seconds = await fields.getByRole('textbox', { name: `${label}: секунды` }).inputValue()
+      const expectedMinutes = totalSeconds === undefined ? '' : String(Math.floor(totalSeconds / 60))
+      const expectedSeconds = totalSeconds === undefined ? '' : String(totalSeconds % 60).padStart(2, '0')
+      return minutes === expectedMinutes && seconds === expectedSeconds ? 'matched' : `keyboard:${minutes}:${seconds}`
+    }
+    if (await trigger.isVisible()) {
+      const text = (await trigger.textContent())?.trim()
+      const expected = totalSeconds === undefined ? 'Добавить время' : `${Math.floor(totalSeconds / 60)}:${String(totalSeconds % 60).padStart(2, '0')}`
+      return text === expected ? 'matched' : `wheel:${text}`
+    }
+    return 'loading'
+  }).toBe('matched')
 }

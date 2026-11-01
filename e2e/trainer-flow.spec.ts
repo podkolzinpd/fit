@@ -1,5 +1,6 @@
+import { nativeSignIn } from './native-local-fixture'
 import { mockNativeAiSession, nativeAiUrl } from './native-ai-fixture'
-import { expect, test, type Page } from '@playwright/test'
+import { expect, test, type Page } from './native-local-fixture'
 import { chooseWorkoutTime, expectWorkoutTime } from './workout-time-wheel'
 
 async function mockWorkoutParser(page: Page, items: unknown[]) {
@@ -29,9 +30,7 @@ async function selectClient(page: Page, name: string, id?: string) {
 
 test('форма: быстрый ввод разбирает текст в упражнения и подходы', async ({ page }) => {
   await page.goto('/auth')
-  await page.getByLabel('Email').fill('trainer@fit.local')
-  await page.getByLabel('Пароль').fill('FitLocal123!')
-  await page.getByRole('button', { name: 'Войти' }).click()
+  await nativeSignIn(page, 'trainer@fit.local')
   await expect(page.getByRole('heading', { level: 1, name: 'Сегодня' })).toBeVisible()
   await expect(page.getByRole('link', { name: 'Аналитика', exact: true })).toHaveCount(0)
   // Пилот YAFIT-317 default-off: вне allowlist входы в верхнюю навигацию
@@ -97,11 +96,7 @@ test('форма: быстрый ввод разбирает текст в уп�
 test('live: пустой подход Берпи остаётся компактным и не уходит на сервер', async ({ page }, testInfo) => {
   await page.setViewportSize({ width: 390, height: 844 })
   await page.goto('/auth')
-  await page.getByLabel('Email').fill('trainer@fit.local')
-  await page.getByLabel('Пароль').fill('FitLocal123!')
-  const tokenResponse = page.waitForResponse((response) => response.request().method() === 'POST' && response.url().includes('/auth/v1/token?grant_type=password'))
-  await page.getByRole('button', { name: 'Войти' }).click()
-  expect((await tokenResponse).ok()).toBe(true)
+  await nativeSignIn(page, 'trainer')
   try {
     await expect(page).toHaveURL(/\/today$/, { timeout: 3_000 })
   } catch {
@@ -167,9 +162,7 @@ test('live: пустой подход Берпи остаётся компакт
 
 test('форма: заголовок «Сет» создаёт суперсет без потери подходов', async ({ page }) => {
   await page.goto('/auth')
-  await page.getByLabel('Email').fill('trainer@fit.local')
-  await page.getByLabel('Пароль').fill('FitLocal123!')
-  await page.getByRole('button', { name: 'Войти' }).click()
+  await nativeSignIn(page, 'trainer@fit.local')
   await expect(page.getByRole('heading', { level: 1, name: 'Сегодня' })).toBeVisible()
 
   await page.goto('/workouts/new')
@@ -193,9 +186,7 @@ test('форма: заголовок «Сет» создаёт суперсет 
 
 test('форма: короткая беговая фраза создаёт редактируемые интервалы в метрах', async ({ page }) => {
   await page.goto('/auth')
-  await page.getByLabel('Email').fill('trainer@fit.local')
-  await page.getByLabel('Пароль').fill('FitLocal123!')
-  await page.getByRole('button', { name: 'Войти' }).click()
+  await nativeSignIn(page, 'trainer@fit.local')
   await expect(page.getByRole('heading', { level: 1, name: 'Сегодня' })).toBeVisible()
 
   await page.goto('/workouts/new')
@@ -218,9 +209,7 @@ test('форма: короткая беговая фраза создаёт ре
 test('гребной тренажёр использует темп на 500 м и частоту гребков', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 })
   await page.goto('/auth')
-  await page.getByLabel('Email').fill('trainer@fit.local')
-  await page.getByLabel('Пароль').fill('FitLocal123!')
-  await page.getByRole('button', { name: 'Войти' }).click()
+  await nativeSignIn(page, 'trainer@fit.local')
   await expect(page.getByRole('heading', { level: 1, name: 'Сегодня' })).toBeVisible()
 
   await page.goto('/workouts/new')
@@ -287,9 +276,7 @@ test('тренер объединяет распознанные упражне�
 test('trainer can create client, complete workout and save progress', async ({ page }, testInfo) => {
   const trainerAlias = `Анна ${testInfo.workerIndex}-${Date.now()}`
   await page.goto('/auth')
-  await page.getByLabel('Email').fill('trainer@fit.local')
-  await page.getByLabel('Пароль').fill('FitLocal123!')
-  await page.getByRole('button', { name: 'Войти' }).click()
+  await nativeSignIn(page, 'trainer@fit.local')
   await expect(page.getByRole('heading', { level: 1, name: 'Сегодня' })).toBeVisible()
   await page.goto('/clients')
 
@@ -552,6 +539,7 @@ test('trainer can create client, complete workout and save progress', async ({ p
   await page.goto(clientUrl)
   await expect(page.getByRole('heading', { name: trainerAlias })).toBeVisible()
   await page.getByRole('link', { name: 'Прогресс и замеры' }).click()
+  await page.getByRole('status').filter({ hasText: 'Прогресс стал короче' }).getByRole('button', { name: 'Понятно' }).click()
   await page.getByRole('link', { name: 'Открыть замеры и показатели' }).click()
   await page.getByRole('button', { name: 'Добавить замер' }).click()
   await page.getByLabel('Дата').fill('2026-07-20')
@@ -568,11 +556,7 @@ test('trainer can create client, complete workout and save progress', async ({ p
 
 test('live: планка вводится в секундах, таймер закреплён, подтверждённый подход правится карандашом', async ({ page }) => {
   await page.goto('/auth')
-  await page.getByLabel('Email').fill('trainer@fit.local')
-  await page.getByLabel('Пароль').fill('FitLocal123!')
-  const tokenResponse = page.waitForResponse((response) => response.request().method() === 'POST' && response.url().includes('/auth/v1/token?grant_type=password'))
-  await page.getByRole('button', { name: 'Войти' }).click()
-  expect((await tokenResponse).ok()).toBe(true)
+  await nativeSignIn(page, 'trainer')
   try {
     await expect(page).toHaveURL(/\/today$/, { timeout: 3_000 })
   } catch {
@@ -624,9 +608,7 @@ test('live: планка вводится в секундах, таймер за
 
 test('план: порядок упражнений меняется в отдельном режиме и сохраняется', async ({ page }) => {
   await page.goto('/auth')
-  await page.getByLabel('Email').fill('trainer@fit.local')
-  await page.getByLabel('Пароль').fill('FitLocal123!')
-  await page.getByRole('button', { name: 'Войти' }).click()
+  await nativeSignIn(page, 'trainer@fit.local')
   await expect(page.getByRole('heading', { level: 1, name: 'Сегодня' })).toBeVisible()
   await page.goto('/clients')
 
@@ -665,9 +647,7 @@ test('план: порядок упражнений меняется в отде
 
 test('live: порядок упражнений меняется в отдельном режиме', async ({ page }) => {
   await page.goto('/auth')
-  await page.getByLabel('Email').fill('trainer@fit.local')
-  await page.getByLabel('Пароль').fill('FitLocal123!')
-  await page.getByRole('button', { name: 'Войти' }).click()
+  await nativeSignIn(page, 'trainer@fit.local')
   await expect(page.getByRole('heading', { level: 1, name: 'Сегодня' })).toBeVisible()
   await page.goto('/clients')
 
@@ -764,9 +744,7 @@ test('live: порядок упражнений меняется в отдель
 
 test('замена упражнения: в форме плана и в live', async ({ page }) => {
   await page.goto('/auth')
-  await page.getByLabel('Email').fill('trainer@fit.local')
-  await page.getByLabel('Пароль').fill('FitLocal123!')
-  await page.getByRole('button', { name: 'Войти' }).click()
+  await nativeSignIn(page, 'trainer@fit.local')
   await expect(page.getByRole('heading', { level: 1, name: 'Сегодня' })).toBeVisible()
   await page.goto('/clients')
 
@@ -831,9 +809,7 @@ test('замена упражнения: в форме плана и в live', a
 test('карточка упражнения: шапка с оборудованием/мышцами и табы', async ({ page }, testInfo) => {
   await page.setViewportSize({ width: 390, height: 844 })
   await page.goto('/auth')
-  await page.getByLabel('Email').fill('trainer@fit.local')
-  await page.getByLabel('Пароль').fill('FitLocal123!')
-  await page.getByRole('button', { name: 'Войти' }).click()
+  await nativeSignIn(page, 'trainer@fit.local')
   await expect(page.getByRole('heading', { level: 1, name: 'Сегодня' })).toBeVisible()
   await page.goto('/clients')
 
@@ -907,9 +883,7 @@ test('карточка упражнения: шапка с оборудован�
 
 test('план: суперсет работает в Live без создания круговой', async ({ page }, testInfo) => {
   await page.goto('/auth')
-  await page.getByLabel('Email').fill('trainer@fit.local')
-  await page.getByLabel('Пароль').fill('FitLocal123!')
-  await page.getByRole('button', { name: 'Войти' }).click()
+  await nativeSignIn(page, 'trainer@fit.local')
   await expect(page.getByRole('heading', { level: 1, name: 'Сегодня' })).toBeVisible()
   await page.goto('/clients')
 
@@ -1024,9 +998,7 @@ test('план: суперсет работает в Live без создани�
 
 test('profile Cancel resets unsaved edits', async ({ page }) => {
   await page.goto('/auth')
-  await page.getByLabel('Email').fill('trainer@fit.local')
-  await page.getByLabel('Пароль').fill('FitLocal123!')
-  await page.getByRole('button', { name: 'Войти' }).click()
+  await nativeSignIn(page, 'trainer@fit.local')
   await expect(page.getByRole('heading', { level: 1, name: 'Сегодня' })).toBeVisible()
 
   // Настройки профиля открываются отдельным экраном из шестерёнки анкеты.
@@ -1056,9 +1028,7 @@ test('profile Cancel resets unsaved edits', async ({ page }) => {
 
 test('schedule shows the whole week and opens the existing hour grid by day', async ({ page }) => {
   await page.goto('/auth')
-  await page.getByLabel('Email').fill('trainer@fit.local')
-  await page.getByLabel('Пароль').fill('FitLocal123!')
-  await page.getByRole('button', { name: 'Войти' }).click()
+  await nativeSignIn(page, 'trainer@fit.local')
   await expect(page.getByRole('heading', { level: 1, name: 'Сегодня' })).toBeVisible()
   await page.goto('/clients')
 
@@ -1093,9 +1063,7 @@ test('schedule shows the whole week and opens the existing hour grid by day', as
 test('расписание: тренировка без времени остаётся видимой после фокуса часовой сетки', async ({ page }, testInfo) => {
   const clientName = `Без времени ${testInfo.workerIndex}-${Date.now()}`
   await page.goto('/auth')
-  await page.getByLabel('Email').fill('trainer@fit.local')
-  await page.getByLabel('Пароль').fill('FitLocal123!')
-  await page.getByRole('button', { name: 'Войти' }).click()
+  await nativeSignIn(page, 'trainer@fit.local')
   await expect(page.getByRole('heading', { level: 1, name: 'Сегодня' })).toBeVisible()
   await page.goto('/clients')
 
@@ -1141,9 +1109,7 @@ test('расписание: тренировка без времени оста�
 test('расписание: создание тренировки из расписания с датой выбранного дня', async ({ page }, testInfo) => {
   const clientName = `Расписание ${testInfo.workerIndex}-${Date.now()}`
   await page.goto('/auth')
-  await page.getByLabel('Email').fill('trainer@fit.local')
-  await page.getByLabel('Пароль').fill('FitLocal123!')
-  await page.getByRole('button', { name: 'Войти' }).click()
+  await nativeSignIn(page, 'trainer@fit.local')
   await expect(page.getByRole('heading', { level: 1, name: 'Сегодня' })).toBeVisible()
   await page.goto('/clients')
 
@@ -1174,9 +1140,7 @@ test('расписание: создание тренировки из расп�
 
 test('расписание: отмена создания возвращает к выбранному дню', async ({ page }) => {
   await page.goto('/auth')
-  await page.getByLabel('Email').fill('trainer@fit.local')
-  await page.getByLabel('Пароль').fill('FitLocal123!')
-  await page.getByRole('button', { name: 'Войти' }).click()
+  await nativeSignIn(page, 'trainer@fit.local')
   await expect(page.getByRole('heading', { level: 1, name: 'Сегодня' })).toBeVisible()
   await page.goto('/clients')
 
@@ -1197,9 +1161,7 @@ test('расписание: отмена создания возвращает �
 test('расписание: карточка события — время, имя клиента, до двух упражнений', async ({ page }, testInfo) => {
   const clientName = `Карточка ${testInfo.workerIndex}-${Date.now()}`
   await page.goto('/auth')
-  await page.getByLabel('Email').fill('trainer@fit.local')
-  await page.getByLabel('Пароль').fill('FitLocal123!')
-  await page.getByRole('button', { name: 'Войти' }).click()
+  await nativeSignIn(page, 'trainer@fit.local')
   await expect(page.getByRole('heading', { level: 1, name: 'Сегодня' })).toBeVisible()
   await page.goto('/clients')
 
@@ -1248,9 +1210,7 @@ test('расписание: карточка события — время, им
 
 test('комментарий тренера к упражнению: план → live → история', async ({ page }) => {
   await page.goto('/auth')
-  await page.getByLabel('Email').fill('trainer@fit.local')
-  await page.getByLabel('Пароль').fill('FitLocal123!')
-  await page.getByRole('button', { name: 'Войти' }).click()
+  await nativeSignIn(page, 'trainer@fit.local')
   await expect(page.getByRole('heading', { level: 1, name: 'Сегодня' })).toBeVisible()
   await page.goto('/clients')
 
@@ -1333,9 +1293,7 @@ test('комментарий тренера к упражнению: план �
 test('live: удаление подхода и наследование факта при добавлении', async ({ page }, testInfo) => {
   const clientName = `Сет Клиент ${testInfo.workerIndex}-${Date.now()}`
   await page.goto('/auth')
-  await page.getByLabel('Email').fill('trainer@fit.local')
-  await page.getByLabel('Пароль').fill('FitLocal123!')
-  await page.getByRole('button', { name: 'Войти' }).click()
+  await nativeSignIn(page, 'trainer@fit.local')
   await expect(page.getByRole('heading', { level: 1, name: 'Сегодня' })).toBeVisible()
   await page.goto('/clients')
 
@@ -1388,19 +1346,19 @@ test('live: удаление подхода и наследование факт
   // объясняет результат и не делает blind overwrite. Повтор уже с новой
   // версией проходит штатно.
   let rejectAppendAsStale = true
-  await page.route('**/rest/v1/rpc/append_live_set', async (route) => {
-    if (!rejectAppendAsStale) { await route.continue(); return }
+  await page.route('**/v1/workout-exercises/*/sets', async (route) => {
+    if (!rejectAppendAsStale) { await route.fallback(); return }
     rejectAppendAsStale = false
     await route.fulfill({
       status: 409,
       contentType: 'application/json',
-      body: JSON.stringify({ code: 'PT409', details: null, hint: null, message: 'workout_conflict' }),
+      body: JSON.stringify({ error: 'workout_conflict' }),
     })
   })
   await page.getByRole('button', { name: '＋ Подход' }).first().click()
   await expect(page.getByText(/Тренировка изменилась в другом окне/)).toBeVisible()
   await page.getByRole('button', { name: '＋ Подход' }).first().click()
-  await page.unroute('**/rest/v1/rpc/append_live_set')
+  await page.unroute('**/v1/workout-exercises/*/sets')
 
   // Добавленный подход наследует факт (100), а не план (90).
   const pendingWeight = page.locator('.live-set:not(.confirmed)').getByLabel('Фактический вес')
@@ -1408,11 +1366,11 @@ test('live: удаление подхода и наследование факт
 
   // Если ответ autosave потерялся из-за сети, введённый факт остаётся на
   // устройстве и досылается после online без reload.
-  await page.route('**/rest/v1/rpc/save_live_set_draft', (route) => route.abort('failed'))
+  await page.route('**/v1/workout-sets/*/draft', (route) => route.abort('failed'))
   await pendingWeight.fill('105')
   await page.locator('.live-timer').click()
   await expect(page.getByText('Результаты сохранены на телефоне')).toBeVisible()
-  await page.unroute('**/rest/v1/rpc/save_live_set_draft')
+  await page.unroute('**/v1/workout-sets/*/draft')
   await page.evaluate(() => window.dispatchEvent(new Event('online')))
   await expect(page.getByText('Результаты сохранены на телефоне')).toHaveCount(0)
   await page.reload()
@@ -1434,10 +1392,10 @@ test('live: удаление подхода и наследование факт
   await page.getByRole('button', { name: '＋ Подход' }).click()
   const retriedWeight = page.locator('.live-set:not(.confirmed)').getByLabel('Фактический вес')
   await retriedWeight.fill('105')
-  await page.route('**/rest/v1/rpc/confirm_live_set', (route) => route.abort('failed'))
+  await page.route('**/v1/workout-sets/*/confirm', (route) => route.abort('failed'))
   await page.getByRole('button', { name: 'Готово, отдых' }).last().click()
   await expect(page.getByText('Результаты сохранены на телефоне')).toBeVisible()
-  await page.unroute('**/rest/v1/rpc/confirm_live_set')
+  await page.unroute('**/v1/workout-sets/*/confirm')
   await page.getByRole('button', { name: 'Повторить' }).click()
   await expect(page.getByText('Результаты сохранены на телефоне')).toHaveCount(0)
   await expect(page.locator('.live-set.confirmed')).toHaveCount(2)
@@ -1447,9 +1405,7 @@ test('live: удаление подхода и наследование факт
 
 test('live: «Готово» без ввода факта — подход считается выполненным по плану', async ({ page }) => {
   await page.goto('/auth')
-  await page.getByLabel('Email').fill('trainer@fit.local')
-  await page.getByLabel('Пароль').fill('FitLocal123!')
-  await page.getByRole('button', { name: 'Войти' }).click()
+  await nativeSignIn(page, 'trainer@fit.local')
   await expect(page.getByRole('heading', { level: 1, name: 'Сегодня' })).toBeVisible()
   await page.goto('/clients')
 

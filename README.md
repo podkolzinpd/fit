@@ -125,3 +125,16 @@ npm run check
 - [OPERATIONS.md](./OPERATIONS.md) — secrets, Google OAuth, автодеплой БД и release gates.
 
 Текущий foundation переносит базовые CRUD и основной trainer flow. Полный статус переноса и ещё не закрытые UX-сценарии перечислены в `FEATURE_PARITY.md`; до их закрытия V1 не архивируется.
+
+## Native browser fixtures
+
+Продуктовые browser-сценарии используют изолированный native API/PostgreSQL17,
+а не Supabase auth/PostgREST. Перед Playwright выполните
+`npm ci --prefix services/api --ignore-scripts` и
+`npm --prefix services/api run build`; локальный PostgreSQL запускайте через
+Podman. По умолчанию fixtures подключаются только к `127.0.0.1:55432/postgres`.
+На каждый worker создаётся отдельная synthetic DB, перед сценарием выполняется
+reset, после worker удаляется только созданная им DB. Playwright dev server
+работает в `native-e2e` mode через существующие native composition aliases;
+обычная development-композиция и frontend SDK на этом подготовительном этапе
+сохранены. Подробности: [контракт fixtures](docs/design/NATIVE_FRONTEND_FIXTURES_20261101.md).

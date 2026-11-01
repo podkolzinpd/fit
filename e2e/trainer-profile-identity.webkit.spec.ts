@@ -1,4 +1,5 @@
-import { expect, test } from '@playwright/test'
+import { nativeSignIn } from './native-local-fixture'
+import { expect, test } from './native-local-fixture'
 
 test('trainer profile controls and feedback fit the iOS shell', async ({ page }) => {
   const draft = {
@@ -7,18 +8,13 @@ test('trainer profile controls and feedback fit the iOS shell', async ({ page })
     experienceStartYear: null, education: '', formats: '', price: '',
     acceptingClients: true, avatarDataUrl: null, certificates: [],
   }
-  await page.route('**/rest/v1/rpc/get_own_trainer_profile', (route) => route.fulfill({
-    contentType: 'application/json',
-    body: JSON.stringify({
+  await page.route("**/v1/trainer-profile", (route) => route.fulfill({ json: {
       publicId: '99e68cb4-81d6-4b24-9a71-5ecf86934a57', draft, published: draft,
       listedInCatalog: true, publishedAt: '2026-09-17T12:00:00+00:00',
       updatedAt: '2026-09-17T12:00:00+00:00', version: 2, isBrandTrainer: false,
-    }),
-  }))
+    } }))
   await page.goto('/auth')
-  await page.getByLabel('Email').fill('trainer@fit.local')
-  await page.getByLabel('Пароль').fill('FitLocal123!')
-  await page.getByRole('button', { name: 'Войти' }).click()
+  await nativeSignIn(page, 'trainer@fit.local')
   await expect(page).toHaveURL(/\/(today|clients)$/)
 
   await page.goto('/profile')

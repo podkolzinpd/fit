@@ -1,3 +1,5 @@
+import { DataBackendContext } from '../src/app/data-backend-context'
+import { nativeBackend } from '../src/test/native-backend'
 import { useState, type FormEvent } from 'react'
 import { createRoot } from 'react-dom/client'
 import type { WorkoutExerciseDraft } from '../src/shared/domain'
@@ -31,5 +33,5 @@ export function mountWorkoutLoadFieldsHarness() {
   if (original) original.style.display = 'none'
   const mount = document.createElement('div')
   document.body.append(mount)
-  createRoot(mount).render(<Harness />)
+  createRoot(mount).render(<DataBackendContext value={nativeBackend}><Harness /></DataBackendContext>)
 }

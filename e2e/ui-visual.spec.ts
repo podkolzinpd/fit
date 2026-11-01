@@ -1,13 +1,21 @@
+import { test as standaloneTest } from '@playwright/test'
+import { nativeRouteFetch } from './native-local-fixture'
+import { mockTrainingSummaries } from './native-summary-fixture'
+import { mockProgressBundle } from './native-progress-fixture'
+import { fulfillTrainingData, trainingPageParams } from './native-workout-fixture'
+import { setFixture, exerciseFixture, workoutFixture } from './native-workout-fixture'
+import { nativeSignIn } from './native-local-fixture'
+import { nativeRegister } from './native-local-fixture'
 import { mockNativeAiSession, nativeAiUrl } from './native-ai-fixture'
-import { expect, test } from '@playwright/test'
+import { expect, test } from './native-local-fixture'
 import { chooseWorkoutTime } from './workout-time-wheel'
 import { randomUUID } from 'node:crypto'
 import { readFileSync } from 'node:fs'
 import { comparisonWorkoutRow, mockResultsHistory, verifyResultsSources } from './progress-results-fixture'
 import { expectMonochromeAccessibility } from './accessibility-helpers'
 
-test('keyboard time and optional wheel fit client and trainer viewports', async ({ page }, testInfo) => {
-  await page.goto('/auth')
+standaloneTest('keyboard time and optional wheel fit client and trainer viewports', async ({ page }, testInfo) => {
+  await page.goto('/legal/terms')
   // This is an isolated component harness. CI intentionally omits app auth env,
   // so the unrelated startup fallback must not sit above its pointer targets.
   await page.addStyleTag({ content: '#fit-startup-shell, #fit-startup-emergency { display: none !important; }' })
@@ -89,8 +97,8 @@ test('keyboard time and optional wheel fit client and trainer viewports', async 
   await chooseWorkoutTime(page, 'Время, подход 1', 65)
 })
 
-test('trainer finance overview stays compact and readable', async ({ page }, testInfo) => {
-  await page.goto('/auth')
+standaloneTest('trainer finance overview stays compact and readable', async ({ page }, testInfo) => {
+  await page.goto('/legal/terms')
   await page.addStyleTag({ content: '#fit-startup-shell, #fit-startup-emergency { display: none !important; }' })
   await page.evaluate(async () => {
     const modulePath = '/e2e/finance-overview-harness.tsx'
@@ -108,9 +116,9 @@ test('trainer finance overview stays compact and readable', async ({ page }, tes
   await expectVisualBaseline(page, `trainer-finance-overview-${profile}-${process.platform}.png`)
 })
 
-test('client payment information stays compact and does not overlap', async ({ page }, testInfo) => {
+standaloneTest('client payment information stays compact and does not overlap', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name === 'visual-trainer-1440', 'Client payments belong to the mobile client cabinet')
-  await page.goto('/auth')
+  await page.goto('/legal/terms')
   await page.addStyleTag({ content: '#fit-startup-shell, #fit-startup-emergency { display: none !important; }' })
   await page.evaluate(async () => {
     const modulePath = '/e2e/client-payment-info-harness.tsx'
@@ -171,8 +179,8 @@ test('client payment information stays compact and does not overlap', async ({ p
   }
 })
 
-test('trainer client finances keep details compact and disclose history on demand', async ({ page }, testInfo) => {
-  await page.goto('/auth')
+standaloneTest('trainer client finances keep details compact and disclose history on demand', async ({ page }, testInfo) => {
+  await page.goto('/legal/terms')
   await page.addStyleTag({ content: '#fit-startup-shell, #fit-startup-emergency { display: none !important; }' })
   await page.evaluate(async () => {
     const modulePath = '/e2e/finance-client-harness.tsx'
@@ -351,15 +359,12 @@ async function mockProgressPeriodSummary(page: VisualPage, periodStart = '2026-0
       { metric: 'max_weight', from: 72, to: 75, change_percent: 4, favorable: true },
     ] }],
   }
-  await page.route('**/rest/v1/client_published_training_summaries?*', (route) => route.fulfill({
-    contentType: 'application/json', body: JSON.stringify([{
+  await mockTrainingSummaries(page, 'client', [{
       id: '80000000-0000-4000-8000-000000000001', source_summary_id: '80000000-0000-4000-8000-000000000002',
       client_id: demoClientId, period_start: periodStart, period_end: periodEnd, summary: clientSummary,
       display_metrics: displayMetrics, generated_at: `${periodEnd}T12:00:00Z`, published_at: `${periodEnd}T12:00:00Z`,
-    }]),
-  }))
-  await page.route('**/rest/v1/client_training_summaries?*', (route) => route.fulfill({
-    contentType: 'application/json', body: JSON.stringify([{
+    }])
+  await mockTrainingSummaries(page, 'trainer', [{
       id: '80000000-0000-4000-8000-000000000002', client_id: demoClientId,
       period_start: periodStart, period_end: periodEnd,
       trainer_summary: {
@@ -370,24 +375,21 @@ async function mockProgressPeriodSummary(page: VisualPage, periodStart = '2026-0
       },
       client_summary: clientSummary, display_metrics: displayMetrics,
       generated_at: `${periodEnd}T12:00:00Z`, version: 1,
-    }]),
-  }))
+    }])
 }
 
 async function mockPeriodComparison(page: VisualPage) {
   await mockProgressPeriodSummary(page)
-  await page.route('**/rest/v1/rpc/list_workouts', (route) => route.fulfill({
-    contentType: 'application/json', body: JSON.stringify([
+  await page.route('**/v1/training-data?*', (route) => fulfillTrainingData(route, [
       comparisonWorkoutRow('81000000-0000-4000-8000-000000000001', '2026-07-05', 50, 5, 1),
       comparisonWorkoutRow('81000000-0000-4000-8000-000000000002', '2026-08-05', 60, 7, 2),
       comparisonWorkoutRow('81000000-0000-4000-8000-000000000003', '2026-08-12', 60, 7, 2),
-    ]),
-  }))
-  await page.route('**/rest/v1/client_progress?*', (route) => route.fulfill({ contentType: 'application/json', body: JSON.stringify([
-    { id: '82000000-0000-4000-8000-000000000001', client_id: demoClientId, created_by: null, recorded_on: '2026-07-10', weight_kg: 60, chest_cm: null, waist_cm: null, hip_cm: null, notes: null, version: 1 },
-    { id: '82000000-0000-4000-8000-000000000002', client_id: demoClientId, created_by: null, recorded_on: '2026-08-10', weight_kg: 61, chest_cm: null, waist_cm: null, hip_cm: null, notes: null, version: 1 },
-  ]) }))
-  await page.route('**/rest/v1/client_progress_custom?*', (route) => route.fulfill({ contentType: 'application/json', body: '[]' }))
+    ]))
+  await mockProgressBundle(page, { entries: [
+    { id: '82000000-0000-4000-8000-000000000001', clientId: demoClientId, createdBy: null, recordedOn: '2026-07-10', weightKg: 60, chestCm: null, waistCm: null, hipCm: null, notes: null, version: 1 },
+    { id: '82000000-0000-4000-8000-000000000002', clientId: demoClientId, createdBy: null, recordedOn: '2026-08-10', weightKg: 61, chestCm: null, waistCm: null, hipCm: null, notes: null, version: 1 },
+  ] })
+  await mockProgressBundle(page, { customValues: [] })
 }
 
 async function mockAutomaticSummaryGeneration(page: VisualPage) {
@@ -400,21 +402,13 @@ async function mockAutomaticSummaryGeneration(page: VisualPage) {
 
 async function mockBodyMapClientGender(page: VisualPage, gender: 'male' | 'female' | null, trainer: boolean) {
   const row = {
-    id: demoClientId, auth_user_id: null, full_name: 'Тестовый спортсмен', gender,
-    age_years: 30, age_updated_at: '2026-08-01', height_cm: 175,
-    goal: null, archived_at: null, version: 1, merged_into_client_id: null, current_weight_kg: 70,
+    id: demoClientId, auth_user_id: null, fullName: 'Тестовый спортсмен', gender,
+    ageYears: 30, ageUpdatedAt: '2026-08-01', heightCm: 175,
+    goal: null, archivedAt: null, version: 1, merged_into_client_id: null, currentWeightKg: 70,
   }
-  await page.route('**/rest/v1/rpc/get_my_client', (route) => route.fulfill({ json: trainer ? [] : [row] }))
-  if (trainer) await page.route('**/rest/v1/rpc/list_clients', (route) => route.fulfill({ json: [{
-    ...row, can_archive: true, has_account: true, canonical_full_name: row.full_name,
-    note: null, last_activity_at: null, membership_version: 1,
-  }] }))
-  await page.route('**/rest/v1/clients?*', (route) => {
-    // A trainer's linked-client lookup is not the viewed athlete. Returning the
-    // athlete here would switch the authenticated actor to client on reload.
-    const linkedActorLookup = new URL(route.request().url()).searchParams.has('auth_user_id')
-    return trainer && linkedActorLookup ? route.fallback() : route.fulfill({ json: row })
-  })
+  const client = { ...row, canArchive: trainer, hasAccount: true, canonicalFullName: row.fullName, note: null, membershipVersion: trainer ? 1 : null }
+  await page.route('**/v1/clients', route => route.fulfill({ json: { clients: [client] } }))
+
 }
 
 test('body maps keep route, gender and saved-list preferences without AI requests', async ({ page }, testInfo) => {
@@ -511,39 +505,37 @@ test.beforeEach(async ({ page }) => {
 
 async function mockTrainerProgressVisual(page: VisualPage) {
   await mockPeriodComparison(page)
-  await page.route('**/rest/v1/rpc/get_workout_regularity', (route) => route.fulfill({
-    contentType: 'application/json', body: JSON.stringify([{
-      period: 'week', period_start: '2026-08-10', period_end: '2026-08-16',
-      planned_count: 2, completed_count: 4, completed_planned_count: 2,
-      partial_count: 0, skipped_count: 0, completion_percent: 100,
-    }]),
-  }))
-  await page.route('**/rest/v1/rpc/get_client_goal', (route) => route.fulfill({ contentType: 'application/json', body: JSON.stringify({
+  await page.route("**/v1/clients/*/progress/regularity", (route) => route.fulfill({ json: { regularity: [{
+      period: 'week', periodStart: '2026-08-10', periodEnd: '2026-08-16',
+      plannedCount: 2, completedCount: 4, completedPlannedCount: 2,
+      partialCount: 0, skippedCount: 0, completionPercent: 100,
+    }] } }))
+  await mockProgressBundle(page, { goal: {
     id: '85000000-0000-4000-8000-000000000001', clientId: demoClientId,
     title: 'Вернуться к бегу', targetDate: null, status: 'active', version: 1, stages: [], criteria: [],
-  }) }))
+  } })
 }
 
 async function mockMeasurementProgress(page: VisualPage) {
   await mockProgressPeriodSummary(page)
-  await page.route('**/rest/v1/rpc/get_client_goal', (route) => route.fulfill({ contentType: 'application/json', body: JSON.stringify({
+  await mockProgressBundle(page, { goal: {
     id: '86000000-0000-4000-8000-000000000001', clientId: demoClientId,
     title: 'Увеличить рабочий вес и сохранить талию', targetDate: null, status: 'active', version: 1, stages: [],
     criteria: [{ id: '86000000-0000-4000-8000-000000000002', goalId: '86000000-0000-4000-8000-000000000001', metric: 'weight', operation: 'increase_to', targetValue: 83, rangeMin: null, rangeMax: null, unit: 'кг', baselineValue: null, baselineRecordedOn: null, confirmationStatus: 'confirmed', position: 0, version: 1 }],
-  }) }))
-  await page.route('**/rest/v1/client_progress?*', (route) => route.fulfill({ contentType: 'application/json', body: JSON.stringify([
-    { id: '83000000-0000-4000-8000-000000000001', client_id: demoClientId, created_by: null, recorded_on: '2026-07-28', weight_kg: 80, chest_cm: 98, waist_cm: 82, hip_cm: 96, notes: null, version: 1 },
-    { id: '83000000-0000-4000-8000-000000000002', client_id: demoClientId, created_by: null, recorded_on: '2026-08-05', weight_kg: 80.8, chest_cm: 99, waist_cm: 81, hip_cm: 96.5, notes: null, version: 1 },
-    { id: '83000000-0000-4000-8000-000000000003', client_id: demoClientId, created_by: null, recorded_on: '2026-08-15', weight_kg: 81.4, chest_cm: 100, waist_cm: 80.5, hip_cm: 97, notes: null, version: 1 },
-  ]) }))
-  await page.route('**/rest/v1/client_custom_metrics?*', (route) => route.fulfill({ contentType: 'application/json', body: JSON.stringify([
-    { id: '84000000-0000-4000-8000-000000000001', client_id: demoClientId, name: 'Плечи', unit: 'см', position: 0, version: 1 },
-  ]) }))
-  await page.route('**/rest/v1/client_progress_custom?*', (route) => route.fulfill({ contentType: 'application/json', body: JSON.stringify([
-    { progress_id: '83000000-0000-4000-8000-000000000001', metric_id: '84000000-0000-4000-8000-000000000001', value: 112 },
-    { progress_id: '83000000-0000-4000-8000-000000000002', metric_id: '84000000-0000-4000-8000-000000000001', value: 113 },
-    { progress_id: '83000000-0000-4000-8000-000000000003', metric_id: '84000000-0000-4000-8000-000000000001', value: 114.5 },
-  ]) }))
+  } })
+  await mockProgressBundle(page, { entries: [
+    { id: '83000000-0000-4000-8000-000000000001', clientId: demoClientId, createdBy: null, recordedOn: '2026-07-28', weightKg: 80, chestCm: 98, waistCm: 82, hipCm: 96, notes: null, version: 1 },
+    { id: '83000000-0000-4000-8000-000000000002', clientId: demoClientId, createdBy: null, recordedOn: '2026-08-05', weightKg: 80.8, chestCm: 99, waistCm: 81, hipCm: 96.5, notes: null, version: 1 },
+    { id: '83000000-0000-4000-8000-000000000003', clientId: demoClientId, createdBy: null, recordedOn: '2026-08-15', weightKg: 81.4, chestCm: 100, waistCm: 80.5, hipCm: 97, notes: null, version: 1 },
+  ] })
+  await mockProgressBundle(page, { customMetrics: [
+    { id: '84000000-0000-4000-8000-000000000001', clientId: demoClientId, name: 'Плечи', unit: 'см', position: 0, version: 1 },
+  ] })
+  await mockProgressBundle(page, { customValues: [
+    { progressId: '83000000-0000-4000-8000-000000000001', metricId: '84000000-0000-4000-8000-000000000001', value: 112 },
+    { progressId: '83000000-0000-4000-8000-000000000002', metricId: '84000000-0000-4000-8000-000000000001', value: 113 },
+    { progressId: '83000000-0000-4000-8000-000000000003', metricId: '84000000-0000-4000-8000-000000000001', value: 114.5 },
+  ] })
 }
 
 async function mockRegularityProgress(page: VisualPage) {
@@ -557,9 +549,7 @@ async function mockRegularityProgress(page: VisualPage) {
     5,
     1,
   ))
-  await page.route('**/rest/v1/rpc/list_workouts', (route) => route.fulfill({
-    contentType: 'application/json', body: JSON.stringify(rows),
-  }))
+  await page.route('**/v1/training-data?*', (route) => fulfillTrainingData(route, rows))
 }
 
 type VisualPage = import('@playwright/test').Page
@@ -598,41 +588,8 @@ async function gotoStable(page: VisualPage, url: string, options?: VisualGotoOpt
 }
 
 async function signIn(page: import('@playwright/test').Page, email: string, destination: RegExp) {
-  await gotoStable(page, '/auth')
-  await page.getByLabel('Email').fill(email)
-  await page.getByLabel('Пароль').fill('FitLocal123!')
-  const submit = page.getByRole('button', { name: 'Войти' })
-
-  for (let attempt = 0; attempt < 5; attempt += 1) {
-    const tokenResponse = page.waitForResponse((response) => (
-      response.request().method() === 'POST'
-      && response.url().includes('/auth/v1/token?grant_type=password')
-    ))
-    await submit.click()
-    const response = await tokenResponse
-
-    if (response.ok()) {
-      try {
-        await expect(page).toHaveURL(destination, { timeout: 3_000 })
-      } catch {
-        // WebKit иногда получает успешный JWT раньше, чем AuthProvider успевает
-        // обработать событие сессии. Перезагрузка восстанавливает уже записанную
-        // локальную сессию и проверяет настоящий cold-start приложения.
-        await page.reload()
-        await expect(page).toHaveURL(destination, { timeout: 15_000 })
-      }
-      return
-    }
-
-    const retryableUpstreamFailure = [502, 503, 504].includes(response.status())
-    if (!retryableUpstreamFailure || attempt === 4) {
-      await expect(page, `Sign-in returned HTTP ${response.status()}`).toHaveURL(destination, { timeout: 15_000 })
-      return
-    }
-
-    await expect(submit).toBeEnabled()
-    await page.waitForTimeout(500 * (2 ** attempt))
-  }
+  await nativeSignIn(page, email)
+  await expect(page).toHaveURL(destination)
 }
 
 async function removeScheduleVisualWorkouts(
@@ -655,12 +612,8 @@ async function removeScheduleVisualWorkouts(
 }
 
 async function mockRoleHomeWorkoutState(page: VisualPage) {
-  const emptyRows = (route: import('@playwright/test').Route) => route.fulfill({
-    contentType: 'application/json',
-    body: '[]',
-  })
-  await page.route('**/rest/v1/rpc/list_workouts', emptyRows)
-  await page.route('**/rest/v1/rpc/list_trainer_attention_workouts', emptyRows)
+  await page.route('**/v1/training-data?*', route => fulfillTrainingData(route, []))
+  await page.route('**/v1/training-data?scope=attention*', route => fulfillTrainingData(route, []))
 }
 
 async function mockTrainerClients(page: VisualPage) {
@@ -668,163 +621,140 @@ async function mockTrainerClients(page: VisualPage) {
   const archivedNames = ['Мария Соколова', 'Николай Васильев', 'Ольга Морозова']
   const row = (fullName: string, index: number, archived: boolean) => ({
       id: index === 0 ? demoClientId : `71000000-0000-4000-8000-${String(index).padStart(12, '0')}`,
-      can_archive: true,
-      has_account: index === 0,
-      full_name: fullName,
-      canonical_full_name: fullName,
+      canArchive: true,
+      hasAccount: index === 0,
+      fullName: fullName,
+      canonicalFullName: fullName,
       gender: null,
-      age_years: 25 + index,
-      age_updated_at: '2026-08-01',
-      height_cm: 170 + index,
+      ageYears: 25 + index,
+      ageUpdatedAt: '2026-08-01',
+      heightCm: 170 + index,
       goal: null,
       note: null,
-      current_weight_kg: 65 + index,
-      last_activity_at: `2026-08-${String(16 - index).padStart(2, '0')}T10:00:00Z`,
-      archived_at: archived ? `2026-08-${String(10 - index).padStart(2, '0')}T10:00:00Z` : null,
+      currentWeightKg: 65 + index,
+      lastActivityAt: `2026-08-${String(16 - index).padStart(2, '0')}T10:00:00Z`,
+      archivedAt: archived ? `2026-08-${String(10 - index).padStart(2, '0')}T10:00:00Z` : null,
       version: 1,
-      membership_version: 1,
+      membershipVersion: 1,
     })
-  await page.route('**/rest/v1/rpc/list_clients', (route) => {
-    const payload = route.request().postDataJSON() as { p_include_archived?: boolean } | null
+  await page.route("**/v1/clients*", (route) => {
+    const archivedOnly = new URL(route.request().url()).searchParams.get('archived') === 'true'
     const active = names.map((fullName, index) => row(fullName, index, false))
     const archived = archivedNames.map((fullName, index) => row(fullName, index + names.length, true))
-    return route.fulfill({
-      contentType: 'application/json',
-      body: JSON.stringify(payload?.p_include_archived ? [...active, ...archived] : active),
-    })
+    return route.fulfill({ json: { clients: archivedOnly ? archived : active } })
   })
-  await page.route('**/rest/v1/rpc/list_chat_threads', (route) => route.fulfill({
-    contentType: 'application/json',
-    body: JSON.stringify([{
-      conversation_id: '72000000-0000-4000-8000-000000000001', client_id: demoClientId,
-      trainer_id: '22222222-2222-4222-8222-222222222222', partner_user_id: '92000000-0000-4000-8000-000000000029',
-      partner_name: names[0], active_connection: true, last_message_body: 'До встречи',
-      last_message_at: '2026-08-16T12:00:00Z', last_message_sender_id: '92000000-0000-4000-8000-000000000029',
-      unread_count: 3, can_message: true, blocked_by_me: false, blocked_by_partner: false,
-    }]),
-  }))
+  await page.route("**/v1/chat/threads", (route) => route.fulfill({ json: { threads: ([{
+      conversationId: '72000000-0000-4000-8000-000000000001', clientId: demoClientId,
+      trainerId: '22222222-2222-4222-8222-222222222222', partnerUserId: '92000000-0000-4000-8000-000000000029',
+      partnerName: names[0], activeConnection: true, lastMessageBody: 'До встречи',
+      lastMessageAt: '2026-08-16T12:00:00Z', lastMessageSenderId: '92000000-0000-4000-8000-000000000029',
+      unreadCount: 3, can_message: true, blocked_by_me: false, blocked_by_partner: false,
+    }]).map(thread => ({ canMessage: true, blockedByMe: false, blockedByPartner: false, ...thread })) } }))
 }
 
 async function mockClientWorkoutHistory(page: import('@playwright/test').Page, options: { includeBack?: boolean; homeLayout?: boolean; bestResults?: boolean; firstOnly?: boolean; denseAchievements?: boolean } = {}) {
-  const workoutRows = ['2026-08-10', '2026-08-03'].filter((_, index) => !options.firstOnly || index === 0).map((workoutDate, index) => ({
-    id: `b1000000-0000-4000-8000-00000000000${index + 1}`,
-    client_id: demoClientId,
-    trainer_id: '22222222-2222-4222-8222-222222222222',
-    client_name: 'Анна Смирнова',
-    created_by: '92000000-0000-4000-8000-000000000029',
-    workout_date: workoutDate,
-    start_time: '18:00:00',
-    end_time: '19:00:00',
-    started_at: `${workoutDate}T15:00:00Z`,
-    completed_at: `${workoutDate}T16:00:00Z`,
-    status: 'done',
-    notes: null,
-    trainer_review: index === 0 ? 'Отличная техника и ровный темп.' : null,
-    trainer_reaction: index === 0 ? 'strong' : null,
-    trainer_review_author_id: index === 0 ? '22222222-2222-4222-8222-222222222222' : null,
-    trainer_reviewed_at: index === 0 ? `${workoutDate}T18:00:00Z` : null,
-    client_comment: null,
-    session_rpe: index === 0 ? 7 : 6,
-    wellbeing: 'good',
-    discomfort: false,
-    has_pr: index === 0,
-    stage_id: null,
-    stage_title: null,
-    version: 1,
-    total_count: 2,
-    exercises: [{
-      id: `b2000000-0000-4000-8000-00000000000${index + 1}`,
-      position: 0,
-      exercise_source: 'system',
-      exercise_ref: 'bench-press',
-      custom_exercise_id: null,
-      exercise_name: 'Жим лёжа',
-      muscle_group: 'chest',
-      input_kind: 'strength',
-      block_id: `b2000000-0000-4000-8000-00000000000${index + 1}`,
-      block_type: 'single',
-      block_preset: 'set',
-      block_rounds: 1,
-      rest_between_exercises_sec: 0,
-      rest_between_rounds_sec: 90,
-      rest_between_sets_sec: 90,
-      trainer_comment: null,
-      sets: [{
-        id: `b3000000-0000-4000-8000-00000000000${index + 1}`,
-        position: 0,
-        plan_weight_kg: 40,
-        plan_reps: 10,
-        plan_duration_min: null,
-        plan_duration_sec: null,
-        plan_distance_km: null,
-        plan_rpe: null,
-        fact_weight_kg: 40 + index * 5,
-        fact_reps: 10,
-        fact_duration_min: null,
-        fact_duration_sec: null,
-        fact_distance_km: null,
-        fact_rpe: null,
-        confirmed_at: `${workoutDate}T15:30:00Z`,
-        version: 1,
-      }],
-    }],
-  }))
-  if (options.includeBack) workoutRows.forEach((workout, index) => workout.exercises.push({
-    id: `b2100000-0000-4000-8000-00000000000${index + 1}`,
-    position: 1,
-    exercise_source: 'system',
-    exercise_ref: 'lat-pulldown',
-    custom_exercise_id: null,
-    exercise_name: 'Тяга верхнего блока',
-    muscle_group: 'back',
-    input_kind: 'strength',
-    block_id: `b2100000-0000-4000-8000-00000000000${index + 1}`,
-    block_type: 'single',
-    block_preset: 'set',
-    block_rounds: 1,
-    rest_between_exercises_sec: 0,
-    rest_between_rounds_sec: 90,
-    rest_between_sets_sec: 90,
-    trainer_comment: null,
-    sets: [{
-      id: `b3100000-0000-4000-8000-00000000000${index + 1}`,
-      position: 0,
-      plan_weight_kg: 35,
-      plan_reps: 10,
-      plan_duration_min: null,
-      plan_duration_sec: null,
-      plan_distance_km: null,
-      plan_rpe: null,
-      fact_weight_kg: options.bestResults && index === 0 ? 40 : 35,
-      fact_reps: 10,
-      fact_duration_min: null,
-      fact_duration_sec: null,
-      fact_distance_km: null,
-      fact_rpe: null,
-      confirmed_at: `${workout.workout_date}T15:45:00Z`,
-      version: 1,
-    }],
-  }))
+  const workoutRows = ['2026-08-10', '2026-08-03'].filter((_, index) => !options.firstOnly || index === 0).map((workoutDate, index) => (workoutFixture({
+id: `b1000000-0000-4000-8000-00000000000${index + 1}`,
+clientId: demoClientId,
+trainerId: '22222222-2222-4222-8222-222222222222',
+clientName: 'Анна Смирнова',
+createdBy: '92000000-0000-4000-8000-000000000029',
+workoutDate: workoutDate,
+startTime: '18:00:00',
+endTime: '19:00:00',
+startedAt: `${workoutDate}T15:00:00Z`,
+completedAt: `${workoutDate}T16:00:00Z`,
+status: 'done',
+notes: null,
+trainerReview: index === 0 ? 'Отличная техника и ровный темп.' : null,
+trainerReaction: index === 0 ? 'strong' : null,
+trainerReviewAuthorId: index === 0 ? '22222222-2222-4222-8222-222222222222' : null,
+trainerReviewedAt: index === 0 ? `${workoutDate}T18:00:00Z` : null,
+clientComment: null,
+sessionRpe: index === 0 ? 7 : 6,
+wellbeing: 'good',
+discomfort: false,
+hasPr: index === 0,
+stageId: null,
+stageTitle: null,
+version: 1,
+exercises: [exerciseFixture({
+id: `b2000000-0000-4000-8000-00000000000${index + 1}`,
+position: 0,
+source: 'system',
+ref: 'bench-press',
+customExerciseId: null,
+name: 'Жим лёжа',
+muscleGroup: 'chest',
+inputKind: 'strength',
+blockId: `b2000000-0000-4000-8000-00000000000${index + 1}`,
+blockType: 'single',
+blockPreset: 'set',
+blockRounds: 1,
+restBetweenExercisesSec: 0,
+restBetweenRoundsSec: 90,
+restBetweenSetsSec: 90,
+trainerComment: null,
+sets: [setFixture({
+id: `b3000000-0000-4000-8000-00000000000${index + 1}`,
+position: 0,
+confirmedAt: `${workoutDate}T15:30:00Z`,
+version: 1,
+plan: { weightKg: 40, reps: 10, durationMin: null, durationSec: null, distanceKm: null, rpe: null },
+fact: { weightKg: 40 + index * 5, reps: 10, durationMin: null, durationSec: null, distanceKm: null, rpe: null }
+})]
+})]
+})))
+  if (options.includeBack) workoutRows.forEach((workout, index) => workout.exercises.push(exerciseFixture({
+id: `b2100000-0000-4000-8000-00000000000${index + 1}`,
+position: 1,
+source: 'system',
+ref: 'lat-pulldown',
+customExerciseId: null,
+name: 'Тяга верхнего блока',
+muscleGroup: 'back',
+inputKind: 'strength',
+blockId: `b2100000-0000-4000-8000-00000000000${index + 1}`,
+blockType: 'single',
+blockPreset: 'set',
+blockRounds: 1,
+restBetweenExercisesSec: 0,
+restBetweenRoundsSec: 90,
+restBetweenSetsSec: 90,
+trainerComment: null,
+sets: [setFixture({
+id: `b3100000-0000-4000-8000-00000000000${index + 1}`,
+position: 0,
+confirmedAt: `${workout.workoutDate}T15:45:00Z`,
+version: 1,
+plan: { weightKg: 35, reps: 10, durationMin: null, durationSec: null, distanceKm: null, rpe: null },
+fact: { weightKg: options.bestResults && index === 0 ? 40 : 35, reps: 10, durationMin: null, durationSec: null, distanceKm: null, rpe: null }
+})]
+})))
   if (options.bestResults) {
-    workoutRows[0]!.exercises[0]!.sets[0]!.fact_weight_kg = 45
-    workoutRows[1]!.exercises[0]!.sets[0]!.fact_weight_kg = 40
+    workoutRows[0]!.exercises[0]!.sets[0]!.fact.weightKg = 45
+    workoutRows[1]!.exercises[0]!.sets[0]!.fact.weightKg = 40
     for (const [position, ref, name, group, currentWeight, previousWeight] of [
       [2, 'lateral-raise', 'Разведение гантелей в стороны', 'shoulders', 16, 14],
       [3, 'barbell-squat', 'Присед со штангой', 'legs', 80, 75],
     ] as const) workoutRows.forEach((workout, index) => {
       const base = workout.exercises[0]!
-      workout.exercises.push({ ...base, id: `${workout.id}-${ref}`, exercise_ref: ref, exercise_name: name, muscle_group: group, position,
-        block_id: `${workout.id}-${ref}-block`, sets: base.sets.map((set) => ({ ...set, id: `${workout.id}-${ref}-set`, fact_weight_kg: index === 0 ? currentWeight : previousWeight })) })
+      workout.exercises.push({ ...base, id: `${workout.id}-${ref}`, ref: ref, name: name, muscleGroup: group, position,
+        blockId: `${workout.id}-${ref}-block`, sets: base.sets.map((set) => (setFixture({
+...set,
+id: `${workout.id}-${ref}-set`,
+fact: { ...set.fact, weightKg: index === 0 ? currentWeight : previousWeight }
+}))) })
     })
   }
   if (options.homeLayout) {
     const workout = workoutRows[0]!
-    workout.exercises[0]!.exercise_name = 'Жим гантелей лёжа на скамье с длинным названием'
-    workout.exercises[0]!.sets[0]!.fact_weight_kg = 50
+    workout.exercises[0]!.name = 'Жим гантелей лёжа на скамье с длинным названием'
+    workout.exercises[0]!.sets[0]!.fact.weightKg = 50
     for (const [index, name, group] of [[3, 'Разгибание ног', 'legs'], [4, 'Скручивания', 'core'], [5, 'Бег', 'cardio']] as const) {
       const base = workout.exercises[0]!
-      workout.exercises.push({ ...base, id: `b2100000-0000-4000-8000-00000000000${index}`, exercise_ref: `home-${index}`,
-        exercise_name: name, muscle_group: group, position: index,
+      workout.exercises.push({ ...base, id: `b2100000-0000-4000-8000-00000000000${index}`, ref: `home-${index}`,
+        name: name, muscleGroup: group, position: index,
         sets: base.sets.map((set) => ({ ...set, id: `b3100000-0000-4000-8000-00000000000${index}` })) })
     }
   }
@@ -837,41 +767,31 @@ async function mockClientWorkoutHistory(page: import('@playwright/test').Page, o
       const suffix = String(index + 1).padStart(12, '0')
       const workoutId = `b1000000-0000-4000-8000-${suffix}`
       const exerciseId = `b2000000-0000-4000-8000-${suffix}`
-      return {
-        ...template, id: workoutId, workout_date: workoutDate,
-        started_at: `${workoutDate}T15:00:00Z`, completed_at: `${workoutDate}T16:00:00Z`,
-        exercises: [{ ...exercise, id: exerciseId, block_id: exerciseId, sets: [{
-          ...set, id: `b3000000-0000-4000-8000-${suffix}`, fact_weight_kg: 40 + index,
-          confirmed_at: `${workoutDate}T15:30:00Z`,
-        }] }],
-      }
+      return workoutFixture({
+...template,
+id: workoutId,
+workoutDate: workoutDate,
+startedAt: `${workoutDate}T15:00:00Z`,
+completedAt: `${workoutDate}T16:00:00Z`,
+exercises: [{ ...exercise, id: exerciseId, blockId: exerciseId, sets: [setFixture({
+...set,
+id: `b3000000-0000-4000-8000-${suffix}`,
+confirmedAt: `${workoutDate}T15:30:00Z`,
+fact: { ...set.fact, weightKg: 40 + index }
+})] }]
+})
     })
     workoutRows.splice(0, workoutRows.length, ...rows.reverse())
   }
-  await page.route('**/rest/v1/workouts?*', (route) => {
-    const id = new URL(route.request().url()).searchParams.get('id')?.replace(/^eq\./, '')
-    const row = workoutRows.find((item) => item.id === id)
-    return row ? route.fulfill({ contentType: 'application/json', body: JSON.stringify(row) }) : route.fallback()
-  })
-  await page.route('**/rest/v1/workout_exercises?*', (route) => {
-    const id = new URL(route.request().url()).searchParams.get('workout_id')?.replace(/^eq\./, '')
-    const row = workoutRows.find((item) => item.id === id)
-    return row ? route.fulfill({ contentType: 'application/json', body: JSON.stringify(row.exercises) }) : route.fallback()
-  })
-  await page.route('**/rest/v1/workout_sets?*', (route) => {
-    const ids = new URL(route.request().url()).searchParams.get('workout_exercise_id') ?? ''
-    const exercises = workoutRows.flatMap((item) => item.exercises).filter((item) => ids.includes(item.id))
-    return exercises.length ? route.fulfill({ contentType: 'application/json', body: JSON.stringify(exercises.flatMap((item) => item.sets.map((set) => ({ ...set, workout_exercise_id: item.id })))) }) : route.fallback()
-  })
-  await page.route('**/rest/v1/rpc/list_workouts', async (route) => {
-    const body = route.request().postDataJSON() as { p_from?: string | null; p_to?: string | null; p_offset?: number }
+  await page.route('**/v1/training-data?*', async (route) => {
+    const body = trainingPageParams(route)
     const filtered = workoutRows.filter((workout) => (
-      (!body.p_from || workout.workout_date >= body.p_from)
-      && (!body.p_to || workout.workout_date <= body.p_to)
+      (!body.from || workout.workoutDate >= body.from)
+      && (!body.to || workout.workoutDate <= body.to)
     ))
-    const offset = body.p_offset ?? 0
+    const offset = body.offset ?? 0
     const rows = filtered.slice(offset).map((workout) => ({ ...workout, total_count: filtered.length }))
-    await route.fulfill({ contentType: 'application/json', body: JSON.stringify(rows) })
+    await fulfillTrainingData(route, rows)
   })
 }
 
@@ -967,12 +887,7 @@ async function createStandaloneClient(
   emailPrefix = 'visual-client',
 ) {
   await gotoStable(page, '/auth')
-  await page.getByRole('button', { name: 'Создать аккаунт' }).click()
-  await page.getByLabel('Тип аккаунта').selectOption('client')
-  await page.getByLabel('Имя').fill(name)
-  await page.getByLabel('Email').fill(`${emailPrefix}-${projectName}-${randomUUID()}@fit.local`)
-  await page.getByLabel('Пароль').fill('FitLocal123!')
-  await page.getByRole('button', { name: 'Создать аккаунт' }).click()
+  await nativeRegister(page, { key: `${emailPrefix}-${projectName}-${randomUUID()}@fit.local`, firstName: name, role: 'client' })
   try {
     await expect(page).toHaveURL(/\/me$/, { timeout: 3_000 })
   } catch {
@@ -1026,79 +941,15 @@ async function openPreviewLiveWorkout(page: import('@playwright/test').Page, fre
   await expect(page.getByRole('heading', { name: 'Live-тренировка' })).toBeVisible()
 }
 
-test('visual sign-in retries a transient local auth gateway failure', async ({ page }, testInfo) => {
-  test.skip(testInfo.project.name !== 'visual-trainer-1440', 'One profile is enough to verify the shared sign-in helper')
-  let tokenRequests = 0
-  await page.route('**/auth/v1/token?grant_type=password', async (route) => {
-    tokenRequests += 1
-    if (tokenRequests === 1) {
-      await route.fulfill({
-        status: 502,
-        contentType: 'application/json',
-        body: JSON.stringify({ message: 'An invalid response was received from the upstream server' }),
-      })
-      return
-    }
-    await route.continue()
-  })
-
+standaloneTest('native auth entry keeps its fixed identity with either theme preference', async ({ page }) => {
   await gotoStable(page, '/auth')
-  await page.getByLabel('Email').fill('trainer@fit.local')
-  await page.getByLabel('Пароль').fill('FitLocal123!')
-  const successfulRetry = page.waitForResponse((response) => (
-    response.request().method() === 'POST'
-    && response.url().includes('/auth/v1/token?grant_type=password')
-    && response.ok()
-  ))
-  await page.getByRole('button', { name: 'Войти' }).click()
-  await successfulRetry
-  await expect(page).toHaveURL(/\/today$/, { timeout: 15_000 })
-  expect(tokenRequests).toBe(2)
-
-  let linkedClientRequests = 0
-  await page.route('**/rest/v1/clients?*', async (route) => {
-    linkedClientRequests += 1
-    if (linkedClientRequests === 1) {
-      await route.fulfill({
-        status: 502,
-        contentType: 'application/json',
-        body: JSON.stringify({ message: 'An invalid response was received from the upstream server' }),
-      })
-      return
-    }
-    await route.continue()
-  })
-  await gotoStable(page, '/profile')
-  await expect(page.getByRole('heading', { name: 'Профиль' })).toBeVisible()
-  expect(linkedClientRequests).toBeGreaterThanOrEqual(2)
-})
-
-test('auth family keeps light and dark visual baselines', async ({ page }) => {
+  await expect(page.getByRole('button', { name: 'Продолжить с Yandex ID' })).toBeEnabled()
+  await expect(page.getByLabel('Email')).toHaveCount(0)
+  await expect(page.getByLabel('Пароль')).toHaveCount(0)
+  await expectVisualBaseline(page, `auth-native-entry-${process.platform}.png`, [], true)
+  await page.addInitScript(() => localStorage.setItem('fit.appTheme', 'dark'))
   await gotoStable(page, '/auth')
-  await expect(page.locator('.auth-flow-identity')).toBeVisible()
-  await expect(page.locator('html')).toHaveClass(/ui-identity/)
-  await expectVisualBaseline(page, `auth-login-${process.platform}.png`, [], true)
-
-  await page.getByRole('button', { name: 'Создать аккаунт' }).click()
-  await expect(page.getByRole('heading', { name: 'Регистрация' })).toBeVisible()
-  await expectVisualBaseline(page, `auth-register-${process.platform}.png`, [], true)
-
-  await gotoStable(page, '/auth/reset')
-  await expect(page.getByRole('heading', { name: 'Новый пароль' })).toBeVisible()
-  await expectVisualBaseline(page, `auth-reset-${process.platform}.png`, [], true)
-
-  await page.addInitScript(() => window.localStorage.setItem('fit.appTheme', 'dark'))
-  await gotoStable(page, '/auth/forgot')
-  await expect(page.getByRole('heading', { name: 'Восстановление пароля' })).toBeVisible()
-  await expectVisualBaseline(page, `auth-forgot-dark-${process.platform}.png`, [], true, '#111214')
-
-  await gotoStable(page, '/auth')
-  await expect(page.getByRole('heading', { name: 'Добро пожаловать' })).toBeVisible()
-  await expectVisualBaseline(page, `auth-login-dark-${process.platform}.png`, [], true, '#111214')
-
-  await gotoStable(page, '/auth/callback')
-  await expect(page.getByRole('heading', { name: 'Завершаем вход' })).toBeVisible()
-  await expectVisualBaseline(page, `auth-callback-dark-${process.platform}.png`, [], true, '#111214')
+  await expectVisualBaseline(page, `auth-native-entry-${process.platform}.png`, [], true)
 })
 
 test('Join keeps manual and invitation states in the auth family', async ({ page }) => {
@@ -1440,13 +1291,11 @@ test('trainer catalog stays compact and aligned across supported widths', async 
     city: 'Москва', metroStationIds: ['msk-dinamo', 'msk-tsska'], customLocations: ['World Class Динамо'], trainingModes: ['online', 'in_person'], experienceStartYear: 2018,
     education: '', formats: '', price: '', acceptingClients: true, avatarDataUrl: null, certificates: [],
   }
-  await page.route('**/rest/v1/rpc/list_public_trainer_profiles_page', (route) => {
-    expect(route.request().postDataJSON()).toEqual(expect.objectContaining({ p_accepting_clients: true }))
-    return route.fulfill({
-      contentType: 'application/json', body: JSON.stringify({ items: [
-        { publicId: '91000000-0000-4000-8000-000000000001', draft, published: draft, listedInCatalog: true, publishedAt: '2026-09-12T10:00:00Z', updatedAt: '2026-09-12T10:00:00Z', version: 2, isBrandTrainer: false },
-      ], totalCount: 1, nextOffset: null }),
-    })
+  await page.route("**/v1/trainers/catalog*", (route) => {
+    expect(new URL(route.request().url()).searchParams.get('accepting')).toBe('true')
+    return route.fulfill({ json: { items: [
+        { publicId: '91000000-0000-4000-8000-000000000001', profile: draft, listedInCatalog: true, publishedAt: '2026-09-12T10:00:00Z', updatedAt: '2026-09-12T10:00:00Z', version: 2, isBrandTrainer: false },
+      ], totalCount: 1, nextOffset: null } })
   })
   await signIn(page, 'client@fit.local', /\/me$/)
   await page.evaluate(() => sessionStorage.removeItem('fit.trainer-catalog.view.v1'))
@@ -1490,7 +1339,7 @@ test('trainer catalog stays compact and aligned across supported widths', async 
   await page.screenshot({ path: testInfo.outputPath(`trainer-catalog-${testInfo.project.name}.png`), fullPage: true })
 })
 
-test('public trainer photo fills supported mobile widths in both themes', async ({ page }, testInfo) => {
+standaloneTest('public trainer photo fills supported mobile widths in both themes', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name === 'visual-trainer-1440', 'The public trainer photo viewer is a mobile acceptance case')
   const publicId = '91000000-0000-4000-8000-000000000003'
   const photoBytes = readFileSync(new URL('../public/exercises/vital/smith-seated-military-press.jpg', import.meta.url))
@@ -1501,9 +1350,9 @@ test('public trainer photo fills supported mobile widths in both themes', async 
     mimeType: 'image/jpeg', width: 960, height: 960 }))
   const published = { displayName: 'Анна Иванова', bio: '', specialties: ['Силовые тренировки'], city: 'Москва', metroStationIds: [], customLocations: [], trainingModes: ['online'], experienceStartYear: 2018,
     education: '', formats: '', price: '', acceptingClients: true, avatarDataUrl: null, photos, certificates: [] }
-  await page.route('**/rest/v1/rpc/get_public_trainer_profile', (route) => route.fulfill({ contentType: 'application/json', body: JSON.stringify({
+  await page.route("**/v1/trainers/*/public-profile", (route) => route.fulfill({ json: {
     publicId, draft: published, published, listedInCatalog: true, publishedAt: '2026-09-20T10:00:00Z', updatedAt: '2026-09-20T10:00:00Z', version: 1, isBrandTrainer: false,
-  }) }))
+  } }))
   await page.goto(`/trainers/${publicId}`)
   await expect(page.getByRole('heading', { name: 'Анна Иванова' })).toBeVisible()
 
@@ -1610,7 +1459,6 @@ test('client key routes keep their visual baselines', async ({ page }, testInfo)
 test('exercise catalog and technique detail keep their visual baselines in both themes', async ({ page }) => {
   // Keep the catalog snapshot independent from custom exercises created by
   // behavior tests and from unrelated first-visit navigation coachmarks.
-  await page.route('**/rest/v1/custom_exercises?*', (route) => route.fulfill({ contentType: 'application/json', body: '[]' }))
   await signIn(page, 'trainer@fit.local', /\/today$/)
   await gotoStable(page, '/exercises')
   await expect(page.locator('.phone-frame')).toHaveClass(/exercise-catalog-identity/)
@@ -1656,9 +1504,7 @@ async function mockOwnTrainerProfile(page: VisualPage) {
     avatarDataUrl: null,
     certificates: [],
   }
-  await page.route('**/rest/v1/rpc/get_own_trainer_profile', (route) => route.fulfill({
-    contentType: 'application/json',
-    body: JSON.stringify({
+  await page.route("**/v1/trainer-profile", (route) => route.fulfill({ json: {
       publicId: '99e68cb4-81d6-4b24-9a71-5ecf86934a57',
       draft,
       published: draft,
@@ -1667,8 +1513,7 @@ async function mockOwnTrainerProfile(page: VisualPage) {
       updatedAt: '2026-09-10T12:00:00+00:00',
       version: 2,
       isBrandTrainer: false,
-    }),
-  }))
+    } }))
 }
 
 test('trainer Profile and feedback keep their visual baselines in both themes', async ({ page }) => {
@@ -1745,18 +1590,18 @@ test('client Progress zone list keeps its dark visual baseline', async ({ page }
 
 test('client Progress shows composite goal facts in both themes', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name === 'visual-trainer-1440', 'Client Progress uses mobile visual profiles')
-  await page.route('**/rest/v1/rpc/get_client_goal', (route) => route.fulfill({ contentType: 'application/json', body: JSON.stringify({
+  await mockProgressBundle(page, { goal: {
     id: 'a1000000-0000-4000-8000-000000000001', clientId: demoClientId,
     title: 'Держать вес и тренироваться регулярно', targetDate: null, status: 'active', version: 1, stages: [],
     criteria: [
       { id: 'a2000000-0000-4000-8000-000000000002', goalId: 'a1000000-0000-4000-8000-000000000001', metric: 'weight', operation: 'maintain_range', targetValue: null, rangeMin: 58.5, rangeMax: 59.5, unit: 'кг', baselineValue: null, baselineRecordedOn: null, confirmationStatus: 'confirmed', position: 0, version: 1 },
       { id: 'a2000000-0000-4000-8000-000000000003', goalId: 'a1000000-0000-4000-8000-000000000001', metric: 'workout_regularity', operation: 'increase_to', targetValue: 2, rangeMin: null, rangeMax: null, unit: 'трен.', baselineValue: null, baselineRecordedOn: null, regularityPeriod: 'week', regularityMode: 'each_period', confirmationStatus: 'confirmed', position: 1, version: 1 },
     ],
-  }) }))
-  await page.route('**/rest/v1/client_progress?*', (route) => route.fulfill({ contentType: 'application/json', body: JSON.stringify([
-    { id: 'a4000000-0000-4000-8000-000000000004', client_id: demoClientId, created_by: null, recorded_on: '2026-08-15', weight_kg: 59, chest_cm: null, waist_cm: null, hip_cm: null, notes: null, version: 1 },
-  ]) }))
-  await page.route('**/rest/v1/client_progress_custom?*', (route) => route.fulfill({ contentType: 'application/json', body: '[]' }))
+  } })
+  await mockProgressBundle(page, { entries: [
+    { id: 'a4000000-0000-4000-8000-000000000004', clientId: demoClientId, createdBy: null, recordedOn: '2026-08-15', weightKg: 59, chestCm: null, waistCm: null, hipCm: null, notes: null, version: 1 },
+  ] })
+  await mockProgressBundle(page, { customValues: [] })
   await openClientProgress(page)
   const overviewGoal = page.locator('.progress-overview-panel .client-progress-goal-story')
   await expect(overviewGoal.locator('.goal-criterion-progress-row:visible')).toHaveCount(0)
@@ -2149,7 +1994,7 @@ test('client card edit keeps its visual baseline', async ({ page }, testInfo) =>
 async function openWorkoutCreate(page: import('@playwright/test').Page, dark = false) {
   await page.clock.setFixedTime(new Date('2026-08-29T18:00:00+03:00'))
   // The empty-form baseline must not inherit a goal from earlier local scenarios.
-  await page.route('**/rest/v1/rpc/get_client_goal', (route) => route.fulfill({ json: null }))
+  await mockProgressBundle(page, { goal: null })
   await signIn(page, 'client@fit.local', /\/me$/)
   await gotoStable(page, '/me/settings')
   const darkTheme = page.getByRole('switch', { name: 'Тёмная тема' })
@@ -2303,26 +2148,23 @@ test('workout detail, completion and exercise history keep their visual baseline
   await page.clock.setFixedTime(new Date('2026-09-18T07:00:00.000Z'))
   const trainer = testInfo.project.name === 'visual-trainer-1440'
   let exposeCompletionComparison = false
-  await page.route('**/rest/v1/rpc/list_workouts', async (route) => {
-    if (!exposeCompletionComparison) return route.continue()
-    const response = await route.fetch()
-    const rows = await response.json() as Array<Record<string, unknown>>
-    const body = route.request().postDataJSON() as { p_client_id?: string | null }
+  await page.route('**/v1/training-data?*', async (route) => {
+    if (!exposeCompletionComparison) return route.fallback()
+    const response = await nativeRouteFetch(route)
+    const { workouts: rows } = await response.json() as import('../src/data/repositories/yandex-pilot.repository').YandexPilotTrainingData
+    const body = trainingPageParams(route)
     const previous = comparisonWorkoutRow('89000000-0000-4000-8000-000000000001', '2026-08-20', 30, 0, 2)
-    previous.client_id = body.p_client_id ?? demoClientId
-    previous.trainer_id = String(rows[0]?.trainer_id ?? previous.trainer_id)
-    previous.client_name = String(rows[0]?.client_name ?? previous.client_name)
-    previous.exercises = [{ ...previous.exercises[0]!, exercise_ref: 'bench-press', exercise_name: 'Жим штанги лёжа' }]
-    const result = [...rows, previous].map((row) => ({ ...row, total_count: rows.length + 1 }))
-    await route.fulfill({ contentType: 'application/json', body: JSON.stringify(result) })
+    previous.clientId = body.clientId ?? demoClientId
+    previous.trainerId = String(rows[0]?.trainerId ?? previous.trainerId)
+    previous.clientName = String(rows[0]?.clientName ?? previous.clientName)
+    previous.exercises = [{ ...previous.exercises[0]!, ref: 'bench-press', name: 'Жим штанги лёжа' }]
+    const result = [...rows, previous]
+    await fulfillTrainingData(route, result)
   })
-  await page.route('**/rest/v1/rpc/list_workout_personal_records', (route) => route.fulfill({
-    contentType: 'application/json',
-    body: JSON.stringify([{
-      exercise_name: 'Жим лёжа (Штанга)', exercise_ref: 'bench-press', input_kind: 'strength',
-      metric: 'weight_reps', primary_value: 382.5, reps: 9, weight_kg: 42.5,
-    }]),
-  }))
+  await page.route("**/v1/workouts/*/personal-records", (route) => route.fulfill({ json: { records: [{
+      name: 'Жим лёжа (Штанга)', ref: 'bench-press', inputKind: 'strength',
+      metric: 'weight_reps', primary_value: 382.5, reps: 9, weightKg: 42.5,
+    }] } }))
   await openWorkoutForDetailReview(page, trainer, false, async () => {
     await expect(page.getByRole('button', { name: 'Начать тренировку' })).toBeVisible()
     await expectVisualBaseline(page, `workout-detail-planned-${process.platform}.png`)
@@ -2509,7 +2351,7 @@ test('client Live keeps row geometry, notes and timer independent', async ({ pag
   await page.locator('.live-exercise-note summary').click()
   const note = page.getByLabel(/^Заметка:/)
   await note.fill('Скамья 3, удобная высота')
-  const saved = page.waitForResponse((response) => response.url().includes('/rpc/set_exercise_comment') && response.ok())
+  const saved = page.waitForResponse((response) => response.url().includes('/comment') && response.ok())
   await page.locator('.live-timer').click()
   await saved
   await page.reload()
@@ -2674,13 +2516,13 @@ test('trainer key routes keep their visual baselines', async ({ page }, testInfo
   await expectVisualBaseline(page, 'trainer-schedule.png')
 
   await mockClientWorkoutHistory(page, { includeBack: true, bestResults: true })
-  await page.route('**/rest/v1/client_training_summaries?*', async (route) => {
+  await page.route('**/v1/clients/*/training-summaries', async (route) => {
     // Trainer history follows the saved summary's period, not the browser's
     // current date. Pin that period to the workout fixture without replacing
     // the established narrative, goal, or other summary fields.
-    const response = await route.fetch()
-    const rows = await response.json() as Record<string, unknown>[]
-    await route.fulfill({ json: rows.map((row) => ({ ...row, period_start: '2026-07-17', period_end: '2026-08-16' })) })
+    const response = await nativeRouteFetch(route)
+    const { summaries: rows } = await response.json() as { summaries: Record<string, unknown>[] }
+    await route.fulfill({ json: { summaries: rows.map(row => ({ ...row, period_start: '2026-07-17', period_end: '2026-08-16' })) } })
   })
   await gotoStable(page, `/progress/${demoClientId}`)
   await expect(page.getByRole('heading', { name: 'Прогресс', exact: true })).toBeVisible()
@@ -2710,8 +2552,7 @@ test('trainer key routes keep their visual baselines', async ({ page }, testInfo
   // seed before the separate full-page and narrative baselines: adding raw
   // facts there intentionally deduplicates narrative sections.
   for (const pattern of [
-    '**/rest/v1/client_training_summaries?*', '**/rest/v1/rpc/list_workouts',
-    '**/rest/v1/workouts?*', '**/rest/v1/workout_exercises?*', '**/rest/v1/workout_sets?*',
+    '**/v1/clients/*/training-summaries', '**/v1/training-data?*',
   ]) await page.unroute(pattern)
   await gotoStable(page, `/progress/${demoClientId}`)
   await expect(page.locator('.client-progress-main-now')).toBeVisible()
@@ -2889,7 +2730,7 @@ test('trainer Clients list keeps its mobile visual baselines', async ({ page }, 
 test('exercise picker keeps search, filters and technique readable', async ({ page }, testInfo) => {
   // The baseline represents a new plan without a goal. Isolate it from goal
   // records written by other scenarios sharing the local demo client.
-  await page.route('**/rest/v1/rpc/get_client_goal', (route) => route.fulfill({ contentType: 'application/json', body: 'null' }))
+  await mockProgressBundle(page, { goal: null })
   await signIn(page, 'trainer@fit.local', /\/today$/)
   const profile = testInfo.project.name === 'visual-trainer-1440' ? 'desktop' : testInfo.project.name.replace('visual-client-', 'mobile-')
   await gotoStable(page, `/workouts/new?client=${demoClientId}`)
@@ -2930,9 +2771,7 @@ test('exercise picker keeps search, filters and technique readable', async ({ pa
 })
 
 test('trainer Client Detail keeps its visual baselines', async ({ page }, testInfo) => {
-  await page.route('**/rest/v1/rpc/list_workout_summaries', (route) => route.fulfill({
-    contentType: 'application/json', body: '[]',
-  }))
+  await page.route('**/v1/training-data?*', route => fulfillTrainingData(route, []))
   await signIn(page, 'trainer@fit.local', /\/today$/)
   await page.clock.install({ time: new Date('2026-08-16T18:00:00+03:00') })
   await gotoStable(page, `/clients/${demoClientId}`)
@@ -3120,9 +2959,7 @@ test('trainer Schedule keeps its compact workspace in both themes', async ({ pag
 test('Home body map keeps its front and back switch aligned', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name === 'visual-trainer-1440', 'Client Home')
   await mockClientWorkoutHistory(page, { includeBack: true, homeLayout: true })
-  await page.route('**/rest/v1/workouts?*', (route) => new URL(route.request().url()).searchParams.get('select') === 'workout_date'
-    ? route.fulfill({ contentType: 'application/json', body: JSON.stringify({ workout_date: '2026-08-03' }) }) : route.fallback())
-  await page.route('**/rest/v1/client_published_training_summaries?*', (route) => route.fulfill({ contentType: 'application/json', body: '[]' }))
+  await mockTrainingSummaries(page, 'client', [])
   await page.clock.install({ time: new Date('2026-08-16T18:00:00+03:00') })
   await signIn(page, 'client@fit.local', /\/me$/)
   const map = page.getByRole('region', { name: 'Последняя тренировка' }).getByRole('region', { name: 'Нагрузка по телу' })
@@ -3203,9 +3040,7 @@ test('personal workout result stays on Home and remains available in Progress hi
     summaryRequestCount += 1
     return route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ error: 'temporarily unavailable' }) })
   }
-  await page.route('**/rest/v1/workouts?*', (route) => new URL(route.request().url()).searchParams.get('select') === 'workout_date'
-    ? route.fulfill({ contentType: 'application/json', body: JSON.stringify({ workout_date: '2026-08-03' }) }) : route.fallback())
-  await page.route('**/rest/v1/client_published_training_summaries?*', (route) => route.fulfill({ contentType: 'application/json', body: '[]' }))
+  await mockTrainingSummaries(page, 'client', [])
   await page.route('https://functions.yandexcloud.net/**', rejectUnexpectedSummary)
   await page.route('**/v1/clients/*/training-summaries/generate', rejectUnexpectedSummary)
   await page.clock.install({ time: new Date('2026-08-16T18:00:00+03:00') })
@@ -3373,25 +3208,25 @@ test('results center keeps detailed analytics in dark theme', async ({ page }, t
 test('reliable chat stays compact on client phones and trainer desktop', async ({ page }, testInfo) => {
   const trainer = testInfo.project.name === 'visual-trainer-1440'
   const conversationId = 'b9000000-0000-4000-8000-000000000001'
-  await page.route('**/rest/v1/rpc/list_chat_threads', (route) => route.fulfill({ contentType: 'application/json', body: JSON.stringify([{
-    conversation_id: conversationId,
-    client_id: '11111111-1111-4111-8111-111111111111',
-    trainer_id: '90000000-0000-4000-8000-000000000009',
-    partner_user_id: trainer ? '92000000-0000-4000-8000-000000000029' : '90000000-0000-4000-8000-000000000009',
-    partner_name: trainer ? 'Анна Смирнова' : 'Тест Тренер',
-    active_connection: true,
-    last_message_body: 'Хорошо, тогда до встречи завтра',
-    last_message_at: '2026-09-10T16:45:00.000Z',
-    last_message_sender_id: trainer ? '90000000-0000-4000-8000-000000000009' : '92000000-0000-4000-8000-000000000029',
-    unread_count: trainer ? 2 : 0,
-  }]) }))
-  await page.route('**/rest/v1/rpc/list_chat_messages_v3', (route) => route.fulfill({ contentType: 'application/json', body: JSON.stringify([
-    { id: 'b9000000-0000-4000-8000-000000000012', conversation_id: conversationId, sender_id: trainer ? '90000000-0000-4000-8000-000000000009' : '92000000-0000-4000-8000-000000000029', body: 'Хорошо, тогда до встречи завтра', created_at: '2026-09-10T16:45:00.000Z', edited_at: null, reply_to_message_id: null },
-    { id: 'b9000000-0000-4000-8000-000000000011', conversation_id: conversationId, sender_id: trainer ? '92000000-0000-4000-8000-000000000029' : '90000000-0000-4000-8000-000000000009', body: 'Как самочувствие после тренировки?', created_at: '2026-09-10T16:42:00.000Z', edited_at: null, reply_to_message_id: null },
-  ]) }))
-  await page.route('**/rest/v1/rpc/get_chat_unread_state', (route) => route.fulfill({ contentType: 'application/json', body: '[]' }))
-  await page.route('**/rest/v1/rpc/get_chat_connection_state', (route) => route.fulfill({ contentType: 'application/json', body: JSON.stringify([{ active_connection: true, invitation_pending: false, invited_at: null, can_invite: false, can_accept: false, trainer_switch_required: false }]) }))
-  await page.route('**/rest/v1/rpc/mark_chat_read_v2', (route) => route.fulfill({ contentType: 'application/json', body: 'null' }))
+  await page.route("**/v1/chat/threads", (route) => route.fulfill({ json: { threads: ([{
+    conversationId: conversationId,
+    clientId: '11111111-1111-4111-8111-111111111111',
+    trainerId: '90000000-0000-4000-8000-000000000009',
+    partnerUserId: trainer ? '92000000-0000-4000-8000-000000000029' : '90000000-0000-4000-8000-000000000009',
+    partnerName: trainer ? 'Анна Смирнова' : 'Тест Тренер',
+    activeConnection: true,
+    lastMessageBody: 'Хорошо, тогда до встречи завтра',
+    lastMessageAt: '2026-09-10T16:45:00.000Z',
+    lastMessageSenderId: trainer ? '90000000-0000-4000-8000-000000000009' : '92000000-0000-4000-8000-000000000029',
+    unreadCount: trainer ? 2 : 0,
+  }]).map(thread => ({ canMessage: true, blockedByMe: false, blockedByPartner: false, ...thread })) } }))
+  await page.route("**/v1/chat/conversations/*/messages?*", (route) => route.fulfill({ json: { messages: ([
+    { id: 'b9000000-0000-4000-8000-000000000012', conversationId: conversationId, senderId: trainer ? '90000000-0000-4000-8000-000000000009' : '92000000-0000-4000-8000-000000000029', body: 'Хорошо, тогда до встречи завтра', createdAt: '2026-09-10T16:45:00.000Z', editedAt: null, reply_to_message_id: null },
+    { id: 'b9000000-0000-4000-8000-000000000011', conversationId: conversationId, senderId: trainer ? '92000000-0000-4000-8000-000000000029' : '90000000-0000-4000-8000-000000000009', body: 'Как самочувствие после тренировки?', createdAt: '2026-09-10T16:42:00.000Z', editedAt: null, reply_to_message_id: null },
+  ]).map(message => ({ replyTo: null, image: null, ...message })), nextCursor: null } }))
+  await page.route("**/v1/chat/conversations/*/unread", (route) => route.fulfill({ json: { unread: { firstMessageId: null, firstCreatedAt: null, unreadCount: 0 } } }))
+  await page.route("**/v1/chat/conversations/*/connection", (route) => route.fulfill({ json: { state: ([{ activeConnection: true, invitationPending: false, invitedAt: null, canInvite: false, canAccept: false, trainerSwitchRequired: false }])[0] } }))
+  await page.route("**/v1/chat/conversations/*/read", (route) => route.fulfill({ status: 204 }))
   await signIn(page, trainer ? 'trainer@fit.local' : 'client@fit.local', trainer ? /\/today$/ : /\/me$/)
   await gotoStable(page, `/chat/${conversationId}`)
   await expect(page.getByLabel('Сообщение')).toBeVisible()

@@ -1,14 +1,10 @@
-import { expect, test } from '@playwright/test'
+import { nativeRegister } from './native-local-fixture'
+import { expect, test } from './native-local-fixture'
 import { randomUUID } from 'node:crypto'
 
 test('global rollout gives a new trainer the Today identity', async ({ page }) => {
   await page.goto('/auth')
-  await page.getByRole('button', { name: 'Создать аккаунт' }).click()
-  await page.getByLabel('Тип аккаунта').selectOption('trainer')
-  await page.getByLabel('Имя').fill('Today flag off')
-  await page.getByLabel('Email').fill(`today-flag-off-${randomUUID()}@fit.local`)
-  await page.getByLabel('Пароль').fill('FitLocal123!')
-  await page.getByRole('button', { name: 'Создать аккаунт' }).click()
+  await nativeRegister(page, { key: `today-flag-off-${randomUUID()}@fit.local`, firstName: 'Today flag off', role: 'trainer' })
   await expect(page).toHaveURL(/\/(today|clients)$/)
 
   await page.goto('/today')

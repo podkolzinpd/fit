@@ -1,7 +1,7 @@
-import { expect, test, type Page } from '@playwright/test'
+import { nativeSignIn, nativeRegister, closeNativeContext } from './native-local-fixture'
+import { expect, test, type Page } from './native-local-fixture'
 import { chooseWorkoutTime } from './workout-time-wheel'
 
-const password = 'FitLocal123!'
 
 async function fillClientProfileDetails(page: Page) {
   await page.getByLabel('Пол').selectOption('female')
@@ -11,12 +11,14 @@ async function fillClientProfileDetails(page: Page) {
 
 async function register(page: Page, values: { name: string; email: string; role?: 'client' }) {
   await page.goto('/auth')
-  await page.getByRole('button', { name: 'Создать аккаунт' }).click()
-  if (values.role) await page.getByLabel('Тип аккаунта').selectOption(values.role)
-  await page.getByLabel('Имя').fill(values.name)
-  await page.getByLabel('Email').fill(values.email)
-  await page.getByLabel('Пароль').fill(password)
-  await page.getByRole('button', { name: 'Создать аккаунт' }).click()
+  await nativeRegister(page, { key: values.email, firstName: values.name, role: values.role ?? 'trainer' })
+}
+
+// Native data is refreshed when the app becomes visible again. Exercise
+// that existing contract without the retired Supabase Realtime channel.
+async function pollNative(page: Page) {
+  await page.waitForLoadState('networkidle')
+  await page.evaluate(() => document.dispatchEvent(new Event('visibilitychange')))
 }
 
 function dateOffset(days: number) {
@@ -42,9 +44,7 @@ async function setRpe(page: Page, value: number) {
 
 async function loginDemo(page: Page, email: string, destination: RegExp) {
   await page.goto('/auth')
-  await page.getByLabel('Email').fill(email)
-  await page.getByLabel('Пароль').fill(password)
-  await page.getByRole('button', { name: 'Войти' }).click()
+  await nativeSignIn(page, email)
   await expect(page).toHaveURL(destination)
 }
 
@@ -72,11 +72,11 @@ test('trainer and athlete exchange messages, keep a draft and update unread stat
     await trainer.reload()
     await expect(trainer.getByLabel('Сообщение')).toHaveValue('Черновик ответа')
   } finally {
-    await Promise.allSettled([trainerContext.close(), clientContext.close()])
+    await Promise.all([closeNativeContext(trainerContext), closeNativeContext(clientContext)])
   }
 })
 
-test('client and trainer receive progress and workout changes without reload', async ({ browser }, testInfo) => {
+test('client and trainer refresh shared progress and workouts when the app becomes visible', async ({ browser }, testInfo) => {
   testInfo.setTimeout(120_000)
   const suffix = `${testInfo.workerIndex}-${Date.now()}`
   const trainerContext = await browser.newContext()
@@ -86,6 +86,7 @@ test('client and trainer receive progress and workout changes without reload', a
 
   try {
     await register(trainer, { name: 'Realtime тренер', email: `realtime-trainer-${suffix}@fit.local` })
+    await pollNative(trainer)
     await expect(trainer.getByRole('heading', { level: 1, name: 'Сегодня' })).toBeVisible()
     await trainer.goto('/clients')
     await trainer.getByRole('link', { name: 'Добавить' }).click()
@@ -109,30 +110,36 @@ test('client and trainer receive progress and workout changes without reload', a
       email: `realtime-client-${suffix}@fit.local`,
       role: 'client',
     })
+    await pollNative(client)
     await expect(client.getByRole('heading', { name: 'Тренируйтесь и следите за прогрессом' })).toBeVisible()
     await client.goto('/join')
     await client.getByLabel('Код приглашения').fill(code!)
     await client.getByRole('button', { name: 'Присоединиться' }).click()
+    await pollNative(client)
     await expect(client.getByRole('heading', { name: 'Тренер подключён' })).toBeVisible()
     await client.getByRole('button', { name: 'Открыть кабинет' }).click()
     await expect(client).toHaveURL(/\/me$/)
+    await pollNative(trainer)
     await expect(trainer.getByRole('button', { name: 'Пригласить клиента' })).toHaveCount(0, { timeout: 10_000 })
 
     await trainer.goto(`/clients/${clientId}/goal`)
     await trainer.getByLabel('Цель').fill('Realtime цель')
     await trainer.getByLabel('Дата достижения').fill(dateOffset(30))
     await trainer.getByRole('button', { name: 'Создать цель' }).click()
+    await pollNative(client)
     await expect(client.getByText('Realtime цель', { exact: true })).toBeVisible({ timeout: 10_000 })
     await trainer.getByRole('button', { name: '＋ Добавить' }).click()
     await trainer.getByLabel('Название этапа').fill('Realtime этап')
     await trainer.getByLabel('Начало').fill(dateOffset(0))
     await trainer.getByLabel('Конец').fill(dateOffset(7))
     await trainer.getByRole('button', { name: 'Добавить этап' }).click()
+    await pollNative(client)
     await expect(client.getByText('Текущий этап: Realtime этап', { exact: true })).toBeVisible({ timeout: 10_000 })
 
     await trainer.goto(`/progress/${clientId}?view=measurements`)
     await trainer.getByRole('button', { name: /История ·/ }).click()
     await client.goto('/me/progress')
+    await pollNative(client)
     await expect(client.getByRole('heading', { name: 'Мой прогресс' })).toBeVisible()
     await client.getByRole('button', { name: /История замеров ·/ }).click()
     await client.getByRole('button', { name: 'Добавить замер' }).click()
@@ -141,17 +148,24 @@ test('client and trainer receive progress and workout changes without reload', a
     await client.getByLabel('Дата').fill(dateOffset(-1))
     await client.getByLabel('Вес, кг').fill('61.1')
     await client.getByRole('button', { name: 'Сохранить замер' }).click()
+    await expect(client.getByRole('button', { name: 'Сохранить замер' })).toHaveCount(0)
+    await pollNative(trainer)
     await expect(trainer.getByText('вес 61,1 кг', { exact: true })).toBeVisible({ timeout: 10_000 })
 
     await trainer.getByRole('button', { name: 'Добавить замер' }).click()
     await trainer.getByLabel('Дата').fill(dateOffset(-2))
     await trainer.getByLabel('Вес, кг').fill('62.2')
     await trainer.getByRole('button', { name: 'Сохранить замер' }).click()
+    await expect(trainer.getByRole('button', { name: 'Сохранить замер' })).toHaveCount(0)
+    await pollNative(client)
     await expect(client.getByText('вес 62,2 кг', { exact: true })).toBeVisible({ timeout: 10_000 })
 
     await client.goto('/me/workouts')
+    await pollNative(client)
     await expect(client.getByRole('link', { name: 'Добавить', exact: true })).toHaveCount(1)
+    await pollNative(client)
     await expect(client.getByText('БЛИЖАЙШЕЕ')).toHaveCount(0)
+    await pollNative(client)
     await expect(client.locator('#workouts-history-panel .workout-chronicle-card')).toHaveCount(0)
     await client.waitForTimeout(500)
     await trainer.goto(`/workouts/new?client=${clientId}`)
@@ -168,26 +182,32 @@ test('client and trainer receive progress and workout changes without reload', a
     const workoutUrl = trainer.url()
 
     const assignedWorkout = client.getByRole('link', { name: /Бег.*План/ })
+    await pollNative(client)
     await expect(assignedWorkout).toBeVisible({ timeout: 10_000 })
     await assignedWorkout.click()
     await client.getByRole('button', { name: 'Начать тренировку' }).click()
 
     // Обе стороны остаются на одном workout detail: старт и завершение должны
     // появиться у тренера через realtime, без reload или повторной навигации.
+    await pollNative(trainer)
     await expect(trainer.getByRole('link', { name: 'Продолжить тренировку' })).toBeVisible({ timeout: 10_000 })
     await chooseWorkoutTime(client, 'Фактическое время', 30 * 60)
     await client.getByLabel('Фактическая дистанция').fill('5')
     await client.getByRole('button', { name: 'Готово, отдых' }).click()
+    await pollNative(client)
     await expect(client.locator('.live-exercise-collapsed')).toBeVisible()
     await Promise.all([
       client.waitForURL(workoutUrl),
       client.getByRole('button', { name: 'Завершить тренировку' }).click(),
     ])
+    await pollNative(trainer)
     await expect(trainer.getByRole('heading', { name: 'Отзыв тренера' })).toBeVisible({ timeout: 10_000 })
 
     // Завершение уже видно тренеру до необязательного feedback: его ошибка или
     // пропуск не может откатить сохранённый факт тренировки.
+    await pollNative(trainer)
     await expect(trainer.locator('.workout-detail-page .workout-status-completed')).toHaveCount(0)
+    await pollNative(trainer)
     await expect(trainer.locator('.completed-exercise-list')).toBeVisible()
     const clientComment = `Realtime комментарий ${suffix}`
     const feedbackCard = client.locator('.workout-feedback')
@@ -196,7 +216,10 @@ test('client and trainer receive progress and workout changes without reload', a
     await feedbackCard.getByRole('button', { name: 'Да', exact: true }).click()
     await client.getByRole('textbox', { name: 'Заметка к итогам тренировки', exact: true }).fill(clientComment)
     await feedbackCard.getByRole('button', { name: 'Сохранить самочувствие', exact: true }).click()
+    await expect(client.getByText('Итоги тренировки сохранены.', { exact: true })).toBeVisible()
+    await pollNative(trainer)
     await expect(trainer.getByText('RPE 7/10', { exact: true })).toBeVisible({ timeout: 10_000 })
+    await pollNative(trainer)
     await expect(trainer.locator('.workout-feedback .workout-review-text')).toContainText(clientComment, { timeout: 10_000 })
 
     const trainerReview = `Realtime отзыв ${suffix}`
@@ -207,7 +230,9 @@ test('client and trainer receive progress and workout changes without reload', a
     await trainerReviewCard.getByRole('button', { name: '👍', exact: true }).click()
     await trainer.getByRole('textbox', { name: 'Отзыв тренера', exact: true }).fill(trainerReview)
     await trainer.getByRole('button', { name: 'Отправить ответ', exact: true }).click()
+    await pollNative(client)
     await expect(client.getByText(trainerReview, { exact: true })).toBeVisible({ timeout: 10_000 })
+    await pollNative(client)
     await expect(client.getByLabel('Реакция 👍', { exact: true })).toBeVisible({ timeout: 10_000 })
 
     const exerciseHistoryUrl = await trainer.locator('.exercise-history-link').first().getAttribute('href')
@@ -241,6 +266,6 @@ test('client and trainer receive progress and workout changes without reload', a
   } finally {
     // Не маскируем исходное падение шага вторичной ошибкой teardown, если
     // Playwright уже закрыл один из контекстов после общего timeout.
-    await Promise.allSettled([trainerContext.close(), clientContext.close()])
+    await Promise.all([closeNativeContext(trainerContext), closeNativeContext(clientContext)])
   }
 })

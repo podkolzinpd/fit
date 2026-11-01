@@ -1,10 +1,9 @@
-import { expect, test } from '@playwright/test'
+import { nativeSignIn } from './native-local-fixture'
+import { expect, test } from './native-local-fixture'
 
 test('client saves a workout to favorites, then plans a new one from it', async ({ page }) => {
   await page.goto('/auth')
-  await page.getByLabel('Email').fill('client@fit.local')
-  await page.getByLabel('Пароль').fill('FitLocal123!')
-  await page.getByRole('button', { name: 'Войти' }).click()
+  await nativeSignIn(page, 'client@fit.local')
   await expect(page).toHaveURL(/\/me$/)
 
   // Собираем реальную тренировку с одним упражнением и сохраняем как план.
@@ -66,13 +65,11 @@ test('client saves a workout to favorites, then plans a new one from it', async 
 })
 
 test('client sees a retry action, not a misleading empty state, when favorites fail to load', async ({ page }) => {
-  await page.route('**/rest/v1/rpc/list_favorite_workouts', (route) => route.fulfill({
+  await page.route('**/v1/favorite-workouts', (route) => route.fulfill({
     status: 500, contentType: 'application/json', body: JSON.stringify({ message: 'internal error' }),
   }))
   await page.goto('/auth')
-  await page.getByLabel('Email').fill('client@fit.local')
-  await page.getByLabel('Пароль').fill('FitLocal123!')
-  await page.getByRole('button', { name: 'Войти' }).click()
+  await nativeSignIn(page, 'client@fit.local')
   await expect(page).toHaveURL(/\/me$/)
 
   await page.goto('/me/workouts?tab=presets')

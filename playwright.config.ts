@@ -11,9 +11,9 @@ export default defineConfig({
   // Устаревший rollout-флаг здесь маскировал регрессии нового основного сценария.
   webServer: [{ command: process.env.FIT_TEST_PRODUCTION_BUILD === 'true'
     ? `npx --no-install vite preview --host 127.0.0.1 --port ${testPort}`
-    : `npm run dev:frontend -- --host 127.0.0.1 --port ${testPort}`, url: `http://127.0.0.1:${testPort}`, reuseExistingServer: !process.env.CI,
+    : `npm run dev:frontend -- --mode native-e2e --host 127.0.0.1 --port ${testPort}`, url: `http://127.0.0.1:${testPort}`, reuseExistingServer: !process.env.CI,
     // Synthetic fixture identities only; never used in a production build.
-    env: { VITE_QUICK_WORKOUT_ENTRY_ENABLED: process.env.FIT_QUICK_WORKOUT_ENTRY_ACCEPTANCE === '1' ? 'true' : 'false', VITE_QUICK_WORKOUT_ENTRY_PILOT_USER_IDS: 'c0ac0000-6010-4000-8000-000000000001,c0ac0000-6010-4000-8000-000000000002', VITE_CLIENT_WORKOUT_REDESIGN_ENABLED: 'true', VITE_CLIENT_WORKOUT_REDESIGN_PILOT_USER_IDS: 'c11e0000-6010-4000-8000-000000000001', VITE_COACH_WORKOUT_REDESIGN_ENABLED: 'true', VITE_COACH_WORKOUT_REDESIGN_PILOT_USER_IDS: 'c0ac0000-6010-4000-8000-000000000001,c0ac0000-6010-4000-8000-000000000002',
+    env: { VITE_YANDEX_OAUTH_CLIENT_ID: 'fixture-client-id', VITE_YANDEX_API_BASE_URL: process.env.VITE_YANDEX_API_BASE_URL ?? 'http://127.0.0.1:4100', VITE_YANDEX_APP_SESSION_ENABLED: 'true', VITE_YANDEX_MAIN_ROUTING_ENABLED: 'true', VITE_YANDEX_ONLY_AUTH_ENABLED: 'true', VITE_YANDEX_NATIVE_REGISTRATION_ENABLED: 'true', VITE_QUICK_WORKOUT_ENTRY_ENABLED: process.env.FIT_QUICK_WORKOUT_ENTRY_ACCEPTANCE === '1' ? 'true' : 'false', VITE_QUICK_WORKOUT_ENTRY_PILOT_USER_IDS: 'c0ac0000-6010-4000-8000-000000000001,c0ac0000-6010-4000-8000-000000000002', VITE_CLIENT_WORKOUT_REDESIGN_ENABLED: 'true', VITE_CLIENT_WORKOUT_REDESIGN_PILOT_USER_IDS: 'c11e0000-6010-4000-8000-000000000001', VITE_COACH_WORKOUT_REDESIGN_ENABLED: 'true', VITE_COACH_WORKOUT_REDESIGN_PILOT_USER_IDS: 'c0ac0000-6010-4000-8000-000000000001,c0ac0000-6010-4000-8000-000000000002',
       VITE_COACH_PLAN_INPUT_ENABLED: 'true', VITE_COACH_PLAN_INPUT_PILOT_USER_IDS: 'c0ac0000-6010-4000-8000-000000000001,c0ac0000-6010-4000-8000-000000000002',
       VITE_COACH_PLAN_LAYOUT_ENABLED: 'true', VITE_COACH_PLAN_LAYOUT_PILOT_USER_IDS: 'c0ac0000-6010-4000-8000-000000000001,c0ac0000-6010-4000-8000-000000000002',
       VITE_COACH_LIVE_DENSITY_ENABLED: 'true', VITE_COACH_LIVE_DENSITY_PILOT_USER_IDS: 'c0ac0000-6010-4000-8000-000000000001,c0ac0000-6010-4000-8000-000000000002',
@@ -21,7 +21,7 @@ export default defineConfig({
   }, {
     command: process.env.FIT_TEST_PRODUCTION_BUILD === 'true'
       ? `npx --no-install vite preview --host 127.0.0.1 --port ${testPort + 1000}`
-      : `npm run dev:frontend -- --host 127.0.0.1 --port ${testPort + 1000}`,
+      : `npm run dev:frontend -- --mode native-e2e --host 127.0.0.1 --port ${testPort + 1000}`,
     url: `http://127.0.0.1:${testPort + 1000}`, reuseExistingServer: !process.env.CI,
     env: { VITE_YANDEX_OAUTH_CLIENT_ID: 'fixture-client-id', VITE_YANDEX_API_BASE_URL: process.env.VITE_YANDEX_API_BASE_URL ?? 'http://127.0.0.1:4100',
       VITE_YANDEX_APP_SESSION_ENABLED: 'true', VITE_YANDEX_MAIN_ROUTING_ENABLED: 'true',
