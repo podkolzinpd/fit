@@ -2241,7 +2241,7 @@ test('Lifecycle P2 text review returns to the same draft and keeps chosen format
   await lifecycleChooseClient(page)
   await form.getByRole('button', { name: 'Самостоятельно', exact: true }).click()
   const key = `fit.workout-form-draft.${id}.new--2026-11-01--quick`
-  const requestId = await page.evaluate(k => JSON.parse(localStorage.getItem(k)!).requestId as string, key)
+  const requestId = await page.evaluate(k => (JSON.parse(localStorage.getItem(k)!) as { requestId: string }).requestId, key)
   await form.getByRole('button', { name: 'Ввести текстом', exact: true }).click()
   await page.getByRole('textbox', { name: 'Тренировка', exact: true }).fill('Приседания один подход десять повторений')
   await page.getByRole('button', { name: 'Разобрать тренировку', exact: true }).click()
@@ -2254,7 +2254,7 @@ test('Lifecycle P2 text review returns to the same draft and keeps chosen format
   await expect(form).toBeVisible()
   await expect(form.getByRole('textbox', { name: 'Название тренировки' })).toHaveValue('Сохранённое намерение')
   await expect(form.getByRole('button', { name: 'Самостоятельно', exact: true })).toHaveAttribute('aria-pressed', 'true')
-  expect(await page.evaluate(k => JSON.parse(localStorage.getItem(k)!).requestId as string, key)).toBe(requestId)
+  expect(await page.evaluate(k => (JSON.parse(localStorage.getItem(k)!) as { requestId: string }).requestId, key)).toBe(requestId)
   await form.getByRole('button', { name: 'Ввести текстом', exact: true }).click()
   await expect(page.getByRole('textbox', { name: 'Тренировка', exact: true })).toHaveValue('Приседания один подход десять повторений')
 })
