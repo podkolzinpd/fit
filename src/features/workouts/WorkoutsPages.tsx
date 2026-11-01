@@ -1030,8 +1030,8 @@ function TrainerScheduleV2({ forceDayView = false }: { forceDayView?: boolean })
         </section>
       </> : <>
         {timelineEvents.length === 0 && untimed.length === 0 && independent.length === 0 && <p className="schedule-v2-empty-day" role="status">{fitLimeToday ? 'На этот день тренировок нет' : 'Свободный день'}</p>}
-        {independent.length > 0 && <section className="schedule-v2-untimed" aria-label="Самостоятельные тренировки"><strong>Самостоятельно</strong>{independent.map((workout) => <Link key={workout.id} to={`/workouts/${workout.id}`} state={{ returnTo }}><span className="schedule-v2-avatar">{clientInitials(workout.clientName)}</span><span><b>{workout.clientName}</b><small>{eventTime(workout) || 'Без времени'} · {scheduleV2WorkoutLine(workout)}</small></span>{workout.status === 'done' ? <CheckIcon /> : workout.status === 'cancelled' ? <span className="schedule-cancelled-mark" role="img" aria-label="Не состоялась"><CloseIcon /></span> : null}</Link>)}</section>}
-        {untimed.length > 0 && <section className="schedule-v2-untimed" aria-labelledby="schedule-v2-untimed-title"><strong id="schedule-v2-untimed-title">Без времени</strong>{untimed.map((workout) => <Link key={workout.id} to={`/workouts/${workout.id}`} state={{ returnTo }}><span className="schedule-v2-avatar">{clientInitials(workout.clientName)}</span><span><b>{workout.clientName}</b><small>{scheduleV2WorkoutLine(workout)}</small></span>{workout.status === 'done' ? <CheckIcon /> : workout.status === 'cancelled' ? <span className="schedule-cancelled-mark" role="img" aria-label="Не состоялась"><CloseIcon /></span> : null}</Link>)}</section>}
+        {independent.length > 0 && <section className="schedule-v2-untimed" aria-label="Самостоятельные тренировки"><strong>Самостоятельно</strong>{independent.map((workout) => <Link key={workout.id} data-status={workout.status} to={`/workouts/${workout.id}`} state={{ returnTo }}><span className="schedule-v2-avatar">{clientInitials(workout.clientName)}</span><span><b>{workout.clientName}</b><small>{eventTime(workout) || 'Без времени'} · {scheduleV2WorkoutLine(workout)}</small></span>{workout.status === 'done' ? <CheckIcon /> : workout.status === 'cancelled' ? <span className="schedule-cancelled-mark" role="img" aria-label="Не состоялась"><CloseIcon /></span> : null}</Link>)}</section>}
+        {untimed.length > 0 && <section className="schedule-v2-untimed" aria-labelledby="schedule-v2-untimed-title"><strong id="schedule-v2-untimed-title">Без времени</strong>{untimed.map((workout) => <Link key={workout.id} data-status={workout.status} to={`/workouts/${workout.id}`} state={{ returnTo }}><span className="schedule-v2-avatar">{clientInitials(workout.clientName)}</span><span><b>{workout.clientName}</b><small>{scheduleV2WorkoutLine(workout)}</small></span>{workout.status === 'done' ? <CheckIcon /> : workout.status === 'cancelled' ? <span className="schedule-cancelled-mark" role="img" aria-label="Не состоялась"><CloseIcon /></span> : null}</Link>)}</section>}
         <div className="day-grid-scroll schedule-v2-timeline" ref={scrollRef}>
           <div key={selected} className={`day-grid${dayInteractions ? ' coach-day-grid' : ''}`} style={{ height: timelineHeight }}>
             {HOURS.map((hour) => <div key={hour} className={`day-grid-hour${selected === today && scheduleHourLabelCollidesWithNow(hour, currentMinutes, fitLimeToday ? hourHeight : undefined) ? ' is-near-current-time' : ''}`} style={{ top: hour * hourHeight }}><span className="day-grid-hour-label">{String(hour).padStart(2, '0')}:00</span><div className="day-grid-hour-line" /></div>)}
@@ -1108,7 +1108,7 @@ export function TrainerScheduleTodayPage() {
 
 export function WorkoutStatusBadge({ workout }: { workout: Workout }) {
   const { actor } = useAuth()
-  const status = workoutStatusPresentation(workout, todayInTimeZone(actor?.timezone))
+  const status = workoutStatusPresentation(workout, todayInTimeZone(actor?.timezone), actor?.role === 'trainer' ? 'trainer' : 'client')
   const state: WorkoutUiState = status.tone === 'done' ? 'completed'
     : status.tone === 'in_progress' ? 'current'
       : status.tone === 'partial' ? 'partial'
@@ -1214,7 +1214,7 @@ export function WorkoutChronicleCard({ workout, contextLabel, returnTo, historyL
         {exercisePreview.visible.length > 0 ? exercisePreview.visible.map((exercise) => {
           const result = calendarDayDetails
             ? done ? calendarExerciseResult(exercise) : null
-            : done ? compactCompletedSetSummary(exercise.sets, false, exercise.ref)
+            : done ? compactCompletedSetSummary(exercise.sets, false, exercise.ref, coachView ? 'trainer' : 'client')
               : compactPlannedSetSummary(exercise.sets, false, exercise.ref)
           return <div className="workout-chronicle-exercise" key={exercise.id}>
             <span className="workout-chronicle-exercise-name">{exercise.name}
@@ -2106,7 +2106,7 @@ export function WorkoutDetailPage() {
   const responseAuthor = trainers.data?.find((trainer) => trainer.trainerId === workout?.trainerReviewAuthorId)
   const responseAuthorName = responseAuthor ? [responseAuthor.firstName, responseAuthor.lastName].filter(Boolean).join(' ') : null
   const today = todayInTimeZone(actor?.timezone)
-  const statusPresentation = workout ? workoutStatusPresentation(workout, today) : null
+  const statusPresentation = workout ? workoutStatusPresentation(workout, today, clientMode ? 'client' : 'trainer') : null
   const detailState: WorkoutUiState = statusPresentation?.tone === 'done' ? 'completed'
     : statusPresentation?.tone === 'partial' ? 'partial'
       : statusPresentation?.tone === 'in_progress' ? 'current'
@@ -2147,7 +2147,7 @@ export function WorkoutDetailPage() {
   ]
   const exerciseCards = <div className={`cards ${done ? 'completed-exercise-list' : 'planned-exercise-list'}`}>{groupIntoBlocks(workout?.exercises ?? []).map((block) => {
     const articles = block.exercises.map((exercise) => {
-      const detailSummary = compactExerciseDetailSummary(exercise.inputKind, exercise.sets, done ? 'completed' : 'planned', showRpe, exercise.ref)
+      const detailSummary = compactExerciseDetailSummary(exercise.inputKind, exercise.sets, done ? 'completed' : 'planned', showRpe, exercise.ref, clientMode ? 'client' : 'trainer')
       const exerciseMeta = findCatalogExercise(catalog.exercises, exercise) ?? exercise
       return <WorkoutExercise state={done ? 'history' : 'planned'} className={`exercise ${done ? 'completed-exercise' : 'planned-detail-exercise'}`} key={exercise.id}>
         <div className="workout-detail-exercise-row">
@@ -2159,7 +2159,7 @@ export function WorkoutDetailPage() {
               {done && exercise.sets.some((set) => set.timerConfirmed) && <span className="workout-timer-confirmed-note">Засчитано таймером, не проверено: {exercise.sets.filter((set) => set.timerConfirmed).length}</span>}
             </summary>
             <WorkoutSetTable variant="history" inputKind={exercise.inputKind} showRpe={false} columnLabels={[done ? 'Результат' : 'План']} className="workout-history-sets">
-              {exercise.sets.map((set, index) => <WorkoutHistorySet key={set.id} set={set} index={index} done={done} clientLime={isClientLimeEnabled(actor)} showRpe={showRpe} exerciseRef={exercise.ref} />)}
+              {exercise.sets.map((set, index) => <WorkoutHistorySet key={set.id} set={set} index={index} done={done} clientLime={isClientLimeEnabled(actor)} trainerView={!clientMode} showRpe={showRpe} exerciseRef={exercise.ref} />)}
             </WorkoutSetTable>
           </details>
           <div className="workout-detail-exercise-actions">
@@ -2651,17 +2651,17 @@ function formatSet(set: WorkoutSet, showRpe: boolean, exerciseRef?: string) {
   return pace && plan ? `${plan} · темп ${pace}` : plan || 'Подход без плана'
 }
 
-function WorkoutHistorySet({ set, index, done, clientLime, showRpe, exerciseRef }: { set: WorkoutSet; index: number; done: boolean; clientLime: boolean; showRpe: boolean; exerciseRef?: string }) {
+function WorkoutHistorySet({ set, index, done, clientLime, trainerView, showRpe, exerciseRef }: { set: WorkoutSet; index: number; done: boolean; clientLime: boolean; trainerView: boolean; showRpe: boolean; exerciseRef?: string }) {
   const confirmed = Boolean(set.confirmedAt)
   const { fact, planNote } = formatFactVsPlan(set, showRpe, exerciseRef)
-  const result = done ? fact : formatSet(set, showRpe, exerciseRef)
+  const result = done ? trainerView && !confirmed ? '—' : fact : formatSet(set, showRpe, exerciseRef)
   return <WorkoutSetRow state={done ? (confirmed ? 'completed' : 'skipped') : 'planned'} className={`workout-history-set ${confirmed ? 'confirmed' : done || !clientLime ? 'missed' : 'planned'}`}>
     <span className="workout-set-number workout-history-set-number" aria-label={`Подход ${index + 1}`}>{index + 1}</span>
     <span className="workout-history-set-result"><strong>{result}</strong>
-      {done && !confirmed && <span className="plan-note">не выполнено</span>}
+      {done && !confirmed && !trainerView && <span className="plan-note">не выполнено</span>}
       {done && confirmed && planNote && <span className="plan-note">{planNote}</span>}
     </span>
-    {done && <span className="workout-history-set-status" aria-label={confirmed ? 'Выполнен' : 'Не выполнен'}>{confirmed ? '✓' : '—'}</span>}
+    {done && <span className="workout-history-set-status" aria-label={confirmed ? 'Выполнен' : trainerView ? 'Результат не записан' : 'Не выполнен'}>{confirmed ? '✓' : '—'}</span>}
   </WorkoutSetRow>
 }
 

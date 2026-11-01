@@ -2332,7 +2332,7 @@ test('workout detail, completion and exercise history keep their visual baseline
   await page.getByRole('button', { name: 'Готово, отдых' }).first().click()
   await expect(page.locator('.live-set.confirmed')).toBeVisible()
   if (trainer) {
-    // Тренерский сценарий продолжает покрывать безопасное частичное состояние.
+    // Retain partial recorded results without changing conducted attendance.
     await page.getByRole('button', { name: '＋ Ещё упражнение' }).click()
     await page.getByLabel('Поиск упражнения').fill('Берпи')
     await page.getByRole('button', { name: 'Добавить: Берпи', exact: true }).click()
@@ -2353,7 +2353,8 @@ test('workout detail, completion and exercise history keep their visual baseline
   else await expect(page.getByText(/Тренировка завершена ·/)).toBeVisible()
   await expect(page.locator('.phone-frame')).toHaveClass(/workout-detail-history-identity/)
   if (trainer) {
-    await expect(page.locator('.workout-detail-page .badge.partial')).toHaveText('Частично')
+    await expect(page.locator('.workout-detail-page .workout-header-contract')).toHaveAttribute('data-state', 'completed')
+    await expect(page.locator('.workout-detail-page .badge.partial')).toHaveCount(0)
   } else {
     await expect(page.getByText('Выполнено 2 из 2 подходов')).toBeVisible()
     await expect(page.locator('.workout-completion-count-line strong')).toHaveText('100%')
