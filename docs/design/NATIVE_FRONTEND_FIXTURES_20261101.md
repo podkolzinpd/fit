@@ -77,3 +77,11 @@ typecheck и policies passed. Browser TypeScript/targeted lint passed; Node
 workflow/doc policy52/52; desktop completion visual1/1 без update; push
 diagnostics с FIT_SCHEDULE_V2_VISUAL=1 —1/1; связанные native trainer finish/
 calendar Back/active-input flush Chromium/WebKit —6/6. Финальный CI — в PR1928.
+
+Полные логи остановленного старого прогона дополнительно выявили устаревшие
+assertions для нового trainer done-status и attendance dialog в realtime/
+mobile-shell. Теперь проверяются явное «Проведена», primary submit/secondary
+cancel действующего dialog; сохранение записанных/незаписанных результатов,
+права и Back assertions остаются. Целевые Chromium/WebKit сценарии3/3, lint
+и browser TypeScript passed. Других ошибок в логах оставшихся остановленных
+auth/Fit Lime jobs не зарегистрировано; это не заменяет полный новый CI.
