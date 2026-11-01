@@ -29,7 +29,7 @@ P1–P4 завершены; итог — итерация26 каноническ
 Физический iPhone/реальный OAuth не проверены; реальные назначения не менялись.
 
 ## Точка продолжения
-[UX:4PR, начат PR1](design/WORKOUT_LIFECYCLE_UX_AUDIT_20261101.md).
+[UX:4PR, начат PR2](design/WORKOUT_LIFECYCLE_UX_AUDIT_20261101.md).
 
 YAFIT-696: стабильная клавиатура и упражнения первыми — всем тренерам.
 [План и журнал](design/COACH_EXERCISE_FIRST_AND_KEYBOARD_20261030.md); текущие CI,

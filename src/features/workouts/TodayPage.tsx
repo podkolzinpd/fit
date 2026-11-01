@@ -199,7 +199,7 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
   const [prepSeconds, setPrepSeconds] = useState(0)
   // undefined — режим не выбран явно и следует формату тренировки.
   const [executionMode, setExecutionMode] = useState<WorkoutExecutionMode | undefined>(undefined)
-  const [trainingFormat, setTrainingFormat] = useState<WorkoutTrainingFormat | undefined>(clientMode ? 'self' : limePlanning ? entryState?.planTrainingFormat : undefined)
+  const [trainingFormat, setTrainingFormat] = useState<WorkoutTrainingFormat | undefined>(clientMode ? 'self' : entryState?.planTrainingFormat ?? defaultWorkoutTrainingFormat(clientMode ? 'client' : 'trainer'))
   const trainingFormatTouched = useRef(limePlanning && Boolean(entryState?.planTrainingFormat))
   const finance = useQuery({
     queryKey: ['trainer-finance-client', effectiveClientId],
@@ -303,7 +303,7 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
       setActualDurationMinutes(draft.actualDurationMinutes ?? '')
       setPrepSeconds(draft.prepSeconds ?? 0)
       setExecutionMode(draft.executionMode)
-      setTrainingFormat(clientMode ? 'self' : draft.trainingFormat)
+      setTrainingFormat(clientMode ? 'self' : draft.trainingFormat ?? defaultWorkoutTrainingFormat('trainer'))
       trainingFormatTouched.current = Boolean(draft.trainingFormat)
       setManualRefs(draft.manualRefs ?? [])
       setRemovedRefs(draft.removedRefs ?? [])
@@ -328,7 +328,7 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
   useEffect(() => {
     if (clientMode) { setTrainingFormat('self'); return }
     if (!trainingFormatTouched.current && finance.data) {
-      setTrainingFormat(defaultWorkoutTrainingFormat(finance.data.packages, workoutDate))
+      setTrainingFormat(defaultWorkoutTrainingFormat('trainer'))
     }
   }, [clientMode, finance.data, workoutDate])
 
@@ -394,7 +394,7 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
   const save = useMutation({
     mutationFn: async (mode: RecordMode) => {
       if (clientMode && !effectiveClientId) throw new Error('Не удалось открыть профиль спортсмена. Повторите загрузку профиля.')
-      const draft = { ...(limePlanning && mode === 'planned' ? { title: planMetadata.title?.trim() || null, requestId: planMetadata.requestId, endTime: planMetadata.endTime || undefined } : {}), clientId: effectiveClientId, workoutDate, startTime: startTime || undefined, ...(mode === 'completed' ? { actualDurationSec: actualWorkoutDurationSeconds(actualDurationMinutes) } : { prepSeconds: prepSeconds || null, executionMode: executionMode ?? DEFAULT_EXECUTION_MODE }), trainingFormat: clientMode ? 'self' as const : trainingFormat ?? 'self', exercises: planOnly ? planExercises : items.map(draftExercise) }
+      const draft = { ...(limePlanning && mode === 'planned' ? { title: planMetadata.title?.trim() || null, requestId: planMetadata.requestId, endTime: planMetadata.endTime || undefined } : {}), clientId: effectiveClientId, workoutDate, startTime: startTime || undefined, ...(mode === 'completed' ? { actualDurationSec: actualWorkoutDurationSeconds(actualDurationMinutes) } : { prepSeconds: prepSeconds || null, executionMode: executionMode ?? DEFAULT_EXECUTION_MODE }), trainingFormat: clientMode ? 'self' as const : trainingFormat ?? 'with_trainer', exercises: planOnly ? planExercises : items.map(draftExercise) }
       return mode === 'planned' ? workoutsRepository.save(draft) : workoutsRepository.saveCompleted(draft)
     },
     onMutate: (mode) => trackGoal(mode === 'planned' ? 'today_plan_save_started' : 'today_workout_save_started'),
@@ -800,7 +800,7 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
     setMissingCardioTime(null)
     setWorkoutDate(today)
     setStartTime('')
-    setTrainingFormat(clientMode ? 'self' : undefined)
+    setTrainingFormat(defaultWorkoutTrainingFormat(clientMode ? 'client' : 'trainer'))
     trainingFormatTouched.current = false
     setManualRefs([])
     setRemovedRefs([])
@@ -883,7 +883,7 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
   return <Page title={pageTitle} hideTitle={header.hideTitle} className={`today-page today-start-page${clientReference ? ' client-workout-entry' : ''}`} action={<div className="today-header-actions"><ChatHeaderAction />{header.showProfileAvatar && <Link className="today-profile-avatar" to={clientMode ? '/me/profile' : '/profile'} aria-label="Открыть профиль">{profileInitial}</Link>}</div>}>
     {actor && !limePlanning && !(clientLime && requestedClientDraft) && screen === 'compose' && !textComposerOpen && <><AppInstallPrompt userId={actor.userId} /><NotificationOnboarding userId={actor.userId} role={clientMode ? 'client' : 'trainer'} /></>}
     {screen === 'compose' ? <section className={`today-composer today-voice-home voice-phase-${voicePhase}`}>
-      {limePlanning ? <div><button type="button" className="link today-review-back" onClick={() => navigate(returnTo)}>← В календарь</button><h1>Составить план</h1><p className="muted">{planMetadata.title || 'Новая тренировка'} · {formatLocalDate(workoutDate)}</p></div> : !greetingHeaderPilotEnabled && !(clientLime && requestedClientDraft) && <p className="today-greeting">{greeting} 👋</p>}
+      {limePlanning ? <div><button type="button" className="link today-review-back" onClick={() => navigate(returnTo, { state: planMetadata.sourceFormDraftKey ? { resumePlanRequestId: planMetadata.requestId } : undefined })}>{planMetadata.sourceFormDraftKey ? '← К планированию' : '← В календарь'}</button><h1>Составить план</h1><p className="muted">{planMetadata.title || 'Новая тренировка'} · {formatLocalDate(workoutDate)}</p></div> : !greetingHeaderPilotEnabled && !(clientLime && requestedClientDraft) && <p className="today-greeting">{greeting} 👋</p>}
       {clientMode && !textComposerOpen ? <><ClientHomeOverview
         today={today}
         gender={mine.data?.gender}
@@ -1058,7 +1058,7 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
           : mine.isFetching
             ? <p className="today-assignment-self">Проверяем профиль…</p>
             : <div className="error" role="alert">Не удалось открыть профиль спортсмена. <button type="button" className="link" onClick={() => void mine.refetch()}>Повторить</button></div>
-        : <ClientPicker userId={actor?.userId} clients={clients.data ?? []} selectedId={clientId} onChange={(id) => { trainingFormatTouched.current = false; setTrainingFormat(undefined); setClientId(id) }} label="Для кого тренировка" loading={clients.isLoading} error={clients.error} onRetry={() => void clients.refetch()} onCreate={createQuickClient} />}
+        : <ClientPicker userId={actor?.userId} clients={clients.data ?? []} selectedId={clientId} onChange={setClientId} label="Для кого тренировка" loading={clients.isLoading} error={clients.error} onRetry={() => void clients.refetch()} onCreate={createQuickClient} />}
       {(prefillError || save.error) && <p className="error">{prefillError ?? save.error?.message}</p>}
       <section className="today-save-actions" aria-label="Тип записи">
         {planOnly ? <p className="today-plan-summary">{clients.data?.find((client) => client.id === clientId)?.fullName ?? 'Выберите клиента'} · {formatLocalDate(workoutDate)} · {startTime || 'Без времени'} · {trainingFormat === 'with_trainer' ? 'С тренером' : 'Самостоятельно'}</p> : <>

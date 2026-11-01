@@ -8,28 +8,27 @@ import { invalidateWorkoutResults } from '../../app/invalidate-workout-results'
 import { isFitLimeEnabled } from '../../app/fit-lime'
 import { isCoachWorkoutRedesignEnabled } from '../../app/coach-workout-redesign'
 import { FitLimeDatePicker } from '../../shared/FitLimeDatePicker'
-import { AddIcon, ArrowUpIcon, BackIcon, CloseIcon, KeyboardIcon, MicIcon } from '../../shared/icons'
+import { AddIcon, BackIcon, CloseIcon, KeyboardIcon, MicIcon } from '../../shared/icons'
 import { formatLocalDate, formatRelativeLocalDate, todayInTimeZone, type LocalDate } from '../../shared/local-date'
 import { Coachmark } from '../../shared/ui'
 import { ClientPicker } from '../clients'
 import { hasWorkoutFormContent, quickPlanDraftChoices, retainQuickPlanDraft, removeWorkoutFormDraft, workoutFormDraftKey, writeWorkoutFormDraft, type WorkoutFormDraft } from './workout-form-draft'
 import { readTodayDraft, todayDraftKey, writeTodayDraft } from './today-draft'
 import { DEFAULT_EXECUTION_MODE } from './live-phase'
-import { WorkoutExecutionModeField } from './WorkoutExecutionModeField'
-import type { WorkoutExecutionMode } from '../../shared/domain'
 
 /** Figma's quick planned-workout entry. Live and completed entry stay separate. */
-export function FitLimePlanComposer({ date, returnTo, onClose, onBack }: {
+export function FitLimePlanComposer({ date, returnTo, onClose, onBack, resumeRequestId }: {
   date: LocalDate
   returnTo: string
-  onClose: () => void
+  onClose: (reason?: 'navigate') => void
   onBack?: () => void
+  resumeRequestId?: string
 }) {
   const { actor } = useAuth()
   const { clients: clientsRepository } = useDataBackend()
   const key = workoutFormDraftKey(actor?.userId ?? 'anonymous', `new--${date}--quick`)
   const [choices] = useState(() => quickPlanDraftChoices(key, date))
-  const [selection, setSelection] = useState<{ draft: WorkoutFormDraft | null } | null>(() => choices.length ? null : { draft: null })
+  const [selection, setSelection] = useState<{ draft: WorkoutFormDraft | null } | null>(() => { const resumed = resumeRequestId ? choices.find(choice => choice.draft.requestId === resumeRequestId) : undefined; return resumed ? { draft: resumed.draft } : choices.length ? null : { draft: null } })
   const [error, setError] = useState<string | null>(null)
   const dialog = useRef<HTMLDialogElement>(null)
   const clients = useQuery({ queryKey: ['clients', false], queryFn: () => clientsRepository.list(false) })
@@ -52,7 +51,7 @@ export function FitLimePlanComposer({ date, returnTo, onClose, onBack }: {
   }
   if (selection) return <FitLimePlanForm date={date} returnTo={returnTo} onClose={onClose} onBack={onBack} initialDraft={selection.draft} />
   return <dialog ref={dialog} tabIndex={-1} className="fit-lime-plan-dialog fit-lime-workout-entry" aria-label="Черновик плана" onClose={(event) => { if (event.target === event.currentTarget) onClose() }}>
-    <button type="button" className="fit-lime-plan-close" aria-label="Закрыть создание" onClick={onClose}><CloseIcon /></button>
+    <button type="button" className="fit-lime-plan-close" aria-label="Закрыть создание" onClick={() => onClose()}><CloseIcon /></button>
     {onBack && <button type="button" className="fit-lime-plan-back" aria-label="Назад к выбору действия" onClick={onBack}><BackIcon /></button>}
     <h2>Есть сохранённый черновик</h2>
     {choices.map((choice, index) => <section key={choice.key} className="fit-lime-draft-choice">
@@ -69,7 +68,7 @@ export function FitLimePlanComposer({ date, returnTo, onClose, onBack }: {
 function FitLimePlanForm({ date, returnTo, onClose, onBack, initialDraft }: {
   date: LocalDate
   returnTo: string
-  onClose: () => void
+  onClose: (reason?: 'navigate') => void
   onBack?: () => void
   initialDraft: WorkoutFormDraft | null
 }) {
@@ -90,10 +89,9 @@ function FitLimePlanForm({ date, returnTo, onClose, onBack, initialDraft }: {
   const [error, setError] = useState<string | null>(null)
   const [pickerOpen, setPickerOpen] = useState(false)
   const [trainingFormat, setTrainingFormat] = useState(saved?.trainingFormat ?? 'with_trainer')
-  // Режим Live: явный выбор или по формату (с тренером — вручную, самостоятельно — таймер).
-  const [executionMode, setExecutionMode] = useState<WorkoutExecutionMode | undefined>(saved?.executionMode)
+  // Keep the saved Live mode while removing its control from this planning window.
+  const executionMode = saved?.executionMode
   const effectiveMode = executionMode ?? DEFAULT_EXECUTION_MODE
-  const completeAfterSave = useRef(false)
   const submitting = useRef(false)
   const savedSuccessfully = useRef(false)
   const clients = useQuery({ queryKey: ['clients', false], queryFn: () => clientsRepository.list(false) })
@@ -124,13 +122,12 @@ function FitLimePlanForm({ date, returnTo, onClose, onBack, initialDraft }: {
       await invalidateWorkoutResults(queryClient)
       await queryClient.invalidateQueries({ queryKey: ['today-workouts'] })
       dialog.current?.close()
-      navigate(completeAfterSave.current ? `/workouts/${id}` : returnTo, { replace: true, state: completeAfterSave.current ? { returnTo, confirmAttendance: true } : { savedPlanId: id } })
+      navigate(returnTo, { replace: true, state: { savedPlanId: id } })
     },
     onSettled: () => { submitting.current = false },
   })
   function submit(event: FormEvent) {
     event.preventDefault()
-    completeAfterSave.current = (event.nativeEvent as SubmitEvent).submitter?.getAttribute('value') === 'complete'
     if (submitting.current || !isFitLimeEnabled(actor)) return
     if (!clientId) { setError('Выберите клиента для тренировки'); setPickerOpen(true); return }
     if (time.end && !time.start) { setError('Укажите начало тренировки или уберите время окончания.'); return }
@@ -147,7 +144,7 @@ function FitLimePlanForm({ date, returnTo, onClose, onBack, initialDraft }: {
   function openEditor() {
     writeWorkoutFormDraft(key, draft)
     navigate(`/workouts/new?date=${date}&entry=quick`, { state: { returnTo } })
-    onClose()
+    onClose('navigate')
   }
   function openComposer(entry: 'voice' | 'text') {
     writeWorkoutFormDraft(key, draft)
@@ -165,7 +162,7 @@ function FitLimePlanForm({ date, returnTo, onClose, onBack, initialDraft }: {
     })
     const params = new URLSearchParams({ view: 'compose', entry, date: selectedDate, plan: requestId })
     navigate(`/today?${params}`, { state: { returnTo, planClientId: clientId, planStartTime: time.start, planEndTime: time.end, planTrainingFormat: trainingFormat, planTitle: title, planRequestId: requestId, sourceFormDraftKey: key } })
-    onClose()
+    onClose('navigate')
   }
   const today = todayInTimeZone(actor?.timezone)
   const dateLabel = reference ? formatRelativeLocalDate(selectedDate, today) : selectedDate === today ? 'Сегодня' : selectedDate.slice(0, 4) === today.slice(0, 4)
@@ -177,11 +174,7 @@ function FitLimePlanForm({ date, returnTo, onClose, onBack, initialDraft }: {
       <button type="button" className={trainingFormat === 'with_trainer' ? 'active' : ''} aria-pressed={trainingFormat === 'with_trainer'} onClick={() => setTrainingFormat('with_trainer')}>С тренером</button>
       <button type="button" className={trainingFormat === 'self' ? 'active' : ''} aria-pressed={trainingFormat === 'self'} onClick={() => setTrainingFormat('self')}>Самостоятельно</button>
     </div>
-    <WorkoutExecutionModeField value={effectiveMode} onChange={setExecutionMode} />
-    <div className="fit-lime-plan-input-methods">
-      <button type="button" onClick={() => openComposer('voice')}><MicIcon />Надиктовать тренировку</button>
-      <button type="button" onClick={() => openComposer('text')}><KeyboardIcon />Ввести текстом</button>
-    </div>
+
   </>
   return <dialog ref={dialog} tabIndex={-1} role="dialog" className={`fit-lime-plan-dialog${reference ? ' coach-reference-composer' : ''}`} aria-label="Быстрое создание тренировки" onClose={(event) => { if (event.target === event.currentTarget) onClose() }} onCancel={(event) => { if (mutation.isPending) event.preventDefault() }}>
     <form className="fit-lime-plan-composer" onSubmit={submit} inert={pickerOpen} style={pickerOpen ? { visibility: 'hidden' } : undefined}>
@@ -193,14 +186,17 @@ function FitLimePlanForm({ date, returnTo, onClose, onBack, initialDraft }: {
         <div className="fit-lime-plan-controls">
           <button type="button" className="fit-lime-plan-chip" onClick={() => setPickerOpen(true)} aria-label={`Клиент: ${selectedClient?.fullName ?? 'Выберите клиента'}`}>{selectedClient ? <span className="fit-lime-plan-avatar">{selectedClient.fullName.slice(0, 1)}</span> : <AddIcon />}<span>{selectedClient?.fullName ?? 'Клиент'}</span></button>
           <FitLimeDatePicker today={today} value={selectedDate} onChange={setSelectedDate} time={time} onTimeChange={setTime} reference={reference} triggerLabel={`${dateLabel}${time.start ? ` ${time.start}` : ''}`} />
-          {reference && (clientId ? <button type="submit" className="fit-lime-plan-send" aria-label="Сохранить план" aria-busy={mutation.isPending}><ArrowUpIcon /></button> : <button type="button" className="fit-lime-plan-mic" aria-label="Надиктовать тренировку" onClick={() => openComposer('voice')}><MicIcon /></button>)}
         </div>
-        {!reference && options}
+        {options}
         <Coachmark id="lime-quick-plan-2026-10" userId={actor?.userId} title="План можно сохранить сразу" description="Выберите клиента и дату, а упражнения добавьте сейчас или позже.">
           <button type="button" className="fit-lime-plan-exercises" onClick={openEditor}><AddIcon />{draft.exercises.length ? 'Продолжить редактирование' : 'Добавить упражнения'}</button>
         </Coachmark>
-        {actor?.role === 'trainer' && workouts.confirmAttendance && <button type="submit" name="attendance" value="complete" className="link wide">Отметить проведённой</button>}
-        {reference ? <section className="coach-plan-options" aria-labelledby="coach-plan-options-title"><h3 id="coach-plan-options-title">Настройки и способы ввода</h3>{options}{onBack && <button type="button" className="fit-lime-plan-back" onClick={onBack}><BackIcon />Назад к выбору действия</button>}</section> : <button type="submit" className="primary wide fit-lime-plan-save" aria-busy={mutation.isPending}>{mutation.isPending ? 'Сохраняем…' : 'Сохранить план'}</button>}
+            <div className="fit-lime-plan-input-methods">
+      <button type="button" onClick={() => openComposer('voice')}><MicIcon />Надиктовать</button>
+      <button type="button" onClick={() => openComposer('text')}><KeyboardIcon />Ввести текстом</button>
+    </div>
+        <button type="submit" className="primary wide fit-lime-plan-save" aria-busy={mutation.isPending}>{mutation.isPending ? 'Сохраняем…' : 'Запланировать'}</button>
+        {onBack && reference && <button type="button" className="fit-lime-plan-back" onClick={onBack}><BackIcon />Назад</button>}
       </fieldset>
       {(error || mutation.error) && <p className="error" role="alert">{error ?? mutation.error?.message}</p>}
       {mutation.isPending && <p role="status">Сохраняем…</p>}
