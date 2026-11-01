@@ -1579,6 +1579,124 @@ test('client entry from workout list preserves controls while parsing and saving
   }
 })
 
+// MC1 phone acceptance: notice geometry and post-finish home consistency.
+for (const theme of ['light', 'dark']) test(`client compose voice notice keeps readable text and working undo ${theme}`, async ({ page }, info) => {
+  await mockPilot(page, { role: 'client', profileId: pilotId, clientLime: true, workouts: [] })
+  await mockClientStreamingVoice(page, 'Приседания один подход десять повторений')
+  await page.addInitScript(({ id, theme }) => localStorage.setItem(`fit.clientLime.theme.${id}`, theme), { id: pilotId, theme })
+  await page.goto('/me?entry=workout')
+  const text = page.getByLabel('Тренировка', { exact: true })
+  const card = page.locator('.workout-composer-card')
+  const status = card.locator('.voice-input > .voice-input-status[role="status"]')
+  for (const width of [390, 430]) {
+    await page.setViewportSize({ width, height: 844 })
+    await text.fill('Жим лёжа один подход десять повторений 40 кг')
+    await card.getByRole('button', { name: 'Надиктовать тренировку', exact: true }).click()
+    await card.getByRole('button', { name: /^Остановить/ }).click()
+    await expect(status).toContainText('Текст добавлен')
+    const geometry = await status.evaluate(element => {
+      const bounds = element.getBoundingClientRect(), text = element.querySelector('small')!.getBoundingClientRect()
+      const actions = Array.from(element.querySelectorAll('button')).map(button => {
+        const box = button.getBoundingClientRect()
+        return { width: box.width, height: box.height,
+          hittable: button.contains(document.elementFromPoint(box.x + box.width / 2, box.y + box.height / 2)) }
+      })
+      return { width: bounds.width, textWidth: text.width, left: bounds.left, right: bounds.right, actions }
+    })
+    expect(geometry.textWidth).toBeGreaterThanOrEqual(200)
+    expect(geometry.left).toBeGreaterThanOrEqual(0)
+    expect(geometry.right).toBeLessThanOrEqual(width)
+    for (const action of geometry.actions) {
+      expect(action.width).toBeGreaterThanOrEqual(44)
+      expect(action.height).toBeGreaterThanOrEqual(44)
+      expect(action.hittable).toBe(true)
+    }
+    await card.screenshot({ path: info.outputPath(`voice-notice-${theme}-${width}.png`) })
+    await status.getByRole('button', { name: 'Отменить', exact: true }).click()
+    await expect(status).toHaveCount(0)
+    await expect(text).toHaveValue('Жим лёжа один подход десять повторений 40 кг')
+  }
+  await card.getByRole('button', { name: 'Надиктовать тренировку', exact: true }).click()
+  await card.getByRole('button', { name: /^Остановить/ }).click()
+  await expect(status).toContainText('Текст добавлен')
+  const dictated = await text.inputValue()
+  await status.getByRole('button', { name: 'Закрыть сообщение', exact: true }).click()
+  await expect(status).toHaveCount(0)
+  await expect(text).toHaveValue(dictated)
+  await page.getByRole('button', { name: 'Скрыть', exact: true }).click()
+  // New entry deliberately starts empty; resume the saved draft instead.
+  await page.getByRole('button', { name: 'Продолжить черновик', exact: true }).click()
+  await expect(text).toHaveValue(dictated)
+})
+
+test('client compose undo cancels a pending formatter without overwriting the restored text', async ({ page }) => {
+  await mockPilot(page, { role: 'client', profileId: pilotId, clientLime: true, workouts: [] })
+  const transcript = 'Упражнение которое показал тренер один подход десять повторений'
+  await mockClientStreamingVoice(page, transcript)
+  let release!: () => void
+  const pending = new Promise<void>(resolve => { release = resolve })
+  await page.route('**/v1/assistant/yandex/parse-workout', async route => {
+    await pending
+    await route.fulfill({ json: { items: [{ sourceText: transcript, exerciseRef: 'barbell-squat', confidence: 1, sets: [{ reps: 10 }] }], unmatched: [] } })
+  })
+  try {
+    await page.goto('/me?entry=workout')
+    const text = page.getByLabel('Тренировка', { exact: true })
+    await text.fill('Мой исходный текст')
+    const card = page.locator('.workout-composer-card')
+    await card.getByRole('button', { name: 'Надиктовать тренировку', exact: true }).click()
+    await card.getByRole('button', { name: /^Остановить/ }).click()
+    const status = card.locator('.voice-input > .voice-input-status[role="status"]')
+    await expect(status).toContainText('Текст добавлен')
+    await expect(card.getByText('Текст распознан. Обрабатываем упражнения…', { exact: true })).toBeVisible()
+    await status.getByRole('button', { name: 'Отменить', exact: true }).click()
+    await expect(text).toHaveValue('Мой исходный текст')
+    const parsed = page.waitForResponse('**/v1/assistant/yandex/parse-workout')
+    release()
+    await parsed
+    await expect(card.getByText('Текст распознан. Обрабатываем упражнения…', { exact: true })).toHaveCount(0)
+    await expect(text).toHaveValue('Мой исходный текст')
+    await expect(page.getByText('Диктовка разобрана и отформатирована.', { exact: true })).toHaveCount(0)
+  } finally { release() }
+})
+
+for (const outcome of ['success', 'lost-response']) test(`client finish refreshes home after ${outcome}`, async ({ page }) => {
+  const source = restTimerWorkout()
+  source.startedAt = new Date().toISOString()
+  const backend = await mockPilot(page, { role: 'client', profileId: pilotId, clientLime: true, workouts: [source] })
+  let commands = 0
+  await page.route(`**/v1/workouts/${workoutId}/finish`, async route => {
+    commands += 1
+    if (outcome === 'success') { await route.fallback(); return }
+    // The server committed, but the command response never reached the phone.
+    const committed = backend.getWorkouts().find(item => item.id === workoutId)!
+    committed.status = 'done'
+    committed.version += 1
+    committed.completedAt = new Date().toISOString()
+    await route.abort('failed')
+  })
+  await page.goto('/me')
+  const quick = page.getByRole('region', { name: 'Тренировка сейчас' })
+  await quick.getByRole('button', { name: 'Продолжить тренировку', exact: true }).click()
+  await expect(page.locator('.live-workout-page')).toBeVisible()
+  await page.getByRole('button', { name: 'Завершить тренировку', exact: true }).click()
+  await page.locator('.finish-confirm').getByRole('button', { name: 'Завершить', exact: true }).click()
+  if (outcome === 'success') {
+    await expect(page.getByRole('region', { name: 'Тренировка завершена', exact: true })).toBeVisible()
+    await page.getByRole('link', { name: 'Готово', exact: true }).click()
+  } else {
+    // Recovery opens the existing saved detail without justCompleted route state.
+    await expect(page.getByText('ТРЕНИРОВКА ЗАВЕРШЕНА', { exact: true })).toBeVisible()
+    await expect(page.getByRole('region', { name: 'Сводка тренировки', exact: true })).toBeVisible()
+    await page.getByRole('link', { name: 'Кабинет', exact: true }).click()
+  }
+  await expect(page).toHaveURL(/\/me$/)
+  await expect(quick.getByRole('button', { name: 'Начать тренировку', exact: true })).toBeVisible()
+  await expect(quick.getByRole('button', { name: 'Продолжить тренировку', exact: true })).toHaveCount(0)
+  expect(commands).toBe(1)
+  expect(backend.getWorkouts().filter(item => item.status === 'in_progress')).toHaveLength(0)
+})
+
 test('client reference voice cancel, review edits and failed save retain the draft', async ({ page }) => {
   const backend = await mockPilot(page, { role: 'client', profileId: pilotId, clientLime: true, workouts: [], failFirstSave: true })
   await mockClientStreamingVoice(page, 'Приседания один подход десять повторений')
