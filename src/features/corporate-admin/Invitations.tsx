@@ -7,7 +7,7 @@ import type { CorporateAdminBundle } from '../../shared/corporate-admin'
 import { copyText } from '../../shared/clipboard'
 import { AsyncView, EmptyState, Field, SaveStatus, useConfirm } from '../../shared/ui'
 
-const labels={active:'Ожидает тренера',claimed:'Ожидает подтверждения',approved:'Тренер добавлен',revoked:'Отменено',expired:'Срок истёк'}
+const labels={active:'Ожидает тренера',claimed:'Ожидает подтверждения',approved:'Приглашение подтверждено',revoked:'Отменено',expired:'Срок истёк'}
 export function CorporateInvitations({data,initialCreate=false}:{data:CorporateAdminBundle;initialCreate?:boolean}) {
   const {actor}=useAuth(), client=useQueryClient()
   const [creating,setCreating]=useState(initialCreate),[officeIds,setOfficeIds]=useState<string[]>([])

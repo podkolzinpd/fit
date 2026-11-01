@@ -249,7 +249,7 @@ test('corporate invitation creates QR, explicitly claims and waits for administr
   await page.goto(nativeAiUrl('/admin?tab=invitations'))
   await page.getByRole('button',{name:'Подтвердить тренера',exact:true}).click()
   await page.getByRole('button',{name:'Добавить тренера',exact:true}).click()
-  await expect(page.getByText('Тренер добавлен',{exact:true})).toBeVisible()
+  await expect(page.getByText('Приглашение подтверждено',{exact:true})).toBeVisible()
   await page.getByRole('button',{name:'Тренеры',exact:true}).click()
   await expect(page.getByRole('button',{name:'Настроить тренера Приглашённый тренер'})).toBeVisible()
   expect(approvals).toBe(1)
