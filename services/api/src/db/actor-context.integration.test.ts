@@ -7362,6 +7362,8 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
     it('guards new future completion atomically while retaining done rescheduling and local dates', async () => {
       if (!ownerPool || !runtimePool) throw new Error('Database pools are not ready')
       const card=randomUUID(), athlete=randomUUID(), pack=randomUUID()
+      // The import fast path can only accept dates before every supported local today.
+      expect((await ownerPool.query<{safe:boolean}>("select ((now() at time zone 'UTC')::date - 2) < min((now() at time zone name)::date) as safe from pg_catalog.pg_timezone_names")).rows).toEqual([{safe:true}])
       await ownerPool.query("insert into public.profiles(id,first_name,account_role,timezone) values($1,'Completion date fixture','client','Pacific/Kiritimati')",[athlete])
       await ownerPool.query("insert into public.clients(id,trainer_id,auth_user_id,full_name) values($1,$2,$3,'Date fixture')",[card,ACTOR_ID,athlete])
       await ownerPool.query('insert into public.client_trainer_relationships(client_id,trainer_id,connected_by) values($1,$2,$3)',[card,ACTOR_ID,athlete])
