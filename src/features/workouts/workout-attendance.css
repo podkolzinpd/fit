@@ -45,3 +45,8 @@
 .phone-frame.fit-lime-shell .coach-live-v79 .live-empty-start:not(:has(h2)) { padding:0 16px; background:transparent; }
 
 .phone-frame.fit-lime-shell .workout-live-exit-sheet[open] { display:block; }
+
+/* The Live exit title stays inside its grid at narrow widths and enlarged text. */
+.phone-frame.fit-lime-shell .workout-live-exit-sheet > .client-lime-sheet-header { display:grid; grid-template-columns:44px minmax(0,1fr) 44px; align-items:center; gap:8px; min-height:88px; padding:16px 20px; }
+.phone-frame.fit-lime-shell .workout-live-exit-sheet > .client-lime-sheet-header h1 { grid-column:2; grid-row:1; min-width:0; margin:0; overflow:visible; text-overflow:clip; white-space:normal; overflow-wrap:normal; text-align:center; font-size:16px; line-height:22px; font-weight:500; }
+.phone-frame.fit-lime-shell .workout-live-exit-sheet > .client-lime-sheet-header > button { grid-column:1; grid-row:1; }
