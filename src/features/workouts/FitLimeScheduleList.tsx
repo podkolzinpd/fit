@@ -21,7 +21,7 @@ export function FitLimeScheduleList({ workouts, today, returnTo, onOpenDay }: {
       const untimed = items.filter((item) => !item.startTime)
       const row = (item: Workout) => <Link key={item.id} className="fit-lime-history-row" to={`/workouts/${item.id}`} state={{ returnTo }}>
         <time>{item.startTime?.slice(0, 5) ?? '—'}</time>
-        <span><strong>{item.clientName}</strong>{item.title && <span className="schedule-list-workout-title">{item.title}</span>}<small className="schedule-list-exercises">{workoutExerciseBrief(item.exercises)}</small><small>{isIndependentScheduleWorkout(item) && 'Самостоятельно · '}{item.status === 'done' ? `Проведена${workoutStatusPresentation(item, today).tone === 'partial' ? ' · план выполнен частично' : ''}` : item.status === 'cancelled' ? 'Не состоялась' : workoutStatusPresentation(item, today).label}</small></span>
+        <span><strong>{item.clientName}</strong>{item.title && <span className="schedule-list-workout-title">{item.title}</span>}<small className="schedule-list-exercises">{workoutExerciseBrief(item.exercises)}</small><small>{isIndependentScheduleWorkout(item) && 'Самостоятельно · '}{workoutStatusPresentation(item, today, 'trainer').label}</small></span>
       </Link>
       return <section key={date} aria-label={formatLocalDate(date)}>
         <h2><button type="button" className="link" onClick={() => onOpenDay(date)}>{formatLocalDate(date)}</button></h2>

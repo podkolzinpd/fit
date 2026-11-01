@@ -2290,7 +2290,7 @@ test('iPhone: live-меню остаётся непрозрачным и не у
   await expectNoHorizontalOverflow(page)
 })
 
-test('iPhone: частично завершённая тренировка помечена на 390 и 430 px', async ({ page }, testInfo) => {
+test('iPhone: проведённая тренировка сохраняет записанные и незаписанные результаты на 390 и 430 px', async ({ page }, testInfo) => {
   await page.setViewportSize({ width: 390, height: 844 })
   const clientName = await createIsolatedClient(page, testInfo)
   await page.goto('/workouts/new')
@@ -2319,7 +2319,8 @@ test('iPhone: частично завершённая тренировка по�
   await expect(confirmFinish).toHaveAttribute('data-variant', 'primary')
   await confirmFinish.click()
   await expect(page.getByRole('heading', { name: 'Тренировка завершена' })).toBeVisible()
-  await expect(page.locator('.workout-detail-page .badge.partial')).toHaveText('Частично')
+  await expect(page.locator('.workout-detail-page .workout-header-contract')).toHaveAttribute('data-state', 'completed')
+  await expect(page.locator('.workout-detail-page .badge.partial')).toHaveCount(0)
   await expect(page.locator('.completed-set-summary')).toContainText('—')
   const completedDetails = page.locator('.completed-exercise-details').first()
   await expect(completedDetails).not.toHaveAttribute('open')
@@ -2339,7 +2340,8 @@ test('iPhone: частично завершённая тренировка по�
   await expect(deleteConfirmation).toBeVisible()
   await deleteConfirmation.getByRole('button', { name: 'Отмена' }).click()
   await expect(deleteConfirmation).toHaveCount(0)
-  await expect(completedDetails).toContainText('не выполнено')
+  await expect(completedDetails.locator('.workout-history-set.missed .workout-history-set-result > strong')).toHaveText('—')
+  await expect(completedDetails.locator('.workout-history-set.missed .plan-note')).toHaveCount(0)
   await expectNoHorizontalOverflow(page)
 })
 
