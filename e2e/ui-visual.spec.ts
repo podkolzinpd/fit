@@ -2162,9 +2162,9 @@ test('workout detail, completion and exercise history keep their visual baseline
     await fulfillTrainingData(route, result)
   })
   await page.route("**/v1/workouts/*/personal-records", (route) => route.fulfill({ json: { records: [{
-      name: 'Жим лёжа (Штанга)', ref: 'bench-press', inputKind: 'strength',
-      metric: 'weight_reps', primary_value: 382.5, reps: 9, weightKg: 42.5,
-    }] } }))
+      exerciseName: 'Жим лёжа (Штанга)', exerciseRef: 'bench-press', inputKind: 'strength',
+      metric: 'weight_reps', primaryValue: 382.5, reps: 9, weightKg: 42.5,
+    } satisfies import('../src/shared/domain').WorkoutPersonalRecord] } }))
   await openWorkoutForDetailReview(page, trainer, false, async () => {
     await expect(page.getByRole('button', { name: 'Начать тренировку' })).toBeVisible()
     await expectVisualBaseline(page, `workout-detail-planned-${process.platform}.png`)
@@ -2199,6 +2199,9 @@ test('workout detail, completion and exercise history keep their visual baseline
   else await expect(page.getByText(/Тренировка завершена ·/)).toBeVisible()
   await expect(page.locator('.phone-frame')).toHaveClass(/workout-detail-history-identity/)
   if (trainer) {
+    await expect(page.locator('.workout-completion')).toContainText('Личный рекорд · Жим лёжа (Штанга)')
+    await expect(page.locator('.workout-completion')).toContainText('42,5 кг × 9 повт.')
+    await expect(page.locator('.workout-detail-page .workout-status-completed')).toHaveText('Проведена')
     await expect(page.locator('.workout-detail-page .workout-header-contract')).toHaveAttribute('data-state', 'completed')
     await expect(page.locator('.workout-detail-page .badge.partial')).toHaveCount(0)
   } else {

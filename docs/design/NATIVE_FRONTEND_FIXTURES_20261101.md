@@ -85,3 +85,44 @@ cancel действующего dialog; сохранение записанны�
 права и Back assertions остаются. Целевые Chromium/WebKit сценарии3/3, lint
 и browser TypeScript passed. Других ошибок в логах оставшихся остановленных
 auth/Fit Lime jobs не зарегистрировано; это не заменяет полный новый CI.
+
+Оставшийся desktop visual mismatch: fixture personal-records содержал
+legacy name/ref/primary_value вместо native exerciseName/exerciseRef/primaryValue.
+DTO исправлен, закреплён через satisfies WorkoutPersonalRecord и явные
+assertions рекорда42.5×9/статуса «Проведена». Lint/browser TypeScript passed.
+Новый actual просмотрен: продуктовые WorkoutsPages/AttendanceSheet идентичны
+main dba30d2b; прежний Darwin PNG показывал «Частично»/«Не выполнено», тогда
+как принятое YAFIT-700 требует «Проведена»/«—». Автоматический approval review
+отклонил обновление рабочих PNG без явного разрешения владельца. Эталоны
+рабочей ветки не изменены; ожидается решение на соответствующие desktop PNG.
+Локальный Linux Podman прогон остановлен после kill Vite окружением; его
+снимки не используются как проверенные эталоны.
+
+## Итерация — 01.11.2026 — Codex / OpenAI: повторный CI PR1928
+
+Задача: исправить повторно упавший PR, сохранить native-поведение.
+Расхождения: personal-records fixture ошибочно оставлял legacy поля; public
+profile fixture использовал catalog `profile` вместо native `draft/published`.
+Сделано: оба DTO исправлены и проверяются существующими доменными типами;
+completion явно проверяет личный рекорд42.5×9 и статус «Проведена».
+Public WebKit сохраняет три исходных случая и assertions, выбирает реальный
+scroll-контейнер: mobile page или standalone desktop document.
+Решение: пользователь ответил «поправь пр» на запрос обновить desktop PNG;
+предыдущая блокировка approval этим снята. Принятые рекорд/статус/пустой факт
+сохраняются; изменения UI для подгонки снимков и ослабление порогов отвергнуты.
+Подлит main cdb2fbca без конфликтов; его перенос даты завершённой тренировки
+учтён в тех же эталонах. WorkoutsPages/AttendanceSheet совпадают с main.
+Проверка: public WebKit3/3; desktop Darwin1/1 обычным сравнением после update;
+E2E TypeScript passed. Итог полного check/Linux/CI — в проверенной версии PR1928.
+Production и настоящий OAuth не проверялись и не изменялись; PR остаётся ready.
+Дальше: завершить обычный CI на исправленном head, зависимый PR1929 отдельно.
+
+Итог локально на main cdb2fbca: полный `npm run check` passed —336 unit
+files/3007 tests, coverage81.52/76.54/81.13/86.11, API1551 passed/242 skipped.
+Linux desktop обычным сравнением1/1: pinned Playwright1.61.1 arm64 в Podman,
+тот же native-e2e Vite на macOS loopback через временный локальный proxy.
+Это устранило задержки bind mount; временная оснастка не входит в PR.
+Изменены только3 разрешённых PNG: completion Darwin/Linux и dark Linux.
+Остальные PNG этого сценария совпали; пороги, retries, таймауты прежние.
+Целевой lint, E2E TypeScript, workflow docs и diff whitespace passed.
+CI результата нового head ещё нет; он фиксируется в PR после завершения.
