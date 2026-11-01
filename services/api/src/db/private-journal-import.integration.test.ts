@@ -159,17 +159,20 @@ describe.skipIf(source === undefined)('one private journal into a new card', { c
     expect((await owner.query<{ n: number }>('select count(*)::int n from public.workout_sets s join public.workout_exercises e on e.id=s.workout_exercise_id where e.workout_id=$1 and s.fact_weight_kg=99', [first])).rows[0]?.n).toBe(4)
   })
 
-  for (const count of [85, 72]) it(`imports the reviewed ${count}-session packet with its name kept off GitHub configuration`, async () => {
+  for (const count of [85, 72, 104, 11]) it(`imports the reviewed ${count}-session packet with its name kept off GitHub configuration`, async () => {
     if (!imported) throw new Error('successful_import_fixture_required')
     const { owner, options, receipts, workouts: seed, coach } = imported
-    const total = count === 85 ? 401 : 413
-    const from = count === 85 ? '2025-06-08' : '2026-01-05'
+    const specs: Record<number, { total: number; from: string }> = { 85: { total: 401, from: '2025-06-08' }, 72: { total: 413, from: '2026-01-05' },
+      104: { total: 499, from: '2025-09-23' }, 11: { total: 55, from: '2026-08-23' } }
+    const spec = specs[count]
+    if (!spec) throw new Error('reviewed_fixture_required')
+    const { total, from } = spec
     const name = `Synthetic additional ${count}`
     const workouts = Array.from({ length: count }, (_, index) => ({
       ...seed[0]!, sourceOrdinal: index + 1, requestId: randomUUID(),
       workoutDate: new Date(Date.parse(from + 'T00:00:00Z') + index * 86400000).toISOString().slice(0, 10),
       notes: `Historical context, no invented sets ${index}`,
-      exercises: Array.from({ length: count === 85 ? index < 65 ? 5 : index === 84 ? 0 : 4 : index < 53 ? 6 : 5 }, (_, position) => ({
+      exercises: Array.from({ length: count === 85 ? index < 65 ? 5 : index === 84 ? 0 : 4 : Math.floor(total / count) + (index < total % count ? 1 : 0) }, (_, position) => ({
         ...seed[0]!.exercises[0]!, position, ref: `snapshot:journal:${randomUUID()}`,
         blockId: randomUUID(), name: `Historical literal ${index}/${position}`, sets: [],
       })),
@@ -198,7 +201,11 @@ describe.skipIf(source === undefined)('one private journal into a new card', { c
     expect((await owner.query<{ n: number }>('select count(*)::int n from public.workout_sets s join public.workout_exercises e on e.id=s.workout_exercise_id where e.workout_id=$1 and s.fact_weight_kg=99', [first])).rows[0]?.n).toBe(4)
   })
 
-  async function appendFixture(linked = false, foreignPartition = false, name = 'Synthetic existing') {
+  async function appendFixture(linked = false, foreignPartition = false, name = 'Synthetic existing', count = 85) {
+    const specs: Record<number, { total: number; from: string }> = { 85: { total: 401, from: '2025-06-08' }, 104: { total: 499, from: '2025-09-23' },
+      11: { total: 55, from: '2026-08-23' } }
+    const spec = specs[count]
+    if (!spec) throw new Error('reviewed_fixture_required')
     const f = await prepareFixture(true, foreignPartition)
     await f.owner.query('update public.clients set full_name=$2,goal=$3 where id=$1', [f.existing, name, 'Keep goal'])
     await f.owner.query('insert into public.client_trainers(client_id,trainer_id,note) values($1,$2,$3)',
@@ -211,10 +218,10 @@ describe.skipIf(source === undefined)('one private journal into a new card', { c
         [f.existing, f.coach, athlete])
     }
     await f.owner.query("update public.workouts set workout_date='2025-06-08' where id=$1", [f.oldWorkout])
-    const packetWorkouts = Array.from({ length: 85 }, (_, i) => ({ ...f.workouts[0]!,
+    const packetWorkouts = Array.from({ length: count }, (_, i) => ({ ...f.workouts[0]!,
       requestId: randomUUID(), sourceOrdinal: i + 1,
-      workoutDate: new Date(Date.UTC(2025, 5, 8 + i)).toISOString().slice(0, 10),
-      exercises: Array.from({ length: i < 65 ? 5 : i === 84 ? 0 : 4 }, (_, position) => ({
+      workoutDate: new Date(Date.parse(spec.from + 'T00:00:00Z') + i * 86400000).toISOString().slice(0, 10),
+      exercises: Array.from({ length: count === 85 ? i < 65 ? 5 : i === 84 ? 0 : 4 : Math.floor(spec.total / count) + (i < spec.total % count ? 1 : 0) }, (_, position) => ({
         ...f.workouts[0]!.exercises[0]!, position, name: `Synthetic literal ${i}/${position}`,
         inputKind: 'strength', blockId: randomUUID(), ref: `snapshot:journal:${randomUUID()}`, sets: [],
       })),
@@ -318,6 +325,17 @@ describe.skipIf(source === undefined)('one private journal into a new card', { c
     await f.owner.query('update public.client_trainers set alias=$2 where client_id=$1 and trainer_id=$3', [f.existing, `${name} Alias`, f.coach])
     expect(await runPreparedNewCardImport(f.options)).toMatchObject({ status: 'ready', willCreateCard: false, existingWorkouts: 2 })
     expect((await f.owner.query<{ n: number }>('select count(*)::int n from public.workouts where client_id=$1', [f.existing])).rows[0]?.n).toBe(2)
+  })
+
+  for (const count of [104, 11]) it(`appends the additional reviewed ${count} sessions and preserves the existing graphs`, async () => {
+    const f = await appendFixture(true, false, `Synthetic additional existing ${count}`, count)
+    expect(await runPreparedNewCardImport(f.options)).toMatchObject({ status: 'ready', readOnly: true,
+      willCreateCard: false, appendOnly: true, existingWorkouts: 2, workouts: count })
+    expect(await runPreparedNewCardImport({ ...f.options, mode: 'apply' })).toMatchObject({ status: 'imported',
+      workouts: count, sets: 0, contentVerified: true, previousStateVerified: true, preservedWorkouts: 2 })
+    expect(await f.oldState()).toEqual(f.before)
+    expect((await f.owner.query<{ n: number }>('select count(*)::int n from public.workouts where client_id=$1', [f.existing])).rows[0]?.n).toBe(count + 2)
+    expect(f.receipts.at(-1)?.receipt).toMatchObject({ createdCard: false, athleteId: f.athlete, appendOnly: true })
   })
 
   it('keeps schema2 collision protection and refuses ambiguous or missing append targets', async () => {
