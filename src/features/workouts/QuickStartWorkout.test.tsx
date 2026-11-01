@@ -7,8 +7,8 @@ import type { Client, Workout } from '../../shared/domain'
 import { localDate } from '../../shared/local-date'
 import { QuickStartWorkout, TrainerActiveWorkouts } from './QuickStartWorkout'
 
-const mocks = vi.hoisted(() => ({ quickStart: vi.fn(), invalidate: vi.fn() }))
-vi.mock('../../app/data-backend-context', () => ({ useDataBackend: () => ({ workouts: { quickStart: mocks.quickStart } }) }))
+const mocks = vi.hoisted(() => ({ quickStart: vi.fn(), createClient: vi.fn(), invalidate: vi.fn() }))
+vi.mock('../../app/data-backend-context', () => ({ useDataBackend: () => ({ workouts: { quickStart: mocks.quickStart }, clients: { createQuick: mocks.createClient } }) }))
 vi.mock('../../app/auth-context', () => ({ useAuth: () => ({ actor: { userId: 'trainer-1' } }) }))
 vi.mock('../../app/invalidate-workout-results', () => ({ invalidateWorkoutResults: mocks.invalidate }))
 
@@ -133,9 +133,9 @@ describe('QuickStartWorkout', () => {
     expect(mocks.quickStart.mock.calls[0]?.[1]).toBe(mocks.quickStart.mock.calls[1]?.[1])
   })
 
-  it('keeps start disabled until trainer clients and workouts are loaded', () => {
+  it('allows a loaded empty client list to open inline creation', () => {
     view(<QuickStartWorkout role="trainer" clients={[]} workouts={[]} returnTo="/today" />)
-    expect(screen.getByRole('button', { name: 'Начать тренировку' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Начать тренировку' })).toBeEnabled()
     expect(screen.getByRole('link', { name: 'добавьте клиента' })).toHaveAttribute('href', '/clients/new')
   })
 
@@ -146,4 +146,19 @@ describe('QuickStartWorkout', () => {
     expect(screen.getByRole('link', { name: /Анна/ })).toHaveAttribute('href', `/workouts/${first.id}/live`)
     expect(screen.getByRole('link', { name: /Борис/ })).toHaveAttribute('href', `/workouts/${second.id}/live`)
   })
+})
+
+
+it('creates and selects a client without implicitly starting even in the immediate calendar entry', async () => {
+  mocks.quickStart.mockReset()
+  mocks.createClient.mockResolvedValue(client.id)
+  const user = userEvent.setup()
+  view(<QuickStartWorkout role="trainer" clients={[]} workouts={[]} returnTo="/today" startOnClientSelection initialPickerOpen />)
+  await user.click(screen.getByRole('button', { name: 'Клиент' }))
+  await user.type(screen.getByLabelText('Имя нового клиента'), 'Новая спортсменка')
+  await user.click(screen.getByRole('button', { name: 'Добавить и выбрать' }))
+  expect(await screen.findByText('Новая спортсменка')).toBeVisible()
+  expect(screen.getByRole('button', { name: 'Начать' })).toBeEnabled()
+  expect(mocks.createClient).toHaveBeenCalledWith('Новая спортсменка')
+  expect(mocks.quickStart).not.toHaveBeenCalled()
 })

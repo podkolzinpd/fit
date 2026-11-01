@@ -85,7 +85,7 @@
 .coach-workout-reference .coach-reference-sheet .client-picker-item[aria-pressed='true'] { color: var(--lime-accent) }
 .coach-workout-reference .coach-reference-sheet > .state,
 .coach-workout-reference .coach-reference-sheet .client-picker-create { padding: 16px 20px }
-.coach-workout-reference .coach-reference-sheet .client-picker-create-action { width: calc(100% - 40px); margin: 0 20px 20px }
+.coach-workout-reference .coach-reference-sheet .client-picker-create-action { align-self: flex-start; width: auto; min-height: 44px; margin: 12px 20px 0; padding: 8px 16px; border: 1px solid #3b3b40; border-radius: 999px; background: transparent }
 .coach-workout-reference .coach-reference-sheet .fit-lime-date-selected { display: flex; align-items: center; gap: 16px; padding: 20px; margin: 0; font-size: 14px; line-height: 20px; font-weight: 500; color: #f8b021 }
 .coach-workout-reference .coach-reference-sheet .fit-lime-date-selected svg { width: 24px; height: 24px; flex: 0 0 24px }
 .coach-workout-reference .coach-reference-sheet .fit-lime-month-navigation { margin-inline: 20px }

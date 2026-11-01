@@ -64,6 +64,8 @@ export function ClientPicker({ userId, clients, selectedId, onChange, label = '�
   const [recentVersion, setRecentVersion] = useState(0)
   const [createError, setCreateError] = useState<string | null>(null)
   const [creatingClient, setCreatingClient] = useState(false)
+  const creatingRef = useRef(false)
+  const [createOutcomeUnknown, setCreateOutcomeUnknown] = useState(false)
   const { style: viewportStyle, keyboardOpen } = useVisualViewportStyle()
   const selected = clients.find((client) => client.id === selectedId) ?? (created?.id === selectedId ? created : null)
   const normalizedSearch = search.trim().toLocaleLowerCase('ru')
@@ -74,12 +76,14 @@ export function ClientPicker({ userId, clients, selectedId, onChange, label = '�
   const list = normalizedSearch ? filtered : filtered.filter((client) => !recent.some((recentClient) => recentClient.id === client.id))
 
   function close() {
+    if (creatingRef.current) return
     if (!autoFocusSearch && document.activeElement instanceof HTMLInputElement) document.activeElement.blur()
     setOpen(false)
     setCreating(false)
     setSearch('')
     setName('')
     setCreateError(null)
+    setCreateOutcomeUnknown(false)
     onDismiss?.()
   }
 
@@ -96,16 +100,22 @@ export function ClientPicker({ userId, clients, selectedId, onChange, label = '�
 
   async function createClient() {
     const fullName = name.trim()
-    if (!fullName || !onCreate) return
+    if (fullName.length < 2 || !onCreate || creatingRef.current || createOutcomeUnknown) return
+    creatingRef.current = true
     setCreatingClient(true)
     setCreateError(null)
     try {
       const client = await onCreate(fullName)
       setCreated(client)
+      creatingRef.current = false
       commit(client)
     } catch (cause) {
-      setCreateError(cause instanceof Error ? cause.message : 'Не удалось создать клиента')
+      const code = cause instanceof Error && 'code' in cause ? cause.code : null
+      const unknown = cause instanceof TypeError || ['network_unavailable', 'service_unavailable', 'invalid_response'].includes(String(code))
+      setCreateOutcomeUnknown(unknown)
+      setCreateError(unknown ? 'Не удалось получить подтверждение. Вернитесь к списку и проверьте, появился ли клиент, прежде чем добавлять снова.' : cause instanceof Error ? cause.message : 'Не удалось создать клиента')
     } finally {
+      creatingRef.current = false
       setCreatingClient(false)
     }
   }
@@ -129,15 +139,16 @@ export function ClientPicker({ userId, clients, selectedId, onChange, label = '�
         if (event.shiftKey && (document.activeElement === first || document.activeElement === panel.current)) { event.preventDefault(); last?.focus() }
         else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus() }
       }}>
-        <header className={`picker-header${reference ? ' coach-reference-sheet-header' : ''}`}><h1>{creating ? 'Новый клиент' : reference ? 'Клиенты' : 'Выберите клиента'}</h1><button type="button" className="picker-close" aria-label="Закрыть" onClick={creating ? () => { setCreating(false); setCreateError(null) } : close}><CloseIcon /></button>{reference && !immediateSelection && !creating && <button type="button" className="coach-sheet-confirm" aria-label="Применить клиента" disabled={!clients.some((client) => client.id === draftId) || loading || !!error} onClick={() => { const choice = clients.find((client) => client.id === draftId); if (choice) commit(choice) }}><CheckSmallIcon /></button>}</header>
+        <header className={`picker-header${reference ? ' coach-reference-sheet-header' : ''}`}><h1>{creating ? 'Новый клиент' : reference ? 'Клиенты' : 'Выберите клиента'}</h1><button type="button" className="picker-close" aria-label="Закрыть" disabled={creatingClient} onClick={creating ? () => { setCreating(false); setCreateError(null); setCreateOutcomeUnknown(false); onRetry?.() } : close}><CloseIcon /></button>{reference && !immediateSelection && !creating && <button type="button" className="coach-sheet-confirm" aria-label="Применить клиента" disabled={!clients.some((client) => client.id === draftId) || loading || !!error} onClick={() => { const choice = clients.find((client) => client.id === draftId); if (choice) commit(choice) }}><CheckSmallIcon /></button>}</header>
         {creating ? <div className="client-picker-create">
-          <button type="button" className="link" onClick={() => { setCreating(false); setCreateError(null) }}><BackIcon />К выбору</button>
+          <button type="button" className="link" disabled={creatingClient} onClick={() => { setCreating(false); setCreateError(null); setCreateOutcomeUnknown(false); onRetry?.() }}><BackIcon />К выбору</button>
           <p>Укажите имя — остальные данные можно заполнить позже.</p>
-          <label className="field">Имя клиента<input aria-label="Имя нового клиента" value={name} onChange={(event) => setName(event.target.value)} placeholder="Например, Анна Смирнова" autoFocus /></label>
+          <label className="field">Имя клиента<input aria-label="Имя нового клиента" value={name} disabled={creatingClient || createOutcomeUnknown} onChange={(event) => setName(event.target.value)} placeholder="Например, Анна Смирнова" autoFocus /></label>
           {createError && <p className="error">{createError}</p>}
-          <button type="button" className="primary" disabled={name.trim().length < 2 || creatingClient} onClick={() => void createClient()}>{creatingClient ? 'Создаю…' : 'Создать и выбрать'}</button>
+          <button type="button" className="primary" disabled={name.trim().length < 2 || creatingClient || createOutcomeUnknown} onClick={() => void createClient()}>{creatingClient ? 'Создаю…' : 'Добавить и выбрать'}</button>
         </div> : <>
           <input className="picker-search" aria-label="Поиск клиента" placeholder="Имя клиента" value={search} onChange={(event) => setSearch(event.target.value)} autoFocus={autoFocusSearch} />
+          {onCreate && <button type="button" className="secondary client-picker-create-action" onClick={() => { setName(search.trim()); setCreateOutcomeUnknown(false); setCreating(true) }}><AddIcon />Клиент</button>}
           {loading && <p className="state">Загружаем клиентов…</p>}
           {error && <div className="state"><p className="error">{error.message}</p>{onRetry && <button type="button" className="secondary" onClick={onRetry}>Повторить</button>}</div>}
           {!loading && !error && <div className="client-picker-list">
@@ -146,7 +157,6 @@ export function ClientPicker({ userId, clients, selectedId, onChange, label = '�
             {list.map((client, index) => reference ? <div key={client.id}>{(index === 0 || client.fullName.trim()[0]?.toLocaleUpperCase('ru') !== list[index - 1]?.fullName.trim()[0]?.toLocaleUpperCase('ru')) && <p className="picker-section-label">{client.fullName.trim()[0]?.toLocaleUpperCase('ru')}</p>}{item(client, 'all')}</div> : item(client, 'all'))}
             {!filtered.length && <div className="state"><strong>{clients.length ? 'Никого не нашли' : 'Клиентов пока нет'}</strong><p>{clients.length ? 'Измените запрос или создайте нового клиента.' : 'Создайте первую карточку, чтобы назначить тренировку.'}</p></div>}
           </div>}
-          {onCreate && <button type="button" className="secondary wide client-picker-create-action" onClick={() => { setName(search.trim()); setCreating(true) }}><AddIcon />Новый клиент</button>}
         </>}
       </section>
     </div>}
