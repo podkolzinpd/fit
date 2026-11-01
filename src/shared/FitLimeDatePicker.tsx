@@ -1,17 +1,20 @@
-import { useId, useRef, useState, type ReactNode } from 'react'
+import { useId, useImperativeHandle, useRef, useState, type ReactNode, type Ref } from 'react'
 import { addDays, addMonths, dayOfMonth, formatLocalDate, formatMonth, formatRelativeLocalDate, startOfMonth, weekdayIndex, type LocalDate } from './local-date'
 import { BackIcon, CheckIcon, CheckSmallIcon, ChevronRightIcon, CloseIcon, ScheduleIcon } from './icons'
 import { FitLimeSheetHeader } from './FitLimeSheetHeader'
 import { fitLimeOriginalIcons } from './fit-lime-icons'
 
 /** Presentation-only date choice. Parent owns navigation and persistence. */
-export function FitLimeDatePicker({ value, onChange, time, onTimeChange, triggerLabel, triggerIcon, reference = false, disabled = false, clientLime = false, showEndTime = true, startLabel = 'Начало', today }: {
+export function FitLimeDatePicker({ value, onChange, time, onTimeChange, triggerLabel, triggerIcon, triggerAriaLabel, onTrigger, controlRef, reference = false, disabled = false, clientLime = false, showEndTime = true, startLabel = 'Начало', today }: {
   value: LocalDate
   onChange: (date: LocalDate) => void
   time?: { start: string; end: string }
   onTimeChange?: (time: { start: string; end: string }) => void
   triggerLabel?: ReactNode
   triggerIcon?: ReactNode
+  triggerAriaLabel?: string
+  onTrigger?: (open: () => void) => void
+  controlRef?: Ref<{ open: () => void }>
   reference?: boolean
   disabled?: boolean
   clientLime?: boolean
@@ -47,8 +50,9 @@ export function FitLimeDatePicker({ value, onChange, time, onTimeChange, trigger
     onChange(draft)
     onTimeChange?.(draftTime)
   }
+  useImperativeHandle(controlRef, () => ({ open }))
   return <>
-    <button ref={trigger} type="button" disabled={disabled} className={clientLime ? 'schedule-v2-calendar client-lime-date-control' : 'schedule-v2-calendar'} aria-label={time ? 'Выбрать дату и время' : 'Выбрать дату'} aria-describedby={clientLime && triggerLabel ? descriptionId : undefined} onClick={open}>{triggerIcon ?? <ScheduleIcon />}{triggerLabel && <span id={clientLime ? descriptionId : undefined}>{triggerLabel}</span>}</button>
+    <button ref={trigger} type="button" disabled={disabled} className={clientLime ? 'schedule-v2-calendar client-lime-date-control' : 'schedule-v2-calendar'} aria-label={triggerAriaLabel ?? (time ? 'Выбрать дату и время' : 'Выбрать дату')} aria-describedby={clientLime && triggerLabel ? descriptionId : undefined} onClick={() => onTrigger ? onTrigger(open) : open()}>{triggerIcon ?? <ScheduleIcon />}{triggerLabel && <span id={clientLime ? descriptionId : undefined}>{triggerLabel}</span>}</button>
     <dialog ref={dialog} className={`fit-lime-date-picker${reference ? ' coach-reference-sheet' : ''}${sourceCalendar ? ' coach-source-date-sheet' : ''}${clientLime ? ' client-lime-date-sheet' : ''}`} aria-labelledby={titleId} onKeyDown={(event) => {
       // The surrounding workout form must not submit before the modal is applied.
       if ((clientLime || sourceCalendar) && event.key === 'Enter' && event.target instanceof HTMLInputElement) { event.preventDefault(); event.stopPropagation(); event.target.blur() }

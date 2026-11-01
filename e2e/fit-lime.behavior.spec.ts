@@ -897,7 +897,7 @@ async function checkCoachScheduleFilters(page: Page) {
   await page.getByRole('group', { name: 'Вид расписания' }).getByRole('button', { name: 'Список', exact: true }).click()
   await expect(page).toHaveURL(/mode=list/)
   await expect(summary).toHaveText('Фильтры · 3')
-  await page.getByRole('group', { name: 'Вид расписания' }).getByRole('button', { name: 'Календарь', exact: true }).click()
+  await page.getByRole('group', { name: 'Вид расписания' }).getByRole('button', { name: 'Неделя', exact: true }).click()
   await page.reload()
   await expect(summary).toHaveText('Фильтры · 3')
   await expect(filters).not.toHaveAttribute('open')
