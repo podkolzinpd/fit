@@ -50,7 +50,7 @@ import { copiedExerciseName } from '../../shared/exercise-catalog-curation'
 import { AxisTick, computeYDomain, formatTooltipLabel, formatTooltipValue, renderChartDot } from '../progress/ProgressChart'
 import { readLiveRestOverrides, restDeadline, restoreRestDeadline, storeRestDeadline } from './rest-timer-storage'
 import { blockLabel, chartUnitFor, compactCompletedSetSummary, compactExerciseDetailSummary, compactPlannedSetSummary, completedWorkoutDraft, copyWorkout, createRunningFormatDrafts, durationLabel, durationSeconds, exerciseSummary, factLine, favoriteTemplateToWorkoutDraft, formatFactVsPlan, groupIntoBlocks, blockRoundsView, currentRoundIndex, muscleGroupLabels, performedMuscleGroupLabels, previousResultLine, replaceExercise, restSecondsAfterSet, splitClientWorkouts, tonnageLabel, workoutFocusTitle, workoutStatusPresentation, workoutDurationLabel, workoutToFavoriteTemplate, workoutTonnage } from '../../data/repositories/workout-rules'
-import type { ExerciseProgressCursor, ExerciseSnapshot, LiveSetDraft, TrainerReaction, Workout, WorkoutDraft, WorkoutExercise as WorkoutExerciseModel, WorkoutFeedbackDraft, WorkoutQuestionAnswerDraft, WorkoutSet, WorkoutTemplate, WorkoutTrainerResponseDraft, WorkoutTrainingFormat, WorkoutWellbeing, WorkoutExecutionMode } from '../../shared/domain'
+import type { ExerciseProgressCursor, ExerciseSnapshot, LiveSetDraft, TrainerReaction, Workout, WorkoutSlotDraft, WorkoutDraft, WorkoutExercise as WorkoutExerciseModel, WorkoutFeedbackDraft, WorkoutQuestionAnswerDraft, WorkoutSet, WorkoutTemplate, WorkoutTrainerResponseDraft, WorkoutTrainingFormat, WorkoutWellbeing, WorkoutExecutionMode } from '../../shared/domain'
 import { formatRest, LiveRestTimer } from './LiveRestTimer'
 import { WorkoutExecutionModeField } from './WorkoutExecutionModeField'
 import { claimLiveAutostart, DEFAULT_EXECUTION_MODE, effectiveExecutionMode, elapsedWorkSeconds, EXECUTION_MODE_LABELS, PERSON_WORK_FINISH_GUARD_MS, personWorkSeconds, formatPrepOption, livePhasePrimaryAction, restoreLiveExecutionMode, restoreLivePhase, storeLiveExecutionMode, storeLivePhase, timedSetSeconds, timerAssumesPlannedValues, WORKOUT_PREP_OPTIONS, type LivePhaseTimer } from './live-phase'
@@ -214,9 +214,13 @@ function useTrainerScheduleModel(forceDayView = false, hourHeight = HOUR_HEIGHT)
   const scheduleLocation = useLocation()
   const scheduleFocus = (scheduleLocation.state as WorkoutNavigationState | null)?.scheduleFocus
   const autoScrolledDateRef = useRef<LocalDate | null>(null)
+  const consumedFocusRef = useRef<string | null>(null)
   const scrollKey = `${actor?.userId}:${selected}:${clientFilter}:${statusFilter}`
 
-  function openDay(date: LocalDate, preservePeriodStart?: LocalDate) {
+  function openDay(date: LocalDate, preservePeriodStart?: LocalDate, preserveViewport = false) {
+    if (preserveViewport && lime && scrollRef.current) {
+      writeScheduleScroll(`${actor?.userId}:${date}:${clientFilter}:${statusFilter}`, scrollRef.current.scrollTop / hourHeight)
+    }
     const anchor = preservePeriodStart ?? (daysBetween(weekStart, date) >= 0 && daysBetween(weekStart, date) < overviewDayCount
       ? weekStart : mondayWeekStart(date))
     const next = new URLSearchParams({ date, week: anchor })
@@ -273,8 +277,11 @@ function useTrainerScheduleModel(forceDayView = false, hourHeight = HOUR_HEIGHT)
       autoScrolledDateRef.current = null
       return
     }
-    if (query.isLoading || query.isError || !scrollRef.current || autoScrolledDateRef.current === selected) return
-    const explicitFocus = scheduleFocus && timed.find(item => item.id === scheduleFocus.workoutId && item.startTime)
+    if (query.isLoading || query.isError || !scrollRef.current) return
+    const focusKey = scheduleFocus ? `${scheduleLocation.key}:${selected}:${scheduleFocus.workoutId}:${scheduleFocus.startTime}` : null
+    const explicitFocus = focusKey !== consumedFocusRef.current && scheduleFocus && timed.find(item => item.id === scheduleFocus.workoutId && item.startTime)
+    if (autoScrolledDateRef.current === selected && !explicitFocus) return
+    if (explicitFocus) consumedFocusRef.current = focusKey
     const focusMinutes = explicitFocus ? minutesOf(explicitFocus.startTime!) : scheduleFocusMinutes(timed, currentTimeInTimeZone(actor?.timezone))
     const retained = lime && !explicitFocus ? readScheduleScroll(scrollKey) : null
     scrollRef.current.scrollTop = retained !== null ? retained * hourHeight : scheduleTimelineScrollTop(
@@ -283,7 +290,7 @@ function useTrainerScheduleModel(forceDayView = false, hourHeight = HOUR_HEIGHT)
       hourHeight,
     )
     autoScrolledDateRef.current = selected
-  }, [actor?.timezone, hourHeight, isDayView, query.isError, query.isLoading, selected, timed, lime, scrollKey, scheduleFocus])
+  }, [actor?.timezone, hourHeight, isDayView, query.isError, query.isLoading, selected, timed, lime, scrollKey, scheduleFocus, scheduleLocation.key])
 
   const todayDisabled = isDayView ? selected === today : weekStart === todayWeekStart
 
@@ -790,7 +797,20 @@ function TrainerScheduleV2({ forceDayView = false }: { forceDayView?: boolean })
   const [bookingTime, setBookingTime] = useState<string | null>(null)
   const quickDayEntry = isDayView && isQuickWorkoutEntryEnabled(actor)
   const dayInteractions = singleDayGuide || quickDayEntry
-  const daySwipeRef = useCoachDaySwipe(dayInteractions, selected, openDay, quickDayEntry ? { resolve: (target, x, y) => dayBookingTime(target, x, y, hourHeight), open: setBookingTime } : undefined)
+  const [dragPreview, setDragPreview] = useState<{ workout: Workout; slot: WorkoutSlotDraft } | null>(null)
+  const [slotMove, setSlotMove] = useState<{ workout: Workout; slot: WorkoutSlotDraft } | null>(null)
+  const daySwipeRef = useCoachDaySwipe(dayInteractions, selected, date => openDay(date, undefined, true),
+    quickDayEntry ? { resolve: (target, x, y) => dayBookingTime(target, x, y, hourHeight), open: setBookingTime } : undefined,
+    singleDayGuide && workoutsRepository.rescheduleSlot ? {
+      hourHeight,
+      resolve: target => {
+        const id = target.closest<HTMLElement>('[data-workout-id]')?.dataset.workoutId
+        const workout = timed.find(item => item.id === id)
+        return actor?.role === 'trainer' && workout?.status === 'planned' && (!workout.createdBy || workout.createdBy === actor.userId) ? workout : null
+      },
+      preview: setDragPreview,
+      drop: (workout, slot) => setSlotMove({ workout, slot }),
+    } : undefined)
   const homeClients = useQuery({
     queryKey: ['clients', false],
     queryFn: () => clientsRepository.list(false),
@@ -1001,15 +1021,17 @@ function TrainerScheduleV2({ forceDayView = false }: { forceDayView?: boolean })
         {independent.length > 0 && <section className="schedule-v2-untimed" aria-label="Самостоятельные тренировки"><strong>Самостоятельно</strong>{independent.map((workout) => <Link key={workout.id} to={`/workouts/${workout.id}`} state={{ returnTo }}><span className="schedule-v2-avatar">{clientInitials(workout.clientName)}</span><span><b>{workout.clientName}</b><small>{eventTime(workout) || 'Без времени'} · {scheduleV2WorkoutLine(workout)}</small></span>{workout.status === 'done' ? <CheckIcon /> : workout.status === 'cancelled' ? <span className="schedule-cancelled-mark" role="img" aria-label="Не состоялась"><CloseIcon /></span> : null}</Link>)}</section>}
         {untimed.length > 0 && <section className="schedule-v2-untimed" aria-labelledby="schedule-v2-untimed-title"><strong id="schedule-v2-untimed-title">Без времени</strong>{untimed.map((workout) => <Link key={workout.id} to={`/workouts/${workout.id}`} state={{ returnTo }}><span className="schedule-v2-avatar">{clientInitials(workout.clientName)}</span><span><b>{workout.clientName}</b><small>{scheduleV2WorkoutLine(workout)}</small></span>{workout.status === 'done' ? <CheckIcon /> : workout.status === 'cancelled' ? <span className="schedule-cancelled-mark" role="img" aria-label="Не состоялась"><CloseIcon /></span> : null}</Link>)}</section>}
         <div className="day-grid-scroll schedule-v2-timeline" ref={scrollRef}>
-          <div className="day-grid" style={{ height: timelineHeight }}>
+          <div key={selected} className={`day-grid${dayInteractions ? ' coach-day-grid' : ''}`} style={{ height: timelineHeight }}>
             {HOURS.map((hour) => <div key={hour} className={`day-grid-hour${selected === today && scheduleHourLabelCollidesWithNow(hour, currentMinutes, fitLimeToday ? hourHeight : undefined) ? ' is-near-current-time' : ''}`} style={{ top: hour * hourHeight }}><span className="day-grid-hour-label">{String(hour).padStart(2, '0')}:00</span><div className="day-grid-hour-line" /></div>)}
             {selected === today && <div className="schedule-v2-now" style={{ top: (currentMinutes / 60) * hourHeight }}><time>{currentTime}</time><span /></div>}
             <div className="schedule-v2-event-layer">
             {timelineEvents.map(({ workout, top, height, column, columns }) => {
               const status = scheduleEventStatus(workout, today)
-              return <Link key={workout.id} className={`schedule-v2-event schedule-event-${status.tone}${columns > 1 ? ' is-compact' : ''}${columns > 2 ? ' is-dense' : ''}${height <= 44 ? ' is-short' : ''}`} style={{ top, height, left: `${column * 100 / columns}%`, width: `calc(${100 / columns}% - ${columns > 1 ? 4 : 0}px)` }} aria-label={`${eventTime(workout)} ${workout.clientName} · ${status.label}`} title={`${eventTime(workout)} · ${workout.clientName}`} to={`/workouts/${workout.id}`} state={{ returnTo }} onClick={() => trackGoal('schedule_v2_workout_opened')}>
+              const preview = dragPreview?.workout.id === workout.id ? dragPreview.slot : null
+              const cardTop = preview?.startTime ? minutesOf(preview.startTime) / 60 * hourHeight : top
+              return <Link key={workout.id} draggable={false} data-workout-id={workout.id} className={`schedule-v2-event${preview ? ' is-slot-moving' : ''} schedule-event-${status.tone}${columns > 1 ? ' is-compact' : ''}${columns > 2 ? ' is-dense' : ''}${height <= 44 ? ' is-short' : ''}`} style={{ top: cardTop, height, left: `${column * 100 / columns}%`, width: `calc(${100 / columns}% - ${columns > 1 ? 4 : 0}px)` }} aria-label={`${eventTime(workout)} ${workout.clientName} · ${status.label}`} title={`${eventTime(workout)} · ${workout.clientName}`} to={`/workouts/${workout.id}`} state={{ returnTo }} onClick={() => trackGoal('schedule_v2_workout_opened')}>
                 <span className="schedule-v2-avatar">{clientInitials(workout.clientName)}</span>
-                <span><b>{fitLimeToday && columns > 1 ? scheduleLaneClientName(workout.clientName) : workout.clientName}</b><small className="schedule-workout-line" title={scheduleV2WorkoutLine(workout)}>{workout.title && <span className="schedule-event-workout-title">{workout.title}</span>}<span className="schedule-event-exercises">{workoutExerciseBrief(workout.exercises)}</span></small><span className="sr-only">{status.label}</span></span>
+                <span><b>{fitLimeToday && columns > 1 ? scheduleLaneClientName(workout.clientName) : workout.clientName}</b><small className="schedule-workout-line" title={scheduleV2WorkoutLine(workout)}>{preview ? <time className="schedule-slot-preview-time">{slotTimeLabel(preview)}</time> : <>{workout.title && <span className="schedule-event-workout-title">{workout.title}</span>}<span className="schedule-event-exercises">{workoutExerciseBrief(workout.exercises)}</span></>}</small><span className="sr-only">{status.label}</span></span>
                 {workout.status === 'done' ? <CheckIcon /> : workout.status === 'cancelled' ? <span className="schedule-cancelled-mark" role="img" aria-label="Не состоялась"><CloseIcon /></span> : null}
               </Link>
             })}
@@ -1018,9 +1040,23 @@ function TrainerScheduleV2({ forceDayView = false }: { forceDayView?: boolean })
         </div>
       </>}
     </AsyncView>
-    {isFitLimeEnabled(actor)
+    {!dragPreview && (isFitLimeEnabled(actor)
       ? <button type="button" className="schedule-v2-fab" aria-label="Новая тренировка" onClick={() => { trackGoal('schedule_v2_workout_create_started'); setPlanComposerOpen(true) }}><AddIcon /></button>
-      : <Link className="schedule-v2-fab" aria-label={`Запланировать тренировку на ${selected}`} to={`/workouts/new?date=${selected}`} state={{ returnTo }} onClick={() => trackGoal('schedule_v2_workout_create_started')}><AddIcon /></Link>}
+      : <Link className="schedule-v2-fab" aria-label={`Запланировать тренировку на ${selected}`} to={`/workouts/new?date=${selected}`} state={{ returnTo }} onClick={() => trackGoal('schedule_v2_workout_create_started')}><AddIcon /></Link>)}
+    {slotMove && <WorkoutRescheduleSheet workout={slotMove.workout} initialSlot={slotMove.slot} onClose={() => setSlotMove(null)} onReloaded={fresh => {
+      setSlotMove(null)
+      void navigate(`/workouts/${fresh.id}`, { state: { returnTo } })
+    }} onSaved={async slot => {
+      const id = slotMove.workout.id
+      setSlotMove(null)
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['workout', id] }),
+        invalidateWorkoutResults(queryClient),
+        queryClient.invalidateQueries({ queryKey: ['today-workouts'] }),
+        queryClient.invalidateQueries({ queryKey: ['trainer-attention'] }),
+      ])
+      void navigate(`/today?${new URLSearchParams({ date: slot.workoutDate, week: mondayWeekStart(slot.workoutDate) })}`, { state: { scheduleFocus: { workoutId: id, startTime: slot.startTime } } })
+    }} />}
     {bookingTime && <QuickDayBooking date={selected} time={bookingTime} returnTo={returnTo} onClose={() => setBookingTime(null)} />}
     {planComposerOpen && <FitLimeWorkoutEntry date={selected} returnTo={returnTo} onClose={() => setPlanComposerOpen(false)} />}
     {inboxOpen && <ScheduleV2InboxSheet
