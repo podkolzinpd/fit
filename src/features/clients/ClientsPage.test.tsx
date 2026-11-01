@@ -1,21 +1,16 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { ChatThread, Client } from '../../shared/domain'
 import { ArchivedClientsPage, ClientsPage } from './ClientsListPage'
 
-const backend = vi.hoisted(() => ({ list: vi.fn(), setArchived: vi.fn(), listThreads: vi.fn(), open: vi.fn(), listFinanceOverview: vi.fn() }))
+const backend = vi.hoisted(() => ({ list: vi.fn(), setArchived: vi.fn(), listThreads: vi.fn(), open: vi.fn(), listFinanceOverview: vi.fn(), createInvite: vi.fn(), revoke: vi.fn() }))
 vi.mock('../../app/data-backend-context', () => ({
-  useDataBackend: () => ({ clients: { list: backend.list, setArchived: backend.setArchived }, chat: { listThreads: backend.listThreads, open: backend.open }, trainerFinance: { listOverview: backend.listFinanceOverview } }),
+  useDataBackend: () => ({ source: 'yandex', clients: { list: backend.list, setArchived: backend.setArchived }, chat: { listThreads: backend.listThreads, open: backend.open }, trainerFinance: { listOverview: backend.listFinanceOverview }, invitations: { createShareForNewClient: backend.createInvite, revoke: backend.revoke } }),
 }))
 vi.mock('../../app/auth-context', () => ({ useAuth: () => ({ actor: { role: 'trainer', userId: 'trainer-1' } }) }))
-
-// Из workouts.repository экрану нужен только формат ИМТ, а тест проверяет
-// поиск, а не расчёт. Заглушка держит тест на одном модуле вместо всего
-// репозитория тренировок.
-vi.mock('../../data/repositories/workouts.repository', () => ({ bmiLabel: () => '23.3' }))
 
 const client = (id: string, fullName: string, hasAccount = false, archivedAt: string | null = null): Client => ({
   id, canArchive: false, fullName, canonicalFullName: fullName, hasAccount, gender: null,
@@ -31,6 +26,8 @@ const thread = (clientId: string, unreadCount = 0, activeConnection = true): Cha
 })
 
 const NAMES = ['Анна Смирнова', 'Борис Иванов', 'Вера Кузнецова', 'Глеб Орлов', 'Дарья Ершова', 'Егор Панов']
+
+beforeAll(() => { HTMLDialogElement.prototype.showModal = function () { this.setAttribute('open', '') } })
 
 // State-machine coverage only: real browser input is verified separately in E2E.
 class TestPointerEvent extends MouseEvent {
@@ -113,7 +110,7 @@ describe('ClientsPage archive actions', () => {
     const surface = await swipeSurface()
     pointerEvent(surface, 'pointerdown', 310)
     pointerEvent(surface, 'pointermove', 65)
-    pointerEvent(surface.querySelector('svg')!, 'lostpointercapture', 65)
+    pointerEvent(surface.querySelector('.client-avatar')!, 'lostpointercapture', 65)
     expect(surface.closest('.client-swipe-row')).toHaveClass('is-armed')
     expect(backend.setArchived).not.toHaveBeenCalled()
     pointerEvent(surface, 'pointerup', 65)
@@ -330,11 +327,17 @@ describe('ClientsPage search', () => {
     expect(screen.getByText(/· до 08\.10/)).toBeVisible()
   })
 
-  it('offers a direct invitation and keeps manual profile creation available', async () => {
+  it('offers one add action without a decorative plus and keeps both existing creation paths', async () => {
+    const user = userEvent.setup()
     renderPage([])
-
-    expect(await screen.findByRole('button', { name: 'Пригласить спортсмена' })).toBeVisible()
-    expect(screen.getByRole('link', { name: 'Добавить' })).toHaveAttribute('href', '/clients/new')
+    await user.click(await screen.findByRole('button', { name: 'Добавить клиента' }))
+    expect(document.querySelector('.state-panel-mark')).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Добавить' })).not.toBeInTheDocument()
+    const manual = screen.getByRole('link', { name: 'Создать карточку' })
+    expect(manual).toHaveAttribute('href', '/clients/new')
+    await user.click(screen.getByRole('button', { name: 'Пригласить по ссылке' }))
+    expect(await screen.findByRole('dialog', { name: 'Кого пригласить?' })).toBeVisible()
+    expect(screen.getByLabelText('Имя спортсмена')).toBeVisible()
   })
 
   it('filters by name and clears the query from the field itself', async () => {
@@ -361,11 +364,41 @@ describe('ClientsPage search', () => {
     expect(screen.getByText('По этому имени клиентов не найдено.')).toBeVisible()
   })
 
-  it('hides the field while the list is still short enough to scan', async () => {
-    renderPage(NAMES.slice(0, 5).map((name, index) => client(`c${index}`, name)))
-
+  it('keeps search available for one client and restores the result after clearing a miss', async () => {
+    const user = userEvent.setup()
+    renderPage([client('c1', 'Анна Смирнова')])
+    const search = await screen.findByLabelText('Поиск клиента')
+    await user.type(search, 'Нет совпадения')
+    expect(screen.queryByText('Анна Смирнова')).not.toBeInTheDocument()
+    await user.click(within(document.querySelector<HTMLElement>('.clients-search-empty')!).getByRole('button', { name: 'Очистить поиск' }))
     expect(await screen.findByText('Анна Смирнова')).toBeVisible()
-    expect(screen.queryByLabelText('Поиск клиента')).not.toBeInTheDocument()
+    expect(screen.getByLabelText('Поиск клиента')).toHaveValue('')
+  })
+
+  it('uses initials and one financial label without requiring medical profile fields', async () => {
+    renderPage([{ ...client('c1', 'Анна Смирнова'), ageYears: 30, heightCm: 170, currentWeightKg: 62 }])
+    await screen.findByText('Анна Смирнова')
+    expect(document.querySelector('.client-avatar')).toHaveTextContent('АС')
+    expect(document.querySelector('.client-card-copy')).not.toHaveTextContent(/ИМТ|лет|кг|Нужно дополнить/)
+    expect(backend.listFinanceOverview).toHaveBeenCalledTimes(1)
+  })
+
+  it('keeps the generated invitation open when creating the first card replaces the empty state', async () => {
+    const user = userEvent.setup()
+    backend.createInvite.mockReset().mockImplementation(() => {
+      backend.list.mockResolvedValue([client('created', 'Новый спортсмен')])
+      return Promise.resolve({ clientId: 'created', share: { id: 'invite-1', clientId: 'created', targetRole: 'client',
+        code: 'ABC123DEF456', token: `ABC123DEF456.${'a'.repeat(64)}`, expiresAt: '2026-11-08T12:00:00Z' } })
+    })
+    renderPage([])
+    await user.click(await screen.findByRole('button', { name: 'Добавить клиента' }))
+    await user.click(screen.getByRole('button', { name: 'Пригласить по ссылке' }))
+    await user.type(screen.getByLabelText('Имя спортсмена'), 'Новый спортсмен')
+    await user.click(screen.getByRole('button', { name: 'Создать приглашение' }))
+    expect(await screen.findByText('Новый спортсмен', { selector: '.client-card-copy strong' })).toBeVisible()
+    expect(await screen.findByRole('dialog', { name: 'Ссылка готова' })).toBeVisible()
+    expect(backend.createInvite).toHaveBeenCalledExactlyOnceWith('Новый спортсмен', expect.stringMatching(/^[a-f0-9-]{36}$/))
+    expect(screen.getByRole('button', { name: 'Добавить' })).toBeVisible()
   })
 })
 
