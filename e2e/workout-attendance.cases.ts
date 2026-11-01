@@ -212,6 +212,7 @@ export function workoutAttendanceCases() {
     expect(await sheet.evaluate(el=>getComputedStyle(el).fontFamily.replace(/[\s'"]/g,''))).toBe(await page.locator('.phone-frame').evaluate(el=>getComputedStyle(el).fontFamily.replace(/[\s'"]/g,'')))
     await expect(sheet.locator('.workout-attendance-note')).toHaveCount(0)
     await sheet.getByRole('button',{name:'Продолжить тренировку',exact:true}).click()
+    await expect(page.getByRole('button',{name:'Завершить тренировку',exact:true})).toBeFocused()
     expect(calls).toHaveLength(0)
     await expect(page).toHaveURL(new RegExp(`/workouts/${workoutId}/live`))
     await page.getByRole('button',{name:'Завершить тренировку',exact:true}).click()
