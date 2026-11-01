@@ -135,8 +135,34 @@ for (const role of ['client', 'trainer'] as const) test(`Lime Live direct input 
   await expect(first).toHaveClass(/confirmed/)
 })
 
-// One 390px interaction case per engine: trusted touch capture in Chromium and
-// WebKit pointer bubbling from the nested SVG. Geometry stays in the existing matrix.
+test('First-client invitation survives the empty-to-list transition', { tag: ['@lime-clients', '@lime-critical'] }, async ({ page }) => {
+  await mockPilot(page, { fitLime: true, clientRecords: [] })
+  let created = false
+  const commands: Array<{ fullName: string; operationId: string }> = []
+  const record = { id: clientId, fullName: 'Первый спортсмен', canonicalFullName: 'Первый спортсмен', hasAccount: false,
+    canArchive: true, archivedAt: null, ageYears: null, heightCm: null, currentWeightKg: null, gender: null,
+    ageUpdatedAt: null, goal: null, note: null, version: 1, membershipVersion: null }
+  await page.route(url => url.pathname === '/v1/clients', route => route.fulfill({ json: { clients: created ? [record] : [] } }))
+  await page.route('**/v1/invitation-links/new-client', async route => {
+    commands.push(route.request().postDataJSON() as typeof commands[number]); created = true
+    await route.fulfill({ status: 201, json: { clientId, share: { id: newWorkoutId, clientId, targetRole: 'client',
+      code: 'ABC123DEF456', token: `ABC123DEF456.${'a'.repeat(64)}`, expiresAt: '2026-11-08T12:00:00Z' } } })
+  })
+  await page.goto('/clients')
+  await expect(page.locator('.state-panel-mark')).toHaveCount(0)
+  await page.getByRole('button', { name: 'Добавить клиента', exact: true }).click()
+  await page.getByRole('button', { name: 'Пригласить по ссылке' }).click()
+  await page.getByLabel('Имя спортсмена').fill('Первый спортсмен')
+  await page.getByRole('button', { name: 'Создать приглашение' }).click()
+  await expect(page.getByRole('dialog', { name: 'Ссылка готова' })).toBeVisible()
+  await expect(page.locator('.client-card-copy strong')).toHaveText('Первый спортсмен')
+  expect(commands).toHaveLength(1)
+  expect(commands[0]).toMatchObject({ fullName: 'Первый спортсмен', operationId: expect.stringMatching(/^[a-f0-9-]{36}$/) })
+  await page.getByRole('dialog', { name: 'Ссылка готова' }).getByRole('button', { name: 'Закрыть', exact: true }).click()
+  await expect(page.getByRole('button', { name: 'Добавить', exact: true })).toBeVisible()
+  await expect(page.locator('.client-card')).toHaveCount(1)
+})
+
 test('Client chat tap stays separate from archive gestures', { tag: ['@lime-clients', '@lime-chat'] }, async ({ page, browserName }) => {
   const row = await openSwipeFixture(page, true)
   const chat = row.getByRole('button', { name: /Сообщения с Алексей Смирнов/ })
@@ -693,12 +719,15 @@ test('Live mode switch in the timer settings stops the timer flow for this sessi
 
 test('Live rest failure and retry preserve the countdown and a manual adjustment', { tag: ["@lime-critical"] }, async ({ page }) => {
   await page.clock.install({ time: new Date('2026-10-08T09:00:00Z') })
+  // Keep Date deterministic while asynchronous UI and request timers continue to run.
+  await page.clock.setFixedTime(new Date('2026-10-08T09:00:00Z'))
   const source = restTimerWorkout(); source.exercises[0]!.restBetweenSetsSec = 90
   await mockPilot(page, { role: 'client', profileId: clientId, workouts: [source], failFirstSetConfirm: true })
   await page.goto(`/workouts/${workoutId}/live`)
   await page.getByRole('button', { name: 'Готово, отдых', exact: true }).first().click()
   const retry = page.getByRole('button', { name: 'Готово, отдых', exact: true }).filter({ hasText: 'Повтор' })
   await expect(retry).toBeVisible()
+  await page.clock.setFixedTime(new Date('2026-10-08T09:00:05Z'))
   await page.clock.fastForward(5_000)
   await expect(page.locator('.live-rest-trigger')).toContainText('Отдых 1:25')
   await page.locator('.live-rest-trigger').click()
@@ -708,6 +737,9 @@ test('Live rest failure and retry preserve the countdown and a manual adjustment
   await retry.click()
   await expect(page.locator('.live-session-progress-copy')).toContainText('Готово 1 из 2')
   await expect(page.locator('.live-rest-trigger')).toContainText('Отдых 1:40')
+  await page.clock.setFixedTime(new Date('2026-10-08T09:00:10Z'))
+  await page.clock.fastForward(5_000)
+  await expect(page.locator('.live-rest-trigger')).toContainText('Отдых 1:35')
 })
 
 test('Live rest phase expiry waits for a pending confirmation without timing the same set twice', async ({ page }) => {
@@ -1840,7 +1872,7 @@ test('direct pilot workout link returns to its dated calendar instead of clients
 
 test('Lime complete lifecycle preserves one plan through start resume and finish', { tag: ["@lime-critical"] }, async ({ page }) => {
   await page.clock.setFixedTime(new Date('2026-09-24T12:00:00+03:00'))
-  await mockPilot(page, { fitLime: true, workouts: [] })
+  const backend = await mockPilot(page, { fitLime: true, workouts: [] })
   const writes: string[] = []
   page.on('request', (request) => { if (request.method() === 'POST' && new URL(request.url()).pathname.startsWith('/v1/workouts')) writes.push(new URL(request.url()).pathname) })
   await page.goto('/today?date=2026-09-24')
@@ -1866,9 +1898,13 @@ test('Lime complete lifecycle preserves one plan through start resume and finish
   await page.getByRole('button', { name: 'Начать сейчас', exact: true }).click()
   await page.getByRole('dialog', { name: 'Выбор клиента' }).getByRole('button', { name: /Алексей Смирнов/ }).click()
   await expect(page).toHaveURL(new RegExp(`/workouts/${newWorkoutId}/live$`))
+  const before = JSON.stringify(backend.getWorkouts()[0]!.exercises)
   await page.getByRole('button', { name: 'Завершить тренировку', exact: true }).click()
-  await page.getByRole('button', { name: 'Завершить', exact: true }).click()
-  await expect(page.getByRole('heading', { name: 'Тренировка завершена' })).toBeVisible()
+  await page.getByRole('dialog', { name: 'Отметить проведённой', exact: true }).getByRole('button', { name: 'Подтвердить проведение', exact: true }).click()
+  await expect(page).toHaveURL(new RegExp(`/workouts/${newWorkoutId}$`))
+  await expect(page.locator('.workout-header-contract')).toContainText('Проведена')
+  expect(backend.getWorkouts()).toHaveLength(1)
+  expect(JSON.stringify(backend.getWorkouts()[0]!.exercises)).toBe(before)
   await page.goto('/today?date=2026-09-24')
   await expect(page.locator('.schedule-v2-event.schedule-event-done')).toHaveCount(1)
   expect(writes).toEqual(['/v1/workouts', `/v1/workouts/${newWorkoutId}/start`, `/v1/workouts/${newWorkoutId}/finish`])
@@ -2059,12 +2095,18 @@ test('Client Lime voice parsing exposes progress and retains failed transcript',
 })
 
 for (const kind of ['anonymous', 'other-client', 'trainer'] as const) {
-  test(`Client Lime public routes exclude ${kind}`, { tag: ["@lime-critical"] }, async ({ page }) => {
+  test(`Client Lime public routes keep only the invitation exception for ${kind}`, { tag: ["@lime-critical"] }, async ({ page }) => {
     await mockPilot(page, { role: kind === 'trainer' ? 'trainer' : 'client', profileId: kind === 'other-client' ? '10000000-0000-4000-8000-000000000010' : kind === 'trainer' ? trainerId : clientId, fitLime: kind === 'trainer' })
     if (kind === 'anonymous') await page.addInitScript(() => localStorage.removeItem('fit.yandexAppSession.v1'))
     await page.addInitScript((id) => localStorage.setItem(`fit.clientLime.theme.${id}`, 'dark'), clientId)
     await mockPublicTrainer(page)
-    for (const route of ['/legal/privacy', `/trainers/${publicTrainerId}`, '/invite']) {
+    // The approved invitation is the sole new pre-actor presentation exception.
+    // Navigate away afterwards to prove it cannot leak into the old gates.
+    await page.goto('/invite')
+    await expect(page.getByRole('heading').first()).toBeVisible()
+    await expect(page.locator('.phone-frame.fit-client-lime-public')).toHaveCount(1)
+    await expect(page.locator('html')).toHaveClass(/fit-client-lime-document/)
+    for (const route of ['/legal/privacy', `/trainers/${publicTrainerId}`]) {
       await page.goto(route)
       await expect(page.getByRole('heading').first()).toBeVisible()
       await expect(page.locator('.fit-client-lime')).toHaveCount(0)

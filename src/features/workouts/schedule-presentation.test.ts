@@ -53,21 +53,21 @@ describe('schedule presentation', () => {
     expect(scheduleEventStatus(workout(), today)).toEqual({ label: 'План', tone: 'planned' })
     expect(scheduleEventStatus(workout({ workoutDate: localDate('2026-08-25') }), today)).toEqual({ label: 'План', tone: 'decision' })
     expect(scheduleEventStatus(workout({ status: 'in_progress' }), today)).toEqual({ label: 'Идёт', tone: 'current' })
-    expect(scheduleEventStatus(workout({ status: 'done' }), today)).toEqual({ label: 'Готово', tone: 'done' })
+    expect(scheduleEventStatus(workout({ status: 'done' }), today)).toEqual({ label: 'Проведена', tone: 'done' })
     expect(scheduleEventStatus(workout({ status: 'cancelled' }), today)).toEqual({ label: 'Не состоялась', tone: 'skipped' })
   })
 
-  it('marks only trainer-assigned workouts started and finished by the same athlete', () => {
+  it('keeps the completion status independent of who started or finished the workout', () => {
     const today = localDate('2026-08-26')
     const actors = { trainerId: 'trainer-1', createdBy: 'trainer-1', startedBy: 'client-1', completedBy: 'client-1' }
     expect(scheduleEventStatus(workout({ status: 'done', ...actors }), today))
-      .toEqual({ label: 'Самостоятельно', tone: 'self-led' })
+      .toEqual({ label: 'Проведена', tone: 'done' })
     expect(scheduleEventStatus(workout({ status: 'done', ...actors, completedBy: 'trainer-1' }), today))
-      .toEqual({ label: 'Готово', tone: 'done' })
+      .toEqual({ label: 'Проведена', tone: 'done' })
     expect(scheduleEventStatus(workout({ status: 'done', ...actors, createdBy: 'client-1' }), today))
-      .toEqual({ label: 'Готово', tone: 'done' })
+      .toEqual({ label: 'Проведена', tone: 'done' })
     expect(scheduleEventStatus(workout({ status: 'done', trainerId: 'trainer-1', createdBy: 'trainer-1' }), today))
-      .toEqual({ label: 'Готово', tone: 'done' })
+      .toEqual({ label: 'Проведена', tone: 'done' })
   })
 
   it('focuses the nearest workout, the first when all ended, or current time when empty', () => {

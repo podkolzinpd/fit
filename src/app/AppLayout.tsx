@@ -153,6 +153,7 @@ export function AppLayout() {
     isCoachWorkoutRedesignEnabled(actor) ? 'coach-workout-reference' : '',
     isCoachWorkoutRedesignEnabled(actor) || clientLimeShell && isClientWorkoutRedesignEnabled(actor) ? 'workout-live-reference' : '',
     clientLimeShell ? 'fit-client-lime' : '',
+    clientLimeShell && isClientWorkoutRedesignEnabled(actor) && pathname === '/me' ? 'client-workout-entry-shell' : '',
     clientLimeShell && isClientWorkoutRedesignEnabled(actor) ? 'client-screen-reference' : '',
     clientLimeShell && (isClientWorkoutRedesignEnabled(actor) || favoriteEditor) ? 'client-workout-reference' : '',
     clientCompose ? 'client-workout-compose' : '',

@@ -90,7 +90,7 @@ test('trainer two-week Schedule keeps ten workouts visible without an inner scro
     expect(new Set(secondWeekHeights.map(Math.round)).size).toBe(1);
     await expect(page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).resolves.toBe(true);
 });
-test('trainer day Schedule labels a trainer assignment completed by the athlete', async ({ page }) => {
+test('trainer day Schedule keeps the conducted status when the athlete completed the assignment', async ({ page }) => {
     await page.goto('/auth');
     await nativeSignIn(page, 'trainer@fit.local');
     await expect(page).toHaveURL(/\/(today|clients)$/);
@@ -115,7 +115,7 @@ test('trainer day Schedule labels a trainer assignment completed by the athlete'
             })]));
     await page.goto('/schedule?date=2026-09-18');
     const event = page.locator('.day-grid-event').filter({ hasText: 'Анна Смирнова' });
-    await expect(event).toHaveClass(/schedule-event-self-led/);
-    await expect(event.locator('.day-grid-event-status')).toHaveText('Самостоятельно');
+    await expect(event).toHaveClass(/schedule-event-done/);
+    await expect(event.locator('.day-grid-event-status')).toHaveText('Проведена');
     await expect(page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).resolves.toBe(true);
 });

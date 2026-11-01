@@ -880,7 +880,7 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
     : <button type="button" className="link" onClick={() => { trackGoal('today_review_reorder_started'); setReordering(true) }}>Изменить порядок</button>
     : null
 
-  return <Page title={pageTitle} hideTitle={header.hideTitle} className="today-page today-start-page" action={<div className="today-header-actions"><ChatHeaderAction />{header.showProfileAvatar && <Link className="today-profile-avatar" to={clientMode ? '/me/profile' : '/profile'} aria-label="Открыть профиль">{profileInitial}</Link>}</div>}>
+  return <Page title={pageTitle} hideTitle={header.hideTitle} className={`today-page today-start-page${clientReference ? ' client-workout-entry' : ''}`} action={<div className="today-header-actions"><ChatHeaderAction />{header.showProfileAvatar && <Link className="today-profile-avatar" to={clientMode ? '/me/profile' : '/profile'} aria-label="Открыть профиль">{profileInitial}</Link>}</div>}>
     {actor && !limePlanning && !(clientLime && requestedClientDraft) && screen === 'compose' && !textComposerOpen && <><AppInstallPrompt userId={actor.userId} /><NotificationOnboarding userId={actor.userId} role={clientMode ? 'client' : 'trainer'} /></>}
     {screen === 'compose' ? <section className={`today-composer today-voice-home voice-phase-${voicePhase}`}>
       {limePlanning ? <div><button type="button" className="link today-review-back" onClick={() => navigate(returnTo)}>← В календарь</button><h1>Составить план</h1><p className="muted">{planMetadata.title || 'Новая тренировка'} · {formatLocalDate(workoutDate)}</p></div> : !greetingHeaderPilotEnabled && !(clientLime && requestedClientDraft) && <p className="today-greeting">{greeting} 👋</p>}
