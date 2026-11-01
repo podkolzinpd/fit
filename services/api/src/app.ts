@@ -1,3 +1,4 @@
+import { registerCorporateInvitationRoutes, type CorporateInvitationsService } from './corporate-invitations.js'
 import { readWorkoutTitleRequest } from './workout-title-request.js'
 import type { ChatMeetings, MeetingAction } from './chat-meetings.js'
 import { registerCorporateAdminRoutes, type CorporateAdminService } from './corporate-admin.js'
@@ -201,6 +202,7 @@ function readCompatibleYandexActorSession(
 }
 
 interface BuildAppOptions {
+  corporateInvitations?: CorporateInvitationsService
   corporateAdmin?: CorporateAdminService
   nutritionAutoActivator?: import('./nutrition-pilot.js').NutritionAutoActivator
   nutritionDiary?: NutritionDiary
@@ -273,6 +275,7 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
     },
   })
   registerCorporateAdminRoutes(app, options.corporateAdmin)
+  registerCorporateInvitationRoutes(app, options.corporateInvitations)
   const allowedOrigins = new Set(options.allowedOrigins ?? [])
   const publicChatMessage = async (message: ChatMessage) => {
     if (!message.image) return { ...message, image: null }

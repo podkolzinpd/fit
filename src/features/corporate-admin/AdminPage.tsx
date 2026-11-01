@@ -1,3 +1,4 @@
+import { CorporateInvitations } from './Invitations'
 import { useLayoutEffect, useRef, useState } from 'react'
 import { useForm, useWatch } from 'react-hook-form'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
@@ -39,14 +40,16 @@ function AdminWorkspace() {
   const { actor } = useAuth()
   const [params, setParams] = useSearchParams()
   const officesTab = params.get('tab') === 'offices'
+  const invitationsTab = params.get('tab') === 'invitations'
   const query = useQuery({ queryKey: ['corporate-admin-bundle', actor?.userId], queryFn: () => repository.bundle(), retry: false })
   return <>
     <nav className="corporate-admin-tabs" aria-label="Разделы кабинета">
-      <button type="button" className="secondary" aria-current={!officesTab ? 'page' : undefined} onClick={() => setParams({})}>Тренеры</button>
+      <button type="button" className="secondary" aria-current={!officesTab && !invitationsTab ? 'page' : undefined} onClick={() => setParams({})}>Тренеры</button>
       <button type="button" className="secondary" aria-current={officesTab ? 'page' : undefined} onClick={() => setParams({ tab: 'offices' })}>Офисы</button>
+      <button type="button" className="secondary" aria-current={invitationsTab ? 'page' : undefined} onClick={() => setParams({ tab: 'invitations' })}>Приглашения</button>
     </nav>
     <AsyncView loading={query.isPending} error={query.error} onRetry={() => void query.refetch()}>
-      {query.data && (officesTab ? <Offices key="offices" data={query.data} /> : <Trainers key="trainers" data={query.data} />)}
+      {query.data && (officesTab ? <Offices key="offices" data={query.data} /> : invitationsTab ? <CorporateInvitations key="invitations" data={query.data} initialCreate={params.get('create') === '1'} /> : <Trainers key="trainers" data={query.data} onInvite={() => setParams({ tab: 'invitations', create: '1' })} />)}
     </AsyncView>
   </>
 }
@@ -103,13 +106,13 @@ function OfficeForm({ office, onClose }: { office: CorporateOffice; onClose: () 
   </form>
 }
 
-function Trainers({ data }: { data: CorporateAdminBundle }) {
+function Trainers({ data, onInvite }: { data: CorporateAdminBundle; onInvite: () => void }) {
   const [search, setSearch] = useState('')
   const [officeId, setOfficeId] = useState('')
   const [selected, setSelected] = useState<CorporateTrainer | null>(null)
   const rows = data.trainers.filter(t => t.isYandex && matchesAdminTrainer(t, search) && (!officeId || t.officeIds.includes(officeId)))
   return <section className="corporate-admin-workspace">
-    <h2>Тренеры</h2>
+    <div className="corporate-admin-toolbar"><h2>Тренеры</h2><button type="button" className="primary" onClick={onInvite}>Пригласить тренера</button></div>
     <div className="corporate-admin-filters">
       <Field label="Поиск тренера"><input type="search" placeholder="Имя или ссылка на анкету" value={search} onChange={e => setSearch(e.target.value)} /></Field>
       <Field label="Офис"><select value={officeId} onChange={e => setOfficeId(e.target.value)}><option value="">Все офисы</option>{data.offices.map(o => <option key={o.id} value={o.id}>{o.city} · {o.name}{o.archived ? ' · Архив' : ''}</option>)}</select></Field>

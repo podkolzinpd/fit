@@ -13,6 +13,11 @@ on:
         type: choice
         default: primary
         options: [primary, additional]
+      scope:
+        description: Administrator capability or the independent invitation test pilot
+        type: choice
+        default: administrator
+        options: [administrator, invitation-pilot]
 permissions:
   contents: read
 concurrency:
@@ -35,6 +40,8 @@ jobs:
           PRIMARY_ADMIN_LOGIN_SHA256: ${{ secrets.FIT_CORPORATE_ADMIN_LOGIN_SHA256 }}
           ADDITIONAL_ADMIN_LOGIN_SHA256: ${{ secrets.FIT_CORPORATE_ADMIN_ADDITIONAL_LOGIN_SHA256 }}
           ADMIN_ACCOUNT: ${{ inputs.account }}
+          CORPORATE_ADMIN_SCOPE: ${{ inputs.scope }}
+          PILOT_TRAINER_LOGIN_SHA256: ${{ secrets.FIT_CORPORATE_INVITATION_PILOT_LOGIN_SHA256 }}
           CORPORATE_ADMIN_ACTION: ${{ inputs.action }}
         shell: bash
         run: |
@@ -47,6 +54,11 @@ jobs:
           case "$ADMIN_ACCOUNT" in
             primary) CORPORATE_ADMIN_LOGIN_SHA256=$PRIMARY_ADMIN_LOGIN_SHA256; CORPORATE_ADMIN_ACCESS_SLOT=1 ;;
             additional) CORPORATE_ADMIN_LOGIN_SHA256=$ADDITIONAL_ADMIN_LOGIN_SHA256; CORPORATE_ADMIN_ACCESS_SLOT=2 ;;
+            *) exit 1 ;;
+          esac
+          case "$CORPORATE_ADMIN_SCOPE" in
+            administrator) ;;
+            invitation-pilot) CORPORATE_ADMIN_LOGIN_SHA256=$PILOT_TRAINER_LOGIN_SHA256 ;;
             *) exit 1 ;;
           esac
           [[ "$CORPORATE_ADMIN_LOGIN_SHA256" =~ ^[a-f0-9]{64}$ ]]
@@ -65,7 +77,7 @@ jobs:
           jq -r 'to_entries[] | select(.key | startswith("MIGRATION_DATABASE_")) | "\(.key)=\(.value)"' \
             <<<"$CLOUDRU_DATABASE_CONFIG_JSON" | sudo tee "$owner" >/dev/null
           printf 'MIGRATION_DATABASE_SSL_MODE=require\nGITHUB_REF=refs/heads/main\nGITHUB_REPOSITORY=podkolzinpd/fit\n' | sudo tee -a "$owner" >/dev/null
-          printf 'CORPORATE_ADMIN_ACTION=%s\nCORPORATE_ADMIN_LOGIN_SHA256=%s\nCORPORATE_ADMIN_ACCESS_SLOT=%s\n' "$CORPORATE_ADMIN_ACTION" "$CORPORATE_ADMIN_LOGIN_SHA256" "$CORPORATE_ADMIN_ACCESS_SLOT" | sudo tee -a "$owner" >/dev/null
+          printf 'CORPORATE_ADMIN_ACTION=%s\nCORPORATE_ADMIN_LOGIN_SHA256=%s\nCORPORATE_ADMIN_ACCESS_SLOT=%s\nCORPORATE_ADMIN_SCOPE=%s\n' "$CORPORATE_ADMIN_ACTION" "$CORPORATE_ADMIN_LOGIN_SHA256" "$CORPORATE_ADMIN_ACCESS_SLOT" "$CORPORATE_ADMIN_SCOPE" | sudo tee -a "$owner" >/dev/null
           sudo podman run --rm --read-only --memory=128m --cpus=0.5 --timeout=25 --cap-drop=ALL \
             --security-opt=no-new-privileges --env-file "$owner" --user "$(id -u):$(id -g)" \
             -v "$PWD/scripts/manage-corporate-admin-access.mjs:/operation.mjs:ro" \

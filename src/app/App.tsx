@@ -1,4 +1,4 @@
-import { CorporateAdminPage } from '../features/corporate-admin'
+import { CorporateInvitationPage, CorporateAdminPage } from '../features/corporate-admin'
 import { Navigate, Outlet, RouterProvider, createBrowserRouter, useLocation } from 'react-router-dom'
 import { useAuth } from './auth-context'
 import { trackPageView } from '../shared/yandex-metrika'
@@ -69,6 +69,11 @@ function InvitationRoute() {
     : <LegalAcceptanceGate><InvitationPage /></LegalAcceptanceGate>
 }
 
+function CorporateInvitationRoute() {
+  const { actor } = useAuth()
+  return actor === null ? <CorporateInvitationPage /> : <LegalAcceptanceGate><CorporateInvitationPage /></LegalAcceptanceGate>
+}
+
 function AssistantPage() {
   return <YandexAssistantRoute />
 }
@@ -94,6 +99,7 @@ const router = createBrowserRouter([
   { path: '/legal/delete-account', element: <AccountDeletionPage /> },
   { path: '/trainers/:publicId', element: <PublicTrainerProfilePage /> },
   ] },
+  { path: '/corporate-invite', element: <ClientLimeStandaloneLayout invitation><CorporateInvitationRoute /></ClientLimeStandaloneLayout> },
   { path: '/invite', element: <ClientLimeStandaloneLayout invitation><InvitationRoute /></ClientLimeStandaloneLayout> },
   { element: <Protected />, children: [
     { path: '/admin', element: <CorporateAdminPage /> },

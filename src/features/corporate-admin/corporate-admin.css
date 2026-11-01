@@ -36,3 +36,6 @@
 }
 .corporate-admin-shell select { height:var(--control-height-standard); min-height:var(--control-height-standard); padding:10px 12px; }
 .corporate-admin-workspace h2, .corporate-admin-editor h3 { margin:0; }
+
+.corporate-invitation-qr { width:min(320px,100%); height:auto; }
+@media(max-width:700px) { .corporate-admin-tabs { flex-wrap:wrap; } .corporate-admin-toolbar { flex-wrap:wrap; } }

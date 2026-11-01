@@ -1,4 +1,4 @@
-export { AuthPage, ForgotPasswordPage, ResetPasswordPage, AuthCallbackPage, YandexAppSessionPage, YandexAssistantFeaturesRefreshPage, YandexPilotCallbackPage } from './AuthPages'
+export { AuthIdentityScreen, AuthPage, ForgotPasswordPage, ResetPasswordPage, AuthCallbackPage, YandexAppSessionPage, YandexAssistantFeaturesRefreshPage, YandexPilotCallbackPage } from './AuthPages'
 export { JoinPage } from './JoinPage'
 export { InvitationPage } from './InvitationPage'
 export { InvitationShareButton, InviteAthleteButton } from './InvitationShareActions'

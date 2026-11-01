@@ -36,6 +36,7 @@ describe('trackPageView', () => {
     const token = `ABCDEF123456.${'a'.repeat(64)}`
     expect(sanitizeMetrikaUrl(`/invite?token=${token}&source=yandex`)).toBe('/invite')
     expect(sanitizeMetrikaUrl(`/invite#token=${token}&source=yandex`)).toBe('/invite')
+    expect(sanitizeMetrikaUrl(`/corporate-invite#token=${token}`)).toBe('/corporate-invite')
   })
 })
 

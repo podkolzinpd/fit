@@ -17,7 +17,7 @@ function browserStorage(): Storage | undefined {
 
 export function invitationAuthReturnPath(value: unknown): string | null {
   if (typeof value !== 'string' || value === '') return null
-  if (value === '/invite') return value
+  if (value === '/invite' || value === '/corporate-invite') return value
   if (!value.startsWith('/join?') || value.includes('#')) return null
 
   const search = value.slice('/join?'.length)

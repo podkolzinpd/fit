@@ -205,4 +205,92 @@ for(const theme of ['light','dark'] as const) {
   })
 }
 
+
+test('corporate invitation creates QR, explicitly claims and waits for administrator approval',async({page},testInfo)=>{
+  await page.setViewportSize({width:1366,height:900})
+  await mockNativeAiSession(page,'client')
+  const invitationId='70000000-0000-4000-8000-000000000001',token='c'.repeat(43)
+  let status='active',claims=0,approvals=0,created=false
+  const offices=[{id:officeId,city:'Санкт-Петербург',name:'Бенуа',address:'Синтетический адрес',archived:false,version:1}]
+  const routes=async()=>{
+  await page.route('**/v1/admin/access',r=>r.fulfill({json:{allowed:true}}))
+  await page.route('**/v1/admin/bundle',r=>r.fulfill({json:{offices,trainers:status==='approved'?[{id:coachId,name:'Приглашённый тренер',isYandex:true,officeIds:[officeId],version:1}]:[]}}))
+  await page.route('**/v1/admin/invitations',r=>{
+    if(r.request().method()==='POST'){created=true;return r.fulfill({json:{id:invitationId,token}})}
+    return r.fulfill({json:{invitations:created?[{id:invitationId,status,createdAt:'2026-11-01T10:00:00+00:00',expiresAt:'2099-01-01T00:00:00+00:00',officeIds:[officeId],trainerName:status==='active'?null:'Приглашённый тренер'}]:[]}})
+  })
+  await page.route('**/v1/corporate-invitations/preview',r=>r.fulfill({json:{invitation:{status,expiresAt:'2099-01-01T00:00:00+00:00',offices:[{city:'Санкт-Петербург',name:'Бенуа'}]}}}))
+  await page.route('**/v1/corporate-invitations/claim',r=>{claims++;status='claimed';return r.fulfill({json:{status}})})
+  await page.route(`**/v1/admin/invitations/${invitationId}/approve`,r=>{approvals++;status='approved';return r.fulfill({json:{saved:true}})})
+  }
+  await routes()
+  await page.goto(nativeAiUrl('/admin'))
+  await expect(page.getByRole('button',{name:'Настроить тренера Приглашённый тренер'})).toHaveCount(0)
+  await page.getByRole('button',{name:'Пригласить тренера',exact:true}).click()
+  await page.getByRole('checkbox',{name:'Санкт-Петербург · Бенуа'}).check()
+  await page.getByRole('button',{name:'Создать приглашение',exact:true}).click()
+  const link=await page.getByRole('textbox',{name:'Ссылка приглашения'}).inputValue()
+  expect(new URL(link).hash).toBe(`#token=${token}`)
+  await page.getByRole('button',{name:'Показать QR',exact:true}).click()
+  await expect(page.getByRole('img',{name:'QR-код приглашения тренера'})).toBeVisible()
+  await page.screenshot({path:testInfo.outputPath('corporate-invitation-admin.png'),fullPage:true})
+  await mockNativeAiSession(page,'trainer')
+  await routes()
+  await page.goto('about:blank')
+  await page.goto(link)
+  await expect(page.getByText('Текущий аккаунт:',{exact:false})).toBeVisible()
+  expect(claims).toBe(0)
+  await page.getByRole('button',{name:'Присоединиться к кабинету Яндекса',exact:true}).click()
+  await expect(page.getByRole('heading',{name:'Ожидает подтверждения'})).toBeVisible()
+  expect(claims).toBe(1);expect(approvals).toBe(0)
+  await mockNativeAiSession(page,'client')
+  await routes()
+  await page.goto('about:blank')
+  await page.goto(nativeAiUrl('/admin?tab=invitations'))
+  await page.getByRole('button',{name:'Подтвердить тренера',exact:true}).click()
+  await page.getByRole('button',{name:'Добавить тренера',exact:true}).click()
+  await expect(page.getByText('Тренер добавлен',{exact:true})).toBeVisible()
+  await page.getByRole('button',{name:'Тренеры',exact:true}).click()
+  await expect(page.getByRole('button',{name:'Настроить тренера Приглашённый тренер'})).toBeVisible()
+  expect(approvals).toBe(1)
+})
+
+test('corporate invitation guest, wrong role and terminal states do not claim automatically',async({page},testInfo)=>{
+  const token='d'.repeat(43)
+  let status='active',claims=0
+  const routes=async()=>{
+  await page.route('**/v1/corporate-invitations/preview',r=>r.fulfill({json:{invitation:{status,expiresAt:'2099-01-01T00:00:00Z',offices:[{city:'Москва',name:'Тестовый офис'}]}}}))
+  await page.route('**/v1/corporate-invitations/claim',r=>{claims++;return r.fulfill({status:403,json:{error:'corporate_invitation_pilot_only'}})})
+  }
+  await routes()
+  const url=nativeAiUrl(`/corporate-invite#token=${token}`)
+  await page.setViewportSize({width:390,height:844})
+  await page.goto(url)
+  await expect(page.getByRole('link',{name:'Войти в ФИТ',exact:true})).toBeVisible()
+  await expect(page.getByRole('link',{name:'Зарегистрироваться тренером',exact:true})).toBeVisible()
+  expect(claims).toBe(0)
+  await page.screenshot({path:testInfo.outputPath('corporate-invitation-guest-390.png'),fullPage:true})
+  await mockNativeAiSession(page,'client')
+  await routes()
+  await page.goto('about:blank')
+  await page.goto(url)
+  await expect(page.getByText('Для принятия приглашения войдите в аккаунт тренера.')).toBeVisible()
+  await expect(page.getByRole('button',{name:'Присоединиться к кабинету Яндекса'})).toHaveCount(0)
+  await mockNativeAiSession(page,'trainer')
+  await routes()
+  await page.goto('about:blank')
+  await page.goto(url)
+  await page.getByRole('button',{name:'Присоединиться к кабинету Яндекса'}).click()
+  await expect(page.getByRole('alert')).toContainText('только выбранным тестовым аккаунтам')
+  for(const value of ['revoked','expired']){
+    status=value
+    await page.goto('about:blank')
+    await page.goto(url)
+    await expect(page.getByRole('heading',{name:value==='revoked'?'Приглашение отменено':'Срок приглашения истёк'})).toBeVisible()
+    await expect(page.getByRole('button',{name:'Присоединиться к кабинету Яндекса'})).toHaveCount(0)
+  }
+  expect(claims).toBe(1)
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true)
+})
+
 }

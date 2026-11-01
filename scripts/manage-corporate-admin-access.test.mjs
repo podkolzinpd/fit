@@ -50,3 +50,17 @@ test('additional slot preserves a separately enabled administrator',async()=>{
  assert.deepEqual(client.calls.find(x=>x.sql.startsWith('insert into')).args,[hash,2])
  assert.equal(client.calls.some(x=>/update.*where.*<>/.test(x.sql)),false)
 })
+
+test('invitation pilot resolves exactly one linked trainer and never exposes identity',async()=>{
+ const {manageCorporateInvitationPilot}=await import('./manage-corporate-admin-access.mjs')
+ const calls=[]
+ const client={async query(sql,args){calls.push({sql,args});if(sql.includes('select p.id'))return{rows:[{id:'private-profile'}]};if(sql.startsWith('select enabled'))return{rows:[{enabled:true}]};return{rows:[]}}}
+ const result=await manageCorporateInvitationPilot(client,'grant',hash)
+ assert.deepEqual(result,{status:'applied',uniqueTrainer:true,enabled:true})
+ assert.equal(JSON.stringify(result).includes('private-profile'),false)
+ assert.equal(calls.at(-1).sql,'commit')
+ for(const rows of [[],[{id:'one'},{id:'two'}]]){
+  const c={async query(sql){if(sql.includes('select p.id'))return{rows};return{rows:[]}}}
+  await assert.rejects(manageCorporateInvitationPilot(c,'grant',hash),/target_unresolved/)
+ }
+})

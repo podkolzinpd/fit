@@ -21,6 +21,8 @@ function memoryStorage(): Storage {
 describe('invitation auth return', () => {
   it('accepts only the public invitation route and an exact legacy code route', () => {
     expect(invitationAuthReturnPath('/invite')).toBe('/invite')
+    expect(invitationAuthReturnPath('/corporate-invite')).toBe('/corporate-invite')
+    expect(invitationAuthReturnPath('/corporate-invite?token=secret')).toBeNull()
     expect(invitationAuthReturnPath('/join?code=ab12cd34ef56')).toBe('/join?code=AB12CD34EF56')
     expect(invitationAuthReturnPath('/join?code=AB12CD34EF56&next=/clients')).toBeNull()
     expect(invitationAuthReturnPath('/join?code=AB12CD34EF56#fragment')).toBeNull()
