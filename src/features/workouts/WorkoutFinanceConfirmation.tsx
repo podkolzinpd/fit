@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import type { TrainerFinanceClientBundle } from '../../data/repositories/trainer-finance.repository'
+import type { TrainerFinanceClientBundle } from '../../data/contracts/trainer-finance'
 import type { WorkoutTrainingFormat } from '../../shared/domain'
 
 export function workoutFinanceConfirmation(bundle: TrainerFinanceClientBundle | undefined, workoutId: string, trainingFormat?: WorkoutTrainingFormat) {

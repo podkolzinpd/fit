@@ -15,9 +15,6 @@ export async function getSummaryDiagnostic(apiBaseUrl: string, sessionToken: str
   return parseSummaryDiagnostic(value)
 }
 
-export const getLegacySummaryDiagnostic: (clientId: string, periodStart: string, periodEnd: string) => Promise<SummaryDiagnostic> = () =>
-  Promise.reject(new Error('Диагностика старого AI API отключена. Используйте вход через Yandex ID.'))
-
 function parseSummaryDiagnostic(value: unknown): SummaryDiagnostic {
   if (!value || typeof value !== 'object' || !('diagnostic' in value) || value.diagnostic !== true || !('ready' in value) || typeof value.ready !== 'boolean' || !('code' in value) || typeof value.code !== 'string') throw new Error('Неожиданный ответ диагностики.')
   if (!('request_id' in value) || typeof value.request_id !== 'string' || !('release_id' in value) || typeof value.release_id !== 'string') throw new Error('Нет ID трассировки.')

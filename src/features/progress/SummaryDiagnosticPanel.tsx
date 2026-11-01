@@ -1,8 +1,8 @@
 import { useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { getLegacySummaryDiagnostic, getSummaryDiagnostic, type SummaryDiagnostic } from '../../data/repositories/summary-diagnostic.repository'
+import { getSummaryDiagnostic, type SummaryDiagnostic } from '../../data/repositories/summary-diagnostic.repository'
 
-export function SummaryDiagnosticPanel({ backendSource, apiBaseUrl, sessionToken, clientId, periodStart, periodEnd }: { backendSource: 'supabase' | 'yandex'; apiBaseUrl: string | null; sessionToken: string | null; clientId: string; periodStart: string; periodEnd: string }) {
+export function SummaryDiagnosticPanel({ apiBaseUrl, sessionToken, clientId, periodStart, periodEnd }: { apiBaseUrl: string | null; sessionToken: string | null; clientId: string; periodStart: string; periodEnd: string }) {
   const [data, setData] = useState<SummaryDiagnostic | null>(null)
   const [pending, setPending] = useState(false)
   const [error, setError] = useState('')
@@ -13,12 +13,8 @@ export function SummaryDiagnosticPanel({ backendSource, apiBaseUrl, sessionToken
     setPending(true)
     setError('')
     try {
-      if (backendSource === 'supabase') {
-        setData(await getLegacySummaryDiagnostic(clientId, periodStart, periodEnd))
-      } else {
-        if (!apiBaseUrl || !sessionToken) throw new Error('Этап SESSION · активная Yandex-сессия не найдена')
-        setData(await getSummaryDiagnostic(apiBaseUrl, sessionToken, clientId, periodStart, periodEnd))
-      }
+      if (!apiBaseUrl || !sessionToken) throw new Error('Этап SESSION · активная Yandex-сессия не найдена')
+      setData(await getSummaryDiagnostic(apiBaseUrl, sessionToken, clientId, periodStart, periodEnd))
     } catch (failure) {
       setError(failure instanceof Error ? failure.message : 'Ошибка диагностики. Повторный платный запрос не запускайте.')
     } finally { busy.current = false; setPending(false) }

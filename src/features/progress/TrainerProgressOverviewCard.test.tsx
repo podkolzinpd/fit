@@ -11,9 +11,7 @@ const repository = vi.hoisted(() => ({ regularity: vi.fn() }))
 vi.mock('../../app/auth-context', () => ({
   useAuth: () => ({ actor: { userId: 'trainer-1', timezone: 'Europe/Moscow' } }),
 }))
-vi.mock('../../data/repositories/progress.repository', () => ({
-  progressRepository: repository,
-}))
+
 
 const week: WorkoutRegularity = {
   period: 'week',
@@ -79,4 +77,9 @@ describe('TrainerProgressOverviewCard', () => {
     await user.click(screen.getByRole('button', { name: 'Повторить' }))
     expect(await screen.findByText('3 тренировки состоялось')).toBeVisible()
   })
+})
+
+vi.mock('../../app/data-backend-context', async () => {
+  const { nativeBackend } = await import('../../test/native-backend')
+  return { useDataBackend: () => ({ ...nativeBackend, progress: repository }) }
 })

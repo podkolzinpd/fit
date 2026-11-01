@@ -20,7 +20,7 @@ const legal = vi.hoisted(() => ({
 
 vi.mock('../../app/auth-context', () => ({ useAuth: () => useAuth() }))
 vi.mock('../../app/data-backend-context', () => ({
-  useDataBackend: () => ({ source: 'supabase', legal }),
+  useDataBackend: () => ({ source: 'yandex', legal }),
 }))
 
 function wrapper(children: ReactNode) {

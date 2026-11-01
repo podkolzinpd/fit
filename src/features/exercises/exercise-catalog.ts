@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '../../app/auth-context'
 import { useDataBackend } from '../../app/data-backend-context'
-import type { CustomExerciseDraft } from '../../data/repositories/exercises.repository'
+import type { CustomExerciseDraft } from '../../data/contracts/exercises'
 import type { PreparedImage } from '../../shared/image-prep'
 import type { ExerciseSnapshot, SessionActor } from '../../shared/domain'
 

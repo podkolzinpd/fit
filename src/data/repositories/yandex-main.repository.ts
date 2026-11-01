@@ -51,15 +51,8 @@ import { createYandexMainQueries, type YandexMainQueries } from '../queries/yand
 import { diagnosticsForResponse } from '../queries/request-diagnostics'
 import { toJson } from '../queries/json'
 import { currentAppFeedbackContext } from './app-feedback-context'
-import type { CustomExercise } from './exercises.repository'
-import type {
-  TrainerFinancePackageDraft,
-  TrainerFinancePackageUpdate,
-  TrainerFinancePaymentDraft,
-  TrainerFinancePaymentUpdate,
-  TrainerFinanceSessionUpdate,
-  TrainerFinanceManualSessionDraft,
-} from './trainer-finance.repository'
+import type { CustomExercise } from '../contracts/exercises'
+import type { TrainerFinancePackageDraft, TrainerFinancePackageUpdate, TrainerFinancePaymentDraft, TrainerFinancePaymentUpdate, TrainerFinanceSessionUpdate, TrainerFinanceManualSessionDraft } from '../contracts/trainer-finance'
 import { RepositoryError } from './error'
 import { collectPages } from './collect-pages'
 import { roundMetric } from './progress-rules'

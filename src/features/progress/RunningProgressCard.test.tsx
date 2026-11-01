@@ -8,7 +8,7 @@ import { localDate } from '../../shared/local-date'
 import { RunningProgressCard } from './RunningProgressCard'
 
 const repository = vi.hoisted(() => ({ running: vi.fn() }))
-vi.mock('../../data/repositories/progress.repository', () => ({ progressRepository: repository }))
+
 vi.mock('../../app/auth-context', () => ({
   useAuth: () => ({ actor: { timezone: 'Europe/Moscow' } }),
 }))
@@ -74,4 +74,9 @@ describe('RunningProgressCard', () => {
     expect(screen.getByText('10 км · средний темп 6:00 мин/км')).toBeVisible()
     expect(screen.queryByRole('tab')).not.toBeInTheDocument()
   })
+})
+
+vi.mock('../../app/data-backend-context', async () => {
+  const { nativeBackend } = await import('../../test/native-backend')
+  return { useDataBackend: () => ({ ...nativeBackend, progress: repository }) }
 })

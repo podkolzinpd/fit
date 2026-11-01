@@ -15,12 +15,7 @@ vi.mock('../../app/auth-context', () => ({ useAuth: () => useAuth() }))
 vi.mock('../progress/BodyMapAppearanceSetting', () => ({ BodyMapAppearanceSetting: () => null }))
 
 const notificationsStatus = vi.hoisted(() => vi.fn())
-vi.mock('../../data/repositories/push-notifications.repository', () => ({
-  pushNotificationsRepository: { status: notificationsStatus, enable: vi.fn(), setCategoryEnabled: vi.fn(), sendTestPush: vi.fn() },
-  CHAT_MESSAGE_KIND: 'chat_message',
-  WORKOUT_REMINDER_KIND: 'workout_reminder',
-  WORKOUT_SCHEDULED_KIND: 'workout_scheduled',
-}))
+
 vi.mock('../notifications/push-subscription', () => ({ isPushSupported: () => true, getCurrentPushSubscription: () => Promise.resolve(null) }))
 vi.mock('../install', () => ({ detectInstallPlatform: () => 'other', isAppInstalled: () => false }))
 
@@ -62,4 +57,9 @@ describe('TrainerProfileSettingsPage', () => {
     expect(wheel).toBeChecked()
     expect(getWorkoutTimeWheel()).toBe(true)
   })
+})
+
+vi.mock('../../app/data-backend-context', async () => {
+  const { nativeBackend } = await import('../../test/native-backend')
+  return { useDataBackend: () => ({ ...nativeBackend, pushNotifications: { status: notificationsStatus, enable: vi.fn(), setCategoryEnabled: vi.fn(), sendTestPush: vi.fn() } }) }
 })

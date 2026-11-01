@@ -1,13 +1,14 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-const queries = vi.hoisted(() => ({ submit: vi.fn() }))
-vi.mock('../queries/app-feedback.queries', () => ({ appFeedbackQueries: queries }))
+import { resetYandexPlatformRequestStateForTests } from '../queries/request-diagnostics'
 
-import { appDisplayMode, appFeedbackRepository, currentAppFeedbackContext } from './app-feedback.repository'
+import { appDisplayMode, currentAppFeedbackContext } from './app-feedback-context'
+import { appFeedbackRepository } from '../../test/native-backend'
 
 describe('appFeedbackRepository', () => {
+  afterEach(() => vi.unstubAllGlobals())
   beforeEach(() => {
-    queries.submit.mockReset()
+    resetYandexPlatformRequestStateForTests()
     window.history.replaceState({}, '', '/me/profile?source=home#feedback')
     Object.defineProperty(window, 'matchMedia', { configurable: true, value: vi.fn(() => ({ matches: false })) })
   })
@@ -26,11 +27,12 @@ describe('appFeedbackRepository', () => {
   })
 
   it('trims the message and maps repository failures safely', async () => {
-    queries.submit.mockResolvedValueOnce({ data: 'feedback-id', error: null })
-    await expect(appFeedbackRepository.submit('suggestion', '  Отличная идея  ')).resolves.toBe('feedback-id')
-    expect(queries.submit).toHaveBeenCalledWith(expect.objectContaining({ message: 'Отличная идея' }))
+    const fetchMock = vi.fn<typeof fetch>().mockResolvedValueOnce(new Response('{}', { headers: { 'x-fit-request-id': 'fixture-health' } })).mockResolvedValueOnce(new Response(JSON.stringify({ feedback: { id: '10000000-0000-4000-8000-000000000001' } }), { headers: { 'x-fit-request-id': 'fixture-submit' } }))
+    vi.stubGlobal('fetch', fetchMock)
+    await expect(appFeedbackRepository.submit('suggestion', '  Отличная идея  ')).resolves.toBe('10000000-0000-4000-8000-000000000001')
+    expect(JSON.parse(String(fetchMock.mock.calls[1]![1]?.body))).toMatchObject({ message: 'Отличная идея' })
 
-    queries.submit.mockResolvedValueOnce({ data: null, error: { code: 'network_unavailable', message: 'network failed' } })
+    fetchMock.mockRejectedValueOnce(new TypeError('network failed'))
     await expect(appFeedbackRepository.submit('problem', 'Не работает')).rejects.toThrow('Проверьте интернет')
   })
 })

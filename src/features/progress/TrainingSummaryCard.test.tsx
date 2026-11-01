@@ -26,25 +26,10 @@ const repositories = vi.hoisted(() => ({
 vi.mock('../../app/auth-context', () => ({
   useAuth: () => ({ actor: { userId: 'viewer-1', role: 'client', timezone: 'Europe/Moscow' } }),
 }))
-vi.mock('../../data/repositories/training-summaries.repository', () => ({
-  trainingSummariesRepository: {
-    firstCompletedWorkoutDate: repositories.firstCompletedWorkoutDate,
-    listForTrainer: repositories.listForTrainer,
-    listForClient: repositories.listForClient,
-    generate: repositories.generate,
-    publish: repositories.publish,
-    unpublish: repositories.unpublish,
-  },
-}))
-vi.mock('../../data/repositories/goals.repository', () => ({
-  goalsRepository: { get: repositories.goal },
-}))
-vi.mock('../../data/repositories/progress.repository', () => ({
-  progressRepository: { list: repositories.progress, listMetrics: repositories.metrics },
-}))
-vi.mock('../../data/repositories/workouts.repository', () => ({
-  workoutsRepository: { list: repositories.workouts, personalRecords: repositories.personalRecords },
-}))
+
+
+
+
 vi.mock('../../shared/yandex-metrika', () => ({ trackGoal: vi.fn() }))
 
 afterEach(() => {
@@ -907,4 +892,16 @@ describe('Training summary card states', () => {
     expect(repositories.generate).toHaveBeenCalledTimes(1)
   })
 
+})
+
+vi.mock('../../app/data-backend-context', async () => {
+  const { nativeBackend } = await import('../../test/native-backend')
+  return { useDataBackend: () => ({ ...nativeBackend, trainingSummaries: {
+    firstCompletedWorkoutDate: repositories.firstCompletedWorkoutDate,
+    listForTrainer: repositories.listForTrainer,
+    listForClient: repositories.listForClient,
+    generate: repositories.generate,
+    publish: repositories.publish,
+    unpublish: repositories.unpublish,
+  }, goals: { get: repositories.goal }, progress: { list: repositories.progress, listMetrics: repositories.metrics }, workouts: { list: repositories.workouts, personalRecords: repositories.personalRecords } }) }
 })

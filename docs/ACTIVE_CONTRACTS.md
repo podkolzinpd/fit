@@ -98,3 +98,5 @@ Original54/Compact48 и клиентская механика прежние; с
 [YAFIT-700](design/COACH_WORKOUT_STATUS_DISPLAY_20261101.md): у тренера любой
 done отображается «Проведена» одинаково, незаписанный результат — «—».
 Это только отображение; клиентские правила и механики YAFIT-698 сохраняются.
+
+31.10 — frontend Supabase decommission: provider-neutral contracts, native-only composition во всех режимах; server legacy media и frozen SQL вне scope. [Решение и проверка P2](design/SUPABASE_DECOMMISSION_PLAN_20261023.md#p2--удаление-legacy-frontend--итерация-31102026--gpt-6--openai).
