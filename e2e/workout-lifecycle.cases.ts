@@ -232,4 +232,18 @@ test('Lifecycle P3 rejects a new future result before any save', {tag:['@lime-cr
   expect(backend.getSaveAttempts()).toBe(0)
 })
 
+test('Lifecycle P3 ready plans describe planning and open review without starting or saving', {tag:['@lime-critical']},async({page})=>{
+  await mockPilot(page,{role:'client',profileId:clientId,clientLime:false,workouts:[]})
+  const writes:string[]=[]
+  page.on('request',r=>{if(r.method()==='POST'&&new URL(r.url()).pathname.startsWith('/v1/workouts'))writes.push(r.url())})
+  await page.goto('/me')
+  const entry=page.getByRole('button',{name:'Выбрать готовый план',exact:true})
+  await expect(entry).toContainText('Готовые планы')
+  await expect(entry).toContainText('Выберите план и запланируйте тренировку')
+  await entry.click()
+  await page.getByRole('region',{name:'Готовые тренировки',exact:true}).getByRole('button',{name:'Выбрать',exact:true}).first().click()
+  await expect(page.getByRole('heading',{name:'Проверьте тренировку',exact:true})).toBeVisible()
+  expect(writes).toHaveLength(0)
+})
+
 }

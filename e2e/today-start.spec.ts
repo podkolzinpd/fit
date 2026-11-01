@@ -306,7 +306,7 @@ test('today: беговая ветка сразу добавляет интер�
   await expect(page.locator('.block-badge')).toContainText('Интервалы · 6 кр.')
 })
 
-test('создание из календаря: завершённая тренировка сохраняет выбранную будущую дату', async ({ page }) => {
+test('создание из календаря: смена режима не сбрасывает дату до отдельного сохранения', async ({ page }) => {
   await page.goto('/auth')
   await page.getByLabel('Email').fill('trainer@fit.local')
   await page.getByLabel('Пароль').fill('FitLocal123!')
