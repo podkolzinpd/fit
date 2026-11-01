@@ -43,6 +43,7 @@ it('does not reset an immediate scroll in a delayed initial frame', () => {
   const viewport = document.createElement('div')
   Object.defineProperties(viewport, {
     scrollHeight: { value: 2000 }, clientHeight: { value: 800 },
+    scrollTo: { value: ({ top }: ScrollToOptions) => { viewport.scrollTop = top ?? 0 } },
   })
   const frames: FrameRequestCallback[] = []
   const frame = vi.spyOn(globalThis, 'requestAnimationFrame').mockImplementation(callback => {

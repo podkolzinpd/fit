@@ -66,7 +66,7 @@ export function useCoachNavigationScroll(content: RefObject<HTMLDivElement | nul
     const restore = () => {
       if (!restoring) return
       const maximum = Math.max(0, viewport.scrollHeight - viewport.clientHeight)
-      viewport.scrollTop = Math.min(target, maximum)
+      viewport.scrollTo({ top: Math.min(target, maximum), behavior: 'instant' })
       if (maximum >= target) restoring = false
     }
     const schedule = () => {

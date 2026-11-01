@@ -591,12 +591,16 @@ it.each([
   authState.role = 'trainer'; authState.userId = 'coach-navigation-test'
   authState.trainerScheduleV2 = true; authState.fitLime = true
   vi.stubGlobal('ResizeObserver', class { observe() {} disconnect() {} })
+  const previousScrollTo = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'scrollTo')
+  Object.defineProperty(HTMLElement.prototype, 'scrollTo', { configurable: true, value: vi.fn() })
   const layout = renderLayout(route)
   const links = within(screen.getByRole('navigation', { name: 'Основная навигация' })).getAllByRole('link')
   expect(links.map(link => link.textContent)).toEqual(['День', 'Клиенты', '₽Финансы', 'Ассистент'])
   expect(links.filter(link => link.getAttribute('aria-current') === 'page')).toHaveLength(1)
   expect(links.find(link => link.getAttribute('aria-current') === 'page')).toHaveAccessibleName(active)
   layout.unmount(); vi.unstubAllGlobals()
+  if (previousScrollTo) Object.defineProperty(HTMLElement.prototype, 'scrollTo', previousScrollTo)
+  else Reflect.deleteProperty(HTMLElement.prototype, 'scrollTo')
 })
 
 it('keeps finance and assistant availability gates in unified coach navigation', () => {
