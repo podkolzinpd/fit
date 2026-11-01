@@ -5,6 +5,80 @@ import type { WorkoutAttendanceDraft } from '../src/shared/domain'
 const profileId = 'c0ac0000-6010-4000-8000-000000000001'
 export function workoutAttendanceCases() {
   test.skip(process.env.FIT_YANDEX_E2E_REQUIRED !== 'true', 'Native attendance is verified in the mandatory Yandex production-build lane')
+  test('trainer calendar uses one completed appearance regardless of recorded sets', async ({ page }, info) => {
+    await page.clock.setFixedTime(new Date('2026-11-01T09:00:00Z'))
+    const base = restTimerWorkout()
+    const states = ['empty', 'unrecorded', 'partial', 'recorded', 'cancelled', 'planned', 'in_progress'] as const
+    const workouts = states.map((state, index) => ({
+      ...structuredClone(base), id: `70000000-0000-4000-8000-00000000010${index}`,
+      createdBy: profileId, workoutDate: '2026-11-01', startTime: `${String(9 + index).padStart(2, '0')}:00`, endTime: `${10 + index}:00`,
+      status: state === 'cancelled' || state === 'planned' || state === 'in_progress' ? state : 'done' as const,
+      exercises: state === 'empty' ? [] : base.exercises.map(exercise => ({ ...exercise, sets: exercise.sets.map((set, position) => ({ ...set,
+        confirmedAt: state === 'recorded' || state === 'in_progress' || state === 'partial' && position === 0 ? '2026-11-01T08:00:00Z' : null,
+      })) })),
+    }))
+    const untimed = { ...structuredClone(workouts[2]!), id: '70000000-0000-4000-8000-000000000108', startTime: null, endTime: null }
+    const backend = await mockPilot(page, { profileId, fitLime: true, workouts: [...workouts, untimed] })
+    const before = JSON.stringify(backend.getWorkouts())
+    await page.goto('/today?date=2026-11-01')
+    const cards = page.locator('.schedule-v2-event')
+    await expect(cards).toHaveCount(7)
+    const completed = cards.filter({ has: page.locator(':scope > svg') })
+    await expect(completed).toHaveCount(4)
+    for (let index = 0; index < 4; index++) {
+      const card = page.locator(`.schedule-v2-event[href="/workouts/${workouts[index]!.id}"]`)
+      await expect(card).toHaveClass(/schedule-event-done/)
+      await expect(card).toHaveAttribute('aria-label', /Проведена/)
+    }
+    const palettes = await completed.evaluateAll(elements => elements.map(element => ({
+      background: getComputedStyle(element).backgroundColor,
+      avatar: getComputedStyle(element.querySelector('.schedule-v2-avatar')!).backgroundColor,
+      name: getComputedStyle(element.querySelector('b')!).color,
+    })))
+    expect(palettes.every(palette => JSON.stringify(palette) === JSON.stringify(palettes[0]))).toBe(true)
+    const activeAvatar = await page.locator('.schedule-event-current .schedule-v2-avatar').evaluate(element => getComputedStyle(element).backgroundColor)
+    expect(palettes[0]!.avatar).not.toBe(activeAvatar)
+    await expect(page.locator('.schedule-v2-untimed [data-status="done"] .schedule-v2-avatar')).toHaveCSS('background-color', palettes[0]!.avatar)
+    await expect(cards.locator('.schedule-cancelled-mark')).toHaveCount(1)
+    await expect(page.locator('.schedule-event-planned > svg, .schedule-event-current > svg')).toHaveCount(0)
+    await completed.first().scrollIntoViewIfNeeded()
+    await page.screenshot({ path: info.outputPath('completed-status-day.png') })
+    await page.goto('/schedule?week=2026-10-26')
+    await expect(page.locator('.schedule-v2-day-events .schedule-completed-mark')).toHaveCount(4)
+    await expect(page.locator('.schedule-v2-day-events .schedule-cancelled-mark')).toHaveCount(1)
+    expect(JSON.stringify(backend.getWorkouts())).toBe(before)
+  })
+
+  test('trainer detail and history keep completion separate from unrecorded results', async ({ page }, info) => {
+    await page.clock.setFixedTime(new Date('2026-11-01T09:00:00Z'))
+    const base = restTimerWorkout()
+    const exercise = base.exercises[0]!
+    const target = { ...base, createdBy: profileId, status: 'done' as const, workoutDate: '2026-11-01', completedAt: '2026-11-01T08:30:00Z',
+      exercises: [{ ...exercise, sets: exercise.sets.map((set, index) => ({ ...set,
+        confirmedAt: index === 0 ? '2026-11-01T08:00:00Z' : null, fact: index === 0 ? { weightKg: 22, reps: 8 } : {},
+      })) }, { ...exercise, id: '70000000-0000-4000-8000-000000000201', name: 'Тест без результата', sets: exercise.sets.map((set, index) => ({ ...set, id: `70000000-0000-4000-8000-00000000021${index}`, confirmedAt: null })) }],
+    }
+    const backend = await mockPilot(page, { profileId, fitLime: true, workouts: [target] })
+    const before = JSON.stringify(backend.getWorkouts())
+    await page.goto(`/workouts/${workoutId}`)
+    await expect(page.locator('.workout-header-contract .workout-status')).toHaveText('Проведена')
+    await expect(page.locator('.workout-header-contract')).toHaveAttribute('data-state', 'completed')
+    const summaries = page.locator('.workout-detail-exercise-result')
+    await expect(summaries.nth(0)).toContainText('22 кг')
+    await expect(summaries.nth(1)).toHaveText('—')
+    for (const summary of await page.locator('.completed-exercise-details > summary').all()) await summary.click()
+    for (const value of await page.locator('.workout-history-set.missed .workout-history-set-result > strong').all()) await expect(value).toHaveText('—')
+    await expect(page.locator('.workout-history-set.missed .plan-note')).toHaveCount(0)
+    await page.screenshot({ path: info.outputPath('completed-status-detail.png') })
+    await page.goto(`/clients/${clientId}/workouts`)
+    await expect(page.locator('.workout-chronicle-card .workout-status')).toHaveText('Проведена')
+    await expect(page.locator('.workout-chronicle-card .workout-status')).toHaveAttribute('data-state', 'completed')
+    await page.goto('/schedule?mode=list')
+    await expect(page.locator('.fit-lime-history-row')).toContainText('Проведена')
+    await expect(page.locator('.fit-lime-history-row')).not.toContainText('частично')
+    expect(JSON.stringify(backend.getWorkouts())).toBe(before)
+  })
+
   test('attendance preserves the appointment, confirms once and offers later results', async ({ page }, info) => {
     await page.clock.setFixedTime(new Date('2026-10-31T09:00:00Z'))
     const target = { ...restTimerWorkout(), title:'Посещение без упражнений',createdBy:profileId,status:'planned' as const,
