@@ -853,8 +853,8 @@ for (const density of ['original', 'compact']) test(`v79 empty session preserves
   await expect(page.getByRole('button', { name: /^Начать/ })).toHaveCount(0)
   await expect(page.getByRole('button', { name: 'Завершить тренировку', exact: true })).toBeDisabled()
   await expect.poll(() => page.getByRole('button', { name: 'Выбрать упражнение', exact: true }).evaluate(e => {
-    const button = e.getBoundingClientRect(), brand = document.querySelector('.coach-live-footer-brand')!.getBoundingClientRect()
-    return button.top >= 0 && button.bottom <= Math.min(window.innerHeight, brand.top)
+    const button = e.getBoundingClientRect(), bar = document.querySelector('.live-bottom-bar-empty')!.getBoundingClientRect()
+    return button.top >= 0 && button.bottom <= bar.top
   })).toBe(true)
   expect(await page.locator('.content').evaluate(e => e.scrollWidth <= e.clientWidth)).toBe(true)
   await page.screenshot({ path: info.outputPath(`empty-${density}.png`) })
