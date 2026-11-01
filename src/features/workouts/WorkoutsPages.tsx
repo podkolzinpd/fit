@@ -24,6 +24,7 @@ import { isCoachLiveDensityEnabled, isCoachPlanInputEnabled, isCoachPlanLayoutEn
 import { useCoachLiveDensity } from '../../app/coach-live-density'
 import { useCoachLiveHalo } from './use-coach-live-halo'
 import { CoachDayHeading, useCoachDaySwipe } from './CoachDayNavigation'
+import { CoachCalendarViews, type CoachCalendarView } from './CoachCalendarViews'
 import { advancePlanField } from './plan-input-navigation'
 import { useWorkoutFieldVisibility } from './workout-field-visibility'
 import { coachWorkoutReferenceAssets } from '../../shared/coach-workout-reference-assets'
@@ -203,7 +204,8 @@ function useTrainerScheduleModel(forceDayView = false, hourHeight = HOUR_HEIGHT)
   const clientFilter = lime && !isDayView ? params.get('client') ?? '' : ''
   const statusFilter = lime && !isDayView ? scheduleStatusFilter(params.get('status')) : 'all'
   const overviewDayCount = isTwoWeekView ? 14 : 7
-  const selected = dateParam ?? (forceDayView ? today : weekParam ?? today)
+  const anchor = lime && isCoachWorkoutRedesignEnabled(actor) ? safeScheduleDate(params.get('anchor')) : null
+  const selected = dateParam ?? (forceDayView ? today : anchor ?? weekParam ?? today)
   const validWeekStart = weekParam ? mondayWeekStart(weekParam) : null
   const weekStart = validWeekStart && (!isDayView || (daysBetween(validWeekStart, selected) >= 0 && daysBetween(validWeekStart, selected) < overviewDayCount))
     ? validWeekStart : mondayWeekStart(selected)
@@ -233,6 +235,7 @@ function useTrainerScheduleModel(forceDayView = false, hourHeight = HOUR_HEIGHT)
     const next: Record<string, string> = {}
     if (pilot || start !== todayWeekStart) next.week = start
     if (range === '2w') next.range = '2w'
+    if (lime && isCoachWorkoutRedesignEnabled(actor)) next.anchor = date
     if (lime && !isDayView) for (const key of ['client', 'status', 'mode']) { const value = params.get(key); if (value) next[key] = value }
     if (pilot) navigate(`/schedule?${new URLSearchParams(next)}`)
     else setParams(next)
@@ -753,7 +756,8 @@ function TrainerScheduleV2({ forceDayView = false }: { forceDayView?: boolean })
     query, itemsByDay, timed, untimed, todayDisabled,
     isListView, clientFilter, statusFilter, filteredItems, independent, independentPreference,
   } = useTrainerScheduleModel(forceDayView, hourHeight)
-  const workspace = useTrainerWorkspace(isDayView)
+  const compactCalendar = isFitLimeEnabled(actor) && isCoachWorkoutRedesignEnabled(actor)
+  const workspace = useTrainerWorkspace(isDayView || compactCalendar)
   const { clients: clientsRepository, workouts: workoutsRepository } = useDataBackend()
   const queryClient = useQueryClient()
   const location = useLocation()
@@ -769,6 +773,7 @@ function TrainerScheduleV2({ forceDayView = false }: { forceDayView?: boolean })
     navigate(`${location.pathname}?${next}`, compactScheduleFilters ? { flushSync: true } : undefined)
   }
   const dateInputRef = useRef<HTMLInputElement>(null)
+  const calendarControlRef = useRef<{ open: () => void }>(null)
   const actionTriggerRef = useRef<HTMLButtonElement>(null)
   const inboxTriggerRef = useRef<HTMLButtonElement>(null)
   const onboardingTriggerRef = useRef<HTMLButtonElement>(null)
@@ -806,6 +811,23 @@ function TrainerScheduleV2({ forceDayView = false }: { forceDayView?: boolean })
   const compactScheduleFilters = fitLimeSchedule && isCoachWorkoutRedesignEnabled(actor)
   const singleScheduleGuide = compactScheduleFilters && fitLimeSchedule
   const singleDayGuide = fitLimeToday && isCoachWorkoutRedesignEnabled(actor)
+  const calendarView: CoachCalendarView = isDayView ? 'day' : isListView ? 'list' : isTwoWeekView ? '2w' : 'week'
+  const chooseCalendarView = (view: CoachCalendarView) => {
+    if (view === 'day') { openDay(selected); return }
+    const next = new URLSearchParams(location.search)
+    next.delete('date')
+    next.set('anchor', selected)
+    next.set('week', weekStart)
+    if (view === '2w') next.set('range', '2w')
+    else if (view === 'week') next.delete('range')
+    if (view === 'list') next.set('mode', 'list')
+    else next.delete('mode')
+    navigate(`/schedule?${next}`, { flushSync: true })
+  }
+  const chooseCalendarDate = (date: LocalDate) => {
+    if (isDayView) { openDay(date); return }
+    showOverview(date)
+  }
   const [bookingTime, setBookingTime] = useState<string | null>(null)
   const quickDayEntry = isDayView && isQuickWorkoutEntryEnabled(actor)
   const dayInteractions = singleDayGuide || quickDayEntry
@@ -831,23 +853,23 @@ function TrainerScheduleV2({ forceDayView = false }: { forceDayView?: boolean })
   const homeWorkouts = useQuery({
     queryKey: ['workout-home', today],
     queryFn: () => workoutsRepository.home(today),
-    enabled: isDayView,
+    enabled: isDayView || compactCalendar,
   })
   const attention = useQuery({
     queryKey: ['trainer-attention', actor?.userId],
     queryFn: () => workoutsRepository.listTrainerAttention(),
-    enabled: isDayView && Boolean(actor?.userId),
+    enabled: (isDayView || compactCalendar) && Boolean(actor?.userId),
     refetchInterval: 60_000,
   })
   const attentionPreferences = useQuery({
     queryKey: ['trainer-attention-preferences', actor?.userId],
     queryFn: () => clientsRepository.listAttentionPreferences(actor!.userId),
-    enabled: isDayView && Boolean(actor?.userId),
+    enabled: (isDayView || compactCalendar) && Boolean(actor?.userId),
   })
   const baseActionItems = trainerActionItems(homeClients.data ?? [], homeWorkouts.data ?? [], attention.data ?? [], today)
-  const actionItems = fitLimeToday ? trainerDayActionItems(baseActionItems, homeWorkouts.data ?? []) : baseActionItems
-  const draft = actor && isDayView ? readTodayDraft(todayDraftKey(actor.userId)) : null
-  const hasQueueDraft = fitLimeToday && Boolean(draft)
+  const actionItems = fitLimeToday || compactCalendar ? trainerDayActionItems(baseActionItems, homeWorkouts.data ?? []) : baseActionItems
+  const draft = actor && (isDayView || compactCalendar) ? readTodayDraft(todayDraftKey(actor.userId)) : null
+  const hasQueueDraft = (fitLimeToday || compactCalendar) && Boolean(draft)
   const actionClientIds = new Set(actionItems.map((item) => item.clientId))
   const planningItems = trainerPlanningItems(homeClients.data ?? [], homeWorkouts.data ?? [], attentionPreferences.data ?? [], actionClientIds, today)
   const pendingCount = actionItems.length + planningItems.length + Number(hasQueueDraft)
@@ -885,6 +907,7 @@ function TrainerScheduleV2({ forceDayView = false }: { forceDayView?: boolean })
     ? '—'
     : value === undefined ? '…' : scheduleCount(value)
   const openDatePicker = () => {
+    if (compactCalendar) { calendarControlRef.current?.open(); return }
     if (isFitLimeEnabled(actor)) {
       document.querySelector<HTMLButtonElement>('.schedule-v2-topbar button.schedule-v2-calendar')?.click()
       return
@@ -895,9 +918,11 @@ function TrainerScheduleV2({ forceDayView = false }: { forceDayView?: boolean })
     else input.click()
   }
   const menuItems = [
-    { label: 'Сегодня', disabled: todayDisabled, onClick: () => openDay(today) },
-    { label: 'Выбрать дату', onClick: openDatePicker },
-    { label: isTwoWeekView ? 'К 2 неделям' : 'К неделе', onClick: () => showOverview(weekStart) },
+    ...(!compactCalendar ? [
+      { label: 'Сегодня', disabled: todayDisabled, onClick: () => openDay(today) },
+      { label: 'Выбрать дату', onClick: openDatePicker },
+      { label: isTwoWeekView ? 'К 2 неделям' : 'К неделе', onClick: () => showOverview(weekStart) },
+    ] : []),
     ...(isDayView ? [{
       label: densityPreference.density === 'compact' ? 'Обычная сетка' : 'Компактная сетка',
       disabled: densityPreference.status === 'saving',
@@ -925,12 +950,12 @@ function TrainerScheduleV2({ forceDayView = false }: { forceDayView?: boolean })
     {homeContext && <Link className="schedule-v2-next-workout" to={homeContext.workout.status === 'in_progress' ? `/workouts/${homeContext.workout.id}/live` : `/workouts/${homeContext.workout.id}`} state={{ returnTo }}><small>{homeContext.title}</small><strong>{homeContext.workout.clientName}</strong><span>{homeContext.workout.workoutDate === today ? homeContext.workout.startTime?.slice(0, 5) || 'Сегодня' : formatLocalDate(homeContext.workout.workoutDate)} <ChevronRightIcon /></span></Link>}
     {actor && <button ref={onboardingTriggerRef} type="button" className="schedule-v2-onboarding-trigger" onClick={() => setOnboardingOpen(true)}>Установка и уведомления <ChevronRightIcon /></button>}
   </section>
-  const daySummary = isDayView && <section className="schedule-v2-summary" aria-label="Рабочая сводка">
-    <button ref={actionTriggerRef} type="button" className={`schedule-v2-action-card${fitLimeToday && !actionsError && !planningError && !actionsLoading && !planningLoading && pendingCount > 0 ? ' is-active' : ''}`} aria-label={`${actionCount} Незавершённые действия`} onClick={() => { trackGoal('schedule_v2_action_tile_opened'); setActionOpen(true) }}>
-      <span className="schedule-v2-summary-icon">{fitLimeToday ? <WhistleIcon /> : <BellIcon />}</span>
+  const daySummary = (isDayView || compactCalendar) && <section className="schedule-v2-summary" aria-label="Рабочая сводка">
+    <button ref={actionTriggerRef} type="button" className={`schedule-v2-action-card${(fitLimeToday || compactCalendar) && !actionsError && !planningError && !actionsLoading && !planningLoading && pendingCount > 0 ? ' is-active' : ''}`} aria-label={`${actionCount} Незавершённые действия`} onClick={() => { trackGoal('schedule_v2_action_tile_opened'); setActionOpen(true) }}>
+      <span className="schedule-v2-summary-icon">{fitLimeToday || compactCalendar ? <WhistleIcon /> : <BellIcon />}</span>
       <strong>{actionCount}</strong>
     </button>
-    <button ref={inboxTriggerRef} type="button" className={`schedule-v2-message-card${fitLimeToday && !workspace.isError && (workspace.data?.summary.inboxCount ?? 0) > 0 ? ' is-active' : ''}`} aria-label={`${summaryValue(workspace.data?.summary.inboxCount)} Вопросы и сообщения`} onClick={() => { trackGoal('schedule_v2_inbox_tile_opened'); setInboxOpen(true) }}>
+    <button ref={inboxTriggerRef} type="button" className={`schedule-v2-message-card${(fitLimeToday || compactCalendar) && !workspace.isError && (workspace.data?.summary.inboxCount ?? 0) > 0 ? ' is-active' : ''}`} aria-label={`${summaryValue(workspace.data?.summary.inboxCount)} Вопросы и сообщения`} onClick={() => { trackGoal('schedule_v2_inbox_tile_opened'); setInboxOpen(true) }}>
       <span className="schedule-v2-summary-icon"><MessageIcon /></span>
       <strong>{summaryValue(workspace.data?.summary.inboxCount)}</strong>
     </button>
@@ -948,24 +973,25 @@ function TrainerScheduleV2({ forceDayView = false }: { forceDayView?: boolean })
   }
 
   function renderScheduleToolbar(view: ReactNode, filters: ReactNode) {
+    if (compactCalendar) return fitLimeSchedule ? <div className="coach-calendar-filters">{filters}</div> : null
     if (!compactScheduleFilters || !fitLimeSchedule) return <>{view}{filters}</>
     return <div className="coach-schedule-toolbar"><div className="coach-schedule-view-slot"><Coachmark id="coach-schedule-guide-fixed2-2026-10-17" userId={actor?.userId} title="Вид и фильтры расписания" description="Переключайте календарь и список здесь, а клиента, статус и самостоятельные занятия выбирайте в «Фильтрах».">{view}</Coachmark></div><div className="coach-schedule-filter-slot">{filters}</div></div>
   }
 
   return <Page
-    className={`schedule-page schedule-v2 ${isDayView ? 'schedule-day-view' : 'schedule-week-view'}${isDayView && densityPreference.density === 'compact' ? ' schedule-density-compact' : ''}${fitLimeToday ? ' fit-lime-today' : ''}${fitLimeSchedule ? ' fit-lime-schedule' : ''}${compactScheduleFilters && fitLimeSchedule ? ' coach-schedule-polish' : ''}${dayInteractions ? ' coach-day-swipe' : ''}`}
+    className={`schedule-page schedule-v2 ${isDayView ? 'schedule-day-view' : 'schedule-week-view'}${isDayView && densityPreference.density === 'compact' ? ' schedule-density-compact' : ''}${fitLimeToday ? ' fit-lime-today' : ''}${fitLimeSchedule ? ' fit-lime-schedule' : ''}${compactScheduleFilters && fitLimeSchedule ? ' coach-schedule-polish' : ''}${dayInteractions ? ' coach-day-swipe' : ''}${compactCalendar ? ' coach-calendar-navigation' : ''}`}
     title="Расписание"
     hideTitle
   >
     <header ref={daySwipeRef} className={`schedule-v2-topbar${isDayView ? ' schedule-v2-topbar-day' : ''}`}>
-      {isDayView ? singleDayGuide ? <CoachDayHeading date={selected} title={scheduleV2DayTitle(selected)} weekday={scheduleV2Weekday(selected)} /> : <div><h1>{scheduleV2DayTitle(selected)}</h1><p>{scheduleV2Weekday(selected)}</p></div> : <h1 aria-hidden="true">Расписание</h1>}
-      {(fitLimeToday || fitLimeSchedule)
+      {compactCalendar ? <button type="button" className="coach-calendar-heading-button" aria-label="Открыть календарь по дате" onClick={openDatePicker}>{isDayView ? <CoachDayHeading date={selected} title={scheduleV2DayTitle(selected)} weekday={scheduleV2Weekday(selected)} /> : <><h1>{formatMonth(weekStart).replace(/ \d{4}.*$/, '')}</h1><p>{periodLabel.replace(/ \d{4} г\.$/, '')}</p></>}</button> : isDayView ? singleDayGuide ? <CoachDayHeading date={selected} title={scheduleV2DayTitle(selected)} weekday={scheduleV2Weekday(selected)} /> : <div><h1>{scheduleV2DayTitle(selected)}</h1><p>{scheduleV2Weekday(selected)}</p></div> : <h1 aria-hidden="true">Расписание</h1>}
+      {compactCalendar ? <div className="schedule-v2-day-actions"><span className={`coach-calendar-date-slot${!todayDisabled ? ' is-return-today' : ''}`}><FitLimeDatePicker value={selected} onChange={chooseCalendarDate} controlRef={calendarControlRef} triggerAriaLabel={todayDisabled ? 'Выбрать дату' : 'Сегодня'} triggerLabel={todayDisabled ? undefined : 'Сегодня'} triggerIcon={todayDisabled ? undefined : <></>} onTrigger={open => todayDisabled ? open() : chooseCalendarDate(today)} /></span><OverflowMenu label="Настройки расписания" trigger={<SettingsIcon />} items={menuItems} /></div> : (fitLimeToday || fitLimeSchedule)
         ? <div className="schedule-v2-day-actions">{!isDayView && <ChatHeaderAction returnTo={returnTo} />}<FitLimeDatePicker value={selected} onChange={openDay} /><OverflowMenu label="Настройки расписания" trigger={<SettingsIcon />} items={menuItems} /></div>
         : isDayView
         ? <div className="schedule-v2-day-actions"><label className="schedule-v2-calendar" aria-label="Выбрать дату"><ScheduleIcon /><input ref={dateInputRef} type="date" value={selected} onChange={(event) => event.target.value && openDay(localDate(event.target.value))} /></label><OverflowMenu label="Настройки расписания" trigger={<SettingsIcon />} items={menuItems} /></div>
         : <div className="schedule-v2-day-actions"><ChatHeaderAction returnTo={returnTo} /><label className="schedule-v2-calendar" aria-label="Выбрать дату"><ScheduleIcon /><input ref={dateInputRef} type="date" value={selected} onChange={(event) => event.target.value && openDay(localDate(event.target.value))} /></label><OverflowMenu label="Настройки расписания" trigger={<SettingsIcon />} items={menuItems} /></div>}
     </header>
-    {fitLimeToday && selected !== today && <button className="schedule-v2-return-today" type="button" onClick={() => openDay(today)}>Сегодня</button>}
+    {!compactCalendar && fitLimeToday && selected !== today && <button className="schedule-v2-return-today" type="button" onClick={() => openDay(today)}>Сегодня</button>}
     {(fitLimeToday || fitLimeSchedule) && typeof savedPlanId === 'string' && /^[0-9a-f-]{36}$/i.test(savedPlanId) && <section className="fit-lime-plan-saved" role="status">
       <span>План сохранён</span>
       <Link to={`/workouts/${savedPlanId}`} state={{ returnTo }}>Открыть</Link>
@@ -975,8 +1001,9 @@ function TrainerScheduleV2({ forceDayView = false }: { forceDayView?: boolean })
     {fitLimeToday && (singleDayGuide ? <Coachmark id="lime-day-workspace-2026-10" userId={actor?.userId} title="Все дела — в календаре" description="Незавершённые действия и черновики — в рабочей очереди.">{daySummary}</Coachmark> : daySummary)}
     {homeActions}
     {!fitLimeToday && daySummary}
+    {compactCalendar && (compactScheduleFilters ? <Coachmark id="coach-schedule-guide-fixed2-2026-10-17" userId={actor?.userId} title="Вид и фильтры расписания" description="Выберите день, неделю, две недели или список. Клиент, статус и самостоятельные занятия доступны в «Фильтрах»."><CoachCalendarViews value={calendarView} onChange={chooseCalendarView} /></Coachmark> : <CoachCalendarViews value={calendarView} onChange={chooseCalendarView} />)}
     {fitLimeSchedule && !singleScheduleGuide && <Coachmark id="lime-schedule-history-2026-10" userId={actor?.userId} title="История — в списке" description="Переключитесь на список, чтобы найти проведённые тренировки за все даты. Фильтры действуют только в расписании."><span className="sr-only">История тренировок</span></Coachmark>}
-    {renderScheduleToolbar(fitLimeSchedule && <div className="schedule-v2-range-toggle" role="group" aria-label="Вид расписания">
+    {renderScheduleToolbar(fitLimeSchedule && !compactCalendar && <div className="schedule-v2-range-toggle" role="group" aria-label="Вид расписания">
       <button type="button" aria-pressed={!isListView} onClick={() => changeScheduleFilter('mode', 'calendar')}>Календарь</button>
       <button type="button" aria-pressed={isListView} onClick={() => changeScheduleFilter('mode', 'list')}>Список</button>
     </div>, <>
@@ -999,10 +1026,10 @@ function TrainerScheduleV2({ forceDayView = false }: { forceDayView?: boolean })
     {densityPreference.status === 'error' && <p className="schedule-v2-density-error" role="alert">Не удалось сохранить плотность сетки. <button type="button" onClick={densityPreference.retry}>Повторить</button></p>}
     <AsyncView loading={query.isLoading} error={query.error} onRetry={() => void query.refetch()}>
       {isListView ? <FitLimeScheduleList workouts={filteredItems} today={today} returnTo={returnTo} onOpenDay={openDay} /> : !isDayView ? <>
-        <div className="schedule-v2-range-toggle" role="group" aria-label="Период расписания">
+        {!compactCalendar && <div className="schedule-v2-range-toggle" role="group" aria-label="Период расписания">
           <button type="button" aria-pressed={!isTwoWeekView} onClick={() => showOverview(weekStart, 'week')}>Неделя</button>
           <button type="button" aria-pressed={isTwoWeekView} onClick={() => showOverview(weekStart, '2w')}>2 недели</button>
-        </div>
+        </div>}
         <section className={`schedule-v2-period${isTwoWeekView ? ' is-two-week' : ''}`} aria-label="Навигация по расписанию">
           <button type="button" aria-label={isTwoWeekView ? 'Предыдущие 2 недели' : 'Предыдущая неделя'} onClick={() => shiftOverview(-1)}><BackIcon /></button>
           <strong aria-label={periodLabel}>{isTwoWeekView

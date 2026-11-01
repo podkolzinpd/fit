@@ -81,6 +81,73 @@ const scheduleGuideId = 'coach-schedule-guide-fixed2-2026-10-17'
 const dayGuideId = 'lime-day-workspace-2026-10'
 const scheduleCoachmarks = [scheduleGuideId, 'lime-schedule-history-2026-10', 'lime-schedule-ownership-2026-10', 'coach-schedule-filters-2026-10-16']
 
+test('Figma calendar Coach compact navigation keeps date access, menu and all views', { tag: ['@lime-critical'] }, async ({ page }, info) => {
+  await page.clock.setFixedTime(new Date('2026-09-24T12:00:00+03:00'))
+  await mockPilot(page, { fitLime: true, profileId: 'c0ac0000-6010-4000-8000-000000000001' })
+  await page.goto('/today?date=2026-09-24')
+  const calendar = page.locator('.coach-calendar-navigation')
+  const slot = calendar.locator('.coach-calendar-date-slot')
+  await expect(slot.getByRole('button', { name: 'Выбрать дату', exact: true })).toBeVisible()
+  await expect(slot.getByRole('button', { name: 'Сегодня', exact: true })).toHaveCount(0)
+  await page.getByRole('button', { name: 'Открыть календарь по дате' }).click()
+  const picker = page.getByRole('dialog', { name: 'Выбрать дату', exact: true })
+  await picker.getByRole('button', { name: '30 сентября 2026 г.', exact: true }).click()
+  await picker.getByRole('button', { name: 'Применить дату' }).click()
+  await expect(page).toHaveURL(/date=2026-09-30/)
+  await expect(slot.getByRole('button', { name: 'Сегодня', exact: true })).toBeVisible()
+  await page.getByRole('button', { name: 'Открыть календарь по дате' }).click()
+  await expect(picker).toBeVisible()
+  await picker.getByRole('button', { name: 'Закрыть календарь' }).click()
+  await expect(slot.getByRole('button', { name: 'Сегодня', exact: true })).toBeFocused()
+  await slot.getByRole('button', { name: 'Сегодня', exact: true }).click()
+  await expect(page).toHaveURL(/date=2026-09-24/)
+  await expect(slot.getByRole('button', { name: 'Выбрать дату', exact: true })).toBeVisible()
+  await page.getByRole('button', { name: 'Настройки расписания' }).click()
+  const menu = page.getByRole('menu')
+  await expect(menu.getByRole('menuitem')).toHaveText(['Компактная сетка', 'Шаблоны тренировок', 'Профиль', 'Настройки'])
+  const triggerBox = (await page.getByRole('button', { name: 'Настройки расписания' }).boundingBox())!
+  expect((await menu.boundingBox())!.y).toBeGreaterThanOrEqual(triggerBox.y)
+  await menu.getByRole('menuitem', { name: 'Компактная сетка' }).click()
+  await expect(calendar).toHaveClass(/schedule-density-compact/)
+  await page.reload(); await expect(calendar).toHaveClass(/schedule-density-compact/)
+  const views = page.getByRole('group', { name: 'Вид расписания' })
+  for (const name of ['Неделя', '2 недели', 'Список', 'День']) {
+    await views.getByRole('button', { name, exact: true }).click()
+    await expect(views.getByRole('button', { name, exact: true })).toHaveAttribute('aria-pressed', 'true')
+  }
+  await expect(page).toHaveURL(/date=2026-09-24/)
+  await expect(calendar.locator('.schedule-v2-summary button')).toHaveCount(2)
+  for (const tile of await calendar.locator('.schedule-v2-summary button').all()) expect((await tile.innerText()).trim()).toMatch(/^(\d+|99\+|…|—)$/)
+  await page.screenshot({ path: info.outputPath('compact-calendar-day.png') })
+})
+
+// Header text, hit targets and selected-segment geometry depend on viewport width.
+for (const width of [320, 390, 736]) test(`Figma calendar Coach compact header geometry and unchanged summary paint ${width}`, { tag: ['@lime-critical'] }, async ({ page }, info) => {
+  await page.clock.setFixedTime(new Date('2026-09-24T12:00:00+03:00'))
+  await mockPilot(page, { fitLime: true, profileId: 'c0ac0000-6010-4000-8000-000000000001' })
+  await page.setViewportSize({ width, height: 844 })
+  for (const date of ['2026-09-24', '2026-09-30', '2026-11-02', '2026-11-08']) {
+      await page.goto(`/today?date=${date}`)
+      await expect(page.locator('.coach-calendar-views')).toBeVisible()
+      await page.evaluate(() => document.fonts.ready)
+      const geometry = await page.locator('.coach-calendar-navigation').evaluate(el => {
+        const heading = el.querySelector('.coach-calendar-heading-button')!, slot = el.querySelector('.coach-calendar-date-slot')!, gear = el.querySelector('.overflow-trigger')!
+        const h = heading.getBoundingClientRect(), s = slot.getBoundingClientRect(), g = gear.getBoundingClientRect()
+        const views = el.querySelector('.coach-calendar-views')!, box = views.getBoundingClientRect()
+        const buttons = [...views.querySelectorAll('button')].map(b => ({ width: b.getBoundingClientRect().width, height: b.getBoundingClientRect().height, clipped: b.scrollWidth > b.clientWidth }))
+        const tile = el.querySelector('.schedule-v2-summary button')!, paint = () => ({ background: getComputedStyle(tile).backgroundImage, glow: getComputedStyle(tile, '::before').backgroundImage, shadow: getComputedStyle(tile, '::after').boxShadow })
+        const compactPaint = paint();el.classList.remove('coach-calendar-navigation');const originalPaint = paint();el.classList.add('coach-calendar-navigation')
+        return { overlap: h.right > s.left || s.right > g.left, titleClipped: [...heading.querySelectorAll('h1,p')].some(t => t.scrollWidth > t.clientWidth), slotWidth: s.width, viewHeight: box.height, barHeight: box.height - 10, buttons, tileHeight: tile.getBoundingClientRect().height, compactPaint, originalPaint, overflow: document.documentElement.scrollWidth > innerWidth }
+      })
+      expect(geometry.overlap).toBe(false); expect(geometry.titleClipped).toBe(false);expect(geometry.overflow).toBe(false)
+      expect(geometry.slotWidth).toBe(78);expect(geometry.viewHeight).toBe(44);expect(geometry.barHeight).toBe(34)
+      expect(geometry.tileHeight).toBe(88);expect(geometry.compactPaint).toEqual(geometry.originalPaint)
+      for (const button of geometry.buttons) { expect(button.height).toBeGreaterThanOrEqual(44);expect(button.width).toBeGreaterThanOrEqual(44);expect(button.clipped).toBe(false) }
+      expect(Math.max(...geometry.buttons.map(b => b.width)) - Math.min(...geometry.buttons.map(b => b.width))).toBeLessThan(1)
+    }
+  await page.screenshot({ path: info.outputPath(`compact-calendar-${width}.png`) })
+})
+
 // Two engines are intentional: native implicit submit and pointer selection differ in Safari.
 function coachPlanInputFixture(profileId = 'c0ac0000-6010-4000-8000-000000000001') {
   const plan = coachGestureWorkout(false, 3)
@@ -585,11 +652,11 @@ for (const width of [375, 390, 430, 1440]) test(`Figma workout Coach reference s
   await page.reload()
   await expect(view).toBeVisible()
   await expect(guide).toHaveCount(0)
-  await expect(page.locator('.coach-schedule-toolbar')).toHaveCSS('display', 'grid')
-  expect(await page.locator('.coach-schedule-toolbar').evaluate(node => {
-    const mode = node.querySelector('[aria-label="Вид расписания"]')!.getBoundingClientRect()
+  await expect(page.locator('.coach-calendar-filters')).toHaveCSS('display', 'flex')
+  expect(await page.locator('.coach-calendar-filters').evaluate(node => {
+    const mode = document.querySelector('[aria-label="Вид расписания"]')!.getBoundingClientRect()
     const filter = node.querySelector('summary')!.getBoundingClientRect()
-    return Math.abs(mode.top - filter.top) < 1 && mode.right <= filter.left
+    return filter.top >= mode.bottom && filter.right <= mode.right + 1
   })).toBe(true)
   await expect(filters).toBeVisible()
   await expect(filters).not.toHaveAttribute('open')
@@ -609,7 +676,7 @@ for (const width of [375, 390, 430, 1440]) test(`Figma workout Coach reference s
   await page.screenshot({ path: info.outputPath('coach-schedule-filters-open.png') })
   await filters.locator('summary').click()
   await view.getByRole('button', { name: 'Список', exact: true }).click()
-  await view.getByRole('button', { name: 'Календарь', exact: true }).click()
+  await view.getByRole('button', { name: 'Неделя', exact: true }).click()
   await expect(guide).toHaveCount(0)
   await page.goto('/today?date=2026-09-24')
   await expect(guide).toHaveCount(1)
