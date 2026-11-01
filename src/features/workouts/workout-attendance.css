@@ -25,3 +25,23 @@
 .completed-empty-attendance h3 { margin:0 0 8px; font-size:17px; font-weight:500 }
 .completed-empty-attendance p { margin:0 0 16px; font-size:15px; color:var(--muted) }
 .completed-empty-attendance .button { min-height:48px }
+
+/* Explicit trainer Live variant; detail attendance keeps its existing flow. */
+.phone-frame.fit-lime-shell .workout-live-exit-sheet { width:min(440px,100%); max-width:min(440px,100%); max-height:calc(min(var(--app-visible-height,100dvh),100dvh) - 12px); margin:auto auto 0; padding:0 20px max(20px,env(safe-area-inset-bottom)); border:0; border-radius:var(--lime-radius-sheet) var(--lime-radius-sheet) 0 0; background:var(--lime-surface); color:var(--lime-text); font-family:inherit; }
+.phone-frame.fit-lime-shell .workout-live-exit-sheet .client-lime-sheet-header { margin-inline:-20px; }
+.phone-frame.fit-lime-shell .workout-live-exit-sheet .workout-attendance-client { margin-top:20px; color:var(--lime-text); }
+.phone-frame.fit-lime-shell .workout-live-exit-sheet .workout-attendance-date { color:var(--lime-text-secondary); }
+.workout-live-exit-choices { min-width:0; margin:0 0 20px; padding:0; border:0; }
+.phone-frame.fit-lime-shell .workout-live-exit-choices label { display:flex; align-items:center; gap:12px; min-height:60px; padding:14px 0; border-bottom:1px solid var(--lime-divider); color:var(--lime-text); font-size:16px; line-height:22px; font-weight:400; }
+.phone-frame.fit-lime-shell .workout-live-exit-choices input { appearance:auto; flex:0 0 20px; width:20px; height:20px; min-height:0; margin:0; padding:0; accent-color:var(--lime-accent); }
+.workout-live-exit-choices span { min-width:0; overflow-wrap:anywhere; }
+.phone-frame.fit-lime-shell .workout-live-exit-choices .workout-live-exit-delete { color:var(--danger); }
+.phone-frame.fit-lime-shell .workout-live-exit-sheet .workout-attendance-accounting { border:0; border-radius:20px; padding:16px; background:var(--lime-surface-raised); color:var(--lime-text); }
+.phone-frame.fit-lime-shell .workout-live-exit-sheet .workout-attendance-accounting p { color:var(--lime-text-secondary); }
+.phone-frame.fit-lime-shell .workout-live-exit-sheet .workout-attendance-accounting select { background:var(--lime-surface-high); color:var(--lime-text); border-color:var(--lime-divider); font-family:inherit; }
+.phone-frame.fit-lime-shell .workout-live-exit-sheet form>.primary { min-height:60px; margin-top:0; border:0; border-radius:20px; background:var(--lime-accent); color:var(--lime-text-on-accent); font-family:inherit; font-size:16px; line-height:20px; font-weight:500; }
+.phone-frame.fit-lime-shell .workout-live-exit-sheet form>.primary.danger { border:1px solid var(--danger-border); background:var(--danger-surface); color:var(--danger); }
+.phone-frame.fit-lime-shell .workout-live-exit-sheet .workout-attendance-cancel { color:var(--lime-text-secondary); font-family:inherit; }
+.phone-frame.fit-lime-shell .coach-live-v79 .live-empty-start:not(:has(h2)) { padding:0 16px; background:transparent; }
+
+.phone-frame.fit-lime-shell .workout-live-exit-sheet[open] { display:block; }
