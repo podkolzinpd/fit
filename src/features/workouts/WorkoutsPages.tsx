@@ -292,8 +292,10 @@ function useTrainerScheduleModel(forceDayView = false, hourHeight = HOUR_HEIGHT)
     if (explicitFocus) {
       const viewport = scrollRef.current
       const bounds = viewport.getBoundingClientRect()
-      const navigation = viewport.closest('.phone-frame')?.querySelector('.tab-bar')?.getBoundingClientRect()
-      const visibleBottom = Math.min(bounds.bottom, window.innerHeight, navigation?.top ?? Infinity)
+      const frame = viewport.closest('.phone-frame')
+      const navigation = frame?.querySelector('.tab-bar')?.getBoundingClientRect()
+      const compose = frame?.querySelector('.schedule-v2-fab')?.getBoundingClientRect()
+      const visibleBottom = Math.min(bounds.bottom, window.innerHeight, navigation?.top ?? Infinity, compose?.top ?? Infinity)
       const card = viewport.querySelector<HTMLElement>(`[data-workout-id="${CSS.escape(explicitFocus.id)}"]`)
       const context = Math.max(0, (visibleBottom - bounds.top - (card?.offsetHeight ?? hourHeight)) / 2)
       scrollTop = Math.max(0, focusMinutes / 60 * hourHeight - context)

@@ -33,7 +33,9 @@ export function workoutRescheduleCases() {
     await expect.poll(() => card.evaluate(node => {
       const box = node.getBoundingClientRect()
       const nav = document.querySelector('.trainer-tab-bar')!.getBoundingClientRect()
-      return box.bottom <= nav.top && [.25, .5, .75].every(fraction => node.contains(document.elementFromPoint(box.x + box.width / 2, box.y + box.height * fraction)))
+      const compose = document.querySelector('.schedule-v2-fab')?.getBoundingClientRect()
+      return box.bottom <= nav.top && (!compose || box.bottom <= compose.top)
+        && [.1, .5, .9].every(x => [.25, .5, .75].every(y => node.contains(document.elementFromPoint(box.x + box.width * x, box.y + box.height * y))))
     })).toBe(true)
     expect(commands).toHaveLength(1)
     expect(backend.getWorkouts()).toHaveLength(1)
