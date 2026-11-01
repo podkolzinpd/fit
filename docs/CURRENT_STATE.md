@@ -3,7 +3,7 @@
 MC1/PR1916: [проверки и ручной выпуск](design/CLIENT_REFERENCE_SCREENS_20261029.md); исправление CI.
 YAFIT-699: компактный список клиентов и гостевое приглашение,2PR. [План/проверки](design/COACH_CLIENTS_AND_INVITATION_20261031.md); [статус выпуска](https://st.yandex-team.ru/YAFIT-699).
 ФИТ20: перенос собственной плановой тренировки и жесты календаря; [план и журнал](design/COACH_RESCHEDULE_AND_DAY_GESTURES_20261031.md). Реализация и фактический выпуск — [PR1911](https://github.com/podkolzinpd/fit/pull/1911), [PR1914](https://github.com/podkolzinpd/fit/pull/1914).
-01.11 — YAFIT-700: один PR — единое отображение проведения у тренера. [План](design/COACH_WORKOUT_STATUS_DISPLAY_20261101.md), [статус](https://st.yandex-team.ru/YAFIT-700). Механики [YAFIT-698](design/COACH_QUICK_COMPLETION_20261031.md) прежние.
+YAFIT-700: статусы тренера,1PR. [План](design/COACH_WORKOUT_STATUS_DISPLAY_20261101.md), [статус](https://st.yandex-team.ru/YAFIT-700).
 31.10 — YAFIT-697: время быстрого старта обеим ролям, проведение пустой записи
 и «Не состоялась» тренеру. [План, проверки и выпуск](design/COACH_ATTENDANCE_AND_START_TIME_20261031.md).
 PR1906–1908 опубликованы db96685e; итог в YAFIT-697.
