@@ -82,8 +82,13 @@ export async function nativeSignIn(page: Page, key = 'trainer', role: 'trainer' 
   const value: unknown = await (await fixtureRequest('session', { key: fixtureKey, role, firstName })).json()
   if (typeof value !== 'object' || value === null || !('token' in value) || typeof value.token !== 'string' || !('expiresAt' in value) || typeof value.expiresAt !== 'string') throw new Error('Invalid native fixture session')
   const session = { token: value.token, expiresAt: value.expiresAt }
-  // Replace previous fixture init scripts when one browser switches accounts.
-  await page.goto('/auth')
+  // Reuse the current app origin for storage. Routing disables browser caching,
+  // so loading /auth twice repeats the whole Vite module graph.
+  // A fresh page only needs a committed app document before storage is available.
+  const appOrigin = new URL(String(test.info().project.use.baseURL)).origin
+  if (new URL(page.url()).origin !== appOrigin) {
+    await page.goto('/auth', { waitUntil: 'commit' })
+  }
   await page.evaluate(session => localStorage.setItem('fit.yandexAppSession.v1', JSON.stringify(session)), session)
   await page.goto('/auth')
 }
