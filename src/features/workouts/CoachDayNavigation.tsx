@@ -90,7 +90,8 @@ export function useCoachDaySwipe(enabled: boolean, date: LocalDate, openDay: (da
         || document.querySelector('dialog[open], [aria-modal="true"]')) return
       const link = target.closest('a')
       const calendarCard = link?.matches('.schedule-v2-event, .schedule-v2-untimed > a') ?? false
-      if (target.closest('button,input,select,textarea,summary,[role="button"],[contenteditable="true"],dialog,[aria-modal="true"]') || link && !calendarCard) return
+      const control = target.closest('button,input,select,textarea,summary,[role="button"],[contenteditable="true"],dialog,[aria-modal="true"]')
+      if (control && !control.matches('button.coach-calendar-heading-button') || link && !calendarCard) return
       const selection = window.getSelection()
       const anchor = selection?.anchorNode instanceof Element ? selection.anchorNode : selection?.anchorNode?.parentElement
       if (selection?.isCollapsed === false && !anchor?.closest('.coach-day-heading,.schedule-v2-event')) return

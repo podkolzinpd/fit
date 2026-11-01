@@ -17,27 +17,27 @@
 .fit-lime-shell .schedule-v2-topbar-day p { margin: 0; color: var(--lime-text-secondary); }
 .fit-lime-shell .schedule-v2-topbar :where(.schedule-v2-calendar, .overflow-trigger) { border-radius: 50%; }
 .fit-lime-shell .schedule-v2-topbar :where(.schedule-v2-calendar, .overflow-trigger) svg { width: 24px; height: 24px; opacity: .6; }
-.fit-lime-shell .fit-lime-today .schedule-v2-summary { gap: 3px; margin-bottom: 16px; flex: 0 0 auto; }
-.fit-lime-shell .fit-lime-today .schedule-v2-summary > button { min-height: 128px; border-radius: 32px; background: var(--lime-surface-raised); isolation: isolate; }
-.fit-lime-shell .fit-lime-today .schedule-v2-summary > button.is-active {
+.fit-lime-shell :is(.fit-lime-today, .coach-calendar-navigation) .schedule-v2-summary { gap: 3px; margin-bottom: 16px; flex: 0 0 auto; }
+.fit-lime-shell :is(.fit-lime-today, .coach-calendar-navigation) .schedule-v2-summary > button { min-height: 128px; border-radius: 32px; background: var(--lime-surface-raised); isolation: isolate; }
+.fit-lime-shell :is(.fit-lime-today, .coach-calendar-navigation) .schedule-v2-summary > button.is-active {
   background: radial-gradient(ellipse 83.404px 84.364px at center, rgba(37,11,48,.16), rgba(182,239,77,.16)),
     linear-gradient(rgba(182,239,77,.3), rgba(182,239,77,.3)), #000;
 }
-.fit-lime-shell .fit-lime-today .schedule-v2-summary > button.is-active::before {
+.fit-lime-shell :is(.fit-lime-today, .coach-calendar-navigation) .schedule-v2-summary > button.is-active::before {
   content: ''; position: absolute; left: 50%; bottom: -120px;
   width: 364px; height: 281px; transform: translateX(-50%);
   background: url('../../docs/design/figma-20261002/assets/204-387-imgGlow.svg') no-repeat center;
   pointer-events: none; z-index: -1;
 }
-.fit-lime-shell .fit-lime-today .schedule-v2-summary > button.is-active::after {
+.fit-lime-shell :is(.fit-lime-today, .coach-calendar-navigation) .schedule-v2-summary > button.is-active::after {
   content: ''; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
   box-shadow: inset 0 0 16px rgba(182,239,77,.36), inset 0 0 66px rgba(182,239,77,.15);
 }
-.fit-lime-shell .fit-lime-today .schedule-v2-summary-icon { width: 48px; height: 48px; transform: translate(-50%, -50%); opacity: .2; }
-.fit-lime-shell .fit-lime-today .is-active .schedule-v2-summary-icon { opacity: 1; }
-.fit-lime-shell .fit-lime-today .schedule-v2-summary-icon svg { width: 48px; height: 48px; }
-.fit-lime-shell .fit-lime-today .schedule-v2-summary strong { right: 20px; bottom: 15px; color: var(--lime-text-secondary); }
-.fit-lime-shell .fit-lime-today .is-active strong { color: var(--lime-text); }
+.fit-lime-shell :is(.fit-lime-today, .coach-calendar-navigation) .schedule-v2-summary-icon { width: 48px; height: 48px; transform: translate(-50%, -50%); opacity: .2; }
+.fit-lime-shell :is(.fit-lime-today, .coach-calendar-navigation) .is-active .schedule-v2-summary-icon { opacity: 1; }
+.fit-lime-shell :is(.fit-lime-today, .coach-calendar-navigation) .schedule-v2-summary-icon svg { width: 48px; height: 48px; }
+.fit-lime-shell :is(.fit-lime-today, .coach-calendar-navigation) .schedule-v2-summary strong { right: 20px; bottom: 15px; color: var(--lime-text-secondary); }
+.fit-lime-shell :is(.fit-lime-today, .coach-calendar-navigation) .is-active strong { color: var(--lime-text); }
 /* Product actions missing from the drawing remain available, including draft
    recovery and voice entry. Do not delete them to match a static screenshot. */
 .fit-lime-shell .fit-lime-today .schedule-v2-home-actions { margin: 0 16px 16px; }
@@ -71,7 +71,34 @@
 .fit-lime-shell .schedule-v2-now span::before { width: 4px; height: 4px; left: -2px; }
 .fit-lime-shell .schedule-v2-fab { width: 68px; height: 68px; right: 16px; bottom: calc(max(10px, env(safe-area-inset-bottom)) + 80px); background: var(--lime-accent); box-shadow: none; }
 .fit-lime-shell .schedule-v2-fab svg { width: 24px; height: 24px; }
+
+/* Approved coach navigation adaptation; existing summary paints stay untouched. */
+.fit-lime-shell .coach-calendar-navigation .schedule-v2-topbar { gap: 8px; margin-bottom: 8px; }
+.fit-lime-shell .coach-calendar-navigation .coach-calendar-heading-button { flex: 1; min-width: 0; min-height: 48px; padding: 0; border: 0; background: transparent; color: var(--lime-text); text-align: left; }
+.fit-lime-shell .coach-calendar-navigation .coach-calendar-heading-button h1 { white-space: nowrap; }
+.fit-lime-shell .coach-calendar-navigation .coach-calendar-heading-button p { margin: 0; color: var(--lime-text-secondary); font-size: 16px; line-height: 20px; overflow-wrap: anywhere; }
+.fit-lime-shell .coach-calendar-navigation .schedule-v2-day-actions { flex: 0 0 auto; gap: 4px; }
+.fit-lime-shell .coach-calendar-navigation .coach-calendar-date-slot { display: flex; width: 78px; flex: 0 0 78px; justify-content: center; }
+.fit-lime-shell .coach-calendar-navigation .coach-calendar-date-slot.is-return-today .schedule-v2-calendar { width: 78px; min-height: 44px; border-radius: 999px; background: var(--lime-surface-raised); color: var(--lime-text); font-size: 14px; }
+.fit-lime-shell .coach-calendar-navigation .schedule-v2-summary { margin-bottom: 6px; }
+.fit-lime-shell .coach-calendar-navigation .schedule-v2-summary > button { min-height: 88px; border-radius: 28px; }
+.fit-lime-shell .coach-calendar-navigation .schedule-v2-summary > button.is-active::before { bottom: -140px; }
+.fit-lime-shell .coach-calendar-navigation .schedule-v2-summary-icon,
+.fit-lime-shell .coach-calendar-navigation .schedule-v2-summary-icon svg { width: 40px; height: 40px; }
+.fit-lime-shell .coach-calendar-navigation .schedule-v2-summary-icon { left: 14px; transform: translateY(-50%); }
+.fit-lime-shell .coach-calendar-navigation .schedule-v2-summary strong { font-size: 28px; line-height: 30px; right: 14px; bottom: 12px; }
+.fit-lime-shell .coach-calendar-navigation .coach-calendar-views { position: relative; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); min-height: 44px; margin: 0 16px 6px; isolation: isolate; }
+.fit-lime-shell .coach-calendar-navigation .coach-calendar-views::before { content: ''; position: absolute; inset: 5px 0; background: var(--lime-surface-raised); border-radius: 999px; z-index: -1; }
+.fit-lime-shell .coach-calendar-navigation .coach-calendar-views > button { position: relative; min-width: 0; min-height: 44px; padding: 0 2px; border: 0; border-radius: 999px; background: transparent; color: var(--lime-text); font-size: 14px; line-height: 18px; white-space: nowrap; isolation: isolate; }
+.fit-lime-shell .coach-calendar-navigation .coach-calendar-views > button[aria-pressed='true']::before { content: ''; position: absolute; inset: 7px 3px; border-radius: 999px; background: var(--lime-surface-high); z-index: -1; }
+.fit-lime-shell .coach-calendar-navigation .coach-calendar-filters { display: flex; justify-content: flex-end; margin: 0 16px 6px; }
+.fit-lime-shell .coach-calendar-navigation .coach-calendar-filters > .coach-schedule-filter-options { width: 100%; min-width: 110px; }
+.fit-lime-shell .coach-calendar-navigation .coach-calendar-filters > .coach-schedule-filter-options > summary { width: 110px; margin-left: auto; }
+.fit-lime-shell .coach-calendar-navigation .schedule-v2-topbar .coach-calendar-heading-button:focus-visible { outline: 2px solid var(--lime-accent); outline-offset: 3px; border-radius: 8px; }
 @media (max-width: 360px) {
   .fit-lime-shell .schedule-v2-topbar { padding-inline: 12px; gap: 4px; }
   .fit-lime-shell .schedule-v2-topbar-day h1, .fit-lime-shell .schedule-v2-topbar-day p { font-size: 22px; }
+  .fit-lime-shell .coach-calendar-navigation .schedule-v2-topbar { gap: 4px; }
+  .fit-lime-shell .coach-calendar-navigation .coach-calendar-heading-button h1 { font-size: 22px; line-height: 24px; }
+  .fit-lime-shell .coach-calendar-navigation .coach-calendar-heading-button p { font-size: 14px; line-height: 18px; }
 }

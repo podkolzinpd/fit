@@ -7,6 +7,7 @@ import { Coachmark } from '../../shared/ui'
 import { BackIcon, CloseIcon } from '../../shared/icons'
 import { todayInTimeZone, type LocalDate } from '../../shared/local-date'
 import { FitLimePlanComposer } from './FitLimePlanComposer'
+import { Link } from 'react-router-dom'
 import { QuickStartWorkout } from './QuickStartWorkout'
 
 /** One calendar entry, two existing lifecycle commands. Never infer "start" from a selected date. */
@@ -42,6 +43,7 @@ export function FitLimeWorkoutEntry({ date, returnTo, onClose }: {
       <p>Выберите клиента — тренировка начнётся сразу. Если занятие уже идёт, откроем его.</p>
       <button type="button" className="secondary wide" onClick={() => setPlanning(true)}>Запланировать</button>
       <p>Выбрать дату и подготовить тренировку.</p>
+      {reference && <Link className="button secondary wide" to="/schedule/templates" state={{ returnTo }}>Из шаблона</Link>}
     </>}
   </dialog>
 }

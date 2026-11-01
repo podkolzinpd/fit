@@ -2,14 +2,14 @@
 # Fit — текущий индекс
 MC1: [PR1927 F1/F2 зелёный:854browsercases; очередь/выпуск, итерация66](design/CLIENT_REFERENCE_SCREENS_20261029.md).
 YAFIT-699: компактный список клиентов и гостевое приглашение,2PR. [План/проверки](design/COACH_CLIENTS_AND_INVITATION_20261031.md); [статус выпуска](https://st.yandex-team.ru/YAFIT-699).
-ФИТ20: перенос собственной плановой тренировки и жесты календаря; [план и журнал](design/COACH_RESCHEDULE_AND_DAY_GESTURES_20261031.md). Реализация и фактический выпуск — [PR1911](https://github.com/podkolzinpd/fit/pull/1911), [PR1914](https://github.com/podkolzinpd/fit/pull/1914).
-YAFIT-700: статусы тренера,1PR. [План](design/COACH_WORKOUT_STATUS_DISPLAY_20261101.md), [статус](https://st.yandex-team.ru/YAFIT-700).
+ФИТ20: [все статусы R104-S](design/COACH_RESCHEDULE_AND_DAY_GESTURES_20261031.md), [PR1923: CI](https://github.com/podkolzinpd/fit/pull/1923); [навигация — три PR](design/COACH_WORKFLOW_AUDIT_20261031.md).
+31.10 — YAFIT-698: проведение с планом/без, отмена Live/крестик, фильтр истории. [План](design/COACH_QUICK_COMPLETION_20261031.md); [статус](https://st.yandex-team.ru/YAFIT-698).
+YAFIT-700: [Статусы тренера](design/COACH_WORKOUT_STATUS_DISPLAY_20261101.md), [статус](https://st.yandex-team.ru/YAFIT-700).
 31.10 — YAFIT-697: время быстрого старта обеим ролям, проведение пустой записи
 и «Не состоялась» тренеру. [План, проверки и выпуск](design/COACH_ATTENDANCE_AND_START_TIME_20261031.md).
 PR1906–1908 опубликованы db96685e; итог в YAFIT-697.
 31.10 — YAFIT-693: пакет опубликован и включён всем клиентам. [Результат и ограничения](design/CLIENT_REFERENCE_SCREENS_20261029.md), итерация47; [приёмка](https://st.yandex-team.ru/YAFIT-693).
 30.10 — YAFIT-695: компактная история в плановой тренировке тренера, новый Lime-макет. Канонический план H101–H107, журнал и статус выпуска — [в задаче](https://st.yandex-team.ru/YAFIT-695). Приоритет после активного выпуска YAFIT-692 / «ФИТ 14»; до production-приёмки задача остаётся в работе.
-
 29.10 — YAFIT-673: полный список упражнений выбранного дня у тренера, записанные факты под названиями; обычный список/клиентский календарь прежние. План и статус выпуска: [каноническая запись](design/COACH_CALENDAR_FULL_EXERCISES_20261029.md). Локальные целевые/браузерные проверки пройдены, полный check/CI/production ещё гейты.
 
 Исходная база документа: main203f539d21fbc5cf79b1c930dc8467bbc8dc5c3b,28.10.2026; это не автоматически текущая production-сборка.
