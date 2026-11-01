@@ -39,11 +39,12 @@ export function CoachLiveV79Timer({ time, elapsed, resting, paused, phaseLabel, 
       const h = header.getBoundingClientRect(), c = clock.getBoundingClientRect(), w = container.getBoundingClientRect()
       const empty = page.querySelector<HTMLElement>('.live-empty-start')
       if (empty) {
-        // FIT keeps real client/context and the empty-session delete action,
-        // unlike the demo. Reserve those measured blocks before enlarging time.
+        // Reserve the real content after the clock before enlarging time.
         const footer = page.querySelector<HTMLElement>('.live-bottom-bar-empty')
+        const brand = !footer && page.matches('.coach-live-v79') ? page.querySelector<HTMLElement>('.coach-live-footer-brand') : null
         const before = c.top - scroll.getBoundingClientRect().top + scroll.scrollTop
-        const after = empty.getBoundingClientRect().bottom - c.bottom
+        const contentEnd = brand ? brand.getBoundingClientRect().bottom + (parseFloat(getComputedStyle(brand).marginBottom) || 0) : empty.getBoundingClientRect().bottom
+        const after = contentEnd - c.bottom
         const available = Math.min(scroll.clientHeight, window.visualViewport?.height ?? scroll.clientHeight)
         page.style.setProperty('--v79-empty-clock-height', `${Math.max(156, available - before - after - (footer?.getBoundingClientRect().height ?? 0) - 16)}px`)
       } else page.style.removeProperty('--v79-empty-clock-height')
