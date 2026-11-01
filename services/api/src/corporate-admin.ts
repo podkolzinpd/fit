@@ -79,8 +79,9 @@ export class CorporateAdminStore {
     return withYandexActorSession(this.pool, session, async client => {
       // Serialize the membership check with existing corporate writes.
       await client.query('select pg_advisory_xact_lock(159,1)')
-      const rows = await client.query<{ bundle: AdminBundle }>('select app_private.corporate_admin_bundle() bundle')
-      if (!rows[0]?.bundle.trainers.some(row => row.id === draft.id && row.isYandex)) {
+      const rows = await client.query<{ allowed: boolean }>('select app_private.corporate_trainer_update_allowed($1,$2,$3::uuid[],$4) allowed',
+        [draft.id,draft.isYandex,draft.officeIds,draft.version])
+      if (rows[0]?.allowed !== true) {
         throw Object.assign(new Error('corporate_not_found'), { code: 'PT404' })
       }
       await client.query('select app_private.save_corporate_trainer($1,$2,$3::uuid[],$4)',

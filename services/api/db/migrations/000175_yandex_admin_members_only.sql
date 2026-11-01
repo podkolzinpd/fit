@@ -30,7 +30,21 @@ drop index app_private.corporate_admin_one_enabled_login;
 create unique index corporate_admin_enabled_slot
   on app_private.corporate_admin_logins(access_slot) where enabled;
 
+create function app_private.corporate_trainer_update_allowed(p_id uuid,p_enabled boolean,p_offices uuid[],p_version bigint)
+returns boolean language sql stable security definer set search_path='' as $$
+  select app_private.is_corporate_admin() and exists(
+    select 1 from public.corporate_trainers c where c.trainer_id=p_id and (
+      c.is_yandex or (not p_enabled and not c.is_yandex and c.version=p_version+1
+        and coalesce((select array_agg(b.office_id order by b.office_id) from public.corporate_trainer_offices b where b.trainer_id=p_id),'{}'::uuid[])
+          =coalesce((select array_agg(distinct x order by x) from unnest(p_offices) x),'{}'::uuid[])
+        and exists(select 1 from app_private.corporate_admin_audit a where a.entity_kind='trainer' and a.entity_id=p_id
+          and a.before_data->>'isYandex'='true' and a.after_data->>'isYandex'='false'))))
+$$;
+revoke all on function app_private.corporate_trainer_update_allowed(uuid,boolean,uuid[],bigint) from public;
+grant execute on function app_private.corporate_trainer_update_allowed(uuid,boolean,uuid[],bigint) to fit_api;
+
 -- Down Migration
+drop function app_private.corporate_trainer_update_allowed(uuid,boolean,uuid[],bigint);
 -- Refuse to discard a second enabled administrator during a rollback.
 do $$ begin
   if exists(select 1 from app_private.corporate_admin_logins where enabled and access_slot=2) then
