@@ -160,6 +160,7 @@ test('Figma calendar Coach compact navigation keeps date access, menu and all vi
     await views.getByRole('button', { name, exact: true }).click()
     await expect(views.getByRole('button', { name, exact: true })).toHaveAttribute('aria-pressed', 'true')
   }
+  await expect(page).toHaveURL(/date=2026-09-24/)
   await expect(calendar.locator('.schedule-v2-summary button')).toHaveCount(2)
   for (const tile of await calendar.locator('.schedule-v2-summary button').all()) expect((await tile.innerText()).trim()).toMatch(/^(\d+|99\+|…|—)$/)
   await page.screenshot({ path: info.outputPath('compact-calendar-day.png') })

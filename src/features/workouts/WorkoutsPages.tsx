@@ -205,7 +205,8 @@ function useTrainerScheduleModel(forceDayView = false, hourHeight = HOUR_HEIGHT)
   const clientFilter = lime && !isDayView ? params.get('client') ?? '' : ''
   const statusFilter = lime && !isDayView ? scheduleStatusFilter(params.get('status')) : 'all'
   const overviewDayCount = isTwoWeekView ? 14 : 7
-  const selected = dateParam ?? (forceDayView ? today : weekParam ?? today)
+  const anchor = lime && isCoachWorkoutRedesignEnabled(actor) ? safeScheduleDate(params.get('anchor')) : null
+  const selected = dateParam ?? (forceDayView ? today : anchor ?? weekParam ?? today)
   const validWeekStart = weekParam ? mondayWeekStart(weekParam) : null
   const weekStart = validWeekStart && (!isDayView || (daysBetween(validWeekStart, selected) >= 0 && daysBetween(validWeekStart, selected) < overviewDayCount))
     ? validWeekStart : mondayWeekStart(selected)
@@ -235,6 +236,7 @@ function useTrainerScheduleModel(forceDayView = false, hourHeight = HOUR_HEIGHT)
     const next: Record<string, string> = {}
     if (pilot || start !== todayWeekStart) next.week = start
     if (range === '2w') next.range = '2w'
+    if (lime && isCoachWorkoutRedesignEnabled(actor)) next.anchor = date
     if (lime && !isDayView) for (const key of ['client', 'status', 'mode']) { const value = params.get(key); if (value) next[key] = value }
     if (pilot) navigate(`/schedule?${new URLSearchParams(next)}`)
     else setParams(next)
@@ -815,6 +817,7 @@ function TrainerScheduleV2({ forceDayView = false }: { forceDayView?: boolean })
     if (view === 'day') { openDay(selected); return }
     const next = new URLSearchParams(location.search)
     next.delete('date')
+    next.set('anchor', selected)
     next.set('week', weekStart)
     if (view === '2w') next.set('range', '2w')
     else if (view === 'week') next.delete('range')
