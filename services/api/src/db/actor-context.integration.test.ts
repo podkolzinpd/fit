@@ -620,7 +620,9 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
         expect(await withActorTransaction(runtimePool,ACTOR_ID,client => rescheduleWorkout(client,id,'2099-01-01','23:00',3,{endTime:'01:00',operationId:randomUUID()}))).toBe(4)
         expect((await ownerPool.query('select start_time::text,end_time::text from public.workouts where id=$1',[id])).rows).toEqual([{start_time:'23:00:00',end_time:'01:00:00'}])
         await ownerPool.query('update public.workout_sets set fact_weight_kg=35,fact_reps=10,confirmed_at=now() where id=$1',[set])
-        const snapshot = async () => (await ownerPool!.query(`select
+        const snapshot = async () => (await ownerPool!.query<{
+          root: unknown; exercises: unknown; sets: unknown; sessions: unknown[] | null; package: unknown[] | null; events: unknown
+        }>(`select
           -- Existing calorie triggers refresh cache timestamps on a metadata update; values must stay identical.
           to_jsonb(w)-array['workout_date','start_time','end_time','version','updated_at','updated_by','calorie_v2_shadow_at','calorie_estimated_at'] as root,
           (select jsonb_agg(to_jsonb(e)) from public.workout_exercises e where e.workout_id=w.id) as exercises,
