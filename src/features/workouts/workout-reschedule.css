@@ -1,0 +1,27 @@
+.workout-reschedule-sheet { width:min(440px,calc(100% - 16px)); max-height:calc(100dvh - 24px); overflow:auto; margin:auto auto max(8px,env(safe-area-inset-bottom)); padding:24px 20px 14px; border:1px solid var(--border); border-radius:32px; background:var(--surface); color:var(--fg); font-family:inherit }
+.workout-reschedule-sheet::backdrop { background:var(--overlay,rgb(0 0 0 / .7)) }
+.fit-lime-shell .workout-reschedule-sheet { background:var(--lime-surface); color:var(--lime-text); border-color:var(--lime-divider) }
+.workout-reschedule-sheet header { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:8px }
+.workout-reschedule-sheet h2 { margin:0; font-size:24px; line-height:1.15; font-weight:500; letter-spacing:-.03em }
+.workout-reschedule-sheet header button { display:grid; place-items:center; width:44px; min-width:44px; height:44px; padding:10px; border:0; border-radius:16px; background:var(--surface-raised); color:inherit }
+.workout-reschedule-subtitle,.workout-reschedule-note,.workout-reschedule-before { color:var(--muted); font-size:14px; line-height:1.45; overflow-wrap:anywhere }
+.workout-reschedule-subtitle { margin:0 0 22px }
+.workout-reschedule-times { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:12px; margin:16px 0 0; padding:0; border:0; min-width:0 }
+.workout-reschedule-times>div,.workout-reschedule-date { display:grid; gap:8px; min-width:0; color:var(--muted); font-size:14px }
+.workout-reschedule-times .coach-plan-time { display:grid; grid-template-columns:minmax(0,1fr) 44px; min-width:0; border-radius:16px; background:var(--surface-raised); color:var(--fg); padding:4px 0 4px 12px }
+.workout-reschedule-times .coach-plan-native-control { gap:8px; color:inherit }
+.workout-reschedule-times .coach-plan-native-control img { display:none }
+.workout-reschedule-times .coach-plan-time-clear { width:44px; min-width:44px; min-height:44px; padding:8px; border:0; background:transparent; color:var(--muted) }
+.workout-reschedule-times .coach-plan-time-clear svg { width:18px; height:18px }
+.fit-lime-shell .workout-reschedule-sheet .workout-reschedule-date>.schedule-v2-calendar { display:flex; width:100%; height:52px; justify-content:space-between; padding:12px 14px; gap:10px; border-radius:16px; background:var(--lime-surface-raised); color:var(--lime-text) }
+.fit-lime-shell .workout-reschedule-times .coach-plan-time { background:var(--lime-surface-raised); color:var(--lime-text) }
+.workout-reschedule-date>.schedule-v2-calendar { width:100%; justify-content:space-between; gap:10px; min-height:52px; padding:12px 14px; border:0; border-radius:16px; background:var(--surface-raised); color:var(--fg); font-size:16px }
+.workout-reschedule-date>.schedule-v2-calendar>svg { order:2; width:20px; height:20px }
+.workout-reschedule-overlap { margin:18px 0; padding:14px; border-radius:18px; background:var(--warning-soft,var(--surface-raised)); color:var(--warning,var(--fg)); font-size:14px }
+.workout-reschedule-overlap strong { font-weight:500 }
+.workout-reschedule-overlap p { margin:6px 0 0 }
+.workout-reschedule-sheet form>.primary { width:100%; min-height:52px; border-radius:18px; margin-top:18px }
+.workout-reschedule-cancel { display:block; min-height:44px; margin:8px auto 0; color:var(--muted) }
+.workout-slot-trigger { display:inline-flex; gap:8px; align-items:center; min-height:44px; padding:10px 12px; border:0; border-radius:14px; background:var(--surface-raised); color:var(--fg); font:inherit; text-align:left }
+.workout-slot-trigger svg { flex-shrink:0; width:18px; height:18px }
+.workout-slot-trigger span { min-width:0 }

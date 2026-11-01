@@ -5030,11 +5030,21 @@ describe('pilot completed workout lifecycle commands', () => {
       sessionToken, WORKOUT_ID, 1,
     )
     expect(writer.reschedule).toHaveBeenCalledWith(
-      sessionToken, WORKOUT_ID, '2026-08-30', '12:30', 2,
+      sessionToken, WORKOUT_ID, '2026-08-30', '12:30', 2, undefined,
     )
     expect(writer.setClientComment).toHaveBeenCalledWith(
       sessionToken, WORKOUT_ID, 'Было тяжело', 3,
     )
+  })
+
+  it('passes the planned interval and replay token through the existing reschedule route', async () => {
+    const writer = buildWorkoutsWriter()
+    const app = buildApp({pilotWorkoutsWriter:writer.pilotWorkoutsWriter,logger:false}); apps.push(app)
+    const operationId='12345678-1234-4234-8234-123456789012'
+    const result=await app.inject({method:'POST',url:`/v1/workouts/${WORKOUT_ID}/reschedule`,headers:{'x-fit-pilot-session':sessionToken},
+      payload:{expectedVersion:7,workoutDate:'2026-11-03',startTime:'11:30',endTime:'12:30',operationId}})
+    expect(result.statusCode).toBe(200)
+    expect(writer.reschedule).toHaveBeenCalledExactlyOnceWith(sessionToken,WORKOUT_ID,'2026-11-03','11:30',7,{endTime:'12:30',operationId})
   })
 
   it('rejects malformed lifecycle commands before invoking the writer', async () => {

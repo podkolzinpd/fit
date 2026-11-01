@@ -1,3 +1,5 @@
+import { WorkoutRescheduleSheet } from './WorkoutRescheduleSheet'
+import { slotTimeLabel } from './workout-slot'
 import { WorkoutRenameSheet } from './WorkoutRenameSheet'
 import { isQuickWorkoutEntryEnabled } from '../../app/quick-workout-entry'
 import { QuickDayBooking, dayBookingTime } from './QuickDayBooking'
@@ -209,6 +211,8 @@ function useTrainerScheduleModel(forceDayView = false, hourHeight = HOUR_HEIGHT)
   const todayWeekStart = mondayWeekStart(today)
   const overviewDays = Array.from({ length: overviewDayCount }, (_, offset) => addDays(weekStart, offset))
   const scrollRef = useRef<HTMLDivElement>(null)
+  const scheduleLocation = useLocation()
+  const scheduleFocus = (scheduleLocation.state as WorkoutNavigationState | null)?.scheduleFocus
   const autoScrolledDateRef = useRef<LocalDate | null>(null)
   const scrollKey = `${actor?.userId}:${selected}:${clientFilter}:${statusFilter}`
 
@@ -270,15 +274,16 @@ function useTrainerScheduleModel(forceDayView = false, hourHeight = HOUR_HEIGHT)
       return
     }
     if (query.isLoading || query.isError || !scrollRef.current || autoScrolledDateRef.current === selected) return
-    const focusMinutes = scheduleFocusMinutes(timed, currentTimeInTimeZone(actor?.timezone))
-    const retained = lime ? readScheduleScroll(scrollKey) : null
+    const explicitFocus = scheduleFocus && timed.find(item => item.id === scheduleFocus.workoutId && item.startTime)
+    const focusMinutes = explicitFocus ? minutesOf(explicitFocus.startTime!) : scheduleFocusMinutes(timed, currentTimeInTimeZone(actor?.timezone))
+    const retained = lime && !explicitFocus ? readScheduleScroll(scrollKey) : null
     scrollRef.current.scrollTop = retained !== null ? retained * hourHeight : scheduleTimelineScrollTop(
       focusMinutes,
       scrollRef.current.clientHeight,
       hourHeight,
     )
     autoScrolledDateRef.current = selected
-  }, [actor?.timezone, hourHeight, isDayView, query.isError, query.isLoading, selected, timed, lime, scrollKey])
+  }, [actor?.timezone, hourHeight, isDayView, query.isError, query.isLoading, selected, timed, lime, scrollKey, scheduleFocus])
 
   const todayDisabled = isDayView ? selected === today : weekStart === todayWeekStart
 
@@ -1847,6 +1852,7 @@ export function WorkoutDetailPage() {
   const [confirm, confirmDialog] = useConfirm()
   const [askActiveWorkoutRecovery, activeWorkoutRecoveryDialog] = useConfirm()
   const [decisionSheet, setDecisionSheet] = useState<'actions' | 'reschedule' | null>(null)
+  const [slotSheetOpen, setSlotSheetOpen] = useState(false)
   const [renameSheetOpen, setRenameSheetOpen] = useState(false)
   const [renameVersion, setRenameVersion] = useState(0)
   const [favoriteSheetOpen, setFavoriteSheetOpen] = useState(false)
@@ -2180,7 +2186,9 @@ export function WorkoutDetailPage() {
         statusLabel={!clientMode && done && workoutsRepository.confirmAttendance ? 'Проведена' : statusPresentation?.label}
         showStatus={detailState !== 'completed' || !clientMode && done && Boolean(workoutsRepository.confirmAttendance)}
         action={manageMenuInHeader ? <OverflowMenu label="Другие действия с тренировкой" items={workoutManageItems} /> : undefined}
-        meta={<><span>{formatLocalDate(workout.workoutDate)} · {workout.startTime?.slice(0, 5) ?? 'без времени'}</span><span>{workoutTrainingFormatLabel(workout.trainingFormat ?? 'self')}</span>{clientMode && !done && authorLabel && <span>{authorLabel}</span>}{clientAuthoredReadOnly && <span>Создано клиентом · упражнения только для просмотра</span>}{stageTitle && <span>Цель: {stageTitle}</span>}</>} />}
+        meta={<>{actor?.role === 'trainer' && trainerOwned && workout.status === 'planned' && workoutsRepository.rescheduleSlot
+          ? <button type="button" className="workout-slot-trigger" aria-label="Изменить дату и время тренировки" onClick={() => setSlotSheetOpen(true)}><ScheduleIcon /><span>{formatLocalDate(workout.workoutDate)} · {slotTimeLabel(workout)}</span><ChevronRightIcon /></button>
+          : <span>{formatLocalDate(workout.workoutDate)} · {workout.startTime?.slice(0, 5) ?? 'без времени'}</span>}<span>{workoutTrainingFormatLabel(workout.trainingFormat ?? 'self')}</span>{clientMode && !done && authorLabel && <span>{authorLabel}</span>}{clientAuthoredReadOnly && <span>Создано клиентом · упражнения только для просмотра</span>}{stageTitle && <span>Цель: {stageTitle}</span>}</>} />}
       {clientMode && workout.title && <p className="workout-plan-title">{workout.title}</p>}
       {isFitLimeEnabled(actor) && workout.plannedDate && <p className="workout-plan-title">Исходный план: {formatLocalDate(localDate(workout.plannedDate))}{workout.plannedStartTime ? ` · ${workout.plannedStartTime.slice(0, 5)}${workout.plannedEndTime ? `–${workout.plannedEndTime.slice(0, 5)}` : ''}` : ' · без времени'}</p>}
       {isFitLimeEnabled(actor) && workout.status === 'planned' && canExecute && workout.workoutDate !== today && <p className="workout-plan-title">При запуске сейчас тренировка начнётся сегодня, {formatLocalDate(today)}. Исходная дата плана сохранится отдельно.</p>}
@@ -2231,6 +2239,12 @@ export function WorkoutDetailPage() {
       {clientMode && !clientOwned && <div className="actions"><Link className="button secondary" to={`/workouts/new?copy=${workoutId}`} state={childNavigationState}>Создать свою копию</Link>{workout.exercises.length > 0 && (workout.status === 'planned' || done) && <OverflowMenu placement="top" label="Другие действия с тренировкой" items={[{ label: 'В избранное', onClick: () => setFavoriteSheetOpen(true) }]} />}</div>}
       {remove.error && <p className="error">{remove.error.message}</p>}
       {cancelPlanned.error && <p className="error" role="alert">{cancelPlanned.error.message}</p>}
+      {slotSheetOpen && actor?.role === 'trainer' && trainerOwned && workout.status === 'planned' && <WorkoutRescheduleSheet workout={workout} onClose={() => setSlotSheetOpen(false)} onSaved={async slot => {
+        setSlotSheetOpen(false)
+        await invalidateWorkoutSurfaces()
+        const path = isTrainerScheduleV2Enabled(actor) ? '/today' : '/schedule'
+        void navigate(`${path}?${new URLSearchParams({ date: slot.workoutDate, week: mondayWeekStart(slot.workoutDate) })}`, { state: { scheduleFocus: { workoutId: workout.id, startTime: slot.startTime } } })
+      }} />}
       {reschedule.error && <p className="error" role="alert">{reschedule.error.message}</p>}
       {decisionSheet && <div className="sheet-overlay" onClick={() => !cancelPlanned.isPending && !reschedule.isPending && setDecisionSheet(null)}>
         <section className="workout-decision-sheet" role="dialog" aria-modal="true" aria-label={decisionSheet === 'actions' ? 'Действия с планом' : workout.status === 'cancelled' ? 'Вернуть тренировку в план' : 'Перенести тренировку'} onClick={(event) => event.stopPropagation()}>
