@@ -1704,7 +1704,7 @@ export function WorkoutFormPage() {
   function closePicker() { parsedExerciseSelection.current = null; setPickerOpen(false); setReplaceIndex(null); setPickerSearch('') }
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    if (mutation.isPending || stageLoading || (exercises.length === 0 && !limePlan)) return
+    if (!formDraftReady || mutation.isPending || stageLoading || (exercises.length === 0 && !limePlan)) return
     const form = new FormData(event.currentTarget)
     const submitClientId = String(form.get('clientId'))
     if (!submitClientId) { setClientSelectionError('Выберите клиента для тренировки'); return }
@@ -1795,7 +1795,7 @@ export function WorkoutFormPage() {
       event.preventDefault()
       advancePlanField(event.target, event.currentTarget)
     }} onInput={safePlanInput && workoutId ? () => setHasEditChanges(true) : undefined}>
-      <CoachFormControls reference={coachReference} disabled={mutation.isPending}>
+      <CoachFormControls reference={coachReference} disabled={!formDraftReady || mutation.isPending}>
       <section className="workout-form-section">
         {coachReference ? <div className="coach-plan-details">
           <label className="coach-plan-title"><span className="sr-only">Название тренировки</span><input name="title" value={title} maxLength={120} placeholder="Название тренировки" onChange={(event) => setTitle(event.target.value)} /></label>
