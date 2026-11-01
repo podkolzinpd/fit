@@ -5,6 +5,7 @@ import { useAuth } from '../../app/auth-context'
 import { corporateInvitationsRepository as repository } from '../../data/repositories/corporate-invitations.repository'
 import type { CorporateAdminBundle } from '../../shared/corporate-admin'
 import { copyText } from '../../shared/clipboard'
+import { corporateInvitationShareUrl } from '../../shared/invitation-share'
 import { AsyncView, EmptyState, Field, SaveStatus, useConfirm } from '../../shared/ui'
 
 const labels={active:'Ожидает тренера',claimed:'Ожидает подтверждения',approved:'Приглашение подтверждено',revoked:'Отменено',expired:'Срок истёк'}
@@ -41,7 +42,7 @@ export function CorporateInvitations({data,initialCreate=false}:{data:CorporateA
   </section>
 }
 function CorporateInvitationShare({token,onClose}:{token:string;onClose:()=>void}) {
-  const url=`${window.location.origin}/corporate-invite#token=${token}`
+  const url=corporateInvitationShareUrl(token)
   const [copied,setCopied]=useState(false),[copyError,setCopyError]=useState(false),[showQr,setShowQr]=useState(false),[qr,setQr]=useState<string|null>(null),[qrError,setQrError]=useState(false)
   useEffect(()=>{
     if(!showQr)return
