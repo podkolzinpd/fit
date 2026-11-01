@@ -1,6 +1,6 @@
 -- Up Migration
 
-create function app_private.guard_new_workout_completion_date()
+create or replace function app_private.guard_new_workout_completion_date()
 returns trigger
 language plpgsql security definer set search_path = ''
 as $$
@@ -23,6 +23,8 @@ end;
 $$;
 revoke all on function app_private.guard_new_workout_completion_date() from public, fit_api;
 
+-- Reapplication after an older API rollback keeps the guard in place.
+drop trigger if exists guard_new_workout_completion_date on public.workouts;
 create trigger guard_new_workout_completion_date
 before insert or update of status on public.workouts
 for each row execute function app_private.guard_new_workout_completion_date();
