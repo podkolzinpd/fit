@@ -135,8 +135,34 @@ for (const role of ['client', 'trainer'] as const) test(`Lime Live direct input 
   await expect(first).toHaveClass(/confirmed/)
 })
 
-// One 390px interaction case per engine: trusted touch capture in Chromium and
-// WebKit pointer bubbling from the nested SVG. Geometry stays in the existing matrix.
+test('First-client invitation survives the empty-to-list transition', { tag: ['@lime-clients', '@lime-critical'] }, async ({ page }) => {
+  await mockPilot(page, { fitLime: true, clientRecords: [] })
+  let created = false
+  const commands: Array<{ fullName: string; operationId: string }> = []
+  const record = { id: clientId, fullName: 'Первый спортсмен', canonicalFullName: 'Первый спортсмен', hasAccount: false,
+    canArchive: true, archivedAt: null, ageYears: null, heightCm: null, currentWeightKg: null, gender: null,
+    ageUpdatedAt: null, goal: null, note: null, version: 1, membershipVersion: null }
+  await page.route(url => url.pathname === '/v1/clients', route => route.fulfill({ json: { clients: created ? [record] : [] } }))
+  await page.route('**/v1/invitation-links/new-client', async route => {
+    commands.push(route.request().postDataJSON() as typeof commands[number]); created = true
+    await route.fulfill({ status: 201, json: { clientId, share: { id: newWorkoutId, clientId, targetRole: 'client',
+      code: 'ABC123DEF456', token: `ABC123DEF456.${'a'.repeat(64)}`, expiresAt: '2026-11-08T12:00:00Z' } } })
+  })
+  await page.goto('/clients')
+  await expect(page.locator('.state-panel-mark')).toHaveCount(0)
+  await page.getByRole('button', { name: 'Добавить клиента', exact: true }).click()
+  await page.getByRole('button', { name: 'Пригласить по ссылке' }).click()
+  await page.getByLabel('Имя спортсмена').fill('Первый спортсмен')
+  await page.getByRole('button', { name: 'Создать приглашение' }).click()
+  await expect(page.getByRole('dialog', { name: 'Ссылка готова' })).toBeVisible()
+  await expect(page.locator('.client-card-copy strong')).toHaveText('Первый спортсмен')
+  expect(commands).toHaveLength(1)
+  expect(commands[0]).toMatchObject({ fullName: 'Первый спортсмен', operationId: expect.stringMatching(/^[a-f0-9-]{36}$/) })
+  await page.getByRole('dialog', { name: 'Ссылка готова' }).getByRole('button', { name: 'Закрыть', exact: true }).click()
+  await expect(page.getByRole('button', { name: 'Добавить', exact: true })).toBeVisible()
+  await expect(page.locator('.client-card')).toHaveCount(1)
+})
+
 test('Client chat tap stays separate from archive gestures', { tag: ['@lime-clients', '@lime-chat'] }, async ({ page, browserName }) => {
   const row = await openSwipeFixture(page, true)
   const chat = row.getByRole('button', { name: /Сообщения с Алексей Смирнов/ })

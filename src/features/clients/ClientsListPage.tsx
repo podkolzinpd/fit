@@ -4,19 +4,18 @@ import { Link, useLocation, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../../app/auth-context'
 import { useDataBackend } from '../../app/data-backend-context'
 import { isTrainerFinancePilotEnabled } from '../../app/feature-flags'
-import { bmiLabel } from '../../data/repositories/workout-rules'
 import type { Client } from '../../shared/domain'
 import { todayInTimeZone } from '../../shared/local-date'
 import { AsyncView, Coachmark, Page } from '../../shared/ui'
-import { ArchiveIcon, CheckIcon, ChevronRightIcon, CloseIcon, HistoryIcon, ProfileIcon, SearchIcon } from '../../shared/icons'
+import { ArchiveIcon, CheckIcon, ChevronRightIcon, CloseIcon, HistoryIcon, SearchIcon } from '../../shared/icons'
 import { canOpenClientChat, clientChatThreads, ChatStartButton, ChatThreadsNotice, useChatThreads } from '../chat'
+import { ClientAddDialog } from './ClientAddDialog'
 import { InviteAthleteButton } from '../auth/InvitationShareActions'
 import { trainerFinanceClientLabel } from '../finance/TrainerFinanceOverviewPage'
 
-// Порог, с которого список перестаёт охватываться взглядом и поиск начинает
-// экономить время. Ниже него поле только занимало верх экрана: у тренера с
-// тремя-четырьмя спортсменами искать нечего.
-const CLIENTS_SEARCH_MIN = 6
+function clientInitials(name: string): string {
+  return name.trim().split(/\s+/u).filter(Boolean).slice(0, 2).map(part => [...part][0]).join('').toLocaleUpperCase('ru')
+}
 const CLIENTS_SCROLL_KEY = 'fit.clientsListScroll'
 const CLIENTS_ARCHIVE_SCROLL_KEY = 'fit.clientsArchiveListScroll'
 const CLIENT_SWIPE_WIDTH = 112
@@ -154,8 +153,8 @@ function ClientSwipeCard({
       onDragStart={(event) => event.preventDefault()}
       onClickCapture={captureClick}>
       <Link className="client-card-main" to={`/clients/${client.id}`} draggable={false} onClick={onBeforeOpen}>
-        <span className="client-avatar" aria-hidden="true"><ProfileIcon /></span>
-        <span className="client-card-copy"><strong>{client.fullName}</strong><span>{client.ageYears && client.heightCm ? `${client.ageYears} лет · ${client.heightCm} см · ИМТ ${bmiLabel(client.heightCm, client.currentWeightKg)}` : 'Нужно дополнить профиль'}{client.currentWeightKg ? ` · ${client.currentWeightKg} кг` : ''}</span>{financeLabel && <span className="client-finance-state">{financeLabel}</span>}</span>
+        <span className="client-avatar" aria-hidden="true">{clientInitials(client.fullName)}</span>
+        <span className="client-card-copy"><strong>{client.fullName}</strong>{financeLabel && <span className="client-finance-state">{financeLabel}</span>}</span>
       </Link>
       {canOpenChat && <ChatStartButton clientId={client.id} trainerId={trainerId}
         conversationId={conversationId} partnerName={client.fullName} unreadCount={unreadCount}
@@ -176,6 +175,9 @@ function ClientsListPage({ archivedOnly }: ClientsListPageProps) {
   const location = useLocation()
   const [searchParams, setSearchParams] = useSearchParams()
   const pageRef = useRef<HTMLDivElement>(null)
+  const addTrigger = useRef<HTMLButtonElement>(null)
+  const [adding, setAdding] = useState(false)
+  const [inviting, setInviting] = useState(false)
   const [openClientId, setOpenClientId] = useState<string | null>(null)
   const [feedback, setFeedback] = useState<{ client: Client; message: string; canUndo: boolean } | null>(null)
   const archiveInFlight = useRef(false)
@@ -201,12 +203,9 @@ function ClientsListPage({ archivedOnly }: ClientsListPageProps) {
   const financeByClientId = useMemo(() => new Map((finance.data?.clients ?? []).map((item) => [item.clientId, item])), [finance.data?.clients])
   const search = searchParams.get('q') ?? ''
   const threadByClientId = useMemo(() => clientChatThreads(threads.data ?? []), [threads.data])
-  // Порог считаем по всему списку, а не по отфильтрованному: иначе поле
-  // исчезало бы прямо во время ввода, как только совпадений станет мало.
-  const showSearch = (query.data?.length ?? 0) >= CLIENTS_SEARCH_MIN
+  // Keep the input mounted even when the current query finds no cards.
+  const showSearch = (query.data?.length ?? 0) > 0
   const clients = useMemo(() => {
-    // Если список успел сократиться ниже порога, набранный ранее запрос не
-    // должен продолжать скрывать карточки: поля для его сброса уже нет.
     const normalizedSearch = showSearch ? search.trim().toLocaleLowerCase('ru') : ''
     return query.data
       ?.filter((client) => !normalizedSearch || client.fullName.toLocaleLowerCase('ru').includes(normalizedSearch))
@@ -272,10 +271,9 @@ function ClientsListPage({ archivedOnly }: ClientsListPageProps) {
     return () => window.cancelAnimationFrame(frame)
   }, [location.pathname, location.search, query.isSuccess, scrollKey])
 
-  const pageActions = !archivedOnly && <div className="clients-page-header-actions">
-    <Link className="button secondary" to="/clients/new">Добавить</Link>
-    <InviteAthleteButton className="button" label="Пригласить" />
-  </div>
+  const restoreAddFocus = () => window.requestAnimationFrame(() => addTrigger.current?.focus())
+  const addButton = <button ref={addTrigger} type="button" className="button primary clients-add-button" onClick={() => setAdding(true)}>{showSearch ? 'Добавить' : 'Добавить клиента'}</button>
+  const pageActions = !archivedOnly && showSearch && <div className="clients-page-header-actions">{addButton}</div>
 
   return <div ref={pageRef} onPointerDownCapture={(event) => {
     if (!openClientId) return
@@ -298,7 +296,8 @@ function ClientsListPage({ archivedOnly }: ClientsListPageProps) {
     <AsyncView loading={query.isLoading} error={query.error} empty={!query.data?.length} onRetry={() => void query.refetch()}
       emptyTitle={archivedOnly ? 'Архив пуст' : 'Клиентов пока нет'}
       emptyDescription={archivedOnly ? 'Здесь появятся карточки, которые вы отправите в архив.' : 'Пригласите первого спортсмена или создайте его профиль вручную.'}
-      emptyAction={archivedOnly ? undefined : <Link className="button secondary" to="/clients/new">Создать профиль вручную</Link>}>
+      emptyMark={<></>}
+      emptyAction={archivedOnly ? undefined : addButton}>
       {showSearch && <div className="clients-search">
           <SearchIcon aria-hidden="true" />
           <input type="search" aria-label="Поиск клиента" value={search} onChange={(event) => updateSearch(event.target.value)} placeholder="Поиск по имени" autoComplete="off" />
@@ -311,8 +310,8 @@ function ClientsListPage({ archivedOnly }: ClientsListPageProps) {
         const canOpenChat = actor?.role === 'trainer' && canOpenClientChat(client, thread)
         if (!client.canArchive) return <article className="card client-card" key={client.id}>
             <Link className="client-card-main" to={`/clients/${client.id}`} onClick={rememberListPosition}>
-              <span className="client-avatar" aria-hidden="true"><ProfileIcon /></span>
-              <span className="client-card-copy"><strong>{client.fullName}</strong><span>{client.ageYears && client.heightCm ? `${client.ageYears} лет · ${client.heightCm} см · ИМТ ${bmiLabel(client.heightCm, client.currentWeightKg)}` : 'Нужно дополнить профиль'}{client.currentWeightKg ? ` · ${client.currentWeightKg} кг` : ''}</span>{financeLabel && <span className="client-finance-state">{financeLabel}</span>}</span>
+              <span className="client-avatar" aria-hidden="true">{clientInitials(client.fullName)}</span>
+              <span className="client-card-copy"><strong>{client.fullName}</strong>{financeLabel && <span className="client-finance-state">{financeLabel}</span>}</span>
             </Link>
             {canOpenChat && <ChatStartButton clientId={client.id} trainerId={thread?.trainerId ?? actor!.userId}
               conversationId={thread?.conversationId} partnerName={client.fullName} unreadCount={thread?.unreadCount ?? 0}
@@ -332,13 +331,18 @@ function ClientsListPage({ archivedOnly }: ClientsListPageProps) {
               ? 'Нажмите на значок сообщения для переписки или смахните карточку влево для архива; после архивации можно нажать «Вернуть».'
               : 'Смахните карточку влево для архива; после архивации можно нажать «Вернуть». Архивирование кнопкой остаётся в профиле клиента.'}>{card}</Coachmark>
           : card
-      })}</div> : <p className="clients-search-empty">По этому имени клиентов не найдено.</p>}
+      })}</div> : <div className="clients-search-empty"><p>По этому имени клиентов не найдено.</p><button type="button" className="secondary" onClick={() => updateSearch('')}>Очистить поиск</button></div>}
     </AsyncView>
     {!archivedOnly && <Link className="clients-archive-link" to="/clients/archive" onClick={rememberListPosition}>
       <span>Архив</span><ChevronRightIcon />
     </Link>}
     {!archivedOnly && <Link className="clients-code-fallback" aria-label="Ввести код" to="/join">Ввести код приглашения</Link>}
-  </Page></div>
+  </Page>
+    {adding && <ClientAddDialog onBeforeOpen={rememberListPosition}
+      onClose={() => { setAdding(false); restoreAddFocus() }}
+      onInvite={() => { setAdding(false); setInviting(true) }} />}
+    {!archivedOnly && <InviteAthleteButton open={inviting} onOpenChange={value => { setInviting(value); if (!value) restoreAddFocus() }} />}
+  </div>
 }
 
 export function ClientsPage() {
