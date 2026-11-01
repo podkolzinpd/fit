@@ -25,6 +25,7 @@ import { useCoachLiveDensity } from '../../app/coach-live-density'
 import { useCoachLiveHalo } from './use-coach-live-halo'
 import { CoachDayHeading, useCoachDaySwipe } from './CoachDayNavigation'
 import { CoachCalendarViews, type CoachCalendarView } from './CoachCalendarViews'
+import { CoachFortnightComparison } from './CoachFortnightComparison'
 import { advancePlanField } from './plan-input-navigation'
 import { useWorkoutFieldVisibility } from './workout-field-visibility'
 import { coachWorkoutReferenceAssets } from '../../shared/coach-workout-reference-assets'
@@ -1030,14 +1031,14 @@ function TrainerScheduleV2({ forceDayView = false }: { forceDayView?: boolean })
           <button type="button" aria-pressed={!isTwoWeekView} onClick={() => showOverview(weekStart, 'week')}>Неделя</button>
           <button type="button" aria-pressed={isTwoWeekView} onClick={() => showOverview(weekStart, '2w')}>2 недели</button>
         </div>}
-        <section className={`schedule-v2-period${isTwoWeekView ? ' is-two-week' : ''}`} aria-label="Навигация по расписанию">
+        {!(compactCalendar && isTwoWeekView) && <section className={`schedule-v2-period${isTwoWeekView ? ' is-two-week' : ''}`} aria-label="Навигация по расписанию">
           <button type="button" aria-label={isTwoWeekView ? 'Предыдущие 2 недели' : 'Предыдущая неделя'} onClick={() => shiftOverview(-1)}><BackIcon /></button>
           <strong aria-label={periodLabel}>{isTwoWeekView
             ? <><span>{periodLabel.replace(/ \d{4} г\.$/, '')}</span><small>{periodEnd.slice(0, 4)} г.</small></>
             : periodLabel}</strong>
           <button type="button" aria-label={isTwoWeekView ? 'Следующие 2 недели' : 'Следующая неделя'} onClick={() => shiftOverview(1)}><ChevronRightIcon /></button>
-        </section>
-        <div className="schedule-v2-weekstrip" aria-label="Дни периода">
+        </section>}
+        {compactCalendar && isTwoWeekView ? <CoachFortnightComparison weekStart={weekStart} today={today} itemsByDay={itemsByDay} onOpenDay={openDay} onShift={shiftOverview} /> : <><div className="schedule-v2-weekstrip" aria-label="Дни периода">
           {Array.from({ length: isTwoWeekView ? 2 : 1 }, (_, weekIndex) => <div key={weekIndex} className="schedule-v2-weekdays">
             {overviewDays.slice(weekIndex * 7, (weekIndex + 1) * 7).map((day) => <button key={day} type="button" className={`${day === selected ? 'is-selected' : ''}${day === today ? ' is-today' : ''}`} aria-label={formatScheduleDateLabel(day)} onClick={() => openDay(day, weekStart)}><span>{weekdayShort(day)}</span><strong>{dayOfMonth(day)}</strong></button>)}
           </div>)}
@@ -1054,7 +1055,7 @@ function TrainerScheduleV2({ forceDayView = false }: { forceDayView?: boolean })
               })}{workouts.length === 0 && (compactScheduleFilters ? <span className="sr-only">На этот день тренировок нет</span> : <em>Свободный день</em>)}{workouts.length > 5 && <em>Ещё {workouts.length - 5}</em>}</span>
             </button>
           })}
-        </section>
+        </section></>}
       </> : <>
         {timelineEvents.length === 0 && untimed.length === 0 && independent.length === 0 && <p className="schedule-v2-empty-day" role="status">{fitLimeToday ? 'На этот день тренировок нет' : 'Свободный день'}</p>}
         {independent.length > 0 && <section className="schedule-v2-untimed" aria-label="Самостоятельные тренировки"><strong>Самостоятельно</strong>{independent.map((workout) => <Link key={workout.id} data-status={workout.status} to={`/workouts/${workout.id}`} state={{ returnTo }}><span className="schedule-v2-avatar">{clientInitials(workout.clientName)}</span><span><b>{workout.clientName}</b><small>{eventTime(workout) || 'Без времени'} · {scheduleV2WorkoutLine(workout)}</small></span>{workout.status === 'done' ? <CheckIcon /> : workout.status === 'cancelled' ? <span className="schedule-cancelled-mark" role="img" aria-label="Не состоялась"><CloseIcon /></span> : null}</Link>)}</section>}

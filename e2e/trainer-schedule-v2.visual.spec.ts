@@ -81,6 +81,51 @@ const scheduleGuideId = 'coach-schedule-guide-fixed2-2026-10-17'
 const dayGuideId = 'lime-day-workspace-2026-10'
 const scheduleCoachmarks = [scheduleGuideId, 'lime-schedule-history-2026-10', 'lime-schedule-ownership-2026-10', 'coach-schedule-filters-2026-10-16']
 
+test('Figma calendar Coach fortnight compares aligned weekdays and keeps every appointment', { tag: ['@lime-critical'] }, async ({ page }, info) => {
+  const profileId = 'c0ac0000-6010-4000-8000-000000000001'
+  await page.clock.setFixedTime(new Date('2026-12-28T09:00:00+03:00'))
+  const rows: MockWorkout[] = Array.from({ length: 8 }, (_, i) => ({ ...workout,
+    id: `30000000-0000-4000-8000-${String(i + 1).padStart(12, '0')}`, trainerId: profileId, createdBy: profileId,
+    workoutDate: i < 6 ? '2026-12-28' : '2027-01-04', clientName: i < 6 ? `Первая неделя ${i + 1}` : 'Александра Константинопольская-Оченьдлиннаяфамилия',
+    status: 'planned', completedAt: null, startTime: `${String(9 + i).padStart(2, '0')}:00`, endTime: `${String(10 + i).padStart(2, '0')}:00`,
+  }))
+  rows.push({ ...rows[0]!, id: '30000000-0000-4000-8000-000000000009', workoutDate: '2027-01-05', clientName: 'Без времени', startTime: null, endTime: null })
+  await mockPilot(page, { profileId, fitLime: true, workouts: rows })
+  await page.goto('/schedule?week=2026-12-28&range=2w')
+  const comparison = page.getByRole('region', { name: 'Сравнение двух недель' })
+  await expect(comparison.locator('.coach-fortnight-day')).toHaveCount(14)
+  expect(await comparison.locator('.coach-fortnight-day').evaluateAll(nodes => nodes.map(n => n.getAttribute('data-date')))).toEqual([
+    '2026-12-28','2027-01-04','2026-12-29','2027-01-05','2026-12-30','2027-01-06','2026-12-31','2027-01-07','2027-01-01','2027-01-08','2027-01-02','2027-01-09','2027-01-03','2027-01-10',
+  ])
+  await expect(comparison.locator('.coach-fortnight-appointment')).toHaveCount(9)
+  await expect(comparison.locator('[data-date="2026-12-28"] time')).toHaveText(['09:00','10:00','11:00','12:00','13:00','14:00'])
+  await expect(comparison.locator('[data-date="2027-01-05"] time')).toHaveText('—')
+  // Paired row alignment, truncation and scrolling are responsive geometry contracts.
+  for (const width of [320,390,736,1440]) {
+    await page.setViewportSize({ width, height: 844 })
+    const geometry = await comparison.evaluate(el => {
+      const cells = [...el.querySelectorAll('.coach-fortnight-day')].map(n => n.getBoundingClientRect())
+      return { aligned: cells.every((box, i) => i % 2 || box.top === cells[i + 1]!.top && box.height === cells[i + 1]!.height),
+        shortEmpty: cells[8]!.height, overflow: document.documentElement.scrollWidth > innerWidth,
+        rows: [...el.querySelectorAll('.coach-fortnight-appointment')].map(n => n.getBoundingClientRect().height),
+        namesContained: [...el.querySelectorAll('.coach-fortnight-client')].every(n => n.getBoundingClientRect().right <= n.closest('button')!.getBoundingClientRect().right) }
+    })
+    expect(geometry.aligned).toBe(true);expect(geometry.overflow).toBe(false);expect(geometry.namesContained).toBe(true)
+    expect(geometry.shortEmpty).toBeLessThanOrEqual(48)
+    for (const height of geometry.rows) expect(height).toBeLessThanOrEqual(20)
+    await page.screenshot({ path: info.outputPath(`fortnight-${width}.png`), fullPage: true })
+  }
+  await page.setViewportSize({ width: 390, height: 844 })
+  await comparison.locator('[data-date="2027-01-04"]').click()
+  await expect(page).toHaveURL(/date=2027-01-04/)
+  await expect(page.locator('.schedule-v2-event')).toHaveCount(2)
+  await page.goBack();await expect(comparison).toBeVisible();await expect(comparison.locator('.coach-fortnight-appointment')).toHaveCount(9)
+  await comparison.getByRole('button', { name: 'Следующие 2 недели' }).click()
+  await expect(comparison.locator('.coach-fortnight-day').first()).toHaveAttribute('data-date', '2027-01-11')
+  await comparison.getByRole('button', { name: 'Предыдущие 2 недели' }).click()
+  await expect(comparison.locator('.coach-fortnight-day').first()).toHaveAttribute('data-date', '2026-12-28')
+})
+
 test('Figma calendar Coach compact navigation keeps date access, menu and all views', { tag: ['@lime-critical'] }, async ({ page }, info) => {
   await page.clock.setFixedTime(new Date('2026-09-24T12:00:00+03:00'))
   await mockPilot(page, { fitLime: true, profileId: 'c0ac0000-6010-4000-8000-000000000001' })
