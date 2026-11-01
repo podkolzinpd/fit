@@ -18,9 +18,9 @@ export function CorporateInvitations({data,initialCreate=false}:{data:CorporateA
   const query=useQuery({queryKey:['corporate-invitations',actor?.userId],queryFn:()=>repository.list(),retry:false})
   const create=useMutation({mutationFn:()=>repository.create(operationId,officeIds),onSuccess:async value=>{setShare(value);setCreating(false);setOfficeIds([]);setOperationId(crypto.randomUUID());await refresh()}})
   const decide=useMutation({mutationFn:({id,approve}:{id:string;approve:boolean})=>repository.decide(id,approve),onSuccess:refresh})
-  const open=()=>{create.reset();setShare(null);setCreating(true)}
+  const open=()=>{create.reset();setShare(null);setOfficeIds([]);setOperationId(crypto.randomUUID());setCreating(true)}
   return <section className="corporate-admin-workspace">
-    <div className="corporate-admin-toolbar"><h2>Приглашения</h2><button type="button" className="primary" onClick={open}>Пригласить тренера</button></div>
+    <div className="corporate-admin-toolbar"><h2>Приглашения</h2><button type="button" className="primary" disabled={create.isPending} onClick={open}>Пригласить тренера</button></div>
     {creating&&<form className="corporate-admin-editor" aria-label="Новое приглашение" onSubmit={e=>{e.preventDefault();create.mutate()}}>
       <h3>Офисы тренера</h3>
       <fieldset disabled={create.isPending}>
