@@ -58,18 +58,18 @@
   max-width: none;
   text-align: left;
 }
-.phone-frame.fit-client-lime .client-workout-entry .voice-input-status small {
+.phone-frame.fit-client-lime .client-workout-entry .workout-composer-card .voice-input-status small {
   grid-column: 1;
   grid-row: 1;
 }
-.phone-frame.fit-client-lime .client-workout-entry .voice-input-status .link {
+.phone-frame.fit-client-lime .client-workout-entry .workout-composer-card .voice-input-status .link {
   grid-column: 1;
   grid-row: 2;
   justify-self: start;
   min-width: 44px;
   min-height: 44px;
 }
-.phone-frame.fit-client-lime .client-workout-entry .voice-status-dismiss {
+.phone-frame.fit-client-lime .client-workout-entry .workout-composer-card .voice-status-dismiss {
   grid-column: 2;
   grid-row: 1;
   width: 44px;
