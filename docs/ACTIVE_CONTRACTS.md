@@ -15,7 +15,9 @@
 | Клиентский пакет YAFIT-676 | [Экраны и план выпуска](design/CLIENT_REFERENCE_SCREENS_20261029.md) | CR1–CR6: существующий клиентский пилот4 и прежние механики; CR7/YAFIT-693 — пакет опубликован и включён всем клиентам; результат/ограничения в журнале47 и тикете |
 | Клиентский Live | [v79 contract](design/CLIENT_LIVE_V79_CONTRACT.md), [interactions](design/CLIENT_LIVE_INTERACTIONS_20261027.md), [focus](design/CLIENT_LIVE_FOCUS_GUARD_20261026.md), [time](design/CLIENT_LIVE_TIME_PREFERENCE_20261026.md) | Ввод, клавиатура, фокус, таймеры и соседние изменения |
 | Тренерский Live | [актуальное решение о паузе и rollout](design/COACH_LIVE_FINISH_AND_ROLLOUT_20261028.md); история: [v79](design/COACH_LIVE_V79_INTEGRATION_20261025.md), [composition](design/COACH_LIVE_COMPOSITION_FIXED2_20261026.md), [supersets](design/COACH_SUPERSET_FIXED2_20261027.md) | YAFIT-668 / PR1848–1851 в main; Original54/Compact48, одна механика, жесты/суперсеты/черновики; actual runtime mode проверяется отдельно |
+| Перенос и календарные жесты тренера | [ФИТ20](design/COACH_RESCHEDULE_AND_DAY_GESTURES_20261031.md) | Своя плановая запись; общий слот, whole-card hold без grip/подписей, swipe по карточкам; факт/финансы прежние |
 | Тренерские формы и каталог | [SVG parity](design/COACH_SVG_PARITY_FIXED2_20261020.md) | Оба recent-раздела с понятными названиями, цвета/состояния из источника, существующий выбор |
+| Клиенты и гостевое приглашение | [YAFIT-699 / два PR](design/COACH_CLIENTS_AND_INVITATION_20261031.md) | Компактный список, один вход добавления, существующее подключение и сохранность истории; другие identity gates прежние |
 | Ачивки | [progress states](design/ACHIEVEMENT_PROGRESS_STATES_20261004.md), [regularity](design/ACHIEVEMENT_REGULARITY_COPY_20261005.md) | Принятые изображения/условия; перед правкой сверить последующие решения и текущий каталог |
 | Корпоративные тренеры | [кабинет](design/CORPORATE_ADMIN_20261027.md), [анкеты/офисы](design/TRAINER_PROFILES_OFFICES_20261029.md) | Права отдельно от роли; фото из публикации; статус/офисы утверждает администратор; клуб отдельно |
 | Backend/публикация | [playbook](YANDEX_CUTOVER_PLAYBOOK.md), [engineering](ENGINEERING_RULES.md), OPERATIONS.md в корне | Cloud.ru, ownership/RLS, forward migrations, отсутствие dual-write |
@@ -84,3 +86,11 @@
 [Актуальный план YAFIT-692](design/WORKOUT_NAMES_AND_PUBLIC_QUICK_ENTRY_20261030.md)
 заменяет fixed2-границу YAFIT-675 только для этого пакета; прочие пилоты прежние.
 Runtime all включается отдельным выпуском, текущий статус — в тикете.
+
+## Проведение и несостоявшиеся занятия
+
+[YAFIT-698](design/COACH_QUICK_COMPLETION_20261031.md) уточняет YAFIT-697:
+тренер проводит свой план/Live с упражнениями или без, без фиктивных фактов;
+отмена доступна своему начатому Live, сохраняет данные, без расхода; крестик в
+календаре. Пустые посещения остаются в общей истории, но не в источниках плана.
+Original54/Compact48 и клиентская механика прежние; статус выпуска — в тикете.

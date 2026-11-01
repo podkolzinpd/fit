@@ -134,6 +134,7 @@ export interface PilotWorkoutsWriter {
     workoutDate: string,
     startTime: string | null,
     expectedVersion: number,
+    slot?: { endTime: string | null; operationId: string },
   ): Promise<number>
   saveCompleted(
     sessionToken: YandexActorSessionInput,
@@ -522,6 +523,7 @@ export class DatabasePilotWorkoutsWriter implements PilotWorkoutsWriter {
     workoutDate: string,
     startTime: string | null,
     expectedVersion: number,
+    slot?: { endTime: string | null; operationId: string },
   ): Promise<number> {
     return this.withSession(sessionToken, (client) => rescheduleWorkout(
       client,
@@ -529,6 +531,7 @@ export class DatabasePilotWorkoutsWriter implements PilotWorkoutsWriter {
       workoutDate,
       startTime,
       expectedVersion,
+      slot,
     ))
   }
 
