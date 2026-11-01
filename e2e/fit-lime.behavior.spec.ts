@@ -2089,12 +2089,18 @@ test('Client Lime voice parsing exposes progress and retains failed transcript',
 })
 
 for (const kind of ['anonymous', 'other-client', 'trainer'] as const) {
-  test(`Client Lime public routes exclude ${kind}`, { tag: ["@lime-critical"] }, async ({ page }) => {
+  test(`Client Lime public routes keep only the invitation exception for ${kind}`, { tag: ["@lime-critical"] }, async ({ page }) => {
     await mockPilot(page, { role: kind === 'trainer' ? 'trainer' : 'client', profileId: kind === 'other-client' ? '10000000-0000-4000-8000-000000000010' : kind === 'trainer' ? trainerId : clientId, fitLime: kind === 'trainer' })
     if (kind === 'anonymous') await page.addInitScript(() => localStorage.removeItem('fit.yandexAppSession.v1'))
     await page.addInitScript((id) => localStorage.setItem(`fit.clientLime.theme.${id}`, 'dark'), clientId)
     await mockPublicTrainer(page)
-    for (const route of ['/legal/privacy', `/trainers/${publicTrainerId}`, '/invite']) {
+    // The approved invitation is the sole new pre-actor presentation exception.
+    // Navigate away afterwards to prove it cannot leak into the old gates.
+    await page.goto('/invite')
+    await expect(page.getByRole('heading').first()).toBeVisible()
+    await expect(page.locator('.phone-frame.fit-client-lime-public')).toHaveCount(1)
+    await expect(page.locator('html')).toHaveClass(/fit-client-lime-document/)
+    for (const route of ['/legal/privacy', `/trainers/${publicTrainerId}`]) {
       await page.goto(route)
       await expect(page.getByRole('heading').first()).toBeVisible()
       await expect(page.locator('.fit-client-lime')).toHaveCount(0)

@@ -53,6 +53,30 @@ test('Compact clients keep search, initials and one add flow in trainer Lime', {
   }
 })
 
+// Both token pairs are public invitation states; sizes only measure layout.
+for (const theme of ['light', 'dark']) test(`Public invitation identity and controls ${theme}`, { tag: ['@lime-critical'] }, async ({ page }, info) => {
+  await page.addInitScript(value => localStorage.setItem('fit.clientLime.theme.', value), theme)
+  await page.route('**/v1/invitation-links/preview', route => route.fulfill({ json: {
+    invitation: { targetRole: 'client', inviterName: 'Алексей Константинопольский', status: 'active', expiresAt: '2099-11-08T15:00:00.000Z' },
+  } }))
+  await page.goto(`/invite?token=ABCDEF123456.${'a'.repeat(64)}&source=yandex`)
+  const shell = page.locator('.fit-client-lime-public')
+  await expect(page.getByRole('heading', { name: 'Тренировки вместе с тренером' })).toBeVisible()
+  if (theme === 'light') await expect(shell).toHaveClass(/theme-light/)
+  else await expect(shell).not.toHaveClass(/theme-light/)
+  await page.evaluate(() => document.fonts.ready)
+  expect(await shell.evaluate(node => getComputedStyle(node).fontFamily)).toContain('YS Geo')
+  expect(await page.evaluate(() => document.fonts.check('500 30px "YS Geo"'))).toBe(true)
+  for (const width of [320, 390, 736]) {
+    await page.setViewportSize({ width, height: 844 })
+    const action = page.getByRole('button', { name: 'Войти и подключиться' })
+    await expectContainedButtonText(action)
+    expect((await action.boundingBox())!.height).toBeGreaterThanOrEqual(52)
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+    await page.screenshot({ path: info.outputPath(`invitation-${theme}-${width}.png`), fullPage: true })
+  }
+})
+
 const scheduleGuideId = 'coach-schedule-guide-fixed2-2026-10-17'
 const dayGuideId = 'lime-day-workspace-2026-10'
 const scheduleCoachmarks = [scheduleGuideId, 'lime-schedule-history-2026-10', 'lime-schedule-ownership-2026-10', 'coach-schedule-filters-2026-10-16']

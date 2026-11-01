@@ -93,8 +93,8 @@ const router = createBrowserRouter([
   { path: '/legal/privacy', element: <PrivacyPage /> },
   { path: '/legal/delete-account', element: <AccountDeletionPage /> },
   { path: '/trainers/:publicId', element: <PublicTrainerProfilePage /> },
-  { path: '/invite', element: <InvitationRoute /> },
   ] },
+  { path: '/invite', element: <ClientLimeStandaloneLayout invitation><InvitationRoute /></ClientLimeStandaloneLayout> },
   { element: <Protected />, children: [
     { path: '/admin', element: <CorporateAdminPage /> },
     { element: <AppLayout />, children: [
