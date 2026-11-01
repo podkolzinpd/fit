@@ -351,8 +351,9 @@ export function TrainerFinancePage() {
     </article>
   }
   const financeBackTo = routeState && typeof routeState === 'object'
-    && 'financeBackTo' in routeState && routeState.financeBackTo === '/finance'
-    ? '/finance'
+    && 'financeBackTo' in routeState && typeof routeState.financeBackTo === 'string'
+    && /^\/finance(?:\?[^#]*)?$/.test(routeState.financeBackTo)
+    ? routeState.financeBackTo
     : `/clients/${clientId}`
   return <Page title="Финансы" subtitle={client.data?.fullName} back={financeBackTo} swipeBack className="trainer-finance-page">
     <AsyncView loading={client.isLoading || finance.isLoading} error={(client.error ?? finance.error) as Error | null} onRetry={() => { void client.refetch(); void finance.refetch() }}>
