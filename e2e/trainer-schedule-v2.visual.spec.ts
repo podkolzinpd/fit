@@ -1168,7 +1168,8 @@ for (const width of [375, 390, 430, 1440]) {
     if (width === 390) {
       await page.screenshot({ path: info.outputPath('coach-reference-first-entry.png') })
       const entryCoachmark = page.getByRole('dialog', { name: 'Новая тренировка', exact: true }).locator('.coachmark-bubble')
-      await expect(entryCoachmark).toContainText('Начало без лишнего шага')
+      await expect(entryCoachmark).toContainText('Начать тренировку')
+      await expect(entryCoachmark).toContainText('Выберите клиента и формат, затем нажмите «Начать тренировку».')
       const entryClose = page.getByRole('dialog', { name: 'Новая тренировка', exact: true }).getByRole('button', { name: 'Закрыть выбор действия', exact: true })
       expect(await entryClose.evaluate(node => { const r = node.getBoundingClientRect(); return node.contains(document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2)) })).toBe(true)
       await entryCoachmark.getByRole('button', { name: 'Понятно', exact: true }).click()
