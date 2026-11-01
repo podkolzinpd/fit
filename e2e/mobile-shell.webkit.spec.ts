@@ -973,8 +973,8 @@ test('iPhone: новый клиент выбирает готовую трени
   await page.getByLabel('Пароль').fill('FitLocal123!')
   await page.getByRole('button', { name: 'Создать аккаунт' }).click()
 
-  await expect(page.getByRole('button', { name: 'Попробовать готовую тренировку' })).toBeVisible()
-  await page.getByRole('button', { name: 'Попробовать готовую тренировку' }).click()
+  await expect(page.getByRole('button', { name: 'Выбрать готовый план' })).toBeVisible()
+  await page.getByRole('button', { name: 'Выбрать готовый план' }).click()
   await expect(page.getByText('Всё тело без инвентаря')).toBeVisible()
   await expectNoHorizontalOverflow(page)
 
