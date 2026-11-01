@@ -182,7 +182,7 @@ export function MyWorkoutsPage() {
         <section className="client-workout-section client-history-section">
           <div className="client-workout-section-head client-history-section-head"><div><p className="eyebrow">РЕЗУЛЬТАТЫ</p><h2>История</h2></div></div>
           {calendarState.view === 'list' ? historyItems.length > 0
-            ? <><div className="cards client-workout-cards workout-chronicle-list">{historyItems.map((workout) => <WorkoutChronicleCard key={workout.id} workout={workout} contextLabel={clientWorkoutCardLabel(workout, actor?.userId, trainers.data)} returnTo={calendarReturnTo} historyListActions showTitle />)}</div><LoadMoreButton hasMore={history.hasNextPage} loading={history.isFetchingNextPage} onLoadMore={() => void history.fetchNextPage()} /></>
+            ? <><div className="cards client-workout-cards workout-chronicle-list">{historyItems.map((workout) => <WorkoutChronicleCard key={workout.id} workout={workout} contextLabel={clientWorkoutCardLabel(workout, actor?.userId, trainers.data)} returnTo={calendarReturnTo} historyListActions showTitle compactHistory={referenceCards} />)}</div><LoadMoreButton hasMore={history.hasNextPage} loading={history.isFetchingNextPage} onLoadMore={() => void history.fetchNextPage()} /></>
             : <EmptyState title="Пока нет результатов" description="Завершённые тренировки появятся здесь." />
             : <ClientWorkoutHistoryCalendar
                 month={calendarState.month}
