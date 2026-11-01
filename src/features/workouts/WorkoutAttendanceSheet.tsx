@@ -46,12 +46,12 @@ export function WorkoutAttendanceSheet({ workout, action, onCompleted, onClose, 
     return () => { if (previous?.isConnected) previous.focus({ preventScroll: true }) }
   }, [])
   const save = useMutation({
-    mutationFn: async () => {
-      if (currentAction === 'delete') {
+    mutationFn: async (intent: 'complete' | 'cancel' | 'delete') => {
+      if (intent === 'delete') {
         if (!canDelete || !onDelete) throw new Error('Удаление доступно только для пустой тренировки')
         await onDelete(); return
       }
-      if (!completed) { const prepared = beforeSave ? await beforeSave() : target; await workouts.cancelPlanned(prepared); return }
+      if (intent === 'cancel') { const prepared = beforeSave ? await beforeSave() : target; await workouts.cancelPlanned(prepared); return }
       if (!workouts.confirmAttendance) throw new Error('Проведение занятия недоступно')
       if (selection.startsWith('charged:') && !selected) throw new Error('Обновите список абонементов')
       const disposition = selected ? 'charged' : selection === 'trial' ? 'trial' : selection === 'free' ? 'free' : selection === 'unassigned' ? 'unassigned' : 'auto'
@@ -59,7 +59,7 @@ export function WorkoutAttendanceSheet({ workout, action, onCompleted, onClose, 
       const prepared = beforeSave ? await beforeSave() : target
       await workouts.confirmAttendance(prepared, draft, requestId.current)
     },
-    onSuccess: () => currentAction === 'delete' ? undefined : onCompleted(currentAction),
+    onSuccess: (_data, intent) => intent === 'delete' ? undefined : onCompleted(intent),
     onError: () => setNeedsReload(true),
     onSettled: () => { submitting.current = false },
   })
@@ -78,7 +78,7 @@ export function WorkoutAttendanceSheet({ workout, action, onCompleted, onClose, 
     {live ? <FitLimeSheetHeader title="Завершение тренировки" backLabel="Закрыть" onBack={onClose} disabled={busy} /> : <header><h2>{completed ? 'Отметить проведённой' : 'Не состоялась'}</h2><button type="button" aria-label="Закрыть" disabled={busy} onClick={onClose}><CloseIcon /></button></header>}
     <p className="workout-attendance-client">{target.clientName}</p>
     <p className="workout-attendance-date">{formatLocalDate(target.workoutDate)} · {target.startTime?.slice(0, 5) ?? 'без времени'} · {workoutTrainingFormatLabel(target.trainingFormat ?? 'self')}</p>
-    <form onSubmit={event => { event.preventDefault(); if (!busy && !submitting.current && !needsReload && !financePending && (!deleting || canDelete)) { submitting.current = true; save.mutate() } }}>
+    <form onSubmit={event => { event.preventDefault(); if (!busy && !submitting.current && !needsReload && !financePending && (!deleting || canDelete)) { submitting.current = true; save.mutate(currentAction) } }}>
       {live && <fieldset className="workout-live-exit-choices" disabled={busy || needsReload}>
         <legend className="sr-only">Действие с тренировкой</legend>
         {([{ value: 'complete', label: 'Завершить тренировку' }, { value: 'cancel', label: 'Отметить как несостоявшуюся' }, ...(canDelete ? [{ value: 'delete', label: 'Удалить пустую тренировку' }] : [])] as const).map(item => <label key={item.value} className={item.value === 'delete' ? 'workout-live-exit-delete' : undefined}>
