@@ -1,9 +1,17 @@
 import { useEffect, useLayoutEffect, useRef, useState, type RefObject } from 'react'
+import { localDate } from '../shared/local-date'
 import { isTrainerScheduleV2CalendarRoute } from './trainer-schedule-v2'
 
 function calendarRoute(value: string | null): string | null {
   if (!value || !/^\/today(?:\?[^#]*)?$/.test(value)) return null
-  return isTrainerScheduleV2CalendarRoute('/today', value.slice('/today'.length)) ? value : null
+  const search = value.slice('/today'.length)
+  if (!isTrainerScheduleV2CalendarRoute('/today', search)) return null
+  const params = new URLSearchParams(search)
+  for (const key of ['date', 'week', 'anchor']) {
+    const date = params.get(key)
+    if (date !== null) { try { localDate(date) } catch { return null } }
+  }
+  return value
 }
 
 function readDestination(userId: string | undefined, name: string, validate: (value: string | null) => string | null): string | null {

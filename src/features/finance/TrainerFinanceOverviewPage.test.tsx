@@ -107,3 +107,11 @@ it('restores a finance deep link and passes month/filter to the client return', 
   await userEvent.click(await screen.findByRole('link', { name: /Клиент/ }))
   expect(screen.getByText('Финансы клиента · возврат /finance?month=2026-09&filter=overdue')).toBeVisible()
 })
+
+it.each(['0000-01', '0099-01', '2026-13', 'wrong'])('keeps invalid finance URL month %s out of repository queries', async (month) => {
+  listOverview.mockReset().mockResolvedValue({ month: '2026-11', receivedCents: 0, dueCents: 0, attentionCount: 0, clients: [] })
+  renderPage(`/finance?month=${month}`)
+  await screen.findByRole('region', { name: 'Финансовая сводка' })
+  expect(listOverview).toHaveBeenCalledTimes(1)
+  expect(listOverview.mock.calls[0]?.[0]).not.toBe(month)
+})

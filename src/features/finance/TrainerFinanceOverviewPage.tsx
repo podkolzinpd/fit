@@ -53,14 +53,20 @@ function monthStart(value: LocalDate) {
   return localDate(`${value.slice(0, 7)}-01`)
 }
 
+function selectedMonth(value: string | null, today: LocalDate): LocalDate {
+  if (value && /^\d{4}-(0[1-9]|1[0-2])$/.test(value)) {
+    try { return localDate(`${value}-01`) } catch { /* Invalid URL dates use the current month. */ }
+  }
+  return monthStart(today)
+}
+
 export function TrainerFinanceOverviewPage() {
   const { actor } = useAuth()
   const { trainerFinance } = useDataBackend()
   const [params, setParams] = useSearchParams()
   const location = useLocation()
   const monthParam = params.get('month')
-  const month = monthParam && /^\d{4}-(0[1-9]|1[0-2])$/.test(monthParam)
-    ? localDate(`${monthParam}-01`) : monthStart(todayInTimeZone(actor?.timezone))
+  const month = selectedMonth(monthParam, todayInTimeZone(actor?.timezone))
   const filter = FILTERS.find((item) => item.id === params.get('filter'))?.id ?? 'all'
   const change = (nextMonth: LocalDate, nextFilter: FinanceFilter) => {
     const next = new URLSearchParams(params)

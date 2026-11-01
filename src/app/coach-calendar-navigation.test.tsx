@@ -18,7 +18,7 @@ it('retains calendar date, range and filters across routes and isolates accounts
   expect(readCoachCalendarRoute('second')).toBeNull()
 })
 
-it.each(['/today?view=compose', '/today?view=save', '/today?classic=1', '//example.com/today', 'https://example.com/today', '/today#other', '/schedule/templates'])('rejects non-calendar stored destinations %s', (value) => {
+it.each(['/today?view=compose', '/today?view=save', '/today?classic=1', '//example.com/today', 'https://example.com/today', '/today#other', '/schedule/templates', '/today?date=wrong', '/today?week=2026-02-30', '/today?anchor=2026-13-01'])('rejects non-calendar stored destinations %s', (value) => {
   sessionStorage.setItem('fit.coach-calendar-route.first', value)
   expect(readCoachCalendarRoute('first')).toBeNull()
 })
