@@ -452,6 +452,31 @@ describe('splitClientWorkouts', () => {
 })
 
 describe('clientWorkoutStatusLabel', () => {
+  it('uses one trainer completion status without changing the athlete presentation or stored facts', () => {
+    const source = workoutWith('2026-07-20', 'squat', 'strength', [{ id: 'source-set', position: 0, weightKg: 30, reps: 10, fact: { weightKg: 35, reps: 8 }, confirmedAt: 'now', version: 1 }])
+    const original = JSON.stringify(source)
+    const set = source.exercises[0]!.sets[0]!
+    const cases = [[], [{ ...source.exercises[0]!, sets: [] }], ...[0, 1, 2].map((count) => [{ ...source.exercises[0]!, sets: [0, 1].map((position) => ({ ...set, position, confirmedAt: position < count ? '2026-07-20T10:00:00Z' : null })) }])]
+    for (const exercises of cases) {
+      expect(workoutStatusPresentation({ ...source, status: 'done', exercises }, TODAY, 'trainer')).toEqual({ label: 'Проведена', tone: 'done' })
+    }
+    const partial = { ...source, status: 'done' as const, exercises: cases[3]! }
+    expect(workoutStatusPresentation(partial, TODAY)).toEqual({ label: 'Частично', tone: 'partial' })
+    expect(JSON.stringify(source)).toBe(original)
+  })
+
+  it('uses a dash for an unrecorded trainer result while retaining confirmed values and athlete copy', () => {
+    const set: WorkoutSet = { id: 'missing-result', position: 0, weightKg: 30, reps: 10, confirmedAt: null, fact: {}, version: 1 }
+    expect(compactCompletedSetSummary([set], false, undefined, 'trainer')).toBe('—')
+    expect(compactExerciseDetailSummary('strength', [set], 'completed', false, undefined, 'trainer')).toBe('—')
+    expect(compactExerciseDetailSummary('strength', [], 'completed', false, undefined, 'trainer')).toBe('—')
+    expect(compactCompletedSetSummary([set])).toBe('Не выполнено')
+    expect(compactExerciseDetailSummary('strength', [set], 'completed')).toBe('Не выполнено')
+    const recorded = { ...set, confirmedAt: '2026-07-20T10:00:00Z', fact: { weightKg: 35, reps: 8 } }
+    expect(compactCompletedSetSummary([recorded, set], false, undefined, 'trainer')).toBe('35 кг × 8 повт.')
+    expect(compactCompletedSetSummary([recorded, set])).toContain('не выполнено: 1')
+  })
+
   it('does not call a past plan or stale live workout completed', () => {
     expect(clientWorkoutStatusLabel(bareWorkout('2026-07-30', 'planned'), TODAY)).toBe('План')
     expect(clientWorkoutStatusLabel(bareWorkout('2026-07-20', 'planned'), TODAY)).toBe('План')
