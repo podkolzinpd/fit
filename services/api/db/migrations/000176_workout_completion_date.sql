@@ -12,6 +12,9 @@ begin
   if tg_op = 'UPDATE' then
     if old.status = 'done' then return new; end if;
   end if;
+  -- Historical dates are past in every supported timezone. Avoid enumerating
+  -- the timezone catalog for each row of an already-reviewed history import.
+  if new.workout_date < (now() at time zone 'UTC')::date - 1 then return new; end if;
   select profile.timezone into actor_timezone from public.profiles profile where profile.id = actor_id;
   if not exists(select 1 from pg_catalog.pg_timezone_names zone where zone.name = actor_timezone)
     then actor_timezone := 'Europe/Moscow'; end if;
