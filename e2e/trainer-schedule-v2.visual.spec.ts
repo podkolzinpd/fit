@@ -1,3 +1,4 @@
+import { workoutLifecycleCases } from './workout-lifecycle.cases'
 import { writeFile } from 'node:fs/promises'
 import { expect, test, type Locator, type Page } from '@playwright/test'
 import { buildFitLimeCalendarPlan } from '../services/api/src/db/fit-lime-calendar-plan'
@@ -3827,7 +3828,7 @@ for (const width of [390, 430, 1440]) {
     await expect(format.getByRole('button', { name: 'С тренером', exact: true })).toHaveAttribute('aria-pressed', 'true')
     await format.getByRole('button', { name: 'Самостоятельно', exact: true }).click()
     await expect(format.getByRole('button', { name: 'Самостоятельно', exact: true })).toHaveAttribute('aria-pressed', 'true')
-    const start = format.getByRole('button', { name: 'Начать', exact: true })
+    const start = format.getByRole('button', { name: 'Начать тренировку', exact: true })
     await expect(start).toHaveCSS('background-color', 'rgb(182, 239, 77)')
     await start.scrollIntoViewIfNeeded()
     for (const button of await format.getByRole('button').all()) {
@@ -7319,3 +7320,5 @@ for (const theme of ['light', 'dark']) for (const width of [390, 430]) {
     await page.screenshot({ path: info.outputPath('history-calendar.png') })
   })
 }
+
+workoutLifecycleCases()
