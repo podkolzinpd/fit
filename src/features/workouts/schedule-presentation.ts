@@ -42,17 +42,7 @@ export function compactScheduleEventLabel(time: string | null | undefined, clien
 }
 
 export function scheduleEventStatus(workout: Workout, today: LocalDate): ScheduleEventStatus {
-  const status = workoutStatusPresentation(workout, today)
-  const assignmentAuthor = workout.createdBy ?? workout.trainerId
-  const selfLed = Boolean(
-    assignmentAuthor
-    && workout.startedBy
-    && workout.completedBy
-    && workout.startedBy === workout.completedBy
-    && workout.startedBy !== assignmentAuthor,
-  )
-  if (selfLed && status.tone === 'done') return { label: 'Самостоятельно', tone: 'self-led' }
-  if (selfLed && status.tone === 'partial') return { label: 'Самостоятельно · частично', tone: 'partial' }
+  const status = workoutStatusPresentation(workout, today, 'trainer')
   if (status.tone === 'cancelled') return { label: 'Не состоялась', tone: 'skipped' }
   if (status.tone === 'in_progress') return { label: status.label, tone: 'current' }
   return { label: status.label, tone: status.tone }
