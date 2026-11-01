@@ -26,6 +26,27 @@ function show(workout: Workout, coachView = true) {
 }
 
 describe('WorkoutChronicleCard feedback', () => {
+  it('shows a completed trainer workout consistently when only some results were recorded', () => {
+    const workout = completed({ exercises: [{ id: 'exercise', name: 'Приседания', ref: 'squat', inputKind: 'strength', position: 0, source: 'system', muscleGroup: 'legs', blockId: 'block', blockType: 'single', blockPreset: 'set', blockRounds: 1, restBetweenExercisesSec: 0, restBetweenRoundsSec: 0, restBetweenSetsSec: 0,
+      sets: [0, 1].map(position => ({ id: `set-${position}`, position, weightKg: 30, reps: 10, confirmedAt: position === 0 ? '2026-10-30T10:00:00Z' : null, fact: {}, version: 1 })) }] })
+    show(workout)
+    expect(screen.getByText('Проведена')).toHaveAttribute('data-state', 'completed')
+    expect(screen.queryByText('Частично')).not.toBeInTheDocument()
+  })
+
+  it('does not call an unrecorded trainer exercise unperformed or change the athlete result', () => {
+    const workout = completed({ exercises: [{ id: 'exercise', name: 'Приседания', ref: 'squat', inputKind: 'strength', position: 0, source: 'system', muscleGroup: 'legs', blockId: 'block', blockType: 'single', blockPreset: 'set', blockRounds: 1, restBetweenExercisesSec: 0, restBetweenRoundsSec: 0, restBetweenSetsSec: 0,
+      sets: [{ id: 'set', position: 0, weightKg: 30, reps: 10, confirmedAt: null, fact: {}, version: 1 }] }] })
+    session.role = 'trainer'
+    const view = render(<MemoryRouter><WorkoutChronicleCard workout={workout} coachView /></MemoryRouter>)
+    expect(screen.getByText('—')).toBeVisible()
+    expect(screen.queryByText('Не выполнено')).not.toBeInTheDocument()
+    view.unmount()
+    session.role = 'client'
+    render(<MemoryRouter><WorkoutChronicleCard workout={workout} /></MemoryRouter>)
+    expect(screen.getByText('Не выполнено')).toBeVisible()
+  })
+
   it('retains a coach-visible wellbeing result when older feedback has no RPE', () => {
     show(completed({ wellbeing: 'hard' }))
     expect(screen.getByText('Плохо')).toBeVisible()
