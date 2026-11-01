@@ -103,7 +103,7 @@ test('real Playwright partitions preserve the 689-case union without duplicates 
   }
   for (const { project } of engines) {
     const full = collect(fitLimeArgs(project, 'full').args)
-    assert.equal(full.length, 689) // Existing686 plus four lifecycle client-creation cases; every previous case remains.
+    assert.equal(full.length, 689) // Existing686 plus three client-creation cases; slot creation stays in dedicated quick-entry.
     for (const title of ['Compact clients keep search, initials and one add flow in trainer Lime', 'First-client invitation survives the empty-to-list transition', 'Lime coach calendar shows full recorded history and preserves return, list and source data', 'Lime athlete calendar retains its existing compact history preview']) {
       assert.equal(full.filter(key => key.endsWith(title)).length, 1, title)
     }
@@ -141,7 +141,7 @@ test('real Playwright partitions preserve the 689-case union without duplicates 
     const scoped = collect(fitLimeArgs(project, 'scoped', 'critical,finance').args)
     const scopedParts = fitLimePartitions('scoped').flatMap(({ lane, shard }) =>
       collect(fitLimeArgs(project, 'scoped', 'critical,finance', lane, shard).args))
-    assert.equal(scoped.length, 122) // Existing119 plus four critical lifecycle client-creation cases.
+    assert.equal(scoped.length, 122) // Existing119 plus three critical client-creation cases; dedicated slot coverage remains.
     assert.equal(new Set(scopedParts).size, scopedParts.length)
     assert.deepEqual(scopedParts.sort(), scoped.sort())
   }
