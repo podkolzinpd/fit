@@ -3558,9 +3558,9 @@ for (const method of ['text', 'voice', 'manual'] as const) {
     await page.getByRole('dialog', { name: 'Выбор клиента' }).getByRole('button', { name: /Алексей Смирнов/ }).click()
     if (method === 'manual') {
       await page.getByRole('button', { name: 'Добавить упражнения', exact: true }).click()
-      await expect(page.getByRole('group', { name: 'Тип тренировки' })).toHaveCount(0)
+      await expect(page.getByRole('group', { name: 'Тип тренировки' }).getByRole('button', { name: 'План', exact: true })).toHaveAttribute('aria-pressed', 'true')
     } else {
-      await page.getByRole('button', { name: method === 'voice' ? 'Надиктовать тренировку' : 'Ввести текстом', exact: true }).click()
+      await page.getByRole('button', { name: method === 'voice' ? 'Надиктовать' : 'Ввести текстом', exact: true }).click()
       if (method === 'voice') await page.getByRole('button', { name: 'Ввести текстом', exact: true }).click()
       await page.getByRole('textbox', { name: 'Тренировка', exact: true }).fill('Мой присед 3 по 10 по 20 кг')
       await page.getByRole('button', { name: 'Разобрать тренировку', exact: true }).click()
@@ -3924,10 +3924,9 @@ for (const width of [390, 430, 1440]) {
     await expect(page.getByRole('textbox', { name: 'Название тренировки' })).toHaveValue('План с очень длинным названием для проверки переноса')
     await page.getByRole('button', { name: 'Назад', exact: true }).click()
     await expect(page).toHaveURL(/today\?date=2026-09-24/)
-    await page.getByRole('button', { name: 'Новая тренировка', exact: true }).click()
-    await page.getByRole('button', { name: 'Запланировать', exact: true }).click()
-    await page.getByRole('button', { name: 'Продолжить черновик' }).click()
-    await expect(page.getByRole('textbox', { name: 'Название тренировки' })).toHaveValue('План с очень длинным названием для проверки переноса')
+    const resumed = page.getByRole('dialog', { name: 'Быстрое создание тренировки', exact: true })
+    await expect(resumed).toBeVisible()
+    await expect(resumed.getByRole('textbox', { name: 'Название тренировки' })).toHaveValue('План с очень длинным названием для проверки переноса')
   })
 
   test(`Figma workout editor and client picker at ${width}`, async ({ page }, testInfo) => {
