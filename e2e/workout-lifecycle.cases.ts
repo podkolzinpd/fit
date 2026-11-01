@@ -1,0 +1,171 @@
+import { expect, test, type Page } from '@playwright/test'
+import { clientId, newWorkoutId, conversationId, trainerId, mockPilot } from './fit-lime-fixtures'
+
+export function workoutLifecycleCases() {
+for (const entry of ['slot', 'start', 'quick-plan', 'full-plan'] as const) test(`Lifecycle P1 inline client creation retains ${entry} context`, { tag: ['@lime-critical'] }, async ({ page }, testInfo) => {
+  await page.clock.setFixedTime(new Date('2026-11-01T09:00:00Z'))
+  const backend = await mockPilot(page, { profileId: 'c0ac0000-6010-4000-8000-000000000001', fitLime: true, workouts: [] })
+  const writes: string[] = []
+  page.on('request', request => { if (request.method() === 'POST' && new URL(request.url()).pathname.startsWith('/v1/workouts')) writes.push(request.url()) })
+  if (entry === 'full-plan') {
+    await page.goto('/workouts/new?date=2026-11-03')
+    await page.getByRole('textbox', { name: 'Название тренировки', exact: true }).fill('План нового клиента')
+    await page.getByRole('button', { name: 'Клиент: Выберите клиента', exact: true }).click()
+  } else {
+    await page.goto('/today?date=2026-11-03')
+    if (entry === 'slot') {
+      const viewport = page.locator('.schedule-v2-timeline'), grid = viewport.locator('.day-grid')
+      await expect(grid).toBeVisible()
+      await viewport.evaluate(async el => { el.scrollTop = el.querySelector<HTMLElement>('.day-grid')!.offsetHeight / 24 * 13; await new Promise(resolve => setTimeout(resolve, 350)) })
+      const point = await grid.evaluate(el => { const r = el.getBoundingClientRect(); return { x: r.left + 140, y: r.top + el.clientHeight / 24 * 14 + 2 } })
+      await page.touchscreen.tap(point.x, point.y)
+      await page.getByRole('dialog', { name: 'Записать клиента', exact: true }).getByRole('button', { name: 'Выбрать клиента', exact: true }).click()
+    } else {
+      await page.getByRole('button', { name: 'Новая тренировка', exact: true }).click()
+      await page.getByRole('button', { name: entry === 'start' ? 'Начать сейчас' : 'Запланировать', exact: true }).click()
+      if (entry === 'quick-plan') {
+        await page.getByRole('textbox', { name: 'Название тренировки', exact: true }).fill('План нового клиента')
+        await page.getByRole('button', { name: 'Клиент: Выберите клиента', exact: true }).click()
+      }
+    }
+  }
+  const picker = page.getByRole('dialog', { name: 'Выбор клиента', exact: true })
+  await picker.getByRole('textbox', { name: 'Поиск клиента' }).fill('Новая спортсменка')
+  await expect(picker.getByText('Никого не нашли', { exact: true })).toBeVisible()
+  await page.screenshot({ path: testInfo.outputPath(`lifecycle-p1-${entry}-picker.png`) })
+  await picker.getByRole('button', { name: 'Клиент', exact: true }).click()
+  await expect(picker.getByRole('textbox', { name: 'Имя нового клиента' })).toHaveValue('Новая спортсменка')
+  await picker.getByRole('button', { name: 'К выбору', exact: true }).click()
+  await expect(picker.getByRole('textbox', { name: 'Поиск клиента' })).toHaveValue('Новая спортсменка')
+  await picker.getByRole('button', { name: 'Клиент', exact: true }).click()
+  await picker.getByRole('button', { name: 'Добавить и выбрать', exact: true }).click()
+  await expect(picker).toHaveCount(0)
+  expect(writes).toHaveLength(0)
+  expect(backend.getSaveAttempts()).toBe(0)
+  if (entry === 'start') {
+    await expect(page.locator('.quick-start-format')).toContainText('Новая спортсменка')
+    await expect(page.getByRole('button', { name: 'Начать', exact: true })).toBeVisible()
+  } else if (entry === 'slot') {
+    const booking = page.getByRole('dialog', { name: 'Записать клиента', exact: true })
+    await expect(booking).toContainText('Новая спортсменка')
+    await expect(booking).toContainText('14:00')
+  } else {
+    await expect(page.getByRole('textbox', { name: 'Название тренировки', exact: true })).toHaveValue('План нового клиента')
+    await expect(page.getByRole('button', { name: /Клиент: Новая спортсменка/ })).toBeVisible()
+  }
+  await page.screenshot({ path: testInfo.outputPath(`lifecycle-p1-${entry}.png`) })
+})
+
+async function lifecycleQuickPlan(page: Page) {
+  await page.goto('/today?date=2026-11-01')
+  await page.getByRole('button', { name: 'Новая тренировка', exact: true }).click()
+  await page.getByRole('button', { name: 'Запланировать', exact: true }).click()
+  return page.getByRole('dialog', { name: 'Быстрое создание тренировки', exact: true })
+}
+async function lifecycleChooseClient(page: Page) {
+  await page.getByRole('button', { name: 'Клиент: Выберите клиента', exact: true }).click()
+  const picker = page.getByRole('dialog', { name: 'Выбор клиента', exact: true })
+  await picker.getByRole('button', { name: /Алексей Смирнов/ }).click()
+  const apply = picker.getByRole('button', { name: 'Применить клиента', exact: true })
+  if (await apply.count()) await apply.click()
+}
+
+test('Lifecycle P2 compact plan has one intent and keeps essential input visible', { tag: ['@lime-critical'] }, async ({ page }, testInfo) => {
+  await page.clock.setFixedTime(new Date('2026-11-01T09:00:00Z'))
+  const backend = await mockPilot(page, { profileId: 'c0ac0000-6010-4000-8000-000000000001', fitLime: true, workouts: [] })
+  let finishes = 0
+  page.on('request', request => { if (request.method() === 'POST' && request.url().endsWith('/finish')) finishes++ })
+  const form = await lifecycleQuickPlan(page)
+  await expect(form.getByRole('button', { name: 'Надиктовать', exact: true })).toBeVisible()
+  await expect(form.getByRole('button', { name: 'Ввести текстом', exact: true })).toBeVisible()
+  await expect(form.getByRole('button', { name: 'Добавить упражнения', exact: true })).toBeVisible()
+  await expect(form.getByRole('button', { name: 'С тренером', exact: true })).toHaveAttribute('aria-pressed', 'true')
+  await expect(form.getByRole('switch', { name: 'Таймер сам ведёт подходы' })).toHaveCount(0)
+  await expect(form.getByRole('button', { name: 'Отметить проведённой' })).toHaveCount(0)
+  await expect(form.getByText('Настройки и способы ввода')).toHaveCount(0)
+  await page.screenshot({ path: testInfo.outputPath('lifecycle-p2-compact-empty.png') })
+  await form.getByRole('button', { name: 'Запланировать', exact: true }).click()
+  await expect(page.getByRole('dialog', { name: 'Выбор клиента' })).toBeVisible()
+  await page.getByRole('button', { name: /Алексей Смирнов/ }).click()
+  await page.getByRole('button', { name: 'Применить клиента', exact: true }).click()
+  await expect(form.getByRole('button', { name: 'Надиктовать', exact: true })).toBeVisible()
+  await expect(form.getByRole('button', { name: 'Запланировать', exact: true })).toBeVisible()
+  await page.screenshot({ path: testInfo.outputPath('lifecycle-p2-compact-ready.png') })
+  await form.getByRole('button', { name: 'Запланировать', exact: true }).click()
+  await expect(form).toHaveCount(0)
+  expect(backend.getSaveAttempts()).toBe(1)
+  expect(backend.getWorkouts()[0]).toMatchObject({ status: 'planned', trainingFormat: 'with_trainer' })
+  expect(finishes).toBe(0)
+  await page.reload()
+  await expect(page.getByRole('region', { name: 'Без времени', exact: true }).getByRole('link')).toHaveAttribute('href', `/workouts/${newWorkoutId}`)
+})
+
+test('Lifecycle P2 text review returns to the same draft and keeps chosen format', { tag: ['@lime-critical'] }, async ({ page }) => {
+  await page.clock.setFixedTime(new Date('2026-11-01T09:00:00Z'))
+  const id = 'c0ac0000-6010-4000-8000-000000000001'
+  await mockPilot(page, { profileId: id, fitLime: true, workouts: [] })
+  const form = await lifecycleQuickPlan(page)
+  await form.getByRole('textbox', { name: 'Название тренировки' }).fill('Сохранённое намерение')
+  await lifecycleChooseClient(page)
+  await form.getByRole('button', { name: 'Самостоятельно', exact: true }).click()
+  const key = `fit.workout-form-draft.${id}.new--2026-11-01--quick`
+  const requestId = await page.evaluate(k => (JSON.parse(localStorage.getItem(k)!) as { requestId: string }).requestId, key)
+  await form.getByRole('button', { name: 'Ввести текстом', exact: true }).click()
+  await page.getByRole('textbox', { name: 'Тренировка', exact: true }).fill('Приседания один подход десять повторений')
+  await page.getByRole('button', { name: 'Разобрать тренировку', exact: true }).click()
+  await expect(page.getByRole('heading', { name: 'Проверьте тренировку' })).toBeVisible()
+  await page.getByRole('button', { name: 'Далее', exact: true }).click()
+  await expect(page.getByRole('button', { name: 'Самостоятельно', exact: true })).toHaveAttribute('aria-pressed', 'true')
+  await page.getByRole('button', { name: '← К проверке', exact: true }).click()
+  await page.getByRole('button', { name: '← Назад', exact: true }).click()
+  await page.getByRole('button', { name: '← К планированию', exact: true }).click()
+  await expect(form).toBeVisible()
+  await expect(form.getByRole('textbox', { name: 'Название тренировки' })).toHaveValue('Сохранённое намерение')
+  await expect(form.getByRole('button', { name: 'Самостоятельно', exact: true })).toHaveAttribute('aria-pressed', 'true')
+  expect(await page.evaluate(k => (JSON.parse(localStorage.getItem(k)!) as { requestId: string }).requestId, key)).toBe(requestId)
+  await form.getByRole('button', { name: 'Ввести текстом', exact: true }).click()
+  await expect(page.getByRole('textbox', { name: 'Тренировка', exact: true })).toHaveValue('Приседания один подход десять повторений')
+})
+
+test('Lifecycle P2 full editor returns changes to the planning card', { tag: ['@lime-critical'] }, async ({ page }) => {
+  await mockPilot(page, { profileId: 'c0ac0000-6010-4000-8000-000000000001', fitLime: true, workouts: [] })
+  const form = await lifecycleQuickPlan(page)
+  await lifecycleChooseClient(page)
+  await form.getByRole('button', { name: 'Самостоятельно', exact: true }).click()
+  await form.getByRole('button', { name: 'Добавить упражнения', exact: true }).click()
+  await expect(page.getByRole('button', { name: 'Самостоятельно', exact: true })).toHaveAttribute('aria-pressed', 'true')
+  await expect(page.getByRole('button', { name: 'Завершённая', exact: true })).toBeVisible()
+  await page.getByRole('textbox', { name: 'Название тренировки', exact: true }).fill('Правка полного редактора')
+  await page.getByRole('button', { name: 'Назад', exact: true }).click()
+  await expect(form).toBeVisible()
+  await expect(form.getByRole('textbox', { name: 'Название тренировки' })).toHaveValue('Правка полного редактора')
+  await expect(form.getByRole('button', { name: 'Самостоятельно', exact: true })).toHaveAttribute('aria-pressed', 'true')
+})
+
+for (const service of ['none', 'online'] as const) test(`Lifecycle P2 trainer format is explicit with ${service} service`, { tag: ['@lime-critical'] }, async ({ page }) => {
+  await mockPilot(page, { profileId: 'c0ac0000-6010-4000-8000-000000000001', fitLime: true, workouts: [] })
+  if (service === 'online') await page.route(`**/v1/clients/${clientId}/finance`, route => route.fulfill({ json: { finance: { clientId, packages: [{ id: conversationId, clientId, trainerId, kind: 'online_coaching', title: 'Онлайн', sessionsTotal: 0, sessionsUsed: 0, sessionsRemaining: 0, priceCents: 10000, paidCents: 10000, dueCents: 0, startsOn: '2026-10-01', endsOn: '2026-12-01', paymentDueOn: null, comment: null, packageStatus: 'active', paymentStatus: 'paid', closedAt: null, version: 1, createdAt: '2026-10-01T00:00:00Z', updatedAt: '2026-10-01T00:00:00Z' }], payments: [], sessions: [] } } }))
+  await page.goto(`/workouts/new?client=${clientId}&date=2026-11-01`)
+  await expect(page.getByRole('button', { name: 'С тренером', exact: true })).toHaveAttribute('aria-pressed', 'true')
+  await page.getByRole('button', { name: 'Самостоятельно', exact: true }).click()
+  await page.reload()
+  await expect(page.getByRole('button', { name: 'Самостоятельно', exact: true })).toHaveAttribute('aria-pressed', 'true')
+})
+
+test('Lifecycle P2 completed result has a direct entry and never saves on mode selection', { tag: ['@lime-critical'] }, async ({ page }, testInfo) => {
+  const backend = await mockPilot(page, { profileId: 'c0ac0000-6010-4000-8000-000000000001', fitLime: true, workouts: [] })
+  await page.goto('/today?date=2026-11-01')
+  await page.getByRole('button', { name: 'Новая тренировка', exact: true }).click()
+  await page.getByRole('link', { name: 'Записать результат', exact: true }).click()
+  await expect(page).toHaveURL(/mode=completed/)
+  await expect(page.getByRole('button', { name: 'Завершённая', exact: true })).toHaveAttribute('aria-pressed', 'true')
+  await expect(page.getByRole('button', { name: 'Записать тренировку', exact: true })).toBeVisible()
+  await page.getByRole('textbox', { name: 'Название тренировки', exact: true }).fill('Вчерашний результат')
+  await page.getByRole('button', { name: 'План', exact: true }).click()
+  await expect(page.getByRole('textbox', { name: 'Название тренировки', exact: true })).toHaveValue('Вчерашний результат')
+  await page.getByRole('button', { name: 'Завершённая', exact: true }).click()
+  expect(backend.getSaveAttempts()).toBe(0)
+  await page.screenshot({ path: testInfo.outputPath('lifecycle-p2-result.png') })
+})
+
+}

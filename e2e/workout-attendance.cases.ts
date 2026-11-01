@@ -238,7 +238,7 @@ export function workoutAttendanceCases() {
     await expect(page.locator('.workout-header-contract')).toContainText('Проведена')
     expect(JSON.stringify(backend.getWorkouts()[0]!.exercises)).toBe(before)
   })
-  test('quick plan creation enters the same attendance confirmation with one saved appointment',async({page})=>{
+  test('saved quick plan enters attendance confirmation without creation marking it done',async({page})=>{
     const backend=await mockPilot(page,{profileId,fitLime:true,workouts:[]})
     await page.goto('/today?date=2026-10-31')
     await page.locator('.schedule-v2-fab').click()
@@ -247,7 +247,12 @@ export function workoutAttendanceCases() {
     await form.getByRole('button',{name:'Клиент: Выберите клиента',exact:true}).click()
     await page.getByRole('button',{name:/Алексей Смирнов/}).last().click()
     await page.getByRole('button',{name:'Применить клиента',exact:true}).click()
-    await form.getByRole('button',{name:'Отметить проведённой',exact:true}).click()
+    await expect(form.getByRole('button',{name:'Отметить проведённой',exact:true})).toHaveCount(0)
+    await form.getByRole('button',{name:'Запланировать',exact:true}).click()
+    await expect(form).toHaveCount(0)
+    await expect.poll(()=>backend.getWorkouts().length).toBe(1)
+    await page.goto(`/workouts/${backend.getWorkouts()[0]!.id}`)
+    await page.getByRole('button',{name:'Отметить проведённой',exact:true}).click()
     const sheet=page.getByRole('dialog',{name:'Отметить проведённой',exact:true})
     await expect(sheet).toBeVisible()
     expect(backend.getWorkouts()).toHaveLength(1)
