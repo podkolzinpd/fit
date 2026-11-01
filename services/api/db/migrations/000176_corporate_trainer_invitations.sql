@@ -55,6 +55,8 @@ declare v app_private.corporate_trainer_invitations; offices uuid[];
 begin
   if not app_private.is_corporate_admin() then raise exception 'corporate_forbidden' using errcode='PT403'; end if;
   perform pg_catalog.pg_advisory_xact_lock(159,1);
+  -- Owner access changes use the same lock; recheck after any wait.
+  if not app_private.is_corporate_admin() then raise exception 'corporate_forbidden' using errcode='PT403'; end if;
   if p_id is null or p_hash is null or p_hash !~ '^[a-f0-9]{64}$' or not app_private.corporate_invitation_offices_valid(p_offices) then
     raise exception 'corporate_invalid' using errcode='PT422'; end if;
   select array_agg(distinct x order by x) into offices from unnest(p_offices) x;
@@ -102,6 +104,11 @@ begin
   if not exists(select 1 from app_private.corporate_invitation_pilot_trainers where profile_id=auth.uid() and enabled) then
     raise exception 'corporate_invitation_pilot_only' using errcode='PT403'; end if;
   perform pg_catalog.pg_advisory_xact_lock(159,1);
+  -- Pilot or account access can be revoked while this command waits.
+  if not exists(select 1 from public.profiles p join public.trainers t on t.profile_id=p.id where p.id=auth.uid() and p.account_role='trainer') then
+    raise exception 'corporate_trainer_required' using errcode='PT403'; end if;
+  if not exists(select 1 from app_private.corporate_invitation_pilot_trainers where profile_id=auth.uid() and enabled) then
+    raise exception 'corporate_invitation_pilot_only' using errcode='PT403'; end if;
   select * into v from app_private.corporate_trainer_invitations where token_sha256=p_hash for update;
   if not found then raise exception 'corporate_not_found' using errcode='PT404'; end if;
   state:=app_private.corporate_invitation_status(v);
@@ -121,6 +128,8 @@ begin
   if not app_private.is_corporate_admin() then raise exception 'corporate_forbidden' using errcode='PT403'; end if;
   if p_approve is null then raise exception 'corporate_invalid' using errcode='PT422'; end if;
   perform pg_catalog.pg_advisory_xact_lock(159,1);
+  -- Owner access changes use the same lock; recheck after any wait.
+  if not app_private.is_corporate_admin() then raise exception 'corporate_forbidden' using errcode='PT403'; end if;
   select * into v from app_private.corporate_trainer_invitations where id=p_id for update;
   if not found then raise exception 'corporate_not_found' using errcode='PT404'; end if;
   state:=app_private.corporate_invitation_status(v);

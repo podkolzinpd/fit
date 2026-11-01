@@ -1,6 +1,6 @@
 import { createHash, randomUUID } from 'node:crypto'
 import { fileURLToPath } from 'node:url'
-import { Pool, type QueryResultRow } from 'pg'
+import { Pool, type PoolClient, type QueryResultRow } from 'pg'
 import { runner } from 'node-pg-migrate'
 import { CorporateInvitationsStore } from '../corporate-invitations.js'
 import { CorporateAdminStore } from '../corporate-admin.js'
@@ -325,6 +325,50 @@ describe.skipIf(!source)('corporate administration on real actor/RLS', () => {
       expect(await store.preview(first.token)).toBeNull()
       expect(await store.preview(second.token)).toMatchObject({status:'active'})
     } finally {await runtime.end()}
+  })
+
+  it('rechecks administrator and pilot access after waiting for an owner revocation',async()=>{
+    async function revokedWhileWaiting(id:string,sql:string,args:unknown[],revoke:(c:PoolClient)=>Promise<unknown>,message:string) {
+      const blocker=await pool.connect(), waiter=await pool.connect()
+      let pending:Promise<unknown>|undefined
+      try {
+        await blocker.query('begin');await blocker.query('select pg_advisory_xact_lock(159,1)')
+        await waiter.query('begin');await waiter.query("select set_config('request.jwt.claim.sub',$1,true)",[id]);await waiter.query('set local role fit_api')
+        const pid=(await waiter.query<{pid:number}>('select pg_backend_pid() pid')).rows[0]!.pid
+        pending=waiter.query(sql,args).then(()=>null,(error:unknown)=>error)
+        let waiting=false
+        for(let attempt=0;attempt<100;attempt++) {
+          waiting=(await blocker.query("select 1 from pg_locks where pid=$1 and locktype='advisory' and not granted",[pid])).rowCount===1
+          if(waiting)break
+          await new Promise(resolve=>setTimeout(resolve,10))
+        }
+        expect(waiting,'The actor must reach the shared lock before access is revoked').toBe(true)
+        await revoke(blocker);await blocker.query('commit')
+        expect(await pending).toMatchObject({code:'PT403',message})
+      } finally {
+        await blocker.query('rollback');if(pending)await pending
+        await waiter.query('rollback');blocker.release();waiter.release()
+      }
+    }
+    const createId=randomUUID(),revokeId=randomUUID(),claimId=randomUUID()
+    const digest=(id:string)=>createHash('sha256').update(id).digest('hex')
+    const revokeAdmin=(c:PoolClient)=>c.query('update app_private.corporate_admins set enabled=false where profile_id=$1',[admin])
+    try {
+      await revokedWhileWaiting(admin,'select app_private.create_corporate_trainer_invitation($1,$2,$3::uuid[])',[createId,digest(createId),[officeId]],revokeAdmin,'corporate_forbidden')
+      expect((await pool.query('select id from app_private.corporate_trainer_invitations where id=$1',[createId])).rowCount).toBe(0)
+      await pool.query('update app_private.corporate_admins set enabled=true where profile_id=$1',[admin])
+      await actor(admin,'select app_private.create_corporate_trainer_invitation($1,$2,$3::uuid[])',[revokeId,digest(revokeId),[officeId]])
+      await revokedWhileWaiting(admin,'select app_private.decide_corporate_trainer_invitation($1,false)',[revokeId],revokeAdmin,'corporate_forbidden')
+      expect((await pool.query('select revoked_at from app_private.corporate_trainer_invitations where id=$1',[revokeId])).rows).toEqual([{revoked_at:null}])
+      await pool.query('update app_private.corporate_admins set enabled=true where profile_id=$1',[admin])
+      await actor(admin,'select app_private.create_corporate_trainer_invitation($1,$2,$3::uuid[])',[claimId,digest(claimId),[officeId]])
+      await revokedWhileWaiting(otherInvited,'select app_private.claim_corporate_trainer_invitation($1)',[digest(claimId)],c=>c.query('update app_private.corporate_invitation_pilot_trainers set enabled=false where profile_id=$1',[otherInvited]),'corporate_invitation_pilot_only')
+      expect((await pool.query('select claimed_at from app_private.corporate_trainer_invitations where id=$1',[claimId])).rows).toEqual([{claimed_at:null}])
+      expect((await pool.query('select trainer_id from public.corporate_trainers where trainer_id=$1',[otherInvited])).rowCount).toBe(0)
+    } finally {
+      await pool.query('update app_private.corporate_admins set enabled=true where profile_id=$1',[admin])
+      await pool.query('update app_private.corporate_invitation_pilot_trainers set enabled=true where profile_id=$1',[otherInvited])
+    }
   })
 
 })
