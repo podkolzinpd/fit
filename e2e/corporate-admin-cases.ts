@@ -22,7 +22,7 @@ test('trainer settings stay visible when opened from a long list, including repe
   }))
   const trainers = Array.from({ length: 60 }, (_, index) => ({
     id: `40000000-0000-4000-8000-${String(index + 1).padStart(12, '0')}`,
-    name: `Тренер ${index + 1}`, isYandex: false, officeIds: [], version: 0,
+    name: `Тренер ${index + 1}`, isYandex: true, officeIds: [], version: 1,
   }))
   await page.route('**/v1/admin/access', route => route.fulfill({ json: { allowed: true } }))
   await page.route('**/v1/admin/bundle', route => route.fulfill({ json: { offices, trainers } }))
@@ -31,7 +31,7 @@ test('trainer settings stay visible when opened from a long list, including repe
   for (const width of [1366, 390]) {
     await page.setViewportSize({ width, height: width > 700 ? 768 : 844 })
     await page.goto(nativeAiUrl('/admin'))
-    await expect(page.getByRole('heading', { name: 'Администрирование', exact: true })).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Кабинет Яндекса', exact: true })).toBeVisible()
     await page.evaluate(theme => localStorage.setItem('fit.appTheme', theme), width < 700 ? 'dark' : 'light')
     await page.reload()
     if (width < 700) await expect(page.locator('html')).not.toHaveClass(/theme-light/)
@@ -47,18 +47,19 @@ test('trainer settings stay visible when opened from a long list, including repe
     await expect(heading).toBeInViewport()
     await expect(heading).toBeFocused()
     await page.screenshot({ path: testInfo.outputPath(`admin-editor-visible-${width}.png`) })
-    await editor.getByRole('checkbox', { name: 'Тренер Яндекса', exact: true }).check()
+    await editor.getByRole('checkbox', { name: 'Тренер Яндекса', exact: true }).uncheck()
     await editor.getByRole('checkbox', { name: 'Тестовый город · Офис 1', exact: true }).check()
     await trigger.scrollIntoViewIfNeeded()
     await trigger.click()
     await expect(heading).toBeInViewport()
     await expect(heading).toBeFocused()
-    await expect(editor.getByRole('checkbox', { name: 'Тренер Яндекса', exact: true })).toBeChecked()
+    await expect(editor.getByRole('checkbox', { name: 'Тренер Яндекса', exact: true })).not.toBeChecked()
     await expect(editor.getByRole('checkbox', { name: 'Тестовый город · Офис 1', exact: true })).toBeChecked()
     await page.getByRole('button', { name: 'Настроить тренера Тренер 59', exact: true }).click()
     const nextEditor = page.getByRole('form', { name: 'Настройки Тренер 59', exact: true })
     await expect(nextEditor.getByRole('heading', { name: 'Тренер 59', exact: true })).toBeInViewport()
-    await expect(nextEditor.getByRole('checkbox', { name: 'Тренер Яндекса', exact: true })).not.toBeChecked()
+    await expect(nextEditor.getByRole('checkbox', { name: 'Тренер Яндекса', exact: true })).toBeChecked()
+    await expect(nextEditor.getByRole('checkbox', { name: 'Тестовый город · Офис 1', exact: true })).not.toBeChecked()
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
     await nextEditor.getByRole('button', { name: 'Отмена', exact: true }).click()
     await expect(nextEditor).toHaveCount(0)
@@ -71,7 +72,7 @@ test('admin manages offices and trainer flags on a laptop, including validation 
   await mockNativeAiSession(page,'trainer')
   await page.route('**/v1/admin/access',r=>r.fulfill({json:{allowed:true}}))
   const offices: Array<{id:string;city:string;name:string;address:string;archived:boolean;version:number}> = []
-  const trainers = [{id:coachId,name:'Тестовый тренер',isYandex:false,officeIds:[] as string[],version:0}]
+  const trainers = [{id:coachId,name:'Тестовый тренер',isYandex:true,officeIds:[] as string[],version:1}]
   let fail = true
   await page.route('**/v1/admin/bundle',r=>r.fulfill({json:{offices,trainers}}))
   await page.route('**/v1/admin/offices',async r=>{
@@ -88,7 +89,7 @@ test('admin manages offices and trainer flags on a laptop, including validation 
     await r.fulfill({json:{saved:true}})
   })
   await page.goto(nativeAiUrl('/admin'))
-  await expect(page.getByRole('heading',{name:'Администрирование'})).toBeVisible()
+  await expect(page.getByRole('heading',{name:'Кабинет Яндекса'})).toBeVisible()
   await expect(page.getByText('Анкета не опубликована', { exact: true })).toHaveCount(0)
   await page.getByRole('button',{name:'Настроить тренера Тестовый тренер'}).click()
   await page.getByRole('checkbox',{name:'Тренер Яндекса',exact:true}).check()
@@ -144,12 +145,15 @@ test('admin identifies namesakes by published name, photo and profile link', asy
   const photoUrl = nativeAiUrl('/assets/startup-photo-983c93dc4df8.jpg')
   await page.route('**/v1/admin/access', route => route.fulfill({ json: { allowed: true } }))
   await page.route('**/v1/admin/bundle', route => route.fulfill({ json: { offices: [], trainers: [
-    { id: coachId, name: 'Тестовый тренер', publishedName: 'Тренер Север', publicId, photoUrl, isYandex: false, officeIds: [], version: 0 },
-    { id: officeId, name: 'Тестовый тренер', publishedName: null, publicId: null, photoUrl: null, isYandex: false, officeIds: [], version: 0 },
+    { id: coachId, name: 'Тестовый тренер', publishedName: 'Тренер Север', publicId, photoUrl, isYandex: true, officeIds: [], version: 1 },
+    { id: '20000000-0000-4000-8000-000000000099', name: 'Посторонний тренер', isYandex: false, officeIds: [], version: 0 },
+    { id: officeId, name: 'Тестовый тренер', publishedName: null, publicId: null, photoUrl: null, isYandex: true, officeIds: [], version: 1 },
   ] } }))
   await page.goto(nativeAiUrl('/admin'))
   const rows = page.locator('.corporate-admin-list > li')
   await expect(rows).toHaveCount(2)
+  await expect(page.getByText('Посторонний тренер', { exact: true })).toHaveCount(0)
+  await expect(page.getByRole('checkbox', { name: 'Только тренеры Яндекса' })).toHaveCount(0)
   await expect(rows.first().getByRole('img', { name: 'Фото тренера Тестовый тренер' })).toBeVisible()
   await expect.poll(() => rows.first().locator('img').evaluate((image: HTMLImageElement) => image.naturalWidth)).toBeGreaterThan(0)
   await expect(rows.last().getByText('Анкета не опубликована')).toBeVisible()
@@ -182,7 +186,7 @@ for(const role of ['trainer','client'] as const) {
     expect(bundleRequests).toBe(0)
     await page.getByRole('link',{name:'Вернуться в ФИТ'}).click()
     await expect(page.getByRole('heading',{name:'Настройки',exact:true})).toBeVisible()
-    await expect(page.getByRole('link',{name:'Администрирование',exact:true})).toBeHidden()
+    await expect(page.getByRole('link',{name:'Кабинет Яндекса',exact:true})).toBeHidden()
   })
 }
 for(const theme of ['light','dark'] as const) {
