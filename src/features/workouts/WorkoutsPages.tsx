@@ -4177,6 +4177,14 @@ export function LiveWorkoutPage() {
   }
   function setClientCardExpanded(exercise: WorkoutExerciseModel, expanded: boolean) {
     if (!expanded && clientCardCollapseBlocked(exercise)) return
+    if (!expanded) {
+      // The footer menu is inside the retained fold. Move its focus to the
+      // visible header before making that body inert, without native scrolling.
+      const card = liveSetForms.current.get(exercise.sets[0]?.id ?? '')?.closest('.client-live-card')
+      if (card?.querySelector('.client-live-card-body')?.contains(document.activeElement)) {
+        card.querySelector<HTMLButtonElement>('.coach-v79-card-toggle')?.focus({ preventScroll: true })
+      }
+    }
     setClientCardDisplays(current => new Map(current).set(v79CardKey(exercise), { status: clientCardStatus(exercise), expanded }))
     setExpandedExercises(current => { if (!current.has(exercise.id)) return current; const next = new Set(current); next.delete(exercise.id); return next })
     if (!expanded && exercise.sets.every(set => set.confirmedAt)) {
@@ -4755,12 +4763,12 @@ export function LiveWorkoutPage() {
               const expanded = clientCardExpanded(exercise)
               const thumbnail = liveHeaderThumbnail(exercise, blockStatus === 'current')
               const completedMark = allDone && <span className="client-live-completed-mark" role="img" aria-label="Все подходы выполнены"><CheckIcon /></span>
-              const leading = thumbnail ? <span className="client-live-card-media">{thumbnail}{completedMark}</span> : completedMark
+              const leading = thumbnail ? <span className="client-live-card-media">{thumbnail}{completedMark}</span> : undefined
               const timerPending = exercise.sets.some(set => set.confirmedAt && set.timerConfirmed)
               return swipeLive(exercise, <WorkoutExercise state={blockStatus === 'done' ? 'completed' : blockStatus}
                 className={`client-live-card live-exercise ${blockStatus}`}>
                 <WorkoutExerciseHeader className="live-exercise-head" name={exercise.name}
-                  leading={leading} summary={referenceLiveSummary(exercise, false)}
+                  leading={leading} titleAdornment={!thumbnail ? completedMark : undefined} summary={referenceLiveSummary(exercise, false)} summaryInCopy
                   onTitleClick={() => setClientCardExpanded(exercise, !expanded)} titleActionLabel={`Подходы упражнения «${exercise.name}»`}
                   titleExpanded={expanded} showTechniqueLabel={false} actions={<>{clientCardToggle(exercise)}{reorder}</>} />
                 {timerPending && <div className="live-timer-pending" data-timer-pending={exercise.id}>

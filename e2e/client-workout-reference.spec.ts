@@ -791,7 +791,10 @@ for (const theme of ['light', 'dark']) for (const density of ['original', 'compa
     expect(geometry.markWidth).toBeGreaterThan(0)
     expect(geometry.titleSize).toBe(density === 'original' ? '24px' : '20px')
     if (animation) expect(geometry.thumbRight).toBeLessThan(geometry.copyX)
-    else await expect(page.locator('.client-live-card-media')).toHaveCount(0)
+    else {
+      await expect(page.locator('.client-live-card-media, .client-live-card .workout-exercise-header-main')).toHaveCount(0)
+      await expect(page.locator('.client-live-card h2 > .client-live-completed-mark')).toHaveCount(3)
+    }
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
     await page.screenshot({ path: info.outputPath(`completed-${width}.png`) })
   }
@@ -837,6 +840,7 @@ for (const theme of ['light', 'dark']) for (const density of ['original', 'compa
       await page.getByRole('menuitem', { name: 'Свернуть', exact: true }).click()
     }
     await expect(row).not.toBeInViewport()
+    await expect(card.getByRole('button', { name: `Развернуть: ${exercise.name}`, exact: true })).toBeFocused()
     expect(await input!.evaluate(element => element.isConnected)).toBe(true)
     await expect(row.locator('xpath=ancestor::div[contains(@class,"client-live-card-body")]')).toHaveAttribute('inert', '')
     await expect(compact).toBeVisible()
@@ -1008,6 +1012,7 @@ async function tapVisible(page: Page, target: ReturnType<Page['locator']>) {
   await target.scrollIntoViewIfNeeded()
   const box = await target.boundingBox()
   if (!box) throw new Error('Action is not visible')
+  expect(await target.evaluate((element, point) => element.contains(document.elementFromPoint(point.x, point.y)), { x: box.x + box.width / 2, y: box.y + box.height / 2 })).toBe(true)
   await page.touchscreen.tap(box.x + box.width / 2, box.y + box.height / 2)
 }
 
@@ -2460,26 +2465,27 @@ for (const theme of ['light', 'dark']) for (const density of ['original', 'compa
   for (const set of source.exercises[1]!.sets) { set.confirmedAt = new Date().toISOString(); set.fact = { weightKg: 20, reps: 10 } }
   await mockPilot(page, { role: 'client', profileId: pilotId, clientLime: true, workouts: [source] })
   await page.goto(`/workouts/${workoutId}/live`)
-  for (const exercise of source.exercises.slice(1)) await page.getByRole('button', { name: `Развернуть: ${exercise.name}`, exact: true }).click()
-  const cards = page.locator('.client-live-card'), footer = cards.first().locator('.live-exercise-utilities'), note = footer.locator('.live-exercise-note')
+  await page.getByRole('button', { name: `Развернуть: ${source.exercises[1]!.name}`, exact: true }).click()
+  const cards = page.locator('.client-live-card'), footer = cards.first().locator('.coach-v79-exercise-tools'), note = cards.first().locator('.live-exercise-note')
   for (const width of [390, 430]) {
     await page.setViewportSize({ width, height: 844 })
-    const facts = await page.locator('.live-exercise-utilities').evaluateAll(elements => elements.map(e => {
-      const summary = e.querySelector('summary')!, add = e.querySelector('.live-add-set')!, details = e.querySelector('details')!
-      const n = summary.getBoundingClientRect(), a = add.getBoundingClientRect(), style = getComputedStyle(summary), button = getComputedStyle(add)
-      return { height: n.height, width: n.width, addHeight: a.height, addWidth: a.width, sameY: Math.abs(n.y - a.y) < 1, separated: n.right <= a.x,
-        font: style.fontFamily, weight: style.fontWeight, addWeight: button.fontWeight, color: style.color, addColor: button.color, background: getComputedStyle(e.closest('.client-live-card')!).backgroundColor, filled: details.hasAttribute('data-has-note') }
+    const facts = await cards.evaluateAll(elements => elements.map(card => {
+      const tools = card.querySelector('.coach-v79-exercise-tools')!, details = card.querySelector('.live-exercise-note')!
+      const summary = details.querySelector('summary')!, add = tools.querySelector('.live-add-set')!, menu = tools.querySelector('.overflow-trigger')!
+      const n = summary.getBoundingClientRect(), a = add.getBoundingClientRect(), t = tools.getBoundingClientRect(), m = menu.getBoundingClientRect(), style = getComputedStyle(summary), button = getComputedStyle(add)
+      return { height: n.height, width: n.width, addHeight: a.height, addWidth: a.width, noteBelow: n.y >= t.bottom, actionsAligned: Math.abs(a.y - m.y) < 1, menuHeight: m.height,
+        font: style.fontFamily, weight: style.fontWeight, addWeight: button.fontWeight, color: style.color, addColor: button.color, background: getComputedStyle(card).backgroundColor, filled: details.hasAttribute('data-has-note') }
     }))
     expect(facts).toHaveLength(3)
     for (const fact of facts) {
-      expect(fact.height).toBe(44); expect(fact.addHeight).toBe(44)
+      expect(fact.height).toBe(44); expect(fact.addHeight).toBe(44); expect(fact.menuHeight).toBe(44)
       expect(Math.min(fact.width, fact.addWidth)).toBeGreaterThanOrEqual(44)
-      expect(fact.sameY).toBe(true); expect(fact.separated).toBe(true)
+      expect(fact.noteBelow).toBe(true); expect(fact.actionsAligned).toBe(true)
       expect(fact.font).toMatch(/YS Geo/); expect(fact.weight).toBe('400'); expect(fact.addWeight).toBe('400')
       expect(liveContrast(fact.color, fact.background)).toBeGreaterThanOrEqual(4.5)
     }
-    expect(facts[0]!.color).toBe(facts[0]!.addColor)
-    expect(facts[1]!.color).not.toBe(facts[1]!.addColor)
+    expect(facts[0]!.color).not.toBe(facts[0]!.addColor)
+    expect(facts[1]!.color).toBe(facts[1]!.addColor)
     expect(facts[2]!.filled).toBe(true)
     const emptyColor = facts[0]!.color
     await note.locator('summary').click()
@@ -2978,7 +2984,9 @@ for (const theme of ['light', 'dark']) for (const width of [390, 430]) test(`cli
   await page.screenshot({ path: info.outputPath('rest-sheet.png') })
   await rest.getByRole('button', { name: 'Начать отдых · 1:00', exact: true }).click()
   await expect(restTrigger).toHaveAttribute('aria-label', 'Таймер отдыха: 1:00')
-  await restTrigger.click()
+  // A real touch uses the currently exposed hitbox. A desktop click can retain
+  // the outgoing large-copy node across the existing clock handoff.
+  await tapVisible(page, restTrigger)
   await rest.getByRole('button', { name: 'Остановить отдых', exact: true }).click()
   await expect(restTrigger).toHaveAttribute('aria-label', 'Таймер отдыха')
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
@@ -3253,7 +3261,8 @@ for (const theme of ['light', 'dark']) for (const density of ['original', 'compa
     expect(states[0]!.color).not.toBe(states[2]!.color)
     expect(states[0]!.background).not.toBe(states[2]!.background)
     expect(states[1]!.background).not.toBe(states[2]!.background)
-    expect(states[0]!.mark).not.toBe('none')
+    expect(states[0]!.mark).toBe('none')
+    expect(states[0]!.background).toBe(states[2]!.color)
     expect(liveContrast(states[0]!.color, states[0]!.background)).toBeGreaterThanOrEqual(3)
     for (const state of states) expect(state.height).toBe(density === 'original' ? 54 : 48)
     await page.screenshot({ path: info.outputPath(`three-states-${width}.png`) })
@@ -3397,13 +3406,13 @@ for (const theme of ['light', 'dark']) for (const density of ['original', 'compa
       const time = rect('.workout-duration-trigger'), check = rect('.live-set-check')
       const grids = card.querySelectorAll('.live-set-grid'), first = grids[0]!.getBoundingClientRect(), second = grids[1]!.getBoundingClientRect()
       const style = getComputedStyle(card.querySelector('.live-exercise-head')!)
-      const contentHeight = Math.max(trigger.height, card.querySelector('.exercise-thumbnail')?.getBoundingClientRect().height ?? 0, rect('.exercise-head-actions').height)
+      const contentHeight = Math.max(card.querySelector('.client-live-card-media')?.getBoundingClientRect().height ?? 0, rect('.workout-exercise-header-copy').height, rect('.exercise-head-actions').height)
       return { headerHeight: header.height, contentHeight, paddingTop: parseFloat(style.paddingTop), paddingBottom: parseFloat(style.paddingBottom), border: parseFloat(style.borderTopWidth) + parseFloat(style.borderBottomWidth), minHeight: style.minHeight, titleInset: title.x - trigger.x, confirmOffset: check.y - time.y, checkHeight: check.height, timeHeight: time.height, rowGap: second.y - first.bottom }
     })
     await info.attach(`layout-${width}`, { body: JSON.stringify(geometry), contentType: 'application/json' })
     expect(geometry.minHeight).toBe('0px')
-    expect(geometry.paddingTop).toBe(density === 'original' ? 16 : 12)
-    expect(geometry.paddingBottom).toBe(8)
+    expect(geometry.paddingTop).toBe(density === 'original' ? 16 : 8)
+    expect(geometry.paddingBottom).toBe(density === 'original' ? 16 : 8)
     expect(Math.abs(geometry.headerHeight - geometry.contentHeight - geometry.paddingTop - geometry.paddingBottom - geometry.border)).toBeLessThan(1)
     expect(Math.abs(geometry.titleInset)).toBeLessThan(1)
     expect(Math.abs(geometry.confirmOffset)).toBeLessThan(1)
@@ -3554,7 +3563,7 @@ for (const theme of ['light', 'dark']) for (const density of ['original', 'compa
   const sibling = JSON.stringify(backend.getWorkouts()[0]!.exercises[0]!.sets[1]!.fact)
   const deadline = await page.evaluate(id => sessionStorage.getItem(`fit:live-rest-until:${id}`), workoutId)
   expect(deadline).not.toBeNull()
-  const swipe = async () => { const gesture=await beginClientGesture(page,first,browserName,first.locator('.live-set-number')); await gesture.move(60); await gesture.end(); await first.getByRole('button',{name:/Удалить подход 1:/}).click() }
+  const swipe = async () => { await expect(first.locator('.workout-set-swipe')).toHaveAttribute('tabindex', '0'); const gesture=await beginClientGesture(page,first,browserName,first.locator('.live-set-number')); await gesture.move(60); await gesture.end(); await first.getByRole('button',{name:/Удалить подход 1:/}).click() }
   await swipe()
   await expect(page.getByRole('alertdialog')).toContainText('Выполненный результат')
   await page.getByRole('alertdialog').getByRole('button',{name:'Отмена',exact:true}).click()

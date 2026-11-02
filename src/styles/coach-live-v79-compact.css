@@ -13,4 +13,4 @@
 .phone-frame.fit-lime-shell.workout-live-reference.live-identity :is(.coach-live-v79,.client-live-v79).coach-live-density-compact .live-exercise-head { min-height: 0; padding: 8px 16px; margin: 0 -16px 4px; gap: 4px 8px; }
 .phone-frame.fit-lime-shell.workout-live-reference.live-identity :is(.coach-live-v79,.client-live-v79).coach-live-density-compact .live-exercise-head :is(h2,h3) { font-size: 20px; line-height: 24px; font-weight: 500; }
 .phone-frame.fit-lime-shell.workout-live-reference.live-identity :is(.coach-live-v79,.client-live-v79).coach-live-density-compact .coach-v79-exercise-tools { gap: 8px; padding: 4px 0; }
-.phone-frame.fit-lime-shell.workout-live-reference.live-identity :is(.coach-live-v79,.client-live-v79).coach-live-density-compact .coach-live-field-unit { font-size: 9px; line-height: 10px; }
+.phone-frame.fit-lime-shell.workout-live-reference.live-identity .coach-live-v79.coach-live-density-compact .coach-live-field-unit { font-size: 9px; line-height: 10px; }
