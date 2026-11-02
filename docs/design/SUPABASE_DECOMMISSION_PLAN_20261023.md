@@ -249,3 +249,72 @@ Generated types сравнились побайтно с main; PNG diff отно
 Workflow docs и diff whitespace passed. Локальный browser smoke не запускался:
 существующая Podman VM недоступна; production DSN/remote DB не используются.
 Точный CI нового head остаётся гейтом; PR переведён на main и готовится к review.
+
+## P3 — native-only local/CI — 02.11.2026 — Codex / OpenAI
+
+Задача: «Давай убирать» после инвентаря и предложения убрать локальный Supabase
+из dev/check/CI. База main4e283aa5 после merge PR1928/1929. Поток data-media;
+пользовательский результат — разработка/проверки без второй локальной БД и CLI.
+Приёмка: L1 dev/prepare/verify native-only; L2 clean install без root CLI/SDK;
+L3 CI без source job, native actor/RLS и browser gates сохранены; L4 архив intact;
+L5 ручная source rehearsal остаётся явной и не запускается обычными командами.
+
+Расхождения: P3 исторически предполагал ещё не перенесённые browser fixtures;
+PR1928/1929 уже перенесли их и удалили frontend SDK. В CI остался только frozen
+pgTAP job; source auth/services больше не нужны браузерам. Решение P3-LOCAL-01:
+по текущей команде владельца вывести frozen SQL regression из обычной приёмки,
+сохранив исходники и контрольные суммы. Remote decommission/retention не закрыты.
+
+Сделано: root CLI и db:* команды удалены вместе с obsolete auth waiter и scope
+старого database job. dev/prepare готовят только PG17, verify запускает native
+actor/RLS и migration safety; source generated-type digest перенесён в архив.
+SQL/config/seed/types оставлены по прежним путям для operational consumers,
+202 migrations и107 test files не переписаны;314 baseline files в SHA256SUMS.
+Source rehearsal больше не root script: явный запуск после подготовки source
+по supabase/README.md; отсутствие контейнера останавливает её до изменения target.
+
+Сохранение проверок:
+
+| Прежняя проверка | Сохраняющий контракт и проверка |
+| --- | --- |
+| Browser legacy auth/REST/RPC сценарии | [Assertion mapping P2](LEGACY_FRONTEND_TEST_MAPPING_20261031.md); native fixtures PR1928, native-only runtime PR1929; сценарии/PNG в P3 не меняются |
+| Legacy SQL RPC, triggers, GoTrue roles/auth.users и storage policies | Прекращённый source backend; все107 pgTAP files и их assertions сохранены побайтно в архиве для отдельной репетиции, не выдаются за native coverage |
+| Actor identity, cross-tenant grants/RLS, транзакции и replay | Неизменённые services/api/src/db/actor-context.integration.test.ts и single-trainer.integration.test.ts в обязательном native database job |
+| History prefill, corporate access, release migrations, private journal/erasure | Неизменённый services/api package test:db и отдельная recovery DB CI-проверка |
+| Native frontend behavior, обе роли, оба движка, visual/Lime | Прежние auth/visual/Chromium/WebKit/Lime lanes и итоговые app/e2e gates без изменения specs, shards, retries, thresholds |
+| Generated source schema digest | Архивный supabase/tools/check-db-types.mjs и checksum всех baseline-файлов; native types продолжают проверяться TypeScript/API contracts |
+| Immutable/dangerous migrations | scripts/check-migrations.mjs сохранён для обеих историй, без изменения safe allowlist |
+| Source registry fallback, ephemeral ports, CLI scope/version, GoTrue waiter | Прекращённые механизмы удалённого source CI job; их tests удалены с реализацией. Новые tests проверяют native prepare/verify, остановку при migration failure и отсутствие CLI в clean install |
+
+Новые случаи: три launcher/install regression tests; один CI guard отсутствия
+source services. Они не дублируют product/API/visual tests. Старые SQL assertions
+не объявляются автоматически равными native assertions; это архив прекращённого
+backend. Не менялись native SQL/API tests и обязательные продуктовые gates.
+CI union: удалён один source database job; browser matrices/spec inventories
+не менялись. Замер до/после длительности пока не выполнен; ускорение не заявляется.
+
+Проверено до публикации:53 targeted workflow/launcher/rehearsal tests passed;
+checksum314/314 и archived schema digest passed; migration safety0 changed passed;
+workflow docs/whitespace passed; root npm ls не содержит CLI/SDK. Первый check
+остановился на lint archived helper вне TS project; добавлен точный ignore по
+существующему паттерну scripts. Повторный полный check и exact-head CI — гейты.
+Локальная VM не запущена/connection refused: реальная local:verify пока не
+выполнена, subprocess tests не выдаются за PG integration. Production/remote
+source не менялись; его media, SDK/API package и credentials остаются вне scope.
+Отвергнуто: удаление source SQL/history или remote resources и переписывание
+native tests ради удаления текстовых совпадений. Дальше: зелёный полный CI;
+P1 server/media и P4 operations остаются отдельными задачами.
+
+Проверки P3 перед PR: чистый npm ci и полный npm run check passed:
+320 unit files/2919 tests, coverage83.31/78.23/82.39/88.01 при прежних порогах;
+API1555 passed/254 skipped без DB env; lint/typecheck/policies/build passed.
+53 targeted tests и workflow-doc tests passed. Архив314/314 intact.
+Podman VM затем запущена. local:verify на существующем старом volume остановился
+на неизменённом safe guard000149: single_trainer_ambiguous_legacy_data; данные
+не чистились и guard не обходился. На отдельном временном Podman PG17 после
+readiness native test:db passed:223+21 Vitest tests и6 erasure cases; один
+существующий real-S3 case skip без TEST_CUSTOM_PHOTO_S3_ENDPOINT. Первая попытка
+до readiness получила ECONNRESET на init restart; повтор только DB gate прошёл.
+Native/SQL/browser specs и PNG не менялись. Exact-head Linux CI остаётся гейтом.
+Обычная local:verify на старом volume не объявляется прошедшей; отдельная clean
+PG17 проверка не маскирует необходимость адресно разобрать старые local fixtures.

@@ -11,7 +11,6 @@ const workflow = readFileSync(
   'utf8',
 )
 
-const supportedSupabaseCliVersion = '2.116.0'
 const migrationOnlyWorkflow = readFileSync(
   join(import.meta.dirname, '..', '.github', 'workflows', 'deploy-yandex-migration-container-only.yml'),
   'utf8',
@@ -210,7 +209,6 @@ test('runs Chromium behavior scenarios in two isolated shards', () => {
 
 test('keeps the required app check stable while quality and coverage run in parallel', () => {
   assert.match(workflow, /repository-quality:[\s\S]*- run: npm run lint[\s\S]*- run: npm run infra:policy:test/)
-  assert.match(workflow, /repository-quality:[\s\S]*- run: npm run db:types:check/)
   assert.match(workflow, /app-quality:[\s\S]*- run: npm run typecheck[\s\S]*- run: npm run build/)
   assert.match(workflow, /app-tests:[\s\S]*- run: npm run test:coverage/)
   assert.match(workflow, /app:\n    needs: \[e2e-scope, repository-quality, app-quality, app-tests, frontend-infrastructure\]/)
@@ -228,7 +226,7 @@ test('frontend jobs depend on the automatic scope, not a prompt, label or manual
     assert.ok(workflow.includes(`  ${name}:\n    needs: e2e-scope\n    if: needs.e2e-scope.outputs.frontend_required == 'true'`), name)
   }
   assert.match(workflow, /frontend_required: \$\{\{ steps\.scope\.outputs\.frontend_required \}\}/)
-  const scope = workflow.slice(workflow.indexOf('      - name: Detect frontend'), workflow.indexOf('      - name: Detect legacy database'))
+  const scope = workflow.slice(workflow.indexOf('      - name: Detect frontend'), workflow.indexOf('      - name: Select temporary'))
   assert.match(scope, /EVENT_NAME: \$\{\{ github\.event_name \}\}/)
   assert.doesNotMatch(scope, /inputs\.|labels|skip/i)
 })
@@ -256,14 +254,6 @@ test('real app and E2E gate scripts reject missing scope, failed lanes and unaut
   assert.notEqual(spawnSync('bash', ['-c', appScript], { env: { SCOPE_RESULT: 'success', REPOSITORY_RESULT: 'failure', FRONTEND_REQUIRED: 'false', QUALITY_RESULT: 'skipped', TESTS_RESULT: 'skipped', INFRA_RESULT: 'skipped' } }).status, 0)
 })
 
-test('runs heavy legacy database checks only for relevant changes or a manual CI run', () => {
-  assert.match(workflow, /database:\n    needs: e2e-scope\n    if: needs\.e2e-scope\.outputs\.database_required == 'true'/)
-  assert.match(workflow, /database_required: \$\{\{ steps\.database-scope\.outputs\.required \}\}/)
-  assert.match(workflow, /id: database-scope\n\s+run: node scripts\/supabase-database-scope\.mjs "\$EVENT_NAME" "\$BASE_SHA" "\$HEAD_SHA"/)
-  assert.match(workflow, /EVENT_NAME: \$\{\{ github\.event_name \}\}/)
-  assert.match(workflow, /- run: supabase test db --local/)
-})
-
 test('browser lanes use isolated native API databases without Supabase auth or SDK credentials', () => {
   for (const name of ['e2e-visual', 'e2e-chromium', 'e2e-webkit']) {
     const start = workflow.indexOf(`  ${name}:\n`)
@@ -276,82 +266,6 @@ test('browser lanes use isolated native API databases without Supabase auth or S
     assert.match(body, /--env FIT_E2E_POSTGRES_URL/)
     assert.doesNotMatch(body, /VITE_SUPABASE_|supabase\/setup-cli|supabase start|supabase db reset|wait-for-local-auth/)
   }
-})
-
-test('does not start Supabase services that CI scenarios do not use', () => {
-  assert.match(
-    workflow,
-    /SUPABASE_DATABASE_EXCLUDE: edge-runtime,gotrue,imgproxy,kong,logflare,mailpit,postgres-meta,postgrest,realtime,storage-api,studio,supavisor,vector/,
-  )
-
-  const databaseJob = workflow.slice(workflow.indexOf('  database:\n'), workflow.indexOf('  yandex-database:\n'))
-  assert.match(databaseJob, /supabase start --exclude "\$SUPABASE_DATABASE_EXCLUDE"/)
-
-
-})
-
-test('clears the setup-cli override to retain official registry fallback in every database-backed CI job', () => {
-  for (const job of ['database']) {
-    const start = workflow.indexOf(`  ${job}:\n`)
-    assert.notEqual(start, -1, `${job} job is missing`)
-    const body = workflow.slice(start).split(/\n  [a-z][a-z0-9-]*:\n/, 1)[0]
-
-    assert.match(
-      body,
-      /name: Allow official Supabase registry fallbacks\n\s+run: echo 'SUPABASE_INTERNAL_IMAGE_REGISTRY=' >> "\$GITHUB_ENV"/,
-    )
-    assert.ok(
-      body.indexOf('Allow official Supabase registry fallbacks') < body.indexOf('supabase start --exclude'),
-      `${job} must retain fallback before pulling Supabase images`,
-    )
-    assert.doesNotMatch(body, /SUPABASE_INTERNAL_IMAGE_REGISTRY=docker\.io/)
-  }
-})
-
-test('reserves Supabase ports before checkout on disposable GitHub hosts only', () => {
-  const scripts = []
-  for (const name of ['database']) {
-    const start = workflow.indexOf(`  ${name}:\n`)
-    const job = workflow.slice(start).split(/\n  [a-z][a-z0-9-]*:\n/, 1)[0]
-    const setup = job.indexOf('Reserve local Supabase ports before network setup')
-    assert.ok(setup > 0 && setup < job.indexOf('uses: actions/checkout@v4'), name)
-    const script = inlineShell(job).find(value => value.includes('ip_local_reserved_ports'))
-    assert.ok(script, name)
-    scripts.push(script)
-  }
-  assert.equal(new Set(scripts).size, 1)
-  const root = mkdtempSync(join(tmpdir(), 'fit-ci-ports-'))
-  try {
-    const log = join(root, 'calls')
-    writeFileSync(join(root, 'sysctl'), `#!/bin/bash
-if [ "$1" = -n ]; then
-  printf '%s' "$FIT_TEST_RESERVED"
-  exit "\${FIT_TEST_READ_STATUS:-0}"
-fi
-printf '%s\\n' "$*" >> "$FIT_TEST_CALLS"
-exit "\${FIT_TEST_WRITE_STATUS:-0}"
-`, { mode: 0o755 })
-    writeFileSync(join(root, 'sudo'), '#!/bin/bash\nexec "$@"\n', { mode: 0o755 })
-    const run = overrides => spawnSync('bash', ['-c', 'export PATH="$FIT_TEST_BIN:$PATH"\n' + scripts[0]], {
-      encoding: 'utf8',
-      env: { PATH: `${root}:${process.env.PATH}`, GITHUB_ACTIONS: 'true', RUNNER_OS: 'Linux',
-        RUNNER_ENVIRONMENT: 'github-hosted', FIT_TEST_BIN: root, FIT_TEST_RESERVED: '', FIT_TEST_CALLS: log, ...overrides },
-    })
-    for (const prior of ['', '40000-40010,55000']) {
-      const result = run({ FIT_TEST_RESERVED: prior })
-      assert.equal(result.status, 0, result.stderr)
-      const calls = readFileSync(log, 'utf8').trim().split('\n')
-      assert.equal(calls.at(-1), `-q -w net.ipv4.ip_local_reserved_ports=${prior ? `${prior},` : ''}54320-54329`)
-    }
-    const before = readFileSync(log, 'utf8')
-    for (const env of [{ RUNNER_ENVIRONMENT: 'self-hosted' }, { RUNNER_OS: 'macOS' }, { GITHUB_ACTIONS: 'false' }]) {
-      assert.notEqual(run(env).status, 0)
-      assert.equal(readFileSync(log, 'utf8'), before)
-    }
-    assert.equal(run({ FIT_TEST_READ_STATUS: '7' }).status, 7)
-    assert.equal(readFileSync(log, 'utf8'), before)
-    assert.equal(run({ FIT_TEST_WRITE_STATUS: '8' }).status, 8)
-  } finally { rmSync(root, { recursive: true, force: true }) }
 })
 
 test('uses the identical pinned PostgreSQL17 image without changing health or migration checks', () => {
@@ -372,17 +286,6 @@ test('runs the complete Yandex API check independently from browser E2E', () => 
 test('cancels a superseded CI run for the same pull request', () => {
   assert.match(workflow, /concurrency:\n  group: ci-\$\{\{ github\.event\.pull_request\.number \|\| github\.ref \}\}/)
   assert.match(workflow, /cancel-in-progress: true/)
-})
-
-test('uses a Supabase CLI version that reloads Kong after db reset', () => {
-  const configuredVersions = [...workflow.matchAll(/uses: supabase\/setup-cli@v1\n\s+with:[\s\S]*?\n\s+version: ([^\s]+)/g)]
-    .map((match) => match[1])
-
-  assert.ok(configuredVersions.length > 0)
-  assert.deepEqual(
-    [...new Set(configuredVersions)],
-    [supportedSupabaseCliVersion],
-  )
 })
 
 const cloudruBootstrap = readFileSync(join(import.meta.dirname, '..', '.github', 'workflows', 'deploy-cloudru-stage.yml'), 'utf8')
@@ -647,4 +550,10 @@ test('Cloud.ru missing built image cannot advance current or SHA', () => {
     assert.equal(readlinkSync(join(root, 'current')), previous)
     assert.equal(readFileSync(join(root, 'DEPLOYED_SHA'), 'utf8'), 'previous\n')
   })
+})
+
+test('CI has no local Supabase service or legacy database lane', () => {
+  assert.doesNotMatch(workflow, /supabase|database_required|database-scope|wait-for-local-auth|db:types:check/i)
+  assert.doesNotMatch(workflow, /^  database:/m)
+  assert.match(workflow, /yandex-database:[\s\S]*npm --prefix services\/api run test:db/)
 })

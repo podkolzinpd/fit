@@ -51,20 +51,18 @@ scope и ожидаемые success/skipped состояния; failed/cancelled
 
 ## Локальная разработка
 
-Обычный запуск выполняется командой `npm run dev`: через Podman она готовит
-локальные Supabase и PostgreSQL 17 для Yandex API, затем запускает API и
-frontend. Безопасные локальные URL и publishable key хранятся в committed-файле
-`.env.development`.
+Обычный запуск `npm run dev` через Podman готовит только PostgreSQL 17 для
+native API, затем запускает API и frontend. `npm run local:prepare` применяет
+pending migrations без запуска серверов, `npm run local:verify` проверяет native
+actor/RLS и историю миграций. Supabase CLI и `VITE_SUPABASE_*` не требуются.
+Browser fixtures используют отдельные native базы и synthetic app-session.
 
-Development-сборка программно отклоняет любой Supabase URL, кроме `localhost` и
-`127.0.0.1`. `VITE_SUPABASE_*` нужны только локальным legacy-сценариям, не production
-web/Android/iOS build. Текущая production-конфигурация находится в
-`.github/workflows/prepare-cloudru-frontend.yml`, а не в Vercel Production.
-Yandex frontend workflow сохранён для прежнего контура; его наличие не означает
-активный production deploy.
-Production URL/ключи нельзя копировать в `.env.local`, `.env.development` или
-другие локальные env-файлы. `npm run db:reset` сбрасывает только локальный
-Supabase baseline, не Yandex PostgreSQL.
+Production URL/ключи нельзя копировать в локальные env-файлы. Текущая production
+конфигурация — `.github/workflows/prepare-cloudru-frontend.yml`; Yandex workflow
+сохранён для прежнего контура. Замороженная source SQL-цепочка и инструкция
+явного запуска legacy-проверок: [supabase/README.md](supabase/README.md).
+Обычные `dev`/`check`/CI эту цепочку не запускают. Серверный legacy media bridge
+и удалённые source resources остаются отдельной частью decommission.
 
 ## Карта системы и подготовка возврата в Yandex Cloud
 
@@ -565,7 +563,7 @@ npm run tenant:migrate -- validate --in <artifact.fit>
 Для повторяемой проверки всего цикла одной командой используйте:
 
 ```text
-npm run tenant:rehearse:local
+node scripts/run-local-tenant-rehearsal.mjs
 ```
 
 Команда работает только с loopback-портами локального Podman, дополняет

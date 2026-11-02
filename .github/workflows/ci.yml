@@ -9,11 +9,6 @@ on:
 permissions:
   contents: read
 
-env:
-  # The frozen pgTAP chain only needs PostgreSQL; none of the local product
-  # services participate in database-only checks.
-  SUPABASE_DATABASE_EXCLUDE: edge-runtime,gotrue,imgproxy,kong,logflare,mailpit,postgres-meta,postgrest,realtime,storage-api,studio,supavisor,vector
-
 concurrency:
   group: ci-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
@@ -45,7 +40,6 @@ jobs:
         run: |
           node scripts/check-workflow-docs.mjs
           node --test scripts/check-workflow-docs.test.mjs
-      - run: npm run db:types:check
       - run: npm run infra:policy:test
       - run: npm run frontend:hosting:test
       - run: node --test scripts/prepare-fit-lime-fonts.test.mjs
@@ -145,38 +139,6 @@ jobs:
       - run: npm ci --prefix services/api
       - run: npm --prefix services/api run check
 
-  database:
-    needs: e2e-scope
-    if: needs.e2e-scope.outputs.database_required == 'true'
-    runs-on: ubuntu-latest
-    steps:
-      # Keep Docker service ports out of automatic outbound socket allocation.
-      # This changes only the disposable GitHub-hosted test VM.
-      - name: Reserve local Supabase ports before network setup
-        shell: bash
-        run: |
-          set -euo pipefail
-          test "$GITHUB_ACTIONS" = true
-          test "$RUNNER_OS" = Linux
-          test "$RUNNER_ENVIRONMENT" = github-hosted
-          reserved=$(sysctl -n net.ipv4.ip_local_reserved_ports)
-          sudo sysctl -q -w "net.ipv4.ip_local_reserved_ports=${reserved:+$reserved,}54320-54329"
-      - uses: actions/checkout@v4
-      - uses: supabase/setup-cli@v1
-        with:
-          # Pin to the version used by package-lock.json. Resolving `latest`
-          # hits GitHub's unauthenticated release API and can be rate-limited.
-          version: 2.116.0
-      # CLI2.116 supports ECR -> GHCR -> Docker Hub fallback. setup-cli exports
-      # an override; clear it so a throttled shared registry is not the only path.
-      - name: Allow official Supabase registry fallbacks
-        run: echo 'SUPABASE_INTERNAL_IMAGE_REGISTRY=' >> "$GITHUB_ENV"
-      # pgTAP runs directly against PostgreSQL. Starting the local API, auth,
-      # realtime, storage and observability services only adds image pulls.
-      - run: supabase start --exclude "$SUPABASE_DATABASE_EXCLUDE"
-      - run: supabase db reset --local
-      - run: supabase test db --local
-
   yandex-database:
     runs-on: ubuntu-latest
     services:
@@ -232,7 +194,6 @@ jobs:
     outputs:
       required: ${{ steps.scope.outputs.required }}
       frontend_required: ${{ steps.scope.outputs.frontend_required }}
-      database_required: ${{ steps.database-scope.outputs.required }}
       lime_mode: ${{ steps.lime-scope.outputs.mode }}
       lime_tags: ${{ steps.lime-scope.outputs.tags }}
       lime_partitions: ${{ steps.lime-scope.outputs.partitions }}
@@ -247,14 +208,6 @@ jobs:
           EVENT_NAME: ${{ github.event_name }}
           BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
-      - name: Detect legacy database changes
-        id: database-scope
-        run: node scripts/supabase-database-scope.mjs "$EVENT_NAME" "$BASE_SHA" "$HEAD_SHA"
-        env:
-          EVENT_NAME: ${{ github.event_name }}
-          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
-          HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
-
       - name: Select temporary PR Fit Lime acceptance scope
         id: lime-scope
         run: node scripts/fit-lime-ci-scope.mjs "$BASE_SHA" "$HEAD_SHA"
@@ -263,8 +216,7 @@ jobs:
           BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
 
-  # Production auth uses Yandex. Keep this browser gate independent from the
-  # frozen local Supabase stack still needed by the remaining legacy specs.
+  # Auth and product scenarios use isolated native PostgreSQL fixtures.
   e2e-yandex-auth:
     permissions:
       contents: read
@@ -293,7 +245,7 @@ jobs:
         run: node scripts/prepare-fit-lime-ci-fonts.mjs
         env:
           GH_TOKEN: ${{ github.token }}
-      - name: Run Yandex-only auth and nutrition without Supabase services
+      - name: Run native auth and nutrition acceptance
         run: |
           docker run --rm --init --ipc=host --network host \
             --env CI=true \
@@ -470,7 +422,7 @@ jobs:
           if-no-files-found: ignore
           retention-days: 7
 
-  # Each lane owns a local Supabase instance. The four lanes run concurrently,
+  # Each lane owns an isolated native PostgreSQL fixture. The four lanes run concurrently,
   # while short-lived browser processes keep WebKit engine failures isolated.
   e2e-webkit:
     needs: e2e-scope
