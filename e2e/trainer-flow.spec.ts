@@ -336,7 +336,7 @@ test('trainer creates and edits a client, filters exercises and persists a worko
   // A separate unauthenticated load repeats the uncached Vite graph, not a user action.
   await nativeSignIn(page, 'trainer@fit.local')
   await expect(page.getByRole('heading', { level: 1, name: 'Сегодня' })).toBeVisible()
-  await page.goto('/clients')
+  await page.getByRole('navigation', { name: 'Основная навигация' }).getByRole('link', { name: 'Клиенты', exact: true }).click()
 
   await page.getByRole('button', { name: /^(Добавить|Добавить клиента)$/ }).click()
   await page.getByRole('dialog', { name: 'Добавить клиента' }).getByRole('link', { name: 'Создать карточку', exact: true }).click()
@@ -364,7 +364,8 @@ test('trainer creates and edits a client, filters exercises and persists a worko
   await expect(page.getByRole('heading', { name: trainerAlias })).toBeVisible()
   await page.goto('/clients')
   await expect(page.getByText(trainerAlias)).toBeVisible()
-  await page.goto(clientUrl)
+  await page.locator('.client-card-main').filter({ hasText: trainerAlias }).click()
+  await expect(page).toHaveURL(clientUrl)
 
   await page.getByRole('link', { name: /Запланировать/ }).click()
   await selectClient(page, trainerAlias)
@@ -609,7 +610,8 @@ test('trainer reuses completed facts and keeps history, exercise progress and me
   await expect(page.getByRole('heading', { name: 'Тренировки клиента' })).toBeVisible()
 
   // Прогресс открывается из карточки клиента, без отдельного списка-посредника.
-  await page.goto(clientUrl)
+  await page.locator('.page-back').click()
+  await expect(page).toHaveURL(clientUrl)
   await expect(page.getByRole('heading', { name: trainerAlias })).toBeVisible()
   await page.getByRole('link', { name: 'Прогресс и замеры' }).click()
   await page.getByRole('status').filter({ hasText: 'Прогресс стал короче' }).getByRole('button', { name: 'Понятно' }).click()
