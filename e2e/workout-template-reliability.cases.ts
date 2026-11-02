@@ -223,6 +223,16 @@ export function workoutTemplateSourceCases() {
     const writes: string[] = []
     page.on('request', request => { if (request.method() !== 'GET' && /\/v1\/workouts(?:\/|$)/.test(new URL(request.url()).pathname)) writes.push(request.url()) })
     await page.goto(`/workouts/new?client=${clientId}&date=2026-11-09`)
+    for (const width of [320,390,430,1440]) {
+      await page.setViewportSize({ width, height:844 })
+      const geometry = await page.locator('.coach-reference-form > .page-header').evaluate(header => {
+        const rect = header.getBoundingClientRect(), title = header.querySelector('h1')!.getBoundingClientRect()
+        const actions = header.querySelector('.coach-plan-template-actions')!.getBoundingClientRect()
+        return { height: rect.height, clearTitle: title.right <= actions.left, contained: [...header.querySelectorAll('button')].every(button => { const box = button.getBoundingClientRect(); return box.left >= rect.left && box.right <= rect.right && box.top >= rect.top && box.bottom <= rect.bottom && box.width >= 44 && box.height >= 44 }) }
+      })
+      expect(geometry).toEqual({ height:44, clearTitle:true, contained:true })
+    }
+    await page.setViewportSize({ width:390, height:844 })
     await page.getByRole('button', { name: 'Другие действия с планом', exact: true }).click()
     await page.getByRole('menuitem', { name: 'Сохранить как шаблон', exact: true }).click()
     await expect(page.getByLabel('Название шаблона')).toHaveValue(draft.title)
@@ -239,6 +249,20 @@ export function workoutTemplateSourceCases() {
     expect(retained.notes).toBe(draft.notes)
     expect(writes).toEqual([])
     await page.screenshot({ path: info.outputPath('template-unsaved-plan-return.png') })
+    // The same feature stays available in the existing Mono menu; its layout remains unchanged.
+    await mockPilot(page, { profileId: actorId, fitLime: false, workouts: [] })
+    const monoCommands = await captureTemplateCreation(page)
+    await page.goto(`/workouts/new?client=${clientId}&date=2026-11-09`)
+    await expect(page.locator('.trainer-plan-methods')).toHaveCount(0)
+    await expect(page.getByRole('button', { name: 'Другие действия с планом', exact: true })).toHaveCount(0)
+    await page.getByRole('button', { name: 'Действия с планом', exact: true }).click()
+    await page.getByRole('menuitem', { name: 'Сохранить как шаблон', exact: true }).click()
+    await expect(page.getByLabel('Название шаблона')).toHaveValue(draft.title)
+    await expect(page.locator('.trainer-template-methods')).toHaveCount(0)
+    await page.getByRole('button', { name: 'Сохранить шаблон', exact: true }).click()
+    await expect(page.getByRole('textbox', { name: 'Название тренировки', exact: true })).toHaveValue(draft.title)
+    expect(monoCommands).toHaveLength(1)
+    expect(writes).toEqual([])
   })
 
   for (const status of ['planned', 'done']) test(`Template source ${status} returns to exact workout and copies plan without facts`, { tag: ['@lime-templates'] }, async ({ page }, info) => {
