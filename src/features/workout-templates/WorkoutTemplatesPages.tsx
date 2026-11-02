@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link, Navigate, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useDataBackend } from '../../app/data-backend-context'
 import { useAuth } from '../../app/auth-context'
+import { isFitLimeEnabled } from '../../app/fit-lime'
 import { isCoachWorkoutRedesignEnabled } from '../../app/coach-workout-redesign'
 import { readCoachCalendarRoute } from '../../app/coach-calendar-navigation'
 import { cloneWorkoutTemplate, workoutTemplateFromWorkout } from '../../data/repositories/workout-template-rules'
@@ -152,6 +153,7 @@ export function WorkoutTemplateEditorPage() {
 }
 
 function WorkoutTemplateEditor({ templateId, sourceWorkoutId, draftKey, context, libraryReturn }: { templateId?: string; sourceWorkoutId: string; draftKey: string; context?: TemplatePlanContext; libraryReturn?: { context: TemplatePlanContext; index?: number } }) {
+  const { actor } = useAuth()
   const { exercises: exercisesRepository, workoutTemplates, workouts } = useDataBackend()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
@@ -264,7 +266,7 @@ function WorkoutTemplateEditor({ templateId, sourceWorkoutId, draftKey, context,
           </details>
         </section>
         <section className="workout-form-section workout-form-exercises"><div className="workout-form-section-head workout-form-exercise-heading"><h2>Упражнения</h2><span>{templateMeta(exercises)}</span></div>
-          <QuickWorkoutEntry methods={{ onExercise: () => { setReplaceIndex(null); setPickerSearch(''); setPickerOpen(true) } }} catalog={catalog.exercises} parseWorkout={(text, systemCatalog) => exercisesRepository.parseWorkout(text, systemCatalog)} onAdd={quickAdd} compact={exercises.length > 0} onOpenCatalog={exercises.length === 0 ? (search) => { setPickerSearch(search); setPickerOpen(true) } : undefined} />
+          <QuickWorkoutEntry methods={isFitLimeEnabled(actor) ? { onExercise: () => { setReplaceIndex(null); setPickerSearch(''); setPickerOpen(true) } } : undefined} catalog={catalog.exercises} parseWorkout={(text, systemCatalog) => exercisesRepository.parseWorkout(text, systemCatalog)} onAdd={quickAdd} compact={exercises.length > 0} onOpenCatalog={exercises.length === 0 ? (search) => { setPickerSearch(search); setPickerOpen(true) } : undefined} />
           {!exercises.length && <p className="workout-empty-hint">Добавьте хотя бы одно упражнение — голосом, текстом или из каталога.</p>}
           <WorkoutExerciseEditor exercises={exercises} onChange={(next) => { setExercises(next); setDirty(true) }} onOpenPicker={() => setPickerOpen(true)} onReplaceExercise={(index) => { setReplaceIndex(index); setPickerOpen(true) }} hideEmptyAddAction collapseInitialExercises={Boolean(templateId || sourceWorkoutId)} initialExercisesReady={ready} />
         </section>
