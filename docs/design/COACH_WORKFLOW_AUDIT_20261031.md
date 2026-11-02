@@ -1032,3 +1032,25 @@ versionName1.1.2 и исходная подпись сохраняются. ABI 
 прошёл без изменения assertions. Полный CI/Android debug нового head,
 подписанный APK build7 и публичная/OTA-приёмка остаются обязательными.
 Физический Android и применение нового APK на телефоне не проверены.
+
+Уточнение F2W7 — 02.11.2026 — Codex / OpenAI.
+
+PR1939/7135 прошёл полныйCI41442090555 (32success/1scope-skip) и Android
+41442090553; merged98f67f22. Его current-main CI41451565244 получил настоящий
+failure Chromium2/2/job125297921754: trainer-flow общий30s истекает на разных
+шагах, client auth case также превысил30s и прошёл только повтор. Публикация
+98f67f22 не объявляется успешной. Все остальные завершённые проверки прошли.
+Трассы показывают два полных/auth по4.2–4.8s до продуктовых действий; первая
+загрузка перед nativeSignIn/nativeRegister избыточна: helper сам устанавливает
+origin, seeds session и открывает/auth. Технический followup удаляет только
+эти два startup goto. Trainer-правка совпадает с проверенным соседним aed6ff34;
+client-случай независимо подтверждён своей трассой и тем же helper-контрактом.
+Все последующие действия, URL/role/data assertions, обязательные reload,
+скриншоты,30s/retries сохранены побайтно. Runtime приложения, native7, API,
+БД, UI-source hash bcbc2242 и роли/режимы не меняются.
+Проверка настоящего actor-scoped API/PG создаёт отдельную случайную БД
+каждому worker и удаляет только её;6/6 полных сценариев (каждый×3),1.7m,
+0retry/skips: client12.6–13.2s, trainer18.3–18.5s. E2E lint/typecheck прошли.
+Новый PR и current-main CI по действующему classifier обязательны; затем
+разрешённый API/web/signedAPK/OTA и public-приёмка продолжаются. CI-gates,
+inventory, baseline, assertions и лимиты ради зелёного результата не меняются.

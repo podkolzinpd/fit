@@ -275,6 +275,8 @@ test('тренер объединяет распознанные упражне�
 
 test('trainer can create client, complete workout and save progress', async ({ page }, testInfo) => {
   const trainerAlias = `Анна ${testInfo.workerIndex}-${Date.now()}`
+  // The fixture establishes the origin and opens /auth after seeding the session.
+  // A separate unauthenticated load repeats the uncached Vite graph, not a user action.
   await nativeSignIn(page, 'trainer@fit.local')
   await expect(page.getByRole('heading', { level: 1, name: 'Сегодня' })).toBeVisible()
   await page.goto('/clients')

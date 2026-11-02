@@ -117,7 +117,7 @@ test('trainer adds the first client, plans a workout and gets an invitation code
 
 test('client registers, starts without a profile questionnaire and creates an own workout', async ({ page }, testInfo) => {
   const email = `client-signup-${testInfo.workerIndex}-${Date.now()}@fit.local`
-  await page.goto('/auth')
+  // Registration seeds the session before the fixture opens /auth.
   await nativeRegister(page, { key: email, firstName: 'Клиент', role: 'client' })
 
   await expect(page).toHaveURL(/\/me$/)
