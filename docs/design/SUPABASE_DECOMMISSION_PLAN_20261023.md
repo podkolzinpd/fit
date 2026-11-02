@@ -403,3 +403,12 @@ merge/deploy не выполняются.
 assertions/PNG не удалялись. Android1.1.3/code8, OTA workflow, operations и
 snapshot из main сохранены; native-only local/CI и required database context
 сохранены. Новый head и проверки — в PR1944. Production release не запускается.
+
+### P3 — конфликт индекса после PR1938 — 02.11.2026
+
+После 31 успешного test job CI41476969918 main получил c49f3a51/PR1938.
+Единственный конфликт — соседние записи CURRENT_STATE: сохранены TC101–107
+из main и актуальный P2/P3 индекс этой ветки. Product/API/SQL/E2E из main
+приняты автоматически; собственный product diff не добавлен. Проверки docs и
+whitespace выполняются после разрешения; новый head/CI фиксируются в PR1944.
+Strict branch protection app/database/e2e не меняется; CI повторяется для merge.

@@ -1,5 +1,6 @@
 28.10 — Чат: плашка даты перед первым сообщением дня («Сегодня», «Вчера», «26 октября», «12 марта 2025»), раньше «Новые сообщения»; в списке чатов дата по давности. День по часам телефона. chat-dates.ts + тесты.
 # Fit — текущий индекс
+TC101–107: [план/статус](design/TRAINER_CONNECTION_CONFIRMATION_20261102.md). В работе.
 P2: PR1928/1929 слиты. P3: native-only dev/check/CI — [план](design/SUPABASE_DECOMMISSION_PLAN_20261023.md).
 MC1: [PR1927: база1932; CI/выпуск](design/CLIENT_REFERENCE_SCREENS_20261029.md).
 YAFIT-699: компактный список клиентов и гостевое приглашение,2PR. [План/проверки](design/COACH_CLIENTS_AND_INVITATION_20261031.md); [статус выпуска](https://st.yandex-team.ru/YAFIT-699).
