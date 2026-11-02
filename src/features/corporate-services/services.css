@@ -1,0 +1,35 @@
+.corporate-service-workspace { display:grid; gap:24px; min-width:0; }
+.corporate-service-note { margin:0; color:var(--muted); font-size:14px; line-height:1.5; }
+.corporate-service-entry { margin-top:16px; }
+.corporate-service-actions, .corporate-service-counts { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; }
+.corporate-services-page a.secondary { display:flex; align-items:center; justify-content:center; min-height:48px; padding:12px 16px; text-decoration:none; border-radius:var(--radius-md); text-align:center; box-sizing:border-box; overflow-wrap:anywhere; }
+.corporate-service-history, .corporate-service-period, .corporate-service-record-actions { display:grid; gap:16px; min-width:0; }
+.corporate-service-history h2 { margin:0; }
+.corporate-service-period .actions, .corporate-service-dates, .corporate-service-form .actions { display:flex; gap:8px; flex-wrap:wrap; }
+.corporate-service-dates > button { min-height:44px; height:auto; padding:10px 12px; }
+.corporate-service-dates .schedule-v2-calendar span { white-space:normal; }
+.corporate-service-list { list-style:none; margin:0; padding:0; display:grid; }
+.corporate-service-list li { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:16px 0; border-bottom:1px solid var(--border); }
+.corporate-service-list li > div { min-width:0; overflow-wrap:anywhere; }
+.corporate-service-list p { color:var(--muted); margin:6px 0 0; font-size:14px; }
+.corporate-service-list a { flex-shrink:0; }
+.corporate-service-form { display:grid; gap:16px; }
+.corporate-service-form fieldset { margin:0; padding:0; border:0; min-width:0; display:grid; gap:16px; }
+.corporate-service-form select { width:100%; min-width:0; box-sizing:border-box; font-size:16px; min-height:48px; }
+.corporate-service-date { display:grid; gap:8px; }
+.corporate-service-date .schedule-v2-calendar { width:100%; height:auto; min-height:48px; padding:12px; justify-content:flex-start; }
+.corporate-service-date .schedule-v2-calendar span { white-space:normal; text-align:left; }
+.corporate-service-audit { padding-left:20px; overflow-wrap:anywhere; }
+.corporate-service-audit li { padding:12px 0; }
+.corporate-service-audit p { margin:6px 0 0; color:var(--muted); font-size:14px; }
+.corporate-service-counts { margin:0; }
+.corporate-service-counts > div { padding:20px; border:1px solid var(--border); border-radius:var(--radius-md); background:var(--surface); }
+.corporate-service-counts dt { color:var(--muted); }
+.corporate-service-counts dd { margin:12px 0 0; font-size:32px; font-weight:500; }
+@media(max-width:360px) { .corporate-service-actions { grid-template-columns:1fr; } .corporate-service-list li { align-items:flex-start; flex-direction:column; } .corporate-service-counts { grid-template-columns:1fr; } }
+.corporate-service-period .schedule-v2-calendar, .corporate-service-date .schedule-v2-calendar { display:flex; flex-direction:row; align-items:center; gap:8px; border-radius:var(--radius-md); }
+.corporate-service-period .schedule-v2-calendar > svg, .corporate-service-date .schedule-v2-calendar > svg { width:24px; height:24px; flex:0 0 24px; }
+.corporate-service-form .actions > * { flex:1 1 150px; min-width:0; }
+.corporate-services-page .corporate-service-form select { min-height:48px; height:48px; padding:10px 12px; border-radius:var(--radius-md); line-height:1.4; }
+
+.corporate-service-heading { display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; }

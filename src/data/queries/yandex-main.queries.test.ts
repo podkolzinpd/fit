@@ -36,6 +36,25 @@ describe('Yandex main query timeout', () => {
     expect(calls[0]?.[1]?.body).toBe(JSON.stringify(payload))
   })
 
+  it.each(['/v1/corporate-services', '/v1/corporate-services/record/void'])('bounds corporate command %s without retrying its operation', async path => {
+    vi.useFakeTimers()
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockImplementation((input, init) => {
+      if (String(input).endsWith('/health')) return Promise.resolve(new Response('{}', { headers: { 'x-fit-request-id': 'corporate-health' } }))
+      return new Promise<Response>((_resolve, reject) => {
+        init?.signal?.addEventListener('abort', () => reject(new DOMException('Aborted', 'AbortError')), { once: true })
+      })
+    })
+    const draft = { commandId: 'same-operation', version: 1 }
+    const request = createYandexMainQueries('https://corporate.example', 'session').write(path, 'POST', draft)
+    const result = request.then(() => undefined, (error: unknown) => error)
+    await vi.advanceTimersByTimeAsync(15_000)
+    expect(await result).toMatchObject({ message: 'Ответ не получен. Повторите попытку.' })
+    const writes = fetchMock.mock.calls.filter(([, init]) => init?.method === 'POST')
+    expect(writes).toHaveLength(1)
+    expect(writes[0]?.[1]?.signal?.aborted).toBe(true)
+    expect(writes[0]?.[1]?.body).toBe(JSON.stringify(draft))
+  })
+
   it('keeps successful media signing and an unrelated write unchanged', async () => {
     vi.useFakeTimers()
     let finishWrite: ((response: Response) => void) | undefined
