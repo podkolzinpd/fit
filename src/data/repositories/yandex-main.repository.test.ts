@@ -1762,3 +1762,22 @@ function ownProfile() {
 function staleClientActor(): SessionActor {
   return { ...actor, kind: 'client', role: 'client', clientId: archivedClientId, trainerId: actor.userId, fullName: 'Старый профиль' }
 }
+
+
+describe('native trainer connection confirmation transport', () => {
+  afterEach(() => vi.unstubAllGlobals())
+  it('carries consent guards across preview/confirm and preserves actionable stale errors', async () => {
+    const preview = { clientId, currentRelationshipId: invitationId, currentTrainer: { id: actor.userId, name: 'Анна' }, trainer: { id: archivedClientId, name: 'Иван' }, offerVersion: 'v1' }
+    const fetchMock = vi.fn<typeof fetch>().mockResolvedValueOnce(jsonResponse({ preview }))
+      .mockResolvedValueOnce(jsonResponse({ clientId }))
+      .mockResolvedValueOnce(jsonResponse({ error: 'connection_changed' }, 409))
+    vi.stubGlobal('fetch', fetchMock)
+    const repository = createYandexMainRepository(apiBaseUrl, sessionToken, actor).trainerConnections!
+    const offer = { source: 'chat' as const, locator: conversationId }
+    await expect(repository.preview(offer)).resolves.toEqual(preview)
+    const draft = { ...offer, expectedRelationshipId: invitationId, offerVersion: 'v1', operationId: workoutId }
+    await expect(repository.confirm(draft)).resolves.toBe(clientId)
+    expect(fetchMock.mock.calls[1]?.[1]).toMatchObject({ method: 'POST', body: JSON.stringify(draft), headers: { 'x-fit-session': sessionToken } })
+    await expect(repository.confirm(draft)).rejects.toMatchObject({ code: 'connection_changed' })
+  })
+})

@@ -4,3 +4,5 @@ export { InvitationPage } from './InvitationPage'
 export { InvitationShareButton, InviteAthleteButton } from './InvitationShareActions'
 export { LogoutButton } from './LogoutButton'
 export { createYandexAuthorizationUrl } from './yandex-pilot-oauth'
+
+export { TrainerConnectionConfirmation } from './TrainerConnectionConfirmation'

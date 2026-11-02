@@ -1,3 +1,4 @@
+import { TrainerConnectionConfirmation } from '../auth'
 import { VideoMeeting } from './VideoMeeting'
 import { chatDayKey, chatDayLabel, chatListTimeLabel } from './chat-dates'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
@@ -148,7 +149,7 @@ export function ChatConversationPage() {
   const { conversationId = '' } = useParams()
   const { actor } = useAuth()
   const fitLimeConversation = actor?.role === 'trainer' && actor.experiments?.fitLime === true && isTrainerScheduleV2Enabled(actor)
-  const { chat, meetings } = useDataBackend()
+  const { chat, meetings, trainerConnections } = useDataBackend()
   const queryClient = useQueryClient()
   const location = useLocation()
   const navigate = useNavigate()
@@ -369,14 +370,16 @@ export function ChatConversationPage() {
       </section>}
       <section ref={surfaceRef} className="chat-surface" aria-label="Переписка">
         {!connected && connection.data && <section className="chat-connection-card" aria-label="Связь с тренером">
-          {connection.data.trainerSwitchRequired
+          {connection.data.trainerSwitchRequired && !trainerConnections
             ? <><strong>У вас уже есть тренер</strong><span>Сначала отключите его в профиле.</span></>
             : actor?.role === 'trainer'
               ? connection.data.invitationPending
                 ? <><strong>Приглашение отправлено</strong><span>Спортсмен увидит его здесь.</span></>
                 : <><strong>Начать совместные тренировки?</strong><button type="button" className="secondary" disabled={!connection.data.canInvite || invite.isPending} onClick={() => invite.mutate()}>{invite.isPending ? 'Отправляем…' : 'Предложить тренировки'}</button></>
               : connection.data.invitationPending
-                ? <><strong>Тренер предлагает заниматься вместе</strong><button type="button" className="primary" disabled={!connection.data.canAccept || accept.isPending} onClick={() => accept.mutate()}>{accept.isPending ? 'Подключаем…' : 'Подключиться'}</button></>
+                ? <><strong>Тренер предлагает заниматься вместе</strong>{trainerConnections
+                    ? <TrainerConnectionConfirmation repository={trainerConnections} offer={{ source: 'chat', locator: conversationId }} onSuccess={refreshConversationState} />
+                    : <button type="button" className="primary" disabled={!connection.data.canAccept || accept.isPending} onClick={() => accept.mutate()}>{accept.isPending ? 'Подключаем…' : 'Подключиться'}</button>}</>
                 : <><strong>Можно общаться без подключения</strong><span>Тренировки пока недоступны тренеру.</span></>}
           {connectionError && <span className="error" role="alert">Не удалось выполнить действие</span>}
         </section>}
