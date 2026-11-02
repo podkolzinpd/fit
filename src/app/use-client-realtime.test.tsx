@@ -3,7 +3,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { act, render } from '@testing-library/react'
 import type { ReactNode } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import type { ClientRealtimeChange } from '../data/repositories/realtime.repository'
+import type { ClientRealtimeChange } from '../data/contracts/realtime'
 import {
   applyClientRealtimeChanges,
   refetchClientSpace,
@@ -17,13 +17,7 @@ const realtime = vi.hoisted(() => ({
   unsubscribe: vi.fn(),
 }))
 
-vi.mock('../data/repositories/realtime.repository', async (importOriginal) => {
-  const original = await importOriginal<typeof import('../data/repositories/realtime.repository')>()
-  return {
-    ...original,
-    realtimeRepository: { subscribeToClientChanges: realtime.subscribe },
-  }
-})
+
 
 function change(table: ClientRealtimeChange['table'], values: Record<string, unknown> = {}): ClientRealtimeChange {
   return { table, eventType: 'UPDATE', new: values, old: {} }
@@ -200,4 +194,9 @@ describe('client realtime', () => {
     expect(options?.predicate?.(queryClient.getQueryCache().find({ queryKey: ['client-goal', 'client-1'] })!)).toBe(true)
     expect(options?.predicate?.(queryClient.getQueryCache().find({ queryKey: ['workout-home', '2026-10-08'] })!)).toBe(true)
   })
+})
+
+vi.mock('./data-backend-context', async () => {
+  const { nativeBackend } = await import('../test/native-backend')
+  return { useDataBackend: () => ({ ...nativeBackend, realtime: { subscribeToClientChanges: realtime.subscribe } }) }
 })

@@ -1,6 +1,6 @@
 import { createRoot } from 'react-dom/client'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
-import type { ClientFinanceSummary } from '../src/data/repositories/client-finance.repository'
+import type { ClientFinanceSummary } from '../src/data/contracts/client-finance'
 import { ClientFinanceDetails, ClientFinanceHomeContent } from '../src/features/finance/ClientFinancePage'
 import { AnalyticsIcon, HomeIcon, ProfileIcon, ScheduleIcon } from '../src/shared/icons'
 import { Page } from '../src/shared/ui'

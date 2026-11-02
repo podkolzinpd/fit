@@ -1,6 +1,6 @@
 import { expect, it, vi } from 'vitest'
 import { summaryDiagnosticQuery } from '../queries/summary-diagnostic.queries'
-import { getLegacySummaryDiagnostic, getSummaryDiagnostic } from './summary-diagnostic.repository'
+import { getSummaryDiagnostic } from './summary-diagnostic.repository'
 
 vi.mock('../queries/summary-diagnostic.queries', () => ({ summaryDiagnosticQuery: vi.fn() }))
 const valid = {
@@ -38,11 +38,4 @@ it('keeps a valid no-model preflight with trace metadata', async () => {
     requestId: 'request-id',
     releaseId: 'release-id',
   })
-})
-
-it('closes retired legacy diagnostics without invoking native diagnostics', async () => {
-  vi.mocked(summaryDiagnosticQuery).mockClear()
-  await expect(getLegacySummaryDiagnostic('client', '2026-08-16', '2026-09-15'))
-    .rejects.toThrow('Диагностика старого AI API отключена')
-  expect(summaryDiagnosticQuery).not.toHaveBeenCalled()
 })
