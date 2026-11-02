@@ -447,3 +447,12 @@ API1567passed/281skipped без DB env, lint/types/policies/build passed. Тот
 booking-history набор на production build с флагами CI:4/4passed (6.3s),
 без retries. Временный PG-контейнер остановлен. Статусы нового head — в PR1944.
 Подлит main1baf0069/PR1941; его date-picker/UI изменения приняты без правок.
+
+После зелёного CI41530624921 (35/35) и Android41530625033 main получил
+745dedb0/PR1949 с тем же исправлением booking-history. Единственный конфликт
+— поясняющий комментарий перед идентичным setFixedTime. Принят весь cases-файл
+из main, включая дополнительный assertion текста кнопки запуска; собственного
+E2E diff теперь нет. DB fixture fix и три полуночные регрессии сохраняются.
+После merge1949 passed:те же4 production-mode booking cases (6.4s),
+ESLint/E2E TypeScript/docs/whitespace; новый head/CI — в PR1944.
+Обязательные checks не обходятся.
