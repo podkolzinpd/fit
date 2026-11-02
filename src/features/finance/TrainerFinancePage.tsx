@@ -4,12 +4,7 @@ import { Link, useLocation, useParams } from 'react-router-dom'
 import { useAuth } from '../../app/auth-context'
 import { isFitLimeEnabled } from '../../app/fit-lime'
 import { useDataBackend } from '../../app/data-backend-context'
-import type {
-  TrainerFinancePackage,
-  TrainerFinancePackageDraft,
-  TrainerFinancePayment, TrainerFinanceSession,
-  TrainerFinancePaymentDraft,
-} from '../../data/repositories/trainer-finance.repository'
+import type { TrainerFinancePackage, TrainerFinancePackageDraft, TrainerFinancePayment, TrainerFinanceSession, TrainerFinancePaymentDraft } from '../../data/contracts/trainer-finance'
 import { addDays, daysBetween, formatLocalDate, localDate, todayInTimeZone } from '../../shared/local-date'
 import { AsyncView, Field, InlineRequestError, OverflowMenu, Page, useConfirm } from '../../shared/ui'
 

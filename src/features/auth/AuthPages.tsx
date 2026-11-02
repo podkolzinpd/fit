@@ -1,7 +1,6 @@
 import { useContext, useEffect, useMemo, useRef, useState, type FormEvent, type PropsWithChildren } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
-import { getLocalAuthRepository } from '#fit/local-auth'
 import {
   yandexPilotRepository,
   type YandexPilotClient,
@@ -27,7 +26,7 @@ import { applyThemeVariant, resolveThemeVariant, themeVariantClass, useAppTheme 
 import { FitLogo } from '../../shared/FitLogo'
 import { StartupSplash } from '../../shared/StartupSplash'
 import { ProfileIcon } from '../../shared/icons'
-import { AsyncView, Field, RequestDiagnosticDetails, StatePanel } from '../../shared/ui'
+import { AsyncView, RequestDiagnosticDetails, StatePanel } from '../../shared/ui'
 import type { AccountRole } from '../../shared/domain'
 import { LEGAL_PATHS, PRIVACY_VERSION, TERMS_VERSION } from '../../shared/legal'
 import { systemTimeZone } from '../../shared/local-date'
@@ -53,8 +52,6 @@ import {
   saveInvitationAuthReturn,
 } from './invitation-auth-return'
 
-type Mode = 'login' | 'register'
-type RegistrationMethod = 'yandex' | 'email'
 
 function internalAuthReturnPath(value: unknown): string | undefined {
   if (typeof value !== 'string'
@@ -114,23 +111,14 @@ export function AuthIdentityScreen({ children, className }: PropsWithChildren<{ 
 
 export function AuthPage() {
   const location = useLocation()
-  const authState = location.state as { from?: string; mode?: Mode; inviteRole?: AccountRole } | null
+  const authState = location.state as { from?: string; mode?: 'login' | 'register'; inviteRole?: AccountRole } | null
   const directReturnTo = internalAuthReturnPath(authState?.from)
   const [initialInvitationReturn] = useState(() => saveInvitationAuthReturn(directReturnTo))
   const returnTo = directReturnTo
     ?? (hasPendingInvitationLink() ? '/invite' : initialInvitationReturn ?? readInvitationAuthReturn() ?? undefined)
-  const nativeRegistrationConfig = getYandexNativeRegistrationConfig()
-  const yandexOnlyAuthConfig = getYandexOnlyAuthConfig()
-  const [mode, setMode] = useState<Mode>(authState?.mode === 'register' ? 'register' : 'login')
-  const [registrationMethod, setRegistrationMethod] = useState<RegistrationMethod>(
-    nativeRegistrationConfig === null ? 'email' : 'yandex',
-  )
-  const [firstName, setFirstName] = useState('')
-  const [busy, setBusy] = useState(false)
+  const yandexOnlyAuthConfig = getYandexOnlyAuthConfig() ?? getYandexAppSessionEntryConfig() ?? getYandexIdPilotConfig()
   const [yandexBusy, setYandexBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [role, setRole] = useState<AccountRole>(authState?.inviteRole
-    ?? (returnTo?.startsWith('/join') ? 'client' : 'trainer'))
   const { actor } = useAuth()
   const yandexAppSession = useYandexAppSession()
   const yandexAppSessionConfig = getYandexAppSessionEntryConfig()
@@ -138,44 +126,6 @@ export function AuthPage() {
   if (actor) return <InvitationAuthRedirect role={actor.role} preferred={directReturnTo} />
   if (yandexAppSession.loading) return <StartupSplash />
   if (yandexAppSession.session) return <Navigate to="/auth/yandex/session" replace />
-
-  async function submit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault(); setError(null)
-    const values = new FormData(event.currentTarget)
-    if (mode === 'register' && registrationMethod === 'yandex') {
-      if (nativeRegistrationConfig === null) {
-        setError('Регистрация через Yandex ID пока недоступна.')
-        return
-      }
-      setYandexBusy(true)
-      savePendingYandexNativeRegistration({
-        accountRole: role,
-        firstName,
-        timezone: systemTimeZone(),
-        termsVersion: TERMS_VERSION,
-        privacyVersion: PRIVACY_VERSION,
-      })
-      try {
-        const url = await createYandexAuthorizationUrl(
-          nativeRegistrationConfig.clientId,
-          yandexAuthorizationRedirectUri(),
-          sessionStorage,
-          'register',
-        )
-        window.location.assign(url)
-      } catch {
-        setError('Не удалось начать регистрацию через Yandex ID.')
-        setYandexBusy(false)
-      }
-      return
-    }
-    setBusy(true)
-    try {
-      if (mode === 'login') await getLocalAuthRepository().signIn(String(values.get('email')), String(values.get('password')))
-      else await getLocalAuthRepository().signUp(String(values.get('email')), String(values.get('password')), firstName, role)
-    } catch (caught) { setError(caught instanceof Error ? caught.message : 'Не удалось войти') }
-    finally { setBusy(false) }
-  }
 
   function startYandexLogin(): void {
     const config = yandexOnlyAuthConfig ?? yandexAppSessionConfig ?? yandexPilotConfig
@@ -193,7 +143,7 @@ export function AuthPage() {
       .catch(() => { setError('Не удалось начать вход через Yandex ID.'); setYandexBusy(false) })
   }
 
-  if (yandexOnlyAuthConfig !== null) return <ClientLimeStandaloneLayout authEntry>
+  return <ClientLimeStandaloneLayout authEntry>
     <main className="lime-auth-entry" aria-label="Вход в Fit">
       <img className="lime-auth-photo" src="/assets/startup-photo-983c93dc4df8.jpg" width={940} height={1673} alt="" aria-hidden="true" fetchPriority="high" onError={(event) => { event.currentTarget.hidden = true }} />
       <section className="lime-auth-actions" aria-label="Авторизация через Yandex ID">
@@ -204,7 +154,7 @@ export function AuthPage() {
         <button
           className="primary auth-yandex"
           type="button"
-          disabled={yandexBusy}
+          disabled={yandexBusy || yandexOnlyAuthConfig === null}
           aria-busy={yandexBusy}
           onClick={startYandexLogin}
         >{yandexBusy ? 'Переходим в Yandex ID…' : 'Продолжить с Yandex ID'}</button>
@@ -217,74 +167,6 @@ export function AuthPage() {
       <nav className="lime-auth-legal" aria-label="Юридическая информация"><Link to={LEGAL_PATHS.terms}>Условия использования</Link><Link to={LEGAL_PATHS.privacy}>Конфиденциальность</Link></nav>
     </main>
   </ClientLimeStandaloneLayout>
-
-  return <AuthIdentityScreen className={mode === 'login' ? 'auth-login-screen' : undefined}>
-    <header className="auth-entry-head">
-      <FitLogo />
-      {mode === 'login' ? <>
-        <h1>Добро пожаловать</h1>
-        <p className="muted">Войдите, чтобы продолжить тренировки</p>
-      </> : <>
-        <p className="eyebrow">ВАШ РАБОЧИЙ ПРОЦЕСС</p>
-        <h1>Регистрация</h1>
-        <p className="muted">{role === 'client' ? 'Следите за своими тренировками и прогрессом.' : 'Планируйте тренировки и следите за прогрессом клиентов.'}</p>
-      </>}
-      {returnTo !== undefined && <p className="muted">Войдите или создайте аккаунт, чтобы продолжить по приглашению.</p>}
-    </header>
-    {mode === 'login' && yandexAppSessionConfig !== null && <button
-      className="primary auth-yandex"
-      type="button"
-      disabled={yandexBusy}
-      onClick={startYandexLogin}
-    >{yandexBusy ? 'Переходим в Yandex ID…' : 'Продолжить с Yandex ID'}</button>}
-    <form className="stack auth-form" onSubmit={(event) => void submit(event)}>
-      {mode === 'register' && <>
-        <Field label="Тип аккаунта"><select value={role} onChange={(event) => setRole(event.target.value as AccountRole)}>
-          <option value="trainer">Я тренер</option><option value="client">Я клиент</option>
-        </select></Field>
-        <Field label="Имя"><input name="firstName" minLength={2} maxLength={120} autoComplete="given-name" required value={firstName} onChange={(event) => setFirstName(event.target.value)} /></Field>
-      </>}
-      {(mode === 'login' || registrationMethod === 'email') && <>
-        <Field label="Email"><input name="email" type="email" autoComplete="email" required /></Field>
-        <Field label="Пароль"><input name="password" type="password" minLength={8} autoComplete={mode === 'login' ? 'current-password' : 'new-password'} required /></Field>
-      </>}
-      {error && <p className="error" role="alert">{error}</p>}
-      <button className={mode === 'login' && yandexAppSessionConfig !== null ? 'secondary' : 'primary'} disabled={busy || yandexBusy} aria-busy={busy || yandexBusy}>{busy || yandexBusy
-        ? 'Подождите…'
-        : mode === 'login'
-          ? yandexAppSessionConfig === null ? 'Войти' : 'Войти по email'
-          : registrationMethod === 'yandex'
-            ? 'Продолжить с Yandex ID'
-            : 'Создать аккаунт'}</button>
-    </form>
-    {mode === 'register' && <p className="auth-consent">Создавая аккаунт, вы принимаете <Link to={LEGAL_PATHS.terms}>Условия использования</Link> и <Link to={LEGAL_PATHS.privacy}>Политику конфиденциальности</Link>.</p>}
-    {mode === 'login' && yandexAppSessionConfig === null && yandexPilotConfig !== null && <button className="secondary auth-yandex" disabled={yandexBusy} onClick={startYandexLogin}>{yandexBusy
-        ? 'Переходим в Yandex ID…'
-        : 'Проверить Yandex ID'}</button>}
-    {yandexAppSession.error && <div className="stack" role="alert">
-      <p className="error">{yandexAppSession.error}</p>
-      <div className="stack">
-        <button className="secondary" type="button" onClick={() => void yandexAppSession.retry()}>Повторить проверку</button>
-        <button className="link" type="button" onClick={yandexAppSession.reset}>Сбросить сессию Yandex ID</button>
-      </div>
-    </div>}
-    <div className="auth-links">
-      <button className="link" onClick={() => {
-        const nextMode = mode === 'login' ? 'register' : 'login'
-        setMode(nextMode)
-        setError(null)
-        if (nextMode === 'register') {
-          setRegistrationMethod(nativeRegistrationConfig === null ? 'email' : 'yandex')
-        }
-      }}>{mode === 'login' ? 'Создать аккаунт' : 'У меня есть аккаунт'}</button>
-      {mode === 'register' && nativeRegistrationConfig !== null && <button className="link" type="button" onClick={() => {
-        setRegistrationMethod(registrationMethod === 'yandex' ? 'email' : 'yandex')
-        setError(null)
-      }}>{registrationMethod === 'yandex' ? 'Создать по email' : 'Создать через Yandex ID'}</button>}
-      {mode === 'login' && <Link to="/auth/forgot" state={{ from: returnTo }}>Забыли пароль?</Link>}
-    </div>
-    <nav className="auth-legal-links" aria-label="Юридическая информация"><Link to={LEGAL_PATHS.terms}>Условия использования</Link><Link to={LEGAL_PATHS.privacy}>Конфиденциальность</Link></nav>
-  </AuthIdentityScreen>
 }
 
 export function YandexPilotCallbackPage() {
@@ -849,35 +731,6 @@ function pilotClientSummary(client: YandexPilotClient): string {
   return details.length > 0 ? details.join(' · ') : 'Профиль без дополнительных данных'
 }
 
-export function ForgotPasswordPage() {
-  const [message, setMessage] = useState<string | null>(null)
-  const [error, setError] = useState<string | null>(null)
-  if (getYandexOnlyAuthConfig() !== null) return <Navigate to="/auth" replace />
-  async function submit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault(); setError(null)
-    try { await getLocalAuthRepository().resetPassword(String(new FormData(event.currentTarget).get('email'))); setMessage('Ссылка отправлена, если такой аккаунт существует.') }
-    catch (caught) { setError(caught instanceof Error ? caught.message : 'Ошибка') }
-  }
-  return <AuthIdentityScreen><header className="auth-entry-head"><FitLogo /><p className="eyebrow">ДОСТУП К АККАУНТУ</p><h1>Восстановление пароля</h1><p className="muted">Отправим ссылку на ваш email.</p></header><form className="stack auth-form" onSubmit={(e) => void submit(e)}><Field label="Email"><input name="email" type="email" autoComplete="email" required /></Field>{error && <p className="error" role="alert">{error}</p>}{message && <p className="success" role="status">{message}</p>}<button className="primary">Отправить ссылку</button></form><Link className="auth-back-link" to="/auth">Вернуться ко входу</Link></AuthIdentityScreen>
-}
-
-export function ResetPasswordPage() {
-  const navigate = useNavigate(); const [error, setError] = useState<string | null>(null)
-  if (getYandexOnlyAuthConfig() !== null) return <Navigate to="/auth" replace />
-  async function submit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-    try {
-      await getLocalAuthRepository().updatePassword(String(new FormData(event.currentTarget).get('password')))
-      navigate(hasPendingInvitationLink() ? '/invite' : consumeInvitationAuthReturn() ?? '/')
-    }
-    catch (caught) { setError(caught instanceof Error ? caught.message : 'Ошибка') }
-  }
-  return <AuthIdentityScreen><header className="auth-entry-head"><FitLogo /><p className="eyebrow">БЕЗОПАСНОСТЬ</p><h1>Новый пароль</h1><p className="muted">Выберите новый пароль для входа в FIT.</p></header><form className="stack auth-form" onSubmit={(e) => void submit(e)}><Field label="Пароль"><input name="password" type="password" minLength={8} autoComplete="new-password" required /></Field>{error && <p className="error" role="alert">{error}</p>}<button className="primary">Сохранить</button></form></AuthIdentityScreen>
-}
-
-export function AuthCallbackPage() {
-  const { loading, error, actor } = useAuth()
-  if (getYandexOnlyAuthConfig() !== null) return <Navigate to="/auth" replace />
-  if (actor) return <InvitationAuthRedirect role={actor.role} />
-  return <AuthIdentityScreen><header className="auth-entry-head"><FitLogo /><p className="eyebrow">ВХОД В АККАУНТ</p><h1>Завершаем вход</h1><p className="muted">{loading ? 'Проверяем сессию…' : error ?? 'Не удалось получить сессию.'}</p></header><Link className="auth-back-link" to="/auth">Вернуться</Link></AuthIdentityScreen>
-}
+export function ForgotPasswordPage() { return <Navigate to="/auth" replace /> }
+export function ResetPasswordPage() { return <Navigate to="/auth" replace /> }
+export function AuthCallbackPage() { return <Navigate to="/auth" replace /> }

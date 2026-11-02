@@ -1,63 +1,7 @@
-import { describe, expect, it, vi } from 'vitest'
+import { describe, expect, it } from 'vitest'
 import type { ProgressEntry } from '../../shared/domain'
 import { localDate } from '../../shared/local-date'
 import { findProgressDateConflict, groupCustomMetricValues, roundMetric } from './progress-rules'
-
-const queries = vi.hoisted(() => ({ regularity: vi.fn(), createMetric: vi.fn(), setMetricArchived: vi.fn() }))
-vi.mock('../queries/progress.queries', () => ({ progressQueries: queries }))
-
-import { progressRepository } from './progress.repository'
-
-describe('progressRepository.regularity', () => {
-  it('maps the server aggregate without recalculating it in the browser', async () => {
-    queries.regularity.mockResolvedValue({ data: [{
-      period: 'week', period_start: '2026-08-10', period_end: '2026-08-16',
-      planned_count: 4, completed_count: 3, completed_planned_count: 2,
-      partial_count: 1, skipped_count: 1, completion_percent: 50,
-    }, {
-      period: 'month', period_start: '2026-08-01', period_end: '2026-08-31',
-      planned_count: 0, completed_count: 1, completed_planned_count: 0,
-      partial_count: 0, skipped_count: 0, completion_percent: null,
-    }], error: null })
-
-    await expect(progressRepository.regularity('client-1')).resolves.toEqual([{
-      period: 'week', periodStart: '2026-08-10', periodEnd: '2026-08-16',
-      plannedCount: 4, completedCount: 3, completedPlannedCount: 2,
-      partialCount: 1, skippedCount: 1, completionPercent: 50,
-    }, {
-      period: 'month', periodStart: '2026-08-01', periodEnd: '2026-08-31',
-      plannedCount: 0, completedCount: 1, completedPlannedCount: 0,
-      partialCount: 0, skippedCount: 0, completionPercent: null,
-    }])
-    expect(queries.regularity).toHaveBeenCalledWith('client-1')
-  })
-})
-
-describe('progressRepository custom metrics', () => {
-  it('creates a client-owned metric through the guarded mutation', async () => {
-    queries.createMetric.mockResolvedValue({ data: {
-      id: 'metric-1', client_id: 'client-1', trainer_id: 'trainer-1', name: 'Плечи', unit: 'см',
-      archived_at: null, version: 1, created_at: '2026-08-30T10:00:00Z', updated_at: '2026-08-30T10:00:00Z',
-    }, error: null })
-
-    await expect(progressRepository.createMetric('client-1', 'Плечи', 'см')).resolves.toEqual({
-      id: 'metric-1', clientId: 'client-1', name: 'Плечи', unit: 'см', archivedAt: null, version: 1,
-    })
-    expect(queries.createMetric).toHaveBeenCalledWith('client-1', 'Плечи', 'см')
-  })
-
-  it('returns the new version after archiving a metric', async () => {
-    queries.setMetricArchived.mockResolvedValue({ data: {
-      id: 'metric-1', client_id: 'client-1', trainer_id: 'trainer-1', name: 'Плечи', unit: 'см',
-      archived_at: '2026-08-30T11:00:00Z', version: 2, created_at: '2026-08-30T10:00:00Z', updated_at: '2026-08-30T11:00:00Z',
-    }, error: null })
-
-    await expect(progressRepository.setMetricArchived({
-      id: 'metric-1', clientId: 'client-1', name: 'Плечи', unit: 'см', archivedAt: null, version: 1,
-    }, true)).resolves.toMatchObject({ archivedAt: '2026-08-30T11:00:00Z', version: 2 })
-    expect(queries.setMetricArchived).toHaveBeenCalledWith('metric-1', 1, true)
-  })
-})
 
 describe('roundMetric', () => {
   it('округляет до точности БД', () => expect(roundMetric(1.23456)).toBe(1.235))
