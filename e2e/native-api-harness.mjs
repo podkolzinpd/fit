@@ -10,8 +10,9 @@ const apiDirectory = new URL('../services/api/', import.meta.url)
 const requireApi = createRequire(new URL('package.json', apiDirectory))
 const { Pool } = requireApi('pg')
 const ownerUrl = new URL(process.env.FIT_E2E_POSTGRES_URL ?? 'postgresql://postgres:postgres@127.0.0.1:55432/postgres')
+// 55474 is the isolated Fit674 local cluster; host and database guards still apply.
 if (!['127.0.0.1', 'localhost', '[::1]'].includes(ownerUrl.hostname)
-  || !['5432', '55432'].includes(ownerUrl.port)
+  || !['5432', '55432', '55474'].includes(ownerUrl.port)
   || !['/postgres', '/fit_actor_test'].includes(ownerUrl.pathname)) throw new Error('native_fixture_requires_local_postgres')
 const databaseName = `fit_frontend_e2e_${process.pid}_${randomUUID().replaceAll('-', '').slice(0, 12)}`
 if (!/^fit_frontend_e2e_[0-9]+_[a-f0-9]{12}$/.test(databaseName)) throw new Error('invalid_fixture_database')
