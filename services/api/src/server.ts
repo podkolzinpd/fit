@@ -1,4 +1,5 @@
 import { CorporateInvitationsStore } from './corporate-invitations.js'
+import { CorporateServicesStore } from './corporate-services.js'
 import { DatabaseChatMeetings, readJitsiConfig } from './chat-meetings.js'
 import { DatabaseCorporateAdminLoginObserver } from './corporate-admin-login.js'
 import { CorporateAdminStore } from './corporate-admin.js'
@@ -314,7 +315,7 @@ const app = buildApp(
     ...(pilotTrainerProfiles === undefined ? {} : { pilotTrainerProfiles }),
     ...(pilotTrainerDiscovery === undefined ? {} : { pilotTrainerDiscovery }),
     ...(pilotFavoriteWorkouts === undefined ? {} : { pilotFavoriteWorkouts }),
-    ...(databasePool === undefined ? {} : { corporateAdmin: new CorporateAdminStore(databasePool, yandexMediaStorage), corporateInvitations: new CorporateInvitationsStore(databasePool) }),
+    ...(databasePool === undefined ? {} : { corporateAdmin: new CorporateAdminStore(databasePool, yandexMediaStorage), corporateInvitations: new CorporateInvitationsStore(databasePool), corporateServices: new CorporateServicesStore(databasePool) }),
     ...(pilotTrainerFinance === undefined ? {} : { pilotTrainerFinance }),
     ...(pilotWorkoutsWriter === undefined ? {} : { pilotWorkoutsWriter }),
     ...(pilotWorkoutTemplates === undefined ? {} : { pilotWorkoutTemplates }),
