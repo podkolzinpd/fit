@@ -1,4 +1,4 @@
-import { LIVE_WORKOUT_REQUEST_TIMEOUT_MS } from './auth-fetch'
+const LIVE_WORKOUT_REQUEST_TIMEOUT_MS = 12_000
 import {
   fetchWithRequestDiagnostics,
   fetchWithYandexPlatformReadRetry,

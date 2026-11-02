@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto'
 import { readdir, readFile } from 'node:fs/promises'
 
 const migrationsDirectory = new URL('../supabase/migrations/', import.meta.url)
-const typeFile = new URL('../src/data/database.types.ts', import.meta.url)
+const typeFile = new URL('../supabase/database.types.ts', import.meta.url)
 const names = (await readdir(migrationsDirectory)).filter((name) => name.endsWith('.sql')).sort()
 const hash = createHash('sha256')
 for (const name of names) hash.update(name).update('\0').update(await readFile(new URL(name, migrationsDirectory))).update('\0')

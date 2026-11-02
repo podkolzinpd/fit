@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { parseTrainerDiscoveryPrompt } from './trainer-discovery.repository'
+import { parseTrainerDiscoveryPrompt } from './trainer-discovery-prompt'
 
 describe('trainer discovery repository', () => {
   it('parses the server-owned prompt state', () => {

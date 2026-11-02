@@ -11,12 +11,7 @@ const repository = vi.hoisted(() => ({
   setCategoryEnabled: vi.fn(),
   sendTestPush: vi.fn(),
 }))
-vi.mock('../../data/repositories/push-notifications.repository', () => ({
-  pushNotificationsRepository: repository,
-  CHAT_MESSAGE_KIND: 'chat_message',
-  WORKOUT_REMINDER_KIND: 'workout_reminder',
-  WORKOUT_SCHEDULED_KIND: 'workout_scheduled',
-}))
+
 
 const isPushSupported = vi.hoisted(() => vi.fn<() => boolean>())
 const getCurrentPushSubscription = vi.hoisted(() => vi.fn<() => Promise<{ endpoint: string; p256dh: string; authKey: string } | null>>())
@@ -314,4 +309,9 @@ describe('NotificationsSetting', () => {
     expect(repository.setCategoryEnabled).toHaveBeenCalledWith(USER_ID, 'workout_reminder', false)
     expect(nativeReminder.cancelAll).toHaveBeenCalledOnce()
   })
+})
+
+vi.mock('../../app/data-backend-context', async () => {
+  const { nativeBackend } = await import('../../test/native-backend')
+  return { useDataBackend: () => ({ ...nativeBackend, pushNotifications: repository }) }
 })

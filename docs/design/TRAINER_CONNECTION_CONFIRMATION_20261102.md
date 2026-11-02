@@ -173,3 +173,17 @@ setup найден в мобильном сценарии интервалов �
 за5.9s,retries0; E2E types/lint/diffcheck passed. WebKit интервалы проверяются.
 Дальше: интегрировать новый main, повторить затронутые проверки и полный CI
 точного итогового head; публикация ещё не выполнена.
+
+
+### Итерация7 — 02.11.2026 — Codex / OpenAI
+
+Задача: устранить конфликты с main4e283aa5 после слияния PR1929.
+Расхождения: основной DataBackend перенесён в provider-neutral contracts;
+наш новый optional capability был добавлен по прежнему месту объявления.
+Сделано: сохранены context и native-only контракт PR1929; trainerConnections
+добавлен в src/data/contracts/backend.ts. В CURRENT_STATE сохранены оба индекса.
+Удалённый frontend SDK/legacy transport не восстановлен; новые API/SQL и UI
+consent сохранены. Отвергнуто: выбрать целиком старый context и вернуть legacy.
+Проверка: после merge повторяются types/check/build и затронутые browser tests;
+предыдущие проверки не выдаются за результат нового head.
+Дальше: exact-head CI; затем штатный выпуск и readback.

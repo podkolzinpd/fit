@@ -4,7 +4,6 @@ import { localDate } from '../../shared/local-date'
 import type { NutritionConnection, NutritionDraft, NutritionEntry } from '../../shared/nutrition'
 import { resetYandexPlatformRequestStateForTests } from '../queries/request-diagnostics'
 import { createYandexMainRepository } from './yandex-main.repository'
-import { unsupportedNutritionRepository } from './nutrition.repository'
 
 const actor: SessionActor = { kind: 'trainer', role: 'trainer', userId: 'f00d0000-6010-4000-8000-000000000004',
   email: null, firstName: 'Тренер', lastName: null, timezone: 'Europe/Moscow' }
@@ -84,8 +83,3 @@ it.each([[409, 'conflict', 'PT409'], [403, 'forbidden', 'PT403'], [429, 'rate_li
     expect(fetchMock.mock.calls.filter(([, init]) => init?.method === 'PUT')).toHaveLength(1)
   },
 )
-
-it('unsupported legacy composition does not become a second nutrition store', async () => {
-  await expect(unsupportedNutritionRepository.day(localDate(entry.day))).rejects.toMatchObject({ code: 'nutrition_unavailable' })
-  await expect(unsupportedNutritionRepository.save(draft)).rejects.toMatchObject({ code: 'nutrition_unavailable' })
-})

@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react'
-import type { WorkoutParseResponse } from '../../data/repositories/exercises.repository'
+import type { WorkoutParseResponse } from '../../shared/workout-parse-response'
 import type { ExerciseSnapshot } from '../../shared/domain'
 import { CloseIcon } from '../../shared/icons'
 import { prepareZeroReplacement } from '../../shared/numeric-input'
