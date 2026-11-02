@@ -10,7 +10,8 @@ interface VoiceNoteFieldProps {
   onValueChange?: (value: string) => void
   onManualValueChange?: (value: string) => void
   onTranscriptValueChange?: (value: string) => void
-  onTranscriptAppended?: (event: { previousValue: string; value: string; transcript: string }) => void | Promise<void>
+  /** Return the formatted value so undo still owns that automatic replacement. */
+  onTranscriptAppended?: (event: { previousValue: string; value: string; transcript: string }) => string | void | Promise<string | void>
   label?: string
   voiceLabel?: string
   voiceBeta?: boolean
@@ -62,6 +63,7 @@ export function VoiceNoteField({ name, source, defaultValue, value, onValueChang
       if (!textareaRef.current) return
       const previous = textareaRef.current.value
       const nextValue = appendTranscript(previous, text)
+      let appliedValue = nextValue
       if (onTranscriptValueChange) onTranscriptValueChange(nextValue)
       else if (onValueChange) onValueChange(nextValue)
       else {
@@ -71,14 +73,21 @@ export function VoiceNoteField({ name, source, defaultValue, value, onValueChang
       if (onTranscriptAppended) {
         setIsTranscriptProcessing(true)
         const processing = onTranscriptAppended({ previousValue: previous, value: nextValue, transcript: text.trim() })
-        if (processing && typeof processing.then === 'function') void processing.finally(() => setIsTranscriptProcessing(false))
-        else setIsTranscriptProcessing(false)
+        if (processing && typeof processing !== 'string' && typeof processing.then === 'function') {
+          void processing.then((formatted) => {
+            if (typeof formatted === 'string') appliedValue = formatted
+          }).finally(() => setIsTranscriptProcessing(false))
+        } else {
+          if (typeof processing === 'string') appliedValue = processing
+          setIsTranscriptProcessing(false)
+        }
       }
       textareaRef.current.focus()
       return () => {
-        if (!textareaRef.current || textareaRef.current.value !== nextValue) return
-        if (onTranscriptValueChange) onTranscriptValueChange(previous)
-        else if (onValueChange) onValueChange(previous)
+        if (!textareaRef.current || textareaRef.current.value !== appliedValue) return
+        // Undo is a user edit: invalidate pending parsing and derived previews.
+        if (onValueChange) onValueChange(previous)
+        else if (onTranscriptValueChange) onTranscriptValueChange(previous)
         else {
           textareaRef.current.value = previous
           textareaRef.current.dispatchEvent(new Event('input', { bubbles: true }))

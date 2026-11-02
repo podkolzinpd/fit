@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { act, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import type { Client } from '../../shared/domain'
@@ -55,12 +55,58 @@ describe('ClientPicker', () => {
     expect(screen.getByText('Борис Иванов')).toBeInTheDocument()
     expect(screen.queryByText('Анна Смирнова')).not.toBeInTheDocument()
 
-    await user.click(screen.getByRole('button', { name: 'Новый клиент' }))
+    await user.click(screen.getByRole('button', { name: 'Клиент' }))
     expect(screen.getByLabelText('Имя нового клиента')).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'К выбору' }))
     expect(screen.getByLabelText('Поиск клиента')).toBeInTheDocument()
 
     await user.click(screen.getByText('Борис Иванов'))
     expect(onChange).toHaveBeenCalledWith('boris')
+  })
+})
+
+
+describe('inline client creation', () => {
+  it('prefills search, blocks duplicate submission and selects only after success', async () => {
+    const user = userEvent.setup(), change = vi.fn()
+    let complete!: (value: { id: string; fullName: string }) => void
+    const create = vi.fn(() => new Promise<{ id: string; fullName: string }>(resolve => { complete = resolve }))
+    render(<ClientPicker userId="trainer" clients={[]} selectedId="" onChange={change} onCreate={create} initialOpen hideTrigger />)
+    await user.type(screen.getByLabelText('Поиск клиента'), 'Новая спортсменка')
+    await user.click(screen.getByRole('button', { name: 'Клиент' }))
+    expect(screen.getByLabelText('Имя нового клиента')).toHaveValue('Новая спортсменка')
+    await user.dblClick(screen.getByRole('button', { name: 'Добавить и выбрать' }))
+    expect(create).toHaveBeenCalledOnce()
+    expect(change).not.toHaveBeenCalled()
+    expect(screen.getByRole('button', { name: 'Закрыть' })).toBeDisabled()
+    await act(async () => { complete({ id: 'created', fullName: 'Новая спортсменка' }); await Promise.resolve() })
+    expect(change).toHaveBeenCalledExactlyOnceWith('created')
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+  })
+  it('retains the name after a rejected creation and keeps search on cancel', async () => {
+    const user = userEvent.setup(), change = vi.fn(), create = vi.fn().mockRejectedValue(new Error('Проверьте имя'))
+    render(<ClientPicker userId="trainer" clients={[]} selectedId="" onChange={change} onCreate={create} initialOpen hideTrigger />)
+    await user.type(screen.getByLabelText('Поиск клиента'), 'Новая спортсменка')
+    await user.click(screen.getByRole('button', { name: 'Клиент' }))
+    await user.click(screen.getByRole('button', { name: 'Добавить и выбрать' }))
+    expect(await screen.findByText('Проверьте имя')).toBeVisible()
+    expect(screen.getByLabelText('Имя нового клиента')).toHaveValue('Новая спортсменка')
+    await user.click(screen.getByRole('button', { name: 'К выбору' }))
+    expect(screen.getByLabelText('Поиск клиента')).toHaveValue('Новая спортсменка')
+    expect(change).not.toHaveBeenCalled()
+  })
+  it('requires checking the list after an unknown creation outcome', async () => {
+    const user = userEvent.setup(), change = vi.fn(), retry = vi.fn()
+    const create = vi.fn().mockRejectedValue(Object.assign(new Error('Соединение потеряно'), { code: 'network_unavailable' }))
+    render(<ClientPicker userId="trainer" clients={[]} selectedId="" onChange={change} onCreate={create} onRetry={retry} initialOpen hideTrigger />)
+    await user.click(screen.getByRole('button', { name: 'Клиент' }))
+    await user.type(screen.getByLabelText('Имя нового клиента'), 'Новая спортсменка')
+    await user.click(screen.getByRole('button', { name: 'Добавить и выбрать' }))
+    expect(await screen.findByText(/Вернитесь к списку/)).toBeVisible()
+    expect(screen.getByRole('button', { name: 'Добавить и выбрать' })).toBeDisabled()
+    await user.click(screen.getByRole('button', { name: 'К выбору' }))
+    expect(retry).toHaveBeenCalledOnce()
+    expect(create).toHaveBeenCalledOnce()
+    expect(change).not.toHaveBeenCalled()
   })
 })

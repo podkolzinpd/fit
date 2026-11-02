@@ -590,9 +590,9 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
     let enrollmentPool: PgDatabasePool | undefined
     let runtimePool: PgDatabasePool | undefined
 
-    it('reschedules one coach plan with its interval, replay and all existing data intact', async () => {
+    it('reschedules every coach lifecycle state with interval, replay, facts and charged finance intact', async () => {
       if (!ownerPool || !runtimePool) throw new Error('Database not ready')
-      const id = randomUUID(), exercise = randomUUID(), set = randomUUID(), operation = randomUUID()
+      const id = randomUUID(), exercise = randomUUID(), set = randomUUID(), operation = randomUUID(), packageId = randomUUID()
       await ownerPool.query(`insert into public.workouts(id,trainer_id,client_id,created_by,workout_date,start_time,end_time,status,title,notes,training_format)
         values($1,$2,$3,$2,current_date,'10:00','11:00','planned','Synthetic slot','Keep note','with_trainer')`, [id,ACTOR_ID,CLIENT_ID])
       try {
@@ -619,15 +619,47 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
         expect(await move(2,null,randomUUID())).toBe(3)
         expect(await withActorTransaction(runtimePool,ACTOR_ID,client => rescheduleWorkout(client,id,'2099-01-01','23:00',3,{endTime:'01:00',operationId:randomUUID()}))).toBe(4)
         expect((await ownerPool.query('select start_time::text,end_time::text from public.workouts where id=$1',[id])).rows).toEqual([{start_time:'23:00:00',end_time:'01:00:00'}])
-        await ownerPool.query("update public.workouts set status='in_progress',started_at=now() where id=$1",[id])
-        await expect(move(4,null,randomUUID())).rejects.toThrow()
-        await ownerPool.query("update public.workouts set status='done',completed_at=now() where id=$1",[id])
-        await expect(move(4,null,randomUUID())).rejects.toThrow()
-        await ownerPool.query("update public.workouts set status='planned',started_at=null,completed_at=null where id=$1",[id])
+        await ownerPool.query('update public.workout_sets set fact_weight_kg=35,fact_reps=10,confirmed_at=now() where id=$1',[set])
+        const snapshot = async () => (await ownerPool!.query<{
+          root: unknown; exercises: unknown; sets: unknown; sessions: unknown[] | null; package: unknown[] | null; events: unknown
+        }>(`select
+          -- Existing calorie triggers refresh cache timestamps on a metadata update; values must stay identical.
+          to_jsonb(w)-array['workout_date','start_time','end_time','version','updated_at','updated_by','calorie_v2_shadow_at','calorie_estimated_at'] as root,
+          (select jsonb_agg(to_jsonb(e)) from public.workout_exercises e where e.workout_id=w.id) as exercises,
+          (select jsonb_agg(to_jsonb(s)) from public.workout_sets s where s.workout_exercise_id=$2) as sets,
+          (select jsonb_agg(to_jsonb(s)) from public.trainer_finance_sessions s where s.workout_id=w.id) as sessions,
+          (select jsonb_agg(to_jsonb(p)) from public.trainer_finance_packages p where p.id=$3) as package,
+          (select jsonb_agg(to_jsonb(e) order by e.id) from public.trainer_finance_events e where e.trainer_id=w.trainer_id and e.client_id=w.client_id) as events
+          from public.workouts w where w.id=$1`,[id,exercise,packageId])).rows
+        let version = 4
+        for (const status of ['in_progress','done','cancelled']) {
+          await ownerPool.query("update public.workouts set status=$2,started_at=case when $2='cancelled' then null else coalesce(started_at,now()) end,completed_at=case when $2='done' then now() else null end where id=$1",[id,status])
+          if (status === 'done') {
+            await ownerPool.query(`insert into public.trainer_finance_packages(id,trainer_id,client_id,title,sessions_total,price_cents,starts_on)
+              values($1,$2,$3,'Slot preservation',10,250000,current_date)`,[packageId,ACTOR_ID,CLIENT_ID])
+            await ownerPool.query(`insert into public.trainer_finance_sessions(workout_id,trainer_id,client_id,package_id,disposition,source)
+              values($1,$2,$3,$4,'charged','automatic')`,[id,ACTOR_ID,CLIENT_ID,packageId])
+          }
+          if (status === 'cancelled') await ownerPool.query("update public.trainer_finance_sessions set voided_at=now(),void_reason='Synthetic cancellation' where workout_id=$1",[id])
+          const before = await snapshot(), op = randomUUID()
+          if (status === 'done') {
+            expect(before[0]?.sessions).toHaveLength(1)
+            expect(before[0]?.package).toHaveLength(1)
+          }
+          expect(await move(version,null,op)).toBe(version+1)
+          expect(await move(version,null,op)).toBe(version+1)
+          expect(await snapshot()).toEqual(before)
+          await expect(move(version,null,randomUUID())).rejects.toMatchObject({failure:'conflict'})
+          await expect(move(version+1,null,randomUUID(),OUTSIDE_TRAINER_ID)).rejects.toMatchObject({failure:'forbidden'})
+          await expect(move(version+1,null,randomUUID(),OTHER_ACTOR_ID)).rejects.toMatchObject({failure:'forbidden'})
+          version++
+        }
         await ownerPool.query('update public.clients set archived_at=now() where id=$1',[CLIENT_ID])
-        await expect(move(4,null,randomUUID())).rejects.toMatchObject({failure:'forbidden'})
+        await expect(move(version,null,randomUUID())).rejects.toMatchObject({failure:'forbidden'})
       } finally {
         await ownerPool.query('update public.clients set archived_at=null where id=$1',[CLIENT_ID])
+        await ownerPool.query('delete from public.trainer_finance_sessions where workout_id=$1',[id])
+        await ownerPool.query('delete from public.trainer_finance_packages where id=$1',[packageId])
         await ownerPool.query('delete from public.workouts where id=$1',[id])
         await ownerPool.query("delete from app_private.live_workout_operations where resource_id=$1",[id])
       }
@@ -7325,6 +7357,45 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
       })
 
       await ownerPool.query('delete from public.workouts where id = $1', [POST_WORKOUT_ID])
+    })
+
+    it('guards new future completion atomically while retaining done rescheduling and local dates', async () => {
+      if (!ownerPool || !runtimePool) throw new Error('Database pools are not ready')
+      const card=randomUUID(), athlete=randomUUID(), pack=randomUUID()
+      // The import fast path can only accept dates before every supported local today.
+      expect((await ownerPool.query<{safe:boolean}>("select ((now() at time zone 'UTC')::date - 2) < min((now() at time zone name)::date) as safe from pg_catalog.pg_timezone_names")).rows).toEqual([{safe:true}])
+      await ownerPool.query("insert into public.profiles(id,first_name,account_role,timezone) values($1,'Completion date fixture','client','Pacific/Kiritimati')",[athlete])
+      await ownerPool.query("insert into public.clients(id,trainer_id,auth_user_id,full_name) values($1,$2,$3,'Date fixture')",[card,ACTOR_ID,athlete])
+      await ownerPool.query('insert into public.client_trainer_relationships(client_id,trainer_id,connected_by) values($1,$2,$3)',[card,ACTOR_ID,athlete])
+      await ownerPool.query("insert into public.trainer_finance_packages(id,trainer_id,client_id,title,sessions_total,price_cents,starts_on) values($1,$2,$3,'Date package',10,0,current_date-2)",[pack,ACTOR_ID,card])
+      try {
+        const id=randomUUID(), op=randomUUID()
+        await ownerPool.query("insert into public.workouts(id,trainer_id,client_id,created_by,workout_date,status,training_format) values($1,$2,$3,$2,current_date+3,'planned','with_trainer')",[id,ACTOR_ID,card])
+        await expect(withActorTransaction(runtimePool,ACTOR_ID,c=>finishLiveWorkout(c,id,1,op,{disposition:'auto',packageId:null}))).rejects.toMatchObject({failure:'invalid'})
+        expect((await ownerPool.query('select status,version::int from public.workouts where id=$1',[id])).rows).toEqual([{status:'planned',version:1}])
+        expect((await ownerPool.query('select count(*)::int n from public.trainer_finance_sessions where workout_id=$1',[id])).rows).toEqual([{n:0}])
+        const today=(await ownerPool.query<{day:string}>("select (now() at time zone coalesce((select timezone from public.profiles where id=$1),'Europe/Moscow'))::date::text as day",[ACTOR_ID])).rows[0]!.day
+        const moved=await withActorTransaction(runtimePool,ACTOR_ID,c=>rescheduleWorkout(c,id,today,null,1,{endTime:null,operationId:randomUUID()}))
+        const finish=()=>withActorTransaction(runtimePool!,ACTOR_ID,c=>finishLiveWorkout(c,id,moved,op,{disposition:'auto',packageId:null}))
+        expect((await finish()).replayed).toBe(false);expect((await finish()).replayed).toBe(true)
+        const finance=(await ownerPool.query('select to_jsonb(s) row from public.trainer_finance_sessions s where workout_id=$1',[id])).rows
+        expect(finance).toHaveLength(1)
+        await withActorTransaction(runtimePool,ACTOR_ID,c=>rescheduleWorkout(c,id,'2099-01-01',null,moved+1,{endTime:null,operationId:randomUUID()}))
+        expect((await ownerPool.query('select to_jsonb(s) row from public.trainer_finance_sessions s where workout_id=$1',[id])).rows).toEqual(finance)
+        const day=(await ownerPool.query<{day:string}>("select (now() at time zone 'Pacific/Kiritimati')::date::text as day")).rows[0]!.day
+        const draft:PlannedWorkoutDraft={id:null,requestId:randomUUID(),clientId:card,workoutDate:'2099-01-01',startTime:null,endTime:null,notes:null,trainingFormat:'self',exercises:[{position:0,source:'system',ref:'squat',customExerciseId:null,name:'Присед',muscleGroup:'legs',inputKind:'strength',blockId:randomUUID(),blockType:'single',blockPreset:'set',blockRounds:1,restBetweenExercisesSec:0,restBetweenRoundsSec:0,restBetweenSetsSec:90,trainerComment:null,sets:[{position:0,weightKg:30,reps:10,durationSec:null,durationMin:null,distanceKm:null,rpe:null}]}]}
+        await expect(withActorTransaction(runtimePool,athlete,c=>saveCompletedWorkout(c,draft,null))).rejects.toMatchObject({failure:'invalid'})
+        const saved=await withActorTransaction(runtimePool,athlete,c=>saveCompletedWorkout(c,{...draft,workoutDate:day,requestId:randomUUID()},null))
+        expect((await ownerPool.query('select status,workout_date::text as day from public.workouts where id=$1',[saved.id])).rows).toEqual([{status:'done',day}])
+      } finally {
+        await ownerPool.query('delete from public.trainer_finance_sessions where client_id=$1',[card])
+        await ownerPool.query('delete from public.workouts where client_id=$1',[card])
+        await ownerPool.query('delete from public.trainer_finance_packages where client_id=$1',[card])
+        await ownerPool.query('delete from public.trainer_finance_events where client_id=$1',[card])
+        await ownerPool.query('delete from public.client_trainer_relationships where client_id=$1',[card])
+        await ownerPool.query('delete from public.clients where id=$1',[card])
+        await ownerPool.query('delete from public.profiles where id=$1',[athlete])
+      }
     })
 
     it('confirms the same empty appointment atomically with existing package accounting and replay', async () => {

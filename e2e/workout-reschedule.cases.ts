@@ -3,6 +3,53 @@ import { beginClientGesture, mockPilot, restTimerWorkout, workoutId } from './fi
 
 export function workoutRescheduleCases() {
   test.skip(process.env.FIT_YANDEX_E2E_REQUIRED !== 'true', 'Uses the mandatory native appointment lane')
+  // Status gates differ on the server; hour heights differ in the two densities.
+  // Share the short scenario instead of repeating the long gesture regression.
+  for (const density of ['comfortable', 'compact'] as const) test(`coach moves every lifecycle status in ${density} day grid`, async ({ page, browserName }, info) => {
+    const profileId = 'c0ac0000-6010-4000-8000-000000000001'
+    const targets = (['planned', 'in_progress', 'done', 'cancelled'] as const).map((status, index) => ({
+      ...restTimerWorkout(), id: `c0ac0000-6010-4000-8000-00000000900${index}`, trainerId: profileId, createdBy: profileId,
+      clientName: `Статус ${status}`, status, workoutDate: '2026-11-02', startTime: `${10 + index * 2}:00`, endTime: `${11 + index * 2}:00`,
+      startedAt: status === 'planned' || status === 'cancelled' ? null : '2026-11-02T07:00:00Z', completedAt: status === 'done' ? '2026-11-02T08:00:00Z' : null,
+      trainingFormat: 'with_trainer' as const,
+    }))
+    const backend = await mockPilot(page, { profileId, fitLime: true, scheduleDensity: density, workouts: targets })
+    const commands: unknown[] = []
+    await page.route('**/v1/workouts/*/reschedule', async route => {
+      const id = new URL(route.request().url()).pathname.split('/').at(-2)
+      const command = route.request().postDataJSON() as { workoutDate: string; startTime: string; endTime: string; expectedVersion: number }
+      commands.push(command)
+      Object.assign(backend.getWorkouts().find(workout => workout.id === id)!, {
+        workoutDate: command.workoutDate, startTime: command.startTime, endTime: command.endTime, version: command.expectedVersion + 1,
+      })
+      await route.fulfill({ json: { workout: { id, version: command.expectedVersion + 1 } } })
+    })
+    await page.goto('/today?date=2026-11-02&week=2026-11-02')
+    for (const [index, target] of targets.entries()) {
+      const before = structuredClone(backend.getWorkouts().find(workout => workout.id === target.id)!)
+      const card = page.locator(`[data-workout-id="${target.id}"]`)
+      await card.evaluate(node => node.scrollIntoView({ block: 'center' }))
+      const hold = await beginClientGesture(page, card, browserName, card.locator('b'))
+      await page.waitForTimeout(460)
+      await expect(card).toHaveClass(/is-slot-moving/)
+      await hold.move(0, density === 'compact' ? 22 : 28)
+      await hold.end()
+      const sheet = page.getByRole('dialog', { name: 'Дата и время', exact: true })
+      await expect(sheet.getByLabel('Начало', { exact: true })).toHaveValue(`${10 + index * 2}:30`)
+      expect(commands).toHaveLength(index)
+      if (target.status === 'done') await page.screenshot({ path: info.outputPath(`completed-slot-${density}.png`) })
+      await sheet.getByRole('button', { name: 'Перенести', exact: true }).click()
+      await expect(sheet).toHaveCount(0)
+      expect(commands).toHaveLength(index + 1)
+      expect(backend.getWorkouts().find(workout => workout.id === target.id)).toEqual({
+        ...before, startTime: `${10 + index * 2}:30`, endTime: `${11 + index * 2}:30`, version: before.version + 1,
+      })
+    }
+    await page.goto(`/workouts/${targets[2]!.id}`)
+    await page.getByRole('button', { name: 'Изменить дату и время тренировки' }).click()
+    await expect(page.getByRole('dialog', { name: 'Дата и время', exact: true })).toBeVisible()
+    expect(commands).toHaveLength(4)
+  })
   for (const [height, keepNotice] of [[520, false], [672, true]] as const) test(`coach sees the moved appointment above navigation on a short screen ${height} after a next-week move`, async ({ page }, info) => {
     await page.setViewportSize({ width: 390, height })
     const profileId = 'c0ac0000-6010-4000-8000-000000000001'

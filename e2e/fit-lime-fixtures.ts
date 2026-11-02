@@ -918,7 +918,7 @@ export const publicTrainerDraft = {
   avatarDataUrl: null,
   photos: [0, 1].map((index) => ({ id: `10000000-0000-4000-8000-00000000006${index + 1}`, url: 'http://127.0.0.1:5173/assets/startup-photo-983c93dc4df8.jpg', thumbnailUrl: 'http://127.0.0.1:5173/assets/startup-photo-983c93dc4df8.jpg', mimeType: 'image/jpeg', width: 940, height: 1673 })),
   certificates: [{ title: 'Тестовый сертификат', organization: 'Фикстура', year: 2020 }],
-}
+} satisfies import('../src/shared/domain').TrainerProfileDraft
 
 export async function mockPublicTrainer(page: Page) {
   await page.route(`**/v1/trainers/${publicTrainerId}/public-profile`, (route) => route.fulfill({ contentType: 'application/json', body: JSON.stringify({ publicId: publicTrainerId, draft: publicTrainerDraft, published: publicTrainerDraft, listedInCatalog: true, publishedAt: '2026-09-24T09:00:00.000Z', updatedAt: '2026-09-24T09:00:00.000Z', version: 1, isBrandTrainer: false }) }))

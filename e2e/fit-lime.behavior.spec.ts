@@ -312,7 +312,7 @@ test('Figma workout Coach reference full editor is absent for non-pilot trainer'
   await expect(page.getByLabel('Запись тренировки')).toBeVisible()
 })
 
-test('Figma workout Coach reference second trainer starts immediately after client choice', async ({ page }) => {
+test('Figma workout Coach reference second trainer starts explicitly after client and format choice', async ({ page }) => {
   await mockPilot(page, { profileId: 'c0ac0000-6010-4000-8000-000000000002', fitLime: true, workouts: [] })
   await page.goto('/today?date=2026-09-24')
   await page.getByRole('button', { name: 'Новая тренировка', exact: true }).click()
@@ -321,6 +321,8 @@ test('Figma workout Coach reference second trainer starts immediately after clie
   await expect(picker).toHaveClass(/coach-reference-sheet/)
   await expect(picker.getByRole('button', { name: 'Применить клиента' })).toHaveCount(0)
   await picker.getByRole('button', { name: /Алексей Смирнов/ }).click()
+  await expect(page.locator('.quick-start-format')).toBeVisible()
+  await page.getByRole('button', { name: 'Начать тренировку', exact: true }).click()
   await expect(page).toHaveURL(/\/live$/)
   await expect(page.locator('.quick-start-format')).toHaveCount(0)
 })
@@ -447,7 +449,6 @@ for (const [role, profileId, expected] of [
     if (role === 'trainer') {
       await page.goto('/schedule?week=2026-09-21')
       await expect(page.locator('.coach-schedule-filter-options')).toHaveCount(expected ? 1 : 0)
-      if (expected) await checkCoachScheduleFilters(page)
     }
   })
 }
@@ -856,6 +857,10 @@ test('Achievement collection restores earned badges after signing in again', asy
   await expect(first.locator('.athlete-achievement-badge')).toHaveClass(/is-earned/)
 })
 
+test('Figma calendar Coach filters retain selection through unified route history', { tag: ['@lime-critical'] }, async ({ page }) => {
+  await checkCoachScheduleFilters(page)
+})
+
 async function checkCoachScheduleFilters(page: Page) {
   await page.setViewportSize({ width: 390, height: 844 })
   await page.clock.setFixedTime(new Date('2026-09-24T09:00:00+03:00'))
@@ -897,7 +902,7 @@ async function checkCoachScheduleFilters(page: Page) {
   await page.getByRole('group', { name: 'Вид расписания' }).getByRole('button', { name: 'Список', exact: true }).click()
   await expect(page).toHaveURL(/mode=list/)
   await expect(summary).toHaveText('Фильтры · 3')
-  await page.getByRole('group', { name: 'Вид расписания' }).getByRole('button', { name: 'Календарь', exact: true }).click()
+  await page.getByRole('group', { name: 'Вид расписания' }).getByRole('button', { name: 'Неделя', exact: true }).click()
   await page.reload()
   await expect(summary).toHaveText('Фильтры · 3')
   await expect(filters).not.toHaveAttribute('open')
@@ -912,7 +917,7 @@ async function checkCoachScheduleFilters(page: Page) {
   await expect(page.locator('.schedule-v2-event')).toHaveCount(2)
   await page.goBack()
   await page.goBack()
-  await expect(page).toHaveURL(/\/schedule\?/)
+  await expect(page).toHaveURL(/\/today\?/)
   await expect(summary).toHaveText('Фильтры · 3')
   await expect(filters).not.toHaveAttribute('open')
   await summary.click()
@@ -994,7 +999,7 @@ for (const fitLime of [true, false]) {
   })
 }
 
-test('Lime direct start opens Live immediately after choosing the client', async ({ page }) => {
+test('Lime direct start requires explicit confirmation after choosing the client', async ({ page }) => {
   await mockPilot(page, { fitLime: true, workouts: [] })
   const commands: unknown[] = []
   page.on('request', (request) => { if (request.url().endsWith('/workouts/quick-start')) commands.push(request.postDataJSON() as unknown) })
@@ -1002,24 +1007,25 @@ test('Lime direct start opens Live immediately after choosing the client', async
   await page.getByRole('button', { name: 'Новая тренировка', exact: true }).click()
   await page.getByRole('button', { name: 'Начать сейчас', exact: true }).click()
   await page.getByRole('dialog', { name: 'Выбор клиента' }).getByRole('button', { name: /Алексей Смирнов/ }).click()
+  expect(commands).toHaveLength(0)
+  await page.getByRole('button', { name: 'Начать тренировку', exact: true }).click()
   await expect(page).toHaveURL(new RegExp(`/workouts/${newWorkoutId}/live$`))
   await expect(page.locator('.live-workout-page')).toBeVisible()
   expect(commands).toHaveLength(1)
   expect(commands[0]).toMatchObject({ clientId, trainingFormat: 'with_trainer' })
 })
 
-test('Lime keeps unparsed plan text when returning before choosing a client', async ({ page }) => {
+test('Lime keeps unparsed plan text and returns directly to its planning card', async ({ page }) => {
   await mockPilot(page, { fitLime: true })
   await page.goto('/today?date=2026-09-24')
   await page.getByRole('button', { name: 'Новая тренировка', exact: true }).click()
   await page.getByRole('button', { name: 'Запланировать', exact: true }).click()
   await page.getByRole('button', { name: 'Ввести текстом' }).click()
   await page.getByRole('textbox', { name: 'Тренировка', exact: true }).fill('Планка три раза по минуте')
-  await page.getByRole('button', { name: '← В календарь' }).click()
-  await page.getByRole('button', { name: 'Новая тренировка', exact: true }).click()
-  await page.getByRole('button', { name: 'Запланировать', exact: true }).click()
-  await page.getByRole('button', { name: 'Продолжить черновик' }).click()
-  await page.getByRole('button', { name: 'Ввести текстом' }).click()
+  await page.getByRole('button', { name: '← К планированию' }).click()
+  const form = page.getByRole('dialog', { name: 'Быстрое создание тренировки' })
+  await expect(form).toBeVisible()
+  await form.getByRole('button', { name: 'Ввести текстом' }).click()
   await expect(page.getByRole('textbox', { name: 'Тренировка', exact: true })).toHaveValue('Планка три раза по минуте')
 })
 
@@ -1033,13 +1039,13 @@ test('Lime plan rejects an end time without start before any save command', asyn
   await page.getByRole('button', { name: 'Выбрать дату и время' }).click()
   await page.getByLabel('Окончание', { exact: true }).fill('15:00')
   await page.getByRole('button', { name: 'Применить дату' }).click()
-  await page.getByRole('button', { name: 'Сохранить план' }).click()
+  await page.getByRole('button', { name: 'Запланировать' }).click()
   await expect(page.getByRole('alert')).toContainText('Укажите начало тренировки')
   expect(backend.getSaveAttempts()).toBe(0)
   await page.getByRole('button', { name: 'Выбрать дату и время' }).click()
   await page.getByLabel('Начало', { exact: true }).fill('14:00')
   await page.getByRole('button', { name: 'Применить дату' }).click()
-  await page.getByRole('button', { name: 'Сохранить план' }).click()
+  await page.getByRole('button', { name: 'Запланировать' }).click()
   await expect(page.getByRole('dialog', { name: 'Быстрое создание тренировки' })).toHaveCount(0)
   expect(backend.getSaveAttempts()).toBe(1)
 })
@@ -1056,7 +1062,8 @@ test('Lime start now retries one command without using the selected future date'
   await page.getByRole('button', { name: 'Новая тренировка', exact: true }).click()
   await page.getByRole('button', { name: 'Начать сейчас' }).click()
   await page.getByRole('dialog', { name: 'Выбор клиента' }).getByRole('button', { name: /Алексей Смирнов/ }).click()
-  await expect(page.getByRole('button', { name: 'Начать', exact: true })).toHaveCount(0)
+  expect(commands).toHaveLength(0)
+  await page.getByRole('button', { name: 'Начать тренировку', exact: true }).click()
   await expect(page.getByRole('button', { name: 'Запланировать', exact: true })).toHaveCount(0)
   await expect(page.getByRole('alert')).toContainText('Не удалось начать тренировку')
   await page.getByRole('button', { name: 'Повторить', exact: true }).click()
@@ -1084,7 +1091,7 @@ test('Figma workout second pilot keeps quick-plan guidance and separate complete
   await guidance.getByRole('button', { name: 'Понятно' }).click()
   await page.getByRole('textbox', { name: 'Название тренировки' }).fill('Силовая')
   await page.getByRole('button', { name: 'Добавить упражнения', exact: true }).click()
-  await expect(page.getByRole('button', { name: 'Завершённая', exact: true })).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'Завершённая', exact: true })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Сохранить план', exact: true })).toBeVisible()
   await page.goto('/today?date=2026-09-24')
   await page.getByRole('button', { name: 'Новая тренировка', exact: true }).click()
@@ -1897,6 +1904,7 @@ test('Lime complete lifecycle preserves one plan through start resume and finish
   await page.getByRole('button', { name: 'Новая тренировка', exact: true }).click()
   await page.getByRole('button', { name: 'Начать сейчас', exact: true }).click()
   await page.getByRole('dialog', { name: 'Выбор клиента' }).getByRole('button', { name: /Алексей Смирнов/ }).click()
+  await page.getByRole('button', { name: 'Продолжить тренировку', exact: true }).click()
   await expect(page).toHaveURL(new RegExp(`/workouts/${newWorkoutId}/live$`))
   const before = JSON.stringify(backend.getWorkouts()[0]!.exercises)
   await page.getByRole('button', { name: 'Завершить тренировку', exact: true }).click()

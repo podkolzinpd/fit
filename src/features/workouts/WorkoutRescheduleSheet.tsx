@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useDataBackend } from '../../app/data-backend-context'
 import type { Workout, WorkoutSlotDraft } from '../../shared/domain'
-import { addDays, formatLocalDate } from '../../shared/local-date'
+import { addDays, formatLocalDate, type LocalDate } from '../../shared/local-date'
 import { CloseIcon } from '../../shared/icons'
 import { FitLimeDatePicker } from '../../shared/FitLimeDatePicker'
 import { isRepositoryConflict } from '../../data/repositories/error'
@@ -12,7 +12,8 @@ import { CoachPlanTimeField } from './CoachPlanTimeField'
 import './workout-reschedule.css'
 
 /** One slot editor is shared by detail and calendar; it never saves the plan. */
-export function WorkoutRescheduleSheet({ workout: sourceWorkout, initialSlot, onSaved, onClose, onReloaded }: {
+export function WorkoutRescheduleSheet({ workout: sourceWorkout, initialSlot, onSaved, onClose, onReloaded, completionDateMax }: {
+  completionDateMax?: LocalDate
   workout: Workout; initialSlot?: WorkoutSlotDraft; onReloaded?: (workout: Workout) => void
   onSaved: (slot: WorkoutSlotDraft) => Promise<void>; onClose: () => void
 }) {
@@ -30,7 +31,7 @@ export function WorkoutRescheduleSheet({ workout: sourceWorkout, initialSlot, on
   const overlaps = overlappingWorkoutSlots(workout, slot, collisions.data ?? [])
   const start = slotMinutes(slot.startTime), end = slotMinutes(slot.endTime)
   const duration = slotDurationMinutes(slot.startTime, slot.endTime)
-  const invalid = end !== null && (start === null || end === start) ? 'Укажите начало и отличающееся от него окончание.' : null
+  const invalid = completionDateMax && slot.workoutDate > completionDateMax ? 'Для проведения выберите сегодня или прошедший день.' : end !== null && (start === null || end === start) ? 'Укажите начало и отличающееся от него окончание.' : null
   useEffect(() => {
     const previous = document.activeElement instanceof HTMLElement ? document.activeElement : null
     dialog.current?.showModal()
@@ -92,7 +93,7 @@ export function WorkoutRescheduleSheet({ workout: sourceWorkout, initialSlot, on
       {reload.error && <p className="error" role="alert">{reload.error.message}</p>}
       {conflict ? <button type="button" className="primary wide" disabled={busy} onClick={() => { setReloading(true); reload.mutate() }}>Открыть актуальную запись</button>
         : <button type="submit" className="primary wide" disabled={busy || Boolean(invalid) || collisions.isPending || collisions.isError} aria-busy={save.isPending}>
-          {save.isPending ? 'Переносим…' : save.isError ? 'Повторить' : overlaps.length ? 'Перенести всё равно' : 'Перенести'}
+          {save.isPending ? 'Сохраняем…' : save.isError ? 'Повторить' : completionDateMax ? 'Сохранить дату' : overlaps.length ? 'Перенести всё равно' : 'Перенести'}
         </button>}
       <button type="button" className="link workout-reschedule-cancel" disabled={busy} onClick={onClose}>Отмена</button>
     </form>

@@ -223,3 +223,29 @@ Darwin native control сохранён; в reference для form snapshots пр�
 `codex/native-frontend-test-fixtures`. Это перенос проверенного source diff
 из закрытого PR1909; PNG и fixture API не дублируются. Перед merge первого
 этапа второй не сливается; после первого его base обновляется на main.
+
+## P2 — актуализация PR1929 — 02.11.2026 — Codex / OpenAI
+
+Задача: поправить зависимый PR после слияния PR1928. База main903f1409.
+Расхождения: старая ветка58dd5e1f не содержала исправлений fixtures/CI PR1928
+и новых main-правил жизненного цикла. Решение: merge main и base main вместо
+слитой первой ветки. Удаление SDK/local composition/legacy paths сохранено.
+Конфликты E2E разрешены в пользу актуальных native fixtures, assertions и
+PNG из main; новые эталоны не генерируются. Synthetic VAPID и быстрый native
+sign-in сохранены. Новый role-based default формата из main заменяет прежний
+расчёт по абонементам; obsolete import нейтрального finance-типа удалён.
+В eslint сохранён ignore перемещённого generated supabase/database.types.ts.
+Истории обоих этапов сохранены; runtime/media/AI prompts/Cloud Functions и
+существующие миграции не переписываются. Проверки и итоговый head — в PR1929.
+Отвергнуто: возврат SDK ради разрешения конфликта и старых assertions.
+Дальше: полный check, повторный CI; production и merge не входят в этот шаг.
+
+Проверки02.11 после merge main: чистый `npm ci`, E2E TypeScript и полный
+`npm run check` passed —320 unit files/2919 tests, coverage83.31/78.23/82.4/88.01
+при прежних порогах80/75/80/80; API1555 passed/254 skipped; lint/typecheck/
+policies/build passed. Root npm ls не содержит Supabase SDK; в runtime src
+SDK imports отсутствуют, строки SDK остаются только в regression guards.
+Generated types сравнились побайтно с main; PNG diff относительно main пуст.
+Workflow docs и diff whitespace passed. Локальный browser smoke не запускался:
+существующая Podman VM недоступна; production DSN/remote DB не используются.
+Точный CI нового head остаётся гейтом; PR переведён на main и готовится к review.

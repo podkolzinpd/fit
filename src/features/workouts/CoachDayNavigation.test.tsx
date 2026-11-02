@@ -254,3 +254,22 @@ it('cancels a held card with Escape without turning release into an accidental l
   expect(drag.drop).not.toHaveBeenCalled()
   expect(drag.preview).toHaveBeenLastCalledWith(null)
 })
+
+it('keeps date-button taps and keyboard clicks but suppresses clicks after its day swipe', () => {
+  const open = vi.fn(), picker = vi.fn()
+  function DateButton() {
+    const ref = useCoachDaySwipe(true, localDate('2026-12-31'), open)
+    return <div className="schedule-day-view"><header ref={ref}><button className="coach-calendar-heading-button" onClick={picker}><span>Выбрать день</span></button></header></div>
+  }
+  render(<DateButton />)
+  const label = screen.getByText('Выбрать день')
+  pointer(label, 'pointerdown', 220); pointer(label, 'pointerup', 220)
+  fireEvent.click(label, { detail: 1 })
+  expect(picker).toHaveBeenCalledTimes(1)
+  swipe(label)
+  fireEvent.click(label, { detail: 1 })
+  expect(open).toHaveBeenCalledExactlyOnceWith('2027-01-01')
+  expect(picker).toHaveBeenCalledTimes(1)
+  fireEvent.click(label, { detail: 0 })
+  expect(picker).toHaveBeenCalledTimes(2)
+})

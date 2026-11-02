@@ -10,9 +10,9 @@ const listOverview = vi.hoisted(() => vi.fn())
 vi.mock('../../app/auth-context', () => ({ useAuth: () => ({ actor: { role: 'trainer', userId: 'trainer-1', timezone: 'Europe/Moscow' } }) }))
 vi.mock('../../app/data-backend-context', () => ({ useDataBackend: () => ({ trainerFinance: { listOverview } }) }))
 
-function renderPage() {
+function renderPage(path = '/finance') {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
-  return render(<MemoryRouter initialEntries={['/finance']}><QueryClientProvider client={queryClient}><Routes>
+  return render(<MemoryRouter initialEntries={[path]}><QueryClientProvider client={queryClient}><Routes>
     <Route path="/finance" element={<TrainerFinanceOverviewPage />} />
     <Route path="/clients/:clientId/finance" element={<FinanceTarget />} />
   </Routes></QueryClientProvider></MemoryRouter>)
@@ -92,4 +92,26 @@ describe('TrainerFinanceOverviewPage', () => {
     await user.click(await screen.findByRole('link', { name: /Анна Смирнова/ }))
     expect(screen.getByText('Финансы клиента · возврат /finance')).toBeVisible()
   })
+})
+
+
+it('restores a finance deep link and passes month/filter to the client return', async () => {
+  listOverview.mockResolvedValue({ month: '2026-09', receivedCents: 0, dueCents: 100, attentionCount: 1, clients: [{
+    clientId: 'client', fullName: 'Клиент', archivedAt: null, receivedCents: 0, dueCents: 100,
+    nearestPaymentDueOn: null, unpaidPackageCount: 0, activePackageCount: 1, upcomingPackageCount: 0,
+    sessionsRemaining: 2, overdue: true, lowSessions: true, unassignedSessions: 0, needsAttention: true,
+  }] })
+  renderPage('/finance?month=2026-09&filter=overdue')
+  expect(await screen.findByRole('button', { name: 'Просрочено' })).toHaveAttribute('aria-pressed', 'true')
+  expect(listOverview).toHaveBeenCalledWith('2026-09')
+  await userEvent.click(await screen.findByRole('link', { name: /Клиент/ }))
+  expect(screen.getByText('Финансы клиента · возврат /finance?month=2026-09&filter=overdue')).toBeVisible()
+})
+
+it.each(['0000-01', '0099-01', '2026-13', 'wrong'])('keeps invalid finance URL month %s out of repository queries', async (month) => {
+  listOverview.mockReset().mockResolvedValue({ month: '2026-11', receivedCents: 0, dueCents: 0, attentionCount: 0, clients: [] })
+  renderPage(`/finance?month=${month}`)
+  await screen.findByRole('region', { name: 'Финансовая сводка' })
+  expect(listOverview).toHaveBeenCalledTimes(1)
+  expect(listOverview.mock.calls[0]?.[0]).not.toBe(month)
 })

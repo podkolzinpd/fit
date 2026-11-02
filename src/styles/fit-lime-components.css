@@ -153,6 +153,7 @@ html.fit-lime-document,
 .fit-lime .overflow-item:hover { background: #303034 }
 .fit-lime .overflow-item.danger { color: var(--danger) }
 .fit-lime .overflow-item:disabled { opacity: 1; border-color: var(--lime-divider); background: var(--lime-surface-raised); color: var(--lime-text-secondary) }
+.fit-lime-shell .trainer-tab-bar .coach-finance-nav-icon { display: grid; place-items: center; width: 24px; height: 24px; font-size: 26px; line-height: 24px; font-weight: 500; }
 .fit-lime .sheet-overlay,
 .fit-lime .modal-overlay { background: var(--overlay) }
 .fit-lime .client-picker,

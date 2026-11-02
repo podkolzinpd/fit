@@ -28,6 +28,36 @@ async function scrollDayForBooking(viewport: Locator) {
 
 export function quickWorkoutEntryCases() {
   test.skip(process.env.FIT_QUICK_WORKOUT_ENTRY_ACCEPTANCE !== '1', 'Dedicated native quick-entry harness')
+  test('Lifecycle P1 inline client creation retains slot context', async ({ page }, info) => {
+    await page.clock.setFixedTime(new Date('2026-11-01T09:00:00Z'))
+    const backend = await mockPilot(page, { profileId: 'c0ac0000-6010-4000-8000-000000000001', fitLime: true, workouts: [] })
+    const writes: string[] = []
+    page.on('request', request => { if (request.method() === 'POST' && new URL(request.url()).pathname.startsWith('/v1/workouts')) writes.push(request.url()) })
+    await page.goto('/today?date=2026-11-03')
+    const viewport = page.locator('.schedule-v2-timeline'), grid = viewport.locator('.day-grid')
+    await expect(grid).toBeVisible()
+    await scrollDayForBooking(viewport)
+    const point = await grid.evaluate(el => { const r = el.getBoundingClientRect(); return { x: r.left + 140, y: r.top + el.clientHeight / 24 * 14 + 2 } })
+    await page.touchscreen.tap(point.x, point.y)
+    const booking = page.getByRole('dialog', { name: 'Записать клиента', exact: true })
+    await booking.getByRole('button', { name: 'Выбрать клиента', exact: true }).click()
+    const picker = page.getByRole('dialog', { name: 'Выбор клиента', exact: true })
+    await picker.getByRole('textbox', { name: 'Поиск клиента' }).fill('Новая спортсменка')
+    await expect(picker.getByText('Никого не нашли', { exact: true })).toBeVisible()
+    await page.screenshot({ path: info.outputPath('lifecycle-p1-slot-picker.png') })
+    await picker.getByRole('button', { name: 'Клиент', exact: true }).click()
+    await expect(picker.getByRole('textbox', { name: 'Имя нового клиента' })).toHaveValue('Новая спортсменка')
+    await picker.getByRole('button', { name: 'К выбору', exact: true }).click()
+    await expect(picker.getByRole('textbox', { name: 'Поиск клиента' })).toHaveValue('Новая спортсменка')
+    await picker.getByRole('button', { name: 'Клиент', exact: true }).click()
+    await picker.getByRole('button', { name: 'Добавить и выбрать', exact: true }).click()
+    await expect(picker).toHaveCount(0)
+    expect(writes).toHaveLength(0)
+    expect(backend.getSaveAttempts()).toBe(0)
+    await expect(booking).toContainText('Новая спортсменка')
+    await expect(booking).toContainText('14:00')
+    await page.screenshot({ path: info.outputPath('lifecycle-p1-slot.png') })
+  })
   for (const role of ['trainer', 'client'] as const) test(`quick-entry explicit running format keeps its existing path ${role}`, async ({ page }) => {
     const profileId = `c0ac0000-6010-4000-8000-00000000000${role === 'trainer' ? 1 : 2}`
     const backend = await mockPilot(page, { role, profileId, fitLime: true, clientLime: true, workouts: [{ ...restTimerWorkout(), createdBy: profileId, exercises: [] }] })

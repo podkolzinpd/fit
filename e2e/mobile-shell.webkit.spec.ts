@@ -930,8 +930,8 @@ test('iPhone: новый клиент выбирает готовую трени
   await page.goto('/auth')
   await nativeRegister(page, { key: `client-preset-${testInfo.workerIndex}-${Date.now()}@fit.local`, firstName: 'Клиент', role: 'client' })
 
-  await expect(page.getByRole('button', { name: 'Попробовать готовую тренировку' })).toBeVisible()
-  await page.getByRole('button', { name: 'Попробовать готовую тренировку' }).click()
+  await expect(page.getByRole('button', { name: 'Выбрать готовый план' })).toBeVisible()
+  await page.getByRole('button', { name: 'Выбрать готовый план' }).click()
   await expect(page.getByText('Всё тело без инвентаря')).toBeVisible()
   await expectNoHorizontalOverflow(page)
 
@@ -2161,7 +2161,7 @@ test('iPhone: завершение сначала отправляет ввод 
   // Программный tap сохраняет фокус в input и проверяет именно finish-flush,
   // а не побочный blur браузера.
   await page.getByRole('button', { name: 'Завершить тренировку' }).evaluate((button: HTMLButtonElement) => button.click())
-  await page.getByRole('button', { name: 'Завершить', exact: true }).evaluate((button: HTMLButtonElement) => button.click())
+  await page.getByRole('button', { name: 'Подтвердить проведение', exact: true }).evaluate((button: HTMLButtonElement) => button.click())
   await expect(page.getByRole('heading', { name: 'Тренировка завершена' })).toBeVisible()
   await expect.poll(() => liveCalls).toEqual(['draft', 'finish'])
 })
@@ -2247,9 +2247,10 @@ test('iPhone: проведённая тренировка сохраняет з�
   const finishWorkout = page.getByRole('button', { name: 'Завершить тренировку' })
   await expect(finishWorkout).toHaveAttribute('data-variant', 'secondary')
   await finishWorkout.click()
-  await expect(page.getByRole('button', { name: 'Отмена', exact: true })).toHaveAttribute('data-variant', 'tertiary')
-  const confirmFinish = page.getByRole('button', { name: 'Завершить', exact: true })
-  await expect(confirmFinish).toHaveAttribute('data-variant', 'primary')
+  const attendance = page.getByRole('dialog', { name: 'Отметить проведённой' })
+  await expect(attendance.getByRole('button', { name: 'Отмена', exact: true })).toHaveClass(/link/)
+  const confirmFinish = attendance.getByRole('button', { name: 'Подтвердить проведение', exact: true })
+  await expect(confirmFinish).toHaveClass(/primary/)
   await confirmFinish.click()
   await expect(page.getByRole('heading', { name: 'Тренировка завершена' })).toBeVisible()
   await expect(page.locator('.workout-detail-page .workout-header-contract')).toHaveAttribute('data-state', 'completed')
@@ -2349,7 +2350,7 @@ test('iPhone: результат прошлого плана записывае�
   await expect(page).toHaveURL(/\/workouts\/[0-9a-f-]+$/)
   await expect(page).not.toHaveURL(/\/live/)
   await expect(page.getByRole('heading', { name: 'Тренировка', level: 1, exact: true })).toBeVisible()
-  await expect(page.locator('.workout-detail-page .workout-status-completed')).toHaveCount(0)
+  await expect(page.locator('.workout-detail-page .workout-status-completed')).toHaveText('Проведена')
   await expect(page.getByText('40 кг × 10', { exact: true }).first()).toBeVisible()
   await expectNoHorizontalOverflow(page)
   await page.screenshot({ path: testInfo.outputPath('record-past-plan-result-390.png'), fullPage: true })

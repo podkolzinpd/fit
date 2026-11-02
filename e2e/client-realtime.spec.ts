@@ -207,7 +207,7 @@ test('client and trainer refresh shared progress and workouts when the app becom
     // Завершение уже видно тренеру до необязательного feedback: его ошибка или
     // пропуск не может откатить сохранённый факт тренировки.
     await pollNative(trainer)
-    await expect(trainer.locator('.workout-detail-page .workout-status-completed')).toHaveCount(0)
+    await expect(trainer.locator('.workout-detail-page .workout-status-completed')).toHaveText('Проведена')
     await pollNative(trainer)
     await expect(trainer.locator('.completed-exercise-list')).toBeVisible()
     const clientComment = `Realtime комментарий ${suffix}`

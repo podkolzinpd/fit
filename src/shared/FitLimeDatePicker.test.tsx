@@ -1,6 +1,6 @@
 import { fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { FitLimeDatePicker } from './FitLimeDatePicker'
 import { localDate } from './local-date'
@@ -25,6 +25,26 @@ function Harness({ clientLime = true, showEndTime = false, reference = false, di
 }
 
 describe('FitLimeDatePicker', () => {
+  it('lets the parent return to today while the date heading still opens the same picker', async () => {
+    function CalendarSlot() {
+      const today = localDate('2026-12-20')
+      const [date, setDate] = useState(localDate('2026-12-21'))
+      const control = useRef<{ open: () => void }>(null)
+      return <><button onClick={() => control.current?.open()}>Дата в шапке</button><FitLimeDatePicker value={date} onChange={setDate} controlRef={control}
+        triggerAriaLabel={date === today ? 'Выбрать дату' : 'Сегодня'} triggerLabel={date === today ? undefined : 'Сегодня'}
+        onTrigger={open => date === today ? open() : setDate(today)} /></>
+    }
+    const user = userEvent.setup()
+    render(<CalendarSlot />)
+    await user.click(screen.getByRole('button', { name: 'Дата в шапке' }))
+    expect(screen.getByRole('dialog')).toBeVisible()
+    await user.click(screen.getByRole('button', { name: 'Закрыть календарь' }))
+    expect(screen.getByRole('button', { name: 'Сегодня' })).toHaveFocus()
+    await user.click(screen.getByRole('button', { name: 'Сегодня' }))
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: /^Выбрать дату$/ }))
+    expect(within(screen.getByRole('dialog')).getByRole('button', { name: '20 декабря 2026 г.' })).toHaveAttribute('aria-pressed', 'true')
+  })
   it('does not treat a gesture started on an action as a backdrop dismissal after layout changes', async () => {
     const user = userEvent.setup()
     render(<Harness />)

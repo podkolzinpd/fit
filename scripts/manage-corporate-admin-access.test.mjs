@@ -18,7 +18,7 @@ test('grants exactly one privately approved login and returns no identities',asy
  assert.deepEqual(result,{status:'applied',enabled:true,bound:false,readyProfiles:0,otherEnabledAdmins:0})
  assert.equal(JSON.stringify(result).includes(hash),false)
  assert.equal(client.calls.at(-1).sql,'commit')
- assert.deepEqual(client.calls.find(x=>x.sql.startsWith('insert into')).args,[hash])
+ assert.deepEqual(client.calls.find(x=>x.sql.startsWith('insert into')).args,[hash,1])
 })
 test('refuses an existing unrelated administrator and rolls back',async()=>{
  const client=database({conflict:true})
@@ -40,4 +40,27 @@ test('inspection is read only; workflow is main-only, bounded and keeps the targ
  const workflow=readFileSync(new URL('../.github/workflows/manage-corporate-admin.yml',import.meta.url),'utf8')
  for(const text of ['refs/heads/main','cloudru-stage-vm','RUNNING_SHA','FIT_CORPORATE_ADMIN_LOGIN_SHA256','--read-only','--timeout=25','trap']) assert.ok(workflow.includes(text))
  assert.equal(workflow.includes('yndx-'),false)
+})
+
+test('additional slot preserves a separately enabled administrator',async()=>{
+ const client=database();const query=client.query.bind(client)
+ client.query=async(sql,args)=>sql.includes('login_sha256<>$1')?{rows:[{n:1}]}:query(sql,args)
+ const result=await manageCorporateAdminAccess(client,'grant',hash,2)
+ assert.equal(result.otherEnabledAdmins,1)
+ assert.deepEqual(client.calls.find(x=>x.sql.startsWith('insert into')).args,[hash,2])
+ assert.equal(client.calls.some(x=>/update.*where.*<>/.test(x.sql)),false)
+})
+
+test('invitation pilot resolves exactly one linked trainer and never exposes identity',async()=>{
+ const {manageCorporateInvitationPilot}=await import('./manage-corporate-admin-access.mjs')
+ const calls=[]
+ const client={async query(sql,args){calls.push({sql,args});if(sql.includes('select p.id'))return{rows:[{id:'private-profile'}]};if(sql.startsWith('select enabled'))return{rows:[{enabled:true}]};return{rows:[]}}}
+ const result=await manageCorporateInvitationPilot(client,'grant',hash)
+ assert.deepEqual(result,{status:'applied',uniqueTrainer:true,enabled:true})
+ assert.equal(JSON.stringify(result).includes('private-profile'),false)
+ assert.equal(calls.at(-1).sql,'commit')
+ for(const rows of [[],[{id:'one'},{id:'two'}]]){
+  const c={async query(sql){if(sql.includes('select p.id'))return{rows};return{rows:[]}}}
+  await assert.rejects(manageCorporateInvitationPilot(c,'grant',hash),/target_unresolved/)
+ }
 })

@@ -777,7 +777,7 @@ test('private journal transport rejects corruption, redirected identity and deco
   assert.throws(() => readJournalTransport(redirected.parts, redirected.sha, name), /private_payload_invalid/)
   const large = Buffer.alloc(3 * 1024 * 1024, 32), zipped = gzipSync(large).toString('base64')
   assert.throws(() => readJournalTransport([zipped.slice(0, -4), zipped.slice(-4)], hash(large), name), /private_payload_invalid/)
-  for (const [count, total] of [[85, 401], [72, 413]]) {
+  for (const [count, total] of [[85, 401], [72, 413], [104, 499], [11, 55]]) {
     const movements = Array.from({ length: count }, (_, i) => ({ trainingFormat: 'with_trainer',
       exercises: Array.from({ length: Math.floor(total / count) + (i < total % count ? 1 : 0) }, () => ({ sets: [] })),
     }))
@@ -794,7 +794,7 @@ test('private journal transport rejects corruption, redirected identity and deco
     const redirected = encode({ ...reviewed, actorId: historyFixtureIds[0] })
     assert.throws(() => readJournalTransport(redirected.parts, redirected.sha, name), /private_payload_invalid/)
     const append = encode({ ...reviewed, schemaVersion: 3 })
-    if(count===85) {
+    if([85,104,11].includes(count)) {
       assert.equal(readJournalTransport(append.parts, append.sha, name).schemaVersion,3)
       assert.throws(() => readJournalTransport(append.parts, encoded.sha, name), /private_payload_invalid/)
     } else assert.throws(() => readJournalTransport(append.parts, append.sha, name), /private_payload_invalid/)

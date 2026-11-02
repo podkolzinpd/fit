@@ -2,7 +2,6 @@ import { nativeSignIn } from './native-local-fixture'
 import { expect, test } from './native-local-fixture'
 
 test('trainer publishes a profile and athlete finds it in the catalog', async ({ page }) => {
-  await page.goto('/auth')
   await nativeSignIn(page, 'trainer@fit.local')
   await expect(page).toHaveURL(/\/(today|clients)$/)
 
@@ -192,7 +191,6 @@ test('athlete loads every page of the trainer catalog', async ({ page }) => {
     return route.fulfill({ json: { items: items.map(item => ({ publicId: item.publicId, profile: item.profile, isBrandTrainer: item.isBrandTrainer })), totalCount: 21, nextOffset: offset === 0 ? 20 : null } })
   })
 
-  await page.goto('/auth')
   await nativeSignIn(page, 'client@fit.local')
   await expect(page).toHaveURL(/\/me$/)
   await page.goto('/me/trainers')

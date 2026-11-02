@@ -1,3 +1,4 @@
+import { workoutLifecycleCases } from './workout-lifecycle.cases'
 import { writeFile } from 'node:fs/promises'
 import { expect, test, type Locator, type Page } from '@playwright/test'
 import { buildFitLimeCalendarPlan } from '../services/api/src/db/fit-lime-calendar-plan'
@@ -80,6 +81,204 @@ for (const theme of ['light', 'dark']) test(`Public invitation identity and cont
 const scheduleGuideId = 'coach-schedule-guide-fixed2-2026-10-17'
 const dayGuideId = 'lime-day-workspace-2026-10'
 const scheduleCoachmarks = [scheduleGuideId, 'lime-schedule-history-2026-10', 'lime-schedule-ownership-2026-10', 'coach-schedule-filters-2026-10-16']
+
+test('Figma calendar Coach unified routes retain list, finance and template context', { tag: ['@lime-critical'] }, async ({ page }, info) => {
+  const profileId = 'c0ac0000-6010-4000-8000-000000000001'
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.clock.setFixedTime(new Date('2026-09-24T09:00:00+03:00'))
+  await page.addInitScript(id => {
+    localStorage.setItem(`fit.coachmarks-seen.${id}`, JSON.stringify(['coach-schedule-guide-fixed2-2026-10-17', 'coach-schedule-filters-2026-10-16', 'lime-schedule-history-2026-10', 'lime-schedule-ownership-2026-10', 'lime-day-workspace-2026-10', 'lime-clients-search-2026-10', 'lime-direct-client-start-2026-10']))
+  }, profileId)
+  const rows: MockWorkout[] = Array.from({ length: 35 }, (_, i) => ({ ...workout,
+    id: `40000000-0000-4000-8000-${String(i + 1).padStart(12, '0')}`, trainerId: profileId, createdBy: profileId,
+    status: 'planned', completedAt: null, clientName: `Клиент ${i + 1}`,
+  }))
+  await mockPilot(page, { profileId, fitLime: true, workouts: rows })
+  await page.route('**/v1/finance/overview?*', route => route.fulfill({ json: { overview: {
+    month: new URL(route.request().url()).searchParams.get('month'), receivedCents: 10000, dueCents: 25000, attentionCount: 1,
+    clients: [{ clientId, fullName: 'Алексей Смирнов', archivedAt: null, receivedCents: 10000, dueCents: 25000,
+      nearestPaymentDueOn: '2026-09-30', unpaidPackageCount: 1, activePackageCount: 1, upcomingPackageCount: 0,
+      sessionsRemaining: 2, overdue: true, lowSessions: true, unassignedSessions: 0, needsAttention: true }],
+  } } }))
+  const template = { id: '10000000-0000-4000-8000-000000000080', trainerId: profileId, name: 'Готовый план',
+    notes: null, version: 1, createdAt: '2026-09-01T00:00:00Z', updatedAt: '2026-09-01T00:00:00Z', exercises: [] }
+  await page.route('**/v1/workout-templates', route => route.fulfill({ json: { templates: [template] } }))
+  await page.route(`**/v1/workout-templates/${template.id}`, route => route.fulfill({ json: { template } }))
+  const original = '/schedule?week=2026-09-21&range=2w&anchor=2026-09-30&mode=list&status=planned'
+  const canonical = original.replace('/schedule?', '/today?')
+  await page.goto(original)
+  await expect(page).toHaveURL(new RegExp(canonical.replace(/[?]/g, '\\?') + '$'))
+  const views = page.getByRole('group', { name: 'Вид расписания' })
+  await expect(views.getByRole('button', { name: 'Список', exact: true })).toHaveAttribute('aria-pressed', 'true')
+  await expect(page.locator('.fit-lime-history-row')).toHaveCount(35)
+  const content = page.locator('.content')
+  await content.evaluate(node => { node.scrollTop = 520; node.dispatchEvent(new Event('scroll')) })
+  await expect.poll(() => content.evaluate(node => node.scrollTop)).toBeGreaterThan(400)
+  const scroll = await content.evaluate(node => node.scrollTop)
+  const nav = page.getByRole('navigation', { name: 'Основная навигация' })
+  await expect(nav.getByRole('link', { name: 'Расписание', exact: true })).toHaveCount(0)
+  await nav.getByRole('link', { name: 'Клиенты', exact: true }).click()
+  await expect(page).toHaveURL(/\/clients$/)
+  await nav.getByRole('link', { name: 'День', exact: true }).click()
+  await expect.poll(() => content.evaluate(node => node.scrollTop)).toBeCloseTo(scroll, 0)
+  await page.reload()
+  await expect(views.getByRole('button', { name: 'Список', exact: true })).toHaveAttribute('aria-pressed', 'true')
+  await expect.poll(() => content.evaluate(node => node.scrollTop)).toBeCloseTo(scroll, 0)
+  await nav.getByRole('link', { name: 'Финансы', exact: true }).click()
+  await page.getByRole('button', { name: 'Предыдущий месяц' }).click()
+  await page.getByRole('button', { name: 'Просрочено', exact: true }).click()
+  await expect(page).toHaveURL(/month=2026-08&filter=overdue/)
+  await page.getByRole('link', { name: /Алексей Смирнов/ }).click()
+  await expect(nav.getByRole('link', { name: 'Финансы' })).toHaveAttribute('aria-current', 'page')
+  await page.getByRole('button', { name: 'Назад', exact: true }).click()
+  await expect(page).toHaveURL(/month=2026-08&filter=overdue/)
+  await expect(page.getByRole('button', { name: 'Просрочено', exact: true })).toHaveAttribute('aria-pressed', 'true')
+  await nav.getByRole('link', { name: 'День', exact: true }).click()
+  await expect.poll(() => content.evaluate(node => node.scrollTop)).toBeCloseTo(scroll, 0)
+  await nav.getByRole('link', { name: 'Финансы', exact: true }).click()
+  await expect(page).toHaveURL(/month=2026-08&filter=overdue/)
+  await nav.getByRole('link', { name: 'День', exact: true }).click()
+  await page.getByRole('button', { name: 'Новая тренировка', exact: true }).click()
+  await page.getByRole('dialog', { name: 'Новая тренировка', exact: true }).getByRole('link', { name: 'Из шаблона' }).click()
+  await expect(page.getByRole('heading', { name: 'Шаблоны тренировок' })).toBeVisible()
+  const assign = page.getByRole('link', { name: 'Назначить', exact: true })
+  await expect(assign).toHaveAttribute('href', `/workouts/new?template=${template.id}&date=2026-09-30`)
+  await assign.click()
+  await expect(page).toHaveURL(/template=.*date=2026-09-30/)
+  await expect(page.getByRole('textbox', { name: 'Название тренировки', exact: true })).toHaveValue('Готовый план')
+  await page.getByRole('button', { name: 'Назад', exact: true }).click()
+  await page.getByRole('alertdialog').getByRole('button', { name: 'Выйти', exact: true }).click()
+  await expect(views.getByRole('button', { name: 'Список', exact: true })).toHaveAttribute('aria-pressed', 'true')
+  await expect.poll(() => content.evaluate(node => node.scrollTop)).toBeCloseTo(scroll, 0)
+  // Opening the top menu is an explicit move back to the header.
+  await content.evaluate(node => { node.scrollTop = 0; node.dispatchEvent(new Event('scroll')) })
+  await page.getByRole('button', { name: 'Настройки расписания' }).click()
+  await page.getByRole('menuitem', { name: 'Шаблоны тренировок', exact: true }).click()
+  await expect(page.getByRole('heading', { name: 'Шаблоны тренировок' })).toBeVisible()
+  await page.getByRole('button', { name: 'Назад', exact: true }).click()
+  await expect.poll(() => content.evaluate(node => node.scrollTop)).toBe(0)
+  await views.getByRole('button', { name: 'День', exact: true }).click()
+  await expect(page).toHaveURL(/date=2026-09-30/)
+  await page.screenshot({ path: info.outputPath('unified-coach-calendar.png') })
+})
+
+test('Figma calendar Coach fortnight compares aligned weekdays and keeps every appointment', { tag: ['@lime-critical'] }, async ({ page }, info) => {
+  const profileId = 'c0ac0000-6010-4000-8000-000000000001'
+  await page.clock.setFixedTime(new Date('2026-12-28T09:00:00+03:00'))
+  const rows: MockWorkout[] = Array.from({ length: 8 }, (_, i) => ({ ...workout,
+    id: `30000000-0000-4000-8000-${String(i + 1).padStart(12, '0')}`, trainerId: profileId, createdBy: profileId,
+    workoutDate: i < 6 ? '2026-12-28' : '2027-01-04', clientName: i < 6 ? `Первая неделя ${i + 1}` : 'Александра Константинопольская-Оченьдлиннаяфамилия',
+    status: 'planned', completedAt: null, startTime: `${String(9 + i).padStart(2, '0')}:00`, endTime: `${String(10 + i).padStart(2, '0')}:00`,
+  }))
+  rows.push({ ...rows[0]!, id: '30000000-0000-4000-8000-000000000009', workoutDate: '2027-01-05', clientName: 'Без времени', startTime: null, endTime: null })
+  await mockPilot(page, { profileId, fitLime: true, workouts: rows })
+  await page.goto('/schedule?week=2026-12-28&range=2w')
+  const comparison = page.getByRole('region', { name: 'Сравнение двух недель' })
+  await expect(comparison.locator('.coach-fortnight-day')).toHaveCount(14)
+  expect(await comparison.locator('.coach-fortnight-day').evaluateAll(nodes => nodes.map(n => n.getAttribute('data-date')))).toEqual([
+    '2026-12-28','2027-01-04','2026-12-29','2027-01-05','2026-12-30','2027-01-06','2026-12-31','2027-01-07','2027-01-01','2027-01-08','2027-01-02','2027-01-09','2027-01-03','2027-01-10',
+  ])
+  await expect(comparison.locator('.coach-fortnight-appointment')).toHaveCount(9)
+  await expect(comparison.locator('[data-date="2026-12-28"] time')).toHaveText(['09:00','10:00','11:00','12:00','13:00','14:00'])
+  await expect(comparison.locator('[data-date="2027-01-05"] time')).toHaveText('—')
+  // Paired row alignment, truncation and scrolling are responsive geometry contracts.
+  for (const width of [320,390,736,1440]) {
+    await page.setViewportSize({ width, height: 844 })
+    const geometry = await comparison.evaluate(el => {
+      const cells = [...el.querySelectorAll('.coach-fortnight-day')].map(n => n.getBoundingClientRect())
+      return { aligned: cells.every((box, i) => i % 2 || box.top === cells[i + 1]!.top && box.height === cells[i + 1]!.height),
+        shortEmpty: cells[8]!.height, overflow: document.documentElement.scrollWidth > innerWidth,
+        rows: [...el.querySelectorAll('.coach-fortnight-appointment')].map(n => n.getBoundingClientRect().height),
+        namesContained: [...el.querySelectorAll('.coach-fortnight-client')].every(n => n.getBoundingClientRect().right <= n.closest('button')!.getBoundingClientRect().right) }
+    })
+    expect(geometry.aligned).toBe(true);expect(geometry.overflow).toBe(false);expect(geometry.namesContained).toBe(true)
+    expect(geometry.shortEmpty).toBeLessThanOrEqual(48)
+    for (const height of geometry.rows) expect(height).toBeLessThanOrEqual(20)
+    await page.screenshot({ path: info.outputPath(`fortnight-${width}.png`), fullPage: true })
+  }
+  await page.setViewportSize({ width: 390, height: 844 })
+  await comparison.locator('[data-date="2027-01-04"]').click()
+  await expect(page).toHaveURL(/date=2027-01-04/)
+  await expect(page.locator('.schedule-v2-event')).toHaveCount(2)
+  await page.goBack();await expect(comparison).toBeVisible();await expect(comparison.locator('.coach-fortnight-appointment')).toHaveCount(9)
+  await comparison.getByRole('button', { name: 'Следующие 2 недели' }).click()
+  await expect(comparison.locator('.coach-fortnight-day').first()).toHaveAttribute('data-date', '2027-01-11')
+  await comparison.getByRole('button', { name: 'Предыдущие 2 недели' }).click()
+  await expect(comparison.locator('.coach-fortnight-day').first()).toHaveAttribute('data-date', '2026-12-28')
+})
+
+test('Figma calendar Coach compact navigation keeps date access, menu and all views', { tag: ['@lime-critical'] }, async ({ page }, info) => {
+  await page.clock.setFixedTime(new Date('2026-09-24T12:00:00+03:00'))
+  await mockPilot(page, { fitLime: true, profileId: 'c0ac0000-6010-4000-8000-000000000001' })
+  await page.goto('/today?date=2026-09-24')
+  const calendar = page.locator('.coach-calendar-navigation')
+  const slot = calendar.locator('.coach-calendar-date-slot')
+  await expect(slot.getByRole('button', { name: 'Выбрать дату', exact: true })).toBeVisible()
+  await expect(slot.getByRole('button', { name: 'Сегодня', exact: true })).toHaveCount(0)
+  await page.getByRole('button', { name: 'Открыть календарь по дате' }).click()
+  const picker = page.getByRole('dialog', { name: 'Выбрать дату', exact: true })
+  await picker.getByRole('button', { name: '30 сентября 2026 г.', exact: true }).click()
+  await picker.getByRole('button', { name: 'Применить дату' }).click()
+  await expect(page).toHaveURL(/date=2026-09-30/)
+  await expect(slot.getByRole('button', { name: 'Сегодня', exact: true })).toBeVisible()
+  await page.getByRole('button', { name: 'Открыть календарь по дате' }).click()
+  await expect(picker).toBeVisible()
+  await picker.getByRole('button', { name: 'Закрыть календарь' }).click()
+  await expect(slot.getByRole('button', { name: 'Сегодня', exact: true })).toBeFocused()
+  await slot.getByRole('button', { name: 'Сегодня', exact: true }).click()
+  await expect(page).toHaveURL(/date=2026-09-24/)
+  await expect(slot.getByRole('button', { name: 'Выбрать дату', exact: true })).toBeVisible()
+  await page.getByRole('button', { name: 'Настройки расписания' }).click()
+  const menu = page.getByRole('menu')
+  await expect(menu.getByRole('menuitem')).toHaveText(['Компактная сетка', 'Шаблоны тренировок', 'Профиль', 'Настройки'])
+  const triggerBox = (await page.getByRole('button', { name: 'Настройки расписания' }).boundingBox())!
+  expect((await menu.boundingBox())!.y).toBeGreaterThanOrEqual(triggerBox.y)
+  await menu.getByRole('menuitem', { name: 'Компактная сетка' }).click()
+  await expect(calendar).toHaveClass(/schedule-density-compact/)
+  await page.reload(); await expect(calendar).toHaveClass(/schedule-density-compact/)
+  const views = page.getByRole('group', { name: 'Вид расписания' })
+  for (const name of ['Неделя', '2 недели', 'Список', 'День']) {
+    await views.getByRole('button', { name, exact: true }).click()
+    await expect(views.getByRole('button', { name, exact: true })).toHaveAttribute('aria-pressed', 'true')
+  }
+  await expect(page).toHaveURL(/date=2026-09-24/)
+  await expect(calendar.locator('.schedule-v2-summary button')).toHaveCount(2)
+  for (const tile of await calendar.locator('.schedule-v2-summary button').all()) expect((await tile.innerText()).trim()).toMatch(/^(\d+|99\+|…|—)$/)
+  await page.screenshot({ path: info.outputPath('compact-calendar-day.png') })
+})
+
+// Header text, hit targets and selected-segment geometry depend on viewport width.
+for (const width of [320, 390, 736]) test(`Figma calendar Coach compact header geometry and unchanged summary paint ${width}`, { tag: ['@lime-critical'] }, async ({ page }, info) => {
+  await page.clock.setFixedTime(new Date('2026-09-24T12:00:00+03:00'))
+  await mockPilot(page, { fitLime: true, profileId: 'c0ac0000-6010-4000-8000-000000000001' })
+  await page.setViewportSize({ width, height: 844 })
+  for (const date of ['2026-09-24', '2026-09-30', '2026-11-02', '2026-11-08']) {
+      await page.goto(`/today?date=${date}`)
+      await expect(page.locator('.coach-calendar-views')).toBeVisible()
+      await page.evaluate(() => document.fonts.ready)
+      const geometry = await page.locator('.coach-calendar-navigation').evaluate(el => {
+        const heading = el.querySelector('.coach-calendar-heading-button')!, slot = el.querySelector('.coach-calendar-date-slot')!, gear = el.querySelector('.overflow-trigger')!
+        const h = heading.getBoundingClientRect(), s = slot.getBoundingClientRect(), g = gear.getBoundingClientRect()
+        const views = el.querySelector('.coach-calendar-views')!, box = views.getBoundingClientRect()
+        const buttons = [...views.querySelectorAll('button')].map(b => ({ width: b.getBoundingClientRect().width, height: b.getBoundingClientRect().height, clipped: b.scrollWidth > b.clientWidth }))
+        const tile = el.querySelector('.schedule-v2-summary button')!, paint = () => ({ background: getComputedStyle(tile).backgroundImage, glow: getComputedStyle(tile, '::before').backgroundImage, shadow: getComputedStyle(tile, '::after').boxShadow })
+        const summaryCenters = [...el.querySelectorAll('.schedule-v2-summary button')].map(button => {
+          const tileBox = button.getBoundingClientRect(), countBox = button.querySelector('strong')!.getBoundingClientRect(), iconBox = button.querySelector('.schedule-v2-summary-icon')!.getBoundingClientRect()
+          const center = (rect: DOMRect) => rect.top + rect.height / 2
+          return { countOffset: Math.abs(center(countBox) - center(tileBox)), iconOffset: Math.abs(center(iconBox) - center(tileBox)) }
+        })
+        const compactPaint = paint();el.classList.remove('coach-calendar-navigation');const originalPaint = paint();el.classList.add('coach-calendar-navigation')
+        return { overlap: h.right > s.left || s.right > g.left, titleClipped: [...heading.querySelectorAll('h1,p')].some(t => t.scrollWidth > t.clientWidth), slotWidth: s.width, viewHeight: box.height, barHeight: box.height - 10, buttons, tileHeight: tile.getBoundingClientRect().height, summaryCenters, compactPaint, originalPaint, overflow: document.documentElement.scrollWidth > innerWidth }
+      })
+      expect(geometry.overlap).toBe(false); expect(geometry.titleClipped).toBe(false);expect(geometry.overflow).toBe(false)
+      expect(geometry.slotWidth).toBe(78);expect(geometry.viewHeight).toBe(44);expect(geometry.barHeight).toBe(34)
+      expect(geometry.tileHeight).toBe(88);expect(geometry.compactPaint).toEqual(geometry.originalPaint)
+      for (const summary of geometry.summaryCenters) { expect(summary.countOffset).toBeLessThanOrEqual(1);expect(summary.iconOffset).toBeLessThanOrEqual(1) }
+      for (const button of geometry.buttons) { expect(button.height).toBeGreaterThanOrEqual(44);expect(button.width).toBeGreaterThanOrEqual(44);expect(button.clipped).toBe(false) }
+      expect(Math.max(...geometry.buttons.map(b => b.width)) - Math.min(...geometry.buttons.map(b => b.width))).toBeLessThan(1)
+    }
+  await page.screenshot({ path: info.outputPath(`compact-calendar-${width}.png`) })
+})
 
 // Two engines are intentional: native implicit submit and pointer selection differ in Safari.
 function coachPlanInputFixture(profileId = 'c0ac0000-6010-4000-8000-000000000001') {
@@ -585,11 +784,11 @@ for (const width of [375, 390, 430, 1440]) test(`Figma workout Coach reference s
   await page.reload()
   await expect(view).toBeVisible()
   await expect(guide).toHaveCount(0)
-  await expect(page.locator('.coach-schedule-toolbar')).toHaveCSS('display', 'grid')
-  expect(await page.locator('.coach-schedule-toolbar').evaluate(node => {
-    const mode = node.querySelector('[aria-label="Вид расписания"]')!.getBoundingClientRect()
+  await expect(page.locator('.coach-calendar-filters')).toHaveCSS('display', 'flex')
+  expect(await page.locator('.coach-calendar-filters').evaluate(node => {
+    const mode = document.querySelector('[aria-label="Вид расписания"]')!.getBoundingClientRect()
     const filter = node.querySelector('summary')!.getBoundingClientRect()
-    return Math.abs(mode.top - filter.top) < 1 && mode.right <= filter.left
+    return filter.top >= mode.bottom && filter.right <= mode.right + 1
   })).toBe(true)
   await expect(filters).toBeVisible()
   await expect(filters).not.toHaveAttribute('open')
@@ -609,7 +808,7 @@ for (const width of [375, 390, 430, 1440]) test(`Figma workout Coach reference s
   await page.screenshot({ path: info.outputPath('coach-schedule-filters-open.png') })
   await filters.locator('summary').click()
   await view.getByRole('button', { name: 'Список', exact: true }).click()
-  await view.getByRole('button', { name: 'Календарь', exact: true }).click()
+  await view.getByRole('button', { name: 'Неделя', exact: true }).click()
   await expect(guide).toHaveCount(0)
   await page.goto('/today?date=2026-09-24')
   await expect(guide).toHaveCount(1)
@@ -969,7 +1168,8 @@ for (const width of [375, 390, 430, 1440]) {
     if (width === 390) {
       await page.screenshot({ path: info.outputPath('coach-reference-first-entry.png') })
       const entryCoachmark = page.getByRole('dialog', { name: 'Новая тренировка', exact: true }).locator('.coachmark-bubble')
-      await expect(entryCoachmark).toContainText('Начало без лишнего шага')
+      await expect(entryCoachmark).toContainText('Начать тренировку')
+      await expect(entryCoachmark).toContainText('Выберите клиента и формат, затем нажмите «Начать тренировку».')
       const entryClose = page.getByRole('dialog', { name: 'Новая тренировка', exact: true }).getByRole('button', { name: 'Закрыть выбор действия', exact: true })
       expect(await entryClose.evaluate(node => { const r = node.getBoundingClientRect(); return node.contains(document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2)) })).toBe(true)
       await entryCoachmark.getByRole('button', { name: 'Понятно', exact: true }).click()
@@ -978,7 +1178,7 @@ for (const width of [375, 390, 430, 1440]) {
     const composer = page.getByRole('dialog', { name: 'Быстрое создание тренировки' })
     await expect(composer).toHaveClass(/coach-reference-composer/)
     await expect(composer.getByRole('button', { name: 'С тренером', exact: true })).toBeVisible()
-    await expect(composer.getByRole('switch', { name: 'Таймер сам ведёт подходы' })).toBeVisible()
+    await expect(composer.getByRole('switch', { name: 'Таймер сам ведёт подходы' })).toHaveCount(0)
     await expect(composer.getByRole('button', { name: 'Ввести текстом', exact: true })).toBeVisible()
     await page.screenshot({ path: info.outputPath('coach-reference-plan-options-open.png') })
     if (width === 390) {
@@ -989,7 +1189,7 @@ for (const width of [375, 390, 430, 1440]) {
       await coachmark.getByRole('button', { name: 'Понятно', exact: true }).click()
     }
     await expect(composer.getByRole('textbox', { name: 'Название тренировки' })).toHaveCSS('font-size', '24px')
-    await expect(composer.getByRole('button', { name: 'Сохранить план', exact: true })).toHaveCount(0)
+    await expect(composer.getByRole('button', { name: 'Запланировать', exact: true })).toBeVisible()
     await composer.getByRole('textbox', { name: 'Название тренировки' }).fill('Силовая с длинным названием')
     await composer.getByRole('button', { name: 'Клиент: Выберите клиента' }).click()
     let picker = page.getByRole('dialog', { name: 'Выбор клиента' })
@@ -1012,7 +1212,7 @@ for (const width of [375, 390, 430, 1440]) {
     await dates.getByLabel('Окончание', { exact: true }).fill('11:00')
     await page.screenshot({ path: info.outputPath('coach-reference-dates.png') })
     await dates.getByRole('button', { name: 'Применить дату' }).click()
-    await composer.getByRole('button', { name: 'Сохранить план' }).click()
+    await composer.getByRole('button', { name: 'Запланировать' }).click()
     await expect(composer.getByRole('alert')).toContainText('12 часов')
     await composer.getByRole('button', { name: 'Выбрать дату и время' }).click()
     await dates.getByLabel('Окончание', { exact: true }).fill('13:00')
@@ -1041,27 +1241,25 @@ for (const width of [375, 390, 430, 1440]) {
     await recovery.getByRole('button', { name: 'Продолжить черновик', exact: true }).click()
     await expect(composer.getByRole('textbox', { name: 'Название тренировки' })).toHaveValue('Силовая с длинным названием')
     await expect(composer.getByRole('button', { name: 'Самостоятельно', exact: true })).toHaveAttribute('aria-pressed', 'true')
-    await expect(composer.getByRole('switch', { name: 'Таймер сам ведёт подходы' })).toBeVisible()
+    await expect(composer.getByRole('switch', { name: 'Таймер сам ведёт подходы' })).toHaveCount(0)
     await expect(composer.getByRole('button', { name: 'Ввести текстом', exact: true })).toBeVisible()
     if (width === 390) {
       await composer.getByRole('button', { name: 'Добавить упражнения', exact: true }).click()
       await expect(page).toHaveURL(/\/workouts\/new\?date=2026-09-24&entry=quick$/)
       await expect(page.getByRole('textbox', { name: 'Название тренировки' })).toHaveValue('Силовая с длинным названием')
       await page.getByRole('button', { name: 'Назад', exact: true }).click()
-      await page.getByRole('button', { name: 'Новая тренировка', exact: true }).click()
-      await page.getByRole('button', { name: 'Запланировать', exact: true }).click()
-      await page.getByRole('dialog', { name: 'Черновик плана' }).getByRole('button', { name: 'Продолжить черновик', exact: true }).click()
+      await expect(composer).toBeVisible()
       await expect(composer.getByRole('button', { name: 'Самостоятельно', exact: true })).toHaveAttribute('aria-pressed', 'true')
-      await expect(composer.getByRole('switch', { name: 'Таймер сам ведёт подходы' })).toBeVisible()
+      await expect(composer.getByRole('switch', { name: 'Таймер сам ведёт подходы' })).toHaveCount(0)
       await expect(composer.getByRole('button', { name: 'Ввести текстом', exact: true })).toBeVisible()
     }
     const sent: Array<{ requestId: string; trainingFormat: string; startTime: string; endTime: string; exercises: unknown[] }> = []
     page.on('request', (request) => { if (request.method() === 'POST' && new URL(request.url()).pathname === '/v1/workouts') sent.push(request.postDataJSON() as typeof sent[number]) })
-    await composer.getByRole('button', { name: 'Сохранить план' }).click()
+    await composer.getByRole('button', { name: 'Запланировать' }).click()
     await expect(composer.getByRole('alert')).toBeVisible()
     await expect(composer.getByRole('textbox', { name: 'Название тренировки' })).toHaveValue('Силовая с длинным названием')
     await page.screenshot({ path: info.outputPath('coach-reference-plan.png') })
-    await composer.getByRole('button', { name: 'Сохранить план' }).click()
+    await composer.getByRole('button', { name: 'Запланировать' }).click()
     await expect(composer).not.toBeVisible()
     expect(sent).toHaveLength(2); expect(sent[1]).toEqual(sent[0])
     expect(sent[0]).toMatchObject({ trainingFormat: 'self', startTime: '12:00', endTime: '13:00', exercises: [] })
@@ -3301,12 +3499,12 @@ for (const width of [390, 430, 1440]) {
     const plan = page.getByRole('dialog', { name: 'Быстрое создание тренировки' })
     await page.evaluate(() => document.fonts.ready)
     await expect(plan.getByRole('textbox', { name: 'Название тренировки' })).toHaveCSS('font-size', '16px')
-    await expect(plan.getByRole('button', { name: 'Надиктовать тренировку' })).toHaveCSS('font-size', '14px')
+    await expect(plan.getByRole('button', { name: 'Надиктовать' })).toHaveCSS('font-size', '14px')
     expect(await plan.evaluate((element) => getComputedStyle(element).fontFamily)).toContain('YS Geo')
     await plan.getByRole('button', { name: 'Клиент: Выберите клиента' }).click()
     const picker = page.getByRole('dialog', { name: 'Выбор клиента' })
     await expect(picker).toBeFocused()
-    await expect(plan.getByRole('button', { name: 'Сохранить план' })).not.toBeVisible()
+    await expect(plan.getByRole('button', { name: 'Запланировать' })).not.toBeVisible()
     const box = await picker.boundingBox()
     expect(box!.x).toBeGreaterThanOrEqual(12)
     expect(box!.width).toBeLessThanOrEqual(375)
@@ -3315,7 +3513,7 @@ for (const width of [390, 430, 1440]) {
     expect(await picker.evaluate((element) => element.contains(document.activeElement))).toBe(true)
     await page.keyboard.press('Escape')
     await expect(picker).toHaveCount(0)
-    await expect(plan.getByRole('button', { name: 'Сохранить план' })).toBeVisible()
+    await expect(plan.getByRole('button', { name: 'Запланировать' })).toBeVisible()
     await plan.getByRole('button', { name: 'Клиент: Выберите клиента' }).click()
     await page.getByRole('button', { name: /Александра Константинопольская/ }).click()
     expect(await plan.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true)
@@ -3367,9 +3565,9 @@ for (const method of ['text', 'voice', 'manual'] as const) {
     await page.getByRole('dialog', { name: 'Выбор клиента' }).getByRole('button', { name: /Алексей Смирнов/ }).click()
     if (method === 'manual') {
       await page.getByRole('button', { name: 'Добавить упражнения', exact: true }).click()
-      await expect(page.getByRole('group', { name: 'Тип тренировки' })).toHaveCount(0)
+      await expect(page.getByRole('group', { name: 'Тип тренировки' }).getByRole('button', { name: 'План', exact: true })).toHaveAttribute('aria-pressed', 'true')
     } else {
-      await page.getByRole('button', { name: method === 'voice' ? 'Надиктовать тренировку' : 'Ввести текстом', exact: true }).click()
+      await page.getByRole('button', { name: method === 'voice' ? 'Надиктовать' : 'Ввести текстом', exact: true }).click()
       if (method === 'voice') await page.getByRole('button', { name: 'Ввести текстом', exact: true }).click()
       await page.getByRole('textbox', { name: 'Тренировка', exact: true }).fill('Мой присед 3 по 10 по 20 кг')
       await page.getByRole('button', { name: 'Разобрать тренировку', exact: true }).click()
@@ -3414,8 +3612,8 @@ test('Lime plan keeps actions reachable with enlarged text on a narrow viewport'
   await page.screenshot({ path: testInfo.outputPath('lime-enlarged-text-before-scroll.png') })
   expect(await plan.evaluate((element) => Array.from(element.querySelectorAll('*')).filter((child) => child.getBoundingClientRect().right > element.getBoundingClientRect().right + 1).map((child) => child.className))).toEqual([])
   expect(await plan.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true)
-  await plan.getByRole('button', { name: 'Сохранить план' }).scrollIntoViewIfNeeded()
-  await expect(plan.getByRole('button', { name: 'Сохранить план' })).toBeInViewport()
+  await plan.getByRole('button', { name: 'Запланировать' }).scrollIntoViewIfNeeded()
+  await expect(plan.getByRole('button', { name: 'Запланировать' })).toBeInViewport()
   await page.screenshot({ path: testInfo.outputPath('lime-enlarged-text.png') })
   await plan.getByRole('button', { name: 'Закрыть создание' }).click()
   await expect(plan).toHaveCount(0)
@@ -3435,6 +3633,8 @@ for (const profileId of [trainerId, '10000000-0000-4000-8000-000000000010']) {
     await page.screenshot({ path: testInfo.outputPath('lime-entry-choice.png') })
     await choice.getByRole('button', { name: 'Начать сейчас' }).click()
     await page.getByRole('dialog', { name: 'Выбор клиента' }).getByRole('button', { name: /Алексей Смирнов/ }).click()
+    expect(mutations).toHaveLength(0)
+    await page.getByRole('button', { name: 'Продолжить тренировку', exact: true }).click()
     await expect(page).toHaveURL(new RegExp(`/workouts/${workoutId}/live$`))
     expect(mutations).toHaveLength(0)
     await page.goto('/today?date=2026-09-29')
@@ -3637,7 +3837,7 @@ for (const width of [390, 430, 1440]) {
     await expect(format.getByRole('button', { name: 'С тренером', exact: true })).toHaveAttribute('aria-pressed', 'true')
     await format.getByRole('button', { name: 'Самостоятельно', exact: true }).click()
     await expect(format.getByRole('button', { name: 'Самостоятельно', exact: true })).toHaveAttribute('aria-pressed', 'true')
-    const start = format.getByRole('button', { name: 'Начать', exact: true })
+    const start = format.getByRole('button', { name: 'Начать тренировку', exact: true })
     await expect(start).toHaveCSS('background-color', 'rgb(182, 239, 77)')
     await start.scrollIntoViewIfNeeded()
     for (const button of await format.getByRole('button').all()) {
@@ -3700,16 +3900,16 @@ for (const width of [390, 430, 1440]) {
     await expect(composer.locator('.fit-lime-plan-exercises svg')).toHaveCSS('height', '24px')
     const composerBox = await composer.boundingBox()
     expect(composerBox!.height).toBeLessThanOrEqual(876)
-    await expect(composer.getByRole('button', { name: 'Сохранить план' })).toBeVisible()
+    await expect(composer.getByRole('button', { name: 'Запланировать' })).toBeVisible()
     await page.screenshot({ path: testInfo.outputPath('figma-quick-plan.png') })
     const sent: Array<{ title?: string; requestId: string; exercises: unknown[] }> = []
     page.on('request', (request) => {
       if (request.method() === 'POST' && new URL(request.url()).pathname === '/v1/workouts') sent.push(request.postDataJSON() as typeof sent[number])
     })
-    await composer.getByRole('button', { name: 'Сохранить план' }).click()
+    await composer.getByRole('button', { name: 'Запланировать' }).click()
     await expect(composer.getByRole('alert')).toBeVisible()
     await expect(composer.getByRole('textbox', { name: 'Название тренировки' })).toHaveValue('Всё тело')
-    await composer.getByRole('button', { name: 'Сохранить план' }).click()
+    await composer.getByRole('button', { name: 'Запланировать' }).click()
     await expect(composer).not.toBeVisible()
     expect(sent).toHaveLength(2)
     expect(sent[0]).toMatchObject({ title: 'Всё тело', exercises: [] })
@@ -3733,10 +3933,9 @@ for (const width of [390, 430, 1440]) {
     await expect(page.getByRole('textbox', { name: 'Название тренировки' })).toHaveValue('План с очень длинным названием для проверки переноса')
     await page.getByRole('button', { name: 'Назад', exact: true }).click()
     await expect(page).toHaveURL(/today\?date=2026-09-24/)
-    await page.getByRole('button', { name: 'Новая тренировка', exact: true }).click()
-    await page.getByRole('button', { name: 'Запланировать', exact: true }).click()
-    await page.getByRole('button', { name: 'Продолжить черновик' }).click()
-    await expect(page.getByRole('textbox', { name: 'Название тренировки' })).toHaveValue('План с очень длинным названием для проверки переноса')
+    const resumed = page.getByRole('dialog', { name: 'Быстрое создание тренировки', exact: true })
+    await expect(resumed).toBeVisible()
+    await expect(resumed.getByRole('textbox', { name: 'Название тренировки' })).toHaveValue('План с очень длинным названием для проверки переноса')
   })
 
   test(`Figma workout editor and client picker at ${width}`, async ({ page }, testInfo) => {
@@ -4833,8 +5032,8 @@ for (const profileId of [trainerId, '10000000-0000-4000-8000-000000000010']) {
     await page.clock.setFixedTime(new Date('2026-09-24T12:00:00+03:00'))
     await mockPilot(page, { profileId, fitLime: true, workouts: [{ ...workout, trainerId: profileId, createdBy: profileId, workoutDate: '2026-09-26' }] })
     await page.goto(`/workouts/${workoutId}`)
-    await expect(page.getByText('При запуске сейчас тренировка начнётся сегодня,', { exact: false })).toBeVisible()
-    await expect(page.getByRole('button', { name: 'Начать тренировку', exact: true })).toBeVisible()
+    await expect(page.getByText('Тренировка начнётся сегодня. Исходная дата плана сохранится.', { exact: true })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Начать сегодня', exact: true })).toBeVisible()
     await mockPilot(page, { profileId, fitLime: true, workouts: [{ ...workout,
       status: 'done', workoutDate: '2026-09-24', startTime: '12:00:00', endTime: null,
       completedAt: '2026-09-25T00:10:00+03:00', plannedDate: '2026-09-26',
@@ -7129,3 +7328,5 @@ for (const theme of ['light', 'dark']) for (const width of [390, 430]) {
     await page.screenshot({ path: info.outputPath('history-calendar.png') })
   })
 }
+
+workoutLifecycleCases()
