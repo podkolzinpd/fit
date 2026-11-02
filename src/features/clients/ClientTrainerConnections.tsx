@@ -54,7 +54,7 @@ export function ClientTrainerConnections({ clientId, finance }: { clientId: stri
     {finance}
     <Link className={`button client-trainer-search ${trainers.data?.length === 0 ? 'primary' : 'secondary'}`} to="/me/trainers"><SearchIcon />Найти тренера</Link>
     {trainers.data?.length === 0 && <div className="client-trainer-invite-actions"><p>Уже договорились с тренером?</p><InvitationShareButton clientId={clientId} targetRole="trainer" label="Пригласить тренера" className="secondary client-trainer-invite-button" /><small>Отправьте ему ссылку или QR-код.</small></div>}
-    {hasTrainers && <p className="muted">У вас может быть один активный тренер. Для смены сначала отключите текущего — история сохранится.</p>}
+    {hasTrainers && <p className="muted">У вас может быть один активный тренер. Смену подтверждаете вы — история сохранится.</p>}
     {invitations.isLoading && <p className="muted">Загрузка приглашений…</p>}
     {invitations.data && invitations.data.length > 0 && <div className="client-home-invitations"><h3>Активные приглашения</h3>{invitations.data.map((item) => <article className="card" key={item.id}><div><strong>Приглашение для тренера</strong><p>Действует до {new Date(item.expiresAt).toLocaleDateString('ru-RU')}</p></div><button className="link danger" disabled={revoke.isPending} onClick={async () => { if (await confirm({ message: 'Отозвать это приглашение? Ссылка и QR-код больше не будут работать.', confirmLabel: 'Отозвать', danger: true })) revoke.mutate(item.id) }}>Отозвать</button></article>)}</div>}
     {invitations.error && <div><p className="error">{invitations.error.message}</p><button className="secondary" onClick={() => void invitations.refetch()}>Повторить</button></div>}
