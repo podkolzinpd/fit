@@ -1899,3 +1899,40 @@ entry/create/reload/retry, полный редактор375/390/430/1440 и пр
 stage1 public/ZIP приёмка; затем очередь1943. PR2/PR3 будут окончательно объединены
 с актуальным main в своём готовом окне и получат полный exact-source CI.
 Физический телефон и реальный OAuth не проверены. Все три этапа обязательны.
+
+
+Уточнение TMPA — первый этап принят, локальная интеграция LIVE-P1 — 03.11.2026 — Codex / OpenAI.
+
+PR1942/main616e6f71 опубликован и независимо принят. FullmainCI41540486649
+SUCCESS34jobs/2 штатных scope-skips, Androiddebug41540486646 SUCCESS;
+API41542778214/web41542778042/signedOTA41543304316 SUCCESS.213/213 public-файлов
+совпали по SHA256/размеру; оба API release616/health/ready200/auth401.
+RSA manifest/ZIP,source/ABIa882/native1.1.3/code8 проверены, sequence1793661142071,
+ZIPsha256 ed77d7c6d678437bb6041bc813b5395c477ed41ff083adb542f9b489b06388d1.
+Публичный сайт6/6 и actual signed ZIP6/6 Chromium/WebKit,0retry/flaky/skips;
+итоговый readback подтвердил ту же версию. WebKit-снимки актуальной карточки
+и выбора черновика из signedZIP просмотрены, без наложений/обрезания.
+Business writes изолированы синтетическим API; физический телефон/OAuth
+не подтверждены. [Квитанция](https://github.com/podkolzinpd/fit/pull/1942)
+обновлена в PR без нового source commit/push/выпуска. Этапы2/3 обязательны.
+
+Следующим владелец1943 штатно слил LIVE-P1 вd14aca541a396c928c24d173f973bb62c75add76.
+Его граница actualmain CI/API/web/OTA/public receipt остаётся за владельцем.
+Свежая согласованная очередь1943→1944→1948 сохраняется; локальная подготовка
+своего PR2 не занимает main. Из1944 ожидается rootlock/новый ABI: перед будущей
+приёмкой policy harness будет сверена с фактически выпущенным native-контрактом.
+
+Ordinary merge main d14 в собственный PR2 выполнен без конфликтов.
+Own PR2 delta WorkoutsPages относительно616/7e3 побайтно совпадает с delta
+объединённого файла относительноd14; все incoming клиентские Live изменения
+сохранены. Остальные входящие файлы/контракты взяты без собственных изменений;
+история TMPA/F201 и исходный клиентский допуск сохранены.
+Проверено на объединённом runtime:35/35 unit в5 файлах (template/draft/context,
+общие exercise-header/set-table), types, ESLint изменённых source, docs, новая
+native production build/startup;42/42 Chromium/WebKit за39.1s,0retry/skips
+по template/editor/calendar. Прежний fullcoverage2931 относится к7e3, не выдаётся
+за полный прогон нового d14-merge. Итоговый exact-source CI обязателен позже.
+Отвергнуты ожидание без доступной локальной интеграции, вмешательство в чужой
+release-slot и промежуточный push/полный CI до известных входящих голов.
+Далее: дождаться реальных границ1943/1944/1948, ordinarysync finalmain,
+точный полный source CI/PR2 и отдельная публикация/приёмка; затем PR3.
