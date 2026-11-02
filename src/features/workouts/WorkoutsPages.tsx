@@ -767,6 +767,7 @@ function TrainerScheduleV2({ forceDayView = false }: { forceDayView?: boolean })
     isListView, clientFilter, statusFilter, filteredItems, independent, independentPreference,
   } = useTrainerScheduleModel(forceDayView, hourHeight)
   const compactCalendar = isFitLimeEnabled(actor) && isCoachWorkoutRedesignEnabled(actor)
+  const isFortnightComparison = compactCalendar && isTwoWeekView && !isDayView && !isListView
   const workspace = useTrainerWorkspace(isDayView || compactCalendar)
   const { clients: clientsRepository, workouts: workoutsRepository } = useDataBackend()
   const queryClient = useQueryClient()
@@ -977,20 +978,20 @@ function TrainerScheduleV2({ forceDayView = false }: { forceDayView?: boolean })
     const count = Number(Boolean(clientFilter)) + Number(statusFilter !== 'all') + Number(independentPreference.enabled)
     const error = homeClients.isError || independentPreference.storageError
     const filters = <details className="coach-schedule-filter-options workout-options">
-        <summary>Фильтры{count > 0 ? ` · ${count}` : ''}{error ? ' · ошибка' : homeClients.isLoading ? ' · загрузка' : ''}<ChevronRightIcon /></summary>
+        <summary>{isFortnightComparison ? <><span className="sr-only">Фильтры{count > 0 ? ` · ${count}` : ''}{error ? ' · ошибка' : homeClients.isLoading ? ' · загрузка' : ''}</span><img src={coachWorkoutReferenceAssets.filter} alt="" aria-hidden="true" />{count > 0 && <span className="coach-calendar-filter-count" aria-hidden="true">{count}</span>}</> : <>Фильтры{count > 0 ? ` · ${count}` : ''}{error ? ' · ошибка' : homeClients.isLoading ? ' · загрузка' : ''}<ChevronRightIcon /></>}</summary>
         {content}
       </details>
     return <>{!singleScheduleGuide && <Coachmark id="coach-schedule-filters-2026-10-16" userId={actor?.userId} title="Фильтры собраны вместе" description="Клиент, статус и самостоятельные занятия — под кнопкой «Фильтры»."><span className="sr-only">Фильтры расписания</span></Coachmark>}{filters}</>
   }
 
   function renderScheduleToolbar(view: ReactNode, filters: ReactNode) {
-    if (compactCalendar) return fitLimeSchedule ? <div className="coach-calendar-filters">{filters}</div> : null
+    if (compactCalendar) return fitLimeSchedule ? <div className="coach-calendar-filters">{isFortnightComparison && <span className="coach-calendar-year">{weekStart.slice(0, 4)}{weekStart.slice(0, 4) !== periodEnd.slice(0, 4) ? `–${periodEnd.slice(0, 4)}` : ''}</span>}{filters}</div> : null
     if (!compactScheduleFilters || !fitLimeSchedule) return <>{view}{filters}</>
     return <div className="coach-schedule-toolbar"><div className="coach-schedule-view-slot"><Coachmark id="coach-schedule-guide-fixed2-2026-10-17" userId={actor?.userId} title="Вид и фильтры расписания" description="Переключайте календарь и список здесь, а клиента, статус и самостоятельные занятия выбирайте в «Фильтрах».">{view}</Coachmark></div><div className="coach-schedule-filter-slot">{filters}</div></div>
   }
 
   return <Page
-    className={`schedule-page schedule-v2 ${isDayView ? 'schedule-day-view' : 'schedule-week-view'}${isDayView && densityPreference.density === 'compact' ? ' schedule-density-compact' : ''}${fitLimeToday ? ' fit-lime-today' : ''}${fitLimeSchedule ? ' fit-lime-schedule' : ''}${compactScheduleFilters && fitLimeSchedule ? ' coach-schedule-polish' : ''}${dayInteractions ? ' coach-day-swipe' : ''}${compactCalendar ? ' coach-calendar-navigation' : ''}`}
+    className={`schedule-page schedule-v2 ${isDayView ? 'schedule-day-view' : 'schedule-week-view'}${isDayView && densityPreference.density === 'compact' ? ' schedule-density-compact' : ''}${fitLimeToday ? ' fit-lime-today' : ''}${fitLimeSchedule ? ' fit-lime-schedule' : ''}${compactScheduleFilters && fitLimeSchedule ? ' coach-schedule-polish' : ''}${dayInteractions ? ' coach-day-swipe' : ''}${compactCalendar ? ' coach-calendar-navigation' : ''}${isFortnightComparison ? ' coach-fortnight-view' : ''}`}
     title="Расписание"
     hideTitle
   >
@@ -1041,14 +1042,14 @@ function TrainerScheduleV2({ forceDayView = false }: { forceDayView?: boolean })
           <button type="button" aria-pressed={!isTwoWeekView} onClick={() => showOverview(weekStart, 'week')}>Неделя</button>
           <button type="button" aria-pressed={isTwoWeekView} onClick={() => showOverview(weekStart, '2w')}>2 недели</button>
         </div>}
-        {!(compactCalendar && isTwoWeekView) && <section className={`schedule-v2-period${isTwoWeekView ? ' is-two-week' : ''}`} aria-label="Навигация по расписанию">
+        {!isFortnightComparison && <section className={`schedule-v2-period${isTwoWeekView ? ' is-two-week' : ''}`} aria-label="Навигация по расписанию">
           <button type="button" aria-label={isTwoWeekView ? 'Предыдущие 2 недели' : 'Предыдущая неделя'} onClick={() => shiftOverview(-1)}><BackIcon /></button>
           <strong aria-label={periodLabel}>{isTwoWeekView
             ? <><span>{periodLabel.replace(/ \d{4} г\.$/, '')}</span><small>{periodEnd.slice(0, 4)} г.</small></>
             : periodLabel}</strong>
           <button type="button" aria-label={isTwoWeekView ? 'Следующие 2 недели' : 'Следующая неделя'} onClick={() => shiftOverview(1)}><ChevronRightIcon /></button>
         </section>}
-        {compactCalendar && isTwoWeekView ? <CoachFortnightComparison weekStart={weekStart} today={today} itemsByDay={itemsByDay} onOpenDay={openDay} onShift={shiftOverview} /> : <><div className="schedule-v2-weekstrip" aria-label="Дни периода">
+        {isFortnightComparison ? <CoachFortnightComparison weekStart={weekStart} today={today} itemsByDay={itemsByDay} onOpenDay={openDay} onShift={shiftOverview} /> : <><div className="schedule-v2-weekstrip" aria-label="Дни периода">
           {Array.from({ length: isTwoWeekView ? 2 : 1 }, (_, weekIndex) => <div key={weekIndex} className="schedule-v2-weekdays">
             {overviewDays.slice(weekIndex * 7, (weekIndex + 1) * 7).map((day) => <button key={day} type="button" className={`${day === selected ? 'is-selected' : ''}${day === today ? ' is-today' : ''}`} aria-label={formatScheduleDateLabel(day)} onClick={() => openDay(day, weekStart)}><span>{weekdayShort(day)}</span><strong>{dayOfMonth(day)}</strong></button>)}
           </div>)}
