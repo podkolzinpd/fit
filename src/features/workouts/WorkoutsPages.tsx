@@ -1730,7 +1730,7 @@ export function WorkoutFormPage() {
       catch (error) { setDurationError(error instanceof Error ? error.message : 'Проверьте длительность тренировки'); return }
     }
     setDurationError(null)
-    if (completedMode && source.data?.status !== 'done' && date > today) { setFormTimeError('Нельзя записать результат на будущую дату. Выберите сегодня или прошедший день.'); return }
+    if (completedMode && (!workoutId || source.data?.status !== 'done') && date > today) { setFormTimeError('Нельзя записать результат на будущую дату. Выберите сегодня или прошедший день.'); return }
     const missingTimeExercise = completedMode
       ? firstCardioDraftMissingEnteredDuration({ exercises }) : null
     if (missingTimeExercise && !await confirmLeave({
