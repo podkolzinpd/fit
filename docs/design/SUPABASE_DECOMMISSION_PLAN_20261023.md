@@ -391,3 +391,15 @@ assertions/reloads/PNG и native-only local/CI сохранены. Auth spec и 
 ESLint двух specs, E2E TypeScript, workflow-doc и whitespace checks passed.
 Неразрешённых conflict paths нет. Новый полный CI остаётся обязательным;
 merge/deploy не выполняются.
+
+### P3 — повторные конфликты с Android release1945 — 02.11.2026
+
+За время CI main получил0f5dbe7d/PR1945; владелец повторно попросил исправить
+конфликты1944. Единственный конфликт — способ открытия карточки в trainer-flow:
+наша href-ссылка и main card.filter + URL assertion реализуют тот же переход.
+Принят trainer-flow целиком из нового main: он уже содержит наш native bootstrap
+и nav-переход, добавляет URL assertion и обратную навигацию перед progress.
+Таким образом, относительно нового main E2E spec diff отсутствует; уникальные
+assertions/PNG не удалялись. Android1.1.3/code8, OTA workflow, operations и
+snapshot из main сохранены; native-only local/CI и required database context
+сохранены. Новый head и проверки — в PR1944. Production release не запускается.
