@@ -1,3 +1,4 @@
+import type { TrainerConnectionsRepository } from '../shared/trainer-connection'
 import type { ChatMeetingsRepository } from '../shared/meeting'
 import type { Workout, WorkoutAttendanceDraft, WorkoutSlotDraft } from '../shared/domain'
 import { getLocalDataBackend, localLegacyAvailable } from '#fit/local-data'
@@ -30,6 +31,7 @@ import { useYandexAppSession } from './yandex-app-session-context'
 
 export interface DataBackend {
   source: 'supabase' | 'yandex'
+  trainerConnections?: TrainerConnectionsRepository
   clients: typeof clientsRepository
   meetings?: ChatMeetingsRepository
   chat: typeof chatRepository

@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test'
 import { z } from 'zod'
-import { clientId, coachGestureWorkout, mockPilot, publicTrainerDraft, publicTrainerId, trainerId } from './fit-lime-fixtures'
+import { conversationId as consentConversationId, clientId, coachGestureWorkout, mockPilot, publicTrainerDraft, publicTrainerId, trainerId } from './fit-lime-fixtures'
 import type { WorkoutExerciseDraft } from '../src/shared/domain'
 
 async function readyPlanEditorFixture(page: Page, theme = 'dark') {
@@ -1709,4 +1709,95 @@ test('client profile recovers a merged card and transient empty list without a n
   expect(writes.filter(path => path.startsWith('/v1/auth/') || path === '/v1/clients')).toEqual([])
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
   await page.screenshot({ path: testInfo.outputPath('recovered-client-profile.png'), fullPage: true })
+})
+
+
+test.describe('shared trainer connection consent', () => {
+  const conversationId = consentConversationId
+  const oldPeriod = '10000000-0000-4000-8000-000000000099'
+  const oldTrainer = '10000000-0000-4000-8000-000000000098'
+  const token = `ABCDEF123456.${'a'.repeat(64)}`
+  const preview = { clientId, currentRelationshipId: oldPeriod, currentTrainer: { id: oldTrainer, name: 'Анна Смирнова' },
+    trainer: { id: trainerId, name: 'Иван Александрович Константинопольский' }, offerVersion: 'offer-v1' }
+  async function fixture(page: Page, theme = 'dark') {
+    await mockPilot(page, { role: 'client', profileId: clientId, clientLime: true, fitLime: false })
+    await page.addInitScript(({ id, theme }) => { if (!localStorage.getItem(`fit.clientLime.theme.${id}`)) localStorage.setItem(`fit.clientLime.theme.${id}`, theme) }, { id: clientId, theme })
+    await page.route('**/v1/invitation-links/preview', route => route.fulfill({ json: { invitation: {
+      targetRole: 'client', inviterName: preview.trainer.name, expiresAt: '2030-01-01T12:00:00Z', status: 'active',
+    } } }))
+    await page.route('**/v1/trainer-connections/preview', route => route.fulfill({ json: { preview } }))
+    await page.route(`**/v1/chat/conversations/${conversationId}/connection`, route => route.fulfill({ json: { state: {
+      activeConnection: false, invitationPending: true, invitedAt: '2026-11-02T12:00:00Z', canInvite: false, canAccept: false, trainerSwitchRequired: true,
+    } } }))
+    // The thread and connection describe the same disconnected trainer.
+    await page.route('**/v1/chat/threads', route => route.fulfill({ json: { threads: [{
+      conversationId, clientId, trainerId, partnerUserId: trainerId, partnerName: preview.trainer.name,
+      activeConnection: false, lastMessageBody: null, lastMessageAt: null, lastMessageSenderId: null,
+      unreadCount: 0, canMessage: true, blockedByMe: false, blockedByPartner: false,
+    }] } }))
+  }
+
+  for (const source of ['link', 'chat'] as const) {
+    test(`athlete confirms ${source} replacement and rechecks changed consent`, async ({ page }) => {
+      test.skip(process.env.VITE_YANDEX_ONLY_AUTH_ENABLED !== 'true', 'Requires native Yandex composition.')
+      await fixture(page)
+      const drafts: Record<string, unknown>[] = []
+      await page.route('**/v1/trainer-connections/confirm', async route => {
+        drafts.push(route.request().postDataJSON() as Record<string, unknown>)
+        await route.fulfill({ status: 409, json: { error: 'connection_changed' } })
+      })
+      await page.goto(source === 'link' ? `/invite?source=yandex&token=${token}` : `/chat/${conversationId}`)
+      if (source === 'chat') await page.getByRole('button', { name: 'Подключиться', exact: true }).click()
+      const consent = page.getByRole('region', { name: 'Подтверждение подключения' })
+      await expect(consent).toContainText('Анна Смирнова')
+      await expect(consent).toContainText(preview.trainer.name)
+      expect(drafts).toHaveLength(0)
+      await consent.getByRole('button', { name: 'Сменить тренера', exact: true }).click()
+      await expect(consent.getByRole('alert')).toContainText('Подключение изменилось')
+      expect(drafts).toHaveLength(1)
+      expect(drafts[0]).toMatchObject({ source, locator: source === 'link' ? token : conversationId, expectedRelationshipId: oldPeriod, offerVersion: 'offer-v1' })
+      await expect(consent.getByRole('button', { name: 'Сменить тренера', exact: true })).toHaveCount(0)
+      await consent.getByRole('button', { name: 'Проверить снова', exact: true }).click()
+      await expect(consent.getByRole('button', { name: 'Сменить тренера', exact: true })).toBeVisible()
+      expect(drafts).toHaveLength(1)
+      await page.route('**/v1/trainer-connections/confirm', async route => {
+        drafts.push(route.request().postDataJSON() as Record<string, unknown>)
+        await page.route(`**/v1/chat/conversations/${conversationId}/connection`, r => r.fulfill({ json: { state: {
+          activeConnection: true, invitationPending: false, invitedAt: null, canInvite: false, canAccept: false, trainerSwitchRequired: false,
+        } } }))
+        await route.fulfill({ json: { clientId } })
+      })
+      await consent.getByRole('button', { name: 'Сменить тренера', exact: true }).click()
+      if (source === 'link') await expect(page).toHaveURL(/\/me$/)
+      else await expect(page.getByRole('region', { name: 'Связь с тренером' })).toHaveCount(0)
+      expect(drafts).toHaveLength(2)
+    })
+  }
+
+  // Geometry/token coverage uses a prepared consent state, without repeating
+  // acceptance for every theme and width. Long names test real wrapping risks.
+  test('connection confirmation fits client widths and both themes', async ({ page }, testInfo) => {
+    test.skip(process.env.VITE_YANDEX_ONLY_AUTH_ENABLED !== 'true', 'Requires native Yandex composition.')
+    await fixture(page)
+    for (const theme of ['light', 'dark']) for (const width of [390, 430]) {
+      await page.setViewportSize({ width, height: 932 })
+      await page.goto(`/invite?source=yandex&token=${token}`)
+      await page.evaluate(({ id, theme }) => { localStorage.setItem(`fit.clientLime.theme.${id}`, theme); document.documentElement.dataset.theme = theme }, { id: clientId, theme })
+      await page.reload()
+      const consent = page.getByRole('region', { name: 'Подтверждение подключения' })
+      await expect(consent).toBeVisible()
+      const button = consent.getByRole('button', { name: 'Сменить тренера', exact: true })
+      await button.scrollIntoViewIfNeeded()
+      const metrics = await consent.evaluate(element => {
+        const rect = element.getBoundingClientRect()
+        const button = element.querySelector('button')!.getBoundingClientRect()
+        return { left: rect.left, right: rect.right, overflow: document.documentElement.scrollWidth > innerWidth, touchHeight: button.height }
+      })
+      expect(metrics.left).toBeGreaterThanOrEqual(0)
+      expect(metrics.right).toBeLessThanOrEqual(width)
+      expect(metrics.overflow).toBe(false)
+      expect(metrics.touchHeight).toBeGreaterThanOrEqual(44)
+      await page.screenshot({ path: testInfo.outputPath(`connection-${theme}-${width}.png`), fullPage: true })
+    }
+  })
 })
