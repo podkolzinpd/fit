@@ -19,13 +19,16 @@ function useServiceAccess() {
   return useQuery({ queryKey: accessKey(actor?.userId), queryFn: () => repository.access(), enabled: actor?.role === 'trainer', retry: false, staleTime: 0, gcTime: 0, refetchOnMount: 'always' })
 }
 export function CorporateServiceEntry() {
+  const { actor } = useAuth()
   const access = useServiceAccess()
-  return access.data === true ? <div className="menu corporate-service-entry"><Link to={root}>Работа в Яндексе</Link></div> : null
+  return actor?.role === 'trainer' && access.data === true ? <div className="menu corporate-service-entry"><Link to={root}>Работа в Яндексе</Link></div> : null
 }
 function ServiceGate({ children }: PropsWithChildren) {
+  const { actor } = useAuth()
   const access = useServiceAccess()
-  return <AsyncView loading={access.isPending} error={access.error} onRetry={() => void access.refetch()}>
-    {access.data === true ? children : <StatePanel tone="info" title="Нет доступа" description="Учёт услуг доступен только тренерам с отдельным допуском и действующим назначением офиса." />}
+  const trainer = actor?.role === 'trainer'
+  return <AsyncView loading={trainer && access.isPending} error={trainer ? access.error : null} onRetry={() => void access.refetch()}>
+    {trainer && access.data === true ? children : <StatePanel tone="info" title="Нет доступа" description="Учёт услуг доступен только тренерам с отдельным допуском и действующим назначением офиса." />}
   </AsyncView>
 }
 export function CorporateServicesPage() {

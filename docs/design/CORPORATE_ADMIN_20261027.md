@@ -670,6 +670,16 @@ statements81.33/branches76.41/functions80.6/lines86.05 при прежних п�
 Root/API types+lint+build, API1559passed(267 штатных localPG skips), infra379,
 calendar22, hosting196, db-types/docs/diff-check прошли. Отдельные реальные
 PG-проверки API-этапа13/13 и прежнего corporate18/18 сохранены.
+Уточнение после main4e283aa5: native-only frontend интегрирован обычным
+merge без конфликтов; новые queries не возвращают удалённый legacy SDK.
+При review прямого пути спортсмена обнаружено вечное ожидание disabled access
+query; вместо него показан явный отказ без запроса данных. Вход из профиля
+также явно требует trainer role. Новый component-тест подтверждает этот отказ.
+Целевые42/42 и production-mode Chromium/WebKit40/40 без retries/skips прошли
+на обновлённой основе. Light390 форма и dark1440 кабинет просмотрены, геометрия
+и доступные действия сохранены. Root2938/2938, coverage83.39/78.23/82.43/88.05
+при прежних порогах; typecheck/lint/build/startup/docs/diff passed. Документация
+продукта и оператора дополнена точной независимой default-off границей.
 Открыто: удалённый CI/оба последовательных выпуска и тестовый grant.
 Дальше: от опубликованного API/main пересверить diff и правила, полный CI
 второго точного head, штатный выпуск и фактическая public/signedUI приёмка.

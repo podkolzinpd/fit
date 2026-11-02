@@ -9,7 +9,8 @@ import { addDays, formatLocalDate, todayInTimeZone } from '../../shared/local-da
 import type { CorporateService } from '../../data/repositories/corporate-services.repository'
 
 const api = vi.hoisted(() => ({ access: vi.fn(), list: vi.fn(), record: vi.fn(), save: vi.fn(), void: vi.fn(), audit: vi.fn(), statistics: vi.fn() }))
-vi.mock('../../app/auth-context', () => ({ useAuth: () => ({ actor: { userId: '10000000-0000-4000-8000-000000000001', role: 'trainer', timezone: 'Europe/Moscow' } }) }))
+const session = vi.hoisted(() => ({ role: 'trainer' }))
+vi.mock('../../app/auth-context', () => ({ useAuth: () => ({ actor: { userId: '10000000-0000-4000-8000-000000000001', role: session.role, timezone: 'Europe/Moscow' } }) }))
 vi.mock('../../data/repositories/corporate-services.repository', async original => ({ ...await original<typeof import('../../data/repositories/corporate-services.repository')>(), corporateServicesRepository: api }))
 const id = '20000000-0000-4000-8000-000000000001', office = { id, city: 'Москва', name: 'Тестовый' }
 const row: CorporateService = { id, kind: 'tour', officeId: id, city: office.city, officeName: office.name, occurredAt: '2026-01-01T09:15:36Z', version: 1, voidedAt: null, createdAt: '2026-01-01T09:16:00Z', updatedAt: '2026-01-01T09:16:00Z' }
@@ -27,6 +28,7 @@ function mount(path: string) {
 }
 beforeEach(() => {
   vi.resetAllMocks()
+  session.role = 'trainer'
   api.access.mockResolvedValue(true); api.list.mockResolvedValue(page); api.record.mockResolvedValue(row)
   api.save.mockResolvedValue({ saved: true, id, version: 1 }); api.void.mockResolvedValue({ saved: true, id, version: 2 })
   api.audit.mockResolvedValue({ events: [{ action: 'update', at: row.updatedAt, version: 2, before: row, after: { ...row, kind: 'intro' } }], nextBeforeVersion: null })
@@ -35,6 +37,11 @@ beforeEach(() => {
   HTMLDialogElement.prototype.close = function () { this.removeAttribute('open'); this.dispatchEvent(new Event('close')) }
 })
 describe('corporate trainer service screens', () => {
+  it('denies an athlete direct route without waiting on a disabled access query', async () => {
+    session.role = 'client'; mount('/profile/yandex-services/new?kind=tour')
+    expect(await screen.findByRole('heading', { name: 'Нет доступа' })).toBeVisible()
+    expect(api.access).not.toHaveBeenCalled(); expect(api.list).not.toHaveBeenCalled(); expect(api.record).not.toHaveBeenCalled()
+  })
   it('does not expose data to a denied trainer', async () => {
     api.access.mockResolvedValue(false); mount('/profile/yandex-services/new?kind=tour')
     expect(await screen.findByRole('heading', { name: 'Нет доступа' })).toBeVisible()
