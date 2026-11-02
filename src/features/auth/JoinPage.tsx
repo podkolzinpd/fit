@@ -11,6 +11,7 @@ import { Field, Page } from '../../shared/ui'
 export function JoinPage() {
   const { invitations: invitationsRepository, trainerConnections } = useDataBackend()
   const [offerCode, setOfferCode] = useState<string | null>(null)
+  const [connectionResult, setConnectionResult] = useState<string | null>(null)
   const { actor } = useAuth()
   const [searchParams, setSearchParams] = useSearchParams()
   const navigate = useNavigate()
@@ -43,12 +44,12 @@ export function JoinPage() {
     connect(String(new FormData(event.currentTarget).get('code')))
   }
 
-  if (offerCode && trainerConnections) return <Page title="Подключение" back={backPath} swipeBack className="join-page">
+  if (offerCode && trainerConnections && connectionResult === null) return <Page title="Подключение" back={backPath} swipeBack className="join-page">
     <TrainerConnectionConfirmation repository={trainerConnections} offer={{ source: 'code', locator: offerCode }} eager
-      onSuccess={() => navigate('/me', { replace: true })} />
+      onSuccess={setConnectionResult} />
   </Page>
 
-  if (claim.isSuccess) {
+  if (claim.isSuccess || connectionResult !== null) {
     return <Page title="Подключение" back={backPath} swipeBack className="join-page">
       <section className="join-card join-success" role="status" aria-live="polite">
         <div className="join-card-head">
