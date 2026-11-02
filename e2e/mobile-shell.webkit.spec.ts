@@ -679,6 +679,7 @@ test('iPhone: тренер назначает интервалы, спортсм
     await trainer.getByLabel('Возраст').fill('30')
     await trainer.getByLabel('Рост, см').fill('170')
     await trainer.getByLabel('Начальный вес, кг').fill('60')
+    await trainer.keyboard.press('Escape')
     await Promise.all([
       trainer.waitForURL(/\/clients\/[0-9a-f-]+$/),
       trainer.getByRole('button', { name: 'Сохранить' }).click(),
