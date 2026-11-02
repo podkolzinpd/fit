@@ -95,3 +95,20 @@ API1555passed/254conditionalDBskipped, lint/typecheck/API build/frontend build
 флагов и повторён с полным fixture env. Production-БД не использовалась.
 Classifier для точных SHA main4e283aa5→ec698672 требует full frontend/browser.
 Workflow-docs и diff-check passed; native подпись/публикация и телефон впереди.
+
+## Итерация4 — 02.11.2026 — Codex / OpenAI
+
+Задача: завершить тот же разрешённый выпуск1.1.3; владелец прямо разрешил
+приоритет перед PR1938–1944 после зелёного CI.
+Расхождение: во время PR CI41450286239 main обновился PR1939/98f67f22;
+он уже повышает build6→7 при прежнем name1.1.2 для удаления SDK. Обычный merge
+дал конфликты native versionName и metadata assertion release workflow.
+Сделано: сохранены все изменения1939, выбран1.1.3/code8 в Gradle/workflow
+и документации. Это уточняет code7 из итерации3: нельзя переиспользовать build7,
+который может быть выпущен из нового main раньше нас.
+Отвергнуто: одинаковый code7 для разных shell и обход защиты версии.
+Проверка: локальная приёмка итерации3 относится к прежнему объединённому head;
+обновлённый main уже имеет green PR CI1939, наш новый head проходит OTA/doc
+проверки и полный обязательный CI заново. Native/API/UI1939 не переопределяются.
+Открыто: подписанный выпуск и физическое устройство впереди.
+Дальше: green актуального head, merge, current-main CI и signed APK1.1.3/code8.

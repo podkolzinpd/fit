@@ -3,7 +3,7 @@
 P2: PR1928 слит; PR1929 — frontend SDK. PR1909 закрыт.
 MC1: [PR1927: база1932; CI/выпуск](design/CLIENT_REFERENCE_SCREENS_20261029.md).
 YAFIT-699: компактный список клиентов и гостевое приглашение,2PR. [План/проверки](design/COACH_CLIENTS_AND_INVITATION_20261031.md); [статус выпуска](https://st.yandex-team.ru/YAFIT-699).
-ФИТ20: [все статусы R104-S](design/COACH_RESCHEDULE_AND_DAY_GESTURES_20261031.md), [PR1923: CI](https://github.com/podkolzinpd/fit/pull/1923); [навигация — три PR](design/COACH_WORKFLOW_AUDIT_20261031.md).
+ФИТ20: [все статусы R104-S](design/COACH_RESCHEDULE_AND_DAY_GESTURES_20261031.md), [PR1923: CI](https://github.com/podkolzinpd/fit/pull/1923); [F201–208: CI/выпуск](design/COACH_WORKFLOW_AUDIT_20261031.md).
 31.10 — YAFIT-698: проведение с планом/без, отмена Live/крестик, фильтр истории. [План](design/COACH_QUICK_COMPLETION_20261031.md); [статус](https://st.yandex-team.ru/YAFIT-698).
 YAFIT-700: [Статусы тренера](design/COACH_WORKOUT_STATUS_DISPLAY_20261101.md), [статус](https://st.yandex-team.ru/YAFIT-700).
 31.10 — YAFIT-697: время быстрого старта обеим ролям, проведение пустой записи
@@ -61,8 +61,8 @@ YAFIT-667 завершён: PR1847/main91ce5582, общие правила и а
 ## Android OTA — выпуск1.1.3
 
 PR1855 выпустил APK1.1.2/code6; применение OTA на телефоне не подтверждено.
-02.11: после удаления frontend Supabase SDK новый lock ABI требует APK1.1.3/code7.
-База подготовки main4e283aa5; подпись и публикация ожидают зелёный CI.
+02.11: после удаления frontend Supabase SDK новый lock ABI требует APK1.1.3/code8.
+База подготовки main98f67f22; подпись и публикация ожидают зелёный CI.
 [План, проверки и ограничения](design/ANDROID_OTA_RECOVERY_20261028.md).
 
 ## Действующие границы
