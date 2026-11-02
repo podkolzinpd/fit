@@ -14,10 +14,10 @@ on:
         default: primary
         options: [primary, additional]
       scope:
-        description: Administrator capability or the independent invitation test pilot
+        description: Administrator capability or the independent invitation/services test pilots
         type: choice
         default: administrator
-        options: [administrator, invitation-pilot]
+        options: [administrator, invitation-pilot, services-pilot]
 permissions:
   contents: read
 concurrency:
@@ -42,6 +42,7 @@ jobs:
           ADMIN_ACCOUNT: ${{ inputs.account }}
           CORPORATE_ADMIN_SCOPE: ${{ inputs.scope }}
           PILOT_TRAINER_LOGIN_SHA256: ${{ secrets.FIT_CORPORATE_INVITATION_PILOT_LOGIN_SHA256 }}
+          SERVICES_TRAINER_LOGIN_SHA256: ${{ secrets.FIT_CORPORATE_SERVICES_PILOT_LOGIN_SHA256 }}
           CORPORATE_ADMIN_ACTION: ${{ inputs.action }}
         shell: bash
         run: |
@@ -59,6 +60,7 @@ jobs:
           case "$CORPORATE_ADMIN_SCOPE" in
             administrator) ;;
             invitation-pilot) CORPORATE_ADMIN_LOGIN_SHA256=$PILOT_TRAINER_LOGIN_SHA256 ;;
+            services-pilot) CORPORATE_ADMIN_LOGIN_SHA256=$SERVICES_TRAINER_LOGIN_SHA256 ;;
             *) exit 1 ;;
           esac
           [[ "$CORPORATE_ADMIN_LOGIN_SHA256" =~ ^[a-f0-9]{64}$ ]]
