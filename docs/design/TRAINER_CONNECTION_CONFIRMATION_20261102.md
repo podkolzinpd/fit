@@ -89,3 +89,30 @@ production-транзакции; расширять legacy adapter или мен
 реальный OAuth и физический телефон пока не проверены.
 Дальше: PR и проверка CI; затем штатный выпуск точного main без пользовательских
 production-мутаций ради тестирования.
+
+### Итерация3 — 02.11.2026 — Codex / OpenAI
+
+Задача: исправить CI1938 и интегрировать вышедший1928/main903f1409.
+Расхождения: два visual4/4 lane искали старый claim/button; это изменение
+пользовательского контракта требовало нового native preview/confirm fixture.
+Новый main перенёс общие E2E на реальный native API: новая service добавлена
+только в существующий test harness. Конфликт CURRENT_STATE разрешён сохранением
+обоих статусов; прежние сведения main не возвращены/удалены.
+Сделано: сохранён прежний success «Тренер подключён»/«Открыть кабинет»;
+visual fixture теперь проверяет source/locator/expected period/offer revision,
+отсутствие записи до click, прежние темы/radius/result/overflow assertions.
+Защищённые test titles/tags и digest не менялись; остаётся full CI.
+Решения: first-run coachmarks в native invitation tests закрываются штатным
+«Понятно» после hydration; отсутствие overlay до hydration не считается готовностью.
+Отвергнуто: force click/удаление overlay из DOM, увеличение timeout/retries,
+отключение visual lane, auto-refresh protected digest или возврат старого API.
+Проверка:11/11WebKit/Chromium shared/visual cases,retries0. Обратный native
+спортсмен→тренер прошёл; отдельный повтор прямого trainer→athlete —1/1 за5s,
+через реальный Fastify/actor session/PG17 с новым confirmation store. Настоящий
+Yandex OAuth не использовался: сессии условные, SQL/RLS настоящие.
+E2E TypeScript/targeted lint/node syntax/workflow budgets/diffcheck passed.
+Полный check после merge выявил только5s timeout независимого compression test
+при конкурентной локальной нагрузке; assertions/timeouts не менялись, итоговый
+повтор выполняется с VITEST_MAX_WORKERS=2. Runtime feature tests сохранены.
+Открыто: итог полного check этой интеграции, CI нового head,merge/выпуск/readback.
+Дальше: отправить проверенную интеграцию в1938; старый CI не выдавать за новый.

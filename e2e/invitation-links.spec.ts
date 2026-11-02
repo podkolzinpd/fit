@@ -1,5 +1,10 @@
 import { nativeRegister } from './native-local-fixture'
-import { expect, test } from './native-local-fixture'
+import { expect, test, type Page } from './native-local-fixture'
+
+async function dismissVisibleCoachmarks(page: Page) {
+  const dismiss = page.locator('.coachmark-bubble').getByRole('button', { name: 'Понятно', exact: true })
+  while (await dismiss.count() > 0) await dismiss.first().click()
+}
 
 test('trainer invites a new athlete by protected link without entering a code', async ({ page }, testInfo) => {
   test.setTimeout(120_000)
@@ -24,6 +29,10 @@ test('trainer invites a new athlete by protected link without entering a code', 
 
   await page.getByRole('button', { name: 'Закрыть' }).click()
   await page.goto('/profile/settings')
+  await expect(page.getByRole('button', { name: 'Выйти', exact: true })).toBeVisible()
+  // Fresh-account onboarding mounts after the settings route hydrates.
+  await page.locator('.coachmark-bubble').getByRole('button', { name: 'Понятно', exact: true }).first().click()
+  await dismissVisibleCoachmarks(page)
   await page.getByRole('button', { name: 'Выйти' }).click()
   await page.goto(invitationUrl)
 
@@ -32,7 +41,7 @@ test('trainer invites a new athlete by protected link without entering a code', 
   await nativeRegister(page, { key: `link-athlete-${suffix}@fit.local`, firstName: athleteName, role: 'client' })
 
   await expect(page).toHaveURL(/\/invite$/)
-  await page.getByRole('button', { name: 'Подключиться к тренеру' }).click()
+  await page.getByRole('button', { name: 'Подключить тренера', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Тренер подключён' })).toBeVisible()
   await page.getByRole('button', { name: 'Открыть кабинет' }).click()
   await expect(page).toHaveURL(/\/me$/)
@@ -54,6 +63,7 @@ test('athlete invites a trainer by the same protected link shown in the QR code'
   await page.getByLabel('Пол').selectOption('female')
   await page.getByLabel('Возраст').fill('30')
   await page.getByLabel('Рост, см').fill('170')
+  await dismissVisibleCoachmarks(page)
   await page.getByRole('button', { name: 'Сохранить профиль' }).click()
   await expect(page).toHaveURL(/\/me$/)
 
@@ -70,6 +80,7 @@ test('athlete invites a trainer by the same protected link shown in the QR code'
   await expect(page.getByRole('button', { name: 'Сохранить QR-код' })).toBeEnabled()
 
   await page.goto('/me/settings')
+  await dismissVisibleCoachmarks(page)
   await page.getByRole('button', { name: 'Выйти' }).click()
   await page.goto(invitationUrl)
   await expect(page.getByRole('heading', { name: 'Приглашение стать тренером' })).toBeVisible()
