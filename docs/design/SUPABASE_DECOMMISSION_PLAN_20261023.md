@@ -148,6 +148,60 @@ P1 и независимые части P2 допускают параллель
 Только Markdown: inventory path/count/coverage validation, относительные ссылки, `git diff --check`, штатный scope classifier и применимый CI. Runtime tests, native DB/browser acceptance, production smoke, remote/data audit и shutdown **не выполнялись этим PR** и не объявлены завершёнными. `npm run check` для документального diff заменяется утверждённой docs-only классификацией, если она подтверждена на точном head; обязательный CI не обходится.
 
 
+## P2 — удаление legacy frontend — итерация 31.10.2026 — GPT-6 / OpenAI
+
+Задача: удалить весь legacy frontend-контур и SDK, перевести оставшиеся сценарии на native fixtures. База main93784374. Серверный legacy chat/media migration, историческая Supabase БД, remote resources и secrets вне scope.
+
+Расхождения: DataBackend выводит контракт из legacy реализаций; до их удаления выделяется явный provider-neutral контракт. Production уже native; local/test composition ещё выбирает Supabase. Авторизация email/password — прекращённый контракт, её проверки не выдаются за native покрытие.
+
+Acceptance: (F1) native composition во всех режимах; (F2) явные DTO/repository contracts без SDK/DB rows; (F3) удалены legacy query/repository/auth/storage/realtime пути и frontend SDK; (F4) уникальные продуктовые assertions перенесены в native fixtures, obsolete transport/auth assertions отмечены отдельно; (F5) prompts/native поведение/media сохранены; (F6) полный check, Chromium/WebKit/visual и exact-head CI.
+
+Решение: переиспользовать существующий native repository/API и native browser fixtures. Не создавать второй fake Supabase protocol или production fallback. Удаление server SDK/CLI/старой БД отложено за границу этой задачи.
+
+Проверка/открыто: реализация и перенос сценариев выполняются; финальные результаты и соответствие старого покрытия будут записаны здесь до handoff. Production не изменялся.
+
+P2, проверенная итерация: удалены local auth/data composition,22 legacy repositories,
+legacy queries и root SDK dependency; runtime contracts явно описаны в
+`src/data/contracts`. Generated legacy DB type побайтно перемещён в
+`supabase/database.types.ts`, frozen SQL/operational consumers сохранены.
+Нативные AI запросы выделены из удаляемого query-модуля без изменения prompts.
+Публичное удаление аккаунта больше не требует authenticated backend до входа.
+Исторические invitation source markers продолжают читаться через native API.
+
+Проверки31.10: повторный полный `npm run check` после интеграции main88901eb7
+прошёл —314 unit files,2833 tests; coverage83.62/78.31/83.17/88.1;
+API1549 passed/238 skipped; lint/typecheck/build и policy suites passed.
+E2E TypeScript и workflow docs checks passed. Уникальные browser assertions и
+прекращённые SDK/GoTrue/PostgREST контракты: [карта соответствия](LEGACY_FRONTEND_TEST_MAPPING_20261031.md).
+Native CRUD/auth/приглашения/chat, обе роли, записи и проверки прав используют
+реальный локальный API/PostgreSQL; дальнейший exact-head browser/visual CI остаётся
+гейтом. PR1909: https://github.com/podkolzinpd/fit/pull/1909.
+
+Обнаруженная совместимость при переносе: WebKit отображал native preparation
+select ниже обязательной touch-высоты, native sport options имели40px.
+Две scoped CSS-правки восстанавливают48px select и44px options, используя текущий
+дизайн; никаких изменений prompts, данных, ролей или server permissions.
+Падающие проверки доступности/таймауты не ослаблены. Восстановлены сохранённые
+`fact.reps` при сборке fixtures рекордов: поверхностное переопределение `fact`
+первоначально теряло повторения; продуктовая логика не менялась.
+
+Отвергнуто: сохранение SDK ради старых protocol tests; второй fake backend;
+снятие SQL regression из shared local stack (отклонено автоматической проверкой
+scope, оставлено без изменения). Local stack по-прежнему готовит frozen SQL,
+frontend env при этом всегда native. Linux ARM Podman/WebKit прогон локально
+нестабилен, не объявлен зелёным; source/базы production не использовались.
+Дальше в рамках этого же PR: завершить exact-head CI и передать готовый PR.
+
+Linux visual fixtures получены в pinned CI runtime, manual run41237810794:
+57/56/32 passed,4/5/29 skipped по профилям390/430/1440 соответственно
+(145 проверенных случаев,38 штатных role/browser skips). Это генерация эталонов
+с действующими assertions, не финальный CI gate. Временный manual job удалён;
+финальный PR обязан пройти обычный CI без update-snapshots.
+Darwin native control сохранён; в reference для form snapshots применены только
+те же две touch-правки, остальные UI/CSS без изменений. Нет сопоставимого замера
+полного старого suite; ускорение общей CI матрицы не заявляется.
+
+
 ## P2 — разделение frontend-работы — 01.11.2026
 
 По решению владельца большой PR1909 закрыт без merge. Полная исходная работа
@@ -164,3 +218,34 @@ P1 и независимые части P2 допускают параллель
 и безопасный anonymous AccountDeletion gate необходимы для native-приёмки.
 Подробный [контракт и проверки первого этапа](NATIVE_FRONTEND_FIXTURES_20261101.md).
 Второй PR проверяется относительно первого, а не повторяет его PNG/fixture diff.
+
+Второй этап опубликован из `codex/remove-supabase-frontend-runtime` поверх
+`codex/native-frontend-test-fixtures`. Это перенос проверенного source diff
+из закрытого PR1909; PNG и fixture API не дублируются. Перед merge первого
+этапа второй не сливается; после первого его base обновляется на main.
+
+## P2 — актуализация PR1929 — 02.11.2026 — Codex / OpenAI
+
+Задача: поправить зависимый PR после слияния PR1928. База main903f1409.
+Расхождения: старая ветка58dd5e1f не содержала исправлений fixtures/CI PR1928
+и новых main-правил жизненного цикла. Решение: merge main и base main вместо
+слитой первой ветки. Удаление SDK/local composition/legacy paths сохранено.
+Конфликты E2E разрешены в пользу актуальных native fixtures, assertions и
+PNG из main; новые эталоны не генерируются. Synthetic VAPID и быстрый native
+sign-in сохранены. Новый role-based default формата из main заменяет прежний
+расчёт по абонементам; obsolete import нейтрального finance-типа удалён.
+В eslint сохранён ignore перемещённого generated supabase/database.types.ts.
+Истории обоих этапов сохранены; runtime/media/AI prompts/Cloud Functions и
+существующие миграции не переписываются. Проверки и итоговый head — в PR1929.
+Отвергнуто: возврат SDK ради разрешения конфликта и старых assertions.
+Дальше: полный check, повторный CI; production и merge не входят в этот шаг.
+
+Проверки02.11 после merge main: чистый `npm ci`, E2E TypeScript и полный
+`npm run check` passed —320 unit files/2919 tests, coverage83.31/78.23/82.4/88.01
+при прежних порогах80/75/80/80; API1555 passed/254 skipped; lint/typecheck/
+policies/build passed. Root npm ls не содержит Supabase SDK; в runtime src
+SDK imports отсутствуют, строки SDK остаются только в regression guards.
+Generated types сравнились побайтно с main; PNG diff относительно main пуст.
+Workflow docs и diff whitespace passed. Локальный browser smoke не запускался:
+существующая Podman VM недоступна; production DSN/remote DB не используются.
+Точный CI нового head остаётся гейтом; PR переведён на main и готовится к review.
