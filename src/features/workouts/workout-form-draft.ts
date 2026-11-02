@@ -103,3 +103,23 @@ export function retainQuickPlanDraft(key: string, date: LocalDate): boolean {
     return true
   } catch { return false }
 }
+
+/** A template assignment keeps its own date/client context; legacy keys stay readable. */
+export function templateAssignmentDraftKey(userId: string, templateId: string, clientId: string, date: LocalDate, completed = false): string {
+  return `${workoutFormDraftKey(userId, `template-${templateId}`)}.assignment.${encodeURIComponent(clientId || 'any')}.${date}.${completed ? 'completed' : 'planned'}`
+}
+
+export function templateAssignmentDraftChoices(userId: string, templateId: string): Array<{ key: string; draft: WorkoutFormDraft }> {
+  const legacyKey = workoutFormDraftKey(userId, `template-${templateId}`)
+  const keys = new Set([legacyKey])
+  try {
+    for (let index = 0; index < localStorage.length; index += 1) {
+      const key = localStorage.key(index)
+      if (key?.startsWith(`${legacyKey}.assignment.`)) keys.add(key)
+    }
+  } catch { /* A denied store never authorizes deleting another draft. */ }
+  return [...keys].flatMap((key) => {
+    const draft = readWorkoutFormDraft(key)
+    return draft ? [{ key, draft }] : []
+  })
+}

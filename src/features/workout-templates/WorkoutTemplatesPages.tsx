@@ -143,7 +143,7 @@ function WorkoutTemplateEditor({ templateId, sourceWorkoutId, draftKey }: { temp
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const catalog = useExerciseCatalog()
-  const templateQuery = useQuery({ queryKey: ['workout-template', templateId], queryFn: () => workoutTemplates.get(templateId!), enabled: Boolean(templateId) })
+  const templateQuery = useQuery({ queryKey: ['workout-template', templateId], queryFn: () => workoutTemplates.get(templateId!), enabled: Boolean(templateId), staleTime: 0, refetchOnMount: 'always' })
   const sourceQuery = useQuery({ queryKey: ['workout', sourceWorkoutId], queryFn: () => workouts.get(sourceWorkoutId), enabled: Boolean(sourceWorkoutId) })
   const [storedDraft] = useState(() => {
     const draft = readWorkoutTemplateDraft(draftKey)
@@ -167,24 +167,27 @@ function WorkoutTemplateEditor({ templateId, sourceWorkoutId, draftKey }: { temp
   const [pickerSearch, setPickerSearch] = useState('')
   const [replaceIndex, setReplaceIndex] = useState<number | null>(null)
   useEffect(() => {
-    if (ready || templateQuery.isLoading || sourceQuery.isLoading || templateQuery.error || sourceQuery.error) return
+    if (ready || !storedDraft && templateQuery.isFetching || templateQuery.isLoading || sourceQuery.isLoading || templateQuery.error || sourceQuery.error) return
     const initial = storedDraft ?? templateQuery.data ?? (sourceQuery.data ? workoutTemplateFromWorkout(sourceQuery.data) : null)
     if (initial) { setName(initial.name); setNotes(initial.notes ?? ''); setExercises(initial.exercises) }
     setBaseVersion(initial?.version)
     setDirty(Boolean(storedDraft))
     setReady(true)
-  }, [ready, storedDraft, sourceQuery.data, sourceQuery.isLoading, sourceQuery.error, templateQuery.data, templateQuery.isLoading, templateQuery.error])
+  }, [ready, storedDraft, sourceQuery.data, sourceQuery.isLoading, sourceQuery.error, templateQuery.isFetching, templateQuery.data, templateQuery.isLoading, templateQuery.error])
   useEffect(() => {
     if (!ready || !dirty || finished.current) return
     setDraftStorageError(!writeWorkoutTemplateDraft(draftKey, { id: templateId ?? newTemplateId, name, notes, exercises, version: baseVersion }))
   }, [ready, dirty, draftKey, templateId, newTemplateId, name, notes, exercises, baseVersion])
   const save = useMutation({
     mutationFn: (draft: WorkoutTemplateDraft) => workoutTemplates.save(draft),
-    onSuccess: async () => {
+    onSuccess: async (savedId) => {
       finished.current = true
       removeWorkoutTemplateDraft(draftKey)
       if (!active.current) return
-      await queryClient.invalidateQueries({ queryKey: ['workout-templates'] })
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['workout-template', savedId], exact: true, refetchType: 'none' }),
+        queryClient.invalidateQueries({ queryKey: ['workout-templates'] }),
+      ])
       if (active.current) navigate('/schedule/templates', { replace: true })
     },
   })
