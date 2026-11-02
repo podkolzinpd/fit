@@ -146,3 +146,21 @@ P1 и независимые части P2 допускают параллель
 ## Проверка самого планового PR
 
 Только Markdown: inventory path/count/coverage validation, относительные ссылки, `git diff --check`, штатный scope classifier и применимый CI. Runtime tests, native DB/browser acceptance, production smoke, remote/data audit и shutdown **не выполнялись этим PR** и не объявлены завершёнными. `npm run check` для документального diff заменяется утверждённой docs-only классификацией, если она подтверждена на точном head; обязательный CI не обходится.
+
+
+## P2 — разделение frontend-работы — 01.11.2026
+
+По решению владельца большой PR1909 закрыт без merge. Полная исходная работа
+сохранена в `codex/remove-legacy-frontend` на `f406f293`.
+
+1. `codex/native-frontend-test-fixtures`: native browser fixture API/PostgreSQL,
+   перенос продуктовых E2E и соответствующих визуальных эталонов. Legacy SDK,
+   auth/data composition, queries/repositories и их unit-тесты сохранены.
+2. Следующий PR поверх первого удаляет legacy frontend и SDK, выделяет явные
+   domain contracts. Native prompts, Cloud Functions и media не меняются.
+
+Первый этап использует существующие native aliases только в Playwright mode
+`native-e2e`; обычный dev mode пока не переключается. Две touch-правки44/48px
+и безопасный anonymous AccountDeletion gate необходимы для native-приёмки.
+Подробный [контракт и проверки первого этапа](NATIVE_FRONTEND_FIXTURES_20261101.md).
+Второй PR проверяется относительно первого, а не повторяет его PNG/fixture diff.

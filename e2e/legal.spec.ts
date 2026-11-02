@@ -1,4 +1,5 @@
-import { expect, test } from '@playwright/test'
+import { nativeRegister } from './native-local-fixture'
+import { expect, test } from './native-local-fixture'
 
 for (const legalPage of [
   { path: '/legal/terms', title: 'Условия использования сервиса Fit', lastSection: '4. Изменение Условий' },
@@ -46,12 +47,9 @@ test('legal documents are public and account deletion stays a reversible request
 
   const email = `legal-flow-${testInfo.workerIndex}-${Date.now()}@fit.local`
   await page.getByRole('link', { name: 'Войти в Fit' }).click()
-  await page.getByRole('button', { name: 'Создать аккаунт' }).click()
-  await page.getByLabel('Имя').fill('Юридический тест')
-  await page.getByLabel('Email').fill(email)
-  await page.getByLabel('Пароль').fill('FitLocal123!')
-  await page.getByRole('button', { name: 'Создать аккаунт' }).click()
+  await nativeRegister(page, { key: email, firstName: 'Юридический тест', role: 'trainer' })
 
+  await page.goto('/legal/delete-account')
   await expect(page).toHaveURL(/\/legal\/delete-account$/)
   await page.getByRole('button', { name: 'Запросить удаление аккаунта' }).click()
   await page.getByRole('button', { name: 'Отправить запрос' }).click()

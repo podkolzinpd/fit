@@ -1,24 +1,18 @@
-import { expect, test } from '@playwright/test'
+import { nativeSignIn, nativeRegister } from './native-local-fixture'
+import { expect, test } from './native-local-fixture'
 import { randomUUID } from 'node:crypto'
 
 const demoClientId = '11111111-1111-4111-8111-111111111111'
 
 async function signInPreviewTrainer(page: import('@playwright/test').Page) {
   await page.goto('/auth')
-  await page.getByLabel('Email').fill('trainer@fit.local')
-  await page.getByLabel('Пароль').fill('FitLocal123!')
-  await page.getByRole('button', { name: 'Войти' }).click()
+  await nativeSignIn(page, 'trainer@fit.local')
   await expect(page).toHaveURL(/\/(today|clients)$/)
 }
 
 test('global rollout gives a new trainer the Progress identity', async ({ page }) => {
   await page.goto('/auth')
-  await page.getByRole('button', { name: 'Создать аккаунт' }).click()
-  await page.getByLabel('Тип аккаунта').selectOption('trainer')
-  await page.getByLabel('Имя').fill('Progress flag off')
-  await page.getByLabel('Email').fill(`progress-flag-off-${randomUUID()}@fit.local`)
-  await page.getByLabel('Пароль').fill('FitLocal123!')
-  await page.getByRole('button', { name: 'Создать аккаунт' }).click()
+  await nativeRegister(page, { key: `progress-flag-off-${randomUUID()}@fit.local`, firstName: 'Progress flag off', role: 'trainer' })
   await expect(page).toHaveURL(/\/(today|clients)$/)
 
   await page.goto(`/progress/${demoClientId}`)
