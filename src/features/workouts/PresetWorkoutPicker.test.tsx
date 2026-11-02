@@ -24,7 +24,7 @@ describe('PresetWorkoutPicker', () => {
   it('reveals every preset as a card once the toggle is opened', async () => {
     render(<PresetWorkoutPicker onSelect={vi.fn()} />)
     expect(screen.queryByRole('button', { name: 'Выбрать' })).not.toBeInTheDocument()
-    await userEvent.click(screen.getByRole('button', { name: 'Попробовать готовую тренировку' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Выбрать готовый план' }))
     expect(screen.getAllByRole('button', { name: 'Выбрать' })).toHaveLength(PRESET_WORKOUTS.length)
     for (const preset of PRESET_WORKOUTS) expect(screen.getByText(preset.title)).toBeInTheDocument()
   })
@@ -32,7 +32,7 @@ describe('PresetWorkoutPicker', () => {
   it('calls onSelect with the chosen preset id', async () => {
     const onSelect = vi.fn()
     render(<PresetWorkoutPicker onSelect={onSelect} />)
-    await userEvent.click(screen.getByRole('button', { name: 'Попробовать готовую тренировку' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Выбрать готовый план' }))
     const [firstButton] = screen.getAllByRole('button', { name: 'Выбрать' })
     await userEvent.click(firstButton!)
     expect(onSelect).toHaveBeenCalledWith(PRESET_WORKOUTS[0]!.id)
@@ -40,7 +40,7 @@ describe('PresetWorkoutPicker', () => {
 
   it('disables selection while pending', async () => {
     render(<PresetWorkoutPicker onSelect={vi.fn()} pending />)
-    await userEvent.click(screen.getByRole('button', { name: 'Попробовать готовую тренировку' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Выбрать готовый план' }))
     for (const button of screen.getAllByRole('button', { name: 'Выбрать' })) expect(button).toBeDisabled()
   })
 })

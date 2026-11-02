@@ -85,7 +85,7 @@
 .coach-workout-reference .coach-reference-sheet .client-picker-item[aria-pressed='true'] { color: var(--lime-accent) }
 .coach-workout-reference .coach-reference-sheet > .state,
 .coach-workout-reference .coach-reference-sheet .client-picker-create { padding: 16px 20px }
-.coach-workout-reference .coach-reference-sheet .client-picker-create-action { width: calc(100% - 40px); margin: 0 20px 20px }
+.coach-workout-reference .coach-reference-sheet .client-picker-create-action { align-self: flex-start; width: auto; min-height: 44px; margin: 12px 20px 0; padding: 8px 16px; border: 1px solid #3b3b40; border-radius: 999px; background: transparent }
 .coach-workout-reference .coach-reference-sheet .fit-lime-date-selected { display: flex; align-items: center; gap: 16px; padding: 20px; margin: 0; font-size: 14px; line-height: 20px; font-weight: 500; color: #f8b021 }
 .coach-workout-reference .coach-reference-sheet .fit-lime-date-selected svg { width: 24px; height: 24px; flex: 0 0 24px }
 .coach-workout-reference .coach-reference-sheet .fit-lime-month-navigation { margin-inline: 20px }
@@ -173,3 +173,14 @@
    measured quick-plan surface, retaining native dialog and existing controls. */
 .phone-frame.fit-lime-shell.coach-workout-reference .fit-lime-workout-entry { width: min(calc(100% - 16px), 359px); border-radius: 32px; background: #252529; padding: 24px 20px 16px }
 .coach-workout-reference .fit-lime-workout-entry .fit-lime-plan-close { top: 12px; right: 8px }
+
+
+/* Approved lifecycle planning: one explicit save, all essential input visible. */
+.coach-workout-reference .coach-reference-composer .fit-lime-plan-controls { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); margin-block: 12px }
+.coach-workout-reference .coach-reference-composer .fit-lime-plan-time-hint { margin: 0 0 8px; font-size: 12px; line-height: 16px; color: var(--lime-text-secondary) }
+.coach-workout-reference .coach-reference-composer .workout-record-mode { margin-block: 8px; min-height: 44px }
+.coach-workout-reference .coach-reference-composer .fit-lime-plan-exercises { margin: 4px 0; width: 100%; min-height: 44px; border-radius: 16px }
+.coach-workout-reference .coach-reference-composer .fit-lime-plan-input-methods { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin: 8px 0 }
+.coach-workout-reference .coach-reference-composer .fit-lime-plan-input-methods > button { min-height: 44px; padding: 8px 0; display: inline-flex; justify-content: center; gap: 6px; font-size: 14px; line-height: 20px }
+.coach-workout-reference .coach-reference-composer .fit-lime-plan-save { min-height: 48px; margin-top: 8px; border-radius: 999px }
+.coach-workout-reference .coach-reference-composer .fit-lime-plan-back { position: static; min-height: 44px; display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; margin: 4px 0 0; font-size: 14px; line-height: 20px }

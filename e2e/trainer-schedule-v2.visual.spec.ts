@@ -1,3 +1,4 @@
+import { workoutLifecycleCases } from './workout-lifecycle.cases'
 import { writeFile } from 'node:fs/promises'
 import { expect, test, type Locator, type Page } from '@playwright/test'
 import { buildFitLimeCalendarPlan } from '../services/api/src/db/fit-lime-calendar-plan'
@@ -1167,7 +1168,8 @@ for (const width of [375, 390, 430, 1440]) {
     if (width === 390) {
       await page.screenshot({ path: info.outputPath('coach-reference-first-entry.png') })
       const entryCoachmark = page.getByRole('dialog', { name: 'Новая тренировка', exact: true }).locator('.coachmark-bubble')
-      await expect(entryCoachmark).toContainText('Начало без лишнего шага')
+      await expect(entryCoachmark).toContainText('Начать тренировку')
+      await expect(entryCoachmark).toContainText('Выберите клиента и формат, затем нажмите «Начать тренировку».')
       const entryClose = page.getByRole('dialog', { name: 'Новая тренировка', exact: true }).getByRole('button', { name: 'Закрыть выбор действия', exact: true })
       expect(await entryClose.evaluate(node => { const r = node.getBoundingClientRect(); return node.contains(document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2)) })).toBe(true)
       await entryCoachmark.getByRole('button', { name: 'Понятно', exact: true }).click()
@@ -1176,7 +1178,7 @@ for (const width of [375, 390, 430, 1440]) {
     const composer = page.getByRole('dialog', { name: 'Быстрое создание тренировки' })
     await expect(composer).toHaveClass(/coach-reference-composer/)
     await expect(composer.getByRole('button', { name: 'С тренером', exact: true })).toBeVisible()
-    await expect(composer.getByRole('switch', { name: 'Таймер сам ведёт подходы' })).toBeVisible()
+    await expect(composer.getByRole('switch', { name: 'Таймер сам ведёт подходы' })).toHaveCount(0)
     await expect(composer.getByRole('button', { name: 'Ввести текстом', exact: true })).toBeVisible()
     await page.screenshot({ path: info.outputPath('coach-reference-plan-options-open.png') })
     if (width === 390) {
@@ -1187,7 +1189,7 @@ for (const width of [375, 390, 430, 1440]) {
       await coachmark.getByRole('button', { name: 'Понятно', exact: true }).click()
     }
     await expect(composer.getByRole('textbox', { name: 'Название тренировки' })).toHaveCSS('font-size', '24px')
-    await expect(composer.getByRole('button', { name: 'Сохранить план', exact: true })).toHaveCount(0)
+    await expect(composer.getByRole('button', { name: 'Запланировать', exact: true })).toBeVisible()
     await composer.getByRole('textbox', { name: 'Название тренировки' }).fill('Силовая с длинным названием')
     await composer.getByRole('button', { name: 'Клиент: Выберите клиента' }).click()
     let picker = page.getByRole('dialog', { name: 'Выбор клиента' })
@@ -1210,7 +1212,7 @@ for (const width of [375, 390, 430, 1440]) {
     await dates.getByLabel('Окончание', { exact: true }).fill('11:00')
     await page.screenshot({ path: info.outputPath('coach-reference-dates.png') })
     await dates.getByRole('button', { name: 'Применить дату' }).click()
-    await composer.getByRole('button', { name: 'Сохранить план' }).click()
+    await composer.getByRole('button', { name: 'Запланировать' }).click()
     await expect(composer.getByRole('alert')).toContainText('12 часов')
     await composer.getByRole('button', { name: 'Выбрать дату и время' }).click()
     await dates.getByLabel('Окончание', { exact: true }).fill('13:00')
@@ -1239,27 +1241,25 @@ for (const width of [375, 390, 430, 1440]) {
     await recovery.getByRole('button', { name: 'Продолжить черновик', exact: true }).click()
     await expect(composer.getByRole('textbox', { name: 'Название тренировки' })).toHaveValue('Силовая с длинным названием')
     await expect(composer.getByRole('button', { name: 'Самостоятельно', exact: true })).toHaveAttribute('aria-pressed', 'true')
-    await expect(composer.getByRole('switch', { name: 'Таймер сам ведёт подходы' })).toBeVisible()
+    await expect(composer.getByRole('switch', { name: 'Таймер сам ведёт подходы' })).toHaveCount(0)
     await expect(composer.getByRole('button', { name: 'Ввести текстом', exact: true })).toBeVisible()
     if (width === 390) {
       await composer.getByRole('button', { name: 'Добавить упражнения', exact: true }).click()
       await expect(page).toHaveURL(/\/workouts\/new\?date=2026-09-24&entry=quick$/)
       await expect(page.getByRole('textbox', { name: 'Название тренировки' })).toHaveValue('Силовая с длинным названием')
       await page.getByRole('button', { name: 'Назад', exact: true }).click()
-      await page.getByRole('button', { name: 'Новая тренировка', exact: true }).click()
-      await page.getByRole('button', { name: 'Запланировать', exact: true }).click()
-      await page.getByRole('dialog', { name: 'Черновик плана' }).getByRole('button', { name: 'Продолжить черновик', exact: true }).click()
+      await expect(composer).toBeVisible()
       await expect(composer.getByRole('button', { name: 'Самостоятельно', exact: true })).toHaveAttribute('aria-pressed', 'true')
-      await expect(composer.getByRole('switch', { name: 'Таймер сам ведёт подходы' })).toBeVisible()
+      await expect(composer.getByRole('switch', { name: 'Таймер сам ведёт подходы' })).toHaveCount(0)
       await expect(composer.getByRole('button', { name: 'Ввести текстом', exact: true })).toBeVisible()
     }
     const sent: Array<{ requestId: string; trainingFormat: string; startTime: string; endTime: string; exercises: unknown[] }> = []
     page.on('request', (request) => { if (request.method() === 'POST' && new URL(request.url()).pathname === '/v1/workouts') sent.push(request.postDataJSON() as typeof sent[number]) })
-    await composer.getByRole('button', { name: 'Сохранить план' }).click()
+    await composer.getByRole('button', { name: 'Запланировать' }).click()
     await expect(composer.getByRole('alert')).toBeVisible()
     await expect(composer.getByRole('textbox', { name: 'Название тренировки' })).toHaveValue('Силовая с длинным названием')
     await page.screenshot({ path: info.outputPath('coach-reference-plan.png') })
-    await composer.getByRole('button', { name: 'Сохранить план' }).click()
+    await composer.getByRole('button', { name: 'Запланировать' }).click()
     await expect(composer).not.toBeVisible()
     expect(sent).toHaveLength(2); expect(sent[1]).toEqual(sent[0])
     expect(sent[0]).toMatchObject({ trainingFormat: 'self', startTime: '12:00', endTime: '13:00', exercises: [] })
@@ -3499,12 +3499,12 @@ for (const width of [390, 430, 1440]) {
     const plan = page.getByRole('dialog', { name: 'Быстрое создание тренировки' })
     await page.evaluate(() => document.fonts.ready)
     await expect(plan.getByRole('textbox', { name: 'Название тренировки' })).toHaveCSS('font-size', '16px')
-    await expect(plan.getByRole('button', { name: 'Надиктовать тренировку' })).toHaveCSS('font-size', '14px')
+    await expect(plan.getByRole('button', { name: 'Надиктовать' })).toHaveCSS('font-size', '14px')
     expect(await plan.evaluate((element) => getComputedStyle(element).fontFamily)).toContain('YS Geo')
     await plan.getByRole('button', { name: 'Клиент: Выберите клиента' }).click()
     const picker = page.getByRole('dialog', { name: 'Выбор клиента' })
     await expect(picker).toBeFocused()
-    await expect(plan.getByRole('button', { name: 'Сохранить план' })).not.toBeVisible()
+    await expect(plan.getByRole('button', { name: 'Запланировать' })).not.toBeVisible()
     const box = await picker.boundingBox()
     expect(box!.x).toBeGreaterThanOrEqual(12)
     expect(box!.width).toBeLessThanOrEqual(375)
@@ -3513,7 +3513,7 @@ for (const width of [390, 430, 1440]) {
     expect(await picker.evaluate((element) => element.contains(document.activeElement))).toBe(true)
     await page.keyboard.press('Escape')
     await expect(picker).toHaveCount(0)
-    await expect(plan.getByRole('button', { name: 'Сохранить план' })).toBeVisible()
+    await expect(plan.getByRole('button', { name: 'Запланировать' })).toBeVisible()
     await plan.getByRole('button', { name: 'Клиент: Выберите клиента' }).click()
     await page.getByRole('button', { name: /Александра Константинопольская/ }).click()
     expect(await plan.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true)
@@ -3565,9 +3565,9 @@ for (const method of ['text', 'voice', 'manual'] as const) {
     await page.getByRole('dialog', { name: 'Выбор клиента' }).getByRole('button', { name: /Алексей Смирнов/ }).click()
     if (method === 'manual') {
       await page.getByRole('button', { name: 'Добавить упражнения', exact: true }).click()
-      await expect(page.getByRole('group', { name: 'Тип тренировки' })).toHaveCount(0)
+      await expect(page.getByRole('group', { name: 'Тип тренировки' }).getByRole('button', { name: 'План', exact: true })).toHaveAttribute('aria-pressed', 'true')
     } else {
-      await page.getByRole('button', { name: method === 'voice' ? 'Надиктовать тренировку' : 'Ввести текстом', exact: true }).click()
+      await page.getByRole('button', { name: method === 'voice' ? 'Надиктовать' : 'Ввести текстом', exact: true }).click()
       if (method === 'voice') await page.getByRole('button', { name: 'Ввести текстом', exact: true }).click()
       await page.getByRole('textbox', { name: 'Тренировка', exact: true }).fill('Мой присед 3 по 10 по 20 кг')
       await page.getByRole('button', { name: 'Разобрать тренировку', exact: true }).click()
@@ -3612,8 +3612,8 @@ test('Lime plan keeps actions reachable with enlarged text on a narrow viewport'
   await page.screenshot({ path: testInfo.outputPath('lime-enlarged-text-before-scroll.png') })
   expect(await plan.evaluate((element) => Array.from(element.querySelectorAll('*')).filter((child) => child.getBoundingClientRect().right > element.getBoundingClientRect().right + 1).map((child) => child.className))).toEqual([])
   expect(await plan.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true)
-  await plan.getByRole('button', { name: 'Сохранить план' }).scrollIntoViewIfNeeded()
-  await expect(plan.getByRole('button', { name: 'Сохранить план' })).toBeInViewport()
+  await plan.getByRole('button', { name: 'Запланировать' }).scrollIntoViewIfNeeded()
+  await expect(plan.getByRole('button', { name: 'Запланировать' })).toBeInViewport()
   await page.screenshot({ path: testInfo.outputPath('lime-enlarged-text.png') })
   await plan.getByRole('button', { name: 'Закрыть создание' }).click()
   await expect(plan).toHaveCount(0)
@@ -3633,6 +3633,8 @@ for (const profileId of [trainerId, '10000000-0000-4000-8000-000000000010']) {
     await page.screenshot({ path: testInfo.outputPath('lime-entry-choice.png') })
     await choice.getByRole('button', { name: 'Начать сейчас' }).click()
     await page.getByRole('dialog', { name: 'Выбор клиента' }).getByRole('button', { name: /Алексей Смирнов/ }).click()
+    expect(mutations).toHaveLength(0)
+    await page.getByRole('button', { name: 'Продолжить тренировку', exact: true }).click()
     await expect(page).toHaveURL(new RegExp(`/workouts/${workoutId}/live$`))
     expect(mutations).toHaveLength(0)
     await page.goto('/today?date=2026-09-29')
@@ -3835,7 +3837,7 @@ for (const width of [390, 430, 1440]) {
     await expect(format.getByRole('button', { name: 'С тренером', exact: true })).toHaveAttribute('aria-pressed', 'true')
     await format.getByRole('button', { name: 'Самостоятельно', exact: true }).click()
     await expect(format.getByRole('button', { name: 'Самостоятельно', exact: true })).toHaveAttribute('aria-pressed', 'true')
-    const start = format.getByRole('button', { name: 'Начать', exact: true })
+    const start = format.getByRole('button', { name: 'Начать тренировку', exact: true })
     await expect(start).toHaveCSS('background-color', 'rgb(182, 239, 77)')
     await start.scrollIntoViewIfNeeded()
     for (const button of await format.getByRole('button').all()) {
@@ -3898,16 +3900,16 @@ for (const width of [390, 430, 1440]) {
     await expect(composer.locator('.fit-lime-plan-exercises svg')).toHaveCSS('height', '24px')
     const composerBox = await composer.boundingBox()
     expect(composerBox!.height).toBeLessThanOrEqual(876)
-    await expect(composer.getByRole('button', { name: 'Сохранить план' })).toBeVisible()
+    await expect(composer.getByRole('button', { name: 'Запланировать' })).toBeVisible()
     await page.screenshot({ path: testInfo.outputPath('figma-quick-plan.png') })
     const sent: Array<{ title?: string; requestId: string; exercises: unknown[] }> = []
     page.on('request', (request) => {
       if (request.method() === 'POST' && new URL(request.url()).pathname === '/v1/workouts') sent.push(request.postDataJSON() as typeof sent[number])
     })
-    await composer.getByRole('button', { name: 'Сохранить план' }).click()
+    await composer.getByRole('button', { name: 'Запланировать' }).click()
     await expect(composer.getByRole('alert')).toBeVisible()
     await expect(composer.getByRole('textbox', { name: 'Название тренировки' })).toHaveValue('Всё тело')
-    await composer.getByRole('button', { name: 'Сохранить план' }).click()
+    await composer.getByRole('button', { name: 'Запланировать' }).click()
     await expect(composer).not.toBeVisible()
     expect(sent).toHaveLength(2)
     expect(sent[0]).toMatchObject({ title: 'Всё тело', exercises: [] })
@@ -3931,10 +3933,9 @@ for (const width of [390, 430, 1440]) {
     await expect(page.getByRole('textbox', { name: 'Название тренировки' })).toHaveValue('План с очень длинным названием для проверки переноса')
     await page.getByRole('button', { name: 'Назад', exact: true }).click()
     await expect(page).toHaveURL(/today\?date=2026-09-24/)
-    await page.getByRole('button', { name: 'Новая тренировка', exact: true }).click()
-    await page.getByRole('button', { name: 'Запланировать', exact: true }).click()
-    await page.getByRole('button', { name: 'Продолжить черновик' }).click()
-    await expect(page.getByRole('textbox', { name: 'Название тренировки' })).toHaveValue('План с очень длинным названием для проверки переноса')
+    const resumed = page.getByRole('dialog', { name: 'Быстрое создание тренировки', exact: true })
+    await expect(resumed).toBeVisible()
+    await expect(resumed.getByRole('textbox', { name: 'Название тренировки' })).toHaveValue('План с очень длинным названием для проверки переноса')
   })
 
   test(`Figma workout editor and client picker at ${width}`, async ({ page }, testInfo) => {
@@ -5031,8 +5032,8 @@ for (const profileId of [trainerId, '10000000-0000-4000-8000-000000000010']) {
     await page.clock.setFixedTime(new Date('2026-09-24T12:00:00+03:00'))
     await mockPilot(page, { profileId, fitLime: true, workouts: [{ ...workout, trainerId: profileId, createdBy: profileId, workoutDate: '2026-09-26' }] })
     await page.goto(`/workouts/${workoutId}`)
-    await expect(page.getByText('При запуске сейчас тренировка начнётся сегодня,', { exact: false })).toBeVisible()
-    await expect(page.getByRole('button', { name: 'Начать тренировку', exact: true })).toBeVisible()
+    await expect(page.getByText('Тренировка начнётся сегодня. Исходная дата плана сохранится.', { exact: true })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Начать сегодня', exact: true })).toBeVisible()
     await mockPilot(page, { profileId, fitLime: true, workouts: [{ ...workout,
       status: 'done', workoutDate: '2026-09-24', startTime: '12:00:00', endTime: null,
       completedAt: '2026-09-25T00:10:00+03:00', plannedDate: '2026-09-26',
@@ -7327,3 +7328,5 @@ for (const theme of ['light', 'dark']) for (const width of [390, 430]) {
     await page.screenshot({ path: info.outputPath('history-calendar.png') })
   })
 }
+
+workoutLifecycleCases()

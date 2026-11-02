@@ -205,11 +205,11 @@ test('today: быстрый старт ведёт к единому выбору
   await expect(page.getByText('Как сохранить?', { exact: true })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Запланировать', exact: true })).toHaveAttribute('aria-pressed', 'true')
   await page.locator('.client-picker-trigger').click()
-  await page.getByRole('button', { name: 'Новый клиент' }).click()
+  await page.getByRole('button', { name: 'Клиент', exact: true }).click()
   await expect(page.getByLabel('Имя нового клиента')).toBeVisible()
   const quickClientName = `Тест ${testInfo.workerIndex}-${Date.now()}`
   await page.getByLabel('Имя нового клиента').fill(quickClientName)
-  await page.getByRole('button', { name: 'Создать и выбрать' }).click()
+  await page.getByRole('button', { name: 'Добавить и выбрать' }).click()
   await expect(page.locator('.client-picker-trigger')).toContainText(quickClientName)
   await page.locator('.client-picker-trigger').click()
   await page.locator('.client-picker-item').filter({ hasText: 'Анна Смирнова' }).first().click()
@@ -306,7 +306,7 @@ test('today: беговая ветка сразу добавляет интер�
   await expect(page.locator('.block-badge')).toContainText('Интервалы · 6 кр.')
 })
 
-test('создание из календаря: завершённая тренировка сохраняет выбранную будущую дату', async ({ page }) => {
+test('создание из календаря: смена режима не сбрасывает дату до отдельного сохранения', async ({ page }) => {
   await page.goto('/auth')
   await page.getByLabel('Email').fill('trainer@fit.local')
   await page.getByLabel('Пароль').fill('FitLocal123!')

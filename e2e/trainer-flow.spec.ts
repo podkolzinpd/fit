@@ -50,7 +50,7 @@ test('форма: быстрый ввод разбирает текст в уп�
   await expect(page.getByRole('navigation', { name: 'Основная навигация' })).toHaveCount(0)
   await expect(page.getByRole('textbox', { name: 'Заметка' })).toBeHidden()
   const format = page.getByRole('group', { name: 'Формат тренировки' })
-  await expect(format.getByRole('button', { name: 'Самостоятельно' })).toHaveAttribute('aria-pressed', 'true')
+  await expect(format.getByRole('button', { name: 'С тренером' })).toHaveAttribute('aria-pressed', 'true')
   for (const width of [320, 390, 430]) {
     await page.setViewportSize({ width, height: 844 })
     const metrics = await format.evaluate((element) => {

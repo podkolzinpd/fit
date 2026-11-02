@@ -7,8 +7,8 @@ import type { Client, Workout } from '../../shared/domain'
 import { localDate } from '../../shared/local-date'
 import { QuickStartWorkout, TrainerActiveWorkouts } from './QuickStartWorkout'
 
-const mocks = vi.hoisted(() => ({ quickStart: vi.fn(), invalidate: vi.fn() }))
-vi.mock('../../app/data-backend-context', () => ({ useDataBackend: () => ({ workouts: { quickStart: mocks.quickStart } }) }))
+const mocks = vi.hoisted(() => ({ quickStart: vi.fn(), createClient: vi.fn(), invalidate: vi.fn() }))
+vi.mock('../../app/data-backend-context', () => ({ useDataBackend: () => ({ workouts: { quickStart: mocks.quickStart }, clients: { createQuick: mocks.createClient } }) }))
 vi.mock('../../app/auth-context', () => ({ useAuth: () => ({ actor: { userId: 'trainer-1' } }) }))
 vi.mock('../../app/invalidate-workout-results', () => ({ invalidateWorkoutResults: mocks.invalidate }))
 
@@ -48,28 +48,30 @@ describe('QuickStartWorkout', () => {
     await user.click(screen.getByText('Анна'))
     expect(mocks.quickStart).not.toHaveBeenCalled()
     expect(screen.getByRole('button', { name: 'С тренером' })).toHaveAttribute('aria-pressed', 'true')
-    await user.click(screen.getByRole('button', { name: 'Начать' }))
+    await user.click(screen.getByRole('button', { name: 'Начать тренировку' }))
     expect(await screen.findByText('Открыта Live-тренировка')).toBeVisible()
     expect(mocks.quickStart).toHaveBeenCalledWith(client.id, expect.any(String), 'with_trainer')
   })
 
-  it('starts Lime immediately on client selection and retries the same command', async () => {
+  it('requires explicit Lime start and retries the same command', async () => {
     mocks.quickStart.mockRejectedValueOnce(new Error('network')).mockResolvedValue({ id: workoutId, resumed: true })
     const user = userEvent.setup()
-    view(<QuickStartWorkout role="trainer" clients={[client]} workouts={[]} returnTo="/today" startOnClientSelection initialPickerOpen />)
+    view(<QuickStartWorkout role="trainer" clients={[client]} workouts={[]} returnTo="/today" initialPickerOpen />)
     expect(mocks.quickStart).not.toHaveBeenCalled()
     await user.click(screen.getByText('Анна'))
+    expect(mocks.quickStart).not.toHaveBeenCalled()
+    await user.click(screen.getByRole('button', { name: 'Начать тренировку' }))
     await user.click(await screen.findByRole('button', { name: 'Повторить' }))
     expect(await screen.findByText('Открыта Live-тренировка')).toBeVisible()
     expect(mocks.quickStart).toHaveBeenCalledTimes(2)
     expect(mocks.quickStart.mock.calls[0]).toEqual(mocks.quickStart.mock.calls[1])
     expect(mocks.quickStart.mock.calls[0]).toEqual([client.id, expect.any(String), 'with_trainer'])
-    expect(screen.queryByRole('button', { name: 'Начать' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Начать тренировку' })).not.toBeInTheDocument()
   })
 
   it('does not start a workout when Lime client selection is cancelled', async () => {
     const cancel = vi.fn()
-    view(<QuickStartWorkout role="trainer" clients={[client]} workouts={[]} returnTo="/today" startOnClientSelection initialPickerOpen onPickerCancel={cancel} />)
+    view(<QuickStartWorkout role="trainer" clients={[client]} workouts={[]} returnTo="/today" initialPickerOpen onPickerCancel={cancel} />)
     await userEvent.setup().click(screen.getByRole('button', { name: 'Закрыть' }))
     expect(cancel).toHaveBeenCalledOnce()
     expect(mocks.quickStart).not.toHaveBeenCalled()
@@ -82,7 +84,7 @@ describe('QuickStartWorkout', () => {
     view(<QuickStartWorkout role="trainer" clientId={client.id} workouts={[]} returnTo="/today?date=2026-09-29" compact startLabel="Начать сейчас" onPendingChange={pending} />)
     await user.click(screen.getByRole('button', { name: 'Начать сейчас' }))
     expect(mocks.quickStart).not.toHaveBeenCalled()
-    await user.click(screen.getByRole('button', { name: 'Начать' }))
+    await user.click(screen.getByRole('button', { name: 'Начать тренировку' }))
     expect(await screen.findByText('Открыта Live-тренировка')).toBeVisible()
     expect(mocks.quickStart).toHaveBeenCalledWith(client.id, expect.any(String), 'with_trainer')
     expect(pending).toHaveBeenCalledWith(false)
@@ -94,7 +96,7 @@ describe('QuickStartWorkout', () => {
     view(<QuickStartWorkout role="trainer" clientId={client.id} clients={[client]} workouts={[]} returnTo="/today" />)
     await user.click(screen.getByRole('button', { name: 'Начать тренировку' }))
     await user.click(screen.getByRole('button', { name: 'Самостоятельно' }))
-    await user.click(screen.getByRole('button', { name: 'Начать' }))
+    await user.click(screen.getByRole('button', { name: 'Начать тренировку' }))
     await user.click(await screen.findByRole('button', { name: 'Повторить' }))
     expect(await screen.findByText('Открыта Live-тренировка')).toBeVisible()
     expect(mocks.quickStart.mock.calls[0]).toEqual(mocks.quickStart.mock.calls[1])
@@ -133,9 +135,9 @@ describe('QuickStartWorkout', () => {
     expect(mocks.quickStart.mock.calls[0]?.[1]).toBe(mocks.quickStart.mock.calls[1]?.[1])
   })
 
-  it('keeps start disabled until trainer clients and workouts are loaded', () => {
+  it('allows a loaded empty client list to open inline creation', () => {
     view(<QuickStartWorkout role="trainer" clients={[]} workouts={[]} returnTo="/today" />)
-    expect(screen.getByRole('button', { name: 'Начать тренировку' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Начать тренировку' })).toBeEnabled()
     expect(screen.getByRole('link', { name: 'добавьте клиента' })).toHaveAttribute('href', '/clients/new')
   })
 
@@ -146,4 +148,32 @@ describe('QuickStartWorkout', () => {
     expect(screen.getByRole('link', { name: /Анна/ })).toHaveAttribute('href', `/workouts/${first.id}/live`)
     expect(screen.getByRole('link', { name: /Борис/ })).toHaveAttribute('href', `/workouts/${second.id}/live`)
   })
+})
+
+
+it('creates and selects a client without implicitly starting even in the immediate calendar entry', async () => {
+  mocks.quickStart.mockReset()
+  mocks.createClient.mockResolvedValue(client.id)
+  const user = userEvent.setup()
+  view(<QuickStartWorkout role="trainer" clients={[]} workouts={[]} returnTo="/today" initialPickerOpen />)
+  await user.click(screen.getByRole('button', { name: 'Клиент' }))
+  await user.type(screen.getByLabelText('Имя нового клиента'), 'Новая спортсменка')
+  await user.click(screen.getByRole('button', { name: 'Добавить и выбрать' }))
+  expect(await screen.findByText('Новая спортсменка')).toBeVisible()
+  expect(screen.getByRole('button', { name: 'Начать тренировку' })).toBeEnabled()
+  expect(mocks.createClient).toHaveBeenCalledWith('Новая спортсменка')
+  expect(mocks.quickStart).not.toHaveBeenCalled()
+})
+
+it('selects an active client before explicitly continuing without a write or format change', async () => {
+  mocks.quickStart.mockReset()
+  const user = userEvent.setup()
+  view(<QuickStartWorkout role="trainer" clients={[client]} workouts={[{ id: workoutId, clientId: client.id, status: 'in_progress', trainingFormat: 'self' } as Workout]} returnTo="/today" initialPickerOpen />)
+  await user.click(screen.getByText('Анна'))
+  expect(screen.getByText(/уже идёт тренировка/)).toBeVisible()
+  expect(screen.queryByRole('button', { name: 'С тренером' })).not.toBeInTheDocument()
+  expect(screen.queryByText('Открыта Live-тренировка')).not.toBeInTheDocument()
+  await user.click(screen.getByRole('button', { name: 'Продолжить тренировку' }))
+  expect(await screen.findByText('Открыта Live-тренировка')).toBeVisible()
+  expect(mocks.quickStart).not.toHaveBeenCalled()
 })
