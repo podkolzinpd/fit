@@ -1,3 +1,4 @@
+import { workoutTemplateReliabilityCases } from './workout-template-reliability.cases'
 import { workoutLifecycleCases } from './workout-lifecycle.cases'
 import { writeFile } from 'node:fs/promises'
 import { expect, test, type Locator, type Page } from '@playwright/test'
@@ -10,6 +11,7 @@ import { trainerId, clientId, workoutId, conversationId, messageId, newWorkoutId
 
 // Visual and mixed interaction/state acceptance; all original assertions are retained.
 test.skip(!process.env.FIT_SCHEDULE_V2_VISUAL, 'Dedicated server-backed pilot harness')
+workoutTemplateReliabilityCases()
 
 // Narrow client rows and the one-add flow use the production route and fonts.
 test('Compact clients keep search, initials and one add flow in trainer Lime', { tag: ['@lime-clients', '@lime-critical'] }, async ({ page }, info) => {
@@ -285,8 +287,12 @@ test('Figma calendar Coach compact navigation keeps date access, menu and all vi
   await expect(menu.getByRole('menuitem')).toHaveText(['Компактная сетка', 'Шаблоны тренировок', 'Профиль', 'Настройки'])
   const triggerBox = (await page.getByRole('button', { name: 'Настройки расписания' }).boundingBox())!
   expect((await menu.boundingBox())!.y).toBeGreaterThanOrEqual(triggerBox.y)
+  // The class is optimistic; persistence is checked after the server acknowledges it.
+  const densitySaved = page.waitForResponse(response => new URL(response.url()).pathname === '/v1/profile'
+    && response.request().method() === 'PUT' && response.status() === 204)
   await menu.getByRole('menuitem', { name: 'Компактная сетка' }).click()
   await expect(calendar).toHaveClass(/schedule-density-compact/)
+  await densitySaved
   await page.reload(); await expect(calendar).toHaveClass(/schedule-density-compact/)
   const views = page.getByRole('group', { name: 'Вид расписания' })
   for (const name of ['Неделя', '2 недели', 'Список', 'День']) {

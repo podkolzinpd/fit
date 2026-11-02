@@ -23,8 +23,7 @@ const template: WorkoutTemplate = {
   name: 'Ноги', version: 1, createdAt: '2026-10-07T00:00:00Z', updatedAt: '2026-10-07T00:00:00Z',
   exercises: [{ source: 'system', ref: 'squat', name: 'Присед', muscleGroup: 'legs', inputKind: 'strength', position: 0, blockId: 'block', sets: [{ position: 0, weightKg: 50.5, reps: 8 }] }],
 }
-function open(route = '/schedule/templates/new/editor?sourceWorkout=source') {
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })
+function open(route = '/schedule/templates/new/editor?sourceWorkout=source', client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })) {
   const tree = () => <QueryClientProvider client={client}><MemoryRouter initialEntries={[route]}><Routes>
     <Route path="/schedule/templates/new/editor" element={<WorkoutTemplateEditorPage />} />
     <Route path="/schedule/templates/:templateId/edit" element={<WorkoutTemplateEditorPage />} />
@@ -44,6 +43,16 @@ beforeEach(() => {
   backend.workoutTemplates.save.mockResolvedValue(template.id)
 })
 describe('template save commands', () => {
+  it('waits for the current template instead of initializing from fresh-looking old cache', async () => {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: 20_000 } } })
+    client.setQueryData(['workout-template', template.id], template)
+    backend.workoutTemplates.get.mockResolvedValue({ ...template, name: 'Новая версия', version: 2 })
+    open(`/schedule/templates/${template.id}/edit`, client)
+    await waitFor(() => expect(screen.getByLabelText('Название шаблона')).toHaveValue('Новая версия'))
+    fireEvent.click(screen.getByRole('button', { name: 'Сохранить шаблон' }))
+    await waitFor(() => expect(backend.workoutTemplates.save).toHaveBeenCalledWith(expect.objectContaining({ name: 'Новая версия', version: 2 })))
+  })
+
   it('prefills the complete source workout title and allows editing it independently', async () => {
     const title = 'я'.repeat(120)
     backend.workouts.get.mockResolvedValue({ ...template, title, exercises: template.exercises })
