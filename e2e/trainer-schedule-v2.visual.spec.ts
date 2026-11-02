@@ -287,8 +287,12 @@ test('Figma calendar Coach compact navigation keeps date access, menu and all vi
   await expect(menu.getByRole('menuitem')).toHaveText(['Компактная сетка', 'Шаблоны тренировок', 'Профиль', 'Настройки'])
   const triggerBox = (await page.getByRole('button', { name: 'Настройки расписания' }).boundingBox())!
   expect((await menu.boundingBox())!.y).toBeGreaterThanOrEqual(triggerBox.y)
+  // The class is optimistic; persistence is checked after the server acknowledges it.
+  const densitySaved = page.waitForResponse(response => new URL(response.url()).pathname === '/v1/profile'
+    && response.request().method() === 'PUT' && response.status() === 204)
   await menu.getByRole('menuitem', { name: 'Компактная сетка' }).click()
   await expect(calendar).toHaveClass(/schedule-density-compact/)
+  await densitySaved
   await page.reload(); await expect(calendar).toHaveClass(/schedule-density-compact/)
   const views = page.getByRole('group', { name: 'Вид расписания' })
   for (const name of ['Неделя', '2 недели', 'Список', 'День']) {
