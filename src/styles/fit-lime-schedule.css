@@ -95,8 +95,10 @@
 /* Compare corresponding weekdays; grid rows stretch each pair to the same height. */
 .fit-lime-shell .coach-fortnight-comparison { margin: 0 16px 16px; }
 .fit-lime-shell .coach-fortnight-headings { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px; margin-bottom: 6px; color: var(--lime-text-secondary); font-size: 12px; line-height: 16px; }
-.fit-lime-shell .coach-fortnight-headings > span { min-width: 0; display: flex; align-items: center; gap: 4px; }
-.fit-lime-shell .coach-fortnight-headings > span > span { flex: 1; min-width: 0; }
+.fit-lime-shell .coach-fortnight-headings > span { min-width: 0; display: grid; grid-template-columns: 36px minmax(0, 1fr) 36px; align-items: center; }
+.fit-lime-shell .coach-fortnight-headings > span > span { grid-column: 2; grid-row: 1; min-width: 0; white-space: nowrap; text-align: center; }
+.fit-lime-shell .coach-fortnight-headings > span:first-child button { grid-column: 1; grid-row: 1; }
+.fit-lime-shell .coach-fortnight-headings > span:last-child button { grid-column: 3; grid-row: 1; }
 .fit-lime-shell .coach-fortnight-headings button { width: 44px; min-width: 44px; min-height: 44px; display: grid; place-items: center; padding: 0; border: 0; border-radius: 50%; background: transparent; color: var(--lime-text); }
 .fit-lime-shell .coach-fortnight-headings button svg { width: 24px; height: 24px; }
 .fit-lime-shell .coach-fortnight-days { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 3px; }
@@ -106,11 +108,27 @@
 .fit-lime-shell .coach-fortnight-day-heading strong { color: var(--lime-text); font-weight: 500; }
 .fit-lime-shell .coach-fortnight-day.is-today .coach-fortnight-day-heading strong { color: var(--lime-accent); }
 .fit-lime-shell .coach-fortnight-appointments { display: grid; gap: 2px; }
-.fit-lime-shell .coach-fortnight-appointment { min-width: 0; display: flex; align-items: baseline; gap: 5px; font-size: 12px; line-height: 18px; }
-.fit-lime-shell .coach-fortnight-appointment time { flex: 0 0 34px; color: var(--lime-accent); font-variant-numeric: tabular-nums; }
+.fit-lime-shell .coach-fortnight-appointment { min-width: 0; display: grid; grid-template-columns: 30px minmax(0, 1fr) 12px; align-items: center; gap: 4px; border: 0; border-radius: 0; background: transparent; color: var(--lime-text); font-size: 11.5px; line-height: 18px; font-weight: 400; }
+.fit-lime-shell .coach-fortnight-appointment time { color: var(--lime-accent); font-size: 11px; font-variant-numeric: tabular-nums; }
+.fit-lime-shell .coach-fortnight-appointment.is-untimed time { color: var(--lime-text-secondary); }
+.fit-lime-shell .coach-fortnight-appointment.schedule-event-decision { border-style: none; background: transparent; }
 .fit-lime-shell .coach-fortnight-client { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .fit-lime-shell .coach-fortnight-appointment > svg { flex: 0 0 12px; width: 12px; height: 12px; align-self: center; }
 .fit-lime-shell .coach-fortnight-appointment.schedule-event-skipped .coach-fortnight-client { text-decoration: line-through; }
+
+/* The fortnight overview scrolls above its existing FAB and navigation, not behind them. */
+.fit-lime-shell .schedule-v2.coach-fortnight-view { padding-bottom: 0; }
+.fit-lime-shell:has(.coach-fortnight-view) .content { margin-bottom: calc(max(10px, env(safe-area-inset-bottom)) + 166px); padding-bottom: 12px; }
+.fit-lime-shell .coach-fortnight-view .coach-calendar-filters { align-items: center; min-height: 44px; margin-bottom: 0; }
+.fit-lime-shell .coach-fortnight-view .coach-calendar-year { flex: 0 0 auto; color: var(--lime-text-secondary); font-size: 12px; }
+.fit-lime-shell .coach-fortnight-view .coach-calendar-filters > .coach-schedule-filter-options { min-width: 0; }
+.fit-lime-shell .coach-fortnight-view .coach-calendar-filters > .coach-schedule-filter-options > summary { width: max-content; min-width: 44px; padding: 0 8px; flex-wrap: nowrap; gap: 6px; }
+.fit-lime-shell .coach-fortnight-view .coach-calendar-filters summary > img { width: 20px; height: 20px; }
+.fit-lime-shell .coach-fortnight-view .coach-calendar-filter-count { display: grid; place-items: center; width: 17px; height: 17px; border-radius: 50%; background: var(--lime-accent); color: var(--lime-text-on-accent); font-size: 11px; }
+@media (max-width: 390px) {
+  .fit-lime-shell .coach-fortnight-headings > span { grid-template-columns: 22px minmax(0, 1fr) 22px; font-size: 11px; }
+  .fit-lime-shell .coach-fortnight-headings button { transform: translateX(-11px); }
+}
 .fit-lime-shell .fit-lime-schedule .schedule-v2-day-title > span { font-size: 16px; font-weight: 400; color: var(--lime-text-secondary); }
 .fit-lime-shell .fit-lime-schedule .schedule-v2-day-title > strong { font-size: 16px; font-weight: 500; }
 .fit-lime-shell .fit-lime-schedule .schedule-v2-day-events > span { grid-template-columns: 38px minmax(0,1fr); gap: 6px; font-size: 14px; line-height: 18px; }

@@ -977,20 +977,20 @@ function TrainerScheduleV2({ forceDayView = false }: { forceDayView?: boolean })
     const count = Number(Boolean(clientFilter)) + Number(statusFilter !== 'all') + Number(independentPreference.enabled)
     const error = homeClients.isError || independentPreference.storageError
     const filters = <details className="coach-schedule-filter-options workout-options">
-        <summary>Фильтры{count > 0 ? ` · ${count}` : ''}{error ? ' · ошибка' : homeClients.isLoading ? ' · загрузка' : ''}<ChevronRightIcon /></summary>
+        <summary>{compactCalendar && isTwoWeekView ? <><span className="sr-only">Фильтры{count > 0 ? ` · ${count}` : ''}{error ? ' · ошибка' : homeClients.isLoading ? ' · загрузка' : ''}</span><img src={coachWorkoutReferenceAssets.filter} alt="" aria-hidden="true" />{count > 0 && <span className="coach-calendar-filter-count" aria-hidden="true">{count}</span>}</> : <>Фильтры{count > 0 ? ` · ${count}` : ''}{error ? ' · ошибка' : homeClients.isLoading ? ' · загрузка' : ''}<ChevronRightIcon /></>}</summary>
         {content}
       </details>
     return <>{!singleScheduleGuide && <Coachmark id="coach-schedule-filters-2026-10-16" userId={actor?.userId} title="Фильтры собраны вместе" description="Клиент, статус и самостоятельные занятия — под кнопкой «Фильтры»."><span className="sr-only">Фильтры расписания</span></Coachmark>}{filters}</>
   }
 
   function renderScheduleToolbar(view: ReactNode, filters: ReactNode) {
-    if (compactCalendar) return fitLimeSchedule ? <div className="coach-calendar-filters">{filters}</div> : null
+    if (compactCalendar) return fitLimeSchedule ? <div className="coach-calendar-filters">{isTwoWeekView && <span className="coach-calendar-year">{weekStart.slice(0, 4)}{weekStart.slice(0, 4) !== periodEnd.slice(0, 4) ? `–${periodEnd.slice(0, 4)}` : ''}</span>}{filters}</div> : null
     if (!compactScheduleFilters || !fitLimeSchedule) return <>{view}{filters}</>
     return <div className="coach-schedule-toolbar"><div className="coach-schedule-view-slot"><Coachmark id="coach-schedule-guide-fixed2-2026-10-17" userId={actor?.userId} title="Вид и фильтры расписания" description="Переключайте календарь и список здесь, а клиента, статус и самостоятельные занятия выбирайте в «Фильтрах».">{view}</Coachmark></div><div className="coach-schedule-filter-slot">{filters}</div></div>
   }
 
   return <Page
-    className={`schedule-page schedule-v2 ${isDayView ? 'schedule-day-view' : 'schedule-week-view'}${isDayView && densityPreference.density === 'compact' ? ' schedule-density-compact' : ''}${fitLimeToday ? ' fit-lime-today' : ''}${fitLimeSchedule ? ' fit-lime-schedule' : ''}${compactScheduleFilters && fitLimeSchedule ? ' coach-schedule-polish' : ''}${dayInteractions ? ' coach-day-swipe' : ''}${compactCalendar ? ' coach-calendar-navigation' : ''}`}
+    className={`schedule-page schedule-v2 ${isDayView ? 'schedule-day-view' : 'schedule-week-view'}${isDayView && densityPreference.density === 'compact' ? ' schedule-density-compact' : ''}${fitLimeToday ? ' fit-lime-today' : ''}${fitLimeSchedule ? ' fit-lime-schedule' : ''}${compactScheduleFilters && fitLimeSchedule ? ' coach-schedule-polish' : ''}${dayInteractions ? ' coach-day-swipe' : ''}${compactCalendar ? ' coach-calendar-navigation' : ''}${compactCalendar && isTwoWeekView ? ' coach-fortnight-view' : ''}`}
     title="Расписание"
     hideTitle
   >

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { Workout } from '../../shared/domain'
 import { localDate } from '../../shared/local-date'
-import { compactScheduleClientName, compactScheduleEventLabel, compactScheduleTime, formatScheduleDateLabel, layoutScheduleTimelineEvents, mondayWeekStart, scheduleEventStatus, scheduleExerciseLine, scheduleFocusMinutes, scheduleHourLabelCollidesWithNow, scheduleTimelineScrollTop } from './schedule-presentation'
+import { compactCoachWeekRange, compactScheduleClientName, compactScheduleEventLabel, compactScheduleTime, formatScheduleDateLabel, layoutScheduleTimelineEvents, mondayWeekStart, scheduleEventStatus, scheduleExerciseLine, scheduleFocusMinutes, scheduleHourLabelCollidesWithNow, scheduleTimelineScrollTop } from './schedule-presentation'
 
 function workout(overrides: Partial<Workout> = {}): Workout {
   return {
@@ -31,6 +31,12 @@ describe('schedule presentation', () => {
 
   it('formats the selected date as an explicit day context', () => {
     expect(formatScheduleDateLabel(localDate('2026-08-26'))).toBe('Среда, 26 августа')
+  })
+
+  it('keeps compact comparison periods readable across month and year boundaries', () => {
+    expect(compactCoachWeekRange(localDate('2026-10-19'), localDate('2026-10-25'))).toBe('19–25 окт.')
+    expect(compactCoachWeekRange(localDate('2026-10-26'), localDate('2026-11-01'))).toBe('26 окт.–1 ноя.')
+    expect(compactCoachWeekRange(localDate('2026-12-28'), localDate('2027-01-03'))).toBe('28 дек.–3 янв.')
   })
 
   it('keeps time and a short client name readable in a seven-column calendar', () => {
