@@ -2775,3 +2775,43 @@ WebKit lime voice/text, строка118 — после второго нажат
 UI assertions,30s, retries/fail-on-flaky и обработчики приложения не ослаблены.
 Чужие fixture здесь не переписывались; готовый фикс будет взят из итогового
 main. Полный CI нового head выполняется, успешный исход ещё не заявляется.
+
+### Итерация 87 — 2026-11-03 — Codex / OpenAI
+
+Задача: продолжить LIVE-P1 по очереди и сохранить входящие исправления.
+CI41515608992 для1941/532804c5 прошёл; после final-base integration
+c59069c5 также все36checks SUCCESS. №1941 слит в1baf0069. Собственный
+LIVE-P1/1943 пока не слит, удалённый AED остаётся зелёным; runtime здесь
+не менялся. Впереди1942, обновлённый владельцем доfc04f8ef, его новый
+CI41526811804/Android41526811743; старый749 — только история.
+
+Между ними в main233d2f69 вошёл подготовительный CI PR1947:4 native
+production shards вместо одного worker/job, весь inventory сохранён,
+fail-fast:false, прежние бюджеты/retries/--fail-on-flaky-tests и обязательные
+gates сохранены. Прочитан diff, runtime/native/root lock не менялись.
+Входящие testfixes — origin.hover после закрытия swipe-dialog и корректный
+контракт autoplay rejection→ручная кнопка; прежние факты/playing assertions
+сохранены. Их не переписывать назад при переносе LIVE-P1.
+Read-only merge-tree с233d выявляет2test-конфликта, не runtime: trainer-flow
+берётся актуальный из final main; client confirmed swipe объединяет наши
+tabindex0 readiness с incoming alertdialog-closed/origin.hover. Автоматически
+объединённый video fix сохраняется. Сам merge-tree файлы ветки не менял.
+
+MainCI41525771096 для1baf получил failure shard2/4/job125553148787:
+216passed/2failed, оба quick-entry booking history false/true, каждый во
+всех3attempts. После startAction.click URL/detail вместо/live; это не
+nutrition-flake. Лог /tmp/fit-live-p1-peer1941-main-shard2.log. Первичная
+гипотеза shard/order уточнена по коду: существующий case76 жёстко задаёт
+workoutDate02.11, но не clock; actor timezoneEurope/Moscow. Запуск21:22UTC
+02.11 уже03.11 в этом часовом поясе. WorkoutsPages2154/2293–2295 корректно
+открывает действия пропущенного плана, не start.mutate. Соседний Lifecycle
+case фиксирует clock, этот — нет. Даты/действия/URL-проверку менять не нужно:
+передан владельцу19 узкий предложенный fixedTime02.11T09Z доmock/goto.
+Error-context сверяет владелец; приложение/чужой test/run здесь не правились.
+ФИТ20 предупреждён о том же факторе своей общей базы, без слепых reruns.
+
+Решение: не обходить активные1941/1942 и не менять поведение прошлых дат
+ради теста. Исправленный fixture берётся из фактического main, без дубля.
+Открыто: устранение текущего main-blocker/публикационная квитанция1941,
+далее полный выпуск1942, окончательная интеграция/CI/публикация LIVE-P1.
+Серверная отмена остаётся LIVE-P2 после проверки владельца первого этапа.
