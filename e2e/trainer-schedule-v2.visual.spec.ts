@@ -172,6 +172,9 @@ test('Figma calendar Coach fortnight compares aligned weekdays and keeps every a
   }))
   rows.push({ ...rows[0]!, id: '30000000-0000-4000-8000-000000000009', workoutDate: '2027-01-05', clientName: 'Без времени', startTime: null, endTime: null })
   rows.push({ ...rows[0]!, id: '30000000-0000-4000-8000-000000000010', clientName: 'Без времени первым', startTime: null, endTime: null })
+  rows[1]!.status = 'done'; rows[1]!.completedAt = '2026-12-28T10:00:00Z'
+  rows[2]!.status = 'cancelled'
+  rows[3]!.status = 'in_progress'
   await mockPilot(page, { profileId, fitLime: true, workouts: rows })
   await page.goto('/schedule?week=2026-12-28&range=2w')
   const comparison = page.getByRole('region', { name: 'Сравнение двух недель' })
@@ -186,10 +189,26 @@ test('Figma calendar Coach fortnight compares aligned weekdays and keeps every a
   await expect(page.locator('.coach-calendar-year')).toHaveText('2026–2027')
   const filters = page.locator('.coach-calendar-filters summary')
   expect(await filters.locator('img').evaluate(async node => {
-    const source = await (await fetch((node as HTMLImageElement).src)).text()
+    const src = (node as HTMLImageElement).src, comma = src.indexOf(',')
+    const source = src.startsWith('data:')
+      ? src.slice(0, comma).endsWith(';base64') ? atob(src.slice(comma + 1)) : decodeURIComponent(src.slice(comma + 1))
+      : await (await fetch(src)).text()
     return /id=["']Filter Settings["']/.test(source)
   })).toBe(true)
   await expect(filters).toHaveAccessibleName('Фильтры')
+  await expect(comparison.locator('.schedule-event-done > svg')).toHaveCount(1)
+  await expect(comparison.locator('.schedule-event-skipped > svg')).toHaveCount(1)
+  expect(await comparison.evaluate(el => {
+    const active = el.querySelector('.schedule-event-current')!, cancelled = el.querySelector('.schedule-event-skipped')!
+    const baseline = document.createElement('span')
+    el.append(baseline)
+    baseline.className = 'schedule-event-current'
+    const activePaint = getComputedStyle(active).backgroundColor === getComputedStyle(baseline).backgroundColor
+    baseline.className = 'schedule-event-skipped'
+    const cancelledColor = getComputedStyle(cancelled).color === getComputedStyle(baseline).color
+    baseline.remove()
+    return activePaint && cancelledColor
+  })).toBe(true)
   // Paired row alignment, truncation and scrolling are responsive geometry contracts.
   for (const width of [320,390,736,1440]) {
     await page.setViewportSize({ width, height: 844 })
