@@ -1665,3 +1665,26 @@ client-случай независимо подтверждён своей тр�
 Новый PR и current-main CI по действующему classifier обязательны; затем
 разрешённый API/web/signedAPK/OTA и public-приёмка продолжаются. CI-gates,
 inventory, baseline, assertions и лимиты ради зелёного результата не меняются.
+
+
+Уточнение TMPA — приёмка публичного API-prefix — 02.11.2026 — Codex / OpenAI.
+
+Квитанция предшественника1939/1946/Android8 принята: опубликован0f5dbe7d,
+full main CI41476071634 и API41481403118/web41481403002/Android41481440620
+успешны;213/213publicфайлов, обеAPI, подпись/ABI APK1.1.3/code8 и ZIP,
+14/14public и14/14signedZIP проверены владельцем. Это не выпуск TMPA.
+Actual main ужеc49f3a51/1938; его CI41483592761 ожидается, затем фактическая
+приёмка1938,1940 и1941 до нашего1942. Чужие ветки и выпуски не менялись.
+В собственном output-only harness выявлено то же расхождение адресации:
+публичная API-base содержит /api, диспетчер synthetic API ожидал /v1.
+Нормализация теперь учитывает только точный origin/base-prefix; фактический
+запрос браузера не переписывается. Observer пагинации использует ту же функцию.
+Business writes по-прежнему полностью изолированы; assertions/лимиты/retries
+не ослаблены, приложение и production-конфигурация не менялись.
+Локальная native-сборка aa355e21 с API-base http://127.0.0.1:4100/api:
+22/22Chromium/WebKit,18.25s,0retry/skips/flaky; build/startup прошли.
+Это проверка harness, не публичная приёмка шаблонов и не физический телефон.
+Доказательства: outputs/coach-templates-audit-20261102/release-acceptance/
+local-prefix-report.json и local-prefix-browser.log в зеркале задачи.
+Дальше: итоговая интеграция actual main и полный CI нового source1942 в его
+согласованном окне; затем три самостоятельных публикации/приёмки TMPA.
