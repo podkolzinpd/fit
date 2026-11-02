@@ -1778,3 +1778,34 @@ failure отдельно сохранён. После фактического s
 его actual main в собственную ветку, проверки настоящего diff и новый полный
 exact-source CI. Собственный merge ждёт финальную публикационную квитанцию
 1941/1949 и зелёный CI нового source. Все три этапа TMPA остаются обязательными.
+
+
+Уточнение TMPA — общий clock-fix интегрирован — 03.11.2026 — Codex / OpenAI.
+
+Технический PR1949 штатно слит владельцем1941 после CI41529044094 SUCCESS:
+35 успешных jobs, 1 штатный database scope-skip, все4 production native части
+и общий e2e gate. Exact squash 745dedb02d36cebffd1e7f635013f261a68a4890.
+Это продолжение приёмки1941, а не опубликованный этап шаблонов. Shared main
+сохраняется до нового полного main CI/API/web/OTA/public receipt владельца.
+
+В собственную ветку ordinary merge 7661fd19 включён фактический squash745.
+Конфликтов нет; все журналы и прежние контракты сохранены. Настоящий diff
+от fc04: только3 строки quick-workout-entry.cases.ts и документы. Src tree
+до/после одинаков: a7ffb9040e0d37218a559bedf913697eb1c53449; package/lock/android побайтно прежние.
+Поэтому полный unit coverage2925/321, lint и26 template/calendar browser
+на fc04 остаются проверкой того же runtime, но не заменяют новый source CI.
+Общий E2E-файл побайтно равен actual main; дублирующего clock patch нет.
+
+Проверено в собственной объединённой ветке: ESLint изменённого E2E, typecheck,
+8/8 real inventory (706 union), workflow docs budgets/links/archive, новая
+native production build/startup; два бывших падающих history случая × оба
+Chromium/WebKit ×3 =12/12 за16.2s, retries0/skips0. Quick-entry включён только
+в локальной синтетической паре fixture-сборки; production flags не менялись.
+Все103 прежних assertions и дополнительная проверка начала взяты из main.
+Отвергнуто: слепой rerun fc04, смена продуктовой даты/поведения ради теста,
+повтор полного локального unit набора при побайтно неизменном runtime.
+
+Открыто: новый полный CI точной следующей головы1942; старый fc04 failure
+сохранён. Собственный merge ждёт нового1941/1949 public receipt и зелёный
+exact-source CI. Далее обычный squash, полный CI фактического main, штатные
+API/web/signedOTA и stage1 приёмка; затем обязательные PR2/PR3.
