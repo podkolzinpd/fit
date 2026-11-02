@@ -424,3 +424,26 @@ fail-on-flaky; удаление local Supabase и настоящий required da
 Локально passed:54 workflow/launcher/rehearsal tests, E2E TypeScript, docs
 и whitespace checks. Относительно main нет diff в e2e/API/Android. Статусы
 нового head фиксируются в PR1944; предыдущий CI6dc645c1 был зелёным32/32.
+
+### P3 — ошибки календарных fixtures в CI1944 — 03.11.2026
+
+CI41524294759 выявил две независимые зависимости тестов от wall clock после
+main1940/1947: booking-history с фиксированной датой02.11 без фиксации часов
+и corporate-services event now−1min с границами текущего дня. Во втором случае
+job дошёл до теста в00:00 МСК03.11: событие осталось во вчерашнем дне и пять
+проверок статистики/истории получили0. Production-код не изменяется.
+
+Booking-history фиксирует02.11 до mockPilot; обе ветви hasPlan и assertions
+перехода в Live сохранены. DB fixture вычисляет начало/конец дня из одного
+времени события; три новых SQL-случая проверяют до полуночи, первые30 секунд
+после и первую минуту. Они ловят именно расхождение дня события и дня now,
+не дублируют сценарии API. Матрицы, retries/timeouts/gates не меняются.
+
+Локально passed:4 booking-history cases (оба hasPlan × Chromium/WebKit,9.7s),
+16 corporate-services actor/RLS/transaction tests (13 существующих+3 границы)
+на отдельном временном Podman PG17. Владелец старого volume не затронут.
+Полный npm run check passed:321 unit files/2923 tests; coverage83.31/78.19/82.4/88.01,
+API1567passed/281skipped без DB env, lint/types/policies/build passed. Тот же
+booking-history набор на production build с флагами CI:4/4passed (6.3s),
+без retries. Временный PG-контейнер остановлен. Статусы нового head — в PR1944.
+Подлит main1baf0069/PR1941; его date-picker/UI изменения приняты без правок.

@@ -74,6 +74,7 @@ export function quickWorkoutEntryCases() {
     expect(command.exercise.prefillFromHistory).toBeUndefined()
   })
   for (const hasPlan of [false, true]) test(`quick-entry booking history preserves appointment and requires replacement ${hasPlan}`, async ({ page }, info) => {
+    await page.clock.setFixedTime(new Date('2026-11-02T09:00:00Z'))
     const profileId = 'c0ac0000-6010-4000-8000-000000000001'
     const base = restTimerWorkout()
     const target = { ...base, createdBy: profileId, status: 'planned' as const, workoutDate: '2026-11-02', startTime: '14:00', endTime: '15:00', startedAt: null, exercises: hasPlan ? base.exercises : [] }
