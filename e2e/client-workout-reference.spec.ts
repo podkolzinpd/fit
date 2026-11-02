@@ -3516,7 +3516,14 @@ for (const theme of ['light', 'dark']) for (const density of ['original', 'compa
   const sibling = JSON.stringify(backend.getWorkouts()[0]!.exercises[0]!.sets[1]!.fact)
   const deadline = await page.evaluate(id => sessionStorage.getItem(`fit:live-rest-until:${id}`), workoutId)
   expect(deadline).not.toBeNull()
-  const swipe = async () => { const gesture=await beginClientGesture(page,first,browserName,first.locator('.live-set-number')); await gesture.move(60); await gesture.end(); await first.getByRole('button',{name:/Удалить подход 1:/}).click() }
+  const swipe = async () => {
+    await expect(page.getByRole('alertdialog')).toHaveCount(0)
+    const origin = first.locator('.live-set-number')
+    // WebKit may still settle scroll after the dialog loses focus. Wait for
+    // this exact hit target before sampling raw gesture coordinates again.
+    await origin.hover()
+    const gesture=await beginClientGesture(page,first,browserName,origin); await gesture.move(60); await gesture.end(); await first.getByRole('button',{name:/Удалить подход 1:/}).click()
+  }
   await swipe()
   await expect(page.getByRole('alertdialog')).toContainText('Выполненный результат')
   await page.getByRole('alertdialog').getByRole('button',{name:'Отмена',exact:true}).click()

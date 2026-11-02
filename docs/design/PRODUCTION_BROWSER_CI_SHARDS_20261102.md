@@ -112,3 +112,46 @@ docs budgets/links/archive и diff-check passed. Повторный реальн
 Отвергнуто: выбрать только одну сторону snapshot или переписать историю ветки.
 Открыто: CI нового head. Дальше: публикация merge commit в тот же PR;
 production/mobile не меняются, PR этим исправлением не сливается.
+
+## Итерация 3 — 2026-11-02 — Codex / OpenAI
+
+Задача владельца: «CI падает» в PR1947. Актуальный headd53d7024,
+CI41485991118 завершился failure: единственный browser failure — shard4/4,
+job125418973731. Остальные проверки прошли; итоговый e2e красный вследствие
+этого job. WebKit case `client confirmed swipe explicit cancel delete and
+reload dark compact430` исчерпал30s при повторном открытии удаления первого
+подхода после отмены. Retry прошёл за7,6s, но `--fail-on-flaky-tests` правильно
+вернул exit1:217 passed+1 flaky. Это не успешная приёмка.
+
+Evidence: error-context первого падения показывает открытое удаление второго
+подхода вместо первого. Координаты в helper вычислялись отдельно от browser
+actionability точного origin; сценарий сразу продолжал raw pointer stream
+после отмены диалога. Позднее смещение scroll/hit-target — гипотеза, точная
+последовательность первого pointer stream не записана: штатный trace собирается
+на первом retry, а не на нулевой попытке. Исходный локальный точный повтор
+прошёл10/10 за35,3s без retries; детерминированного red→green не заявляем.
+
+Изменение ограничено этим существующим E2E: до каждого swipe проверяется
+отсутствие alertdialog и выполняется `origin.hover()` на номере первого
+подхода. Playwright проверяет стабильность/доступность конкретного origin до
+повторного измерения raw координат; произвольного sleep нет. Сам свайп,
+cancel/delete/reload, запрет DELETE при отмене, версия/receipt, соседний факт,
+rest deadline и остальные исходные assertions сохранены. UI/runtime/shared
+gesture helper, protected inventory, browsers, budgets и flaky gate не меняются.
+Это синхронизация обычного CRUD-сценария, не снятие проверки отдельного race.
+
+После правки точный case10/10 прошёл за35,0s, retries0. Полная существующая
+матрица:8 профилей ×2 engine ×3 диагностических повтора =48/48 passed за2,1m,
+workers1/retries0. В CI новых browser cases0/удалённых0. Реальный
+inventory873/873 и disjoint union219+218+218+218 сохранён; policy54/54 passed.
+
+Отвергнуто: слепой rerun, ослабление timeout/retries/`--fail-on-flaky-tests`
+или изменение продуктовой механики без доказательства её дефекта.
+Полный локальный `npm run check` exit0: frontend2923/2923,
+API1563passed+264 штатных localDBskip, infra379/379, SpeechKit7/7,
+hosting196/196, calendar22/22, media2/2, lint/typecheck/build/postbuild passed.
+Docs/PR acceptance и diff-check passed. Полный browser набор873 локально
+повторно не исполнялся; новая CI-проверка обязательна.
+Открыто: CI исправленного head.
+Дальше: закончить проверки, один push в тот же PR и новый полный CI;
+production и мобильные приложения не затрагиваются.
