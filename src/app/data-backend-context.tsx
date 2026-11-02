@@ -57,7 +57,7 @@ export interface DataBackend {
   realtime: typeof realtimeRepository
 }
 
-const DataBackendContext = createContext<DataBackend | 'yandex-session-unavailable' | null>(null)
+export const DataBackendContext = createContext<DataBackend | 'yandex-session-unavailable' | null>(null)
 
 export function DataBackendProvider({ children }: PropsWithChildren) {
   const { actor } = useAuth()

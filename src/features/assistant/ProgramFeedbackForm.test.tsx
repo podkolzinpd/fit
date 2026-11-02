@@ -18,7 +18,7 @@ describe('ProgramFeedbackForm', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Всё хорошо' }))
     fireEvent.click(screen.getByRole('button', { name: 'Отправить отзыв' }))
     await waitFor(() => expect(repository.submit).toHaveBeenCalledWith('training program', 'Программа тренировок: всё хорошо.', payload))
-    expect(screen.getByRole('status')).toHaveTextContent('Обратная связь отправлена')
+    await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent('Обратная связь отправлена'))
   })
 
   it('requires a detailed comment for a negative assessment', async () => {

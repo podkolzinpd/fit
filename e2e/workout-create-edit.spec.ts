@@ -1,13 +1,9 @@
-import { expect, test } from '@playwright/test'
+import { nativeRegister } from './native-local-fixture'
+import { expect, test } from './native-local-fixture'
 
 test('global rollout gives a new client the workout create and review identity', async ({ page }, testInfo) => {
   await page.goto('/auth')
-  await page.getByRole('button', { name: 'Создать аккаунт' }).click()
-  await page.getByLabel('Тип аккаунта').selectOption('client')
-  await page.getByLabel('Имя').fill('Тренировка без preview')
-  await page.getByLabel('Email').fill(`workout-flow-no-preview-${testInfo.workerIndex}-${Date.now()}@fit.local`)
-  await page.getByLabel('Пароль').fill('FitLocal123!')
-  await page.getByRole('button', { name: 'Создать аккаунт' }).click()
+  await nativeRegister(page, { key: `workout-flow-no-preview-${testInfo.workerIndex}-${Date.now()}@fit.local`, firstName: 'Тренировка без preview', role: 'client' })
   await expect(page).toHaveURL(/\/me$/)
 
   await page.goto('/workouts/new')

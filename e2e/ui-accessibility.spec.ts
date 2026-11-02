@@ -1,4 +1,5 @@
-import { expect, test, type Page } from '@playwright/test'
+import { nativeSignIn } from './native-local-fixture'
+import { expect, test, type Page } from './native-local-fixture'
 
 async function expectTokenContrast(page: Page) {
   const results = await page.locator('.ui-identity').first().evaluate((element) => {
@@ -50,27 +51,26 @@ async function expectTokenContrast(page: Page) {
 
 async function signInClient(page: Page) {
   await page.goto('/auth')
-  await page.getByLabel('Email').fill('client@fit.local')
-  await page.getByLabel('Пароль').fill('FitLocal123!')
-  await page.getByRole('button', { name: 'Войти' }).click()
+  await nativeSignIn(page, 'client@fit.local')
   await expect(page).toHaveURL(/\/me$/)
 }
 
 test('identity palettes keep text and semantic colours at WCAG AA', async ({ page }) => {
-  await page.goto('/auth')
+  // The native welcome has a fixed dark identity; legal pages expose both shared palettes.
+  await page.goto('/legal/terms')
+  await expect(page.locator('html')).toHaveClass(/theme-light/)
   await expectTokenContrast(page)
 
-  await page.evaluate(() => localStorage.setItem('fit.appTheme', 'dark'))
+  await page.addInitScript(() => localStorage.setItem('fit.appTheme', 'dark'))
   await page.reload()
-  await expect(page.locator('.auth-flow-identity')).not.toHaveClass(/theme-light/)
+  await expect(page.locator('html')).not.toHaveClass(/theme-light/)
   await expectTokenContrast(page)
 })
 
 test('identity provides keyboard focus and honours reduced motion', async ({ page }) => {
   await page.goto('/auth')
-  const email = page.getByLabel('Email')
-  // The auth form mounts after session restoration; Tab on the loading shell
-  // cannot focus a field that does not exist yet.
+  const email = page.getByRole('button', { name: 'Продолжить с Yandex ID' })
+  // Wait for native session restoration before checking keyboard focus.
   await expect(email).toBeVisible()
   await page.keyboard.press('Tab')
   await expect(email).toBeFocused()
