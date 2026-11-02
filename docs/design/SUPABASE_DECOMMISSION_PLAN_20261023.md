@@ -343,3 +343,16 @@ ESLint spec и E2E TypeScript passed. Spec входит только в mobile-c
 Full npm check из предыдущей итерации не повторялся: дополнительно изменены
 только этот spec и журнал; применимые lint/typecheck/browser проверки выполнены.
 Точный новый head/CI — в PR1944; первый failure не скрывается.
+
+### P3 — зелёный CI и обновление main — 02.11.2026
+
+На ad9f4ac2 CI41447085236 завершён success:32/32jobs, auth/nutrition862passed/
+8skipped; Android41447085242 success на том же head. Chromium2/2 сохраняет630
+собранных cases:103passed/527 прежних conditional skips вместо102passed/1failed/
+527skipped на первой попытке; assertions и matrix не сокращены.
+За время прогона main получил98f67f22/PR1939. GitHub показал BEHIND при MERGEABLE.
+Выбрано: merge свежего main без конфликтов, сохранить календарные/style/Android
+изменения владельца и проверить точный объединённый head заново. Архив source и
+удаление local CLI/CI сохранены. Workflow docs после merge passed. Новый полный
+local check и exact-head CI — гейты; proof/status публикуется в PR1944.
+Отвергнуто: выдавать старый head за готовый при обязательном актуальном main.
