@@ -1723,3 +1723,179 @@ client-случай независимо подтверждён своей тр�
 Новый PR и current-main CI по действующему classifier обязательны; затем
 разрешённый API/web/signedAPK/OTA и public-приёмка продолжаются. CI-gates,
 inventory, baseline, assertions и лимиты ради зелёного результата не меняются.
+
+
+Уточнение TMPA — приёмка публичного API-prefix — 02.11.2026 — Codex / OpenAI.
+
+Квитанция предшественника1939/1946/Android8 принята: опубликован0f5dbe7d,
+full main CI41476071634 и API41481403118/web41481403002/Android41481440620
+успешны;213/213publicфайлов, обеAPI, подпись/ABI APK1.1.3/code8 и ZIP,
+14/14public и14/14signedZIP проверены владельцем. Это не выпуск TMPA.
+Actual main ужеc49f3a51/1938; его CI41483592761 ожидается, затем фактическая
+приёмка1938,1940 и1941 до нашего1942. Чужие ветки и выпуски не менялись.
+В собственном output-only harness выявлено то же расхождение адресации:
+публичная API-base содержит /api, диспетчер synthetic API ожидал /v1.
+Нормализация теперь учитывает только точный origin/base-prefix; фактический
+запрос браузера не переписывается. Observer пагинации использует ту же функцию.
+Business writes по-прежнему полностью изолированы; assertions/лимиты/retries
+не ослаблены, приложение и production-конфигурация не менялись.
+Локальная native-сборка aa355e21 с API-base http://127.0.0.1:4100/api:
+22/22Chromium/WebKit,18.25s,0retry/skips/flaky; build/startup прошли.
+Это проверка harness, не публичная приёмка шаблонов и не физический телефон.
+Доказательства: outputs/coach-templates-audit-20261102/release-acceptance/
+local-prefix-report.json и local-prefix-browser.log в зеркале задачи.
+Дальше: итоговая интеграция actual main и полный CI нового source1942 в его
+согласованном окне; затем три самостоятельных публикации/приёмки TMPA.
+
+
+Уточнение TMPA — локальная интеграция1938/1940 — 02.11.2026 — Codex / OpenAI.
+
+1938/c49 прошёл независимую проверку владельцем1940: опубликованные assets,
+версии API, RSA/ZIP и применимые экраны подключения на сайте/в подписанном
+пакете; блокеров не обнаружено. Личная квитанция именно автора1938 не была
+дополнительным условием.1940/606d1d1d после полногоCI41484555623 штатно merged
+в main55c7f508f871019ffcf1d70ebbc27b32234d4506; его выпуск/приёмка продолжаются.
+В собственную ветку1942 обычным merge получена эта фактическая база:
+local ee12c6c2b57a190a57e7dbbf9fdfce7b176175ea. Конфликты только двух индексов
+решены объединением обеих записей TMPA/TC/SRV; журналы/допуски/история сохранены.
+Trainer-flow побайтно равен actual main, включая новые три полноценных сценария,
+реальные SPA-переходы, assertions/reload/лимиты/retries. Чужих веток не меняла.
+Проверено: typecheck,38targetedunit,8/8inventory (706 union без дублей),
+8/8E2Escopepolicy, native production build/startup,26/26Chromium/WebKit
+(шаблоны/календарь/геометрия),22.4s,0retry/skips. Diff-check пройден.
+Удалённый1942/source74928c35 оставлен прежним; CI41452612538 относится к нему,
+не к ee12. Полный новый sourceCI обязателен после итоговой интеграции1941.
+Не опубликовано: ни один из трёх этапов TMPA. Следующий release-slot1941,
+после его итоговой базы/приёмки — final sync/sourceCI/выпуск нашего1942.
+
+
+Уточнение TMPA — итоговая интеграция PR1941 и подготовка source CI — 03.11.2026 — Codex / OpenAI.
+
+Предшественник PR1941 штатно слит после полного CI41521610378: 35 успешных
+jobs и 1 штатный database scope-skip; Android41521610303 успешен. Получен точный
+squash 1baf0069d7153ae7561cf1c07931a929bb5184c6. Владелец разрешил параллельную
+подготовку следующего исходника; общая main сохраняется до его квитанции
+full main CI → API/web/OTA → независимая публичная приёмка. Наш merge/выпуск
+до этой границы не выполняется. PR1938/1940 ранее независимо приняты.
+
+В собственную ветку обычным merge dc1dc488 включена эта фактическая база.
+Единственный конфликт CURRENT_STATE решён сохранением обеих ссылок/статусов;
+сокращена только собственная строка TMPA до бюджета 12 KiB/120 строк.
+Первая проверка бюджета выявила 12320 байт; после сокращения — 12282 байта.
+Это документный конфликт, приложение не подгонялось под проверку.
+Весь канонический журнал, 8 ID/28 состояний, F201–208, CAL101–104, native8/ABI,
+прежние клиентские/lifecycle/календарные контракты сохранены. Trainer-flow,
+nutrition fixture repair и CI с четырьмя обязательными production shards
+побайтно равны actual main. Собственных правок этих тестов/CI нет.
+
+Проверено после объединения: полный coverage 321 файл / 2925 тестов,
+193.95 s; statements 83.21%, branches 78.12%, functions 82.27%, lines 87.94%.
+Typecheck/lint, production build/startup, 62 CI/scope/inventory проверки прошли;
+Lime union 706 без дублей, прежние scoped136 и finance/critical сохранены.
+26/26 browser Chromium/WebKit, 44.8 s, 0 retries/skips; шаблоны/черновики,
+календарь, Пн↔Пн, compact reload и геометрия. Просмотрены WebKit-снимки
+fortnight390, compact320 и draft-choice: счётчики по центру, прежние цвета,
+финансы в навигации, пары дней и содержимое sheet без наложений/обрезания.
+Workflow docs budgets/links/archive integrity и diff-check пройдены.
+
+Это локальная проверка итогового runtime, не новый удалённый допуск и не
+публичная приёмка TMPA. Предыдущий CI41452612538 относится к source74928c35;
+новой голове нужен собственный полный CI. Реальный OAuth/физический телефон
+не проверены. Результаты сохранены в outputs/coach-templates-audit-20261102/
+pr1-final-* зеркала задачи. Отвергнуты bypass, отмена чужих прогонов, ослабление
+assertions/baselines/лимитов и дополнительный продуктовый gate для CI-only1947.
+Дальше: один обычный push итоговой головы в тот же PR1942, новый полный CI;
+после действительной квитанции1941 — обычный merge/main CI/публикация/приёмка
+первого этапа, затем обязательные второй и третий этапы шаблонов.
+
+
+Уточнение TMPA — inherited clock failure CI — 03.11.2026 — Codex / OpenAI.
+
+Полный source CI41526811804 на fc04f8ef завершён failure: 32 jobs success,
+1 штатный database scope-skip, native2/4/job125559033029 и native4/4/job125559033061
+failed, вследствие этого итоговый e2e/job125568724460 failed. Cancelled0.
+Android41526811743 успешен. Это не зелёный допуск и не опубликованный этап.
+Обе части получили по 216 passed/2 failed: quick-entry booking history
+false/true, quick-workout-entry.cases.ts:152, ожидаемый /live вместо /detail.
+Per-job logs сохранены в outputs/coach-templates-audit-20261102/
+pr1-fc04-native-shard2-failure.log и pr1-fc04-native-shard4-failure.log.
+
+Тот же дефект блокирует main1baf/выпуск1941. Целевая дата теста жёстко
+2026-11-02, часы не закреплены, actor timezone Europe/Moscow. После 21:00 UTC
+наступило 3 ноября: приложение правильно предлагает действия с прошедшим
+занятием. Владелец1941 подтвердил CI snapshot и контролируемый red на 3 ноября;
+clock 2 ноября даёт 12/12 Chromium/WebKit ×3 без retries, 18.3 s. Все103
+прежних assertions сохранены, добавлен текстовый assert начала. Продукт,
+таймауты, flaky gate, механика и native8 не меняются.
+
+Общее исправление ведётся владельцем в техническом PR1949/source0dc85af2,
+CI41529044094. Это продолжение блокированной границы1941 перед нашим1942.
+Дублирующий patch и слепой rerun fc04 не выполняются. Наши локальные2925 unit,
+62 policy и26 browser относятся к неизменённому runtime; текущий удалённый
+failure отдельно сохранён. После фактического squash1949: ordinary merge
+его actual main в собственную ветку, проверки настоящего diff и новый полный
+exact-source CI. Собственный merge ждёт финальную публикационную квитанцию
+1941/1949 и зелёный CI нового source. Все три этапа TMPA остаются обязательными.
+
+
+Уточнение TMPA — общий clock-fix интегрирован — 03.11.2026 — Codex / OpenAI.
+
+Технический PR1949 штатно слит владельцем1941 после CI41529044094 SUCCESS:
+35 успешных jobs, 1 штатный database scope-skip, все4 production native части
+и общий e2e gate. Exact squash 745dedb02d36cebffd1e7f635013f261a68a4890.
+Это продолжение приёмки1941, а не опубликованный этап шаблонов. Shared main
+сохраняется до нового полного main CI/API/web/OTA/public receipt владельца.
+
+В собственную ветку ordinary merge 7661fd19 включён фактический squash745.
+Конфликтов нет; все журналы и прежние контракты сохранены. Настоящий diff
+от fc04: только3 строки quick-workout-entry.cases.ts и документы. Src tree
+до/после одинаков: a7ffb9040e0d37218a559bedf913697eb1c53449; package/lock/android побайтно прежние.
+Поэтому полный unit coverage2925/321, lint и26 template/calendar browser
+на fc04 остаются проверкой того же runtime, но не заменяют новый source CI.
+Общий E2E-файл побайтно равен actual main; дублирующего clock patch нет.
+
+Проверено в собственной объединённой ветке: ESLint изменённого E2E, typecheck,
+8/8 real inventory (706 union), workflow docs budgets/links/archive, новая
+native production build/startup; два бывших падающих history случая × оба
+Chromium/WebKit ×3 =12/12 за16.2s, retries0/skips0. Quick-entry включён только
+в локальной синтетической паре fixture-сборки; production flags не менялись.
+Все103 прежних assertions и дополнительная проверка начала взяты из main.
+Отвергнуто: слепой rerun fc04, смена продуктовой даты/поведения ради теста,
+повтор полного локального unit набора при побайтно неизменном runtime.
+
+Открыто: новый полный CI точной следующей головы1942; старый fc04 failure
+сохранён. Собственный merge ждёт нового1941/1949 public receipt и зелёный
+exact-source CI. Далее обычный squash, полный CI фактического main, штатные
+API/web/signedOTA и stage1 приёмка; затем обязательные PR2/PR3.
+
+
+Уточнение TMPA — локальная интеграция PR2 с опубликованной очередью — 03.11.2026 — Codex / OpenAI.
+
+PR1941/1949 независимо принят на745dedb0; квитанция владельца подтверждает
+213/213 файлов, оба API/auth-boundary,8 public browser cases, RSA/native8/ABI/ZIP.
+Первый этап шаблонов PR1942 штатно squash-слит в616e6f71 после полного
+source CI41533426908 (35 success/1 scope-skip) и Android41533426968. Git tree
+main616 равен проверенному source6a44e623. Полный main CI41540486649 ещё идёт;
+Androiddebug41540486646 успешен. Ни один этап шаблонов пока не опубликован.
+
+Для доступной параллельной подготовки PR2 выполнено ordinary merge main616
+в собственную ветку. Конфликты ограничены перекрытием прежнего PR1 с PR2:
+сохранены актуальная invalidation/save-version логика, контекстный handoff PR2,
+все прежние assertions и новые4 entry cases; инвентарь710=706+4, scoped136 прежний.
+Весь main-журнал побайтными строками сохранён в исходном порядке; записи PR2
+добавлены без удаления. Trainer-flow с тремя фазами, nutrition fixture repair,
+общий clock-fix, CI workflows, package/lock/android равны фактическому main616.
+
+Проверено после объединения:322 файла/2931 unit,208.27s; coverage statements82.93%,
+branches77.94%,functions81.94%,lines87.72%. Typecheck/lint, production build/startup,
+62 CI/scope/inventory checks и workflow docs пройдены.42/42 Chromium/WebKit
+за55.0s,0retry/skips: reliability/version/draft/replay/discard, новые full/quick
+entry/create/reload/retry, полный редактор375/390/430/1440 и прежний календарь.
+Просмотрены WebKit возвраты390 полного и быстрого плана: контекст и компактные
+источники без наложений; результаты относятся к локальному синтетическому API.
+
+Отвергнуты повтор реализации, whole-file ours/theirs, ослабление тестов и push
+промежуточной головы ради отчёта. Открыто: actualmain CI/API/web/signedOTA и
+stage1 public/ZIP приёмка; затем очередь1943. PR2/PR3 будут окончательно объединены
+с актуальным main в своём готовом окне и получат полный exact-source CI.
+Физический телефон и реальный OAuth не проверены. Все три этапа обязательны.

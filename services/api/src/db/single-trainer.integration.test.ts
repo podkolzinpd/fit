@@ -193,6 +193,98 @@ describe.skipIf(source === undefined)('one active trainer through every connecti
     expect(await counts(f.card)).toEqual({ active: 1, memberships: 1 })
   })
 
+  // The confirmation feature uses the same real actor/RLS harness, with
+  // extra guards for replacing a coaching period rather than adding a second.
+  async function replacementFixture(source: 'chat' | 'link' | 'code') {
+    const f = await fixture()
+    await pool.query('insert into public.client_trainer_relationships(client_id,trainer_id,connected_by) values($1,$2,$3)', [f.card,f.first,f.athlete])
+    await pool.query("insert into public.client_trainers(client_id,trainer_id,note) values($1,$2,'private old note')", [f.card,f.first])
+    let locator: string
+    if (source === 'chat') {
+      locator = randomUUID()
+      await pool.query('insert into public.chat_conversations(id,client_id,client_user_id,trainer_id) values($1,$2,$3,$4)', [locator,f.card,f.athlete,f.second])
+      const [state] = await actor(f.second,'select * from public.send_chat_connection_invitation($1)',[locator])
+      expect(state).toMatchObject({ invitation_pending:true,trainer_switch_required:true })
+    } else {
+      const manual = randomUUID()
+      await pool.query("insert into public.clients(id,trainer_id,full_name) values($1,$2,'Manual new coach card')",[manual,f.second])
+      await pool.query("insert into public.client_trainers(client_id,trainer_id,alias) values($1,$2,'Manual athlete')",[manual,f.second])
+      const [invitation] = await actor(f.second,"select * from public.create_client_invitation_share($1,'client')",[manual])
+      locator = String(source === 'link' ? invitation!.invitation_token : invitation!.invitation_code)
+    }
+    const [row] = await actor(f.athlete,'select app_private.preview_trainer_connection($1,$2) preview',[source,locator])
+    const preview = row!.preview as { currentRelationshipId:string; offerVersion:string; clientId:string }
+    const operation = randomUUID()
+    const params = [source,locator,preview.currentRelationshipId,preview.offerVersion,operation]
+    const sql = 'select app_private.confirm_trainer_connection($1,$2,$3,$4,$5) id'
+    return { ...f,source,locator,preview,operation,params,sql }
+  }
+
+  it.each(['chat','link','code'] as const)('atomically replaces through %s, preserves data and handles exact replay', async source => {
+    const f = await replacementFixture(source)
+    expect(await actor(f.first,'select public.can_access_client($1) allowed',[f.card])).toEqual([{allowed:true}])
+    expect(await actor(f.athlete,f.sql,f.params)).toEqual([{id:f.card}])
+    expect(await actor(f.athlete,f.sql,f.params)).toEqual([{id:f.card}])
+    expect(await counts(f.card)).toEqual({active:1,memberships:2})
+    expect(await actor(f.first,'select public.can_access_client($1) allowed',[f.card])).toEqual([{allowed:false}])
+    expect(await actor(f.second,'select public.can_access_client($1) allowed',[f.card])).toEqual([{allowed:true}])
+    expect((await pool.query('select note from public.client_trainers where client_id=$1 and trainer_id=$2',[f.card,f.first])).rows).toEqual([{note:'private old note'}])
+    expect((await pool.query('select trainer_id,auth_user_id from public.clients where id=$1',[f.card])).rows).toEqual([{trainer_id:f.athlete,auth_user_id:f.athlete}])
+    await actor(f.athlete,'select public.remove_client_trainer($1,$2)',[f.card,f.second])
+    await expect(actor(f.athlete,f.sql,f.params)).rejects.toMatchObject({message:'connection_changed'})
+    expect(await counts(f.card)).toEqual({active:0,memberships:2})
+  })
+
+  it('requires fresh athlete consent after the old period changes, and never accepts as a trainer', async () => {
+    const f = await replacementFixture('chat')
+    await expect(actor(f.second,f.sql,f.params)).rejects.toMatchObject({message:'connection_forbidden'})
+    await expect(actor(f.outsider,'select app_private.preview_trainer_connection($1,$2)',['chat',f.locator])).rejects.toMatchObject({message:'connection_forbidden'})
+    await pool.query("update public.client_trainer_relationships set status='disconnected',disconnected_at=now(),disconnected_by=$2 where id=$1",[f.preview.currentRelationshipId,f.athlete])
+    await pool.query('insert into public.client_trainer_relationships(client_id,trainer_id,connected_by) values($1,$2,$3)',[f.card,f.first,f.athlete])
+    await expect(actor(f.athlete,f.sql,f.params)).rejects.toMatchObject({message:'connection_changed'})
+    expect(await counts(f.card)).toEqual({active:1,memberships:1})
+    await expect(actor(f.athlete,'select * from app_private.trainer_connection_receipts')).rejects.toMatchObject({code:'42501'})
+  })
+
+  it.each(['revoked','expired','blocked','renewed'] as const)('rejects a %s offer without disconnecting the current coach', async failure => {
+    const source = failure === 'blocked' || failure === 'renewed' ? 'chat' : 'link'
+    const f = await replacementFixture(source)
+    if (failure === 'blocked') await pool.query('update public.chat_conversations set client_blocked_at=now() where id=$1',[f.locator])
+    if (failure === 'renewed') await pool.query("update public.chat_conversations set connection_invited_at=connection_invited_at+interval '1 second' where id=$1",[f.locator])
+    if (failure === 'revoked') await pool.query('update public.client_invitations set revoked_at=now() where id=$1',[f.preview.offerVersion])
+    if (failure === 'expired') await pool.query("update public.client_invitations set created_at=now()-interval '2 days',expires_at=now()-interval '1 second' where id=$1",[f.preview.offerVersion])
+    await expect(actor(f.athlete,f.sql,f.params)).rejects.toMatchObject({message:failure==='renewed'?'connection_changed':'connection_offer_unavailable'})
+    expect(await actor(f.first,'select public.can_access_client($1) allowed',[f.card])).toEqual([{allowed:true}])
+    expect(await counts(f.card)).toEqual({active:1,memberships:1})
+  })
+
+  it('rolls back the disconnect when existing canonical-card merge checks reject a link', async () => {
+    const f = await replacementFixture('link')
+    const [invitation] = (await pool.query<{client_id:string}>('select client_id from public.client_invitations where id=$1',[f.preview.offerVersion])).rows
+    for (const card of [f.card,invitation!.client_id]) {
+      await pool.query("insert into public.client_progress(client_id,trainer_id,created_by,recorded_on,weight_kg) select $1,trainer_id,trainer_id,'2026-01-01',$2 from public.clients where id=$1",[card,card===f.card?70:80])
+    }
+    await expect(actor(f.athlete,f.sql,f.params)).rejects.toMatchObject({message:'client_merge_progress_conflict'})
+    expect(await actor(f.first,'select public.can_access_client($1) allowed',[f.card])).toEqual([{allowed:true}])
+    expect(await counts(f.card)).toEqual({active:1,memberships:1})
+    expect((await pool.query('select count(*)::int n from app_private.trainer_connection_receipts where actor_id=$1',[f.athlete])).rows).toEqual([{n:0}])
+  })
+
+  it('serializes competing confirmations and prevents replaying an operation with another offer', async () => {
+    const f = await replacementFixture('chat')
+    const other = randomUUID()
+    await pool.query('insert into public.chat_conversations(id,client_id,client_user_id,trainer_id) values($1,$2,$3,$4)',[other,f.card,f.athlete,f.outsider])
+    await actor(f.outsider,'select * from public.send_chat_connection_invitation($1)',[other])
+    const [row] = await actor(f.athlete,'select app_private.preview_trainer_connection($1,$2) preview',['chat',other])
+    const preview = row!.preview as {offerVersion:string}
+    const params=['chat',other,f.preview.currentRelationshipId,preview.offerVersion,randomUUID()]
+    const results=await Promise.allSettled([actor(f.athlete,f.sql,f.params),actor(f.athlete,f.sql,params)])
+    expect(results.filter(r=>r.status==='fulfilled')).toHaveLength(1)
+    expect(await counts(f.card)).toEqual({active:1,memberships:2})
+    const [winner] = (await pool.query<{operation_id:string}>('select operation_id from app_private.trainer_connection_receipts where actor_id=$1',[f.athlete])).rows
+    await expect(actor(f.athlete,f.sql,['chat',other,f.preview.currentRelationshipId,'another-version',winner!.operation_id])).rejects.toMatchObject({message:'connection_changed'})
+  })
+
   it('requires a fresh chat offer after trainer disconnect; repeat acceptance alone never reconnects', async () => {
     const f = await fixture(), chat = randomUUID()
     await pool.query('insert into public.chat_conversations(id,client_id,client_user_id,trainer_id) values($1,$2,$3,$4)', [chat, f.card, f.athlete, f.first])

@@ -6418,12 +6418,21 @@ for (const theme of ['light', 'dark']) for (const width of [390, 430]) {
     const token = `ABCDEF123456.${'a'.repeat(64)}`
     await page.route('**/v1/invitation-links/preview', (route) => route.fulfill({ contentType: 'application/json', body: JSON.stringify({ invitation: { inviterName: 'Тестовый тренер', targetRole: 'client', expiresAt: '2099-01-01T00:00:00.000Z', status: 'active' } }) }))
     let claims = 0
-    await page.route('**/v1/invitation-links/claim', (route) => { claims++; return route.fulfill({ contentType: 'application/json', body: JSON.stringify({ clientId }) }) })
+    await page.route('**/v1/trainer-connections/preview', route => route.fulfill({ json: { preview: {
+      clientId, currentRelationshipId: null, currentTrainer: null,
+      trainer: { id: trainerId, name: 'Тестовый тренер' }, offerVersion: 'visual-invitation-v1',
+    } } }))
+    await page.route('**/v1/trainer-connections/confirm', route => {
+      expect(route.request().postDataJSON()).toMatchObject({ source: 'link', locator: token, expectedRelationshipId: null, offerVersion: 'visual-invitation-v1' })
+      claims++
+      return route.fulfill({ json: { clientId } })
+    })
     await page.goto(`/invite?source=yandex&token=${token}`)
-    const connect = page.getByRole('button', { name: 'Подключиться к тренеру' })
+    const connect = page.getByRole('button', { name: 'Подключить тренера', exact: true })
     await expect(connect).toHaveCSS('border-radius', '999px')
     await expect(page.locator('meta[name="theme-color"]')).toHaveAttribute('content', theme === 'light' ? '#f6f7f2' : '#000000')
     await page.screenshot({ path: testInfo.outputPath('valid-invitation.png') })
+    expect(claims).toBe(0)
     await connect.click()
     await expect(page.getByRole('heading', { name: 'Тренер подключён' })).toBeVisible()
     expect(claims).toBe(1)

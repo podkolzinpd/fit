@@ -1,3 +1,4 @@
+import { TrainerConnectionConfirmation } from './TrainerConnectionConfirmation'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
@@ -57,6 +58,8 @@ export function InvitationPage() {
     }
   })
   const [signingOut, setSigningOut] = useState(false)
+  const [connectionPending, setConnectionPending] = useState(false)
+  const [connectionResult, setConnectionResult] = useState<string | null>(null)
   const openedTracked = useRef(false)
 
   useEffect(() => {
@@ -108,6 +111,7 @@ export function InvitationPage() {
       || actor.email || (actor.role === 'client' ? 'Аккаунт спортсмена' : 'Аккаунт тренера')
 
   async function changeAccount(): Promise<void> {
+    if (connectionPending) return
     setSigningOut(true)
     await Promise.allSettled([signOut()])
     navigate('/auth', {
@@ -116,7 +120,7 @@ export function InvitationPage() {
     })
   }
 
-  if (claim.isSuccess) {
+  if (claim.isSuccess || connectionResult !== null) {
     return <AuthIdentityScreen className="invitation-page">
       <header className="auth-entry-head">
         <FitLogo />
@@ -205,9 +209,12 @@ export function InvitationPage() {
     /> : <div className="stack invitation-actions">
       {requiresDisconnect ? <StatePanel tone="error" title="Сначала отключите текущего тренера" description="Аккаунт, тренировки и замеры сохранятся." action={<Link className="button secondary" to="/me/profile">Открыть профиль</Link>} />
         : claim.error && <p className="error" role="alert">{claim.error.message}</p>}
-      <button type="button" className="primary" aria-busy={claim.isPending} disabled={claim.isPending || requiresDisconnect || backend === null} onClick={() => claim.mutate()}>{claim.isPending ? 'Проверяем…' : invitation.status === 'claimed' ? 'Проверить подключение' : invitation.targetRole === 'trainer' ? 'Стать тренером' : 'Подключиться к тренеру'}</button>
+      {actor.role === 'client' && backend?.trainerConnections && invitation.status === 'active'
+        ? <TrainerConnectionConfirmation repository={backend.trainerConnections} offer={{ source: 'link', locator: pending.token }} eager onPendingChange={setConnectionPending}
+          onSuccess={(clientId) => { trackGoal('invitation_claimed'); clearPendingInvitationLink(); setConnectionResult(clientId) }} />
+        : <button type="button" className="primary" aria-busy={claim.isPending} disabled={claim.isPending || requiresDisconnect || backend === null} onClick={() => claim.mutate()}>{claim.isPending ? 'Проверяем…' : invitation.status === 'claimed' ? 'Проверить подключение' : invitation.targetRole === 'trainer' ? 'Стать тренером' : 'Подключиться к тренеру'}</button>}
       {backend === null && <StatePanel tone="error" title="Войдите в аккаунт снова" description="Приглашение сохранено." action={<button type="button" className="secondary" onClick={() => void changeAccount()}>Перейти ко входу</button>} />}
-      <button type="button" className="link invitation-change-account" disabled={signingOut || claim.isPending} onClick={() => void changeAccount()}>{signingOut ? 'Выходим…' : 'Войти под другим аккаунтом'}</button>
+      <button type="button" className="link invitation-change-account" disabled={signingOut || claim.isPending || connectionPending} onClick={() => void changeAccount()}>{signingOut ? 'Выходим…' : 'Войти под другим аккаунтом'}</button>
     </div>}
   </AuthIdentityScreen>
 }

@@ -96,7 +96,7 @@
 .coach-workout-reference .coach-reference-sheet .fit-lime-month-grid button[aria-pressed='true'] { background: transparent }
 .coach-workout-reference .coach-reference-sheet .fit-lime-month-grid button[aria-pressed='true'] > span { background: var(--lime-accent); color: var(--lime-text-on-accent) }
 .coach-workout-reference .coach-reference-sheet .fit-lime-date-times { position: sticky; bottom: 0; padding: 16px 20px; margin: 0; border-top: 1px solid #252529; background: #1a1a1c }
-.phone-frame.fit-lime-shell.coach-workout-reference .coach-source-date-sheet[open] { display: flex; flex-direction: column; width: min(100%, 375px); overflow: hidden }
+.phone-frame.fit-lime-shell.coach-workout-reference .coach-source-date-sheet[open] { display: flex; flex-direction: column; width: min(100%, 375px); height: min(752px, var(--fit-date-max-height)); max-height: var(--fit-date-max-height); overflow: hidden }
 .coach-workout-reference .coach-source-date-sheet > :not(.coach-date-months) { flex-shrink: 0 }
 .coach-workout-reference .coach-source-date-sheet .coach-date-sun { display: inline-block; width: 24px; height: 24px; flex: 0 0 24px; background: var(--lime-yellow); mask-position: center; mask-size: 24px 24px; mask-repeat: no-repeat }
 .coach-workout-reference .coach-source-date-sheet .fit-lime-month-navigation { position: relative; display: block; margin: 0; padding: 20px 20px 12px; border-bottom: 1px solid var(--lime-surface-raised) }
