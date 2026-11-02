@@ -1,7 +1,8 @@
 import { createHash, randomUUID } from 'node:crypto'
 import { fileURLToPath } from 'node:url'
-import { Pool, type QueryResultRow } from 'pg'
+import { Pool, type PoolClient, type QueryResultRow } from 'pg'
 import { runner } from 'node-pg-migrate'
+import { CorporateInvitationsStore } from '../corporate-invitations.js'
 import { CorporateAdminStore } from '../corporate-admin.js'
 import { PgDatabasePool } from './pg-pool.js'
 import { beforeAll, afterAll, describe, expect, it } from 'vitest'
@@ -243,4 +244,131 @@ describe.skipIf(!source)('corporate administration on real actor/RLS', () => {
     await expect(actor(coach,'select app_private.corporate_admin_bundle_with_identity()')).rejects.toMatchObject({code:'PT403'})
     expect(await actor(coach,'select app_private.is_corporate_admin() allowed')).toEqual([{allowed:false}])
   })
+  const invited=randomUUID(), otherInvited=randomUUID()
+  const invitation=randomUUID(), invitationHash='7'.repeat(64)
+  it('keeps invitation data and the independent pilot private, including for existing Yandex trainers', async()=>{
+    await pool.query('insert into app_private.corporate_admins(profile_id) values($1) on conflict(profile_id) do update set enabled=true',[admin])
+    await saveOffice(officeId,0)
+    await saveTrainer(true,[officeId],0)
+    for(const [id,name] of [[invited,'Invited synthetic'],[otherInvited,'Other synthetic']]) {
+      await pool.query("insert into public.profiles(id,first_name,account_role) values($1,$2,'trainer')",[id,name])
+      await pool.query('insert into public.trainers(profile_id) values($1)',[id])
+    }
+    for(const id of [invited,coach]) {
+      await expect(actor(id,'select app_private.list_corporate_trainer_invitations()')).rejects.toMatchObject({code:'PT403'})
+      await expect(actor(id,'insert into app_private.corporate_invitation_pilot_trainers(profile_id,enabled) values($1,true)',[id])).rejects.toMatchObject({code:'42501'})
+      await expect(actor(id,'select app_private.claim_corporate_trainer_invitation($1)',[invitationHash])).rejects.toMatchObject({code:'PT403',message:'corporate_invitation_pilot_only'})
+    }
+    await expect(actor(athlete,'select app_private.claim_corporate_trainer_invitation($1)',[invitationHash])).rejects.toMatchObject({code:'PT403',message:'corporate_trainer_required'})
+    await expect(actor(invited,'select app_private.create_corporate_trainer_invitation($1,$2,$3::uuid[])',[invitation,invitationHash,[officeId]])).rejects.toMatchObject({code:'PT403'})
+    await actor(admin,'select app_private.create_corporate_trainer_invitation($1,$2,$3::uuid[])',[invitation,invitationHash,[officeId]])
+    const preview=(await actor<{v:Record<string,unknown>}>('', 'select app_private.preview_corporate_trainer_invitation($1) v',[invitationHash]))[0]!.v
+    expect(preview).toMatchObject({status:'active',offices:[{city:'Санкт-Петербург',name:'Бенуа'}]})
+    for(const privateValue of [admin,officeId,invitationHash,'address','createdBy','claimedBy'])expect(JSON.stringify(preview)).not.toContain(privateValue)
+  })
+  it('requires explicit claim plus administrator confirmation and replays without duplicates or client changes', async()=>{
+    await pool.query('insert into app_private.corporate_invitation_pilot_trainers(profile_id,enabled) values($1,true),($2,true)',[invited,otherInvited])
+    await actor(invited,'select app_private.claim_corporate_trainer_invitation($1)',[invitationHash])
+    await actor(invited,'select app_private.claim_corporate_trainer_invitation($1)',[invitationHash])
+    expect((await pool.query('select is_yandex from public.corporate_trainers where trainer_id=$1',[invited])).rows).toEqual([])
+    await expect(actor(otherInvited,'select app_private.claim_corporate_trainer_invitation($1)',[invitationHash])).rejects.toMatchObject({code:'PT409'})
+    await expect(actor(invited,'select app_private.decide_corporate_trainer_invitation($1,true)',[invitation])).rejects.toMatchObject({code:'PT403'})
+    await actor(admin,'select app_private.decide_corporate_trainer_invitation($1,true)',[invitation])
+    await actor(admin,'select app_private.decide_corporate_trainer_invitation($1,true)',[invitation])
+    expect((await pool.query('select is_yandex from public.corporate_trainers where trainer_id=$1',[invited])).rows).toEqual([{is_yandex:true}])
+    expect((await pool.query('select office_id from public.corporate_trainer_offices where trainer_id=$1',[invited])).rows).toEqual([{office_id:officeId}])
+    expect((await pool.query<{action:string}>('select action from app_private.corporate_invitation_audit where invitation_id=$1 order by action',[invitation])).rows.map(r=>r.action)).toEqual(['approve','claim','create'])
+    expect((await pool.query('select count(*)::int n from public.client_trainers where trainer_id=$1',[invited])).rows).toEqual([{n:0}])
+    expect((await pool.query('select count(*)::int n from public.workouts where trainer_id=$1',[invited])).rows).toEqual([{n:0}])
+    const list=(await actor<{v:unknown}>(admin,'select app_private.list_corporate_trainer_invitations() v'))[0]!.v
+    expect(JSON.stringify(list)).not.toContain(invitationHash)
+    expect(JSON.stringify(list)).not.toContain(invited)
+  })
+  it('handles a lost create response, revocation, expiry and office archival without marking a trainer',async()=>{
+    const id=randomUUID(), h='8'.repeat(64), next='9'.repeat(64)
+    await actor(admin,'select app_private.create_corporate_trainer_invitation($1,$2,$3::uuid[])',[id,h,[officeId]])
+    await actor(admin,'select app_private.create_corporate_trainer_invitation($1,$2,$3::uuid[])',[id,next,[officeId]])
+    expect((await actor<{v:unknown}>('', 'select app_private.preview_corporate_trainer_invitation($1) v',[h]))[0]!.v).toBeNull()
+    await actor(admin,'select app_private.decide_corporate_trainer_invitation($1,false)',[id])
+    await actor(admin,'select app_private.decide_corporate_trainer_invitation($1,false)',[id])
+    await expect(actor(otherInvited,'select app_private.claim_corporate_trainer_invitation($1)',[next])).rejects.toMatchObject({code:'PT409'})
+    const expired=randomUUID()
+    await actor(admin,'select app_private.create_corporate_trainer_invitation($1,$2,$3::uuid[])',[expired,h,[officeId]])
+    await pool.query("update app_private.corporate_trainer_invitations set expires_at=now()-interval '1 second' where id=$1",[expired])
+    await expect(actor(otherInvited,'select app_private.claim_corporate_trainer_invitation($1)',[h])).rejects.toMatchObject({code:'PT409'})
+    const archived=randomUUID(), archiveOffice=randomUUID(), archiveHash='a1'.repeat(32)
+    await saveOffice(archiveOffice,0,false,'Invitation archive fixture')
+    await actor(admin,'select app_private.create_corporate_trainer_invitation($1,$2,$3::uuid[])',[archived,archiveHash,[archiveOffice]])
+    await actor(otherInvited,'select app_private.claim_corporate_trainer_invitation($1)',[archiveHash])
+    await saveOffice(archiveOffice,1,true,'Invitation archive fixture')
+    await expect(actor(admin,'select app_private.decide_corporate_trainer_invitation($1,true)',[archived])).rejects.toMatchObject({code:'PT422'})
+    expect((await pool.query('select is_yandex from public.corporate_trainers where trainer_id=$1',[otherInvited])).rows).toEqual([])
+    await pool.query(`insert into app_private.corporate_trainer_invitations(id,token_sha256,created_by,office_ids,created_at,approved_at)
+      select gen_random_uuid(),repeat(lpad(seq::text,4,'0'),16),$1,$2::uuid[],now()+interval '1 hour',now() from generate_series(1,401) seq`,[admin,[officeId]])
+    const history=(await actor<{v:Array<{id:string}>}>(admin,'select app_private.list_corporate_trainer_invitations() v'))[0]!.v
+    expect(history).toHaveLength(400)
+    expect(history.some(i=>i.id===archived)).toBe(true)
+    expect(history[0]!.id).toBe(archived)
+
+  })
+
+  it('issues only a fresh opaque secret while storing its digest and invalidating a lost create response',async()=>{
+    const runtime=new PgDatabasePool({connectionString,max:1})
+    try {
+      const store=new CorporateInvitationsStore(runtime), id=randomUUID(), session={accessMode:'read_write' as const,token:'a'.repeat(43)}
+      const first=await store.create(session,{id,officeIds:[officeId]})
+      expect(first.token).toMatch(/^[a-zA-Z0-9_-]{43}$/)
+      const stored=(await pool.query<{token_sha256:string}>('select token_sha256 from app_private.corporate_trainer_invitations where id=$1',[id])).rows[0]!.token_sha256
+      expect(stored).toBe(createHash('sha256').update(first.token).digest('hex'))
+      const second=await store.create(session,{id,officeIds:[officeId]})
+      expect(second.id).toBe(first.id);expect(second.token).not.toBe(first.token)
+      expect(await store.preview(first.token)).toBeNull()
+      expect(await store.preview(second.token)).toMatchObject({status:'active'})
+    } finally {await runtime.end()}
+  })
+
+  it('rechecks administrator and pilot access after waiting for an owner revocation',async()=>{
+    async function revokedWhileWaiting(id:string,sql:string,args:unknown[],revoke:(c:PoolClient)=>Promise<unknown>,message:string) {
+      const blocker=await pool.connect(), waiter=await pool.connect()
+      let pending:Promise<unknown>|undefined
+      try {
+        await blocker.query('begin');await blocker.query('select pg_advisory_xact_lock(159,1)')
+        await waiter.query('begin');await waiter.query("select set_config('request.jwt.claim.sub',$1,true)",[id]);await waiter.query('set local role fit_api')
+        const pid=(await waiter.query<{pid:number}>('select pg_backend_pid() pid')).rows[0]!.pid
+        pending=waiter.query(sql,args).then(()=>null,(error:unknown)=>error)
+        let waiting=false
+        for(let attempt=0;attempt<100;attempt++) {
+          waiting=(await blocker.query("select 1 from pg_locks where pid=$1 and locktype='advisory' and not granted",[pid])).rowCount===1
+          if(waiting)break
+          await new Promise(resolve=>setTimeout(resolve,10))
+        }
+        expect(waiting,'The actor must reach the shared lock before access is revoked').toBe(true)
+        await revoke(blocker);await blocker.query('commit')
+        expect(await pending).toMatchObject({code:'PT403',message})
+      } finally {
+        await blocker.query('rollback');if(pending)await pending
+        await waiter.query('rollback');blocker.release();waiter.release()
+      }
+    }
+    const createId=randomUUID(),revokeId=randomUUID(),claimId=randomUUID()
+    const digest=(id:string)=>createHash('sha256').update(id).digest('hex')
+    const revokeAdmin=(c:PoolClient)=>c.query('update app_private.corporate_admins set enabled=false where profile_id=$1',[admin])
+    try {
+      await revokedWhileWaiting(admin,'select app_private.create_corporate_trainer_invitation($1,$2,$3::uuid[])',[createId,digest(createId),[officeId]],revokeAdmin,'corporate_forbidden')
+      expect((await pool.query('select id from app_private.corporate_trainer_invitations where id=$1',[createId])).rowCount).toBe(0)
+      await pool.query('update app_private.corporate_admins set enabled=true where profile_id=$1',[admin])
+      await actor(admin,'select app_private.create_corporate_trainer_invitation($1,$2,$3::uuid[])',[revokeId,digest(revokeId),[officeId]])
+      await revokedWhileWaiting(admin,'select app_private.decide_corporate_trainer_invitation($1,false)',[revokeId],revokeAdmin,'corporate_forbidden')
+      expect((await pool.query('select revoked_at from app_private.corporate_trainer_invitations where id=$1',[revokeId])).rows).toEqual([{revoked_at:null}])
+      await pool.query('update app_private.corporate_admins set enabled=true where profile_id=$1',[admin])
+      await actor(admin,'select app_private.create_corporate_trainer_invitation($1,$2,$3::uuid[])',[claimId,digest(claimId),[officeId]])
+      await revokedWhileWaiting(otherInvited,'select app_private.claim_corporate_trainer_invitation($1)',[digest(claimId)],c=>c.query('update app_private.corporate_invitation_pilot_trainers set enabled=false where profile_id=$1',[otherInvited]),'corporate_invitation_pilot_only')
+      expect((await pool.query('select claimed_at from app_private.corporate_trainer_invitations where id=$1',[claimId])).rows).toEqual([{claimed_at:null}])
+      expect((await pool.query('select trainer_id from public.corporate_trainers where trainer_id=$1',[otherInvited])).rowCount).toBe(0)
+    } finally {
+      await pool.query('update app_private.corporate_admins set enabled=true where profile_id=$1',[admin])
+      await pool.query('update app_private.corporate_invitation_pilot_trainers set enabled=true where profile_id=$1',[otherInvited])
+    }
+  })
+
 })
