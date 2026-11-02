@@ -14,7 +14,7 @@ const repository = vi.hoisted(() => ({
   listTrainers: vi.fn(),
   revoke: vi.fn(),
 }))
-vi.mock('../../data/repositories/invitations.repository', () => ({ invitationsRepository: repository }))
+
 vi.mock('../../app/auth-context', () => ({
   useAuth: () => ({ actor: { userId: 'client-user', role: 'client', firstName: 'Антон' } }),
 }))
@@ -161,4 +161,9 @@ describe('ClientTrainerConnections safe disconnect', () => {
     expect(screen.getByRole('button', { name: 'Повторить' })).toBeVisible()
   })
 
+})
+
+vi.mock('../../app/data-backend-context', async () => {
+  const { nativeBackend } = await import('../../test/native-backend')
+  return { useDataBackend: () => ({ ...nativeBackend, invitations: repository }) }
 })

@@ -2,7 +2,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const repository = vi.hoisted(() => ({ submit: vi.fn() }))
-vi.mock('../../data/repositories/app-feedback.repository', () => ({ appFeedbackRepository: repository }))
+
 
 import { AppFeedbackForm } from './AppFeedbackForm'
 
@@ -31,4 +31,9 @@ describe('AppFeedbackForm', () => {
     expect(input).toHaveValue('Не открывается тренировка')
     expect(input).toHaveAttribute('placeholder', 'Что произошло и чего вы ожидали?')
   })
+})
+
+vi.mock('../../app/data-backend-context', async () => {
+  const { nativeBackend } = await import('../../test/native-backend')
+  return { useDataBackend: () => ({ ...nativeBackend, appFeedback: repository }) }
 })

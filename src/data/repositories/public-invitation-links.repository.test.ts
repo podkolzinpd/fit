@@ -22,14 +22,10 @@ describe('publicInvitationLinksRepository', () => {
     vi.unstubAllGlobals()
   })
 
-  it('reads a Supabase invitation only from its explicit source', async () => {
-    previewLink.mockResolvedValue({ targetRole: 'trainer', inviterName: 'Антон' })
-
-    await expect(publicInvitationLinksRepository.preview('supabase', token)).resolves.toMatchObject({
-      targetRole: 'trainer', inviterName: 'Антон',
-    })
-    expect(previewLink).toHaveBeenCalledWith(token)
-    expect(getYandexMainRoutingConfig).not.toHaveBeenCalled()
+  it('rejects an unconfigured native API without invoking the retired source', async () => {
+    getYandexMainRoutingConfig.mockReturnValue(null)
+    await expect(publicInvitationLinksRepository.preview('supabase', token)).rejects.toThrow('Приглашение временно недоступно')
+    expect(previewLink).not.toHaveBeenCalled()
   })
 
   it('uses the public Yandex endpoint and does not fall back to another backend', async () => {

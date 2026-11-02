@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import type { TrainerFinanceClientBundle } from '../../data/repositories/trainer-finance.repository'
+import type { TrainerFinanceClientBundle } from '../../data/contracts/trainer-finance'
 import { workoutFinanceConfirmation } from './WorkoutFinanceConfirmation'
 
 const bundle: TrainerFinanceClientBundle = {
