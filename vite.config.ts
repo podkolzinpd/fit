@@ -1,19 +1,10 @@
 import { androidOtaPolicy } from './scripts/android-ota-contract.mjs'
-import { fileURLToPath } from 'node:url'
-import { isLocalLegacyBuild, assertNativeFrontendModules } from './src/app/composition-build-boundary'
+import { assertNativeFrontendModules } from './src/app/composition-build-boundary'
 import { defineConfig } from 'vitest/config'
 import react from '@vitejs/plugin-react'
 
-export default defineConfig(({ mode }) => ({
+export default defineConfig(() => ({
   define: { __FIT_ANDROID_OTA_POLICY__: JSON.stringify(androidOtaPolicy()) },
-  resolve: { alias: {
-    '#fit/local-auth': fileURLToPath(new URL(isLocalLegacyBuild(mode)
-      ? './src/app/local-auth-composition.ts'
-      : './src/app/native-only-composition.ts', import.meta.url)),
-    '#fit/local-data': fileURLToPath(new URL(isLocalLegacyBuild(mode)
-      ? './src/app/local-data-composition.ts'
-      : './src/app/native-only-composition.ts', import.meta.url)),
-  } },
   plugins: [react(), {
     name: 'fit-native-composition-boundary',
     apply: 'build',
@@ -23,7 +14,6 @@ export default defineConfig(({ mode }) => ({
         abi: policy.abi, enabled: policy.enabled, sourceCommit: process.env.FIT_SOURCE_COMMIT ?? '',
         apiBaseUrl: process.env.VITE_YANDEX_API_BASE_URL ?? '',
       }) })
-      if (isLocalLegacyBuild(mode)) return
       assertNativeFrontendModules(Object.values(bundle).flatMap((item) => item.type === 'chunk' ? Object.keys(item.modules) : []))
     },
   }, {
@@ -55,13 +45,9 @@ export default defineConfig(({ mode }) => ({
         lines: 80,
       },
       exclude: [
-        'src/data/database.types.ts',
         'src/main.tsx',
-        'src/data/repositories/auth.repository.ts',
-        // Тонкие обёртки над supabase.rpc()/.from(...) — по конвенции проекта
-        // тесты мокают их на границе модуля (vi.mock('../queries/…')), а не
-        // выполняют настоящий код; юнит-покрытие для них структурно
-        // недостижимо, реальная проверка — pgTAP/integration-тесты.
+        // Native HTTP wrappers are exercised through repository contracts and
+        // browser/API integration; the coverage gate measures business behavior.
         'src/data/queries/*.queries.ts',
         // Страницы верхнего уровня без выделенных vitest-тестов — проверяются
         // через Playwright e2e, который эта метрика не видит. См. PR #1011.

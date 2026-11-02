@@ -6,7 +6,7 @@ const { appSession, getSession, invoke } = vi.hoisted(() => ({
 }))
 vi.mock('./client', () => ({ supabase: { auth: { getSession }, functions: { invoke } } }))
 vi.mock('../yandex-app-session-transport', () => ({ yandexAppSessionTransport: appSession }))
-import { parseWorkout, suggestGoalCriteria } from './exercises.queries'
+import { parseWorkout, suggestGoalCriteria } from './workout-ai.queries'
 
 const native = { apiBaseUrl: 'http://127.0.0.1:4100', sessionToken: 's'.repeat(43), accessMode: 'read_write' as const }
 beforeEach(() => {
