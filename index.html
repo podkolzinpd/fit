@@ -284,12 +284,21 @@
     <script type="text/javascript">
       const isFitProduction = window.location.hostname === 'fit-training.ru'
         || window.location.protocol === 'capacitor:';
-      if (isFitProduction) {
+      function fitIsCorporateInvitationPath(pathname) {
+        try {
+          // Match the router's case-insensitive, decoded path and trailing slashes.
+          return /^\/corporate-invite\/*$/i.test(decodeURIComponent(pathname));
+        } catch (_) {
+          return false;
+        }
+      }
+      const isCorporateInvitationEntry = fitIsCorporateInvitationPath(window.location.pathname);
+      if (isFitProduction && !isCorporateInvitationEntry) {
         function fitMetrikaSafeUrl(rawUrl) {
           if (!rawUrl) return '';
           try {
             var url = new URL(rawUrl, window.location.origin);
-            if (url.pathname === '/invite') {
+            if (url.pathname === '/invite' || fitIsCorporateInvitationPath(url.pathname)) {
               url.searchParams.delete('token');
               url.searchParams.delete('source');
               var hash = new URLSearchParams(url.hash.startsWith('#') ? url.hash.slice(1) : url.hash);

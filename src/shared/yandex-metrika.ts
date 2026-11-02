@@ -12,7 +12,8 @@ export function sanitizeMetrikaUrl(rawUrl: string): string {
   try {
     const absolute = /^[a-z][a-z\d+.-]*:/i.test(rawUrl)
     const url = new URL(rawUrl, window.location.origin)
-    if (url.pathname === '/invite') {
+    const corporateInvitation = /^\/corporate-invite\/*$/i.test(decodeURIComponent(url.pathname))
+    if (url.pathname === '/invite' || corporateInvitation) {
       url.searchParams.delete('token')
       url.searchParams.delete('source')
       const hash = new URLSearchParams(url.hash.startsWith('#') ? url.hash.slice(1) : url.hash)
