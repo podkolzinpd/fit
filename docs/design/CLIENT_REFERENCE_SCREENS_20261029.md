@@ -2657,3 +2657,12 @@ d87/code7 ABI6ed45f6c… . После первого опубликованно�
 Сообщено приоритетному координатору, чужие lock/native/CI не правились.
 Аудит: /tmp/fit-live-p1-pr1944-native-audit.json. Будущий риск не считается
 текущей ошибкой карточек; финальная база перед нашим выпуском проверяется заново.
+
+Подготовленный public-readback UI harness после уточнения synthetic-названий
+и добавления pageerror guard перепроверен локально:12/12 Chromium/WebKit,
+10.1s, retries0. Source local production build03eb91e5, renderer LIVE-P1
+не изменён последующими test/docs commits; это не проверка ещё не выполненной
+публикации. Просмотрены light/compact/mediaOFF и dark/original/mediaON снимки.
+Лог /tmp/fit-live-p1-public-harness-recheck.log; собственный preview5390
+остановлен. После реальной публикации этот harness повторяется на сайте
+и извлечённом signed OTA, с запретом реальных API-записей.
