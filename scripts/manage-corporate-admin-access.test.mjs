@@ -64,3 +64,24 @@ test('invitation pilot resolves exactly one linked trainer and never exposes ide
   await assert.rejects(manageCorporateInvitationPilot(c,'grant',hash),/target_unresolved/)
  }
 })
+
+test('service pilot is independent, requires current corporate eligibility and keeps identities private',async()=>{
+ const {manageCorporateServicePilot}=await import('./manage-corporate-admin-access.mjs')
+ for(const eligible of [true,false]){
+  const calls=[]
+  const client={async query(sql,args){calls.push({sql,args});if(sql.includes('select p.id'))return{rows:[{id:'private-trainer'}]};if(sql.includes(' eligible'))return{rows:[{eligible}]};if(sql.startsWith('select enabled'))return{rows:[{enabled:true}]};return{rows:[]}}}
+  if(!eligible){await assert.rejects(manageCorporateServicePilot(client,'grant',hash),/ineligible/);assert.equal(calls.some(c=>c.sql.startsWith('insert')),false);assert.equal(calls.at(-1).sql,'rollback');continue}
+  assert.deepEqual(await manageCorporateServicePilot(client,'grant',hash),{status:'applied',uniqueTrainer:true,enabled:true,eligible:true})
+  assert.ok(calls.find(c=>c.sql.startsWith('insert into app_private.corporate_service_pilot_trainers')))
+  assert.equal(calls.some(c=>/^(update|insert into) (public\.|app_private\.corporate_admin|app_private\.corporate_invitation)/.test(c.sql)),false)
+  assert.equal(calls.at(-1).sql,'commit')
+ }
+ for(const rows of [[],[{id:'one'},{id:'two'}]]){
+  const calls=[];const client={async query(sql){calls.push(sql);return{rows:sql.includes('select p.id')?rows:[]}}}
+  await assert.rejects(manageCorporateServicePilot(client,'grant',hash),/target_unresolved/)
+  assert.equal(calls.some(sql=>sql.startsWith('insert')),false);assert.equal(calls.at(-1),'rollback')
+ }
+ const reads=[];const inspector={async query(sql){reads.push(sql);if(sql.includes('select p.id'))return{rows:[{id:'private-trainer'}]};if(sql.includes(' eligible'))return{rows:[{eligible:false}]};return{rows:[]}}}
+ assert.deepEqual(await manageCorporateServicePilot(inspector,'inspect',hash),{status:'inspected',uniqueTrainer:true,enabled:false,eligible:false})
+ assert.equal(reads[0],'begin read only');assert.equal(reads.some(sql=>/^(insert|update)/.test(sql)),false)
+})

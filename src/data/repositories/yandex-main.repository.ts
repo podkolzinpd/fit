@@ -440,6 +440,9 @@ const workoutTemplateResponseSchema = z.object({ template: workoutTemplateSchema
 type ResponseErrorFactory = (status: number, code?: string) => Error
 
 function errorForStatus(status: number, code?: string): RepositoryError {
+  if (code === 'connection_changed') return new RepositoryError(code, 'Подключение изменилось. Проверьте условия и подтвердите заново.')
+  if (code === 'connection_offer_unavailable') return new RepositoryError(code, 'Приглашение больше не действует. Попросите тренера отправить новое.')
+  if (code === 'connection_forbidden') return new RepositoryError(code, 'Подключение может подтвердить только приглашённый спортсмен.')
   if (code === 'invitation_role_mismatch') return new RepositoryError(code, 'Приглашение предназначено другой роли. Войдите под подходящим аккаунтом.')
   if (code === 'invitation_connection_ended') return new RepositoryError(code, 'Это подключение уже завершено. Для повторного подключения нужно новое приглашение.')
   if (code === 'push_test_rate_limited') return new RepositoryError(code, 'Тест уже запрошен. Подождите минуту перед повторной отправкой.')
@@ -1698,6 +1701,18 @@ export function createYandexMainRepository(
         invalidate(); return payload.workout.version
       },
       async remove(item) { await writeJson(queries, `/v1/workouts/${item.id}`, 'DELETE', { expectedVersion: item.version }, z.object({ workout: z.object({ version: z.number().int().positive() }) })); invalidate() },
+    },
+    trainerConnections: {
+      async preview(offer) {
+        const trainer = z.object({ id: uuid, name: z.string() })
+        return (await writeJson(queries, '/v1/trainer-connections/preview', 'POST', offer, z.object({ preview: z.object({
+          clientId: uuid, currentRelationshipId: uuid.nullable(), currentTrainer: trainer.nullable(), trainer, offerVersion: z.string(),
+        }) }))).preview
+      },
+      async confirm(draft) {
+        const result = await writeJson(queries, '/v1/trainer-connections/confirm', 'POST', draft, z.object({ clientId: uuid }))
+        invalidate(); return result.clientId
+      },
     },
     invitations: {
       async createShareForNewClient(fullName, operationId) {

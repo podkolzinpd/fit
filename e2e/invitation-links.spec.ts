@@ -1,5 +1,22 @@
 import { nativeRegister } from './native-local-fixture'
-import { expect, test } from './native-local-fixture'
+import { expect, test, type Page } from './native-local-fixture'
+
+async function dismissVisibleCoachmarks(page: Page) {
+  const dismiss = page.locator('.coachmark-bubble').getByRole('button', { name: 'Понятно', exact: true })
+  while (await dismiss.count() > 0) await dismiss.first().click()
+}
+
+async function signOut(page: Page) {
+  const dismiss = page.locator('.coachmark-bubble').getByRole('button', { name: 'Понятно', exact: true }).first()
+  // Settings onboarding is optional and may mount after route hydration.
+  // Handle it only during sign-out, after invitation dialogs are closed.
+  await page.addLocatorHandler(dismiss, async () => { await dismiss.click() })
+  try {
+    await page.getByRole('button', { name: 'Выйти', exact: true }).click()
+  } finally {
+    await page.removeLocatorHandler(dismiss)
+  }
+}
 
 test('trainer invites a new athlete by protected link without entering a code', async ({ page }, testInfo) => {
   test.setTimeout(120_000)
@@ -24,7 +41,8 @@ test('trainer invites a new athlete by protected link without entering a code', 
 
   await page.getByRole('button', { name: 'Закрыть' }).click()
   await page.goto('/profile/settings')
-  await page.getByRole('button', { name: 'Выйти' }).click()
+  await expect(page.getByRole('button', { name: 'Выйти', exact: true })).toBeVisible()
+  await signOut(page)
   await page.goto(invitationUrl)
 
   await expect(page.getByRole('heading', { name: 'Тренировки вместе с тренером' })).toBeVisible()
@@ -32,7 +50,7 @@ test('trainer invites a new athlete by protected link without entering a code', 
   await nativeRegister(page, { key: `link-athlete-${suffix}@fit.local`, firstName: athleteName, role: 'client' })
 
   await expect(page).toHaveURL(/\/invite$/)
-  await page.getByRole('button', { name: 'Подключиться к тренеру' }).click()
+  await page.getByRole('button', { name: 'Подключить тренера', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Тренер подключён' })).toBeVisible()
   await page.getByRole('button', { name: 'Открыть кабинет' }).click()
   await expect(page).toHaveURL(/\/me$/)
@@ -54,6 +72,7 @@ test('athlete invites a trainer by the same protected link shown in the QR code'
   await page.getByLabel('Пол').selectOption('female')
   await page.getByLabel('Возраст').fill('30')
   await page.getByLabel('Рост, см').fill('170')
+  await dismissVisibleCoachmarks(page)
   await page.getByRole('button', { name: 'Сохранить профиль' }).click()
   await expect(page).toHaveURL(/\/me$/)
 
@@ -70,7 +89,7 @@ test('athlete invites a trainer by the same protected link shown in the QR code'
   await expect(page.getByRole('button', { name: 'Сохранить QR-код' })).toBeEnabled()
 
   await page.goto('/me/settings')
-  await page.getByRole('button', { name: 'Выйти' }).click()
+  await signOut(page)
   await page.goto(invitationUrl)
   await expect(page.getByRole('heading', { name: 'Приглашение стать тренером' })).toBeVisible()
   await expect(page.getByRole('region', { name: 'Отправитель приглашения' })).toContainText(athleteName)
