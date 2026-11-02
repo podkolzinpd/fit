@@ -1,13 +1,9 @@
-import { expect, test } from '@playwright/test'
+import { nativeRegister } from './native-local-fixture'
+import { expect, test } from './native-local-fixture'
 
 async function createClientAccount(page: import('@playwright/test').Page, email: string) {
   await page.goto('/auth')
-  await page.getByRole('button', { name: 'Создать аккаунт' }).click()
-  await page.getByLabel('Тип аккаунта').selectOption('client')
-  await page.getByLabel('Имя').fill('Клиент календаря')
-  await page.getByLabel('Email').fill(email)
-  await page.getByLabel('Пароль').fill('FitLocal123!')
-  await page.getByRole('button', { name: 'Создать аккаунт' }).click()
+  await nativeRegister(page, { key: email, firstName: 'Клиент календаря', role: 'client' })
   await expect(page).toHaveURL(/\/me$/)
   await page.getByRole('button', { name: 'Ввести текстом' }).click()
   await expect(page.getByText('Новая тренировка', { exact: true })).toBeVisible()
@@ -31,12 +27,7 @@ async function createCompletedWorkout(page: import('@playwright/test').Page) {
 
 test('global rollout gives a new client the My Workouts identity', async ({ page }, testInfo) => {
   await page.goto('/auth')
-  await page.getByRole('button', { name: 'Создать аккаунт' }).click()
-  await page.getByLabel('Тип аккаунта').selectOption('client')
-  await page.getByLabel('Имя').fill('Тренировки без preview')
-  await page.getByLabel('Email').fill(`workouts-no-preview-${testInfo.workerIndex}-${Date.now()}@fit.local`)
-  await page.getByLabel('Пароль').fill('FitLocal123!')
-  await page.getByRole('button', { name: 'Создать аккаунт' }).click()
+  await nativeRegister(page, { key: `workouts-no-preview-${testInfo.workerIndex}-${Date.now()}@fit.local`, firstName: 'Тренировки без preview', role: 'client' })
   await expect(page).toHaveURL(/\/me$/)
 
   await page.goto('/me/workouts')

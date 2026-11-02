@@ -1,4 +1,5 @@
-import { expect, test } from '@playwright/test'
+import { nativeSignIn } from './native-local-fixture'
+import { expect, test } from './native-local-fixture'
 
 for (const scenario of [
   { name: 'Удержание штанги стоя', metric: 'duration' },
@@ -6,9 +7,7 @@ for (const scenario of [
 ]) {
   test(`${scenario.name}: plan and Live retain fractional weight after reopening`, async ({ page }, testInfo) => {
     await page.goto('/auth')
-    await page.getByLabel('Email').fill('trainer@fit.local')
-    await page.getByLabel('Пароль').fill('FitLocal123!')
-    await page.getByRole('button', { name: 'Войти' }).click()
+    await nativeSignIn(page, 'trainer@fit.local')
     await expect(page).toHaveURL(/\/today$/)
     const clientName = `Нагрузка ${Date.now().toString().slice(-6)}`
     await page.goto('/clients/new')
@@ -49,7 +48,7 @@ for (const scenario of [
 }
 
 test('loaded holds and carries keep fractional values, optional time and aligned controls', async ({ page }, testInfo) => {
-  await page.goto('/auth')
+  await page.goto('/legal/terms')
   await page.addStyleTag({ content: '#fit-startup-shell, #fit-startup-emergency { display: none !important; }' })
   await page.evaluate(async () => {
     const modulePath = '/e2e/workout-load-fields-harness.tsx'
@@ -133,9 +132,7 @@ test('saved and newly entered fractional weights do not block workout editing', 
 
 test('walking lunges accept kilograms in the plan and Live on iPhone', async ({ page }, testInfo) => {
   await page.goto('/auth')
-  await page.getByLabel('Email').fill('trainer@fit.local')
-  await page.getByLabel('Пароль').fill('FitLocal123!')
-  await page.getByRole('button', { name: 'Войти' }).click()
+  await nativeSignIn(page, 'trainer@fit.local')
   await expect(page).toHaveURL(/\/today$/)
 
   const clientName = `Выпады ${Date.now().toString().slice(-6)}`

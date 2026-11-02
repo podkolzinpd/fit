@@ -1,4 +1,5 @@
-import { expect, test } from '@playwright/test'
+import { nativeSignIn } from './native-local-fixture'
+import { expect, test } from './native-local-fixture'
 
 test('iPhone catalog keeps search and filter sheet usable', async ({ page }) => {
   const published = {
@@ -9,18 +10,14 @@ test('iPhone catalog keeps search and filter sheet usable', async ({ page }) => 
     trainingModes: ['online', 'in_person'], experienceStartYear: 2018, education: '', formats: '', price: '',
     acceptingClients: true, avatarDataUrl: null, certificates: [],
   }
-  await page.route('**/rest/v1/rpc/list_public_trainer_profiles_page', (route) => route.fulfill({
-    contentType: 'application/json', body: JSON.stringify({ items: [{
-      publicId: '92000000-0000-4000-8000-000000000001', draft: published, published,
+  await page.route("**/v1/trainers/catalog*", (route) => route.fulfill({ json: { items: [{
+      publicId: '92000000-0000-4000-8000-000000000001', profile: published,
       listedInCatalog: true, publishedAt: '2026-09-12T10:00:00Z', updatedAt: '2026-09-12T10:00:00Z', version: 1,
       isBrandTrainer: false,
-    }], totalCount: 1, nextOffset: null }),
-  }))
+    }], totalCount: 1, nextOffset: null } }))
 
   await page.goto('/auth')
-  await page.getByLabel('Email').fill('client@fit.local')
-  await page.getByLabel('Пароль').fill('FitLocal123!')
-  await page.getByRole('button', { name: 'Войти' }).click()
+  await nativeSignIn(page, 'client@fit.local')
   await expect(page).toHaveURL(/\/me$/)
   await page.evaluate(() => sessionStorage.removeItem('fit.trainer-catalog.view.v1'))
   await page.goto('/me/trainers')

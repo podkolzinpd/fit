@@ -1,14 +1,10 @@
-import { expect, test } from '@playwright/test'
+import { nativeSignIn, nativeRegister } from './native-local-fixture'
+import { expect, test } from './native-local-fixture'
 import { randomUUID } from 'node:crypto'
 
 test('global rollout gives a new trainer the Client Form identity', async ({ page }) => {
   await page.goto('/auth')
-  await page.getByRole('button', { name: 'Создать аккаунт' }).click()
-  await page.getByLabel('Тип аккаунта').selectOption('trainer')
-  await page.getByLabel('Имя').fill('Client form flag off')
-  await page.getByLabel('Email').fill(`client-form-flag-off-${randomUUID()}@fit.local`)
-  await page.getByLabel('Пароль').fill('FitLocal123!')
-  await page.getByRole('button', { name: 'Создать аккаунт' }).click()
+  await nativeRegister(page, { key: `client-form-flag-off-${randomUUID()}@fit.local`, firstName: 'Client form flag off', role: 'trainer' })
   await expect(page).toHaveURL(/\/(today|clients)$/)
 
   await page.goto('/clients/new')
@@ -18,9 +14,7 @@ test('global rollout gives a new trainer the Client Form identity', async ({ pag
 
 test('trainer Client Create keeps existing validation under monochrome preview', async ({ page }) => {
   await page.goto('/auth')
-  await page.getByLabel('Email').fill('trainer@fit.local')
-  await page.getByLabel('Пароль').fill('FitLocal123!')
-  await page.getByRole('button', { name: 'Войти' }).click()
+  await nativeSignIn(page, 'trainer@fit.local')
   await expect(page).toHaveURL(/\/(today|clients)$/)
   await page.goto('/clients/new')
   await expect(page.locator('.phone-frame')).toHaveClass(/trainer-client-form-identity/)
@@ -34,12 +28,7 @@ test('trainer creates a client without age, height or initial weight', async ({ 
   const clientName = `Клиент без замеров ${randomUUID().slice(0, 8)}`
   const trainerEmail = `optional-client-fields-${randomUUID()}@fit.local`
   await page.goto('/auth')
-  await page.getByRole('button', { name: 'Создать аккаунт' }).click()
-  await page.getByLabel('Тип аккаунта').selectOption('trainer')
-  await page.getByLabel('Имя').fill('Optional fields trainer')
-  await page.getByLabel('Email').fill(trainerEmail)
-  await page.getByLabel('Пароль').fill('FitLocal123!')
-  await page.getByRole('button', { name: 'Создать аккаунт' }).click()
+  await nativeRegister(page, { key: trainerEmail, firstName: 'Optional fields trainer', role: 'trainer' })
   await expect(page).toHaveURL(/\/(today|clients)$/)
 
   await page.goto('/clients/new')

@@ -1,326 +1,280 @@
-import { mockNativeAiSession, nativeAiUrl } from './native-ai-fixture'
-import { expect, test, type Page } from '@playwright/test'
-import { addDays, todayInTimeZone } from '../src/shared/local-date'
-import { comparisonWorkoutRow, verifyAnalysisShortcutKeepsShell } from './progress-results-fixture'
-
+import { mockProgressBundle } from './native-progress-fixture'
+import { mockWorkoutHistory } from './native-workout-fixture'
+import { nativeSignIn, nativeRegister } from './native-local-fixture';
+import { mockNativeAiSession, nativeAiUrl } from './native-ai-fixture';
+import { expect, test, type Page } from './native-local-fixture';
+import { addDays, todayInTimeZone } from '../src/shared/local-date';
+import { comparisonWorkoutRow, verifyAnalysisShortcutKeepsShell } from './progress-results-fixture';
 async function mockBodyMapWorkoutHistory(page: Page) {
-  const today = todayInTimeZone('Europe/Moscow')
-  const rows = [
-    comparisonWorkoutRow('d1000000-0000-4000-8000-000000000001', addDays(today, -20), 40, 3, 3),
-    comparisonWorkoutRow('d1000000-0000-4000-8000-000000000002', addDays(today, -5), 50, 3, 3),
-  ]
-  await page.route('**/rest/v1/rpc/list_workouts', (route) => {
-    const body = route.request().postDataJSON() as { p_from?: string; p_to?: string; p_offset?: number }
-    const selected = rows.filter((row) => (!body.p_from || row.workout_date >= body.p_from) && (!body.p_to || row.workout_date <= body.p_to))
-    return route.fulfill({ json: selected.slice(body.p_offset ?? 0).map((row) => ({ ...row, total_count: selected.length })) })
-  })
+    const today = todayInTimeZone('Europe/Moscow');
+    const rows = [
+        comparisonWorkoutRow('d1000000-0000-4000-8000-000000000001', addDays(today, -20), 40, 3, 3),
+        comparisonWorkoutRow('d1000000-0000-4000-8000-000000000002', addDays(today, -5), 50, 3, 3),
+    ];
+    await mockWorkoutHistory(page, rows)
 }
-
 test('global rollout gives a new client the monochrome Progress identity', async ({ page }, testInfo) => {
-  await page.goto('/auth')
-  await page.getByRole('button', { name: 'Создать аккаунт' }).click()
-  await page.getByLabel('Тип аккаунта').selectOption('client')
-  await page.getByLabel('Имя').fill('Progress без preview')
-  await page.getByLabel('Email').fill(`progress-no-preview-${testInfo.workerIndex}-${Date.now()}@fit.local`)
-  await page.getByLabel('Пароль').fill('FitLocal123!')
-  await page.getByRole('button', { name: 'Создать аккаунт' }).click()
-  await expect(page).toHaveURL(/\/me$/)
-
-  await page.goto('/me/progress')
-  await expect(page.getByRole('heading', { name: 'Мой прогресс' })).toBeVisible()
-  await expect(page.locator('.phone-frame')).toHaveClass(/progress-identity/)
-  await expect(page.locator('html')).toHaveClass(/ui-identity/)
-})
-
+    await page.goto('/auth');
+    await nativeRegister(page, { key: `progress-no-preview-${testInfo.workerIndex}-${Date.now()}@fit.local`, firstName: 'Progress без preview', role: 'client' });
+    await expect(page).toHaveURL(/\/me$/);
+    await page.goto('/me/progress');
+    await expect(page.getByRole('heading', { name: 'Мой прогресс' })).toBeVisible();
+    await expect(page.locator('.phone-frame')).toHaveClass(/progress-identity/);
+    await expect(page.locator('html')).toHaveClass(/ui-identity/);
+});
 test('standalone client creates and formulates an own goal', async ({ page }, testInfo) => {
-  await page.goto('/auth')
-  await page.getByRole('button', { name: 'Создать аккаунт' }).click()
-  await page.getByLabel('Тип аккаунта').selectOption('client')
-  await page.getByLabel('Имя').fill('Самостоятельная цель')
-  await page.getByLabel('Email').fill(`self-goal-${testInfo.workerIndex}-${Date.now()}@fit.local`)
-  await page.getByLabel('Пароль').fill('FitLocal123!')
-  await page.getByRole('button', { name: 'Создать аккаунт' }).click()
-  await expect(page).toHaveURL(/\/me$/)
-
-  await page.getByRole('button', { name: 'Ввести текстом' }).click()
-  await expect(page.getByRole('heading', { level: 1, name: 'Сегодня' })).toBeVisible()
-  await page.goto('/me/goal')
-  await expect(page.getByRole('heading', { name: 'Моя цель' })).toBeVisible()
-  await page.getByLabel('Цель').fill('Держать вес 59 кг')
-  await page.getByRole('switch', { name: 'Автоматическая оценка' }).check()
-  await page.getByLabel('Показатель').selectOption('weight')
-  await page.getByLabel('Способ оценки').selectOption('maintain_range')
-  await page.getByLabel('Минимум, кг').fill('58,5')
-  await page.getByLabel('Максимум, кг').fill('59,5')
-  await page.getByRole('button', { name: 'Создать цель' }).click()
-
-  await expect(page.getByRole('heading', { name: 'Держать вес 59 кг' })).toBeVisible()
-  await expect(page.getByText('58,5–59,5 кг')).toBeVisible()
-  await expect(page.getByText('Критерий подтверждён')).toBeVisible()
-})
-
+    await page.goto('/auth');
+    await nativeRegister(page, { key: `self-goal-${testInfo.workerIndex}-${Date.now()}@fit.local`, firstName: 'Самостоятельная цель', role: 'client' });
+    await expect(page).toHaveURL(/\/me$/);
+    await page.getByRole('button', { name: 'Ввести текстом' }).click();
+    await expect(page.getByRole('heading', { level: 1, name: 'Сегодня' })).toBeVisible();
+    await page.goto('/me/goal');
+    await expect(page.getByRole('heading', { name: 'Моя цель' })).toBeVisible();
+    await page.getByLabel('Цель').fill('Держать вес 59 кг');
+    await page.getByRole('switch', { name: 'Автоматическая оценка' }).check();
+    await page.getByLabel('Показатель').selectOption('weight');
+    await page.getByLabel('Способ оценки').selectOption('maintain_range');
+    await page.getByLabel('Минимум, кг').fill('58,5');
+    await page.getByLabel('Максимум, кг').fill('59,5');
+    await page.getByRole('button', { name: 'Создать цель' }).click();
+    await expect(page.getByRole('heading', { name: 'Держать вес 59 кг' })).toBeVisible();
+    await expect(page.getByText('58,5–59,5 кг')).toBeVisible();
+    await expect(page.getByText('Критерий подтверждён')).toBeVisible();
+});
 test('client explicitly confirms an LLM criterion before it can be saved', async ({ page }) => {
-  await page.route('**/v1/assistant/yandex/suggest-goal-criteria', (route) => route.fulfill({
-    contentType: 'application/json', body: JSON.stringify({ criteria: [{
-      metric: 'weight', operation: 'maintain_range', targetValue: null, rangeMin: 58.5, rangeMax: 59.5,
-      unit: 'кг', secondaryTargetValue: null, secondaryUnit: null, exerciseRef: null, customMetricId: null,
-      regularityPeriod: null, regularityMode: null,
-    }], needsInput: [], unsupportedReason: null }),
-  }))
-  await mockNativeAiSession(page, 'client')
-  await page.goto(nativeAiUrl('/me'))
-
-  await page.getByRole('button', { name: 'Ввести текстом' }).click()
-  await expect(page.getByRole('heading', { level: 1, name: 'Сегодня' })).toBeVisible()
-  await page.goto(nativeAiUrl('/me/goal'))
-  await page.getByLabel('Цель').fill('Держать вес 59 кг')
-  await page.getByRole('switch', { name: 'Автоматическая оценка' }).check()
-  await page.getByRole('button', { name: 'Предложить критерии с ИИ' }).click()
-  const confirmation = page.getByLabel(/Я проверил\(а\), что все критерии/)
-  await expect(confirmation).toBeVisible()
-  await page.getByRole('button', { name: 'Создать цель' }).click()
-  await expect(page.getByRole('alert')).toContainText('Подтвердите предложенные критерии')
-  await confirmation.check()
-  await page.getByRole('button', { name: 'Создать цель' }).click()
-  await expect(page.getByRole('heading', { name: 'Держать вес 59 кг' })).toBeVisible()
-})
-
+    await page.route('**/v1/assistant/yandex/suggest-goal-criteria', (route) => route.fulfill({
+        contentType: 'application/json', body: JSON.stringify({ criteria: [{
+                    metric: 'weight', operation: 'maintain_range', targetValue: null, rangeMin: 58.5, rangeMax: 59.5,
+                    unit: 'кг', secondaryTargetValue: null, secondaryUnit: null, exerciseRef: null, customMetricId: null,
+                    regularityPeriod: null, regularityMode: null
+                }], needsInput: [], unsupportedReason: null })
+    }));
+    await mockNativeAiSession(page, 'client');
+    await page.goto(nativeAiUrl('/me'));
+    await page.getByRole('button', { name: 'Ввести текстом' }).click();
+    await expect(page.getByRole('heading', { level: 1, name: 'Сегодня' })).toBeVisible();
+    await page.goto(nativeAiUrl('/me/goal'));
+    await page.getByLabel('Цель').fill('Держать вес 59 кг');
+    await page.getByRole('switch', { name: 'Автоматическая оценка' }).check();
+    await page.getByRole('button', { name: 'Предложить критерии с ИИ' }).click();
+    const confirmation = page.getByLabel(/Я проверил\(а\), что все критерии/);
+    await expect(confirmation).toBeVisible();
+    await page.getByRole('button', { name: 'Создать цель' }).click();
+    await expect(page.getByRole('alert')).toContainText('Подтвердите предложенные критерии');
+    await confirmation.check();
+    await page.getByRole('button', { name: 'Создать цель' }).click();
+    await expect(page.getByRole('heading', { name: 'Держать вес 59 кг' })).toBeVisible();
+});
 test('linked client sees only the published client progress view', async ({ page }) => {
-  await mockBodyMapWorkoutHistory(page)
-  await page.goto('/auth')
-  await page.getByLabel('Email').fill('client@fit.local')
-  await page.getByLabel('Пароль').fill('FitLocal123!')
-  await page.getByRole('button', { name: 'Войти' }).click()
-
-  await expect(page).toHaveURL(/\/me$/)
-  await page.goto('/me/settings')
-  await expect(page.getByRole('radiogroup', { name: 'Вид фигуры' })).toBeVisible()
-  await expect(page.getByRole('radio', { name: 'Фигура' })).toBeChecked()
-  await page.getByRole('radio', { name: 'Список' }).click()
-  await page.goto('/me/progress')
-  await expect(page).toHaveURL(/\/me\/progress$/)
-  await expect(page.getByRole('heading', { name: 'Мой прогресс' })).toBeVisible()
-  await expect(page.getByRole('heading', { name: 'Тренировки' })).toHaveCount(0)
-  await expect(page.getByRole('tab', { name: 'Неделя' })).toHaveCount(0)
-  await expect(page.getByLabel('Прогресс тренировок').getByRole('heading', { name: 'Период', exact: true })).toBeVisible()
-  await expect(page.getByRole('button', { name: '1 месяц' })).toHaveClass(/active/)
-  await expect(page.getByText('По завершённым тренировкам', { exact: true })).toHaveCount(0)
-  await page.getByRole('tab', { name: 'ПРО' }).click()
-  const mapDisclosure = page.locator('.client-body-map-disclosure')
-  await expect(mapDisclosure).not.toHaveAttribute('open')
-  await mapDisclosure.locator('summary').click()
-  await expect(page.locator('.client-progress-main-now')).toHaveCount(0)
-  await page.getByText('Регулярность', { exact: true }).click()
-  await expect(page.getByRole('list', { name: 'Завершённые тренировки по неделям' })).toBeVisible()
-  await expect(page.locator('.client-progress-card').evaluate((element) => {
-    const overview = element.querySelector('.progress-overview-panel')
-    const pro = element.querySelector('.progress-pro-panel')
-    return Boolean(overview?.querySelector('.client-current-week')
-      && overview.querySelector('.client-progress-goal-story')
-      && overview.querySelector('.client-progress-measurements-story')
-      && overview.querySelector('.period-exercise-results')
-      && pro?.querySelector('.client-body-map-disclosure')
-      && pro.querySelector('.weekly-training-load')
-      && pro.querySelector('.period-rhythm')
-      && pro.querySelector('.client-progress-comparison'))
-  })).resolves.toBe(true)
-  await page.getByRole('tab', { name: 'Обзор' }).click()
-  await expect(page.locator('.client-current-week')).toBeVisible()
-  await expect(page.locator('.client-progress-goal-story a[href="/me/goal"]').first()).toBeVisible()
-  await expect(page.locator('.progress-overview-panel').getByRole('button', { name: 'Открыть анализ' })).toBeVisible()
-  await verifyAnalysisShortcutKeepsShell(page)
-  await page.getByRole('tab', { name: 'ПРО' }).click()
-  await page.getByRole('button', { name: 'Прогресс', exact: true }).click()
-  await expect(page.getByRole('heading', { name: 'Где выросли результаты' })).toBeVisible()
-  const bodyZones = mapDisclosure.getByRole('group', { name: 'Зоны тела' })
-  await expect(bodyZones).toBeVisible()
-  await expect(bodyZones.getByRole('button', { name: 'Грудь. Результат зоны: +25%' })).toBeVisible()
-  await expect(mapDisclosure.locator('.body-progress-overlay')).toHaveCount(0)
-  await expect(mapDisclosure.getByRole('button', { name: 'Сзади' })).toHaveCount(0)
-  await page.goto('/me/settings')
-  await page.getByRole('radio', { name: 'Фигура' }).click()
-  await page.goto('/me/progress')
-  await page.getByRole('tab', { name: 'ПРО' }).click()
-  await page.locator('.client-body-map-disclosure > summary').click()
-  await expect(page.getByRole('group', { name: 'Атлетичная женщина, вид спереди' })).toBeVisible()
-  await expect(page.getByRole('button', { name: 'Грудь. Результат зоны: +25%' })).toBeVisible()
-  await page.getByRole('tab', { name: 'Обзор' }).click()
-  await page.getByRole('button', { name: 'Открыть анализ' }).click()
-  const clientDetails = page.getByRole('dialog', { name: 'Подробный анализ' })
-  await expect(clientDetails).toBeVisible()
-  await expect(clientDetails.getByRole('heading', { name: 'Главное сейчас' })).toBeVisible()
-  await expect(clientDetails.getByRole('heading', { name: 'Почему' })).toBeVisible()
-  await expect(clientDetails.getByRole('heading', { name: 'На следующей тренировке' })).toBeVisible()
-  await expect(clientDetails.getByText(/Жим лёжа: рабочий вес вырос с 72 до 75 кг/i)).toHaveCount(0)
-  await page.getByRole('button', { name: 'Закрыть' }).click()
-  await expect(page.locator('.progress-overview-panel').getByText('Твоя цель', { exact: true })).toBeVisible()
-  await expect(page.getByRole('heading', { name: 'Повысить силовые показатели и улучшить выносливость' })).toBeVisible()
-  await expect(page.locator('.progress-overview-panel').getByText('Показатели цели ещё не выбраны.')).toBeVisible()
-  await expect(page.locator('.personal-workout-result')).toHaveCount(0)
-  await expect(page.locator('.client-progress-goal-story a[href="/me/goal"]').first()).toBeVisible()
-  await expect(page.getByText(/Рост рабочего веса поддерживает цель/)).toHaveCount(0)
-  await expect(page.getByRole('heading', { name: 'На следующей тренировке' })).toHaveCount(0)
-  await expect(page.getByText(/причина максимального перерыва/)).toHaveCount(0)
-  await expect(page.getByRole('button', { name: 'Обновить', exact: true })).toHaveCount(0)
-  await expect(page.locator('.ai-progress-footer')).toHaveCount(0)
-  await page.getByRole('tab', { name: 'Обзор' }).click()
-  const measurementSection = page.locator('.client-progress-measurements-story')
-  await measurementSection.scrollIntoViewIfNeeded()
-  await expect(measurementSection.getByRole('button', { name: 'Добавить замер' })).toBeVisible()
-  await expect(measurementSection.getByRole('button', { name: /История/ })).toBeVisible()
-  await expect(measurementSection.getByRole('button', { name: 'Настроить показатели' })).toBeVisible()
-  await expect(page.getByText('УПРАВЛЕНИЕ', { exact: true })).toHaveCount(0)
-  await expect(page.locator('.client-progress-measurement')).toHaveCount(0)
-
-  await page.goto('/me/goal')
-  await expect(page.locator('.phone-frame')).toHaveClass(/client-goal-identity/)
-  await expect(page.getByRole('heading', { name: 'Моя цель' })).toBeVisible()
-  await expect(page.getByRole('heading', { name: 'Как оценивать цель' })).toBeVisible()
-  await expect(page.getByLabel('Цель')).toHaveValue('Повысить силовые показатели и улучшить выносливость')
-  await expect(page.getByText(/Цель сохранится как текст без автоматической оценки/)).toBeVisible()
-
-  await page.goto('/clients')
-  await expect(page).toHaveURL(/\/me$/)
-})
-
+    await mockBodyMapWorkoutHistory(page);
+    await page.goto('/auth');
+    await nativeSignIn(page, 'client@fit.local');
+    await expect(page).toHaveURL(/\/me$/);
+    await page.goto('/me/settings');
+    await expect(page.getByRole('radiogroup', { name: 'Вид фигуры' })).toBeVisible();
+    await expect(page.getByRole('radio', { name: 'Фигура' })).toBeChecked();
+    await page.getByRole('radio', { name: 'Список' }).click();
+    await page.goto('/me/progress');
+    await expect(page).toHaveURL(/\/me\/progress$/);
+    await expect(page.getByRole('heading', { name: 'Мой прогресс' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Тренировки' })).toHaveCount(0);
+    await expect(page.getByRole('tab', { name: 'Неделя' })).toHaveCount(0);
+    await expect(page.getByLabel('Прогресс тренировок').getByRole('heading', { name: 'Период', exact: true })).toBeVisible();
+    await expect(page.getByRole('button', { name: '1 месяц' })).toHaveClass(/active/);
+    await expect(page.getByText('По завершённым тренировкам', { exact: true })).toHaveCount(0);
+    await page.getByRole('tab', { name: 'ПРО' }).click();
+    const mapDisclosure = page.locator('.client-body-map-disclosure');
+    await expect(mapDisclosure).not.toHaveAttribute('open');
+    await mapDisclosure.locator('summary').click();
+    await expect(page.locator('.client-progress-main-now')).toHaveCount(0);
+    await page.getByText('Регулярность', { exact: true }).click();
+    await expect(page.getByRole('list', { name: 'Завершённые тренировки по неделям' })).toBeVisible();
+    await expect(page.locator('.client-progress-card').evaluate((element) => {
+        const overview = element.querySelector('.progress-overview-panel');
+        const pro = element.querySelector('.progress-pro-panel');
+        return Boolean(overview?.querySelector('.client-current-week')
+            && overview.querySelector('.client-progress-goal-story')
+            && overview.querySelector('.client-progress-measurements-story')
+            && overview.querySelector('.period-exercise-results')
+            && pro?.querySelector('.client-body-map-disclosure')
+            && pro.querySelector('.weekly-training-load')
+            && pro.querySelector('.period-rhythm')
+            && pro.querySelector('.client-progress-comparison'));
+    })).resolves.toBe(true);
+    await page.getByRole('tab', { name: 'Обзор' }).click();
+    await expect(page.locator('.client-current-week')).toBeVisible();
+    await expect(page.locator('.client-progress-goal-story a[href="/me/goal"]').first()).toBeVisible();
+    await expect(page.locator('.progress-overview-panel').getByRole('button', { name: 'Открыть анализ' })).toBeVisible();
+    await verifyAnalysisShortcutKeepsShell(page);
+    await page.getByRole('tab', { name: 'ПРО' }).click();
+    await page.getByRole('button', { name: 'Прогресс', exact: true }).click();
+    await expect(page.getByRole('heading', { name: 'Где выросли результаты' })).toBeVisible();
+    const bodyZones = mapDisclosure.getByRole('group', { name: 'Зоны тела' });
+    await expect(bodyZones).toBeVisible();
+    await expect(bodyZones.getByRole('button', { name: 'Грудь. Результат зоны: +25%' })).toBeVisible();
+    await expect(mapDisclosure.locator('.body-progress-overlay')).toHaveCount(0);
+    await expect(mapDisclosure.getByRole('button', { name: 'Сзади' })).toHaveCount(0);
+    await page.goto('/me/settings');
+    await page.getByRole('radio', { name: 'Фигура' }).click();
+    await page.goto('/me/progress');
+    await page.getByRole('tab', { name: 'ПРО' }).click();
+    await page.locator('.client-body-map-disclosure > summary').click();
+    await expect(page.getByRole('group', { name: 'Атлетичная женщина, вид спереди' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Грудь. Результат зоны: +25%' })).toBeVisible();
+    await page.getByRole('tab', { name: 'Обзор' }).click();
+    await page.getByRole('button', { name: 'Открыть анализ' }).click();
+    const clientDetails = page.getByRole('dialog', { name: 'Подробный анализ' });
+    await expect(clientDetails).toBeVisible();
+    await expect(clientDetails.getByRole('heading', { name: 'Главное сейчас' })).toBeVisible();
+    await expect(clientDetails.getByRole('heading', { name: 'Почему' })).toBeVisible();
+    await expect(clientDetails.getByRole('heading', { name: 'На следующей тренировке' })).toBeVisible();
+    await expect(clientDetails.getByText(/Жим лёжа: рабочий вес вырос с 72 до 75 кг/i)).toHaveCount(0);
+    await page.getByRole('button', { name: 'Закрыть' }).click();
+    await expect(page.locator('.progress-overview-panel').getByText('Твоя цель', { exact: true })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Повысить силовые показатели и улучшить выносливость' })).toBeVisible();
+    await expect(page.locator('.progress-overview-panel').getByText('Показатели цели ещё не выбраны.')).toBeVisible();
+    await expect(page.locator('.personal-workout-result')).toHaveCount(0);
+    await expect(page.locator('.client-progress-goal-story a[href="/me/goal"]').first()).toBeVisible();
+    await expect(page.getByText(/Рост рабочего веса поддерживает цель/)).toHaveCount(0);
+    await expect(page.getByRole('heading', { name: 'На следующей тренировке' })).toHaveCount(0);
+    await expect(page.getByText(/причина максимального перерыва/)).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Обновить', exact: true })).toHaveCount(0);
+    await expect(page.locator('.ai-progress-footer')).toHaveCount(0);
+    await page.getByRole('tab', { name: 'Обзор' }).click();
+    const measurementSection = page.locator('.client-progress-measurements-story');
+    await measurementSection.scrollIntoViewIfNeeded();
+    await expect(measurementSection.getByRole('button', { name: 'Добавить замер' })).toBeVisible();
+    await expect(measurementSection.getByRole('button', { name: /История/ })).toBeVisible();
+    await expect(measurementSection.getByRole('button', { name: 'Настроить показатели' })).toBeVisible();
+    await expect(page.getByText('УПРАВЛЕНИЕ', { exact: true })).toHaveCount(0);
+    await expect(page.locator('.client-progress-measurement')).toHaveCount(0);
+    await page.goto('/me/goal');
+    await expect(page.locator('.phone-frame')).toHaveClass(/client-goal-identity/);
+    await expect(page.getByRole('heading', { name: 'Моя цель' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Как оценивать цель' })).toBeVisible();
+    await expect(page.getByLabel('Цель')).toHaveValue('Повысить силовые показатели и улучшить выносливость');
+    await expect(page.getByText(/Цель сохранится как текст без автоматической оценки/)).toBeVisible();
+    await page.goto('/clients');
+    await expect(page).toHaveURL(/\/me$/);
+});
 test('client sees deterministic standard-measurement goal facts', async ({ page }) => {
-  const today = todayInTimeZone('Europe/Moscow')
-  const fiveDaysAgo = addDays(today, -5)
-  const twentyDaysAgo = addDays(today, -20)
-  await page.goto('/auth')
-  await page.getByLabel('Email').fill('client@fit.local')
-  await page.getByLabel('Пароль').fill('FitLocal123!')
-  await page.getByRole('button', { name: 'Войти' }).click()
-  await expect(page).toHaveURL(/\/me$/)
-
-  await page.route('**/rest/v1/rpc/get_client_goal', (route) => route.fulfill({
-    contentType: 'application/json',
-    body: JSON.stringify({
-      id: 'a1000000-0000-4000-8000-000000000001', clientId: '11111111-1111-4111-8111-111111111111',
-      title: 'Держать вес 59 кг', targetDate: null, status: 'active', version: 1, stages: [],
-      criteria: [{
-        id: 'a2000000-0000-4000-8000-000000000002', goalId: 'a1000000-0000-4000-8000-000000000001',
-        metric: 'weight', operation: 'maintain_range', targetValue: null,
-        rangeMin: 58.5, rangeMax: 59.5, unit: 'кг', baselineValue: null,
-        baselineRecordedOn: null, confirmationStatus: 'confirmed', position: 0, version: 1,
-      }],
-    }),
-  }))
-  await page.route('**/rest/v1/client_progress?*', (route) => route.fulfill({
-    contentType: 'application/json',
-    body: JSON.stringify([
-      { id: 'a4000000-0000-4000-8000-000000000004', client_id: '11111111-1111-4111-8111-111111111111', created_by: null, recorded_on: fiveDaysAgo, weight_kg: 59, chest_cm: null, waist_cm: null, hip_cm: null, notes: null, version: 1 },
-      { id: 'a3000000-0000-4000-8000-000000000003', client_id: '11111111-1111-4111-8111-111111111111', created_by: null, recorded_on: twentyDaysAgo, weight_kg: 60, chest_cm: null, waist_cm: null, hip_cm: null, notes: null, version: 1 },
-    ]),
-  }))
-  await page.route('**/rest/v1/client_progress_custom?*', (route) => route.fulfill({
-    contentType: 'application/json', body: '[]',
-  }))
-  await page.route('**/rest/v1/client_custom_metrics?*', (route) => route.fulfill({
-    contentType: 'application/json', body: '[]',
-  }))
-
-  await page.goto('/me/progress')
-  const goal = page.locator('.progress-overview-panel .client-progress-goal-story')
-  await expect(goal.getByRole('heading', { name: 'Держать вес 59 кг' })).toBeVisible()
-  await expect(goal).toContainText('В диапазоне сейчас')
-  await expect(goal).toContainText('59 кг')
-  await expect(goal).toContainText('58,5–59,5 кг')
-  await expect(goal.getByRole('link', { name: 'Смотреть значения и график' })).toHaveCount(0)
-  await expect(goal.getByText(/в окне удержания был замер за его пределами/)).toHaveCount(0)
-
-  await goal.getByRole('link', { name: 'Подробнее в ПРО' }).click()
-  const detailedGoal = page.locator('#goal-details .client-progress-goal-story')
-  await expect(detailedGoal.getByText('В диапазоне сейчас', { exact: true })).toBeVisible()
-  await expect(detailedGoal.getByText('59 кг', { exact: true })).toBeVisible()
-  await expect(detailedGoal.getByText('58,5–59,5 кг')).toBeVisible()
-  await page.getByRole('tab', { name: 'Обзор' }).click()
-  const measurements = page.locator('.client-progress-measurements-story')
-  await expect(measurements.getByRole('heading', { name: 'Замеры' })).toBeVisible()
-  await expect(measurements.getByText('59 кг', { exact: true })).toBeVisible()
-  await measurements.getByText('Подробности замеров', { exact: true }).click()
-  await expect(measurements.getByText('60 кг → 59 кг', { exact: true })).toBeVisible()
-  await expect(measurements.getByText('−1 кг', { exact: true })).toBeVisible()
-  await expect(measurements.getByText('Связан с целью', { exact: true })).toBeVisible()
-  await expect(measurements.getByText(/Свежие данные · 5 дн. · 2 точки · достаточно для динамики/)).toBeVisible()
-  await expect(measurements.getByText('Цель · 58,5–59,5 кг').first()).toBeVisible()
-  await expect(measurements.getByLabel('График показателя «Вес»')).toBeVisible()
-  await expect(measurements.evaluate((element) => {
-    const results = document.querySelector('.period-exercise-results')
-    const analysis = document.querySelector('.progress-story-period')
-    return Boolean(results && analysis
-      && (element.compareDocumentPosition(results) & Node.DOCUMENT_POSITION_FOLLOWING)
-      && (analysis.compareDocumentPosition(element) & Node.DOCUMENT_POSITION_FOLLOWING))
-  })).resolves.toBe(true)
-  await expect(page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).resolves.toBe(true)
-})
-
+    const today = todayInTimeZone('Europe/Moscow');
+    const fiveDaysAgo = addDays(today, -5);
+    const twentyDaysAgo = addDays(today, -20);
+    await page.goto('/auth');
+    await nativeSignIn(page, 'client@fit.local');
+    await expect(page).toHaveURL(/\/me$/);
+    await mockProgressBundle(page, { goal: {
+            id: 'a1000000-0000-4000-8000-000000000001', clientId: '11111111-1111-4111-8111-111111111111',
+            title: 'Держать вес 59 кг', targetDate: null, status: 'active', version: 1, stages: [],
+            criteria: [{
+                    id: 'a2000000-0000-4000-8000-000000000002', goalId: 'a1000000-0000-4000-8000-000000000001',
+                    metric: 'weight', operation: 'maintain_range', targetValue: null,
+                    rangeMin: 58.5, rangeMax: 59.5, unit: 'кг', baselineValue: null,
+                    baselineRecordedOn: null, confirmationStatus: 'confirmed', position: 0, version: 1
+                }]
+        } });
+    await mockProgressBundle(page, { entries: [
+            { id: 'a4000000-0000-4000-8000-000000000004', clientId: '11111111-1111-4111-8111-111111111111', createdBy: null, recordedOn: fiveDaysAgo, weightKg: 59, chestCm: null, waistCm: null, hipCm: null, notes: null, version: 1 },
+            { id: 'a3000000-0000-4000-8000-000000000003', clientId: '11111111-1111-4111-8111-111111111111', createdBy: null, recordedOn: twentyDaysAgo, weightKg: 60, chestCm: null, waistCm: null, hipCm: null, notes: null, version: 1 },
+        ] });
+    await mockProgressBundle(page, { customValues: [] });
+    await mockProgressBundle(page, { customMetrics: [] });
+    await page.goto('/me/progress');
+    const goal = page.locator('.progress-overview-panel .client-progress-goal-story');
+    await expect(goal.getByRole('heading', { name: 'Держать вес 59 кг' })).toBeVisible();
+    await expect(goal).toContainText('В диапазоне сейчас');
+    await expect(goal).toContainText('59 кг');
+    await expect(goal).toContainText('58,5–59,5 кг');
+    await expect(goal.getByRole('link', { name: 'Смотреть значения и график' })).toHaveCount(0);
+    await expect(goal.getByText(/в окне удержания был замер за его пределами/)).toHaveCount(0);
+    await goal.getByRole('link', { name: 'Подробнее в ПРО' }).click();
+    const detailedGoal = page.locator('#goal-details .client-progress-goal-story');
+    await expect(detailedGoal.getByText('В диапазоне сейчас', { exact: true })).toBeVisible();
+    await expect(detailedGoal.getByText('59 кг', { exact: true })).toBeVisible();
+    await expect(detailedGoal.getByText('58,5–59,5 кг')).toBeVisible();
+    await page.getByRole('tab', { name: 'Обзор' }).click();
+    const measurements = page.locator('.client-progress-measurements-story');
+    await expect(measurements.getByRole('heading', { name: 'Замеры' })).toBeVisible();
+    await expect(measurements.getByText('59 кг', { exact: true })).toBeVisible();
+    await measurements.getByText('Подробности замеров', { exact: true }).click();
+    await expect(measurements.getByText('60 кг → 59 кг', { exact: true })).toBeVisible();
+    await expect(measurements.getByText('−1 кг', { exact: true })).toBeVisible();
+    await expect(measurements.getByText('Связан с целью', { exact: true })).toBeVisible();
+    await expect(measurements.getByText(/Свежие данные · 5 дн. · 2 точки · достаточно для динамики/)).toBeVisible();
+    await expect(measurements.getByText('Цель · 58,5–59,5 кг').first()).toBeVisible();
+    await expect(measurements.getByLabel('График показателя «Вес»')).toBeVisible();
+    await expect(measurements.evaluate((element) => {
+        const results = document.querySelector('.period-exercise-results');
+        const analysis = document.querySelector('.progress-story-period');
+        return Boolean(results && analysis
+            && (element.compareDocumentPosition(results) & Node.DOCUMENT_POSITION_FOLLOWING)
+            && (analysis.compareDocumentPosition(element) & Node.DOCUMENT_POSITION_FOLLOWING));
+    })).resolves.toBe(true);
+    await expect(page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).resolves.toBe(true);
+});
 test('trainer reviews verified signals separately from the client copy', async ({ page }) => {
-  await mockBodyMapWorkoutHistory(page)
-  await page.goto('/auth')
-  await page.getByLabel('Email').fill('trainer@fit.local')
-  await page.getByLabel('Пароль').fill('FitLocal123!')
-  await page.getByRole('button', { name: 'Войти' }).click()
-  await expect(page).toHaveURL(/\/today$/)
-  await page.goto('/profile/settings')
-  await expect(page.getByRole('radiogroup', { name: 'Вид фигуры' })).toBeVisible()
-  await expect(page.getByRole('radio', { name: 'Фигура' })).toBeChecked()
-  await page.getByRole('radio', { name: 'Список' }).click()
-  await page.goto('/clients/11111111-1111-4111-8111-111111111111')
-  await expect(page.getByRole('radiogroup', { name: 'Вид фигуры' })).toHaveCount(0)
-  await page.goto('/progress/11111111-1111-4111-8111-111111111111')
-
-  await expect(page.getByRole('heading', { name: 'Прогресс', exact: true })).toBeVisible()
-  await expect(page.getByLabel('Тренировки за неделю')).toBeVisible()
-  await expect(page.getByLabel('Тренировки за неделю').locator('strong')).toBeVisible()
-  await expect(page.getByRole('link', { name: 'Открыть замеры и показатели' })).toBeVisible()
-  await expect(page.locator('details')).toHaveCount(0)
-
-  const trainerAnalysis = page.getByLabel('ИИ-анализ тренировок')
-  await expect(trainerAnalysis.getByRole('radiogroup', { name: 'Вид фигуры' })).toHaveCount(0)
-  await expect(trainerAnalysis.getByRole('group', { name: 'Атлетичный мужчина, вид спереди' })).toHaveCount(0)
-  await expect(trainerAnalysis.getByRole('group', { name: 'Атлетичная женщина, вид спереди' })).toHaveCount(0)
-  const bodyZones = trainerAnalysis.getByRole('group', { name: 'Зоны тела' })
-  await expect(bodyZones).toBeVisible()
-  await expect(bodyZones.getByRole('button', { name: 'Грудь. Результат зоны: +25%' })).toBeVisible()
-  await expect(trainerAnalysis.locator('.body-progress-overlay')).toHaveCount(0)
-  await expect(trainerAnalysis.getByRole('button', { name: 'Сзади' })).toHaveCount(0)
-  await expect(trainerAnalysis.getByRole('heading', { name: 'Период', exact: true })).toBeVisible()
-  await expect(trainerAnalysis.locator('.client-progress-main-now').evaluate((element) => {
-    const goal = document.querySelector('.client-progress-goal-story')
-    const map = document.querySelector('.body-progress-map')
-    const summary = document.querySelector('.progress-story-summary')
-    const comparison = document.querySelector('.client-progress-comparison')
-    const measurements = document.querySelector('.client-progress-measurements-story')
-    const regularity = document.querySelector('.client-progress-regularity-story')
-    return Boolean(goal && map && summary && comparison && measurements && regularity
-      && (element.compareDocumentPosition(goal) & Node.DOCUMENT_POSITION_FOLLOWING)
-      && (goal.compareDocumentPosition(map) & Node.DOCUMENT_POSITION_FOLLOWING)
-      && (map.compareDocumentPosition(comparison) & Node.DOCUMENT_POSITION_FOLLOWING)
-      && (comparison.compareDocumentPosition(measurements) & Node.DOCUMENT_POSITION_FOLLOWING)
-      && (measurements.compareDocumentPosition(regularity) & Node.DOCUMENT_POSITION_FOLLOWING)
-      && (regularity.compareDocumentPosition(summary) & Node.DOCUMENT_POSITION_FOLLOWING))
-  })).resolves.toBe(true)
-  await expect(trainerAnalysis.getByRole('heading', { name: 'Тренировочный ритм' })).toBeVisible()
-  await expect(trainerAnalysis.getByText('Доступно клиенту')).toBeVisible()
-  const trainerSignals = trainerAnalysis.getByRole('region', { name: /проверяем/ })
-  await expect(trainerSignals.getByText('Для тренера')).toBeVisible()
-  await expect(trainerSignals.getByRole('button', { name: 'Показать' })).toHaveAttribute('aria-expanded', 'false')
-  await trainerSignals.getByRole('button', { name: 'Показать' }).click()
-  await expect(trainerSignals.getByText('Факт', { exact: true }).first()).toBeVisible()
-  await expect(trainerSignals.getByText('Вопрос', { exact: true }).first()).toBeVisible()
-  await expect(trainerAnalysis.getByText('Динамика упражнений')).toHaveCount(0)
-  await trainerAnalysis.getByRole('button', { name: 'Подробный анализ' }).click()
-  const detailedAnalysis = page.getByRole('dialog', { name: 'Подробный анализ' })
-  await expect(detailedAnalysis.getByRole('heading', { name: 'Главное сейчас' })).toHaveCount(0)
-  await expect(detailedAnalysis.getByRole('heading', { name: 'Почему' })).toBeVisible()
-  await expect(detailedAnalysis.getByRole('heading', { name: 'На следующей тренировке' })).toBeVisible()
-  await expect(detailedAnalysis.getByText(/Что означают результаты и на чём основан вывод/)).toBeVisible()
-  await page.getByRole('button', { name: 'Закрыть' }).click()
-  await page.getByRole('button', { name: 'Версия для спортсмена' }).click()
-  const clientCopy = page.getByRole('dialog', { name: 'Версия для спортсмена' })
-  await expect(clientCopy).toBeVisible()
-  await expect(clientCopy.getByRole('textbox', { name: 'Главный результат', exact: true }))
-    .toHaveValue(/рабочий вес в жиме вырос на 4%/)
-  await expect(clientCopy.getByRole('button', { name: 'Сохранить клиентскую версию' })).toBeVisible()
-})
+    await mockBodyMapWorkoutHistory(page);
+    await page.goto('/auth');
+    await nativeSignIn(page, 'trainer@fit.local');
+    await expect(page).toHaveURL(/\/today$/);
+    await page.goto('/profile/settings');
+    await expect(page.getByRole('radiogroup', { name: 'Вид фигуры' })).toBeVisible();
+    await expect(page.getByRole('radio', { name: 'Фигура' })).toBeChecked();
+    await page.getByRole('radio', { name: 'Список' }).click();
+    await page.goto('/clients/11111111-1111-4111-8111-111111111111');
+    await expect(page.getByRole('radiogroup', { name: 'Вид фигуры' })).toHaveCount(0);
+    await page.goto('/progress/11111111-1111-4111-8111-111111111111');
+    await expect(page.getByRole('heading', { name: 'Прогресс', exact: true })).toBeVisible();
+    await expect(page.getByLabel('Тренировки за неделю')).toBeVisible();
+    await expect(page.getByLabel('Тренировки за неделю').locator('strong')).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Открыть замеры и показатели' })).toBeVisible();
+    await expect(page.locator('details')).toHaveCount(0);
+    const trainerAnalysis = page.getByLabel('ИИ-анализ тренировок');
+    await expect(trainerAnalysis.getByRole('radiogroup', { name: 'Вид фигуры' })).toHaveCount(0);
+    await expect(trainerAnalysis.getByRole('group', { name: 'Атлетичный мужчина, вид спереди' })).toHaveCount(0);
+    await expect(trainerAnalysis.getByRole('group', { name: 'Атлетичная женщина, вид спереди' })).toHaveCount(0);
+    const bodyZones = trainerAnalysis.getByRole('group', { name: 'Зоны тела' });
+    await expect(bodyZones).toBeVisible();
+    await expect(bodyZones.getByRole('button', { name: 'Грудь. Результат зоны: +25%' })).toBeVisible();
+    await expect(trainerAnalysis.locator('.body-progress-overlay')).toHaveCount(0);
+    await expect(trainerAnalysis.getByRole('button', { name: 'Сзади' })).toHaveCount(0);
+    await expect(trainerAnalysis.getByRole('heading', { name: 'Период', exact: true })).toBeVisible();
+    await expect(trainerAnalysis.locator('.client-progress-main-now').evaluate((element) => {
+        const goal = document.querySelector('.client-progress-goal-story');
+        const map = document.querySelector('.body-progress-map');
+        const summary = document.querySelector('.progress-story-summary');
+        const comparison = document.querySelector('.client-progress-comparison');
+        const measurements = document.querySelector('.client-progress-measurements-story');
+        const regularity = document.querySelector('.client-progress-regularity-story');
+        return Boolean(goal && map && summary && comparison && measurements && regularity
+            && (element.compareDocumentPosition(goal) & Node.DOCUMENT_POSITION_FOLLOWING)
+            && (goal.compareDocumentPosition(map) & Node.DOCUMENT_POSITION_FOLLOWING)
+            && (map.compareDocumentPosition(comparison) & Node.DOCUMENT_POSITION_FOLLOWING)
+            && (comparison.compareDocumentPosition(measurements) & Node.DOCUMENT_POSITION_FOLLOWING)
+            && (measurements.compareDocumentPosition(regularity) & Node.DOCUMENT_POSITION_FOLLOWING)
+            && (regularity.compareDocumentPosition(summary) & Node.DOCUMENT_POSITION_FOLLOWING));
+    })).resolves.toBe(true);
+    await expect(trainerAnalysis.getByRole('heading', { name: 'Тренировочный ритм' })).toBeVisible();
+    await expect(trainerAnalysis.getByText('Доступно клиенту')).toBeVisible();
+    const trainerSignals = trainerAnalysis.getByRole('region', { name: /проверяем/ });
+    await expect(trainerSignals.getByText('Для тренера')).toBeVisible();
+    await expect(trainerSignals.getByRole('button', { name: 'Показать' })).toHaveAttribute('aria-expanded', 'false');
+    await trainerSignals.getByRole('button', { name: 'Показать' }).click();
+    await expect(trainerSignals.getByText('Факт', { exact: true }).first()).toBeVisible();
+    await expect(trainerSignals.getByText('Вопрос', { exact: true }).first()).toBeVisible();
+    await expect(trainerAnalysis.getByText('Динамика упражнений')).toHaveCount(0);
+    await trainerAnalysis.getByRole('button', { name: 'Подробный анализ' }).click();
+    const detailedAnalysis = page.getByRole('dialog', { name: 'Подробный анализ' });
+    await expect(detailedAnalysis.getByRole('heading', { name: 'Главное сейчас' })).toHaveCount(0);
+    await expect(detailedAnalysis.getByRole('heading', { name: 'Почему' })).toBeVisible();
+    await expect(detailedAnalysis.getByRole('heading', { name: 'На следующей тренировке' })).toBeVisible();
+    await expect(detailedAnalysis.getByText(/Что означают результаты и на чём основан вывод/)).toBeVisible();
+    await page.getByRole('button', { name: 'Закрыть' }).click();
+    await page.getByRole('button', { name: 'Версия для спортсмена' }).click();
+    const clientCopy = page.getByRole('dialog', { name: 'Версия для спортсмена' });
+    await expect(clientCopy).toBeVisible();
+    await expect(clientCopy.getByRole('textbox', { name: 'Главный результат', exact: true }))
+        .toHaveValue(/рабочий вес в жиме вырос на 4%/);
+    await expect(clientCopy.getByRole('button', { name: 'Сохранить клиентскую версию' })).toBeVisible();
+});
