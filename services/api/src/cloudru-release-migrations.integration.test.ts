@@ -93,6 +93,20 @@ describe.skipIf(source === undefined)('Cloud.ru forward release migrations on lo
     await peer.query('select pg_advisory_unlock($1::bigint)', [String(PG_MIGRATE_LOCK_ID)])
   })
 
+  it('applies an independent late migration without rewriting the already applied history', async () => {
+    await writeFile(join(directory, '000003_first.sql'), '-- Up Migration\ncreate table public.first_fixture(id integer primary key);\n-- Down Migration\ndrop table public.first_fixture;')
+    expect(await release()).toBe(1)
+    const before = (await client.query<{ id: number; name: string; run_on: Date }>('select id,name,run_on from app_private.fit_migrations order by id')).rows
+    await pending()
+    expect(await release()).toBe(1)
+    const after = (await client.query<{ id: number; name: string; run_on: Date }>('select id,name,run_on from app_private.fit_migrations order by id')).rows
+    expect(after.slice(0, before.length)).toEqual(before)
+    expect(after.map(row => row.name)).toEqual([baseline, '000003_first', '000002_pending'])
+    expect((await client.query("select to_regclass('public.first_fixture') is not null and to_regclass('public.added_fixture') is not null as retained")).rows).toEqual([{ retained: true }])
+    expect(await release()).toBe(0)
+    expect(backup).toHaveBeenCalledTimes(2)
+  })
+
   it('rolls back all pending DDL and history when a later SQL statement fails', async () => {
     await pending()
     await writeFile(join(directory, '000003_failure.sql'), '-- Up Migration\nselect 1 / 0;\n-- Down Migration\nselect 1;')

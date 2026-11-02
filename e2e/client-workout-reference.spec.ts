@@ -3516,7 +3516,14 @@ for (const theme of ['light', 'dark']) for (const density of ['original', 'compa
   const sibling = JSON.stringify(backend.getWorkouts()[0]!.exercises[0]!.sets[1]!.fact)
   const deadline = await page.evaluate(id => sessionStorage.getItem(`fit:live-rest-until:${id}`), workoutId)
   expect(deadline).not.toBeNull()
-  const swipe = async () => { const gesture=await beginClientGesture(page,first,browserName,first.locator('.live-set-number')); await gesture.move(60); await gesture.end(); await first.getByRole('button',{name:/Удалить подход 1:/}).click() }
+  const swipe = async () => {
+    await expect(page.getByRole('alertdialog')).toHaveCount(0)
+    const origin = first.locator('.live-set-number')
+    // WebKit may still settle scroll after the dialog loses focus. Wait for
+    // this exact hit target before sampling raw gesture coordinates again.
+    await origin.hover()
+    const gesture=await beginClientGesture(page,first,browserName,origin); await gesture.move(60); await gesture.end(); await first.getByRole('button',{name:/Удалить подход 1:/}).click()
+  }
   await swipe()
   await expect(page.getByRole('alertdialog')).toContainText('Выполненный результат')
   await page.getByRole('alertdialog').getByRole('button',{name:'Отмена',exact:true}).click()
@@ -4042,22 +4049,34 @@ test('client technique retries failed video and keeps manual play usable', async
   fixture.recover()
   await detail.getByRole('button', { name: 'Повторить загрузку видео: Кошка-корова' }).click()
   const video = detail.locator('video')
-  await expect.poll(() => video.evaluate((element: HTMLVideoElement) => !element.paused)).toBe(true)
+  await expect(video).toHaveAttribute('autoplay', '')
+  // iPhone may reject autoplay after recovery. Readiness and the real play
+  // action are the browser contract; autoplay rejection is covered in ExerciseImage.
+  await expect.poll(() => video.evaluate((element: HTMLVideoElement) => element.readyState)).toBeGreaterThanOrEqual(2)
   expect(fixture.signedVideos()).toBeGreaterThan(failedAttempts)
   await expect(detail.getByText('Видео не загрузилось')).toHaveCount(0)
-  await expect(detail.getByRole('button', { name: 'Запустить анимацию: Кошка-корова' })).toHaveCount(0)
   await video.evaluate((element: HTMLVideoElement) => element.pause())
   const play = detail.getByRole('button', { name: 'Запустить анимацию: Кошка-корова' })
   await expect(play).toBeVisible()
+  const pausedTime = await video.evaluate((element: HTMLVideoElement) => element.currentTime)
   await play.click()
-  await expect.poll(() => video.evaluate((element: HTMLVideoElement) => element.currentTime)).toBeGreaterThan(0)
+  await expect.poll(() => video.evaluate((element: HTMLVideoElement) => !element.paused)).toBe(true)
+  await expect.poll(() => video.evaluate((element: HTMLVideoElement) => element.currentTime)).toBeGreaterThan(pausedTime)
   await expect(play).toHaveCount(0)
   await detail.screenshot({ path: info.outputPath('client-video-playing.png') })
   await detail.getByRole('button', { name: 'Закрыть технику' }).click()
   await expect(detail).toHaveCount(0)
   await expect(inlineRetry).toBeVisible()
   await inlineRetry.click()
-  await expect.poll(() => inline.locator('video').evaluate((element: HTMLVideoElement) => !element.paused)).toBe(true)
+  const inlineVideo = inline.locator('video')
+  await expect(inlineVideo).toHaveAttribute('autoplay', '')
+  await expect.poll(() => inlineVideo.evaluate((element: HTMLVideoElement) => element.readyState)).toBeGreaterThanOrEqual(2)
+  await inlineVideo.evaluate((element: HTMLVideoElement) => element.pause())
+  const inlinePlay = inline.getByRole('button', { name: 'Запустить анимацию: Кошка-корова' })
+  await expect(inlinePlay).toBeVisible()
+  await inlinePlay.click()
+  await expect.poll(() => inlineVideo.evaluate((element: HTMLVideoElement) => !element.paused)).toBe(true)
+  await expect(inlinePlay).toHaveCount(0)
 })
 
 // Themes and widths cover token contrast and wrapping only; recovery runs once above.

@@ -178,6 +178,35 @@ test('runs required Yandex-only browser auth without starting local Supabase', (
   assert.doesNotMatch(job, /VITE_SUPABASE_|supabase\/setup-cli|supabase start|supabase db reset|wait-for-local-auth/)
 })
 
+test('production-mode browser acceptance partitions the unchanged suite into four isolated shards', () => {
+  const job = workflow.slice(workflow.indexOf('  e2e-yandex-auth:\n'), workflow.indexOf('  e2e-visual:\n'))
+  assert.match(job, /fail-fast: false\n\s+max-parallel: 4\n\s+matrix:\n\s+shard: \[1\/4, 2\/4, 3\/4, 4\/4\]/)
+  assert.match(job, /PLAYWRIGHT_SHARD: \$\{\{ matrix\.shard \}\}/)
+  assert.match(job, /--env PLAYWRIGHT_SHARD/)
+  assert.match(job, /--shard="\$PLAYWRIGHT_SHARD" --reporter=github,\.\/scripts\/fit-lime-timing-reporter\.mjs/)
+  assert.match(job, /name: Upload production-mode browser timings\n\s+if: always\(\)/)
+  assert.match(job, /name: playwright-timings-yandex-auth-\$\{\{ strategy\.job-index \}\}/)
+  assert.match(job, /name: playwright-diagnostics-yandex-auth-\$\{\{ strategy\.job-index \}\}/)
+  assert.doesNotMatch(job, /continue-on-error|--grep|--retries|--timeout|--max-failures/)
+
+  const [script] = inlineShell(job)
+  assert.ok(script)
+  for (const shard of ['1/4', '2/4', '3/4', '4/4']) {
+    // Exercise the actual workflow shell without launching a container.
+    const result = spawnSync('bash', ['-eu', '-c', 'docker() { printf "%s\\n" "$@"; };\n' + script], {
+      encoding: 'utf8', env: { ...process.env, PLAYWRIGHT_IMAGE: 'fixture-image', PLAYWRIGHT_SHARD: shard },
+    })
+    assert.equal(result.status, 0, result.stderr)
+    assert.match(result.stdout, /--env\nPLAYWRIGHT_SHARD\n/)
+    assert.ok(result.stdout.includes('--shard="$PLAYWRIGHT_SHARD"'))
+    assert.ok(result.stdout.includes('--workers=1 --fail-on-flaky-tests'))
+  }
+  const failure = spawnSync('bash', ['-eu', '-c', 'docker() { return 31; };\n' + script], {
+    encoding: 'utf8', env: { ...process.env, PLAYWRIGHT_IMAGE: 'fixture-image', PLAYWRIGHT_SHARD: '1/4' },
+  })
+  assert.equal(failure.status, 31)
+})
+
 test('coach releases require explicit public rollout and preserve pilot rollback', () => {
   for (const name of ['prepare-cloudru-frontend.yml', 'release-android-ota.yml']) {
     const source = readFileSync(join(import.meta.dirname, '..', '.github', 'workflows', name), 'utf8')

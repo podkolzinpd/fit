@@ -117,3 +117,4 @@ done отображается «Проведена» одинаково, нез�
 используют только native PostgreSQL17. Frozen source SQL/pgTAP/types остаются
 побайтным архивом с checksum и отдельным opt-in запуском; remote source/media
 не отключаются. [Запись P3](design/SUPABASE_DECOMMISSION_PLAN_20261023.md#p3--native-only-localci--02112026--codex--openai).
+02.11: SRV301–306 в [каноническом плане](design/CORPORATE_ADMIN_20261027.md#проект-следующего-этапа--учёт-услуг-тренера--2026-11-02) приняты владельцем:2PR, услуги без посетительских данных, собственная история/аудит, admin-счётчики. Отдельный default-off допуск только выбранному тестовому тренеру; is_yandex и invitation pilot его не включают.

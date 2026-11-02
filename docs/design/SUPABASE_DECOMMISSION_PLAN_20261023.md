@@ -412,3 +412,15 @@ snapshot из main сохранены; native-only local/CI и required database
 приняты автоматически; собственный product diff не добавлен. Проверки docs и
 whitespace выполняются после разрешения; новый head/CI фиксируются в PR1944.
 Strict branch protection app/database/e2e не меняется; CI повторяется для merge.
+
+### P3 — конфликт индекса после PR1940/1947 — 02.11.2026
+
+По повторному запросу владельца подлит main233d2f69 (PR1940 и PR1947).
+Единственный конфликт ACTIVE_CONTRACTS разрешён сохранением обеих записей:
+P3 native-only dev/CI и независимый SRV301–306 допуск. Из main сохранены
+четыре изолированных production browser shard, timings reporter и требования
+fail-on-flaky; удаление local Supabase и настоящий required database PG17 job
+сохранены. Новых product/API/SQL изменений сверх main эта итерация не вносит.
+Локально passed:54 workflow/launcher/rehearsal tests, E2E TypeScript, docs
+и whitespace checks. Относительно main нет diff в e2e/API/Android. Статусы
+нового head фиксируются в PR1944; предыдущий CI6dc645c1 был зелёным32/32.
