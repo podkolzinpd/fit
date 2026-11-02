@@ -1,4 +1,4 @@
-import { workoutTemplateReliabilityCases } from './workout-template-reliability.cases'
+import { workoutTemplateEntryCases, workoutTemplateReliabilityCases } from './workout-template-reliability.cases'
 import { workoutLifecycleCases } from './workout-lifecycle.cases'
 import { writeFile } from 'node:fs/promises'
 import { expect, test, type Locator, type Page } from '@playwright/test'
@@ -12,6 +12,7 @@ import { trainerId, clientId, workoutId, conversationId, messageId, newWorkoutId
 // Visual and mixed interaction/state acceptance; all original assertions are retained.
 test.skip(!process.env.FIT_SCHEDULE_V2_VISUAL, 'Dedicated server-backed pilot harness')
 workoutTemplateReliabilityCases()
+workoutTemplateEntryCases()
 
 // Narrow client rows and the one-add flow use the production route and fonts.
 test('Compact clients keep search, initials and one add flow in trainer Lime', { tag: ['@lime-clients', '@lime-critical'] }, async ({ page }, info) => {
@@ -698,8 +699,8 @@ for (const width of [375, 390, 430, 1440]) test(`Figma workout Coach reference f
   await expect(squat.locator('.overflow-trigger svg[data-icon="more"]')).toHaveCSS('width', '24px')
   await expect(squat.locator('.exercise-comment-options > summary')).toHaveCSS('min-height', '44px')
   await expect(squat.locator('.set-add-row svg')).toHaveCSS('background-color', 'rgb(182, 239, 77)')
-  await expect(page.locator('.coach-plan-entry-controls .quick-workout-expand')).toHaveCSS('background-color', 'rgb(182, 239, 77)')
-  await expect(page.locator('.coach-plan-entry-controls > button').first()).toHaveCSS('background-color', 'rgb(59, 59, 64)')
+  await expect(page.locator('.trainer-plan-methods .trainer-method-voice')).toHaveCSS('background-color', 'rgb(182, 239, 77)')
+  await expect(page.locator('.trainer-plan-methods > button').first()).toHaveCSS('background-color', 'rgb(59, 59, 64)')
   await squat.getByLabel('Вес, подход 1').fill('27.5')
   await squat.getByLabel('Повторы, подход 1').fill('10')
   await expect(squat.getByLabel('Вес, подход 1')).toHaveCSS('height', '48px')
@@ -707,14 +708,15 @@ for (const width of [375, 390, 430, 1440]) test(`Figma workout Coach reference f
   await expect(squat.getByLabel('Вес, подход 1')).toHaveAttribute('autocomplete', 'off')
   await expect(squat.getByLabel('Вес, подход 1')).toHaveAttribute('inputmode', 'decimal')
   await expect(page.locator('.today-plan-summary')).toHaveCount(0)
-  const lower = page.locator('.coach-plan-entry-controls'), bulk = page.locator('.workout-editor-footer .overflow-trigger')
-  await expect(lower).toHaveCSS('gap', '2px')
-  expect(await lower.locator(':scope > button').evaluateAll(nodes => nodes.every(node => node.getBoundingClientRect().height === 80))).toBe(true)
+  const lower = page.locator('.trainer-plan-methods'), bulk = page.locator('.workout-editor-footer .overflow-trigger')
+  await expect(lower).toHaveCSS('gap', '6px')
+  expect(await lower.locator(':scope > button').evaluateAll(nodes => nodes.every(node => node.getBoundingClientRect().height === 44))).toBe(true)
   await bulk.scrollIntoViewIfNeeded()
   expect(await bulk.evaluate(button => {
     const rect = button.getBoundingClientRect(), footer = button.closest('.workout-editor-footer')!.getBoundingClientRect()
-    const controls = document.querySelector('.coach-plan-entry-controls')!.getBoundingClientRect()
-    return Math.abs(footer.right - rect.right - 16) < 1 && controls.top >= rect.bottom + 8 && rect.height >= 44
+    const controls = document.querySelector('.trainer-plan-methods')!.getBoundingClientRect()
+    const firstExercise = document.querySelector('.planned-exercise')!.getBoundingClientRect()
+    return Math.abs(footer.right - rect.right - 16) < 1 && controls.bottom <= firstExercise.top && rect.height >= 44
   })).toBe(true)
   await bulk.click()
   await expect(page.getByRole('menuitem', { name: 'Сбросить значения', exact: true })).toBeVisible()

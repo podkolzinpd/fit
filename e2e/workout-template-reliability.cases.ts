@@ -106,3 +106,78 @@ export function workoutTemplateReliabilityCases() {
     expect(current[0]).not.toMatchObject({ requestId: oldDraft.requestId })
   })
 }
+
+export function workoutTemplateEntryCases() {
+  for (const quick of [false, true]) for (const create of [false, true]) test(`Template entry ${quick ? 'quick' : 'full'} ${create ? 'empty create save return' : 'repeat append preserves context'}`, { tag: ['@lime-templates'] }, async ({ page }, info) => {
+    await setup(page)
+    const sourceKey = `fit.workout-form-draft.${actorId}.${quick ? 'new--2026-11-09--quick' : `new-${clientId}-2026-11-09`}`
+    const source = { ...oldDraft, clientId, workoutDate: '2026-11-09', title: 'Индивидуальный план', notes: 'Не терять заметку', sourceVersion: undefined }
+    await page.addInitScript(({ key, draft }) => { if (!localStorage.getItem(key)) localStorage.setItem(key, JSON.stringify(draft)) }, { key: sourceKey, draft: source })
+    const commands: unknown[] = []
+    const businessWrites: string[] = []
+    page.on('request', request => { if (request.method() !== 'GET' && /\/v1\/workouts(?:\/|$)/.test(new URL(request.url()).pathname)) businessWrites.push(request.url()) })
+    await page.route('**/v1/workout-templates', async route => {
+      if (route.request().method() === 'GET') return route.fulfill({ json: { templates: create ? [] : [original] } })
+      const command = route.request().postDataJSON() as { draft: typeof original }
+      commands.push(command)
+      if (quick && create && commands.length === 1) return route.abort('connectionreset')
+      return route.fulfill({ json: { template: { ...original, ...command.draft } } })
+    })
+    if (quick) {
+      await page.goto('/today?date=2026-11-09')
+      await page.getByRole('button', { name: 'Новая тренировка', exact: true }).click()
+      await page.getByRole('button', { name: 'Запланировать', exact: true }).click()
+      await page.getByRole('button', { name: 'Продолжить черновик', exact: true }).click()
+    } else await page.goto(`/workouts/new?client=${clientId}&date=2026-11-09`)
+    const methods = page.getByRole('group', { name: 'Добавить упражнения', exact: true })
+    await expect(methods.getByRole('button')).toHaveCount(4)
+    for (const width of [320, 390, 430, 1440]) {
+      await page.setViewportSize({ width, height: 844 })
+      const geometry = await methods.evaluate(node => ({ overflow: node.scrollWidth > node.clientWidth, heights: [...node.querySelectorAll('button')].map(button => button.getBoundingClientRect().height) }))
+      expect(geometry.overflow).toBe(false)
+      expect(geometry.heights.every(height => height >= 44)).toBe(true)
+    }
+    await page.setViewportSize({ width: 390, height: 844 })
+    await page.getByRole('button', { name: 'Добавить шаблон', exact: true }).click()
+    const picker = page.getByRole('dialog', { name: 'Добавить шаблон тренировки' })
+    await expect(picker).toBeVisible()
+    await page.screenshot({ path: info.outputPath('template-entry-picker.png') })
+    if (create) {
+      await expect(picker.getByRole('button', { name: 'Открыть библиотеку' })).toBeVisible()
+      await picker.getByRole('button', { name: 'Создать шаблон', exact: true }).click()
+      await page.getByLabel('Название шаблона').fill('Новый корпус')
+      await page.getByRole('button', { name: 'Выбрать упражнения', exact: true }).click()
+      const catalog = page.getByRole('dialog', { name: 'Добавить упражнение', exact: true })
+      await catalog.getByLabel('Поиск упражнения').fill('Планка')
+      await catalog.getByRole('button', { name: 'Выбрать: Планка', exact: true }).click()
+      await catalog.getByRole('button', { name: 'Добавить 1', exact: true }).click()
+      await page.reload()
+      await expect(page.getByLabel('Название шаблона')).toHaveValue('Новый корпус')
+      await page.getByRole('button', { name: 'Сохранить и добавить в план', exact: true }).click()
+      if (quick) {
+        await expect(page.getByRole('alert')).toBeVisible()
+        const unchanged = await page.evaluate(key => JSON.parse(localStorage.getItem(key) ?? '{}') as { exercises: unknown[] }, sourceKey)
+        expect(unchanged.exercises).toHaveLength(1)
+        await page.getByRole('button', { name: 'Сохранить и добавить в план', exact: true }).click()
+      }
+      await expect(page.getByRole('textbox', { name: 'Название тренировки', exact: true })).toHaveValue(source.title)
+      if (quick) await expect(page.getByRole('dialog', { name: 'Быстрое создание тренировки' })).toBeVisible()
+      expect(commands).toHaveLength(quick ? 2 : 1)
+      if (quick) expect(commands[1]).toEqual(commands[0])
+    } else {
+      await page.keyboard.press('Escape')
+      await expect(picker).toHaveCount(0)
+      await expect(page.getByRole('button', { name: 'Добавить шаблон', exact: true })).toBeFocused()
+      for (let attempt = 0; attempt < 2; attempt++) {
+        await page.getByRole('button', { name: 'Добавить шаблон', exact: true }).click()
+        await picker.locator('.workout-template-picker-item').click()
+      }
+    }
+    const stored = await page.evaluate(key => JSON.parse(localStorage.getItem(key) ?? '{}') as { clientId: string; workoutDate: string; title: string; notes: string; startTime: string; trainingFormat: string; exercises: Array<{ blockId: string }> }, sourceKey)
+    expect(stored).toMatchObject({ clientId, workoutDate: source.workoutDate, title: source.title, notes: source.notes, startTime: source.startTime, trainingFormat: source.trainingFormat })
+    expect(stored.exercises).toHaveLength(create ? 2 : 3)
+    expect(new Set(stored.exercises.map(exercise => exercise.blockId)).size).toBe(create ? 2 : 3)
+    expect(businessWrites).toEqual([])
+    await page.screenshot({ path: info.outputPath('template-entry-return.png') })
+  })
+}
