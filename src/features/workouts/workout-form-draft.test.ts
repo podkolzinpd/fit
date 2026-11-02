@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { localDate } from '../../shared/local-date'
-import { hasWorkoutFormContent, quickPlanDraftChoices, retainQuickPlanDraft, readWorkoutEditDraft, readWorkoutFormDraft, removeWorkoutFormDraft, workoutFormDraftKey, writeWorkoutFormDraft, type WorkoutFormDraft } from './workout-form-draft'
+import { templateAssignmentDraftKey, templateAssignmentDraftChoices, hasWorkoutFormContent, quickPlanDraftChoices, retainQuickPlanDraft, readWorkoutEditDraft, readWorkoutFormDraft, removeWorkoutFormDraft, workoutFormDraftKey, writeWorkoutFormDraft, type WorkoutFormDraft } from './workout-form-draft'
 
 describe('workout form draft storage', () => {
   const key = workoutFormDraftKey('trainer', 'workout-1')
@@ -17,6 +17,23 @@ describe('workout form draft storage', () => {
       setItem: (itemKey: string, value: string) => values.set(itemKey, value),
       removeItem: (itemKey: string) => values.delete(itemKey),
     })
+  })
+
+  it('isolates template assignments while retaining legacy and previous contexts', () => {
+    const legacy = workoutFormDraftKey('trainer', 'template-one')
+    const oldKey = templateAssignmentDraftKey('trainer', 'one', 'client-1', draft.workoutDate)
+    const nextKey = templateAssignmentDraftKey('trainer', 'one', 'client-2', localDate('2026-08-11'))
+    writeWorkoutFormDraft(legacy, { ...draft, requestId: 'legacy' })
+    writeWorkoutFormDraft(oldKey, { ...draft, requestId: 'previous' })
+    writeWorkoutFormDraft(nextKey, { ...draft, clientId: 'client-2', requestId: 'current', workoutDate: localDate('2026-08-11') })
+    expect(new Set([oldKey, nextKey, templateAssignmentDraftKey('trainer', 'one', 'client-2', localDate('2026-08-11'), true)]).size).toBe(3)
+    expect(templateAssignmentDraftChoices('trainer', 'one').map(choice => choice.draft.requestId)).toEqual(['legacy', 'previous', 'current'])
+    expect(templateAssignmentDraftChoices('another-user', 'one')).toEqual([])
+    expect(templateAssignmentDraftChoices('trainer', 'another-template')).toEqual([])
+    expect(retainQuickPlanDraft(nextKey, draft.workoutDate)).toBe(true)
+    writeWorkoutFormDraft(nextKey, { ...draft, requestId: 'fresh' })
+    expect(templateAssignmentDraftChoices('trainer', 'one').map(choice => choice.draft.requestId)).toContain('current')
+    expect(readWorkoutFormDraft(legacy)?.requestId).toBe('legacy')
   })
 
   it('round-trips a draft per source workout', () => {

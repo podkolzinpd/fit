@@ -1,3 +1,4 @@
+import { workoutTemplateReliabilityCases } from './workout-template-reliability.cases'
 import { workoutLifecycleCases } from './workout-lifecycle.cases'
 import { writeFile } from 'node:fs/promises'
 import { expect, test, type Locator, type Page } from '@playwright/test'
@@ -10,6 +11,7 @@ import { trainerId, clientId, workoutId, conversationId, messageId, newWorkoutId
 
 // Visual and mixed interaction/state acceptance; all original assertions are retained.
 test.skip(!process.env.FIT_SCHEDULE_V2_VISUAL, 'Dedicated server-backed pilot harness')
+workoutTemplateReliabilityCases()
 
 // Narrow client rows and the one-add flow use the production route and fonts.
 test('Compact clients keep search, initials and one add flow in trainer Lime', { tag: ['@lime-clients', '@lime-critical'] }, async ({ page }, info) => {
