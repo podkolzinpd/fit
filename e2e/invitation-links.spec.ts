@@ -6,6 +6,18 @@ async function dismissVisibleCoachmarks(page: Page) {
   while (await dismiss.count() > 0) await dismiss.first().click()
 }
 
+async function signOut(page: Page) {
+  const dismiss = page.locator('.coachmark-bubble').getByRole('button', { name: 'Понятно', exact: true }).first()
+  // Settings onboarding is optional and may mount after route hydration.
+  // Handle it only during sign-out, after invitation dialogs are closed.
+  await page.addLocatorHandler(dismiss, async () => { await dismiss.click() })
+  try {
+    await page.getByRole('button', { name: 'Выйти', exact: true }).click()
+  } finally {
+    await page.removeLocatorHandler(dismiss)
+  }
+}
+
 test('trainer invites a new athlete by protected link without entering a code', async ({ page }, testInfo) => {
   test.setTimeout(120_000)
   const suffix = `${testInfo.workerIndex}-${Date.now()}`
@@ -30,10 +42,7 @@ test('trainer invites a new athlete by protected link without entering a code', 
   await page.getByRole('button', { name: 'Закрыть' }).click()
   await page.goto('/profile/settings')
   await expect(page.getByRole('button', { name: 'Выйти', exact: true })).toBeVisible()
-  // Fresh-account onboarding mounts after the settings route hydrates.
-  await page.locator('.coachmark-bubble').getByRole('button', { name: 'Понятно', exact: true }).first().click()
-  await dismissVisibleCoachmarks(page)
-  await page.getByRole('button', { name: 'Выйти' }).click()
+  await signOut(page)
   await page.goto(invitationUrl)
 
   await expect(page.getByRole('heading', { name: 'Тренировки вместе с тренером' })).toBeVisible()
@@ -80,8 +89,7 @@ test('athlete invites a trainer by the same protected link shown in the QR code'
   await expect(page.getByRole('button', { name: 'Сохранить QR-код' })).toBeEnabled()
 
   await page.goto('/me/settings')
-  await dismissVisibleCoachmarks(page)
-  await page.getByRole('button', { name: 'Выйти' }).click()
+  await signOut(page)
   await page.goto(invitationUrl)
   await expect(page.getByRole('heading', { name: 'Приглашение стать тренером' })).toBeVisible()
   await expect(page.getByRole('region', { name: 'Отправитель приглашения' })).toContainText(athleteName)
