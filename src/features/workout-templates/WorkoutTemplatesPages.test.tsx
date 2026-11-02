@@ -15,6 +15,8 @@ vi.mock('../exercises', () => ({ useExerciseCatalog: () => ({ exercises: [] }), 
 vi.mock('../voice-input', () => ({ VoiceNoteField: () => null }))
 vi.mock('../workouts', async () => ({
   ...await vi.importActual('../workouts/template-plan-context'),
+  ...await vi.importActual('../workouts/workout-form-draft'),
+  ...await vi.importActual('../workouts/workout-navigation'),
   WorkoutHeader: ({ title }: { title: string }) => <h1>{title}</h1>,
   QuickWorkoutEntry: () => null, WorkoutExerciseEditor: () => null,
   WorkoutCta: ({ pending, pendingLabel, disabled, children, ...props }: { pending: boolean; pendingLabel: string; disabled: boolean; children: React.ReactNode }) => <button {...props} disabled={pending || disabled}>{pending ? pendingLabel : children}</button>,

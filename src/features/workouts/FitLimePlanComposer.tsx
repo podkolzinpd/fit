@@ -163,7 +163,8 @@ function FitLimePlanForm({ date, returnTo, onClose, onBack, initialDraft }: {
   }
   function openTemplateDestination(library = false) {
     if (!persistTemplateSource(key, draft)) { setError('Не удалось сохранить черновик на устройстве. План остаётся открыт.'); return }
-    const context: TemplatePlanContext = { draftKey: key, returnTo, resumePlanRequestId: requestId, requestId, applyOnSave: true }
+    navigate(returnTo, { replace: true, state: { resumePlanRequestId: requestId, templatePlanDraftKey: key } })
+    const context: TemplatePlanContext = { returnHistoryIndex: (window.history.state as { idx?: number } | null)?.idx, draftKey: key, returnTo, resumePlanRequestId: requestId, requestId, applyOnSave: true }
     navigate(library ? '/schedule/templates' : '/schedule/templates/new/editor', { state: { templatePlanContext: context } })
     onClose('navigate')
   }
