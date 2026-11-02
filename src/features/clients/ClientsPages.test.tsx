@@ -6,7 +6,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Client, ProgressEntry, SessionActor } from '../../shared/domain'
 import { localDate } from '../../shared/local-date'
 import { MyClientEditPage } from './ClientsPages'
-import type { SaveOwnAthleteProfileInput } from '../../data/repositories/athlete-sport-profile.repository'
+import type { SaveOwnAthleteProfileInput } from '../../data/contracts/athlete-sport-profile'
 import type { AthleteSportProfile } from '../../shared/sport-interests'
 
 const repository = vi.hoisted(() => ({

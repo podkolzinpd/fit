@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Client, SessionActor } from '../../shared/domain'
-import type { TrainerFinanceClientBundle, TrainerFinanceRepository } from '../../data/repositories/trainer-finance.repository'
+import type { TrainerFinanceClientBundle, TrainerFinanceRepository } from '../../data/contracts/trainer-finance'
 import { PackageForm, PaymentForm, TrainerFinancePage } from './TrainerFinancePage'
 
 const clientId = '1a0c5295-0a0f-4ccb-a39a-e58090967245'
