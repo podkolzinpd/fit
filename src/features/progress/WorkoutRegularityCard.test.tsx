@@ -8,9 +8,7 @@ import { localDate } from '../../shared/local-date'
 import { WorkoutRegularityCard, WorkoutRegularityContent } from './WorkoutRegularityCard'
 
 const repository = vi.hoisted(() => ({ regularity: vi.fn() }))
-vi.mock('../../data/repositories/progress.repository', () => ({
-  progressRepository: { regularity: repository.regularity },
-}))
+
 
 const periods: WorkoutRegularity[] = [{
   period: 'week', periodStart: localDate('2026-08-10'), periodEnd: localDate('2026-08-16'),
@@ -89,4 +87,9 @@ describe('WorkoutRegularityCard', () => {
     expect(await screen.findByText('3 тренировки')).toBeVisible()
     expect(repository.regularity).toHaveBeenCalledTimes(2)
   })
+})
+
+vi.mock('../../app/data-backend-context', async () => {
+  const { nativeBackend } = await import('../../test/native-backend')
+  return { useDataBackend: () => ({ ...nativeBackend, progress: { regularity: repository.regularity } }) }
 })

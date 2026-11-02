@@ -1,6 +1,6 @@
 import { expect, type Locator, type Page } from '@playwright/test'
 import type { TrainerReaction, WorkoutExercise, WorkoutExerciseDraft, WorkoutTemplateDraft } from '../src/shared/domain'
-import type { TrainerFinanceClientBundle, TrainerFinancePackageDraft, TrainerFinancePaymentDraft } from '../src/data/repositories/trainer-finance.repository'
+import type { TrainerFinanceClientBundle, TrainerFinancePackageDraft, TrainerFinancePaymentDraft } from '../src/data/contracts/trainer-finance'
 import { computeClientStats } from '../src/data/repositories/workout-rules'
 import { workoutHomeSummaries } from '../src/data/repositories/workout-home'
 import { localDate } from '../src/shared/local-date'

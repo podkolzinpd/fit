@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type MouseEventHandler } from 'react'
 import { PRESET_REST_DEFAULTS } from '../../data/repositories/workout-rules'
-import type { WorkoutParseResponse } from '../../data/repositories/exercises.repository'
+import type { WorkoutParseResponse } from '../../shared/workout-parse-response'
 import type { ExerciseSnapshot } from '../../shared/domain'
 import { AddIcon, CopyIcon, KeyboardIcon, MicIcon } from '../../shared/icons'
 import { parseStructuredQuickWorkoutEntry, quickWorkoutExerciseName, type ParsedWorkoutExercise } from './quick-workout-entry'

@@ -40,4 +40,3 @@ export function WorkoutTemplatePicker({ templates, loading, error, onRetry, onSe
     </section>
   </div>
 }
-
