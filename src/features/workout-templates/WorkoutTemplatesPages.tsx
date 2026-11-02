@@ -58,7 +58,7 @@ function WorkoutTemplates() {
   const queryClient = useQueryClient()
   const [confirm, confirmDialog] = useConfirm()
   const pendingCopies = useRef(new Map<string, WorkoutTemplateDraft>())
-  const query = useQuery({ queryKey: ['workout-templates'], queryFn: () => workoutTemplates.list() })
+  const query = useQuery({ queryKey: ['workout-templates'], queryFn: () => workoutTemplates.list(), staleTime: 0, refetchOnMount: 'always' })
   const duplicate = useMutation({
     mutationFn: (template: NonNullable<typeof query.data>[number]) => {
       const key = `${template.id}:${template.version}`
@@ -80,7 +80,7 @@ function WorkoutTemplates() {
       { label: 'Создать с нуля', onClick: () => navigate('/schedule/templates/new/editor', { state: context ? { templatePlanContext: context } : undefined }) },
       { label: 'Из тренировки клиента', onClick: () => navigate('/schedule/templates/from-workout', { state: context ? { templatePlanContext: context } : undefined }) },
     ]} /></div>}>
-    <AsyncView loading={query.isLoading} error={query.error} onRetry={() => void query.refetch()}>
+    <AsyncView loading={query.isLoading || Boolean(context && query.isFetching)} error={query.error} onRetry={() => void query.refetch()}>
       {query.data?.length ? <div className="template-list">{query.data.map((template) => <article className="template-card" key={template.id}>
         <div className="template-card-head">
           <div><h2>{template.name}</h2><p>{templateMeta(template.exercises)}</p></div>

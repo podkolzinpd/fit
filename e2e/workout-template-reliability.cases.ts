@@ -114,10 +114,17 @@ export function workoutTemplateEntryCases() {
     const source = { ...oldDraft, clientId, workoutDate: '2026-11-09', title: 'Индивидуальный план', notes: 'Не терять заметку', sourceVersion: undefined }
     await page.addInitScript(({ key, draft }) => { if (!localStorage.getItem(key)) localStorage.setItem(key, JSON.stringify(draft)) }, { key: sourceKey, draft: source })
     const commands: unknown[] = []
+    let currentTemplate = original
+    let holdRead = false
+    let releaseRead: (() => void) | undefined
+    const readGate = new Promise<void>(resolve => { releaseRead = resolve })
     const businessWrites: string[] = []
     page.on('request', request => { if (request.method() !== 'GET' && /\/v1\/workouts(?:\/|$)/.test(new URL(request.url()).pathname)) businessWrites.push(request.url()) })
     await page.route('**/v1/workout-templates', async route => {
-      if (route.request().method() === 'GET') return route.fulfill({ json: { templates: create ? [] : [original] } })
+      if (route.request().method() === 'GET') {
+        if (holdRead) await readGate
+        return route.fulfill({ json: { templates: create ? [] : [currentTemplate] } })
+      }
       const command = route.request().postDataJSON() as { draft: typeof original }
       commands.push(command)
       if (quick && create && commands.length === 1) return route.abort('connectionreset')
@@ -172,8 +179,16 @@ export function workoutTemplateEntryCases() {
       await page.keyboard.press('Escape')
       await expect(picker).toHaveCount(0)
       await expect(page.getByRole('button', { name: 'Добавить шаблон', exact: true })).toBeFocused()
+      currentTemplate = { ...original, name: 'Корпус · актуальная версия' }
+      holdRead = true
+      const nextRead = page.waitForRequest(request => request.method() === 'GET' && new URL(request.url()).pathname.endsWith('/v1/workout-templates'))
+      await page.getByRole('button', { name: 'Добавить шаблон', exact: true }).click()
+      await nextRead
+      await expect(picker.locator('.workout-template-picker-item')).toHaveCount(0)
+      releaseRead?.()
       for (let attempt = 0; attempt < 2; attempt++) {
-        await page.getByRole('button', { name: 'Добавить шаблон', exact: true }).click()
+        if (attempt) await page.getByRole('button', { name: 'Добавить шаблон', exact: true }).click()
+        await expect(picker.locator('.workout-template-picker-item')).toContainText('Корпус · актуальная версия')
         await picker.locator('.workout-template-picker-item').click()
       }
     }

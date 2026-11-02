@@ -1484,7 +1484,7 @@ export function WorkoutFormPage() {
   const templateReturnDraftKey = actor?.role === 'trainer' && navigationState?.templatePlanDraftKey === workoutFormDraftKey(actor.userId, `edit-${workoutId}`) ? navigationState.templatePlanDraftKey : undefined
   const editDraftEnabled = safePlanInput || Boolean(templateReturnDraftKey)
   const planDraftKey = editDraftEnabled && workoutId ? workoutFormDraftKey(actor?.userId ?? 'anonymous', `edit-${workoutId}`) : draftKey
-  const templates = useQuery({ queryKey: ['workout-templates'], queryFn: () => workoutTemplates.list(), enabled: templatePickerOpen && !clientMode && !completedMode })
+  const templates = useQuery({ queryKey: ['workout-templates'], queryFn: () => workoutTemplates.list(), enabled: templatePickerOpen && !clientMode && !completedMode, staleTime: 0, refetchOnMount: 'always' })
   function closeTemplatePicker() {
     setTemplatePickerOpen(false)
     window.requestAnimationFrame(() => templateTriggerRef.current?.focus())
@@ -1909,7 +1909,7 @@ export function WorkoutFormPage() {
     </form>}</AsyncView>
     {coachReference && referenceClientPickerOpen && <ClientPicker reference initialOpen hideTrigger autoFocusSearch={false} userId={actor?.userId} clients={availableClients ?? []} selectedId={clientId} onChange={(id) => { setClientSelectionError(null); setSelectedClientId(id); setReferenceClientPickerOpen(false) }} onDismiss={() => setReferenceClientPickerOpen(false)} selectionError={clientSelectionError} loading={clients.isLoading} error={clients.error} onRetry={() => void clients.refetch()} onCreate={createQuickClient} />}
     {pickerOpen && <ExercisePicker quickEntry={isQuickWorkoutEntryEnabled(actor)} clientLime={isClientLimeEnabled(actor)} reference={!completedMode && isCoachWorkoutRedesignEnabled(actor)} referenceAppearance={(!completedMode && isCoachWorkoutRedesignEnabled(actor)) || clientReference} catalog={catalog} clientRecent={clientRecentExercises} initialSearch={pickerSearch} initialMode={parsedExerciseSelection.current ? 'all' : replaceIndex === null && exercises.length === 0 ? 'choose' : 'all'} techniqueActionLabel={parsedExerciseSelection.current ? 'Выбрать упражнение' : replaceIndex === null ? 'Добавить упражнение' : 'Заменить упражнение'} onPick={pickExercise} onPickMany={pickExercises} selectionDraft={replaceIndex === null && !parsedExerciseSelection.current ? pickerSelectionDraft : undefined} onSelectionDraftChange={replaceIndex === null && !parsedExerciseSelection.current ? setPickerSelectionDraft : undefined} multiple={replaceIndex === null && !parsedExerciseSelection.current} onClose={closePicker} />}
-    {templatePickerOpen && <WorkoutTemplatePicker templates={templates.data ?? []} loading={templates.isLoading} error={templates.error} onRetry={() => void templates.refetch()} onSelect={addTemplate} onClose={closeTemplatePicker} onCreate={() => openTemplateDestination()} onLibrary={() => openTemplateDestination(true)} />}
+    {templatePickerOpen && <WorkoutTemplatePicker templates={templates.data ?? []} loading={templates.isLoading || templates.isFetching} error={templates.error} onRetry={() => void templates.refetch()} onSelect={addTemplate} onClose={closeTemplatePicker} onCreate={() => openTemplateDestination()} onLibrary={() => openTemplateDestination(true)} />}
     {techniqueExercise && <ExerciseTechniqueSheet exercise={techniqueExercise} onClose={() => setTechniqueExercise(null)} />}
     {confirmLeaveDialog}
   </Page>

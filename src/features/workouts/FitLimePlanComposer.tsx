@@ -86,7 +86,7 @@ function FitLimePlanForm({ date, returnTo, onClose, onBack, initialDraft }: {
   const [saved] = useState(initialDraft)
   const [templatePickerOpen, setTemplatePickerOpen] = useState(false)
   const templateTriggerRef = useRef<HTMLButtonElement>(null)
-  const templates = useQuery({ queryKey: ['workout-templates'], queryFn: () => workoutTemplates.list(), enabled: templatePickerOpen })
+  const templates = useQuery({ queryKey: ['workout-templates'], queryFn: () => workoutTemplates.list(), enabled: templatePickerOpen, staleTime: 0, refetchOnMount: 'always' })
   const [exercises, setExercises] = useState(saved?.exercises ?? [])
   const [notes, setNotes] = useState(saved?.notes ?? '')
   const [addedTemplate, setAddedTemplate] = useState('')
@@ -228,7 +228,7 @@ function FitLimePlanForm({ date, returnTo, onClose, onBack, initialDraft }: {
       {(error || mutation.error) && <p className="error" role="alert">{error ?? mutation.error?.message}</p>}
       {mutation.isPending && <p role="status">Сохраняем…</p>}
     </form>
-    {templatePickerOpen && <WorkoutTemplatePicker templates={templates.data ?? []} loading={templates.isLoading} error={templates.error} onRetry={() => void templates.refetch()} onSelect={addTemplate} onClose={closeTemplatePicker} onCreate={() => openTemplateDestination()} onLibrary={() => openTemplateDestination(true)} />}
+    {templatePickerOpen && <WorkoutTemplatePicker templates={templates.data ?? []} loading={templates.isLoading || templates.isFetching} error={templates.error} onRetry={() => void templates.refetch()} onSelect={addTemplate} onClose={closeTemplatePicker} onCreate={() => openTemplateDestination()} onLibrary={() => openTemplateDestination(true)} />}
     {pickerOpen && <ClientPicker userId={actor?.userId} clients={clients.data ?? []} selectedId={clientId} onChange={(id) => { setClientId(id); setError(null) }} loading={clients.isLoading} error={clients.error} onRetry={() => void clients.refetch()} onCreate={createClient} reference={reference} autoFocusSearch={false} initialOpen hideTrigger onDismiss={() => setPickerOpen(false)} />}
   </dialog>
 }
