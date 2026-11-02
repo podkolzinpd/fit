@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { ExerciseSnapshot } from '../../shared/domain'
 import { SYSTEM_EXERCISE_CATALOG } from '../../shared/system-exercises'
-import { exercisesRepository } from '../../data/repositories/exercises.repository'
+import { exercisesRepository } from '../../test/native-backend'
 import { formatLlmWorkoutText, mergeWorkoutParse, parsedWorkoutItems, parseWorkoutWithLlm, requireExerciseConfirmation } from './llm-workout-parser'
 
 const catalog: ExerciseSnapshot[] = [
