@@ -1,9 +1,8 @@
 28.10 — Чат: плашка даты перед первым сообщением дня («Сегодня», «Вчера», «26 октября», «12 марта 2025»), раньше «Новые сообщения»; в списке чатов дата по давности. День по часам телефона. chat-dates.ts + тесты.
 # Fit — текущий индекс
-02.11: [Двухнедельный календарь F201–208](design/COACH_WORKFLOW_AUDIT_20261031.md): один согласованный PR; локальная приёмка пройдена, полный CI и публикация ещё впереди.
 MC1: [PR1927: база1932; CI/выпуск](design/CLIENT_REFERENCE_SCREENS_20261029.md).
 YAFIT-699: компактный список клиентов и гостевое приглашение,2PR. [План/проверки](design/COACH_CLIENTS_AND_INVITATION_20261031.md); [статус выпуска](https://st.yandex-team.ru/YAFIT-699).
-ФИТ20: [все статусы R104-S](design/COACH_RESCHEDULE_AND_DAY_GESTURES_20261031.md), [PR1923: CI](https://github.com/podkolzinpd/fit/pull/1923); [навигация — три PR](design/COACH_WORKFLOW_AUDIT_20261031.md).
+ФИТ20: [все статусы R104-S](design/COACH_RESCHEDULE_AND_DAY_GESTURES_20261031.md), [PR1923: CI](https://github.com/podkolzinpd/fit/pull/1923); [F201–208: CI/выпуск](design/COACH_WORKFLOW_AUDIT_20261031.md).
 31.10 — YAFIT-698: проведение с планом/без, отмена Live/крестик, фильтр истории. [План](design/COACH_QUICK_COMPLETION_20261031.md); [статус](https://st.yandex-team.ru/YAFIT-698).
 YAFIT-700: [Статусы тренера](design/COACH_WORKOUT_STATUS_DISPLAY_20261101.md), [статус](https://st.yandex-team.ru/YAFIT-700).
 31.10 — YAFIT-697: время быстрого старта обеим ролям, проведение пустой записи
