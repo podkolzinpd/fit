@@ -1,4 +1,4 @@
-import { nativeSignIn } from './native-local-fixture'
+import { nativeRequest, nativeSignIn } from './native-local-fixture'
 import { mockNativeAiSession, nativeAiUrl } from './native-ai-fixture'
 import { expect, test, type Page } from './native-local-fixture'
 import { chooseWorkoutTime, expectWorkoutTime } from './workout-time-wheel'
@@ -273,13 +273,70 @@ test('тренер объединяет распознанные упражне�
   await expect(page.locator('.today-review-block')).toHaveCount(3)
 })
 
-test('trainer can create client, complete workout and save progress', async ({ page }, testInfo) => {
+async function createTrainerFlowClient(page: Page, name: string) {
+  await page.goto('/auth')
+  await nativeSignIn(page, 'trainer@fit.local')
+  const response = await nativeRequest(page, '/v1/clients', { method: 'POST', body: {
+    fullName: name, gender: 'female', ageYears: 30, heightCm: 170,
+    ageUpdatedAt: new Date().toISOString().slice(0, 10), goal: 'Стать сильнее', note: null,
+    initialWeightKg: 61.5, initialWeightRecordedOn: new Date().toISOString().slice(0, 10),
+  } })
+  expect(response.ok).toBe(true)
+  const result = await response.json() as { client: { id: string } }
+  expect(result.client.id).toMatch(/^[0-9a-f-]{36}$/)
+  return { clientId: result.client.id, clientUrl: new URL(`/clients/${result.client.id}`, page.url()).href }
+}
+
+async function createTrainerFlowPlan(page: Page, name: string) {
+  const fixture = await createTrainerFlowClient(page, name)
+  await page.goto(fixture.clientUrl)
+  await page.getByRole('link', { name: /Запланировать/ }).click()
+  await selectClient(page, name)
+  await page.getByRole('button', { name: 'Выбрать упражнения' }).click()
+  await page.getByLabel('Поиск упражнения').fill('Болгарский')
+  await page.getByRole('button', { name: 'Выбрать: Болгарский сплит-присед со штангой', exact: true }).click()
+  await page.getByRole('button', { name: 'Добавить 1' }).click()
+  await page.getByLabel('Вес, подход 1').fill('40')
+  await page.getByLabel('Повторы, подход 1').fill('10')
+  await page.getByRole('button', { name: '＋ Подход' }).click()
+  await page.getByLabel('Вес, подход 2').fill('35')
+  await page.getByLabel('Повторы, подход 2').fill('12')
+  await page.getByRole('button', { name: 'Сохранить' }).click()
+  await expect(page.getByRole('heading', { name: 'Тренировка', level: 1, exact: true })).toBeVisible()
+  return fixture
+}
+
+async function createTrainerFlowHistory(page: Page, name: string) {
+  const fixture = await createTrainerFlowClient(page, name)
+  const response = await nativeRequest(page, '/v1/workouts/completed', { method: 'POST', body: {
+    clientId: fixture.clientId, workoutDate: new Date().toISOString().slice(0, 10),
+    trainingFormat: 'with_trainer', actualDurationSec: 120,
+    exercises: [{
+      position: 0, source: 'system', ref: 'bulgarian-split-squat', customExerciseId: null,
+      name: 'Болгарский сплит-присед со штангой', muscleGroup: 'legs', inputKind: 'strength',
+      blockId: '60000000-0000-4000-8000-000000000001', blockType: 'single', blockPreset: 'set', blockRounds: 1,
+      restBetweenExercisesSec: 0, restBetweenRoundsSec: 0, restBetweenSetsSec: 90, trainerComment: null,
+      sets: [{ position: 0, weightKg: 45, reps: 9 }],
+    }, {
+      position: 1, source: 'system', ref: 'burpee', customExerciseId: null,
+      name: 'Берпи', muscleGroup: 'cardio', inputKind: 'reps',
+      blockId: '60000000-0000-4000-8000-000000000002', blockType: 'single', blockPreset: 'set', blockRounds: 1,
+      restBetweenExercisesSec: 0, restBetweenRoundsSec: 0, restBetweenSetsSec: 90, trainerComment: null, sets: [],
+    }],
+  } })
+  expect(response.ok).toBe(true)
+  await page.goto(fixture.clientUrl)
+  await expect(page.getByRole('heading', { name })).toBeVisible()
+  return fixture
+}
+
+test('trainer creates and edits a client, filters exercises and persists a workout plan', async ({ page }, testInfo) => {
   const trainerAlias = `Анна ${testInfo.workerIndex}-${Date.now()}`
   // The fixture establishes the origin and opens /auth after seeding the session.
   // A separate unauthenticated load repeats the uncached Vite graph, not a user action.
   await nativeSignIn(page, 'trainer@fit.local')
   await expect(page.getByRole('heading', { level: 1, name: 'Сегодня' })).toBeVisible()
-  await page.goto('/clients')
+  await page.getByRole('navigation', { name: 'Основная навигация' }).getByRole('link', { name: 'Клиенты', exact: true }).click()
 
   await page.getByRole('button', { name: /^(Добавить|Добавить клиента)$/ }).click()
   await page.getByRole('dialog', { name: 'Добавить клиента' }).getByRole('link', { name: 'Создать карточку', exact: true }).click()
@@ -307,7 +364,8 @@ test('trainer can create client, complete workout and save progress', async ({ p
   await expect(page.getByRole('heading', { name: trainerAlias })).toBeVisible()
   await page.goto('/clients')
   await expect(page.getByText(trainerAlias)).toBeVisible()
-  await page.goto(clientUrl)
+  await page.locator('.client-card-main').filter({ hasText: trainerAlias }).click()
+  await expect(page).toHaveURL(clientUrl)
 
   await page.getByRole('link', { name: /Запланировать/ }).click()
   await selectClient(page, trainerAlias)
@@ -376,6 +434,14 @@ test('trainer can create client, complete workout and save progress', async ({ p
   await page.getByLabel('Повторы, подход 2').fill('12')
   await page.getByRole('button', { name: 'Сохранить' }).click()
   await expect(page.getByRole('heading', { name: 'Тренировка', level: 1, exact: true })).toBeVisible()
+  // Reload proves the UI-created plan was persisted by the real API.
+  await page.reload()
+  await expect(page.getByText('40 кг × 10 / 35 кг × 12', { exact: true })).toBeVisible()
+})
+
+test('trainer conducts a planned workout, preserves live facts and edits its result', async ({ page }, testInfo) => {
+  const trainerAlias = `Анна Live ${testInfo.workerIndex}-${Date.now()}`
+  const { clientUrl } = await createTrainerFlowPlan(page, trainerAlias)
   await page.getByRole('button', { name: 'Начать' }).click()
   await expect(page.locator('.live-timer')).toBeVisible()
   await page.keyboard.press('Escape')
@@ -482,6 +548,11 @@ test('trainer can create client, complete workout and save progress', async ({ p
   await expect(page.locator('.client-detail-activity')).toContainText('100%')
   await expect(page.locator('.client-detail-vitals')).toContainText('ИМТ')
 
+})
+
+test('trainer reuses completed facts and keeps history, exercise progress and measurements consistent', async ({ page }, testInfo) => {
+  const trainerAlias = `Анна История ${testInfo.workerIndex}-${Date.now()}`
+  const { clientUrl } = await createTrainerFlowHistory(page, trainerAlias)
   // Новая тренировка подхватывает фактические значения всех подходов из
   // последнего завершённого выполнения этого упражнения.
   await page.getByRole('link', { name: /Запланировать/ }).click()
@@ -539,7 +610,8 @@ test('trainer can create client, complete workout and save progress', async ({ p
   await expect(page.getByRole('heading', { name: 'Тренировки клиента' })).toBeVisible()
 
   // Прогресс открывается из карточки клиента, без отдельного списка-посредника.
-  await page.goto(clientUrl)
+  await page.locator('.page-back').click()
+  await expect(page).toHaveURL(clientUrl)
   await expect(page.getByRole('heading', { name: trainerAlias })).toBeVisible()
   await page.getByRole('link', { name: 'Прогресс и замеры' }).click()
   await page.getByRole('status').filter({ hasText: 'Прогресс стал короче' }).getByRole('button', { name: 'Понятно' }).click()

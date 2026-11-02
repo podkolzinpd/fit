@@ -49,6 +49,24 @@ EVENT_NAME=pull_request node scripts/e2e-scope.mjs <base-sha> <head-sha> --json
 scope и ожидаемые success/skipped состояния; failed/cancelled/пустой результат
 не становится зелёным skip. Repository quality не отключается классификатором.
 
+## Production-mode browser shards
+
+`e2e-yandex-auth` сохраняет весь production-build набор входа, питания,
+тренировок и attendance, но выполняет его в четырёх native Playwright shards
+`1/4`…`4/4`. В каждой части прежний один worker, оба browser project и все
+fixture flags. `fail-fast:false` сохраняет результаты остальных частей при
+падении одной; обязательный итоговый `e2e` требует успеха всей matrix.
+Это не сокращение приёмки и не продление временного Fit Lime scope.
+
+Каждая часть сохраняет location-only JSON через существующий timing reporter:
+`playwright-timings-yandex-auth-<job-index>` на7дней, в том числе при успехе.
+Историческое имя файла — `test-results/lime-timings.json`; titles, payload,
+ошибки и attachments туда не записываются. Failure diagnostics также уникальны:
+`playwright-diagnostics-yandex-auth-<job-index>`.
+Параллелизм требует свободных GitHub runners и повторяет setup/build в каждой
+части; очередь может ограничить выигрыш. Исходные тайминги, проверка union и
+ограничения: [канонический план](docs/design/PRODUCTION_BROWSER_CI_SHARDS_20261102.md).
+
 ## Локальная разработка
 
 Обычный запуск выполняется командой `npm run dev`: через Podman она готовит
@@ -2136,7 +2154,7 @@ It never force-removes that container or performs system/volume pruning.
 План: `docs/design/ANDROID_OTA_20261019.md`, протокол публикации/отката и Nginx:
 `infra/cloudru/mobile-updates/README.md`. `FIT_ANDROID_OTA_ENABLED` имеет default-off
 семантику (включено только при точном `true`); штатная web-сборка OTA не проверяет.
-Android APK1.1.2/code6 должен собираться с этим флагом, `FIT_SOURCE_COMMIT`
+Android APK1.1.3/code8 должен собираться с этим флагом, `FIT_SOURCE_COMMIT`
 и canonical API origin `https://api.fit-training.ru`; production env-файлы локально
 не создаются. Native-состав и **все lock-зависимости** входят в консервативный ABI:
 их изменение требует нового APK. Публичный OTA RSA-ключ закреплён в

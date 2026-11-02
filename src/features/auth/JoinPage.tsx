@@ -1,3 +1,5 @@
+import { useState } from 'react'
+import { TrainerConnectionConfirmation } from './TrainerConnectionConfirmation'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import type { FormEvent } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
@@ -7,7 +9,9 @@ import { RepositoryError } from '../../data/repositories/error'
 import { Field, Page } from '../../shared/ui'
 
 export function JoinPage() {
-  const { invitations: invitationsRepository } = useDataBackend()
+  const { invitations: invitationsRepository, trainerConnections } = useDataBackend()
+  const [offerCode, setOfferCode] = useState<string | null>(null)
+  const [connectionResult, setConnectionResult] = useState<string | null>(null)
   const { actor } = useAuth()
   const [searchParams, setSearchParams] = useSearchParams()
   const navigate = useNavigate()
@@ -31,7 +35,8 @@ export function JoinPage() {
     const normalizedCode = code.trim().toUpperCase()
     if (!normalizedCode) return
     setSearchParams({ code: normalizedCode }, { replace: true })
-    claim.mutate(normalizedCode)
+    if (actor?.role === 'client' && trainerConnections) setOfferCode(normalizedCode)
+    else claim.mutate(normalizedCode)
   }
 
   function submit(event: FormEvent<HTMLFormElement>) {
@@ -39,7 +44,12 @@ export function JoinPage() {
     connect(String(new FormData(event.currentTarget).get('code')))
   }
 
-  if (claim.isSuccess) {
+  if (offerCode && trainerConnections && connectionResult === null) return <Page title="Подключение" back={backPath} swipeBack className="join-page">
+    <TrainerConnectionConfirmation repository={trainerConnections} offer={{ source: 'code', locator: offerCode }} eager
+      onSuccess={setConnectionResult} />
+  </Page>
+
+  if (claim.isSuccess || connectionResult !== null) {
     return <Page title="Подключение" back={backPath} swipeBack className="join-page">
       <section className="join-card join-success" role="status" aria-live="polite">
         <div className="join-card-head">
