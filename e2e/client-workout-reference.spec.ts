@@ -774,18 +774,24 @@ for (const theme of ['light', 'dark']) for (const density of ['original', 'compa
   await page.goto(`/workouts/${workoutId}/live`)
   for (const width of [390, 430]) {
     await page.setViewportSize({ width, height: 844 })
-    await expect(page.locator('.workout-exercise-compact')).toHaveCount(3)
-    const geometry = await page.locator('.live-completed-gesture-head').first().evaluate(card => {
-      const button = card.querySelector('.workout-exercise-compact')!, copy = card.querySelector('.workout-exercise-compact-copy')!
-      const thumb = card.querySelector('.exercise-thumbnail'), menu = card.querySelector('.overflow-trigger')!
-      const b = button.getBoundingClientRect(), c = copy.getBoundingClientRect(), m = menu.getBoundingClientRect(), t = thumb?.getBoundingClientRect()
-      return { height: card.getBoundingClientRect().height, copyWidth: c.width, copyX: c.x, buttonX: b.x, copyRight: c.right, menuX: m.x, thumbRight: t?.right }
+    await expect(page.locator('.client-live-card .client-live-card-body[inert]')).toHaveCount(3)
+    await expect(page.locator('.live-completed-gesture-head, .workout-exercise-compact, .live-previous-result')).toHaveCount(0)
+    await expect(page.locator('.client-live-card').getByText('Завершена', { exact: true })).toHaveCount(0)
+    const geometry = await page.locator('.client-live-card').first().evaluate(card => {
+      const head = card.querySelector('.live-exercise-head')!, title = head.querySelector('h2')!, toggle = head.querySelector('.coach-v79-card-toggle')!
+      const thumb = head.querySelector('.exercise-thumbnail'), mark = head.querySelector('.client-live-completed-mark')!
+      const c = title.getBoundingClientRect(), m = toggle.getBoundingClientRect(), t = thumb?.getBoundingClientRect()
+      return { height: card.getBoundingClientRect().height, copyWidth: c.width, copyX: c.x, copyRight: c.right, toggleX: m.x, target: m.height, thumbRight: t?.right, markWidth: mark.getBoundingClientRect().width, titleSize: getComputedStyle(title).fontSize, foldedHeight: card.querySelector('.client-live-card-body')!.getBoundingClientRect().height }
     })
-    expect(geometry.height).toBeLessThan(140)
+    expect(geometry.height).toBeLessThan(160)
     expect(geometry.copyWidth).toBeGreaterThan(100)
-    expect(geometry.copyRight).toBeLessThanOrEqual(geometry.menuX)
+    expect(geometry.copyRight).toBeLessThanOrEqual(geometry.toggleX)
+    expect(geometry.target).toBeGreaterThanOrEqual(44)
+    expect(geometry.foldedHeight).toBeLessThan(1)
+    expect(geometry.markWidth).toBeGreaterThan(0)
+    expect(geometry.titleSize).toBe(density === 'original' ? '24px' : '20px')
     if (animation) expect(geometry.thumbRight).toBeLessThan(geometry.copyX)
-    else expect(geometry.copyX).toBe(geometry.buttonX)
+    else await expect(page.locator('.client-live-card-media')).toHaveCount(0)
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
     await page.screenshot({ path: info.outputPath(`completed-${width}.png`) })
   }
@@ -804,7 +810,7 @@ for (const theme of ['light', 'dark']) for (const density of ['original', 'compa
   const backend = await mockPilot(page, { role: 'client', profileId: pilotId, clientLime: true, workouts: [source] })
   await page.goto(`/workouts/${workoutId}/live`)
   await page.locator('form[data-live-set-id]').nth(1).getByRole('button', { name: 'Готово, отдых', exact: true }).click()
-  const compact = page.locator('.workout-exercise-compact').first()
+  const compact = page.locator('.client-live-card .exercise-technique-trigger').first()
   await expect(compact).toBeVisible()
   await page.clock.fastForward(4000)
   await expect(compact).toBeVisible()
@@ -815,6 +821,10 @@ for (const theme of ['light', 'dark']) for (const density of ['original', 'compa
   await row.getByLabel('Фактический вес', { exact: true }).blur()
   await expect.poll(() => backend.getWorkouts()[0]!.exercises[0]!.sets[0]!.fact.weightKg).toBe(35)
   await expect(row.getByRole('img', { name: 'Подход выполнен' })).toBeVisible()
+  expect(await row.evaluate(form => {
+    const field = getComputedStyle(form.querySelector('input[name="weightKg"]')!), check = getComputedStyle(form.querySelector('.live-set-check.done')!)
+    return check.backgroundColor === field.color && check.boxShadow === 'none'
+  })).toBe(true)
   await expect(page.locator('.live-rest-trigger').and(page.getByRole('button'))).toHaveAttribute('aria-label', /Отдых превышен/)
   expect(backend.getWorkouts()[0]!.exercises[0]!.sets[0]!.confirmedAt).toBe('2026-10-21T08:59:00Z')
   for (const width of [390, 430]) {
@@ -855,7 +865,7 @@ for (const theme of ['light', 'dark']) test(`client completed collapse waits for
     return route.fallback()
   })
   await page.goto(`/workouts/${workoutId}/live`)
-  await page.locator('.workout-exercise-compact').first().click()
+  await page.locator('.client-live-card .exercise-technique-trigger').first().click()
   const row = page.locator(`form[data-live-set-id="${exercise.sets[0]!.id}"]`)
   const field = row.getByLabel('Фактический вес', { exact: true })
   const card = page.locator('.live-exercise').filter({ has: row })
@@ -914,18 +924,41 @@ for (const density of ['original', 'compact']) test(`client explicit card folds 
   await card.getByRole('button', { name: `Развернуть: ${exercise.name}`, exact: true }).click()
   await expect(field).toHaveValue('31.5'); expect(await input!.evaluate(e => e.isConnected)).toBe(true)
   await expect(field).toHaveCSS('height', density === 'original' ? '54px' : '48px')
-  for (const width of [390, 430]) {
+  for (const width of [320, 390, 430]) {
     await page.setViewportSize({ width, height: 844 })
+    const geometry = await card.evaluate(element => {
+      const rows = [...element.querySelectorAll('form[data-live-set-id]')]
+      const first = rows[0]!.querySelector('input[name="weightKg"]')!.getBoundingClientRect()
+      const next = rows[1]!.querySelector('input[name="weightKg"]')!.getBoundingClientRect()
+      const number = rows[0]!.querySelector('.live-set-number')!.getBoundingClientRect()
+      const tools = element.querySelector('.coach-v79-exercise-tools')!
+      const controls = [...tools.querySelectorAll('button')].map(button => button.getBoundingClientRect())
+      return { pitch: next.y - first.bottom, axis: number.y + number.height / 2 - first.y - first.height / 2, fieldHeight: first.height, actionHeights: controls.map(box => box.height), actionY: controls.map(box => box.y), titleSize: getComputedStyle(element.querySelector('h2')!).fontSize }
+    })
+    expect(geometry.pitch).toBeCloseTo(2, 1)
+    expect(geometry.axis).toBeCloseTo(0, 1)
+    expect(geometry.fieldHeight).toBe(density === 'original' ? 54 : 48)
+    expect(geometry.titleSize).toBe(density === 'original' && width >= 359 ? '24px' : '20px')
+    for (const height of geometry.actionHeights) expect(height).toBeGreaterThanOrEqual(44)
+    expect(new Set(geometry.actionY).size).toBe(1)
+    await expect(card.locator('.live-previous-result')).toHaveCount(0)
+    await expect(card.locator('.coach-v79-exercise-tools').getByText('Действия', { exact: true })).toBeVisible()
     const futureCard = page.locator(`[data-workout-block="${future.blockId}"]`)
-    await futureCard.getByRole('button', { name: `Развернуть: ${future.name}`, exact: true }).click()
     await expect(futureCard.getByLabel('Фактический вес', { exact: true }).first()).toBeVisible()
     await futureCard.getByRole('button', { name: `Свернуть: ${future.name}`, exact: true }).click()
-    await expect(futureCard.getByRole('button', { name: `Начать упражнение «${future.name}»`, exact: true })).toBeVisible()
+    await expect(futureCard.locator('.client-live-card-body')).toHaveAttribute('inert', '')
+    await futureCard.getByRole('button', { name: `Развернуть: ${future.name}`, exact: true }).click()
     await expect(page.locator('.live-session-progress-copy')).toHaveText(progress, { useInnerText: true })
     expect(await page.evaluate(id => sessionStorage.getItem(`fit:live-rest-until:${id}`), workoutId)).toBe(deadline)
     expect(backend.getWorkouts()[0]!.exercises.flatMap(e => e.sets).every(s => !s.confirmedAt)).toBe(true)
     expect(await page.locator('.phone-frame').evaluate(e => e.scrollWidth <= e.clientWidth)).toBe(true)
   }
+  const futureCard = page.locator(`[data-workout-block="${future.blockId}"]`)
+  await futureCard.locator('.overflow-trigger').click()
+  await page.getByRole('menuitem', { name: 'Начать упражнение', exact: true }).click()
+  await expect(page.locator('.live-session-progress-copy')).toContainText(`Сейчас: ${future.name}`)
+  expect(await page.evaluate(id => sessionStorage.getItem(`fit:live-rest-until:${id}`), workoutId)).toBe(deadline)
+  await expect(field).toHaveValue('31.5')
   await card.scrollIntoViewIfNeeded()
   await page.screenshot({ path: info.outputPath(`explicit-fold-${density}.png`) })
 })
@@ -940,8 +973,8 @@ test('client keyboard Next skips a folded retained card and preserves rest', asy
   await mockPilot(page, { role: 'client', profileId: pilotId, clientLime: true, workouts: [coachGestureWorkout(false, 3)] })
   await page.goto(`/workouts/${workoutId}/live`)
   const cards = page.locator('.client-live-card'), middle = cards.nth(1), last = cards.nth(2)
-  await middle.getByRole('button', { name: /^Развернуть:/ }).click()
-  await last.getByRole('button', { name: /^Развернуть:/ }).click()
+  await expect(middle.locator('.client-live-card-body')).not.toHaveAttribute('inert', '')
+  await expect(last.locator('.client-live-card-body')).not.toHaveAttribute('inert', '')
   await middle.getByRole('button', { name: /^Свернуть:/ }).click()
   await expect(middle.locator('.client-live-card-body')).toHaveAttribute('inert', '')
   expect(await middle.locator('input.live-set-input').first().evaluate(e => e.getClientRects().length)).toBeGreaterThan(0)
@@ -2584,7 +2617,8 @@ for (const started of [false, true]) test(`client replacement rail preserves can
   if (started) {
     await expect.poll(() => backend.getWorkouts()[0]!.exercises[0]!.sets.length).toBe(1)
     expect(backend.getWorkouts()[0]!.exercises[0]!.sets[0]).toEqual(preserved.sets[0])
-    await expect(page.locator('.workout-exercise-compact').first()).toContainText(preserved.name)
+    await expect(page.locator('.client-live-card').first().locator('.client-live-card-body')).toHaveAttribute('inert', '')
+    await expect(page.locator('.client-live-card').first()).toContainText(preserved.name)
   } else await expect(title).not.toHaveText(preserved.name)
 })
 
@@ -2642,7 +2676,7 @@ for (const theme of ['light', 'dark']) for (const density of ['original', 'compa
   await expect(second).toHaveCount(0)
   expect(attempts).toBe(1)
   expect(backend.getWorkouts()[0]!.exercises[0]!.sets).toHaveLength(1)
-  await page.locator('.workout-exercise-compact').click()
+  await page.locator('.client-live-card').first().getByRole('button', { name: `Развернуть: ${exercise.name}`, exact: true }).click()
   await expect(first.getByLabel('Фактический вес', { exact: true })).toHaveValue('30')
   const protectedGesture = await beginClientGesture(page, first, browserName, first.locator('.live-set-number'))
   await protectedGesture.move(36); await protectedGesture.end()
@@ -2766,7 +2800,7 @@ test('client compact card trusted tap swipe and full-card hold remain distinct',
   await mockPilot(page, { role: 'client', profileId: pilotId, clientLime: true, workouts: [source] })
   await page.goto(`/workouts/${workoutId}/live`)
   const card = page.locator(`[data-workout-block="${target.blockId}"]`)
-  const compact = card.locator('.workout-exercise-compact')
+  const compact = card.locator('.exercise-technique-trigger')
   await compact.tap()
   await expect(card.locator('form[data-live-set-id]')).toHaveCount(2)
   // Reload returns to the saved completed-card representation.
@@ -2774,7 +2808,8 @@ test('client compact card trusted tap swipe and full-card hold remain distinct',
   const gesture = await beginClientGesture(page, card, browserName, compact)
   await gesture.move(100); await gesture.end()
   await expect(card.getByRole('button', { name: 'Удалить', exact: true })).toBeVisible()
-  await expect(card.locator('form[data-live-set-id]')).toHaveCount(0)
+  await expect(card.locator('.client-live-card-body')).toHaveAttribute('inert', '')
+  await expect(card.locator('form[data-live-set-id]')).toHaveCount(2)
   await card.getByRole('button', { name: 'Удалить', exact: true }).click()
   await page.getByRole('alertdialog').getByRole('button', { name: 'Отмена', exact: true }).click()
   await holdClientLiveCard(page, target.blockId)

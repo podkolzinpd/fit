@@ -72,8 +72,8 @@
 
 /* A recorded fact is distinct from the neutral future action. The inset mark
    does not change the input/check geometry or confirmation hit target. */
-.phone-frame.fit-client-lime.client-workout-reference.live-identity .coach-live-density .live-set.confirmed :is(.live-set-input, .live-set-rpe, .run-distance-control, .workout-duration-trigger) { background: color-mix(in srgb, var(--success) 12%, var(--workout-live-field)); }
-.phone-frame.fit-client-lime.client-workout-reference.live-identity .coach-live-density .live-set.confirmed .live-set-check.done { background: color-mix(in srgb, var(--success) 12%, var(--workout-live-field)); color: var(--success-fg); box-shadow: inset 0 0 0 1px var(--success-fg); }
+.phone-frame.fit-client-lime.client-workout-reference.live-identity .coach-live-density .live-set.confirmed :is(.live-set-input, .live-set-rpe, .run-distance-control, .workout-duration-trigger) { background: color-mix(in srgb, var(--lime-text) 30%, var(--lime-surface-raised)); color: var(--lime-text); }
+.phone-frame.fit-client-lime.client-workout-reference.live-identity .coach-live-density .live-set.confirmed .live-set-check.done { background: var(--lime-text); color: var(--lime-bg); box-shadow: none; }
 .phone-frame.fit-client-lime.client-workout-reference.live-identity .coach-live-density .live-set.confirmed .live-set-check.done svg[data-original-icon] { filter: none; }
 
 /* Without media, release the unused header height while retaining content
@@ -269,10 +269,10 @@
    third/fourth metrics use a second row; confirmation follows the last row.
    Pace has its own informational row, never nested inside distance. */
 .phone-frame.fit-client-lime.client-workout-reference.workout-live-reference.live-identity .client-live-density .live-set.live-set-expanded .live-set-grid {
-  grid-template-columns: 20px minmax(0, 1fr);
-  gap: 8px;
+  grid-template-columns: var(--coach-live-number-width) minmax(0, 1fr);
+  gap: 2px;
   align-items: start;
-  padding-inline: 0;
+  padding-inline: var(--coach-live-row-inset);
 }
 .phone-frame.fit-client-lime.client-workout-reference.live-identity .live-set-fields {
   --live-metric-rows: 1;
@@ -380,23 +380,44 @@
 .phone-frame.fit-client-lime.client-workout-reference.live-identity .client-live-density button.live-add-exercise { min-height: 60px; border-radius: 20px; }
 .phone-frame.fit-client-lime.client-workout-reference.live-identity .client-live-density-compact button.live-add-exercise { min-height: 48px; border-radius: 16px; }
 
-/* The client retains its left media and top-right menu. The same source fold
-   button gets its own44px target; the body keeps the original mounted forms. */
-.phone-frame.fit-client-lime.client-workout-reference.live-identity .client-live-card .live-exercise-head { grid-template-columns: minmax(0,1fr) 88px; }
-.phone-frame.fit-client-lime.client-workout-reference.live-identity .client-live-card .live-exercise-head:has(.workout-exercise-header-main) { grid-template-columns: 72px minmax(0,1fr) 88px; }
-/* A flex header lets WebKit recompute long-title height after a width change. */
-.phone-frame.fit-client-lime.client-workout-reference.live-identity .client-live-card .live-exercise-head { display: flex; }
-.phone-frame.fit-client-lime.client-workout-reference.live-identity .client-live-card .live-exercise-head .workout-exercise-header-main { display: flex; align-items: center; gap: 8px; }
-.phone-frame.fit-client-lime.client-workout-reference.live-identity .client-live-card .live-exercise-head :is(.live-header-animation, .exercise-thumbnail) { flex: 0 0 72px; }
-.phone-frame.fit-client-lime.client-workout-reference.live-identity .client-live-card .exercise-head-actions { width: 88px; align-self: start; }
-.phone-frame.fit-client-lime.client-workout-reference.live-identity .client-live-card-controls { display: flex; flex-wrap: wrap; align-items: start; justify-content: flex-end; width: 88px; }
-.phone-frame.fit-client-lime.client-workout-reference.live-identity .client-live-card-controls > button { flex: 0 0 44px; }
-.phone-frame.fit-client-lime.client-workout-reference.live-identity .client-live-card-body > div { display: flex; flex-direction: column; }
-.phone-frame.fit-client-lime.client-workout-reference.live-identity .client-live-card-compact { padding: 0; border: 0; background: transparent; gap: 0; }
-.phone-frame.fit-client-lime.client-workout-reference.live-identity .client-live-card-compact .workout-exercise-compact { padding-right: 0; }
+/* Shared v79 header: the only role-specific leading content is athlete media.
+   Keep one header and the same mounted forms through every card state. */
+.phone-frame.fit-client-lime.client-workout-reference.live-identity .client-live-card .live-exercise-head { border-bottom: 0; display: grid; grid-template-columns: minmax(0,1fr) 44px; gap: 10px; }
+.phone-frame.fit-client-lime.client-workout-reference.live-identity .client-live-card .live-exercise-head:has(.client-live-card-media) { grid-template-columns: 48px minmax(0,1fr) 44px; }
+.phone-frame.fit-client-lime.client-workout-reference.live-identity .client-live-card .live-exercise-head .workout-exercise-header-main { display: contents; }
+.phone-frame.fit-client-lime.client-workout-reference.live-identity .client-live-card-media { position: relative; grid-column: 1; grid-row: 1 / 3; width: 48px; height: 48px; }
+.phone-frame.fit-client-lime.client-workout-reference.live-identity .client-live-card .live-exercise-head :is(.live-header-animation,.exercise-thumbnail) { width: 48px; height: 48px; border-radius: 12px; }
+.phone-frame.fit-client-lime.client-workout-reference.live-identity .client-live-card .live-exercise-head :is(.exercise-technique-trigger,h2,h3) { grid-column: 1; grid-row: 1; text-align: center; }
+.phone-frame.fit-client-lime.client-workout-reference.live-identity .client-live-card .live-exercise-head:has(.client-live-card-media) .exercise-technique-trigger { grid-column: 2; }
+.phone-frame.fit-client-lime.client-workout-reference.live-identity .client-live-card .exercise-head-actions { grid-column: -2; grid-row: 1; width: 44px; align-self: start; }
+.phone-frame.fit-client-lime.client-workout-reference.live-identity .client-live-v79 .client-live-card .live-exercise-head .workout-exercise-header-summary { grid-column: 1; grid-row: 2; padding: 0; font-size: 14px; line-height: 18px; }
+.phone-frame.fit-client-lime.client-workout-reference.live-identity .client-live-v79 .client-live-card .live-exercise-head:has(.client-live-card-media) .workout-exercise-header-summary { grid-column: 2; }
+.phone-frame.fit-client-lime.client-workout-reference.live-identity .client-live-card .live-exercise-head:has(.workout-exercise-header-main):not(:has(.client-live-card-media)) { grid-template-columns: 22px minmax(0,1fr) 44px; }
+.phone-frame.fit-client-lime.client-workout-reference.live-identity .client-live-card .live-exercise-head:has(.workout-exercise-header-main):not(:has(.client-live-card-media)) :is(.exercise-technique-trigger,.workout-exercise-header-summary) { grid-column: 2; }
+.phone-frame.fit-client-lime.client-workout-reference.live-identity .client-live-completed-mark { display: grid; place-items: center; align-self: center; width: 21px; height: 21px; border-radius: 50%; background: var(--lime-text); color: var(--lime-bg); }
+.phone-frame.fit-client-lime.client-workout-reference.live-identity .client-live-card-media > .client-live-completed-mark { position: absolute; z-index: 2; right: -3px; bottom: -3px; border: 2px solid var(--workout-live-card); }
+.phone-frame.fit-client-lime.client-workout-reference.live-identity .client-live-completed-mark svg { width: 13px; height: 13px; }
+.phone-frame.fit-client-lime.client-workout-reference.live-identity .client-live-completed-mark svg[data-original-icon='check'] { background: currentColor; mask: url('../../docs/design/figma-20261002/assets/check.svg') center / contain no-repeat; }
+.phone-frame.fit-client-lime.client-workout-reference.live-identity .client-live-completed-mark svg > image { opacity: 0; }
+.phone-frame.fit-client-lime.client-workout-reference.live-identity .client-live-card-body > div { display: block; }
+.phone-frame.fit-client-lime.client-workout-reference.live-identity .client-live-card-content { border-top: 1px solid var(--lime-divider); padding-top: 10px; }
+.phone-frame.fit-client-lime.client-workout-reference.live-identity .client-live-card.upcoming { background: var(--lime-surface); }
+.phone-frame.fit-client-lime.client-workout-reference.live-identity .client-live-card.upcoming .live-exercise-head :is(h2,h3) { color: var(--lime-text-secondary); }
 .phone-frame.fit-client-lime.client-workout-reference.live-identity .client-live-card .coach-v79-toggle-arrow img { background: var(--lime-text-secondary); object-position: -9999px; }
 .phone-frame.fit-client-lime.client-workout-reference.live-identity .client-live-card .coach-v79-toggle-closed { mask: url('../assets/coach-live-v79/card-collapse.svg') center / contain no-repeat; }
 .phone-frame.fit-client-lime.client-workout-reference.live-identity .client-live-card .coach-v79-toggle-open { mask: url('../assets/coach-live-v79/card-expand.svg') center / contain no-repeat; }
+/* The source row pitch is field height +2; old identity's sibling margin must
+   not add8px to it. Mixed metrics retain captions and their original controls. */
+.phone-frame.fit-client-lime.client-workout-reference.live-identity .client-live-v79 .live-set-table { margin-top: 0; }
+.phone-frame.fit-client-lime.client-workout-reference.live-identity .client-live-v79 .live-set-table > .live-set + .live-set { margin-top: 0; }
+.phone-frame.fit-client-lime.client-workout-reference.live-identity .client-live-v79 .live-set-grid:has(.run-distance-control) { padding-inline: 0; }
+.phone-frame.fit-client-lime.client-workout-reference.live-identity .client-live-v79 .live-set-grid:has(input[name="weightKg"]):has(input[name="reps"]):not(:has(.live-metric-field:nth-child(3 of .live-metric-field))) > .live-set-number { margin-top: 0; }
+@media (max-width:359px) {
+  .phone-frame.fit-client-lime.client-workout-reference.live-identity .client-live-v79 { --coach-live-row-inset: 0px; --coach-live-number-width: 34px; }
+  .phone-frame.fit-client-lime.client-workout-reference.live-identity .client-live-card .live-exercise-head { gap: 6px; }
+  .phone-frame.fit-client-lime.client-workout-reference.live-identity .client-live-v79 .client-live-card .live-exercise-head :is(h2,h3) { font-size: 20px; line-height: 24px; }
+  .phone-frame.fit-client-lime.client-workout-reference.live-identity .client-live-v79 .client-live-card .live-exercise-head:is(:has(.client-live-card-media),:has(.workout-exercise-header-main),:not(:has(.workout-exercise-header-main))) .workout-exercise-header-summary { grid-column: 1 / -1; }
+}
 
 /* The newly exposed replacement rail uses the client's readable accent ink. */
 .phone-frame.fit-client-lime.client-workout-reference.live-identity button.workout-swipe-action.replace { color: var(--lime-accent-ink); }
