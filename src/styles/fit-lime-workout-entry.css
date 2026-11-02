@@ -20,8 +20,8 @@
 .phone-frame.fit-lime-shell:has(.fit-lime-plan-dialog[open]) :is(.content, .day-grid-scroll) { overflow: hidden; }
 .fit-lime-shell .fit-lime-plan-dialog:focus { outline: none; }
 .app-keyboard-open .fit-lime-shell .fit-lime-date-picker {
+  --fit-date-bottom-gap: 0px;
   bottom: calc(100% - var(--app-viewport-offset-top, 0px) - var(--app-visible-height, 100dvh));
-  max-height: calc(var(--app-visible-height, 100dvh) - 24px);
 }
 .fit-lime-shell .fit-lime-plan-composer { position: relative; min-height: 189px; padding: 16px; }
 .fit-lime-shell .fit-lime-plan-composer > input {
