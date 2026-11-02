@@ -86,3 +86,12 @@ ABI доступны с origin https://localhost; R7 — установка по
 Проверка: в подготовке; CI/подпись/публикация ещё не выполнены.
 Открыто: очередь более ранних активных PR и проверка физического устройства.
 Дальше: локальные проверки, PR/зелёный CI, штатный выпуск и публичный readback.
+
+Локальная проверка итерации3: `VITEST_MAX_WORKERS=4 npm run check` exit0:
+frontend2919/2919, infra378/378, hosting196/196, calendar22/22,
+API1555passed/254conditionalDBskipped, lint/typecheck/API build/frontend build
+и startup passed. OTA15/15 отдельно passed. WebKit2/2: существующий вход
+390/430 и restoration error/retry; первый запуск был skipped из-за неполных
+флагов и повторён с полным fixture env. Production-БД не использовалась.
+Classifier для точных SHA main4e283aa5→ec698672 требует full frontend/browser.
+Workflow-docs и diff-check passed; native подпись/публикация и телефон впереди.
