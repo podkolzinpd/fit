@@ -1,3 +1,4 @@
+import { TrainerConnectionConfirmationStore } from './trainer-connection-confirmation.js'
 import { CorporateInvitationsStore } from './corporate-invitations.js'
 import { DatabaseChatMeetings, readJitsiConfig } from './chat-meetings.js'
 import { DatabaseCorporateAdminLoginObserver } from './corporate-admin-login.js'
@@ -287,6 +288,7 @@ const app = buildApp(
     ...(pilotClientsReader === undefined ? {} : { pilotClientsReader }),
     ...(pilotConnectionsReader === undefined ? {} : { pilotConnectionsReader }),
     ...(pilotConnectionsWriter === undefined ? {} : { pilotConnectionsWriter }),
+    ...(databasePool === undefined ? {} : { trainerConnectionConfirmation: new TrainerConnectionConfirmationStore(databasePool) }),
     ...(pilotInvitationLinks === undefined ? {} : { pilotInvitationLinks }),
     ...(pilotLegal === undefined ? {} : { pilotLegal }),
     ...(pilotDomainWriter === undefined ? {} : { pilotDomainWriter }),
