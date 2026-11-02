@@ -332,7 +332,8 @@ async function createTrainerFlowHistory(page: Page, name: string) {
 
 test('trainer creates and edits a client, filters exercises and persists a workout plan', async ({ page }, testInfo) => {
   const trainerAlias = `Анна ${testInfo.workerIndex}-${Date.now()}`
-  await page.goto('/auth')
+  // The fixture establishes the origin and opens /auth after seeding the session.
+  // A separate unauthenticated load repeats the uncached Vite graph, not a user action.
   await nativeSignIn(page, 'trainer@fit.local')
   await expect(page.getByRole('heading', { level: 1, name: 'Сегодня' })).toBeVisible()
   await page.goto('/clients')
