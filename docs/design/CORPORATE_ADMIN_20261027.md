@@ -750,6 +750,14 @@ query; вместо него показан явный отказ без зап�
 и доступные действия сохранены. Root2938/2938, coverage83.39/78.23/82.43/88.05
 при прежних порогах; typecheck/lint/build/startup/docs/diff passed. Документация
 продукта и оператора дополнена точной независимой default-off границей.
+После main98f67f22: оба merge без конфликтов, календарь/Android7 и новый
+release guard сохранены. Новых изменений runtime услуг после их проверки
+на4e нет. На этой основе целевые42/42, production Chromium/WebKit40/40
+(37.3s), retries0/skips0, types/build/startup прошли; Lime390 снимок просмотрен.
+Root323files2939tests, coverage83.39/78.21/82.42/88.04, lint/docs/diff passed.
+API-этап этой основы:2920root/1559API268conditionalPGskips и реальные native
+API/PG trainer-flow17.3s, release-order9/1conditional skip. Допуск всё ещё
+выключен; интерфейс пока локальный, ждёт приёмку первого опубликованного API.
 Открыто: удалённый CI/оба последовательных выпуска и тестовый grant.
 Дальше: от опубликованного API/main пересверить diff и правила, полный CI
 второго точного head, штатный выпуск и фактическая public/signedUI приёмка.
