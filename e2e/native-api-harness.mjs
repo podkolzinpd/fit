@@ -90,6 +90,7 @@ try {
     ['pilotConnectionsReader', 'pilot-connections-reader', 'DatabasePilotConnectionsReader'],
     ['pilotConnectionsWriter', 'pilot-connections-writer', 'DatabasePilotConnectionsWriter'],
     ['pilotInvitationLinks', 'pilot-invitation-links', 'DatabasePilotInvitationLinks'],
+    ['trainerConnectionConfirmation', 'trainer-connection-confirmation', 'TrainerConnectionConfirmationStore'],
     ['pilotLegal', 'pilot-legal', 'DatabasePilotLegal'],
     ['pilotDomainWriter', 'pilot-domain-writer', 'DatabasePilotDomainWriter'],
     ['pilotTrainingDataReader', 'pilot-training-data-reader', 'DatabasePilotTrainingDataReader'],

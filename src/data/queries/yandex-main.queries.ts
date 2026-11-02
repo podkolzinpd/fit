@@ -57,6 +57,7 @@ export function createYandexMainQueries(
         return fetchWithTimeout(request, endpoint(apiBaseUrl, path), init, YANDEX_MAIN_READ_TIMEOUT_MS, 'Exercise media URL request timed out')
       }
       if (/^\/v1\/corporate-services(?:\/|$)/.test(path)) return fetchWithTimeout(request, endpoint(apiBaseUrl, path), init, 15_000, 'Ответ не получен. Повторите попытку.')
+      if (/^\/v1\/trainer-connections\/(preview|confirm)$/.test(path)) return fetchWithTimeout(request, endpoint(apiBaseUrl, path), init, 15_000, 'Trainer connection request timed out')
       if (/^\/v1\/admin\//.test(path)) return fetchWithTimeout(request, endpoint(apiBaseUrl, path), init, 15_000, 'Admin request timed out')
       if (/^\/v1\/me\/nutrition\//.test(path)) return fetchWithTimeout(request, endpoint(apiBaseUrl, path), init, 15_000, 'Nutrition request timed out')
       if (!isLiveWorkoutWrite(path)) return request(endpoint(apiBaseUrl, path), init)

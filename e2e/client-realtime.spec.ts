@@ -116,6 +116,7 @@ test('client and trainer refresh shared progress and workouts when the app becom
     await client.goto('/join')
     await client.getByLabel('Код приглашения').fill(code!)
     await client.getByRole('button', { name: 'Присоединиться' }).click()
+    await client.getByRole('button', { name: 'Подключить тренера', exact: true }).click()
     await pollNative(client)
     await expect(client.getByRole('heading', { name: 'Тренер подключён' })).toBeVisible()
     await client.getByRole('button', { name: 'Открыть кабинет' }).click()
