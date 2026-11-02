@@ -1,4 +1,5 @@
-import { expect, test, type Page } from '@playwright/test'
+import { nativeSignIn } from './native-local-fixture'
+import { expect, test, type Page } from './native-local-fixture'
 import { z } from 'zod'
 import { mockNativeAiSession, nativeAiUrl } from './native-ai-fixture'
 
@@ -123,9 +124,7 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 430, height: 932 }
   test(`unverified technique videos are absent while exercise details remain usable at ${viewport.width}px`, async ({ page }, testInfo) => {
     await page.setViewportSize(viewport)
     await page.goto('/auth')
-    await page.getByLabel('Email').fill('trainer@fit.local')
-    await page.getByLabel('Пароль').fill('FitLocal123!')
-    await page.getByRole('button', { name: 'Войти', exact: true }).click()
+    await nativeSignIn(page, 'trainer@fit.local')
     await expect(page).toHaveURL(/\/(today|clients)$/, { timeout: 20_000 })
     await page.goto('/exercises')
     for (const name of ['Сгибание ноги стоя в тренажёре', 'Кубинский жим', 'Жим гантели лёжа одной рукой', 'Попеременный молоток', 'Попеременный подъём на бицепс на наклонной', 'Подъём штанги на бицепс узким хватом стоя', 'Подъём на бицепс узким хватом', 'Разгибание на трицепс в нижнем блоке', 'Подъём гантелей на бицепс на наклонной с супинацией', 'Подъём гантелей на внутренний пучок бицепса']) {
@@ -163,9 +162,7 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 430, height: 932 }
 
     try {
       await page.goto('/auth')
-      await page.getByLabel('Email').fill('trainer@fit.local')
-      await page.getByLabel('Пароль').fill('FitLocal123!')
-      await page.getByRole('button', { name: 'Войти', exact: true }).click()
+      await nativeSignIn(page, 'trainer@fit.local')
       await expect(page).toHaveURL(/\/(today|clients)$/, { timeout: 20_000 })
       await page.evaluate(() => window.localStorage.setItem('fit.recent-exercises', JSON.stringify(['stationary-bike'])))
       await page.goto('/workouts/new')
@@ -222,9 +219,7 @@ test('public exercise cover finishes loading with a visible fallback after both 
     await route.abort('failed')
   })
   await page.goto('/auth')
-  await page.getByLabel('Email').fill('trainer@fit.local')
-  await page.getByLabel('Пароль').fill('FitLocal123!')
-  await page.getByRole('button', { name: 'Войти', exact: true }).click()
+  await nativeSignIn(page, 'trainer@fit.local')
   await expect(page).toHaveURL(/\/(today|clients)$/, { timeout: 20_000 })
   await page.goto('/exercises')
   await page.getByLabel('Поиск упражнения').fill('жим ногами в тренажере')
