@@ -144,7 +144,11 @@ export function workoutTemplateEntryCases() {
     await page.screenshot({ path: info.outputPath('template-entry-picker.png') })
     if (create) {
       await expect(picker.getByRole('button', { name: 'Открыть библиотеку' })).toBeVisible()
-      await picker.getByRole('button', { name: 'Создать шаблон', exact: true }).click()
+      if (quick) await picker.getByRole('button', { name: 'Создать шаблон', exact: true }).click()
+      else {
+        await picker.getByRole('button', { name: 'Открыть библиотеку', exact: true }).click()
+        await page.getByRole('link', { name: 'Создать с нуля', exact: true }).click()
+      }
       await page.getByLabel('Название шаблона').fill('Новый корпус')
       await page.getByRole('button', { name: 'Выбрать упражнения', exact: true }).click()
       const catalog = page.getByRole('dialog', { name: 'Добавить упражнение', exact: true })

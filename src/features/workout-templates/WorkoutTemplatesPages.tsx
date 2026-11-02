@@ -12,7 +12,7 @@ import { formatLocalDate } from '../../shared/local-date'
 import { AddIcon, CopyIcon, ScheduleIcon } from '../../shared/icons'
 import { AsyncView, EmptyState, Field, InlineRequestError, OverflowMenu, Page, StatePanel, useConfirm } from '../../shared/ui'
 import { ExercisePicker, useExerciseCatalog } from '../exercises'
-import { readTemplatePlanContext, applyCreatedTemplate, templatePlanReturnState, type TemplatePlanContext, QuickWorkoutEntry, WorkoutCta, WorkoutExerciseEditor, WorkoutHeader, workoutDisplayTitle, workoutExerciseBrief, type ParsedWorkoutExercise } from '../workouts'
+import { readTemplatePlanContext, returnToTemplatePlan, templateReturnSteps, applyCreatedTemplate, type TemplatePlanContext, QuickWorkoutEntry, WorkoutCta, WorkoutExerciseEditor, WorkoutHeader, workoutDisplayTitle, workoutExerciseBrief, type ParsedWorkoutExercise } from '../workouts'
 import { VoiceNoteField } from '../voice-input'
 import { readWorkoutTemplateDraft, removeWorkoutTemplateDraft, workoutTemplateDraftKey, writeWorkoutTemplateDraft } from './workout-template-draft'
 
@@ -75,7 +75,7 @@ function WorkoutTemplates() {
     mutationFn: (template: NonNullable<typeof query.data>[number]) => workoutTemplates.archive(template),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['workout-templates'] }),
   })
-  return <Page className="workout-templates-page" title="Шаблоны тренировок" back={context?.returnTo ?? calendarBack} onBack={context ? () => navigate(context.returnTo, { state: templatePlanReturnState(context) }) : undefined}
+  return <Page className="workout-templates-page" title="Шаблоны тренировок" back={context?.returnTo ?? calendarBack} onBack={context ? () => returnToTemplatePlan(context, navigate) : undefined}
     action={<div className="template-create-menu"><OverflowMenu label="Создать шаблон" trigger={<AddIcon />} items={[
       { label: 'Создать с нуля', onClick: () => navigate('/schedule/templates/new/editor', { state: context ? { templatePlanContext: context } : undefined }) },
       { label: 'Из тренировки клиента', onClick: () => navigate('/schedule/templates/from-workout', { state: context ? { templatePlanContext: context } : undefined }) },
@@ -85,14 +85,14 @@ function WorkoutTemplates() {
         <div className="template-card-head">
           <div><h2>{template.name}</h2><p>{templateMeta(template.exercises)}</p></div>
           <OverflowMenu label={`Действия с шаблоном ${template.name}`} items={[
-            { label: 'Редактировать', onClick: () => navigate(`/schedule/templates/${template.id}/edit`) },
+            { label: 'Редактировать', onClick: () => navigate(`/schedule/templates/${template.id}/edit`, { state: context ? { templateLibraryReturn: { context, index: (window.history.state as { idx?: number } | null)?.idx } } : undefined }) },
             { label: 'Создать копию', disabled: duplicate.isPending, onClick: () => duplicate.mutate(template) },
             { label: 'Удалить', danger: true, disabled: archive.isPending, onClick: () => { void confirm({ message: `Удалить шаблон «${template.name}»? Уже назначенные тренировки не изменятся.`, confirmLabel: 'Удалить', danger: true }).then((ok) => ok && archive.mutate(template)) } },
           ]} />
         </div>
         <p className="template-exercise-preview">{template.exercises.slice(0, 3).map((exercise) => exercise.name).join(' · ')}{template.exercises.length > 3 ? ` · ещё ${template.exercises.length - 3}` : ''}</p>
         <div className="template-card-footer"><span>Обновлён {new Intl.DateTimeFormat('ru-RU', { day: 'numeric', month: 'short' }).format(new Date(template.updatedAt))}</span>
-          {context ? <button type="button" className="secondary" onClick={() => { try { applyCreatedTemplate(context, template); navigate(context.returnTo, { state: templatePlanReturnState(context) }) } catch (error) { setReturnError(error instanceof Error ? error.message : 'Не удалось добавить шаблон') } }}>Добавить в план</button> : <Link className="button secondary" to={`/workouts/new?${new URLSearchParams({ template: template.id, ...(assignmentDate ? { date: assignmentDate } : {}) })}`} state={{ returnTo: calendarBack }}><ScheduleIcon />Назначить</Link>}</div>
+          {context ? <button type="button" className="secondary" onClick={() => { try { applyCreatedTemplate(context, template); returnToTemplatePlan(context, navigate) } catch (error) { setReturnError(error instanceof Error ? error.message : 'Не удалось добавить шаблон') } }}>Добавить в план</button> : <Link className="button secondary" to={`/workouts/new?${new URLSearchParams({ template: template.id, ...(assignmentDate ? { date: assignmentDate } : {}) })}`} state={{ returnTo: calendarBack }}><ScheduleIcon />Назначить</Link>}</div>
       </article>)}</div> : <EmptyState title="Создайте первый шаблон" description="Соберите тренировку с нуля или сохраните готовый план клиента."
         action={<div className="template-empty-actions"><Link className="button primary" to="/schedule/templates/new/editor" state={context ? { templatePlanContext: context } : undefined}>Создать с нуля</Link><Link className="button secondary" to="/schedule/templates/from-workout" state={context ? { templatePlanContext: context } : undefined}><CopyIcon />Из тренировки</Link></div>} />}
       {returnError && <p role="alert" className="error">{returnError}</p>}
@@ -143,12 +143,15 @@ export function WorkoutTemplateEditorPage() {
   const sourceWorkoutId = params.get('sourceWorkout') ?? ''
   const location = useLocation()
   const context = actor ? readTemplatePlanContext((location.state as { templatePlanContext?: unknown } | null)?.templatePlanContext, actor.userId) : undefined
+  const libraryOrigin = (location.state as { templateLibraryReturn?: { context?: unknown; index?: number } } | null)?.templateLibraryReturn
+  const libraryContext = actor ? readTemplatePlanContext(libraryOrigin?.context, actor.userId) : undefined
+  const libraryReturn = libraryContext ? { context: libraryContext, index: libraryOrigin?.index } : undefined
   if (!actor || actor.role !== 'trainer') return null
   const draftKey = workoutTemplateDraftKey(actor.userId, templateId, sourceWorkoutId) + (context ? `.plan:${context.draftKey}` : '')
-  return <WorkoutTemplateEditor key={draftKey} templateId={templateId} sourceWorkoutId={sourceWorkoutId} draftKey={draftKey} context={context} />
+  return <WorkoutTemplateEditor key={draftKey} templateId={templateId} sourceWorkoutId={sourceWorkoutId} draftKey={draftKey} context={context} libraryReturn={libraryReturn} />
 }
 
-function WorkoutTemplateEditor({ templateId, sourceWorkoutId, draftKey, context }: { templateId?: string; sourceWorkoutId: string; draftKey: string; context?: TemplatePlanContext }) {
+function WorkoutTemplateEditor({ templateId, sourceWorkoutId, draftKey, context, libraryReturn }: { templateId?: string; sourceWorkoutId: string; draftKey: string; context?: TemplatePlanContext; libraryReturn?: { context: TemplatePlanContext; index?: number } }) {
   const { exercises: exercisesRepository, workoutTemplates, workouts } = useDataBackend()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
@@ -199,9 +202,15 @@ function WorkoutTemplateEditor({ templateId, sourceWorkoutId, draftKey, context 
         queryClient.invalidateQueries({ queryKey: ['workout-template', savedId], exact: true, refetchType: 'none' }),
         queryClient.invalidateQueries({ queryKey: ['workout-templates'] }),
       ])
-      if (active.current) navigate(context?.returnTo ?? '/schedule/templates', { replace: true, state: context ? templatePlanReturnState(context) : undefined })
+      if (active.current) returnToOrigin(true)
     },
   })
+  function returnToOrigin(replace = false) {
+    if (context) { returnToTemplatePlan(context, navigate, replace); return }
+    const steps = templateReturnSteps(libraryReturn?.index)
+    if (steps) navigate(-steps)
+    else navigate('/schedule/templates', { replace, state: libraryReturn ? { templatePlanContext: libraryReturn.context } : undefined })
+  }
   function closePicker() { setPickerOpen(false); setPickerSearch(''); setReplaceIndex(null) }
   const [confirmLeave, confirmLeaveDialog] = useConfirm()
   async function leaveForm() {
@@ -212,7 +221,7 @@ function WorkoutTemplateEditor({ templateId, sourceWorkoutId, draftKey, context 
     }
     finished.current = true
     removeWorkoutTemplateDraft(draftKey)
-    navigate(context?.returnTo ?? '/schedule/templates', { state: context ? templatePlanReturnState(context) : undefined })
+    returnToOrigin()
   }
   function pick(selected: ExerciseSnapshot) {
     setExercises((current) => replaceIndex === null

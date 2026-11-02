@@ -7421,3 +7421,6 @@ details[open] > .progress-details-toggle svg { transform:rotate(180deg); }
 
 .phone-frame.fit-lime-shell.coach-workout-reference .workout-editor-reference .trainer-plan-methods > button { height:44px; min-height:44px; padding:8px 6px; border:0; border-radius:16px; background:var(--workout-editor-field, #3b3b40) }
 .phone-frame.fit-lime-shell.coach-workout-reference .coach-plan-polish .trainer-plan-methods > .trainer-method-voice { background:var(--lime-accent); color:var(--lime-text-on-accent) }
+
+.fit-lime-shell .workout-template-form .trainer-template-methods > button { height:64px; min-height:64px; padding:4px; gap:2px; border-radius:16px; font-size:13px; line-height:16px }
+.fit-lime-shell .workout-template-form .trainer-template-methods > button svg { width:18px; height:18px; flex-basis:18px }

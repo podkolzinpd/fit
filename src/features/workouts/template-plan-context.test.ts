@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { localDate } from '../../shared/local-date'
-import { applyCreatedTemplate, persistTemplateSource, readTemplatePlanContext, type TemplatePlanContext } from './template-plan-context'
+import { applyCreatedTemplate, persistTemplateSource, readTemplatePlanContext, returnToTemplatePlan, templateReturnSteps, type TemplatePlanContext } from './template-plan-context'
 import { readWorkoutFormDraft, workoutFormDraftKey, writeWorkoutFormDraft, type WorkoutFormDraft } from './workout-form-draft'
 import type { WorkoutTemplateDraft } from '../../shared/domain'
 
@@ -14,6 +14,20 @@ beforeEach(() => {
   writeWorkoutFormDraft(key, draft)
 })
 describe('trainer template return', () => {
+  it('returns to the original history entry and safely falls back after a direct open', () => {
+    const previous = window.history.state as unknown
+    window.history.replaceState({ idx: 4 }, '')
+    try {
+      expect(templateReturnSteps(1)).toBe(3)
+      expect(templateReturnSteps(-1)).toBeUndefined()
+      expect(templateReturnSteps(5)).toBeUndefined()
+      const navigate = vi.fn()
+      returnToTemplatePlan({ ...context, returnHistoryIndex: 1 }, navigate)
+      expect(navigate).toHaveBeenCalledWith(-3)
+      returnToTemplatePlan(context, navigate, true)
+      expect(navigate).toHaveBeenLastCalledWith(context.returnTo, { replace: true, state: { templatePlanDraftKey: key } })
+    } finally { window.history.replaceState(previous, '') }
+  })
   it('appends an independent plan once and preserves all filled source fields across retry and autosave', () => {
     applyCreatedTemplate(context, template)
     const result = readWorkoutFormDraft(key)!

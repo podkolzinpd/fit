@@ -1,9 +1,11 @@
+import type { NavigateFunction } from 'react-router-dom'
 import { appendWorkoutTemplateExercises } from '../../data/repositories/workout-template-rules'
 import type { WorkoutTemplateDraft } from '../../shared/domain'
 import { readWorkoutFormDraft, writeWorkoutFormDraft, workoutFormDraftKey, type WorkoutFormDraft } from './workout-form-draft'
 import { safeWorkoutReturnTo, type WorkoutNavigationState } from './workout-navigation'
 
 export interface TemplatePlanContext {
+  returnHistoryIndex?: number
   draftKey: string
   returnTo: string
   navigationState?: WorkoutNavigationState
@@ -33,7 +35,8 @@ export function persistTemplateSource(key: string, draft: WorkoutFormDraft): boo
 /** The receipt and exercises are one local write, so retries never append twice. */
 export function applyCreatedTemplate(context: TemplatePlanContext, template: WorkoutTemplateDraft): void {
   const source = readWorkoutFormDraft(context.draftKey)
-  if (!source || source.requestId !== context.requestId || source.sourceVersion !== context.sourceVersion) throw new Error('Исходный план изменился. Шаблон сохранён в библиотеке; вернитесь к плану и выберите его снова.')
+  if (!source || source.recordCompleted || source.requestId !== context.requestId || source.sourceVersion !== context.sourceVersion) throw new Error('Исходный план изменился. Шаблон сохранён в библиотеке; вернитесь к плану и выберите его снова.')
+  if (!template.id) throw new Error('Шаблон ещё не сохранён. Повторите сохранение.')
   if (!context.applyOnSave || source.appliedTemplateIds?.includes(template.id!)) return
   const updated = {
     ...source, title: source.title?.trim() ? source.title : template.name,
@@ -46,4 +49,17 @@ export function applyCreatedTemplate(context: TemplatePlanContext, template: Wor
 
 export function templatePlanReturnState(context: TemplatePlanContext): WorkoutNavigationState & { resumePlanRequestId?: string } {
   return { ...context.navigationState, templatePlanDraftKey: context.draftKey, ...(context.resumePlanRequestId ? { resumePlanRequestId: context.resumePlanRequestId } : {}) }
+}
+
+/** Return to the existing entry rather than stacking a second copy of the plan. */
+export function templateReturnSteps(index: unknown): number | undefined {
+  const current = (window.history.state as { idx?: unknown } | null)?.idx
+  return typeof index === 'number' && Number.isSafeInteger(index) && index >= 0
+    && typeof current === 'number' && Number.isSafeInteger(current) && current > index ? current - index : undefined
+}
+
+export function returnToTemplatePlan(context: TemplatePlanContext, navigate: NavigateFunction, replace = false): void {
+  const steps = templateReturnSteps(context.returnHistoryIndex)
+  if (steps) void navigate(-steps)
+  else void navigate(context.returnTo, { replace, state: templatePlanReturnState(context) })
 }

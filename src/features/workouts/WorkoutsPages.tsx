@@ -1505,7 +1505,9 @@ export function WorkoutFormPage() {
     const draft: WorkoutFormDraft = { clientId, workoutDate: entryDate, startTime, endTime, actualDurationMinutes, notes, title, stageId: selectedStageId, recordCompleted: false, exercises, trainingFormat, prepSeconds, executionMode,
       ...(workoutId ? { sourceVersion: source.data?.version } : { sourceVersion: favoriteDraftVersion.current, requestId: createRequestId.current }) }
     if (!persistTemplateSource(key, draft)) { setPrefillError('Не удалось сохранить черновик на устройстве. План остаётся открыт.'); return }
-    const context: TemplatePlanContext = { draftKey: key, returnTo: location.pathname + location.search, navigationState: navigationState ?? undefined, requestId: draft.requestId, sourceVersion: draft.sourceVersion, applyOnSave: true }
+    const returnState = { ...navigationState, templatePlanDraftKey: key }
+    navigate(location.pathname + location.search, { replace: true, state: returnState })
+    const context: TemplatePlanContext = { returnHistoryIndex: (window.history.state as { idx?: number } | null)?.idx, draftKey: key, returnTo: location.pathname + location.search, navigationState: returnState, requestId: draft.requestId, sourceVersion: draft.sourceVersion, applyOnSave: true }
     navigate(library ? '/schedule/templates' : '/schedule/templates/new/editor', { state: { templatePlanContext: context } })
   }
   useEffect(() => {
