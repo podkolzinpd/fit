@@ -115,6 +115,9 @@ test('Figma calendar Coach unified routes retain list, finance and template cont
   const views = page.getByRole('group', { name: 'Вид расписания' })
   await expect(views.getByRole('button', { name: 'Список', exact: true })).toHaveAttribute('aria-pressed', 'true')
   await expect(page.locator('.fit-lime-history-row')).toHaveCount(35)
+  await expect(page.locator('.coach-fortnight-view')).toHaveCount(0)
+  await expect(page.locator('.coach-calendar-year')).toHaveCount(0)
+  await expect(page.locator('.coach-calendar-filters summary img')).toHaveCount(0)
   const content = page.locator('.content')
   await content.evaluate(node => { node.scrollTop = 520; node.dispatchEvent(new Event('scroll')) })
   await expect.poll(() => content.evaluate(node => node.scrollTop)).toBeGreaterThan(400)
@@ -168,13 +171,17 @@ test('Figma calendar Coach unified routes retain list, finance and template cont
 
 test('Figma calendar Coach fortnight compares aligned weekdays and keeps every appointment', { tag: ['@lime-critical'] }, async ({ page }, info) => {
   const profileId = 'c0ac0000-6010-4000-8000-000000000001'
-  await page.clock.setFixedTime(new Date('2026-12-28T09:00:00+03:00'))
+  await page.clock.setFixedTime(new Date('2026-12-29T09:00:00+03:00'))
   const rows: MockWorkout[] = Array.from({ length: 8 }, (_, i) => ({ ...workout,
     id: `30000000-0000-4000-8000-${String(i + 1).padStart(12, '0')}`, trainerId: profileId, createdBy: profileId,
     workoutDate: i < 6 ? '2026-12-28' : '2027-01-04', clientName: i < 6 ? `Первая неделя ${i + 1}` : 'Александра Константинопольская-Оченьдлиннаяфамилия',
     status: 'planned', completedAt: null, startTime: `${String(9 + i).padStart(2, '0')}:00`, endTime: `${String(10 + i).padStart(2, '0')}:00`,
   }))
   rows.push({ ...rows[0]!, id: '30000000-0000-4000-8000-000000000009', workoutDate: '2027-01-05', clientName: 'Без времени', startTime: null, endTime: null })
+  rows.push({ ...rows[0]!, id: '30000000-0000-4000-8000-000000000010', clientName: 'Без времени первым', startTime: null, endTime: null })
+  rows[1]!.status = 'done'; rows[1]!.completedAt = '2026-12-28T10:00:00Z'
+  rows[2]!.status = 'cancelled'
+  rows[3]!.status = 'in_progress'
   await mockPilot(page, { profileId, fitLime: true, workouts: rows })
   await page.goto('/schedule?week=2026-12-28&range=2w')
   const comparison = page.getByRole('region', { name: 'Сравнение двух недель' })
@@ -182,9 +189,33 @@ test('Figma calendar Coach fortnight compares aligned weekdays and keeps every a
   expect(await comparison.locator('.coach-fortnight-day').evaluateAll(nodes => nodes.map(n => n.getAttribute('data-date')))).toEqual([
     '2026-12-28','2027-01-04','2026-12-29','2027-01-05','2026-12-30','2027-01-06','2026-12-31','2027-01-07','2027-01-01','2027-01-08','2027-01-02','2027-01-09','2027-01-03','2027-01-10',
   ])
-  await expect(comparison.locator('.coach-fortnight-appointment')).toHaveCount(9)
-  await expect(comparison.locator('[data-date="2026-12-28"] time')).toHaveText(['09:00','10:00','11:00','12:00','13:00','14:00'])
+  await expect(comparison.locator('.coach-fortnight-appointment')).toHaveCount(10)
+  await expect(comparison.locator('[data-date="2026-12-28"] time')).toHaveText(['—','09:00','10:00','11:00','12:00','13:00','14:00'])
   await expect(comparison.locator('[data-date="2027-01-05"] time')).toHaveText('—')
+  await expect(comparison.locator('.coach-fortnight-headings > span > span')).toHaveText(['28 дек.–3 янв.','4–10 янв.'])
+  await expect(page.locator('.coach-calendar-year')).toHaveText('2026–2027')
+  const filters = page.locator('.coach-calendar-filters summary')
+  expect(await filters.locator('img').evaluate(async node => {
+    const src = (node as HTMLImageElement).src, comma = src.indexOf(',')
+    const source = src.startsWith('data:')
+      ? src.slice(0, comma).endsWith(';base64') ? atob(src.slice(comma + 1)) : decodeURIComponent(src.slice(comma + 1))
+      : await (await fetch(src)).text()
+    return /id=["']Filter Settings["']/.test(source)
+  })).toBe(true)
+  await expect(filters).toHaveAccessibleName('Фильтры')
+  await expect(comparison.locator('.schedule-event-done > svg')).toHaveCount(1)
+  await expect(comparison.locator('.schedule-event-skipped > svg')).toHaveCount(1)
+  expect(await comparison.evaluate(el => {
+    const active = el.querySelector('.schedule-event-current')!, cancelled = el.querySelector('.schedule-event-skipped')!
+    const baseline = document.createElement('span')
+    el.append(baseline)
+    baseline.className = 'schedule-event-current'
+    const activePaint = getComputedStyle(active).backgroundColor === getComputedStyle(baseline).backgroundColor
+    baseline.className = 'schedule-event-skipped'
+    const cancelledColor = getComputedStyle(cancelled).color === getComputedStyle(baseline).color
+    baseline.remove()
+    return activePaint && cancelledColor
+  })).toBe(true)
   // Paired row alignment, truncation and scrolling are responsive geometry contracts.
   for (const width of [320,390,736,1440]) {
     await page.setViewportSize({ width, height: 844 })
@@ -193,9 +224,13 @@ test('Figma calendar Coach fortnight compares aligned weekdays and keeps every a
       return { aligned: cells.every((box, i) => i % 2 || box.top === cells[i + 1]!.top && box.height === cells[i + 1]!.height),
         shortEmpty: cells[8]!.height, overflow: document.documentElement.scrollWidth > innerWidth,
         rows: [...el.querySelectorAll('.coach-fortnight-appointment')].map(n => n.getBoundingClientRect().height),
-        namesContained: [...el.querySelectorAll('.coach-fortnight-client')].every(n => n.getBoundingClientRect().right <= n.closest('button')!.getBoundingClientRect().right) }
+        namesContained: [...el.querySelectorAll('.coach-fortnight-client')].every(n => n.getBoundingClientRect().right <= n.closest('button')!.getBoundingClientRect().right),
+        cleanRows: [...el.querySelectorAll('.coach-fortnight-appointment')].every(n => getComputedStyle(n).borderTopStyle === 'none'),
+        fontSize: getComputedStyle(el.querySelector('.coach-fortnight-client')!).fontSize,
+        headingOverlap: el.querySelectorAll('.coach-fortnight-headings > span > span')[0]!.getBoundingClientRect().right > el.querySelectorAll('.coach-fortnight-headings > span > span')[1]!.getBoundingClientRect().left }
     })
     expect(geometry.aligned).toBe(true);expect(geometry.overflow).toBe(false);expect(geometry.namesContained).toBe(true)
+    expect(geometry.cleanRows).toBe(true);expect(geometry.fontSize).toBe('11.5px');expect(geometry.headingOverlap).toBe(false)
     expect(geometry.shortEmpty).toBeLessThanOrEqual(48)
     for (const height of geometry.rows) expect(height).toBeLessThanOrEqual(20)
     await page.screenshot({ path: info.outputPath(`fortnight-${width}.png`), fullPage: true })
@@ -204,11 +239,28 @@ test('Figma calendar Coach fortnight compares aligned weekdays and keeps every a
   await comparison.locator('[data-date="2027-01-04"]').click()
   await expect(page).toHaveURL(/date=2027-01-04/)
   await expect(page.locator('.schedule-v2-event')).toHaveCount(2)
-  await page.goBack();await expect(comparison).toBeVisible();await expect(comparison.locator('.coach-fortnight-appointment')).toHaveCount(9)
+  await page.goBack();await expect(comparison).toBeVisible();await expect(comparison.locator('.coach-fortnight-appointment')).toHaveCount(10)
   await comparison.getByRole('button', { name: 'Следующие 2 недели' }).click()
   await expect(comparison.locator('.coach-fortnight-day').first()).toHaveAttribute('data-date', '2027-01-11')
   await comparison.getByRole('button', { name: 'Предыдущие 2 недели' }).click()
   await expect(comparison.locator('.coach-fortnight-day').first()).toHaveAttribute('data-date', '2026-12-28')
+  await page.setViewportSize({ width: 320, height: 620 })
+  // A short device starts at this height; shrinking an existing viewport also
+  // exercises the separate keyboard detector and temporarily hides navigation.
+  await page.reload()
+  await expect(page.getByRole('navigation', { name: 'Основная навигация' })).toBeVisible()
+  await expect(comparison.locator('.coach-fortnight-day')).toHaveCount(14)
+  await page.locator('.content').evaluate(el => { el.scrollTop = el.scrollHeight })
+  const safeArea = await page.evaluate(() => {
+    const content = document.querySelector('.content')!.getBoundingClientRect()
+    const fab = document.querySelector('.schedule-v2-fab')!.getBoundingClientRect()
+    const nav = document.querySelector('.trainer-tab-bar')!.getBoundingClientRect()
+    const last = [...document.querySelectorAll('.coach-fortnight-day')].at(-1)!.getBoundingClientRect()
+    return { fabGap: fab.top - content.bottom, navGap: nav.top - content.bottom, lastVisible: last.bottom <= content.bottom + 1, trailingGap: content.bottom - last.bottom }
+  })
+  expect(safeArea.fabGap).toBeGreaterThanOrEqual(0);expect(safeArea.navGap).toBeGreaterThanOrEqual(0);expect(safeArea.lastVisible).toBe(true)
+  expect(safeArea.trailingGap).toBeLessThanOrEqual(40)
+  await page.screenshot({ path: info.outputPath('fortnight-short-screen-safe-bottom.png') })
 })
 
 test('Figma calendar Coach compact navigation keeps date access, menu and all views', { tag: ['@lime-critical'] }, async ({ page }, info) => {
@@ -237,8 +289,12 @@ test('Figma calendar Coach compact navigation keeps date access, menu and all vi
   await expect(menu.getByRole('menuitem')).toHaveText(['Компактная сетка', 'Шаблоны тренировок', 'Профиль', 'Настройки'])
   const triggerBox = (await page.getByRole('button', { name: 'Настройки расписания' }).boundingBox())!
   expect((await menu.boundingBox())!.y).toBeGreaterThanOrEqual(triggerBox.y)
+  // The class is optimistic; persistence is checked after the server acknowledges it.
+  const densitySaved = page.waitForResponse(response => new URL(response.url()).pathname === '/v1/profile'
+    && response.request().method() === 'PUT' && response.status() === 204)
   await menu.getByRole('menuitem', { name: 'Компактная сетка' }).click()
   await expect(calendar).toHaveClass(/schedule-density-compact/)
+  await densitySaved
   await page.reload(); await expect(calendar).toHaveClass(/schedule-density-compact/)
   const views = page.getByRole('group', { name: 'Вид расписания' })
   for (const name of ['Неделя', '2 недели', 'Список', 'День']) {
