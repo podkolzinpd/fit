@@ -356,3 +356,21 @@ Full npm check из предыдущей итерации не повторял�
 удаление local CLI/CI сохранены. Workflow docs после merge passed. Новый полный
 local check и exact-head CI — гейты; proof/status публикуется в PR1944.
 Отвергнуто: выдавать старый head за готовый при обязательном актуальном main.
+
+### P3 — сохранение обязательного database context — 02.11.2026
+
+CI41454645467 наd87fa840 завершён success32/32, auth862passed/8skipped;
+Android41454645518 success. Повторный local check после main:320files/2920tests,
+coverage83.31/78.2/82.39/88; API1555passed/254skipped, остальные gates passed.
+
+При финальной проверке MERGEABLE/BLOCKED обнаружен обязательный branch context
+`database`. Read-only protection API: strict=true, contexts app/database/e2e.
+Ранняя проверка этого контракта была пропущена; зелёный run без него не даёт
+готовность к merge. Решение P3-CI-CONTEXT-01: существующий native PG17 job
+переименовать yandex-database → database, сохранить pinned image, health,
+clean migrations, actor/RLS и recovery DB шаги побайтно. Старый source job
+не возвращается, новые дублирующие проверки не добавляются; required contexts
+и branch protection не меняются/не обходятся. Workflow regression проверяет
+stable database name, PostgreSQL service и отсутствие local source startup.
+Отвергнуто: менять branch rules или выдавать отсутствующий context за success.
+Точный новый head и повторный CI фиксируются в PR1944.

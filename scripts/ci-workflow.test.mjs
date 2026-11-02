@@ -269,7 +269,7 @@ test('browser lanes use isolated native API databases without Supabase auth or S
 })
 
 test('uses the identical pinned PostgreSQL17 image without changing health or migration checks', () => {
-  const body = workflow.slice(workflow.indexOf('  yandex-database:\n'), workflow.indexOf('  e2e-scope:\n'))
+  const body = workflow.slice(workflow.indexOf('  database:\n'), workflow.indexOf('  e2e-scope:\n'))
   assert.match(body, /image: postgres:17@sha256:3cec7eb015ba8adb28139fa5c83b8489cdf0e666e53dfdf20f598ae0cc8739e3/)
   assert.match(body, /--health-cmd "pg_isready -U postgres -d fit_actor_test"/)
   assert.match(body, /npm --prefix services\/api run test:db/)
@@ -554,6 +554,6 @@ test('Cloud.ru missing built image cannot advance current or SHA', () => {
 
 test('CI has no local Supabase service or legacy database lane', () => {
   assert.doesNotMatch(workflow, /supabase|database_required|database-scope|wait-for-local-auth|db:types:check/i)
-  assert.doesNotMatch(workflow, /^  database:/m)
-  assert.match(workflow, /yandex-database:[\s\S]*npm --prefix services\/api run test:db/)
+  assert.match(workflow, /^  database:\n    runs-on: ubuntu-latest\n    services:/m)
+  assert.match(workflow, /database:[\s\S]*npm --prefix services\/api run test:db/)
 })

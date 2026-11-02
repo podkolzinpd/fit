@@ -139,7 +139,8 @@ jobs:
       - run: npm ci --prefix services/api
       - run: npm --prefix services/api run check
 
-  yandex-database:
+  # Preserve the required database check name for the native PostgreSQL gate.
+  database:
     runs-on: ubuntu-latest
     services:
       postgres:
