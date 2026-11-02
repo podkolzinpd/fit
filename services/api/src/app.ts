@@ -1,3 +1,4 @@
+import { registerTrainerConnectionConfirmationRoutes, type TrainerConnectionConfirmationService } from './trainer-connection-confirmation.js'
 import { registerCorporateInvitationRoutes, type CorporateInvitationsService } from './corporate-invitations.js'
 import { readWorkoutTitleRequest } from './workout-title-request.js'
 import type { ChatMeetings, MeetingAction } from './chat-meetings.js'
@@ -207,6 +208,7 @@ interface BuildAppOptions {
   nutritionAutoActivator?: import('./nutrition-pilot.js').NutritionAutoActivator
   nutritionDiary?: NutritionDiary
   allowedOrigins?: readonly string[]
+  trainerConnectionConfirmation?: TrainerConnectionConfirmationService
   databasePool?: DatabasePool
   identityProvider?: YandexIdentityProvider
   oauthCodeProvider?: YandexOAuthCodeProvider
@@ -274,6 +276,7 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
         : crypto.randomUUID()
     },
   })
+  registerTrainerConnectionConfirmationRoutes(app, options.trainerConnectionConfirmation)
   registerCorporateAdminRoutes(app, options.corporateAdmin)
   registerCorporateInvitationRoutes(app, options.corporateInvitations)
   const allowedOrigins = new Set(options.allowedOrigins ?? [])

@@ -85,3 +85,30 @@ sources/reporting byte-identical базе. Первоначальный Ruby hel
 Дальше: один push/PR → полный CI и сравнение таймингов. Текущая CI-фактура
 остаётся в связанном PR, без второго push только ради записи статуса.
 Реальные production/БД/мобильные устройства не затрагиваются.
+
+## Итерация 2 — 2026-11-02 — Codex / OpenAI
+
+Задача: устранить конфликт [PR1947](https://github.com/podkolzinpd/fit/pull/1947)
+после merge #1938. Включён main `c49f3a517b5384fb0b1f1be12097d52e6e86557f`
+обычным merge, без rebase/force push. Единственный конфликт — две независимые
+записи CURRENT_STATE; обе сохранены. Расхождений решений нет; продуктовый код,
+SQL178 и browser fixtures взяты byte-identical main. Собственные CI/policy
+файлы byte-identical предыдущему проверенному headfa56da4b.
+
+Предыдущий полный CI41480136831 завершился success: все четыре production-mode
+части прошли, длительности jobs8m19s/8m52s/12m36s/13m15s против исходного40m17s.
+Это отдельные наблюдения, не контролируемый benchmark: очередь сдвинула старты,
+общий span четырёх jobs был21m24s. Результат предыдущего head не является
+зелёной приёмкой нового merge head.
+
+Проверено после объединения: CI/scope54/54, YAML/matrix/dependencies,
+docs budgets/links/archive и diff-check passed. Повторный реальный inventory
+показывает873/873:219+218+218+218, пересечений0, Chromium420/WebKit453;
+три новых случая пришли из main, наши spec/fixtures не менялись.
+`npm run build` (typecheck/Vite/postbuild) прошёл; полный npm run check повторно не запускался: конфликт
+документационный, CI/policy неизменны, full check прошлого head зафиксирован
+выше, объединённый head должен заново пройти полный CI.
+
+Отвергнуто: выбрать только одну сторону snapshot или переписать историю ветки.
+Открыто: CI нового head. Дальше: публикация merge commit в тот же PR;
+production/mobile не меняются, PR этим исправлением не сливается.

@@ -1,3 +1,4 @@
+import type { TrainerConnectionsRepository } from '../../shared/trainer-connection'
 import type {
   Client,
   ClientAttentionPreference,
@@ -70,6 +71,7 @@ import type { NotificationStatus } from './push-notifications'
 import type { ClientRealtimeChange } from './realtime'
 export interface DataBackend {
   source: 'yandex'
+  trainerConnections?: TrainerConnectionsRepository
   clients: {
     getMine(): Promise<Client | null>
     resolveId: (id: string) => Promise<string>
