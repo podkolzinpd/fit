@@ -29,6 +29,15 @@ export function compactScheduleTime(value?: string | null): string {
   return minutes === '00' ? String(numericHours) : `${numericHours}:${minutes}`
 }
 
+/** Compact coach comparison labels; LocalDate arithmetic and full aria labels stay unchanged. */
+export function compactCoachWeekRange(from: LocalDate, to: LocalDate): string {
+  const months = ['янв.', 'фев.', 'мар.', 'апр.', 'мая', 'июн.', 'июл.', 'авг.', 'сен.', 'окт.', 'ноя.', 'дек.']
+  const [, startMonth, startDay] = from.split('-').map(Number)
+  const [, endMonth, endDay] = to.split('-').map(Number)
+  const start = startMonth === endMonth ? String(startDay) : `${startDay} ${months[startMonth! - 1]}`
+  return `${start}–${endDay} ${months[endMonth! - 1]}`
+}
+
 export function compactScheduleClientName(value: string): string {
   const firstName = value.trim().split(/\s+/)[0] ?? ''
   return firstName.length <= 2 ? firstName : firstName.slice(0, 2)
