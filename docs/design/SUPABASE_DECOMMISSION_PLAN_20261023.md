@@ -318,3 +318,28 @@ readiness native test:db passed:223+21 Vitest tests и6 erasure cases; один
 Native/SQL/browser specs и PNG не менялись. Exact-head Linux CI остаётся гейтом.
 Обычная local:verify на старом volume не объявляется прошедшей; отдельная clean
 PG17 проверка не маскирует необходимость адресно разобрать старые local fixtures.
+
+### P3 — исправление Chromium timeout — 02.11.2026
+
+Первый CI41439102809 на243f3d86: API/PG17/RLS/migration safety, repository,
+app build/unit, Android и остальные завершённые browser/visual jobs passed;
+Chromium2/2 упал в trainer-flow:276 (общий30s budget) на разных шагах трёх
+попыток. Диагностика125257814852/trace показала5 полных Vite loads по3.9–4.4s:
+API route отключает HTTP cache, поэтому повторный goto тратит время на module
+graph. Это не отсутствующий Supabase endpoint и не изменение product behavior.
+
+Выбрано: только в упавшем сценарии убрать предварительный auth goto (helper
+сам делает session reload), первый список открыть штатной навигацией и после
+проверки списка открыть карточку её ссылкой. Сохранены все assertions, PNG,
+реальный reload списка для persistence, live/rest reload и поздний reload
+перед progress. Ничего не разбито/не добавлено в matrix, число случаев прежнее.
+Отвергнуто: увеличение timeout/retries, исключение case и обновление PNG.
+
+Локально native PG17/Chromium: исходный case passed19.9s, исправленный passed15.9s
+(одна пара общих elapsed Playwright timings, не статистический benchmark).
+ESLint spec и E2E TypeScript passed. Spec входит только в mobile-chromium:
+запрос точного case у iphone-13-webkit выбрал0tests; это не считается WebKit
+приёмкой. Прежние WebKit suites сохраняются и проходят полным новым CI.
+Full npm check из предыдущей итерации не повторялся: дополнительно изменены
+только этот spec и журнал; применимые lint/typecheck/browser проверки выполнены.
+Точный новый head/CI — в PR1944; первый failure не скрывается.

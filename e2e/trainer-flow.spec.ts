@@ -275,10 +275,10 @@ test('тренер объединяет распознанные упражне�
 
 test('trainer can create client, complete workout and save progress', async ({ page }, testInfo) => {
   const trainerAlias = `Анна ${testInfo.workerIndex}-${Date.now()}`
-  await page.goto('/auth')
+  // nativeSignIn initializes a fresh page and performs the real session reload.
   await nativeSignIn(page, 'trainer@fit.local')
   await expect(page.getByRole('heading', { level: 1, name: 'Сегодня' })).toBeVisible()
-  await page.goto('/clients')
+  await page.getByRole('navigation', { name: 'Основная навигация' }).getByRole('link', { name: 'Клиенты', exact: true }).click()
 
   await page.getByRole('button', { name: /^(Добавить|Добавить клиента)$/ }).click()
   await page.getByRole('dialog', { name: 'Добавить клиента' }).getByRole('link', { name: 'Создать карточку', exact: true }).click()
@@ -306,7 +306,9 @@ test('trainer can create client, complete workout and save progress', async ({ p
   await expect(page.getByRole('heading', { name: trainerAlias })).toBeVisible()
   await page.goto('/clients')
   await expect(page.getByText(trainerAlias)).toBeVisible()
-  await page.goto(clientUrl)
+  // Keep the list reload above to verify persistence; open the card through its link.
+  // API routing disables HTTP caching, so redundant full Vite loads consume the case budget.
+  await page.locator(`.client-card-main[href="${new URL(clientUrl).pathname}"]`).click()
 
   await page.getByRole('link', { name: /Запланировать/ }).click()
   await selectClient(page, trainerAlias)
