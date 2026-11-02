@@ -213,9 +213,10 @@ test('Lifecycle P3 future attendance changes date then confirms the same appoint
   expect(backend.getWorkouts()[0]).toMatchObject({id:workoutId,status:'done',workoutDate:'2026-11-01'})
 })
 
-test('Lifecycle P3 rejects a new future result before any save', {tag:['@lime-critical']},async({page})=>{
+test('Lifecycle P3 rejects a new future result before any save', {tag:['@lime-critical']},async({page},testInfo)=>{
   await page.clock.setFixedTime(new Date('2026-11-01T09:00:00Z'))
-  const backend=await mockPilot(page,{profileId:lifecycleTrainer,fitLime:true,workouts:[]})
+  const source={...restTimerWorkout(),status:'done' as const,workoutDate:'2026-11-03',createdBy:lifecycleTrainer,trainerId:lifecycleTrainer,completedAt:'2026-10-31T10:00:00Z'}
+  const backend=await mockPilot(page,{profileId:lifecycleTrainer,fitLime:true,workouts:[source]})
   await page.goto(`/workouts/new?mode=completed&date=2026-11-03&client=${clientId}`)
   await page.getByRole('button',{name:'Выбрать упражнения',exact:true}).click()
   await page.getByLabel('Поиск упражнения').fill('присед со штангой')
@@ -224,6 +225,37 @@ test('Lifecycle P3 rejects a new future result before any save', {tag:['@lime-cr
   await page.getByRole('button',{name:'Записать тренировку',exact:true}).click()
   await expect(page.getByRole('alert').filter({hasText:'Нельзя записать результат на будущую дату'}).first()).toBeVisible()
   expect(backend.getSaveAttempts()).toBe(0)
+  await page.goto(`/workouts/new?copy=${workoutId}&mode=completed&client=${clientId}`)
+  await expect(page.getByLabel('Дата',{exact:true})).toHaveValue('2026-11-01')
+  await page.getByLabel('Дата',{exact:true}).fill('2026-11-03')
+  await page.getByRole('button',{name:'Записать тренировку',exact:true}).click()
+  await expect(page.getByRole('alert').filter({hasText:'Нельзя записать результат на будущую дату'}).first()).toBeVisible()
+  expect(backend.getSaveAttempts(),'A copy of done is a new fact, not an edit of the source').toBe(0)
+  await page.getByRole('alert').filter({hasText:'Нельзя записать результат на будущую дату'}).first().scrollIntoViewIfNeeded()
+  await page.screenshot({path:testInfo.outputPath('p3-copy-future-blocked.png')})
+  let existingUpdates=0
+  await page.route(`**/v1/workouts/${workoutId}/completed`,async route=>{
+    expect(route.request().method()).toBe('PUT')
+    const draft=route.request().postDataJSON() as {workoutDate:string;exercises:Array<{sets:Array<{weightKg:number;reps:number}>}>}
+    expect(draft.workoutDate).toBe('2026-11-03')
+    expect(draft.exercises[0]?.sets[0]).toMatchObject({weightKg:25,reps:12})
+    existingUpdates+=1
+    await route.fulfill({json:{workout:{id:workoutId}}})
+  })
+  await page.goto(`/workouts/${workoutId}/edit`)
+  await expect(page.getByLabel('Дата',{exact:true})).toHaveValue('2026-11-03')
+  await page.getByRole('button',{name:'Выбрать упражнения',exact:true}).click()
+  await page.getByLabel('Поиск упражнения').fill('присед со штангой')
+  await page.getByRole('button',{name:'Выбрать: Присед со штангой',exact:true}).click()
+  await page.getByRole('button',{name:'Добавить 1',exact:true}).click()
+  await page.getByLabel('Фактический вес, подход 1',{exact:true}).fill('25')
+  await page.getByLabel('Фактические повторы, подход 1',{exact:true}).fill('12')
+  await page.getByRole('button',{name:'Сохранить изменения',exact:true}).click()
+  await expect(page).toHaveURL(new RegExp(`/workouts/${workoutId}$`))
+  expect(existingUpdates).toBe(1)
+  expect(backend.getWorkouts()).toHaveLength(1)
+  expect(backend.getWorkouts()[0]).toMatchObject({id:workoutId,status:'done',workoutDate:'2026-11-03'})
+  await page.screenshot({path:testInfo.outputPath('p3-existing-done-preserved.png')})
 })
 
 for(const density of ['original','compact'] as const) test(`Lifecycle P4 Live exit fits narrow enlarged text and names its action ${density}`,{tag:['@lime-critical']},async({page},info)=>{
