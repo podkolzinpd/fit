@@ -155,3 +155,46 @@ Docs/PR acceptance и diff-check passed. Полный browser набор873 ло
 Открыто: CI исправленного head.
 Дальше: закончить проверки, один push в тот же PR и новый полный CI;
 production и мобильные приложения не затрагиваются.
+
+## Итерация 4 — 2026-11-02 — Codex / OpenAI
+
+Задача владельца: «опять упали». CI41507028084 на354bc5ef отменён после
+внешнего merge main в6c0bde47; это не зелёная приёмка. Новый CI41509756386
+на6c0bde47: swipe прошёл, shard4/4 job125499230400 получил другое падение —
+`client technique retries failed video and keeps manual play usable`.
+После восстановления503 тест безусловно ждал `!video.paused`5s. Retry прошёл,
+но217 passed+1 flaky правильно дают failure при строгом flaky gate.
+Точная причина отказа autoplay в той попытке не доказана.
+
+Проверен утверждённый [контракт воспроизведения](EXERCISE_TECHNIQUE_PLAYBACK_20261027.md):
+iPhone может запретить autoplay, до реального playing остаётся ручная кнопка.
+Runtime уже реализует этот fallback; ExerciseImage component test отдельно
+проверяет rejected play, ручной запуск и скрытие кнопки только по playing.
+Ошибка E2E — требование гарантированного autoplay после retry, которого нет
+в контракте. Продуктовый player, media queries и политика браузера не меняются.
+
+Соответствие старых проверок новым:
+
+- Ошибка503, hitbox retry44×44, новая подписанная ссылка, исчезновение ошибки,
+  закрытие detail и отдельный inline retry → те же assertions в том же case.
+- Безусловный autoplay после detail/inline retry → `autoplay` attribute,
+  реальная готовность MP4, затем настоящий пользовательский play; попытка
+  autoplay и разрешённый отказ остаются в существующих ExerciseImage tests.
+- Скрытая кнопка при playing → после реального ручного запуска в detail
+  и inline; до запуска кнопка обязана быть доступной.
+- Pause→manual play→движение видео → сохранено; дополнительно currentTime
+  обязан вырасти относительно позиции pause, а не просто быть больше нуля.
+
+Новых/удалённых CI cases0, браузеры и матрица прежние. Не добавлены sleep,
+mock video.play, retries/timeout overrides или обход `--fail-on-flaky-tests`.
+Отвергнуто: слепой rerun и изменение runtime без доказанного дефекта.
+Проверено:20/20 browser (WebKit10+Chromium10), workers1/retries0, за43,7s;
+ExerciseImage33/33, включая rejected autoplay; CI/scope54/54. Реальный
+inventory873=219+218+218+218, Chromium420/WebKit453, пересечений0.
+Локального замера исходного video case до правки нет; CI first attempt5s
+timeout и успешный retry не являются контролируемым benchmark.
+Полный локальный `npm run check`: frontend2923, API1567passed+278 штатных
+localDBskip, infra380, SpeechKit7, hosting196, calendar22, media2 passed;
+lint/typecheck/build/postbuild passed, итог exit0. Docs/PR acceptance и
+diff-check passed. CI нового head ещё гейт. Полный browser набор873
+локально повторно не исполнялся. Production/БД/mobile не затрагиваются.

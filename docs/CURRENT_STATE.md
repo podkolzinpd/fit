@@ -1,7 +1,7 @@
 28.10 — Чат: плашка даты перед первым сообщением дня («Сегодня», «Вчера», «26 октября», «12 марта 2025»), раньше «Новые сообщения»; в списке чатов дата по давности. День по часам телефона. chat-dates.ts + тесты.
 # Fit — текущий индекс
 02.11 — CI: production-mode browser набор873 разделяется на4 части без сокращения;
-[план и проверка сохранности](design/PRODUCTION_BROWSER_CI_SHARDS_20261102.md). CI нового head ещё гейт.
+[план, сохранность и исправления flaky swipe/video](design/PRODUCTION_BROWSER_CI_SHARDS_20261102.md). CI нового head ещё гейт.
 TC101–107: [план/статус](design/TRAINER_CONNECTION_CONFIRMATION_20261102.md). В работе.
 P2: PR1928 слит; PR1929 — frontend SDK. PR1909 закрыт.
 MC1: [PR1927: база1932; CI/выпуск](design/CLIENT_REFERENCE_SCREENS_20261029.md).
