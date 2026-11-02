@@ -176,3 +176,20 @@ passed —337 files/3031 unit tests, coverage81.52/76.53/81.09/86.12;
 API1551 passed/242 skipped, lint/typecheck/policies/build passed.
 Целевые ProgramFeedbackForm2/2, workflow docs и diff whitespace passed.
 Новые сценарии не добавлены; прежние состояния, роли и проверки сохранены.
+
+## Итерация — 02.11.2026 — Codex / OpenAI: конфликты PR1928
+
+Задача: разрешить конфликты PR1928 со свежим main.
+Расхождения: только CURRENT_STATE — индекс P2 пересёкся с новым статусом MC1.
+Решение: сохранить P2/PR1928 и актуальную запись MC1 из main; устаревший
+статус MC1/PR1916 не возвращать. История остаётся в каноническом плане MC1.
+Код, native fixtures и тесты объединены автоматически; ручных продуктовых
+изменений, PNG updates и ослабления проверок нет; своих migrations поверх main нет.
+База: PR964ebb7a плюс main3efe3816. Проверки и новый head/CI — в PR1928.
+Production и зависимый PR1929 не меняются.
+
+Проверки merge: полный `npm run check` passed —338 files/3054 unit tests,
+coverage81.24/76.4/80.55/86 при прежних порогах; API1555 passed/254 skipped;
+lint/typecheck/policies/build passed. E2E TypeScript, workflow docs и
+diff whitespace passed. CURRENT_STATE118строк/11939байт, лимиты сохранены.
+Browser/visual нового head локально не запускались; новый CI — в PR1928.

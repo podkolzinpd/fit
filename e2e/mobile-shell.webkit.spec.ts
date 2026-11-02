@@ -930,8 +930,8 @@ test('iPhone: новый клиент выбирает готовую трени
   await page.goto('/auth')
   await nativeRegister(page, { key: `client-preset-${testInfo.workerIndex}-${Date.now()}@fit.local`, firstName: 'Клиент', role: 'client' })
 
-  await expect(page.getByRole('button', { name: 'Попробовать готовую тренировку' })).toBeVisible()
-  await page.getByRole('button', { name: 'Попробовать готовую тренировку' }).click()
+  await expect(page.getByRole('button', { name: 'Выбрать готовый план' })).toBeVisible()
+  await page.getByRole('button', { name: 'Выбрать готовый план' }).click()
   await expect(page.getByText('Всё тело без инвентаря')).toBeVisible()
   await expectNoHorizontalOverflow(page)
 
