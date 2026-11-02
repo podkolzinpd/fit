@@ -2,7 +2,7 @@ import type { Workout } from '../../shared/domain'
 import { addDays, dayOfMonth, formatLocalDate, formatWeekRange, weekdayShort, type LocalDate } from '../../shared/local-date'
 import { BackIcon, CheckIcon, ChevronRightIcon, CloseIcon } from '../../shared/icons'
 import { isIndependentScheduleWorkout } from './schedule-filters'
-import { scheduleEventStatus } from './schedule-presentation'
+import { compactCoachWeekRange, scheduleEventStatus } from './schedule-presentation'
 
 export function CoachFortnightComparison({ weekStart, today, itemsByDay, onOpenDay, onShift }: {
   weekStart: LocalDate
@@ -13,19 +13,21 @@ export function CoachFortnightComparison({ weekStart, today, itemsByDay, onOpenD
 }) {
   return <section className="coach-fortnight-comparison" aria-label="Сравнение двух недель">
     <div className="coach-fortnight-headings">
-      <span><button type="button" aria-label="Предыдущие 2 недели" onClick={() => onShift(-1)}><BackIcon /></button><span>{formatWeekRange(weekStart, addDays(weekStart, 6))}</span></span>
-      <span><span>{formatWeekRange(addDays(weekStart, 7), addDays(weekStart, 13))}</span><button type="button" aria-label="Следующие 2 недели" onClick={() => onShift(1)}><ChevronRightIcon /></button></span>
+      <span><button type="button" aria-label="Предыдущие 2 недели" onClick={() => onShift(-1)}><BackIcon /></button><span aria-label={formatWeekRange(weekStart, addDays(weekStart, 6))}>{compactCoachWeekRange(weekStart, addDays(weekStart, 6))}</span></span>
+      <span><span aria-label={formatWeekRange(addDays(weekStart, 7), addDays(weekStart, 13))}>{compactCoachWeekRange(addDays(weekStart, 7), addDays(weekStart, 13))}</span><button type="button" aria-label="Следующие 2 недели" onClick={() => onShift(1)}><ChevronRightIcon /></button></span>
     </div>
     <div className="coach-fortnight-days">
       {Array.from({ length: 7 }, (_, weekday) => [weekday, weekday + 7]).flat().map(offset => {
-        const date = addDays(weekStart, offset), workouts = itemsByDay.get(date) ?? []
+        const date = addDays(weekStart, offset)
+        const workouts = [...(itemsByDay.get(date) ?? [])].sort((a, b) =>
+          Number(Boolean(a.startTime)) - Number(Boolean(b.startTime)) || (a.startTime ?? '').localeCompare(b.startTime ?? ''))
         return <button key={date} type="button" className={`coach-fortnight-day${date === today ? ' is-today' : ''}`} data-date={date}
           aria-label={`${formatLocalDate(date)}, ${workouts.length ? `занятий: ${workouts.length}` : 'нет тренировок'}`} onClick={() => onOpenDay(date, weekStart)}>
           <span className="coach-fortnight-day-heading"><span>{weekdayShort(date)}</span><strong>{dayOfMonth(date)}</strong></span>
           <span className="coach-fortnight-appointments">
             {workouts.map(workout => {
               const status = scheduleEventStatus(workout, today)
-              return <span key={workout.id} className={`coach-fortnight-appointment schedule-event-${status.tone}`} title={`${workout.startTime?.slice(0, 5) ?? 'Без времени'} · ${workout.clientName} · ${status.label}`}>
+              return <span key={workout.id} className={`coach-fortnight-appointment schedule-event-${status.tone}${!workout.startTime ? ' is-untimed' : ''}`} title={`${workout.startTime?.slice(0, 5) ?? 'Без времени'} · ${workout.clientName} · ${status.label}`}>
                 <time>{workout.startTime?.slice(0, 5) ?? '—'}</time><span className="coach-fortnight-client">{workout.clientName}</span>
                 {workout.status === 'done' ? <CheckIcon /> : workout.status === 'cancelled' ? <CloseIcon /> : null}
                 <span className="sr-only">{!workout.startTime && 'Без времени · '}{status.label}{isIndependentScheduleWorkout(workout) ? ' · Самостоятельно' : ''}</span>
