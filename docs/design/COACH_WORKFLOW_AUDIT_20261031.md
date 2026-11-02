@@ -1749,3 +1749,32 @@ assertions/baselines/лимитов и дополнительный продук
 Дальше: один обычный push итоговой головы в тот же PR1942, новый полный CI;
 после действительной квитанции1941 — обычный merge/main CI/публикация/приёмка
 первого этапа, затем обязательные второй и третий этапы шаблонов.
+
+
+Уточнение TMPA — inherited clock failure CI — 03.11.2026 — Codex / OpenAI.
+
+Полный source CI41526811804 на fc04f8ef завершён failure: 32 jobs success,
+1 штатный database scope-skip, native2/4/job125559033029 и native4/4/job125559033061
+failed, вследствие этого итоговый e2e/job125568724460 failed. Cancelled0.
+Android41526811743 успешен. Это не зелёный допуск и не опубликованный этап.
+Обе части получили по 216 passed/2 failed: quick-entry booking history
+false/true, quick-workout-entry.cases.ts:152, ожидаемый /live вместо /detail.
+Per-job logs сохранены в outputs/coach-templates-audit-20261102/
+pr1-fc04-native-shard2-failure.log и pr1-fc04-native-shard4-failure.log.
+
+Тот же дефект блокирует main1baf/выпуск1941. Целевая дата теста жёстко
+2026-11-02, часы не закреплены, actor timezone Europe/Moscow. После 21:00 UTC
+наступило 3 ноября: приложение правильно предлагает действия с прошедшим
+занятием. Владелец1941 подтвердил CI snapshot и контролируемый red на 3 ноября;
+clock 2 ноября даёт 12/12 Chromium/WebKit ×3 без retries, 18.3 s. Все103
+прежних assertions сохранены, добавлен текстовый assert начала. Продукт,
+таймауты, flaky gate, механика и native8 не меняются.
+
+Общее исправление ведётся владельцем в техническом PR1949/source0dc85af2,
+CI41529044094. Это продолжение блокированной границы1941 перед нашим1942.
+Дублирующий patch и слепой rerun fc04 не выполняются. Наши локальные2925 unit,
+62 policy и26 browser относятся к неизменённому runtime; текущий удалённый
+failure отдельно сохранён. После фактического squash1949: ordinary merge
+его actual main в собственную ветку, проверки настоящего diff и новый полный
+exact-source CI. Собственный merge ждёт финальную публикационную квитанцию
+1941/1949 и зелёный CI нового source. Все три этапа TMPA остаются обязательными.
