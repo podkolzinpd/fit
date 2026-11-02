@@ -231,7 +231,12 @@ test('Lifecycle P3 rejects a new future result before any save', {tag:['@lime-cr
   await page.getByRole('button',{name:'Записать тренировку',exact:true}).click()
   await expect(page.getByRole('alert').filter({hasText:'Нельзя записать результат на будущую дату'}).first()).toBeVisible()
   expect(backend.getSaveAttempts(),'A copy of done is a new fact, not an edit of the source').toBe(0)
-  await page.getByRole('alert').filter({hasText:'Нельзя записать результат на будущую дату'}).first().scrollIntoViewIfNeeded()
+  const dateError=page.getByRole('alert').filter({hasText:'Нельзя записать результат на будущую дату'}).first()
+  await expect(dateError).toBeInViewport({ratio:1})
+  const errorBounds=await dateError.boundingBox();const footerBounds=await page.locator('.workout-action-row').boundingBox()
+  expect(errorBounds).not.toBeNull();expect(footerBounds).not.toBeNull()
+  expect(errorBounds!.y+errorBounds!.height,'Date message must be completely above the pinned save action').toBeLessThanOrEqual(footerBounds!.y)
+  expect(await dateError.evaluate(element=>{const r=element.getBoundingClientRect();return element.contains(document.elementFromPoint(r.left+r.width/2,r.top+r.height/2))}),'Date error must not sit behind the pinned save action').toBe(true)
   await page.screenshot({path:testInfo.outputPath('p3-copy-future-blocked.png')})
   let existingUpdates=0
   await page.route(`**/v1/workouts/${workoutId}/completed`,async route=>{
