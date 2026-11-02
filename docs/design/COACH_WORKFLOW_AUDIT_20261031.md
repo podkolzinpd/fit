@@ -1771,3 +1771,35 @@ native production build/startup и28/28browser Chromium/WebKit,29,1s,0retry:
 16entry/source+12calendar/geometry. Старые2927full-unit относятся к tree e8ca20b3,
 не выдаются за новый полный CI. PR1/source74928c35 отправлен отдельно на
 CI41452612538/Android41452612572; PR2/3 не отправлены и не опубликованы.
+
+Уточнение F2W7 — 02.11.2026 — Codex / OpenAI.
+
+PR1939/7135 прошёл полныйCI41442090555 (32success/1scope-skip) и Android
+41442090553; merged98f67f22. Его current-main CI41451565244 получил настоящий
+failure Chromium2/2/job125297921754: trainer-flow общий30s истекает на разных
+шагах, client auth case также превысил30s и прошёл только повтор. Публикация
+98f67f22 не объявляется успешной. Все остальные завершённые проверки прошли.
+Трассы показывают два полных/auth по4.2–4.8s до продуктовых действий; первая
+загрузка перед nativeSignIn/nativeRegister избыточна: helper сам устанавливает
+origin, seeds session и открывает/auth. Технический followup удаляет только
+эти два startup goto. Trainer-правка совпадает с проверенным соседним aed6ff34;
+client-случай независимо подтверждён своей трассой и тем же helper-контрактом.
+Все последующие действия, URL/role/data assertions, обязательные reload,
+скриншоты,30s/retries сохранены побайтно. Runtime приложения, native7, API,
+БД, UI-source hash bcbc2242 и роли/режимы не меняются.
+Проверка настоящего actor-scoped API/PG создаёт отдельную случайную БД
+каждому worker и удаляет только её;6/6 полных сценариев (каждый×3),1.7m,
+0retry/skips: client12.6–13.2s, trainer18.3–18.5s. E2E lint/typecheck прошли.
+Новый PR и current-main CI по действующему classifier обязательны; затем
+разрешённый API/web/signedAPK/OTA и public-приёмка продолжаются. CI-gates,
+inventory, baseline, assertions и лимиты ради зелёного результата не меняются.
+
+Интеграция native8 (02.11): actualmain0f5dbe7d/1945+1946 обычным merge
+получен всеми тремя собственными ветками. Frontend src/ при этой интеграции
+побайтно не изменился; общие SPA/assertions и оба журнала сохранены. Native
+версия1.1.3/code8 и pipeline взяты из main. Проверки OTA-policy15/15 прошли
+без изменения тестов; первый ограниченный запуск14/15 остановился только на
+loopback listen EPERM, повтор тех же тестов с разрешённым портом прошёл.
+RemotePR1942 остаётся на проверенном74928c35/CI41452612538SUCCESS32; новые
+local merge не отправлены. В своём окончательном окне актуальный source/head
+и новые обязательные проверки остаются необходимыми. Публикаций пакета ещё нет.
