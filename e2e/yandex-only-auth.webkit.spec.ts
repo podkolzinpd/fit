@@ -1632,7 +1632,7 @@ for (const { width, height, theme } of [
       publicReads += 1
       return route.fulfill({
       json: { publicId: publicTrainerId, draft: published, published, listedInCatalog: true,
-        version: 1, isBrandTrainer: false, yandexOffices: offices, publishedAt: '2026-10-29T09:00:00Z', updatedAt: '2026-10-29T09:00:00Z' },
+        version: 1, isBrandTrainer: false, yandexOffices: offices, publishedAt: '2026-10-29T09:00:00Z', updatedAt: '2026-10-29T09:00:00Z' } satisfies import('../src/shared/domain').TrainerProfessionalProfile,
     }) })
     await page.goto('/me/trainers')
     await page.getByRole('link', { name: 'Посмотреть анкету' }).click()
@@ -1652,11 +1652,18 @@ for (const { width, height, theme } of [
       return content.getBoundingClientRect().bottom - element.getBoundingClientRect().bottom
     })
     expect(unusedBottom, 'No tab bar is present: its reserved space must not clip the public page').toBeLessThanOrEqual(1)
-    await profile.evaluate(element => element.scrollTo({ top: element.scrollHeight }))
+    // Mobile uses the public page scroller; the standalone desktop route scrolls the document.
+    await profile.evaluate(element => {
+      const scroller = element.scrollHeight > element.clientHeight ? element : document.scrollingElement!
+      scroller.scrollTo({ top: scroller.scrollHeight })
+    })
     await expect(profile.getByText('Конец анкеты', { exact: true })).toBeInViewport()
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
     await page.screenshot({ path: testInfo.outputPath('public-trainer-bottom.png') })
-    await profile.evaluate(element => element.scrollTo({ top: 0 }))
+    await profile.evaluate(element => {
+      const scroller = element.scrollHeight > element.clientHeight ? element : document.scrollingElement!
+      scroller.scrollTo({ top: 0 })
+    })
     await profile.getByRole('button', { name: 'Открыть фото тренера Тестовый тренер' }).click()
     await expect(page.getByRole('dialog', { name: 'Фотографии тренера' })).toBeVisible()
     await page.getByRole('button', { name: 'Закрыть фото' }).click()
@@ -1768,8 +1775,11 @@ test.describe('shared trainer connection consent', () => {
         await route.fulfill({ json: { clientId } })
       })
       await consent.getByRole('button', { name: 'Сменить тренера', exact: true }).click()
-      if (source === 'link') await expect(page).toHaveURL(/\/me$/)
-      else await expect(page.getByRole('region', { name: 'Связь с тренером' })).toHaveCount(0)
+      if (source === 'link') {
+        await expect(page.getByRole('heading', { name: 'Тренер подключён', exact: true })).toBeVisible()
+        await page.getByRole('button', { name: 'Открыть кабинет', exact: true }).click()
+        await expect(page).toHaveURL(/\/me$/)
+      } else await expect(page.getByRole('region', { name: 'Связь с тренером' })).toHaveCount(0)
       expect(drafts).toHaveLength(2)
     })
   }

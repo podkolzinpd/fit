@@ -1,43 +1,32 @@
-import { expect, test, type Locator, type Page } from '@playwright/test'
+import { nativeSignIn, nativeRequest } from './native-local-fixture'
+import { expect, test, type Locator, type Page } from './native-local-fixture'
 
 const demoClientId = '11111111-1111-4111-8111-111111111111'
 
 async function login(page: Page, email: string) {
-  await page.goto('/auth')
-  await page.getByLabel('Email').fill(email)
-  await page.getByLabel('Пароль').fill('FitLocal123!')
-  await Promise.all([
-    page.waitForURL(/\/(?:today|me)$/),
-    page.getByRole('button', { name: 'Войти' }).click(),
-  ])
+  await nativeSignIn(page, email)
+  await expect(page).toHaveURL(/\/(?:today|me)$/)
 }
 
 for (const role of ['trainer', 'client'] as const) {
   test(`${role}: completed exercise deletion saves to the database and stays deleted on the next edit`, async ({ page }, testInfo) => {
-    const requestPromise = page.waitForRequest((request) => request.url().includes('/rest/v1/rpc/list_workouts'))
     await login(page, `${role}@fit.local`)
-    const readRequest = await requestPromise
-    const headers = {
-      apikey: (await readRequest.headerValue('apikey'))!,
-      authorization: (await readRequest.headerValue('authorization'))!,
-    }
-    // Only synthetic local fixtures. The actual edit/save is through the UI
-    // and the real RPC, with no mutation response interception.
-    const api = new URL('/rest/v1/', readRequest.url()).href
-    const response = await page.request.post(`${api}rpc/save_completed_workout`, {
-      headers,
-      data: { p_workout: {
+    // Fixture creation and persistence assertions use the real actor-scoped API.
+    const response = await nativeRequest(page, '/v1/workouts/completed', {
+      method: 'POST',
+      body: {
         clientId: demoClientId, workoutDate: '2026-09-04',
-        notes: `Exercise removal QA ${role}`,
+        notes: `Exercise removal QA ${role}`, requestId: null, startTime: null, endTime: null, stageId: null, favoriteTitle: null,
         exercises: [0, 1, 2].map((position) => ({
           source: 'system', ref: 'squat', name: `Проверка удаления ${position + 1}`,
-          muscleGroup: 'legs', inputKind: 'strength', position,
-          sets: [{ position: 0, weightKg: 10, reps: 10 }, { position: 1, weightKg: 20, reps: 15 }],
+          muscleGroup: 'legs', inputKind: 'strength', position, sourceExerciseId: null, customExerciseId: null, blockId: crypto.randomUUID(), blockType: 'single', blockPreset: 'set', blockRounds: 1, restBetweenExercisesSec: 0, restBetweenRoundsSec: 0, restBetweenSetsSec: 60, trainerComment: null,
+          sets: [{ position: 0, weightKg: 10, reps: 10 }, { position: 1, weightKg: 20, reps: 15 }].map(set => ({ ...set, sourceSetId: null, durationMin: null, durationSec: null, distanceKm: null, rpe: null })),
         })),
-      } },
+      },
     })
-    expect(response.ok()).toBe(true)
-    const workoutId: unknown = await response.json()
+    expect(response.ok).toBe(true)
+    const result: unknown = await response.json()
+    const workoutId = typeof result === 'object' && result !== null && 'workout' in result && typeof result.workout === 'object' && result.workout !== null && 'id' in result.workout ? result.workout.id : null
     if (typeof workoutId !== 'string') throw new Error('Fixture workout was not created')
     await page.goto(`/workouts/${workoutId}/edit`)
     for (let removed = 0; removed < 2; removed += 1) {
@@ -68,9 +57,9 @@ for (const role of ['trainer', 'client'] as const) {
         await page.screenshot({ path: testInfo.outputPath(`${role}-saved-removal-${theme}-${width}.png`), fullPage: true })
       }
     }
-    const roots = await page.request.get(`${api}workouts?id=eq.${workoutId}&select=version,status`, { headers })
+    const roots = await nativeRequest(page, `/v1/training-data?scope=workouts&workoutId=${workoutId}`)
     const records: unknown = await roots.json()
-    expect(records).toEqual([expect.objectContaining({ status: 'done' })])
+    expect(records).toMatchObject({ workouts: [expect.objectContaining({ status: 'done' })] })
   })
 }
 
