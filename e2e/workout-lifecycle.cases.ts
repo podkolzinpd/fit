@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test'
-import { clientId, newWorkoutId, conversationId, trainerId, mockPilot } from './fit-lime-fixtures'
+import { clientId, newWorkoutId, conversationId, trainerId, workoutId, workout, restTimerWorkout, mockPilot } from './fit-lime-fixtures'
 
 export function workoutLifecycleCases() {
 for (const entry of ['start', 'quick-plan', 'full-plan'] as const) test(`Lifecycle P1 inline client creation retains ${entry} context`, { tag: ['@lime-critical'] }, async ({ page }, testInfo) => {
@@ -39,7 +39,7 @@ for (const entry of ['start', 'quick-plan', 'full-plan'] as const) test(`Lifecyc
   expect(backend.getSaveAttempts()).toBe(0)
   if (entry === 'start') {
     await expect(page.locator('.quick-start-format')).toContainText('Новая спортсменка')
-    await expect(page.getByRole('button', { name: 'Начать', exact: true })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Начать тренировку', exact: true })).toBeVisible()
   } else {
     await expect(page.getByRole('textbox', { name: 'Название тренировки', exact: true })).toHaveValue('План нового клиента')
     await expect(page.getByRole('button', { name: /Клиент: Новая спортсменка/ })).toBeVisible()
@@ -160,6 +160,121 @@ test('Lifecycle P2 completed result has a direct entry and never saves on mode s
   await page.getByRole('button', { name: 'Завершённая', exact: true }).click()
   expect(backend.getSaveAttempts()).toBe(0)
   await page.screenshot({ path: testInfo.outputPath('lifecycle-p2-result.png') })
+})
+
+const lifecycleTrainer = 'c0ac0000-6010-4000-8000-000000000001'
+for (const role of ['trainer', 'client'] as const) test(`Lifecycle P3 future plan explains today's start for ${role}`, {tag:['@lime-critical']}, async ({page},testInfo) => {
+  await page.clock.setFixedTime(new Date('2026-11-01T09:00:00Z'))
+  const source={...workout,status:'planned' as const,workoutDate:'2026-11-03',...(role==='trainer'?{trainerId:lifecycleTrainer,createdBy:lifecycleTrainer}:{})}
+  await mockPilot(page,{role,profileId:role==='trainer'?lifecycleTrainer:clientId,fitLime:true,clientLime:role==='client',workouts:[source]})
+  const writes:string[]=[]
+  page.on('request',r=>{if(r.method()==='POST'&&r.url().includes('/workouts/'))writes.push(r.url())})
+  await page.goto(`/workouts/${workoutId}`)
+  await expect(page.getByText('Тренировка начнётся сегодня. Исходная дата плана сохранится.')).toBeVisible()
+  await expect(page.getByRole('button',{name:'Начать сегодня',exact:true})).toBeVisible()
+  expect(writes).toHaveLength(0)
+  await page.screenshot({path:testInfo.outputPath(`p3-future-${role}.png`)})
+  await page.getByRole('button',{name:'Начать сегодня',exact:true}).click()
+  await expect(page).toHaveURL(/\/live$/)
+  expect(writes.filter(u=>u.endsWith('/start'))).toHaveLength(1)
+})
+
+test('Lifecycle P3 future attendance changes date then confirms the same appointment', {tag:['@lime-critical']},async({page},testInfo)=>{
+  await page.clock.setFixedTime(new Date('2026-11-01T09:00:00Z'))
+  const backend=await mockPilot(page,{profileId:lifecycleTrainer,fitLime:true,workouts:[{...workout,trainerId:lifecycleTrainer,createdBy:lifecycleTrainer,status:'planned',workoutDate:'2026-11-03',trainingFormat:'with_trainer',exercises:[]}]})
+  const finishes:unknown[]=[]
+  page.on('request',r=>{if(r.method()==='POST'&&r.url().endsWith('/finish'))finishes.push(r.postDataJSON() as unknown)})
+  await page.goto(`/workouts/${workoutId}`)
+  await page.getByRole('button',{name:'Отметить проведённой',exact:true}).click()
+  let sheet=page.getByRole('dialog',{name:'Отметить проведённой',exact:true})
+  await expect(sheet.getByText('Дата занятия ещё не наступила')).toBeVisible()
+  await expect(sheet.getByRole('button',{name:'Подтвердить проведение'})).toBeDisabled()
+  await page.screenshot({path:testInfo.outputPath('p3-future-attendance.png')})
+  await sheet.getByRole('button',{name:'Отмена',exact:true}).click()
+  expect(finishes).toHaveLength(0)
+  expect(backend.getWorkouts()[0]).toMatchObject({status:'planned',workoutDate:'2026-11-03'})
+  await page.getByRole('button',{name:'Отметить проведённой',exact:true}).click()
+  await sheet.getByRole('button',{name:'Изменить дату',exact:true}).click()
+  const slot=page.getByRole('dialog',{name:'Дата и время',exact:true})
+  await expect(slot.getByRole('button',{name:'Сохранить дату'})).toBeDisabled()
+  await slot.getByRole('button',{name:'Выбрать дату',exact:true}).click()
+  const calendar=page.getByRole('dialog',{name:'Дата',exact:true})
+  await calendar.getByRole('button',{name:'1 ноября 2026 г.',exact:true}).click()
+  await calendar.getByRole('button',{name:'Применить дату'}).click()
+  await slot.getByRole('button',{name:'Сохранить дату'}).click()
+  sheet=page.getByRole('dialog',{name:'Отметить проведённой',exact:true})
+  await expect(sheet.getByText('Дата занятия ещё не наступила')).toHaveCount(0)
+  await expect(sheet.getByRole('button',{name:'Подтвердить проведение'})).toBeEnabled()
+  expect(finishes).toHaveLength(0)
+  await sheet.getByRole('button',{name:'Подтвердить проведение'}).click()
+  await expect(sheet).toHaveCount(0)
+  expect(finishes).toHaveLength(1)
+  expect(backend.getWorkouts()).toHaveLength(1)
+  expect(backend.getWorkouts()[0]).toMatchObject({id:workoutId,status:'done',workoutDate:'2026-11-01'})
+})
+
+test('Lifecycle P3 rejects a new future result before any save', {tag:['@lime-critical']},async({page},testInfo)=>{
+  await page.clock.setFixedTime(new Date('2026-11-01T09:00:00Z'))
+  const source={...restTimerWorkout(),status:'done' as const,workoutDate:'2026-11-03',createdBy:lifecycleTrainer,trainerId:lifecycleTrainer,completedAt:'2026-10-31T10:00:00Z'}
+  const backend=await mockPilot(page,{profileId:lifecycleTrainer,fitLime:true,workouts:[source]})
+  await page.goto(`/workouts/new?mode=completed&date=2026-11-03&client=${clientId}`)
+  await page.getByRole('button',{name:'Выбрать упражнения',exact:true}).click()
+  await page.getByLabel('Поиск упражнения').fill('присед со штангой')
+  await page.getByRole('button',{name:'Выбрать: Присед со штангой',exact:true}).click()
+  await page.getByRole('button',{name:'Добавить 1',exact:true}).click()
+  await page.getByRole('button',{name:'Записать тренировку',exact:true}).click()
+  await expect(page.getByRole('alert').filter({hasText:'Нельзя записать результат на будущую дату'}).first()).toBeVisible()
+  expect(backend.getSaveAttempts()).toBe(0)
+  await page.goto(`/workouts/new?copy=${workoutId}&mode=completed&client=${clientId}`)
+  await expect(page.getByLabel('Дата',{exact:true})).toHaveValue('2026-11-01')
+  await page.getByLabel('Дата',{exact:true}).fill('2026-11-03')
+  await page.getByRole('button',{name:'Записать тренировку',exact:true}).click()
+  await expect(page.getByRole('alert').filter({hasText:'Нельзя записать результат на будущую дату'}).first()).toBeVisible()
+  expect(backend.getSaveAttempts(),'A copy of done is a new fact, not an edit of the source').toBe(0)
+  const dateError=page.getByRole('alert').filter({hasText:'Нельзя записать результат на будущую дату'}).first()
+  await expect(dateError).toBeInViewport({ratio:1})
+  const errorBounds=await dateError.boundingBox();const footerBounds=await page.locator('.workout-action-row').boundingBox()
+  expect(errorBounds).not.toBeNull();expect(footerBounds).not.toBeNull()
+  expect(errorBounds!.y+errorBounds!.height,'Date message must be completely above the pinned save action').toBeLessThanOrEqual(footerBounds!.y)
+  expect(await dateError.evaluate(element=>{const r=element.getBoundingClientRect();return element.contains(document.elementFromPoint(r.left+r.width/2,r.top+r.height/2))}),'Date error must not sit behind the pinned save action').toBe(true)
+  await page.screenshot({path:testInfo.outputPath('p3-copy-future-blocked.png')})
+  let existingUpdates=0
+  await page.route(`**/v1/workouts/${workoutId}/completed`,async route=>{
+    expect(route.request().method()).toBe('PUT')
+    const draft=route.request().postDataJSON() as {workoutDate:string;exercises:Array<{sets:Array<{weightKg:number;reps:number}>}>}
+    expect(draft.workoutDate).toBe('2026-11-03')
+    expect(draft.exercises[0]?.sets[0]).toMatchObject({weightKg:25,reps:12})
+    existingUpdates+=1
+    await route.fulfill({json:{workout:{id:workoutId}}})
+  })
+  await page.goto(`/workouts/${workoutId}/edit`)
+  await expect(page.getByLabel('Дата',{exact:true})).toHaveValue('2026-11-03')
+  await page.getByRole('button',{name:'Выбрать упражнения',exact:true}).click()
+  await page.getByLabel('Поиск упражнения').fill('присед со штангой')
+  await page.getByRole('button',{name:'Выбрать: Присед со штангой',exact:true}).click()
+  await page.getByRole('button',{name:'Добавить 1',exact:true}).click()
+  await page.getByLabel('Фактический вес, подход 1',{exact:true}).fill('25')
+  await page.getByLabel('Фактические повторы, подход 1',{exact:true}).fill('12')
+  await page.getByRole('button',{name:'Сохранить изменения',exact:true}).click()
+  await expect(page).toHaveURL(new RegExp(`/workouts/${workoutId}$`))
+  expect(existingUpdates).toBe(1)
+  expect(backend.getWorkouts()).toHaveLength(1)
+  expect(backend.getWorkouts()[0]).toMatchObject({id:workoutId,status:'done',workoutDate:'2026-11-03'})
+  await page.screenshot({path:testInfo.outputPath('p3-existing-done-preserved.png')})
+})
+
+test('Lifecycle P3 ready plans describe planning and open review without starting or saving', {tag:['@lime-critical']},async({page})=>{
+  await mockPilot(page,{role:'client',profileId:clientId,clientLime:false,workouts:[]})
+  const writes:string[]=[]
+  page.on('request',r=>{if(r.method()==='POST'&&new URL(r.url()).pathname.startsWith('/v1/workouts'))writes.push(r.url())})
+  await page.goto('/me')
+  const entry=page.getByRole('button',{name:'Выбрать готовый план',exact:true})
+  await expect(entry).toContainText('Готовые планы')
+  await expect(entry).toContainText('Выберите план и запланируйте тренировку')
+  await entry.click()
+  await page.getByRole('region',{name:'Готовые тренировки',exact:true}).getByRole('button',{name:'Выбрать',exact:true}).first().click()
+  await expect(page.getByRole('heading',{name:'Проверьте тренировку',exact:true})).toBeVisible()
+  expect(writes).toHaveLength(0)
 })
 
 }

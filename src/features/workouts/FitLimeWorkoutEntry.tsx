@@ -35,13 +35,13 @@ export function FitLimeWorkoutEntry({ date, returnTo, onClose, resumeRequestId }
     <button type="button" className="fit-lime-plan-close" aria-label="Закрыть выбор действия" disabled={starting} onClick={() => dialog.current?.close()}><CloseIcon /></button>
     {choosingClient && <button type="button" className="fit-lime-plan-back" aria-label="Назад к выбору действия" disabled={starting} onClick={() => setChoosingClient(false)}><BackIcon /></button>}
     <h2>{choosingClient ? 'Начать тренировку' : 'Новая тренировка'}</h2>
-    {choosingClient ? <QuickStartWorkout role="trainer" compact startLabel="Выбрать клиента" startOnClientSelection initialPickerOpen onPickerCancel={() => setChoosingClient(false)} clients={clients.data} workouts={workouts.data}
+    {choosingClient ? <QuickStartWorkout role="trainer" compact startLabel="Выбрать клиента" initialPickerOpen onPickerCancel={() => setChoosingClient(false)} clients={clients.data} workouts={workouts.data}
       loading={clients.isLoading || workouts.isLoading} error={clients.error ?? workouts.error}
       onRetry={() => { void clients.refetch(); void workouts.refetch() }} returnTo={returnTo} onPendingChange={setStarting} /> : <>
-      <Coachmark id="lime-direct-client-start-2026-10" userId={actor?.userId} title="Начало без лишнего шага" description="Выберите клиента — занятие начнётся сразу, а уже начатое откроется без дубля.">
+      <Coachmark id="lime-direct-client-start-2026-10" userId={actor?.userId} title="Начать тренировку" description="Выберите клиента и формат, затем нажмите «Начать тренировку».">
         <button type="button" className="primary wide" onClick={() => setChoosingClient(true)}>Начать сейчас</button>
       </Coachmark>
-      <p>Выберите клиента — тренировка начнётся сразу. Если занятие уже идёт, откроем его.</p>
+      <p>Выберите клиента и формат. Если занятие уже идёт, можно продолжить его.</p>
       <button type="button" className="secondary wide" onClick={() => setPlanning(true)}>Запланировать</button>
       <p>Выбрать дату и подготовить тренировку.</p>
       <Link className="link wide" to={`/workouts/new?date=${date}&mode=completed`} state={{ returnTo }}>Записать результат</Link>

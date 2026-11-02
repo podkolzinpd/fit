@@ -7,6 +7,7 @@ import { WorkoutAttendanceSheet } from './WorkoutAttendanceSheet'
 
 const backend = vi.hoisted(() => ({ confirmAttendance: vi.fn(), cancelPlanned: vi.fn(), get: vi.fn(), listClient: vi.fn() }))
 vi.mock('../../app/data-backend-context', () => ({ useDataBackend: () => ({ workouts: backend, trainerFinance: backend }) }))
+vi.mock('../../app/auth-context', () => ({ useAuth: () => ({ actor: { timezone: 'Europe/Moscow' } }) }))
 const workout: Workout = { id:'workout-1',clientId:'client-1',clientName:'Спортсмен',workoutDate:localDate('2026-10-31'),
   status:'planned',trainingFormat:'with_trainer',title:'Название',startTime:'10:00',endTime:null,startedAt:null,completedAt:null,
   notes:null,stageId:null,stageTitle:null,version:7,exercises:[] }
@@ -78,4 +79,17 @@ describe('shared workout attendance confirmation', () => {
     await waitFor(()=>expect(completed).toHaveBeenCalledOnce())
     expect(backend.confirmAttendance).toHaveBeenCalledOnce()
   })
+})
+
+it('requires a deliberate date change before future attendance and performs no write on cancel', () => {
+  const onChangeDate=vi.fn(), onClose=vi.fn()
+  render(<QueryClientProvider client={new QueryClient()}><WorkoutAttendanceSheet workout={{...workout,workoutDate:localDate('2099-01-01')}} action="complete" onChangeDate={onChangeDate} onClose={onClose} onCompleted={vi.fn()} /></QueryClientProvider>)
+  expect(screen.getByText('Дата занятия ещё не наступила')).toBeVisible()
+  expect(screen.getByRole('button',{name:'Подтвердить проведение'})).toBeDisabled()
+  fireEvent.click(screen.getByRole('button',{name:'Изменить дату'}))
+  expect(onChangeDate).toHaveBeenCalledOnce()
+  fireEvent.click(screen.getByRole('button',{name:'Отмена'}))
+  expect(onClose).toHaveBeenCalledOnce()
+  expect(backend.listClient).not.toHaveBeenCalled()
+  expect(backend.confirmAttendance).not.toHaveBeenCalled()
 })

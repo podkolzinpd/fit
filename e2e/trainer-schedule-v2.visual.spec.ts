@@ -1168,7 +1168,8 @@ for (const width of [375, 390, 430, 1440]) {
     if (width === 390) {
       await page.screenshot({ path: info.outputPath('coach-reference-first-entry.png') })
       const entryCoachmark = page.getByRole('dialog', { name: 'Новая тренировка', exact: true }).locator('.coachmark-bubble')
-      await expect(entryCoachmark).toContainText('Начало без лишнего шага')
+      await expect(entryCoachmark).toContainText('Начать тренировку')
+      await expect(entryCoachmark).toContainText('Выберите клиента и формат, затем нажмите «Начать тренировку».')
       const entryClose = page.getByRole('dialog', { name: 'Новая тренировка', exact: true }).getByRole('button', { name: 'Закрыть выбор действия', exact: true })
       expect(await entryClose.evaluate(node => { const r = node.getBoundingClientRect(); return node.contains(document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2)) })).toBe(true)
       await entryCoachmark.getByRole('button', { name: 'Понятно', exact: true }).click()
@@ -3632,6 +3633,8 @@ for (const profileId of [trainerId, '10000000-0000-4000-8000-000000000010']) {
     await page.screenshot({ path: testInfo.outputPath('lime-entry-choice.png') })
     await choice.getByRole('button', { name: 'Начать сейчас' }).click()
     await page.getByRole('dialog', { name: 'Выбор клиента' }).getByRole('button', { name: /Алексей Смирнов/ }).click()
+    expect(mutations).toHaveLength(0)
+    await page.getByRole('button', { name: 'Продолжить тренировку', exact: true }).click()
     await expect(page).toHaveURL(new RegExp(`/workouts/${workoutId}/live$`))
     expect(mutations).toHaveLength(0)
     await page.goto('/today?date=2026-09-29')
@@ -3834,7 +3837,7 @@ for (const width of [390, 430, 1440]) {
     await expect(format.getByRole('button', { name: 'С тренером', exact: true })).toHaveAttribute('aria-pressed', 'true')
     await format.getByRole('button', { name: 'Самостоятельно', exact: true }).click()
     await expect(format.getByRole('button', { name: 'Самостоятельно', exact: true })).toHaveAttribute('aria-pressed', 'true')
-    const start = format.getByRole('button', { name: 'Начать', exact: true })
+    const start = format.getByRole('button', { name: 'Начать тренировку', exact: true })
     await expect(start).toHaveCSS('background-color', 'rgb(182, 239, 77)')
     await start.scrollIntoViewIfNeeded()
     for (const button of await format.getByRole('button').all()) {
@@ -5029,8 +5032,8 @@ for (const profileId of [trainerId, '10000000-0000-4000-8000-000000000010']) {
     await page.clock.setFixedTime(new Date('2026-09-24T12:00:00+03:00'))
     await mockPilot(page, { profileId, fitLime: true, workouts: [{ ...workout, trainerId: profileId, createdBy: profileId, workoutDate: '2026-09-26' }] })
     await page.goto(`/workouts/${workoutId}`)
-    await expect(page.getByText('При запуске сейчас тренировка начнётся сегодня,', { exact: false })).toBeVisible()
-    await expect(page.getByRole('button', { name: 'Начать тренировку', exact: true })).toBeVisible()
+    await expect(page.getByText('Тренировка начнётся сегодня. Исходная дата плана сохранится.', { exact: true })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Начать сегодня', exact: true })).toBeVisible()
     await mockPilot(page, { profileId, fitLime: true, workouts: [{ ...workout,
       status: 'done', workoutDate: '2026-09-24', startTime: '12:00:00', endTime: null,
       completedAt: '2026-09-25T00:10:00+03:00', plannedDate: '2026-09-26',

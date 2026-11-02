@@ -312,7 +312,7 @@ test('Figma workout Coach reference full editor is absent for non-pilot trainer'
   await expect(page.getByLabel('Запись тренировки')).toBeVisible()
 })
 
-test('Figma workout Coach reference second trainer starts immediately after client choice', async ({ page }) => {
+test('Figma workout Coach reference second trainer starts explicitly after client and format choice', async ({ page }) => {
   await mockPilot(page, { profileId: 'c0ac0000-6010-4000-8000-000000000002', fitLime: true, workouts: [] })
   await page.goto('/today?date=2026-09-24')
   await page.getByRole('button', { name: 'Новая тренировка', exact: true }).click()
@@ -321,6 +321,8 @@ test('Figma workout Coach reference second trainer starts immediately after clie
   await expect(picker).toHaveClass(/coach-reference-sheet/)
   await expect(picker.getByRole('button', { name: 'Применить клиента' })).toHaveCount(0)
   await picker.getByRole('button', { name: /Алексей Смирнов/ }).click()
+  await expect(page.locator('.quick-start-format')).toBeVisible()
+  await page.getByRole('button', { name: 'Начать тренировку', exact: true }).click()
   await expect(page).toHaveURL(/\/live$/)
   await expect(page.locator('.quick-start-format')).toHaveCount(0)
 })
@@ -997,7 +999,7 @@ for (const fitLime of [true, false]) {
   })
 }
 
-test('Lime direct start opens Live immediately after choosing the client', async ({ page }) => {
+test('Lime direct start requires explicit confirmation after choosing the client', async ({ page }) => {
   await mockPilot(page, { fitLime: true, workouts: [] })
   const commands: unknown[] = []
   page.on('request', (request) => { if (request.url().endsWith('/workouts/quick-start')) commands.push(request.postDataJSON() as unknown) })
@@ -1005,6 +1007,8 @@ test('Lime direct start opens Live immediately after choosing the client', async
   await page.getByRole('button', { name: 'Новая тренировка', exact: true }).click()
   await page.getByRole('button', { name: 'Начать сейчас', exact: true }).click()
   await page.getByRole('dialog', { name: 'Выбор клиента' }).getByRole('button', { name: /Алексей Смирнов/ }).click()
+  expect(commands).toHaveLength(0)
+  await page.getByRole('button', { name: 'Начать тренировку', exact: true }).click()
   await expect(page).toHaveURL(new RegExp(`/workouts/${newWorkoutId}/live$`))
   await expect(page.locator('.live-workout-page')).toBeVisible()
   expect(commands).toHaveLength(1)
@@ -1058,7 +1062,8 @@ test('Lime start now retries one command without using the selected future date'
   await page.getByRole('button', { name: 'Новая тренировка', exact: true }).click()
   await page.getByRole('button', { name: 'Начать сейчас' }).click()
   await page.getByRole('dialog', { name: 'Выбор клиента' }).getByRole('button', { name: /Алексей Смирнов/ }).click()
-  await expect(page.getByRole('button', { name: 'Начать', exact: true })).toHaveCount(0)
+  expect(commands).toHaveLength(0)
+  await page.getByRole('button', { name: 'Начать тренировку', exact: true }).click()
   await expect(page.getByRole('button', { name: 'Запланировать', exact: true })).toHaveCount(0)
   await expect(page.getByRole('alert')).toContainText('Не удалось начать тренировку')
   await page.getByRole('button', { name: 'Повторить', exact: true }).click()
@@ -1899,6 +1904,7 @@ test('Lime complete lifecycle preserves one plan through start resume and finish
   await page.getByRole('button', { name: 'Новая тренировка', exact: true }).click()
   await page.getByRole('button', { name: 'Начать сейчас', exact: true }).click()
   await page.getByRole('dialog', { name: 'Выбор клиента' }).getByRole('button', { name: /Алексей Смирнов/ }).click()
+  await page.getByRole('button', { name: 'Продолжить тренировку', exact: true }).click()
   await expect(page).toHaveURL(new RegExp(`/workouts/${newWorkoutId}/live$`))
   const before = JSON.stringify(backend.getWorkouts()[0]!.exercises)
   await page.getByRole('button', { name: 'Завершить тренировку', exact: true }).click()
