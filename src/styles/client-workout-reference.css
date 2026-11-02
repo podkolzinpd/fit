@@ -401,7 +401,14 @@
 .phone-frame.fit-client-lime.client-workout-reference.live-identity .client-live-completed-mark svg > image { opacity: 0; }
 .phone-frame.fit-client-lime.client-workout-reference.live-identity .client-live-card-body > div { display: block; }
 .phone-frame.fit-client-lime.client-workout-reference.live-identity .client-live-card-content { border-top: 1px solid var(--lime-divider); padding-top: 10px; }
-.phone-frame.fit-client-lime.client-workout-reference.live-identity .client-live-card.upcoming { background: var(--lime-surface); }
+.phone-frame.fit-client-lime.client-workout-reference.live-identity .client-live-card.upcoming { --workout-live-card: var(--lime-surface); background: var(--workout-live-card); opacity: 1; }
+/* Swipe foreground must match its card even in the subdued future state. */
+.phone-frame.fit-client-lime.client-workout-reference.live-identity .client-live-card .workout-set-swipe > .workout-swipe-content { background: var(--workout-live-card); }
+.phone-frame.fit-client-lime.client-workout-reference.live-identity .client-live-card.upcoming .client-live-card-content { opacity: .58; }
+/* Light mode keeps explicit secondary ink instead of fading dark text below
+   readable contrast. The future card surface never inherits legacy opacity. */
+.phone-frame.fit-client-lime.client-workout-reference.live-identity.theme-light .client-live-card.upcoming { --workout-live-text: var(--lime-text-secondary); }
+.phone-frame.fit-client-lime.client-workout-reference.live-identity.theme-light .client-live-card.upcoming .client-live-card-content { opacity: 1; }
 .phone-frame.fit-client-lime.client-workout-reference.live-identity .client-live-card.upcoming .live-exercise-head :is(h2,h3) { color: var(--lime-text-secondary); }
 .phone-frame.fit-client-lime.client-workout-reference.live-identity .client-live-card .coach-v79-toggle-arrow img { background: var(--lime-text-secondary); object-position: -9999px; }
 .phone-frame.fit-client-lime.client-workout-reference.live-identity .client-live-card .coach-v79-toggle-closed { mask: url('../assets/coach-live-v79/card-collapse.svg') center / contain no-repeat; }
@@ -415,7 +422,7 @@
 @media (max-width:359px) {
   .phone-frame.fit-client-lime.client-workout-reference.live-identity .client-live-v79 { --coach-live-row-inset: 0px; --coach-live-number-width: 34px; }
   .phone-frame.fit-client-lime.client-workout-reference.live-identity .client-live-card .live-exercise-head { gap: 6px; }
-  .phone-frame.fit-client-lime.client-workout-reference.live-identity .client-live-v79 .client-live-card .live-exercise-head :is(h2,h3) { font-size: 20px; line-height: 24px; }
+  .phone-frame.fit-client-lime.client-workout-reference.live-identity .client-live-v79.coach-live-density .client-live-card .live-exercise-head :is(h2,h3) { font-size: 20px; line-height: 24px; }
   .phone-frame.fit-client-lime.client-workout-reference.live-identity .client-live-v79 .client-live-card .live-exercise-head:is(:has(.client-live-card-media),:has(.workout-exercise-header-main),:not(:has(.workout-exercise-header-main))) .workout-exercise-header-summary { grid-column: 1 / -1; }
 }
 
