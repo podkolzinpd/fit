@@ -9,10 +9,12 @@ async function homeFixture(page: Page, theme: string, lime = true, firstRun = fa
     client: { id: clientId, trainerId, fullName: 'Анна' }, experiments: { trainerScheduleV2: true, nutrition: true, clientLime: lime },
   } } }))
   if (firstRun) await page.route('**/v1/clients', route => route.fulfill({ json: { clients: [] } }))
-  const state = { mode: 'data', reads: 0 }
-  await page.route(/\/v1\/me\/nutrition\?/, route => {
+  const state = { mode: 'data', reads: 0, recoverAfterRetry: false }
+  await page.route(/\/v1\/me\/nutrition\?/, async route => {
     state.reads++
-    if (state.mode === 'error') return route.fulfill({ status: 503, json: { error: 'service_unavailable' } })
+    // Background reads must not recover before the tested manual retry.
+    const retryClicked = state.recoverAfterRetry && await page.evaluate(() => document.documentElement.dataset.nutritionRetryClicked === 'true')
+    if (state.mode === 'error' && !retryClicked) return route.fulfill({ status: 503, json: { error: 'service_unavailable' } })
     return route.fulfill({ json: { access: 'granted', entries: state.mode === 'empty' ? [] : [{
       id: 'f00d0000-6010-4000-8000-000000000013', day: '2026-10-15', meal: 'lunch', name: 'Курица с рисом',
       basis: '100g', grams: 150, calories: 152.2, protein: 9.8, fat: 4.2, carbs: 18.8,
@@ -25,8 +27,14 @@ async function homeFixture(page: Page, theme: string, lime = true, firstRun = fa
     localStorage.setItem(`fit.clientLime.theme.${id}`, theme)
     const key = `fit.coachmarks-seen.${id}`
     const seen = JSON.parse(localStorage.getItem(key) ?? '[]') as string[]
-    localStorage.setItem(key, JSON.stringify([...seen, 'nutrition-client-20261010']))
+    localStorage.setItem(key, JSON.stringify([...seen, 'nutrition-client-20261010', 'client-drafts-2026-10']))
     localStorage.setItem('fit.installDismissed', 'true')
+    document.addEventListener('click', event => {
+      const button = event.target instanceof Element ? event.target.closest('button') : null
+      if (button?.closest('.nutrition-summary') && button.textContent?.trim() === 'Повторить') {
+        document.documentElement.dataset.nutritionRetryClicked = 'true'
+      }
+    }, true)
   }, { id: clientId, theme })
   return state
 }
@@ -78,7 +86,11 @@ for (const theme of ['light', 'dark']) test(`nutrition home uses one vertical su
   await expect(card.getByText('Сегодня записей нет')).toHaveCount(0)
   const retry = card.getByRole('button', { name: 'Повторить' })
   await expect(retry).toBeVisible()
-  state.mode = 'data'
+  state.recoverAfterRetry = true
+  const foregroundRefresh = page.waitForResponse(response => /\/v1\/me\/nutrition\?/.test(response.url()))
+  await page.evaluate(() => window.dispatchEvent(new Event('visibilitychange')))
+  expect((await foregroundRefresh).status()).toBe(503)
+  await expect(card.getByRole('alert')).toContainText('Не удалось загрузить питание.')
   await retry.click()
   await expect(card.getByText('228,3 ккал')).toBeVisible()
 })
@@ -86,18 +98,19 @@ for (const theme of ['light', 'dark']) test(`nutrition home uses one vertical su
 for (const mode of ['lime', 'identity', 'first-run']) test(`nutrition unmounts throughout workout voice/text flow ${mode}`, async ({ page }, info) => {
   await homeFixture(page, 'dark', mode === 'lime', mode === 'first-run')
   await mockClientStreamingVoice(page)
-  await page.addInitScript(() => {
+  await page.goto('/me')
+  await expect(page.locator('.phone-frame')).toHaveClass(mode === 'lime' ? /fit-client-lime/ : /client-home-identity/)
+  // Count hidden DOM nodes too: workout input must unmount the summary.
+  const card = page.locator('section.nutrition-summary')
+  await expect(card.getByText('228,3 ккал')).toBeVisible()
+  // Install after navigation: multiple init scripts have no defined order.
+  await page.evaluate(() => {
     const devices = navigator.mediaDevices
     const get = devices.getUserMedia.bind(devices)
     Object.defineProperty(devices, 'getUserMedia', { value: () => new Promise(resolve => {
       Object.assign(window, { grantNutritionTestMicrophone: () => { void get({ audio: true }).then(resolve) } })
     }) })
   })
-  await page.goto('/me')
-  await expect(page.locator('.phone-frame')).toHaveClass(mode === 'lime' ? /fit-client-lime/ : /client-home-identity/)
-  // Count hidden DOM nodes too: workout input must unmount the summary.
-  const card = page.locator('section.nutrition-summary')
-  await expect(card.getByText('228,3 ккал')).toBeVisible()
   await page.getByRole('button', { name: 'Надиктовать тренировку', exact: true }).click()
   await expect(page.locator('.voice-action-requesting')).toBeVisible()
   await expect(card).toHaveCount(0)
@@ -111,10 +124,15 @@ for (const mode of ['lime', 'identity', 'first-run']) test(`nutrition unmounts t
     await page.getByRole('button', { name: 'Скрыть', exact: true }).click()
   }
   await expect(card.getByText('228,3 ккал')).toBeVisible()
-  await page.evaluate(() => Object.defineProperty(navigator.mediaDevices, 'getUserMedia', {
-    value: () => Promise.reject(new DOMException('Permission denied', 'NotAllowedError')),
-  }))
+  await page.evaluate(() => {
+    document.documentElement.dataset.nutritionDeniedRequests = '0'
+    Object.defineProperty(navigator.mediaDevices, 'getUserMedia', { value: () => {
+      document.documentElement.dataset.nutritionDeniedRequests = String(Number(document.documentElement.dataset.nutritionDeniedRequests) + 1)
+      return Promise.reject(new DOMException('Permission denied', 'NotAllowedError'))
+    } })
+  })
   await page.getByRole('button', { name: 'Надиктовать тренировку', exact: true }).click()
+  await expect.poll(() => page.evaluate(() => document.documentElement.dataset.nutritionDeniedRequests)).toBe('1')
   await expect(page.getByRole('alert').filter({ hasText: 'Нет доступа к микрофону' })).toBeVisible()
   await expect(card).toHaveCount(0)
   if (mode !== 'first-run') {
