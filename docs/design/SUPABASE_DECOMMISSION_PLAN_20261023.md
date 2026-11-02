@@ -374,3 +374,20 @@ clean migrations, actor/RLS и recovery DB шаги побайтно. Стары
 stable database name, PostgreSQL service и отсутствие local source startup.
 Отвергнуто: менять branch rules или выдавать отсутствующий context за success.
 Точный новый head и повторный CI фиксируются в PR1944.
+
+### P3 — конфликты PR1944 с main1946 — 02.11.2026
+
+Запрос владельца: «PR1944 конфликты». Новый main2c845fed/PR1946 независимо
+убрал тот же лишний auth goto и исправил bootstrap второго входа в auth.spec.
+Единственный конфликт trainer-flow: комментарий перед nativeSignIn, семантика
+совпадает. Принят комментарий main; наши штатные nav/card transitions, все
+assertions/reloads/PNG и native-only local/CI сохранены. Auth spec и журнал
+календарного PR из main приняты без переписывания. Required database context
+остаётся настоящим native PG17 job; protection не меняется. Новый head/CI —
+в PR1944. Полный local check на d87fa840 остаётся проверкой неизменённого app;
+для merge выполняются targeted browser/lint/E2E-types/docs и полный новый CI.
+
+Проверки merge1946: оба затронутых Chromium cases passed2/2 (24.7s overall),
+ESLint двух specs, E2E TypeScript, workflow-doc и whitespace checks passed.
+Неразрешённых conflict paths нет. Новый полный CI остаётся обязательным;
+merge/deploy не выполняются.
