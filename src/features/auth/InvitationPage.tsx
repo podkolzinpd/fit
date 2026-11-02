@@ -59,6 +59,7 @@ export function InvitationPage() {
   })
   const [signingOut, setSigningOut] = useState(false)
   const [connectionPending, setConnectionPending] = useState(false)
+  const [connectionResult, setConnectionResult] = useState<string | null>(null)
   const openedTracked = useRef(false)
 
   useEffect(() => {
@@ -119,7 +120,7 @@ export function InvitationPage() {
     })
   }
 
-  if (claim.isSuccess) {
+  if (claim.isSuccess || connectionResult !== null) {
     return <AuthIdentityScreen className="invitation-page">
       <header className="auth-entry-head">
         <FitLogo />
@@ -210,7 +211,7 @@ export function InvitationPage() {
         : claim.error && <p className="error" role="alert">{claim.error.message}</p>}
       {actor.role === 'client' && backend?.trainerConnections && invitation.status === 'active'
         ? <TrainerConnectionConfirmation repository={backend.trainerConnections} offer={{ source: 'link', locator: pending.token }} eager onPendingChange={setConnectionPending}
-          onSuccess={() => { trackGoal('invitation_claimed'); clearPendingInvitationLink(); navigate('/me', { replace: true }) }} />
+          onSuccess={(clientId) => { trackGoal('invitation_claimed'); clearPendingInvitationLink(); setConnectionResult(clientId) }} />
         : <button type="button" className="primary" aria-busy={claim.isPending} disabled={claim.isPending || requiresDisconnect || backend === null} onClick={() => claim.mutate()}>{claim.isPending ? 'Проверяем…' : invitation.status === 'claimed' ? 'Проверить подключение' : invitation.targetRole === 'trainer' ? 'Стать тренером' : 'Подключиться к тренеру'}</button>}
       {backend === null && <StatePanel tone="error" title="Войдите в аккаунт снова" description="Приглашение сохранено." action={<button type="button" className="secondary" onClick={() => void changeAccount()}>Перейти ко входу</button>} />}
       <button type="button" className="link invitation-change-account" disabled={signingOut || claim.isPending || connectionPending} onClick={() => void changeAccount()}>{signingOut ? 'Выходим…' : 'Войти под другим аккаунтом'}</button>
