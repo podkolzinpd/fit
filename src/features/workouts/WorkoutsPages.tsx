@@ -77,6 +77,7 @@ import { RPE_OPTIONS } from '../../shared/rpe'
 import type { RunningFormat } from '../../shared/running-formats'
 import type { ParsedWorkoutExercise } from './quick-workout-entry'
 import { createLiveSetCoordinator } from './live-set-coordinator'
+import { revealLiveExercise } from './live-exercise-reveal'
 import { createLiveUnconfirmedSets } from './live-unconfirmed-sets'
 import { createLiveSetAutosave } from './live-set-autosave'
 import { applyLiveSetUnconfirmation, applyLiveSetConfirmation, applyLiveSetDraft, carriedLiveWeightKey, hasLiveSetResult, reconcileLiveWorkout, sameLiveSetDraft, setWithCarriedLiveWeight } from './live-set-cache'
@@ -3125,6 +3126,8 @@ export function LiveWorkoutPage() {
   const initialRetryWorkoutId = useRef<string | null>(null)
   const recoveryInitializedFor = useRef<string | null>(null)
   const nextExerciseAnchor = useRef<string | null>(null)
+  const cancelExerciseReveal = useRef<(() => void) | null>(null)
+  useEffect(() => () => cancelExerciseReveal.current?.(), [workoutId])
   useLayoutEffect(() => {
     const target = nextExerciseAnchor.current
     if (!target) return
@@ -3132,11 +3135,13 @@ export function LiveWorkoutPage() {
     const card = row?.closest<HTMLElement>('.live-exercise')
     const content = row?.closest<HTMLElement>('.content')
     const pinned = content?.querySelector<HTMLElement>('.live-pinned')
-    if (!card || !content || !pinned) return
+    if (!row || !card || !content || !pinned) return
     nextExerciseAnchor.current = null
-    // Exactly one adjustment after the final set changes the active card.
-    // Regular saves, timer ticks and realtime refreshes never move the page.
-    content.scrollTop += card.getBoundingClientRect().top - pinned.getBoundingClientRect().bottom - 12
+    cancelExerciseReveal.current?.()
+    // A refetch must not cancel/restart the in-flight reveal. Only a new
+    // explicit handoff, user input or leaving this workout owns cancellation.
+    if (visualReference) cancelExerciseReveal.current = revealLiveExercise(row, card, content, pinned)
+    else content.scrollTop += card.getBoundingClientRect().top - pinned.getBoundingClientRect().bottom - 12
   }, [activeExerciseId, query.data])
   function exerciseMetaFor(exercise: WorkoutExerciseModel) {
     return findCatalogExercise(catalog.exercises, exercise) ?? exercise
