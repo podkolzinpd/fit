@@ -1421,6 +1421,14 @@ test('client reference Live timer mode asks to confirm planned reps before finis
   await expect(page.getByRole('button', { name: 'Подтвердить подходы: Приседания', exact: true })).toBeVisible()
   await page.getByRole('button', { name: 'Завершить тренировку', exact: true }).click()
   await expect(page.locator('.timer-review')).toContainText('Таймер засчитал подходов: 2. Всё верно?')
+  const beforeReview = drafts.length
+  await page.getByRole('button', { name: 'Проверить', exact: true }).click()
+  await expect(page.locator('.timer-review')).toHaveCount(0)
+  await expect(page.locator('.live-exercise > .client-live-card-body:not([inert])')).toHaveCount(1)
+  await expect(page.getByRole('button', { name: 'Подтвердить подходы: Приседания', exact: true })).toBeVisible()
+  await expect(page.locator('.client-live-card-body form[data-live-set-id]').first()).toBeVisible()
+  expect(drafts).toHaveLength(beforeReview)
+  await page.getByRole('button', { name: 'Завершить тренировку', exact: true }).click()
   const finish = page.waitForRequest((request) => new URL(request.url()).pathname === `/v1/workouts/${workoutId}/finish`)
   await page.getByRole('button', { name: 'Всё верно, завершить', exact: true }).click()
   await finish
