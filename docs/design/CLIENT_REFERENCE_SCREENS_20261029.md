@@ -2993,3 +2993,84 @@ source/hash/signature/readback и UI с запретом реальных пол
 новые таймер/режим/хранилище, смена охвата, ослабление тестов.
 Сделано: план зафиксирован; runtime/сервер ещё не менялись.
 Дальше: реализация LIVE-P2 и его проверки; затем LIVE-P3 по этому же плану.
+
+### Итерация 91 — 2026-11-03 — Codex / OpenAI
+
+Задача: LIVE-P2 по разрешённому плану90. Реализована настоящая отмена,
+не имитация макета. Расхождения: нет; исходная база af2adcbf, после локальной
+приёмки взят fresh main3dffd730(шаблоны1950) обычным merge без конфликтов.
+Incoming изменения касаются планирования/источников шаблонов, не Live/серверной
+отмены; сохранены полностью. Свой runtime-коммит1c0c2ce6. P3 ещё впереди.
+
+Сделано: provider-neutral workouts.unconfirmLiveSet, native repository route,
+writer/API и forward migration180 unconfirm_live_set. Новая команда расширяет
+существующий allowlist действий/claim; новых таблиц/полей нет. Тот же
+operation ledger/authorize/version/actor и единый порядок блокировок.
+Квитанция записывается существующим трёхаргументным helper с ID подхода,
+сохраняя прежний structure_result_resource guard. Активный статус проверяется
+и при повторе. Снимаются только confirmed_at/timer_confirmed, обновляются
+служебные version/updated_by; план/факты/источники/заметки остаются.
+Down удаляет новую функцию, сохраняет квитанции и расширенный allowlist.
+Старые команды/их receipt compatibility остаются.
+
+UI: вместо SPAN выполненная галочка прямого Live обеих ролей вызывает отмену.
+Последний ввод сохраняется через существующую очередь перед командой; pending
+и двойной тап защищены. Новый серверный факт применяется версионно; поздние
+save/confirm/GET не возвращают отменённую отметку. Ошибка показывает отдельный
+повтор отмены; ambiguous response сверяется через refetch новой версии.
+Форма/одиночная карточка/раскрытый круг сохраняются. Повторное подтверждение
+восстанавливает автоматическое сворачивание спортсмена; прежний ручной fold
+обычных подходов не менялся. Прогресс и completed mark пересчитываются.
+
+Ни один метод отмены не перезапускает отдых/elapsed. Явно отменённый timed set
+удерживается от автоматического запуска/засчёта; собственный actor/workout key
+в existing sessionStorage сохраняет это намерение после reload, без метрик.
+Явный старт/confirm снимает hold; завершение чистит его. Оформление, режимы,
+права, плотности, rollout/native/CI/dependencies не менялись.
+Решение CLV-20261103 записано в контракте/индексе; исторические P1/78 сохранены.
+
+Проверки до интеграции1950:
+- build/tsc/startup-photo и полный root lint passed;
+- полный API check:lint/type/build,1570passed/279existing environment-skips;
+ отдельно route factory265passed, включая200/401/400/403/409 нового endpoint;
+- отдельный собственный PostgreSQL17 наloopback55436, никакой общей/prod-БД:
+ actor-context169passed/1existing skip. Новая проверка покрывает обе роли,
+ foreign actor, stale version, точный replay, reuse ID, сохранность всех метрик/
+ sources, снятие timer flag и запрет завершённой тренировки даже для replay;
+-12component/unit files125passed: очередь save→confirm→undo/double tap,
+ failed undo→refetch→retry, late confirm/save/GET, retained forms/keyboard/gestures/
+ таймеры/прогресс и изоляция/reload hold;
+-267browser regressions Chromium/WebKit,3.4m,retries0(до последнего уточнения
+ только reopened-owner fold/round-key); обе темы/плотности, special metrics,
+ focus/Next/keyboard, swipe, grouped rows, timer/pause и coach control;
+-финальный source:16/16 browser за15.7s,retries0 —2реальные роли, latest input/
+ rest deadline/reload/reconfirm, отказ503 и потерянный ответ, timed hold/restart,
+ раскрытый суперсет обеих ролей/соседние результаты и completed→undo→confirm fold.
+ Темы/размеры не размножают функциональные сценарии; оформление покрывает
+ существующая матрица. Новых уникальных browser cases8, в двухдвижках16.
+ Существующие11assertions «выполнен» перенесены с roleimg на новую action-кнопку,
+ без удаления сценариев/проверок. Inventory SHA/таймауты/retries/gates не менялись.
+
+Первичные локальные ошибки не скрыты: PG обнаружил недостающий resource ID
+при complete receipt(исправлен существующим helper), затем формат numeric в
+новом ожидании уточнён до штатного scale. Полный PG выявил загрязнение ledger
+новым тестом: его finally теперь чистит только собственные operation IDs,
+исходный count4 сохранён. Первый UI-run10fail не дошёл до Live: в локальном
+build отсутствовал synthetic OAuth clientId, все снимки оставались на auth.
+Конфигурация corrected, те же10 затем14/16сценариев passed без app-fallback.
+Это не выдано за UI-исправление. Логи /tmp/fit-live-p2-*.log; базы/аккаунты
+только synthetic. Реальный OAuth/физическая клавиатура не проверены.
+
+Отвергнуто: стирание метрик, снятие отметки при обычном вводе, reset таймеров,
+разрешение чужих/законченных записей, визуальный успех без сервера, ручной prodSQL,
+изменение старых миграций/общего local stack. Открыто: повтор применимых проверок
+на final-base1950, exact-head/mainCI и публикационная приёмка; разрешение на
+выпуск есть, более ранние активные PR/приоритет ФИТ14 сохраняются.
+Дальше: PR LIVE-P2; после его приёмки — LIVE-P3 с измерениями переходов.
+
+Final-base приёмка на merge540c087e98dbe5a65ec652771c08f0cb0128d41b:
+LiveWorkoutPage и последующая часть файла побайтно1c0c2ce6, входящий1950 не
+менял этот runtime. Повторные build/tsc/startup-photo, полный lint,125unit и
+16/16Chromium/WebKit за15.2s,retries0 passed. Migration safety(одна forward180)
+и workflow docs budgets/links/archive/diff-check passed. Exact-head CI/actual
+main/публикация ещё не выполнялись; локальная проверка не заменяет эти гейты.
