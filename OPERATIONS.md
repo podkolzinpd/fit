@@ -1006,12 +1006,11 @@ delete/replace и любые сопутствующие изменения datab
 - `SUPABASE_DB_PASSWORD` — пароль новой БД;
 - `SUPABASE_PROJECT_ID` — `xwfuzfkuhblswpdludbc`.
 
-Это **legacy Supabase secrets** для сохранённых legacy media/rollback путей.
-Новые изменения схемы в `supabase/migrations` больше не добавляются. Workflow
-`.github/workflows/deploy-database.yml` пока технически существует и сработает,
-если изменить legacy migration-файлы в `main`; не используйте его для новой
-функциональности и не запускайте вручную без отдельного решения о legacy
-исправлении. Новые numbered migrations в `services/api/db/migrations`
+Это **legacy Supabase secrets** для оставшихся source ops/rollback путей.
+Новые изменения схемы в `supabase/migrations` больше не добавляются.
+Ручной deploy старой БД и диагностика Supabase Auth удалены; SQL-архив
+сохранён. Секреты пока нужны другим операционным инструментам.
+Новые numbered migrations в `services/api/db/migrations`
 применяет `.github/workflows/deploy-yandex-stage.yml` до переключения
 API-ревизии. Запуск SQL через Dashboard запрещён. Production frontend
 публикуется на `fit-training.ru` через Yandex Gateway/Object Storage; Vercel
@@ -2040,15 +2039,14 @@ variables; mode=`off` is the presentation kill switch. Neither changes client
 rollout, stored density preferences or training data. Inspect server state
 again before activation; empty cohort configuration alone never means all.
 
-## Legacy database/parser deployments — manual-only, 16.10.2026
+## Legacy Yandex parser deployment — manual-only
 
-`.github/workflows/deploy-database.yml` and
-`.github/workflows/deploy-yandex-workout-parser.yml` have only
-`workflow_dispatch`: merging changes to migrations, parser sources or API
-package files no longer deploys these legacy targets. A manual run still
-executes the existing deployment and requires a separate rollback decision.
-Supabase credentials, SQL history and remote resources remain available;
-Cloud.ru API/frontend release workflows are unchanged.
+`.github/workflows/deploy-yandex-workout-parser.yml` имеет только
+`workflow_dispatch`: merge не запускает deploy. Ручной выпуск требует
+отдельного решения. Ручной deploy Supabase БД и Supabase Auth diagnostics
+удалены решением SB-ADMIN-WORKFLOWS-RETIRE-01 от03.11.2026.
+SQL-архив, Supabase secrets и удалённые ресурсы сохранены; Cloud.ru
+API/frontend release workflows не меняются.
 
 ## Удаление legacy password recovery — 14.10.2026
 
