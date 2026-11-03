@@ -3204,3 +3204,55 @@ LIVE-P3 отдельно подготовлен:137unit,174Live-browser и82gest
 приоритетный PR1951 и его фактическая публикация, public/OTA приёмка P2.
 Согласованный охват прежний; physical iPhone/OAuth остаются непроверенными.
 Дальше: новый head1953 по общей очереди; затем отдельный P3.
+
+
+### Итерация 96 — 2026-11-03 — Codex / OpenAI
+
+Задача: закончить локальную реализацию LIVE-P3 из90, не переписывая рабочие
+ввод/клавиатуру/таймер/жесты. Source a832806eb2ab2be042cbc99d765234f79afb4630,
+содержит актуальную P2-recovery95 и main38a6e5ee; PR/P3 ещё не опубликован.
+
+Сделано: visual Live вместо прямого scrollTop использует revealLiveExercise.
+Ждёт три устойчивых кадра реальной геометрии, проверяет видимость следующей
+строки и двигает только content через native smooth. Существующий fold не
+переписан. У v79 граница видимости — фактически закреплённая page-header,
+поскольку live-pinned уже relative и уезжает вместе с большим таймером.
+Иначе старые bounds давали лишний отступ и неверную оценку перекрытия.
+В остальных visual-потребителях сохраняется их pinned boundary; legacy path
+не меняется. Ручной pointer/touch/wheel/key/focus, открытый picker/note/input,
+resize клавиатуры отменяют перенос. Никакого focus()/нового keyboard engine.
+Новый target/уход из тренировки очищает работу; refetch не перезапускает её.
+Reduced motion получает instant, только когда следующая строка не видна.
+
+Измерение before92/returning-state: один scroll step506px клиенту/520px тренеру.
+Final trace /tmp/fit-live-p3-final-motion-results: client Chromium0(поле уже
+видно), WebKit13движущихся кадров/max104px; trainer Chromium27/max137px,
+WebKit11/max147px. Один smooth call на реальный перенос, ни одного лишнего.
+Конечные rows188–242/194–248px при sticky header bottom52px; Chromium client
+767–821px внутри viewport839px без прокрутки. Это browser samples, не FPS
+реального телефона. Native easing/compositor не заменены собственной анимацией.
+
+Проверки:15unit/component files137passed; build/tsc/startup-photo passed;
+целевой lint passed, полный root lint до последней интеграции — passed.
+174Live-browser +82gesture-browser Chromium/WebKit, retries0, обе темы/
+плотности и special metrics: ввод/focus/Next, notes/menu, picker nested/search/
+close, pause/rest, ошибки и retry, undo/reload, swipe/delete/cancel, card hold.
+После окончательного P2-recovery и template integration —68/68 за40.4s,retries0
+по изменившимся веткам: отмена/finish, native handoff, reduced motion, ручные
+race windows response/frame и keyboard first taps. Шесть новых browser runs
+(3unique:2roles+reduced variant) сохраняют реальную запись/старую форму/
+следующие значения/deadline, проверяют viewport и отсутствие focus steal;
+trace прикладывается. Новые6unit покрывают ожидание геометрии, видимую строку,
+portal-input, ручной focus/wheel, reduced motion; два existing keyboard unit
+сохранены. Первичный TS нового test spy требовал optional scrollTo argument;
+исправлена сигнатура, не runtime/проверки. Public acceptance harness28/28
+локально прошёл23.8s с запретом реальных запросов/записей; это preflight, не
+публикация. Physical iPhone/OAuth и actual signed ZIP ещё не проверены.
+
+Решение CLV-20261103-P3: один владелец ручного ввода, необязательный reveal
+уступает ему; не менять таймер/паузы/сохранение/формы ради перехода. Контракт
+дополнен отдельно от истории. Отвергнуто: фиксированный sleep, opacity-маска
+скачка, новый scroll/timer engine, принудительный focus, матрица длинных тестов
+по каждому размеру. Открыто: P2/очередь/публикация и P3 final-main/exact-head CI,
+публикационная API/web/OTA приёмка. Активный ФИТ14 не обходим. Дальше: выпустить
+P2; перенести только net-diff P3 на его фактический main, проверить и выпустить P3.
