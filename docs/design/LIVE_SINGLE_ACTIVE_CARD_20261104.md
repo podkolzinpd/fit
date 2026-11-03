@@ -172,3 +172,20 @@ Typecheck нашёл недекларированный executionMode у MockWor
 web/signed ZIP QA и физический телефон. Ранние локальные fixtures без2/2
 YSGeo не являются typography proof; итоговые сборки проверяют исходные webfonts.
 Дальше: интегрировать parent, закончить проверки/все3PR/штатный выпуск до конца.
+
+### Итог локальной проверки итерации5
+
+Интегрированный runtime проверен330/330 production browser cases,6.9m,0retry,
+Chromium/WebKit, обе роли/плотности/темы; прежние8 неверных UI шагов устранены
+реальным раскрытием, без сокращения assertions. Guard и stable time-cell
+сохраняют открытый picker/тот же field node/введённые10сек после позднего ответа.
+Первый полный local check прошёл lint/type, но coverage получил11 failures
+(10файлов) при load33.69: старые catalog/profile/booking тесты превысили прежние
+лимиты времени/производительности. Исходные логи сохранены, успехом не считаются.
+Тот же исходный код и все2984 теста повторены с2 workers после браузерного набора:
+331/331файл,2984/2984passed,135.42s, прежние timeout/assertions/config сохранены.
+Остальные обязательные проверки ios/media/infra/calendar/hosting/API/build/
+startup завершены exit0; API1555passed/294условныхDBskip. Реальная PG/RLS
+приёмка остаётся обязательной в exact-source/main CI. Webfonts2/2 verified.
+Три PR1969/1971/1972 созданы; публикация/CI ещё впереди и не объявлены готовыми.
+После каждого merge штатный выпуск, после пакета — actual public и signedZIP QA.
