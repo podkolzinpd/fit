@@ -182,6 +182,7 @@ function WorkoutTemplateEditor({ templateId, sourceWorkoutId, draftKey, context,
   const [ready, setReady] = useState(false)
   const [dirty, setDirty] = useState(false)
   const submitting = useRef(false)
+  const submittedRevision = useRef<string | null>(null)
   const [entryBusy, setEntryBusy] = useState(false)
   const [notesBusy, setNotesBusy] = useState(false)
   const [pickerOpen, setPickerOpen] = useState(false)
@@ -206,7 +207,7 @@ function WorkoutTemplateEditor({ templateId, sourceWorkoutId, draftKey, context,
     onSuccess: async (savedId, savedDraft) => {
       if (active.current && context) applyCreatedTemplate(context, { ...savedDraft, id: savedId })
       finished.current = true
-      removeWorkoutTemplateDraft(draftKey)
+      if (JSON.stringify(readWorkoutTemplateDraft(draftKey)) === submittedRevision.current) removeWorkoutTemplateDraft(draftKey)
       if (!active.current) return
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['workout-template', savedId], exact: true, refetchType: 'none' }),
@@ -261,7 +262,9 @@ function WorkoutTemplateEditor({ templateId, sourceWorkoutId, draftKey, context,
     event.preventDefault()
     if (submitting.current || entryBusy || notesBusy || pickerOpen || !name.trim() || !exercises.length) return
     setDirty(true)
-    setDraftStorageError(!writeWorkoutTemplateDraft(draftKey, { id: templateId ?? newTemplateId, name, notes, exercises, version: baseVersion }))
+    const localRevision = { id: templateId ?? newTemplateId, name, notes, exercises, version: baseVersion }
+    submittedRevision.current = JSON.stringify(localRevision)
+    setDraftStorageError(!writeWorkoutTemplateDraft(draftKey, localRevision))
     submitting.current = true
     save.mutate({ id: templateId ?? newTemplateId, name: name.trim(), notes: notes.trim() || undefined, exercises, version: baseVersion })
   }

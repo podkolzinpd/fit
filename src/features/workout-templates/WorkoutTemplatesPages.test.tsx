@@ -46,6 +46,28 @@ beforeEach(() => {
   backend.workoutTemplates.save.mockResolvedValue(template.id)
 })
 describe('template save commands', () => {
+  it('preserves a newer draft reopened while an unmounted save finishes', async () => {
+    let complete: (value: string) => void = () => {}
+    let requestFinished = false
+    backend.workoutTemplates.save.mockImplementationOnce(() => new Promise<string>((resolve) => { complete = resolve }).then((value) => { requestFinished = true; return value }))
+    const key = workoutTemplateDraftKey('trainer', template.id)
+    const first = open(`/schedule/templates/${template.id}/edit`)
+    await waitFor(() => expect(screen.getByLabelText('Название шаблона')).toHaveValue('Ноги'))
+    fireEvent.change(screen.getByLabelText('Название шаблона'), { target: { value: 'Отправленная версия' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Сохранить шаблон' }))
+    await waitFor(() => expect(backend.workoutTemplates.save).toHaveBeenCalledOnce())
+    first.unmount()
+    open(`/schedule/templates/${template.id}/edit`)
+    await waitFor(() => expect(screen.getByLabelText('Название шаблона')).toHaveValue('Отправленная версия'))
+    fireEvent.change(screen.getByLabelText('Название шаблона'), { target: { value: 'Новая локальная версия' } })
+    await waitFor(() => expect(readWorkoutTemplateDraft(key)?.name).toBe('Новая локальная версия'))
+    complete(template.id)
+    await waitFor(() => expect(requestFinished).toBe(true))
+    expect(readWorkoutTemplateDraft(key)?.name).toBe('Новая локальная версия')
+    expect(screen.getByLabelText('Название шаблона')).toHaveValue('Новая локальная версия')
+    expect(screen.queryByRole('heading', { name: 'Шаблоны тренировок' })).not.toBeInTheDocument()
+  })
+
   it('locks the submitted revision, prevents duplicate submit, and restores editing after failure', async () => {
     let rejectSave: (error: Error) => void = () => {}
     backend.workoutTemplates.save.mockImplementationOnce(() => new Promise<string>((_resolve, reject) => { rejectSave = reject }))
