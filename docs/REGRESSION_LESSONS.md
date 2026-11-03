@@ -156,3 +156,15 @@ Red/green и границы вывода — [итерация11](design/IPHONE_
 ответ → возврат», а не только вызов invalidateQueries. Unit и существующий
 attendance browser-case красные на исходном helper и зелёные после исправления.
 Причина и границы — [WQ101–105, итерация7](design/COACH_QUICK_COMPLETION_20261031.md).
+
+
+## RL-LIVE-UTILITY-BLUR-20261103
+
+Отключение pending action-кнопки в WebKit может породить focusout внутри формы.
+Это не редактирование метрик. Нельзя запускать direct Live blur-save от кнопки
+или swipe group: после корректной отмены он способен затереть скрытые RPE/time/
+distance. Dirty guard недостаточен, если action сам уже создал pending draft.
+Проверять обе роли, удержать server ack и воспроизвести focusout; полный факт
+должен оставаться в pending и на сервере. Реальная CI-трасса и red/green —
+[клиентский план, итерация97](design/CLIENT_REFERENCE_SCREENS_20261029.md#итерация-97--2026-11-03--codex--openai).
+Обычный metric blur/autosave/клавиатуру не отключать ради этой защиты.
