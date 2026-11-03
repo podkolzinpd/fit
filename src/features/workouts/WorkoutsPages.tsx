@@ -79,6 +79,7 @@ import type { RunningFormat } from '../../shared/running-formats'
 import type { ParsedWorkoutExercise } from './quick-workout-entry'
 import { createLiveSetCoordinator } from './live-set-coordinator'
 import { revealLiveExercise } from './live-exercise-reveal'
+import { nextLiveTarget } from './live-next-target'
 import { createLiveUnconfirmedSets } from './live-unconfirmed-sets'
 import { liveUnconfirmDraft } from './live-unconfirm-draft'
 import { createLiveSetAutosave } from './live-set-autosave'
@@ -2809,7 +2810,9 @@ function LiveSetFields({ inputKind, exerciseRef, source, set, editing = false, s
   </select>, 'RPE') : null
   const measurements = { source, ref: exerciseRef ?? '', inputKind }
   // «Старт» и отсчёт подхода «Веду сам» живут в ячейке времени: поле остаётся для ручного ввода.
-  const withWorkTimer = (field: ReactNode) => workTimer ? <span className="live-set-time-cell">{field}{workTimer}</span> : field
+  // Keep the client duration editor mounted when its running timer disappears
+  // after confirmation; an open picker/draft still belongs to this same field.
+  const withWorkTimer = (field: ReactNode) => workTimer || clientLayout ? <span className="live-set-time-cell">{field}{workTimer}</span> : field
   const weightField = metric(<LiveSetInput name="weightKg" label="Фактический вес" placeholder={quietUnits ? '—' : 'кг'} defaultValue={value(set.fact.weightKg, set.weightKg)} planHint={isPlanHint(set.fact.weightKg, set.weightKg)} step="any" disabled={locked} inputKey={`w-${k}-${directInput ? 'stable' : carriedWeightKey}`} decimal selectZero directInput={directInput} />, 'кг')
   if (inputKind === 'strength') return <>
     {allowsRepetitionTimeChoice(measurements) && <input type="hidden" name="durationSec" value={value(factDuration, planDuration) ?? ''} />}
@@ -3135,7 +3138,7 @@ export function LiveWorkoutPage() {
     const target = nextExerciseAnchor.current
     if (!target) return
     const row = liveSetForms.current.get(target)
-    const card = row?.closest<HTMLElement>('.live-exercise')
+    const card = row?.closest<HTMLElement>(coachV79 || clientReference ? '[data-live-card-key], .live-exercise' : '.live-exercise')
     const content = row?.closest<HTMLElement>('.content')
     const pinned = content?.querySelector<HTMLElement>(coachV79 || clientReference ? '.live-workout-page > .page-header' : '.live-pinned')
     if (!row || !card || !content || !pinned) return
@@ -3488,7 +3491,7 @@ export function LiveWorkoutPage() {
       })
       const before = queryClient.getQueryData<Workout>(['workout', workoutId])
       const owner = before?.exercises.find((exercise) => exercise.sets.some((item) => item.id === set.id))
-      if (owner && owner.blockType === 'single' && owner.sets.every((item) => item.id === set.id || item.confirmedAt)) {
+      if (owner && !coachV79 && !clientReference && owner.blockType === 'single' && owner.sets.every((item) => item.id === set.id || item.confirmedAt)) {
         if (manuallyReopenedExercises.current.delete(owner.id)) {
           setExpandedExercises(current => { const next = new Set(current); next.delete(owner.id); return next })
           setLiveCardDisplay(null)
@@ -3499,6 +3502,19 @@ export function LiveWorkoutPage() {
       }
       queryClient.setQueryData<Workout>(['workout', workoutId], (workout) => workout
         ? applyLiveSetConfirmation(workout, set.id, draft, version, new Date().toISOString()) : workout)
+      if ((coachV79 || clientReference) && before) {
+        const after = queryClient.getQueryData<Workout>(['workout', workoutId])
+        const next = after && nextLiveTarget(after.exercises, selectedLiveBlock?.blockId)
+        const changedCard = next && owner && (next.exercise.id !== owner.id
+          || owner.blockType !== 'single' && next.set.position !== set.position)
+        nextExerciseAnchor.current = changedCard ? next.set.id : null
+        setActiveExerciseId(next?.exercise.id ?? null)
+        setLiveCardDisplay(null)
+        if (owner && owner.sets.every(item => item.id === set.id || item.confirmedAt)
+          && manuallyReopenedExercises.current.delete(owner.id)) {
+          setExpandedExercises(current => { const result = new Set(current); result.delete(owner.id); return result })
+        }
+      }
       acknowledgeLiveDraft(set.id, draft, true)
       if (advanceAfterConfirm.current === set.id) {
         if (!clientReference) advanceAfterConfirm.current = null
@@ -4252,6 +4268,7 @@ export function LiveWorkoutPage() {
     const focused = document.activeElement instanceof HTMLElement && document.activeElement.matches('input, textarea, select, .workout-duration-trigger, .run-distance-unit') ? document.activeElement : null
     for (const exercise of query.data?.exercises ?? []) {
       const held = exercise.sets.find(set => set.id === saveErrorSetId || validationErrorSetIds.has(set.id) || pendingSetDrafts.current.has(set.id)
+        || liveSetForms.current.get(set.id)?.querySelector('.workout-duration-trigger[aria-expanded="true"]')
         || focused && liveSetForms.current.get(set.id)?.closest('[data-live-card-key], .live-exercise')?.contains(focused))
       if (held) return liveRowCardKey(exercise, held)
     }
