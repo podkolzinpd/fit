@@ -2731,3 +2731,36 @@ whitespace passed; src/e2e/package+lock/android/API побайтно прежн�
 Дальше: обязательный полный CI нового точногоsource и Android; после фактических
 зависимостей прежний squash/fullmainCI/API/web/совместимыйOTA/30+30план.
 Собственные productionwrites0; чужие jobs и операции не запускались/не менялись.
+
+Квитанция exactsource5f7 — 03.11.2026 — Codex / OpenAI.
+На5f7c5380d1ceb19d5313b4c0f3520b15af025686 полныйCI41641650472 attempt1
+SUCCESS35/35jobs и Android41641650587SUCCESS. Повторов/ослабления gates не было;
+полные metadata сохранены в outputs/source-5f7-ci-final.json и android-final.json
+в post-release-audit-20261103. PR1957 обновлён без sourcepush ради квитанции.
+Финальная квитанция восстановления1954/1960 проверена по issuecomment6604787996;
+это чужая операция владельца, мы её не запускали. Подтверждённая очередь:
+native1959/совместимыйAPK1.1.4code9+OTA R8/R9 →1953–1955 →1957 по своему окну.
+Native промежуточныйsource5cf58ba1 ещё не включается. Наш1957 НЕопубликован.
+Дальше: необходимый actualmain обычнымmerge/новый exactsourceCI при сменеhead;
+потом прежние normalmerge/fullmainCI/API/web/signedOTA/30+30actualгейты.
+Эта append-only запись послеfreeze локальная; отдельныйpush/релиз не требуется.
+
+Интеграция actualnative1959 — 03.11.2026 — Codex / OpenAI.
+Задача: подготовить1957 на фактическом main3aec76296f896da9a30a6cc6a425a74cd297eaad.
+Расхождения: main1959 уже слит владельцем, но mainCI/подпись/R8/R9 ещё ожидаются;
+это разрешает только подготовку своегоsource, не слияние/production1957.
+Сделано: ordinarymerge3aec без конфликтов с сохранением локальной квитанции5f7
+и обеих сторон журналов; входящие versionCode9/versionName1.1.4 и точные APK
+artifact/metadata проверки сохранены. Это фактический main, не nativeчерновик.
+Решение: не редактировать чужой nativepatch, сохранить исходные guards и историю;
+прежний APK8 не объявлять совместимым. Версия входит в консервативный ABI,
+поэтому прежнийd377 также не приписывается новомуcode9; итогpolicy сверяется.
+Отвергнуто: intermediatebranch, пропуск exactsourceCI, обход nativeAPKrequired,
+публикация перед R8/R9/1953–1955/своим подтверждённым окном.
+Проверка: nativecontract/publisher/frontendrelease30/30passed без retries/skips,
+workflowdocs/diffcheckpassed; src/e2e/API/package+lock побайтно прежние5f7,
+AGENTS/FITWORKFLOW/ACTIVECONTRACTS прежние. Tests только local syntheticHTTPS.
+Открыто: полныйCI новогоhead/Android, фактические nativeR8/R9 и своя очередь.
+Дальше: новый exactsourceCI → согласованное окно → normal squash/fullmainCI →
+API/web/совместимыйsignedOTA → actual30public+30ZIP/manifest/API/RSA/readback.
+Productionwrites0, чужие workflows/releases не запускались/не менялись.
