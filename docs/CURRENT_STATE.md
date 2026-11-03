@@ -5,7 +5,7 @@ YAFIT-701: [R101–R106, восстановление карточки у тре
 02.11 — CI: production-mode browser набор873 разделяется на4 части без сокращения;
 [план, сохранность и исправления flaky swipe/video](design/PRODUCTION_BROWSER_CI_SHARDS_20261102.md). CI нового head ещё гейт.
 TC101–107: [план/статус](design/TRAINER_CONNECTION_CONFIRMATION_20261102.md). В работе.
-P2: PR1928 слит; PR1929 — frontend SDK. PR1909 закрыт.
+P2:1928/1929 merged. [P3](design/SUPABASE_DECOMMISSION_PLAN_20261023.md).
 MC1/Live: [1943: CI/выпуск, §88](design/CLIENT_REFERENCE_SCREENS_20261029.md).
 YAFIT-699: компактный список клиентов и гостевое приглашение,2PR. [План/проверки](design/COACH_CLIENTS_AND_INVITATION_20261031.md); [статус выпуска](https://st.yandex-team.ru/YAFIT-699).
 ФИТ20: [все статусы R104-S](design/COACH_RESCHEDULE_AND_DAY_GESTURES_20261031.md), [PR1923: CI](https://github.com/podkolzinpd/fit/pull/1923); [F201–208: CI/выпуск](design/COACH_WORKFLOW_AUDIT_20261031.md).
