@@ -130,10 +130,35 @@ describe.skipIf(source === undefined)('one private journal into a new card', { c
     const importedCard = receipts[0]?.receipt.clientId
     expect(importedCard).toBeTruthy()
     expect((await owner.query<{ n: number }>("select count(*)::int n from public.workouts where client_id=$1 and workout_date='2025-12-15'", [importedCard])).rows[0]?.n).toBe(2)
-    for (const table of ['trainer_finance_packages', 'trainer_finance_payments', 'trainer_finance_sessions']) {
+    for (const table of ['trainer_finance_packages', 'trainer_finance_payments']) {
       expect((await owner.query<{ n: number }>(`select count(*)::int n from public.${table} where client_id=$1`, [importedCard])).rows[0]?.n).toBe(0)
     }
+    const attendance = (await owner.query<{ workout_id: string; trainer_id: string; package_id: null; disposition: string; voided_at: null }>(
+      'select workout_id,trainer_id,package_id,disposition,voided_at from public.trainer_finance_sessions where client_id=$1', [importedCard])).rows
+    expect(attendance).toHaveLength(137)
+    expect(new Set(attendance.map(row => row.workout_id))).toEqual(new Set(receipts[0]!.receipt.created.map(row => row.workoutId)))
+    for (const row of attendance) expect(row).toMatchObject({ trainer_id: fixture.coach, package_id: null, disposition: 'unassigned', voided_at: null })
     imported = fixture
+  })
+
+  it('rolls back a new-card import if a writer changes unassigned attendance into a billing decision', async () => {
+    const { owner, runtime, coach, options, packet } = await prepareFixture()
+    let changed = false
+    await expect(runPreparedNewCardImport({ ...options, ...packet('Synthetic billing guard', true), mode: 'apply',
+      saveCompleted: async (...args: Parameters<typeof saveCompletedWorkout>) => {
+        const saved = await saveCompletedWorkout(...args)
+        if (!changed) {
+          changed = true
+          const session = (await runtime.query<{ id: string; version: string }>(
+            'select id,version::text version from public.trainer_finance_sessions where workout_id=$1', [saved.id])).rows[0]!
+          await runtime.query("select public.update_trainer_finance_session_details_v2($1,$2,'free',null,$3,$4::date)",
+            [session.id, session.version, 'Synthetic faulty writer', args[1].workoutDate])
+        }
+        return saved
+      },
+    })).rejects.toThrow('unexpected_finance_change')
+    expect(changed).toBe(true)
+    expect((await owner.query<{ n: number }>("select count(*)::int n from public.clients where trainer_id=$1 and full_name='Synthetic billing guard'", [coach])).rows[0]?.n).toBe(0)
   })
 
   it('replays the committed batch without a second card or duplicate workouts', async () => {
@@ -193,9 +218,14 @@ describe.skipIf(source === undefined)('one private journal into a new card', { c
     expect(await runPreparedNewCardImport({ ...options, ...packet, mode: 'apply' })).toMatchObject({ status: 'imported', workouts: count, exercises: total, sets: 0, contentVerified: true })
     const card = receipts.at(-1)?.receipt.clientId
     expect((await owner.query<{ n: number }>('select count(*)::int n from public.workouts where client_id=$1', [card])).rows[0]?.n).toBe(count)
-    for (const table of ['trainer_finance_packages', 'trainer_finance_payments', 'trainer_finance_sessions']) {
+    for (const table of ['trainer_finance_packages', 'trainer_finance_payments']) {
       expect((await owner.query<{ n: number }>(`select count(*)::int n from public.${table} where client_id=$1`, [card])).rows[0]?.n).toBe(0)
     }
+    const attendance = (await owner.query<{ workout_id: string; disposition: string; package_id: null; voided_at: null }>(
+      'select workout_id,disposition,package_id,voided_at from public.trainer_finance_sessions where client_id=$1', [card])).rows
+    expect(attendance).toHaveLength(count)
+    expect(new Set(attendance.map(row => row.workout_id))).toEqual(new Set(receipts.at(-1)!.receipt.created.map(row => row.workoutId)))
+    for (const row of attendance) expect(row).toMatchObject({ disposition: 'unassigned', package_id: null, voided_at: null })
     expect((await owner.query<{ n: number }>("select count(*)::int n from public.workouts w join public.clients c on c.id=w.client_id where c.trainer_id=$1 and c.full_name='Synthetic import'", [coach])).rows[0]?.n).toBe(137)
     const first = receipts[0]?.receipt.created[1]?.workoutId
     expect((await owner.query<{ n: number }>('select count(*)::int n from public.workout_sets s join public.workout_exercises e on e.id=s.workout_exercise_id where e.workout_id=$1 and s.fact_weight_kg=99', [first])).rows[0]?.n).toBe(4)
@@ -295,7 +325,8 @@ describe.skipIf(source === undefined)('one private journal into a new card', { c
     expect(await f.oldState()).toEqual(f.before)
     expect((await f.owner.query<{ n: number }>('select count(*)::int n from public.workouts where client_id=$1', [f.existing])).rows[0]?.n).toBe(87)
     expect((await f.owner.query<{ n: number }>("select count(*)::int n from public.trainer_finance_sessions where client_id=$1 and disposition='charged' and voided_at is null", [f.existing])).rows[0]?.n).toBe(1)
-    expect((await f.owner.query<{ n: number }>("select count(*)::int n from public.trainer_finance_sessions where client_id=$1 and disposition='unassigned' and package_id is null and voided_at is null", [f.existing])).rows[0]?.n).toBe(85)
+    const importedIds = f.receipts.at(-1)!.receipt.created.map(row => row.workoutId)
+    expect((await f.owner.query<{ n: number }>("select count(*)::int n from public.trainer_finance_sessions where client_id=$1 and workout_id=any($2::uuid[]) and disposition='unassigned' and package_id is null and voided_at is null", [f.existing, importedIds])).rows[0]?.n).toBe(85)
   })
 
   it('does not undo a later manual billing decision on an imported workout', async () => {

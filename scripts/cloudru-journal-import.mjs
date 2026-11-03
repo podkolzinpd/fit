@@ -239,8 +239,19 @@ async function insertReviewedJournal({runtime,trainerId,clientId,athleteId,worko
      ...(existingCard?{}:{version:saved.version})})
    }
   }
-  if(createdCard)for(const table of ['trainer_finance_packages','trainer_finance_payments','trainer_finance_sessions']) {
-   if((await runtime.query(`select count(*)::int n from public.${table} where client_id=$1`,[clientId])).rows[0]?.n!==0)failWriter('unexpected_finance_change')
+  if(createdCard) {
+   for(const table of ['trainer_finance_packages','trainer_finance_payments']) {
+    if((await runtime.query(`select count(*)::int n from public.${table} where client_id=$1`,[clientId])).rows[0]?.n!==0)failWriter('unexpected_finance_change')
+   }
+   // Attendance without a pack is now tracked, including newly imported done
+   // workouts. Permit exactly those unassigned rows; never a charge or payment.
+   const expectedIds=new Set(entries.filter(e=>e.draft.trainingFormat==='with_trainer')
+    .map(e=>created.find(c=>c.ordinal===e.ordinal)?.workoutId))
+   const attendance=(await runtime.query(`select workout_id,trainer_id,package_id,disposition,voided_at
+    from public.trainer_finance_sessions where client_id=$1`,[clientId])).rows
+   if(attendance.length!==expectedIds.size||new Set(attendance.map(s=>s.workout_id)).size!==expectedIds.size
+    ||attendance.some(s=>!expectedIds.has(s.workout_id)||s.trainer_id!==trainerId||s.package_id!==null
+     ||s.disposition!=='unassigned'||s.voided_at!==null))failWriter('unexpected_finance_change')
   }
   if(verifyContent)await verifyContent(runtime,{trainerId,clientId,entries,created})
   if(preservedState)await verifyPreservedState(runtime,clientId,created.map(c=>c.workoutId),preservedState)
