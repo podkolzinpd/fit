@@ -48,7 +48,7 @@ export function readJournalTransport(parts,approvedSha256,targetNameSha256) {
 
 const identityUuid=/^[a-f0-9]{8}-[a-f0-9]{4}-[1-5][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/
 const failIdentity=code=>{throw new Error('journal_import_'+code)}
-async function resolveJournalTrainer(owner,target,legacyId=null) {
+export async function resolveJournalTrainer(owner,target,legacyId=null) {
  if(!target||![target.trainerLoginSha256,target.trainerEmailSha256].every(h=>typeof h==='string'&&/^[a-f0-9]{64}$/.test(h))
   ||(legacyId!==null&&!identityUuid.test(legacyId)))failIdentity('target_invalid')
  await owner.query('begin transaction isolation level repeatable read read only')
@@ -123,7 +123,7 @@ async function keepImportedWorkoutUnassigned(connection,clientId,workoutId,worko
 }
 
 // Detect an older deployed parser silently dropping a supplied source field.
-function sourceContent(d) {
+export function sourceContent(d) {
  const exerciseKeys=['position','source','ref','customExerciseId','name','muscleGroup','inputKind','blockId','blockType',
   'blockPreset','blockRounds','restBetweenExercisesSec','restBetweenRoundsSec','restBetweenSetsSec','trainerComment']
  const setKeys=['position','weightKg','reps','durationMin','durationSec','distanceKm','rpe','metricSources']
@@ -344,7 +344,7 @@ export function sealJournalReceipt(receipt,publicPem) {
 }
 
 const failOrchestrator=code=>{throw new Error('journal_import_'+code)}
-async function ownerRead(owner,work) {
+export async function ownerRead(owner,work) {
  await owner.query('begin transaction isolation level repeatable read read only')
  try {
   await owner.query("set local statement_timeout='10s'")
@@ -464,7 +464,7 @@ async function boundedGet(url,headers) {
  try{return JSON.parse(Buffer.concat(chunks).toString('utf8'))}catch{failBootstrap('legacy_registry_invalid')}
 }
 // Fixed host and bounded registry reader; credentials never leave process memory or logs.
-async function legacyProfileId(env,target,readRegistry) {
+export async function legacyProfileId(env,target,readRegistry) {
  const project=env.SUPABASE_PROJECT_ID,token=env.SUPABASE_ACCESS_TOKEN
  if(!/^[a-z0-9]{20}$/.test(project??'')||!token)failBootstrap('legacy_registry_config_missing')
  const keys=await boundedGet(`https://api.supabase.com/v1/projects/${project}/api-keys`,{Authorization:`Bearer ${token}`})

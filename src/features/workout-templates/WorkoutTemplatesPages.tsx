@@ -181,6 +181,10 @@ function WorkoutTemplateEditor({ templateId, sourceWorkoutId, draftKey, context,
   }, [])
   const [ready, setReady] = useState(false)
   const [dirty, setDirty] = useState(false)
+  const submitting = useRef(false)
+  const submittedRevision = useRef<string | null>(null)
+  const [entryBusy, setEntryBusy] = useState(false)
+  const [notesBusy, setNotesBusy] = useState(false)
   const [pickerOpen, setPickerOpen] = useState(false)
   const [pickerSearch, setPickerSearch] = useState('')
   const [replaceIndex, setReplaceIndex] = useState<number | null>(null)
@@ -203,7 +207,7 @@ function WorkoutTemplateEditor({ templateId, sourceWorkoutId, draftKey, context,
     onSuccess: async (savedId, savedDraft) => {
       if (active.current && context) applyCreatedTemplate(context, { ...savedDraft, id: savedId })
       finished.current = true
-      removeWorkoutTemplateDraft(draftKey)
+      if (JSON.stringify(readWorkoutTemplateDraft(draftKey)) === submittedRevision.current) removeWorkoutTemplateDraft(draftKey)
       if (!active.current) return
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['workout-template', savedId], exact: true, refetchType: 'none' }),
@@ -211,6 +215,7 @@ function WorkoutTemplateEditor({ templateId, sourceWorkoutId, draftKey, context,
       ])
       if (active.current) returnToOrigin(true)
     },
+    onSettled: () => { submitting.current = false },
   })
   function returnToOrigin(replace = false) {
     if (context) { returnToTemplatePlan(context, navigate, replace); return }
@@ -221,7 +226,7 @@ function WorkoutTemplateEditor({ templateId, sourceWorkoutId, draftKey, context,
   function closePicker() { setPickerOpen(false); setPickerSearch(''); setReplaceIndex(null) }
   const [confirmLeave, confirmLeaveDialog] = useConfirm()
   async function leaveForm() {
-    if (save.isPending) return
+    if (submitting.current || entryBusy || notesBusy) return
     if (dirty) {
       const shouldLeave = await confirmLeave({ message: 'Выйти из шаблона? Несохранённые изменения будут удалены.', confirmLabel: 'Выйти', danger: true })
       if (!shouldLeave) return
@@ -231,6 +236,7 @@ function WorkoutTemplateEditor({ templateId, sourceWorkoutId, draftKey, context,
     returnToOrigin()
   }
   function pick(selected: ExerciseSnapshot) {
+    if (submitting.current) return
     setExercises((current) => replaceIndex === null
       ? [...current, blankExercise(selected, current.length)]
       : replaceExercise(current, replaceIndex, selected))
@@ -238,11 +244,13 @@ function WorkoutTemplateEditor({ templateId, sourceWorkoutId, draftKey, context,
     closePicker()
   }
   function pickMany(selected: ExerciseSnapshot[]) {
+    if (submitting.current) return
     setExercises((current) => [...current, ...selected.map((exercise, index) => blankExercise(exercise, current.length + index))])
     setDirty(true)
     closePicker()
   }
   function quickAdd(items: ParsedWorkoutExercise[]) {
+    if (submitting.current) return false
     setExercises((current) => [...current, ...items.map((item, index) => ({
       ...blankExercise(item.exercise, current.length + index),
       ...item.structure,
@@ -252,9 +260,12 @@ function WorkoutTemplateEditor({ templateId, sourceWorkoutId, draftKey, context,
   }
   function submit(event: FormEvent) {
     event.preventDefault()
-    if (save.isPending || !name.trim() || !exercises.length) return
+    if (submitting.current || entryBusy || notesBusy || pickerOpen || !name.trim() || !exercises.length) return
     setDirty(true)
-    setDraftStorageError(!writeWorkoutTemplateDraft(draftKey, { id: templateId ?? newTemplateId, name, notes, exercises, version: baseVersion }))
+    const localRevision = { id: templateId ?? newTemplateId, name, notes, exercises, version: baseVersion }
+    submittedRevision.current = JSON.stringify(localRevision)
+    setDraftStorageError(!writeWorkoutTemplateDraft(draftKey, localRevision))
+    submitting.current = true
     save.mutate({ id: templateId ?? newTemplateId, name: name.trim(), notes: notes.trim() || undefined, exercises, version: baseVersion })
   }
   const error = templateQuery.error ?? sourceQuery.error
@@ -264,20 +275,23 @@ function WorkoutTemplateEditor({ templateId, sourceWorkoutId, draftKey, context,
     <WorkoutHeader eyebrow="ШАБЛОН ТРЕНИРОВКИ" title={pageTitle} meta={headerMeta} state="planned" showStatus={false} />
     <AsyncView loading={!ready && !error} error={error} onRetry={() => { if (templateId) void templateQuery.refetch(); if (sourceWorkoutId) void sourceQuery.refetch() }}>
       <form className="stack workout-form workout-template-form" onSubmit={submit}>
+        <fieldset disabled={save.isPending} style={{ display: 'contents' }}>
         <section className="workout-form-section template-basics"><Field label="Название шаблона"><input value={name} onChange={(event) => { setName(event.target.value); setDirty(true) }} placeholder="Например, Силовая · всё тело" maxLength={120} required /></Field>
           <details className="workout-notes" open={Boolean(notes)}>
             <summary>Заметка для спортсмена <span>Необязательно</span></summary>
-            <VoiceNoteField name="notes" source="workout_template_form" value={notes} onValueChange={(value) => { setNotes(value); setDirty(true) }} placeholder="Общие подсказки к тренировке" hideLabel />
+            <VoiceNoteField disabled={save.isPending} onBusyChange={setNotesBusy} name="notes" source="workout_template_form" value={notes} onValueChange={(value) => { setNotes(value); setDirty(true) }} placeholder="Общие подсказки к тренировке" hideLabel />
           </details>
         </section>
         <section className="workout-form-section workout-form-exercises"><div className="workout-form-section-head workout-form-exercise-heading"><h2>Упражнения</h2><span>{templateMeta(exercises)}</span></div>
-          <QuickWorkoutEntry methods={isFitLimeEnabled(actor) ? { onExercise: () => { setReplaceIndex(null); setPickerSearch(''); setPickerOpen(true) } } : undefined} catalog={catalog.exercises} parseWorkout={(text, systemCatalog) => exercisesRepository.parseWorkout(text, systemCatalog)} onAdd={quickAdd} compact={exercises.length > 0} onOpenCatalog={exercises.length === 0 ? (search) => { setPickerSearch(search); setPickerOpen(true) } : undefined} />
+          <QuickWorkoutEntry disabled={save.isPending} onBusyChange={setEntryBusy} methods={isFitLimeEnabled(actor) ? { onExercise: () => { setReplaceIndex(null); setPickerSearch(''); setPickerOpen(true) } } : undefined} catalog={catalog.exercises} parseWorkout={(text, systemCatalog) => exercisesRepository.parseWorkout(text, systemCatalog)} onAdd={quickAdd} compact={exercises.length > 0} onOpenCatalog={exercises.length === 0 ? (search) => { setPickerSearch(search); setPickerOpen(true) } : undefined} />
           {!exercises.length && <p className="workout-empty-hint">Добавьте хотя бы одно упражнение — голосом, текстом или из каталога.</p>}
-          <WorkoutExerciseEditor exercises={exercises} onChange={(next) => { setExercises(next); setDirty(true) }} onOpenPicker={() => setPickerOpen(true)} onReplaceExercise={(index) => { setReplaceIndex(index); setPickerOpen(true) }} hideEmptyAddAction collapseInitialExercises={Boolean(templateId || sourceWorkoutId)} initialExercisesReady={ready} />
+          <WorkoutExerciseEditor disabled={save.isPending} exercises={exercises} onChange={(next) => { if (!submitting.current) { setExercises(next); setDirty(true) } }} onOpenPicker={() => setPickerOpen(true)} onReplaceExercise={(index) => { setReplaceIndex(index); setPickerOpen(true) }} hideEmptyAddAction collapseInitialExercises={Boolean(templateId || sourceWorkoutId)} initialExercisesReady={ready} />
         </section>
         {save.error && <InlineRequestError error={save.error} />}
         {draftStorageError && <p className="error" role="alert">Не удалось сохранить черновик на устройстве. Не закрывайте экран до сохранения шаблона.</p>}
-        <div className="actions workout-action-row"><WorkoutCta type="submit" pending={save.isPending} pendingLabel="Сохраняем…" disabled={!name.trim() || !exercises.length}>{context?.applyOnSave ? 'Сохранить и добавить в план' : 'Сохранить шаблон'}</WorkoutCta></div>
+        <div className="actions workout-action-row"><WorkoutCta type="submit" pending={save.isPending} pendingLabel="Сохраняем…" disabled={entryBusy || notesBusy || pickerOpen || !name.trim() || !exercises.length}>{context?.applyOnSave ? 'Сохранить и добавить в план' : 'Сохранить шаблон'}</WorkoutCta></div>
+        </fieldset>
+        {(entryBusy || notesBusy) && <p role="status">Завершите ввод перед сохранением шаблона.</p>}
       </form>
       {pickerOpen && <ExercisePicker catalog={catalog} initialSearch={pickerSearch} multiple={replaceIndex === null} onPick={pick} onPickMany={pickMany} onClose={closePicker} techniqueActionLabel={replaceIndex === null ? 'Добавить упражнение' : 'Заменить упражнение'} />}
     </AsyncView>

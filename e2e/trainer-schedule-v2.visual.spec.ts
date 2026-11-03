@@ -1,4 +1,4 @@
-import { workoutTemplateSourceCases, workoutTemplateEntryCases, workoutTemplateReliabilityCases } from './workout-template-reliability.cases'
+import { workoutTemplateDraftSafetyCases, workoutTemplateSourceCases, workoutTemplateEntryCases, workoutTemplateReliabilityCases } from './workout-template-reliability.cases'
 import { workoutLifecycleCases } from './workout-lifecycle.cases'
 import { financeAccountingCases } from './finance-accounting.cases'
 import { writeFile } from 'node:fs/promises'
@@ -16,6 +16,7 @@ workoutTemplateReliabilityCases()
 workoutTemplateEntryCases()
 workoutTemplateSourceCases()
 financeAccountingCases()
+workoutTemplateDraftSafetyCases()
 
 // Narrow client rows and the one-add flow use the production route and fonts.
 test('Compact clients keep search, initials and one add flow in trainer Lime', { tag: ['@lime-clients', '@lime-critical'] }, async ({ page }, info) => {
