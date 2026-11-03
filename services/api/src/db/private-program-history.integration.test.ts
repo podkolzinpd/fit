@@ -1,7 +1,7 @@
 import {createHash,randomUUID} from 'node:crypto'
 import {gzipSync} from 'node:zlib'
 import {fileURLToPath} from 'node:url'
-import {Pool,type PoolClient} from 'pg'
+import {Pool,type PoolClient,type QueryResultRow} from 'pg'
 import {runner} from 'node-pg-migrate'
 import {afterAll,afterEach,beforeAll,describe,expect,it} from 'vitest'
 import {inspectProgramHistory} from '../../../../scripts/cloudru-program-history-inspect.mjs'
@@ -94,7 +94,7 @@ describe.skipIf(source===undefined)('private weekly-program read-only inventory 
     if(!parsed)throw Error('synthetic_draft_required')
     await f.runtime.query('begin')
     await f.runtime.query("select set_config('request.jwt.claim.sub',$1,true)",[f.coach])
-    await saveCompletedWorkout({query:async(sql,args)=>(await f.runtime.query(sql,args)).rows},parsed.draft,null)
+    await saveCompletedWorkout({query:async <Row extends QueryResultRow>(sql:string,args?:readonly unknown[])=>(await f.runtime.query<Row>(sql,args===undefined?undefined:[...args])).rows},parsed.draft,null)
     await f.runtime.query('commit')
     const before=(await f.owner.query('select to_jsonb(s) value from public.trainer_finance_sessions s where client_id=$1',[id])).rows
     expect(await inspectProgramHistory(f.options)).toMatchObject({status:'duplicates_require_manifest_review',duplicates:1,newWorkouts:0,existingWorkouts:1})
