@@ -468,3 +468,46 @@ DB fixture fix и3 regression cases сохраняются. Перед push по
 Merge38a6e5ee:4 production-mode booking cases passed7.8s; E2E TypeScript
 passed. Компактная P2/P3 ссылка сокращена в рамках12KiB CURRENT_STATE,
 все статусы и канонический план сохранены. Docs/whitespace проверяются перед push.
+
+### SB-MEDIA-RETIRE-01 — отказ от source media — 03.11.2026
+
+Запрос: «можно старые файлы никуда не переносить». Это принятое владельцем
+уточнение P1/B01/B02: полнота переноса старых Supabase media больше не гейт
+удаления этого runtime. Файлы, которые есть только в Supabase, не обслуживаются
+через старый bridge; native Cloud.ru objects/новые загрузки/картинки/видео сохраняются.
+Удаление remote source objects, секретов и проекта не выполняется/не разрешается
+этой итерацией. Baseline mainc4cd06a5, поток data-media.
+
+Удаляются SupabaseChatMediaStore, LegacyChatMediaBridge/authorizer, SupabaseBridge,
+три legacy media routes/header/CORS и fallback server composition; source media
+migration CLI/core/workflow и последний API SDK. Native storage остаётся одним
+путём; без его config API не подключается к старому провайдеру. Старые source
+SQL/types/archive и unrelated ops readers не затрагиваются.
+
+Покрытие: legacy auth/RPC/sign/remove/SDK decoding и source-copy hash/parity
+проверки удаляются вместе с прекращёнными контрактами, без имитации переноса.
+Native contracts сохраняют app.test.ts (фото upload→send, own remove, permissions),
+object-storage-media.test.ts (S3/sign/read/remove/config), chat-media/vital-media
+validation и native-media import guard. Три новые retired-route cases проверяют
+404 с anonymous/retired/native headers и отсутствие native storage calls.
+Dependency guard запрещает возвращать @supabase/* в API lockfile; это отдельный
+риск от cold import guard (неиспользуемая dependency могла бы пройти import test).
+Stage storage Terraform/policy assertions сохраняются; удаляются только проверки
+retired source-copy workflow. Cloud.ru S3 migration tooling и Vital uploader не меняются.
+
+Проверено пока:284 targeted API/media tests и56 stage workflow tests passed до
+добавления dependency guard. Полный check/browser/CI фиксируются после стабилизации
+в этом журнале и PR. Отвергнуто переписывание SDK на fetch: это сохранило бы
+зависимость от старого сервиса. Remote media transfer/проверки и prod deployment
+не запускаются. Следующий отдельный остаток — ops/secret readers и stage mirror.
+
+Итог локальной проверки SB-MEDIA-RETIRE-01: полный npm run check passed,
+326 frontend files/2951 tests, coverage83/77.91/81.96/87.75 при прежних порогах;
+API1552passed/281skipped без DB env, lint/types/policies/build passed. После
+чистого npm ci API dependency graph не содержит @supabase/*. В WebKit3/3
+существующих native catalog/private video cases passed9.8s (390/1440 и поиск);
+никаких новых browser cases или protected inventory изменений. Docs/archive
+integrity и migration safety (0 changed migrations) passed. Полный DB/RLS gate
+не запускался отдельно: SQL/ownership/native stores не менялись. Remote media,
+реальное устройство, production и отключение Supabase не проверялись/не менялись.
+Новый PR и exact-head CI добавляются в handoff после push; merge не выполняется.
