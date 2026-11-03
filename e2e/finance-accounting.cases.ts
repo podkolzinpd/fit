@@ -32,6 +32,73 @@ async function formGeometry(form: Locator) {
 }
 
 export function financeAccountingCases() {
+  test('Finance overview search and archive preserve return context without a duplicate clients entry', { tag: ['@lime-finance'] }, async ({ page }, info) => {
+    const ledger = await accountingFixture(page)
+    const active = { clientId, fullName: ledger.clientName!, archivedAt: null, activeClient: true,
+      receivedCents: 1000000, dueCents: 0, nearestPaymentDueOn: null, unpaidPackageCount: 0,
+      activePackageCount: 2, upcomingPackageCount: 0, sessionsRemaining: 10, overdue: false,
+      lowSessions: false, unassignedSessions: 0, needsAttention: false }
+    const archived = { ...active, clientId: conversationId, fullName: 'Дарья Иванова',
+      archivedAt: stamp, activeClient: false, receivedCents: 500000, dueCents: 200000,
+      nearestPaymentDueOn: '2026-10-31', unpaidPackageCount: 1, overdue: true, needsAttention: true }
+    await page.route('**/v1/finance/overview*', route => route.fulfill({ json: { overview: {
+      month: '2026-11', receivedCents: 1500000, dueCents: 200000, attentionCount: 1,
+      clients: [active, archived],
+    } } }))
+    await page.goto('/clients')
+    await expect(page.locator('.clients-finance-entry')).toHaveCount(0)
+    await page.getByRole('navigation', { name: 'Основная навигация' }).getByRole('link', { name: 'Финансы' }).click()
+    const rows = page.locator('.finance-overview-client')
+    await expect(rows).toHaveCount(1)
+    await expect(rows).toContainText('Алексей')
+    const search = page.getByRole('searchbox', { name: 'Поиск клиента' })
+    await search.fill('никого')
+    await expect(page.getByText('Ничего не найдено.')).toBeVisible()
+    await page.screenshot({ path: info.outputPath('finance-empty-search.png'), fullPage: true })
+    await page.getByRole('button', { name: 'Очистить поиск' }).click()
+    await page.getByRole('button', { name: 'Архив', exact: true }).click()
+    await expect(rows).toHaveCount(1)
+    await expect(rows).toContainText('Дарья Иванова')
+    await expect(rows).toContainText('В архиве')
+    for (const width of [320, 430, 1440]) {
+      await page.setViewportSize({ width, height: 844 })
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+      await page.screenshot({ path: info.outputPath(`finance-archive-${width}.png`), fullPage: true })
+    }
+    await page.getByRole('button', { name: 'Все', exact: true }).click()
+    await expect(rows).toContainText('Алексей')
+    await search.fill('алексей')
+    await expect(page).toHaveURL(/q=/)
+    await expect(rows).toContainText('Алексей')
+    const returnUrl = page.url()
+    await rows.click()
+    await page.getByRole('button', { name: 'Назад', exact: true }).click()
+    await expect(page).toHaveURL(returnUrl)
+    await expect(search).toHaveValue('алексей')
+  })
+
+  test('Finance overview failure and explicit retry remain readable', { tag: ['@lime-finance'] }, async ({ page }, info) => {
+    await accountingFixture(page)
+    await page.addInitScript(() => document.addEventListener('click', event => {
+      if ((event.target as Element).closest('button')?.textContent === 'Повторить') sessionStorage.setItem('finance-explicit-retry', 'yes')
+    }, true))
+    await page.route('**/v1/finance/overview*', async route => {
+      const retry = await page.evaluate(() => sessionStorage.getItem('finance-explicit-retry') === 'yes')
+      if (!retry) return route.fulfill({ status: 503, json: {} })
+      return route.fulfill({ json: { overview: { month: '2026-11', receivedCents: 0, dueCents: 0, attentionCount: 0, clients: [] } } })
+    })
+    await page.goto('/finance')
+    const retry = page.getByRole('button', { name: 'Повторить', exact: true })
+    await expect(retry).toBeVisible()
+    for (const width of [320, 1440]) {
+      await page.setViewportSize({ width, height: 844 })
+      await page.screenshot({ path: info.outputPath(`finance-read-error-${width}.png`), fullPage: true })
+    }
+    await retry.click()
+    await expect(page.getByText('В этом разделе клиентов нет.')).toBeVisible()
+    await page.screenshot({ path: info.outputPath('finance-empty-ledger.png'), fullPage: true })
+  })
+
   test('Finance former-client history and refreshed overview keep debt visible with unassigned sessions', { tag: ['@lime-finance'] }, async ({ page }, info) => {
     await page.setViewportSize({ width: 390, height: 844 })
     const ledger = await accountingFixture(page)

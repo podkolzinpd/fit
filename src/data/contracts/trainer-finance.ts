@@ -68,6 +68,7 @@ export interface TrainerFinanceClientBundle {
 
 export interface TrainerFinanceOverviewClient {
   clientId: string
+  activeClient?: boolean
   fullName: string
   archivedAt: string | null
   receivedCents: number

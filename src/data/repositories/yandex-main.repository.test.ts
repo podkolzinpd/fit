@@ -267,7 +267,7 @@ describe('Yandex main repository', () => {
       updatedAt: '2026-09-05T10:00:00.000000+00:00',
     }
     const fetchMock = vi.fn()
-      .mockResolvedValueOnce(jsonResponse({ overview: { month: '2026-09', receivedCents: 1000000, dueCents: 1500000, attentionCount: 1, clients: [{ clientId, fullName: 'Анна', archivedAt: null, receivedCents: 1000000, dueCents: 1500000, activePackageCount: 1, upcomingPackageCount: 0, sessionsRemaining: 8, overdue: true, lowSessions: false, unassignedSessions: 0, needsAttention: true }] } }))
+      .mockResolvedValueOnce(jsonResponse({ overview: { month: '2026-09', receivedCents: 1000000, dueCents: 1500000, attentionCount: 1, clients: [{ clientId, fullName: 'Анна', archivedAt: null, activeClient: false, receivedCents: 1000000, dueCents: 1500000, activePackageCount: 1, upcomingPackageCount: 0, sessionsRemaining: 8, overdue: true, lowSessions: false, unassignedSessions: 0, needsAttention: true }] } }))
       .mockResolvedValueOnce(jsonResponse({ finance: { clientId, clientName: 'Анна', packages: [financePackage], payments: [payment], sessions: [financeSession] } }))
       .mockResolvedValueOnce(jsonResponse({ package: financePackage }, 201))
       .mockResolvedValueOnce(jsonResponse({ payment }, 201))
@@ -276,7 +276,7 @@ describe('Yandex main repository', () => {
     vi.stubGlobal('fetch', fetchMock)
     const repository = createYandexMainRepository(apiBaseUrl, sessionToken, actor)
 
-    await expect(repository.trainerFinance.listOverview('2026-09')).resolves.toMatchObject({ receivedCents: 1000000, attentionCount: 1, clients: [{ nearestPaymentDueOn: null, unpaidPackageCount: 0 }] })
+    await expect(repository.trainerFinance.listOverview('2026-09')).resolves.toMatchObject({ receivedCents: 1000000, attentionCount: 1, clients: [{ activeClient: false, nearestPaymentDueOn: null, unpaidPackageCount: 0 }] })
     await expect(repository.trainerFinance.listClient(clientId)).resolves.toMatchObject({ clientId, clientName: 'Анна', packages: [{ sessionsRemaining: 8 }] })
     await repository.trainerFinance.createPackage(clientId, {
       kind: 'session_pack', title: '10 тренировок', sessionsTotal: 10, openingUsedSessions: 2,

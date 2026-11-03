@@ -56,6 +56,43 @@ describe('trainerFinanceClientLabel deadlines', () => {
 })
 
 describe('TrainerFinanceOverviewPage', () => {
+  it('searches active and historical clients separately while keeping historical debt in due filters', async () => {
+    const base = { clientId: 'active', fullName: 'Анна', archivedAt: null, activeClient: true,
+      receivedCents: 0, dueCents: 500000, nearestPaymentDueOn: null, unpaidPackageCount: 1,
+      activePackageCount: 1, upcomingPackageCount: 0, sessionsRemaining: 5, overdue: true,
+      lowSessions: false, unassignedSessions: 0, needsAttention: true }
+    listOverview.mockResolvedValue({ month: '2026-11', receivedCents: 1000000, dueCents: 600000, attentionCount: 2,
+      clients: [base,
+        { ...base, clientId: 'archived', fullName: 'Кристина', archivedAt: '2026-10-01T00:00:00Z', activeClient: false, dueCents: 0, overdue: false, needsAttention: false },
+        { ...base, clientId: 'former', fullName: 'Игорь', activeClient: false, dueCents: 100000 },
+      ],
+    })
+    const user = userEvent.setup()
+    renderPage()
+    await screen.findByText('Анна')
+    expect(screen.queryByText('Кристина')).not.toBeInTheDocument()
+    expect(screen.queryByText('Игорь')).not.toBeInTheDocument()
+    const summary = screen.getByRole('region', { name: 'Финансовая сводка' })
+    expect(summary).toHaveTextContent(/10\s000/)
+    expect(summary).toHaveTextContent(/6\s000/)
+    await user.type(screen.getByRole('searchbox', { name: 'Поиск клиента' }), 'кристина')
+    expect(screen.getByText('Ничего не найдено.')).toBeVisible()
+    await user.click(screen.getByRole('button', { name: 'Архив' }))
+    expect(screen.getByText('Кристина')).toBeVisible()
+    await user.click(screen.getByRole('button', { name: 'Очистить поиск' }))
+    expect(screen.getByText('Игорь')).toBeVisible()
+    expect(screen.getByText('Связь завершена')).toBeVisible()
+    await user.click(screen.getByRole('button', { name: 'К оплате' }))
+    expect(screen.getByText('Анна')).toBeVisible()
+    expect(screen.getByText('Игорь')).toBeVisible()
+    expect(screen.queryByText('Кристина')).not.toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Просрочено' }))
+    await user.type(screen.getByRole('searchbox', { name: 'Поиск клиента' }), 'ИГОРЬ')
+    await user.click(screen.getByRole('link', { name: /Игорь/ }))
+    const destination = screen.getByText(/Финансы клиента · возврат/).textContent ?? ''
+    expect(destination).toContain('filter=overdue')
+    expect(decodeURIComponent(destination)).toContain('q=ИГОРЬ')
+  })
   beforeEach(() => {
     listOverview.mockReset().mockResolvedValue({
       month: '2026-09', receivedCents: 2500000, dueCents: 500000, attentionCount: 1,

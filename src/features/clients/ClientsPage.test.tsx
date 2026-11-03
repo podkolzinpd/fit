@@ -7,6 +7,15 @@ import type { ChatThread, Client } from '../../shared/domain'
 import { ArchivedClientsPage, ClientsPage } from './ClientsListPage'
 
 const backend = vi.hoisted(() => ({ list: vi.fn(), setArchived: vi.fn(), listThreads: vi.fn(), open: vi.fn(), listFinanceOverview: vi.fn(), createInvite: vi.fn(), revoke: vi.fn() }))
+const navigation = vi.hoisted(() => ({ unified: false }))
+vi.mock('../../app/coach-workout-redesign', async importOriginal => ({
+  ...await importOriginal<typeof import('../../app/coach-workout-redesign')>(),
+  isCoachWorkoutRedesignEnabled: () => navigation.unified,
+}))
+vi.mock('../../app/trainer-schedule-v2', async importOriginal => ({
+  ...await importOriginal<typeof import('../../app/trainer-schedule-v2')>(),
+  isTrainerScheduleV2Enabled: () => navigation.unified,
+}))
 vi.mock('../../app/data-backend-context', () => ({
   useDataBackend: () => ({ source: 'yandex', clients: { list: backend.list, setArchived: backend.setArchived }, chat: { listThreads: backend.listThreads, open: backend.open }, trainerFinance: { listOverview: backend.listFinanceOverview }, invitations: { createShareForNewClient: backend.createInvite, revoke: backend.revoke } }),
 }))
@@ -75,6 +84,7 @@ function renderPage(clients: Client[] | undefined, initialEntry = '/clients') {
 }
 
 beforeEach(() => {
+  navigation.unified = false
   Object.assign(HTMLElement.prototype, { hasPointerCapture: () => false, setPointerCapture: () => undefined, releasePointerCapture: () => undefined })
   backend.list.mockReset()
   backend.setArchived.mockReset()
@@ -86,6 +96,17 @@ beforeEach(() => {
 })
 
 describe('ClientsPage archive actions', () => {
+  it.each([false, true])('keeps one finance entry for the current navigation: unified=%s', async unified => {
+    navigation.unified = unified
+    const user = userEvent.setup()
+    renderPage([client('anna', 'Анна Смирнова')])
+    await screen.findByText('Анна Смирнова')
+    if (unified) expect(document.querySelector('.clients-finance-entry')).not.toBeInTheDocument()
+    else {
+      await user.click(screen.getByRole('link', { name: /^Финансы/ }))
+      expect(screen.getByText('Финансы открыты')).toBeVisible()
+    }
+  })
   it('labels archiving with an archive icon and keeps restore visually distinct', async () => {
     const root = { ...client('root', 'Анна Смирнова'), canArchive: true }
     const { unmount } = renderPage([root])

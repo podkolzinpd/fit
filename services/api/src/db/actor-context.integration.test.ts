@@ -3411,6 +3411,65 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
       }
     })
 
+    it('flags real finance attention and preserves archived receipts without allowing new operations', async () => {
+      if (!ownerPool || !runtimePool) throw new Error('Database pools are not ready')
+      const owner = ownerPool, runtime = runtimePool, card = randomUUID(), empty = randomUUID(), workout = randomUUID()
+      const command = (sql: string, args: unknown[] = [], actor = ACTOR_ID) => withActorTransaction(runtime, actor,
+        client => client.query<JsonResultRow>(sql, args))
+      const overview = async () => (await command("select public.list_trainer_finance_overview_v2(date_trunc('month',current_date)::date) as result"))[0]!.result as {
+        receivedCents: number; dueCents: number; clients: Array<{ clientId: string; dueCents: number }>
+      }
+      const bundle = async () => (await command('select public.list_trainer_finance_client_v2($1) as result', [card]))[0]!.result as {
+        payments: Array<{ id: string; version: number }>; sessions: Array<{ id: string; version: number }>
+      }
+      const create = () => command(`select public.create_trainer_finance_service_v2(
+        $1,'session_pack','Paid pack',10,0,1000000,1000000,current_date,current_date+30,
+        current_date-1,null,current_date,$2) as result`, [card,randomUUID()])
+      try {
+        const before = await overview()
+        await owner.query("insert into public.clients(id,trainer_id,full_name) values($1,$2,'Archive finance fixture')", [card,ACTOR_ID])
+        await create(); await create()
+        let state = await overview()
+        expect(state.clients.find(item => item.clientId === card)).toMatchObject({
+          activeClient: true, activePackageCount: 2, dueCents: 0, lowSessions: false, unassignedSessions: 0, needsAttention: false,
+        })
+        expect(state.receivedCents).toBe(before.receivedCents + 2000000)
+        await owner.query(`insert into public.workouts(id,trainer_id,client_id,created_by,workout_date,status,training_format)
+          values($1,$2,$3,$2,current_date,'planned','with_trainer')`, [workout,ACTOR_ID,card])
+        await withActorTransaction(runtime,ACTOR_ID,client => finishLiveWorkout(client,workout,1,randomUUID(),{disposition:'auto',packageId:null}))
+        state = await overview()
+        expect(state.clients.find(item => item.clientId === card)).toMatchObject({ unassignedSessions: 1, needsAttention: true, dueCents: 0 })
+        const session = (await bundle()).sessions[0]!
+        await command("select public.update_trainer_finance_session_details_v2($1,$2,'free',null,null,current_date) as result", [session.id,session.version])
+        expect((await overview()).clients.find(item => item.clientId === card)).toMatchObject({ unassignedSessions: 0, needsAttention: false })
+        const version = (await owner.query<{ version: number }>('select version from public.clients where id=$1',[card])).rows[0]!.version
+        await command('select public.set_client_archived($1,true,$2) as result', [card,version])
+        expect((await overview()).clients.find(item => item.clientId === card)).toMatchObject({ activeClient: false, needsAttention: false })
+        expect((await command('select public.list_trainer_finance_client_v2($1) as result',[card]))[0]!.result).toMatchObject({ canCreate: false })
+        await expect(create()).rejects.toMatchObject({ code: 'PT404' })
+        await expect(command("select public.create_trainer_finance_manual_session($1,$2,current_date,'free',null,null) as result", [card,randomUUID()]))
+          .rejects.toMatchObject({ code: 'PT404' })
+        const payment = (await bundle()).payments[0]!
+        await command('select public.update_trainer_finance_payment($1,$2,900000,current_date,null) as result', [payment.id,payment.version])
+        state = await overview()
+        expect(state.receivedCents).toBe(before.receivedCents + 1900000)
+        expect(state.dueCents).toBe(before.dueCents + 100000)
+        expect(state.clients.find(item => item.clientId === card)).toMatchObject({ activeClient: false, dueCents: 100000, overdue: true, needsAttention: true })
+        await owner.query("insert into public.clients(id,trainer_id,full_name,archived_at) values($1,$2,'Empty archive fixture',now())", [empty,ACTOR_ID])
+        expect((await command('select public.list_trainer_finance_client_v2($1) as result',[empty]))[0]!.result)
+          .toMatchObject({ clientName: 'Empty archive fixture', canCreate: false, packages: [], payments: [], sessions: [] })
+        await expect(command('select public.list_trainer_finance_client_v2($1) as result',[card],OUTSIDE_TRAINER_ID)).rejects.toMatchObject({ code:'PT404' })
+      } finally {
+        await owner.query('delete from public.trainer_finance_events where client_id=any($1::uuid[])', [[card,empty]])
+        await owner.query('delete from public.trainer_finance_sessions where client_id=$1', [card])
+        await owner.query('delete from public.workouts where client_id=$1', [card])
+        await owner.query('delete from public.trainer_finance_payments where client_id=$1', [card])
+        await owner.query('delete from public.trainer_finance_packages where client_id=$1', [card])
+        await owner.query("delete from app_private.finance_payment_requests where actor_id=$1 and payload->>'clientId'=$2", [ACTOR_ID,card])
+        await owner.query('delete from public.clients where id=any($1::uuid[])', [[card,empty]])
+      }
+    })
+
     it('aggregates payment deadlines only from unpaid open services of the current trainer', async () => {
       if (!ownerPool || !runtimePool) throw new Error('Database pools are not ready')
       const owner = ownerPool, runtime = runtimePool
@@ -3706,6 +3765,9 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
         // without restoring the former relationship or exposing the other pack.
         await ownerPool.query('delete from public.trainer_finance_packages where client_id=$1 and trainer_id=$2', [clientId, ACTOR_ID])
         expect((await history())[0]!.result).toMatchObject({ clientName: 'Finance author fixture', canCreate: false, packages: [], sessions: [{ disposition: 'free' }] })
+        const historicalOverview = (await withActorTransaction(runtimePool,ACTOR_ID,client => client.query<JsonResultRow>(
+          "select public.list_trainer_finance_overview_v2(date_trunc('month',current_date)::date) as result")))[0]!.result as { clients: Array<{ clientId: string }> }
+        expect(historicalOverview.clients.find(item => item.clientId === clientId)).toMatchObject({ activeClient: false, dueCents: 0 })
         await expect(withActorTransaction(runtimePool, OUTSIDE_TRAINER_ID, client => client.query(
           'select public.list_trainer_finance_client_v2($1)', [clientId]))).rejects.toMatchObject({ code: 'PT404' })
       } finally {

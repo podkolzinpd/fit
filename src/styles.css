@@ -2851,6 +2851,7 @@ button.workout-duration-trigger:disabled { cursor:default; opacity:1 }
 .clients-search input { flex:1; min-width:0; padding:0; border:0; border-radius:0; background:transparent; color:inherit; font-size:var(--type-body-size); line-height:var(--leading-body); outline:none }
 /* Плейсхолдер — осмысленный текст, поэтому использует контрастный secondary. */
 .clients-search input::placeholder { color:var(--secondary-label-fg); opacity:1 }
+.finance-overview-search input { min-height:44px }
 /* У type=search свой нативный крестик: он дублировал бы кнопку очистки и не
    имеет доступного имени. */
 .clients-search input::-webkit-search-cancel-button, .clients-search input::-webkit-search-decoration { -webkit-appearance:none; appearance:none }

@@ -148,7 +148,7 @@ const trainerFinanceOverviewSchema = z.object({
   receivedCents: z.number().int().nonnegative(), dueCents: z.number().int().nonnegative(),
   attentionCount: z.number().int().nonnegative(),
   clients: z.array(z.object({
-    clientId: uuid, fullName: z.string(), archivedAt: yandexDateTimeSchema.nullable(),
+    clientId: uuid, fullName: z.string(), archivedAt: yandexDateTimeSchema.nullable(), activeClient: z.boolean().optional(),
     receivedCents: z.number().int().nonnegative(), dueCents: z.number().int().nonnegative(),
     // Additive rollout: an older API still renders the original finance label.
     nearestPaymentDueOn: z.iso.date().nullable().default(null),

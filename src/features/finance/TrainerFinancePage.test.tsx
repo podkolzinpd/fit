@@ -37,6 +37,21 @@ function renderPage(financeBackTo?: '/finance', queryClient = new QueryClient({ 
 }
 
 describe('TrainerFinancePage', () => {
+  it('hides the payment CTA for a fully paid service and retains correction through payment history', async () => {
+    finance.listClient.mockResolvedValue({ ...bundle,
+      packages: [{ ...bundle.packages[0]!, paidCents: 2500000, dueCents: 0, paymentStatus: 'paid' }],
+      payments: [{ ...bundle.payments[0]!, amountCents: 2500000 }],
+    })
+    const user = userEvent.setup()
+    renderPage()
+    await screen.findByRole('heading', { name: 'Персональные тренировки' })
+    expect(screen.queryByRole('button', { name: 'Внести оплату' })).not.toBeInTheDocument()
+    await user.click(screen.getByRole('tab', { name: 'Оплаты: 1' }))
+    await user.click(screen.getByRole('button', { name: /Действия с оплатой/ }))
+    await user.click(screen.getByRole('menuitem', { name: 'Изменить' }))
+    expect(screen.getByLabelText('Сумма, ₽')).toHaveValue(25000)
+    expect(screen.getByRole('button', { name: 'Сохранить' })).toBeVisible()
+  })
   it('refreshes overview months after payment even while their cached balances are fresh', async () => {
     const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: 20_000 } } })
     const months = ['2026-08', '2026-09']
