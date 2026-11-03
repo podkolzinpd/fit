@@ -512,20 +512,13 @@ test('bootstraps private media only after cost approval', () => {
   )
 })
 
-test('mirrors the Supabase bridge payload into a private stage Lockbox', () => {
-  assert.match(workflow, /^  YC_STAGE_LEGACY_SUPABASE_BRIDGE_LOCKBOX_NAME: fit-stage-legacy-supabase-bridge$/m)
-  assert.match(workflow, /Mirror Supabase credentials for the legacy chat media bridge[\s\S]*?supabase projects api-keys/)
-  assert.match(workflow, /mirror-yandex-legacy-supabase-bridge\.mjs[\s\S]*?--payload-file "\$payload_file"/)
-  assert.match(workflow, /-target=yandex_lockbox_secret_iam_member\.legacy_supabase_bridge_reader/)
-  assert.doesNotMatch(workflow, /SUPABASE_SERVICE_ROLE_KEY=.*>> "\$GITHUB_ENV"/)
-  assert.doesNotMatch(
-    containerTerraform,
-    /SUPABASE_SERVICE_ROLE_KEY\s+= "SUPABASE_SERVICE_ROLE_KEY"\s+YANDEX_CLOUD_API_KEY/,
-  )
-  assert.match(
-    readFileSync(join(import.meta.dirname, 'mirror-yandex-legacy-supabase-bridge.mjs'), 'utf8'),
-    /--deletion-protection[\s\S]*?--version-description[\s\S]*?--payload', '-'/,
-  )
+test('stage deployment no longer reads or mounts retired Supabase credentials', () => {
+  assert.doesNotMatch(workflow, /SUPABASE|supabase|mirror-yandex-legacy/)
+  for (const source of [containerTerraform, databaseTerraform, variablesTerraform]) {
+    assert.doesNotMatch(source, /SUPABASE|legacy_supabase_bridge/)
+  }
+  assert.match(containerTerraform, /local\.media_s3_secret_id/)
+  assert.match(containerTerraform, /YANDEX_LLM_GATEWAY_PRIVATE_KEY/)
 })
 
 test('reuses the private dispatcher and preserves the existing DataLens access path', () => {
@@ -994,17 +987,6 @@ test('validates feature branches without expanding the main-only Yandex OIDC tru
 
 test('preserves reviewed WebSQL access instead of creating PostgreSQL drift', () => {
   assert.match(databaseTerraform, /^      web_sql\s+= true$/m)
-})
-
-test('keeps the legacy bridge pair validation compatible with Terraform 1.8', () => {
-  assert.match(
-    containerTerraform,
-    /lifecycle \{[\s\S]*?precondition \{[\s\S]*?legacy_supabase_bridge_lockbox_secret_id[\s\S]*?legacy_supabase_bridge_lockbox_secret_version_id/,
-  )
-  assert.doesNotMatch(
-    variablesTerraform,
-    /variable "legacy_supabase_bridge_lockbox_secret_version_id" \{[\s\S]*?validation \{[\s\S]*?legacy_supabase_bridge_lockbox_secret_id/,
-  )
 })
 
 const nowMs = Date.parse('2026-10-08T10:59:00Z')

@@ -511,3 +511,94 @@ integrity и migration safety (0 changed migrations) passed. Полный DB/RLS
 не запускался отдельно: SQL/ownership/native stores не менялись. Remote media,
 реальное устройство, production и отключение Supabase не проверялись/не менялись.
 Новый PR и exact-head CI добавляются в handoff после push; merge не выполняется.
+
+### SB-STAGE-CREDENTIALS-RETIRE-01 — stage credentials — 03.11.2026
+
+Запрос: удалить Supabase credential mirror/CLI/helper и bridge Terraform
+inputs/mounts/IAM после принятого удаления server runtime вPR1956. Baseline
+mainfb5e6d9b, поток assistant-ops. Удаляются оба mirror шага plan/deploy,
+setup-cli, env/path helper, модуль+тест и npm caller; native credentials нетронуты.
+
+Terraform удаляет только legacy bridge inputs, pair precondition, API dynamic
+mount и прежний grant resource. Не удаляются Lockbox secret/versions, реальные
+GitHub secrets, native Connection Manager/DB/S3/LLM/push и их grants. Физический
+отзыв старого grant произойдёт при последующем reviewed full stage apply,
+который уже существует после обновления runtime revisions. В этом PR apply нет.
+
+Выбран узкий policy exception для delete только точного адреса retired grant,
+правильного типа, before role lockbox.payloadViewer, непустого secret_id и
+member, совпадающего с planned API SA id; after=null, actions только delete.
+Create/update/replacement старого grant больше не разрешены. Delete любых
+других ресурсов остаётся под прежним guard, DB protected destruction неизменно.
+Отвергнуто общее allow-destroy и забывание state с сохранением доступа: первое
+ослабило бы native-защиту, второе оставило бы unmanaged разрешение.
+
+Проверки старого mirror payload/paired vars удаляются с retired контрактом.
+Сохранены native immutable mounts, external-media keys, stage trust, storage
+bootstrap/стоимость и все другие plan policy cases. Новые regressions ловят
+валидный отзыв в automatic/default modes, попытку create/update/replacement,
+неверный principal/type/role/after и смесь с secret/DB/S3 delete. Это разные
+границы whitelist, не новые тяжёлые browser matrices. Пока103 targeted tests
+passed; полный check и Terraform validation — после стабилизации diff, CI в PR.
+Секреты и provider state/payload не читались; rollback stage не переключался.
+
+Итог локальной проверки SB-STAGE-CREDENTIALS-RETIRE-01:103 targeted policy/
+workflow/immutable-mount tests passed (3.7s). Terraform1.8.5 linux_arm64 через
+Podman: init -backend=false -lockfile=readonly, validate и fmt -check changed
+TF files passed; provider0.215.0 из существующего lockfile. Checkout read-only,
+TF_DATA_DIR временный, remote backend/state отключены. Существующий warning
+media.tf prefix deprecated не изменён. Попытка x86-эмуляции упала до проверки
+config, поэтому использован native ARM; итоговая проверка успешно завершена.
+
+Полный npm run check passed:326frontend files/2951tests, coverage83/77.91/81.96/
+87.75 при прежних порогах; API1552passed/281skipped без DB env, lint/types/
+policies/build passed. Migration safety:0 changed SQL migrations. Browser specs,
+матрицы, protected inventory, retries/timeouts не менялись; отдельного local
+browser/DB прогона нет, product/API/SQL не меняются. Remote Terraform plan/apply,
+secret revocation, stage switch и production не запускались. Exact-head CI — в PR.
+
+Синхронизация PR1958 с main0b553718 после PR1954: конфликт только в
+infra:policy:test. Сохранён новый cloudru-client-restore test из main и удалён
+retired mirror test; остальные изменения main приняты без ручных изменений.
+107 targeted tests passed (3.4s), workflow docs/archive integrity и
+whitespace passed. Полный check ранее прошёл на41cb68c1; новый CI после push.
+
+Повторная синхронизация PR1958 с main3ed7d58b: конфликт только соседних
+строк CURRENT_STATE. Сохранены текущий stage cleanup и новый Live P2/P3 §90.
+Код main принят автоматически, последние изменения ветки10d7556c сохранены.
+Docs/archive integrity и whitespace проверяются до push; CI нового head
+остаётся отдельной проверкой. Дополнительных runtime изменений нет.
+
+### SB-ADMIN-WORKFLOWS-RETIRE-01 — admin workflows — 03.11.2026
+
+Задача владельца: удалить deploy-database.yml, diagnose-supabase-auth.yml и
+query-supabase-auth-logs с тестами. Поток assistant-ops, baseline main6e19ff75.
+Расхождений нет: отдельное согласованное удаление двух legacy admin входов.
+Удалены оба manual workflow, diagnostic helper/test и npm caller. В существующем
+CI policy test сохранена проверка manual-only Yandex parser; удалена только
+проверка существования retired deploy. Четыре diagnostic tests сняты вместе с
+прекращённым CLI-контрактом, нового runtime контракта взамен нет.
+
+Обновлены активные ops-инструкции/playbook и текущий индекс. Исторические
+инвентари/аудиты не переписываются. Отвергнуто удаление общих source secrets и
+остальных source tools: восстановление карточек и другие readers ещё используют
+их; это следующий этап. SQL/archive, native auth/API/media/AI/prompts, Cloud
+Functions, parser и DB release не меняются. Удалённые вызовы и deploy запрещены
+в scope этого PR. Локальные проверки и CI фиксируются после выполнения.
+
+Локально50 targeted workflow/scope tests passed, docs budgets/links/archive и
+migration safety (0 SQL changes) passed. Из scope whitelist убран только
+удалённый deploy path; неизвестные пути по-прежнему требуют полный E2E.
+Полный npm run check: lint/typecheck и328frontend files/2963tests passed,
+coverage83.01/77.94/81.97/87.77; infra policy остановился на существующем
+cloudru-client-restore mock curl (вызван реальный GitHub API,401). Отдельный
+прогон воспроизвёл сбой без изменений этого теста/workflow в текущем diff.
+Проверки не ослаблялись; оставшиеся части check запускаются отдельно.
+
+Итог: оставшиеся calendar22/22, hosting196/196, API133files/1555tests
+(287skipped без DB env), API lint/build и frontend build passed. В infra
+372/373 passed на Mac; единственный сбой проверен тем же неизменённым тестом
+в Linux Podman Node22, checkout read-only, network=none:5/5 passed. Таким
+образом mock curl изолированно работает без сети в Linux; Mac-host запуск
+полного check не объявляется зелёным. SQL/product не менялись, отдельного
+локального DB/browser прогона нет. CI/Android нового PR1964 ожидаются.

@@ -1,12 +1,13 @@
 28.10 — Чат: плашка даты перед первым сообщением дня («Сегодня», «Вчера», «26 октября», «12 марта 2025»), раньше «Новые сообщения»; в списке чатов дата по давности. День по часам телефона. chat-dates.ts + тесты.
 # Fit — текущий индекс
-ФИТ19: [финансы,5PR](design/trainer-finance-cabinet-20260930.md); код/QA готовы, CI/очередь.
+ФИТ19: [финансы](design/trainer-finance-cabinet-20260930.md); CI.
+03.11 — [17 журналов](design/ATHLETE_PROGRAM_HISTORY_IMPORT_20261103.md): подготовка; сверка/запись впереди.
 YAFIT-701: [R101–R106, восстановление карточки у тренера без изменения истории](https://st.yandex-team.ru/YAFIT-701).
-Шаблоны: [TMPA101–108,3PR](design/COACH_WORKFLOW_AUDIT_20261031.md#план-трёх-pr-по-шаблонам-тренера--02112026); PR1 в работе; PR2/PR3 далее.
+Шаблоны: [TMPA101–108](design/COACH_WORKFLOW_AUDIT_20261031.md);3PR приняты. R01–R04: исправлены локально, CI/выпуск далее.
 02.11 — CI: production-mode browser набор873 разделяется на4 части без сокращения;
 [план, сохранность и исправления flaky swipe/video](design/PRODUCTION_BROWSER_CI_SHARDS_20261102.md). CI нового head ещё гейт.
 TC101–107: [план/статус](design/TRAINER_CONNECTION_CONFIRMATION_20261102.md). В работе.
-[Supabase: P3 merged; media](design/SUPABASE_DECOMMISSION_PLAN_20261023.md).
+[Supabase: stage merged; admin cleanup](design/SUPABASE_DECOMMISSION_PLAN_20261023.md).
 Live: [P2/P3, §90](design/CLIENT_REFERENCE_SCREENS_20261029.md).
 YAFIT-699: компактный список клиентов и гостевое приглашение,2PR. [План/проверки](design/COACH_CLIENTS_AND_INVITATION_20261031.md); [статус выпуска](https://st.yandex-team.ru/YAFIT-699).
 ФИТ20: [все статусы R104-S](design/COACH_RESCHEDULE_AND_DAY_GESTURES_20261031.md), [PR1923: CI](https://github.com/podkolzinpd/fit/pull/1923); [F201–208: CI/выпуск](design/COACH_WORKFLOW_AUDIT_20261031.md).
@@ -18,8 +19,7 @@ PR1906–1908 опубликованы db96685e; итог в YAFIT-697.
 31.10 — YAFIT-693: пакет опубликован и включён всем клиентам. [Результат и ограничения](design/CLIENT_REFERENCE_SCREENS_20261029.md), итерация47; [приёмка](https://st.yandex-team.ru/YAFIT-693).
 30.10 — YAFIT-695 завершён: компактная история у тренера опубликована PR1892/cccecf35. [H101–H107, журнал и production-приёмка](https://st.yandex-team.ru/YAFIT-695).
 29.10 — YAFIT-673: полный список упражнений выбранного дня у тренера, записанные факты под названиями; обычный список/клиентский календарь прежние. План и статус выпуска: [каноническая запись](design/COACH_CALENDAR_FULL_EXERCISES_20261029.md). Локальные целевые/браузерные проверки пройдены, полный check/CI/production ещё гейты.
-Исходная база документа: main203f539d21fbc5cf79b1c930dc8467bbc8dc5c3b,28.10.2026; это не автоматически текущая production-сборка.
-Перед работой сверить main, нужный тикет и фактический выпуск.
+Исходная база документа: main203f539d21fbc5cf79b1c930dc8467bbc8dc5c3b,28.10.2026; это не автоматически текущая production-сборка. Перед работой сверить main, нужный тикет и фактический выпуск.
 
 ## Анкеты тренеров / YAFIT-674
 
