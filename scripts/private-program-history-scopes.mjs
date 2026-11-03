@@ -2,7 +2,7 @@
 export const reviewedProgramPackets = [
   {
     "code": "F01",
-    "sha256": "9d625f457e26b6090aa0981d83caec4b7ecfaf7cdc20d534fd47dd5a21854e44",
+    "sha256": "e26833f6c9b9691cce45485612ea237f695269129cd25a49e064bb84ae99db61",
     "workouts": 45,
     "exercises": 305,
     "sets": 621,
@@ -12,7 +12,7 @@ export const reviewedProgramPackets = [
   },
   {
     "code": "F02",
-    "sha256": "4dc5efe6f2ed3eb1d271b6927931a55d6586be8d96fd8a65ef2f8a6c95255fe6",
+    "sha256": "4e167cc33142f79ebc20f0243b6615d55b11166b87e07214781b78a83f5330da",
     "workouts": 20,
     "exercises": 140,
     "sets": 420,
@@ -22,7 +22,7 @@ export const reviewedProgramPackets = [
   },
   {
     "code": "F03",
-    "sha256": "b588c235602cdd6f7b4687154a1e29e24288048aa9a20128686cf16909058df5",
+    "sha256": "0e75d7c7802e0d18ce5e79bfe8948e0ea6393d3bc3e1b0388ce6dbcc404ae7d7",
     "workouts": 45,
     "exercises": 333,
     "sets": 872,
@@ -32,17 +32,17 @@ export const reviewedProgramPackets = [
   },
   {
     "code": "F04",
-    "sha256": "bedbd3584de9c30041d70be206b538aea92e37ca5614f1ea4c700bbad04fd5ee",
+    "sha256": "b695794dd2e79fed12e7e82c482d140911b5923387f73d941a49e61d8162e09a",
     "workouts": 30,
     "exercises": 200,
     "sets": 563,
-    "from": "2026-06-01",
-    "to": "2026-08-07",
+    "from": "2026-06-08",
+    "to": "2026-08-14",
     "trainingFormat": "with_trainer"
   },
   {
     "code": "F05",
-    "sha256": "07a0cd3370a8643c3e18f43929e946b991944e286119b4dd2b6f4516182f71db",
+    "sha256": "d09d1b0c377e03c5d40016572b3791bebf875bd44f2256a1fe19fecbcb5259aa",
     "workouts": 15,
     "exercises": 105,
     "sets": 308,
@@ -52,7 +52,7 @@ export const reviewedProgramPackets = [
   },
   {
     "code": "F06",
-    "sha256": "0bdc07d92de16bb8ee0871c233ad15b01a2b1cd393afd1ab817df5d9b715502c",
+    "sha256": "1d3fb4f7143d2e4a06a0efc1a7ee4fe2cabe5f244da0f3e2c6482a38cbe1a285",
     "workouts": 20,
     "exercises": 130,
     "sets": 331,
@@ -62,17 +62,17 @@ export const reviewedProgramPackets = [
   },
   {
     "code": "F07",
-    "sha256": "ea37a1495047b2c62fb041b056b392834827af4432ae6dec4e0c46d4a39ef97c",
+    "sha256": "bf8fbeb05ec337fc2a202bbd8f1fc702a794b060218bfea73bd5835d1dde9336",
     "workouts": 15,
     "exercises": 85,
     "sets": 274,
-    "from": "2026-09-28",
+    "from": "2026-09-14",
     "to": "2026-10-30",
     "trainingFormat": "with_trainer"
   },
   {
     "code": "F08",
-    "sha256": "c6355321ed08f9d7c5e753d16d8e702b79022082125770d40d976366ed664205",
+    "sha256": "53716ac0bef29ba8d69f72221851b05e1adcfcdade466915fc25b072cdcaa7a9",
     "workouts": 30,
     "exercises": 210,
     "sets": 509,
@@ -82,7 +82,7 @@ export const reviewedProgramPackets = [
   },
   {
     "code": "F09",
-    "sha256": "b58522163d249cf7da01f06c59cd224300be243e537a5b5b040ef6a7dd26d9a7",
+    "sha256": "78c59c6ea6be5b0ab57808315f5437b62ca885b1d8f90b4a54785d73308346a1",
     "workouts": 15,
     "exercises": 131,
     "sets": 196,
@@ -92,7 +92,7 @@ export const reviewedProgramPackets = [
   },
   {
     "code": "F10",
-    "sha256": "14e5e9257b185a196d04cb8181663bfb749afcb2b90f48dadb7addc1835f42e5",
+    "sha256": "bf6dba41aa54bd94aeeda97172ef7607b076cb5f2843a95272a34e5864003d15",
     "workouts": 29,
     "exercises": 191,
     "sets": 440,
@@ -102,7 +102,7 @@ export const reviewedProgramPackets = [
   },
   {
     "code": "F11",
-    "sha256": "a7ed585d5cc5211161f0a2a8f4b4316ed43dae03f8d066dc4c17fcdafb63ff32",
+    "sha256": "db0eb3ccfb5af494d7dcb532ef1ebb8f4b3cc44ede5ad1a5f75fa41617f7f82f",
     "workouts": 60,
     "exercises": 430,
     "sets": 1060,
@@ -112,7 +112,7 @@ export const reviewedProgramPackets = [
   },
   {
     "code": "F12",
-    "sha256": "b86b9d9c7881fe66f8680e5f63ca98c7a0fce4c5bc38ac6024383610c1a4c5da",
+    "sha256": "c37ab9ce762d6cf11513babafde2e4dfa5be5c0442083b925d325142769f737e",
     "workouts": 30,
     "exercises": 210,
     "sets": 510,
@@ -122,7 +122,7 @@ export const reviewedProgramPackets = [
   },
   {
     "code": "F13",
-    "sha256": "42b1b494c394a5acbbbc188d914b9f0008f98c58b843ca8a5756564a57acfcb5",
+    "sha256": "8363874ebb5e81b353eb05411587e80981f93c8f390bc18450c9627aacc60b5c",
     "workouts": 20,
     "exercises": 130,
     "sets": 318,
@@ -132,17 +132,17 @@ export const reviewedProgramPackets = [
   },
   {
     "code": "F14",
-    "sha256": "ab317156e5ac846d43da135cfec3232fc32010f76f9d54950602dad31e508bfd",
+    "sha256": "8695a6bd029ffa9164051278b6b0dd2046ddd56fdcca8e804e984274179c42fe",
     "workouts": 30,
     "exercises": 214,
     "sets": 432,
     "from": "2025-12-08",
-    "to": "2026-02-13",
+    "to": "2026-07-17",
     "trainingFormat": "with_trainer"
   },
   {
     "code": "F15",
-    "sha256": "4984ee9df59a6303b20af2a30e873105584e2a441cc94eed3d6c4bd9bb69b5c6",
+    "sha256": "f3d1a95935567581dadf9ca7fe458220718a6b77a0ebe5d8295a5b9891ad640a",
     "workouts": 30,
     "exercises": 210,
     "sets": 531,
@@ -152,7 +152,7 @@ export const reviewedProgramPackets = [
   },
   {
     "code": "F16",
-    "sha256": "596b9373b5df551f9a2d2d2e9cc162536239db4ce20dffed19eef0051c90193e",
+    "sha256": "b8f67af33bd4f6acf407b7a00bc72eccabd6022767c3f298c99a573c25380e27",
     "workouts": 30,
     "exercises": 210,
     "sets": 484,
@@ -162,7 +162,7 @@ export const reviewedProgramPackets = [
   },
   {
     "code": "F17",
-    "sha256": "c3f419202c8847e100c9fee5071bfe78484c4fb2cc509141abcdb1172d70696a",
+    "sha256": "1c44c3d725510423396da8b469a8078d2e2288f9869216100d98113e9989f4bf",
     "workouts": 100,
     "exercises": 699,
     "sets": 839,

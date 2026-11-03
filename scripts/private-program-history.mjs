@@ -22,7 +22,7 @@ const shift = (value,days) => {
 export function explicitProgramDate(value) {
   const source = text(value)
   if (/^\d{4}-\d{2}-\d{2}$/u.test(source)) { monday(source); return source }
-  const match = /(?:^|\s)(\d{1,2})\.(\d{1,2})\.(\d{4}|\d{2})(?:\s|$)/u.exec(source)
+  const match = /(?:^|[^\d])(\d{1,2})\.(\d{1,2})\.(\d{4}|\d{2})(?!\d)/u.exec(source)
   if (!match) return null
   const year = match[3].length===2 ? `20${match[3]}` : match[3]
   const date = `${year}-${match[2].padStart(2,'0')}-${match[1].padStart(2,'0')}`
@@ -100,13 +100,51 @@ export function dateProgramWorkouts(parsed,{lastWeekMonday,startDate=null,notAft
     const numbers=parsed.workouts.filter(w=>w.program===program).map(w=>w.week)
     for(let week=Math.min(...numbers);week<=Math.max(...numbers);week++)weeks.push({program,week})
   }
-  const firstWeek=startDate ? monday(startDate) : shift(lastWeekMonday,-7*(weeks.length-1))
+  const anchors=new Map()
+  const weekIndexOf=source=>weeks.findIndex(w=>w.program===source.program&&w.week===source.week)
+  const daysOf=source=>[...new Set(parsed.workouts.filter(w=>w.program===source.program&&w.week===source.week).map(w=>w.day))].sort((a,b)=>a-b)
+  function anchor(index,value) {
+    if(anchors.has(index)&&anchors.get(index)!==value)fail('explicit_week_anchors_conflict')
+    anchors.set(index,value)
+  }
+  // Real dated cells take priority over a filename label. They anchor their
+  // own program, allowing breaks between programs instead of a fake timeline.
+  for(const program of programs) {
+    const explicit=parsed.workouts.filter(w=>w.program===program&&w.explicitDate).sort((a,b)=>a.week-b.week||a.day-b.day)
+    for(const source of explicit) {
+      const days=daysOf(source),position=days.indexOf(source.day)
+      if(days.length>7)fail('day_order_invalid')
+      const priorOffset=position>0?weekdays[days.length][position-1]:0
+      const actualOffset=(new Date(`${source.explicitDate}T12:00:00Z`).getUTCDay()+6)%7
+      // A late final session can fall into the next calendar week. Earlier
+      // undated sessions must still precede that exact recorded date.
+      const base=shift(monday(source.explicitDate),actualOffset<priorOffset?-7:0)
+      anchor(weekIndexOf(source),base)
+    }
+    const firstIndex=weeks.findIndex(w=>w.program===program)
+    if(explicit.length) {
+      const knownIndex=weekIndexOf(explicit[0])
+      anchor(firstIndex,shift(anchors.get(knownIndex),-7*(knownIndex-firstIndex)))
+    } else if(firstIndex===0&&startDate)anchor(0,monday(startDate))
+  }
+  // Freeze the human-approved end anchor when no start is known. Interior real
+  // dates can prove a break; do not move them to make every week contiguous.
+  if(!startDate&&!anchors.has(weeks.length-1))anchor(weeks.length-1,lastWeekMonday)
+  const known=[...anchors.entries()].sort((a,b)=>a[0]-b[0])
+  if(!known.length)fail('anchor_invalid')
+  for(let i=1;i<known.length;i++)if(known[i][1]<shift(known[i-1][1],7*(known[i][0]-known[i-1][0])))fail('explicit_anchor_order_conflict')
+  const weekDates=weeks.map((_,index)=>{
+    if(anchors.has(index))return anchors.get(index)
+    const before=known.filter(([i])=>i<index).at(-1),after=known.find(([i])=>i>index)
+    return before?shift(before[1],7*(index-before[0])):shift(after[1],-7*(after[0]-index))
+  })
+  const firstWeek=weekDates[0]
   const dated=parsed.workouts.map(source=>{
     const sameWeek=parsed.workouts.filter(w=>w.program===source.program&&w.week===source.week)
     const days=[...new Set(sameWeek.map(w=>w.day))].sort((a,b)=>a-b)
     if(days.length>7 || sameWeek.length!==days.length)fail('day_order_invalid')
-    const weekIndex=weeks.findIndex(w=>w.program===source.program&&w.week===source.week)
-    const derivedDate=shift(firstWeek,weekIndex*7+weekdays[days.length][days.indexOf(source.day)])
+    const weekIndex=weekIndexOf(source)
+    const derivedDate=shift(weekDates[weekIndex],weekdays[days.length][days.indexOf(source.day)])
     const workoutDate=source.explicitDate??derivedDate
     if(workoutDate>notAfter)fail('future_performed_date')
     return {...source,workoutDate,dateOrigin:source.explicitDate?'explicit':'reconstructed',derivedDate}
@@ -114,16 +152,16 @@ export function dateProgramWorkouts(parsed,{lastWeekMonday,startDate=null,notAft
   // Explicit dates never move. Keep source-order disagreements in the report.
   const inSourceOrder=[...dated].sort((a,b)=>a.program-b.program||a.week-b.week||a.day-b.day)
   const conflicts=inSourceOrder.flatMap((w,i)=>i && w.workoutDate<inSourceOrder[i-1].workoutDate ? [{code:'source_date_order_conflict',program:w.program,week:w.week,day:w.day}]:[])
-  return {workouts:inSourceOrder,conflicts,firstWeek,lastWeekMonday:shift(firstWeek,7*(weeks.length-1))}
+  return {workouts:inSourceOrder,conflicts,firstWeek,lastWeekMonday:weekDates.at(-1)}
 }
 
 export function programDrafts(dated,{sourceSha256,fileCode,trainingFormat}) {
-  if(!/^[a-f0-9]{64}$/u.test(sourceSha256) || !/^F\d{2}$/u.test(fileCode) || !['self','with_trainer'].includes(trainingFormat))fail('draft_source_invalid')
+  if(dated.conflicts.length || !/^[a-f0-9]{64}$/u.test(sourceSha256) || !/^F\d{2}$/u.test(fileCode) || !['self','with_trainer'].includes(trainingFormat))fail('draft_source_invalid')
   return [...dated.workouts].sort((a,b)=>a.workoutDate.localeCompare(b.workoutDate)||a.program-b.program||a.week-b.week||a.day-b.day).map((w,index)=>{
     const key=`fit-program-20261103:${sourceSha256}:${w.headerRow}:${w.headerColumn}`
     return {sourceOrdinal:index+1,requestId:uuid(key),workoutDate:w.workoutDate,startTime:null,endTime:null,actualDurationSec:null,trainingFormat,
       title:`Программа ${w.program} · Неделя ${w.week} · День ${w.day}`,
-      notes:[`Перенос истории. ${fileCode}; программа ${w.program}, неделя ${w.week}, ${w.dayLabel}. ${w.dateOrigin==='explicit'?'Дата из источника.':'Дата восстановлена по согласованному расписанию.'}`,
+      notes:[`Перенос истории. Программа ${w.program}, неделя ${w.week}, ${w.dayLabel}. ${w.dateOrigin==='explicit'?'Дата из источника.':'Дата восстановлена по согласованному расписанию.'}`,
         ...w.unnamed.map(e=>`Строка ${e.order??e.row+1} без названия упражнения: ${metricNote(e)}`)].join('\n'),
       exercises:w.exercises.map((e,position)=>({position,source:'system',ref:`snapshot:program-history:${uuid(`${key}:${e.evidence.row}`)}`,customExerciseId:null,name:e.name,muscleGroup:'other',inputKind:'strength',blockId:uuid(`${key}:block:${e.evidence.row}`),blockType:'single',blockPreset:'set',blockRounds:1,restBetweenExercisesSec:0,restBetweenRoundsSec:0,restBetweenSetsSec:0,
         trainerComment:metricNote(e.evidence),sets:explicitSets(e.evidence)}))}

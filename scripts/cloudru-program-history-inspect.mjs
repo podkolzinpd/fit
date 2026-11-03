@@ -150,7 +150,11 @@ async function main() {
 }
 if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href)main().catch(error=>{
   // No SQL/server message, names, IDs, target hashes or private graph in logs.
-  const codes=new Set(['packet_invalid','private_receipt_required','roster_too_large','history_too_large','runtime_role_invalid','visibility_changed','source_invalid','database_target_invalid','connection_interrupted'])
-  const code=error instanceof Error&&error.message.startsWith('program_history_inspect_')?error.message.slice('program_history_inspect_'.length):''
+  const codes=new Set(['packet_invalid','private_receipt_required','roster_too_large','history_too_large','runtime_role_invalid','visibility_changed','source_invalid','database_target_invalid','connection_interrupted',
+    'trainer_ambiguous','current_trainer_identity_required','trainer_role_invalid','target_invalid','readonly_required',
+    'legacy_registry_unavailable','legacy_registry_too_large','legacy_registry_invalid','legacy_registry_config_missing','legacy_registry_credential_missing'])
+  const message=error instanceof Error?error.message:''
+  const prefix=['program_history_inspect_','journal_import_'].find(value=>message.startsWith(value))
+  const code=prefix?message.slice(prefix.length):''
   console.error(JSON.stringify({event:'program_history_inspection_failed',code:codes.has(code)?code:'failed',...safeJournalUploadFailure(error)}));process.exitCode=1
 })

@@ -41,14 +41,17 @@ test('preserves missing week numbers as a calendar gap',()=>{
   const d=dateProgramWorkouts(parseProgramGrid(fixture(1,[1,2,4,5])),dateOptions)
   assert.deepEqual(d.workouts.map(w=>w.workoutDate),['2026-09-28','2026-10-05','2026-10-19','2026-10-26'])
 })
-test('preserves explicit dates even when reconstructed chronology differs',()=>{
+test('anchors missing weeks around the explicit date without a chronological reversal',()=>{
   const g=fixture(1,[1,2]);g[1][5]='Неделя 2 ✅ 07.10.26'
   const d=dateProgramWorkouts(parseProgramGrid(g),dateOptions)
   assert.equal(d.workouts[1].workoutDate,'2026-10-07');assert.equal(d.workouts[1].dateOrigin,'explicit')
-  assert.equal(d.conflicts.length,1)
+  assert.deepEqual(d.workouts.map(w=>w.workoutDate),['2026-09-28','2026-10-07'])
+  assert.deepEqual(d.conflicts,[])
 })
 test('does not interpret a reps/intensity value or a yearless header as a calendar date',()=>{
   assert.equal(explicitProgramDate('3.10'),null);assert.equal(explicitProgramDate('Неделя 1 07.10'),null)
+  assert.equal(explicitProgramDate('Неделя 1 (22.06.26)'),'2026-06-22')
+  assert.equal(explicitProgramDate('Неделя 2 ✅(01.07.2026)'),'2026-07-01')
   assert.throws(()=>explicitProgramDate('31.02.2026'),/date_invalid/u)
 })
 test('refuses future performed dates and a moving or invalid anchor',()=>{
@@ -83,6 +86,7 @@ test('request and block IDs are deterministic across reordering and distinguish 
   const d=dateProgramWorkouts(parseProgramGrid(fixture()),dateOptions)
   const a=programDrafts(d,options), b=programDrafts({...d,workouts:[...d.workouts].reverse()},options)
   assert.deepEqual(a,b);assert.equal(new Set(a.map(w=>w.requestId)).size,6)
+  assert.doesNotMatch(a[0].notes,/F01/u)
   assert.equal(programDrafts(d,{...options,trainingFormat:'self'})[0].trainingFormat,'self')
 })
 test('reads adjacent programs left to right, then the next program below without mixing day rows',()=>{
@@ -91,4 +95,31 @@ test('reads adjacent programs left to right, then the next program below without
   const p=parseProgramGrid(grid),d=dateProgramWorkouts(p,dateOptions)
   assert.equal(p.programs,3);assert.equal(p.workouts.length,6)
   assert.deepEqual(d.workouts.map(w=>[w.program,w.day,w.workoutDate]),[[1,1,'2026-10-12'],[1,2,'2026-10-15'],[2,1,'2026-10-19'],[2,2,'2026-10-22'],[3,1,'2026-10-26'],[3,2,'2026-10-29']])
+})
+test('keeps both the known interior date and the fixed last-week assumption, allowing a break',()=>{
+  const g=fixture(3,[1,2,3,4,5]);g[6][11]='Неделя 4 ✅ (07.10.26)'
+  const d=dateProgramWorkouts(parseProgramGrid(g),dateOptions)
+  assert.equal(d.firstWeek,'2026-09-14');assert.equal(d.lastWeekMonday,'2026-10-26')
+  assert.equal(d.workouts.find(w=>w.week===4&&w.day===2).workoutDate,'2026-10-07')
+  assert.equal(d.workouts.at(-1).workoutDate,'2026-10-30');assert.deepEqual(d.conflicts,[])
+})
+test('uses an actual date within the next program without erasing the break between programs',()=>{
+  const source=fixture(2,[1,2]),grid=source.map(row=>[...row,...Array(9-row.length).fill(null),...row])
+  grid[1][14]='Неделя 2 (22.06.26)'
+  const d=dateProgramWorkouts(parseProgramGrid(grid),{...dateOptions,startDate:'2025-12-08'})
+  assert.equal(d.workouts.find(w=>w.program===1&&w.week===1&&w.day===1).workoutDate,'2025-12-08')
+  assert.equal(d.workouts.find(w=>w.program===2&&w.week===1&&w.day===1).workoutDate,'2026-06-15')
+  assert.equal(d.workouts.find(w=>w.program===2&&w.week===2&&w.day===1).workoutDate,'2026-06-22')
+  assert.deepEqual(d.conflicts,[])
+})
+test('a delayed last session retains its date and remains before the following undated week',()=>{
+  const g=fixture(3,[1,2,3,4]);g[11][8]='Неделя 3 (29.06.26)'
+  const d=dateProgramWorkouts(parseProgramGrid(g),{...dateOptions,startDate:'2026-06-01'})
+  assert.equal(d.workouts.find(w=>w.week===3&&w.day===3).workoutDate,'2026-06-29')
+  assert.equal(d.workouts.find(w=>w.week===4&&w.day===1).workoutDate,'2026-06-29')
+  assert.deepEqual(d.conflicts,[])
+})
+test('contradictory real anchors fail closed rather than dropping or moving a recorded date',()=>{
+  const g=fixture(1,[1,2]);g[1][2]='Неделя 1 (26.10.26)';g[1][5]='Неделя 2 (19.10.26)'
+  assert.throws(()=>dateProgramWorkouts(parseProgramGrid(g),dateOptions),/explicit_anchor_order_conflict/u)
 })
