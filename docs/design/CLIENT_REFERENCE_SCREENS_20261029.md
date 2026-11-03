@@ -3598,3 +3598,31 @@ Runtime не менялся после105; body1953 обновлён прове�
 о публикации по sourceCI. Непроверенное: actual main1953/runtime/API/web/OTA/UI
 и P3exactsource/main, физический телефон/OAuth. Дальше: квитанция14, freshmain/
 head/merge-tree, обычный merge1953 сmatch-head; fullmainCI и штатная публикация.
+### Итерация 108 — 2026-11-03 — Codex / OpenAI
+
+Задача: выпустить1953 после полученной финальной квитанции1959.
+Родитель/R8R9 принят владельцем: public comment6604474095, source/main3aec7629,
+APK1.1.4/code9, обе18-case UI группы и повторный public readback. Независимо нами
+проверены checksum/version/source APK-артефакта, RSA финального OTA и точный public
+readback: run41651117931,ABI8922d2e9fc2c9a092d10f7b6066acdc46edf0fbe7ee7a15159e02a44e7126cf9,
+sequence1793715664613,ZIP40cb90e6256b9f6252435b309954bef752504dae4140e203a97cb3b3cbb0b622.
+Локального APK verifier у нас нет: независимая APK-подпись/legacy/UI не выдаются
+за собственную проверку, использована явная R8R9-квитанция14. Его окно освобождено.
+
+Расхождение с106: обычный gh pr merge1953 --squash --match-head-commit3745521e
+отклонил BEHIND. Равное содержимое merge-tree оказалось недостаточным для требования
+актуальной ветки. Предположение об экономии уже прошедшего CI на sibling-ancestry
+было ошибочным. Read-only rules API не является доказательством возможности merge.
+Никакого --admin/force/alternate merge API не использовано. Владелец получил
+прямое объяснение причины дополнительного прогона. Исправление: обычный merge
+actualmain3aec7629 в P2, runtime371b43ebbffd643543e425c735e7a6f85d34922e.
+Его дерево всё ещё220fe48d1538ae0379ca070f5939d1bbe32c0efe: код и фактические
+native/Live-файлы не изменились; изменена ancestry. PRdiff теперь чистый Live.
+Эта запись документа меняет head, поэтому запускается новый полный exact-head CI.
+35/35 из107 остаются исторической проверкой3745521e, не допуском новой версии.
+
+Отвергнуто: обойти freshness через admin/другой API или перенести старые статусы
+на новый SHA. Непроверенное: новый source/main CI, official1953 publication и
+actualUI; телефон/OAuth прежние. Дальше: новый CI1953→normal merge→main/public;
+P3 до единственного финального push/CI обязательно получает actualmain после
+P2 squash, чтобы не повторить этот freshness-круг. Очередь1953→1955 сохранена.
