@@ -1,5 +1,11 @@
 # Feature parity с trainer-app
 
+03.11 — SB-MEDIA-RETIRE-01: по решению владельца старые Supabase-файлы не
+переносятся. Legacy chat-media upload/sign/remove и fallback удалены;
+существующие Cloud.ru media, новые фото и Vital изображения/видео сохраняются.
+Source media-copy CLI/workflow и API SDK удалены; Supabase-only вложения
+через старый bridge больше не открываются. [Решение и проверки](docs/design/SUPABASE_DECOMMISSION_PLAN_20261023.md#sb-media-retire-01--отказ-от-source-media--03112026).
+
 ## Coach athlete calendar history — YAFIT-673
 
 Selected-day cards reuse the shared history card with the complete ordered
