@@ -192,7 +192,9 @@ describe('template source composer draft', () => {
     render(<QuickWorkoutEntry catalog={catalog} parseWorkout={remote} initialText={snapshot.text} initialSnapshot={snapshot} onAdd={onAdd} />)
     expect(screen.getByLabelText('Запись тренировки')).toHaveValue('Присед 3×8 80 кг')
     fireEvent.click(screen.getByRole('button', { name: /Добавить в план/ }))
-    expect(onAdd.mock.calls[0]?.[0][0].exercise.ref).toBe('front-squat')
+    const added = onAdd.mock.calls[0]?.[0][0]
+    expect(added).toBeDefined()
+    expect(added!.exercise.ref).toBe('front-squat')
     expect(remote).toHaveBeenCalledOnce()
   })
   it('keeps the source text when appending exercises fails', async () => {
