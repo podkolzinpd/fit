@@ -309,6 +309,8 @@ test('Figma workout Coach reference full editor is absent for non-pilot trainer'
   await expect(page.getByRole('textbox', { name: 'Название тренировки' })).toBeVisible()
   await expect(page.locator('.coach-reference-form')).toHaveCount(0)
   await expect(page.getByRole('button', { name: 'Сохранить план', exact: true })).toBeVisible()
+  await expect(page.getByLabel('Запись тренировки')).toHaveCount(0)
+  await page.getByRole('button', { name: 'Ввести текстом', exact: true }).click()
   await expect(page.getByLabel('Запись тренировки')).toBeVisible()
 })
 

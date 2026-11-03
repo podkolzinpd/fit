@@ -1,14 +1,16 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState, type MouseEventHandler } from 'react'
 import { PRESET_REST_DEFAULTS } from '../../data/repositories/workout-rules'
 import type { WorkoutParseResponse } from '../../shared/workout-parse-response'
 import type { ExerciseSnapshot } from '../../shared/domain'
-import { MicIcon } from '../../shared/icons'
+import { AddIcon, CopyIcon, KeyboardIcon, MicIcon } from '../../shared/icons'
 import { parseStructuredQuickWorkoutEntry, quickWorkoutExerciseName, type ParsedWorkoutExercise } from './quick-workout-entry'
 import { orderParsedWorkoutItems, parsedWorkoutItems, parseWorkoutWithLlm, resolveWorkoutParseChoice, workoutParseSetSummary, workoutParseUnmatched, type WorkoutParseUnmatchedView } from './llm-workout-parser'
 import { trackGoal } from '../../shared/yandex-metrika'
+import { flushSync } from 'react-dom'
 import { WorkoutComposer } from './WorkoutComposer'
 
 interface QuickWorkoutEntryProps {
+  methods?: { onTemplate?: MouseEventHandler<HTMLButtonElement>; onExercise: () => void }
   catalog: readonly ExerciseSnapshot[]
   onAdd: (exercises: ParsedWorkoutExercise[]) => void
   preferredExerciseRefs?: readonly string[]
@@ -22,14 +24,20 @@ interface QuickWorkoutEntryProps {
 
 type ParsedEntry = { id: string; groupId?: string; parsed?: ParsedWorkoutExercise; unmatched?: WorkoutParseUnmatchedView }
 
-export function QuickWorkoutEntry({ catalog, onAdd, preferredExerciseRefs = [], onOpenCatalog, compact = false, reference = false, disabled = false, placeholder, parseWorkout }: QuickWorkoutEntryProps) {
+export function QuickWorkoutEntry({ methods, catalog, onAdd, preferredExerciseRefs = [], onOpenCatalog, compact = false, reference = false, disabled = false, placeholder, parseWorkout }: QuickWorkoutEntryProps) {
   const [text, setText] = useState('')
   const [choices, setChoices] = useState<Record<string, ExerciseSnapshot>>({})
-  const [expanded, setExpanded] = useState(!compact)
+  const [expanded, setExpanded] = useState(!compact && !methods)
   const [entries, setEntries] = useState<ParsedEntry[]>([])
   const [parsedText, setParsedText] = useState('')
   const [parsing, setParsing] = useState(false)
   const [parseError, setParseError] = useState<string | null>(null)
+  const entryRef = useRef<HTMLDivElement>(null)
+  function openInput(voice: boolean) {
+    flushSync(() => setExpanded(true))
+    if (voice) entryRef.current?.querySelector<HTMLButtonElement>('.voice-input-button')?.click()
+    else entryRef.current?.querySelector<HTMLTextAreaElement>('textarea')?.focus()
+  }
   const requestVersion = useRef(0)
   const activeReviewText = useRef<string | null>(null)
   const hasStructure = entries.some((entry) => entry.groupId)
@@ -88,7 +96,8 @@ export function QuickWorkoutEntry({ catalog, onAdd, preferredExerciseRefs = [], 
     return null
   }, [unresolved])
 
-  useEffect(() => setExpanded(!compact), [compact])
+  const hasMethods = Boolean(methods)
+  useEffect(() => setExpanded(!compact && !hasMethods), [compact, hasMethods])
 
   function changeText(value: string) {
     requestVersion.current += 1
@@ -158,9 +167,16 @@ export function QuickWorkoutEntry({ catalog, onAdd, preferredExerciseRefs = [], 
     setChoices({})
   }
 
-  if (!expanded) return <button type="button" disabled={disabled} className="secondary wide quick-workout-expand" onClick={() => setExpanded(true)}><MicIcon />{reference ? 'Надиктовать' : 'Добавить голосом или текстом'}</button>
+  if (!expanded && !methods) return <button type="button" disabled={disabled} className="secondary wide quick-workout-expand" onClick={() => setExpanded(true)}><MicIcon />{reference ? 'Надиктовать' : 'Добавить голосом или текстом'}</button>
 
-  return <div className={`quick-workout-entry${compact ? ' expanded' : ''}`}>
+  return <div ref={entryRef} className={`quick-workout-entry${compact ? ' expanded' : ''}`}>
+    {methods && <div className={`trainer-plan-methods${methods.onTemplate ? '' : ' trainer-template-methods'}`} role="group" aria-label="Добавить упражнения">
+      <button type="button" className="secondary" disabled={disabled} aria-label="Выбрать упражнения" onClick={methods.onExercise}><AddIcon />Упражнение</button>
+      {methods.onTemplate && <button aria-label="Добавить шаблон" type="button" className="secondary" disabled={disabled} onClick={methods.onTemplate}><CopyIcon />Шаблон</button>}
+      <button type="button" className="secondary trainer-method-voice" disabled={disabled} onClick={() => openInput(true)}><MicIcon />Надиктовать</button>
+      <button type="button" className="secondary" disabled={disabled} onClick={() => openInput(false)}><KeyboardIcon />Ввести текстом</button>
+    </div>}
+    {expanded && <>
     {compact && <button type="button" className="link quick-workout-collapse" onClick={() => setExpanded(false)}>Свернуть ввод</button>}
     <WorkoutComposer name="quick-workout-entry" source="workout_quick_entry" placeholder={placeholder} label="Запись тренировки" voiceLabel="Надиктовать тренировку" value={text} onValueChange={changeText} onTranscriptValueChange={changeText} onTranscriptAppended={({ value }) => review(value)} onClear={() => changeText('')} primaryAction={parsedText === text && entries.length > 0
       ? <button type="button" className="secondary wide quick-workout-add" disabled={!resolved.length || (hasStructure && unresolved.length > 0)} onClick={add}>Добавить в план{resolved.length ? ` (${resolved.length})` : ''}</button>
@@ -175,5 +191,6 @@ export function QuickWorkoutEntry({ catalog, onAdd, preferredExerciseRefs = [], 
         {unresolved.length > 0 && <div className="quick-workout-unparsed">{unresolved.map(({ key, item }) => <div className="quick-workout-unparsed-line" key={key}><p>«{item.line}» — {item.reason === 'ambiguous' ? 'выберите вариант' : 'не нашли совпадение'}</p>{item.candidates.length > 0 && <div className="quick-workout-candidates">{item.candidates.map((exercise) => <button type="button" className={choices[key]?.ref === exercise.ref ? 'secondary selected' : 'secondary'} key={exercise.ref} onClick={() => { trackGoal('workout_parse_candidate_selected'); setChoices((current) => ({ ...current, [key]: exercise })) }}>{exercise.name}</button>)}</div>}{onOpenCatalog && <button type="button" className="link quick-workout-all-options" onClick={() => { trackGoal('workout_parse_catalog_opened'); onOpenCatalog(quickWorkoutExerciseName(item.line), (exercise) => setChoices((current) => ({ ...current, [key]: exercise }))) }}>Все варианты</button>}</div>)}</div>}
       </div>}
     </WorkoutComposer>
+    </>}
   </div>
 }

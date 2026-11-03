@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Link, Navigate, useNavigate, useParams, useSearchParams } from 'react-router-dom'
+import { Link, Navigate, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useDataBackend } from '../../app/data-backend-context'
 import { useAuth } from '../../app/auth-context'
+import { isFitLimeEnabled } from '../../app/fit-lime'
 import { isCoachWorkoutRedesignEnabled } from '../../app/coach-workout-redesign'
 import { readCoachCalendarRoute } from '../../app/coach-calendar-navigation'
 import { cloneWorkoutTemplate, workoutTemplateFromWorkout } from '../../data/repositories/workout-template-rules'
@@ -12,7 +13,7 @@ import { formatLocalDate } from '../../shared/local-date'
 import { AddIcon, CopyIcon, ScheduleIcon } from '../../shared/icons'
 import { AsyncView, EmptyState, Field, InlineRequestError, OverflowMenu, Page, StatePanel, useConfirm } from '../../shared/ui'
 import { ExercisePicker, useExerciseCatalog } from '../exercises'
-import { QuickWorkoutEntry, WorkoutCta, WorkoutExerciseEditor, WorkoutHeader, workoutDisplayTitle, workoutExerciseBrief, type ParsedWorkoutExercise } from '../workouts'
+import { readTemplatePlanContext, returnToTemplatePlan, templateReturnSteps, applyCreatedTemplate, type TemplatePlanContext, QuickWorkoutEntry, WorkoutCta, WorkoutExerciseEditor, WorkoutHeader, workoutDisplayTitle, workoutExerciseBrief, type ParsedWorkoutExercise } from '../workouts'
 import { VoiceNoteField } from '../voice-input'
 import { readWorkoutTemplateDraft, removeWorkoutTemplateDraft, workoutTemplateDraftKey, writeWorkoutTemplateDraft } from './workout-template-draft'
 
@@ -47,6 +48,9 @@ export function WorkoutTemplatesPage() {
 
 function WorkoutTemplates() {
   const { actor } = useAuth()
+  const location = useLocation()
+  const context = readTemplatePlanContext((location.state as { templatePlanContext?: unknown } | null)?.templatePlanContext, actor!.userId)
+  const [returnError, setReturnError] = useState<string | null>(null)
   const calendarBack = isCoachWorkoutRedesignEnabled(actor) ? readCoachCalendarRoute(actor?.userId) ?? '/today' : '/schedule'
   const calendarParams = new URLSearchParams(calendarBack.split('?')[1])
   const assignmentDate = calendarParams.get('date') ?? calendarParams.get('anchor')
@@ -55,7 +59,7 @@ function WorkoutTemplates() {
   const queryClient = useQueryClient()
   const [confirm, confirmDialog] = useConfirm()
   const pendingCopies = useRef(new Map<string, WorkoutTemplateDraft>())
-  const query = useQuery({ queryKey: ['workout-templates'], queryFn: () => workoutTemplates.list() })
+  const query = useQuery({ queryKey: ['workout-templates'], queryFn: () => workoutTemplates.list(), staleTime: 0, refetchOnMount: 'always' })
   const duplicate = useMutation({
     mutationFn: (template: NonNullable<typeof query.data>[number]) => {
       const key = `${template.id}:${template.version}`
@@ -72,26 +76,27 @@ function WorkoutTemplates() {
     mutationFn: (template: NonNullable<typeof query.data>[number]) => workoutTemplates.archive(template),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['workout-templates'] }),
   })
-  return <Page className="workout-templates-page" title="Шаблоны тренировок" back={calendarBack}
+  return <Page className="workout-templates-page" title="Шаблоны тренировок" back={context?.returnTo ?? calendarBack} onBack={context ? () => returnToTemplatePlan(context, navigate) : undefined}
     action={<div className="template-create-menu"><OverflowMenu label="Создать шаблон" trigger={<AddIcon />} items={[
-      { label: 'Создать с нуля', onClick: () => navigate('/schedule/templates/new/editor') },
-      { label: 'Из тренировки клиента', onClick: () => navigate('/schedule/templates/from-workout') },
+      { label: 'Создать с нуля', onClick: () => navigate('/schedule/templates/new/editor', { state: context ? { templatePlanContext: context } : undefined }) },
+      { label: 'Из тренировки клиента', onClick: () => navigate('/schedule/templates/from-workout', { state: context ? { templatePlanContext: context } : undefined }) },
     ]} /></div>}>
-    <AsyncView loading={query.isLoading} error={query.error} onRetry={() => void query.refetch()}>
+    <AsyncView loading={query.isLoading || Boolean(context && query.isFetching)} error={query.error} onRetry={() => void query.refetch()}>
       {query.data?.length ? <div className="template-list">{query.data.map((template) => <article className="template-card" key={template.id}>
         <div className="template-card-head">
           <div><h2>{template.name}</h2><p>{templateMeta(template.exercises)}</p></div>
           <OverflowMenu label={`Действия с шаблоном ${template.name}`} items={[
-            { label: 'Редактировать', onClick: () => navigate(`/schedule/templates/${template.id}/edit`) },
+            { label: 'Редактировать', onClick: () => navigate(`/schedule/templates/${template.id}/edit`, { state: context ? { templateLibraryReturn: { context, index: (window.history.state as { idx?: number } | null)?.idx } } : undefined }) },
             { label: 'Создать копию', disabled: duplicate.isPending, onClick: () => duplicate.mutate(template) },
             { label: 'Удалить', danger: true, disabled: archive.isPending, onClick: () => { void confirm({ message: `Удалить шаблон «${template.name}»? Уже назначенные тренировки не изменятся.`, confirmLabel: 'Удалить', danger: true }).then((ok) => ok && archive.mutate(template)) } },
           ]} />
         </div>
         <p className="template-exercise-preview">{template.exercises.slice(0, 3).map((exercise) => exercise.name).join(' · ')}{template.exercises.length > 3 ? ` · ещё ${template.exercises.length - 3}` : ''}</p>
         <div className="template-card-footer"><span>Обновлён {new Intl.DateTimeFormat('ru-RU', { day: 'numeric', month: 'short' }).format(new Date(template.updatedAt))}</span>
-          <Link className="button secondary" to={`/workouts/new?${new URLSearchParams({ template: template.id, ...(assignmentDate ? { date: assignmentDate } : {}) })}`} state={{ returnTo: calendarBack }}><ScheduleIcon />Назначить</Link></div>
+          {context ? <button type="button" className="secondary" onClick={() => { try { applyCreatedTemplate(context, template); returnToTemplatePlan(context, navigate) } catch (error) { setReturnError(error instanceof Error ? error.message : 'Не удалось добавить шаблон') } }}>Добавить в план</button> : <Link className="button secondary" to={`/workouts/new?${new URLSearchParams({ template: template.id, ...(assignmentDate ? { date: assignmentDate } : {}) })}`} state={{ returnTo: calendarBack }}><ScheduleIcon />Назначить</Link>}</div>
       </article>)}</div> : <EmptyState title="Создайте первый шаблон" description="Соберите тренировку с нуля или сохраните готовый план клиента."
-        action={<div className="template-empty-actions"><Link className="button primary" to="/schedule/templates/new/editor">Создать с нуля</Link><Link className="button secondary" to="/schedule/templates/from-workout"><CopyIcon />Из тренировки</Link></div>} />}
+        action={<div className="template-empty-actions"><Link className="button primary" to="/schedule/templates/new/editor" state={context ? { templatePlanContext: context } : undefined}>Создать с нуля</Link><Link className="button secondary" to="/schedule/templates/from-workout" state={context ? { templatePlanContext: context } : undefined}><CopyIcon />Из тренировки</Link></div>} />}
+      {returnError && <p role="alert" className="error">{returnError}</p>}
       {(duplicate.error || archive.error) && <InlineRequestError error={(duplicate.error ?? archive.error)!} />}
     </AsyncView>
     {confirmDialog}
@@ -103,6 +108,10 @@ export function WorkoutTemplateCreatePage() {
 }
 
 export function WorkoutTemplateSourcePage() {
+  const { actor } = useAuth()
+  const location = useLocation()
+  const navigate = useNavigate()
+  const context = actor ? readTemplatePlanContext((location.state as { templatePlanContext?: unknown } | null)?.templatePlanContext, actor.userId) : undefined
   const { workouts } = useDataBackend()
   const query = useQuery({ queryKey: ['workouts', 'template-source'], queryFn: () => workouts.list() })
   const [clientId, setClientId] = useState('')
@@ -112,14 +121,14 @@ export function WorkoutTemplateSourcePage() {
     return [...unique.entries()].sort((left, right) => left[1].localeCompare(right[1], 'ru'))
   }, [query.data])
   const visible = (query.data ?? []).filter((workout) => !clientId || workout.clientId === clientId).slice(0, 40)
-  return <Page className="workout-template-source-page" title="Выберите тренировку" back="/schedule/templates">
+  return <Page className="workout-template-source-page" title="Выберите тренировку" back="/schedule/templates" onBack={context ? () => navigate('/schedule/templates', { state: { templatePlanContext: context } }) : undefined}>
     <AsyncView loading={query.isLoading} error={query.error} onRetry={() => void query.refetch()}>
       {query.data?.length ? <>
         <Field label="Клиент"><select value={clientId} onChange={(event) => setClientId(event.target.value)}><option value="">Все клиенты</option>{clients.map(([id, name]) => <option value={id} key={id}>{name}</option>)}</select></Field>
-        <div className="template-source-workouts">{visible.map((workout) => <Link className="template-source-workout" key={workout.id} to={`/schedule/templates/new/editor?sourceWorkout=${workout.id}`}>
+        <div className="template-source-workouts">{visible.map((workout) => <Link className="template-source-workout" key={workout.id} to={`/schedule/templates/new/editor?sourceWorkout=${workout.id}`} state={context ? { templatePlanContext: context } : undefined}>
           <span className="template-source-copy"><strong>{workoutDisplayTitle(workout)}</strong><small>{workout.clientName} · {formatLocalDate(workout.workoutDate)}</small>{workout.trainerReview && <span className="workout-source-review"><span className="workout-source-review-label">Отзыв тренера</span>{workout.trainerReview}</span>}<span className="template-source-exercises">{workoutExerciseBrief(workout.exercises)}</span></span><span>Выбрать</span>
         </Link>)}</div>
-      </> : <EmptyState title="Нет тренировок для основы" description="Создайте шаблон с нуля — тренировку клиента можно сохранить позже." action={<Link className="button primary" to="/schedule/templates/new/editor">Создать с нуля</Link>} />}
+      </> : <EmptyState title="Нет тренировок для основы" description="Создайте шаблон с нуля — тренировку клиента можно сохранить позже." action={<Link className="button primary" to="/schedule/templates/new/editor" state={context ? { templatePlanContext: context } : undefined}>Создать с нуля</Link>} />}
     </AsyncView>
   </Page>
 }
@@ -133,12 +142,18 @@ export function WorkoutTemplateEditorPage() {
   const { templateId } = useParams()
   const [params] = useSearchParams()
   const sourceWorkoutId = params.get('sourceWorkout') ?? ''
+  const location = useLocation()
+  const context = actor ? readTemplatePlanContext((location.state as { templatePlanContext?: unknown } | null)?.templatePlanContext, actor.userId) : undefined
+  const libraryOrigin = (location.state as { templateLibraryReturn?: { context?: unknown; index?: number } } | null)?.templateLibraryReturn
+  const libraryContext = actor ? readTemplatePlanContext(libraryOrigin?.context, actor.userId) : undefined
+  const libraryReturn = libraryContext ? { context: libraryContext, index: libraryOrigin?.index } : undefined
   if (!actor || actor.role !== 'trainer') return null
-  const draftKey = workoutTemplateDraftKey(actor.userId, templateId, sourceWorkoutId)
-  return <WorkoutTemplateEditor key={draftKey} templateId={templateId} sourceWorkoutId={sourceWorkoutId} draftKey={draftKey} />
+  const draftKey = workoutTemplateDraftKey(actor.userId, templateId, sourceWorkoutId) + (context ? `.plan:${context.draftKey}` : '')
+  return <WorkoutTemplateEditor key={draftKey} templateId={templateId} sourceWorkoutId={sourceWorkoutId} draftKey={draftKey} context={context} libraryReturn={libraryReturn} />
 }
 
-function WorkoutTemplateEditor({ templateId, sourceWorkoutId, draftKey }: { templateId?: string; sourceWorkoutId: string; draftKey: string }) {
+function WorkoutTemplateEditor({ templateId, sourceWorkoutId, draftKey, context, libraryReturn }: { templateId?: string; sourceWorkoutId: string; draftKey: string; context?: TemplatePlanContext; libraryReturn?: { context: TemplatePlanContext; index?: number } }) {
+  const { actor } = useAuth()
   const { exercises: exercisesRepository, workoutTemplates, workouts } = useDataBackend()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
@@ -180,7 +195,8 @@ function WorkoutTemplateEditor({ templateId, sourceWorkoutId, draftKey }: { temp
   }, [ready, dirty, draftKey, templateId, newTemplateId, name, notes, exercises, baseVersion])
   const save = useMutation({
     mutationFn: (draft: WorkoutTemplateDraft) => workoutTemplates.save(draft),
-    onSuccess: async (savedId) => {
+    onSuccess: async (savedId, savedDraft) => {
+      if (active.current && context) applyCreatedTemplate(context, { ...savedDraft, id: savedId })
       finished.current = true
       removeWorkoutTemplateDraft(draftKey)
       if (!active.current) return
@@ -188,9 +204,15 @@ function WorkoutTemplateEditor({ templateId, sourceWorkoutId, draftKey }: { temp
         queryClient.invalidateQueries({ queryKey: ['workout-template', savedId], exact: true, refetchType: 'none' }),
         queryClient.invalidateQueries({ queryKey: ['workout-templates'] }),
       ])
-      if (active.current) navigate('/schedule/templates', { replace: true })
+      if (active.current) returnToOrigin(true)
     },
   })
+  function returnToOrigin(replace = false) {
+    if (context) { returnToTemplatePlan(context, navigate, replace); return }
+    const steps = templateReturnSteps(libraryReturn?.index)
+    if (steps) navigate(-steps)
+    else navigate('/schedule/templates', { replace, state: libraryReturn ? { templatePlanContext: libraryReturn.context } : undefined })
+  }
   function closePicker() { setPickerOpen(false); setPickerSearch(''); setReplaceIndex(null) }
   const [confirmLeave, confirmLeaveDialog] = useConfirm()
   async function leaveForm() {
@@ -201,7 +223,7 @@ function WorkoutTemplateEditor({ templateId, sourceWorkoutId, draftKey }: { temp
     }
     finished.current = true
     removeWorkoutTemplateDraft(draftKey)
-    navigate('/schedule/templates')
+    returnToOrigin()
   }
   function pick(selected: ExerciseSnapshot) {
     setExercises((current) => replaceIndex === null
@@ -244,13 +266,13 @@ function WorkoutTemplateEditor({ templateId, sourceWorkoutId, draftKey }: { temp
           </details>
         </section>
         <section className="workout-form-section workout-form-exercises"><div className="workout-form-section-head workout-form-exercise-heading"><h2>Упражнения</h2><span>{templateMeta(exercises)}</span></div>
-          <QuickWorkoutEntry catalog={catalog.exercises} parseWorkout={(text, systemCatalog) => exercisesRepository.parseWorkout(text, systemCatalog)} onAdd={quickAdd} compact={exercises.length > 0} onOpenCatalog={exercises.length === 0 ? (search) => { setPickerSearch(search); setPickerOpen(true) } : undefined} />
+          <QuickWorkoutEntry methods={isFitLimeEnabled(actor) ? { onExercise: () => { setReplaceIndex(null); setPickerSearch(''); setPickerOpen(true) } } : undefined} catalog={catalog.exercises} parseWorkout={(text, systemCatalog) => exercisesRepository.parseWorkout(text, systemCatalog)} onAdd={quickAdd} compact={exercises.length > 0} onOpenCatalog={exercises.length === 0 ? (search) => { setPickerSearch(search); setPickerOpen(true) } : undefined} />
           {!exercises.length && <p className="workout-empty-hint">Добавьте хотя бы одно упражнение — голосом, текстом или из каталога.</p>}
           <WorkoutExerciseEditor exercises={exercises} onChange={(next) => { setExercises(next); setDirty(true) }} onOpenPicker={() => setPickerOpen(true)} onReplaceExercise={(index) => { setReplaceIndex(index); setPickerOpen(true) }} hideEmptyAddAction collapseInitialExercises={Boolean(templateId || sourceWorkoutId)} initialExercisesReady={ready} />
         </section>
         {save.error && <InlineRequestError error={save.error} />}
         {draftStorageError && <p className="error" role="alert">Не удалось сохранить черновик на устройстве. Не закрывайте экран до сохранения шаблона.</p>}
-        <div className="actions workout-action-row"><WorkoutCta type="submit" pending={save.isPending} pendingLabel="Сохраняем…" disabled={!name.trim() || !exercises.length}>Сохранить шаблон</WorkoutCta></div>
+        <div className="actions workout-action-row"><WorkoutCta type="submit" pending={save.isPending} pendingLabel="Сохраняем…" disabled={!name.trim() || !exercises.length}>{context?.applyOnSave ? 'Сохранить и добавить в план' : 'Сохранить шаблон'}</WorkoutCta></div>
       </form>
       {pickerOpen && <ExercisePicker catalog={catalog} initialSearch={pickerSearch} multiple={replaceIndex === null} onPick={pick} onPickMany={pickMany} onClose={closePicker} techniqueActionLabel={replaceIndex === null ? 'Добавить упражнение' : 'Заменить упражнение'} />}
     </AsyncView>
