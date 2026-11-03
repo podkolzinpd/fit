@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test'
 import { mockPilot, trainerId } from './fit-lime-fixtures'
+import { formatLocalDate, localDate } from '../src/shared/local-date'
 import { nativeAiUrl } from './native-ai-fixture'
 import type { CorporateService, CorporateServiceKind, ServiceDraft } from '../src/data/repositories/corporate-services.repository'
 
@@ -120,6 +121,22 @@ export function registerCorporateServiceCases() {
     await expect(page.locator('.corporate-service-list')).toContainText('Отменена')
     expect(fixture.records[0]?.version).toBe(3); expect(fixture.writes).toHaveLength(1)
   })
+  test('services close a retained form when permission is revoked before explicit recovery', async ({ page }) => {
+    const fixture = await setup(page, { seedCount: 1 })
+    const record = fixture.records[0]!
+    await page.goto(nativeAiUrl(`${root}/${record.id}`))
+    await expect(page.getByLabel('Услуга', { exact: true })).toHaveValue('consultation')
+    fixture.records[0] = { ...record, version: 2 }
+    await page.getByRole('button', { name: 'Отменить услугу', exact: true }).click()
+    await page.getByRole('alertdialog').getByRole('button', { name: 'Отменить услугу', exact: true }).click()
+    await expect(page.locator('.save-status-error')).toBeVisible()
+    fixture.revoke()
+    await page.getByRole('button', { name: 'Загрузить сохранённую запись', exact: true }).click()
+    await page.getByRole('alertdialog').getByRole('button', { name: 'Загрузить запись', exact: true }).click()
+    await expect(page.getByRole('heading', { name: 'Нет доступа', exact: true })).toBeVisible()
+    await expect(page.getByRole('form', { name: 'Данные услуги', exact: true })).toHaveCount(0)
+    expect(fixture.writes).toHaveLength(0); expect(fixture.records[0]!.voidedAt).toBeNull()
+  })
   test('services retain the historical range and return position, and reveal an old direct save', async ({ page }) => {
     const fixture = await setup(page, { seedCount: 35 })
     for (const row of fixture.records) row.occurredAt = '2026-10-25T09:00:00Z'
@@ -224,6 +241,49 @@ export function registerCorporateServiceCases() {
     await expect(page.getByRole('heading', { name: 'Нет доступа' })).toBeVisible()
     expect(fixture.records).toHaveLength(0)
   })
+  for (const allowed of [true, false]) test(`profile retries an access failure without disclosing or enabling unconfirmed services: ${allowed}`, async ({ page }) => {
+    const fixture = await setup(page, { allowed })
+    let reads = 0
+    await page.route('**/v1/corporate-services/access', route => ++reads === 1 ? route.fulfill({ status: 503, json: { error: 'unavailable' } }) : route.fulfill({ json: { allowed } }))
+    await page.goto(nativeAiUrl('/profile'))
+    await expect(page.getByText('Не удалось обновить доступные разделы.', { exact: true })).toBeVisible()
+    await expect(page.getByRole('link', { name: 'Работа в Яндексе', exact: true })).toHaveCount(0)
+    expect(fixture.dataRequests).toBe(0)
+    expect((await page.getByRole('button', { name: 'Повторить проверку', exact: true }).boundingBox())!.height).toBeGreaterThanOrEqual(44)
+    await page.getByRole('button', { name: 'Повторить проверку', exact: true }).click()
+    await expect(page.getByText('Не удалось обновить доступные разделы.', { exact: true })).toHaveCount(0)
+    await expect(page.getByRole('link', { name: 'Работа в Яндексе', exact: true })).toHaveCount(allowed ? 1 : 0)
+    expect(reads).toBe(2); expect(fixture.dataRequests).toBe(0)
+  })
+  test('statistics distinguish a draft period from the applied totals and keep quick selection explicit', async ({ page }) => {
+    await page.clock.setFixedTime(new Date('2026-11-04T10:00:00Z'))
+    const fixture = await setup(page, { admin: true, seedCount: 1, legacy: true })
+    fixture.records[0]!.occurredAt = '2026-11-04T09:00:00Z'
+    await page.goto(nativeAiUrl('/admin?tab=statistics'))
+    const count = page.locator('.corporate-service-counts > div').filter({ hasText: 'Консультации' }).locator('dd')
+    await expect(count).toHaveText('1')
+    await expect(page.getByRole('button', { name: 'Месяц', exact: true })).toHaveAttribute('aria-pressed', 'true')
+    await expect(page.getByLabel('Учтённый период')).toContainText('04.11.2026')
+    await expect(page.getByLabel('Тренер', { exact: true })).not.toBeVisible()
+    await page.getByText('Период и фильтры', { exact: true }).focus()
+    await page.keyboard.press('Enter')
+    await expect(page.getByLabel('Тренер', { exact: true })).toBeVisible()
+    await page.getByRole('button', { name: 'Конец периода', exact: true }).click()
+    await page.getByRole('dialog').getByRole('button', { name: formatLocalDate(localDate('2026-11-02')), exact: true }).click()
+    await page.getByRole('button', { name: 'Применить дату', exact: true }).click()
+    await expect(page.getByText(/Период изменён/)).toBeVisible()
+    await expect(count).toHaveText('1')
+    await expect(page.getByLabel('Учтённый период')).toContainText('04.11.2026')
+    expect(fixture.lastRange?.get('until')).toBe('2026-11-05')
+    await page.getByRole('button', { name: 'Применить период', exact: true }).click()
+    await expect(count).toHaveText('0')
+    await expect(page.getByLabel('Учтённый период')).toContainText('02.11.2026')
+    await expect(page.getByText(/Период изменён/)).toHaveCount(0)
+    expect(fixture.lastRange?.get('until')).toBe('2026-11-03')
+    await page.getByRole('button', { name: 'Сегодня', exact: true }).click()
+    await expect(page.getByRole('button', { name: 'Сегодня', exact: true })).toHaveAttribute('aria-pressed', 'true')
+    await expect(count).toHaveText('1')
+  })
   test('services paginate own records and keep explicit period/admin filters', async ({ page }) => {
     const fixture = await setup(page, { seedCount: 51, admin: true })
     await page.goto(nativeAiUrl(root))
@@ -234,6 +294,7 @@ export function registerCorporateServiceCases() {
     await expect(page.locator('.corporate-service-list li')).toHaveCount(50)
     expect(fixture.lastRange?.get('from')).not.toBeNull()
     await page.goto(nativeAiUrl('/admin?tab=statistics'))
+    await page.getByText('Период и фильтры', { exact: true }).click()
     await page.getByLabel('Тренер', { exact: true }).selectOption(trainerId)
     await page.getByLabel('Офис', { exact: true }).selectOption(officeId)
     await expect.poll(() => fixture.lastRange?.get('trainerId')).toBe(trainerId)
@@ -269,6 +330,8 @@ export function registerCorporateServiceCases() {
       await page.screenshot({ path: info.outputPath(`services-form-${theme}-${width}.png`), fullPage: true })
       await page.goto(nativeAiUrl('/admin?tab=statistics'))
       await expect(page.getByRole('heading', { name: 'Статистика услуг' })).toBeVisible()
+      await expect(page.locator('.corporate-service-counts dd').first()).toBeInViewport()
+      expect((await page.locator('.corporate-service-filters summary').boundingBox())!.height).toBeGreaterThanOrEqual(44)
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
       await page.screenshot({ path: info.outputPath(`services-statistics-${theme}-${width}.png`), fullPage: true })
     }

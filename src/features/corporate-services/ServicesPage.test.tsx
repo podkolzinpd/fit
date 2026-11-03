@@ -2,11 +2,11 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { act, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { createMemoryRouter, Outlet, RouterProvider, useLocation } from 'react-router-dom'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { CorporateServiceEntry, CorporateServiceRecordPage, CorporateServicesPage } from './ServicesPage'
 import { CorporateServiceStatistics } from './ServiceStatistics'
-import { addDays, formatLocalDate, todayInTimeZone } from '../../shared/local-date'
-import type { CorporateService } from '../../data/repositories/corporate-services.repository'
+import { addDays, formatLocalDate, formatLocalDateShort, localDate, todayInTimeZone } from '../../shared/local-date'
+import { CorporateServiceError, type CorporateService } from '../../data/repositories/corporate-services.repository'
 
 const api = vi.hoisted(() => ({ access: vi.fn(), list: vi.fn(), record: vi.fn(), save: vi.fn(), void: vi.fn(), audit: vi.fn(), statistics: vi.fn() }))
 const session = vi.hoisted(() => ({ role: 'trainer' }))
@@ -28,6 +28,7 @@ function mount(path: string) {
   render(<QueryClientProvider client={client}><RouterProvider router={router} /></QueryClientProvider>)
   return router
 }
+afterEach(() => { vi.useRealTimers() })
 beforeEach(() => {
   vi.resetAllMocks()
   session.role = 'trainer'
@@ -59,6 +60,18 @@ describe('corporate trainer service screens', () => {
     await user.click(screen.getByRole('button', { name: 'Месяц' }))
     await user.click(screen.getByRole('button', { name: 'Применить период' }))
     await user.click(screen.getByRole('button', { name: 'Обновить' }))
+  })
+  it.each([true, false])('offers a generic profile retry without disclosing an unconfirmed feature; allowed=%s', async allowed => {
+    api.access.mockRejectedValueOnce(new Error('Временная ошибка')).mockResolvedValueOnce(allowed)
+    const user = userEvent.setup(); mount('/profile')
+    expect(await screen.findByText('Не удалось обновить доступные разделы.')).toBeVisible()
+    expect(screen.queryByText(/Яндекс/)).not.toBeInTheDocument()
+    expect(api.list).not.toHaveBeenCalled()
+    await user.click(screen.getByRole('button', { name: 'Повторить проверку' }))
+    await waitFor(() => expect(screen.queryByText('Не удалось обновить доступные разделы.')).not.toBeInTheDocument())
+    if (allowed) expect(screen.getByRole('link', { name: 'Работа в Яндексе' })).toBeVisible()
+    else expect(screen.queryByRole('link', { name: 'Работа в Яндексе' })).not.toBeInTheDocument()
+    expect(api.list).not.toHaveBeenCalled()
   })
   it('shows a failed access read and allows an explicit retry', async () => {
     const user = userEvent.setup(); api.access.mockRejectedValueOnce(new Error('Сеть недоступна')); mount('/profile/yandex-services')
@@ -140,6 +153,18 @@ describe('corporate trainer service screens', () => {
     await waitFor(() => expect(screen.getByLabelText('Услуга', { exact: true })).toHaveValue('tour'))
     expect(screen.queryByText('Нет связи')).not.toBeInTheDocument()
   })
+  it('closes the form when an explicit recovery reports a revoked permission', async () => {
+    const user = userEvent.setup(); api.save.mockRejectedValueOnce(new Error('Нет связи'))
+    mount(`/profile/yandex-services/${id}`)
+    await user.click(await screen.findByRole('button', { name: 'Сохранить исправление' }))
+    await user.click(await screen.findByRole('button', { name: 'Загрузить сохранённую запись' }))
+    api.record.mockRejectedValueOnce(new CorporateServiceError(403, 'Нет допуска'))
+    api.access.mockResolvedValue(false)
+    await user.click(within(screen.getByRole('alertdialog')).getByRole('button', { name: 'Загрузить запись' }))
+    expect(await screen.findByRole('heading', { name: 'Нет доступа' })).toBeVisible()
+    expect(screen.queryByRole('form', { name: 'Данные услуги' })).not.toBeInTheDocument()
+    expect(api.save).toHaveBeenCalledTimes(1); expect(api.void).not.toHaveBeenCalled()
+  })
   it('keeps a selected historical range on back and displays an old saved fact', async () => {
     const user = userEvent.setup(); mount(`/profile/yandex-services/${id}?from=2026-01-01&until=2026-01-02`)
     await user.click(await screen.findByRole('button', { name: 'Назад' }))
@@ -171,12 +196,44 @@ describe('corporate trainer service screens', () => {
     expect(screen.getByTestId('location').textContent).not.toContain('saved=1')
     expect(api.save).toHaveBeenCalledTimes(1)
   })
+  it('keeps totals and their applied range unchanged until the draft period is applied', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] }); vi.setSystemTime(new Date('2026-11-04T10:00:00Z'))
+    api.statistics.mockImplementation((range: { until: string }) => Promise.resolve({ counts: { tour: range.until === '2026-11-03' ? 1 : 3, consultation: 0, instruction: 0, intro: 0 }, timeZone: 'Europe/Moscow', offices: [office], trainers: [] }))
+    const user = userEvent.setup(); mount('/statistics')
+    await waitFor(() => expect(screen.getAllByRole('definition')[0]).toHaveTextContent('3'))
+    expect(screen.getByRole('button', { name: 'Месяц' })).toHaveAttribute('aria-pressed', 'true')
+    const period = screen.getByLabelText('Учтённый период')
+    expect(period).toHaveTextContent(formatLocalDateShort(localDate('2026-11-04')))
+    await user.click(screen.getByText('Период и фильтры', { exact: true }))
+    const chooseEnd = async () => {
+      await user.click(screen.getByRole('button', { name: 'Конец периода' }))
+      await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: formatLocalDate(localDate('2026-11-02')) }))
+      await user.click(screen.getByRole('button', { name: 'Применить дату' }))
+    }
+    await chooseEnd()
+    await user.click(screen.getByRole('button', { name: 'Месяц' }))
+    expect(screen.queryByText(/Период изменён/)).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Конец периода' })).toHaveTextContent('04.11.2026')
+    await chooseEnd()
+    expect(screen.getByText(/Период изменён/)).toBeVisible()
+    expect(period).toHaveTextContent(formatLocalDateShort(localDate('2026-11-04')))
+    expect(screen.getAllByRole('definition')[0]).toHaveTextContent('3')
+    expect(api.statistics).toHaveBeenCalledTimes(1)
+    await user.click(screen.getByRole('button', { name: 'Применить период' }))
+    await waitFor(() => expect(screen.getAllByRole('definition')[0]).toHaveTextContent('1'))
+    expect(period).toHaveTextContent(formatLocalDateShort(localDate('2026-11-02')))
+    expect(screen.queryByText(/Период изменён/)).not.toBeInTheDocument()
+    expect(api.statistics).toHaveBeenLastCalledWith({ from: '2026-11-01', until: '2026-11-03' }, '', '')
+    await user.click(screen.getByRole('button', { name: 'Сегодня' }))
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Сегодня' })).toHaveAttribute('aria-pressed', 'true'))
+  })
   it('shows four real totals, historical filters and explicit retry', async () => {
     const user = userEvent.setup(); api.statistics.mockRejectedValueOnce(new Error('Нет связи')); mount('/statistics')
     expect(await screen.findByText('Нет связи')).toBeVisible()
     await user.click(screen.getByRole('button', { name: 'Повторить' }))
     expect(await screen.findByText('Тестовый тренер (история)')).toBeInTheDocument()
     expect(screen.getByText('Москва · Тестовый (архив)')).toBeInTheDocument()
+    await user.click(screen.getByText('Период и фильтры', { exact: true }))
     await user.selectOptions(screen.getByLabelText('Тренер', { exact: true }), id)
     await user.selectOptions(screen.getByLabelText('Офис', { exact: true }), id)
     await waitFor(() => expect(api.statistics).toHaveBeenLastCalledWith(expect.anything(), id, id))

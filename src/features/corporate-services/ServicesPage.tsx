@@ -21,7 +21,9 @@ function useServiceAccess() {
 export function CorporateServiceEntry() {
   const { actor } = useAuth()
   const access = useServiceAccess()
-  return actor?.role === 'trainer' && access.data === true ? <div className="menu corporate-service-entry"><Link to={root}>Работа в Яндексе</Link></div> : null
+  if (actor?.role !== 'trainer') return null
+  if (access.isError) return <div className="menu corporate-service-entry" role="status"><p>Не удалось обновить доступные разделы.</p><button className="secondary" type="button" disabled={access.isFetching} aria-busy={access.isFetching} onClick={() => void access.refetch()}>Повторить проверку</button></div>
+  return access.data === true ? <div className="menu corporate-service-entry"><Link to={root}>Работа в Яндексе</Link></div> : null
 }
 function ServiceGate({ children }: PropsWithChildren) {
   const { actor } = useAuth()
@@ -110,7 +112,7 @@ function ServiceForm({ record, initialKind, offices, zone }: { record?: Corporat
     client.setQueryData(['corporate-service-record', actor!.userId, initial.id], value)
     navigate(`${root}/${initial.id}?${rangeSearch(range)}`, { replace: true })
     finished.current = false
-  } })
+  }, onError: denied })
   const busy = save.isPending || cancel.isPending || recover.isPending
   const blocker = useBlocker(() => !finished.current && busy)
   useEffect(() => {
