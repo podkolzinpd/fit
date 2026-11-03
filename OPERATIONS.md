@@ -664,36 +664,22 @@ Storage bucket и статический S3-ключ API service account, но �
 статический ключ в GitHub variables. Пустая переменная возвращает штатный
 stage-managed bucket.
 
-Затем вручную запустите `Migrate Yandex media` из `main`:
+03.11.2026 владелец отменил перенос старых файлов из Supabase. Workflow
+`migrate-yandex-media.yml`, API-команда `media:migrate` и source-migrator удалены.
+Старые объекты не копируются и удалённо не удаляются этой правкой. Вложения,
+которые есть только в Supabase, не обслуживаются через legacy media bridge.
+Файлы, уже имеющиеся в native S3/Cloud.ru, новые загрузки, Vital uploader и
+Yandex S3 → Cloud.ru tooling сохраняются.
 
-- `audit` читает source objects и сравнивает target без записи;
-- `apply` идемпотентно копирует отсутствующие или отличающиеся objects и
-  повторно проверяет их SHA-256 и размер.
+API использует только `readMediaStorageConfig` и native `YandexChatMediaStore`:
+без native storage configuration media недоступны, fallback на Supabase нет.
+`SUPABASE_*` больше не читаются сервером для media; старые stage secret mounts
+и manual source tooling других областей пока требуют отдельной cleanup-задачи.
 
-Workflow использует существующие `SUPABASE_ACCESS_TOKEN` и
-`SUPABASE_PROJECT_ID`, получает source service-role key только во временный файл
-с правами `0600`, а target key читает из Lockbox через short-lived GitHub OIDC.
-В summary выводятся только режим, количество objects, суммарный размер,
-количество скопированных/проверенных и content fingerprint. Пути, содержимое и
-ключи не логируются и не сохраняются как artifact. Успешный apply обязан иметь
-`objects == verified`; его можно безопасно повторять после новых source uploads.
-
-По умолчанию после этого запускайте full-cohort `audit` → `dry-run` → pinned
-`apply`. Для живого source, в котором записи продолжают меняться между двумя
-GitHub runners, используйте отдельный current-snapshot apply ниже. Private
-migration runner до подключения к PostgreSQL проверит наличие и точный размер
-каждого chat object, указанного в snapshot. Это исключает commit строк с
-неработающими вложениями. Перед финальным cutover после freeze writes повторите
-media `apply`, чтобы захватить файлы, появившиеся после первой репетиции.
-
-Если product owner явно принимает временно неработающие вложения, оба target
-запуска можно выполнить с `allow_missing_media=true`. Это отдельный default-off
-input workflow `Rehearse Yandex tenant migration`: runner по-прежнему проверяет
-формат media metadata, но не требует наличия objects в Yandex. Пути в строках не
-удаляются и не переписываются; до последующего `Migrate Yandex media: apply`
-чтение таких файлов вернёт not found, а после копирования те же ссылки начнут
-работать без повторной DB migration. Не используйте этот режим как неявный
-fallback и фиксируйте одинаковую policy для dry-run и apply.
+Для явной архивной tenant-репетиции `allow_missing_media=true` остаётся
+отдельным default-off input. Он допускает старые строки без media objects,
+но больше не подразумевает последующее выполнение удалённого source-copy job.
+Новая публикация native API не требует запуска старой репетиции.
 
 ### Удалённая репетиция на Yandex stage
 

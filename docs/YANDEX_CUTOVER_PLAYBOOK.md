@@ -52,6 +52,17 @@ client transport и API. Непривязанный Yandex ID открывает
 Server-side Supabase SDK и legacy media adapters остаются
 для следующих отдельных задач; это ещё не полный decommission.
 
+## Отказ от переноса Supabase media — 03.11.2026
+
+По прямому решению владельца старые файлы Supabase не переносятся.
+Требование полноты их копирования больше не блокирует удаление legacy media
+runtime. Удалены Supabase chat store/authorizer/bridge, три маршрута
+`/v1/legacy/chat-media/{upload,sign,remove}`, media fallback и source-copy CLI/workflow.
+Нужные native chat/Vital/profile media и S3-контракты сохраняются. Старые файлы,
+которые существуют только в Supabase, могут стать недоступными; удалённые
+объекты/ресурсы этим решением не удаляются. Это уточняет прежний P1 media gate,
+но не отменяет проверки остальных data/ops consumers перед отключением проекта.
+
 ## Общая методика продуктовой разработки
 
 ### Точечное восстановление подтверждённой связи — YAFIT-701
