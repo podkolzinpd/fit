@@ -2842,3 +2842,82 @@ ABI8922/code9 неизменён. Предыдущие localappendproof сохр
 Открыто: новыйfullsourceCI/Android,1953/1955actualreceipts и собственноеокно.
 Дальше: обязательные exactsourcechecks, затем прежний normalmerge/fullmainCI/
 API/web/signedOTA/actual30public+30ZIPплан. Productionbusinesswrites0.
+
+Диагностика exactsource913 CI — 03.11.2026 — Codex / OpenAI.
+Задача: проверить полный source1957 после necessaryactualmainopsmerge.
+Расхождения: CI41695603939 attempt1FAILURE:33SUCCESS, auth4/4job126127395216
+strict-flaky и aggregateFAIL; Android41695603952SUCCESS. WebKitdark/original430
+confirmed-swipe timeout30.086s/retry1pass7.623s;223passed+1flaky/224cases225attempts
+не считаютсяgreen. Предыдущийc572green не переносится на913.
+Сделано: сохранены metadata/log/error-context/timings/trace retry1 в
+outputs/coach-templates-audit-20261102/post-release-audit-20261103/source913-*.
+Конкретно client-workout-reference:3533 второйswipe после Отмена на3579 ждёт
+кнопку первого подхода3573; snapshot содержит действие второго при отсутствии
+первой. Возможна scroll/gesturehit связь, точная причина не доказана; trace
+первогоattempt отсутствует по штатной on-first-retry policy. Testfile и
+LiveWorkoutPage доEOF равны actualmaincce0; SHA256proof сохранён.
+Проверка: неизменные8axesWebKit dev8/8passed37.9s0retry, с существующимfont
+servingwarning от symlink; это не productionproof. Отдельный productionbuild/
+startup со шрифтами прошёл, те же8cases8/8passed22.2s0retry/skips. Dark430PNG
+просмотрен, все PNG/traces в отдельных каталогах, не actualsignedZIPприёмка.
+Решение: конкретные факты переданы только разрешённому ФИТ14. Входящий владелец
+ФИТ16 сообщает такую же unstablecase наmaincce0 и уточняет:1955finalsetrevealfix
+к этому диалогу не относится. Это уточнение не выдаётся за нашу проверкуmain.
+Чужие branch/CI не менялись, промежуточныйpatch не включён. Businesswrites0.
+Отвергнуто: retry1pass как CIgreen, слепыеповторы, ослаблениеassertions/timeouts/
+retries/strictflaky/coverage/gates, соседний productfix без доказанной причины.
+Открыто:913CIfailed;1953 фактически принят (уточняет прежнийpending),1955OPEN.
+Дальше: проверить независимое свидетельствоmainfailure и обоснованность одного
+failed-onlysameheadrepeat; затем actual1955ordinarymerge/newfullCI, receipt/
+окно и прежний normalrelease/30public+30signedZIP. Журнал локальный безpush.
+
+Уточнение после проверки независимого main-сбоя — 03.11.2026.
+Фактический mainCI41688941383 job126105005301 подтверждён сохранённымлогом
+main-cce0-auth-failure.log: та жеcase3533/второйswipe3579/кнопка3573, другой
+вариант darkcompact390;timeout30.081s/retry1pass7.867s. Это прямая проверка,
+не только входящее сообщение. При byteequalLive/test,8productionlocalgreen
+безretry и33успешных независимыхjob разрешён ровно один failed-only повтор
+собственного41695603939 на том же913source/tests/gates. Dispatch запрошен.
+ПервыйattemptFAILURE/diagnostics сохранён, второй покаpending, CI неgreen.
+Повторныйfailure требует новой конкретной диагностики, не следующего повтора.
+Никаких новых sourcepush/ослаблений/чужих rerun. Очередь1955/ownslot прежняя.
+
+Квитанция exactsource913 после ограниченного повтора — 03.11.2026.
+CI41695603939 attempt2 на том же913a6705f95f403959a3b492adb1074a8a30cfb3
+завершён SUCCESS35/35jobs. Auth4/4job126143918075:224passed11.8m безflaky/retry,
+aggregate126152008025SUCCESS; Android41695603952SUCCESS. Это результат ровно
+одного обоснованного failed-onlyrepeat, не удаление attempt1strict-flaky.
+Metadata source-913-ci-final.json и source-913-auth-attempt2.log сохранены
+рядом с исходным failure/диагностикой; assertions/tests/gates/source неизменны.
+PR/checkpoint/localcanonicalproof обновлены без sourcepush ради квитанции.
+Открыто:1955OPEN21cf/егоactualreceipt и подтверждённоеокно1957; maincce0 прежний.
+Дальше necessaryactual1955ordinarymerge/newfullCI, затем разрешённый прежний
+squash/fullmainCI/API/web/совместимыйOTA/actual30public+30signedZIP. Businesswrites0.
+
+Интеграция actual1955main — 03.11.2026 — Codex / OpenAI.
+Задача: включить фактический parent squash в1957 до нового exactsourceCI,
+сохранить ownerконтракт и обе истории, не занимая его productionокно.
+Расхождения:1955 штатно MERGEDd63e8534bbcb758bf087c8fe3f57fa3e729d30cf,
+его actualrelease/приёмка ещёpending. Прежний913CIgreen не допуск новогоhead.
+Сделано: ordinarymergeactualmain безконфликтов, включая WorkoutsPages.
+Входящие7files715insertions/5deletions — Livehandoff/helper/tests/контракт/журнал/
+regressionlessons; draftform доLive побайтно прежний913 (кроме новогоimport),
+LiveWorkoutPage иownerhelper равны actuald63. НашиR01/R02/R03guards сохранены,
+R04история прежняя. Предыдущие локальные913failure/greenproof сохранены
+в necessarymerge иsource913-local-ci-proof-before1955.patch.
+Решение: сохранить CLV-20261103-P3: один reveal после устойчивого content-space/
+fold/clocklayout; stickyheaderbounds, reducedmotion и ручной ввод приоритетны;
+refetch не запускает новыйscroll, legacyпуть прежний. Подтверждены freshness/
+layoutlessons владельца, без собственного изменения clientfix/таймера/флагов.
+Отвергнуто: промежуточная1955ветка, повторныйparentCI радиформальности, перенос
+913green на новыйhead, force/admin/bypass, новыйpush только ради квитанции.
+Проверка:6unit/componentfiles44passed4.25s, rootTSC/changedlint/build/startup
+passed. Productionfixture browser30/30ChromiumWebKit1.2m,0retry/skips:8draftsafety,
+6handoff обе роли/reducedmotion,16confirmed-swipe вариантов. Client/trainer
+WebKithandoffPNG просмотрены, отдельныйкаталог сохранён; это неactualZIPQA.
+API/package/rootlock/android неизменны; native1.1.4/code9/ABI8922 прежний.
+Свидетельство incoming-1955-merge-proof.json, logs incoming-1955-* в outputs.
+Открыто: новыйfullsourceCI/Android и actual1955mainCI/API/web/OTA/приёмка/окно.
+Дальше: необходимыйsourcepush этогоmerge→новыйfullCI; нашmerge/production
+только после actual1955receipt и подтверждённогоокна. Затем прежний squash/
+fullactualmainCI/API/web/compatibleOTA/actual30public+30signedZIP. Businesswrites0.
