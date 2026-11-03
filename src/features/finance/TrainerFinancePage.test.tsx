@@ -303,7 +303,9 @@ describe('TrainerFinancePage', () => {
 
   it('resolves a lost manual response after cancel before accepting a new operation', async () => {
     const user = userEvent.setup()
-    finance.createManualSession.mockRejectedValueOnce(new Error('Нет сети')).mockResolvedValue(bundle.sessions[0]!)
+    finance.createManualSession.mockRejectedValueOnce(new Error('Нет сети'))
+      .mockRejectedValueOnce(new RepositoryError('PT404', 'Связь временно недоступна'))
+      .mockResolvedValue(bundle.sessions[0]!)
     renderPage()
     await screen.findByRole('heading', { name: 'Персональные тренировки' })
     await user.click(screen.getByRole('tab', { name: 'Занятия: 1' }))
@@ -322,12 +324,19 @@ describe('TrainerFinancePage', () => {
     await user.click(screen.getByRole('button', { name: 'Повторить сохранение' }))
     await waitFor(() => expect(finance.createManualSession).toHaveBeenCalledTimes(2))
     expect(finance.createManualSession.mock.calls[1]).toEqual(finance.createManualSession.mock.calls[0])
+    // A later access rejection does not prove that the first lost response
+    // represented a rollback. Keep that operation until a successful replay.
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Повторить сохранение' })).toBeEnabled())
+    expect(screen.getByLabelText('Комментарий')).toBeDisabled()
+    await user.click(screen.getByRole('button', { name: 'Повторить сохранение' }))
+    await waitFor(() => expect(finance.createManualSession).toHaveBeenCalledTimes(3))
+    expect(finance.createManualSession.mock.calls[2]).toEqual(finance.createManualSession.mock.calls[0])
     await waitFor(() => expect(screen.queryByLabelText('Дата занятия')).not.toBeInTheDocument())
     await user.click(screen.getByRole('button', { name: 'Добавить' }))
     await user.type(screen.getByLabelText('Комментарий'), 'Другое занятие')
     await user.click(screen.getByRole('button', { name: 'Добавить' }))
-    await waitFor(() => expect(finance.createManualSession).toHaveBeenCalledTimes(3))
-    expect(finance.createManualSession.mock.calls[2]![1].requestId).not.toBe(finance.createManualSession.mock.calls[0]![1].requestId)
+    await waitFor(() => expect(finance.createManualSession).toHaveBeenCalledTimes(4))
+    expect(finance.createManualSession.mock.calls[3]![1].requestId).not.toBe(finance.createManualSession.mock.calls[0]![1].requestId)
     expect(workouts.saveCompleted).not.toHaveBeenCalled()
   })
 

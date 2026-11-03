@@ -229,7 +229,7 @@ export function TrainerFinancePage() {
   const [paymentEditor, setPaymentEditor] = useState<{ packageId: string; payment?: TrainerFinancePayment; direct?: boolean } | null>(null)
   const packageRequest = useRef<string | null>(null)
   const paymentRequest = useRef<string | null>(null)
-  const manualOperation = useRef<{ draft: SessionAccountingDraft; requestId: string } | null>(null)
+  const manualOperation = useRef<{ draft: SessionAccountingDraft; requestId: string; attempts: number } | null>(null)
   const [pendingManualDraft, setPendingManualDraft] = useState<SessionAccountingDraft | null>(null)
   const [manualOpen, setManualOpen] = useState(false)
   const [sessionEditor, setSessionEditor] = useState<string | null>(null)
@@ -260,10 +260,11 @@ export function TrainerFinancePage() {
   const addManualSession = useMutation({
     mutationFn: async (draft: SessionAccountingDraft) => {
       if (!manualOperation.current) {
-        manualOperation.current = { draft, requestId: crypto.randomUUID() }
+        manualOperation.current = { draft, requestId: crypto.randomUUID(), attempts: 0 }
         setPendingManualDraft(draft)
       }
       if (JSON.stringify(manualOperation.current.draft) !== JSON.stringify(draft)) throw new Error('Сначала повторите сохранение предыдущего занятия')
+      manualOperation.current.attempts += 1
       const [disposition, packageId = ''] = draft.value.split(':')
       return trainerFinance.createManualSession(clientId, {
         requestId: manualOperation.current.requestId,
@@ -274,9 +275,9 @@ export function TrainerFinancePage() {
     },
     onSuccess: async () => { setManualOpen(false); manualOperation.current = null; setPendingManualDraft(null); await refresh() },
     onError: error => {
-      // These responses guarantee a rejected transaction. Unknown outcomes keep
-      // their original payload/ID until an explicit retry resolves the receipt.
-      if (error instanceof RepositoryError && ['PT422', 'PT403', 'PT404'].includes(error.code)) {
+      // A later rejection cannot prove that an earlier lost response rolled back.
+      if (manualOperation.current?.attempts === 1 && error instanceof RepositoryError
+        && ['PT422', 'PT403', 'PT404'].includes(error.code)) {
         manualOperation.current = null
         setPendingManualDraft(null)
       }
