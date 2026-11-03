@@ -16,8 +16,8 @@ const id = '20000000-0000-4000-8000-000000000001', office = { id, city: 'Мос�
 const row: CorporateService = { id, kind: 'tour', officeId: id, city: office.city, officeName: office.name, occurredAt: '2026-01-01T09:15:36Z', version: 1, voidedAt: null, createdAt: '2026-01-01T09:16:00Z', updatedAt: '2026-01-01T09:16:00Z' }
 const page = { records: [] as CorporateService[], offices: [office], timeZone: 'Europe/Moscow', nextCursor: null }
 function Location() { return <output data-testid="location">{useLocation().pathname}{useLocation().search}</output> }
-function mount(path: string) {
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })
+function mount(path: string, staleTime = 0) {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime }, mutations: { retry: false } } })
   const router = createMemoryRouter([{ element: <><Location /><Outlet /></>, children: [
     { path: '/profile', element: <CorporateServiceEntry /> },
     { path: '/profile/yandex-services', element: <CorporateServicesPage /> },
@@ -226,6 +226,39 @@ describe('corporate trainer service screens', () => {
     expect(api.statistics).toHaveBeenLastCalledWith({ from: '2026-11-01', until: '2026-11-03' }, '', '')
     await user.click(screen.getByRole('button', { name: 'Сегодня' }))
     await waitFor(() => expect(screen.getByRole('button', { name: 'Сегодня' })).toHaveAttribute('aria-pressed', 'true'))
+  })
+  it('keeps another record read alive when a departed save completes', async () => {
+    const otherId = '20000000-0000-4000-8000-000000000002'
+    let finishSave!: (value: { saved: true; id: string; version: number }) => void
+    let finishRead!: (value: CorporateService) => void
+    api.save.mockImplementation(() => new Promise(resolve => { finishSave = resolve }))
+    api.record.mockImplementation((requested: string) => requested === otherId ? new Promise(resolve => { finishRead = resolve }) : Promise.resolve(row))
+    const user = userEvent.setup(); const router = mount(`/profile/yandex-services/${id}`)
+    await user.click(await screen.findByRole('button', { name: 'Сохранить исправление' }))
+    await act(async () => { await router.navigate(`/profile/yandex-services/${otherId}`) })
+    await user.click(within(screen.getByRole('alertdialog')).getByRole('button', { name: 'Уйти' }))
+    await waitFor(() => expect(api.record).toHaveBeenCalledWith(otherId))
+    await act(async () => { finishSave({ saved: true, id, version: 2 }); await new Promise(resolve => setTimeout(resolve, 0)) })
+    await act(async () => { finishRead({ ...row, id: otherId, kind: 'intro' }); await new Promise(resolve => setTimeout(resolve, 0)) })
+    expect(await screen.findByLabelText('Услуга', { exact: true })).toHaveValue('intro')
+    expect(screen.getByTestId('location')).toHaveTextContent(otherId)
+  })
+  it('reads a fresh audit after correction even while the application cache is fresh', async () => {
+    let saved = false
+    api.save.mockImplementation(() => { saved = true; return Promise.resolve({ saved: true, id, version: 2 }) })
+    api.record.mockImplementation(() => Promise.resolve({ ...row, kind: saved ? 'intro' : 'tour', version: saved ? 2 : 1 }))
+    api.list.mockImplementation(() => Promise.resolve({ ...page, records: [{ ...row, kind: saved ? 'intro' : 'tour', version: saved ? 2 : 1 }] }))
+    api.audit.mockImplementation(() => Promise.resolve({ events: [{ action: 'create', at: row.createdAt, version: 1, before: null, after: row }, ...(saved ? [{ action: 'update', at: row.updatedAt, version: 2, before: row, after: { ...row, kind: 'intro', version: 2 } }] : [])], nextBeforeVersion: null }))
+    const user = userEvent.setup(); mount(`/profile/yandex-services/${id}`, 20_000)
+    await user.click(await screen.findByRole('button', { name: 'История изменений' }))
+    expect(await screen.findByText(/Создана · версия 1/)).toBeVisible()
+    await user.selectOptions(screen.getByLabelText('Услуга', { exact: true }), 'intro')
+    await user.click(screen.getByRole('button', { name: 'Сохранить исправление' }))
+    await user.click(await screen.findByRole('link', { name: 'Исправить' }))
+    await waitFor(() => expect(screen.getByLabelText('Услуга', { exact: true })).toHaveValue('intro'))
+    await user.click(await screen.findByRole('button', { name: 'История изменений' }))
+    expect(await screen.findByText(/Исправлена · версия 2/)).toBeVisible()
+    expect(screen.getByText(/Создана · версия 1/)).toBeVisible()
   })
   it('shows four real totals, historical filters and explicit retry', async () => {
     const user = userEvent.setup(); api.statistics.mockRejectedValueOnce(new Error('Нет связи')); mount('/statistics')
