@@ -2809,7 +2809,8 @@ function LiveSetFields({ inputKind, exerciseRef, source, set, editing = false, s
   </select>, 'RPE') : null
   const measurements = { source, ref: exerciseRef ?? '', inputKind }
   // «Старт» и отсчёт подхода «Веду сам» живут в ячейке времени: поле остаётся для ручного ввода.
-  const withWorkTimer = (field: ReactNode) => workTimer ? <span className="live-set-time-cell">{field}{workTimer}</span> : field
+  // Preserve an open duration editor when its client timer disappears.
+  const withWorkTimer = (field: ReactNode) => workTimer || clientLayout ? <span className="live-set-time-cell">{field}{workTimer}</span> : field
   const weightField = metric(<LiveSetInput name="weightKg" label="Фактический вес" placeholder={quietUnits ? '—' : 'кг'} defaultValue={value(set.fact.weightKg, set.weightKg)} planHint={isPlanHint(set.fact.weightKg, set.weightKg)} step="any" disabled={locked} inputKey={`w-${k}-${directInput ? 'stable' : carriedWeightKey}`} decimal selectZero directInput={directInput} />, 'кг')
   if (inputKind === 'strength') return <>
     {allowsRepetitionTimeChoice(measurements) && <input type="hidden" name="durationSec" value={value(factDuration, planDuration) ?? ''} />}
@@ -4248,9 +4249,10 @@ export function LiveWorkoutPage() {
   function openLiveCardKey() {
     // A pending draft/error or focused metric owns its retained editor. Never
     // reveal two cards, or hide an unsent result to follow a late confirmation.
-    const focusedSetId = document.activeElement instanceof HTMLElement && document.activeElement.matches('input, textarea, select, .workout-duration-trigger, .run-distance-unit')
-      ? document.activeElement.closest<HTMLElement>('[data-live-set-id]')?.dataset.liveSetId : undefined
-    const held = query.data?.exercises.find(exercise => exercise.blockType === 'single' && exercise.sets.some(set => set.id === focusedSetId || set.id === saveErrorSetId || pendingSetDrafts.current.has(set.id)))
+    const focused = document.activeElement instanceof HTMLElement && document.activeElement.matches('input, textarea, select, .workout-duration-trigger, .run-distance-unit') ? document.activeElement : null
+    const held = query.data?.exercises.find(exercise => exercise.blockType === 'single' && exercise.sets.some(set => set.id === saveErrorSetId || validationErrorSetIds.has(set.id) || pendingSetDrafts.current.has(set.id)
+      || liveSetForms.current.get(set.id)?.querySelector('.workout-duration-trigger[aria-expanded="true"]')
+      || focused && liveSetForms.current.get(set.id)?.closest('.live-exercise')?.contains(focused)))
     if (held) return v79CardKey(held)
     const selected = liveCardDisplay?.activeKey === automaticLiveCardKey ? liveCardDisplay.openedKey : automaticLiveCardKey
     return selected && !query.data?.exercises.some(exercise => v79CardKey(exercise) === selected) ? automaticLiveCardKey : selected
@@ -4260,7 +4262,7 @@ export function LiveWorkoutPage() {
   }
   function liveCardCollapseBlocked(exercise: WorkoutExerciseModel) {
     return rootMutationPending || save.isPending || confirm.isPending
-      || exercise.sets.some(set => pendingSetDrafts.current.has(set.id) || set.id === saveErrorSetId)
+      || exercise.sets.some(set => pendingSetDrafts.current.has(set.id) || set.id === saveErrorSetId || validationErrorSetIds.has(set.id))
   }
   function setLiveCardExpanded(exercise: WorkoutExerciseModel, expanded: boolean) {
     const previous = query.data?.exercises.find(item => v79CardKey(item) === openLiveCardKey())

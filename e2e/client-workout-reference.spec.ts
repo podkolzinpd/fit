@@ -4508,3 +4508,41 @@ for (const role of ['client', 'trainer'] as const) test(`Live removing a reviewe
   await expect(page.locator('.live-exercise > :is(.coach-v79-card-body,.client-live-card-body):not([inert])')).toHaveCount(1)
   expect(backend.getWorkouts()[0]!.exercises.every(exercise => exercise.sets.every(set => !set.confirmedAt))).toBe(true)
 })
+
+for (const role of ['client', 'trainer'] as const) test(`Live time picker retains its editor after delayed confirmation ${role}`, async ({ page }) => {
+  await page.clock.setFixedTime(new Date('2026-11-04T09:00:00Z'))
+  const id = role === 'client' ? pilotId : 'c0ac0000-6010-4000-8000-000000000001'
+  await page.addInitScript(id => {
+    localStorage.setItem('fit.workoutTimeWheel', 'true')
+    localStorage.setItem(`fit.liveExerciseAnimation.${id}`, 'false')
+    localStorage.setItem(`fit.coachmarks-seen.${id}`, JSON.stringify(['client-live-reference-timer-2026-10']))
+  }, id)
+  const source = { ...coachGestureWorkout(false, 2), executionMode: 'manual' as const }
+  source.startedAt = '2026-11-04T08:59:00Z'
+  const first = source.exercises[0]!
+  first.inputKind = 'duration'; first.ref = 'plank'; first.name = 'Планка'
+  first.sets = [{ ...first.sets[0]!, weightKg: undefined, reps: undefined, durationSec: 3 }]
+  const backend = await mockPilot(page, { role, profileId: id, fitLime: true, clientLime: true, workouts: [source] })
+  let release!: () => void
+  const gate = new Promise<void>(resolve => { release = resolve })
+  await page.route('**/v1/workout-sets/*/confirm', async route => { await gate; await route.fallback() })
+  await page.goto(`/workouts/${workoutId}/live`)
+  const row = page.locator(`[data-live-set-id="${first.sets[0]!.id}"]`)
+  const field = await row.locator('.workout-duration-trigger').elementHandle()
+  await row.getByRole('button', { name: 'Готово, отдых', exact: true }).click()
+  await row.locator('.workout-duration-trigger').focus()
+  await row.locator('.workout-duration-trigger').press('Enter')
+  const picker = page.getByRole('dialog', { name: 'Фактическое время', exact: true })
+  await expect(picker).toBeVisible()
+  release()
+  await expect.poll(() => backend.getWorkouts()[0]!.exercises[0]!.sets[0]!.confirmedAt).not.toBeNull()
+  expect(await field!.evaluate(element => element.isConnected)).toBe(true)
+  expect(await row.evaluate(element => Boolean(element.closest('[inert]')))).toBe(false)
+  await expect(picker).toBeVisible()
+  await picker.getByRole('listbox', { name: 'секунды', exact: true }).getByRole('option', { name: '10 секунды', exact: true }).click()
+  await picker.getByRole('button', { name: 'Применить · 0:10', exact: true }).click()
+  await expect(picker).toHaveCount(0)
+  await row.locator('.workout-duration-trigger').blur()
+  await expect.poll(() => backend.getWorkouts()[0]!.exercises[0]!.sets[0]!.fact.durationSec).toBe(10)
+  expect(await page.evaluate(() => window.scrollY)).toBe(0)
+})
