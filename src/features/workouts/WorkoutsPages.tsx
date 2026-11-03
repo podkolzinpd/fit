@@ -2809,7 +2809,8 @@ function LiveSetFields({ inputKind, exerciseRef, source, set, editing = false, s
   </select>, 'RPE') : null
   const measurements = { source, ref: exerciseRef ?? '', inputKind }
   // «Старт» и отсчёт подхода «Веду сам» живут в ячейке времени: поле остаётся для ручного ввода.
-  const withWorkTimer = (field: ReactNode) => workTimer ? <span className="live-set-time-cell">{field}{workTimer}</span> : field
+  // Preserve an open duration editor when its client timer disappears.
+  const withWorkTimer = (field: ReactNode) => workTimer || clientLayout ? <span className="live-set-time-cell">{field}{workTimer}</span> : field
   const weightField = metric(<LiveSetInput name="weightKg" label="Фактический вес" placeholder={quietUnits ? '—' : 'кг'} defaultValue={value(set.fact.weightKg, set.weightKg)} planHint={isPlanHint(set.fact.weightKg, set.weightKg)} step="any" disabled={locked} inputKey={`w-${k}-${directInput ? 'stable' : carriedWeightKey}`} decimal selectZero directInput={directInput} />, 'кг')
   if (inputKind === 'strength') return <>
     {allowsRepetitionTimeChoice(measurements) && <input type="hidden" name="durationSec" value={value(factDuration, planDuration) ?? ''} />}
@@ -4252,6 +4253,7 @@ export function LiveWorkoutPage() {
     const focused = document.activeElement instanceof HTMLElement && document.activeElement.matches('input, textarea, select, .workout-duration-trigger, .run-distance-unit') ? document.activeElement : null
     for (const exercise of query.data?.exercises ?? []) {
       const held = exercise.sets.find(set => set.id === saveErrorSetId || validationErrorSetIds.has(set.id) || pendingSetDrafts.current.has(set.id)
+        || liveSetForms.current.get(set.id)?.querySelector('.workout-duration-trigger[aria-expanded="true"]')
         || focused && liveSetForms.current.get(set.id)?.closest('[data-live-card-key], .live-exercise')?.contains(focused))
       if (held) return liveRowCardKey(exercise, held)
     }
