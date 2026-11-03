@@ -271,20 +271,6 @@ variable "api_execution_timeout" {
   }
 }
 
-variable "legacy_supabase_bridge_lockbox_secret_id" {
-  description = "Optional existing Lockbox secret ID with SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY and SUPABASE_SERVICE_ROLE_KEY for the temporary chat-media bridge."
-  type        = string
-  default     = null
-  nullable    = true
-}
-
-variable "legacy_supabase_bridge_lockbox_secret_version_id" {
-  description = "Version ID for legacy_supabase_bridge_lockbox_secret_id. It is intentionally supplied outside Git."
-  type        = string
-  default     = null
-  nullable    = true
-}
-
 variable "allow_unauthenticated_api" {
   description = "Allow browser invocation of the API transport. Application data remains protected by verified Yandex ID and the rollout allowlist."
   type        = bool

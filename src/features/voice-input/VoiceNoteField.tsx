@@ -1,8 +1,10 @@
-import { useEffect, useId, useRef, useState } from 'react'
-import { VoiceInputButton } from './VoiceInputButton'
+import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from 'react'
+import { VoiceInputButton, type VoiceInputPhase } from './VoiceInputButton'
 
 interface VoiceNoteFieldProps {
   name: string
+  disabled?: boolean
+  onBusyChange?: (busy: boolean) => void
   // Экран/форма, где стоит поле — см. VoiceInputButtonProps.source.
   source: string
   defaultValue?: string
@@ -24,10 +26,16 @@ interface VoiceNoteFieldProps {
   compactVoice?: boolean
 }
 
-export function VoiceNoteField({ name, source, defaultValue, value, onValueChange, onManualValueChange, onTranscriptValueChange, onTranscriptAppended, label = 'Заметка', voiceLabel, voiceBeta, placeholder, hideLabel = false, autoResize = false, maxHeightPx = 264, showVoice = true, showVoiceCancel = false, compactVoice = false }: VoiceNoteFieldProps) {
+export function VoiceNoteField({ disabled = false, onBusyChange, name, source, defaultValue, value, onValueChange, onManualValueChange, onTranscriptValueChange, onTranscriptAppended, label = 'Заметка', voiceLabel, voiceBeta, placeholder, hideLabel = false, autoResize = false, maxHeightPx = 264, showVoice = true, showVoiceCancel = false, compactVoice = false }: VoiceNoteFieldProps) {
   const id = useId()
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const [isTranscriptProcessing, setIsTranscriptProcessing] = useState(false)
+  const [voiceBusy, setVoiceBusy] = useState(false)
+  const locked = useRef(disabled)
+  useLayoutEffect(() => { locked.current = disabled }, [disabled])
+  const onPhaseChange = useCallback((phase: VoiceInputPhase) => setVoiceBusy(phase !== 'idle'), [])
+  useEffect(() => { onBusyChange?.(voiceBusy || isTranscriptProcessing) }, [voiceBusy, isTranscriptProcessing, onBusyChange])
+  useEffect(() => () => onBusyChange?.(false), [onBusyChange])
 
   const resizeTextarea = () => {
     if (!autoResize || !textareaRef.current) return
@@ -44,6 +52,7 @@ export function VoiceNoteField({ name, source, defaultValue, value, onValueChang
   return <div className="field voice-note-field">
     {!hideLabel && <label htmlFor={id}>{label}</label>}
     <textarea
+      disabled={disabled}
       ref={textareaRef}
       id={id}
       name={name}
@@ -53,14 +62,15 @@ export function VoiceNoteField({ name, source, defaultValue, value, onValueChang
       defaultValue={onValueChange ? undefined : defaultValue}
       value={onValueChange ? value ?? '' : undefined}
       onChange={onValueChange ? (event) => {
+        if (locked.current) return
         const nextValue = event.target.value
         onValueChange(nextValue)
         onManualValueChange?.(nextValue)
         window.requestAnimationFrame(resizeTextarea)
       } : undefined}
     />
-    {showVoice && <VoiceInputButton variant={compactVoice ? 'icon' : 'inline'} source={source} idleLabel={voiceLabel} beta={voiceBeta} showCancel={showVoiceCancel} onTranscript={(text) => {
-      if (!textareaRef.current) return
+    {showVoice && <VoiceInputButton disabled={disabled} onPhaseChange={onPhaseChange} onStart={() => setVoiceBusy(true)} variant={compactVoice ? 'icon' : 'inline'} source={source} idleLabel={voiceLabel} beta={voiceBeta} showCancel={showVoiceCancel} onTranscript={(text) => {
+      if (!textareaRef.current || locked.current) return
       const previous = textareaRef.current.value
       const nextValue = appendTranscript(previous, text)
       let appliedValue = nextValue
@@ -84,7 +94,7 @@ export function VoiceNoteField({ name, source, defaultValue, value, onValueChang
       }
       textareaRef.current.focus()
       return () => {
-        if (!textareaRef.current || textareaRef.current.value !== appliedValue) return
+        if (!textareaRef.current || locked.current || textareaRef.current.value !== appliedValue) return
         // Undo is a user edit: invalidate pending parsing and derived previews.
         if (onValueChange) onValueChange(previous)
         else if (onTranscriptValueChange) onTranscriptValueChange(previous)

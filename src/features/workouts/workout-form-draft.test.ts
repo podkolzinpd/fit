@@ -36,6 +36,23 @@ describe('workout form draft storage', () => {
     expect(readWorkoutFormDraft(legacy)?.requestId).toBe('legacy')
   })
 
+  it('preserves scoped raw text, explicit clearing, and backwards-compatible invalid previews', () => {
+    const snapshot = { text: 'Планка 40 секунд', parsedText: '', entries: [], choices: {} }
+    writeWorkoutFormDraft(key, { ...draft, requestId: 'one', composerText: snapshot.text, composerSnapshot: snapshot })
+    expect(readWorkoutFormDraft(key)?.composerSnapshot).toEqual(snapshot)
+    writeWorkoutFormDraft(key, { ...draft, requestId: 'one' })
+    expect(readWorkoutFormDraft(key)?.composerSnapshot).toEqual(snapshot)
+    writeWorkoutFormDraft(key, { ...draft, requestId: 'one', composerText: '', composerSnapshot: undefined })
+    expect(readWorkoutFormDraft(key)?.composerText).toBe('')
+    expect(readWorkoutFormDraft(key)?.composerSnapshot).toBeUndefined()
+    localStorage.setItem(key, JSON.stringify({ ...draft, composerText: 'Не терять', composerSnapshot: { text: 'Другой текст', entries: 'bad' } }))
+    expect(readWorkoutFormDraft(key)).toMatchObject({ clientId: draft.clientId, composerText: 'Не терять' })
+    expect(readWorkoutFormDraft(key)?.composerSnapshot).toBeUndefined()
+    writeWorkoutFormDraft(key, { ...draft, requestId: 'old', sourceVersion: 1, composerText: 'Другой план' })
+    writeWorkoutFormDraft(key, { ...draft, requestId: 'new', sourceVersion: 2 })
+    expect(readWorkoutFormDraft(key)?.composerText).toBeUndefined()
+  })
+
   it('round-trips a draft per source workout', () => {
     writeWorkoutFormDraft(key, draft)
     expect(readWorkoutFormDraft(key)).toEqual(draft)

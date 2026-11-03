@@ -582,8 +582,23 @@ const changesContainerCostOrIdentity = (resource) =>
       !== JSON.stringify(resource.change.after?.[field]),
   )
 
+// Retire only the obsolete API reader grant, never its secret or a native grant.
+const isRetiredSupabaseBridgeAccessRemoval = (resource) => {
+  const apiId = plannedResources.find((item) => item.address === 'yandex_iam_service_account.api')?.values?.id
+  const secretId = resource.change.before?.secret_id
+  return resource.address === legacySupabaseBridgeSecretAccessAddress
+    && resource.type === 'yandex_lockbox_secret_iam_member'
+    && resource.change.actions.join(',') === 'delete'
+    && resource.change.after === null
+    && resource.change.before?.role === 'lockbox.payloadViewer'
+    && typeof secretId === 'string' && /^[a-z0-9]+$/u.test(secretId)
+    && typeof apiId === 'string' && /^[a-z0-9]+$/u.test(apiId)
+    && resource.change.before?.member === `serviceAccount:${apiId}`
+}
+
 const isAutomaticStageChange = (resource) => {
   const actions = resource.change.actions.join(',')
+  if (isRetiredSupabaseBridgeAccessRemoval(resource)) return true
   if (isExactApiWarmupBootstrap(resource)) return true
   if (isReviewedPushPipelineBootstrap(resource)) return true
   if (isReviewedMediaStorageBootstrap(resource)) return true
@@ -597,11 +612,6 @@ const isAutomaticStageChange = (resource) => {
       )
       || (
         resource.address === appFeedbackSecretAccessAddress
-        && resource.change.after?.role === 'lockbox.payloadViewer'
-        && isKnownOrComputedServiceAccountMember(resource)
-      )
-      || (
-        resource.address === legacySupabaseBridgeSecretAccessAddress
         && resource.change.after?.role === 'lockbox.payloadViewer'
         && isKnownOrComputedServiceAccountMember(resource)
       )
@@ -717,6 +727,10 @@ if (
 if (protectedDestruction.length > 0) {
   throw new Error('Managed PostgreSQL cluster or database destruction is always blocked')
 }
+if (changes.some((resource) => resource.address === legacySupabaseBridgeSecretAccessAddress
+  && !isRetiredSupabaseBridgeAccessRemoval(resource))) {
+  throw new Error('Retired Supabase bridge grant may only be removed for the planned API identity')
+}
 if (unexpectedPublicResources.length > 0) {
   throw new Error(
     'Public invocation is allowed only for the reviewed stage API binding',
@@ -727,7 +741,7 @@ if (unexpectedAutomaticChanges.length > 0) {
     `Automatic stage deploy contains new or cost-sensitive infrastructure changes: ${unexpectedAutomaticChanges.map(describeUnexpectedAutomaticChange).join(', ')}`,
   )
 }
-if (destructive.length > 0 && !allowDestroy) {
+if (destructive.some((resource) => !isRetiredSupabaseBridgeAccessRemoval(resource)) && !allowDestroy) {
   throw new Error(
     'Terraform plan contains delete or replacement actions; use the reviewed manual override',
   )

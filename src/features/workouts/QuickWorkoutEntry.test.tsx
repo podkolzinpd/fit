@@ -1,4 +1,5 @@
-import { fireEvent, render, screen } from '@testing-library/react'
+import type { QuickWorkoutEntryDraft } from './quick-workout-draft'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { ExerciseSnapshot } from '../../shared/domain'
 import { QuickWorkoutEntry } from './QuickWorkoutEntry'
@@ -172,5 +173,36 @@ describe('QuickWorkoutEntry circuit input', () => {
       'dips',
       'fedb-decline-crunch',
     ])
+  })
+})
+
+
+describe('template source composer draft', () => {
+  it('restores an unresolved choice and planned values without a second parser call', async () => {
+    const remote = vi.fn().mockResolvedValue({ items: [], unmatched: [{ sourceText: 'Присед 3×8 80 кг', reason: 'ambiguous', candidates: ['squat', 'front-squat'], sets: [{ weightKg: 80, reps: 8 }] }] })
+    const changed = vi.fn<(draft: QuickWorkoutEntryDraft) => void>()
+    const view = render(<QuickWorkoutEntry catalog={catalog} parseWorkout={remote} onAdd={vi.fn()} onDraftChange={changed} />)
+    fireEvent.change(screen.getByLabelText('Запись тренировки'), { target: { value: 'Присед 3×8 80 кг' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Разобрать тренировку' }))
+    fireEvent.click(await screen.findByRole('button', { name: 'Фронтальный присед' }))
+    await waitFor(() => expect(changed.mock.lastCall?.[0].choices).not.toEqual({}))
+    const snapshot = changed.mock.lastCall![0]
+    view.unmount()
+    const onAdd = vi.fn<(items: ParsedWorkoutExercise[]) => void>()
+    render(<QuickWorkoutEntry catalog={catalog} parseWorkout={remote} initialText={snapshot.text} initialSnapshot={snapshot} onAdd={onAdd} />)
+    expect(screen.getByLabelText('Запись тренировки')).toHaveValue('Присед 3×8 80 кг')
+    fireEvent.click(screen.getByRole('button', { name: /Добавить в план/ }))
+    const added = onAdd.mock.calls[0]?.[0][0]
+    expect(added).toBeDefined()
+    expect(added!.exercise.ref).toBe('front-squat')
+    expect(remote).toHaveBeenCalledOnce()
+  })
+  it('keeps the source text when appending exercises fails', async () => {
+    render(<QuickWorkoutEntry catalog={catalog} parseWorkout={parseWorkout} onAdd={() => Promise.reject(new Error('append failed'))} />)
+    fireEvent.change(screen.getByLabelText('Запись тренировки'), { target: { value: 'Планка 40 секунд' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Разобрать тренировку' }))
+    fireEvent.click(await screen.findByRole('button', { name: /Добавить в план/ }))
+    await screen.findByText('Не удалось добавить упражнения. Исходный текст сохранён — попробуйте ещё раз.')
+    expect(screen.getByLabelText('Запись тренировки')).toHaveValue('Планка 40 секунд')
   })
 })
