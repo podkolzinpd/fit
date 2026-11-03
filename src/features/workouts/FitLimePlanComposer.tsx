@@ -14,6 +14,7 @@ import { isCoachWorkoutRedesignEnabled } from '../../app/coach-workout-redesign'
 import { FitLimeDatePicker } from '../../shared/FitLimeDatePicker'
 import { AddIcon, BackIcon, CloseIcon, CopyIcon, KeyboardIcon, MicIcon } from '../../shared/icons'
 import { formatLocalDate, formatRelativeLocalDate, todayInTimeZone, type LocalDate } from '../../shared/local-date'
+import { Coachmark } from '../../shared/ui'
 import { ClientPicker } from '../clients'
 import { hasWorkoutFormContent, quickPlanDraftChoices, retainQuickPlanDraft, removeWorkoutFormDraft, workoutFormDraftKey, writeWorkoutFormDraft, type WorkoutFormDraft } from './workout-form-draft'
 import { readTodayDraft, todayDraftKey, writeTodayDraft } from './today-draft'
@@ -215,12 +216,14 @@ function FitLimePlanForm({ date, returnTo, onClose, onBack, initialDraft }: {
           <FitLimeDatePicker today={today} value={selectedDate} onChange={setSelectedDate} time={time} onTimeChange={setTime} reference={reference} triggerLabel={`${dateLabel}${time.start ? ` ${time.start}` : ''}`} />
         </div>
         {options}
+        <Coachmark id="lime-quick-plan-2026-10" userId={actor?.userId} title="План можно сохранить сразу" description="Выберите клиента и дату, а упражнения добавьте сейчас или позже.">
         <div className="trainer-plan-methods" role="group" aria-label="Добавить упражнения">
           <button type="button" className="secondary" aria-label="Добавить упражнения" onClick={openEditor}><AddIcon />Упражнение</button>
           <button type="button" className="secondary" ref={templateTriggerRef} aria-label="Добавить шаблон" onClick={() => setTemplatePickerOpen(true)}><CopyIcon />Шаблон</button>
           <button type="button" className="secondary" onClick={() => openComposer('voice')}><MicIcon />Надиктовать</button>
           <button type="button" className="secondary" onClick={() => openComposer('text')}><KeyboardIcon />Ввести текстом</button>
         </div>
+        </Coachmark>
         {addedTemplate && <p role="status">Добавлен шаблон «{addedTemplate}» · {exercises.length} упр.</p>}
         <button type="submit" className="primary wide fit-lime-plan-save" aria-busy={mutation.isPending}>{mutation.isPending ? 'Сохраняем…' : 'Запланировать'}</button>
         {onBack && reference && <button type="button" className="fit-lime-plan-back" onClick={onBack}><BackIcon />Назад</button>}

@@ -4007,6 +4007,8 @@ for (const width of [390, 430, 1440]) {
     await page.evaluate(() => document.fonts.ready)
     await expect(page.locator('.workout-header-contract h2')).toHaveCSS('font-size', '24px')
     await expect(page.locator('.workout-header-contract h2')).toHaveCSS('font-weight', '500')
+    await expect(page.locator('.workout-composer-card')).toHaveCount(0)
+    await page.getByRole('button', { name: 'Ввести текстом', exact: true }).click()
     await expect(page.locator('.workout-composer-card')).toHaveCSS('border-radius', '32px')
     await page.screenshot({ path: testInfo.outputPath('figma-workout-editor.png'), fullPage: true })
     await page.locator('.client-picker-trigger').click()
