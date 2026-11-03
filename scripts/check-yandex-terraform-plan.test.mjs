@@ -201,24 +201,56 @@ describe('Yandex Terraform plan policy', () => {
     assert.match(result.stderr, /new or cost-sensitive infrastructure changes/)
   })
 
-  test('accepts the stage API read grant for the legacy Supabase bridge Lockbox', () => {
-    const result = runPolicy(
-      [
-        {
-          address: 'yandex_lockbox_secret_iam_member.legacy_supabase_bridge_reader[0]',
-          change: {
-            actions: ['create'],
-            after: {
-              role: 'lockbox.payloadViewer',
-              member: 'serviceAccount:ajed7vfl6dnd1k2h6gt8',
-            },
-          },
-        },
-      ],
-      { automaticStageUpdate: true },
-    )
+  const retiredBridgeGrant = {
+    address: 'yandex_lockbox_secret_iam_member.legacy_supabase_bridge_reader[0]',
+    type: 'yandex_lockbox_secret_iam_member',
+    change: {
+      actions: ['delete'], after: null,
+      before: { role: 'lockbox.payloadViewer', member: 'serviceAccount:ajeapi', secret_id: 'e6qretired' },
+    },
+  }
+  const retirementValues = { root_module: { resources: [{
+    address: 'yandex_iam_service_account.api', values: { id: 'ajeapi' },
+  }] } }
 
-    assert.equal(result.status, 0)
+  test('retires only the obsolete bridge read grant for the planned API identity', () => {
+    for (const automaticStageUpdate of [false, true]) {
+      const result = runPolicy([retiredBridgeGrant], { automaticStageUpdate, plannedValues: retirementValues })
+      assert.equal(result.status, 0, result.stderr)
+    }
+  })
+
+  test('does not recreate, update or replace the retired bridge grant', () => {
+    for (const actions of [['create'], ['update'], ['delete', 'create']]) {
+      const resource = { ...retiredBridgeGrant, change: { ...retiredBridgeGrant.change, actions, after: retiredBridgeGrant.change.before } }
+      for (const automaticStageUpdate of [false, true]) {
+        const result = runPolicy([resource], { automaticStageUpdate, plannedValues: retirementValues })
+        assert.notEqual(result.status, 0)
+      }
+    }
+  })
+
+  test('rejects malformed retirement and grants for another identity or resource', () => {
+    for (const resource of [
+      { ...retiredBridgeGrant, address: 'yandex_lockbox_secret_iam_member.api_media_credentials_reader' },
+      { ...retiredBridgeGrant, type: 'yandex_lockbox_secret' },
+      { ...retiredBridgeGrant, change: { ...retiredBridgeGrant.change, before: { ...retiredBridgeGrant.change.before, member: 'serviceAccount:ajeother' } } },
+      { ...retiredBridgeGrant, change: { ...retiredBridgeGrant.change, before: { ...retiredBridgeGrant.change.before, role: 'editor' } } },
+      { ...retiredBridgeGrant, change: { ...retiredBridgeGrant.change, before: { ...retiredBridgeGrant.change.before, secret_id: '' } } },
+      { ...retiredBridgeGrant, change: { ...retiredBridgeGrant.change, before: { ...retiredBridgeGrant.change.before, secret_id: 123 } } },
+      { ...retiredBridgeGrant, change: { ...retiredBridgeGrant.change, after: {} } },
+    ]) {
+      assert.notEqual(runPolicy([resource], { automaticStageUpdate: true, plannedValues: retirementValues }).status, 0)
+    }
+    assert.notEqual(runPolicy([retiredBridgeGrant], { automaticStageUpdate: true }).status, 0)
+  })
+
+  test('bridge retirement never authorizes deleting its secret, native database or media bucket', () => {
+    for (const address of ['yandex_lockbox_secret.legacy_supabase_bridge', 'yandex_mdb_postgresql_cluster_v2.fit', 'yandex_storage_bucket.media']) {
+      const deletion = { address, change: { actions: ['delete'], before: {}, after: null } }
+      const result = runPolicy([retiredBridgeGrant, deletion], { plannedValues: retirementValues })
+      assert.notEqual(result.status, 0)
+    }
   })
 
   test('accepts only the explicitly approved bounded push pipeline bootstrap', () => {

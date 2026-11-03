@@ -31,12 +31,6 @@ api_min_instances = 0
 # app_feedback_tracker_org_header = "X-Org-ID"
 # app_feedback_tracker_queue = "YAFIT"
 
-# Optional temporary bridge while selected handlers execute in Yandex Cloud but
-# use the existing Supabase auth and tables. Store the four payload values only
-# in this existing Lockbox secret, never in Terraform variables or Git.
-# legacy_supabase_bridge_lockbox_secret_id = "e6q..."
-# legacy_supabase_bridge_lockbox_secret_version_id = "e6q..."
-
 # Public identifier of the Yandex OAuth application. Do not put its client
 # secret here. Keep public invocation disabled until the reviewed auth image is
 # deployed and the read-only allowlist is populated.

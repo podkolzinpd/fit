@@ -5,6 +5,8 @@ export const CLIENT_LIME_WORKOUT_EXAMPLE = 'Жим штанги лёжа 3×10 5
 
 interface WorkoutComposerProps {
   name: string
+  disabled?: boolean
+  onBusyChange?: (busy: boolean) => void
   source: string
   value: string
   label?: string
@@ -24,11 +26,11 @@ interface WorkoutComposerProps {
 
 // Общая оболочка текстового и голосового ввода. Разбор остаётся у экрана-владельца:
 // на главной он открывает проверку, в редакторе плана — добавляет упражнения.
-export function WorkoutComposer({ name, source, value, label = 'Тренировка', voiceLabel = 'Надиктовать', placeholder = 'Присед 3×8 — 80 кг\nПланка 3×45 сек', onValueChange, onClear, onManualValueChange, onTranscriptValueChange, onTranscriptAppended, primaryAction, secondaryAction, children, showVoice = true, showVoiceCancel = false }: WorkoutComposerProps) {
+export function WorkoutComposer({ disabled = false, onBusyChange, name, source, value, label = 'Тренировка', voiceLabel = 'Надиктовать', placeholder = 'Присед 3×8 — 80 кг\nПланка 3×45 сек', onValueChange, onClear, onManualValueChange, onTranscriptValueChange, onTranscriptAppended, primaryAction, secondaryAction, children, showVoice = true, showVoiceCancel = false }: WorkoutComposerProps) {
   return <section className="workout-composer">
     <div className="workout-composer-card">
-      <VoiceNoteField name={name} source={source} label={label} voiceLabel={voiceLabel} placeholder={placeholder} value={value} autoResize showVoice={showVoice} showVoiceCancel={showVoiceCancel} onValueChange={onValueChange} onManualValueChange={onManualValueChange} onTranscriptValueChange={onTranscriptValueChange} onTranscriptAppended={onTranscriptAppended} />
-      {value && <div className="workout-composer-clear"><button type="button" className="link" onClick={onClear}>Очистить</button></div>}
+      <VoiceNoteField disabled={disabled} onBusyChange={onBusyChange} name={name} source={source} label={label} voiceLabel={voiceLabel} placeholder={placeholder} value={value} autoResize showVoice={showVoice} showVoiceCancel={showVoiceCancel} onValueChange={onValueChange} onManualValueChange={onManualValueChange} onTranscriptValueChange={onTranscriptValueChange} onTranscriptAppended={onTranscriptAppended} />
+      {value && <div className="workout-composer-clear"><button type="button" disabled={disabled} className="link" onClick={onClear}>Очистить</button></div>}
     </div>
     {children}
     <div className="workout-composer-actions">

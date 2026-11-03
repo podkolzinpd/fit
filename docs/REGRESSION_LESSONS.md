@@ -156,3 +156,49 @@ Red/green и границы вывода — [итерация11](design/IPHONE_
 ответ → возврат», а не только вызов invalidateQueries. Unit и существующий
 attendance browser-case красные на исходном helper и зелёные после исправления.
 Причина и границы — [WQ101–105, итерация7](design/COACH_QUICK_COMPLETION_20261031.md).
+
+
+## RL-LIVE-UTILITY-BLUR-20261103
+
+Отключение pending action-кнопки в WebKit может породить focusout внутри формы.
+Это не редактирование метрик. Нельзя запускать direct Live blur-save от кнопки
+или swipe group: после корректной отмены он способен затереть скрытые RPE/time/
+distance. Dirty guard недостаточен, если action сам уже создал pending draft.
+Проверять обе роли, удержать server ack и воспроизвести focusout; полный факт
+должен оставаться в pending и на сервере. Реальная CI-трасса и red/green —
+[клиентский план, итерация97](design/CLIENT_REFERENCE_SCREENS_20261029.md#итерация-97--2026-11-03--codex--openai).
+Обычный metric blur/autosave/клавиатуру не отключать ради этой защиты.
+
+
+## RL-LIVE-SAVED-DRAFT-VERSION-20261103
+
+«Это значение уже сохраняли» верно лишь пока новая серверная версия не
+содержит другой факт/источник/timer mark. После409+refetch инвалидировать
+устаревший memo; явный retry обязан реально сохранить оставшийся пользовательский
+ввод до confirm/undo. Старый ack/save response не должен возвращать memo или
+уменьшать tracked version. Timer mark лежит также вне fact в DTO, учитывать его
+при доказательстве человеческого подтверждения. Red/green —
+[клиентский план, итерация100](design/CLIENT_REFERENCE_SCREENS_20261029.md#итерация-100--2026-11-03--codex--openai).
+Не превращать первый конфликт в молчаливое автоматическое перетирание данных.
+
+
+## RL-PR-FRESHNESS-AFTER-SQUASH-20261103
+
+После squash родительского PR равенство Git tree не обеспечило допустимость
+слияния зависимого PR: обычный gh merge отклонил BEHIND, хотя sourceCI35/35 был
+зелёным. Read-only rules API не предсказал это условие. Перед окончательным CI
+зависимого PR включать фактический main после parent squash; проверить
+merge-base --is-ancestor, а не только отсутствие net diff. Новый SHA получает
+собственный CI; admin/alternate merge API для обхода freshness не использовать.
+Случай и исправление: [Live,108](design/CLIENT_REFERENCE_SCREENS_20261029.md#итерация-108--2026-11-03--codex--openai).
+
+
+## RL-LIVE-HANDOFF-LAYOUT-20261103
+
+Неподвижный viewport rect на нескольких RAF не доказывает завершение раскладки:
+scroll anchoring может компенсировать fold, пока одновременно меняется высота
+clock. Перед единственным native reveal проверять content-space/scrollHeight и
+running/pending layout transitions. Отмена ручным фокусом должна работать и до
+первого painted scroll frame. Не маскировать overscroll повторным scroll или
+ослаблением bounds. Red/green и реальный CI trace —
+[Live112](design/CLIENT_REFERENCE_SCREENS_20261029.md#итерация-112--2026-11-03--codex--openai).
