@@ -594,3 +594,11 @@ coverage83.01/77.94/81.97/87.77; infra policy остановился на сущ
 cloudru-client-restore mock curl (вызван реальный GitHub API,401). Отдельный
 прогон воспроизвёл сбой без изменений этого теста/workflow в текущем diff.
 Проверки не ослаблялись; оставшиеся части check запускаются отдельно.
+
+Итог: оставшиеся calendar22/22, hosting196/196, API133files/1555tests
+(287skipped без DB env), API lint/build и frontend build passed. В infra
+372/373 passed на Mac; единственный сбой проверен тем же неизменённым тестом
+в Linux Podman Node22, checkout read-only, network=none:5/5 passed. Таким
+образом mock curl изолированно работает без сети в Linux; Mac-host запуск
+полного check не объявляется зелёным. SQL/product не менялись, отдельного
+локального DB/browser прогона нет. CI/Android нового PR1964 ожидаются.
