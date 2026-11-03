@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useEffect, useRef, useState, type FormEvent } from 'react'
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link, Navigate, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useDataBackend } from '../../app/data-backend-context'
 import { useAuth } from '../../app/auth-context'
@@ -13,7 +13,7 @@ import { formatLocalDate } from '../../shared/local-date'
 import { AddIcon, CopyIcon, ScheduleIcon } from '../../shared/icons'
 import { AsyncView, EmptyState, Field, InlineRequestError, OverflowMenu, Page, StatePanel, useConfirm } from '../../shared/ui'
 import { ExercisePicker, useExerciseCatalog } from '../exercises'
-import { readTemplatePlanContext, returnToTemplatePlan, templateReturnSteps, applyCreatedTemplate, type TemplatePlanContext, QuickWorkoutEntry, WorkoutCta, WorkoutExerciseEditor, WorkoutHeader, workoutDisplayTitle, workoutExerciseBrief, type ParsedWorkoutExercise } from '../workouts'
+import { LoadMoreButton, safeWorkoutReturnTo, readWorkoutFormDraft, type WorkoutNavigationState, readTemplatePlanContext, returnToTemplatePlan, applyCreatedTemplate, templateReturnSteps, type TemplatePlanContext, QuickWorkoutEntry, WorkoutCta, WorkoutExerciseEditor, WorkoutHeader, workoutDisplayTitle, workoutExerciseBrief, type ParsedWorkoutExercise } from '../workouts'
 import { VoiceNoteField } from '../voice-input'
 import { readWorkoutTemplateDraft, removeWorkoutTemplateDraft, workoutTemplateDraftKey, writeWorkoutTemplateDraft } from './workout-template-draft'
 
@@ -112,23 +112,23 @@ export function WorkoutTemplateSourcePage() {
   const location = useLocation()
   const navigate = useNavigate()
   const context = actor ? readTemplatePlanContext((location.state as { templatePlanContext?: unknown } | null)?.templatePlanContext, actor.userId) : undefined
-  const { workouts } = useDataBackend()
-  const query = useQuery({ queryKey: ['workouts', 'template-source'], queryFn: () => workouts.list() })
+  const { workouts, clients: clientsRepository } = useDataBackend()
   const [clientId, setClientId] = useState('')
-  const clients = useMemo(() => {
-    const unique = new Map<string, string>()
-    for (const workout of query.data ?? []) unique.set(workout.clientId, workout.clientName)
-    return [...unique.entries()].sort((left, right) => left[1].localeCompare(right[1], 'ru'))
-  }, [query.data])
-  const visible = (query.data ?? []).filter((workout) => !clientId || workout.clientId === clientId).slice(0, 40)
-  return <Page className="workout-template-source-page" title="Выберите тренировку" back="/schedule/templates" onBack={context ? () => navigate('/schedule/templates', { state: { templatePlanContext: context } }) : undefined}>
-    <AsyncView loading={query.isLoading} error={query.error} onRetry={() => void query.refetch()}>
-      {query.data?.length ? <>
-        <Field label="Клиент"><select value={clientId} onChange={(event) => setClientId(event.target.value)}><option value="">Все клиенты</option>{clients.map(([id, name]) => <option value={id} key={id}>{name}</option>)}</select></Field>
-        <div className="template-source-workouts">{visible.map((workout) => <Link className="template-source-workout" key={workout.id} to={`/schedule/templates/new/editor?sourceWorkout=${workout.id}`} state={context ? { templatePlanContext: context } : undefined}>
-          <span className="template-source-copy"><strong>{workoutDisplayTitle(workout)}</strong><small>{workout.clientName} · {formatLocalDate(workout.workoutDate)}</small>{workout.trainerReview && <span className="workout-source-review"><span className="workout-source-review-label">Отзыв тренера</span>{workout.trainerReview}</span>}<span className="template-source-exercises">{workoutExerciseBrief(workout.exercises)}</span></span><span>Выбрать</span>
-        </Link>)}</div>
-      </> : <EmptyState title="Нет тренировок для основы" description="Создайте шаблон с нуля — тренировку клиента можно сохранить позже." action={<Link className="button primary" to="/schedule/templates/new/editor" state={context ? { templatePlanContext: context } : undefined}>Создать с нуля</Link>} />}
+  const clients = useQuery({ queryKey: ['clients', true], queryFn: () => clientsRepository.list(true) })
+  const query = useInfiniteQuery({
+    queryKey: ['workouts', 'template-source', clientId], initialPageParam: 0,
+    queryFn: ({ pageParam }) => workouts.listPage(undefined, undefined, clientId || undefined, pageParam, 20),
+    getNextPageParam: page => page.nextOffset,
+  })
+  const visible = query.data?.pages.flatMap(page => page.items).filter(workout => workout.exercises.length > 0) ?? []
+  const state = context ? { templatePlanContext: context } : undefined
+  return <Page className="workout-template-source-page" title="Выберите тренировку" back="/schedule/templates" onBack={context ? () => navigate('/schedule/templates', { state }) : undefined}>
+    <Field label="Клиент"><select value={clientId} onChange={event => setClientId(event.target.value)}><option value="">Все клиенты</option>{clients.data?.map(client => <option value={client.id} key={client.id}>{client.fullName}</option>)}</select></Field>
+    <AsyncView loading={query.isLoading || clients.isLoading} error={query.error ?? clients.error} onRetry={() => { void query.refetch(); void clients.refetch() }}>
+      {visible.length > 0 ? <div className="template-source-workouts">{visible.map(workout => <Link className="template-source-workout" key={workout.id} to={`/schedule/templates/new/editor?sourceWorkout=${workout.id}`} state={state}>
+        <span className="template-source-copy"><strong>{workoutDisplayTitle(workout)}</strong><small>{workout.clientName} · {formatLocalDate(workout.workoutDate)}</small>{workout.trainerReview && <span className="workout-source-review"><span className="workout-source-review-label">Отзыв тренера</span>{workout.trainerReview}</span>}<span className="template-source-exercises">{workoutExerciseBrief(workout.exercises)}</span></span><span>Выбрать</span>
+      </Link>)}</div> : query.hasNextPage ? <p role="status">В этой части истории нет тренировок с упражнениями. Загрузите следующую.</p> : <EmptyState title="Нет тренировок для основы" description="Создайте шаблон с нуля — тренировку клиента можно сохранить позже." action={<Link className="button primary" to="/schedule/templates/new/editor" state={state}>Создать с нуля</Link>} />}
+      <LoadMoreButton hasMore={query.hasNextPage} loading={query.isFetchingNextPage} onLoadMore={() => void query.fetchNextPage()} />
     </AsyncView>
   </Page>
 }
@@ -147,12 +147,15 @@ export function WorkoutTemplateEditorPage() {
   const libraryOrigin = (location.state as { templateLibraryReturn?: { context?: unknown; index?: number } } | null)?.templateLibraryReturn
   const libraryContext = actor ? readTemplatePlanContext(libraryOrigin?.context, actor.userId) : undefined
   const libraryReturn = libraryContext ? { context: libraryContext, index: libraryOrigin?.index } : undefined
+  const origin = location.state as { templateWorkoutReturnTo?: unknown; templateWorkoutReturnState?: WorkoutNavigationState; templateWorkoutReturnHistoryIndex?: number } | null
+  const returnTo = safeWorkoutReturnTo(origin?.templateWorkoutReturnTo)
+  const workoutReturn = sourceWorkoutId && returnTo?.split('?')[0] === `/workouts/${sourceWorkoutId}` ? { to: returnTo, state: origin?.templateWorkoutReturnState, index: origin?.templateWorkoutReturnHistoryIndex } : undefined
   if (!actor || actor.role !== 'trainer') return null
   const draftKey = workoutTemplateDraftKey(actor.userId, templateId, sourceWorkoutId) + (context ? `.plan:${context.draftKey}` : '')
-  return <WorkoutTemplateEditor key={draftKey} templateId={templateId} sourceWorkoutId={sourceWorkoutId} draftKey={draftKey} context={context} libraryReturn={libraryReturn} />
+  return <WorkoutTemplateEditor key={draftKey} templateId={templateId} sourceWorkoutId={sourceWorkoutId} draftKey={draftKey} context={context} libraryReturn={libraryReturn} workoutReturn={workoutReturn} />
 }
 
-function WorkoutTemplateEditor({ templateId, sourceWorkoutId, draftKey, context, libraryReturn }: { templateId?: string; sourceWorkoutId: string; draftKey: string; context?: TemplatePlanContext; libraryReturn?: { context: TemplatePlanContext; index?: number } }) {
+function WorkoutTemplateEditor({ templateId, sourceWorkoutId, draftKey, context, workoutReturn, libraryReturn }: { templateId?: string; sourceWorkoutId: string; draftKey: string; context?: TemplatePlanContext; libraryReturn?: { context: TemplatePlanContext; index?: number }; workoutReturn?: { to: string; state?: WorkoutNavigationState; index?: number } }) {
   const { actor } = useAuth()
   const { exercises: exercisesRepository, workoutTemplates, workouts } = useDataBackend()
   const navigate = useNavigate()
@@ -183,12 +186,14 @@ function WorkoutTemplateEditor({ templateId, sourceWorkoutId, draftKey, context,
   const [replaceIndex, setReplaceIndex] = useState<number | null>(null)
   useEffect(() => {
     if (ready || !storedDraft && templateQuery.isFetching || templateQuery.isLoading || sourceQuery.isLoading || templateQuery.error || sourceQuery.error) return
-    const initial = storedDraft ?? templateQuery.data ?? (sourceQuery.data ? workoutTemplateFromWorkout(sourceQuery.data) : null)
+    const plan = context && !context.applyOnSave ? readWorkoutFormDraft(context.draftKey) : null
+    const planCopy = plan ? cloneWorkoutTemplate({ name: plan.title?.trim() || 'Новый шаблон', notes: plan.notes, exercises: plan.exercises }) : null
+    const initial = storedDraft ?? templateQuery.data ?? (sourceQuery.data ? workoutTemplateFromWorkout(sourceQuery.data) : planCopy ? { ...planCopy, name: plan!.title?.trim() || 'Новый шаблон' } : null)
     if (initial) { setName(initial.name); setNotes(initial.notes ?? ''); setExercises(initial.exercises) }
     setBaseVersion(initial?.version)
-    setDirty(Boolean(storedDraft))
+    setDirty(Boolean(storedDraft || planCopy))
     setReady(true)
-  }, [ready, storedDraft, sourceQuery.data, sourceQuery.isLoading, sourceQuery.error, templateQuery.isFetching, templateQuery.data, templateQuery.isLoading, templateQuery.error])
+  }, [ready, storedDraft, context, sourceQuery.data, sourceQuery.isLoading, sourceQuery.error, templateQuery.isFetching, templateQuery.data, templateQuery.isLoading, templateQuery.error])
   useEffect(() => {
     if (!ready || !dirty || finished.current) return
     setDraftStorageError(!writeWorkoutTemplateDraft(draftKey, { id: templateId ?? newTemplateId, name, notes, exercises, version: baseVersion }))
@@ -209,9 +214,9 @@ function WorkoutTemplateEditor({ templateId, sourceWorkoutId, draftKey, context,
   })
   function returnToOrigin(replace = false) {
     if (context) { returnToTemplatePlan(context, navigate, replace); return }
-    const steps = templateReturnSteps(libraryReturn?.index)
+    const steps = templateReturnSteps(workoutReturn?.index ?? libraryReturn?.index)
     if (steps) navigate(-steps)
-    else navigate('/schedule/templates', { replace, state: libraryReturn ? { templatePlanContext: libraryReturn.context } : undefined })
+    else navigate(workoutReturn?.to ?? '/schedule/templates', { replace, state: workoutReturn?.state ?? (libraryReturn ? { templatePlanContext: libraryReturn.context } : undefined) })
   }
   function closePicker() { setPickerOpen(false); setPickerSearch(''); setReplaceIndex(null) }
   const [confirmLeave, confirmLeaveDialog] = useConfirm()
