@@ -4139,15 +4139,30 @@ export function LiveWorkoutPage() {
     setConfirmFinish(false)
     finish.mutate()
   }
+  function showLiveReview(exerciseId: string, setId: string) {
+    const exercise = query.data?.exercises.find(item => item.id === exerciseId)
+    const set = exercise?.sets.find(item => item.id === setId)
+    if (!exercise || !set) return
+    setExpandedExercises(current => new Set(current).add(exercise.id))
+    if (coachV79 || clientReference) setLiveCardDisplay({ activeKey: automaticLiveCardKey, openedKey: liveRowCardKey(exercise, set) })
+    if (exercise.blockType !== 'single') {
+      setExpandedClientBlocks(current => new Set(current).add(exercise.blockId))
+      setExpandedCircuitRounds(current => new Set(current).add(`${exercise.blockId}:${set.position + 1}`))
+      setV79Folded(current => { const next = new Set(current); next.delete(`round:${set.id}`); return next })
+    }
+  }
   function reviewTimerSets() {
     setConfirmFinish(false)
-    const first = timerConfirmedSets[0]?.exercise.id
-    if (first) window.requestAnimationFrame(() => document.querySelector(`[data-timer-pending="${first}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'center' }))
+    const first = timerConfirmedSets[0]
+    if (first) {
+      showLiveReview(first.exercise.id, first.set.id)
+      window.requestAnimationFrame(() => document.querySelector(`[data-timer-pending="${first.exercise.id}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'center' }))
+    }
   }
   function focusCardioDuration() {
     if (!cardioSetMissingTime) return
     setConfirmFinish(false)
-    setExpandedExercises((current) => new Set(current).add(cardioSetMissingTime.exerciseId))
+    showLiveReview(cardioSetMissingTime.exerciseId, cardioSetMissingTime.setId)
     setEditingSets((current) => new Set(current).add(cardioSetMissingTime.setId))
     setExpandedSetId(cardioSetMissingTime.setId)
     window.requestAnimationFrame(() => {
@@ -4739,7 +4754,7 @@ export function LiveWorkoutPage() {
       return
     }
     // Отменить подтверждение на сервере нельзя — открываем подход на правку.
-    setExpandedExercises((current) => new Set(current).add(notice.exerciseId))
+    showLiveReview(notice.exerciseId, notice.setId)
     setEditingSets((current) => new Set(current).add(notice.setId))
     window.requestAnimationFrame(() => {
       const form = liveSetForms.current.get(notice.setId)
