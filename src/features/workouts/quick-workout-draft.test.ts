@@ -10,6 +10,7 @@ describe('optional composer snapshot', () => {
   })
   it('rejects stale previews, malformed choices and facts without dropping the separately stored raw text', () => {
     expect(readQuickWorkoutEntryDraft(snapshot, 'Другой ввод')).toBeUndefined()
+    expect(readQuickWorkoutEntryDraft({ ...snapshot, entries: [{ id: 'one', parsed: { ...snapshot.entries[0]!.parsed, exercise: { ...exercise, inputKind: { toString: 'invalid' } } } }] })).toBeUndefined()
     expect(readQuickWorkoutEntryDraft({ ...snapshot, parsedText: '' }, 'Планка')).toBeUndefined()
     expect(readQuickWorkoutEntryDraft({ ...snapshot, choices: { one: { name: 'Ошибка' } } })).toBeUndefined()
     expect(readQuickWorkoutEntryDraft({ ...snapshot, entries: [{ id: 'one', parsed: { ...snapshot.entries[0]!.parsed, sets: [{ fact: { durationSec: 90 } }] } }] })).toBeUndefined()

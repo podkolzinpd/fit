@@ -13,14 +13,14 @@ export type QuickWorkoutEntryDraft = {
 const record = (value: unknown): value is Record<string, unknown> => Boolean(value && typeof value === 'object' && !Array.isArray(value))
 const exercise = (value: unknown) => record(value) && (value.source === 'system' || value.source === 'custom')
   && ['ref', 'name', 'muscleGroup'].every(key => typeof value[key] === 'string')
-  && ['strength', 'distance', 'reps', 'duration'].includes(String(value.inputKind))
+  && typeof value.inputKind === 'string' && ['strength', 'distance', 'reps', 'duration'].includes(value.inputKind)
 const sets = (value: unknown) => Array.isArray(value) && value.every(set => record(set)
   && Object.values(set).every(item => item === undefined || typeof item === 'number' && Number.isFinite(item)))
 
 const structure = (value: unknown) => record(value) && Object.entries(value).every(([key, item]) =>
   item === undefined || key === 'blockId' && typeof item === 'string'
-  || key === 'blockType' && ['single', 'group'].includes(String(item))
-  || key === 'blockPreset' && ['set', 'circuit', 'interval'].includes(String(item))
+  || key === 'blockType' && typeof item === 'string' && ['single', 'group'].includes(item)
+  || key === 'blockPreset' && typeof item === 'string' && ['set', 'circuit', 'interval'].includes(item)
   || ['blockRounds', 'restBetweenExercisesSec', 'restBetweenRoundsSec', 'restBetweenSetsSec'].includes(key)
     && typeof item === 'number' && Number.isFinite(item) && item >= 0)
 
@@ -36,7 +36,7 @@ export function readQuickWorkoutEntryDraft(value: unknown, text?: string): Quick
       && typeof entry.parsed.hasValues === 'boolean' && exercise(entry.parsed.exercise) && sets(entry.parsed.sets)
       && (entry.parsed.structure === undefined || structure(entry.parsed.structure)))
     && (entry.unmatched === undefined || record(entry.unmatched) && typeof entry.unmatched.line === 'string'
-      && ['not-found', 'ambiguous'].includes(String(entry.unmatched.reason))
+      && typeof entry.unmatched.reason === 'string' && ['not-found', 'ambiguous'].includes(entry.unmatched.reason)
       && Array.isArray(entry.unmatched.candidates) && entry.unmatched.candidates.every(exercise)
       && (entry.unmatched.sets === undefined || sets(entry.unmatched.sets))))) return undefined
   if (!Object.values(value.choices).every(exercise)) return undefined
