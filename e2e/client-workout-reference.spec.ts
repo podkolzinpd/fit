@@ -4478,3 +4478,33 @@ for (const role of ['client', 'trainer'] as const) for (const density of ['origi
   await expect(bodies.nth(1)).toHaveAttribute('inert', '')
   await expect(bodies.nth(2)).not.toHaveAttribute('inert', '')
 })
+
+
+for (const role of ['client', 'trainer'] as const) test(`Live removing a reviewed upcoming card restores the active editor ${role}`, async ({ page }) => {
+  const id = role === 'client' ? pilotId : 'c0ac0000-6010-4000-8000-000000000001'
+  await page.clock.setFixedTime(new Date('2026-11-04T09:00:00Z'))
+  await page.addInitScript(id => { localStorage.setItem(`fit.liveExerciseAnimation.${id}`, 'false'); localStorage.setItem(`fit.coachmarks-seen.${id}`, JSON.stringify(['client-live-reference-timer-2026-10'])) }, id)
+  const source = coachGestureWorkout(false, 3)
+  source.startedAt = '2026-11-04T08:59:00Z'
+  const removedId = source.exercises[1]!.id
+  const backend = await mockPilot(page, { role, profileId: id, fitLime: true, clientLime: true, workouts: [source] })
+  await page.route(`**/v1/workouts/${workoutId}/exercises/${removedId}`, async route => {
+    expect(route.request().method()).toBe('DELETE')
+    const workout = backend.getWorkouts()[0]!
+    expect(route.request().postDataJSON()).toMatchObject({ expectedVersion: workout.version })
+    workout.exercises = workout.exercises.filter(exercise => exercise.id !== removedId)
+    workout.version += 1
+    await route.fulfill({ json: { workout: { version: workout.version } } })
+  })
+  await page.goto(`/workouts/${workoutId}/live`)
+  const future = page.locator('.live-exercise').nth(1)
+  await future.locator('button.coach-v79-card-toggle').click()
+  await future.locator('.overflow-trigger').click()
+  await page.getByRole('menuitem', { name: 'Удалить упражнение', exact: true }).click()
+  await page.getByRole('alertdialog').getByRole('button', { name: 'Удалить', exact: true }).click()
+  await expect.poll(() => backend.getWorkouts()[0]!.exercises.some(exercise => exercise.id === removedId)).toBe(false)
+  await expect(page.locator('.live-exercise')).toHaveCount(2)
+  await expect(page.locator('.live-exercise.current > :is(.coach-v79-card-body,.client-live-card-body)')).not.toHaveAttribute('inert', '')
+  await expect(page.locator('.live-exercise > :is(.coach-v79-card-body,.client-live-card-body):not([inert])')).toHaveCount(1)
+  expect(backend.getWorkouts()[0]!.exercises.every(exercise => exercise.sets.every(set => !set.confirmedAt))).toBe(true)
+})

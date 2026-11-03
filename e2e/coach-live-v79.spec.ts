@@ -870,11 +870,13 @@ for (const density of ['original', 'compact']) test(`v79 duration distance RPE a
   await page.clock.setFixedTime(new Date('2026-10-08T09:01:00Z'))
   await page.addInitScript(({ pilot, density }) => localStorage.setItem(`fit.coachLiveDensity.${pilot}`, density), { pilot, density })
   const source = coachGestureWorkout()
+  source.exercises[0]!.sets = Array.from({ length: 6 }, (_, position) => ({ ...source.exercises[0]!.sets[0]!, id: `c0ac0000-6010-4000-8000-${String(960 + position).padStart(12, '0')}`, position }))
   source.exercises[1] = { ...source.exercises[1]!, ref: 'plank', name: 'Планка', inputKind: 'duration', sets: source.exercises[1]!.sets.map(s => ({ ...s, weightKg: undefined, reps: undefined, durationSec: 60 })) }
   source.exercises[2] = { ...source.exercises[2]!, ref: 'running', name: 'Бег', inputKind: 'distance', sets: source.exercises[2]!.sets.map(s => ({ ...s, weightKg: undefined, reps: undefined, durationSec: 600, distanceKm: 1.5 })) }
   await mockPilot(page, { profileId: pilot, fitLime: true, workouts: [source] })
   await page.goto(`/workouts/${workoutId}/live`)
   const cards = page.locator('.live-exercise')
+  await cards.nth(1).locator('button.coach-v79-card-toggle').click()
   const duration = cards.nth(1).getByRole('button', { name: /Фактическое время:/ }).first()
   const height = density === 'original' ? '54px' : '48px'
   await expect(duration).toHaveCSS('height', height)
@@ -890,7 +892,9 @@ for (const density of ['original', 'compact']) test(`v79 duration distance RPE a
   await page.screenshot({ path: info.outputPath(`${density}-duration-sheet.png`) })
   await sheet.getByRole('button', { name: 'Закрыть выбор времени', exact: true }).click()
   await expect(duration).toBeFocused()
+  await cards.nth(2).locator('button.coach-v79-card-toggle').click()
   await expect(cards.nth(2).locator('.run-distance-control').first()).toHaveCSS('height', height)
+  await cards.first().locator('button.coach-v79-card-toggle').click()
   await cards.first().getByRole('button', { name: 'Ещё действия', exact: true }).click()
   await page.getByRole('menuitem', { name: 'Указать RPE', exact: true }).click()
   await expect(cards.first().locator('.live-set-rpe').first()).toHaveCSS('height', height)

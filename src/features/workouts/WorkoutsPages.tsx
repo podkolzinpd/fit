@@ -4252,7 +4252,8 @@ export function LiveWorkoutPage() {
       ? document.activeElement.closest<HTMLElement>('[data-live-set-id]')?.dataset.liveSetId : undefined
     const held = query.data?.exercises.find(exercise => exercise.blockType === 'single' && exercise.sets.some(set => set.id === focusedSetId || set.id === saveErrorSetId || pendingSetDrafts.current.has(set.id)))
     if (held) return v79CardKey(held)
-    return liveCardDisplay?.activeKey === automaticLiveCardKey ? liveCardDisplay.openedKey : automaticLiveCardKey
+    const selected = liveCardDisplay?.activeKey === automaticLiveCardKey ? liveCardDisplay.openedKey : automaticLiveCardKey
+    return selected && !query.data?.exercises.some(exercise => v79CardKey(exercise) === selected) ? automaticLiveCardKey : selected
   }
   function liveCardExpanded(exercise: WorkoutExerciseModel) {
     return openLiveCardKey() === v79CardKey(exercise)
