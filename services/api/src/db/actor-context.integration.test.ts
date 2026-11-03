@@ -3319,6 +3319,88 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
       }
     })
 
+    it('serializes finance service reductions against completion and preserves charged dates', async () => {
+      if (!ownerPool || !runtimePool) throw new Error('Database pools are not ready')
+      const owner = ownerPool, runtime = runtimePool
+      const packageId = randomUUID(), first = randomUUID(), second = randomUUID()
+      const peers = new Pool({ connectionString: requireLocalTestDatabaseUrl(), max: 3 })
+      const blocker = await peers.connect(), editor = await peers.connect()
+      const edit = (total: number, start = '2026-10-01', end = '2026-11-30', actor = ACTOR_ID) =>
+        withActorTransaction(runtime, actor, client => client.query<JsonResultRow>(
+          `select public.update_trainer_finance_service($1,1,'session_pack','Integrity',
+            $2,1000000,$3::date,$4::date,null,null) as result`, [packageId,total,start,end]))
+      let pending: Promise<{ error: unknown }> | undefined
+      try {
+        await owner.query(`insert into public.trainer_finance_packages
+          (id,trainer_id,client_id,title,sessions_total,price_cents,starts_on,ends_on)
+          values($1,$2,$3,'Integrity',2,1000000,'2026-10-01','2026-11-30')`, [packageId,ACTOR_ID,CLIENT_ID])
+        await owner.query(`insert into public.trainer_finance_payments
+          (package_id,trainer_id,client_id,amount_cents,received_on,source)
+          values($1,$2,$3,1000000,'2026-10-01','manual')`, [packageId,ACTOR_ID,CLIENT_ID])
+        await owner.query(`insert into public.workouts
+          (id,trainer_id,client_id,created_by,workout_date,status,training_format)
+          values($1,$3,$4,$3,'2026-11-01','planned','with_trainer'),
+            ($2,$3,$4,$3,'2026-11-02','planned','with_trainer')`, [first,second,ACTOR_ID,CLIENT_ID])
+        await withActorTransaction(runtime, ACTOR_ID, client => client.query(
+          "select * from public.finish_live_workout($1,1,$2,true,'auto',null)", [first,randomUUID()]))
+        await blocker.query('begin')
+        await blocker.query("select set_config('request.jwt.claim.sub',$1,true)", [ACTOR_ID])
+        await blocker.query('select id from public.trainer_finance_packages where id=$1 for update', [packageId])
+        await blocker.query("select pg_advisory_xact_lock(hashtextextended($1,0))", [`${ACTOR_ID}:${CLIENT_ID}`])
+        const blockerPid = (await blocker.query<{ pid: number }>('select pg_backend_pid() as pid')).rows[0]!.pid
+        await editor.query('begin')
+        await editor.query('set local role fit_api')
+        await editor.query("select set_config('request.jwt.claim.sub',$1,true)", [ACTOR_ID])
+        const editorPid = (await editor.query<{ pid: number }>('select pg_backend_pid() as pid')).rows[0]!.pid
+        pending = editor.query(`select public.update_trainer_finance_service(
+          $1,1,'session_pack','Integrity',1,1000000,'2026-10-01','2026-11-30',null,null)`, [packageId])
+          .then(() => ({ error: null }), (error: unknown) => ({ error }))
+        // Inspect real lock state, without relying on transaction timing.
+        await vi.waitFor(async () => {
+          const state = await owner.query<{ blocked: boolean }>('select $1::int=any(pg_blocking_pids($2::int)) as blocked', [blockerPid,editorPid])
+          expect(state.rows[0]!.blocked).toBe(true)
+        })
+        await blocker.query('set local role fit_api')
+        await blocker.query("select * from public.finish_live_workout($1,1,$2,true,'auto',null)", [second,randomUUID()])
+        await blocker.query('commit')
+        expect((await pending).error).toMatchObject({ code: 'PT422' })
+        await editor.query('rollback')
+        const read = await withActorTransaction(runtime, ACTOR_ID, client => client.query<JsonResultRow>(
+          'select public.list_trainer_finance_client_v2($1) as result', [CLIENT_ID]))
+        const balance = read[0]!.result as { packages: Array<{ id: string }> }
+        expect(balance.packages.find(item => item.id === packageId)).toMatchObject({
+          sessionsTotal: 2, sessionsUsed: 2, paidCents: 1000000, dueCents: 0,
+        })
+        await expect(edit(1)).rejects.toMatchObject({ code: 'PT422' })
+        await expect(withActorTransaction(runtime, ACTOR_ID, client => client.query(
+          `select public.update_trainer_finance_package($1,1,'Integrity',1,1000000,
+            '2026-10-01','2026-11-30',null,null)`, [packageId]))).rejects.toMatchObject({ code: 'PT422' })
+        await expect(edit(2,'2026-11-02')).rejects.toMatchObject({ code: 'PT422' })
+        await expect(edit(2,'2026-10-01','2026-11-01')).rejects.toMatchObject({ code: 'PT422' })
+        await expect(edit(2,'2026-10-01','2026-11-30',OUTSIDE_TRAINER_ID)).rejects.toMatchObject({ code: 'PT404' })
+        await expect(edit(3)).resolves.toMatchObject([{ result: { sessionsTotal: 3, sessionsUsed: 2, version: 2 } }])
+        await expect(edit(3)).rejects.toMatchObject({ code: 'PT409' })
+        // Characterize a pre-existing inconsistent ledger without rewriting it.
+        await owner.query('update public.trainer_finance_packages set sessions_total=1 where id=$1', [packageId])
+        const actual = await withActorTransaction(runtime, ACTOR_ID, client => client.query<JsonResultRow>(
+          'select public.list_trainer_finance_client_v2($1) as result', [CLIENT_ID]))
+        const inconsistent = actual[0]!.result as { packages: Array<{ id: string }> }
+        expect(inconsistent.packages.find(item => item.id === packageId)).toMatchObject({
+          sessionsTotal: 1, sessionsUsed: 2, sessionsRemaining: 0,
+        })
+      } finally {
+        await blocker.query('rollback')
+        if (pending) await pending
+        await editor.query('rollback')
+        blocker.release(); editor.release(); await peers.end()
+        await owner.query('delete from public.trainer_finance_events where client_id=$1', [CLIENT_ID])
+        await owner.query('delete from public.trainer_finance_sessions where workout_id=any($1::uuid[])', [[first,second]])
+        await owner.query('delete from public.trainer_finance_payments where package_id=$1', [packageId])
+        await owner.query('delete from public.workouts where id=any($1::uuid[])', [[first,second]])
+        await owner.query('delete from public.trainer_finance_packages where id=$1', [packageId])
+      }
+    })
+
     it('aggregates payment deadlines only from unpaid open services of the current trainer', async () => {
       if (!ownerPool || !runtimePool) throw new Error('Database pools are not ready')
       const owner = ownerPool, runtime = runtimePool
