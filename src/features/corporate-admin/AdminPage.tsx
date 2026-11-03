@@ -1,3 +1,4 @@
+import { CorporateServiceStatistics } from '../corporate-services'
 import { CorporateInvitations } from './Invitations'
 import { useLayoutEffect, useRef, useState } from 'react'
 import { useForm, useWatch } from 'react-hook-form'
@@ -39,18 +40,20 @@ export function CorporateAdminPage() {
 function AdminWorkspace() {
   const { actor } = useAuth()
   const [params, setParams] = useSearchParams()
+  const statisticsTab = params.get('tab') === 'statistics'
   const officesTab = params.get('tab') === 'offices'
   const invitationsTab = params.get('tab') === 'invitations'
   const query = useQuery({ queryKey: ['corporate-admin-bundle', actor?.userId], queryFn: () => repository.bundle(), retry: false })
   return <>
     <nav className="corporate-admin-tabs" aria-label="Разделы кабинета">
-      <button type="button" className="secondary" aria-current={!officesTab && !invitationsTab ? 'page' : undefined} onClick={() => setParams({})}>Тренеры</button>
+      <button type="button" className="secondary" aria-current={!officesTab && !invitationsTab && !statisticsTab ? 'page' : undefined} onClick={() => setParams({})}>Тренеры</button>
       <button type="button" className="secondary" aria-current={officesTab ? 'page' : undefined} onClick={() => setParams({ tab: 'offices' })}>Офисы</button>
       <button type="button" className="secondary" aria-current={invitationsTab ? 'page' : undefined} onClick={() => setParams({ tab: 'invitations' })}>Приглашения</button>
+      <button type="button" className="secondary" aria-current={statisticsTab ? 'page' : undefined} onClick={() => setParams({ tab: 'statistics' })}>Статистика</button>
     </nav>
-    <AsyncView loading={query.isPending} error={query.error} onRetry={() => void query.refetch()}>
+    {statisticsTab ? <CorporateServiceStatistics /> : <AsyncView loading={query.isPending} error={query.error} onRetry={() => void query.refetch()}>
       {query.data && (officesTab ? <Offices key="offices" data={query.data} /> : invitationsTab ? <CorporateInvitations key="invitations" data={query.data} initialCreate={params.get('create') === '1'} /> : <Trainers key="trainers" data={query.data} onInvite={() => setParams({ tab: 'invitations', create: '1' })} />)}
-    </AsyncView>
+    </AsyncView>}
   </>
 }
 
