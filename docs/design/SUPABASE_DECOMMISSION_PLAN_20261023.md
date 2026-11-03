@@ -456,3 +456,15 @@ E2E diff теперь нет. DB fixture fix и три полуночные ре
 После merge1949 passed:те же4 production-mode booking cases (6.4s),
 ESLint/E2E TypeScript/docs/whitespace; новый head/CI — в PR1944.
 Обязательные checks не обходятся.
+
+После второго полного зелёного CI41534435561 (35/35) и Android41534435230
+main дошёл до38a6e5ee (включая PR1950/1952). Конфликты только двух индексов:
+ACTIVE_CONTRACTS сохраняет обе независимые записи; CURRENT_STATE — актуальный
+P2/P3 и новый MC1/Live1943 из main. Все product/UI изменения main приняты
+автоматически; собственный product/E2E diff этой итерацией не добавлен.
+DB fixture fix и3 regression cases сохраняются. Перед push повторяются
+локальные booking cases, E2E types/docs/whitespace; новый CI — в PR1944.
+
+Merge38a6e5ee:4 production-mode booking cases passed7.8s; E2E TypeScript
+passed. Компактная P2/P3 ссылка сокращена в рамках12KiB CURRENT_STATE,
+все статусы и канонический план сохранены. Docs/whitespace проверяются перед push.

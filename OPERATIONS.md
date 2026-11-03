@@ -2265,6 +2265,26 @@ Workflow отказывает при любом другом включённо�
 запрещён. Результат inspect содержит только enabled/bound/readyProfiles и
 otherEnabledAdmins, без UUID, контактов или токенов.
 
+### Независимый тестовый допуск учёта услуг — SRV301
+
+После публикации migration179 и API/UI использовать существующий
+`manage-corporate-admin.yml` со `scope=services-pilot`, `account=primary` и
+`action=inspect|grant|revoke`. Только current main, совпадающий с работающей
+API-ревизией. Цель задаёт отдельный приватный repository secret
+`FIT_CORPORATE_SERVICES_PILOT_LOGIN_SHA256`: SHA256 точного trim/lower provider
+login согласованного тестового тренера. Контакт/hash/UUID не передавать в
+workflow input и не печатать. Разрешение не наследует admin/invitation пилоты.
+
+Оператор требует единственного существующего trainer identity; grant также
+требует действующую отметку Яндекса и активное назначение офиса. Меняет только
+закрытый `corporate_service_pilot_trainers`, не роли/отметки/офисы. Сначала
+inspect, затем grant и отдельный inspect уже committed состояния. Безопасная
+квитанция содержит только `status/uniqueTrainer/enabled/eligible`. Отсутствие
+таблицы, неоднозначная цель или неподходящий аккаунт — отказ, без fallback.
+Runtime повторно проверяет роль, отметку, допуск и офис внутри транзакции;
+никакой прямой production SQL/SSH для включения не нужен. После отзыва новые
+действия закрываются, исторические административные итоги сохраняются.
+
 ## Видеовстречи из чата — YAFIT-669
 
 Собственный media adapter, runtime API-флаг JITSI_ENABLED (default off).

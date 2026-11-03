@@ -2,6 +2,7 @@ import { useCallback } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 
 export type WorkoutNavigationState = {
+  templatePlanDraftKey?: string
   confirmAttendance?: boolean
   returnTo?: string
   fromWorkoutDetailId?: string

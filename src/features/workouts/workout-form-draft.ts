@@ -5,6 +5,7 @@ export interface WorkoutFormDraft {
   sourceVersion?: number
   title?: string
   requestId?: string
+  appliedTemplateIds?: string[]
   composerText?: string
   clientId: string
   workoutDate: LocalDate
@@ -27,6 +28,7 @@ function isDraft(value: unknown): value is WorkoutFormDraft {
     && (draft.sourceVersion === undefined || Number.isInteger(draft.sourceVersion) && draft.sourceVersion >= 0)
     && (draft.title === undefined || typeof draft.title === 'string')
     && (draft.requestId === undefined || typeof draft.requestId === 'string')
+    && (draft.appliedTemplateIds === undefined || Array.isArray(draft.appliedTemplateIds) && draft.appliedTemplateIds.every(id => typeof id === 'string'))
     && (draft.composerText === undefined || typeof draft.composerText === 'string')
     && typeof draft.workoutDate === 'string'
     && typeof draft.startTime === 'string'
@@ -66,6 +68,9 @@ export function writeWorkoutFormDraft(key: string, draft: WorkoutFormDraft): voi
   if (draft.composerText === undefined && draft.requestId && previous?.requestId === draft.requestId && previous.composerText) {
     draft = { ...draft, composerText: previous.composerText }
   }
+  if (draft.appliedTemplateIds === undefined && previous?.appliedTemplateIds && previous.requestId === draft.requestId && previous.sourceVersion === draft.sourceVersion) {
+    draft = { ...draft, appliedTemplateIds: previous.appliedTemplateIds }
+  }
   try { localStorage.setItem(key, JSON.stringify(draft)) } catch { /* приватный режим: ввод остаётся в текущей сессии */ }
 }
 
@@ -102,4 +107,24 @@ export function retainQuickPlanDraft(key: string, date: LocalDate): boolean {
     localStorage.setItem(`${key}.saved.${draft.requestId ?? crypto.randomUUID()}`, JSON.stringify(draft))
     return true
   } catch { return false }
+}
+
+/** A template assignment keeps its own date/client context; legacy keys stay readable. */
+export function templateAssignmentDraftKey(userId: string, templateId: string, clientId: string, date: LocalDate, completed = false): string {
+  return `${workoutFormDraftKey(userId, `template-${templateId}`)}.assignment.${encodeURIComponent(clientId || 'any')}.${date}.${completed ? 'completed' : 'planned'}`
+}
+
+export function templateAssignmentDraftChoices(userId: string, templateId: string): Array<{ key: string; draft: WorkoutFormDraft }> {
+  const legacyKey = workoutFormDraftKey(userId, `template-${templateId}`)
+  const keys = new Set([legacyKey])
+  try {
+    for (let index = 0; index < localStorage.length; index += 1) {
+      const key = localStorage.key(index)
+      if (key?.startsWith(`${legacyKey}.assignment.`)) keys.add(key)
+    }
+  } catch { /* A denied store never authorizes deleting another draft. */ }
+  return [...keys].flatMap((key) => {
+    const draft = readWorkoutFormDraft(key)
+    return draft ? [{ key, draft }] : []
+  })
 }

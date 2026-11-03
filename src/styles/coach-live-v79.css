@@ -3,7 +3,7 @@
 .phone-frame.fit-lime-shell .live-workout-page:is(.coach-live-v79,.client-live-v79) { position: relative; isolation: isolate; padding-inline: 2px; --v79-large-opacity: 1; --v79-small-opacity: 0; --v79-status-opacity: 1; --v79-glow-opacity: 1; }
 .phone-frame.fit-lime-shell .live-workout-page:is(.coach-live-v79,.client-live-v79):not(:has(.live-pinned-empty)) { min-height: calc(var(--app-visible-height, 100dvh) + 236px); }
 .phone-frame.fit-lime-shell.workout-live-reference.live-identity :is(.coach-live-v79,.client-live-v79) > .page-header { background: transparent; isolation: isolate; min-height: 52px; padding-inline: 14px; }
-.phone-frame.fit-lime-shell.workout-live-reference.live-identity :is(.coach-live-v79,.client-live-v79) > .page-header::before { content: ''; position: absolute; inset: 0 -2px -8px; z-index: -1; background: linear-gradient(var(--lime-bg) 75%, transparent); opacity: var(--v79-small-opacity); pointer-events: none; }
+.phone-frame.fit-lime-shell.workout-live-reference.live-identity :is(.coach-live-v79,.client-live-v79) > .page-header::before { content: ''; position: absolute; inset: 0 -2px -8px; z-index: -1; background: var(--lime-bg); opacity: var(--v79-small-opacity); pointer-events: none; }
 .phone-frame.fit-lime-shell.workout-live-reference.live-identity :is(.coach-live-v79,.client-live-v79) > .page-header .coach-live-status { opacity: var(--v79-status-opacity); }
 .phone-frame.fit-lime-shell.workout-live-reference.live-identity :is(.coach-live-v79,.client-live-v79) .live-pinned { position: relative; top: auto; z-index: 8; background: transparent; }
 .phone-frame.fit-lime-shell.workout-live-reference.live-identity :is(.coach-live-v79,.client-live-v79) .live-timer-toolbar { position: relative; }

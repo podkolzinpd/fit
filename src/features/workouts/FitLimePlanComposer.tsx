@@ -1,3 +1,7 @@
+import { WorkoutTemplatePicker } from './WorkoutTemplatePicker'
+import { persistTemplateSource, type TemplatePlanContext } from './template-plan-context'
+import { appendWorkoutTemplateExercises } from '../../data/repositories/workout-template-rules'
+import type { WorkoutTemplate } from '../../shared/domain'
 import { useCreateWorkoutClient } from './use-create-workout-client'
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
@@ -8,7 +12,7 @@ import { invalidateWorkoutResults } from '../../app/invalidate-workout-results'
 import { isFitLimeEnabled } from '../../app/fit-lime'
 import { isCoachWorkoutRedesignEnabled } from '../../app/coach-workout-redesign'
 import { FitLimeDatePicker } from '../../shared/FitLimeDatePicker'
-import { AddIcon, BackIcon, CloseIcon, KeyboardIcon, MicIcon } from '../../shared/icons'
+import { AddIcon, BackIcon, CloseIcon, CopyIcon, KeyboardIcon, MicIcon } from '../../shared/icons'
 import { formatLocalDate, formatRelativeLocalDate, todayInTimeZone, type LocalDate } from '../../shared/local-date'
 import { Coachmark } from '../../shared/ui'
 import { ClientPicker } from '../clients'
@@ -75,12 +79,18 @@ function FitLimePlanForm({ date, returnTo, onClose, onBack, initialDraft }: {
   const { actor } = useAuth()
   const createClient = useCreateWorkoutClient()
   const reference = isCoachWorkoutRedesignEnabled(actor)
-  const { clients: clientsRepository, workouts } = useDataBackend()
+  const { clients: clientsRepository, workouts, workoutTemplates } = useDataBackend()
   const queryClient = useQueryClient()
   const navigate = useNavigate()
   const dialog = useRef<HTMLDialogElement>(null)
   const key = workoutFormDraftKey(actor?.userId ?? 'anonymous', `new--${date}--quick`)
   const [saved] = useState(initialDraft)
+  const [templatePickerOpen, setTemplatePickerOpen] = useState(false)
+  const templateTriggerRef = useRef<HTMLButtonElement>(null)
+  const templates = useQuery({ queryKey: ['workout-templates'], queryFn: () => workoutTemplates.list(), enabled: templatePickerOpen, staleTime: 0, refetchOnMount: 'always' })
+  const [exercises, setExercises] = useState(saved?.exercises ?? [])
+  const [notes, setNotes] = useState(saved?.notes ?? '')
+  const [addedTemplate, setAddedTemplate] = useState('')
   const [title, setTitle] = useState(saved?.title ?? '')
   const [clientId, setClientId] = useState(saved?.clientId ?? '')
   const [selectedDate, setSelectedDate] = useState(saved?.workoutDate ?? date)
@@ -98,8 +108,8 @@ function FitLimePlanForm({ date, returnTo, onClose, onBack, initialDraft }: {
   const selectedClient = clients.data?.find((client) => client.id === clientId)
   const draft = {
     clientId, title, requestId, workoutDate: selectedDate, startTime: time.start,
-    endTime: time.end, notes: saved?.notes ?? '', stageId: saved?.stageId ?? '',
-    recordCompleted: false, exercises: saved?.exercises ?? [], trainingFormat, prepSeconds: saved?.prepSeconds,
+    endTime: time.end, notes, stageId: saved?.stageId ?? '',
+    recordCompleted: false, exercises, trainingFormat, prepSeconds: saved?.prepSeconds,
     ...(executionMode ? { executionMode } : {}),
   }
   useEffect(() => {
@@ -141,6 +151,24 @@ function FitLimePlanForm({ date, returnTo, onClose, onBack, initialDraft }: {
     submitting.current = true
     mutation.mutate()
   }
+  function closeTemplatePicker() {
+    setTemplatePickerOpen(false)
+    window.requestAnimationFrame(() => templateTriggerRef.current?.focus())
+  }
+  function addTemplate(template: WorkoutTemplate) {
+    setExercises(current => appendWorkoutTemplateExercises(current, template))
+    if (!title.trim()) setTitle(template.name)
+    if (!notes.trim()) setNotes(template.notes ?? '')
+    setAddedTemplate(template.name)
+    closeTemplatePicker()
+  }
+  function openTemplateDestination(library = false) {
+    if (!persistTemplateSource(key, draft)) { setError('Не удалось сохранить черновик на устройстве. План остаётся открыт.'); return }
+    navigate(returnTo, { replace: true, state: { resumePlanRequestId: requestId, templatePlanDraftKey: key } })
+    const context: TemplatePlanContext = { returnHistoryIndex: (window.history.state as { idx?: number } | null)?.idx, draftKey: key, returnTo, resumePlanRequestId: requestId, requestId, applyOnSave: true }
+    navigate(library ? '/schedule/templates' : '/schedule/templates/new/editor', { state: { templatePlanContext: context } })
+    onClose('navigate')
+  }
   function openEditor() {
     writeWorkoutFormDraft(key, draft)
     navigate(`/workouts/new?date=${date}&entry=quick`, { state: { returnTo } })
@@ -177,7 +205,7 @@ function FitLimePlanForm({ date, returnTo, onClose, onBack, initialDraft }: {
 
   </>
   return <dialog ref={dialog} tabIndex={-1} role="dialog" className={`fit-lime-plan-dialog${reference ? ' coach-reference-composer' : ''}`} aria-label="Быстрое создание тренировки" onClose={(event) => { if (event.target === event.currentTarget) onClose() }} onCancel={(event) => { if (mutation.isPending) event.preventDefault() }}>
-    <form className="fit-lime-plan-composer" onSubmit={submit} inert={pickerOpen} style={pickerOpen ? { visibility: 'hidden' } : undefined}>
+    <form className="fit-lime-plan-composer" onSubmit={submit} inert={pickerOpen || templatePickerOpen} style={pickerOpen || templatePickerOpen ? { visibility: 'hidden' } : undefined}>
       <button type="button" className="fit-lime-plan-close" aria-label="Закрыть создание" disabled={mutation.isPending} onPointerDown={(event) => event.preventDefault()} onClick={() => dialog.current?.close()}><CloseIcon /></button>
       {onBack && !reference && <button type="button" className="fit-lime-plan-back" aria-label="Назад к выбору действия" disabled={mutation.isPending} onPointerDown={(event) => event.preventDefault()} onClick={onBack}><BackIcon /></button>}
       <h2 className={reference ? 'sr-only' : undefined}>Запланировать тренировку</h2>
@@ -189,18 +217,21 @@ function FitLimePlanForm({ date, returnTo, onClose, onBack, initialDraft }: {
         </div>
         {options}
         <Coachmark id="lime-quick-plan-2026-10" userId={actor?.userId} title="План можно сохранить сразу" description="Выберите клиента и дату, а упражнения добавьте сейчас или позже.">
-          <button type="button" className="fit-lime-plan-exercises" onClick={openEditor}><AddIcon />{draft.exercises.length ? 'Продолжить редактирование' : 'Добавить упражнения'}</button>
+        <div className="trainer-plan-methods" role="group" aria-label="Добавить упражнения">
+          <button type="button" className="secondary" aria-label="Добавить упражнения" onClick={openEditor}><AddIcon />Упражнение</button>
+          <button type="button" className="secondary" ref={templateTriggerRef} aria-label="Добавить шаблон" onClick={() => setTemplatePickerOpen(true)}><CopyIcon />Шаблон</button>
+          <button type="button" className="secondary" onClick={() => openComposer('voice')}><MicIcon />Надиктовать</button>
+          <button type="button" className="secondary" onClick={() => openComposer('text')}><KeyboardIcon />Ввести текстом</button>
+        </div>
         </Coachmark>
-            <div className="fit-lime-plan-input-methods">
-      <button type="button" onClick={() => openComposer('voice')}><MicIcon />Надиктовать</button>
-      <button type="button" onClick={() => openComposer('text')}><KeyboardIcon />Ввести текстом</button>
-    </div>
+        {addedTemplate && <p role="status">Добавлен шаблон «{addedTemplate}» · {exercises.length} упр.</p>}
         <button type="submit" className="primary wide fit-lime-plan-save" aria-busy={mutation.isPending}>{mutation.isPending ? 'Сохраняем…' : 'Запланировать'}</button>
         {onBack && reference && <button type="button" className="fit-lime-plan-back" onClick={onBack}><BackIcon />Назад</button>}
       </fieldset>
       {(error || mutation.error) && <p className="error" role="alert">{error ?? mutation.error?.message}</p>}
       {mutation.isPending && <p role="status">Сохраняем…</p>}
     </form>
+    {templatePickerOpen && <WorkoutTemplatePicker templates={templates.data ?? []} loading={templates.isLoading || templates.isFetching} error={templates.error} onRetry={() => void templates.refetch()} onSelect={addTemplate} onClose={closeTemplatePicker} onCreate={() => openTemplateDestination()} onLibrary={() => openTemplateDestination(true)} />}
     {pickerOpen && <ClientPicker userId={actor?.userId} clients={clients.data ?? []} selectedId={clientId} onChange={(id) => { setClientId(id); setError(null) }} loading={clients.isLoading} error={clients.error} onRetry={() => void clients.refetch()} onCreate={createClient} reference={reference} autoFocusSearch={false} initialOpen hideTrigger onDismiss={() => setPickerOpen(false)} />}
   </dialog>
 }

@@ -1,3 +1,4 @@
+import { CorporateServicesPage, CorporateServiceRecordPage } from '../features/corporate-services'
 import { CorporateInvitationPage, CorporateAdminPage } from '../features/corporate-admin'
 import { Navigate, Outlet, RouterProvider, createBrowserRouter, useLocation } from 'react-router-dom'
 import { useAuth } from './auth-context'
@@ -162,6 +163,9 @@ const router = createBrowserRouter([
       { path: '/profile', element: <ProfilePage /> },
       { path: '/profile/settings', element: <TrainerProfileSettingsPage /> },
       { path: '/profile/trainer', element: <TrainerProfileEditorPage /> },
+      { path: '/profile/yandex-services', element: <CorporateServicesPage /> },
+      { path: '/profile/yandex-services/new', element: <CorporateServiceRecordPage /> },
+      { path: '/profile/yandex-services/:id', element: <CorporateServiceRecordPage /> },
     ] },
   ] }] },
   { path: '*', element: <Navigate to="/" replace /> },

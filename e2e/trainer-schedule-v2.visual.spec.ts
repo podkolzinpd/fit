@@ -1,3 +1,4 @@
+import { workoutTemplateSourceCases, workoutTemplateEntryCases, workoutTemplateReliabilityCases } from './workout-template-reliability.cases'
 import { workoutLifecycleCases } from './workout-lifecycle.cases'
 import { writeFile } from 'node:fs/promises'
 import { expect, test, type Locator, type Page } from '@playwright/test'
@@ -10,6 +11,9 @@ import { trainerId, clientId, workoutId, conversationId, messageId, newWorkoutId
 
 // Visual and mixed interaction/state acceptance; all original assertions are retained.
 test.skip(!process.env.FIT_SCHEDULE_V2_VISUAL, 'Dedicated server-backed pilot harness')
+workoutTemplateReliabilityCases()
+workoutTemplateEntryCases()
+workoutTemplateSourceCases()
 
 // Narrow client rows and the one-add flow use the production route and fonts.
 test('Compact clients keep search, initials and one add flow in trainer Lime', { tag: ['@lime-clients', '@lime-critical'] }, async ({ page }, info) => {
@@ -285,8 +289,12 @@ test('Figma calendar Coach compact navigation keeps date access, menu and all vi
   await expect(menu.getByRole('menuitem')).toHaveText(['Компактная сетка', 'Шаблоны тренировок', 'Профиль', 'Настройки'])
   const triggerBox = (await page.getByRole('button', { name: 'Настройки расписания' }).boundingBox())!
   expect((await menu.boundingBox())!.y).toBeGreaterThanOrEqual(triggerBox.y)
+  // The class is optimistic; persistence is checked after the server acknowledges it.
+  const densitySaved = page.waitForResponse(response => new URL(response.url()).pathname === '/v1/profile'
+    && response.request().method() === 'PUT' && response.status() === 204)
   await menu.getByRole('menuitem', { name: 'Компактная сетка' }).click()
   await expect(calendar).toHaveClass(/schedule-density-compact/)
+  await densitySaved
   await page.reload(); await expect(calendar).toHaveClass(/schedule-density-compact/)
   const views = page.getByRole('group', { name: 'Вид расписания' })
   for (const name of ['Неделя', '2 недели', 'Список', 'День']) {
@@ -748,8 +756,8 @@ for (const width of [375, 390, 430, 1440]) test(`Figma workout Coach reference f
   await expect(squat.locator('.overflow-trigger svg[data-icon="more"]')).toHaveCSS('width', '24px')
   await expect(squat.locator('.exercise-comment-options > summary')).toHaveCSS('min-height', '44px')
   await expect(squat.locator('.set-add-row svg')).toHaveCSS('background-color', 'rgb(182, 239, 77)')
-  await expect(page.locator('.coach-plan-entry-controls .quick-workout-expand')).toHaveCSS('background-color', 'rgb(182, 239, 77)')
-  await expect(page.locator('.coach-plan-entry-controls > button').first()).toHaveCSS('background-color', 'rgb(59, 59, 64)')
+  await expect(page.locator('.trainer-plan-methods .trainer-method-voice')).toHaveCSS('background-color', 'rgb(182, 239, 77)')
+  await expect(page.locator('.trainer-plan-methods > button').first()).toHaveCSS('background-color', 'rgb(59, 59, 64)')
   await squat.getByLabel('Вес, подход 1').fill('27.5')
   await squat.getByLabel('Повторы, подход 1').fill('10')
   await expect(squat.getByLabel('Вес, подход 1')).toHaveCSS('height', '48px')
@@ -757,14 +765,15 @@ for (const width of [375, 390, 430, 1440]) test(`Figma workout Coach reference f
   await expect(squat.getByLabel('Вес, подход 1')).toHaveAttribute('autocomplete', 'off')
   await expect(squat.getByLabel('Вес, подход 1')).toHaveAttribute('inputmode', 'decimal')
   await expect(page.locator('.today-plan-summary')).toHaveCount(0)
-  const lower = page.locator('.coach-plan-entry-controls'), bulk = page.locator('.workout-editor-footer .overflow-trigger')
-  await expect(lower).toHaveCSS('gap', '2px')
-  expect(await lower.locator(':scope > button').evaluateAll(nodes => nodes.every(node => node.getBoundingClientRect().height === 80))).toBe(true)
+  const lower = page.locator('.trainer-plan-methods'), bulk = page.locator('.workout-editor-footer .overflow-trigger')
+  await expect(lower).toHaveCSS('gap', '6px')
+  expect(await lower.locator(':scope > button').evaluateAll(nodes => nodes.every(node => node.getBoundingClientRect().height === 44))).toBe(true)
   await bulk.scrollIntoViewIfNeeded()
   expect(await bulk.evaluate(button => {
     const rect = button.getBoundingClientRect(), footer = button.closest('.workout-editor-footer')!.getBoundingClientRect()
-    const controls = document.querySelector('.coach-plan-entry-controls')!.getBoundingClientRect()
-    return Math.abs(footer.right - rect.right - 16) < 1 && controls.top >= rect.bottom + 8 && rect.height >= 44
+    const controls = document.querySelector('.trainer-plan-methods')!.getBoundingClientRect()
+    const firstExercise = document.querySelector('.planned-exercise')!.getBoundingClientRect()
+    return Math.abs(footer.right - rect.right - 16) < 1 && controls.bottom <= firstExercise.top && rect.height >= 44
   })).toBe(true)
   await bulk.click()
   await expect(page.getByRole('menuitem', { name: 'Сбросить значения', exact: true })).toBeVisible()
@@ -3948,8 +3957,8 @@ for (const width of [390, 430, 1440]) {
     const dates = page.getByRole('dialog', { name: 'Дата и время' })
     await dates.getByLabel('Начало', { exact: true }).fill('12:00')
     await dates.getByRole('button', { name: 'Применить дату' }).click()
-    await expect(composer.locator('.fit-lime-plan-exercises svg')).toHaveCSS('width', '24px')
-    await expect(composer.locator('.fit-lime-plan-exercises svg')).toHaveCSS('height', '24px')
+    await expect(composer.locator('.trainer-plan-methods [aria-label="Добавить упражнения"] svg')).toHaveCSS('width', '24px')
+    await expect(composer.locator('.trainer-plan-methods [aria-label="Добавить упражнения"] svg')).toHaveCSS('height', '24px')
     const composerBox = await composer.boundingBox()
     expect(composerBox!.height).toBeLessThanOrEqual(876)
     await expect(composer.getByRole('button', { name: 'Запланировать' })).toBeVisible()
@@ -3998,6 +4007,8 @@ for (const width of [390, 430, 1440]) {
     await page.evaluate(() => document.fonts.ready)
     await expect(page.locator('.workout-header-contract h2')).toHaveCSS('font-size', '24px')
     await expect(page.locator('.workout-header-contract h2')).toHaveCSS('font-weight', '500')
+    await expect(page.locator('.workout-composer-card')).toHaveCount(0)
+    await page.getByRole('button', { name: 'Ввести текстом', exact: true }).click()
     await expect(page.locator('.workout-composer-card')).toHaveCSS('border-radius', '32px')
     await page.screenshot({ path: testInfo.outputPath('figma-workout-editor.png'), fullPage: true })
     await page.locator('.client-picker-trigger').click()

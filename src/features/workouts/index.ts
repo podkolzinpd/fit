@@ -14,3 +14,8 @@ export type { ParsedWorkoutExercise } from './quick-workout-entry'
 export { FavoriteWorkoutNameSheet } from './FavoriteWorkoutNameSheet'
 
 export { workoutDisplayTitle, workoutExerciseBrief } from './workout-chronicle'
+
+export { readTemplatePlanContext, persistTemplateSource, applyCreatedTemplate, templatePlanReturnState, type TemplatePlanContext } from './template-plan-context'
+export { safeWorkoutReturnTo, type WorkoutNavigationState } from './workout-navigation'
+export { readWorkoutFormDraft } from './workout-form-draft'
+export { returnToTemplatePlan, templateReturnSteps } from './template-plan-context'
