@@ -1,5 +1,6 @@
 import { workoutTemplateSourceCases, workoutTemplateEntryCases, workoutTemplateReliabilityCases } from './workout-template-reliability.cases'
 import { workoutLifecycleCases } from './workout-lifecycle.cases'
+import { financeAccountingCases } from './finance-accounting.cases'
 import { writeFile } from 'node:fs/promises'
 import { expect, test, type Locator, type Page } from '@playwright/test'
 import { buildFitLimeCalendarPlan } from '../services/api/src/db/fit-lime-calendar-plan'
@@ -14,6 +15,7 @@ test.skip(!process.env.FIT_SCHEDULE_V2_VISUAL, 'Dedicated server-backed pilot ha
 workoutTemplateReliabilityCases()
 workoutTemplateEntryCases()
 workoutTemplateSourceCases()
+financeAccountingCases()
 
 // Narrow client rows and the one-add flow use the production route and fonts.
 test('Compact clients keep search, initials and one add flow in trainer Lime', { tag: ['@lime-clients', '@lime-critical'] }, async ({ page }, info) => {
