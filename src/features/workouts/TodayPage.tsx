@@ -7,6 +7,7 @@ import type { PreviousExerciseResult } from '../../data/contracts/workouts'
 import { AddActionLabel } from '../../shared/AddActionLabel'
 import { NutritionSummary } from '../nutrition'
 import { invalidateWorkoutResults } from '../../app/invalidate-workout-results'
+import { invalidateFinanceViews } from '../../app/invalidate-finance-views'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
@@ -412,6 +413,7 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
       if (limePlanning && planMetadata.sourceFormDraftKey?.startsWith(workoutFormDraftKey(actor!.userId, 'new--'))
         && readWorkoutFormDraft(planMetadata.sourceFormDraftKey)?.requestId === planMetadata.requestId) removeWorkoutFormDraft(planMetadata.sourceFormDraftKey)
       await invalidateWorkoutResults(queryClient)
+      if (mode === 'completed') await invalidateFinanceViews(queryClient, effectiveClientId ?? undefined)
       await queryClient.invalidateQueries({ queryKey: ['today-workouts'] })
       if (!clientMode) await queryClient.invalidateQueries({ queryKey: ['clients'] })
       if (planOnly && mode === 'planned') navigate(returnTo, { replace: true, state: { savedPlanId: id } })

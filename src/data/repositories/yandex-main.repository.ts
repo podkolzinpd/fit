@@ -138,7 +138,7 @@ const trainerFinanceSessionSchema = z.object({
   createdAt: yandexDateTimeSchema, updatedAt: yandexDateTimeSchema,
 })
 const trainerFinanceBundleSchema = z.object({
-  clientId: uuid,
+  clientId: uuid, clientName: z.string().optional(), canCreate: z.boolean().optional(),
   packages: z.array(trainerFinancePackageSchema),
   payments: z.array(trainerFinancePaymentSchema),
   sessions: z.array(trainerFinanceSessionSchema),

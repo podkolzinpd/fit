@@ -34,6 +34,7 @@ import { useWorkoutFieldVisibility } from './workout-field-visibility'
 import { coachWorkoutReferenceAssets } from '../../shared/coach-workout-reference-assets'
 import { WorkoutDragBlock, WorkoutDragHandle, WorkoutGestureList, WorkoutSwipe } from './WorkoutGestures'
 import { invalidateWorkoutResults } from '../../app/invalidate-workout-results'
+import { invalidateFinanceViews } from '../../app/invalidate-finance-views'
 import { WhistleIcon } from '../../shared/icons'
 import { FitLimeDatePicker } from '../../shared/FitLimeDatePicker'
 import { FavoriteWorkoutNameSheet } from './FavoriteWorkoutNameSheet'
@@ -1608,7 +1609,7 @@ export function WorkoutFormPage() {
     if (!initial || formDraftReady || templateId && templateDraftChoice === 'resume') return
     setEntryDate(initial.workoutDate)
   }, [formDraftReady, initial, source.data?.status, templateId, templateDraftChoice])
-  const mutation = useMutation({ mutationFn: (draft: WorkoutDraft) => recordPlannedResult ? workoutsRepository.recordPlannedResult(draft) : completedMode ? workoutsRepository.saveCompleted(draft) : workoutsRepository.save(draft), onSuccess: async (id) => {
+  const mutation = useMutation({ mutationFn: (draft: WorkoutDraft) => recordPlannedResult ? workoutsRepository.recordPlannedResult(draft) : completedMode ? workoutsRepository.saveCompleted(draft) : workoutsRepository.save(draft), onSuccess: async (id, draft) => {
     if (editDraftEnabled) planSaved.current = true
     if (!workoutId || editDraftEnabled) removeWorkoutFormDraft(planDraftKey)
     // Перед переходом карточка должна получить новую optimistic-concurrency
@@ -1617,6 +1618,7 @@ export function WorkoutFormPage() {
     await queryClient.invalidateQueries({ queryKey: ['workout', id] })
     const refreshCalendar = Promise.all([
       invalidateWorkoutResults(queryClient),
+      invalidateFinanceViews(queryClient, draft.clientId),
       queryClient.invalidateQueries({ queryKey: ['today-workouts'] }),
       queryClient.invalidateQueries({ queryKey: ['today-recent-workouts'] }),
       queryClient.invalidateQueries({ queryKey: ['clients'] }),
@@ -2056,8 +2058,7 @@ export function WorkoutDetailPage() {
       queryClient.invalidateQueries({ queryKey: ['workout-regularity'] }),
       queryClient.invalidateQueries({ queryKey: ['clients'] }),
       queryClient.invalidateQueries({ queryKey: ['trainer-attention'] }),
-      queryClient.invalidateQueries({ queryKey: ['trainer-finance', query.data?.clientId] }),
-      queryClient.invalidateQueries({ queryKey: ['trainer-finance-overview'] }),
+      invalidateFinanceViews(queryClient, query.data?.clientId),
     ])
   }
   const cancelPlanned = useMutation({
@@ -4084,8 +4085,7 @@ export function LiveWorkoutPage() {
       queryClient.invalidateQueries({ queryKey: ['workout', workoutId] }),
       invalidateWorkoutResults(queryClient),
       queryClient.invalidateQueries({ queryKey: ['clients'] }),
-      queryClient.invalidateQueries({ queryKey: ['trainer-finance'] }),
-      queryClient.invalidateQueries({ queryKey: ['trainer-finance-overview'] }),
+      invalidateFinanceViews(queryClient, clientId),
       clientId ? queryClient.invalidateQueries({ queryKey: ['client-stats', clientId] }) : Promise.resolve(),
     ])
     await showCompletedWorkout(completed)

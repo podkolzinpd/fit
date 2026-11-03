@@ -12,7 +12,7 @@ async function accountingFixture(page: Page) {
     sessionsRemaining: 0, priceCents: 1000000, paidCents: 1000000, dueCents: 0,
     startsOn: '2026-10-01', endsOn: '2026-10-31', paymentDueOn: null, comment: null,
     packageStatus: 'completed' as const, paymentStatus: 'paid' as const, closedAt: null, version: 1, createdAt: stamp, updatedAt: stamp }
-  const ledger: TrainerFinanceClientBundle = { clientId, packages: [old,
+  const ledger: TrainerFinanceClientBundle = { clientId, clientName: 'Алексей Смирнов', packages: [old,
     { ...old, id: newWorkoutId, title: 'Ноябрь', sessionsTotal: 10, sessionsUsed: 0, sessionsRemaining: 10,
       startsOn: '2026-11-01', endsOn: '2026-11-30', packageStatus: 'active' }], payments: [],
     sessions: [{ id: workoutId, packageId: old.id, workoutId, disposition: 'charged', source: 'automatic',
@@ -32,6 +32,66 @@ async function formGeometry(form: Locator) {
 }
 
 export function financeAccountingCases() {
+  test('Finance former-client history and refreshed overview keep debt visible with unassigned sessions', { tag: ['@lime-finance'] }, async ({ page }, info) => {
+    await page.setViewportSize({ width: 390, height: 844 })
+    const ledger = await accountingFixture(page)
+    ledger.clientName = 'Александра Константинопольская — история занятий'
+    ledger.canCreate = false
+    const service = ledger.packages[0]!
+    Object.assign(service, { priceCents: 2500000, paidCents: 1000000, dueCents: 1500000, paymentStatus: 'overdue' })
+    Object.assign(ledger.packages[1]!, { priceCents: 0, paidCents: 0 })
+    ledger.payments.push({ id: conversationId, packageId: service.id, amountCents: 1000000,
+      receivedOn: '2026-10-01', source: 'opening', comment: null, voidedAt: null, voidReason: null,
+      version: 1, createdAt: stamp, updatedAt: stamp })
+    Object.assign(ledger.sessions[0]!, { disposition: 'unassigned', packageId: null })
+    await page.route('**/v1/clients?*', route => route.fulfill({ status: 403, json: {} }))
+    await page.route('**/v1/finance/overview*', route => route.fulfill({ json: { overview: {
+      month: '2026-11', receivedCents: service.paidCents - 1000000, dueCents: service.dueCents, attentionCount: 1,
+      clients: [{ clientId, fullName: ledger.clientName, archivedAt: null, receivedCents: 0,
+        dueCents: service.dueCents, nearestPaymentDueOn: '2026-10-31', unpaidPackageCount: 1,
+        activePackageCount: 1, upcomingPackageCount: 0, sessionsRemaining: 10, overdue: true,
+        lowSessions: false, unassignedSessions: 1, needsAttention: true }],
+    } } }))
+    await page.route(`**/v1/finance/packages/${service.id}/payments`, route => {
+      expect(route.request().postDataJSON()).toMatchObject({ amountCents: 500000 })
+      service.paidCents += 500000; service.dueCents -= 500000
+      const payment = { id: clientId, packageId: service.id, amountCents: 500000, receivedOn: '2026-11-03',
+        source: 'manual' as const, comment: null, voidedAt: null, voidReason: null, version: 1, createdAt: stamp, updatedAt: stamp }
+      ledger.payments.push(payment)
+      return route.fulfill({ json: { payment } })
+    })
+    await page.goto('/finance?filter=due')
+    const row = page.locator('.finance-overview-client')
+    await expect(row).toContainText(/Просрочено 15\s000/)
+    await expect(row).toContainText('Не привязано: 1')
+    for (const width of [320, 430, 1440]) {
+      await page.setViewportSize({ width, height: 844 })
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+      await page.screenshot({ path: info.outputPath(`debt-and-unassigned-${width}.png`), fullPage: true })
+    }
+    await row.click()
+    await expect(page.locator('.page-title-group')).toContainText(ledger.clientName)
+    await page.locator('.finance-history > summary').click()
+    const history = page.locator('.finance-history .finance-package')
+    await expect(history).toContainText(service.title)
+    for (const width of [320, 430, 1440]) {
+      await page.setViewportSize({ width, height: width === 1440 ? 1000 : 844 })
+      await history.scrollIntoViewIfNeeded()
+      await expect(history.getByRole('button', { name: 'Внести оплату', exact: true })).toBeInViewport()
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+      await page.screenshot({ path: info.outputPath(`former-client-history-${width}.png`), fullPage: true })
+    }
+    await history.getByRole('button', { name: 'Внести оплату', exact: true }).click()
+    await page.getByLabel('Сумма, ₽').fill('5000')
+    await page.getByRole('button', { name: 'Сохранить', exact: true }).click()
+    await expect(page.locator('.finance-form')).toHaveCount(0)
+    await page.getByRole('button', { name: 'Назад', exact: true }).click()
+    await expect(page).toHaveURL(/\/finance\?filter=due$/)
+    await expect(row).toContainText(/Просрочено 10\s000/)
+    await expect(row).toContainText('Не привязано: 1')
+    await page.screenshot({ path: info.outputPath('overview-after-payment.png'), fullPage: true })
+  })
+
   // One behavior chain per engine; responsive snapshots resize the same state
   // to check native date/select, long names and the retry CTA, without replays.
   test('Finance accounting dates and uncertain manual retry preserve one operation', { tag: ['@lime-finance'] }, async ({ page }, info) => {

@@ -62,6 +62,8 @@ export interface TrainerFinanceSession {
 
 export interface TrainerFinanceClientBundle {
   clientId: string
+  clientName?: string
+  canCreate?: boolean
   packages: TrainerFinancePackage[]
   payments: TrainerFinancePayment[]
   sessions: TrainerFinanceSession[]
