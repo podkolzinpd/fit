@@ -1,6 +1,6 @@
 import { z } from 'zod'
 import { expect, test, type Page } from '@playwright/test'
-import { beginClientGesture, coachGestureWorkout, restTimerWorkout, holdClientLiveCard, mockClientStreamingVoice, mockPilot, mockPublicTrainer, publicTrainerDraft, publicTrainerId, newWorkoutId, workoutId, conversationId, messageId, clientId } from './fit-lime-fixtures'
+import { revealLiveSet, beginClientGesture, coachGestureWorkout, restTimerWorkout, holdClientLiveCard, mockClientStreamingVoice, mockPilot, mockPublicTrainer, publicTrainerDraft, publicTrainerId, newWorkoutId, workoutId, conversationId, messageId, clientId } from './fit-lime-fixtures'
 
 test.skip(process.env.FIT_CLIENT_WORKOUT_ACCEPTANCE !== '1', 'Dedicated native client-workout harness')
 
@@ -605,6 +605,7 @@ test('client Live metrics and superset preserve final input and notes', async ({
   const handle = await stroke.elementHandle()
   await row.getByRole('button', { name: 'Готово, отдых', exact: true }).click()
   await expect.poll(() => backend.getWorkouts()[0]!.exercises[0]!.sets[0]!.fact.reps).toBe(28)
+  await revealLiveSet(page, source.exercises[0]!.sets[0]!.id)
   await expect(row.getByRole('button', { name: /^Отменить выполнение:/ })).toBeVisible()
   expect(await handle!.evaluate(element => element.isConnected)).toBe(true)
   const confirmedAt = backend.getWorkouts()[0]!.exercises[0]!.sets[0]!.confirmedAt
@@ -650,6 +651,7 @@ for (const grouped of [false, true]) for (const metric of liveMetricCases) test(
   const rpe = row.getByLabel('Фактический RPE')
   await rpe.selectOption('9')
   await row.getByRole('button', { name: 'Готово, отдых', exact: true }).click()
+  await revealLiveSet(page, exercise.sets[0]!.id)
   await expect(row.getByRole('button', { name: /^Отменить выполнение:/ })).toBeVisible()
   await expect.poll(() => backend.getWorkouts()[0]!.exercises[0]!.sets[0]!.fact.rpe).toBe(9)
   await page.reload()
@@ -698,6 +700,7 @@ test('client Live inactive supersets keep manual expansion and ragged rounds', a
   await expect(round.locator('form[data-live-set-id]')).toHaveCount(1)
   await expect(group.getByRole('button', { name: 'Добавить круг', exact: true })).toBeVisible()
   // Any-order confirmation remains available in the future group.
+  await revealLiveSet(page, source.exercises[2]!.sets[0]!.id)
   const futureSet = group.locator('form[data-live-set-id]').first()
   await futureSet.getByRole('button', { name: 'Готово, отдых', exact: true }).click()
   await expect(futureSet.getByRole('button', { name: /^Отменить выполнение:/ })).toBeVisible()
@@ -1082,6 +1085,7 @@ for (const rpe of [false, true]) test(`client Live metric keyboard preserves fin
   }
   await expect.poll(() => backend.getWorkouts()[0]!.exercises[0]!.sets[0]!.fact.reps).toBe(27)
   await tapVisible(page, row.getByRole('button', { name: 'Готово, отдых', exact: true }))
+  await revealLiveSet(page, source.exercises[0]!.sets[0]!.id)
   await expect(row.getByRole('button', { name: /^Отменить выполнение:/ })).toBeVisible()
   expect(backend.getWorkouts()[0]!.exercises[0]!.sets[0]!.fact.reps).toBe(27)
 })
@@ -4477,4 +4481,61 @@ for (const role of ['client', 'trainer'] as const) for (const density of ['origi
   await expect(bodies.nth(0)).toHaveAttribute('inert', '')
   await expect(bodies.nth(1)).toHaveAttribute('inert', '')
   await expect(bodies.nth(2)).not.toHaveAttribute('inert', '')
+})
+
+for (const role of ['client', 'trainer'] as const) for (const density of ['original', 'compact'] as const) test(`Live single round and item disclosure ${role} ${density}`, async ({ page }, info) => {
+  await page.clock.setFixedTime(new Date('2026-11-04T09:00:00Z'))
+  const id = role === 'client' ? pilotId : 'c0ac0000-6010-4000-8000-000000000001'
+  await page.addInitScript(({ id, density }) => {
+    localStorage.setItem(`fit.liveExerciseAnimation.${id}`, 'false')
+    localStorage.setItem(`fit.clientLiveDensity.${id}`, density)
+    localStorage.setItem(`fit.coachLiveDensity.${id}`, density)
+    localStorage.setItem(`fit.coachmarks-seen.${id}`, JSON.stringify(['client-live-reference-timer-2026-10']))
+  }, { id, density })
+  const source = coachGestureWorkout(true, 4)
+  source.startedAt = '2026-11-04T08:59:00Z'
+  const backend = await mockPilot(page, { role, profileId: id, fitLime: true, clientLime: true, workouts: [source] })
+  await page.goto(`/workouts/${workoutId}/live`)
+  const group = page.locator('.exercise-block.live'), rounds = group.locator('.circuit-round')
+  const roundBody = (index: number) => rounds.nth(index).locator(':scope > .coach-v79-round-body,:scope > .client-circuit-round-body')
+  const cardBody = (exercise: number, round: number) => page.locator(`[data-live-card-key="round:${source.exercises[exercise]!.sets[round]!.id}"] > :is(.coach-v79-card-body,.client-live-card-body)`)
+  const blockBody = group.locator(':scope > .coach-v79-circuit-body,:scope > .client-circuit-body')
+  await expect(rounds).toHaveCount(2)
+  await expect(roundBody(0)).not.toHaveAttribute('inert', '')
+  await expect(roundBody(1)).toHaveAttribute('inert', '')
+  await expect(cardBody(0, 0)).not.toHaveAttribute('inert', '')
+  await expect(cardBody(1, 0)).toHaveAttribute('inert', '')
+  await page.screenshot({ path: info.outputPath('one-round-initial.png') })
+  await expect(page.locator('.live-exercise.upcoming > :is(.coach-v79-card-body,.client-live-card-body):not([inert])')).toHaveCount(0)
+  const retained = await page.locator(`[data-live-set-id="${source.exercises[0]!.sets[1]!.id}"]`).elementHandle()
+  const currentHeader = page.locator(`[data-live-card-key="round:${source.exercises[0]!.sets[0]!.id}"] .exercise-technique-trigger`)
+  await currentHeader.click()
+  await expect(cardBody(0, 0)).toHaveAttribute('inert', '')
+  await expect(roundBody(0)).not.toHaveAttribute('inert', '')
+  await expect(blockBody).not.toHaveAttribute('inert', '')
+  await currentHeader.click()
+  await expect(cardBody(0, 0)).not.toHaveAttribute('inert', '')
+  const progress = await page.locator('.live-session-progress-copy').innerText()
+  const rest = await page.evaluate(id => sessionStorage.getItem(`fit:live-rest-until:${id}`), workoutId)
+  await rounds.nth(1).locator('.circuit-round-toggle').click()
+  await expect(roundBody(0)).toHaveAttribute('inert', '')
+  await expect(roundBody(1)).not.toHaveAttribute('inert', '')
+  await expect(cardBody(0, 1)).not.toHaveAttribute('inert', '')
+  await expect(cardBody(1, 1)).toHaveAttribute('inert', '')
+  await expect(page.locator('.live-session-progress-copy')).toHaveText(progress, { useInnerText: true })
+  expect(await page.evaluate(id => sessionStorage.getItem(`fit:live-rest-until:${id}`), workoutId)).toBe(rest)
+  await rounds.nth(0).locator('.circuit-round-toggle').click()
+  for (let round = 0; round < 2; round++) for (let exercise = 0; exercise < 2; exercise++) {
+    const set = source.exercises[exercise]!.sets[round]!
+    await expect(cardBody(exercise, round)).not.toHaveAttribute('inert', '')
+    await expect(group.locator('[data-live-card-key] > :is(.coach-v79-card-body,.client-live-card-body):not([inert])')).toHaveCount(1)
+    await page.locator(`[data-live-set-id="${set.id}"]`).getByRole('button', { name: 'Готово, отдых', exact: true }).click()
+    await expect.poll(() => backend.getWorkouts()[0]!.exercises[exercise]!.sets[round]!.confirmedAt).not.toBeNull()
+  }
+  await expect(blockBody).toHaveAttribute('inert', '')
+  await expect(page.locator('.live-session-progress-copy')).toContainText(source.exercises[2]!.name)
+  await expect(page.locator('.live-exercise.current > :is(.coach-v79-card-body,.client-live-card-body)')).not.toHaveAttribute('inert', '')
+  expect(await retained!.evaluate(element => element.isConnected)).toBe(true)
+  await expect.poll(() => blockBody.evaluate(body => body.getBoundingClientRect().height)).toBeLessThan(1)
+  await page.screenshot({ path: info.outputPath('one-round-completed.png') })
 })

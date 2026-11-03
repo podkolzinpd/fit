@@ -1,7 +1,7 @@
 // Gate-on coverage is isolated from the existing trainer/client suites.
 // The existing workflow lane runs this on the actual production build in both engines.
 import { expect, test } from '@playwright/test'
-import { mockPilot, restTimerWorkout, workoutId } from './fit-lime-fixtures'
+import { revealLiveSet, mockPilot, restTimerWorkout, workoutId } from './fit-lime-fixtures'
 import { coachGestureWorkout, beginClientGesture } from './fit-lime-fixtures'
 
 // State fixtures isolate visual layout from the merge/split behavior scenario.
@@ -71,7 +71,7 @@ for (const density of ['original', 'compact'] as const) {
         await group.screenshot({ path: info.outputPath(`superset-${density}-completed-summary.png`) })
         await head.getByRole('button', { name: /^Результаты суперсета:/ }).click()
         for (const index of [0, 1]) {
-          await rounds.nth(index).locator('.circuit-round-toggle').click()
+          await revealLiveSet(page, source.exercises[0]!.sets[index]!.id)
           await expect(rounds.nth(index).locator('.live-exercise-head .overflow-trigger')).toHaveCount(2)
           const note = await openNote(rounds.nth(index))
           await expect(note).toBeVisible()
@@ -99,13 +99,13 @@ for (const density of ['original', 'compact'] as const) {
         const earlierNote = await openNote(rounds.first())
         await expect(earlierNote.locator('textarea')).toHaveValue('Не торопиться на опускании')
         await expect(group.locator('.live-exercise-note')).toHaveCount(1)
-        const title = current.locator('.exercise-technique-trigger').first()
-        await title.click()
-        await expect(current.locator('.coach-v79-card-body').first()).toHaveAttribute('inert', '')
-        await expect(rounds.first().locator('.coach-v79-card-body').first()).not.toHaveAttribute('inert', '')
-        await rounds.first().getByLabel('Фактические повторы', { exact: true }).last().press('Enter')
-        await expect(current.locator(`[data-live-set-id="${source.exercises[1]!.sets[1]!.id}"]`).getByLabel('Фактический вес', { exact: true })).toBeFocused()
-        await title.click()
+        await expect(current.locator('.coach-v79-round-body')).toHaveAttribute('inert', '')
+        await expect(rounds.first().locator('.coach-v79-round-body')).not.toHaveAttribute('inert', '')
+        const earlierReps = rounds.first().getByLabel('Фактические повторы', { exact: true }).first()
+        await earlierReps.press('Enter')
+        await expect(earlierReps).toBeFocused()
+        await expect(current.locator(`[data-live-set-id="${source.exercises[1]!.sets[1]!.id}"]`).getByLabel('Фактический вес', { exact: true })).not.toBeFocused()
+        await revealLiveSet(page, source.exercises[0]!.sets[1]!.id)
         await openNote(current)
         await expect(note.locator('textarea')).toHaveValue('Не торопиться на опускании')
         await current.locator('.live-exercise-head .overflow-trigger').first().click()
@@ -223,8 +223,11 @@ for(const density of ['original','compact'])test(`v79 superset lifecycle ${densi
  await expect(group.locator(':scope > .circuit-head')).toContainText('Круг 1 из 2')
  const firstId=source.exercises[0]!.sets[0]!.id,first=page.locator(`[data-live-set-id="${firstId}"]`)
  const field=first.getByLabel('Фактический вес',{exact:true}),fieldNode=await field.elementHandle()
- await rounds.first().getByLabel('Фактические повторы',{exact:true}).last().press('Enter')
- await expect(page.locator(`[data-live-set-id="${source.exercises[2]!.sets[0]!.id}"]`).getByLabel('Фактический вес',{exact:true})).toBeFocused()
+ await field.press('Enter')
+ await expect(first.getByLabel('Фактические повторы',{exact:true})).toBeFocused()
+ await first.getByLabel('Фактические повторы',{exact:true}).press('Enter')
+ await expect(first.getByLabel('Фактические повторы',{exact:true})).toBeFocused()
+ await expect(page.locator(`[data-live-set-id="${source.exercises[2]!.sets[0]!.id}"]`).getByLabel('Фактический вес',{exact:true})).not.toBeFocused()
  await field.fill('27.5');await first.locator('button.live-set-check').click()
  if(density==='original'){
   await expect(page.locator('.live-sync-state')).toContainText('Не удалось отправить')
@@ -249,6 +252,7 @@ for(const density of ['original','compact'])test(`v79 superset lifecycle ${densi
  await group.getByRole('button',{name:/^Результаты суперсета:/}).click()
  await rounds.nth(1).locator('.circuit-round-toggle').click()
  const editedId=source.exercises[1]!.sets[1]!.id,edited=page.locator(`[data-live-set-id="${editedId}"]`).getByLabel('Фактический вес',{exact:true})
+ await revealLiveSet(page,editedId)
  const beforeRest=await page.evaluate(id=>sessionStorage.getItem(`fit:live-rest-until:${id}`),workoutId)
  await edited.fill('31.5');await edited.press('Tab')
  await expect.poll(()=>backend.getWorkouts()[0]!.exercises[1]!.sets[1]!.fact.weightKg).toBe(31.5)

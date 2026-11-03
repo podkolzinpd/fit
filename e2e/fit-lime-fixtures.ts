@@ -925,3 +925,23 @@ export async function mockPublicTrainer(page: Page) {
   await page.route(`**/v1/trainers/${publicTrainerId}/public-profile`, (route) => route.fulfill({ contentType: 'application/json', body: JSON.stringify({ publicId: publicTrainerId, draft: publicTrainerDraft, published: publicTrainerDraft, listedInCatalog: true, publishedAt: '2026-09-24T09:00:00.000Z', updatedAt: '2026-09-24T09:00:00.000Z', version: 1, isBrandTrainer: false }) }))
   await page.route('**/v1/trainers/catalog*', (route) => route.fulfill({ contentType: 'application/json', body: JSON.stringify({ items: [{ publicId: publicTrainerId, profile: publicTrainerDraft, isBrandTrainer: false }], totalCount: 1, nextOffset: null }) }))
 }
+
+/** Open the existing retained editor through its real disclosure controls. */
+export async function revealLiveSet(page: Page, setId: string) {
+  const row = page.locator(`[data-live-set-id="${setId}"]`)
+  await expect(row).toHaveCount(1)
+  const group = page.locator('.exercise-block.live').filter({ has: row })
+  if (await group.count()) {
+    const body = group.locator(':scope > .coach-v79-circuit-body, :scope > .client-circuit-body')
+    if (await body.getAttribute('inert') !== null) await group.locator(':scope > .circuit-head button.coach-v79-circuit-heading, :scope > .circuit-head button.client-circuit-toggle').click()
+    const round = group.locator('.circuit-round').filter({ has: row })
+    const roundBody = round.locator(':scope > .coach-v79-round-body, :scope > .client-circuit-round-body')
+    if (await roundBody.getAttribute('inert') !== null) await round.locator(':scope > .circuit-round-toggle').click()
+    const card = group.locator('[data-live-card-key]').filter({ has: row })
+    if (await card.locator(':scope > .coach-v79-card-body, :scope > .client-live-card-body').getAttribute('inert') !== null) await card.locator('.exercise-technique-trigger').click()
+  } else {
+    const card = page.locator('.live-exercise').filter({ has: row })
+    if (await card.locator(':scope > .coach-v79-card-body, :scope > .client-live-card-body').getAttribute('inert') !== null) await card.locator('button.coach-v79-card-toggle').click()
+  }
+  await expect.poll(() => row.evaluate(element => element.closest('[inert]') === null)).toBe(true)
+}

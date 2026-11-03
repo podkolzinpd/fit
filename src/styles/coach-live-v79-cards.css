@@ -45,3 +45,9 @@
   .coach-live-v79 .coach-v79-card-body, .phone-frame.fit-client-lime.client-workout-reference :is(.client-circuit-body, .client-live-card-body), :is(.coach-live-v79, .client-live-v79) .coach-v79-toggle-arrow,
   :is(.coach-live-v79, .client-live-v79) .coach-v79-toggle-arrow img { transition: none; }
 }
+
+/* Client rounds retain the same forms and use the shared fold as coach rounds. */
+.client-live-v79 .client-circuit-round-body { display: grid; grid-template-rows: 1fr; opacity: 1; transition: grid-template-rows .32s cubic-bezier(.22,1,.36,1), opacity .32s cubic-bezier(.22,1,.36,1); }
+.client-live-v79 .client-circuit-round-body.folded { grid-template-rows: 0fr; opacity: 0; }
+.client-live-v79 .client-circuit-round-body > div { min-height: 0; overflow: clip; }
+@media (prefers-reduced-motion: reduce) { .client-live-v79 .client-circuit-round-body { transition: none; } }
