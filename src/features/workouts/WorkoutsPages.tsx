@@ -4146,9 +4146,7 @@ export function LiveWorkoutPage() {
     setExpandedExercises(current => new Set(current).add(exercise.id))
     if (coachV79 || clientReference) setLiveCardDisplay({ activeKey: automaticLiveCardKey, openedKey: liveRowCardKey(exercise, set) })
     if (exercise.blockType !== 'single') {
-      setExpandedClientBlocks(current => new Set(current).add(exercise.blockId))
       setExpandedCircuitRounds(current => new Set(current).add(`${exercise.blockId}:${set.position + 1}`))
-      setV79Folded(current => { const next = new Set(current); next.delete(`round:${set.id}`); return next })
     }
   }
   function reviewTimerSets() {
