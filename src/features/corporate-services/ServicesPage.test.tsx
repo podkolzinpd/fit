@@ -1,7 +1,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { render, screen, waitFor, within } from '@testing-library/react'
+import { act, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
+import { createMemoryRouter, Outlet, RouterProvider, useLocation } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { CorporateServiceEntry, CorporateServiceRecordPage, CorporateServicesPage } from './ServicesPage'
 import { CorporateServiceStatistics } from './ServiceStatistics'
@@ -18,13 +18,15 @@ const page = { records: [] as CorporateService[], offices: [office], timeZone: '
 function Location() { return <output data-testid="location">{useLocation().pathname}{useLocation().search}</output> }
 function mount(path: string) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })
-  render(<QueryClientProvider client={client}><MemoryRouter initialEntries={[path]}><Location /><Routes>
-    <Route path="/profile" element={<CorporateServiceEntry />} />
-    <Route path="/profile/yandex-services" element={<CorporateServicesPage />} />
-    <Route path="/profile/yandex-services/new" element={<CorporateServiceRecordPage />} />
-    <Route path="/profile/yandex-services/:id" element={<CorporateServiceRecordPage />} />
-    <Route path="/statistics" element={<CorporateServiceStatistics />} />
-  </Routes></MemoryRouter></QueryClientProvider>)
+  const router = createMemoryRouter([{ element: <><Location /><Outlet /></>, children: [
+    { path: '/profile', element: <CorporateServiceEntry /> },
+    { path: '/profile/yandex-services', element: <CorporateServicesPage /> },
+    { path: '/profile/yandex-services/new', element: <CorporateServiceRecordPage /> },
+    { path: '/profile/yandex-services/:id', element: <CorporateServiceRecordPage /> },
+    { path: '/statistics', element: <CorporateServiceStatistics /> },
+  ] }], { initialEntries: [path] })
+  render(<QueryClientProvider client={client}><RouterProvider router={router} /></QueryClientProvider>)
+  return router
 }
 beforeEach(() => {
   vi.resetAllMocks()
@@ -113,6 +115,61 @@ describe('corporate trainer service screens', () => {
     api.record.mockResolvedValueOnce({ ...row, kind: 'intro', version: 2 })
     await user.click(within(screen.getByRole('alertdialog')).getByRole('button', { name: 'Загрузить запись' }))
     await waitFor(() => expect(screen.getByLabelText('Услуга', { exact: true })).toHaveValue('intro'))
+  })
+  it('offers explicit recovery after a void conflict and retries the current version', async () => {
+    const user = userEvent.setup(); api.void.mockRejectedValueOnce(new Error('Конфликт отмены'))
+    mount(`/profile/yandex-services/${id}`)
+    await user.click(await screen.findByRole('button', { name: 'Отменить услугу' }))
+    await user.click(within(screen.getByRole('alertdialog')).getByRole('button', { name: 'Отменить услугу' }))
+    expect(await screen.findByText('Конфликт отмены')).toBeVisible()
+    api.record.mockResolvedValueOnce({ ...row, version: 2, kind: 'intro' })
+    await user.click(screen.getByRole('button', { name: 'Загрузить сохранённую запись' }))
+    await user.click(within(screen.getByRole('alertdialog')).getByRole('button', { name: 'Загрузить запись' }))
+    await waitFor(() => expect(screen.getByLabelText('Услуга', { exact: true })).toHaveValue('intro'))
+    await user.click(screen.getByRole('button', { name: 'Отменить услугу' }))
+    await user.click(within(screen.getByRole('alertdialog')).getByRole('button', { name: 'Отменить услугу' }))
+    await waitFor(() => expect(api.void).toHaveBeenLastCalledWith(id, expect.any(String), 2))
+  })
+  it('explicit recovery replaces unsaved input even when the server version did not change', async () => {
+    const user = userEvent.setup(); api.save.mockRejectedValueOnce(new Error('Нет связи'))
+    mount(`/profile/yandex-services/${id}`)
+    await user.selectOptions(await screen.findByLabelText('Услуга', { exact: true }), 'instruction')
+    await user.click(screen.getByRole('button', { name: 'Сохранить исправление' }))
+    await user.click(await screen.findByRole('button', { name: 'Загрузить сохранённую запись' }))
+    await user.click(within(screen.getByRole('alertdialog')).getByRole('button', { name: 'Загрузить запись' }))
+    await waitFor(() => expect(screen.getByLabelText('Услуга', { exact: true })).toHaveValue('tour'))
+    expect(screen.queryByText('Нет связи')).not.toBeInTheDocument()
+  })
+  it('keeps a selected historical range on back and displays an old saved fact', async () => {
+    const user = userEvent.setup(); mount(`/profile/yandex-services/${id}?from=2026-01-01&until=2026-01-02`)
+    await user.click(await screen.findByRole('button', { name: 'Назад' }))
+    await waitFor(() => expect(api.list).toHaveBeenLastCalledWith({ from: '2026-01-01', until: '2026-01-02' }, undefined))
+  })
+  it('returns a direct old record save to its own day instead of an empty current month', async () => {
+    const user = userEvent.setup(); mount(`/profile/yandex-services/${id}`)
+    await user.click(await screen.findByRole('button', { name: 'Сохранить исправление' }))
+    await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent('saved=1&from=2026-01-01&until=2026-01-02'))
+    // Updating the cache must not remount the form before its successful navigation.
+    expect(api.record).toHaveBeenCalledTimes(1)
+  })
+  it('confirms pending navigation and never redirects after a confirmed departure', async () => {
+    let finish!: (value: { saved: true; id: string; version: number }) => void
+    api.save.mockImplementation(() => new Promise(resolve => { finish = resolve }))
+    const user = userEvent.setup(); mount('/profile/yandex-services/new?kind=tour')
+    await user.click(await screen.findByRole('button', { name: 'Сохранить услугу' }))
+    const unload = new Event('beforeunload', { cancelable: true })
+    window.dispatchEvent(unload)
+    expect(unload.defaultPrevented).toBe(true)
+    await user.click(screen.getByRole('button', { name: 'Назад' }))
+    await user.click(within(screen.getByRole('alertdialog')).getByRole('button', { name: 'Остаться' }))
+    expect(screen.getByLabelText('Услуга', { exact: true })).toHaveValue('tour')
+    await user.click(screen.getByRole('button', { name: 'Назад' }))
+    await user.click(within(screen.getByRole('alertdialog')).getByRole('button', { name: 'Уйти' }))
+    await screen.findByRole('heading', { name: 'Мои услуги' })
+    await act(async () => { finish({ saved: true, id, version: 1 }); await new Promise(resolve => setTimeout(resolve, 0)) })
+    await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent('/profile/yandex-services?from='))
+    expect(screen.getByTestId('location').textContent).not.toContain('saved=1')
+    expect(api.save).toHaveBeenCalledTimes(1)
   })
   it('shows four real totals, historical filters and explicit retry', async () => {
     const user = userEvent.setup(); api.statistics.mockRejectedValueOnce(new Error('Нет связи')); mount('/statistics')

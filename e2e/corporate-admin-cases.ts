@@ -67,6 +67,32 @@ test('trainer settings stay visible when opened from a long list, including repe
   expect(writes).toBe(0)
 })
 
+test('office selection reveals the editor again and retains its unsaved draft', async ({ page }, info) => {
+  await mockNativeAiSession(page, 'trainer')
+  const offices = Array.from({ length: 40 }, (_, index) => ({ id: `50000000-0000-4000-8000-${String(index + 1).padStart(12, '0')}`, city: 'Тестовый город', name: `Офис ${index + 1}`, address: 'Тестовый адрес', archived: false, version: 1 }))
+  await page.route('**/v1/admin/access', route => route.fulfill({ json: { allowed: true } }))
+  await page.route('**/v1/admin/bundle', route => route.fulfill({ json: { offices, trainers: [] } }))
+  let writes = 0
+  await page.route('**/v1/admin/offices', route => { writes++; return route.abort() })
+  for (const width of [1366, 390]) {
+    await page.setViewportSize({ width, height: width > 700 ? 768 : 844 })
+    await page.goto(nativeAiUrl('/admin?tab=offices'))
+    const trigger = page.getByRole('button', { name: 'Изменить офис Офис 40', exact: true })
+    await trigger.click()
+    const editor = page.getByRole('form', { name: 'Данные офиса' })
+    const heading = editor.getByRole('heading', { name: 'Изменить офис', exact: true })
+    await expect(heading).toBeInViewport(); await expect(heading).toBeFocused()
+    await editor.getByLabel('Город', { exact: true }).fill('Несохранённый город')
+    await trigger.click()
+    await expect(heading).toBeInViewport(); await expect(heading).toBeFocused()
+    await expect(editor.getByLabel('Город', { exact: true })).toHaveValue('Несохранённый город')
+    await page.screenshot({ path: info.outputPath(`office-repeated-${width}.png`) })
+    await page.getByRole('button', { name: 'Изменить офис Офис 39', exact: true }).click()
+    await expect(editor.getByLabel('Город', { exact: true })).toHaveValue('Тестовый город')
+  }
+  expect(writes).toBe(0)
+})
+
 test('admin manages offices and trainer flags on a laptop, including validation and retry', async ({ page }, testInfo) => {
   await page.setViewportSize({ width:1366,height:768 })
   await mockNativeAiSession(page,'trainer')
