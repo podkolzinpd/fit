@@ -4184,7 +4184,7 @@ for (const role of ['client', 'trainer'] as const) test(`Live unconfirm preserve
   expect(backend.getWorkouts()[0]!.exercises[0]!.sets[1]!.confirmedAt).toBeNull()
 })
 
-for (const failure of ['rejected', 'response-lost', 'timer-response-lost'] as const) test(`Live unconfirm recovers ${failure} without clearing facts`, async ({ page }) => {
+for (const failure of ['rejected', 'response-lost', 'timer-response-lost', 'concurrent-fact'] as const) test(`Live unconfirm recovers ${failure} without clearing facts`, async ({ page }) => {
   await page.clock.setFixedTime(new Date('2026-11-03T09:00:00Z'))
   const timed = failure === 'timer-response-lost'
   const source = timed ? restTimerWorkout(0, true, 'timer') : restTimerWorkout()
@@ -4197,6 +4197,11 @@ for (const failure of ['rejected', 'response-lost', 'timer-response-lost'] as co
     if (attempts > 1) return route.fallback()
     if (failure === 'rejected') return route.fulfill({ status: 503, json: { error: 'unavailable' } })
     const set = backend.getWorkouts()[0]!.exercises[0]!.sets[0]!
+    if (failure === 'concurrent-fact') {
+      set.fact = { ...set.fact, weightKg: 45 }
+      set.version = (route.request().postDataJSON() as { expectedVersion: number }).expectedVersion + 1
+      return route.fulfill({ status: 409, json: { error: 'conflict' } })
+    }
     set.confirmedAt = null
     delete set.timerConfirmed
     set.version = (route.request().postDataJSON() as { expectedVersion: number }).expectedVersion + 1
@@ -4204,20 +4209,29 @@ for (const failure of ['rejected', 'response-lost', 'timer-response-lost'] as co
   })
   await page.goto(`/workouts/${workoutId}/live`)
   const row = page.locator(`[data-live-set-id="${source.exercises[0]!.sets[0]!.id}"]`)
+  const expectedWeight = failure === 'concurrent-fact' ? 42.5 : 40
+  if (failure === 'concurrent-fact') await row.getByLabel('Фактический вес', { exact: true }).fill('42.5')
   await row.getByRole('button', { name: /^Отменить выполнение:/ }).dblclick()
-  if (failure === 'rejected') {
+  if (failure === 'rejected' || failure === 'concurrent-fact') {
     await expect(page.getByRole('alert').filter({ hasText: 'Не удалось отменить' })).toBeVisible()
     await expect(row).toHaveClass(/confirmed/)
     expect(attempts).toBe(1)
+    if (failure === 'concurrent-fact') {
+      expect(backend.getWorkouts()[0]!.exercises[0]!.sets[0]!.fact.weightKg).toBe(45)
+      await expect(row.getByLabel('Фактический вес', { exact: true })).toHaveValue('42.5')
+    }
     await page.getByRole('button', { name: 'Повторить отмену', exact: true }).click()
   }
   await expect(row).not.toHaveClass(/confirmed/)
   if (timed) {
     expect(backend.getWorkouts()[0]!.exercises[0]!.sets[0]!.fact.durationSec).toBe(3)
     await expect(row.getByRole('button', { name: 'Старт подхода', exact: true })).toBeVisible()
-  } else await expect(row.getByLabel('Фактический вес', { exact: true })).toHaveValue('40')
+  } else {
+    await expect(row.getByLabel('Фактический вес', { exact: true })).toHaveValue(String(expectedWeight))
+    expect(backend.getWorkouts()[0]!.exercises[0]!.sets[0]!.fact.weightKg).toBe(expectedWeight)
+  }
   await expect(page.getByRole('alert').filter({ hasText: 'Не удалось отменить' })).toHaveCount(0)
-  expect(attempts).toBe(failure === 'rejected' ? 2 : 1)
+  expect(attempts).toBe(failure === 'rejected' || failure === 'concurrent-fact' ? 2 : 1)
   if (timed) {
     await page.getByRole('button', { name: 'Завершить тренировку', exact: true }).click()
     await page.locator('.finish-confirm').getByRole('button', { name: 'Завершить', exact: true }).click()

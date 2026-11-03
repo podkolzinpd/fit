@@ -179,3 +179,68 @@ it('allows a failed undo to retry with the refreshed version without dropping it
   expect(undo).toHaveBeenNthCalledWith(2, set.id, 4)
   await expect(coordinator.waitForIdle()).resolves.toBeUndefined()
 })
+
+it('resaves the pending value before undo after a concurrent server fact replaces the saved value', async () => {
+  let serverVersion = 1, attempts = 0
+  let fact: LiveSetDraft = { weightKg: 40, reps: 12 }
+  const save = vi.fn((_id: string, value: LiveSetDraft, version: number) => {
+    expect(version).toBe(serverVersion)
+    fact = { ...value }
+    return Promise.resolve(++serverVersion)
+  })
+  const undo = vi.fn((_id: string, version: number) => {
+    expect(version).toBe(serverVersion)
+    if (++attempts === 1) {
+      fact = { weightKg: 45, reps: 12 }
+      serverVersion++
+      return Promise.reject(new Error('concurrent fact'))
+    }
+    return Promise.resolve(++serverVersion)
+  })
+  const coordinator = createLiveSetCoordinator(save, vi.fn(), undo)
+  const confirmed = { ...set, fact, confirmedAt: '2026-11-03T09:00:00Z' }
+  await expect(coordinator.unconfirm(confirmed, draft)).rejects.toThrow('concurrent fact')
+  const refreshed = { ...confirmed, version: serverVersion, fact }
+  coordinator.sync(refreshed)
+  await coordinator.unconfirm(refreshed, draft)
+  expect(fact).toEqual(draft)
+  expect(save).toHaveBeenCalledTimes(2)
+  expect(undo).toHaveBeenLastCalledWith(set.id, 4)
+})
+
+it('ignores an old fact acknowledgement after a newer successful save', async () => {
+  const save = vi.fn(() => Promise.resolve(3))
+  const coordinator = createLiveSetCoordinator(save, vi.fn())
+  await coordinator.save(set, draft)
+  const oldDraft = { weightKg: 20, reps: 10 }
+  coordinator.sync({ ...set, version: 2, fact: oldDraft }, oldDraft)
+  await coordinator.save({ ...set, version: 3 }, draft)
+  expect(save).toHaveBeenCalledOnce()
+})
+
+it('does not mistake a timer-confirmed server fact for a human review with the same numbers', async () => {
+  const save = vi.fn().mockResolvedValueOnce(2).mockResolvedValueOnce(3)
+  const coordinator = createLiveSetCoordinator(save, vi.fn())
+  const automatic: LiveSetDraft = { durationSec: 3, timerConfirmed: true }
+  const reviewed: LiveSetDraft = { durationSec: 3 }
+  await coordinator.save(set, automatic)
+  const refreshed = { ...set, version: 2, fact: reviewed, timerConfirmed: true }
+  coordinator.sync(refreshed, reviewed)
+  await coordinator.save(refreshed, reviewed)
+  expect(save).toHaveBeenNthCalledWith(2, set.id, reviewed, 2)
+})
+
+it('does not restore an obsolete saved-value memo when its response arrives after a newer fact', async () => {
+  let release!: (version: number) => void
+  const save = vi.fn().mockImplementationOnce(() => new Promise<number>(resolve => { release = resolve })).mockResolvedValueOnce(4)
+  const undo = vi.fn((_id: string, version: number) => { expect(version).toBe(4); return Promise.resolve(5) })
+  const coordinator = createLiveSetCoordinator(save, vi.fn(), undo)
+  const saving = coordinator.save(set, draft)
+  await vi.waitFor(() => expect(save).toHaveBeenCalledOnce())
+  const newer = { ...set, version: 3, fact: { weightKg: 45, reps: 12 } }
+  coordinator.sync(newer)
+  release(2)
+  await saving
+  await coordinator.unconfirm(newer, draft)
+  expect(save).toHaveBeenNthCalledWith(2, set.id, draft, 3)
+})
