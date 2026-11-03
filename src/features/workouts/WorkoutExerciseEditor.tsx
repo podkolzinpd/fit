@@ -90,6 +90,7 @@ export function clearWorkoutLoad(exercises: readonly WorkoutExerciseDraft[]): Wo
 
 interface WorkoutExerciseEditorProps {
   exercises: readonly WorkoutExerciseDraft[]
+  onSaveAsTemplate?: () => void
   onChange: (exercises: WorkoutExerciseDraft[]) => void
   onOpenPicker: () => void
   onReplaceExercise: (index: number) => void
@@ -131,7 +132,7 @@ function PlanNumberField({ label, placeholder, name, value, decimal, disabled, o
     defaultValue={value} step={decimal ? 'any' : 1} decimal={decimal} directInput disabled={disabled} onValueChange={onChange} />
 }
 
-export function WorkoutExerciseEditor({ exercises, onChange, onOpenPicker, onReplaceExercise, onOpenTechnique, canOpenTechnique, exerciseCatalog = [], showTrainerComments = true, commentLabel = 'Заметка спортсмену', entryMode = 'plan', hideEmptyAddAction = false, previousResults = new Map(), showRpeByDefault = false, showRestByDefault = false, collapseInitialExercises = false, initialExercisesReady = true, reference = false, referenceAppearance = reference, safePlanInput = false, refinedPlan = false, disabled = false }: WorkoutExerciseEditorProps) {
+export function WorkoutExerciseEditor({ exercises, onSaveAsTemplate, onChange, onOpenPicker, onReplaceExercise, onOpenTechnique, canOpenTechnique, exerciseCatalog = [], showTrainerComments = true, commentLabel = 'Заметка спортсмену', entryMode = 'plan', hideEmptyAddAction = false, previousResults = new Map(), showRpeByDefault = false, showRestByDefault = false, collapseInitialExercises = false, initialExercisesReady = true, reference = false, referenceAppearance = reference, safePlanInput = false, refinedPlan = false, disabled = false }: WorkoutExerciseEditorProps) {
   const [reordering, setReordering] = useState(false)
   const [confirm, confirmDialog] = useConfirm()
   const [roundError, setRoundError] = useState<string | null>(null)
@@ -448,6 +449,7 @@ export function WorkoutExerciseEditor({ exercises, onChange, onOpenPicker, onRep
   const showEmptyAddAction = !hideEmptyAddAction
   const hasAdjustableWeight = exercises.some((exercise) => exercise.sets.some((set) => set.weightKg !== undefined))
   const planActions = [
+    ...(onSaveAsTemplate ? [{ label: 'Сохранить как шаблон', disabled: referenceControlsDisabled, onClick: onSaveAsTemplate }] : []),
     ...(hasAdjustableWeight ? [
       { label: 'Рабочие веса −5%', disabled: referenceControlsDisabled, onClick: () => commitExercises(adjustWorkoutLoad(latestExercises.current, .95)) },
       { label: 'Рабочие веса +5%', disabled: referenceControlsDisabled, onClick: () => commitExercises(adjustWorkoutLoad(latestExercises.current, 1.05)) },

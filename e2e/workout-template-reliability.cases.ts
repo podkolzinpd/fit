@@ -1,5 +1,6 @@
+import type { WorkoutTemplateDraft } from '../src/shared/domain'
 import { expect, test, type Page } from '@playwright/test'
-import { clientId, mockPilot } from './fit-lime-fixtures'
+import { clientId, mockPilot, restTimerWorkout, workoutId } from './fit-lime-fixtures'
 
 const actorId = 'c0ac0000-6010-4000-8000-000000000001'
 const templateId = '10000000-0000-4000-8000-000000000080'
@@ -198,5 +199,130 @@ export function workoutTemplateEntryCases() {
     expect(new Set(stored.exercises.map(exercise => exercise.blockId)).size).toBe(create ? 2 : 3)
     expect(businessWrites).toEqual([])
     await page.screenshot({ path: info.outputPath('template-entry-return.png') })
+  })
+}
+
+async function captureTemplateCreation(page: Page) {
+  const commands: WorkoutTemplateDraft[] = []
+  await page.route('**/v1/workout-templates', async route => {
+    if (route.request().method() === 'GET') return route.fulfill({ json: { templates: [] } })
+    const command = route.request().postDataJSON() as { draft: WorkoutTemplateDraft }
+    commands.push(command.draft)
+    return route.fulfill({ json: { template: { ...original, ...command.draft } } })
+  })
+  return commands
+}
+
+export function workoutTemplateSourceCases() {
+  test('Template source unsaved plan saves independent copy and returns without a workout write', { tag: ['@lime-templates'] }, async ({ page }, info) => {
+    await setup(page)
+    const key = `fit.workout-form-draft.${actorId}.new-${clientId}-2026-11-09`
+    const draft = { ...oldDraft, clientId, workoutDate: '2026-11-09', sourceVersion: undefined }
+    await page.addInitScript(({ key, draft }) => { if (!localStorage.getItem(key)) localStorage.setItem(key, JSON.stringify(draft)) }, { key, draft })
+    const commands = await captureTemplateCreation(page)
+    const writes: string[] = []
+    page.on('request', request => { if (request.method() !== 'GET' && /\/v1\/workouts(?:\/|$)/.test(new URL(request.url()).pathname)) writes.push(request.url()) })
+    await page.goto(`/workouts/new?client=${clientId}&date=2026-11-09`)
+    for (const width of [320,390,430,1440]) {
+      await page.setViewportSize({ width, height:844 })
+      const geometry = await page.locator('.coach-reference-form > .page-header').evaluate(header => {
+        const rect = header.getBoundingClientRect(), title = header.querySelector('h1')!.getBoundingClientRect()
+        const actions = header.querySelector('.coach-plan-template-actions')!.getBoundingClientRect()
+        return { height: rect.height, clearTitle: title.right <= actions.left, contained: [...header.querySelectorAll('button')].every(button => { const box = button.getBoundingClientRect(); return box.left >= rect.left && box.right <= rect.right && box.top >= rect.top && box.bottom <= rect.bottom && box.width >= 44 && box.height >= 44 }) }
+      })
+      expect(geometry).toEqual({ height:44, clearTitle:true, contained:true })
+    }
+    await page.setViewportSize({ width:390, height:844 })
+    await page.getByRole('button', { name: 'Другие действия с планом', exact: true }).click()
+    await page.getByRole('menuitem', { name: 'Сохранить как шаблон', exact: true }).click()
+    await expect(page.getByLabel('Название шаблона')).toHaveValue(draft.title)
+    await page.getByLabel('Название шаблона').fill('Независимый корпус')
+    await page.reload()
+    await expect(page.getByLabel('Название шаблона')).toHaveValue('Независимый корпус')
+    await page.getByRole('button', { name: 'Сохранить шаблон', exact: true }).click()
+    await expect(page).toHaveURL(new RegExp(`/workouts/new\\?client=${clientId}&date=2026-11-09$`))
+    await expect(page.getByRole('textbox', { name: 'Название тренировки', exact: true })).toHaveValue(draft.title)
+    expect(commands).toHaveLength(1)
+    expect(commands[0]!.exercises[0]!.blockId).not.toBe(draft.exercises[0]!.blockId)
+    const retained = await page.evaluate(key => JSON.parse(localStorage.getItem(key) ?? '{}') as { exercises: unknown[]; notes: string }, key)
+    expect(retained.exercises).toHaveLength(1)
+    expect(retained.notes).toBe(draft.notes)
+    expect(writes).toEqual([])
+    await page.screenshot({ path: info.outputPath('template-unsaved-plan-return.png') })
+    // The same feature stays available in the existing Mono menu; its layout remains unchanged.
+    await mockPilot(page, { profileId: actorId, fitLime: false, workouts: [] })
+    const monoCommands = await captureTemplateCreation(page)
+    await page.goto(`/workouts/new?client=${clientId}&date=2026-11-09`)
+    await expect(page.locator('.trainer-plan-methods')).toHaveCount(0)
+    await expect(page.getByRole('button', { name: 'Другие действия с планом', exact: true })).toHaveCount(0)
+    await page.getByRole('button', { name: 'Действия с планом', exact: true }).click()
+    await page.getByRole('menuitem', { name: 'Сохранить как шаблон', exact: true }).click()
+    await expect(page.getByLabel('Название шаблона')).toHaveValue(draft.title)
+    await expect(page.locator('.trainer-template-methods')).toHaveCount(0)
+    await page.getByRole('button', { name: 'Сохранить шаблон', exact: true }).click()
+    await expect(page.getByRole('textbox', { name: 'Название тренировки', exact: true })).toHaveValue(draft.title)
+    expect(monoCommands).toHaveLength(1)
+    expect(writes).toEqual([])
+  })
+
+  for (const status of ['planned', 'done']) test(`Template source ${status} returns to exact workout and copies plan without facts`, { tag: ['@lime-templates'] }, async ({ page }, info) => {
+    const source = { ...restTimerWorkout(), trainerId: actorId, createdBy: actorId, status, title: 'Исходный план', clientComment: 'Личная заметка клиента', wellbeing: 'normal' as const, discomfort: true }
+    source.exercises = source.exercises.map(exercise => ({ ...exercise, clientNote: 'Приватное', sets: exercise.sets.map(set => ({ ...set, weightKg: 40, fact: { weightKg: 45, reps: 9 }, confirmedAt: '2026-10-01T10:00:00Z' })) }))
+    await mockPilot(page, { profileId: actorId, fitLime: true, workouts: [source] })
+    const commands = await captureTemplateCreation(page)
+    const sourceWrites: string[] = []
+    page.on('request', request => { if (request.method() !== 'GET' && /\/v1\/workouts(?:\/|$)/.test(new URL(request.url()).pathname)) sourceWrites.push(request.url()) })
+    const origin = '/today?week=2026-09-21&range=2w&anchor=2026-09-24&mode=list&status=planned'
+    if (status === 'planned') {
+      await page.goto(origin)
+      await page.locator(`.fit-lime-history-row[href="/workouts/${workoutId}"]`).click()
+    } else await page.goto(`/workouts/${workoutId}`)
+    await page.getByRole('button', { name: 'Другие действия с тренировкой', exact: true }).click()
+    await page.getByRole('menuitem', { name: 'Сохранить как шаблон', exact: true }).click()
+    await expect(page.getByLabel('Название шаблона')).toHaveValue(source.title)
+    if (status === 'done') for (const width of [320,390,430,1440]) {
+      await page.setViewportSize({ width, height: 844 })
+      const geometry = await page.locator('.trainer-template-methods').evaluate(node => [...node.querySelectorAll('button')].map(button => {
+        const rect = button.getBoundingClientRect(), range = document.createRange()
+        range.selectNodeContents(button)
+        return { height: rect.height, width: rect.width, contained: [...range.getClientRects()].every(line => line.left >= rect.left && line.right <= rect.right && line.top >= rect.top && line.bottom <= rect.bottom) }
+      }))
+      expect(geometry.every(button => button.height === 64 && button.width >= 44 && button.contained)).toBe(true)
+    }
+    await page.setViewportSize({ width:390, height:844 })
+    await page.screenshot({ path: info.outputPath('template-workout-copy.png') })
+    await page.getByRole('button', { name: 'Сохранить шаблон', exact: true }).click()
+    await expect(page).toHaveURL(new RegExp(`/workouts/${workoutId}$`))
+    expect(commands).toHaveLength(1)
+    expect(commands[0]!.exercises[0]!.sets[0]!.weightKg).toBe(40)
+    expect(commands[0]!.exercises[0]!.blockId).not.toBe(source.exercises[0]!.blockId)
+    for (const forbidden of ['fact', 'confirmedAt', 'clientComment', 'clientNote', 'wellbeing', 'discomfort', 'clientId', 'workoutDate']) expect(JSON.stringify(commands[0])).not.toContain(`"${forbidden}"`)
+    expect(source.exercises[0]!.sets[0]!.fact.weightKg).toBe(45)
+    expect(sourceWrites).toEqual([])
+    if (status === 'planned') {
+      await page.getByRole('button', { name: 'Назад', exact: true }).click()
+      await expect(page).toHaveURL(url => url.pathname + url.search === origin)
+    }
+  })
+
+  test('Template source history reaches older 45th plan after empty pages and preserves server client filter', { tag: ['@lime-templates'] }, async ({ page }, info) => {
+    const rows = Array.from({ length: 45 }, (_, index) => ({ ...restTimerWorkout(), id: `20000000-0000-4000-8000-${String(index).padStart(12, '0')}`, trainerId: actorId, createdBy: actorId, status: index === 43 ? 'cancelled' : 'done', title: `История ${index + 1}`, exercises: index < 42 ? [] : restTimerWorkout().exercises }))
+    await mockPilot(page, { profileId: actorId, fitLime: true, workouts: rows })
+    const reads: Array<{ offset: string | null; client: string | null; limit: string | null }> = []
+    page.on('request', request => { const url = new URL(request.url()); if (url.pathname === '/v1/training-data' && url.searchParams.get('scope') === 'workouts') reads.push({ offset: url.searchParams.get('offset'), client: url.searchParams.get('clientId'), limit: url.searchParams.get('limit') }) })
+    await page.goto('/schedule/templates/from-workout')
+    await expect(page.getByText('В этой части истории нет тренировок с упражнениями. Загрузите следующую.')).toBeVisible()
+    await expect(page.getByText('Нет тренировок для основы', { exact: true })).toHaveCount(0)
+    await page.getByRole('combobox', { name: 'Клиент', exact: true }).selectOption(clientId)
+    await page.getByRole('button', { name: 'Показать ещё', exact: true }).click()
+    await page.getByRole('button', { name: 'Показать ещё', exact: true }).click()
+    await expect(page.getByRole('link', { name: /История 45/ })).toBeVisible()
+    await expect(page.getByRole('link', { name: /История 44/ })).toBeVisible()
+    await expect(page.locator('.template-source-workout')).toHaveCount(3)
+    expect(reads.filter(read => read.client === clientId).map(read => read.offset)).toEqual(['0', '20', '40'])
+    expect(reads.filter(read => read.client === clientId).map(read => read.limit)).toEqual(['20', '20', '20'])
+    await page.screenshot({ path: info.outputPath('template-history-45.png') })
+    await page.getByRole('link', { name: /История 45/ }).click()
+    await expect(page.getByLabel('Название шаблона')).toHaveValue('История 45')
   })
 }
