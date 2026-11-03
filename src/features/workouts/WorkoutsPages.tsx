@@ -3170,10 +3170,10 @@ export function LiveWorkoutPage() {
       onOpenTechnique={() => setTechniqueExercise(meta)}
     />
   }
-  function referenceLiveSummary(exercise: WorkoutExerciseModel) {
+  function referenceLiveSummary(exercise: WorkoutExerciseModel, completedLabel = true) {
     const values = exercise.sets.map((set) => set.confirmedAt ? factLine(set, false, exercise.ref) : planLine(exercise.inputKind, set, exercise.ref))
     const provenance = exercise.sets.every((set) => set.confirmedAt) ? 'Результат' : exercise.sets.some((set) => set.confirmedAt) ? 'План и факт' : 'План'
-    return `${provenance}: ${coachLiveSetSummary(values)}`
+    return `${!completedLabel && exercise.sets.every(set => set.confirmedAt) ? '' : `${provenance}: `}${coachLiveSetSummary(values)}`
   }
   useEffect(() => {
     if (!actor?.userId || !query.data) return
@@ -4173,7 +4173,7 @@ export function LiveWorkoutPage() {
     const status = clientCardStatus(exercise), display = clientCardDisplays.get(v79CardKey(exercise))
     if (expandedExercises.has(exercise.id) || exercise.sets.some(set => editingSets.has(set.id) || set.id === saveErrorSetId
       || status === 'done' && pendingSetDrafts.current.has(set.id))) return true
-    return display?.status === status && display.expanded !== null ? display.expanded : status === 'current'
+    return display?.status === status && display.expanded !== null ? display.expanded : status !== 'done'
   }
   function clientCardCollapseBlocked(exercise: WorkoutExerciseModel) {
     return rootMutationPending || save.isPending || confirm.isPending
@@ -4181,6 +4181,14 @@ export function LiveWorkoutPage() {
   }
   function setClientCardExpanded(exercise: WorkoutExerciseModel, expanded: boolean) {
     if (!expanded && clientCardCollapseBlocked(exercise)) return
+    if (!expanded) {
+      // The footer menu is inside the retained fold. Move its focus to the
+      // visible header before making that body inert, without native scrolling.
+      const card = liveSetForms.current.get(exercise.sets[0]?.id ?? '')?.closest('.client-live-card')
+      if (card?.querySelector('.client-live-card-body')?.contains(document.activeElement)) {
+        card.querySelector<HTMLButtonElement>('.coach-v79-card-toggle')?.focus({ preventScroll: true })
+      }
+    }
     setClientCardDisplays(current => new Map(current).set(v79CardKey(exercise), { status: clientCardStatus(exercise), expanded }))
     setExpandedExercises(current => { if (!current.has(exercise.id)) return current; const next = new Set(current); next.delete(exercise.id); return next })
     if (!expanded && exercise.sets.every(set => set.confirmedAt)) {
@@ -4216,7 +4224,7 @@ export function LiveWorkoutPage() {
   }
   function liveExerciseFooter(exercise: WorkoutExerciseModel, actions?: ReactNode) {
     const add = canManageLiveStructure && <button type="button" className="secondary live-add-set" disabled={coachReference ? structureMutationPending : rootMutationPending} onClick={() => appendSet.mutate(exercise.id)}><AddActionLabel>Подход</AddActionLabel></button>
-    if (coachV79) {
+    if (coachV79 || clientReference) {
       const technique = techniqueActionFor(exercise)
       return <><div className="coach-v79-exercise-tools">{add}{technique && <button type="button" className="coach-v79-instruction" onClick={technique}>Инструкция</button>}{actions}</div>{liveCommentField(exercise)}</>
     }
@@ -4247,7 +4255,8 @@ export function LiveWorkoutPage() {
     const canCollapse = clientReference && exercise.sets.every((set) => set.confirmedAt) && clientCardExpanded(exercise)
     const collapseBlocked = clientCardCollapseBlocked(exercise)
     const circuitTechnique = coachV79 && circuitSetId ? techniqueActionFor(exercise) : undefined
-    return <OverflowMenu trigger={coachV79 && footer ? <span>Действия</span> : undefined} items={[
+    return <OverflowMenu trigger={(coachV79 || clientReference) && footer ? <span>Действия</span> : undefined} items={[
+      ...(clientReference && footer && exercise.id !== activeLiveExercise?.id && exercise.sets.some(set => !set.confirmedAt) ? [{ label: exercise.sets.some(set => set.confirmedAt) ? 'Продолжить упражнение' : 'Начать упражнение', disabled: rootMutationPending, onClick: () => activateLiveExercise(exercise) }] : []),
       ...(circuitTechnique ? [{ label: 'Инструкция', onClick: circuitTechnique }] : []),
       ...(coachV79 && circuitSetId ? [{ label: 'Заметка тренера', onClick: () => {
         setV79Folded(previous => { const next = new Set(previous); next.delete(`round:${circuitSetId}`); return next })
@@ -4374,7 +4383,7 @@ export function LiveWorkoutPage() {
       {swipeSet(<WorkoutSetRow state={set.confirmedAt && !isEditing ? 'completed' : (clientLime || coachReference) && !current && !isEditing ? 'planned' : 'current'} className="live-set-grid">
         <span className="workout-set-number live-set-number" aria-label={label}>{setNumber ?? (clientReference ? null : '•')}</span>
         <LiveSetLayout client={clientReference}>
-        <LiveSetFields inputKind={exercise.inputKind} exerciseRef={exercise.ref} source={exercise.source} set={displayedSet} editing={isEditing} showRpe={showRpe} carriedWeightKey={carriedLiveWeightKey(exercise, set)} reference={visualReference} clientLayout={clientReference} directInput={directLiveInput} quietUnits={densityEnabled || clientReference} workTimer={personWorkTimer} referenceHeader={coachV79} />
+        <LiveSetFields inputKind={exercise.inputKind} exerciseRef={exercise.ref} source={exercise.source} set={displayedSet} editing={isEditing} showRpe={showRpe} carriedWeightKey={carriedLiveWeightKey(exercise, set)} reference={visualReference} clientLayout={clientReference} directInput={directLiveInput} quietUnits={densityEnabled || clientReference} workTimer={personWorkTimer} referenceHeader={coachV79 || clientReference} />
         <div className="live-set-confirm">
           {set.confirmedAt && isEditing
             ? <button type="button" className="secondary live-set-save" aria-label="Сохранить" disabled={save.isPending}
@@ -4756,40 +4765,27 @@ export function LiveWorkoutPage() {
             const collapsed = !coachV79 && allDone && !expandedExercises.has(exercise.id) && !justCompleted && !editing
             if (clientReference) {
               const expanded = clientCardExpanded(exercise)
-              const compactCompleted = allDone && !expanded
-              const compactUpcoming = blockStatus === 'upcoming' && !expanded
-              const mounted = blockStatus === 'current' || expanded || clientCardDisplays.has(v79CardKey(exercise))
-              const controls = <span className="client-live-card-controls">{clientCardToggle(exercise)}{exerciseMenu(exercise, canReorder, removableSet, groupingItems)}{reorder}</span>
+              const thumbnail = liveHeaderThumbnail(exercise, blockStatus === 'current')
+              const completedMark = allDone && <span className="client-live-completed-mark" role="img" aria-label="Все подходы выполнены"><CheckIcon /></span>
+              const leading = thumbnail ? <span className="client-live-card-media">{thumbnail}{completedMark}</span> : undefined
               const timerPending = exercise.sets.some(set => set.confirmedAt && set.timerConfirmed)
-              const countLabel = exercise.sets.length === 1 ? 'подход' : exercise.sets.length < 5 ? 'подхода' : 'подходов'
-              const result = exercise.sets.map(set => factLine(set, true, exercise.ref)).filter(Boolean).slice(-1)[0]
-              const compact = <WorkoutExerciseCompact state="completed" className="live-exercise-collapsed" title={exercise.name} leading={liveHeaderThumbnail(exercise)}
-                meta={`${exercise.sets.length} ${countLabel}${result ? ` · ${result}` : ''}`} action={timerPending ? <span className="sr-only">Засчитано таймером</span> : undefined}
-                onClick={() => setClientCardExpanded(exercise, true)} />
               return swipeLive(exercise, <WorkoutExercise state={blockStatus === 'done' ? 'completed' : blockStatus}
-                className={`client-live-card${compactCompleted ? ' client-live-card-compact' : compactUpcoming ? ' live-exercise-upcoming' : ` live-exercise ${blockStatus}`}`}>
-                {compactCompleted ? <div className="live-completed-gesture-head">
-                  {timerPending ? <div className="live-timer-pending" data-timer-pending={exercise.id}>{compact}
-                    <button type="button" className="live-timer-confirm" aria-label={`Подтвердить подходы: ${exercise.name}`} aria-busy={acceptingTimerSets === exercise.id}
-                      disabled={acceptingTimerSets !== null || save.isPending} onClick={() => void acceptExerciseTimerSets(exercise)}>Подтвердить</button>
-                  </div> : compact}
-                  <span className="exercise-head-actions">{controls}</span>
-                </div> : <WorkoutExerciseHeader className="live-exercise-head" name={exercise.name}
-                  leading={liveHeaderThumbnail(exercise, blockStatus === 'current')} description={compactUpcoming ? undefined : livePreviousResult(exercise)}
-                  onTitleClick={techniqueActionFor(exercise)} showTechniqueLabel={false} actions={controls} />}
-                <WorkoutFoldBody className="client-live-card-body" folded={!expanded}>{mounted ? <>
+                className={`client-live-card live-exercise ${blockStatus}`}>
+                <WorkoutExerciseHeader className="live-exercise-head" name={exercise.name}
+                  leading={leading} titleAdornment={!thumbnail ? completedMark : undefined} summary={referenceLiveSummary(exercise, false)} summaryInCopy
+                  onTitleClick={() => setClientCardExpanded(exercise, !expanded)} titleActionLabel={`Подходы упражнения «${exercise.name}»`}
+                  titleExpanded={expanded} showTechniqueLabel={false} actions={<>{clientCardToggle(exercise)}{reorder}</>} />
+                {timerPending && <div className="live-timer-pending" data-timer-pending={exercise.id}>
+                  <button type="button" className="live-timer-confirm" aria-label={`Подтвердить подходы: ${exercise.name}`} aria-busy={acceptingTimerSets === exercise.id}
+                    disabled={acceptingTimerSets !== null || save.isPending} onClick={() => void acceptExerciseTimerSets(exercise)}>Подтвердить</button>
+                </div>}
+                <WorkoutFoldBody className="client-live-card-body" folded={!expanded}><div className="client-live-card-content">
                   {liveTrainerNote(exercise)}
                   <WorkoutSetTable variant="live" inputKind={exercise.inputKind} columnLabels={exerciseSetColumnLabels(exercise)} showRpe={isRpeVisible(exercise.id)} trailingLabel="Статус">
                     {exercise.sets.map((set, index) => renderLiveSet(exercise, set, `Подход ${index + 1}`, set.id === activeSetId))}
                   </WorkoutSetTable>
-                  {liveExerciseFooter(exercise)}
-                </> : null}</WorkoutFoldBody>
-                {compactUpcoming && <div className="live-upcoming-row"><p className="live-upcoming-summary">
-                  <span>{exercise.sets.some(set => set.confirmedAt) ? `Выполнено ${exercise.sets.filter(set => set.confirmedAt).length} из ${exercise.sets.length}` : `${exercise.sets.length} ${countLabel}`}</span>
-                  <span>{exercise.sets.map(set => planLine(exercise.inputKind, set, exercise.ref)).find(Boolean)}</span>
-                </p><button type="button" className="secondary live-exercise-start" disabled={rootMutationPending}
-                  aria-label={`${exercise.sets.some(set => set.confirmedAt) ? 'Продолжить' : 'Начать'} упражнение «${exercise.name}»`}
-                  onClick={() => { setClientCardExpanded(exercise, true); activateLiveExercise(exercise) }}>{exercise.sets.some(set => set.confirmedAt) ? 'Продолжить' : 'Начать'}</button></div>}
+                  {liveExerciseFooter(exercise, exerciseMenu(exercise, canReorder, removableSet, groupingItems, true))}
+                </div></WorkoutFoldBody>
               </WorkoutExercise>)
             }
             if (collapsed) {
@@ -4828,7 +4824,7 @@ export function LiveWorkoutPage() {
               <WorkoutExerciseHeader className="live-exercise-head" name={exercise.name} leading={coachReference ? referenceNumber(exercise) : liveHeaderThumbnail(exercise, blockStatus === 'current')} description={clientLime ? livePreviousResult(exercise) : undefined} summary={coachReference ? referenceLiveSummary(exercise) : undefined} onTitleClick={coachV79 ? () => toggleV79Card(exercise) : techniqueActionFor(exercise)} titleActionLabel={coachV79 ? `${v79IsFolded(exercise) ? 'Развернуть' : 'Свернуть'}: ${exercise.name}` : undefined} titleExpanded={coachV79 ? !v79IsFolded(exercise) : undefined} showTechniqueLabel={false} actions={coachV79 ? v79CardToggle(exercise) : <>{exerciseMenu(exercise, canReorder, removableSet, groupingItems)}{!coachReference && reorder}</>} />
               {v79CardBody(exercise, <>{liveTechniqueFor(exercise, blockStatus === 'current')}
               {liveTrainerNote(exercise)}
-              {!clientLime && livePreviousResult(exercise)}
+              {!clientLime && !coachV79 && livePreviousResult(exercise)}
               <WorkoutSetTable variant="live" inputKind={exercise.inputKind} columnLabels={exerciseSetColumnLabels(exercise)} showRpe={isRpeVisible(exercise.id)} trailingLabel="Статус">
                 {exercise.sets.map((set, index) => renderLiveSet(exercise, set, `Подход ${index + 1}`, set.id === activeSetId))}
               </WorkoutSetTable>

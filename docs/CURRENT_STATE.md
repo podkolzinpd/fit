@@ -1,8 +1,11 @@
 28.10 — Чат: плашка даты перед первым сообщением дня («Сегодня», «Вчера», «26 октября», «12 марта 2025»), раньше «Новые сообщения»; в списке чатов дата по давности. День по часам телефона. chat-dates.ts + тесты.
 # Fit — текущий индекс
-Шаблоны тренера: [утверждённые3PR/TMPA101–108](design/COACH_WORKFLOW_AUDIT_20261031.md#план-трёх-pr-по-шаблонам-тренера--02112026); PR1 в работе, затемPR2/PR3.
+Шаблоны: [TMPA101–108,3PR](design/COACH_WORKFLOW_AUDIT_20261031.md#план-трёх-pr-по-шаблонам-тренера--02112026); PR1 в работе; PR2/PR3 далее.
+02.11 — CI: production-mode browser набор873 разделяется на4 части без сокращения;
+[план, сохранность и исправления flaky swipe/video](design/PRODUCTION_BROWSER_CI_SHARDS_20261102.md). CI нового head ещё гейт.
+TC101–107: [план/статус](design/TRAINER_CONNECTION_CONFIRMATION_20261102.md). В работе.
 P2: PR1928 слит; PR1929 — frontend SDK. PR1909 закрыт.
-MC1: [PR1927: база1932; CI/выпуск](design/CLIENT_REFERENCE_SCREENS_20261029.md).
+MC1/Live: [1943: CI/выпуск, §88](design/CLIENT_REFERENCE_SCREENS_20261029.md).
 YAFIT-699: компактный список клиентов и гостевое приглашение,2PR. [План/проверки](design/COACH_CLIENTS_AND_INVITATION_20261031.md); [статус выпуска](https://st.yandex-team.ru/YAFIT-699).
 ФИТ20: [все статусы R104-S](design/COACH_RESCHEDULE_AND_DAY_GESTURES_20261031.md), [PR1923: CI](https://github.com/podkolzinpd/fit/pull/1923); [F201–208: CI/выпуск](design/COACH_WORKFLOW_AUDIT_20261031.md).
 31.10 — YAFIT-698: проведение с планом/без, отмена Live/крестик, фильтр истории. [План](design/COACH_QUICK_COMPLETION_20261031.md); [статус](https://st.yandex-team.ru/YAFIT-698).
@@ -26,8 +29,8 @@ P3/PR1881 опубликован наf847f25b:213 файлов/health и каб�
 P4/PR1882 опубликован наe5b5aa1d:213 файлов/health и public UI3/3 проверены.
 P1–P4 завершены; итог — итерация26 канонического журнала и YAFIT-674.
 31.10 справочник заполнен:32 офиса добавлены,33/33 после reload; итерация27.
-02.11: [кабинет Яндекса](design/CORPORATE_ADMIN_20261027.md): PR1930 опубликован.
-Второй допуск включён, ждёт входа. Приглашения готовятся тест-пилотом; статистика отдельно.
+02.11: [кабинет Яндекса](design/CORPORATE_ADMIN_20261027.md): PR1930/1937 опубликованы.
+Учёт услуг SRV301–306:2PR в работе, отдельный тест-допуск. Второй admin ждёт входа.
 
 ## Точка продолжения
 [UX:4PR, проверки](design/WORKOUT_LIFECYCLE_UX_AUDIT_20261101.md).

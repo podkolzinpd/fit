@@ -679,6 +679,7 @@ test('iPhone: тренер назначает интервалы, спортсм
     await trainer.getByLabel('Возраст').fill('30')
     await trainer.getByLabel('Рост, см').fill('170')
     await trainer.getByLabel('Начальный вес, кг').fill('60')
+    await trainer.keyboard.press('Escape')
     await Promise.all([
       trainer.waitForURL(/\/clients\/[0-9a-f-]+$/),
       trainer.getByRole('button', { name: 'Сохранить' }).click(),
@@ -697,6 +698,7 @@ test('iPhone: тренер назначает интервалы, спортсм
     await client.goto('/join')
     await client.getByLabel('Код приглашения').fill(code!)
     await client.getByRole('button', { name: 'Присоединиться' }).click()
+    await client.getByRole('button', { name: 'Подключить тренера', exact: true }).click()
     await expect(client.getByRole('heading', { name: 'Тренер подключён' })).toBeVisible()
     await client.getByRole('button', { name: 'Открыть кабинет' }).click()
     await expect(client).toHaveURL(/\/me$/)
