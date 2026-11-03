@@ -20,7 +20,7 @@ function draftKey(draft: LiveSetDraft): string {
   ])
 }
 
-export function createLiveSetCoordinator(saveLiveSet: SaveLiveSet, confirmLiveSet: ConfirmLiveSet) {
+export function createLiveSetCoordinator(saveLiveSet: SaveLiveSet, confirmLiveSet: ConfirmLiveSet, unconfirmLiveSet?: ConfirmLiveSet) {
   const versions = new Map<string, number>()
   const savedDrafts = new Map<string, string>()
   const tails = new Map<string, Promise<void>>()
@@ -78,6 +78,14 @@ export function createLiveSetCoordinator(saveLiveSet: SaveLiveSet, confirmLiveSe
         const confirmedVersion = await confirmLiveSet(set.id, savedVersion)
         versions.set(set.id, confirmedVersion)
         return confirmedVersion
+      }),
+    unconfirm: (set: WorkoutSet, draft: LiveSetDraft) =>
+      enqueue(set.id, `unconfirm:${draftKey(draft)}`, async () => {
+        if (!unconfirmLiveSet) throw new Error('Отмена подхода недоступна')
+        const savedVersion = await saveChangedDraft(set, draft)
+        const version = await unconfirmLiveSet(set.id, savedVersion)
+        versions.set(set.id, version)
+        return version
       }),
     waitForIdle: async () => {
       await Promise.allSettled([...pending])

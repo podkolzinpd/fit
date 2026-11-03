@@ -4131,6 +4131,38 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
     )
   })
 
+  app.post('/v1/workout-sets/:setId/unconfirm', async (request, reply) => {
+    const sessionToken = readCompatibleYandexActorSession(request.headers)
+    const { setId } = request.params as { setId?: unknown }
+    const command = readLiveOperationRequest(request.body)
+    if (sessionToken === undefined) {
+      return reply.code(401).send({ error: 'unauthorized' })
+    }
+    if (
+      typeof setId !== 'string'
+      || !uuidPattern.test(setId)
+      || command === undefined
+    ) {
+      return reply.code(400).send({ error: 'invalid_request' })
+    }
+    const writer = options.pilotWorkoutsWriter
+    if (writer === undefined) {
+      return reply.code(503).send({ error: 'service_unavailable' })
+    }
+    return sendPilotCommand(
+      reply,
+      () => writer.unconfirmLiveSet(
+        sessionToken,
+        setId,
+        command.expectedVersion,
+        command.operationId,
+      ),
+      (result) => reply
+        .header('cache-control', 'no-store')
+        .send({ set: { id: setId, ...result } }),
+    )
+  })
+
   app.post('/v1/workouts/:workoutId/finish', async (request, reply) => {
     const sessionToken = readCompatibleYandexActorSession(request.headers)
     const { workoutId } = request.params as { workoutId?: unknown }

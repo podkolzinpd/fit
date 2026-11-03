@@ -147,3 +147,35 @@ describe('live set coordinator', () => {
     expect(confirmLiveSet).toHaveBeenCalledOnce()
   })
 })
+
+it('serializes save, confirmation and undo, deduplicating a double tap', async () => {
+  let releaseSave!: (version: number) => void
+  const save = vi.fn(() => new Promise<number>(resolve => { releaseSave = resolve }))
+  const confirm = vi.fn(() => Promise.resolve(3))
+  const undo = vi.fn(() => Promise.resolve(4))
+  const coordinator = createLiveSetCoordinator(save, confirm, undo)
+  const entered = { weightKg: 45, reps: 12 }
+  const saved = coordinator.save(set, entered)
+  const confirmed = coordinator.confirm(set, entered)
+  const undone = coordinator.unconfirm(set, entered)
+  const duplicate = coordinator.unconfirm(set, entered)
+  await vi.waitFor(() => expect(save).toHaveBeenCalledOnce())
+  expect(undo).not.toHaveBeenCalled()
+  releaseSave(2)
+  await expect(Promise.all([saved, confirmed, undone, duplicate])).resolves.toEqual([2, 3, 4, 4])
+  expect(confirm).toHaveBeenCalledWith(set.id, 2)
+  expect(undo).toHaveBeenCalledExactlyOnceWith(set.id, 3)
+})
+
+it('allows a failed undo to retry with the refreshed version without dropping its fact', async () => {
+  const undo = vi.fn().mockRejectedValueOnce(new Error('lost response')).mockResolvedValue(5)
+  const save = vi.fn(() => Promise.resolve(3))
+  const coordinator = createLiveSetCoordinator(save, vi.fn(), undo)
+  await expect(coordinator.unconfirm(set, draft)).rejects.toThrow('lost response')
+  await expect(coordinator.waitForIdle()).rejects.toThrow('lost response')
+  coordinator.sync({ ...set, version: 4, fact: draft, confirmedAt: '2026-11-03T09:00:00Z' }, draft)
+  await expect(coordinator.unconfirm(set, draft)).resolves.toBe(5)
+  expect(save).toHaveBeenCalledOnce()
+  expect(undo).toHaveBeenNthCalledWith(2, set.id, 4)
+  await expect(coordinator.waitForIdle()).resolves.toBeUndefined()
+})

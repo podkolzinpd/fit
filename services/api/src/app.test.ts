@@ -2784,6 +2784,7 @@ function buildWorkoutsWriter(error?: Error): {
   appendLiveRound: ReturnType<typeof vi.fn>
   cancelPlanned: ReturnType<typeof vi.fn>
   confirmLiveSet: ReturnType<typeof vi.fn>
+  unconfirmLiveSet: ReturnType<typeof vi.fn>
   deletePlanned: ReturnType<typeof vi.fn>
   deleteWorkout: ReturnType<typeof vi.fn>
   finishLive: ReturnType<typeof vi.fn>
@@ -2849,6 +2850,7 @@ function buildWorkoutsWriter(error?: Error): {
   const startLive = vi.fn(() => result({ version: 2, replayed: false }))
   const saveLiveSet = vi.fn(() => result({ version: 2, replayed: false }))
   const confirmLiveSet = vi.fn(() => result({ version: 3, replayed: false }))
+  const unconfirmLiveSet = vi.fn(() => result({ version: 4, replayed: false }))
   const finishLive = vi.fn(() => result({ version: 3, replayed: false }))
   const setLivePause = vi.fn(() => result({ version: 4, replayed: false }))
   const removeLiveSet = vi.fn(() => result({
@@ -2904,6 +2906,7 @@ function buildWorkoutsWriter(error?: Error): {
       appendLiveRound,
       cancelPlanned,
       confirmLiveSet,
+      unconfirmLiveSet,
       deletePlanned,
       deleteWorkout,
       finishLive,
@@ -2933,6 +2936,7 @@ function buildWorkoutsWriter(error?: Error): {
     appendLiveRound,
     cancelPlanned,
     confirmLiveSet,
+    unconfirmLiveSet,
     deletePlanned,
     deleteWorkout,
     finishLive,
@@ -5319,6 +5323,32 @@ describe('pilot live workout core commands', () => {
       headers: { 'x-fit-pilot-session': sessionToken }, payload: { expectedVersion: 1, operationId: OPERATION_IDS.finish, attendance: true } })
     expect(bad.statusCode).toBe(400)
     expect(writer.finishLive).toHaveBeenCalledOnce()
+  })
+
+  it('unconfirms with the existing actor/version/operation contract and validates inputs', async () => {
+    const writer = buildWorkoutsWriter()
+    const app = buildApp({ pilotWorkoutsWriter: writer.pilotWorkoutsWriter, logger: false })
+    apps.push(app)
+    const request = { method: 'POST' as const, url: `/v1/workout-sets/${WORKOUT_SET_ID}/unconfirm`,
+      headers: { 'x-fit-pilot-session': sessionToken }, payload: { expectedVersion: 3, operationId: OPERATION_IDS.confirm } }
+    const response = await app.inject(request)
+    expect(response.statusCode).toBe(200)
+    expect(response.headers['cache-control']).toBe('no-store')
+    expect(response.json()).toEqual({ set: { id: WORKOUT_SET_ID, version: 4, replayed: false } })
+    expect(writer.unconfirmLiveSet).toHaveBeenCalledWith(sessionToken, WORKOUT_SET_ID, 3, OPERATION_IDS.confirm)
+    expect((await app.inject({ ...request, headers: {} })).statusCode).toBe(401)
+    expect((await app.inject({ ...request, payload: { expectedVersion: 0, operationId: OPERATION_IDS.confirm } })).statusCode).toBe(400)
+    expect((await app.inject({ ...request, url: '/v1/workout-sets/not-an-id/unconfirm' })).statusCode).toBe(400)
+    expect(writer.unconfirmLiveSet).toHaveBeenCalledOnce()
+  })
+
+  it.each([['forbidden', 403], ['conflict', 409]] as const)('preserves %s failures when unconfirming', async (failure, status) => {
+    const writer = buildWorkoutsWriter(new PilotWorkoutCommandError(failure))
+    const app = buildApp({ pilotWorkoutsWriter: writer.pilotWorkoutsWriter, logger: false })
+    apps.push(app)
+    const response = await app.inject({ method: 'POST', url: `/v1/workout-sets/${WORKOUT_SET_ID}/unconfirm`,
+      headers: { 'x-fit-pilot-session': sessionToken }, payload: { expectedVersion: 3, operationId: OPERATION_IDS.confirm } })
+    expect(response.statusCode).toBe(status)
   })
 
   it('starts, records, confirms and finishes with operation identities', async () => {
