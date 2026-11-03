@@ -16,7 +16,7 @@ frontend — `fit-training.ru` на Cloud.ru Nginx; app-session/API/PostgreSQL �
 - видит публичный репозиторий `podkolzinpd/fit`;
 - работает в отдельной ветке и может открыть pull request;
 - установил зависимости из lock-файла;
-- запускает локальные Supabase, PostgreSQL для Yandex API и frontend командой
+- запускает локальный PostgreSQL17, native API и frontend командой
   `npm run dev` через Podman;
 - успешно выполняет `npm run check`;
 - не сохранил токен GitHub или production-секреты в репозитории.
@@ -152,18 +152,14 @@ npm ci
 npm run dev
 ```
 
-`npm run dev` через Podman готовит локальные Supabase и PostgreSQL 17 для
-Yandex API, запускает API, а затем Vite на `http://localhost:5173`. Безопасные
-локальные значения уже находятся в закоммиченном `.env.development`. Локальный
-Supabase нужен существующим тестам/legacy-сценариям; обычная development-сборка
-не доказывает работу новой функции через production Yandex API.
+`npm run dev` через Podman готовит только локальный PostgreSQL17 для native
+API, запускает API, затем Vite на `http://localhost:5173`. Supabase CLI и
+email/password seed для обычной разработки не требуются. Frontend во всех
+режимах использует native API. Для ручного входа нужен локальный OAuth-клиент
+Yandex ID; production credentials/URL в локальные env не копируются.
 
-Для проверки замороженного локального Supabase baseline (не для новых миграций):
-
-```bash
-npm run db:reset
-npm run db:test
-```
+Frozen Supabase baseline выведен из dev/check/CI. Его исходники, контрольные
+суммы и явная legacy-репетиция сохранены в [архиве](../supabase/README.md).
 
 Для новой Yandex PostgreSQL migration выполните общую локальную проверку,
 которая поднимет локальный PostgreSQL и проверит actor/RLS:
@@ -172,10 +168,9 @@ npm run db:test
 npm run local:verify
 ```
 
-После сброса базы доступны только локальные демонстрационные аккаунты:
-
-- тренер: `trainer@fit.local` / `FitLocal123!`;
-- клиент: `client@fit.local` / `FitLocal123!`.
+Архивный email/password seed относится только к старой Supabase-цепочке и
+не используется для native входа. Browser fixtures создают synthetic sessions
+и отдельные native PostgreSQL базы без GoTrue/PostgREST.
 
 ## 6. Секреты и внешние сервисы
 
@@ -188,8 +183,7 @@ npm run local:verify
 - Google OAuth secret;
 - Yandex Cloud API key.
 
-Нельзя заменять `.env.development` production-конфигурацией. Локальная сборка
-намеренно принимает только `localhost` и `127.0.0.1`. Если отдельная задача
+Нельзя заменять локальную env-конфигурацию production-значениями. Если отдельная задача
 действительно требует внешнего секрета, владелец выдаёт его через секрет-хранилище
 среды с минимальными правами и сроком действия; агент не печатает его в логах.
 
@@ -218,10 +212,9 @@ npm run check
 npm run local:verify
 ```
 
-`npm run db:reset` и `npm run db:test` остаются проверкой неизменённой
-Supabase-цепочки; не добавляйте в неё миграции ради новой функции. Если
-legacy E2E не может подготовить новые данные, добавьте локальный Yandex
-API/PostgreSQL fixture и целевой тест вместо параллельной Supabase-схемы.
+Замороженная Supabase SQL-цепочка запускается только отдельно по инструкции
+архива. Новая схема и новые данные проверяются через локальный native API/
+PostgreSQL17 и actor/RLS, без парных Supabase adapters/migrations.
 
 После изменения агент отправляет только рабочую ветку и создаёт PR:
 

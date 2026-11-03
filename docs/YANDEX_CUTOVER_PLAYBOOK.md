@@ -13,7 +13,7 @@ Production Fit использует внешний Yandex ID; app-session/API/Po
 migration Cloud.ru → Yandex Cloud.
 Vercel сохранён только для редиректа со старого адреса; PR Preview отключён.
 Supabase остаётся временным legacy-источником для неперенесённых
-media, локальных тестов и rollback — не вторым production backend новых функций.
+media, явных архивных репетиций и rollback — не вторым production backend новых функций.
 
 Этот playbook обязателен для задач, которые до вывода Supabase затрагивают
 auth, БД, repositories/queries, media, Assistant, SpeechKit, push, backend
@@ -36,7 +36,7 @@ routing или переносимые продуктовые данные. Те�
   `.github/workflows/prepare-cloudru-frontend.yml` после зелёного CI на `main`;
 - production frontend больше не маршрутизирует продуктовые запросы в Supabase,
   web/Android/iOS production build больше не требует `VITE_SUPABASE_*` и
-  не инициализирует Supabase SDK/Auth. Локальный SDK, server-side legacy media и rollback tooling пока сохраняются;
+  не инициализирует Supabase SDK/Auth. Server-side legacy media и rollback tooling пока сохраняются;
 - Supabase Auth, Data API, Storage, Edge Functions и фоновые producer отключены
   только после подтверждённого окна стабилизации и сохранения rollback backup;
 - пользовательский контракт клиента и тренера не ухудшается при переключении.
@@ -49,8 +49,19 @@ client transport и API. Непривязанный Yandex ID открывает
 не удаляются, но больше не привязываются через проверку Supabase credentials.
 Старый `/v1/auth/yandex/recover` возвращает 404. Исторические SQL migrations
 сохраняются без переписывания; они не являются доступным recovery API.
-Локальный Supabase SDK, server-side legacy media adapters остаются
+Server-side Supabase SDK и legacy media adapters остаются
 для следующих отдельных задач; это ещё не полный decommission.
+
+## Отказ от переноса Supabase media — 03.11.2026
+
+По прямому решению владельца старые файлы Supabase не переносятся.
+Требование полноты их копирования больше не блокирует удаление legacy media
+runtime. Удалены Supabase chat store/authorizer/bridge, три маршрута
+`/v1/legacy/chat-media/{upload,sign,remove}`, media fallback и source-copy CLI/workflow.
+Нужные native chat/Vital/profile media и S3-контракты сохраняются. Старые файлы,
+которые существуют только в Supabase, могут стать недоступными; удалённые
+объекты/ресурсы этим решением не удаляются. Это уточняет прежний P1 media gate,
+но не отменяет проверки остальных data/ops consumers перед отключением проекта.
 
 ## Общая методика продуктовой разработки
 
@@ -74,8 +85,9 @@ route/feature -> domain repository contract -> Yandex API/PostgreSQL
    numbered Yandex PostgreSQL migrations. Не добавляйте парную migration в
    `supabase/migrations`; существующая цепочка заморожена, не удалена.
 6. Изменение схемы проверяется на чистом локальном PostgreSQL 17, actor/RLS и
-   API tests. `npm run local:verify` поднимает обе локальные базы ради
-   совместимости текущего tooling; зелёный Supabase-тест не заменяет Yandex test.
+   API tests. `npm run local:verify` использует только Podman PostgreSQL17;
+   frozen Supabase SQL/pgTAP не участвуют в dev/check/CI и сохранены в
+   `supabase/README.md` с контрольными суммами для явной legacy-репетиции.
 7. Tenant catalog/export/import меняются, только если требуется перенос
    **существующих** legacy-данных. Для новой Yandex-only таблицы не создавайте
    фиктивное Supabase mapping.
