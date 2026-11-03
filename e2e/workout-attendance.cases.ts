@@ -80,7 +80,7 @@ export function workoutAttendanceCases() {
   })
 
   test('attendance preserves the appointment, confirms once and offers later results', async ({ page }, info) => {
-    await page.clock.setFixedTime(new Date('2026-10-31T09:00:00Z'))
+    await page.clock.setFixedTime(new Date('2026-11-01T09:00:00Z'))
     const target = { ...restTimerWorkout(), title:'Посещение без упражнений',createdBy:profileId,status:'planned' as const,
       workoutDate:'2026-10-31',startTime:'10:00',startedAt:null,trainingFormat:'with_trainer' as const,exercises:[] }
     const backend=await mockPilot(page,{profileId,fitLime:true,workouts:[target]})
@@ -92,13 +92,41 @@ export function workoutAttendanceCases() {
       Object.assign(backend.getWorkouts()[0]!,{status:'done',version:target.version+1,completedAt:'2026-10-31T09:00:00Z'})
       await route.fulfill({json:{workout:{version:target.version+1,replayed:false}}})
     })
-    await page.goto(`/workouts/${workoutId}`)
-    await page.getByRole('button',{name:'Отметить проведённой',exact:true}).click()
+    await page.goto('/today?date=2026-10-31')
+    const queueTrigger = page.getByRole('button', { name: /Незавершённые действия/ })
+    await expect(queueTrigger).toHaveAttribute('aria-label', '1 Незавершённые действия')
+    let releaseSnapshot!: () => void
+    const snapshotGate = new Promise<void>(resolve => { releaseSnapshot = resolve })
+    let snapshotStarted = false
+    let snapshotDelivered = false
+    await page.route('**/v1/workouts/home?*', async route => {
+      if (snapshotStarted) { await route.fallback(); return }
+      const snapshot = backend.getWorkouts().map(item => ({ id: item.id, clientId: item.clientId, clientName: item.clientName,
+        workoutDate: item.workoutDate, status: item.status, startTime: item.startTime,
+        exerciseCount: item.exercises.length, exerciseNames: item.exercises.slice(0, 2).map(exercise => exercise.name) }))
+      snapshotStarted = true
+      await snapshotGate
+      await route.fulfill({ json: { workouts: snapshot } })
+      snapshotDelivered = true
+    })
+    // A background read starts before navigation but returns its planned snapshot
+    // only after attendance has been saved. It must not revive the finished task.
+    await page.clock.setFixedTime(new Date('2026-11-01T09:00:21Z'))
+    await page.evaluate(() => window.dispatchEvent(new Event('visibilitychange')))
     const sheet=page.getByRole('dialog',{name:'Отметить проведённой',exact:true})
-    await expect(sheet.getByText('Нет подходящего абонемента',{exact:true})).toBeVisible()
-    await page.screenshot({path:info.outputPath('attendance-confirm.png')})
-    await sheet.getByRole('button',{name:'Подтвердить проведение',exact:true}).click()
-    await expect(sheet).toHaveCount(0)
+    try {
+      await expect.poll(() => snapshotStarted).toBe(true)
+      await queueTrigger.click()
+      await page.getByRole('dialog', { name: 'Рабочая очередь' }).locator(`a[href="/workouts/${workoutId}"]`).click()
+      await page.getByRole('button',{name:'Отметить проведённой',exact:true}).click()
+      await expect(sheet.getByText('Нет подходящего абонемента',{exact:true})).toBeVisible()
+      await page.screenshot({path:info.outputPath('attendance-confirm.png')})
+      await sheet.getByRole('button',{name:'Подтвердить проведение',exact:true}).click()
+      await expect(sheet).toHaveCount(0)
+    } finally {
+      releaseSnapshot()
+    }
+    await expect.poll(() => snapshotDelivered).toBe(true)
     await expect(page.getByText('Проведена',{exact:true})).toBeVisible()
     await expect(page.getByText('Упражнения не записаны',{exact:true})).toBeVisible()
     await expect(page.getByRole('link',{name:'Добавить результат',exact:true})).toBeVisible()
@@ -108,6 +136,14 @@ export function workoutAttendanceCases() {
     await expect(page.locator('.workout-finance-confirmation')).toContainText('Не списано')
     await page.screenshot({path:info.outputPath('attendance-result.png')})
     expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true)
+    await page.locator('.page-back').click()
+    await queueTrigger.click()
+    const queue = page.getByRole('dialog', { name: 'Рабочая очередь' })
+    await expect(queue.locator(`a[href="/workouts/${workoutId}"]`)).toHaveCount(0)
+    await expect(queue.getByText('Следующая тренировка не запланирована', { exact: true })).toBeVisible()
+    await queue.getByRole('button', { name: 'Закрыть рабочую очередь' }).click()
+    await page.locator(`.schedule-v2-event[href="/workouts/${workoutId}"]`).click()
+    await expect(page.getByText('Проведена', { exact: true })).toBeVisible()
     await page.getByRole('link',{name:'Добавить результат',exact:true}).click()
     await expect(page).toHaveURL(new RegExp(`/workouts/${workoutId}/edit$`))
     await expect(page.getByRole('textbox',{name:'Название тренировки',exact:true})).toHaveValue(target.title)
