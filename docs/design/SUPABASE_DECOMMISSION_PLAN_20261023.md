@@ -556,3 +556,9 @@ policies/build passed. Migration safety:0 changed SQL migrations. Browser specs,
 матрицы, protected inventory, retries/timeouts не менялись; отдельного local
 browser/DB прогона нет, product/API/SQL не меняются. Remote Terraform plan/apply,
 secret revocation, stage switch и production не запускались. Exact-head CI — в PR.
+
+Синхронизация PR1958 с main0b553718 после PR1954: конфликт только в
+infra:policy:test. Сохранён новый cloudru-client-restore test из main и удалён
+retired mirror test; остальные изменения main приняты без ручных изменений.
+107 targeted tests passed (3.4s), workflow docs/archive integrity и
+whitespace passed. Полный check ранее прошёл на41cb68c1; новый CI после push.
