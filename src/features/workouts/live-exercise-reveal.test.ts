@@ -90,3 +90,46 @@ it('respects reduced motion without focusing the next field', () => {
   expect(s.frames.size).toBe(0)
   stop()
 })
+
+it('waits for clock and fold layout transitions, without waiting for color', () => {
+  const s = scene()
+  const clock = { transitionProperty: 'height', playState: 'running', pending: true }
+  const fold = { transitionProperty: 'grid-template-rows', playState: 'finished', pending: false }
+  const color = { transitionProperty: 'color', playState: 'running', pending: false }
+  Object.defineProperty(s.content, 'getAnimations', { value: () => [clock, fold, color] })
+  const stop = revealLiveExercise(s.row, s.card, s.content, s.pinned)
+  s.step(5)
+  expect(s.scroll).not.toHaveBeenCalled()
+  clock.playState = 'finished'; clock.pending = false; fold.playState = 'running'
+  s.step(5)
+  expect(s.scroll).not.toHaveBeenCalled()
+  fold.playState = 'finished'
+  s.step(4)
+  expect(s.scroll).toHaveBeenCalledExactlyOnceWith({ top: 588, behavior: 'smooth' })
+  stop()
+})
+
+it('does not mistake scroll anchoring for settled content geometry', () => {
+  const s = scene()
+  let height = 2000
+  Object.defineProperty(s.content, 'scrollHeight', { get: () => height })
+  const stop = revealLiveExercise(s.row, s.card, s.content, s.pinned)
+  // Anchoring can hold viewport rectangles still while preceding content folds.
+  for (let index = 0; index < 5; index++) {
+    s.content.scrollTop = index * 50; height = 2000 - index * 50; s.step()
+  }
+  expect(s.scroll).not.toHaveBeenCalled()
+  s.step(4)
+  expect(s.scroll).toHaveBeenCalledExactlyOnceWith({ top: 788, behavior: 'smooth' })
+  stop()
+})
+
+it('keeps manual focus cancellation while native smooth scrolling has not painted yet', () => {
+  const s = scene()
+  const stop = revealLiveExercise(s.row, s.card, s.content, s.pinned)
+  s.step(10)
+  document.querySelector<HTMLInputElement>('#search')!.focus()
+  expect(s.scroll).toHaveBeenLastCalledWith({ top: 0, behavior: 'instant' })
+  expect(s.frames.size).toBe(0)
+  stop()
+})

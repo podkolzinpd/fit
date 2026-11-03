@@ -5,6 +5,8 @@ export function revealLiveExercise(row: HTMLElement, card: HTMLElement, content:
   let stopped = false
   let scrolling = false
   let stable = 0
+  let moved = false
+  let origin = 0
   let previous: number[] | undefined
   const startedAt = performance.now()
   const isEditing = () => document.activeElement instanceof HTMLElement
@@ -29,9 +31,10 @@ export function revealLiveExercise(row: HTMLElement, card: HTMLElement, content:
     const now = performance.now()
     if (scrolling) {
       const position = content.scrollTop
+      moved ||= Math.abs(position - origin) >= .5
       stable = previous && Math.abs(position - previous[0]!) < .5 ? stable + 1 : 0
       previous = [position]
-      if (stable >= 3 || now - startedAt > 1800) { cleanup(false); return }
+      if (moved && stable >= 3 || now - startedAt > 1800) { cleanup(false); return }
     } else {
       const cardBounds = card.getBoundingClientRect()
       const rowBounds = row.closest('[inert]') ? cardBounds : row.getBoundingClientRect()
@@ -39,14 +42,22 @@ export function revealLiveExercise(row: HTMLElement, card: HTMLElement, content:
       const bounds = content.getBoundingClientRect()
       const top = Math.max(bounds.top, pinned.getBoundingClientRect().bottom) + 12
       const bottom = Math.min(bounds.bottom, viewport ? viewport.offsetTop + viewport.height : innerHeight) - 16
-      const geometry = [cardBounds.top, rowBounds.top, rowBounds.bottom, top, bottom]
-      stable = previous && geometry.every((value, index) => Math.abs(value - previous![index]!) < .5) ? stable + 1 : 0
+      // Anchoring can hold viewport rectangles still while the fold/clock
+      // changes document geometry. Pending CSS transitions are not settled.
+      const geometry = [cardBounds.top + content.scrollTop, rowBounds.top + content.scrollTop,
+        rowBounds.bottom + content.scrollTop, content.scrollHeight, top, bottom]
+      const layoutChanging = content.getAnimations?.({ subtree: true }).some(animation =>
+        'transitionProperty' in animation
+        && (animation.transitionProperty === 'height' || animation.transitionProperty === 'grid-template-rows')
+        && (animation.playState === 'running' || animation.pending)) ?? false
+      stable = !layoutChanging && previous && geometry.every((value, index) => Math.abs(value - previous![index]!) < .5) ? stable + 1 : 0
       previous = geometry
       if (stable >= 3) {
         if (bottom <= top || rowBounds.top >= top && rowBounds.bottom <= bottom) { cleanup(false); return }
         const delta = rowBounds.top < top ? rowBounds.top - top
           : Math.max(cardBounds.top - top, rowBounds.bottom - bottom)
         const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches
+        origin = content.scrollTop
         content.scrollTo({ top: Math.max(0, content.scrollTop + delta), behavior: reduced ? 'instant' : 'smooth' })
         if (reduced) { cleanup(false); return }
         scrolling = true

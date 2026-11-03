@@ -4366,10 +4366,11 @@ for (const sample of [
   await button.scrollIntoViewIfNeeded()
   const handle = await row.getByLabel('Фактический вес', { exact: true }).elementHandle()
   const next = page.locator(`[data-live-set-id="${source.exercises[1]!.sets[0]!.id}"]`)
-  const measurements = page.evaluate(() => new Promise<{ frames: Array<{ t: number; scroll: number }>; calls: ScrollToOptions[] }>(resolve => {
+  const measurements = page.evaluate(setId => new Promise<{ frames: Array<{ t: number; scroll: number }>; calls: ScrollToOptions[] }>(resolve => {
     const content = document.querySelector<HTMLElement>('.content')!
+    const target = document.querySelector<HTMLElement>(`[data-live-set-id="${setId}"]`)!
     const original = content.scrollTo.bind(content)
-    const frames: Array<{ t: number; scroll: number }> = [], calls: ScrollToOptions[] = []
+    const frames: Array<{ t: number; scroll: number; targetTop: number; targetBottom: number; contentTargetTop: number; contentHeight: number; clockHeight: number; layoutTransitions: string[] }> = [], calls: ScrollToOptions[] = []
     const start = performance.now()
     content.scrollTo = function (options: ScrollToOptions | number = {}, y?: number) {
       if (typeof options === 'number') return original(options, y ?? 0)
@@ -4377,12 +4378,18 @@ for (const sample of [
       original(options)
     }
     function sampleFrame(t: number) {
-      frames.push({ t, scroll: content.scrollTop })
+      const bounds = target.getBoundingClientRect()
+      const animations = content.getAnimations?.({ subtree: true }) ?? []
+      frames.push({ t, scroll: content.scrollTop, targetTop: bounds.top, targetBottom: bounds.bottom,
+        contentTargetTop: bounds.top + content.scrollTop, contentHeight: content.scrollHeight,
+        clockHeight: document.querySelector('.coach-v79-large-clock')?.getBoundingClientRect().height ?? 0,
+        layoutTransitions: animations.filter(a => a.playState === 'running' || a.pending)
+          .map(a => 'transitionProperty' in a ? String(a.transitionProperty) : 'animation') })
       if (performance.now() - start < 1600) requestAnimationFrame(sampleFrame)
       else { content.scrollTo = original; resolve({ frames, calls }) }
     }
     requestAnimationFrame(sampleFrame)
-  }))
+  }), source.exercises[1]!.sets[0]!.id)
   await button.click()
   await expect.poll(() => backend.getWorkouts()[0]!.exercises[0]!.sets[1]!.confirmedAt).not.toBeNull()
   const trace = await measurements

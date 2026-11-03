@@ -3668,3 +3668,65 @@ receipt и собственного зелёного sourceCI; перед merge 
 Отвергнуто: повтор ancestry-ошибки108, перенос CI на новый SHA или публикацияP3
 по готовности исходника без приёмкиP2. Права/ввод/клавиатура/таймер/жесты прежние.
 Открыто: обе actual main/publication приёмки, physical iPhone/OAuth не проверены.
+
+
+### Итерация 111 — 2026-11-03 — Codex / OpenAI
+
+LIVE-P2 / PR1953 фактически опубликован и принят на
+3ed7d58b1423b12ef68dfbb78787cb7713eb3cc2. Source8dd97161/CI41658742510 SUCCESS35;
+mainCI41663721190 SUCCESS (штатная migration-safety skipped на push), Androiddebug
+41663721092 success. Официальные API41667434935,web41667435069,OTA41668733649 SUCCESS.
+Независимая приёмка:213/213 публичныхSHA/size кточному frontendartifact,8HTTP+3DNS,
+обеAPI release=3ed7d58b/ready200/protected401; новый unconfirm route отдельно
+отклонил anonymousPOST401 на обоих origins, без пользовательских mutations.
+
+Подпись manifest/ZIP и provenance/nativeBuild9/ABI
+8922d2e9fc2c9a092d10f7b6066acdc46edf0fbe7ee7a15159e02a44e7126cf9 проверены
+verifyOtaDirectory+точным public readback. Sequence1793721421570,
+ZIPca6d2012132d066be108634da8296a9462ab241ad0ba6e3d3f866f9a36a813e4.
+Actual published WEB24/24 Chromium/WebKit(1.2m), actual signedZIP12/12Chromium
+(27.5s), retries0. UI работает с изолированными fixtures, неизвестные реальные
+API mutations/origins заблокированы; серверная SQL/ownership/version команда
+проверена настоящей nativeDB в CI, не выдаётся за business-write в production.
+Охват/flags не менялись. Изучены реальные web PNG клиента/тренера: белая
+выполненная галочка, плотность, введённые42.5 и существующая композиция сохранены.
+ПослеUI повторены полные213file/API проверки и OTAreadback, версия осталась3ed.
+Артефакты/логи в собственных /tmp/fit-live-p2-publication-3ed,
+/tmp/fit-live-p2-public-live-results,/tmp/fit-live-p2-signed-ota-ui-results.
+
+LIVE-P2 закрыт: галочка реально снимает подтверждение, обычное редактирование
+сохраняет его; факты/план/заметки/раскрытый круг/таймеры сохранены. Физический
+iPhone/реальныйOAuth/применениеOTA устройством не проверены. Это не закрывает
+LIVE-P3: его CI41664841569 нашёл clientWebKit handoff bounds failure(224passed,
+1failed,оба retries тожеfailed). Трасса получена, sourceP3 не выпущен;
+исправление геометрии продолжается без отмены принятойP2. Дальше: P3fix/CI→merge/
+mainCI/publication/actualUI по той же очереди, без новых разрешений.
+
+
+### Итерация 112 — 2026-11-03 — Codex / OpenAI
+
+Задача: устранить доказанный CI41664841569 clientWebKit handoff failure, не
+ослабляя bounds и не меняя ввод/таймер/анимации. Расхождение: прежняя проверка
+трёх неподвижных viewport-прямоугольников не доказывала завершение CSS layout.
+CI trace: один smoothTo821.5, final scroll784 и следующая строка под sticky header;
+повторилось во всех трёх попытках. Это реальная ошибка, не flaky-перезапуск.
+
+Выбрано: reveal helper ждёт content-space геометрию/scrollHeight и завершение
+running/pending height/grid-template-rows transitions. Цветовые переходы ждать
+не нужно. Прежний срок ожидания900ms сохранён. После единственного native scroll
+manual-focus cancellation остаётся до наблюдаемого движения/успокоения, а не
+снимается до первого painted frame; прежний общий предел1800ms. Фокус/таймер/
+CSS/данные/API не меняются, reduced-motion и ручные жесты имеют приоритет.
+Отвергнуто: повтор CI без исправления, увеличение timeout, второй корректирующий
+scroll и ослабление конечной видимости. Диагностика существующих6browser cases
+дополнена content-space/clock/transitions, сами assertions сохранены.
+
+Проверка: на старой реализации три новые unit упали(3failed/6passed), после
+исправления helper/input visibility11/11, lint/build/tsc/startup-photo passed.
+Handoff6/6 и применимый набор82/82 Chromium/WebKit(1.6m,retries0) passed: обе роли,
+ручной ввод/клавиатура/пикеры/жесты, unconfirm, timer/clock, длительность/дистанция.
+Это локальная проверка; LinuxCI и фактическая публикацияP3 ещё не приняты.
+Открыто: freshmain/sourceCI→обычный merge→mainCI/API/web/signedOTA/actualUI.
+За время проверки main получил1958/1964(операционная очистка); перед окончательным
+push будет включён actualmaincce0f419, без изменения чужих файлов. LIVE-P2 уже
+фактически принят в111. Физический телефон/реальныйOAuth не проверены.

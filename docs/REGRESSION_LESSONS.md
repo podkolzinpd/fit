@@ -191,3 +191,14 @@ distance. Dirty guard недостаточен, если action сам уже с
 merge-base --is-ancestor, а не только отсутствие net diff. Новый SHA получает
 собственный CI; admin/alternate merge API для обхода freshness не использовать.
 Случай и исправление: [Live,108](design/CLIENT_REFERENCE_SCREENS_20261029.md#итерация-108--2026-11-03--codex--openai).
+
+
+## RL-LIVE-HANDOFF-LAYOUT-20261103
+
+Неподвижный viewport rect на нескольких RAF не доказывает завершение раскладки:
+scroll anchoring может компенсировать fold, пока одновременно меняется высота
+clock. Перед единственным native reveal проверять content-space/scrollHeight и
+running/pending layout transitions. Отмена ручным фокусом должна работать и до
+первого painted scroll frame. Не маскировать overscroll повторным scroll или
+ослаблением bounds. Red/green и реальный CI trace —
+[Live112](design/CLIENT_REFERENCE_SCREENS_20261029.md#итерация-112--2026-11-03--codex--openai).
