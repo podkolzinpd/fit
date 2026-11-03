@@ -3640,3 +3640,31 @@ P3CI на промежуточном parent до появления actualmain �
 Workflow docs/diff checks passed. Открыто: новый sourceCI1953, его обычный merge/
 mainCI/публикация; P3 ещё не опубликован. Дальше: после1953merge обновить actualmain
 в P3, проверить ancestor/net scope, push/fullCI параллельно actual1953publication.
+
+
+### Итерация 110 — 2026-11-03 — Codex / OpenAI
+
+Задача: завершить1953 и подготовить1955 параллельно его обязательной публикации.
+Актуальный1953/head8dd97161 прошёл новый sourceCI41658742510 SUCCESS35/35;
+обычный merge сmatch-head выполнен в main3ed7d58b1423b12ef68dfbb78787cb7713eb3cc2.
+Source375/374 не подменяет эти гейты. MainCI41663721190 ещё выполняется;
+Build Cloud.ru API41663721247 прошёл, но это не публикация. API/web/OTA/UI
+1953 не объявляются принятыми до реального source/hash/readback/functional QA.
+
+P3 ДО окончательного push/CI включает actualmain3ed стандартным merge,
+runtime3f6f19eba868b5d5c8b9d0d9c9cbb9ce007f1476. Parent squash вызвал пять
+пересечений в shared files. До разрешения доказано: actualmain tree равен P2head8dd
+(8da7425c3a30a2a657678421b18bf871bb542bcc), наш child уже содержит весь этот
+parent и только согласованные handoff/notes. Поэтому в этих пяти пересечениях
+сохранён child, а не удалены чужие изменения. Проверен точный net7files и15lines
+WorkoutsPages; API/SQL/flags/native/deps изменений нет. Actualmain является ancestor
+P3, не только равен отдельному дереву. Все записи100–109 и новая freshness-lesson
+сохранены. Build/tsc/startup-photo на этой базе прошли; helper+input-visibility
+8/8unit(2files,1.15s). Не повторяли неизменённые большие локальные наборы.
+
+Дальше PR1955 получает base main, единственный окончательный source push и полный
+CI параллельно mainCI/публикации1953. Merge/publication1955 только после actual1953
+receipt и собственного зелёного sourceCI; перед merge повторить freshmain-ancestor.
+Отвергнуто: повтор ancestry-ошибки108, перенос CI на новый SHA или публикацияP3
+по готовности исходника без приёмкиP2. Права/ввод/клавиатура/таймер/жесты прежние.
+Открыто: обе actual main/publication приёмки, physical iPhone/OAuth не проверены.
