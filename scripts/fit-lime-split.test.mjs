@@ -87,7 +87,7 @@ test('finance/template visual matrices cannot grow back into full business chain
   assert.doesNotMatch(bodies.get('template'), /page\.clock|page\.reload|commands|\/health|rows\.size/)
 })
 
-test('real Playwright partitions preserve the 716-case union without duplicates in either engine', () => {
+test('real Playwright partitions preserve the 720-case union without duplicates in either engine', () => {
   const collect = (args) => {
     const result = spawnSync(process.execPath, [join(root, 'node_modules/playwright/cli.js'), ...args, '--list', '--reporter=json'],
       { cwd: root, encoding: 'utf8', timeout: 60000, env: { ...process.env, FIT_SCHEDULE_V2_VISUAL: '1' } })
@@ -103,7 +103,7 @@ test('real Playwright partitions preserve the 716-case union without duplicates 
   }
   for (const { project } of engines) {
     const full = collect(fitLimeArgs(project, 'full').args)
-    assert.equal(full.length, 716) // Reviewed714 plus two FIN302 accounting cases; every previous case remains.
+    assert.equal(full.length, 720) // Current main718 plus two FIN302 cases; every previous case remains.
     for (const title of ['Finance accounting dates and uncertain manual retry preserve one operation', 'Finance session date editor retains its current charge and updates eligible services']) {
       assert.equal(full.filter(key => key.endsWith(title)).length, 1, title)
     }
@@ -140,6 +140,7 @@ test('real Playwright partitions preserve the 716-case union without duplicates 
     assert.equal(full.filter(key => key.includes('Template reliability ') && !key.includes('lime=')).length, 3)
     assert.equal(full.filter(key => key.includes('Template entry ')).length, 4)
     assert.equal(full.filter(key => key.includes('Template source ')).length, 4)
+    assert.equal(full.filter(key => key.includes('Template draft safety ')).length, 4)
     const parts = partitions.flatMap(({ lane, shard }) => collect(fitLimeArgs(project, 'full', '', lane, shard).args))
     assert.equal(parts.length, full.length)
     assert.equal(new Set(parts).size, parts.length)

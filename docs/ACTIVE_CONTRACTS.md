@@ -25,6 +25,7 @@
 | Ачивки | [progress states](design/ACHIEVEMENT_PROGRESS_STATES_20261004.md), [regularity](design/ACHIEVEMENT_REGULARITY_COPY_20261005.md) | Принятые изображения/условия; перед правкой сверить последующие решения и текущий каталог |
 | Корпоративные тренеры | [кабинет](design/CORPORATE_ADMIN_20261027.md), [анкеты/офисы](design/TRAINER_PROFILES_OFFICES_20261029.md) | Права отдельно от роли; фото из публикации; статус/офисы утверждает администратор; клуб отдельно |
 | Backend/публикация | [playbook](YANDEX_CUTOVER_PLAYBOOK.md), [engineering](ENGINEERING_RULES.md), OPERATIONS.md в корне | Cloud.ru, ownership/RLS, forward migrations, отсутствие dual-write |
+| Перенос недельных журналов | [PHI101–105](design/ATHLETE_PROGRAM_HISTORY_IMPORT_20261103.md) | 16спортсменов+собственный журнал тренера; восстановленные даты отдельно, без дублей/смены роли/изменения финансов; запись после сверки |
 | Decommission | [план](design/SUPABASE_DECOMMISSION_PLAN_20261023.md), [P0](design/SUPABASE_P0_RESOURCE_AUDIT_20261024.md) | Не удалять rollback/legacy по возрасту; проверить фактические незакрытые гейты |
 
 ## Известные уточнения и конфликты
@@ -126,3 +127,11 @@ done отображается «Проведена» одинаково, нез�
 03.11 — SB-MEDIA-RETIRE-01: владелец отменил перенос старых Supabase файлов.
 Legacy media runtime/source-copy удаляются; Cloud.ru media сохраняются.
 [Решение и проверки](design/SUPABASE_DECOMMISSION_PLAN_20261023.md#sb-media-retire-01--отказ-от-source-media--03112026).
+
+03.11 — SB-STAGE-CREDENTIALS-RETIRE-01: stage больше не читает/зеркалирует
+Supabase credentials; bridge mounts/inputs сняты. Только точный retired API
+viewer grant допускает отзыв; native ресурсы защищены. [Проверки](design/SUPABASE_DECOMMISSION_PLAN_20261023.md#sb-stage-credentials-retire-01--stage-credentials--03112026).
+
+03.11 — SB-ADMIN-WORKFLOWS-RETIRE-01: удаляются ручной deploy старой БД и
+диагностика Supabase Auth/helper; frozen SQL и остальные source ops сохранены.
+[Scope и проверки](design/SUPABASE_DECOMMISSION_PLAN_20261023.md#sb-admin-workflows-retire-01--admin-workflows--03112026).
