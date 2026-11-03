@@ -18,7 +18,7 @@ describe.skipIf(source===undefined)('private weekly-program read-only inventory 
     const url=new URL(source??'')
     if(!['127.0.0.1','localhost'].includes(url.hostname)||url.pathname!=='/fit_actor_test')throw Error('local_fit_actor_test_database_required')
     admin=new Pool({connectionString:url.href,max:1})
-    await admin.query("do $$ begin if not exists(select 1 from pg_roles where rolname='fit_api') then create role fit_api login; end if; end $$")
+    await admin.query("do $$ begin perform pg_advisory_xact_lock(193635,1); if not exists(select 1 from pg_roles where rolname='fit_api') then create role fit_api login; end if; end $$")
     await admin.query(`create database ${database} template template0 encoding 'UTF8' lc_collate 'C' lc_ctype 'C'`);created=true;url.pathname=`/${database}`
     await runner({databaseUrl:url.href,dir:fileURLToPath(new URL('../../db/migrations',import.meta.url)),direction:'up',migrationsTable:'fit_migrations',migrationsSchema:'app_private',createMigrationsSchema:true,verbose:false,log:()=>{}})
     pool=new Pool({connectionString:url.href,max:5})
