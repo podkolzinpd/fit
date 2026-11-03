@@ -375,7 +375,12 @@ test('Template draft safety A3 resume draft without a client keeps client unsele
  await page.screenshot({path:info.outputPath('A3-client.png')});
  await expect(page.getByRole('button',{name:/Клиент:/})).toBeEnabled();
  expect(await page.getByRole('button',{name:/Клиент:/}).textContent()).not.toContain('Анна Морозова');
- expect(await page.evaluate(key=>(JSON.parse(localStorage.getItem(key)!) as {clientId:string}).clientId,key)).toBe('');
+ await expect.poll(()=>page.evaluate(key=>(JSON.parse(localStorage.getItem(key)!) as {clientId:string}).clientId,key)).toBe('');
+ await page.reload();
+ await page.getByRole('dialog',{name:'Есть черновик этого шаблона'}).getByRole('button',{name:/План до перехода/}).click();
+ await expect(page.getByRole('button',{name:/Клиент:/})).toBeEnabled();
+ expect(await page.getByRole('button',{name:/Клиент:/}).textContent()).not.toContain('Анна Морозова');
+ await expect.poll(()=>page.evaluate(key=>(JSON.parse(localStorage.getItem(key)!) as {clientId:string}).clientId,key)).toBe('');
 });
 test('Template draft safety A4 unparsed text survives successful template-copy save',async({page},info)=>{
  await setup(page);await page.route('**/v1/workout-templates',route=>{const command=route.request().method()==='GET'?undefined:route.request().postDataJSON() as {draft:typeof original};return route.fulfill({json:command?{template:{...template,...command.draft}}:{templates:[template]}})});const key=`fit.workout-form-draft.${actorId}.new-${clientId}-2026-11-09`;
