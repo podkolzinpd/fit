@@ -339,11 +339,6 @@ const mediaTerraform = readFileSync(
   join(import.meta.dirname, '..', 'infra', 'yandex', 'media.tf'),
   'utf8',
 )
-const mediaMigrationWorkflow = readFileSync(
-  join(import.meta.dirname, '..', '.github', 'workflows', 'migrate-yandex-media.yml'),
-  'utf8',
-)
-
 test('publishes the final yandex-stage result without restoring an approval gate', () => {
   assert.match(workflow, /^  publish_deployment:$/m)
   assert.match(
@@ -494,7 +489,7 @@ test('bootstraps the private push timer only after explicit cost approval and he
   )
 })
 
-test('bootstraps private media only after cost approval and keeps migration aggregate-only', () => {
+test('bootstraps private media only after cost approval', () => {
   assert.match(workflow, /^      approve_media_storage:$/m)
   assert.ok(workflow.includes(
     'MEDIA_STORAGE_PLAN_REVIEWED: ${{ (inputs.plan_only == true || inputs.approve_media_storage == true)',
@@ -515,29 +510,6 @@ test('bootstraps private media only after cost approval and keeps migration aggr
     mediaTerraform,
     /output_to_lockbox \{[\s\S]*?entry_for_access_key = "YANDEX_MEDIA_ACCESS_KEY_ID"[\s\S]*?entry_for_secret_key = "YANDEX_MEDIA_SECRET_ACCESS_KEY"/,
   )
-  assert.match(mediaMigrationWorkflow, /^  workflow_dispatch:$/m)
-  assert.doesNotMatch(mediaMigrationWorkflow, /^  (push|pull_request):$/m)
-  assert.match(mediaMigrationWorkflow, /supabase projects api-keys/)
-  assert.match(mediaMigrationWorkflow, /echo "::add-mask::\$source_key"/)
-  assert.match(
-    mediaMigrationWorkflow,
-    /^  YANDEX_MEDIA_BUCKET_OVERRIDE: \$\{\{ vars\.YC_STAGE_MEDIA_BUCKET \}\}$/m,
-  )
-  assert.match(
-    mediaMigrationWorkflow,
-    /target_bucket="\$\{YANDEX_MEDIA_BUCKET_OVERRIDE:-fit-stage-media-\$\{YC_FOLDER_ID:0:8\}\}"/,
-  )
-  assert.match(
-    mediaMigrationWorkflow,
-    /export YANDEX_MEDIA_BUCKET="\$target_bucket"/,
-  )
-  assert.match(mediaMigrationWorkflow, /npm --silent --prefix services\/api run media:migrate/)
-  assert.match(
-    mediaMigrationWorkflow,
-    /\.mode != "apply" or \.objects == \.verified/,
-  )
-  assert.doesNotMatch(mediaMigrationWorkflow, /actions\/upload-artifact/)
-  assert.doesNotMatch(mediaMigrationWorkflow, /\.path|object\.path|image_path/)
 })
 
 test('mirrors the Supabase bridge payload into a private stage Lockbox', () => {

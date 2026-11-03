@@ -7,6 +7,10 @@ import {CorporateServicesStore} from '../corporate-services.js'
 import {PgDatabasePool} from './pg-pool.js'
 
 const source=process.env.TEST_DATABASE_URL,database=`fit_corporate_services_${process.pid}`
+// Both bounds must use the event's day, including the first minute after midnight.
+const fixtureDatesSql=`with event as (select coalesce($1::timestamptz,now())-interval '1 minute' as event_at)
+ select event_at::text at,((event_at at time zone 'Europe/Moscow')::date)::text as "from",
+ ((event_at at time zone 'Europe/Moscow')::date+1)::text until from event`
 describe.skipIf(!source)('corporate services on actual actor/RLS and transactions',()=>{
  let owner:Pool,pool:Pool,created=false,connectionString=''
  const admin=randomUUID(),coach=randomUUID(),other=randomUUID(),ordinary=randomUUID(),athlete=randomUUID(),office=randomUUID(),secondOffice=randomUUID()
@@ -25,9 +29,7 @@ describe.skipIf(!source)('corporate services on actual actor/RLS and transaction
    await pool.query('insert into public.corporate_trainers(trainer_id,is_yandex)values($1,true)',[id])
    await pool.query('insert into public.corporate_trainer_offices(trainer_id,office_id)values($1,$2),($1,$3)',[id,office,secondOffice])
   }
-  const dates=(await pool.query<{at:string;from:string;until:string}>(`select (now()-interval '1 minute')::text at,
-   ((now() at time zone 'Europe/Moscow')::date)::text as "from",
-   ((now() at time zone 'Europe/Moscow')::date+1)::text until`)).rows[0]
+  const dates=(await pool.query<{at:string;from:string;until:string}>(fixtureDatesSql,[null])).rows[0]
   if(!dates)throw Error('test_dates_missing')
   at=new Date(dates.at).toISOString();from=dates.from;until=dates.until
  },90_000)
@@ -44,6 +46,14 @@ describe.skipIf(!source)('corporate services on actual actor/RLS and transaction
  const save=(who:string=coach,id:string=randomUUID(),command:string=randomUUID(),version=0,kind='consultation',officeId:string=office,time=at)=>actor<{result:{saved:boolean;id:string;version:number}}>(who,'select app_private.save_corporate_service($1,$2,$3,$4,$5,$6,false) result',[command,id,kind,officeId,time,version])
  const list=(who=coach,cursorAt:string|null=null,cursorId:string|null=null)=>actor<{data:{records:Array<{id:string;version:number;voidedAt:string|null}>;nextCursor:{at:string;id:string}|null;offices:unknown[]}}>(who,'select app_private.read_corporate_services($1,$2,$3,$4) data',[from,until,cursorAt,cursorId])
  const stats=()=>actor<{data:{counts:Record<string,number>}}>(admin,'select app_private.corporate_service_statistics($1,$2) data',[from,until])
+ it.each([
+  ['2026-11-02T20:59:59Z','2026-11-02','2026-11-03'],
+  ['2026-11-02T21:00:30Z','2026-11-02','2026-11-03'],
+  ['2026-11-02T21:01:00Z','2026-11-03','2026-11-04'],
+ ])('keeps fixture event inside its Moscow day at %s',async(anchor,expectedFrom,expectedUntil)=>{
+  const dates=(await pool.query<{from:string;until:string}>(fixtureDatesSql,[anchor])).rows[0]
+  expect(dates).toMatchObject({from:expectedFrom,until:expectedUntil})
+ })
  it('requires all independent gates and denies tables, self-grants and every outsider command',async()=>{
   for(const id of [other,ordinary,athlete,admin]){
    expect(await actor(id,'select app_private.corporate_services_allowed() allowed')).toEqual([{allowed:false}])

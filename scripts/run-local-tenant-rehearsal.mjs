@@ -732,6 +732,10 @@ async function rehearse(runNumber) {
 
 async function main() {
   console.log('[tenant-rehearsal] Подготавливаю только локальный Podman stack.')
+  // The frozen source is opt-in; normal development prepares only native PostgreSQL.
+  run('podman', ['container', 'exists', SOURCE_CONTAINER], {
+    label: 'legacy_source_missing_see_supabase_README',
+  })
   run(npmCommand, ['run', 'local:prepare'], { label: 'local_prepare' })
   prepareSourceFixture()
   run(npmCommand, ['--prefix', 'services/api', 'run', 'build'], {

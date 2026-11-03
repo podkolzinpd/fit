@@ -3455,3 +3455,34 @@ main чужие изменения должны сохраниться. Отве
 совместимый Android после1944 ожидается отдельно. Physical iPhone/OAuth не
 проверены. Дальше: дождаться production-квитанции1954, обновить основу и выпускать
 1953, затем1955 с полной проверкой каждого.
+### Итерация 103 — 2026-11-03 — Codex / OpenAI
+
+Задача: подготовить LIVE-P2 к актуальному main, пока приоритет1954 удерживает
+публикацию. Из1951..main появились1944(native-only dev/CI) и1956(media retirement).
+Новые решения ENGINEERING_RULES/ACTIVE_CONTRACTS прочитаны; чужой код не
+переписывается. Локальный merge/source74066b3cdbd1d82fb90b4fba9e23145c391abfc6
+включает mainfb5e6d9bfdfc9fac362b68087ae2225ddd507ced. Единственный конфликт —
+CURRENT_STATE: upstream Supabase ссылка сохранена, наш актуальный Live указатель
+сохранён вместо старого1943. API/app+request-tests слились чисто; net diff кmain
+содержит только ранее согласованный unconfirm. SQL180 свободен, migration safety
+и workflow docs/diff checks passed. Own node_modules — реальные каталоги;
+root/API npm ci --ignore-scripts --offline успешно без правки lock/версий.
+
+Полный API check(lint/type/tests/build)1555passed/282environment-skips на этой
+основе. Это не167/169 actual-PG прогон: actor-context169passed/1existing skip
+из прежней серверной проверки не выдаётся за новый запуск. Build/tsc/startup-photo,
+полный root lint и целевые76/76browser прошли(1.2m,retries0), обе роли/движка,
+undo/reload/conflict/hidden metrics/keyboard/focus/swipe/clock/density. Logs:
+/tmp/fit-live-p2-native-main-api-check.log,
+/tmp/fit-live-p2-native-main-build.log,
+/tmp/fit-live-p2-native-main-lint.log,
+/tmp/fit-live-p2-native-main-browser.log. Регрессионные условия не ослаблены.
+
+Runtime/охват/SQL/API Live-контракт не расширяются; собственного push/нового CI/
+слияния main/публикации не было. Отвергнуто: заменить новый native-only код старой
+веткой ради отсутствия конфликтов или принять локальные проверки за публикацию.
+Приоритет1954 и финальный main ещё ожидаются; при их изменении сверить реальные
+отличия. Открыто: final head/main CI, official API/web и совместимый native выпуск,
+независимая опубликованная UI/source/hash/signature приёмка. Physical iPhone/OAuth
+не проверены. Дальше: после production-квитанции1954 обновить окончательную основу,
+выпустить1953, затем1955; чужой APK follow-up в эту серию не включать.

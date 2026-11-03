@@ -18,11 +18,6 @@ import { DatabasePilotAssistantState } from './pilot-assistant-state.js'
 import { DatabasePilotAssistantTurnRunner } from './pilot-assistant-turn.js'
 import { DatabasePilotPushNotifications } from './pilot-push-notifications.js'
 import { DatabasePilotChat } from './pilot-chat.js'
-import { SupabaseChatMediaStore } from './supabase-chat-media.js'
-import {
-  LegacyChatMediaBridge,
-  SupabaseLegacyChatMediaAuthorizer,
-} from './legacy-chat-media.js'
 import {
   readMediaStorageConfig,
   YandexChatMediaStore,
@@ -45,7 +40,6 @@ import { DatabasePilotProgressData } from './progress-data.js'
 import { DatabasePilotWorkoutParser } from './pilot-workout-parser.js'
 import { DatabasePilotTrainingSummaries } from './training-summary.js'
 import { YandexWorkoutParser } from './legacy-workout-parser.js'
-import { readSupabaseBridgeConfig, SupabaseBridge } from './supabase-bridge.js'
 import { DatabaseYandexNativeRegistrar } from './yandex-native-registration.js'
 import { DatabaseYandexAuthHandoffService } from './yandex-auth-handoff.js'
 import {
@@ -238,7 +232,6 @@ const pilotTrainingSummaryGenerator =
     || process.env.YANDEX_CLOUD_FOLDER_ID === undefined
     ? undefined
     : pilotTrainingSummaryReader
-const supabaseBridgeConfig = readSupabaseBridgeConfig()
 const mediaStorageConfig = readMediaStorageConfig()
 const yandexMediaStorage = mediaStorageConfig === undefined
   ? undefined
@@ -249,18 +242,9 @@ const pilotTrainerProfiles = databasePool === undefined
 const pilotCustomExercisePhotos = databasePool === undefined || yandexMediaStorage === undefined
   ? undefined
   : new DatabasePilotCustomExercisePhotos(databasePool, yandexMediaStorage)
-const chatMediaStore = yandexMediaStorage !== undefined
-  ? new YandexChatMediaStore(yandexMediaStorage)
-  : supabaseBridgeConfig === undefined
-    ? undefined
-    : new SupabaseChatMediaStore(supabaseBridgeConfig)
-const legacyChatMediaBridge = yandexMediaStorage === undefined || supabaseBridgeConfig === undefined
+const chatMediaStore = yandexMediaStorage === undefined
   ? undefined
-  : new LegacyChatMediaBridge(
-    new SupabaseLegacyChatMediaAuthorizer(new SupabaseBridge(supabaseBridgeConfig)),
-    yandexMediaStorage,
-    new SupabaseChatMediaStore(supabaseBridgeConfig),
-  )
+  : new YandexChatMediaStore(yandexMediaStorage)
 const chatMeetings = databasePool === undefined ? undefined : new DatabaseChatMeetings(databasePool, readJitsiConfig(process.env))
 const pilotChat = databasePool === undefined ? undefined : new DatabasePilotChat(databasePool)
 const vitalMediaSigner = yandexMediaStorage === undefined
@@ -285,7 +269,6 @@ const app = buildApp(
     ...(pilotChat === undefined ? {} : { pilotChat }),
     ...(chatMediaStore === undefined ? {} : { chatMediaStore }),
     ...(pilotCustomExercisePhotos === undefined ? {} : { pilotCustomExercisePhotos }),
-    ...(legacyChatMediaBridge === undefined ? {} : { legacyChatMediaBridge }),
     ...(pilotClientsReader === undefined ? {} : { pilotClientsReader }),
     ...(pilotConnectionsReader === undefined ? {} : { pilotConnectionsReader }),
     ...(pilotConnectionsWriter === undefined ? {} : { pilotConnectionsWriter }),
