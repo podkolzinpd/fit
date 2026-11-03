@@ -68,6 +68,25 @@ describe.skipIf(source===undefined)('bounded weekly-program writes and closed-re
     await expect(runProgramImport({...f.options,mode:'apply'})).rejects.toThrow('verify_required')
     expect(await f.count('workouts')).toBe(3)
   })
+  it('distinguishes an unresolved email from a missing Yandex link without selecting or writing an identity',async()=>{
+    for(const missing of ['email_binding','yandex_link']) {
+      const f=await fixture()
+      if(missing==='email_binding')await f.owner.query('delete from app_private.fit_lime_pilot_allowlist where profile_id=$1',[f.coach])
+      else await f.owner.query('delete from app_private.auth_identities where profile_id=$1',[f.coach])
+      const options={...f.options,legacyId:missing==='email_binding'?null:f.coach}
+      const before=(await f.owner.query('select to_jsonb(p) value from public.profiles p order by id')).rows
+      expect(await runProgramImport(options)).toEqual({status:'identity_requires_review',code:'F01',workouts:0,
+        readOnly:true,productionMutated:false,trainerVerified:false,legacyRegistryMatched:missing!=='email_binding',
+        retainedLoginBinding:missing!=='email_binding',reason:missing==='email_binding'?'email_binding_missing':'yandex_identity_missing'})
+      expect(f.receipts).toHaveLength(1)
+      expect(f.receipts[0]?.receipt).toMatchObject({kind:'program_identity_inspection',packetSha256:options.approvedSha256})
+      expect(JSON.stringify(f.receipts)).not.toContain(f.coach)
+      expect(f.started).toBe(false);expect(f.proof).toBeNull();expect(f.verified).toEqual([])
+      for(const mode of ['apply','verify'] as const)await expect(runProgramImport({...options,mode})).rejects.toThrow('current_trainer_identity_required')
+      expect(await f.count('clients')).toBe(0);expect(await f.count('workouts')).toBe(0)
+      expect((await f.owner.query('select to_jsonb(p) value from public.profiles p order by id')).rows).toEqual(before)
+    }
+  })
   it('keeps own workouts self without changing trainer role or creating an authentication account',async()=>{
     const f=await fixture('self')
     const before=(await f.owner.query('select id,account_role from public.profiles order by id')).rows

@@ -6,6 +6,7 @@ import {reviewedProgramPackets} from './private-program-history-scopes.mjs'
 import {resolveJournalTrainer,ownerRead,validateJournalDrafts,insertReviewedJournal,
   verifyJournalContent,preservedJournalState,verifyPreservedState,legacyProfileId,sealJournalReceipt} from './cloudru-journal-import.mjs'
 import {loadCloudruUpload,safeJournalUploadFailure} from './cloudru-journal-upload.mjs'
+import {inspectWorkoutHistoryTarget} from './cloudru-account-history-audit.mjs'
 
 const fail=code=>{throw new Error(`program_history_write_${code}`)}
 const same=(a,b)=>JSON.stringify(a)===JSON.stringify(b)
@@ -74,7 +75,21 @@ export async function runProgramImport({mode,owner,runtime,target,legacyId=null,
   if(!['inspect','apply','verify'].includes(mode))fail('mode_invalid')
   const {payload,scope}=readProgramPacket(parts,approvedSha256,readRequest,scopes)
   if(typeof persistReceipt!=='function')fail('receipt_required')
-  const {trainerId}=await resolveJournalTrainer(owner,target,legacyId)
+  let trainerId
+  try {({trainerId}=await resolveJournalTrainer(owner,target,legacyId))} catch(error) {
+    // The old importer deliberately uses one identity error for two causes.
+    // Diagnose them through its existing READ ONLY preflight, without choosing
+    // a new identity, binding an apply selection or weakening the writer guard.
+    if(mode!=='inspect'||error?.message!=='journal_import_current_trainer_identity_required')throw error
+    const evidence=await inspectWorkoutHistoryTarget(owner,runtime,target,legacyId)
+    if(evidence.trainerMatched&&evidence.yandexIdentityLinked)fail('selection_changed')
+    const result={status:'identity_requires_review',code:scope.code,workouts:0,readOnly:true,
+      productionMutated:false,trainerVerified:false,legacyRegistryMatched:legacyId!==null,
+      retainedLoginBinding:evidence.retainedLoginBinding===true,
+      reason:evidence.trainerMatched?'yandex_identity_missing':'email_binding_missing'}
+    await persistReceipt('readback',{...result,kind:'program_identity_inspection',packetSha256:approvedSha256})
+    return result
+  }
   const requestIds=payload.workouts.map(w=>w.requestId)
   if(mode==='verify') {
     if(![readProof,markVerified].every(f=>typeof f==='function'))fail('private_proof_required')
