@@ -1,3 +1,4 @@
+import { CorporateServiceEntry } from '../corporate-services'
 import { CorporateAdminEntry } from '../corporate-admin'
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
@@ -35,6 +36,7 @@ export function ProfilePage() {
     <Link className="profile-settings-link" to="/profile/settings" aria-label="Настройки профиля"><SettingsIcon /></Link>
   </Coachmark>}>
     <TrainerProfessionalProfileSection />
+    <CorporateServiceEntry />
   </Page>
 }
 
