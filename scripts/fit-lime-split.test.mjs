@@ -148,7 +148,7 @@ test('real Playwright partitions preserve the 717-case union without duplicates 
     const scoped = collect(fitLimeArgs(project, 'scoped', 'critical,finance').args)
     const scopedParts = fitLimePartitions('scoped').flatMap(({ lane, shard }) =>
       collect(fitLimeArgs(project, 'scoped', 'critical,finance', lane, shard).args))
-    assert.equal(scoped.length, 136) // Existing119 plus seventeen critical lifecycle cases; slot creation stays in dedicated quick-entry.
+    assert.equal(scoped.length, 138) // Reviewed136 plus two tagged FIN302 cases; no existing case is omitted.
     assert.equal(new Set(scopedParts).size, scopedParts.length)
     assert.deepEqual(scopedParts.sort(), scoped.sort())
   }
