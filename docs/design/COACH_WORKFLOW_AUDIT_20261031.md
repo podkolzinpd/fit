@@ -2629,3 +2629,17 @@ inactive-экран по-прежнему не навигирует.12/12compone
 отдельный полный coverage остановлен нами до правкиR02 как устаревающая проверка,
 а не принят за green. Финальная версия проходит все327файлов/thresholds заново,
 с меньшей локальной конкуренцией, без изменения assertions/timeouts/retries/CI.
+
+Синхронизация actualmain — 03.11.2026 — Codex / OpenAI.
+В main появилсяfb5e6d9b/PR1956: владелец отдельно отменил legacy Supabase-media;
+решение SB-MEDIA-RETIRE-01 прочитано, входящий API/операционный контекст сохранён
+обычным merge без конфликтов. Frontendsrc/e2e/rootlock/native byte-identical6d1444;
+его полный coverage327files/2958tests passed за154.20s, thresholds прежние:
+83.02statements/77.90branches/82.03functions/87.77lines. Остальные прежниеcheckстадии
+прошли; входящий API и изменённая policy проверяются по новому фактическомуdiff.
+Новый exactsourceCI обязателен. Начальный browser-перезапуск не смог открыть
+локальный5510 (EPERM,0tests), поэтому повтор выполняется с разрешённым локальным
+listener; assertions и retries не меняются. Это не productfailure/greenпроверка.
+Native ABI по-прежнемуd377; чужой OTA41616769266 корректно остановлен
+OTA_NATIVE_APK_REQUIRED, новый feed404. Нужен реально совместимый shell;
+старый APK8/a882 не объявляется им. Чужие операции не перезапускаются.
