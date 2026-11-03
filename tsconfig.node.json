@@ -20,6 +20,7 @@
     "playwright.config.ts",
     "capacitor.config.ts",
     "scripts/android-ota-contract.d.mts",
-    "scripts/cloudru-journal-import.d.mts"
+    "scripts/cloudru-journal-import.d.mts",
+    "scripts/cloudru-client-restore.d.mts"
   ]
 }
