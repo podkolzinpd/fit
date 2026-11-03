@@ -72,6 +72,14 @@ account: secret/versions, native DB/S3/AI/push и другие grants не уд�
 Физические GitHub secrets/Lockbox пока сохраняются для отдельной проверки
 оставшихся ops readers. Эта правка не запускает stage/production apply.
 
+## Удаление старых административных workflows — 03.11.2026
+
+По решению SB-ADMIN-WORKFLOWS-RETIRE-01 удалены ручной deploy Supabase БД,
+Supabase Auth diagnostics и её CLI helper. Замороженный SQL-архив сохранён;
+это не отключение удалённого проекта и не отзыв credentials. Оставшиеся
+source consumers, включая восстановление карточек, пока работают отдельно.
+Native migrations/releases и ручной Yandex parser deployment сохраняются.
+
 ## Общая методика продуктовой разработки
 
 ### Точечное восстановление подтверждённой связи — YAFIT-701

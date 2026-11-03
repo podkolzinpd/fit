@@ -568,3 +568,29 @@ whitespace passed. Полный check ранее прошёл на41cb68c1; но
 Код main принят автоматически, последние изменения ветки10d7556c сохранены.
 Docs/archive integrity и whitespace проверяются до push; CI нового head
 остаётся отдельной проверкой. Дополнительных runtime изменений нет.
+
+### SB-ADMIN-WORKFLOWS-RETIRE-01 — admin workflows — 03.11.2026
+
+Задача владельца: удалить deploy-database.yml, diagnose-supabase-auth.yml и
+query-supabase-auth-logs с тестами. Поток assistant-ops, baseline main6e19ff75.
+Расхождений нет: отдельное согласованное удаление двух legacy admin входов.
+Удалены оба manual workflow, diagnostic helper/test и npm caller. В существующем
+CI policy test сохранена проверка manual-only Yandex parser; удалена только
+проверка существования retired deploy. Четыре diagnostic tests сняты вместе с
+прекращённым CLI-контрактом, нового runtime контракта взамен нет.
+
+Обновлены активные ops-инструкции/playbook и текущий индекс. Исторические
+инвентари/аудиты не переписываются. Отвергнуто удаление общих source secrets и
+остальных source tools: восстановление карточек и другие readers ещё используют
+их; это следующий этап. SQL/archive, native auth/API/media/AI/prompts, Cloud
+Functions, parser и DB release не меняются. Удалённые вызовы и deploy запрещены
+в scope этого PR. Локальные проверки и CI фиксируются после выполнения.
+
+Локально50 targeted workflow/scope tests passed, docs budgets/links/archive и
+migration safety (0 SQL changes) passed. Из scope whitelist убран только
+удалённый deploy path; неизвестные пути по-прежнему требуют полный E2E.
+Полный npm run check: lint/typecheck и328frontend files/2963tests passed,
+coverage83.01/77.94/81.97/87.77; infra policy остановился на существующем
+cloudru-client-restore mock curl (вызван реальный GitHub API,401). Отдельный
+прогон воспроизвёл сбой без изменений этого теста/workflow в текущем diff.
+Проверки не ослаблялись; оставшиеся части check запускаются отдельно.

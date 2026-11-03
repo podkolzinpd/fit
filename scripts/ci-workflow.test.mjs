@@ -16,8 +16,8 @@ const migrationOnlyWorkflow = readFileSync(
   'utf8',
 )
 
-test('keeps the frozen Supabase database and legacy Yandex parser manual-only', () => {
-  for (const name of ['deploy-database.yml', 'deploy-yandex-workout-parser.yml']) {
+test('keeps the legacy Yandex parser manual-only', () => {
+  for (const name of ['deploy-yandex-workout-parser.yml']) {
     const legacyWorkflow = readFileSync(join(import.meta.dirname, '..', '.github', 'workflows', name), 'utf8')
     // The entire event block must be manual-only, including future trigger types.
     assert.match(legacyWorkflow, /^on:\n  workflow_dispatch:\n\npermissions:/m, name)
