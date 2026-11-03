@@ -55,15 +55,25 @@ export function createLiveSetCoordinator(saveLiveSet: SaveLiveSet, confirmLiveSe
     if (savedDrafts.get(set.id) === key) return currentVersion(set)
 
     const version = await saveLiveSet(set.id, draft, currentVersion(set))
-    versions.set(set.id, version)
-    savedDrafts.set(set.id, key)
+    // A later authoritative refetch must not be invalidated by this old response.
+    if (version >= currentVersion(set)) {
+      versions.set(set.id, version)
+      savedDrafts.set(set.id, key)
+    }
     return version
   }
 
   return {
     sync: (set: WorkoutSet, draft?: LiveSetDraft) => {
-      versions.set(set.id, Math.max(versions.get(set.id) ?? set.version, set.version))
-      if (draft && draftKey(set.fact) === draftKey(draft)) {
+      if (set.version < currentVersion(set)) return
+      versions.set(set.id, set.version)
+      const serverKey = draftKey({ ...set.fact,
+        metricSources: set.metricSources ?? set.fact.metricSources,
+        timerConfirmed: (set.timerConfirmed ?? set.fact.timerConfirmed) === true ? true : undefined,
+      })
+      // The same value was saved at an older version, not necessarily at this one.
+      if (savedDrafts.get(set.id) !== serverKey) savedDrafts.delete(set.id)
+      if (draft && serverKey === draftKey(draft)) {
         savedDrafts.set(set.id, draftKey(draft))
         // A refetch is authoritative: if it contains the requested fact, an
         // earlier lost response must not keep finish blocked by a stale error.
@@ -76,7 +86,7 @@ export function createLiveSetCoordinator(saveLiveSet: SaveLiveSet, confirmLiveSe
       enqueue(set.id, `confirm:${draftKey(draft)}`, async () => {
         const savedVersion = await saveChangedDraft(set, draft)
         const confirmedVersion = await confirmLiveSet(set.id, savedVersion)
-        versions.set(set.id, confirmedVersion)
+        versions.set(set.id, Math.max(currentVersion(set), confirmedVersion))
         return confirmedVersion
       }),
     unconfirm: (set: WorkoutSet, draft: LiveSetDraft) =>
@@ -84,7 +94,7 @@ export function createLiveSetCoordinator(saveLiveSet: SaveLiveSet, confirmLiveSe
         if (!unconfirmLiveSet) throw new Error('Отмена подхода недоступна')
         const savedVersion = await saveChangedDraft(set, draft)
         const version = await unconfirmLiveSet(set.id, savedVersion)
-        versions.set(set.id, version)
+        versions.set(set.id, Math.max(currentVersion(set), version))
         return version
       }),
     waitForIdle: async () => {
