@@ -7424,3 +7424,8 @@ details[open] > .progress-details-toggle svg { transform:rotate(180deg); }
 
 .fit-lime-shell .workout-template-form .trainer-template-methods > button { height:64px; min-height:64px; padding:4px; gap:2px; border-radius:16px; font-size:13px; line-height:16px }
 .fit-lime-shell .workout-template-form .trainer-template-methods > button svg { width:18px; height:18px; flex-basis:18px }
+
+/* The plan menu and existing save stay in one toolbar row. */
+.phone-frame.fit-lime-shell .coach-plan-template-actions { display:flex; flex-wrap:nowrap; align-items:center; gap:4px }
+.phone-frame.fit-lime-shell.coach-workout-reference .coach-reference-form > .page-header:has(.coach-plan-template-actions .overflow-menu) { grid-template-columns:44px minmax(0,1fr) 92px }
+.coach-plan-template-actions .overflow-trigger { width:44px; min-width:44px; height:44px; min-height:44px; padding:10px }

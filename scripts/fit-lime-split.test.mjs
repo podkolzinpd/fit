@@ -87,7 +87,7 @@ test('finance/template visual matrices cannot grow back into full business chain
   assert.doesNotMatch(bodies.get('template'), /page\.clock|page\.reload|commands|\/health|rows\.size/)
 })
 
-test('real Playwright partitions preserve the 710-case union without duplicates in either engine', () => {
+test('real Playwright partitions preserve the 714-case union without duplicates in either engine', () => {
   const collect = (args) => {
     const result = spawnSync(process.execPath, [join(root, 'node_modules/playwright/cli.js'), ...args, '--list', '--reporter=json'],
       { cwd: root, encoding: 'utf8', timeout: 60000, env: { ...process.env, FIT_SCHEDULE_V2_VISUAL: '1' } })
@@ -103,7 +103,7 @@ test('real Playwright partitions preserve the 710-case union without duplicates 
   }
   for (const { project } of engines) {
     const full = collect(fitLimeArgs(project, 'full').args)
-    assert.equal(full.length, 710) // Existing706 plus four trainer-template entry cases; every previous case remains.
+    assert.equal(full.length, 714) // Existing710 plus four trainer-template source cases; every previous case remains.
     for (const title of ['Compact clients keep search, initials and one add flow in trainer Lime', 'First-client invitation survives the empty-to-list transition', 'Lime coach calendar shows full recorded history and preserves return, list and source data', 'Lime athlete calendar retains its existing compact history preview']) {
       assert.equal(full.filter(key => key.endsWith(title)).length, 1, title)
     }
@@ -136,6 +136,7 @@ test('real Playwright partitions preserve the 710-case union without duplicates 
     for (const title of [...financeTitles, ...templateTitles]) assert.equal(full.filter(key => key.endsWith(title)).length, 1, title)
     assert.equal(full.filter(key => key.includes('Template reliability ') && !key.includes('lime=')).length, 3)
     assert.equal(full.filter(key => key.includes('Template entry ')).length, 4)
+    assert.equal(full.filter(key => key.includes('Template source ')).length, 4)
     const parts = partitions.flatMap(({ lane, shard }) => collect(fitLimeArgs(project, 'full', '', lane, shard).args))
     assert.equal(parts.length, full.length)
     assert.equal(new Set(parts).size, parts.length)
