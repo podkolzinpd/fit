@@ -1275,8 +1275,9 @@ production-приёмка сверяется отдельно. Прочитан�
 при обычном повторе потерянного ответа сохранён, автоматического overwrite нет.
 Проверка: пять новых регрессий падают на исходном ServicesPage (10 прежних
 сценариев проходят); исправленная версия124/124 component/repository/shared
-shell/navigation. Root lint/types/build/startup прошли; новый финальный прогон
-48 production-mode Chromium/WebKit ещё выполняется. Исходный аудит18 сохранён.
+shell/navigation. Root lint/types/build/startup прошли; финальные48/48
+production-mode Chromium/WebKit прошли без повторов. Снимки390/1366 просмотрены;
+все service API/WS изолированы. Исходный аудит18 сохранён.
 Runtime closure SHA256:79543781134bff2fd7de4f698ea1f1fa424515bbdad8962de6afe310a9f6813b
 (четыре runtime-файла PR1 в лексическом перечислении приватной квитанции).
 Отвергнуто: сброс ввода при повторном выборе, слепая отмена новой версии,
