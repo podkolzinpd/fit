@@ -19,6 +19,8 @@ as $$
 declare
   actor_id uuid := app_private.trainer_finance_assert_trainer();
   current_kind text;
+  current_starts_on date;
+  current_ends_on date;
   client_id_value uuid;
   used_sessions integer;
 begin
@@ -33,7 +35,8 @@ begin
   perform pg_catalog.pg_advisory_xact_lock(pg_catalog.hashtextextended(
     actor_id::text || ':' || client_id_value::text, 0
   ));
-  select package.kind into current_kind
+  select package.kind, package.starts_on, package.ends_on
+  into current_kind, current_starts_on, current_ends_on
   from public.trainer_finance_packages package
   where package.id = p_package_id and package.trainer_id = actor_id
     and package.version = p_expected_version
@@ -60,7 +63,11 @@ begin
     raise exception 'trainer_finance_invalid' using errcode = 'PT422';
   end if;
 
-  if p_kind = 'session_pack' and exists (
+  -- Do not turn an existing period discrepancy into a ban on unrelated edits.
+  -- Only a requested period change must contain every currently charged date.
+  if p_kind = 'session_pack'
+    and (p_starts_on is distinct from current_starts_on or p_ends_on is distinct from current_ends_on)
+    and exists (
     select 1 from public.trainer_finance_sessions session
     join public.workouts workout on workout.id = session.workout_id
     where session.package_id = p_package_id and session.trainer_id = actor_id
