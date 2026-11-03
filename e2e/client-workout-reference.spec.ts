@@ -4218,6 +4218,11 @@ for (const failure of ['rejected', 'response-lost', 'timer-response-lost'] as co
   } else await expect(row.getByLabel('Фактический вес', { exact: true })).toHaveValue('40')
   await expect(page.getByRole('alert').filter({ hasText: 'Не удалось отменить' })).toHaveCount(0)
   expect(attempts).toBe(failure === 'rejected' ? 2 : 1)
+  if (timed) {
+    await page.getByRole('button', { name: 'Завершить тренировку', exact: true }).click()
+    await page.locator('.finish-confirm').getByRole('button', { name: 'Завершить', exact: true }).click()
+    await expect.poll(() => backend.getWorkouts()[0]!.status).toBe('done')
+  }
 })
 
 test('Live unconfirm keeps a timed set manual until explicit start, including reload', async ({ page }) => {

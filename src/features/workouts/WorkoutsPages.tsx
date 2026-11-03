@@ -3533,7 +3533,8 @@ export function LiveWorkoutPage() {
         const serverSet = refreshed.data?.exercises.flatMap(exercise => exercise.sets).find(item => item.id === set.id)
         if (serverSet) {
           const applied = serverSet.version > set.version && !serverSet.confirmedAt && sameLiveSetDraft(serverSet.fact, { ...draft, timerConfirmed: undefined })
-          liveSets.sync(serverSet, applied ? draft : undefined)
+          // A proven undo acknowledges the authoritative fact (its timer mark is gone).
+          liveSets.sync(serverSet, applied ? serverSet.fact : undefined)
           if (applied) return serverSet.version
         }
         throw liveWorkoutRecoveryError(error, !refreshed.error)
