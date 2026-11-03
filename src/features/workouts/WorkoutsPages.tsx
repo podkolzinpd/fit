@@ -3135,7 +3135,7 @@ export function LiveWorkoutPage() {
     const row = liveSetForms.current.get(target)
     const card = row?.closest<HTMLElement>('.live-exercise')
     const content = row?.closest<HTMLElement>('.content')
-    const pinned = content?.querySelector<HTMLElement>('.live-pinned')
+    const pinned = content?.querySelector<HTMLElement>(coachV79 || clientReference ? '.live-workout-page > .page-header' : '.live-pinned')
     if (!row || !card || !content || !pinned) return
     nextExerciseAnchor.current = null
     cancelExerciseReveal.current?.()

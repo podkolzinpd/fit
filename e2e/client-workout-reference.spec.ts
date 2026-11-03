@@ -4302,3 +4302,72 @@ for (const role of ['client', 'trainer'] as const) test(`Live unconfirm preserve
   await expect(row).not.toHaveClass(/confirmed/)
   expect(backend.getWorkouts()[0]!.exercises[0]!.sets[0]!.fact).toMatchObject(originalFact)
 })
+
+// A real final-set handoff, rather than synthetic clicks on a scroll helper.
+// Roles change folding structure; reduced motion changes the native scroll path.
+for (const sample of [
+  { role: 'client', reduced: false }, { role: 'trainer', reduced: false },
+  { role: 'trainer', reduced: true },
+] as const) test(`Live transition reveals next exercise without stealing input ${sample.role} reduced-${sample.reduced}`, async ({ page }, info) => {
+  await page.clock.setFixedTime(new Date('2026-11-03T09:00:00Z'))
+  await page.emulateMedia({ reducedMotion: sample.reduced ? 'reduce' : 'no-preference' })
+  const id = sample.role === 'client' ? pilotId : 'c0ac0000-6010-4000-8000-000000000001'
+  await page.addInitScript(id => {
+    const key = `fit.coachmarks-seen.${id}`
+    const seen = JSON.parse(localStorage.getItem(key) ?? '[]') as string[]
+    localStorage.setItem(key, JSON.stringify([...seen, 'client-live-reference-timer-2026-10']))
+    localStorage.setItem(`fit.liveExerciseAnimation.${id}`, 'false')
+    localStorage.setItem(`fit.clientLiveDensity.${id}`, 'original')
+    localStorage.setItem(`fit.coachLiveDensity.${id}`, 'original')
+  }, id)
+  const source = coachGestureWorkout(false, 3)
+  source.startedAt = '2026-11-03T08:59:00Z'
+  Object.assign(source.exercises[0]!.sets[0]!, { confirmedAt: '2026-11-03T08:59:30Z', fact: { weightKg: 30, reps: 12 } })
+  const backend = await mockPilot(page, { role: sample.role, profileId: id, clientLime: true, fitLime: true, workouts: [source] })
+  await page.goto(`/workouts/${workoutId}/live`)
+  await page.evaluate(() => document.fonts.ready)
+  const row = page.locator(`[data-live-set-id="${source.exercises[0]!.sets[1]!.id}"]`)
+  const button = row.getByRole('button', { name: 'Готово, отдых', exact: true })
+  await button.scrollIntoViewIfNeeded()
+  const handle = await row.getByLabel('Фактический вес', { exact: true }).elementHandle()
+  const next = page.locator(`[data-live-set-id="${source.exercises[1]!.sets[0]!.id}"]`)
+  const measurements = page.evaluate(() => new Promise<{ frames: Array<{ t: number; scroll: number }>; calls: ScrollToOptions[] }>(resolve => {
+    const content = document.querySelector<HTMLElement>('.content')!
+    const original = content.scrollTo.bind(content)
+    const frames: Array<{ t: number; scroll: number }> = [], calls: ScrollToOptions[] = []
+    const start = performance.now()
+    content.scrollTo = function (options: ScrollToOptions | number, y?: number) {
+      if (typeof options === 'number') return original(options, y ?? 0)
+      calls.push(options)
+      original(options)
+    }
+    function sampleFrame(t: number) {
+      frames.push({ t, scroll: content.scrollTop })
+      if (performance.now() - start < 1600) requestAnimationFrame(sampleFrame)
+      else { content.scrollTo = original; resolve({ frames, calls }) }
+    }
+    requestAnimationFrame(sampleFrame)
+  }))
+  await button.click()
+  await expect.poll(() => backend.getWorkouts()[0]!.exercises[0]!.sets[1]!.confirmedAt).not.toBeNull()
+  const trace = await measurements
+  await info.attach('live-handoff-frames', { body: JSON.stringify(trace), contentType: 'application/json' })
+  expect(trace.calls.length).toBeLessThanOrEqual(1)
+  if (Math.abs(trace.frames.at(-1)!.scroll - trace.frames[0]!.scroll) > 100) {
+    expect(trace.calls).toHaveLength(1)
+    if (!sample.reduced) expect(new Set(trace.frames.map(frame => frame.scroll)).size).toBeGreaterThan(2)
+  }
+  for (const call of trace.calls) expect(call.behavior).toBe(sample.reduced ? 'instant' : 'smooth')
+  await expect(next.getByLabel('Фактический вес', { exact: true })).not.toBeFocused()
+  expect(await handle!.evaluate(element => element.isConnected)).toBe(true)
+  expect(await next.evaluate(element => {
+    const row = element.getBoundingClientRect(), content = element.closest('.content')!.getBoundingClientRect()
+    const header = document.querySelector('.live-workout-page > .page-header')!.getBoundingClientRect()
+    const viewport = window.visualViewport!
+    return row.top >= Math.max(content.top, header.bottom) && row.bottom <= Math.min(content.bottom, viewport.offsetTop + viewport.height)
+  })).toBe(true)
+  expect(await page.evaluate(() => window.scrollY)).toBe(0)
+  expect(backend.getWorkouts()[0]!.exercises[0]!.sets[0]!.fact).toEqual({ weightKg: 30, reps: 12 })
+  expect(await page.evaluate(id => sessionStorage.getItem(`fit:live-rest-until:${id}`), workoutId)).not.toBeNull()
+  await page.screenshot({ path: info.outputPath('live-handoff.png') })
+})
