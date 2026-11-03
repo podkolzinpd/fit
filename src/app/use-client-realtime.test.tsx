@@ -126,8 +126,7 @@ describe('client realtime', () => {
     })
     expect(invalidate).not.toHaveBeenCalled()
 
-    act(() => { vi.advanceTimersByTime(1) })
-    await Promise.resolve()
+    await act(async () => { await vi.advanceTimersByTimeAsync(1) })
     expect(invalidate).toHaveBeenCalledWith({ queryKey: ['workouts'] })
     expect(invalidate).toHaveBeenCalledWith({ queryKey: ['workout', 'workout-1'] })
     expect(invalidate).toHaveBeenCalledWith({ queryKey: ['workout-regularity', 'client-1'] })

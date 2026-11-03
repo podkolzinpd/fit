@@ -134,7 +134,7 @@
   Новая функция получает один доменный контракт и Yandex implementation;
   создавать ради неё Supabase adapter или парную migration не нужно.
 - Supabase ещё задействован в ограниченных legacy-путях (оставшиеся media,
-  локальные тесты и rollback tooling). Recovery через email/пароль удалён
+  явные архивные репетиции и rollback tooling). Recovery через email/пароль удалён
   14.10.2026: исторические миграции не означают доступный recovery API
   ([решение](YANDEX_CUTOVER_PLAYBOOK.md#завершение-password-recovery--14102026)).
   Не удаляйте оставшиеся legacy-пути или старые таблицы до отдельного
@@ -175,17 +175,17 @@ Yandex migrations, а не на исторические `supabase/migrations` �
    с текущим playbook, не создавать старые Cloud Functions по историческому описанию.
 4. Проверьте Yandex producer/dispatcher на идемпотентность, opt-out,
    отсутствие подписок, несколько устройств и отказ отправки. Legacy pgTAP
-   остаётся регрессией замороженной Supabase-цепочки, не приёмкой новой функции.
+   сохранён в архиве замороженной Supabase-цепочки вне активного CI,
+   не является приёмкой новой функции.
 
 ## Качество и безопасность
 
 - Не используйте `select('*')`, `any`, небезопасные casts и проглоченные ошибки.
 - Не коммитьте `.env`, DB password, secret/service-role/OAuth secret.
-- Локальная разработка использует только локальные Podman Supabase и PostgreSQL
-  17; production URL/секреты не копируются в локальные env-файлы. Production
+- Локальная разработка использует только локальный Podman PostgreSQL17; production URL/секреты не копируются в локальные env-файлы. Production
   frontend строится GitHub Actions для Cloud.ru Nginx, не Vercel.
 - Для обычного локального запуска используйте `npm run dev`: команда сама
-  запускает обе локальные базы. Не подменяйте `.env.development` удалённым проектом.
+  запускает native PostgreSQL17. Не подменяйте `.env.development` удалённым проектом.
 - Любая mutation должна подтверждать, что изменилась ожидаемая запись.
 - Многошаговая запись обязана полностью откатываться при любой ошибке.
 - Добавляйте тест на cross-tenant доступ для каждого нового tenant ID.
