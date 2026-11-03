@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
-import { useMemo, useState } from 'react'
+import { useMemo, useState, type ReactNode } from 'react'
 import { Link, useLocation, useSearchParams } from 'react-router-dom'
 import { isCoachWorkoutRedesignEnabled } from '../../app/coach-workout-redesign'
 import { readCoachCalendarRoute } from '../../app/coach-calendar-navigation'
@@ -9,6 +9,8 @@ import type { TrainerFinanceOverview, TrainerFinanceOverviewClient } from '../..
 import { addMonths, formatLocalDateShort, formatMonth, localDate, todayInTimeZone, type LocalDate } from '../../shared/local-date'
 import { BackIcon, ChevronRightIcon, CloseIcon, SearchIcon } from '../../shared/icons'
 import { AsyncView, Page } from '../../shared/ui'
+
+import { TrainerFinancePayments } from './TrainerFinancePayments'
 
 type FinanceFilter = 'all' | 'due' | 'overdue' | 'low' | 'missing' | 'unassigned' | 'archived'
 
@@ -74,6 +76,16 @@ export function TrainerFinanceOverviewPage() {
   const month = selectedMonth(monthParam, todayInTimeZone(actor?.timezone))
   const filter = FILTERS.find((item) => item.id === params.get('filter'))?.id ?? 'all'
   const search = params.get('q') ?? ''
+  const paymentsView = params.get('view') === 'payments'
+  const paymentClient = params.get('client') ?? undefined
+  const rawOffset = Number(params.get('offset') ?? 0)
+  const offset = Number.isInteger(rawOffset) && rawOffset >= 0 && rawOffset <= 1000000 ? rawOffset : 0
+  const changePaymentParam = (name: string, value: string) => {
+    const next = new URLSearchParams(params)
+    if (value) next.set(name, value); else next.delete(name)
+    if (name !== 'offset') next.delete('offset')
+    setParams(next, { replace: true })
+  }
   const changeSearch = (value: string) => {
     const next = new URLSearchParams(params)
     if (value) next.set('q', value); else next.delete('q')
@@ -82,6 +94,7 @@ export function TrainerFinanceOverviewPage() {
   const change = (nextMonth: LocalDate, nextFilter: FinanceFilter) => {
     const next = new URLSearchParams(params)
     next.set('month', nextMonth.slice(0, 7))
+    next.delete('offset')
     if (nextFilter === 'all') next.delete('filter'); else next.set('filter', nextFilter)
     setParams(next, { replace: true })
   }
@@ -89,8 +102,17 @@ export function TrainerFinanceOverviewPage() {
   const query = useQuery({
     queryKey: ['trainer-finance-overview', monthValue],
     queryFn: () => trainerFinance.listOverview(monthValue),
+    enabled: !paymentsView,
   })
-  return <TrainerFinanceOverviewView month={month} data={query.data} loading={query.isLoading} error={query.error}
+  return <TrainerFinanceOverviewView month={month}
+    navigation={<div className="finance-tabs finance-overview-tabs" role="group" aria-label="Раздел финансов">
+      <button type="button" className={!paymentsView ? 'is-active' : ''} aria-pressed={!paymentsView} onClick={() => changePaymentParam('view', '')}>Клиенты</button>
+      <button type="button" className={paymentsView ? 'is-active' : ''} aria-pressed={paymentsView} onClick={() => changePaymentParam('view', 'payments')}>Оплаты</button>
+    </div>}
+    paymentHistory={paymentsView ? <TrainerFinancePayments key={`${monthValue}:${paymentClient ?? ''}`} month={monthValue} clientId={paymentClient}
+      offset={offset} returnTo={`${location.pathname}${location.search}`}
+      onClientChange={value => changePaymentParam('client', value)}
+      onOffsetChange={value => changePaymentParam('offset', value ? String(value) : '')} /> : undefined} data={query.data} loading={query.isLoading} error={query.error}
     search={search} onSearchChange={changeSearch}
     filter={filter} onFilterChange={(value) => change(month, value)} returnTo={`${location.pathname}${location.search}`}
     back={isCoachWorkoutRedesignEnabled(actor) ? readCoachCalendarRoute(actor?.userId) ?? '/today' : '/clients'}
@@ -99,7 +121,9 @@ export function TrainerFinanceOverviewPage() {
     onRetry={() => void query.refetch()} />
 }
 
-export function TrainerFinanceOverviewView({ month, data, loading = false, error = null, onPreviousMonth, onNextMonth, onRetry, filter: controlledFilter, onFilterChange, search: controlledSearch, onSearchChange, returnTo = '/finance', back = '/clients' }: {
+export function TrainerFinanceOverviewView({ month, data, loading = false, error = null, onPreviousMonth, onNextMonth, onRetry, filter: controlledFilter, onFilterChange, search: controlledSearch, onSearchChange, returnTo = '/finance', back = '/clients', navigation, paymentHistory }: {
+  navigation?: ReactNode
+  paymentHistory?: ReactNode
   search?: string
   onSearchChange?: (value: string) => void
   filter?: FinanceFilter
@@ -126,6 +150,7 @@ export function TrainerFinanceOverviewView({ month, data, loading = false, error
       && (!name || client.fullName.toLocaleLowerCase('ru').includes(name)))
   }, [filter, search, data?.clients])
   return <Page title="Финансы" back={back} swipeBack className="finance-overview-page">
+    {navigation}
     <div className="finance-period-block">
       <span>Период</span>
       <div className="finance-month-switcher" aria-label="Месяц финансов">
@@ -134,7 +159,7 @@ export function TrainerFinanceOverviewView({ month, data, loading = false, error
       <button type="button" aria-label="Следующий месяц" onClick={onNextMonth}><ChevronRightIcon /></button>
       </div>
     </div>
-    <AsyncView loading={loading} error={error} onRetry={onRetry}>
+    {paymentHistory ?? <AsyncView loading={loading} error={error} onRetry={onRetry}>
       {data && <>
         <section className="finance-overview-summary" aria-label="Финансовая сводка">
           <p><span>Получено за месяц</span><strong>{money(data.receivedCents)}</strong></p>
@@ -149,6 +174,6 @@ export function TrainerFinanceOverviewView({ month, data, loading = false, error
         <div className="finance-overview-list">{clients.map((client) => <Link className={`card finance-overview-client${client.needsAttention ? ' needs-attention' : ''}`} to={`/clients/${client.clientId}/finance`} state={{ financeBackTo: returnTo }} key={client.clientId}><span><strong>{client.fullName}</strong>{client.archivedAt ? <small>В архиве</small> : client.activeClient === false ? <small>Связь завершена</small> : null}</span><span>{trainerFinanceClientLabel(client)}</span><ChevronRightIcon /></Link>)}</div>
         {clients.length === 0 && <p className="finance-empty">{search.trim() ? 'Ничего не найдено.' : 'В этом разделе клиентов нет.'}</p>}
       </>}
-    </AsyncView>
+    </AsyncView>}
   </Page>
 }

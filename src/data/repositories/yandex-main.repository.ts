@@ -130,6 +130,15 @@ const trainerFinancePaymentSchema = z.object({
   voidReason: z.string().nullable(), version: z.number().int().positive(),
   createdAt: yandexDateTimeSchema, updatedAt: yandexDateTimeSchema,
 })
+const trainerFinancePaymentHistorySchema = z.object({
+  month: z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/), clientId: uuid.nullable(),
+  offset: z.number().int().nonnegative(), limit: z.number().int().positive(),
+  totalCount: z.number().int().nonnegative(), totalCents: z.number().int().nonnegative(),
+  clients: z.array(z.object({ id: uuid, name: z.string() })),
+  payments: z.array(trainerFinancePaymentSchema.extend({
+    clientId: uuid, clientName: z.string(), serviceTitle: z.string(), archivedAt: yandexDateTimeSchema.nullable(),
+  })),
+})
 const trainerFinanceSessionSchema = z.object({
   id: uuid, packageId: uuid.nullable(), workoutId: uuid,
   disposition: z.enum(['charged', 'unassigned', 'free', 'trial']), source: z.enum(['automatic', 'manual']),
@@ -1131,6 +1140,12 @@ export function createYandexMainRepository(
       },
     },
     trainerFinance: {
+      async listPayments(month: string, clientId?: string, offset = 0) {
+        const params = new URLSearchParams({ month, offset: String(offset) })
+        if (clientId) params.set('clientId', clientId)
+        const payload = await readJson(queries, `/v1/finance/payments?${params}`, z.object({ history: trainerFinancePaymentHistorySchema }))
+        return payload.history
+      },
       async listOverview(month: string) {
         const payload = await readJson(queries, `/v1/finance/overview?month=${encodeURIComponent(month)}`, z.object({ overview: trainerFinanceOverviewSchema }))
         return payload.overview

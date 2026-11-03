@@ -244,6 +244,22 @@ describe('Yandex main repository', () => {
     expect(fetchMock).toHaveBeenCalledTimes(1)
   })
 
+  it('reads validated receipts with period/client pagination and no private client requests', async () => {
+    const history = { month: '2026-11', clientId, offset: 50, limit: 50, totalCount: 51, totalCents: 5100000,
+      clients: [{ id: clientId, name: 'Анна' }], payments: [{ id: financePaymentId, packageId: financePackageId,
+        clientId, clientName: 'Анна', archivedAt: '2026-10-01T10:00:00Z', serviceTitle: 'Персональные',
+        amountCents: 100000, receivedOn: '2026-11-03', source: 'manual', comment: null, voidedAt: null,
+        voidReason: null, version: 2, createdAt: '2026-11-03T10:00:00Z', updatedAt: '2026-11-03T10:00:00Z' }] }
+    const fetchMock = vi.fn().mockResolvedValueOnce(jsonResponse({ history }))
+      .mockResolvedValueOnce(jsonResponse({ history: { ...history, totalCents: -1 } }))
+    vi.stubGlobal('fetch', fetchMock)
+    const repository = createYandexMainRepository(apiBaseUrl, sessionToken, actor)
+    expect(await repository.trainerFinance.listPayments('2026-11', clientId, 50)).toEqual(history)
+    expect(fetchMock.mock.calls[0]![0]).toBe(`${apiBaseUrl}/v1/finance/payments?month=2026-11&offset=50&clientId=${clientId}`)
+    await expect(repository.trainerFinance.listPayments('2026-11')).rejects.toMatchObject({ code: 'invalid_response' })
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+  })
+
   it('reads and changes trainer finance only through the Yandex API', async () => {
     const financePackage = {
       id: financePackageId, clientId, trainerId: actor.userId, kind: 'session_pack', title: '10 тренировок',
