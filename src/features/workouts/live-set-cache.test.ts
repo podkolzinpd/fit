@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Workout } from '../../shared/domain'
-import { applyLiveSetConfirmation, applyLiveSetDraft, hasLiveSetResult, reconcileLiveWorkout, sameLiveSetDraft, setWithCarriedLiveWeight, setWithLocalDraft } from './live-set-cache'
+import { applyLiveSetUnconfirmation, applyLiveSetConfirmation, applyLiveSetDraft, hasLiveSetResult, reconcileLiveWorkout, sameLiveSetDraft, setWithCarriedLiveWeight, setWithLocalDraft } from './live-set-cache'
 
 const workout = {
   id: 'workout-1', clientId: 'client-1', clientName: 'Антон', workoutDate: '2026-08-05', status: 'in_progress', version: 1,
@@ -104,4 +104,15 @@ describe('hasLiveSetResult', () => {
     expect(hasLiveSetResult({ durationSec: 0 })).toBe(true)
     expect(hasLiveSetResult({ rpe: 8 })).toBe(true)
   })
+})
+
+it('retains reopened metrics against delayed confirm, save and GET responses', () => {
+  const confirmed = applyLiveSetConfirmation(workout, 'set-1', { weightKg: 55, reps: 8 }, 3, '2026-09-09T10:00:00Z')
+  const reopened = applyLiveSetUnconfirmation(confirmed, 'set-1', { weightKg: 57.5, reps: 8 }, 5)
+  const set = reopened.exercises[0]!.sets[0]!
+  expect(set).toMatchObject({ confirmedAt: null, timerConfirmed: false, version: 5, fact: { weightKg: 57.5, reps: 8 } })
+  const lateConfirm = applyLiveSetConfirmation(reopened, 'set-1', { weightKg: 55, reps: 8 }, 3, '2026-09-09T10:00:00Z')
+  expect(lateConfirm.exercises[0]!.sets[0]).toEqual(set)
+  expect(applyLiveSetDraft(reopened, 'set-1', { weightKg: 50 }, 4).exercises[0]!.sets[0]).toEqual(set)
+  expect(reconcileLiveWorkout(reopened, confirmed).exercises[0]!.sets[0]).toEqual(set)
 })

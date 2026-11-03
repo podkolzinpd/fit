@@ -195,6 +195,7 @@ export interface DataBackend {
     reschedule(workout: Workout, workoutDate: LocalDate, startTime: string | null): Promise<number>
     saveLiveSet(id: string, draft: LiveSetDraft, version: number): Promise<number>
     confirmLiveSet(id: string, version: number): Promise<number>
+    unconfirmLiveSet(id: string, version: number): Promise<number>
     appendLiveExercise(workout: Workout, exercise: ExerciseSnapshot, _operationId?: string, prefillFromHistory?: boolean): Promise<number>
     appendLiveSet(workout: Workout, exerciseId: string): Promise<number>
     appendLiveRound(workout: Workout, blockId: string, operationId: string): Promise<number>

@@ -562,3 +562,9 @@ infra:policy:test. Сохранён новый cloudru-client-restore test из 
 retired mirror test; остальные изменения main приняты без ручных изменений.
 107 targeted tests passed (3.4s), workflow docs/archive integrity и
 whitespace passed. Полный check ранее прошёл на41cb68c1; новый CI после push.
+
+Повторная синхронизация PR1958 с main3ed7d58b: конфликт только соседних
+строк CURRENT_STATE. Сохранены текущий stage cleanup и новый Live P2/P3 §90.
+Код main принят автоматически, последние изменения ветки10d7556c сохранены.
+Docs/archive integrity и whitespace проверяются до push; CI нового head
+остаётся отдельной проверкой. Дополнительных runtime изменений нет.

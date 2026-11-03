@@ -88,6 +88,7 @@ import {
   askWorkoutQuestion,
   cancelPlannedWorkout,
   confirmLiveSet,
+  unconfirmLiveSet,
   finishLiveWorkout,
   setLiveWorkoutPause,
   mergeLiveBlockWithNext,
@@ -7712,6 +7713,48 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
         await ownerPool.query('delete from public.client_trainer_relationships where client_id = $1', [QUICK_START_CLIENT_ID])
         await ownerPool.query('delete from public.clients where id = $1', [QUICK_START_CLIENT_ID])
         await ownerPool.query('delete from public.profiles where id = $1', [QUICK_START_ACTOR_ID])
+      }
+    })
+
+    it('unconfirms Live facts for either permitted role with safe replay, versions and active-only access', async () => {
+      if (!ownerPool || !runtimePool) throw new Error('Database pools are not ready')
+      const runtime = runtimePool
+      await ownerPool.query("update public.workouts set status='planned',completed_at=null where client_id=$1 and status='in_progress'", [CLIENT_ID])
+      await ownerPool.query("update public.workouts set status='in_progress',completed_at=null,started_at=now(),version=2 where id=$1", [ROOT_WORKOUT_ID])
+      const operation = randomUUID()
+      const operationIds = [operation]
+      try {
+        await ownerPool.query(`update public.workout_sets set confirmed_at=now(),timer_confirmed=true,
+          fact_weight_kg=25,fact_reps=10,fact_duration_sec=45,fact_distance_km=1.2,fact_rpe=6,
+          fact_duration_source='entered',fact_distance_source='entered',fact_rpe_source='entered',version=7 where id=$1`, [ROOT_WORKOUT_SET_ID])
+        const run = (actor: string, version: number, id = randomUUID()) => {
+          operationIds.push(id)
+          return withActorTransaction(runtime, actor, client => unconfirmLiveSet(client, ROOT_WORKOUT_SET_ID, version, id))
+        }
+        await expect(run(OUTSIDE_TRAINER_ID, 7)).rejects.toMatchObject({ failure: 'forbidden' })
+        await expect(run(OTHER_ACTOR_ID, 6)).rejects.toMatchObject({ failure: 'conflict' })
+        await expect(run(OTHER_ACTOR_ID, 7, operation)).resolves.toEqual({ version: 8, replayed: false })
+        await expect(run(OTHER_ACTOR_ID, 7, operation)).resolves.toEqual({ version: 8, replayed: true })
+        await expect(run(OTHER_ACTOR_ID, 8, operation)).rejects.toMatchObject({ failure: 'invalid' })
+        const read = await ownerPool.query(`select confirmed_at,timer_confirmed,fact_weight_kg,fact_reps,
+          fact_duration_sec,fact_distance_km,fact_rpe,fact_duration_source,version
+          from public.workout_sets where id=$1`, [ROOT_WORKOUT_SET_ID])
+        expect(read.rows[0]).toMatchObject({ confirmed_at: null,timer_confirmed: false,
+          fact_weight_kg: '25.00',fact_reps: 10,fact_duration_sec: 45,fact_distance_km: '1.20000',fact_rpe: '6.0',
+          fact_duration_source: 'entered',version: '8' })
+        const confirmOperation = randomUUID()
+        operationIds.push(confirmOperation)
+        const confirmed = await withActorTransaction(runtime, ACTOR_ID, client => confirmLiveSet(client, ROOT_WORKOUT_SET_ID, 8, confirmOperation))
+        await expect(run(ACTOR_ID, confirmed.version)).resolves.toEqual({ version: 10, replayed: false })
+        await ownerPool.query("update public.workouts set status='done',completed_at=now() where id=$1", [ROOT_WORKOUT_ID])
+        await expect(run(OTHER_ACTOR_ID, 10)).rejects.toMatchObject({ failure: 'conflict' })
+        await expect(run(OTHER_ACTOR_ID, 7, operation)).rejects.toMatchObject({ failure: 'conflict' })
+      } finally {
+        await ownerPool.query('delete from app_private.live_workout_operations where operation_id = any($1::uuid[])', [operationIds])
+        await ownerPool.query("update public.workouts set status='planned',started_at=null,completed_at=null,version=1 where id=$1", [ROOT_WORKOUT_ID])
+        await ownerPool.query(`update public.workout_sets set confirmed_at=null,timer_confirmed=false,
+          fact_weight_kg=null,fact_reps=null,fact_duration_sec=null,fact_distance_km=null,fact_rpe=null,
+          fact_duration_source='unknown',fact_distance_source='unknown',fact_rpe_source='unknown',version=1 where id=$1`, [ROOT_WORKOUT_SET_ID])
       }
     })
 
