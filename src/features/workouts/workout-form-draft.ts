@@ -1,3 +1,4 @@
+import { readQuickWorkoutEntryDraft, type QuickWorkoutEntryDraft } from './quick-workout-draft'
 import type { WorkoutDraft, WorkoutTrainingFormat } from '../../shared/domain'
 import type { LocalDate } from '../../shared/local-date'
 
@@ -7,6 +8,7 @@ export interface WorkoutFormDraft {
   requestId?: string
   appliedTemplateIds?: string[]
   composerText?: string
+  composerSnapshot?: QuickWorkoutEntryDraft
   clientId: string
   workoutDate: LocalDate
   startTime: string
@@ -51,7 +53,13 @@ export function readWorkoutFormDraft(key: string): WorkoutFormDraft | null {
   try {
     const raw = localStorage.getItem(key)
     const parsed: unknown = raw ? JSON.parse(raw) : null
-    return isDraft(parsed) ? parsed : null
+    if (!isDraft(parsed)) return null
+    if (parsed.composerSnapshot !== undefined) {
+      const { composerSnapshot, ...draft } = parsed
+      const snapshot = readQuickWorkoutEntryDraft(composerSnapshot, parsed.composerText)
+      return snapshot ? { ...draft, composerSnapshot: snapshot } : draft
+    }
+    return parsed
   } catch {
     return null
   }
@@ -65,8 +73,8 @@ export function readWorkoutEditDraft(key: string, version: number | undefined): 
 
 export function writeWorkoutFormDraft(key: string, draft: WorkoutFormDraft): void {
   const previous = readWorkoutFormDraft(key)
-  if (draft.composerText === undefined && draft.requestId && previous?.requestId === draft.requestId && previous.composerText) {
-    draft = { ...draft, composerText: previous.composerText }
+  if (draft.composerText === undefined && draft.requestId && previous?.requestId === draft.requestId && previous.sourceVersion === draft.sourceVersion && previous.composerText) {
+    draft = { ...draft, composerText: previous.composerText, composerSnapshot: previous.composerSnapshot }
   }
   if (draft.appliedTemplateIds === undefined && previous?.appliedTemplateIds && previous.requestId === draft.requestId && previous.sourceVersion === draft.sourceVersion) {
     draft = { ...draft, appliedTemplateIds: previous.appliedTemplateIds }

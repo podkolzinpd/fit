@@ -1,3 +1,4 @@
+import type { QuickWorkoutEntryDraft } from './quick-workout-draft'
 import { WorkoutTemplatePicker } from './WorkoutTemplatePicker'
 import { persistTemplateSource, type TemplatePlanContext } from './template-plan-context'
 import { TrainerTemplateDraftChoice } from './TrainerTemplateDraftChoice'
@@ -1388,7 +1389,7 @@ export function WorkoutFormPage() {
   const clientLime = isClientLimeEnabled(actor)
   const clients = useQuery({ queryKey: ['clients', false], queryFn: () => clientsRepository.list(false), enabled: !clientMode })
   const mine = useQuery({ queryKey: ['my-client'], queryFn: () => clientsRepository.getMine(), enabled: clientMode })
-  useClientRealtime(source.data?.clientId ?? (clientMode ? mine.data?.id : params.get('client') ?? undefined))
+  useClientRealtime(templateId ? undefined : source.data?.clientId ?? (clientMode ? mine.data?.id : params.get('client') ?? undefined))
   const catalog = useExerciseCatalog()
   const [draftExercises, setDraftExercises] = useState<WorkoutDraft['exercises'] | null>(null)
   const [previousResultReferences, setPreviousResultReferences] = useState<ReadonlyMap<string, PreviousExerciseResult>>(() => new Map())
@@ -1417,6 +1418,8 @@ export function WorkoutFormPage() {
   // undefined follows the initial default; an empty string is an explicit choice.
   const [stageId, setStageId] = useState<string | undefined>(undefined)
   const [formDraftReady, setFormDraftReady] = useState(false)
+  const [composerSnapshot, setComposerSnapshot] = useState<QuickWorkoutEntryDraft>()
+  const [composerBusy, setComposerBusy] = useState(false)
   const [templateDraftChoice, setTemplateDraftChoice] = useState<'resume' | 'fresh' | null>(null)
   const [templateDraftWaiting, setTemplateDraftWaiting] = useState(false)
   const [assignmentKey, setAssignmentKey] = useState<string | null>(null)
@@ -1457,10 +1460,11 @@ export function WorkoutFormPage() {
   useEffect(() => { setPickerSelectionDraft([]) }, [draftKey])
   // Клиент, для которого выбираем этап (реактивно — при смене в селекте).
   const defaultClientId = clientMode ? (mine.data?.id ?? '') : (initial?.clientId ?? routeClientId)
-  const [selectedClientId, setSelectedClientId] = useState<string>('')
+  const [selectedClientId, setSelectedClientId] = useState<string | undefined>(undefined)
   // Копия остаётся в контексте клиента исходной тренировки: имя уже видно
   // в шапке, поэтому повторный picker только удлинял форму и создавал риск ошибки.
-  const clientId = copiedWorkout ? (initial?.clientId ?? defaultClientId) : (selectedClientId || defaultClientId)
+  const clientId = copiedWorkout ? (initial?.clientId ?? defaultClientId) : templateId ? formDraftReady ? selectedClientId ?? defaultClientId : '' : (selectedClientId || defaultClientId)
+  useClientRealtime(templateId && formDraftReady ? clientId : undefined)
   const goBack = useWorkoutBack(pilotCalendarReturnTo ?? (workoutId ? `/workouts/${workoutId}` : workoutListFallback(clientMode, clientId)))
   const clientWorkouts = useQuery({ queryKey: ['client-exercises-frequency', clientId], queryFn: () => workoutsRepository.list(undefined, undefined, clientId), enabled: Boolean(clientId) })
   const finance = useQuery({ queryKey: ['trainer-finance-client', clientId], queryFn: () => trainerFinance.listClient(clientId), enabled: !clientMode && Boolean(clientId) })
@@ -1501,9 +1505,9 @@ export function WorkoutFormPage() {
     closeTemplatePicker()
   }
   function openTemplateDestination(library = false, applyOnSave = true) {
-    if (!actor || completedMode) return
+    if (!actor || completedMode || composerBusy) return
     const key = workoutId ? workoutFormDraftKey(actor.userId, `edit-${workoutId}`) : planDraftKey
-    const draft: WorkoutFormDraft = { clientId, workoutDate: entryDate, startTime, endTime, actualDurationMinutes, notes, title, stageId: selectedStageId, recordCompleted: false, exercises, trainingFormat, prepSeconds, executionMode,
+    const draft: WorkoutFormDraft = { clientId, workoutDate: entryDate, startTime, endTime, actualDurationMinutes, notes, title, stageId: selectedStageId, recordCompleted: false, exercises, trainingFormat, prepSeconds, executionMode, composerText: composerSnapshot?.text ?? '', composerSnapshot,
       ...(workoutId ? { sourceVersion: source.data?.version } : { sourceVersion: favoriteDraftVersion.current, requestId: createRequestId.current }) }
     if (!persistTemplateSource(key, draft)) { setPrefillError('Не удалось сохранить черновик на устройстве. План остаётся открыт.'); return }
     const returnState = { ...navigationState, templatePlanDraftKey: key }
@@ -1527,6 +1531,7 @@ export function WorkoutFormPage() {
     if (saved) {
       if (saved.requestId) createRequestId.current = saved.requestId
       setSelectedClientId(templateId ? saved.clientId : routeClientId || saved.clientId)
+      setComposerSnapshot(saved.composerSnapshot ?? { text: saved.composerText ?? '', parsedText: '', entries: [], choices: {} })
       setEntryDate(saved.workoutDate)
       setStartTime(saved.startTime.slice(0, 5))
       setEndTime(saved.endTime.slice(0, 5))
@@ -1579,9 +1584,9 @@ export function WorkoutFormPage() {
 
   useEffect(() => {
     if (!formDraftReady || stageLoading || editDraftEnabled && planSaved.current || workoutId && !editDraftEnabled) return
-    const draft = { clientId, workoutDate: entryDate, startTime, endTime, actualDurationMinutes, notes, title, stageId: clientReference || templateId ? selectedStageId : stageId ?? '', recordCompleted, exercises, trainingFormat, prepSeconds, executionMode }
+    const draft = { composerText: composerSnapshot?.text, composerSnapshot, clientId, workoutDate: entryDate, startTime, endTime, actualDurationMinutes, notes, title, stageId: clientReference || templateId ? selectedStageId : stageId ?? '', recordCompleted, exercises, trainingFormat, prepSeconds, executionMode }
     if (workoutId) {
-      const fingerprint = JSON.stringify(draft)
+      const fingerprint = JSON.stringify({ ...draft, composerText: draft.composerText || undefined, composerSnapshot: draft.composerText ? draft.composerSnapshot : undefined })
       editBaseline.current ??= fingerprint
       const changed = editRestored.current || fingerprint !== editBaseline.current
       setHasEditChanges(changed)
@@ -1593,7 +1598,7 @@ export function WorkoutFormPage() {
       }
       writeWorkoutFormDraft(planDraftKey, { ...draft, sourceVersion: editSourceVersion.current })
     } else writeWorkoutFormDraft(draftKey, { ...draft, sourceVersion: favoriteDraftVersion.current, requestId: createRequestId.current })
-  }, [actualDurationMinutes, clientId, clientReference, selectedStageId, stageLoading, draftKey, planDraftKey, editDraftEnabled, safePlanInput, endTime, entryDate, exercises, formDraftReady, notes, title, recordCompleted, stageId, startTime, trainingFormat, prepSeconds, executionMode, workoutId])
+  }, [composerSnapshot, actualDurationMinutes, clientId, clientReference, selectedStageId, stageLoading, draftKey, planDraftKey, editDraftEnabled, safePlanInput, endTime, entryDate, exercises, formDraftReady, notes, title, recordCompleted, stageId, startTime, trainingFormat, prepSeconds, executionMode, workoutId])
 
   useEffect(() => {
     if (!safePlanInput || !hasEditChanges) return
@@ -1778,7 +1783,7 @@ export function WorkoutFormPage() {
   }
   const availableClients = clientMode ? (mine.data ? [mine.data] : []) : clients.data
   const selectedClientName = availableClients?.find((client) => client.id === clientId)?.fullName
-  const clientContextLocked = !clientMode && !workoutId && Boolean(routeClientId || (copiedWorkout && source.data?.clientId))
+  const clientContextLocked = !clientMode && !workoutId && !(templateId && templateDraftChoice === 'resume') && Boolean(routeClientId || (copiedWorkout && source.data?.clientId))
   const editingDenied = Boolean(clientMode && workoutId && source.data && source.data.createdBy !== actor?.userId)
   const error = source.error ?? templateSource.error ?? mine.error ?? (plannedFromFavorite ? favorites.error : null) ?? (presetId ? catalog.error : null)
   const loading = source.isLoading || templateSource.isLoading || Boolean(templateId && !formDraftReady && templateSource.isFetching) || mine.isLoading || (plannedFromFavorite && (favorites.isLoading || !formDraftReady && favorites.isFetching)) || Boolean(presetId && catalog.loading) || Boolean(!error && (favorite || preset) && !formDraftReady && !templateDraftWaiting)
@@ -1825,7 +1830,7 @@ export function WorkoutFormPage() {
     <option value="">Без этапа</option>
     {stages.map((stage) => <option key={stage.id} value={stage.id}>{stage.title}</option>)}
   </select>
-  return <Page title={coachReference ? pageTitle : documentTitle} hideTitle={!coachReference} className={`workout-form-page workout-focused-page${coachReference ? ' coach-reference-form' : ''}${coachReference || clientReference ? ' workout-editor-reference' : ''}${clientReference ? ' client-reference-form client-editor-refined client-editor-polish' : ''}${refinedPlan ? ' coach-plan-refined coach-plan-polish' : ''}`} back={-1} onBack={() => void leaveForm()} action={coachReference || limePlan && !clientMode && exercises.length > 0 ? <div className="actions coach-plan-template-actions">{limePlan && !clientMode && exercises.length > 0 && <OverflowMenu label="Другие действия с планом" items={[{ label: 'Сохранить как шаблон', disabled: !formDraftReady || loading || Boolean(error) || mutation.isPending || pickerOpen || templatePickerOpen, onClick: () => openTemplateDestination(false, false) }]} />}{coachReference ? <WorkoutCta form="coach-workout-plan-form" type="submit" className="coach-plan-save" aria-label={completedMode ? 'Сохранить результат' : 'Сохранить план'} pending={mutation.isPending} pendingLabel={<><CheckSmallIcon /><span className="sr-only">Сохраняем…</span></>} disabled={!formDraftReady || loading || Boolean(error) || referenceClientPickerOpen || pickerOpen || templatePickerOpen}><CheckSmallIcon /></WorkoutCta> : null}</div> : undefined}>
+  return <Page title={coachReference ? pageTitle : documentTitle} hideTitle={!coachReference} className={`workout-form-page workout-focused-page${coachReference ? ' coach-reference-form' : ''}${coachReference || clientReference ? ' workout-editor-reference' : ''}${clientReference ? ' client-reference-form client-editor-refined client-editor-polish' : ''}${refinedPlan ? ' coach-plan-refined coach-plan-polish' : ''}`} back={-1} onBack={() => void leaveForm()} action={coachReference || limePlan && !clientMode && exercises.length > 0 ? <div className="actions coach-plan-template-actions">{limePlan && !clientMode && exercises.length > 0 && <OverflowMenu label="Другие действия с планом" items={[{ label: 'Сохранить как шаблон', disabled: composerBusy || !formDraftReady || loading || Boolean(error) || mutation.isPending || pickerOpen || templatePickerOpen, onClick: () => openTemplateDestination(false, false) }]} />}{coachReference ? <WorkoutCta form="coach-workout-plan-form" type="submit" className="coach-plan-save" aria-label={completedMode ? 'Сохранить результат' : 'Сохранить план'} pending={mutation.isPending} pendingLabel={<><CheckSmallIcon /><span className="sr-only">Сохраняем…</span></>} disabled={!formDraftReady || loading || Boolean(error) || referenceClientPickerOpen || pickerOpen || templatePickerOpen}><CheckSmallIcon /></WorkoutCta> : null}</div> : undefined}>
     {!coachReference && <WorkoutHeader eyebrow={completedMode ? 'РЕЗУЛЬТАТ' : 'ПЛАН ТРЕНИРОВКИ'} title={pageTitle} state={completedMode ? 'history' : 'planned'}
       meta={headerMeta} showStatus={Boolean(workoutId)} />}
     <AsyncView loading={loading} error={error} onRetry={() => { if (sourceId) void source.refetch(); if (templateId) void templateSource.refetch(); if (clientMode) void mine.refetch(); if (plannedFromFavorite) void favorites.refetch(); if (presetId) catalog.retry() }}>{(plannedFromFavorite && !favorite || presetId && !preset) ? <StatePanel tone="info" title="Тренировка больше недоступна" description="Возможно, она была удалена из избранного." action={<Link className="button secondary" to="/me/workouts?tab=presets">К готовым тренировкам</Link>} /> : templateDraftWaiting && templateDraftChoice === null && templateId ? <TrainerTemplateDraftChoice choices={assignmentChoices} date={localDate(params.get('date') ?? today)} clientNames={new Map((clients.data ?? []).map((client) => [client.id, client.fullName]))} error={assignmentStorageError} onFresh={() => { void startFreshTemplate() }} onClose={goBack} onResume={(choice) => { setAssignmentKey(choice.key); setResumedAssignment(choice.draft); setTemplateDraftChoice('resume') }} /> : templateDraftWaiting && templateDraftChoice === null ? <StatePanel tone="info" title="Есть несохранённый черновик" description={plannedFromFavorite && readWorkoutFormDraft(draftKey)?.sourceVersion !== favorite?.version ? 'Шаблон обновлён или версия старого черновика неизвестна. Выберите, с чем продолжить.' : 'Продолжите введённую тренировку или начните заново из шаблона.'} action={<div className="stack compact"><WorkoutCta type="button" onClick={() => setTemplateDraftChoice('resume')}>Продолжить черновик</WorkoutCta><WorkoutCta type="button" variant="secondary" onClick={() => { void confirmLeave({ message: 'Начать из актуального шаблона? Несохранённые изменения этого черновика будут удалены.', confirmLabel: 'Начать заново', danger: true }).then((accepted) => { if (accepted) void startFreshTemplate() }) }}>Начать из обновлённого шаблона</WorkoutCta></div>} /> : editingDenied ? <StatePanel tone="info" title="Редактирование недоступно" description="Назначенную тренером тренировку может менять только тренер." action={<button type="button" className="secondary" onClick={goBack}>Вернуться</button>} /> : clientMode && !mine.data ? <StatePanel tone="info" title="Заполните профиль спортсмена" description="После этого можно будет добавлять самостоятельные тренировки и отслеживать результаты." action={<Link className="button" to="/me/edit">Заполнить профиль</Link>} /> : <form id={coachReference ? 'coach-workout-plan-form' : undefined} className="stack workout-form" onSubmit={(event) => void submit(event)} onKeyDownCapture={(event) => {
@@ -1893,7 +1898,7 @@ export function WorkoutFormPage() {
       <section className="workout-form-section workout-form-exercises">
         <div className={`workout-form-section-head workout-form-exercise-heading${coachReference ? ' sr-only' : ''}`}><h2>{completedMode ? 'Что выполнено' : 'Упражнения'}</h2>{!limePlan && !clientMode && !completedMode && <button ref={templateTriggerRef} type="button" className="secondary workout-form-template-trigger" onClick={() => setTemplatePickerOpen(true)}><CopyIcon />Добавить шаблон</button>}</div>
         {addedTemplateName && <p className="workout-template-added" role="status">Добавлен шаблон «{addedTemplateName}»</p>}
-        <CoachPlanEntryControls reference={coachReference && (clientMode || completedMode)} disabled={mutation.isPending} onOpenPicker={() => { setReplaceIndex(null); setPickerSearch(''); setPickerOpen(true) }}><QuickWorkoutEntry methods={limePlan && !clientMode ? { onTemplate: (event) => { templateTriggerRef.current = event.currentTarget; setTemplatePickerOpen(true) }, onExercise: () => { setReplaceIndex(null); setPickerSearch(''); setPickerOpen(true) } } : undefined} placeholder={isClientLimeEnabled(actor) ? CLIENT_LIME_WORKOUT_EXAMPLE : undefined} reference={coachReference} disabled={mutation.isPending} catalog={catalog.exercises} preferredExerciseRefs={clientRecentExercises.map((exercise) => exercise.ref)} parseWorkout={(text, systemCatalog) => exercisesRepository.parseWorkout(text, systemCatalog)} onAdd={(parsed) => void addQuickEntry(parsed)} compact={coachReference || exercises.length > 0} onOpenCatalog={exercises.length === 0 ? (search, onSelect) => { parsedExerciseSelection.current = onSelect ?? null; setPickerSearch(search); setReplaceIndex(null); setPickerOpen(true) } : undefined} /></CoachPlanEntryControls>
+        <CoachPlanEntryControls reference={coachReference && (clientMode || completedMode)} disabled={mutation.isPending} onOpenPicker={() => { setReplaceIndex(null); setPickerSearch(''); setPickerOpen(true) }}><QuickWorkoutEntry key={!clientMode ? formDraftReady ? planDraftKey : 'initializing' : undefined} onBusyChange={!clientMode ? setComposerBusy : undefined} initialText={!clientMode ? composerSnapshot?.text : undefined} initialSnapshot={!clientMode ? composerSnapshot : undefined} onDraftChange={formDraftReady && !clientMode && !completedMode ? setComposerSnapshot : undefined} methods={limePlan && !clientMode ? { onTemplate: (event) => { templateTriggerRef.current = event.currentTarget; setTemplatePickerOpen(true) }, onExercise: () => { setReplaceIndex(null); setPickerSearch(''); setPickerOpen(true) } } : undefined} placeholder={isClientLimeEnabled(actor) ? CLIENT_LIME_WORKOUT_EXAMPLE : undefined} reference={coachReference} disabled={mutation.isPending} catalog={catalog.exercises} preferredExerciseRefs={clientRecentExercises.map((exercise) => exercise.ref)} parseWorkout={(text, systemCatalog) => exercisesRepository.parseWorkout(text, systemCatalog)} onAdd={addQuickEntry} compact={coachReference || exercises.length > 0} onOpenCatalog={exercises.length === 0 ? (search, onSelect) => { parsedExerciseSelection.current = onSelect ?? null; setPickerSearch(search); setReplaceIndex(null); setPickerOpen(true) } : undefined} /></CoachPlanEntryControls>
         {exercises.length === 0 && <p className="workout-empty-hint" role="status">{limePlan ? 'Можно сохранить план сейчас и добавить упражнения позже.' : 'Добавьте хотя бы одно упражнение — голосом, текстом или из каталога.'}</p>}
         <WorkoutExerciseEditor onSaveAsTemplate={formDraftReady && !clientMode && !completedMode && !limePlan ? () => openTemplateDestination(false, false) : undefined} exercises={exercises} onChange={setDraftExercises} onOpenPicker={() => { setReplaceIndex(null); setPickerOpen(true) }} onReplaceExercise={(index) => { setReplaceIndex(index); setPickerOpen(true) }}
           exerciseCatalog={catalog.exercises}
