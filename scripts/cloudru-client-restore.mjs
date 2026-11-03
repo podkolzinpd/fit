@@ -118,6 +118,7 @@ export async function applyClientRestore(client,plan,{backupVerified=false}={}){
    if(receipt){
      requireState(receipt.status==='active'&&receipt.trainer_id===pair.trainerId,'restored_period_ended')
      requireState(current.periods.filter(p=>p.status==='active').length===1,'other_trainer')
+     requireState(current.memberships.some(m=>m.client_id===current.card.id),'restored_membership_missing')
      requireState(fingerprint(current.history)===fingerprint(plan.state.history),'history_changed_since_restore')
      await client.query('commit')
      return {event:'client_restore_applied',replayed:true,historyUnchanged:true}
@@ -155,11 +156,16 @@ export async function verifyClientRestore(runtime,plan){
      rolsuper,rolbypassrls from pg_roles where rolname=current_user`)).rows[0]
    requireState(role?.username==='fit_api'&&role.readonly==='on'&&!role.rolsuper&&!role.rolbypassrls,'runtime_role')
    await runtime.query("select set_config('request.jwt.claim.sub',$1,true)",[plan.pair.trainerId])
+   const receipt=(await runtime.query(`select
+     exists(select 1 from public.client_trainers where client_id=$1 and trainer_id=$2) membership,
+     exists(select 1 from public.client_trainer_relationships where id=$3 and client_id=$1
+       and trainer_id=$2 and status='active') period`,[plan.state.card.id,plan.pair.trainerId,plan.periodId])).rows[0]
+   requireState(receipt?.membership&&receipt.period,'runtime_receipt')
    const rows=(await runtime.query('select done_count from public.list_client_overviews(false) where id=$1',[plan.state.card.id])).rows
    const count=(await runtime.query("select count(*)::int count from public.workouts where client_id=$1 and status='done' and deleted_at is null",[plan.state.card.id])).rows[0]?.count
    requireState(rows.length===1&&rows[0].done_count===plan.state.groups[0].count&&count===rows[0].done_count,'runtime_visibility')
    await runtime.query('commit')
-   return {event:'client_restore_verified',readOnly:true,trainerCanReadCanonical:true,done:count}
+   return {event:'client_restore_verified',readOnly:true,restoredPeriodActive:true,canonicalMembership:true,trainerCanReadCanonical:true,done:count}
  }catch(error){await runtime.query('rollback');throw error}
 }
 

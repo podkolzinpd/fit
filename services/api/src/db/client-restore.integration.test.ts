@@ -70,7 +70,7 @@ describe.skipIf(source === undefined)('owner-approved canonical client restorati
   }
   it('restores only the canonical connection, keeps old periods/results/notes and verifies actual fit_api visibility', async () => {
     const f = await fixture(), p = await plan(f)
-    await expect(verify(p)).rejects.toThrow('runtime_visibility')
+    await expect(verify(p)).rejects.toThrow('runtime_receipt')
     await expect(apply(p, false)).rejects.toThrow('backup_required')
     expect(await apply(p)).toMatchObject({ replayed: false, historyUnchanged: true, done: 21 })
     expect(await verify(p)).toMatchObject({ trainerCanReadCanonical: true, done: 21 })
@@ -87,6 +87,17 @@ describe.skipIf(source === undefined)('owner-approved canonical client restorati
     await owner.query('insert into public.client_trainer_relationships(client_id,trainer_id,connected_by) values($1,$2,$3)', [f.card, f.other, f.athleteId])
     await expect(apply(p)).rejects.toThrow('other_trainer')
     expect((await owner.query('select trainer_id from public.client_trainer_relationships where client_id=$1 and status=$2', [f.card, 'active'])).rows).toEqual([{ trainer_id: f.other }])
+  })
+  it('does not certify another period or a lost restored membership', async () => {
+    const f = await fixture(), p = await plan(f)
+    await owner.query('insert into public.client_trainers(client_id,trainer_id) values($1,$2)', [f.card, f.trainerId])
+    await owner.query('insert into public.client_trainer_relationships(client_id,trainer_id,connected_by) values($1,$2,$3)', [f.card, f.trainerId, f.athleteId])
+    await expect(verify(p)).rejects.toThrow('runtime_receipt')
+    const g = await fixture(), q = await plan(g)
+    await apply(q)
+    await owner.query('delete from public.client_trainers where client_id=$1 and trainer_id=$2', [g.card, g.trainerId])
+    await expect(verify(q)).rejects.toThrow('runtime_receipt')
+    await expect(apply(q)).rejects.toThrow('restored_membership_missing')
   })
   it('a changed result invalidates the plan and a new real disconnect cannot be undone by replay', async () => {
     const f = await fixture(), p = await plan(f)
