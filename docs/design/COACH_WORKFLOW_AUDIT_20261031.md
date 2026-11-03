@@ -1958,3 +1958,35 @@ CI после необходимой интеграции остаётся об�
 не встраивается заранее: native-policy сверяется с реально выпущенным main.
 Отвергнуты дальнейшее ожидание стоящего1944 вопреки решению владельца, takeover
 чужой ветки, bypass и объявление этапов2/3 опубликованными по локальным проверкам.
+
+
+Уточнение TMPA — итоговая интеграция этапа2 с main1948 — 03.11.2026 — Codex / OpenAI.
+
+После прямого снятия ожидания стоящего1944 владелец1948 штатно слил исходник
+3009d47b вaf2adcbfd01260a2f2297666d1ca8c9c448199cd. Полный sourceCI1948
+прошёл36 проверок с2 штатными skips; actualmainCI41586253884 и его выпуск/
+публичная приёмка остаются у владельца. Androiddebug41586253847 успешен.
+Собственный merge/выпуск ждёт итоговой квитанции1948; сейчас готовится source.
+
+В собственный этап2 ordinary merge bac2a460 включён фактическийaf2 без
+конфликтов. Все16 собственных source/E2E/policy deltas относительно нового
+main побайтно равны прежним относительноd14. Входящие routes/layout/services
+и их независимый закрытый допуск сохранены; чужие настройки не менялись.
+Package/lock/android/capacitor, CI workflows и trainer-flow равны actualmain.
+История,8ID/28состояний,F201–208 и предыдущие календарные/lifecycle/client
+контракты сохранены. Будущая native-правка1944 заранее не включалась.
+
+На объединённом runtime: полный coverage325 файлов/2950 тестов,147.89s,
+statements83%,branches77.94%,functions81.99%,lines87.75%; types/full lint,
+production build/startup и62 CI/scope/inventory проверки прошли. Lime union710
+без дублей, scoped136/finance прежние.42/42Chromium/WebKit за38.3s,0retry/skips:
+template/version/draft/replay/entry/create/return, полный редактор и календарь.
+Просмотрены WebKit quick-return390 и picker: controls/контекст без наложений.
+Scope по точным40-значным SHA требует frontend/browser; передача символических
+refs даёт штатный fail-closed fullcheck, не основание пропускать CI.
+
+Отвергнуты ожидание1944, вмешательство в чужие branches/runs/grant и подмена
+нового sourceCI историческим green. Дальше: один обычный push/PR2+attachment,
+полный CI его точной головы; после квитанции1948 — штатный squash/mainCI/
+API/web/signedOTA и14public+14signedZIP приёмка. Затем обязательный этап3.
+Физический телефон/реальный OAuth не проверены; production business writes0.
