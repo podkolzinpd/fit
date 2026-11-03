@@ -252,27 +252,7 @@ begin
 end;
 $$;
 
-create or replace function public.update_trainer_finance_package(
-  p_package_id uuid,
-  p_expected_version bigint,
-  p_title text,
-  p_sessions_total integer,
-  p_price_cents bigint,
-  p_starts_on date,
-  p_ends_on date,
-  p_payment_due_on date,
-  p_comment text
-)
-returns jsonb
-language plpgsql security definer set search_path = ''
-as $$
-begin
-  return public.update_trainer_finance_service(
-    p_package_id, p_expected_version, 'session_pack', p_title, p_sessions_total,
-    p_price_cents, p_starts_on, p_ends_on, p_payment_due_on, p_comment
-  );
-end;
-$$;
+
 
 -- Down Migration
 
@@ -498,59 +478,5 @@ begin
       join public.profiles profile on profile.id = scope.trainer_id
     ), '[]'::jsonb)
   );
-end;
-$$;
-
-create or replace function public.update_trainer_finance_package(
-  p_package_id uuid,
-  p_expected_version bigint,
-  p_title text,
-  p_sessions_total integer,
-  p_price_cents bigint,
-  p_starts_on date,
-  p_ends_on date,
-  p_payment_due_on date,
-  p_comment text
-)
-returns jsonb
-language plpgsql security definer set search_path = ''
-as $$
-declare
-  actor_id uuid := app_private.trainer_finance_assert_trainer();
-  used_sessions integer;
-begin
-  select package.opening_used_sessions + count(session.id)::integer
-  into used_sessions
-  from public.trainer_finance_packages package
-  left join public.trainer_finance_sessions session
-    on session.package_id = package.id
-   and session.disposition = 'charged'
-   and session.voided_at is null
-  where package.id = p_package_id and package.trainer_id = actor_id
-  group by package.opening_used_sessions;
-  if used_sessions is null then
-    raise exception 'trainer_finance_package_not_found' using errcode = 'PT404';
-  end if;
-  if nullif(btrim(coalesce(p_title, '')), '') is null
-    or p_sessions_total not between greatest(used_sessions, 1) and 10000
-    or p_price_cents not between 0 and 100000000000
-    or p_starts_on is null
-    or (p_ends_on is not null and p_ends_on < p_starts_on)
-    or char_length(coalesce(p_comment, '')) > 2000 then
-    raise exception 'trainer_finance_invalid' using errcode = 'PT422';
-  end if;
-
-  update public.trainer_finance_packages package
-  set title = btrim(p_title), sessions_total = p_sessions_total,
-    price_cents = p_price_cents, starts_on = p_starts_on,
-    ends_on = p_ends_on, payment_due_on = p_payment_due_on,
-    comment = nullif(btrim(coalesce(p_comment, '')), ''),
-    version = package.version + 1
-  where package.id = p_package_id and package.trainer_id = actor_id
-    and package.version = p_expected_version;
-  if not found then
-    raise exception 'trainer_finance_conflict' using errcode = 'PT409';
-  end if;
-  return app_private.trainer_finance_package_payload(p_package_id);
 end;
 $$;

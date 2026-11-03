@@ -3374,7 +3374,7 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
         await expect(edit(1)).rejects.toMatchObject({ code: 'PT422' })
         await expect(withActorTransaction(runtime, ACTOR_ID, client => client.query(
           `select public.update_trainer_finance_package($1,1,'Integrity',1,1000000,
-            '2026-10-01','2026-11-30',null,null)`, [packageId]))).rejects.toMatchObject({ code: 'PT422' })
+            '2026-10-01','2026-11-30',null,null)`, [packageId]))).rejects.toMatchObject({ code: '42501' })
         await expect(edit(2,'2026-11-02')).rejects.toMatchObject({ code: 'PT422' })
         await expect(edit(2,'2026-10-01','2026-11-01')).rejects.toMatchObject({ code: 'PT422' })
         await expect(edit(2,'2026-10-01','2026-11-30',OUTSIDE_TRAINER_ID)).rejects.toMatchObject({ code: 'PT404' })
