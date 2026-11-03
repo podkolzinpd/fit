@@ -4341,7 +4341,7 @@ for (const sample of [
     const original = content.scrollTo.bind(content)
     const frames: Array<{ t: number; scroll: number }> = [], calls: ScrollToOptions[] = []
     const start = performance.now()
-    content.scrollTo = function (options: ScrollToOptions | number, y?: number) {
+    content.scrollTo = function (options: ScrollToOptions | number = {}, y?: number) {
       if (typeof options === 'number') return original(options, y ?? 0)
       calls.push(options)
       original(options)
