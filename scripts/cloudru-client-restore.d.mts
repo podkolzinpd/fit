@@ -1,6 +1,5 @@
-import type { QueryResult } from 'pg'
 interface RestoreConnection {
-  query(text: string, values?: unknown[]): Promise<QueryResult>
+  query(text: string, values?: unknown[]): Promise<{ rows: Record<string, unknown>[] }>
 }
 export interface RestorePair { trainerId: string; athleteId: string }
 export interface RestorePlan {
