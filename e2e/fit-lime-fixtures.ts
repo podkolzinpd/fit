@@ -938,7 +938,10 @@ export async function revealLiveSet(page: Page, setId: string) {
     const roundBody = round.locator(':scope > .coach-v79-round-body, :scope > .client-circuit-round-body')
     if (await roundBody.getAttribute('inert') !== null) await round.locator(':scope > .circuit-round-toggle').click()
     const card = group.locator('[data-live-card-key]').filter({ has: row })
-    if (await card.locator(':scope > .coach-v79-card-body, :scope > .client-live-card-body').getAttribute('inert') !== null) await card.locator('.exercise-technique-trigger').click()
+    if (await card.locator(':scope > .coach-v79-card-body, :scope > .client-live-card-body').getAttribute('inert') !== null) {
+      const arrow = card.locator('button.coach-v79-card-toggle')
+      await (await arrow.count() ? arrow : card.locator('.exercise-technique-trigger')).click()
+    }
   } else {
     const card = page.locator('.live-exercise').filter({ has: row })
     if (await card.locator(':scope > .coach-v79-card-body, :scope > .client-live-card-body').getAttribute('inert') !== null) await card.locator('button.coach-v79-card-toggle').click()
