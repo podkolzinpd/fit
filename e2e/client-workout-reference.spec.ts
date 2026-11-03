@@ -539,7 +539,7 @@ for (const grouped of [false, true]) test(`client Live time preference text conf
   await expect(row.locator('.save-status-error')).toBeVisible()
   await expect(seconds).toHaveValue('45')
   await row.getByRole('button', { name: 'Готово, отдых', exact: true }).click()
-  await expect(row.getByRole('img', { name: 'Подход выполнен' })).toBeVisible()
+  await expect(row.getByRole('button', { name: /^Отменить выполнение:/ })).toBeVisible()
   await expect.poll(() => backend.getWorkouts()[0]!.exercises[0]!.sets[0]!.fact.durationSec).toBe(105)
   expect(await node!.evaluate(element => element.isConnected)).toBe(true)
   const confirmedAt = backend.getWorkouts()[0]!.exercises[0]!.sets[0]!.confirmedAt
@@ -605,7 +605,7 @@ test('client Live metrics and superset preserve final input and notes', async ({
   const handle = await stroke.elementHandle()
   await row.getByRole('button', { name: 'Готово, отдых', exact: true }).click()
   await expect.poll(() => backend.getWorkouts()[0]!.exercises[0]!.sets[0]!.fact.reps).toBe(28)
-  await expect(row.getByRole('img', { name: 'Подход выполнен' })).toBeVisible()
+  await expect(row.getByRole('button', { name: /^Отменить выполнение:/ })).toBeVisible()
   expect(await handle!.evaluate(element => element.isConnected)).toBe(true)
   const confirmedAt = backend.getWorkouts()[0]!.exercises[0]!.sets[0]!.confirmedAt
   await stroke.fill('29'); await stroke.blur()
@@ -650,7 +650,7 @@ for (const grouped of [false, true]) for (const metric of liveMetricCases) test(
   const rpe = row.getByLabel('Фактический RPE')
   await rpe.selectOption('9')
   await row.getByRole('button', { name: 'Готово, отдых', exact: true }).click()
-  await expect(row.getByRole('img', { name: 'Подход выполнен' })).toBeVisible()
+  await expect(row.getByRole('button', { name: /^Отменить выполнение:/ })).toBeVisible()
   await expect.poll(() => backend.getWorkouts()[0]!.exercises[0]!.sets[0]!.fact.rpe).toBe(9)
   await page.reload()
   await expect(row.getByLabel('Фактический RPE')).toHaveValue('9')
@@ -700,7 +700,7 @@ test('client Live inactive supersets keep manual expansion and ragged rounds', a
   // Any-order confirmation remains available in the future group.
   const futureSet = group.locator('form[data-live-set-id]').first()
   await futureSet.getByRole('button', { name: 'Готово, отдых', exact: true }).click()
-  await expect(futureSet.getByRole('img', { name: 'Подход выполнен' })).toBeVisible()
+  await expect(futureSet.getByRole('button', { name: /^Отменить выполнение:/ })).toBeVisible()
   expect(backend.getWorkouts()[0]!.exercises[2]!.sets[0]!.confirmedAt).toBeTruthy()
 })
 
@@ -823,7 +823,7 @@ for (const theme of ['light', 'dark']) for (const density of ['original', 'compa
   await row.getByLabel('Фактический вес', { exact: true }).fill('35')
   await row.getByLabel('Фактический вес', { exact: true }).blur()
   await expect.poll(() => backend.getWorkouts()[0]!.exercises[0]!.sets[0]!.fact.weightKg).toBe(35)
-  await expect(row.getByRole('img', { name: 'Подход выполнен' })).toBeVisible()
+  await expect(row.getByRole('button', { name: /^Отменить выполнение:/ })).toBeVisible()
   expect(await row.evaluate(form => {
     const field = getComputedStyle(form.querySelector('input[name="weightKg"]')!), check = getComputedStyle(form.querySelector('.live-set-check.done')!)
     return check.backgroundColor === field.color && check.boxShadow === 'none'
@@ -849,7 +849,7 @@ for (const theme of ['light', 'dark']) for (const density of ['original', 'compa
     await compact.click()
     expect(await input!.evaluate(element => element.isConnected)).toBe(true)
     await expect(row.getByLabel('Фактический вес', { exact: true })).toHaveValue('35')
-    await expect(row.getByRole('img', { name: 'Подход выполнен' })).toBeVisible()
+    await expect(row.getByRole('button', { name: /^Отменить выполнение:/ })).toBeVisible()
     expect(backend.getWorkouts()[0]!.exercises[0]!.sets[0]!.confirmedAt).toBe('2026-10-21T08:59:00Z')
   }
 })
@@ -1074,7 +1074,7 @@ for (const rpe of [false, true]) test(`client Live metric keyboard preserves fin
   }
   await expect.poll(() => backend.getWorkouts()[0]!.exercises[0]!.sets[0]!.fact.reps).toBe(27)
   await tapVisible(page, row.getByRole('button', { name: 'Готово, отдых', exact: true }))
-  await expect(row.getByRole('img', { name: 'Подход выполнен' })).toBeVisible()
+  await expect(row.getByRole('button', { name: /^Отменить выполнение:/ })).toBeVisible()
   expect(backend.getWorkouts()[0]!.exercises[0]!.sets[0]!.fact.reps).toBe(27)
 })
 
@@ -1271,7 +1271,7 @@ for (const density of ['original', 'compact']) test(`client reference input and 
   await expect(reps).toHaveValue('8')
   await expect(reps).toHaveAttribute('data-stable-input', 'before-density')
   await first.getByRole('button', { name: 'Готово, отдых', exact: true }).click()
-  await expect(first.getByRole('img', { name: 'Подход выполнен' })).toBeVisible()
+  await expect(first.getByRole('button', { name: /^Отменить выполнение:/ })).toBeVisible()
   await expect(second.getByLabel('Фактический вес', { exact: true })).toBeFocused()
   await expect(weight).toBeEnabled()
   await expect(weight).toHaveValue('22,5')
@@ -3249,7 +3249,7 @@ for (const theme of ['light', 'dark']) for (const density of ['original', 'compa
   await page.goto(`/workouts/${workoutId}/live`)
   const rows = page.locator('form[data-live-set-id]')
   await expect(rows).toHaveCount(3)
-  await expect(rows.first().getByRole('img', { name: 'Подход выполнен' })).toBeVisible()
+  await expect(rows.first().getByRole('button', { name: /^Отменить выполнение:/ })).toBeVisible()
   await expect(rows.nth(1)).toHaveClass(/current/)
   await expect(rows.nth(2).getByRole('button', { name: 'Готово, отдых', exact: true })).toBeVisible()
   for (const width of [390, 430]) {
@@ -3271,7 +3271,7 @@ for (const theme of ['light', 'dark']) for (const density of ['original', 'compa
   await rows.first().getByLabel('Фактический вес', { exact: true }).blur()
   await expect.poll(() => backend.getWorkouts()[0]!.exercises[0]!.sets[0]!.fact.weightKg).toBe(27.5)
   expect(backend.getWorkouts()[0]!.exercises[0]!.sets[0]!.confirmedAt).toBe(confirmedAt)
-  await expect(rows.first().getByRole('img', { name: 'Подход выполнен' })).toBeVisible()
+  await expect(rows.first().getByRole('button', { name: /^Отменить выполнение:/ })).toBeVisible()
   await expect(page.locator('.live-rest-trigger').and(page.getByRole('button'))).not.toHaveAttribute('aria-label', /Отдых идёт/)
 })
 
@@ -4143,3 +4143,197 @@ for (const sample of [{ width: 390, theme: 'light' }, { width: 430, theme: 'ligh
     await detail.screenshot({ path: info.outputPath(`client-video-error-${sample.theme}-${sample.width}.png`) })
   })
 }
+
+// Role is a real permission/UI axis; themes/densities remain in existing visual cases.
+for (const role of ['client', 'trainer'] as const) test(`Live unconfirm preserves latest input rest and reload for ${role}`, async ({ page }) => {
+  await page.clock.install({ time: new Date('2026-11-03T09:00:00Z') })
+  const id = role === 'client' ? pilotId : 'c0ac0000-6010-4000-8000-000000000001'
+  const source = restTimerWorkout()
+  source.startedAt = '2026-11-03T08:59:00Z'
+  await page.addInitScript(id => {
+    localStorage.setItem(`fit.clientLime.theme.${id}`, 'dark')
+    localStorage.setItem(`fit.clientLiveDensity.${id}`, 'compact')
+    localStorage.setItem(`fit.coachLiveDensity.${id}`, 'compact')
+    localStorage.setItem(`fit.liveExerciseAnimation.${id}`, 'false')
+  }, id)
+  const backend = await mockPilot(page, { role, profileId: id, clientLime: true, fitLime: true, workouts: [source] })
+  await page.goto(`/workouts/${workoutId}/live`)
+  const row = page.locator(`[data-live-set-id="${source.exercises[0]!.sets[0]!.id}"]`)
+  const field = row.getByLabel('Фактический вес', { exact: true })
+  const handle = await field.elementHandle()
+  await field.fill('40')
+  await row.getByRole('button', { name: 'Готово, отдых', exact: true }).click()
+  await expect(row).toHaveClass(/confirmed/)
+  const deadline = await page.evaluate(id => sessionStorage.getItem(`fit:live-rest-until:${id}`), workoutId)
+  expect(deadline).not.toBeNull()
+  await field.fill('42.5')
+  await row.getByRole('button', { name: /^Отменить выполнение:/ }).click()
+  await expect.poll(() => backend.getWorkouts()[0]!.exercises[0]!.sets[0]!.confirmedAt).toBeNull()
+  expect(backend.getWorkouts()[0]!.exercises[0]!.sets[0]!.fact.weightKg).toBe(42.5)
+  await expect(row).not.toHaveClass(/confirmed/)
+  await expect(page.getByRole('progressbar', { name: 'Выполненные подходы' })).toHaveAttribute('aria-valuenow', '0')
+  await expect(field).toHaveValue('42.5')
+  expect(await handle!.evaluate(element => element.isConnected)).toBe(true)
+  expect(await page.evaluate(id => sessionStorage.getItem(`fit:live-rest-until:${id}`), workoutId)).toBe(deadline)
+  await page.reload()
+  await expect(field).toHaveValue('42.5')
+  await expect(row).not.toHaveClass(/confirmed/)
+  await row.getByRole('button', { name: 'Готово, отдых', exact: true }).click()
+  await expect(row).toHaveClass(/confirmed/)
+  expect(backend.getWorkouts()[0]!.exercises[0]!.sets[0]!.fact.weightKg).toBe(42.5)
+  expect(backend.getWorkouts()[0]!.exercises[0]!.sets[1]!.confirmedAt).toBeNull()
+})
+
+for (const failure of ['rejected', 'response-lost', 'timer-response-lost', 'concurrent-fact'] as const) test(`Live unconfirm recovers ${failure} without clearing facts`, async ({ page }) => {
+  await page.clock.setFixedTime(new Date('2026-11-03T09:00:00Z'))
+  const timed = failure === 'timer-response-lost'
+  const source = timed ? restTimerWorkout(0, true, 'timer') : restTimerWorkout()
+  source.startedAt = '2026-11-03T08:59:00Z'
+  Object.assign(source.exercises[0]!.sets[0]!, { confirmedAt: '2026-11-03T08:59:30Z', fact: timed ? { durationSec: 3 } : { weightKg: 40, reps: 12 }, ...(timed ? { timerConfirmed: true } : {}), version: 3 })
+  const backend = await mockPilot(page, { role: 'client', profileId: pilotId, clientLime: true, workouts: [source] })
+  let attempts = 0
+  await page.route('**/v1/workout-sets/*/unconfirm', async route => {
+    attempts++
+    if (attempts > 1) return route.fallback()
+    if (failure === 'rejected') return route.fulfill({ status: 503, json: { error: 'unavailable' } })
+    const set = backend.getWorkouts()[0]!.exercises[0]!.sets[0]!
+    if (failure === 'concurrent-fact') {
+      set.fact = { ...set.fact, weightKg: 45 }
+      set.version = (route.request().postDataJSON() as { expectedVersion: number }).expectedVersion + 1
+      return route.fulfill({ status: 409, json: { error: 'conflict' } })
+    }
+    set.confirmedAt = null
+    delete set.timerConfirmed
+    set.version = (route.request().postDataJSON() as { expectedVersion: number }).expectedVersion + 1
+    return route.abort('failed')
+  })
+  await page.goto(`/workouts/${workoutId}/live`)
+  const row = page.locator(`[data-live-set-id="${source.exercises[0]!.sets[0]!.id}"]`)
+  const expectedWeight = failure === 'concurrent-fact' ? 42.5 : 40
+  if (failure === 'concurrent-fact') await row.getByLabel('Фактический вес', { exact: true }).fill('42.5')
+  await row.getByRole('button', { name: /^Отменить выполнение:/ }).dblclick()
+  if (failure === 'rejected' || failure === 'concurrent-fact') {
+    await expect(page.getByRole('alert').filter({ hasText: 'Не удалось отменить' })).toBeVisible()
+    await expect(row).toHaveClass(/confirmed/)
+    expect(attempts).toBe(1)
+    if (failure === 'concurrent-fact') {
+      expect(backend.getWorkouts()[0]!.exercises[0]!.sets[0]!.fact.weightKg).toBe(45)
+      await expect(row.getByLabel('Фактический вес', { exact: true })).toHaveValue('42.5')
+    }
+    await page.getByRole('button', { name: 'Повторить отмену', exact: true }).click()
+  }
+  await expect(row).not.toHaveClass(/confirmed/)
+  if (timed) {
+    expect(backend.getWorkouts()[0]!.exercises[0]!.sets[0]!.fact.durationSec).toBe(3)
+    await expect(row.getByRole('button', { name: 'Старт подхода', exact: true })).toBeVisible()
+  } else {
+    await expect(row.getByLabel('Фактический вес', { exact: true })).toHaveValue(String(expectedWeight))
+    expect(backend.getWorkouts()[0]!.exercises[0]!.sets[0]!.fact.weightKg).toBe(expectedWeight)
+  }
+  await expect(page.getByRole('alert').filter({ hasText: 'Не удалось отменить' })).toHaveCount(0)
+  expect(attempts).toBe(failure === 'rejected' || failure === 'concurrent-fact' ? 2 : 1)
+  if (timed) {
+    await page.getByRole('button', { name: 'Завершить тренировку', exact: true }).click()
+    await page.locator('.finish-confirm').getByRole('button', { name: 'Завершить', exact: true }).click()
+    await expect.poll(() => backend.getWorkouts()[0]!.status).toBe('done')
+  }
+})
+
+test('Live unconfirm keeps a timed set manual until explicit start, including reload', async ({ page }) => {
+  await page.clock.install({ time: new Date('2026-11-03T09:00:00Z') })
+  const source = restTimerWorkout(0, true, 'timer')
+  source.startedAt = '2026-11-03T08:59:00Z'
+  const set = source.exercises[0]!.sets[0]!
+  Object.assign(set, { confirmedAt: '2026-11-03T08:59:30Z', fact: { durationSec: 3 }, timerConfirmed: true })
+  await page.addInitScript(id => {
+    if (!sessionStorage.getItem(`fit:live-rest-until:${id}`)) sessionStorage.setItem(`fit:live-rest-until:${id}`, String(Date.now() + 2000))
+  }, workoutId)
+  const backend = await mockPilot(page, { role: 'client', profileId: pilotId, clientLime: true, workouts: [source] })
+  await page.goto(`/workouts/${workoutId}/live`)
+  const row = page.locator(`[data-live-set-id="${set.id}"]`)
+  await row.getByRole('button', { name: /^Отменить выполнение:/ }).click()
+  await expect(row).not.toHaveClass(/confirmed/)
+  await page.clock.fastForward(10000)
+  expect(backend.getWorkouts()[0]!.exercises[0]!.sets[0]!.confirmedAt).toBeNull()
+  await page.reload()
+  await page.clock.fastForward(10000)
+  await expect(row).not.toHaveClass(/confirmed/)
+  await row.getByRole('button', { name: 'Старт подхода', exact: true }).click()
+  await expect(row.getByRole('button', { name: /^Засчитать подход:/ })).toBeVisible()
+  await page.clock.fastForward(4000)
+  await expect.poll(() => backend.getWorkouts()[0]!.exercises[0]!.sets[0]!.confirmedAt).not.toBeNull()
+})
+
+for (const role of ['client', 'trainer'] as const) test(`Live unconfirm retains the expanded superset round for ${role}`, async ({ page }) => {
+  await page.clock.setFixedTime(new Date('2026-11-03T09:00:00Z'))
+  const source = coachGestureWorkout(true, 2)
+  source.startedAt = '2026-11-03T08:59:00Z'
+  for (const exercise of source.exercises) Object.assign(exercise.sets[0]!, { confirmedAt: '2026-11-03T08:59:30Z', fact: { weightKg: 30, reps: 12 } })
+  const id = role === 'client' ? pilotId : 'c0ac0000-6010-4000-8000-000000000001'
+  const backend = await mockPilot(page, { role, profileId: id, clientLime: true, fitLime: true, workouts: [source] })
+  await page.goto(`/workouts/${workoutId}/live`)
+  await page.getByRole('button', { name: /Круг 1.*Показать/ }).click()
+  const row = page.locator(`[data-live-set-id="${source.exercises[0]!.sets[0]!.id}"]`)
+  const field = row.getByLabel('Фактический вес', { exact: true })
+  const handle = await field.elementHandle()
+  await row.getByRole('button', { name: /^Отменить выполнение:/ }).click()
+  await expect(row).not.toHaveClass(/confirmed/)
+  await expect(field).toBeVisible()
+  expect(await handle!.evaluate(element => element.isConnected)).toBe(true)
+  expect(backend.getWorkouts()[0]!.exercises[0]!.sets[0]!.fact.weightKg).toBe(30)
+  expect(backend.getWorkouts()[0]!.exercises[1]!.sets[0]!.confirmedAt).not.toBeNull()
+  await expect(page.getByRole('progressbar', { name: 'Выполненные подходы' })).toHaveAttribute('aria-valuenow', '1')
+})
+
+test('Live unconfirm reopens a completed card and reconfirmation restores automatic folding', async ({ page }) => {
+  await page.clock.setFixedTime(new Date('2026-11-03T09:00:00Z'))
+  const source = restTimerWorkout()
+  source.startedAt = '2026-11-03T08:59:00Z'
+  source.exercises[0]!.sets = source.exercises[0]!.sets.slice(0, 1)
+  Object.assign(source.exercises[0]!.sets[0]!, { confirmedAt: '2026-11-03T08:59:30Z', fact: { weightKg: 30, reps: 12 } })
+  await mockPilot(page, { role: 'client', profileId: pilotId, clientLime: true, workouts: [source] })
+  await page.goto(`/workouts/${workoutId}/live`)
+  const card = page.locator('.client-live-card').first()
+  await card.getByRole('button', { name: `Развернуть: ${source.exercises[0]!.name}`, exact: true }).click()
+  const row = card.locator('[data-live-set-id]').first()
+  const handle = await row.getByLabel('Фактический вес', { exact: true }).elementHandle()
+  await row.getByRole('button', { name: /^Отменить выполнение:/ }).click()
+  await expect(row.getByLabel('Фактический вес', { exact: true })).toBeVisible()
+  await expect(card.locator('.client-live-completed-mark')).toHaveCount(0)
+  await row.getByRole('button', { name: 'Готово, отдых', exact: true }).click()
+  await expect(card.locator('.client-live-card-body')).toHaveAttribute('inert', '')
+  await expect(card.locator('.client-live-completed-mark')).toHaveCount(1)
+  expect(await handle!.evaluate(element => element.isConnected)).toBe(true)
+})
+
+for (const role of ['client', 'trainer'] as const) test(`Live unconfirm preserves hidden metrics for ${role}`, async ({ page }) => {
+  await page.clock.setFixedTime(new Date('2026-11-03T09:00:00Z'))
+  const source = restTimerWorkout()
+  source.startedAt = '2026-11-03T08:59:00Z'
+  const originalFact = { weightKg: 30, reps: 12, durationSec: 45, distanceKm: 1.2, rpe: 7 }
+  Object.assign(source.exercises[0]!.sets[0]!, { confirmedAt: '2026-11-03T08:59:30Z', fact: originalFact })
+  const id = role === 'client' ? pilotId : 'c0ac0000-6010-4000-8000-000000000001'
+  const backend = await mockPilot(page, { role, profileId: id, clientLime: true, fitLime: true, workouts: [source] })
+  let release!: () => void
+  const gate = new Promise<void>(resolve => { release = resolve })
+  await page.route('**/v1/workout-sets/*/unconfirm', async route => { await gate; await route.fallback() })
+  await page.goto(`/workouts/${workoutId}/live`)
+  const row = page.locator(`[data-live-set-id="${source.exercises[0]!.sets[0]!.id}"]`)
+  await expect(row.locator('[name="rpe"], [name="distanceKm"], [name="durationSec"]')).toHaveCount(0)
+  const undo = row.getByRole('button', { name: /^Отменить выполнение:/ })
+  try {
+    await undo.focus()
+    await undo.click()
+    await expect(undo).toBeDisabled()
+    // Force the focus-out race observed when Linux WebKit disables this button.
+    await undo.dispatchEvent('focusout', { relatedTarget: null })
+    const pending = await page.evaluate(({ id, workoutId, setId }) => {
+      const drafts = JSON.parse(localStorage.getItem(`fit.live-set-drafts.${id}.${workoutId}`) ?? '{}') as Record<string, unknown>
+      return drafts[setId]
+    }, { id, workoutId, setId: source.exercises[0]!.sets[0]!.id })
+    expect(pending).toMatchObject(originalFact)
+    release()
+    await expect(row).not.toHaveClass(/confirmed/)
+    expect(backend.getWorkouts()[0]!.exercises[0]!.sets[0]!.fact).toMatchObject(originalFact)
+  } finally { release() }
+})

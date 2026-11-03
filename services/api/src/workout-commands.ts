@@ -527,6 +527,18 @@ export function confirmLiveSet(
     [setId, expectedVersion, operationId],
   )
 }
+export function unconfirmLiveSet(
+  client: DatabaseClient,
+  setId: string,
+  expectedVersion: number,
+  operationId: string,
+): Promise<PilotLiveCommandResult> {
+  return runLiveCommand(
+    client,
+    'select version, replayed from public.unconfirm_live_set($1, $2, $3)',
+    [setId, expectedVersion, operationId],
+  )
+}
 
 export function finishLiveWorkout(
   client: DatabaseClient,

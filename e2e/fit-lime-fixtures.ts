@@ -563,19 +563,20 @@ export async function mockPilot(page: Page, options: { role?: 'trainer' | 'clien
       workouts = workouts.map((item) => item.exercises.some((exercise) => exercise.sets.some((set) => set.id === id))
         ? { ...item, version: item.version + 1, exercises: item.exercises.map((exercise) => ({ ...exercise, sets: exercise.sets.filter((set) => set.id !== id).map((set, position) => ({ ...set, position })) })) } : item)
       body = { set: { version: workouts.find((item) => item.id === workoutId)!.version } }
-    } else if (/^\/v1\/workout-sets\/[0-9a-f-]+\/(draft|confirm)$/.test(url.pathname)) {
+    } else if (/^\/v1\/workout-sets\/[0-9a-f-]+\/(draft|confirm|unconfirm)$/.test(url.pathname)) {
       const id = url.pathname.split('/')[3]
       const command = route.request().postDataJSON() as { expectedVersion: number; draft?: { reps?: number; weightKg?: number; timerConfirmed?: true } }
       const confirmed = url.pathname.endsWith('/confirm')
+      const unconfirmed = url.pathname.endsWith('/unconfirm')
       if (confirmed && failFirstSetConfirm) { failFirstSetConfirm = false; await route.fulfill({ status: 503, contentType: 'application/json', body: '{"error":"unavailable"}' }); return }
       workouts = workouts.map((item) => ({ ...item, exercises: item.exercises.map((exercise) => ({ ...exercise,
         sets: exercise.sets.map((set) => {
           if (set.id !== id) return set
           // Как сервер: пометку ставит только черновик таймера, любое другое сохранение снимает.
           const { timerConfirmed: previousTimer, ...rest } = set as typeof set & { timerConfirmed?: true }
-          const timerConfirmed = command.draft ? command.draft.timerConfirmed === true : previousTimer === true
+          const timerConfirmed = !unconfirmed && (command.draft ? command.draft.timerConfirmed === true : previousTimer === true)
           return { ...rest, fact: command.draft ?? set.fact, ...(timerConfirmed ? { timerConfirmed: true as const } : {}),
-            confirmedAt: confirmed ? '2026-09-24T09:01:00Z' : set.confirmedAt, version: command.expectedVersion + 1 }
+            confirmedAt: unconfirmed ? null : confirmed ? '2026-09-24T09:01:00Z' : set.confirmedAt, version: command.expectedVersion + 1 }
         }),
       })) }))
       body = { set: { version: command.expectedVersion + 1 } }

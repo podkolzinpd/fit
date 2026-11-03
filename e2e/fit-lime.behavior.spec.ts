@@ -91,7 +91,7 @@ for (const role of ['client', 'trainer'] as const) test(`Lime Live direct input 
   await expect(reps).toBeFocused()
   await page.keyboard.type('8')
   await first.getByRole('button', { name: 'Готово, отдых', exact: true }).click()
-  await expect(first.getByRole('img', { name: 'Подход выполнен' })).toBeVisible()
+  await expect(first.getByRole('button', { name: /^Отменить выполнение:/ })).toBeVisible()
   await expect(second.getByLabel('Фактический вес', { exact: true })).toBeFocused()
   await expect(weight).toBeEnabled()
   await expect(weight).toHaveValue('22,5')

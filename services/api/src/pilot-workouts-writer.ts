@@ -15,6 +15,7 @@ import {
   appendLiveRound,
   cancelPlannedWorkout,
   confirmLiveSet,
+  unconfirmLiveSet,
   finishLiveWorkout,
   setLiveWorkoutPause,
   recordPlannedWorkoutResult,
@@ -108,6 +109,12 @@ export interface PilotWorkoutsWriter {
     expectedVersion: number,
   ): Promise<number>
   confirmLiveSet(
+    sessionToken: YandexActorSessionInput,
+    setId: string,
+    expectedVersion: number,
+    operationId: string,
+  ): Promise<PilotLiveCommandResult>
+  unconfirmLiveSet(
     sessionToken: YandexActorSessionInput,
     setId: string,
     expectedVersion: number,
@@ -383,6 +390,15 @@ export class DatabasePilotWorkoutsWriter implements PilotWorkoutsWriter {
   ): Promise<PilotLiveCommandResult> {
     return this.withSession(sessionToken, (client) =>
       confirmLiveSet(client, setId, expectedVersion, operationId))
+  }
+  unconfirmLiveSet(
+    sessionToken: YandexActorSessionInput,
+    setId: string,
+    expectedVersion: number,
+    operationId: string,
+  ): Promise<PilotLiveCommandResult> {
+    return this.withSession(sessionToken, (client) =>
+      unconfirmLiveSet(client, setId, expectedVersion, operationId))
   }
 
   savePlanned(
