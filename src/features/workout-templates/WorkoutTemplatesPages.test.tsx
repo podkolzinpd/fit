@@ -46,6 +46,50 @@ beforeEach(() => {
   backend.workoutTemplates.save.mockResolvedValue(template.id)
 })
 describe('template save commands', () => {
+  it('preserves a newer draft reopened while an unmounted save finishes', async () => {
+    let complete: (value: string) => void = () => {}
+    let requestFinished = false
+    backend.workoutTemplates.save.mockImplementationOnce(() => new Promise<string>((resolve) => { complete = resolve }).then((value) => { requestFinished = true; return value }))
+    const key = workoutTemplateDraftKey('trainer', template.id)
+    const first = open(`/schedule/templates/${template.id}/edit`)
+    await waitFor(() => expect(screen.getByLabelText('Название шаблона')).toHaveValue('Ноги'))
+    fireEvent.change(screen.getByLabelText('Название шаблона'), { target: { value: 'Отправленная версия' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Сохранить шаблон' }))
+    await waitFor(() => expect(backend.workoutTemplates.save).toHaveBeenCalledOnce())
+    first.unmount()
+    open(`/schedule/templates/${template.id}/edit`)
+    await waitFor(() => expect(screen.getByLabelText('Название шаблона')).toHaveValue('Отправленная версия'))
+    fireEvent.change(screen.getByLabelText('Название шаблона'), { target: { value: 'Новая локальная версия' } })
+    await waitFor(() => expect(readWorkoutTemplateDraft(key)?.name).toBe('Новая локальная версия'))
+    complete(template.id)
+    await waitFor(() => expect(requestFinished).toBe(true))
+    expect(readWorkoutTemplateDraft(key)?.name).toBe('Новая локальная версия')
+    expect(screen.getByLabelText('Название шаблона')).toHaveValue('Новая локальная версия')
+    expect(screen.queryByRole('heading', { name: 'Шаблоны тренировок' })).not.toBeInTheDocument()
+  })
+
+  it('locks the submitted revision, prevents duplicate submit, and restores editing after failure', async () => {
+    let rejectSave: (error: Error) => void = () => {}
+    backend.workoutTemplates.save.mockImplementationOnce(() => new Promise<string>((_resolve, reject) => { rejectSave = reject }))
+    open(`/schedule/templates/${template.id}/edit`)
+    const input = await screen.findByLabelText('Название шаблона')
+    await waitFor(() => expect(input).toHaveValue('Ноги'))
+    fireEvent.change(input, { target: { value: 'Зафиксированное имя' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Сохранить шаблон' }))
+    await waitFor(() => expect(input).toBeDisabled())
+    fireEvent.submit(input.closest('form')!)
+    expect(backend.workoutTemplates.save).toHaveBeenCalledOnce()
+    expect(backend.workoutTemplates.save.mock.calls[0]![0]).toMatchObject({ name: 'Зафиксированное имя', version: 1 })
+    rejectSave(new Error('Ответ потерян'))
+    await screen.findByRole('alert')
+    expect(input).toBeEnabled()
+    expect(input).toHaveValue('Зафиксированное имя')
+    expect(readWorkoutTemplateDraft(workoutTemplateDraftKey('trainer', template.id))?.name).toBe('Зафиксированное имя')
+    fireEvent.click(screen.getByRole('button', { name: 'Сохранить шаблон' }))
+    await waitFor(() => expect(backend.workoutTemplates.save).toHaveBeenCalledTimes(2))
+    expect(backend.workoutTemplates.save.mock.calls[1]![0]).toEqual(backend.workoutTemplates.save.mock.calls[0]![0])
+  })
+
   it('waits for the current template instead of initializing from fresh-looking old cache', async () => {
     const client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: 20_000 } } })
     client.setQueryData(['workout-template', template.id], template)

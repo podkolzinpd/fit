@@ -198,19 +198,12 @@ OIDC deployer must not receive `resource-manager.admin` or be able to expand
 its own permissions. Ordinary deploys remain automatic after this one-time
 grant, and the controlled AI smoke verifies the effective runtime permission.
 
-To enable this bridge on an isolated stage, a security administrator creates an
-existing Lockbox version with exactly these payload keys:
+The retired Supabase media bridge no longer has stage credentials, CLI mirror,
+Terraform input variables or container mounts. Native database, media and LLM
+credentials keep their existing immutable Lockbox versions. The old secret and
+its versions are not deleted by this configuration change.
 
-- `SUPABASE_URL`
-- `SUPABASE_PUBLISHABLE_KEY`
-- `SUPABASE_SERVICE_ROLE_KEY`
-- `YANDEX_CLOUD_API_KEY`
-
-Set only the Lockbox ID and version through the two
-`legacy_supabase_bridge_lockbox_*` Terraform inputs. Do not put payload values
-in Terraform variables, GitHub variables, repository files or frontend builds.
-The API receives a Supabase session only in `X-Supabase-Authorization`, because
-the container transport reserves `Authorization` for Yandex IAM. The container
+The container
 timeout is 120 seconds to preserve the existing summary function's bounded
 three-attempt, 30-second YandexGPT policy.
 
@@ -219,7 +212,10 @@ Do not place backend credentials, OAuth secrets, database passwords or URLs,
 
 Pull-request CI never applies Terraform. A merge to `main` creates a plan and
 automatically deploys only when policy confirms an existing API/migration image
-update with no new paid resource, resize, identity change, delete or replacement.
+update with no new paid resource, resize, identity change, delete or replacement,
+except the exact retirement of the obsolete bridge payload-viewer grant for the
+planned API identity. That exception cannot delete its secret, a native grant,
+PostgreSQL or a media bucket, and cannot recreate the retired grant.
 The only additional automatic bootstrap allowed here is the narrow Lockbox
 payload viewer grant for the existing dispatcher; it does not add compute
 resources. Media creation is never automatic and requires its dedicated manual

@@ -22,7 +22,7 @@ export function applyLiveSetDraft(workout: Workout, setId: string, draft: LiveSe
     ...workout,
     exercises: workout.exercises.map((exercise) => ({
       ...exercise,
-      sets: exercise.sets.map((set) => set.id === setId ? { ...set, fact: draftFact(draft), metricSources: draft.metricSources ?? set.metricSources, timerConfirmed: draft.timerConfirmed === true, version } : set),
+      sets: exercise.sets.map((set) => set.id === setId && set.version <= version ? { ...set, fact: draftFact(draft), metricSources: draft.metricSources ?? set.metricSources, timerConfirmed: draft.timerConfirmed === true, version } : set),
     })),
   }
 }
@@ -106,7 +106,15 @@ export function sameLiveSetDraft(left: LiveSetDraft, right: LiveSetDraft): boole
 export function applyLiveSetConfirmation(workout: Workout, setId: string, draft: LiveSetDraft, version: number, confirmedAt: string): Workout {
   const next = applyLiveSetDraft(workout, setId, draft, version)
   return { ...next, exercises: next.exercises.map((exercise) => ({ ...exercise,
-    sets: exercise.sets.map((set) => set.id === setId ? { ...set, confirmedAt: set.confirmedAt ?? confirmedAt } : set),
+    sets: exercise.sets.map((set) => set.id === setId && set.version <= version ? { ...set, confirmedAt: set.confirmedAt ?? confirmedAt } : set),
+  })) }
+}
+
+/** Undo only the completion flags; retain entered facts, plan and provenance. */
+export function applyLiveSetUnconfirmation(workout: Workout, setId: string, draft: LiveSetDraft, version: number): Workout {
+  const next = applyLiveSetDraft(workout, setId, draft, version)
+  return { ...next, exercises: next.exercises.map(exercise => ({ ...exercise,
+    sets: exercise.sets.map(set => set.id === setId && set.version <= version ? { ...set, confirmedAt: null, timerConfirmed: false } : set),
   })) }
 }
 

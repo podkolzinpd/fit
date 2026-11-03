@@ -17,7 +17,7 @@ const SERVER_ONLY = [
 ]
 const OPERATIONS_ONLY = [
   /^\.github\/workflows\/(?:inspect-cloudru-operations|maintain-cloudru-runner-disk|backup-cloudru-production|deploy-cloudru-stage|migrate-yandex-(?:database|media)-to-cloudru|transfer-yandex-sql-to-cloudru|manage-cloudru-recovery-push)\.yml$/,
-  /^\.github\/workflows\/(?:deploy-database|deploy-summary-function|deploy-yandex-(?:stage|migration-container-only)|manage-yandex-stage-database-access|manage-yandex-stage-identity-unlink|migrate-yandex-media|sync-yandex-stage-preview)\.yml$/,
+  /^\.github\/workflows\/(?:deploy-summary-function|deploy-yandex-(?:stage|migration-container-only)|manage-yandex-stage-database-access|manage-yandex-stage-identity-unlink|migrate-yandex-media|sync-yandex-stage-preview)\.yml$/,
   /^scripts\/(?:cloudru-stabilization-workflows|cloudru-runner-disk-workflow|domain-change-push-workflow)\.test\.mjs$/,
   /^scripts\/(?:check-yandex-migration-container-plan|check-yandex-terraform-plan|cloudru-media-migration-workflow|deploy-yandex-serverless-revision|deploy-yandex-stage-workflow|verify-yandex-stage-access|yandex-stage-smoke)(?:\.test)?\.mjs$/,
   /^scripts\/cloudru-speech-diagnostics(?:\.test)?\.py$/,
