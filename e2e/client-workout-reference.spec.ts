@@ -1357,8 +1357,8 @@ test('client reference preserves full-card drag cancellation and stored results'
   await expect(card.getByLabel('Фактический вес', { exact: true }).first()).toHaveValue('25')
 })
 
-test('client reference top finish retains missing cardio time warning', async ({ page }) => {
-  const source = restTimerWorkout(), exercise = source.exercises[0]!
+for (const grouped of [false, true]) test(`client reference top finish retains missing cardio time warning${grouped ? ' grouped' : ''}`, async ({ page }) => {
+  const source = grouped ? coachGestureWorkout(true, 2) : restTimerWorkout(), exercise = source.exercises[0]!
   exercise.inputKind = 'distance'; exercise.ref = 'running'; exercise.muscleGroup = 'cardio'; exercise.name = 'Бег'
   exercise.sets = [ { ...exercise.sets[0]!, confirmedAt: '2026-10-08T09:01:00Z', fact: { distanceKm: 1 }, distanceKm: 1 } ]
   await mockPilot(page, { role: 'client', profileId: pilotId, clientLime: true, workouts: [source] })
@@ -1430,6 +1430,14 @@ test('client reference Live timer mode asks to confirm planned reps before finis
   await expect(page.getByRole('button', { name: 'Подтвердить подходы: Приседания', exact: true })).toBeVisible()
   await page.getByRole('button', { name: 'Завершить тренировку', exact: true }).click()
   await expect(page.locator('.timer-review')).toContainText('Таймер засчитал подходов: 2. Всё верно?')
+  const beforeReview = drafts.length
+  await page.getByRole('button', { name: 'Проверить', exact: true }).click()
+  await expect(page.locator('.timer-review')).toHaveCount(0)
+  await expect(page.locator('.live-exercise > .client-live-card-body:not([inert])')).toHaveCount(1)
+  await expect(page.getByRole('button', { name: 'Подтвердить подходы: Приседания', exact: true })).toBeVisible()
+  await expect(page.locator('.client-live-card-body form[data-live-set-id]').first()).toBeVisible()
+  expect(drafts).toHaveLength(beforeReview)
+  await page.getByRole('button', { name: 'Завершить тренировку', exact: true }).click()
   const finish = page.waitForRequest((request) => new URL(request.url()).pathname === `/v1/workouts/${workoutId}/finish`)
   await page.getByRole('button', { name: 'Всё верно, завершить', exact: true }).click()
   await finish
