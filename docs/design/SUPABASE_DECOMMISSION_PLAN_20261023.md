@@ -511,3 +511,48 @@ integrity и migration safety (0 changed migrations) passed. Полный DB/RLS
 не запускался отдельно: SQL/ownership/native stores не менялись. Remote media,
 реальное устройство, production и отключение Supabase не проверялись/не менялись.
 Новый PR и exact-head CI добавляются в handoff после push; merge не выполняется.
+
+### SB-STAGE-CREDENTIALS-RETIRE-01 — stage credentials — 03.11.2026
+
+Запрос: удалить Supabase credential mirror/CLI/helper и bridge Terraform
+inputs/mounts/IAM после принятого удаления server runtime вPR1956. Baseline
+mainfb5e6d9b, поток assistant-ops. Удаляются оба mirror шага plan/deploy,
+setup-cli, env/path helper, модуль+тест и npm caller; native credentials нетронуты.
+
+Terraform удаляет только legacy bridge inputs, pair precondition, API dynamic
+mount и прежний grant resource. Не удаляются Lockbox secret/versions, реальные
+GitHub secrets, native Connection Manager/DB/S3/LLM/push и их grants. Физический
+отзыв старого grant произойдёт при последующем reviewed full stage apply,
+который уже существует после обновления runtime revisions. В этом PR apply нет.
+
+Выбран узкий policy exception для delete только точного адреса retired grant,
+правильного типа, before role lockbox.payloadViewer, непустого secret_id и
+member, совпадающего с planned API SA id; after=null, actions только delete.
+Create/update/replacement старого grant больше не разрешены. Delete любых
+других ресурсов остаётся под прежним guard, DB protected destruction неизменно.
+Отвергнуто общее allow-destroy и забывание state с сохранением доступа: первое
+ослабило бы native-защиту, второе оставило бы unmanaged разрешение.
+
+Проверки старого mirror payload/paired vars удаляются с retired контрактом.
+Сохранены native immutable mounts, external-media keys, stage trust, storage
+bootstrap/стоимость и все другие plan policy cases. Новые regressions ловят
+валидный отзыв в automatic/default modes, попытку create/update/replacement,
+неверный principal/type/role/after и смесь с secret/DB/S3 delete. Это разные
+границы whitelist, не новые тяжёлые browser matrices. Пока103 targeted tests
+passed; полный check и Terraform validation — после стабилизации diff, CI в PR.
+Секреты и provider state/payload не читались; rollback stage не переключался.
+
+Итог локальной проверки SB-STAGE-CREDENTIALS-RETIRE-01:103 targeted policy/
+workflow/immutable-mount tests passed (3.7s). Terraform1.8.5 linux_arm64 через
+Podman: init -backend=false -lockfile=readonly, validate и fmt -check changed
+TF files passed; provider0.215.0 из существующего lockfile. Checkout read-only,
+TF_DATA_DIR временный, remote backend/state отключены. Существующий warning
+media.tf prefix deprecated не изменён. Попытка x86-эмуляции упала до проверки
+config, поэтому использован native ARM; итоговая проверка успешно завершена.
+
+Полный npm run check passed:326frontend files/2951tests, coverage83/77.91/81.96/
+87.75 при прежних порогах; API1552passed/281skipped без DB env, lint/types/
+policies/build passed. Migration safety:0 changed SQL migrations. Browser specs,
+матрицы, protected inventory, retries/timeouts не менялись; отдельного local
+browser/DB прогона нет, product/API/SQL не меняются. Remote Terraform plan/apply,
+secret revocation, stage switch и production не запускались. Exact-head CI — в PR.

@@ -673,8 +673,13 @@ Yandex S3 → Cloud.ru tooling сохраняются.
 
 API использует только `readMediaStorageConfig` и native `YandexChatMediaStore`:
 без native storage configuration media недоступны, fallback на Supabase нет.
-`SUPABASE_*` больше не читаются сервером для media; старые stage secret mounts
-и manual source tooling других областей пока требуют отдельной cleanup-задачи.
+`SUPABASE_*` больше не читаются сервером для media. Stage deploy не получает
+и не зеркалирует эти credentials; Terraform bridge mounts/inputs/IAM resource
+удалены. Физические GitHub secrets и Lockbox versions не удаляются: manual
+source tooling других областей пока требует отдельной cleanup-задачи.
+Существующий obsolete IAM grant снимается только при последующем проверенном
+stage apply; policy разрешает delete только этого payload-viewer grant у
+текущей API identity, сохраняя запрет удаления секрета/БД/S3 и иных grants.
 
 Для явной архивной tenant-репетиции `allow_missing_media=true` остаётся
 отдельным default-off input. Он допускает старые строки без media objects,
