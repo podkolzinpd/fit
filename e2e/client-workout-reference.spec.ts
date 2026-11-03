@@ -4184,11 +4184,12 @@ for (const role of ['client', 'trainer'] as const) test(`Live unconfirm preserve
   expect(backend.getWorkouts()[0]!.exercises[0]!.sets[1]!.confirmedAt).toBeNull()
 })
 
-for (const failure of ['rejected', 'response-lost'] as const) test(`Live unconfirm recovers ${failure} without clearing facts`, async ({ page }) => {
+for (const failure of ['rejected', 'response-lost', 'timer-response-lost'] as const) test(`Live unconfirm recovers ${failure} without clearing facts`, async ({ page }) => {
   await page.clock.setFixedTime(new Date('2026-11-03T09:00:00Z'))
-  const source = restTimerWorkout()
+  const timed = failure === 'timer-response-lost'
+  const source = timed ? restTimerWorkout(0, true, 'timer') : restTimerWorkout()
   source.startedAt = '2026-11-03T08:59:00Z'
-  Object.assign(source.exercises[0]!.sets[0]!, { confirmedAt: '2026-11-03T08:59:30Z', fact: { weightKg: 40, reps: 12 }, version: 3 })
+  Object.assign(source.exercises[0]!.sets[0]!, { confirmedAt: '2026-11-03T08:59:30Z', fact: timed ? { durationSec: 3 } : { weightKg: 40, reps: 12 }, ...(timed ? { timerConfirmed: true } : {}), version: 3 })
   const backend = await mockPilot(page, { role: 'client', profileId: pilotId, clientLime: true, workouts: [source] })
   let attempts = 0
   await page.route('**/v1/workout-sets/*/unconfirm', async route => {
@@ -4197,6 +4198,7 @@ for (const failure of ['rejected', 'response-lost'] as const) test(`Live unconfi
     if (failure === 'rejected') return route.fulfill({ status: 503, json: { error: 'unavailable' } })
     const set = backend.getWorkouts()[0]!.exercises[0]!.sets[0]!
     set.confirmedAt = null
+    delete set.timerConfirmed
     set.version = (route.request().postDataJSON() as { expectedVersion: number }).expectedVersion + 1
     return route.abort('failed')
   })
@@ -4210,7 +4212,10 @@ for (const failure of ['rejected', 'response-lost'] as const) test(`Live unconfi
     await page.getByRole('button', { name: 'Повторить отмену', exact: true }).click()
   }
   await expect(row).not.toHaveClass(/confirmed/)
-  await expect(row.getByLabel('Фактический вес', { exact: true })).toHaveValue('40')
+  if (timed) {
+    expect(backend.getWorkouts()[0]!.exercises[0]!.sets[0]!.fact.durationSec).toBe(3)
+    await expect(row.getByRole('button', { name: 'Старт подхода', exact: true })).toBeVisible()
+  } else await expect(row.getByLabel('Фактический вес', { exact: true })).toHaveValue('40')
   await expect(page.getByRole('alert').filter({ hasText: 'Не удалось отменить' })).toHaveCount(0)
   expect(attempts).toBe(failure === 'rejected' ? 2 : 1)
 })
@@ -4280,4 +4285,20 @@ test('Live unconfirm reopens a completed card and reconfirmation restores automa
   await expect(card.locator('.client-live-card-body')).toHaveAttribute('inert', '')
   await expect(card.locator('.client-live-completed-mark')).toHaveCount(1)
   expect(await handle!.evaluate(element => element.isConnected)).toBe(true)
+})
+
+for (const role of ['client', 'trainer'] as const) test(`Live unconfirm preserves hidden metrics for ${role}`, async ({ page }) => {
+  await page.clock.setFixedTime(new Date('2026-11-03T09:00:00Z'))
+  const source = restTimerWorkout()
+  source.startedAt = '2026-11-03T08:59:00Z'
+  const originalFact = { weightKg: 30, reps: 12, durationSec: 45, distanceKm: 1.2, rpe: 7 }
+  Object.assign(source.exercises[0]!.sets[0]!, { confirmedAt: '2026-11-03T08:59:30Z', fact: originalFact })
+  const id = role === 'client' ? pilotId : 'c0ac0000-6010-4000-8000-000000000001'
+  const backend = await mockPilot(page, { role, profileId: id, clientLime: true, fitLime: true, workouts: [source] })
+  await page.goto(`/workouts/${workoutId}/live`)
+  const row = page.locator(`[data-live-set-id="${source.exercises[0]!.sets[0]!.id}"]`)
+  await expect(row.locator('[name="rpe"], [name="distanceKm"], [name="durationSec"]')).toHaveCount(0)
+  await row.getByRole('button', { name: /^Отменить выполнение:/ }).click()
+  await expect(row).not.toHaveClass(/confirmed/)
+  expect(backend.getWorkouts()[0]!.exercises[0]!.sets[0]!.fact).toMatchObject(originalFact)
 })

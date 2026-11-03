@@ -78,6 +78,7 @@ import type { RunningFormat } from '../../shared/running-formats'
 import type { ParsedWorkoutExercise } from './quick-workout-entry'
 import { createLiveSetCoordinator } from './live-set-coordinator'
 import { createLiveUnconfirmedSets } from './live-unconfirmed-sets'
+import { liveUnconfirmDraft } from './live-unconfirm-draft'
 import { createLiveSetAutosave } from './live-set-autosave'
 import { applyLiveSetUnconfirmation, applyLiveSetConfirmation, applyLiveSetDraft, carriedLiveWeightKey, hasLiveSetResult, reconcileLiveWorkout, sameLiveSetDraft, setWithCarriedLiveWeight } from './live-set-cache'
 import { liveMetricSources, markLiveMetricEntered } from './live-set-provenance'
@@ -3531,7 +3532,7 @@ export function LiveWorkoutPage() {
           .catch(() => { throw liveWorkoutRecoveryError(error, false) })
         const serverSet = refreshed.data?.exercises.flatMap(exercise => exercise.sets).find(item => item.id === set.id)
         if (serverSet) {
-          const applied = serverSet.version > set.version && !serverSet.confirmedAt && sameLiveSetDraft(serverSet.fact, draft)
+          const applied = serverSet.version > set.version && !serverSet.confirmedAt && sameLiveSetDraft(serverSet.fact, { ...draft, timerConfirmed: undefined })
           liveSets.sync(serverSet, applied ? draft : undefined)
           if (applied) return serverSet.version
         }
@@ -3571,7 +3572,7 @@ export function LiveWorkoutPage() {
     if (pendingUnconfirm.current || query.data?.status !== 'in_progress') return
     const form = liveSetForms.current.get(set.id)
     if (form && !liveDistanceIsValid(form)) return
-    const draft = form ? draftFrom(form, set) : pendingSetDrafts.current.get(set.id) ?? set.fact
+    const draft = form ? liveUnconfirmDraft(set, form, draftFrom(form, set)) : pendingSetDrafts.current.get(set.id) ?? set.fact
     liveSetAutosave.clear(set.id)
     pendingUnconfirm.current = set.id
     rememberLiveDraft(set.id, draft)
