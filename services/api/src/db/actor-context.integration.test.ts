@@ -3325,10 +3325,10 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
       const packageId = randomUUID(), first = randomUUID(), second = randomUUID()
       const peers = new Pool({ connectionString: requireLocalTestDatabaseUrl(), max: 3 })
       const blocker = await peers.connect(), editor = await peers.connect()
-      const edit = (total: number, start = '2026-10-01', end = '2026-11-30', actor = ACTOR_ID) =>
+      const edit = (total: number, start = '2026-10-01', end = '2026-11-30', actor = ACTOR_ID, expected = 1) =>
         withActorTransaction(runtime, actor, client => client.query<JsonResultRow>(
-          `select public.update_trainer_finance_service($1,1,'session_pack','Integrity',
-            $2,1000000,$3::date,$4::date,null,null) as result`, [packageId,total,start,end]))
+          `select public.update_trainer_finance_service($1,$5,'session_pack','Integrity',
+            $2,1000000,$3::date,$4::date,null,null) as result`, [packageId,total,start,end,expected]))
       let pending: Promise<{ error: unknown }> | undefined
       try {
         await owner.query(`insert into public.trainer_finance_packages
@@ -3380,6 +3380,16 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
         await expect(edit(2,'2026-10-01','2026-11-30',OUTSIDE_TRAINER_ID)).rejects.toMatchObject({ code: 'PT404' })
         await expect(edit(3)).resolves.toMatchObject([{ result: { sessionsTotal: 3, sessionsUsed: 2, version: 2 } }])
         await expect(edit(3)).rejects.toMatchObject({ code: 'PT409' })
+        // A pre-existing out-of-period charge remains inspectable and must not
+        // prevent editing a title/price with the service dates unchanged.
+        await owner.query("update public.trainer_finance_packages set ends_on='2026-11-01' where id=$1", [packageId])
+        await expect(edit(3,'2026-10-01','2026-11-01',ACTOR_ID,2)).resolves.toMatchObject([
+          { result: { version: 3, sessionsUsed: 2, endsOn: '2026-11-01' } },
+        ])
+        await expect(edit(3,'2026-10-01','2026-10-31',ACTOR_ID,3)).rejects.toMatchObject({ code: 'PT422' })
+        await expect(edit(3,'2026-10-01','2026-11-30',ACTOR_ID,3)).resolves.toMatchObject([
+          { result: { version: 4, sessionsUsed: 2, endsOn: '2026-11-30' } },
+        ])
         // Characterize a pre-existing inconsistent ledger without rewriting it.
         await owner.query('update public.trainer_finance_packages set sessions_total=1 where id=$1', [packageId])
         const actual = await withActorTransaction(runtime, ACTOR_ID, client => client.query<JsonResultRow>(
