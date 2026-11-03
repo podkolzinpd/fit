@@ -134,3 +134,5 @@ viewer grant допускает отзыв; native ресурсы защищен
 03.11 — SB-ADMIN-WORKFLOWS-RETIRE-01: удаляются ручной deploy старой БД и
 диагностика Supabase Auth/helper; frozen SQL и остальные source ops сохранены.
 [Scope и проверки](design/SUPABASE_DECOMMISSION_PLAN_20261023.md#sb-admin-workflows-retire-01--admin-workflows--03112026).
+
+04.11 — [LIVE-ONE-20261104](design/LIVE_SINGLE_ACTIVE_CARD_20261104.md): в visual Live обеих ролей одна раскрытая карточка, в суперсете один круг и элемент; заменяет прежний future-open default CLV-20261102. Таймер/факт/охват/54–48 прежние.

@@ -573,7 +573,7 @@ for (const density of ['original', 'compact']) test(`v79 cards keep notes full i
   const source = coachGestureWorkout(), first = source.exercises[0]!
   first.trainerComment = 'Полная заметка тренера без потери текста'
   first.sets = Array.from({ length: 6 }, (_, index) => ({ ...first.sets[0]!, id: `c0ac0000-6010-4000-8000-${String(900 + index).padStart(12, '0')}`, position: index }))
-  await mockPilot(page, { profileId: pilot, fitLime: true, workouts: [source] })
+  const backend = await mockPilot(page, { profileId: pilot, fitLime: true, workouts: [source] })
   await page.goto(`/workouts/${workoutId}/live`)
   const card = page.locator('.live-exercise').first(), rows = card.locator('form[data-live-set-id]')
   await expect(rows).toHaveCount(6)
@@ -590,6 +590,8 @@ for (const density of ['original', 'compact']) test(`v79 cards keep notes full i
   await expect(page.getByRole('menuitem', { name: 'Объединить со следующим в суперсет', exact: true })).toBeVisible()
   await page.keyboard.press('Escape')
   await field.fill('29.5'); const element = await field.elementHandle()
+  await field.blur()
+  await expect.poll(() => backend.getWorkouts()[0]!.exercises[0]!.sets[0]!.fact.weightKg).toBe(29.5)
   const toggle = card.locator('.coach-v79-card-toggle')
   await toggle.click(); await expect(toggle).toHaveAttribute('aria-expanded', 'false')
   await expect(toggle).toBeFocused()
