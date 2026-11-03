@@ -125,3 +125,11 @@ done отображается «Проведена» одинаково, нез�
 03.11 — SB-MEDIA-RETIRE-01: владелец отменил перенос старых Supabase файлов.
 Legacy media runtime/source-copy удаляются; Cloud.ru media сохраняются.
 [Решение и проверки](design/SUPABASE_DECOMMISSION_PLAN_20261023.md#sb-media-retire-01--отказ-от-source-media--03112026).
+
+03.11 — SB-STAGE-CREDENTIALS-RETIRE-01: stage больше не читает/зеркалирует
+Supabase credentials; bridge mounts/inputs сняты. Только точный retired API
+viewer grant допускает отзыв; native ресурсы защищены. [Проверки](design/SUPABASE_DECOMMISSION_PLAN_20261023.md#sb-stage-credentials-retire-01--stage-credentials--03112026).
+
+03.11 — SB-ADMIN-WORKFLOWS-RETIRE-01: удаляются ручной deploy старой БД и
+диагностика Supabase Auth/helper; frozen SQL и остальные source ops сохранены.
+[Scope и проверки](design/SUPABASE_DECOMMISSION_PLAN_20261023.md#sb-admin-workflows-retire-01--admin-workflows--03112026).

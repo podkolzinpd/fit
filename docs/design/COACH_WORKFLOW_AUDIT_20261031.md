@@ -2797,3 +2797,48 @@ productionзапуск миграции/чужого выпуска, пропу�
 Открыто: новый полный exactsourceCI/Android, фактические1953/1955receipts и окно.
 Дальше: новые автоматические checks, затем прежний согласованный release/30+30
 план1957. Уже принятые первоначальные3этапа не перевыпускаются. Businesswrites0.
+
+Квитанция exactsourcec572 — 03.11.2026 — Codex / OpenAI.
+Наc5728e4c84ecef04813da69a4a81fd6126c77474 полныйCI41664234788 attempt1
+SUCCESS35/35jobs и Android41664234901SUCCESS. Повторов/ослабления gates нет.
+Полные metadata source-c572-ci-final.json/source-c572-android-final.json сохранены
+в outputs/coach-templates-audit-20261102/post-release-audit-20261103.
+Реальный databasejobSUCCESS; получение детальноголога ещё выполняется, точное
+количество входящихPGcases пока отдельно не заявляется. LocalDBskip не доказательство.
+PR1957 обновлён без sourcepush ради квитанции. Actual1953main3ed7 уже включён;
+его body по-прежнему требует actualpublication/приёмку,1955OPEN. Наше merge/deploy
+1957 удерживается до их фактическихквитанций и подтверждённого окна. NativeABI8922
+прежний. Дальше необходимыйactualmain/новыйsourceCI, затем прежние actualmainCI,
+API/web/совместимыйsignedOTA и actual30public+30ZIP/manifest/API/RSA/readback.
+Эта append-only запись остаётся локальной послеfreeze; businesswritesproduction0.
+
+Уточнение DB-доказательства c572 после получения лога — 03.11.2026.
+Скачивание source-c572-native-db.log завершено без нового запускаCI. В логе
+реально применена migration180; actor-context170tests включает169passed/1прежнийskip,
+основнаяDBгруппа256passed/1skip; отдельные privatejournal21 иrecovery10passed.
+Ошибки запрещённых unconfirm-команд присутствуют как ожидаемые negativecases,
+а не скрытый failure. Это testPostgreSQL, не production. Прежняя запись о pending
+скачивании дополнена фактом получения; runtime/source не меняется.
+
+Интеграция actualmain1958/1964 — 03.11.2026 — Codex / OpenAI.
+Задача: сохранить1957 на необходимом актуальном main, не менять чужой ops scope.
+Расхождения: main дополнен1958/6e19ff75 и1964/cce0f41903a540616024e9600606a41832573c30;
+ожидание1955 остаётся, но source1957 обязан сохранить новые решения и историю.
+Сделано: ordinarymergecce0 без конфликтов; приняты SB-STAGE-CREDENTIALS-RETIRE-01
+и SB-ADMIN-WORKFLOWS-RETIRE-01. Сохранены входящие retireworkflow/helper удаления,
+узкая Terraformзащита только точного retiredgrant, неизменные native DB/S3/AI/push
+и запреты общейдеструкции. Remoteapply/секреты/старыйSupabase нами не запускались.
+Решение: сохранить входящий ownerops контракт, без собственных CI/infra/credential
+изменений. Удалённые retiredtests принадлежат входящим1958/1964, наши gates прежние.
+Отвергнуто: возврат retiredbridge, общееallowdestroy, отмена чужих изменений,
+перенос старогоCIgreen на новыйsource или sourcepush только ради квитанции.
+Проверка: targetedpolicy151/151passed3.02s; первый150/151 остановлен listenerEPERM,
+после разрешениялокальногоlistener весь тот же набор прошёл без правок. Прямой
+дополнительныйeslintprobe scripts завершился5ignoredwarnings/0errors: scripts/**/*.mjs
+исключены существующимconfig, это не применимая lintпроверка и не выдаётся заpass.
+Configured repositorylint остаётся обязательным в новомCI; config не менялся.
+Workflowdocs/diffcheckpassed; src/e2e/API/rootlock/android побайтно прежниеc572,
+ABI8922/code9 неизменён. Предыдущие localappendproof сохранены merge иpatch.
+Открыто: новыйfullsourceCI/Android,1953/1955actualreceipts и собственноеокно.
+Дальше: обязательные exactsourcechecks, затем прежний normalmerge/fullmainCI/
+API/web/signedOTA/actual30public+30ZIPплан. Productionbusinesswrites0.
