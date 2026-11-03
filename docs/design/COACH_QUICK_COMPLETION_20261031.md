@@ -239,3 +239,29 @@ Realtime-test ждёт тот же120ms через async timer, чтобы до�
 source/mainCI, штатная публикация и public/signedZIP-проверка остаются впереди.
 Физический телефон/реальный OAuth не проверены. Следующий шаг — полный check,
 существующие attendance scenarios и один PR по общей согласованной очереди.
+
+### Итерация8 — 03.11.2026 — Codex / OpenAI
+
+Runtime f12fbf53: полный npm run check exit0. Frontend325files/2945tests,
+coverage83.29/78.12/82.33/87.97; API1567passed/278conditional DBskipped;
+lint/types/infra/hosting/calendar policies, API/frontend build и startup passed.
+Обязательные настоящие PG/RLS-проверки остаются в CI; локальный skip не выдан
+за их выполнение. Workflow-docs и diff-check passed.
+
+Производственная fixture-сборка:54/54 существующих attendance/reschedule cases
+в Chromium/WebKit,41.2s,0retry/skips. Перенос, отмена, пустое/заполненное
+проведение, обе плотности Live, история и финансы сохранены. Дев-прогон52/54
+первоначально имел2history failure: в локальном запуске отсутствовал штатный
+FIT_QUICK_WORKOUT_ENTRY_ACCEPTANCE=1. Причина подтверждена bookingHistoryAvailable;
+никакой runtime/date/assertion fix для этого не вносился. Короткая гипотеза
+о календарной дате отвергнута по коду; временная строка clock удалена. Правильная
+конфигурация даёт2/2 history, затем полная production54/54 подтверждает итог.
+
+Причинный отрицательный browser-прогон временно использовал исходный helper
+только в своей локальной рабочей копии, с обязательным восстановлением вfinally.
+Оба движка оставили ТОТ ЖЕ workoutId после сохранения (0ожидалось/1получено);
+исправленный файл восстановлен побайтно. Ошибки/снимки/trace сохранены как
+локальные диагностические артефакты, не копируются в публичный репозиторий.
+Новый тест расширяет существующий case, browser inventory/таймауты/повторы
+и прежние assertions не сокращены. Source/mainCI и опубликованная приёмка
+впереди; rollout/финансовые команды/native dependencies не меняются.
