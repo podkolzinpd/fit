@@ -9,26 +9,36 @@ const source = process.env.TEST_DATABASE_URL
 const database = `fit_client_restore_${process.pid}`
 describe.skipIf(source === undefined)('owner-approved canonical client restoration with real RLS', () => {
   let admin: Pool, owner: Pool, runtime: Pool
-  let created = false
+  let created = false, createdOwner = false
   beforeAll(async () => {
     const url = new URL(source ?? '')
     if (!['127.0.0.1', 'localhost'].includes(url.hostname) || url.pathname !== '/fit_actor_test') throw Error('local_test_database_required')
     admin = new Pool({ connectionString: url.href, max: 1 })
-    await admin.query(`do $$ begin perform pg_advisory_xact_lock(193635,1);
-      if not exists(select 1 from pg_roles where rolname='fit_api') then create role fit_api login; end if; end $$`)
-    await admin.query(`create database ${database}`); created = true
+    await admin.query('begin')
+    await admin.query('select pg_advisory_xact_lock(193635,1)')
+    if (!(await admin.query("select 1 from pg_roles where rolname='fit_api'")).rowCount) await admin.query('create role fit_api')
+    if (!(await admin.query("select 1 from pg_roles where rolname='fit_owner'")).rowCount) {
+      await admin.query('create role fit_owner'); createdOwner = true
+    }
+    await admin.query('commit')
+    await admin.query(`create database ${database} owner fit_owner`); created = true
     url.pathname = `/${database}`
-    await runner({ databaseUrl: url.href, dir: fileURLToPath(new URL('../../db/migrations', import.meta.url)),
-      direction: 'up', migrationsTable: 'fit_migrations', migrationsSchema: 'app_private',
-      createMigrationsSchema: true, verbose: false, log: () => {} })
-    owner = new Pool({ connectionString: url.href, max: 2 })
-    url.username = 'fit_api'; url.password = ''
-    runtime = new Pool({ connectionString: url.href, max: 1 })
+    // Test-only SET ROLE matches the existing operational-test bootstrap.
+    // Production connects directly with its protected owner/runtime credentials.
+    owner = new Pool({ connectionString: url.href, options: '-c role=fit_owner', max: 2 })
+    const migrating = await owner.connect()
+    try {
+      await runner({ dbClient: migrating, dir: fileURLToPath(new URL('../../db/migrations', import.meta.url)),
+        direction: 'up', migrationsTable: 'fit_migrations', migrationsSchema: 'app_private',
+        createMigrationsSchema: true, verbose: false, log: () => {} })
+    } finally { migrating.release() }
+    runtime = new Pool({ connectionString: url.href, options: '-c role=fit_api', max: 1 })
   })
   afterAll(async () => {
     if (runtime) await runtime.end()
     if (owner) await owner.end()
     if (created) await admin.query(`drop database ${database}`)
+    if (createdOwner) await admin.query('drop role fit_owner')
     if (admin) await admin.end()
   })
   async function fixture() {
