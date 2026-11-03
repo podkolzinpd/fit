@@ -15,13 +15,6 @@ resource "yandex_serverless_container" "api" {
       condition     = var.media_s3_credentials_override == null ? true : try(trimspace(var.media_bucket_override) != "", false)
       error_message = "External media credentials require an explicit media bucket override."
     }
-    precondition {
-      condition = (
-        (var.legacy_supabase_bridge_lockbox_secret_id == null && var.legacy_supabase_bridge_lockbox_secret_version_id == null)
-        || (var.legacy_supabase_bridge_lockbox_secret_id != null && var.legacy_supabase_bridge_lockbox_secret_version_id != null)
-      )
-      error_message = "Legacy Supabase bridge Lockbox ID and version must be provided together."
-    }
   }
 
   runtime {
@@ -93,21 +86,6 @@ resource "yandex_serverless_container" "api" {
     environment_variable = "YANDEX_MEDIA_SECRET_ACCESS_KEY"
   }
 
-  dynamic "secrets" {
-    for_each = var.legacy_supabase_bridge_lockbox_secret_id == null ? {} : {
-      SUPABASE_URL              = "SUPABASE_URL"
-      SUPABASE_PUBLISHABLE_KEY  = "SUPABASE_PUBLISHABLE_KEY"
-      SUPABASE_SERVICE_ROLE_KEY = "SUPABASE_SERVICE_ROLE_KEY"
-    }
-
-    content {
-      id                   = var.legacy_supabase_bridge_lockbox_secret_id
-      version_id           = var.legacy_supabase_bridge_lockbox_secret_version_id
-      key                  = secrets.value
-      environment_variable = secrets.key
-    }
-  }
-
   secrets {
     id                   = var.llm_gateway_lockbox_secret_id
     version_id           = var.llm_gateway_lockbox_secret_version_id
@@ -126,7 +104,6 @@ resource "yandex_serverless_container" "api" {
     yandex_iam_service_account_iam_member.api_deployer,
     yandex_lockbox_secret_iam_member.api_connection_secret_reader,
     yandex_lockbox_secret_iam_member.api_media_credentials_reader,
-    yandex_lockbox_secret_iam_member.legacy_supabase_bridge_reader,
   ]
 }
 

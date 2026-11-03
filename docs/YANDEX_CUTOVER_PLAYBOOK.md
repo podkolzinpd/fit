@@ -63,6 +63,15 @@ runtime. Удалены Supabase chat store/authorizer/bridge, три маршр
 объекты/ресурсы этим решением не удаляются. Это уточняет прежний P1 media gate,
 но не отменяет проверки остальных data/ops consumers перед отключением проекта.
 
+## Stage credentials после удаления bridge — 03.11.2026
+
+Stage plan/deploy не используют Supabase CLI или credential mirror. Bridge
+Lockbox inputs/mounts/IAM resource удалены из Terraform. Последующий reviewed
+apply может отозвать только прежний payload-viewer grant у planned API service
+account: secret/versions, native DB/S3/AI/push и другие grants не удаляются.
+Физические GitHub secrets/Lockbox пока сохраняются для отдельной проверки
+оставшихся ops readers. Эта правка не запускает stage/production apply.
+
 ## Общая методика продуктовой разработки
 
 ### Точечное восстановление подтверждённой связи — YAFIT-701
