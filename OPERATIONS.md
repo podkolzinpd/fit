@@ -2143,7 +2143,7 @@ It never force-removes that container or performs system/volume pruning.
 План: `docs/design/ANDROID_OTA_20261019.md`, протокол публикации/отката и Nginx:
 `infra/cloudru/mobile-updates/README.md`. `FIT_ANDROID_OTA_ENABLED` имеет default-off
 семантику (включено только при точном `true`); штатная web-сборка OTA не проверяет.
-Android APK1.1.3/code8 должен собираться с этим флагом, `FIT_SOURCE_COMMIT`
+Android APK1.1.4/code9 должен собираться с этим флагом, `FIT_SOURCE_COMMIT`
 и canonical API origin `https://api.fit-training.ru`; production env-файлы локально
 не создаются. Native-состав и **все lock-зависимости** входят в консервативный ABI:
 их изменение требует нового APK. Публичный OTA RSA-ключ закреплён в
