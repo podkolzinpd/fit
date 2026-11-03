@@ -3577,3 +3577,24 @@ CI и actual publication gates остаются обязательными. Ра
 и реальная приёмка14, затем mainCI/API/web/OTA/UI наших1953 и1955. Physical
 телефон/OAuth не проверены. Дальше: приёмка14→merge1953; после него финальная
 основа/CI1955 готовятся параллельно публикации1953, выпуск1955 после его приёмки.
+
+
+### Итерация 107 — 2026-11-03 — Codex / OpenAI
+
+Задача: завершить реальный source-gate LIVE-P2 параллельно принятому native-выпуску.
+Source/head3745521e61d28e933ab73798b7c2461bca53a4f7:
+CI41645887371 SUCCESS35/35. Новые подтверждённые результаты: frontend328files/
+2963tests, API1555passed/287environment-skips. Отдельный native DB job125950980901:
+256passed/1existing skip, import21, account-erasure6, final group10 — всего293passed,
+1skip. Это свежая проверка реальной nativeSQL180, а не сумма пропущенных API-тестов.
+Request/API job125950980706 и app-tests125951138867 прошли; журналы сохранены в
+собственных /tmp/fit-live-p2-candidate-{database,api,app-tests}.log. Browser groups
+и итоговый gate sourceCI прошли, старые отменённые/failed run не переименованы.
+
+Runtime не менялся после105; body1953 обновлён проверенной версией и source-gates,
+новый commit кremoteP2 не создаётся ради статуса. Main1959/3aec7629 проверяется
+в41647107830; actual native-публикация ещё не принята. Очередь удерживается.
+Отвергнуто: считать готовность нашего source разрешением обойти14 или сообщить
+о публикации по sourceCI. Непроверенное: actual main1953/runtime/API/web/OTA/UI
+и P3exactsource/main, физический телефон/OAuth. Дальше: квитанция14, freshmain/
+head/merge-tree, обычный merge1953 сmatch-head; fullmainCI и штатная публикация.
