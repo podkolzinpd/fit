@@ -24,6 +24,7 @@
 | Ачивки | [progress states](design/ACHIEVEMENT_PROGRESS_STATES_20261004.md), [regularity](design/ACHIEVEMENT_REGULARITY_COPY_20261005.md) | Принятые изображения/условия; перед правкой сверить последующие решения и текущий каталог |
 | Корпоративные тренеры | [кабинет](design/CORPORATE_ADMIN_20261027.md), [анкеты/офисы](design/TRAINER_PROFILES_OFFICES_20261029.md) | Права отдельно от роли; фото из публикации; статус/офисы утверждает администратор; клуб отдельно |
 | Backend/публикация | [playbook](YANDEX_CUTOVER_PLAYBOOK.md), [engineering](ENGINEERING_RULES.md), OPERATIONS.md в корне | Cloud.ru, ownership/RLS, forward migrations, отсутствие dual-write |
+| Перенос недельных журналов | [PHI101–105](design/ATHLETE_PROGRAM_HISTORY_IMPORT_20261103.md) | 16спортсменов+собственный журнал тренера; восстановленные даты отдельно, без дублей/смены роли/изменения финансов; запись после сверки |
 | Decommission | [план](design/SUPABASE_DECOMMISSION_PLAN_20261023.md), [P0](design/SUPABASE_P0_RESOURCE_AUDIT_20261024.md) | Не удалять rollback/legacy по возрасту; проверить фактические незакрытые гейты |
 
 ## Известные уточнения и конфликты
