@@ -2764,3 +2764,36 @@ AGENTS/FITWORKFLOW/ACTIVECONTRACTS прежние. Tests только local synt
 Дальше: новый exactsourceCI → согласованное окно → normal squash/fullmainCI →
 API/web/совместимыйsignedOTA → actual30public+30ZIP/manifest/API/RSA/readback.
 Productionwrites0, чужие workflows/releases не запускались/не менялись.
+
+Квитанция exactsourcecf8 — 03.11.2026 — Codex / OpenAI.
+Наcf8b7030e6964571532d61a6f998a7530bb07756 полныйCI41647572137 attempt1
+SUCCESS35/35jobs; Android41647572128SUCCESS. Повторов/ослабления gates нет.
+Полные metadata source-cf8-ci-final.json/source-cf8-android-final.json сохранены
+в outputs/coach-templates-audit-20261102/post-release-audit-20261103.
+PR1957 обновлён; новый sourcepush ради этой append-only квитанции не делается.
+Actualcode9 contract8922 остаётся таким же, как actualmain1959/3aec.
+Владелец1959 начал подписанныйAPK/OTA, но R8/R9 ещё не приняты; наше merge/deploy
+удерживается до его квитанции, затем1953–1955 и собственного подтверждённого окна.
+Наш1957 ещё НЕопубликован. Дальше прежний fullmainCI/API/web/signedOTA/actual30+30
+план; новый necessarymain при наличии включается ordinarymerge с новымsourceCI.
+
+Интеграция фактического1953main — 03.11.2026 — Codex / OpenAI.
+Задача: подготовить1957 параллельно фактической приёмке предыдущего этапа.
+Расхождения:1953 штатно слит в3ed7d58b1423b12ef68dfbb78787cb7713eb3cc2,
+но его публикация/приёмка и следующий1955 ещё впереди; своё окно не открыто.
+Сделано: ordinarymerge3ed7 без конфликтов, включая общий WorkoutsPages;
+сохранены входящие CLV-20261103/LIVE-P2, utilityblur/version lessons,
+API/unconfirm/migration180/actor-contextDBtests и все чужие журналы. Это входящий
+принятый main владельца, не самостоятельное расширение API/schema нашегоUI.
+Решение: сохранить обе реализации — наши template/draft/input и Live unconfirm;
+локальная append-only квитанцияcf8 сохранена в этой необходимой интеграции иpatch.
+Отвергнуто: whole-fileours/theirs, возврат прежнего Live-P1-only контракта,
+productionзапуск миграции/чужого выпуска, пропуск нового fullsourceCI.
+Проверка: rootTSC/build/startup/docs/diffcheckpassed;7targetedfiles51unit,
+12templatecomponent и8draft-safety browserChromium/WebKit11.1s passed,
+0retry/skips. APIcheck exit0:133files1555passed/287условныхDBskip,lint/type/build.
+Существующий DB/role/unconfirm gate обязан реально пройти новый exactsourceCI;
+локальныеskip не его замена. Nativecode9 ABI8922 неизменён, dependencies прежние.
+Открыто: новый полный exactsourceCI/Android, фактические1953/1955receipts и окно.
+Дальше: новые автоматические checks, затем прежний согласованный release/30+30
+план1957. Уже принятые первоначальные3этапа не перевыпускаются. Businesswrites0.

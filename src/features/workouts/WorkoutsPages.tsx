@@ -78,8 +78,10 @@ import { RPE_OPTIONS } from '../../shared/rpe'
 import type { RunningFormat } from '../../shared/running-formats'
 import type { ParsedWorkoutExercise } from './quick-workout-entry'
 import { createLiveSetCoordinator } from './live-set-coordinator'
+import { createLiveUnconfirmedSets } from './live-unconfirmed-sets'
+import { liveUnconfirmDraft } from './live-unconfirm-draft'
 import { createLiveSetAutosave } from './live-set-autosave'
-import { applyLiveSetConfirmation, applyLiveSetDraft, carriedLiveWeightKey, hasLiveSetResult, reconcileLiveWorkout, sameLiveSetDraft, setWithCarriedLiveWeight } from './live-set-cache'
+import { applyLiveSetUnconfirmation, applyLiveSetConfirmation, applyLiveSetDraft, carriedLiveWeightKey, hasLiveSetResult, reconcileLiveWorkout, sameLiveSetDraft, setWithCarriedLiveWeight } from './live-set-cache'
 import { liveMetricSources, markLiveMetricEntered } from './live-set-provenance'
 import { firstCardioDraftMissingEnteredDuration, firstCardioSetMissingEnteredDuration } from './calorie-duration-prompt'
 import {
@@ -3064,7 +3066,11 @@ export function LiveWorkoutPage() {
   const [liveSets] = useState(() => createLiveSetCoordinator(
     (id, draft, version) => workoutsRepository.saveLiveSet(id, draft, version),
     (id, version) => workoutsRepository.confirmLiveSet(id, version),
+    (id, version) => workoutsRepository.unconfirmLiveSet(id, version),
   ))
+  const manualSetHolds = useMemo(() => createLiveUnconfirmedSets(workoutId, actor?.userId), [workoutId, actor?.userId])
+  const pendingUnconfirm = useRef<string | null>(null)
+  const manuallyReopenedExercises = useRef(new Set<string>())
   const [liveSetAutosave] = useState(() => createLiveSetAutosave())
   const [liveWorkout] = useState(() => createLiveWorkoutCoordinator())
   const pendingRoundOperations = useRef<Map<string, { operationId: string; expectedVersion: number; position: number }>>(new Map())
@@ -3235,6 +3241,7 @@ export function LiveWorkoutPage() {
   useEffect(() => () => liveSetAutosave.dispose(), [liveSetAutosave])
   useEffect(() => {
     if (query.data?.status !== 'done') return
+    manualSetHolds.clear()
     if (actor?.userId) {
       clearPendingLiveSetDrafts(actor.userId, workoutId)
       clearPendingLiveSetConfirmations(actor.userId, workoutId)
@@ -3464,6 +3471,7 @@ export function LiveWorkoutPage() {
   const confirm = useMutation({
     mutationFn: ({ set, draft }: { set: WorkoutSet; draft: LiveSetDraft }) => runLiveSetMutation(set, draft, true, () => liveSets.confirm(set, draft)),
     onMutate: ({ set, draft }) => {
+      manualSetHolds.delete(set.id)
       const retry = pendingSetConfirmations.current.has(set.id)
       rememberLiveDraft(set.id, draft)
       pendingSetConfirmations.current.add(set.id)
@@ -3481,6 +3489,10 @@ export function LiveWorkoutPage() {
       const before = queryClient.getQueryData<Workout>(['workout', workoutId])
       const owner = before?.exercises.find((exercise) => exercise.sets.some((item) => item.id === set.id))
       if (owner && owner.blockType === 'single' && owner.sets.every((item) => item.id === set.id || item.confirmedAt)) {
+        if (manuallyReopenedExercises.current.delete(owner.id)) {
+          setExpandedExercises(current => { const next = new Set(current); next.delete(owner.id); return next })
+          setClientCardDisplays(current => { const next = new Map(current); next.delete(v79CardKey(owner)); return next })
+        }
         const next = before?.exercises.find((exercise) => exercise.id !== owner.id && exercise.sets.some((item) => !item.confirmedAt))
         nextExerciseAnchor.current = next?.sets.find((item) => !item.confirmedAt)?.id ?? null
         setActiveExerciseId(next?.id ?? null)
@@ -3516,9 +3528,65 @@ export function LiveWorkoutPage() {
     },
     onError: () => { advanceAfterConfirm.current = null; trackGoal('live_set_confirm_error') },
   })
+  const unconfirm = useMutation({
+    mutationFn: async ({ set, draft }: { set: WorkoutSet; draft: LiveSetDraft }) => {
+      try {
+        return await liveSets.unconfirm(set, draft)
+      } catch (error) {
+        const refreshed = await liveOperationWithTimeout(query.refetch())
+          .catch(() => { throw liveWorkoutRecoveryError(error, false) })
+        const serverSet = refreshed.data?.exercises.flatMap(exercise => exercise.sets).find(item => item.id === set.id)
+        if (serverSet) {
+          const applied = serverSet.version > set.version && !serverSet.confirmedAt && sameLiveSetDraft(serverSet.fact, { ...draft, timerConfirmed: undefined })
+          // A proven undo acknowledges the authoritative fact (its timer mark is gone).
+          liveSets.sync(serverSet, applied ? serverSet.fact : undefined)
+          if (applied) return serverSet.version
+        }
+        throw liveWorkoutRecoveryError(error, !refreshed.error)
+      }
+    },
+    onMutate: ({ set }) => {
+      manualSetHolds.add(set.id)
+      advanceAfterConfirm.current = null
+      nextExerciseAnchor.current = null
+      autoStartNextWork.current = false
+    },
+    onSuccess: (version, { set, draft }) => {
+      manualSetHolds.add(set.id)
+      const workout = queryClient.getQueryData<Workout>(['workout', workoutId])
+      const owner = workout?.exercises.find(exercise => exercise.sets.some(item => item.id === set.id))
+      if (owner) {
+        manuallyReopenedExercises.current.add(owner.id)
+        setExpandedExercises(current => new Set(current).add(owner.id))
+        if (owner.blockType !== 'single') {
+          setExpandedClientBlocks(current => new Set(current).add(owner.blockId))
+          setExpandedCircuitRounds(current => new Set(current).add(`${owner.blockId}:${set.position + 1}`))
+        }
+        setV79Folded(current => { const next = new Set(current); next.delete(v79CardKey(owner)); next.delete(`round:${set.id}`); return next })
+      }
+      queryClient.setQueryData<Workout>(['workout', workoutId], current => current
+        ? applyLiveSetUnconfirmation(current, set.id, draft, version) : current)
+      acknowledgeLiveDraft(set.id, draft, true)
+      setPhaseNotice(current => current?.kind === 'work-confirmed' && current.setId === set.id ? null : current)
+      setEditingSets(current => { const next = new Set(current); next.delete(set.id); return next })
+      void query.refetch()
+      void queryClient.invalidateQueries({ queryKey: ['clients'] })
+    },
+    onSettled: () => { pendingUnconfirm.current = null },
+  })
+  function unconfirmLiveSet(set: WorkoutSet) {
+    if (pendingUnconfirm.current || query.data?.status !== 'in_progress') return
+    const form = liveSetForms.current.get(set.id)
+    if (form && !liveDistanceIsValid(form)) return
+    const draft = form ? liveUnconfirmDraft(set, form, draftFrom(form, set)) : pendingSetDrafts.current.get(set.id) ?? set.fact
+    liveSetAutosave.clear(set.id)
+    pendingUnconfirm.current = set.id
+    rememberLiveDraft(set.id, draft)
+    unconfirm.mutate({ set, draft })
+  }
   async function retryPendingLiveDrafts() {
     if (!actor?.userId || !query.data || retryingSetDrafts.current
-      || save.isPending || confirm.isPending || (typeof navigator !== 'undefined' && !navigator.onLine)) return
+      || save.isPending || confirm.isPending || unconfirm.isPending || pendingUnconfirm.current !== null || (typeof navigator !== 'undefined' && !navigator.onLine)) return
     const pending = readPendingLiveSetDrafts(actor.userId, workoutId)
     if (!pending.size) return
     retryingSetDrafts.current = true
@@ -3579,7 +3647,7 @@ export function LiveWorkoutPage() {
       window.removeEventListener('pageshow', retry)
       document.removeEventListener('visibilitychange', retry)
     }
-  }, [actor?.userId, query.data, workoutId, save.isPending, confirm.isPending])
+  }, [actor?.userId, query.data, workoutId, save.isPending, confirm.isPending, unconfirm.isPending])
   // Запускает отдых до абсолютного момента endsAt (мс). null — отдыха нет
   // (напр. между упражнениями суперсета, seconds=0): таймер не показываем.
   function startRestUntil(endsAt: number | null, pauseAt = livePausedAt) {
@@ -3636,7 +3704,7 @@ export function LiveWorkoutPage() {
   }
   // Запускает таймер подхода на время; false — у подхода нет плановой длительности.
   function startWorkTimer(set: WorkoutSet | undefined, exercise: WorkoutExerciseModel | undefined): boolean {
-    if (!timerLeads) return false
+    if (!timerLeads || set && (manualSetHolds.has(set.id) || pendingUnconfirm.current === set.id)) return false
     const seconds = set && exercise ? liveTimerSeconds(set) : null
     if (!set || seconds === null || pendingSetConfirmations.current.has(set.id)) return false
     const now = Date.now()
@@ -3652,7 +3720,7 @@ export function LiveWorkoutPage() {
     const located = query.data?.exercises.flatMap((exercise) => exercise.sets.map((set) => ({ exercise, set })))
       .find(({ set }) => set.id === phase.setId)
     setLivePhase(null)
-    if (!located || located.set.confirmedAt) return
+    if (!located || located.set.confirmedAt || manualSetHolds.has(phase.setId) || pendingUnconfirm.current === phase.setId) return
     const { exercise, set } = located
     const seconds = phase.manual ? personWorkSeconds(phase, at) : elapsedWorkSeconds(phase, at)
     const form = liveSetForms.current.get(set.id)
@@ -3681,6 +3749,7 @@ export function LiveWorkoutPage() {
   function activateLiveExercise(exercise: WorkoutExerciseModel) {
     const nextSet = exercise.sets.find((set) => !set.confirmedAt)
     if (!nextSet) return
+    manualSetHolds.delete(nextSet.id)
     inactivityReminder.noteActivity(restEndsAt)
     nextExerciseAnchor.current = nextSet.id
     setExpandedSetId(nextSet.id)
@@ -4094,7 +4163,7 @@ export function LiveWorkoutPage() {
   }
   const structureMutationPending = appendSet.isPending || appendRound.isPending || removeRound.isPending || removeSet.isPending || removeExercise.isPending || appendExercise.isPending || appendSelection.isPending
     || reorderBlock.isPending || moveLiveBlock.isPending || mergeBlock.isPending || splitSuperset.isPending || replaceLive.isPending || finish.isPending
-  const rootMutationPending = structureMutationPending || commentLive.isPending
+  const rootMutationPending = structureMutationPending || commentLive.isPending || unconfirm.isPending
   const pendingNoteRetry = coachReference ? [...pendingNotes].find(([id, value]) => {
     const exercise = query.data?.exercises.find(item => item.id === id)
     return exercise && focusedNote !== id && (exercise.trainerComment ?? '').trim() !== value.trim()
@@ -4332,7 +4401,7 @@ export function LiveWorkoutPage() {
     // в «Веду сам», в «Ведёт таймер» подходы запускаются сами.
     const workPhase = livePhase?.kind === 'work' ? livePhase : null
     const ownPhase = workPhase?.setId === set.id ? workPhase : null
-    const personWorkTimer = !coachReference && !set.confirmedAt && timedSetSeconds(set) !== null && (!timerLeads || ownPhase)
+    const personWorkTimer = !coachReference && !set.confirmedAt && timedSetSeconds(set) !== null && (!timerLeads || ownPhase || manualSetHolds.has(set.id))
       ? <LiveSetWorkTimer phase={ownPhase} pausedAt={livePausedAt} disabled={Boolean(workPhase) || confirm.isPending}
           onStart={() => startPersonWorkTimer(set)} onFinish={() => ownPhase?.manual ? finishPersonWorkTimer(true) : confirmRunningTimerSet()} />
       : undefined
@@ -4373,8 +4442,9 @@ export function LiveWorkoutPage() {
       captureLiveDraft(set, event.currentTarget, event.target)
     }} onSubmit={(event) => event.preventDefault()} onBlur={(event) => {
       if (deletingSet) return
-      // WebKit focuses the swipe group itself. Its blur is not a metric edit.
-      if (clientReference && !(event.target instanceof Element && event.target.matches('input, select, textarea, .workout-duration-trigger'))) return
+      // WebKit can blur a utility button/group when pending disables it.
+      // Only a metric control can initiate direct-input blur autosave.
+      if ((clientReference || directLiveInput) && !(event.target instanceof Element && event.target.matches('input, select, textarea, .workout-duration-trigger'))) return
       // A utility action is not an edited metric. Closing its confirmation must
       // never turn untouched plan placeholders into a saved Live result.
       if (liveSwipeEnabled && event.target instanceof Element && event.target.closest('.workout-swipe-action')) return
@@ -4394,7 +4464,9 @@ export function LiveWorkoutPage() {
             ? <button type="button" className="secondary live-set-save" aria-label="Сохранить" disabled={save.isPending}
                 onPointerDown={() => { skipBlurForSet.current = set.id; liveSetAutosave.clear(set.id) }}
                 onClick={(event) => { const form = event.currentTarget.form; skipBlurForSet.current = null; if (!form || !liveDistanceIsValid(form, true)) return; persistLiveDraft(set, draftFrom(form, set), true); setEditingSets((prev) => { const next = new Set(prev); next.delete(set.id); return next }) }}>{visualReference ? <CheckIcon /> : <span aria-hidden="true">✓</span>}</button>
-            : set.confirmedAt && directLiveInput ? <span className={`live-set-check done${set.timerConfirmed ? ' timer' : ''}`} role="img" aria-label={set.timerConfirmed ? 'Засчитано таймером' : 'Подход выполнен'}>{set.timerConfirmed ? <TimerIcon /> : visualReference ? <CheckIcon /> : <span aria-hidden="true">✓</span>}</span>
+            : set.confirmedAt && directLiveInput ? <button type="button" className={`live-set-check done${set.timerConfirmed ? ' timer' : ''}`} aria-label={`Отменить выполнение: ${label ?? `Подход ${set.position + 1}`}`} aria-busy={unconfirm.isPending && unconfirm.variables?.set.id === set.id} disabled={rootMutationPending || confirm.isPending}
+                onPointerDown={() => { skipBlurForSet.current = set.id; liveSetAutosave.clear(set.id) }}
+                onClick={() => { skipBlurForSet.current = null; unconfirmLiveSet(set) }}>{set.timerConfirmed ? <TimerIcon /> : visualReference ? <CheckIcon /> : <span aria-hidden="true">✓</span>}</button>
             : set.confirmedAt ? <button type="button" className={`secondary live-set-check done${set.timerConfirmed ? ' timer' : ''}`} aria-label={set.timerConfirmed ? 'Засчитано таймером, изменить подход' : 'Редактировать подход'} title={coachReference ? 'Подход выполнен — изменить результат' : undefined} onClick={() => setEditingSets((prev) => new Set(prev).add(set.id))}>{set.timerConfirmed ? <TimerIcon /> : visualReference ? <CheckIcon /> : <span aria-hidden="true">✓</span>}</button>
             : <button type="button" className="live-set-check" aria-label={confirmLabel} aria-busy={confirmationPending} disabled={confirm.isPending}
                 onPointerDown={(event) => {
@@ -4550,7 +4622,13 @@ export function LiveWorkoutPage() {
   // «Веду сам»: подход со временем человек запускает сам, таймер отсчитывает
   // и сигналит на нуле, засчитывает подход повторное нажатие или «Готово».
   function startPersonWorkTimer(set: WorkoutSet) {
+    manualSetHolds.delete(set.id)
     resumeWorkoutIfPaused()
+    if (timerLeads) {
+      const exercise = query.data?.exercises.find(item => item.sets.some(candidate => candidate.id === set.id))
+      startWorkTimer(set, exercise)
+      return
+    }
     const seconds = liveTimerSeconds(set)
     if (timerLeads || coachReference || seconds === null || livePhaseRef.current || pendingSetConfirmations.current.has(set.id)) return
     prepareGong()
@@ -4953,6 +5031,7 @@ export function LiveWorkoutPage() {
       {canManageLiveStructure && query.data.exercises.length === 0 && liveExerciseEntry(<section className="live-empty-start">{!trainerLiveExit && <h2>Добавьте первое упражнение</h2>}<button type="button" className="primary wide" disabled={rootMutationPending} onClick={event => { if (clientReference) event.currentTarget.focus({ preventScroll: true }); setReplaceExerciseId(null); setPickerOpen(true) }}>Выбрать упражнение</button>{cancelEmpty.error && <p className="live-empty-error" role="alert">Не удалось удалить тренировку. Попробуйте ещё раз.</p>}</section>)}
       {canManageLiveStructure && query.data.exercises.length > 0 && liveExerciseEntry(<button type="button" className="secondary wide live-add-exercise" disabled={rootMutationPending} onClick={event => { if (clientReference) event.currentTarget.focus({ preventScroll: true }); setReplaceExerciseId(null); setPickerOpen(true) }}><AddActionLabel>{coachReference ? 'Упражнение' : 'Ещё упражнение'}</AddActionLabel></button>)}
       {coachReference && <FitLogo className="coach-live-footer-brand" />}
+      {unconfirm.isError && <div className="live-sync-state error" role="alert"><span>Не удалось отменить выполнение подхода. Значения сохранены.</span><button type="button" className="secondary" disabled={rootMutationPending || confirm.isPending} onClick={() => unconfirmLiveSet(unconfirm.variables.set)}>Повторить отмену</button></div>}
       {error && <p className="error">{error.message}</p>}
       {liveSwipeEnabled && removeSet.isError && removeSet.variables && <>
         {removalRetryReason && <p role="status">{removalRetryReason}</p>}
