@@ -3626,3 +3626,17 @@ native/Live-файлы не изменились; изменена ancestry. PRd
 actualUI; телефон/OAuth прежние. Дальше: новый CI1953→normal merge→main/public;
 P3 до единственного финального push/CI обязательно получает actualmain после
 P2 squash, чтобы не повторить этот freshness-круг. Очередь1953→1955 сохранена.
+
+
+### Итерация 109 — 2026-11-03 — Codex / OpenAI
+
+Задача: подготовить P3 без повторения freshness-ошибки108. Локально включён
+актуальный P2head8dd97161; конфликт был только в append журнала, сохранены106–108.
+Runtime P3/helper/forms не менялись, новых проверок/CI из этой подготовки не
+запускали. Добавлен узкий regression lesson о фактически отклонённом BEHIND и
+обязательном actualmain-ancestor перед единственным финальным push/CI.
+Отвергнуто: снова использовать один tree equality как допуск merge, запускать
+P3CI на промежуточном parent до появления actualmain после1953 squash.
+Workflow docs/diff checks passed. Открыто: новый sourceCI1953, его обычный merge/
+mainCI/публикация; P3 ещё не опубликован. Дальше: после1953merge обновить actualmain
+в P3, проверить ancestor/net scope, push/fullCI параллельно actual1953publication.

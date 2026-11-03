@@ -180,3 +180,14 @@ distance. Dirty guard недостаточен, если action сам уже с
 при доказательстве человеческого подтверждения. Red/green —
 [клиентский план, итерация100](design/CLIENT_REFERENCE_SCREENS_20261029.md#итерация-100--2026-11-03--codex--openai).
 Не превращать первый конфликт в молчаливое автоматическое перетирание данных.
+
+
+## RL-PR-FRESHNESS-AFTER-SQUASH-20261103
+
+После squash родительского PR равенство Git tree не обеспечило допустимость
+слияния зависимого PR: обычный gh merge отклонил BEHIND, хотя sourceCI35/35 был
+зелёным. Read-only rules API не предсказал это условие. Перед окончательным CI
+зависимого PR включать фактический main после parent squash; проверить
+merge-base --is-ancestor, а не только отсутствие net diff. Новый SHA получает
+собственный CI; admin/alternate merge API для обхода freshness не использовать.
+Случай и исправление: [Live,108](design/CLIENT_REFERENCE_SCREENS_20261029.md#итерация-108--2026-11-03--codex--openai).
