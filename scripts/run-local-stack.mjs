@@ -10,14 +10,13 @@ const OWNER_DATABASE_URL = `postgresql://postgres:postgres@127.0.0.1:${POSTGRES_
 const RUNTIME_DATABASE_URL = `postgresql://fit_api:fit-api-test-only@127.0.0.1:${POSTGRES_PORT}/${POSTGRES_DATABASE}`
 const isWin32 = process.platform === 'win32'
 const npmCommand = isWin32 ? 'npm.cmd' : 'npm'
-const npxCommand = isWin32 ? 'npx.cmd' : 'npx'
 
 // Node >=18.20.2/20.12.2/21.7.3 (CVE-2024-27980) отказывает EINVAL при спавне
 // .bat/.cmd на Windows без shell:true — затрагивает только npm/npx-обёртки,
 // не трогаем podman/node: их аргументы (например, многословный SQL) не
 // экранируются автоматически при shell:true и могут разъехаться.
 function needsShell(command) {
-  return isWin32 && (command === npmCommand || command === npxCommand)
+  return isWin32 && command === npmCommand
 }
 
 function run(command, args, options = {}) {
@@ -50,15 +49,6 @@ function requireCommand(command, versionArguments) {
       `Не найден ${command}. Установите и запустите Podman, затем повторите команду.`,
     )
   }
-}
-
-function startSupabase() {
-  console.log('\n[local] Запускаю локальный Supabase через Podman…')
-  run(npmCommand, ['run', 'db:start', '--silent'], { capture: true })
-  console.log('[local] Supabase готов.')
-
-  console.log('[local] Применяю только ещё не применённые Supabase-миграции…')
-  run(npxCommand, ['--no-install', 'supabase', 'migration', 'up', '--local'])
 }
 
 function ensureApiDependencies() {
@@ -170,18 +160,13 @@ function preparePostgres() {
 async function prepareLocalDatabases() {
   requireCommand('podman', ['--version'])
   ensureApiDependencies()
-  startSupabase()
   startPostgres()
   await waitForPostgres()
   preparePostgres()
-  console.log('\n[local] Обе локальные базы готовы.')
+  console.log('\n[local] Локальный PostgreSQL 17 готов.')
 }
 
 function verifyLocalDatabases() {
-  console.log('\n[local] Проверяю Supabase SQL/RLS и generated types…')
-  run(npmCommand, ['run', 'db:test'])
-  run(npmCommand, ['run', 'db:types:check'])
-
   console.log('\n[local] Проверяю PostgreSQL 17 actor context и RLS…')
   run(npmCommand, ['--prefix', 'services/api', 'run', 'test:db'], {
     env: { ...process.env, TEST_DATABASE_URL: OWNER_DATABASE_URL },

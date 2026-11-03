@@ -249,3 +249,222 @@ Generated types сравнились побайтно с main; PNG diff отно
 Workflow docs и diff whitespace passed. Локальный browser smoke не запускался:
 существующая Podman VM недоступна; production DSN/remote DB не используются.
 Точный CI нового head остаётся гейтом; PR переведён на main и готовится к review.
+
+## P3 — native-only local/CI — 02.11.2026 — Codex / OpenAI
+
+Задача: «Давай убирать» после инвентаря и предложения убрать локальный Supabase
+из dev/check/CI. База main4e283aa5 после merge PR1928/1929. Поток data-media;
+пользовательский результат — разработка/проверки без второй локальной БД и CLI.
+Приёмка: L1 dev/prepare/verify native-only; L2 clean install без root CLI/SDK;
+L3 CI без source job, native actor/RLS и browser gates сохранены; L4 архив intact;
+L5 ручная source rehearsal остаётся явной и не запускается обычными командами.
+
+Расхождения: P3 исторически предполагал ещё не перенесённые browser fixtures;
+PR1928/1929 уже перенесли их и удалили frontend SDK. В CI остался только frozen
+pgTAP job; source auth/services больше не нужны браузерам. Решение P3-LOCAL-01:
+по текущей команде владельца вывести frozen SQL regression из обычной приёмки,
+сохранив исходники и контрольные суммы. Remote decommission/retention не закрыты.
+
+Сделано: root CLI и db:* команды удалены вместе с obsolete auth waiter и scope
+старого database job. dev/prepare готовят только PG17, verify запускает native
+actor/RLS и migration safety; source generated-type digest перенесён в архив.
+SQL/config/seed/types оставлены по прежним путям для operational consumers,
+202 migrations и107 test files не переписаны;314 baseline files в SHA256SUMS.
+Source rehearsal больше не root script: явный запуск после подготовки source
+по supabase/README.md; отсутствие контейнера останавливает её до изменения target.
+
+Сохранение проверок:
+
+| Прежняя проверка | Сохраняющий контракт и проверка |
+| --- | --- |
+| Browser legacy auth/REST/RPC сценарии | [Assertion mapping P2](LEGACY_FRONTEND_TEST_MAPPING_20261031.md); native fixtures PR1928, native-only runtime PR1929; сценарии/PNG в P3 не меняются |
+| Legacy SQL RPC, triggers, GoTrue roles/auth.users и storage policies | Прекращённый source backend; все107 pgTAP files и их assertions сохранены побайтно в архиве для отдельной репетиции, не выдаются за native coverage |
+| Actor identity, cross-tenant grants/RLS, транзакции и replay | Неизменённые services/api/src/db/actor-context.integration.test.ts и single-trainer.integration.test.ts в обязательном native database job |
+| History prefill, corporate access, release migrations, private journal/erasure | Неизменённый services/api package test:db и отдельная recovery DB CI-проверка |
+| Native frontend behavior, обе роли, оба движка, visual/Lime | Прежние auth/visual/Chromium/WebKit/Lime lanes и итоговые app/e2e gates без изменения specs, shards, retries, thresholds |
+| Generated source schema digest | Архивный supabase/tools/check-db-types.mjs и checksum всех baseline-файлов; native types продолжают проверяться TypeScript/API contracts |
+| Immutable/dangerous migrations | scripts/check-migrations.mjs сохранён для обеих историй, без изменения safe allowlist |
+| Source registry fallback, ephemeral ports, CLI scope/version, GoTrue waiter | Прекращённые механизмы удалённого source CI job; их tests удалены с реализацией. Новые tests проверяют native prepare/verify, остановку при migration failure и отсутствие CLI в clean install |
+
+Новые случаи: три launcher/install regression tests; один CI guard отсутствия
+source services. Они не дублируют product/API/visual tests. Старые SQL assertions
+не объявляются автоматически равными native assertions; это архив прекращённого
+backend. Не менялись native SQL/API tests и обязательные продуктовые gates.
+CI union: удалён один source database job; browser matrices/spec inventories
+не менялись. Замер до/после длительности пока не выполнен; ускорение не заявляется.
+
+Проверено до публикации:53 targeted workflow/launcher/rehearsal tests passed;
+checksum314/314 и archived schema digest passed; migration safety0 changed passed;
+workflow docs/whitespace passed; root npm ls не содержит CLI/SDK. Первый check
+остановился на lint archived helper вне TS project; добавлен точный ignore по
+существующему паттерну scripts. Повторный полный check и exact-head CI — гейты.
+Локальная VM не запущена/connection refused: реальная local:verify пока не
+выполнена, subprocess tests не выдаются за PG integration. Production/remote
+source не менялись; его media, SDK/API package и credentials остаются вне scope.
+Отвергнуто: удаление source SQL/history или remote resources и переписывание
+native tests ради удаления текстовых совпадений. Дальше: зелёный полный CI;
+P1 server/media и P4 operations остаются отдельными задачами.
+
+Проверки P3 перед PR: чистый npm ci и полный npm run check passed:
+320 unit files/2919 tests, coverage83.31/78.23/82.39/88.01 при прежних порогах;
+API1555 passed/254 skipped без DB env; lint/typecheck/policies/build passed.
+53 targeted tests и workflow-doc tests passed. Архив314/314 intact.
+Podman VM затем запущена. local:verify на существующем старом volume остановился
+на неизменённом safe guard000149: single_trainer_ambiguous_legacy_data; данные
+не чистились и guard не обходился. На отдельном временном Podman PG17 после
+readiness native test:db passed:223+21 Vitest tests и6 erasure cases; один
+существующий real-S3 case skip без TEST_CUSTOM_PHOTO_S3_ENDPOINT. Первая попытка
+до readiness получила ECONNRESET на init restart; повтор только DB gate прошёл.
+Native/SQL/browser specs и PNG не менялись. Exact-head Linux CI остаётся гейтом.
+Обычная local:verify на старом volume не объявляется прошедшей; отдельная clean
+PG17 проверка не маскирует необходимость адресно разобрать старые local fixtures.
+
+### P3 — исправление Chromium timeout — 02.11.2026
+
+Первый CI41439102809 на243f3d86: API/PG17/RLS/migration safety, repository,
+app build/unit, Android и остальные завершённые browser/visual jobs passed;
+Chromium2/2 упал в trainer-flow:276 (общий30s budget) на разных шагах трёх
+попыток. Диагностика125257814852/trace показала5 полных Vite loads по3.9–4.4s:
+API route отключает HTTP cache, поэтому повторный goto тратит время на module
+graph. Это не отсутствующий Supabase endpoint и не изменение product behavior.
+
+Выбрано: только в упавшем сценарии убрать предварительный auth goto (helper
+сам делает session reload), первый список открыть штатной навигацией и после
+проверки списка открыть карточку её ссылкой. Сохранены все assertions, PNG,
+реальный reload списка для persistence, live/rest reload и поздний reload
+перед progress. Ничего не разбито/не добавлено в matrix, число случаев прежнее.
+Отвергнуто: увеличение timeout/retries, исключение case и обновление PNG.
+
+Локально native PG17/Chromium: исходный case passed19.9s, исправленный passed15.9s
+(одна пара общих elapsed Playwright timings, не статистический benchmark).
+ESLint spec и E2E TypeScript passed. Spec входит только в mobile-chromium:
+запрос точного case у iphone-13-webkit выбрал0tests; это не считается WebKit
+приёмкой. Прежние WebKit suites сохраняются и проходят полным новым CI.
+Full npm check из предыдущей итерации не повторялся: дополнительно изменены
+только этот spec и журнал; применимые lint/typecheck/browser проверки выполнены.
+Точный новый head/CI — в PR1944; первый failure не скрывается.
+
+### P3 — зелёный CI и обновление main — 02.11.2026
+
+На ad9f4ac2 CI41447085236 завершён success:32/32jobs, auth/nutrition862passed/
+8skipped; Android41447085242 success на том же head. Chromium2/2 сохраняет630
+собранных cases:103passed/527 прежних conditional skips вместо102passed/1failed/
+527skipped на первой попытке; assertions и matrix не сокращены.
+За время прогона main получил98f67f22/PR1939. GitHub показал BEHIND при MERGEABLE.
+Выбрано: merge свежего main без конфликтов, сохранить календарные/style/Android
+изменения владельца и проверить точный объединённый head заново. Архив source и
+удаление local CLI/CI сохранены. Workflow docs после merge passed. Новый полный
+local check и exact-head CI — гейты; proof/status публикуется в PR1944.
+Отвергнуто: выдавать старый head за готовый при обязательном актуальном main.
+
+### P3 — сохранение обязательного database context — 02.11.2026
+
+CI41454645467 наd87fa840 завершён success32/32, auth862passed/8skipped;
+Android41454645518 success. Повторный local check после main:320files/2920tests,
+coverage83.31/78.2/82.39/88; API1555passed/254skipped, остальные gates passed.
+
+При финальной проверке MERGEABLE/BLOCKED обнаружен обязательный branch context
+`database`. Read-only protection API: strict=true, contexts app/database/e2e.
+Ранняя проверка этого контракта была пропущена; зелёный run без него не даёт
+готовность к merge. Решение P3-CI-CONTEXT-01: существующий native PG17 job
+переименовать yandex-database → database, сохранить pinned image, health,
+clean migrations, actor/RLS и recovery DB шаги побайтно. Старый source job
+не возвращается, новые дублирующие проверки не добавляются; required contexts
+и branch protection не меняются/не обходятся. Workflow regression проверяет
+stable database name, PostgreSQL service и отсутствие local source startup.
+Отвергнуто: менять branch rules или выдавать отсутствующий context за success.
+Точный новый head и повторный CI фиксируются в PR1944.
+
+### P3 — конфликты PR1944 с main1946 — 02.11.2026
+
+Запрос владельца: «PR1944 конфликты». Новый main2c845fed/PR1946 независимо
+убрал тот же лишний auth goto и исправил bootstrap второго входа в auth.spec.
+Единственный конфликт trainer-flow: комментарий перед nativeSignIn, семантика
+совпадает. Принят комментарий main; наши штатные nav/card transitions, все
+assertions/reloads/PNG и native-only local/CI сохранены. Auth spec и журнал
+календарного PR из main приняты без переписывания. Required database context
+остаётся настоящим native PG17 job; protection не меняется. Новый head/CI —
+в PR1944. Полный local check на d87fa840 остаётся проверкой неизменённого app;
+для merge выполняются targeted browser/lint/E2E-types/docs и полный новый CI.
+
+Проверки merge1946: оба затронутых Chromium cases passed2/2 (24.7s overall),
+ESLint двух specs, E2E TypeScript, workflow-doc и whitespace checks passed.
+Неразрешённых conflict paths нет. Новый полный CI остаётся обязательным;
+merge/deploy не выполняются.
+
+### P3 — повторные конфликты с Android release1945 — 02.11.2026
+
+За время CI main получил0f5dbe7d/PR1945; владелец повторно попросил исправить
+конфликты1944. Единственный конфликт — способ открытия карточки в trainer-flow:
+наша href-ссылка и main card.filter + URL assertion реализуют тот же переход.
+Принят trainer-flow целиком из нового main: он уже содержит наш native bootstrap
+и nav-переход, добавляет URL assertion и обратную навигацию перед progress.
+Таким образом, относительно нового main E2E spec diff отсутствует; уникальные
+assertions/PNG не удалялись. Android1.1.3/code8, OTA workflow, operations и
+snapshot из main сохранены; native-only local/CI и required database context
+сохранены. Новый head и проверки — в PR1944. Production release не запускается.
+
+### P3 — конфликт индекса после PR1938 — 02.11.2026
+
+После 31 успешного test job CI41476969918 main получил c49f3a51/PR1938.
+Единственный конфликт — соседние записи CURRENT_STATE: сохранены TC101–107
+из main и актуальный P2/P3 индекс этой ветки. Product/API/SQL/E2E из main
+приняты автоматически; собственный product diff не добавлен. Проверки docs и
+whitespace выполняются после разрешения; новый head/CI фиксируются в PR1944.
+Strict branch protection app/database/e2e не меняется; CI повторяется для merge.
+
+### P3 — конфликт индекса после PR1940/1947 — 02.11.2026
+
+По повторному запросу владельца подлит main233d2f69 (PR1940 и PR1947).
+Единственный конфликт ACTIVE_CONTRACTS разрешён сохранением обеих записей:
+P3 native-only dev/CI и независимый SRV301–306 допуск. Из main сохранены
+четыре изолированных production browser shard, timings reporter и требования
+fail-on-flaky; удаление local Supabase и настоящий required database PG17 job
+сохранены. Новых product/API/SQL изменений сверх main эта итерация не вносит.
+Локально passed:54 workflow/launcher/rehearsal tests, E2E TypeScript, docs
+и whitespace checks. Относительно main нет diff в e2e/API/Android. Статусы
+нового head фиксируются в PR1944; предыдущий CI6dc645c1 был зелёным32/32.
+
+### P3 — ошибки календарных fixtures в CI1944 — 03.11.2026
+
+CI41524294759 выявил две независимые зависимости тестов от wall clock после
+main1940/1947: booking-history с фиксированной датой02.11 без фиксации часов
+и corporate-services event now−1min с границами текущего дня. Во втором случае
+job дошёл до теста в00:00 МСК03.11: событие осталось во вчерашнем дне и пять
+проверок статистики/истории получили0. Production-код не изменяется.
+
+Booking-history фиксирует02.11 до mockPilot; обе ветви hasPlan и assertions
+перехода в Live сохранены. DB fixture вычисляет начало/конец дня из одного
+времени события; три новых SQL-случая проверяют до полуночи, первые30 секунд
+после и первую минуту. Они ловят именно расхождение дня события и дня now,
+не дублируют сценарии API. Матрицы, retries/timeouts/gates не меняются.
+
+Локально passed:4 booking-history cases (оба hasPlan × Chromium/WebKit,9.7s),
+16 corporate-services actor/RLS/transaction tests (13 существующих+3 границы)
+на отдельном временном Podman PG17. Владелец старого volume не затронут.
+Полный npm run check passed:321 unit files/2923 tests; coverage83.31/78.19/82.4/88.01,
+API1567passed/281skipped без DB env, lint/types/policies/build passed. Тот же
+booking-history набор на production build с флагами CI:4/4passed (6.3s),
+без retries. Временный PG-контейнер остановлен. Статусы нового head — в PR1944.
+Подлит main1baf0069/PR1941; его date-picker/UI изменения приняты без правок.
+
+После зелёного CI41530624921 (35/35) и Android41530625033 main получил
+745dedb0/PR1949 с тем же исправлением booking-history. Единственный конфликт
+— поясняющий комментарий перед идентичным setFixedTime. Принят весь cases-файл
+из main, включая дополнительный assertion текста кнопки запуска; собственного
+E2E diff теперь нет. DB fixture fix и три полуночные регрессии сохраняются.
+После merge1949 passed:те же4 production-mode booking cases (6.4s),
+ESLint/E2E TypeScript/docs/whitespace; новый head/CI — в PR1944.
+Обязательные checks не обходятся.
+
+После второго полного зелёного CI41534435561 (35/35) и Android41534435230
+main дошёл до38a6e5ee (включая PR1950/1952). Конфликты только двух индексов:
+ACTIVE_CONTRACTS сохраняет обе независимые записи; CURRENT_STATE — актуальный
+P2/P3 и новый MC1/Live1943 из main. Все product/UI изменения main приняты
+автоматически; собственный product/E2E diff этой итерацией не добавлен.
+DB fixture fix и3 regression cases сохраняются. Перед push повторяются
+локальные booking cases, E2E types/docs/whitespace; новый CI — в PR1944.
+
+Merge38a6e5ee:4 production-mode booking cases passed7.8s; E2E TypeScript
+passed. Компактная P2/P3 ссылка сокращена в рамках12KiB CURRENT_STATE,
+все статусы и канонический план сохранены. Docs/whitespace проверяются перед push.
