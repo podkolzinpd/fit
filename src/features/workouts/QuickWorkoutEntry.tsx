@@ -1,18 +1,23 @@
-import { useEffect, useMemo, useRef, useState, type MouseEventHandler } from 'react'
+import { readQuickWorkoutEntryDraft, type QuickWorkoutEntryDraft, type QuickWorkoutEntryItem } from './quick-workout-draft'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type MouseEventHandler } from 'react'
 import { PRESET_REST_DEFAULTS } from '../../data/repositories/workout-rules'
 import type { WorkoutParseResponse } from '../../shared/workout-parse-response'
 import type { ExerciseSnapshot } from '../../shared/domain'
 import { AddIcon, CopyIcon, KeyboardIcon, MicIcon } from '../../shared/icons'
 import { parseStructuredQuickWorkoutEntry, quickWorkoutExerciseName, type ParsedWorkoutExercise } from './quick-workout-entry'
-import { orderParsedWorkoutItems, parsedWorkoutItems, parseWorkoutWithLlm, resolveWorkoutParseChoice, workoutParseSetSummary, workoutParseUnmatched, type WorkoutParseUnmatchedView } from './llm-workout-parser'
+import { orderParsedWorkoutItems, parsedWorkoutItems, parseWorkoutWithLlm, resolveWorkoutParseChoice, workoutParseSetSummary, workoutParseUnmatched, } from './llm-workout-parser'
 import { trackGoal } from '../../shared/yandex-metrika'
 import { flushSync } from 'react-dom'
 import { WorkoutComposer } from './WorkoutComposer'
 
 interface QuickWorkoutEntryProps {
+  initialText?: string
+  initialSnapshot?: QuickWorkoutEntryDraft
+  onDraftChange?: (draft: QuickWorkoutEntryDraft) => void
+  onBusyChange?: (busy: boolean) => void
   methods?: { onTemplate?: MouseEventHandler<HTMLButtonElement>; onExercise: () => void }
   catalog: readonly ExerciseSnapshot[]
-  onAdd: (exercises: ParsedWorkoutExercise[]) => void
+  onAdd: (exercises: ParsedWorkoutExercise[]) => void | boolean | Promise<unknown>
   preferredExerciseRefs?: readonly string[]
   onOpenCatalog?: (search: string, onSelect?: (exercise: ExerciseSnapshot) => void) => void
   compact?: boolean
@@ -22,24 +27,42 @@ interface QuickWorkoutEntryProps {
   parseWorkout: (text: string, systemCatalog: readonly ExerciseSnapshot[]) => Promise<WorkoutParseResponse>
 }
 
-type ParsedEntry = { id: string; groupId?: string; parsed?: ParsedWorkoutExercise; unmatched?: WorkoutParseUnmatchedView }
+type ParsedEntry = QuickWorkoutEntryItem
 
-export function QuickWorkoutEntry({ methods, catalog, onAdd, preferredExerciseRefs = [], onOpenCatalog, compact = false, reference = false, disabled = false, placeholder, parseWorkout }: QuickWorkoutEntryProps) {
-  const [text, setText] = useState('')
-  const [choices, setChoices] = useState<Record<string, ExerciseSnapshot>>({})
+export function QuickWorkoutEntry({ initialText, initialSnapshot, onDraftChange, onBusyChange, methods, catalog, onAdd, preferredExerciseRefs = [], onOpenCatalog, compact = false, reference = false, disabled = false, placeholder, parseWorkout }: QuickWorkoutEntryProps) {
+  const [restored] = useState(() => readQuickWorkoutEntryDraft(initialSnapshot, initialText))
+  const [text, setText] = useState(restored?.text ?? initialText ?? '')
+  const [choices, setChoices] = useState<Record<string, ExerciseSnapshot>>(restored?.choices ?? {})
   const [expanded, setExpanded] = useState(!compact && !methods)
-  const [entries, setEntries] = useState<ParsedEntry[]>([])
-  const [parsedText, setParsedText] = useState('')
+  const [entries, setEntries] = useState<ParsedEntry[]>(restored?.entries ?? [])
+  const [parsedText, setParsedText] = useState(restored?.parsedText ?? '')
   const [parsing, setParsing] = useState(false)
   const [parseError, setParseError] = useState<string | null>(null)
+  const [voiceBusy, setVoiceBusy] = useState(false)
+  const [adding, setAdding] = useState(false)
+  const locked = useRef(disabled)
+  useLayoutEffect(() => { locked.current = disabled || adding }, [disabled, adding])
+  const requestVersion = useRef(0)
+  const activeReviewText = useRef<string | null>(null)
+  const active = useRef(true)
   const entryRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    active.current = true
+    return () => { active.current = false; requestVersion.current += 1 }
+  }, [])
+  const hadContent = useRef(Boolean(restored || initialText))
+  useEffect(() => {
+    if (!hadContent.current && !text && !parsedText && !entries.length && !Object.keys(choices).length) return
+    hadContent.current = true
+    onDraftChange?.({ text, parsedText, entries, choices })
+  }, [text, parsedText, entries, choices, onDraftChange])
+  useEffect(() => { onBusyChange?.(parsing || voiceBusy || adding) }, [parsing, voiceBusy, adding, onBusyChange])
   function openInput(voice: boolean) {
+    if (locked.current) return
     flushSync(() => setExpanded(true))
     if (voice) entryRef.current?.querySelector<HTMLButtonElement>('.voice-input-button')?.click()
     else entryRef.current?.querySelector<HTMLTextAreaElement>('textarea')?.focus()
   }
-  const requestVersion = useRef(0)
-  const activeReviewText = useRef<string | null>(null)
   const hasStructure = entries.some((entry) => entry.groupId)
   const parsedResolved = useMemo(() => entries.flatMap((entry) => {
     const item = entry.parsed ?? (entry.unmatched && choices[entry.id]
@@ -100,6 +123,7 @@ export function QuickWorkoutEntry({ methods, catalog, onAdd, preferredExerciseRe
   useEffect(() => setExpanded(!compact && !hasMethods), [compact, hasMethods])
 
   function changeText(value: string) {
+    if (locked.current || !active.current) return
     requestVersion.current += 1
     setText(value)
     setParsedText('')
@@ -111,7 +135,7 @@ export function QuickWorkoutEntry({ methods, catalog, onAdd, preferredExerciseRe
 
   async function review(value = text) {
     const normalized = value.trim()
-    if (!normalized || activeReviewText.current === normalized) return
+    if (locked.current || !active.current || !normalized || activeReviewText.current === normalized) return
     activeReviewText.current = normalized
     const request = ++requestVersion.current
     setParsing(true)
@@ -145,12 +169,12 @@ export function QuickWorkoutEntry({ methods, catalog, onAdd, preferredExerciseRe
         ].sort((left, right) => (left.position ?? Number.MAX_SAFE_INTEGER) - (right.position ?? Number.MAX_SAFE_INTEGER))
         nextEntries.push(...ordered.map(({ id, parsed, unmatched }) => ({ id, parsed, unmatched })))
       }
-      if (request !== requestVersion.current) return
+      if (!active.current || locked.current || request !== requestVersion.current) return
       setEntries(nextEntries)
       setParsedText(value)
       if (!nextEntries.length) setParseError('Не удалось распознать упражнения. Уточните текст или выберите их из каталога.')
     } catch {
-      if (request !== requestVersion.current) return
+      if (!active.current || locked.current || request !== requestVersion.current) return
       setParseError('Не удалось обработать запись. Исходный текст сохранён — попробуйте ещё раз.')
     } finally {
       if (activeReviewText.current === normalized) activeReviewText.current = null
@@ -158,28 +182,33 @@ export function QuickWorkoutEntry({ methods, catalog, onAdd, preferredExerciseRe
     }
   }
 
-  function add() {
-    if (!resolved.length || (hasStructure && unresolved.length)) return
+  async function add() {
+    if (locked.current || adding || !resolved.length || (hasStructure && unresolved.length)) return
     if (unresolved.some(({ item }) => item.reason === 'ambiguous')) trackGoal('workout_parse_ambiguous')
     if (unresolved.some(({ item }) => item.reason === 'not-found')) trackGoal('workout_parse_not_found')
-    onAdd(resolved)
-    setText(''); setParsedText(''); setEntries([])
-    setChoices({})
+    setAdding(true)
+    try {
+      const result = await onAdd(resolved)
+      if (!active.current || result === false) return
+      setText(''); setParsedText(''); setEntries([]); setChoices({})
+    } catch {
+      if (active.current) setParseError('Не удалось добавить упражнения. Исходный текст сохранён — попробуйте ещё раз.')
+    } finally { if (active.current) setAdding(false) }
   }
 
   if (!expanded && !methods) return <button type="button" disabled={disabled} className="secondary wide quick-workout-expand" onClick={() => setExpanded(true)}><MicIcon />{reference ? 'Надиктовать' : 'Добавить голосом или текстом'}</button>
 
   return <div ref={entryRef} className={`quick-workout-entry${compact ? ' expanded' : ''}`}>
     {methods && <div className={`trainer-plan-methods${methods.onTemplate ? '' : ' trainer-template-methods'}`} role="group" aria-label="Добавить упражнения">
-      <button type="button" className="secondary" disabled={disabled} aria-label="Выбрать упражнения" onClick={methods.onExercise}><AddIcon />Упражнение</button>
-      {methods.onTemplate && <button aria-label="Добавить шаблон" type="button" className="secondary" disabled={disabled} onClick={methods.onTemplate}><CopyIcon />Шаблон</button>}
+      <button type="button" className="secondary" disabled={disabled || parsing || voiceBusy || adding} aria-label="Выбрать упражнения" onClick={methods.onExercise}><AddIcon />Упражнение</button>
+      {methods.onTemplate && <button aria-label="Добавить шаблон" type="button" className="secondary" disabled={disabled || parsing || voiceBusy || adding} onClick={methods.onTemplate}><CopyIcon />Шаблон</button>}
       <button type="button" className="secondary trainer-method-voice" disabled={disabled} onClick={() => openInput(true)}><MicIcon />Надиктовать</button>
       <button type="button" className="secondary" disabled={disabled} onClick={() => openInput(false)}><KeyboardIcon />Ввести текстом</button>
     </div>}
     {expanded && <>
     {compact && <button type="button" className="link quick-workout-collapse" onClick={() => setExpanded(false)}>Свернуть ввод</button>}
-    <WorkoutComposer name="quick-workout-entry" source="workout_quick_entry" placeholder={placeholder} label="Запись тренировки" voiceLabel="Надиктовать тренировку" value={text} onValueChange={changeText} onTranscriptValueChange={changeText} onTranscriptAppended={({ value }) => review(value)} onClear={() => changeText('')} primaryAction={parsedText === text && entries.length > 0
-      ? <button type="button" className="secondary wide quick-workout-add" disabled={!resolved.length || (hasStructure && unresolved.length > 0)} onClick={add}>Добавить в план{resolved.length ? ` (${resolved.length})` : ''}</button>
+    <WorkoutComposer name="quick-workout-entry" source="workout_quick_entry" disabled={disabled || adding} onBusyChange={setVoiceBusy} placeholder={placeholder} label="Запись тренировки" voiceLabel="Надиктовать тренировку" value={text} onValueChange={changeText} onTranscriptValueChange={changeText} onTranscriptAppended={({ value }) => review(value)} onClear={() => changeText('')} primaryAction={parsedText === text && entries.length > 0
+      ? <button type="button" className="secondary wide quick-workout-add" disabled={!resolved.length || (hasStructure && unresolved.length > 0)} onClick={() => void add()}>Добавить в план{resolved.length ? ` (${resolved.length})` : ''}</button>
       : <button type="button" className="secondary wide quick-workout-add" disabled={!text.trim() || parsing} onClick={() => void review()}>{parsing ? 'Разбираю тренировку…' : 'Разобрать тренировку'}</button>} secondaryAction={onOpenCatalog ? <button type="button" className="secondary wide quick-workout-catalog" onClick={() => { trackGoal('exercise_picker_opened'); onOpenCatalog('') }}>Выбрать упражнения</button> : undefined}>
       <p className="workout-composer-hint">Например: присед 3×8 80 кг или бег 30 минут 5 км. Для нового упражнения скажите «затем».</p>
       {parseError && <p className="error" role="alert">{parseError}</p>}
