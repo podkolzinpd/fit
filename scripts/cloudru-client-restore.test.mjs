@@ -1,6 +1,9 @@
 import {test} from 'node:test'
 import assert from 'node:assert/strict'
-import {readFileSync} from 'node:fs'
+import {readFileSync,mkdtempSync,writeFileSync,rmSync} from 'node:fs'
+import {tmpdir} from 'node:os'
+import {join} from 'node:path'
+import {spawnSync} from 'node:child_process'
 import {readRestoreTarget,resolveRestorePair,planClientRestore,applyClientRestore,verifyClientRestore} from './cloudru-client-restore.mjs'
 
 test('only the two privately approved address hashes resolve a unique pair',()=>{
@@ -47,4 +50,36 @@ test('transport is explicit trusted-main plan/apply/verify and keeps private rec
  assert.match(source,/--cap-drop=ALL/)
  assert.match(source,/trap 'sudo rm -f/)
  assert.doesNotMatch(source,/upload-artifact|pull_request:|schedule:|--privileged|GRANT|FIT_ACCOUNT_HISTORY_TARGETS|FIT_ACCOUNT_DELETION_TARGET/)
+})
+
+test('runner GitHub reads work without gh installed and reject failed HTTP requests',()=>{
+ const source=readFileSync(new URL('../.github/workflows/restore-client-history.yml',import.meta.url),'utf8')
+ const helper=source.match(/          github_api\(\) \{\n[\s\S]*?\n          \}/)?.[0]
+ assert.ok(helper)
+ assert.doesNotMatch(source,/\bgh api\b/)
+ const directory=mkdtempSync(join(tmpdir(),'fit-restore-runner-'))
+ try{
+   // The production runner has curl, but no GitHub CLI. Keep the test PATH equally narrow.
+   writeFileSync(join(directory,'curl'),`#!/bin/sh
+auth=false
+bounded=false
+previous=''
+for arg do
+  [ "$previous" != '--header' ] || [ "$arg" != 'Authorization: Bearer synthetic-token' ] || auth=true
+  [ "$previous" != '--max-time' ] || [ "$arg" != '15' ] || bounded=true
+  previous="$arg"
+done
+[ "$auth" = true ] && [ "$bounded" = true ] || exit 1
+case "$arg" in
+  https://api.github.com/repos/podkolzinpd/fit/commits/main) printf '{"sha":"synthetic-main"}' ;;
+  *) exit 22 ;;
+esac
+`,{mode:0o700})
+   const env={PATH:directory,GH_TOKEN:'synthetic-token',GITHUB_REPOSITORY:'podkolzinpd/fit'}
+   const success=spawnSync('/bin/bash',['-e','-o','pipefail','-c',`${helper}\ngithub_api commits/main`],{env,encoding:'utf8'})
+   assert.equal(success.status,0,success.stderr)
+   assert.deepEqual(JSON.parse(success.stdout),{sha:'synthetic-main'})
+   const failure=spawnSync('/bin/bash',['-e','-o','pipefail','-c',`${helper}\ngithub_api actions/runs/unavailable`],{env,encoding:'utf8'})
+   assert.notEqual(failure.status,0)
+ }finally{rmSync(directory,{recursive:true,force:true})}
 })
