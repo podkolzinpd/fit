@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type PropsWithChildren } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState, type PropsWithChildren } from 'react'
 import { useForm, useWatch } from 'react-hook-form'
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link, useBeforeUnload, useBlocker, useNavigate, useParams, useSearchParams } from 'react-router-dom'
@@ -49,10 +49,10 @@ function ServicesWorkspace() {
     {params.get('saved') === '1' && <SaveStatus status="saved" />}
     <section className="corporate-service-history"><div className="corporate-service-heading"><h2>Мои услуги</h2><button className="secondary" type="button" disabled={history.isFetching} onClick={() => void history.refetch()}>Обновить</button></div><ServicePeriod key={rangeSearch(range)} range={range} zone={effectiveZone} onChange={setRange} />
       <p className="corporate-service-note">Время аккаунта: {effectiveZone}</p>
-      <AsyncView loading={history.isPending} error={history.error} onRetry={() => void history.refetch()}>
+      <AsyncView loading={history.isPending || history.isRefetching} error={history.error} onRetry={() => void history.refetch()}>
         {rows?.length ? <ul className="corporate-service-list">{rows.map(row => <li key={row.id}><div><strong>{serviceLabels[row.kind]}</strong><p>{row.city} · {row.officeName}</p><p>{serviceTimeLabel(row.occurredAt, effectiveZone)}</p>{row.voidedAt && <p>Отменена · не входит в статистику</p>}</div><Link className="secondary" to={`${root}/${row.id}?${rangeSearch(range)}`}>{row.voidedAt ? 'История' : 'Исправить'}</Link></li>)}</ul> : rows && <EmptyState title="За этот период услуг нет" description="Отметьте оказанную услугу или выберите другой период." />}
       </AsyncView>
-      {history.hasNextPage && <button type="button" className="secondary" disabled={history.isFetchingNextPage} onClick={() => void history.fetchNextPage()}>{history.isFetchingNextPage ? 'Загружаем…' : 'Показать ещё'}</button>}
+      {history.hasNextPage && <button type="button" className="secondary" disabled={history.isFetching} onClick={() => void history.fetchNextPage()}>{history.isFetchingNextPage ? 'Загружаем…' : 'Показать ещё'}</button>}
     </section>
   </div>
 }
@@ -70,7 +70,7 @@ function RecordLoader({ id }: { id?: string }) {
   const metadata = useQuery({ queryKey: ['corporate-service-offices', actor!.userId, range], queryFn: () => repository.list(range), retry: false, staleTime: 0, refetchOnWindowFocus: false, refetchOnReconnect: false })
   const record = useQuery({ queryKey: ['corporate-service-record', actor!.userId, id], queryFn: () => repository.record(id!), enabled: Boolean(id), retry: false, staleTime: 0, refetchOnWindowFocus: false, refetchOnReconnect: false })
   const kind = corporateServiceKind.safeParse(params.get('kind'))
-  return <AsyncView loading={metadata.isPending || Boolean(id && record.isPending)} error={metadata.error ?? record.error} onRetry={() => { void metadata.refetch(); if (id) void record.refetch() }}>
+  return <AsyncView loading={metadata.isPending || metadata.isFetching || Boolean(id && (record.isPending || record.isFetching))} error={metadata.error ?? record.error} onRetry={() => { void metadata.refetch(); if (id) void record.refetch() }}>
     {metadata.data && (!id || record.data) && <ServiceForm key={`${actor!.userId}:${record.data ? `${record.data.id}:${record.data.version}` : 'new'}`} record={record.data} initialKind={kind.success ? kind.data : 'consultation'} offices={metadata.data.offices} zone={metadata.data.timeZone} />}
   </AsyncView>
 }
@@ -81,7 +81,7 @@ function ServiceForm({ record, initialKind, offices, zone }: { record?: Corporat
   const range = historyRange(params, zone)
   const back = `${root}?${rangeSearch(range)}`
   const active = useRef(true), finished = useRef(false)
-  useEffect(() => { active.current = true; return () => { active.current = false } }, [])
+  useLayoutEffect(() => { active.current = true; return () => { active.current = false } }, [])
   const [confirm, confirmation] = useConfirm()
   const [initial] = useState(() => ({ id: record?.id ?? crypto.randomUUID(), at: record?.occurredAt ?? new Date().toISOString() }))
   const [auditOpen, setAuditOpen] = useState(Boolean(record?.voidedAt))
@@ -91,9 +91,13 @@ function ServiceForm({ record, initialKind, offices, zone }: { record?: Corporat
   const date = useWatch({ control: form.control, name: 'date' }), time = useWatch({ control: form.control, name: 'time' })
   const refresh = async (occurredAt: string) => {
     // Cancel inactive reads before invalidation: a late pre-save GET must not restore stale data.
-    const keys = [['corporate-services', actor!.userId], ['corporate-service-record', actor!.userId], ['corporate-service-statistics']]
+    const keys = [['corporate-services', actor!.userId], ['corporate-service-audit', actor!.userId, initial.id], ['corporate-service-statistics']]
+    const recordKey = ['corporate-service-record', actor!.userId, initial.id]
     await Promise.all(keys.map(queryKey => client.cancelQueries({ queryKey })))
-    await Promise.all(keys.map(queryKey => client.invalidateQueries({ queryKey, refetchType: queryKey[0] === 'corporate-service-record' ? 'none' : 'active' })))
+    await client.cancelQueries({ queryKey: recordKey, exact: true })
+    // Keep an existing draft; resume a mounted loader that has no record yet. Other IDs are independent.
+    await client.invalidateQueries({ queryKey: recordKey, exact: true, refetchType: client.getQueryData(recordKey) === undefined ? 'active' : 'none' })
+    await Promise.all(keys.map(queryKey => client.invalidateQueries({ queryKey })))
     if (!active.current) return
     const next = savedRange(range, occurredAt, zone)
     finished.current = true
@@ -156,6 +160,6 @@ function ServiceForm({ record, initialKind, offices, zone }: { record?: Corporat
 }
 function ServiceAudit({ id, zone }: { id: string; zone: string }) {
   const { actor } = useAuth()
-  const audit = useInfiniteQuery({ queryKey: ['corporate-service-audit', actor!.userId, id], queryFn: ({ pageParam }) => repository.audit(id, pageParam), initialPageParam: undefined as number | undefined, getNextPageParam: page => page.nextBeforeVersion ?? undefined, retry: false })
-  return <AsyncView loading={audit.isPending} error={audit.error} onRetry={() => void audit.refetch()}><ol className="corporate-service-audit">{audit.data?.pages.flatMap(page => page.events).map(event => <li key={event.version}><strong>{event.action === 'create' ? 'Создана' : event.action === 'update' ? 'Исправлена' : 'Отменена'} · версия {event.version}</strong><p>{serviceTimeLabel(event.at, zone)}</p><p>{serviceLabels[event.after.kind]} · {event.after.city}, {event.after.officeName} · {serviceTimeLabel(event.after.occurredAt, zone)}</p>{event.before && <p>До изменения: {serviceLabels[event.before.kind]} · {event.before.city}, {event.before.officeName} · {serviceTimeLabel(event.before.occurredAt, zone)}</p>}</li>)}</ol>{audit.hasNextPage && <button type="button" className="secondary" disabled={audit.isFetchingNextPage} onClick={() => void audit.fetchNextPage()}>Ещё изменения</button>}</AsyncView>
+  const audit = useInfiniteQuery({ queryKey: ['corporate-service-audit', actor!.userId, id], queryFn: ({ pageParam }) => repository.audit(id, pageParam), initialPageParam: undefined as number | undefined, getNextPageParam: page => page.nextBeforeVersion ?? undefined, retry: false, staleTime: 0, refetchOnMount: 'always' })
+  return <AsyncView loading={audit.isPending || audit.isRefetching} error={audit.error} onRetry={() => void audit.refetch()}><ol className="corporate-service-audit">{audit.data?.pages.flatMap(page => page.events).map(event => <li key={event.version}><strong>{event.action === 'create' ? 'Создана' : event.action === 'update' ? 'Исправлена' : 'Отменена'} · версия {event.version}</strong><p>{serviceTimeLabel(event.at, zone)}</p><p>{serviceLabels[event.after.kind]} · {event.after.city}, {event.after.officeName} · {serviceTimeLabel(event.after.occurredAt, zone)}</p>{event.before && <p>До изменения: {serviceLabels[event.before.kind]} · {event.before.city}, {event.before.officeName} · {serviceTimeLabel(event.before.occurredAt, zone)}</p>}</li>)}</ol>{audit.hasNextPage && <button type="button" className="secondary" disabled={audit.isFetching} onClick={() => void audit.fetchNextPage()}>Ещё изменения</button>}</AsyncView>
 }
