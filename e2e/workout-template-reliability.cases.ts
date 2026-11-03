@@ -326,3 +326,70 @@ export function workoutTemplateSourceCases() {
     await expect(page.getByLabel('Название шаблона')).toHaveValue('История 45')
   })
 }
+
+
+export function workoutTemplateDraftSafetyCases() {
+ const draft={...oldDraft,clientId,workoutDate:'2026-11-09',title:'План до перехода',sourceVersion:undefined};
+ const template=original;
+test('Template draft safety A1 unparsed text survives template-copy round trip',async({page},info)=>{
+ await setup(page);const key=`fit.workout-form-draft.${actorId}.new-${clientId}-2026-11-09`;
+ await page.addInitScript(({key,draft})=>{if(!localStorage.getItem(key))localStorage.setItem(key,JSON.stringify(draft))},{key,draft});
+ await page.goto(`/workouts/new?client=${clientId}&date=2026-11-09`);
+ await page.getByRole('button',{name:'Ввести текстом',exact:true}).click();
+ const text=page.getByRole('textbox',{name:'Запись тренировки',exact:true});await text.fill('Жим лёжа 3 по 8 по 60 кг — ещё не добавлено');
+ await page.getByRole('button',{name:'Другие действия с планом',exact:true}).click();
+ await page.getByRole('menuitem',{name:'Сохранить как шаблон',exact:true}).click();
+ await expect(page.getByLabel('Название шаблона')).toHaveValue(draft.title);
+ await page.goBack();await expect(page).toHaveURL(/workouts\/new/);
+ await page.getByRole('button',{name:'Ввести текстом',exact:true}).click();
+ await page.screenshot({path:info.outputPath('A1-return-input.png')});
+ expect(await text.inputValue()).toBe('Жим лёжа 3 по 8 по 60 кг — ещё не добавлено');
+});
+test('Template draft safety A2 pending save locks the submitted template snapshot',async({page})=>{
+ await setup(page);let release:()=>void=()=>{};const gate=new Promise<void>(resolve=>{release=resolve});
+ const commands:Array<{draft:typeof original;expectedVersion:number}>=[];
+ await page.route('**/v1/workout-templates/'+templateId,async route=>{
+  if(route.request().method()==='GET')return route.fulfill({json:{template}});
+  const command=route.request().postDataJSON() as (typeof commands)[number];commands.push(command);
+  await gate;return route.fulfill({json:{template:{...template,...command.draft,version:2}}});
+ });
+ await page.goto(`/schedule/templates/${templateId}/edit`);
+ const name=page.getByLabel('Название шаблона');await expect(name).toHaveValue('Корпус');
+ await name.fill('Имя отправленное');await page.getByRole('button',{name:'Сохранить шаблон',exact:true}).click();
+ try {
+  await expect.poll(()=>commands.length).toBe(1);await expect(name).toBeDisabled();
+  await expect(page.getByRole('button',{name:'Выбрать упражнения',exact:true})).toBeDisabled();
+  await page.locator('form').evaluate(form=>(form as HTMLFormElement).requestSubmit());
+  expect(commands).toHaveLength(1);await expect(name).toHaveValue('Имя отправленное');
+ } finally {release()}
+ await expect(page).toHaveURL(/schedule\/templates$/);
+ expect(commands[0]!.draft.name).toBe('Имя отправленное');expect(commands[0]!.expectedVersion).toBe(1);
+ expect(await page.evaluate(key=>localStorage.getItem(key),`fit.workout-template-draft.${actorId}.template:${templateId}`)).toBeNull();
+});
+test('Template draft safety A3 resume draft without a client keeps client unselected',async({page},info)=>{
+ await setup(page);const key=`fit.workout-form-draft.${actorId}.template-${templateId}`;
+ await page.addInitScript(({key,draft})=>{if(!localStorage.getItem(key))localStorage.setItem(key,JSON.stringify(draft))},{key,draft:{...draft,clientId:''}});
+ await page.goto(`/workouts/new?template=${templateId}&client=${clientId}&date=2026-11-09`);
+ await page.getByRole('dialog',{name:'Есть черновик этого шаблона'}).getByRole('button',{name:/План до перехода/}).click();
+ await expect(page.getByRole('textbox',{name:'Название тренировки',exact:true})).toHaveValue(draft.title);
+ await page.screenshot({path:info.outputPath('A3-client.png')});
+ await expect(page.getByRole('button',{name:/Клиент:/})).toBeEnabled();
+ expect(await page.getByRole('button',{name:/Клиент:/}).textContent()).not.toContain('Анна Морозова');
+ expect(await page.evaluate(key=>(JSON.parse(localStorage.getItem(key)!) as {clientId:string}).clientId,key)).toBe('');
+});
+test('Template draft safety A4 unparsed text survives successful template-copy save',async({page},info)=>{
+ await setup(page);await page.route('**/v1/workout-templates',route=>{const command=route.request().method()==='GET'?undefined:route.request().postDataJSON() as {draft:typeof original};return route.fulfill({json:command?{template:{...template,...command.draft}}:{templates:[template]}})});const key=`fit.workout-form-draft.${actorId}.new-${clientId}-2026-11-09`;
+ await page.addInitScript(({key,draft})=>{if(!localStorage.getItem(key))localStorage.setItem(key,JSON.stringify(draft))},{key,draft});
+ await page.goto(`/workouts/new?client=${clientId}&date=2026-11-09`);
+ await page.getByRole('button',{name:'Ввести текстом',exact:true}).click();
+ const text=page.getByRole('textbox',{name:'Запись тренировки',exact:true});await text.fill('Жим лёжа 3 по 8 по 60 кг — ещё не добавлено');
+ await page.getByRole('button',{name:'Другие действия с планом',exact:true}).click();
+ await page.getByRole('menuitem',{name:'Сохранить как шаблон',exact:true}).click();
+ await expect(page.getByLabel('Название шаблона')).toHaveValue(draft.title);
+ await page.getByRole('button',{name:'Сохранить шаблон',exact:true}).click();await expect(page).toHaveURL(/workouts\/new/);
+ await page.getByRole('button',{name:'Ввести текстом',exact:true}).click();
+ await page.screenshot({path:info.outputPath('A1-return-input.png')});
+ expect(await text.inputValue()).toBe('Жим лёжа 3 по 8 по 60 кг — ещё не добавлено');
+});
+
+}
