@@ -3256,3 +3256,42 @@ portal-input, ручной focus/wheel, reduced motion; два existing keyboard
 по каждому размеру. Открыто: P2/очередь/публикация и P3 final-main/exact-head CI,
 публикационная API/web/OTA приёмка. Активный ФИТ14 не обходим. Дальше: выпустить
 P2; перенести только net-diff P3 на его фактический main, проверить и выпустить P3.
+
+### Итерация 97 — 2026-11-03 — Codex / OpenAI
+
+Задача: устранить реальный failure нового P2 CI, не повторять его вслепую.
+CI41601927602/job125803265846 на1ddb1038: auth4/4,222passed/1failed;
+trainer WebKit hidden-metrics case падал также при штатных retry1/2. Это не
+объявлено сетевой нестабильностью. Артефакт13214999042/trace показывает PUT
+полных скрытых duration/distance/RPE → POST undo → лишний PUT с тремя null.
+Первое сохранение helper94 было верным, но поздний utility blur его затирал.
+
+Причина: только clientReference отбрасывал blur кнопки. У тренера отключаемая
+pending-кнопка теряла фокус; form.onBlur запускал save. Уже существующий
+local draft от undo делал прежний dirty guard недостаточным. Исправление
+5dbab4e3: в direct Live blur autosave инициирует только metric control;
+новая undo-кнопка переиспользует существующую pointerdown/skipBlur/clear-debounce
+защиту подтверждения, затем capture в click. Обычный ввод/дебаунс/формы,
+legacy explicit-edit, версии/сервер/таймер не менялись.
+
+Два существующих hidden-metric browser cases усилены удержанным server ack
+и focusout, наблюдённым в Linux WebKit; проверяется также полный pending draft
+до release. Red на прежнем handler:client passed/trainer failed с потерянными
+тремя метриками. Green:58/58 Chromium/WebKit38.5s,retries0 — undo, hidden-metric
+race, manual focus response/frame, keyboard Live first taps и действующие
+trainer v79 clock/fields/notes/metric controls/gestures. Это не дополнительная
+матрица размеров и не удаление прежних проверок.
+
+Затем интегрирован приоритетный PR1951/main727e6b0c, источник
+a36af4b936aa97aee755127601414029f1b4c8bc. Final-base build/tsc/startup-photo,
+полный root lint,129unit и22/22 browser17.7s,retries0 passed. API/SQL180 прежние;
+source нового полного CI ещё впереди. P3 пока draft1955, зависит от1953 и
+потребует того же исправления/финального main до выпуска. RL-LIVE-UTILITY-BLUR
+фиксирует защиту для следующих работ, вместо повторного неверного сохранения.
+
+Отвергнуто: ослабить hidden-metric assertion, убрать trainer, маскировать
+падение retries, изменять факты/форматы/таймер ради focusout. Открыто: новый
+exact-head CI, публикационная приёмка активного ФИТ14/1951 и подготовительного
+1944, затем наши1953/1955 по очереди. Реальные OAuth/iPhone/применение OTA
+не проверены; flags/native/охват этим исправлением не изменены.
+Дальше: push нового P2 head, дождаться гейтов и actual публикации; затем P3.
