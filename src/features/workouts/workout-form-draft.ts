@@ -5,6 +5,7 @@ export interface WorkoutFormDraft {
   sourceVersion?: number
   title?: string
   requestId?: string
+  appliedTemplateIds?: string[]
   composerText?: string
   clientId: string
   workoutDate: LocalDate
@@ -27,6 +28,7 @@ function isDraft(value: unknown): value is WorkoutFormDraft {
     && (draft.sourceVersion === undefined || Number.isInteger(draft.sourceVersion) && draft.sourceVersion >= 0)
     && (draft.title === undefined || typeof draft.title === 'string')
     && (draft.requestId === undefined || typeof draft.requestId === 'string')
+    && (draft.appliedTemplateIds === undefined || Array.isArray(draft.appliedTemplateIds) && draft.appliedTemplateIds.every(id => typeof id === 'string'))
     && (draft.composerText === undefined || typeof draft.composerText === 'string')
     && typeof draft.workoutDate === 'string'
     && typeof draft.startTime === 'string'
@@ -65,6 +67,9 @@ export function writeWorkoutFormDraft(key: string, draft: WorkoutFormDraft): voi
   const previous = readWorkoutFormDraft(key)
   if (draft.composerText === undefined && draft.requestId && previous?.requestId === draft.requestId && previous.composerText) {
     draft = { ...draft, composerText: previous.composerText }
+  }
+  if (draft.appliedTemplateIds === undefined && previous?.appliedTemplateIds && previous.requestId === draft.requestId && previous.sourceVersion === draft.sourceVersion) {
+    draft = { ...draft, appliedTemplateIds: previous.appliedTemplateIds }
   }
   try { localStorage.setItem(key, JSON.stringify(draft)) } catch { /* приватный режим: ввод остаётся в текущей сессии */ }
 }

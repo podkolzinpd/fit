@@ -163,5 +163,5 @@
 :is(.coach-plan-polish, .client-editor-polish) .set-add-row svg[data-original-icon='plus'] { background-color: var(--lime-accent); mask: url('../../docs/design/figma-20261002/assets/plus.svg') center / contain no-repeat }
 :is(.coach-plan-polish, .client-editor-polish) .set-add-row svg[data-original-icon='plus'] > image { opacity: 0 }
 .phone-frame.fit-lime-shell:is(.coach-workout-reference, .client-workout-reference) :is(.coach-plan-polish, .client-editor-polish) .coach-plan-entry-controls > .quick-workout-expand { background: var(--lime-accent); color: var(--lime-text-on-accent) }
-:is(.coach-plan-polish, .client-editor-polish) .quick-workout-expand svg[data-original-icon='microphone'] { background-color: currentColor; mask: url('../../docs/design/figma-20261002/assets/microphone.svg') center / contain no-repeat }
-:is(.coach-plan-polish, .client-editor-polish) .quick-workout-expand svg[data-original-icon='microphone'] > image { opacity: 0 }
+:is(.coach-plan-polish, .client-editor-polish) :is(.quick-workout-expand, .trainer-method-voice) svg[data-original-icon='microphone'] { background-color: currentColor; mask: url('../../docs/design/figma-20261002/assets/microphone.svg') center / contain no-repeat }
+:is(.coach-plan-polish, .client-editor-polish) :is(.quick-workout-expand, .trainer-method-voice) svg[data-original-icon='microphone'] > image { opacity: 0 }
