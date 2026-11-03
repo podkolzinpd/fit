@@ -4300,10 +4300,26 @@ for (const role of ['client', 'trainer'] as const) test(`Live unconfirm preserve
   Object.assign(source.exercises[0]!.sets[0]!, { confirmedAt: '2026-11-03T08:59:30Z', fact: originalFact })
   const id = role === 'client' ? pilotId : 'c0ac0000-6010-4000-8000-000000000001'
   const backend = await mockPilot(page, { role, profileId: id, clientLime: true, fitLime: true, workouts: [source] })
+  let release!: () => void
+  const gate = new Promise<void>(resolve => { release = resolve })
+  await page.route('**/v1/workout-sets/*/unconfirm', async route => { await gate; await route.fallback() })
   await page.goto(`/workouts/${workoutId}/live`)
   const row = page.locator(`[data-live-set-id="${source.exercises[0]!.sets[0]!.id}"]`)
   await expect(row.locator('[name="rpe"], [name="distanceKm"], [name="durationSec"]')).toHaveCount(0)
-  await row.getByRole('button', { name: /^Отменить выполнение:/ }).click()
-  await expect(row).not.toHaveClass(/confirmed/)
-  expect(backend.getWorkouts()[0]!.exercises[0]!.sets[0]!.fact).toMatchObject(originalFact)
+  const undo = row.getByRole('button', { name: /^Отменить выполнение:/ })
+  try {
+    await undo.focus()
+    await undo.click()
+    await expect(undo).toBeDisabled()
+    // Force the focus-out race observed when Linux WebKit disables this button.
+    await undo.dispatchEvent('focusout', { relatedTarget: null })
+    const pending = await page.evaluate(({ id, workoutId, setId }) => {
+      const drafts = JSON.parse(localStorage.getItem(`fit.live-set-drafts.${id}.${workoutId}`) ?? '{}') as Record<string, unknown>
+      return drafts[setId]
+    }, { id, workoutId, setId: source.exercises[0]!.sets[0]!.id })
+    expect(pending).toMatchObject(originalFact)
+    release()
+    await expect(row).not.toHaveClass(/confirmed/)
+    expect(backend.getWorkouts()[0]!.exercises[0]!.sets[0]!.fact).toMatchObject(originalFact)
+  } finally { release() }
 })

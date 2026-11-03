@@ -4437,8 +4437,9 @@ export function LiveWorkoutPage() {
       captureLiveDraft(set, event.currentTarget, event.target)
     }} onSubmit={(event) => event.preventDefault()} onBlur={(event) => {
       if (deletingSet) return
-      // WebKit focuses the swipe group itself. Its blur is not a metric edit.
-      if (clientReference && !(event.target instanceof Element && event.target.matches('input, select, textarea, .workout-duration-trigger'))) return
+      // WebKit can blur a utility button/group when pending disables it.
+      // Only a metric control can initiate direct-input blur autosave.
+      if ((clientReference || directLiveInput) && !(event.target instanceof Element && event.target.matches('input, select, textarea, .workout-duration-trigger'))) return
       // A utility action is not an edited metric. Closing its confirmation must
       // never turn untouched plan placeholders into a saved Live result.
       if (liveSwipeEnabled && event.target instanceof Element && event.target.closest('.workout-swipe-action')) return
@@ -4458,7 +4459,9 @@ export function LiveWorkoutPage() {
             ? <button type="button" className="secondary live-set-save" aria-label="Сохранить" disabled={save.isPending}
                 onPointerDown={() => { skipBlurForSet.current = set.id; liveSetAutosave.clear(set.id) }}
                 onClick={(event) => { const form = event.currentTarget.form; skipBlurForSet.current = null; if (!form || !liveDistanceIsValid(form, true)) return; persistLiveDraft(set, draftFrom(form, set), true); setEditingSets((prev) => { const next = new Set(prev); next.delete(set.id); return next }) }}>{visualReference ? <CheckIcon /> : <span aria-hidden="true">✓</span>}</button>
-            : set.confirmedAt && directLiveInput ? <button type="button" className={`live-set-check done${set.timerConfirmed ? ' timer' : ''}`} aria-label={`Отменить выполнение: ${label ?? `Подход ${set.position + 1}`}`} aria-busy={unconfirm.isPending && unconfirm.variables?.set.id === set.id} disabled={rootMutationPending || confirm.isPending} onClick={() => unconfirmLiveSet(set)}>{set.timerConfirmed ? <TimerIcon /> : visualReference ? <CheckIcon /> : <span aria-hidden="true">✓</span>}</button>
+            : set.confirmedAt && directLiveInput ? <button type="button" className={`live-set-check done${set.timerConfirmed ? ' timer' : ''}`} aria-label={`Отменить выполнение: ${label ?? `Подход ${set.position + 1}`}`} aria-busy={unconfirm.isPending && unconfirm.variables?.set.id === set.id} disabled={rootMutationPending || confirm.isPending}
+                onPointerDown={() => { skipBlurForSet.current = set.id; liveSetAutosave.clear(set.id) }}
+                onClick={() => { skipBlurForSet.current = null; unconfirmLiveSet(set) }}>{set.timerConfirmed ? <TimerIcon /> : visualReference ? <CheckIcon /> : <span aria-hidden="true">✓</span>}</button>
             : set.confirmedAt ? <button type="button" className={`secondary live-set-check done${set.timerConfirmed ? ' timer' : ''}`} aria-label={set.timerConfirmed ? 'Засчитано таймером, изменить подход' : 'Редактировать подход'} title={coachReference ? 'Подход выполнен — изменить результат' : undefined} onClick={() => setEditingSets((prev) => new Set(prev).add(set.id))}>{set.timerConfirmed ? <TimerIcon /> : visualReference ? <CheckIcon /> : <span aria-hidden="true">✓</span>}</button>
             : <button type="button" className="live-set-check" aria-label={confirmLabel} aria-busy={confirmationPending} disabled={confirm.isPending}
                 onPointerDown={(event) => {
