@@ -361,9 +361,10 @@ export function workoutAttendanceCases() {
     await expect(sheet.getByRole('button',{name:'Удалить пустую тренировку',exact:true})).toBeEnabled()
     await sheet.getByRole('button',{name:'Удалить пустую тренировку',exact:true}).evaluate(button=>{(button as HTMLButtonElement).click();(button as HTMLButtonElement).click()})
     await expect(sheet.getByRole('button',{name:'Сохраняем…',exact:true})).toBeDisabled()
-    expect(deletes).toBe(2);release!()
+    // Pending UI may render before the intercepted request reaches its handler.
+    await expect.poll(()=>deletes).toBe(2);release!()
     await expect(page).toHaveURL(/\/today(?:\?|$)/)
     expect(backend.getWorkouts()).toHaveLength(0)
-    expect(finishes).toBe(0);expect(cancels).toBe(0)
+    expect(finishes).toBe(0);expect(cancels).toBe(0);expect(deletes).toBe(2)
   })
 }
