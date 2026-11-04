@@ -348,3 +348,19 @@ Android41910798515SUCCESS; полные финальныеmetadata сохран�
 18/18 localbrowser28.9s. Исходный skippedlog сохранён отдельно, никакие
 assertions/timeouts/retries/baselines не менялись. Both header WebKit PNG
 просмотрены. Новый fullsourceCI из-заnecessary main merge ещё обязателен.
+
+## Итерация 14 — 05.11.2026 — Codex / OpenAI — локальная подготовка
+
+PR2/PR3 включилиnecessarycatalogmain967 через5dc ordinary merges7c4023fd/
+f744dccf. Конфликты только вappend-only журнале: все строки общей базы,
+всеlocal вставки и весь incoming suffix сохранены; точная общая запись12
+оставлена один раз. Сопоставление строк проверено до разрешения конфликта.
+Runtime целей/подцелей и финального профиля побайтно прежний в каждой ветке;
+входящие меняют толькообщиеcatalogCSS/AppLayout/main entrypoint/probes.
+Полнаяlocal сборка PR3 сproperfixture/tsc/startup passed. Сквознойproduction
+browser14/14ChromiumWebKit13.3s,0retry/skips:photo/goal all3stages+save+return/
+sports/services/chat/disconnect/narrow360/375. Goal/services/narrowtrainer
+light+dark/afterdisconnect WebKit PNG просмотрены, сохранены отдельноmain967.
+Это synthetic local fixture, не опубликованный web/actualsignedZIP.
+PR2/PR3 ещё не pushed; after actualsquash1/2 — necessary ordinaryactualmain
+merge, fresh exactsourceCI и последовательная фактическая приёмка каждого.
