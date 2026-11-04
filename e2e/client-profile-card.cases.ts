@@ -201,7 +201,6 @@ for (const width of [375,390,430]) test(`Reference profile dimensions and direct
   await expect(name).toBeVisible()
   await page.evaluate(()=>document.fonts.ready)
   await expect(name).toHaveCSS('font-family',/YS Geo/)
-  expect(await page.evaluate(()=>document.fonts.check('500 32px "YS Geo"'))).toBe(true)
   await expect(page.locator('.client-profile-vitals dd').first()).toHaveCSS('font-family',/Doto/)
   const bar=(await header.boundingBox())!, title=(await name.boundingBox())!
   expect(bar.y).toBe(12)
@@ -284,4 +283,19 @@ test('Relocated note microphone appends to current text, restores focus and supp
   await expect(page.getByRole('dialog')).toHaveCount(0)
 })
 
+}
+
+// Exact font bytes belong to the existing font-equipped Lime acceptance lane.
+// Generic browser lanes deliberately retain their fallback-font coverage.
+export function clientProfileExactFontCases() {
+  for (const width of [375, 390, 430]) test(`Client profile loads approved YS Geo at ${width}`, { tag: ['@lime-clients'] }, async ({ page }) => {
+    await page.setViewportSize({ width, height: 844 })
+    await mockPilot(page, { fitLime: true, clientHasAccount: false, withGoal: false, workouts: [] })
+    await page.goto(`/clients/${clientId}`)
+    await expect(page.locator('.client-profile-header h2')).toBeVisible()
+    await page.evaluate(() => document.fonts.ready)
+    expect(await page.evaluate(() => document.fonts.check('500 32px "YS Geo"'))).toBe(true)
+    await expect(page.locator('.client-profile-header h2')).toHaveCSS('font-family', /YS Geo/)
+    await expect(page.locator('.client-profile-note textarea')).toHaveCSS('font-family', /YS Geo/)
+  })
 }
