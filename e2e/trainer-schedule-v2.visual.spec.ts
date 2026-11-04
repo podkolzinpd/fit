@@ -1,3 +1,4 @@
+import { clientCardAction } from './fit-lime-fixtures'
 import { workoutTemplateDraftSafetyCases, workoutTemplateSourceCases, workoutTemplateEntryCases, workoutTemplateReliabilityCases } from './workout-template-reliability.cases'
 import { workoutLifecycleCases } from './workout-lifecycle.cases'
 import { financeAccountingCases } from './finance-accounting.cases'
@@ -758,8 +759,8 @@ for (const width of [375, 390, 430, 1440]) test(`Figma workout Coach reference f
   await expect(squat.locator('.compact-editor-exercise-fields')).toHaveCSS('border-top', '1px solid rgb(59, 59, 64)')
   await expect(squat.locator('.overflow-trigger svg[data-icon="more"]')).toHaveCSS('width', '24px')
   await expect(squat.locator('.exercise-comment-options > summary')).toHaveCSS('min-height', '44px')
-  await expect(squat.locator('.set-add-row svg')).toHaveCSS('background-color', 'rgb(182, 239, 77)')
-  await expect(page.locator('.trainer-plan-methods .trainer-method-voice')).toHaveCSS('background-color', 'rgb(182, 239, 77)')
+  await expect(squat.locator('.set-add-row svg')).toHaveCSS('background-color', 'rgb(209, 253, 45)')
+  await expect(page.locator('.trainer-plan-methods .trainer-method-voice')).toHaveCSS('background-color', 'rgb(209, 253, 45)')
   await expect(page.locator('.trainer-plan-methods > button').first()).toHaveCSS('background-color', 'rgb(59, 59, 64)')
   await squat.getByLabel('Вес, подход 1').fill('27.5')
   await squat.getByLabel('Повторы, подход 1').fill('10')
@@ -1166,7 +1167,7 @@ for (const width of [375, 390, 430, 1440]) test(`Figma workout Coach reference c
   await expect(picker.locator('.coach-filter-count')).toHaveText('1')
   await expect(picker.locator('.coach-filter-count')).toHaveCSS('width', '20px')
   await expect(picker.locator('.coach-filter-count')).toHaveCSS('height', '20px')
-  await expect(picker.locator('.coach-filter-count')).toHaveCSS('background-color', 'rgb(182, 239, 77)')
+  await expect(picker.locator('.coach-filter-count')).toHaveCSS('background-color', 'rgb(209, 253, 45)')
   const titleCenterOffset = await picker.locator('.coach-catalog-sheet-title').evaluate(node => {
     const title = node.getBoundingClientRect(), sheet = node.closest('.coach-reference-catalog')!.getBoundingClientRect()
     return Math.abs(title.x + title.width / 2 - sheet.x - sheet.width / 2)
@@ -2334,9 +2335,9 @@ for (const width of [375, 390, 430, 1440]) {
     await expect(page.locator('.live-set.confirmed')).toHaveCount(1)
     const addSet = page.locator('.live-add-set').first()
     await expect(addSet).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)')
-    await expect(addSet.locator('svg')).toHaveCSS('color', 'rgb(182, 239, 77)')
+    await expect(addSet.locator('svg')).toHaveCSS('color', 'rgb(209, 253, 45)')
     const originalPlus = addSet.locator('svg[data-original-icon="plus"]')
-    await expect(originalPlus).toHaveCSS('background-color', 'rgb(182, 239, 77)')
+    await expect(originalPlus).toHaveCSS('background-color', 'rgb(209, 253, 45)')
     // Vite embeds this tiny original SVG in CSS; verify the silhouette, not a file URL.
     expect(await originalPlus.evaluate(icon => decodeURIComponent(getComputedStyle(icon).maskImage)))
       .toContain('M11 6V11H6V13H11V18H13V13H18V11H13V6H11Z')
@@ -3906,7 +3907,7 @@ for (const width of [390, 430, 1440]) {
     await format.getByRole('button', { name: 'Самостоятельно', exact: true }).click()
     await expect(format.getByRole('button', { name: 'Самостоятельно', exact: true })).toHaveAttribute('aria-pressed', 'true')
     const start = format.getByRole('button', { name: 'Начать тренировку', exact: true })
-    await expect(start).toHaveCSS('background-color', 'rgb(182, 239, 77)')
+    await expect(start).toHaveCSS('background-color', 'rgb(209, 253, 45)')
     await start.scrollIntoViewIfNeeded()
     for (const button of await format.getByRole('button').all()) {
       const bounds = await button.boundingBox()
@@ -4279,7 +4280,18 @@ for (const [account, profileId] of [
       labelBackground: getComputedStyle(element).backgroundColor,
       numberStripBackground: getComputedStyle(element, '::before').backgroundColor,
     }))
-    expect(weekstripSurface).toEqual({ labelBackground: 'rgba(0, 0, 0, 0)', numberStripBackground: 'rgb(37, 54, 12)' })
+    // Normalize the approved literal through the browser's own color serializer:
+    // WebKit and Chromium round color(srgb) at different decimal precision.
+    const approvedWeekstripColor = await page.evaluate(() => {
+      const probe = document.createElement('span')
+      probe.style.backgroundColor = 'color-mix(in srgb, #D1FD2D 16%, #000)'
+      probe.hidden = true
+      document.body.append(probe)
+      const color = getComputedStyle(probe).backgroundColor
+      probe.remove()
+      return color
+    })
+    expect(weekstripSurface).toEqual({ labelBackground: 'rgba(0, 0, 0, 0)', numberStripBackground: approvedWeekstripColor })
     await expect(page.locator('.schedule-v2-period-summary')).toHaveText('1 тренировка · 1 клиент')
     await expect(page.locator('.schedule-v2-day-card').first()).toContainText('Свободный день')
     await expect(page.locator('.schedule-v2-day-card').nth(3)).toContainText('Алексей Смирнов')
@@ -4725,11 +4737,11 @@ for (const [account, profileId] of [
     await page.goto(`/clients/${clientId}`)
     await expect(page.locator('.phone-frame')).toHaveClass(/fit-lime-shell/)
     await expect(page.getByRole('heading', { name: 'Алексей Смирнов' })).toBeVisible()
-    await expect(page.getByRole('region', { name: 'Сводка по спортсмену' })).toContainText('ИМТ')
+    await expect(page.locator('.client-profile-vitals')).toContainText('ИМТ')
     await expect(page.getByRole('link', { name: /Запланировать тренировку/ })).toBeVisible()
     await expect(page.getByRole('link', { name: /История тренировок/ })).toBeVisible()
     await expect(page.getByRole('link', { name: /Прогресс и замеры/ })).toBeVisible()
-    await expect(page.locator('.client-detail-plan')).toHaveCSS('background-color', 'rgb(182, 239, 77)')
+    await expect(page.locator('.client-detail-plan')).toHaveCSS('background-color', 'rgb(209, 253, 45)')
     for (const icon of await page.locator('.client-detail-plan svg[data-original-icon]').all()) {
       await expect(icon).toHaveCSS('filter', 'brightness(0)')
     }
@@ -4738,13 +4750,13 @@ for (const [account, profileId] of [
       await page.screenshot({ path: screenshotPath, fullPage: true })
       await testInfo.attach('fit-lime-client-card', { path: screenshotPath, contentType: 'image/png' })
     }
-    await page.getByRole('button', { name: 'Архивировать клиента' }).click()
+    await (await clientCardAction(page, 'Архивировать клиента')).click()
     await expect(page.getByRole('alertdialog', { name: /Переместить карточку/ })).toBeVisible()
     await page.getByRole('alertdialog').getByRole('button', { name: 'Отмена' }).click()
-    await expect(page.getByRole('button', { name: 'Архивировать клиента' })).toBeVisible()
-    await page.getByRole('button', { name: 'Архивировать клиента' }).click()
+    await expect((await clientCardAction(page, 'Архивировать клиента'))).toBeVisible()
+    await (await clientCardAction(page, 'Архивировать клиента')).click()
     await page.getByRole('alertdialog').getByRole('button', { name: 'В архив' }).click()
-    await expect(page.getByRole('button', { name: 'Вернуть из архива' })).toBeVisible()
+    await expect((await clientCardAction(page, 'Вернуть из архива'))).toBeVisible()
     await expect(page.getByRole('status').getByText('Изменение архива сохранено')).toBeVisible()
     await page.getByRole('button', { name: 'Назад' }).click()
     await expect(page).toHaveURL(/\/clients$/)
@@ -4768,6 +4780,7 @@ for (const width of [390, 1440]) {
     await page.goto(`/clients/${clientId}`)
     const coachmark = page.getByRole('button', { name: 'Понятно', exact: true })
     if (await coachmark.isVisible()) await coachmark.click()
+    await page.getByText('Статистика, замеры и питание', { exact: true }).click()
     await expect(page.locator('.client-detail-activity')).toContainText('120 тренировок')
     await expect(page.locator('.client-detail-activity')).toContainText('98%')
     await expect(page.getByText('Давно не тренировался', { exact: true })).toBeVisible()
@@ -4777,6 +4790,7 @@ for (const width of [390, 1440]) {
     await page.screenshot({ path: testInfo.outputPath('client-card-stats.png') })
     failure = true
     await page.reload()
+    await page.getByText('Статистика, замеры и питание', { exact: true }).click()
     const alert = page.getByRole('alert').filter({ hasText: 'Не удалось загрузить статистику тренировок' })
     await expect(alert).toBeVisible()
     await expect(page.getByRole('link', { name: /Запланировать тренировку/ })).toBeVisible()
@@ -4850,7 +4864,7 @@ for (const [account, profileId] of [
     await expect(page.getByRole('heading', { name: 'Подготовка к старту' })).toBeVisible()
     await expect(page.locator('.stage-row.current')).toContainText('База')
     await expect(page.locator('.stage-row.current')).toContainText('идёт')
-    await expect(page.locator('.stage-row.current')).toHaveCSS('border-top-color', 'rgb(182, 239, 77)')
+    await expect(page.locator('.stage-row.current')).toHaveCSS('border-top-color', 'rgb(209, 253, 45)')
     if (account === 'first') {
       const screenshotPath = testInfo.outputPath('fit-lime-client-goal.png')
       await page.screenshot({ path: screenshotPath, fullPage: true })

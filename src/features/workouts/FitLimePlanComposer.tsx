@@ -11,7 +11,7 @@ import { useDataBackend } from '../../app/data-backend-context'
 import { invalidateWorkoutResults } from '../../app/invalidate-workout-results'
 import { isFitLimeEnabled } from '../../app/fit-lime'
 import { isCoachWorkoutRedesignEnabled } from '../../app/coach-workout-redesign'
-import { FitLimeDatePicker } from '../../shared/FitLimeDatePicker'
+import { WorkoutDatePicker } from './WorkoutDatePicker'
 import { AddIcon, BackIcon, CloseIcon, CopyIcon, KeyboardIcon, MicIcon } from '../../shared/icons'
 import { formatLocalDate, formatRelativeLocalDate, todayInTimeZone, type LocalDate } from '../../shared/local-date'
 import { Coachmark } from '../../shared/ui'
@@ -213,7 +213,7 @@ function FitLimePlanForm({ date, returnTo, onClose, onBack, initialDraft }: {
       <fieldset disabled={mutation.isPending}>
         <div className="fit-lime-plan-controls">
           <button type="button" className="fit-lime-plan-chip" onClick={() => setPickerOpen(true)} aria-label={`Клиент: ${selectedClient?.fullName ?? 'Выберите клиента'}`}>{selectedClient ? <span className="fit-lime-plan-avatar">{selectedClient.fullName.slice(0, 1)}</span> : <AddIcon />}<span>{selectedClient?.fullName ?? 'Клиент'}</span></button>
-          <FitLimeDatePicker today={today} value={selectedDate} onChange={setSelectedDate} time={time} onTimeChange={setTime} reference={reference} triggerLabel={`${dateLabel}${time.start ? ` ${time.start}` : ''}`} />
+          <WorkoutDatePicker clientId={clientId} today={today} value={selectedDate} onChange={setSelectedDate} time={time} onTimeChange={setTime} reference={reference} triggerLabel={`${dateLabel}${time.start ? ` ${time.start}` : ''}`} />
         </div>
         {options}
         <Coachmark id="lime-quick-plan-2026-10" userId={actor?.userId} title="План можно сохранить сразу" description="Выберите клиента и дату, а упражнения добавьте сейчас или позже.">
