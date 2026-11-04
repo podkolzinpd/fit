@@ -83,3 +83,28 @@ client Lime; ошибки настройки сохранены, продфла�
 проверяют upload/conflict/reload и геометрию390dark/430light отдельно.
 Открыто: полныйunitcoverage/browser/API/CI и публикация. Продданные не менялись.
 Дальше: сохранить PNG/конкретные результаты, PR1 и параллельная подготовкаPR2.
+
+## Итерация 3 — 04.11.2026 — Codex / OpenAI
+
+Задача: устранить конкретные ошибки подключения browser acceptance PR1989.
+Проверка source ade20:339unitfiles/3040passed; coverage83.64/78.62/82.89/88.33,
+APIcheck exit0 (135files1569passed,320условныхDBskips — не SQL-доказательство).
+Proper production fixture:6/6 Chromium/WebKit,0retry/skips, PNG просмотрены.
+FullCI41885442250 первая попытка выявила ошибки самого acceptance:
+новые standalone spec попали в legacy Chromium/WebKit без compiled clientLime;
+native profile-settings ожидал заменённый аватар56, Lime visual — старую
+кнопку radius0. Логи отдельных завершённых jobs сохранены до изменений.
+Решение: неизменные три own-profile cases регистрируются через существующий
+обязательный client-workout-reference entrypoint для обоих движков в native
+production harness. Отдельные дублирующие entrypoints удалены; inventory6/6.
+Прежние settings/visual сценарии сохраняют действия и проверки, geometry
+обновлена на утверждённые photo121×120/edit52/radius18. CI-конфигурация,
+assertions других состояний, retries/timeouts/strict-flaky не меняются.
+Локальный повтор settings выявил отсутствующий client-workout pilot в нашей
+fixture-сборке (нет Compact radio); исправлен только локальный build env.
+Это не новая ошибка продукта и не разрешение пропустить проверку настроек.
+Открыто: новый head требует собственного полного CI; публикации ещё нет.
+Проверка исправления:14/14 browser (6header +4settings обоих движков +
+4Chromium visual)14.1s; отдельно4/4WebKit visual,0retry/skips. Production
+build/startup/fonts2/2, ESLint/docs/diff passed; WebKit PNG просмотрен/сохранён.
+Дальше: normal push исправления и fresh source CI.

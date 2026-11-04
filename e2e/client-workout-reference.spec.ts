@@ -1,9 +1,13 @@
 import { writeFile } from 'node:fs/promises'
 import { z } from 'zod'
 import { expect, test, type Page } from '@playwright/test'
+import { ownProfileCases } from './client-own-profile.cases'
 import { revealLiveSet, beginClientGesture, coachGestureWorkout, restTimerWorkout, holdClientLiveCard, mockClientStreamingVoice, mockPilot, mockPublicTrainer, publicTrainerDraft, publicTrainerId, newWorkoutId, workoutId, conversationId, messageId, clientId } from './fit-lime-fixtures'
 
 test.skip(process.env.FIT_CLIENT_WORKOUT_ACCEPTANCE !== '1', 'Dedicated native client-workout harness')
+
+// Own-profile fixtures require the same compiled client Lime/auth configuration.
+ownProfileCases()
 
 const pilotId = 'c11e0000-6010-4000-8000-000000000001'
 
@@ -297,7 +301,8 @@ for (const theme of ['light', 'dark']) test(`client reference profile settings r
   await page.addInitScript(({ id, theme }) => localStorage.setItem(`fit.clientLime.theme.${id}`, theme), { id: pilotId, theme })
   await mockPilot(page, { role: 'client', profileId: pilotId, clientLime: true, clientGender: 'male' })
   await page.goto('/me/profile')
-  await expect(page.locator('.client-profile-avatar')).toHaveCSS('width', '56px')
+  await expect(page.getByRole('region', { name: 'Мои данные' }).locator('.client-own-photo-button')).toHaveCSS('width', '121px')
+  await expect(page.getByRole('region', { name: 'Мои данные' }).locator('.client-own-photo-button')).toHaveCSS('height', '120px')
   await page.screenshot({ path: info.outputPath(`profile-${theme}.png`) })
   await page.getByRole('link', { name: 'Настройки профиля', exact: true }).click()
   await expect(page).toHaveURL(/\/me\/settings$/)
