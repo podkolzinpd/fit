@@ -1,3 +1,4 @@
+import { OwnClientProfileGoal } from './OwnClientProfileGoal'
 import { OwnClientProfileHeader } from './OwnClientProfileHeader'
 import { CorporateAdminEntry } from '../corporate-admin'
 import { ClientLiveDensitySetting } from './ClientLiveDensitySetting'
@@ -53,6 +54,7 @@ export function ClientProfilePage() {
           </div>
           <Link className="client-profile-edit" to="/me/edit">Изменить данные <ChevronRightIcon /></Link>
         </section>}
+        {isClientLimeEnabled(actor) && <OwnClientProfileGoal client={client.data} />}
         {athleteSportProfile.supportsSportInterests && <section className="client-profile-card athlete-sport-card">
           <h2>Мой спорт</h2>
           <AsyncView loading={sport.isLoading} error={sport.error} onRetry={() => void sport.refetch()}>

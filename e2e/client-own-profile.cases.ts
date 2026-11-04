@@ -57,4 +57,56 @@ export function ownProfileCases() {
       await page.screenshot({ path: info.outputPath(`own-profile-${theme}.png`), fullPage: true })
     })
   }
+
+  test('Own profile retains every subgoal and criterion when editing a stage and returning', async ({ page }, info) => {
+    await page.clock.setFixedTime(new Date('2026-09-24T09:00:00+03:00'))
+    await mockPilot(page, { role: 'client', profileId: clientId, clientLime: true })
+    const goalId = '10000000-0000-4000-8000-000000000040'
+    const stages = [
+      { id: '10000000-0000-4000-8000-000000000041', goalId, title: 'База', startsOn: '2026-09-01', endsOn: '2026-10-01', position: 0, version: 7 },
+      { id: '10000000-0000-4000-8000-000000000042', goalId, title: 'Развитие', startsOn: '2026-10-02', endsOn: '2026-11-01', position: 1, version: 8 },
+      { id: '10000000-0000-4000-8000-000000000043', goalId, title: 'Подводка', startsOn: '2026-11-02', endsOn: '2026-12-01', position: 2, version: 9 },
+    ]
+    const criteria = [{ id: '10000000-0000-4000-8000-000000000044', goalId, metric: 'weight', operation: 'track_only', targetValue: null, rangeMin: null, rangeMax: null, unit: 'кг', confirmationStatus: 'confirmed', position: 0, version: 3 }]
+    const goal = { id: goalId, clientId, title: 'Подготовка к старту', targetDate: '2026-12-01', status: 'active', version: 4, criteria, stages }
+    await page.route(`**/v1/clients/${clientId}/progress`, route => route.fulfill({ json: { entries: [], customMetrics: [], goal } }))
+    let writes = 0
+    await page.route(`**/v1/goal-stages/${stages[1]!.id}`, async route => {
+      expect(route.request().method()).toBe('PUT')
+      const input = route.request().postDataJSON() as { draft: { title: string; startsOn: string; endsOn: string; position: number }; expectedVersion: number }
+      expect(input.expectedVersion).toBe(8)
+      expect(input.draft).toMatchObject({ title: 'Темповой блок', startsOn: stages[1]!.startsOn, endsOn: stages[1]!.endsOn, position: 1 })
+      Object.assign(stages[1]!, input.draft, { version: 9 }); writes++
+      await route.fulfill({ json: { stage: stages[1] } })
+    })
+    await page.goto('/me/profile')
+    const section = page.getByRole('region', { name: 'Моя цель' })
+    await expect(section.getByText('Этап 1 из 3')).toBeVisible()
+    await section.getByText('Все подцели · 3').click()
+    await expect(section.locator('li strong')).toHaveText(['База', 'Развитие', 'Подводка'])
+    await expect(section.getByText('Критериев оценки: 1')).toBeVisible()
+    await section.getByRole('link', { name: 'Изменить цель и подцели' }).click()
+    await expect(page).toHaveURL(/\/me\/goal$/)
+    await page.getByRole('button', { name: 'Назад', exact: true }).click()
+    await expect(page).toHaveURL(/\/me\/profile$/)
+    await section.getByRole('link', { name: 'Изменить цель и подцели' }).click()
+    await page.locator('.stage-row').filter({ hasText: 'Развитие' }).getByRole('button', { name: 'Изменить', exact: true }).click()
+    await page.getByLabel('Название этапа', { exact: true }).fill('Темповой блок')
+    await page.getByRole('button', { name: 'Сохранить', exact: true }).click()
+    await expect(page).toHaveURL(/\/me\/profile$/)
+    await section.getByText('Все подцели · 3').click()
+    await expect(section.locator('li strong')).toHaveText(['База', 'Темповой блок', 'Подводка'])
+    await expect(section.getByText('Критериев оценки: 1')).toBeVisible()
+    expect(writes).toBe(1); expect(criteria).toHaveLength(1)
+    await page.reload()
+    await section.getByText('Все подцели · 3').click()
+    await expect(section.locator('li')).toHaveCount(3)
+    await expect(section).toContainText('Темповой блок')
+    await page.screenshot({ path: info.outputPath('own-profile-subgoals.png'), fullPage: true })
+    await section.getByRole('link', { name: 'Изменить цель и подцели' }).click()
+    await page.locator('.goal-block').first().getByRole('button', { name: 'Изменить', exact: true }).click()
+    await page.getByRole('button', { name: 'Отмена', exact: true }).click()
+    await expect(page).toHaveURL(/\/me\/profile$/)
+    expect(writes).toBe(1)
+  })
 }

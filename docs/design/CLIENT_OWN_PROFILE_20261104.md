@@ -109,6 +109,30 @@ fixture-сборке (нет Compact radio); исправлен только л�
 build/startup/fonts2/2, ESLint/docs/diff passed; WebKit PNG просмотрен/сохранён.
 Дальше: normal push исправления и fresh source CI.
 
+## Итерация 4 — 04.11.2026 — Codex / OpenAI
+
+Задача: COP201–204 без потери подцелей/критериев.
+Сделано: OwnClientProfileGoal читает существующий aggregate, показывает цель,
+срок, текущий этап с датами/номером и весь упорядоченный список подцелей.
+Отсутствующий текущий этап не подменяется первым; отсутствие/error/loading
+разделены. Legacy client.goal только текстовый fallback, не источник stages.
+Критерии/подтверждение не пересчитываются, сохранены текущие правила/версии.
+Прежний редактор получает разрешённый context from=/me/profile: сохранение,
+отмена, back и архив возвращают в профиль только при входе оттуда.
+Другие входы/редактор критериев и серверные команды сохраняются.
+Проверка:5новых unit +прежний editor/profile =11passed; types/build passed.
+Browser2/2 Chromium/WebKit: изменён второй из трёх этапов с expectedVersion8,
+все названия/даты/порядок/критерий сохранены после возврата/reload, отмена
+не создаёт повторную запись. PNG WebKit просмотрен, файлы сохранены отдельно.
+Два промежуточных провала были ошибками нового теста: back является button,
+ответ stage требует полный объект, а не только version. Assertions не сняты:
+проверен фактический переход и ответ приведён к действующему API-контракту.
+Попытка запуска preview без localhost-разрешения получила EPERM до тестов;
+разрешённый локальный запуск прошёл, это не отказ приложения.
+Открыто: PR2 пока локальный, sequential source/main/release после приёмкиPR1.
+Дальше: подготовить COP301–304; PR1989 newsource483aacd8 CI41888524738.
+
+
 ## Итерация 6 — 04.11.2026 — Codex / OpenAI
 
 Задача: необходимая интеграция фактического squash1979/d7de75bb.
@@ -192,6 +216,25 @@ Src/API/package/lock/android/наш профиль и nativeABI8922/code9 пре
 Green e87/attempt2 сохранён, новая объединённая голова требует полногоCI.
 Дальше: штатные проверки incoming workflow и exactsourceCI, без bypass.
 
+## Итерация 12 — 05.11.2026 — Codex / OpenAI
+
+Пока exactsource376 ожидает полный CI, подготовленные PR2/PR3 локально
+объединены ordinary merge с его исправлениями/header и actualmain1986.
+PR2 merge35d292e1 без конфликтов; PR3 mergeff31a8e6 — только конфликт журнала.
+Проверено: входящая сторона добавляет точный suffix, local отличается от
+общей базы только вставленными записями; сохранены все строки базы, все local
+вставки и весь incoming suffix. Никакие записи/сохранённые уточнения не сняты.
+Src/API/own-cases/goal/editor/android/lock каждой ветки побайтно прежние,
+из тестов incoming меняет только уже исправленный recovery-selector177.
+DiffPR2к376:7files233+/16- — только цель/подцели/редактор/проверки/журнал.
+DiffPR3к35d:6files215+/6- — только sports/connections/finance composition,
+контекст возврата/проверки/журнал. Docs/diff проверки пройдены.
+Новые runtime-правки и повтор прежних browser-прогонов не требуются для этой
+интеграции; published actualmain каждого этапа ещё будет ordinary-merged
+перед свежим sourceCI. PR2/PR3 не pushed и не опубликованы. Последовательные
+merge/release/actual-acceptance каждого этапа сохраняются.
+
+
 ### Локальная подготовка приёмки после freeze376
 
 Новая exactsource376 CI41910798483/Android41910798515 автоматически;
@@ -232,3 +275,88 @@ Android41910798515SUCCESS; полные финальныеmetadata сохран�
 18/18 localbrowser28.9s. Исходный skippedlog сохранён отдельно, никакие
 assertions/timeouts/retries/baselines не менялись. Both header WebKit PNG
 просмотрены. Новый fullsourceCI из-заnecessary main merge ещё обязателен.
+
+## Итерация 14 — 05.11.2026 — Codex / OpenAI — локальная подготовка
+
+PR2/PR3 включилиnecessarycatalogmain967 через5dc ordinary merges7c4023fd/
+f744dccf. Конфликты только вappend-only журнале: все строки общей базы,
+всеlocal вставки и весь incoming suffix сохранены; точная общая запись12
+оставлена один раз. Сопоставление строк проверено до разрешения конфликта.
+Runtime целей/подцелей и финального профиля побайтно прежний в каждой ветке;
+входящие меняют толькообщиеcatalogCSS/AppLayout/main entrypoint/probes.
+Полнаяlocal сборка PR3 сproperfixture/tsc/startup passed. Сквознойproduction
+browser14/14ChromiumWebKit13.3s,0retry/skips:photo/goal all3stages+save+return/
+sports/services/chat/disconnect/narrow360/375. Goal/services/narrowtrainer
+light+dark/afterdisconnect WebKit PNG просмотрены, сохранены отдельноmain967.
+Это synthetic local fixture, не опубликованный web/actualsignedZIP.
+PR2/PR3 ещё не pushed; after actualsquash1/2 — necessary ordinaryactualmain
+merge, fresh exactsourceCI и последовательная фактическая приёмка каждого.
+
+## Итерация 15 — 05.11.2026 — Codex / OpenAI
+
+PR1/#1989 штатно squashed21:55:26Z вactualmain1ee23d54 сmatch-head5dc,
+безforce/admin/bypass/branchdelete. Source5dcCI41916007024attempt1SUCCESS35/35,
+Android41916006720SUCCESS. Git treeactual1ee=source5dc=5291f792209e610ccab86ae1b352f2c5395db5a1.
+MainCI41920575270/Android41920575354 созданы автоматически; это ещё не
+публикация. Предшественник967 officialAPI41918375589/web41918375736/
+OTA41919028319SUCCESS;обаAPIexact967/ready200/auth401 иRSAsignednative9/ABI8922
+readiness сверены напрямую. Исходящих сообщений в другие чаты нет.
+PR2 включилactualsquash1ee обычнымmerge.4конфликта add/add/content — только
+план/own-cases/ClientProfilePage/ownCSS:incoming каждого побайтно совпадает
+сsource5dc, который уже ancestor нашей goal-ветки. Это подтверждено вместе
+сравенствомполныхGit trees; сохранены все наши goal additions и журналы,
+никакие входящие изменения не отброшены. Доказательство SHA256 сохранено
+в outputs/client-own-profile-20261104/pr2-main1ee-conflict-preservation.json.
+Runtime/e2e/API/package/lock/android после разрешения побайтно04aad75f;
+diffкactual1ee — только прежние цели/подцели/редактор/проверки и журнал.
+Docs/diff passed; прежние11unit/2goalbrowser и integrated14browser сохраняют
+свой scope, новый точный fullsourceCI PR2 обязателен. СоздатьdraftPR2 и егоCI
+параллельноmainCI1, но merge2 удерживать до фактической приёмки PR1.
+
+## Итерация 19 — 05.11.2026 — Codex / OpenAI
+
+DraftPR2/82797CI41920954246attempt1FAILURE:33SUCCESS,auth4job126896678665+
+aggregateFAILURE. Сохраненыfullmetadata/log/timings/diagnostics. Помимо прежнего
+Live4388frame flaky (retry0/1two positions,retry2pass) естьдетерминированный
+trainer-name lime failure808/908:3attempts `.client-home-connections .error`
+находятдваодинаковых403. Ровнототжеexisting test/assertions оставлены.
+Причина: добавленныйOwnGoal useClientRealtime приSUBSCRIBED/visibility
+безусловноinvalidates весьclientspace, включая обеconnections queries;
+это новый побочныйэффект goalcard, а не основание выбратьпервуюошибкувтесте.
+Решение COP204: optional profile-goal catch-up в существующем hook обновляет
+толькоmy-client/client-goal. Default всех прежнихпотребителей прежний;
+incremental tableevents/merge/canonical/workoutinvalidations по прежним
+общимправилам не меняются. Один lifecycle/debounce/subscription сохраняется,
+никакого второго канала/новыхdeps/schema/API/permissions/CI изменений.
+Новыйbehaviorunit проверяетready/visibility goal updates безconnections
+invalidations и сохранённый remote goal_stages→goal/workouts path.
+Проверка:20tests/4files2.76s, ESLint/type/build/startup passed. Первоеlocal
+legacy-воспроизведение не дошло до908: сборка имела localhostAPI вместо
+hardcoded stage.example.test fixture,логсохранён и проверкойне считается.
+После правильнойfixtureсборки:прежние2trainer-name/error/retry Mono+Lime
+и8ownheader/goalcases Chromium/WebKit10/10passed12.6s,0retry/skips.
+Тесты/assertions/лимиты/strict-flaky не ослаблены. Source82797 не повторяется
+вслепую; codefix покаlocal, до merge2 необходимactual1988ordinarymerge и
+новый full exactsourceCI. ОсновнойPR1публикуетсянаunchanged1ee отдельно.
+
+## Итерация 22 — 05.11.2026 — Codex / OpenAI
+
+Necessary actualmain1988/f222f8caa97a160dbc1ab5a28d50f441f49127e9 включён
+вgoal-ветку321 обычнымmerge без конфликтов. Incoming20files531+/64-:
+CPA101–105trainercard/assets/inline note+optionalvoiceidleIcon, точныйfontlane/
+partitioninventory738 и оба журнальныхконтракта. AGENTS/FIT_WORKFLOW прежние;
+ACTIVE_CONTRACTS/CURRENT_STATE уточняютCPA и сохраняютнашCOP. API/photo188/
+package/lock/android/nativekey побайтно прежние,ABI8922/code9 неизменны.
+OwnGoal/catchupfix/myprofile/cases побайтно321, все входящие изменениясохранены.
+Проверка:5unitfiles36passed4.53s (включаяsharedVoiceInputButton),8partition
+checks passed13.56s,properstagefixture productionbuild/type/startup/lint/docs/
+diff passed.8ownprofilecases+2прежнихtrainer-name/retryMonoLime10/10passed
+12.5s,0retry/skips;никакиеassertions/лимиты/coverage/CI guards не менялись.
+НашPR1/main1ee ужефактическипринят6public+6signedZIP/213files/API/RSA/native9/
+finalreadback,all6actualZIPPNGviewed;receiptвPR1989. Окноосвобождено1988.
+Входящийкоординатор подтвердилегоmainCI41928769161/Android41928769374 и
+удержаниеwindowдоofficialAPI/web/OTA+34public34signedZIPприёмки. Этоне наша
+8+8stage2приёмка. PR2newheadполучитновыйfullsourceCIавтоматическипослеpush,
+ноегоmerge удерживаетсядофактическойквитанции1988. PR3preparedlocalea6
+содержитcatchupfix;послеэтогоmergeбудетподнятнаактуальнуюбазу ссохранением
+обеихисторий. Ниforeignoperations/branches/CI,ниисточникиsources не менялись.
