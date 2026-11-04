@@ -1,10 +1,12 @@
-import { randomUUID } from 'node:crypto'
+import { createHash, randomUUID } from 'node:crypto'
 import { fileURLToPath } from 'node:url'
 import { readFile, readdir } from 'node:fs/promises'
 import { runner } from 'node-pg-migrate'
 import { Pool, type QueryResultRow } from 'pg'
-import { afterAll, beforeAll, describe, expect, it } from 'vitest'
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
 import type { DatabaseClient } from './types.js'
+import { PgDatabasePool } from './pg-pool.js'
+import { DatabasePilotClientPhotos } from '../client-profile-photo.js'
 import type { PlannedWorkoutDraft } from '../planned-workout-request.js'
 import { confirmLiveSet, finishLiveWorkout, saveCompletedWorkout, savePlannedWorkout, startLiveWorkout } from '../workout-commands.js'
 import { readAccessibleTrainingData } from '../training-data.js'
@@ -95,13 +97,13 @@ describe.skipIf(source === undefined)('one active trainer through every connecti
       (select count(*)::int from public.client_trainers where client_id=$1) memberships`, [card])).rows[0]
   }
 
-  it('stores a photo only for the active trainer, rejects stale updates and preserves idempotency', async () => {
+  it('shares the photo with its athlete owner, rejects outsiders and stale updates', async () => {
     const f = await fixture()
     await pool.query('insert into public.client_trainer_relationships(client_id,trainer_id,connected_by) values($1,$2,$3)', [f.card,f.first,f.athlete])
     const image = { path: `${f.card}/${'a'.repeat(64)}.jpg`, sha256: 'a'.repeat(64), sizeBytes: 120 }
     const save = (who: string, value: unknown, version: number | null) => actor(who,
       'select public.save_client_profile_photo($1,$2::jsonb,$3) photo', [f.card,JSON.stringify(value),version])
-    for (const who of [f.athlete,f.second,f.outsider]) await expect(save(who,image,0)).rejects.toMatchObject({ message: 'client_forbidden' })
+    for (const who of [f.second,f.outsider]) await expect(save(who,image,0)).rejects.toMatchObject({ message: 'client_forbidden' })
     for (const value of [null,{}, {...image,sha256:null},{...image,sizeBytes:null},{...image,sizeBytes:160001},{...image,path:'another/photo.jpg'}])
       await expect(save(f.first,value,0)).rejects.toMatchObject({ message: 'client_invalid' })
     await expect(save(f.first,image,null)).rejects.toMatchObject({ message: 'client_invalid' })
@@ -109,10 +111,44 @@ describe.skipIf(source === undefined)('one active trainer through every connecti
     expect(await save(f.first,image,0)).toEqual([{ photo: {...image,version:1} }])
     const replacement = {...image,path:`${f.card}/${'b'.repeat(64)}.jpg`,sha256:'b'.repeat(64)}
     await expect(save(f.first,replacement,0)).rejects.toMatchObject({ message: 'client_conflict' })
-    expect(await save(f.first,replacement,1)).toEqual([{ photo:{...replacement,version:2} }])
+    expect(await save(f.athlete,replacement,1)).toEqual([{ photo:{...replacement,version:2} }])
+    await expect(save(f.first,image,1)).rejects.toMatchObject({ message: 'client_conflict' })
     await actor(f.first,'select public.leave_client_space($1)',[f.card])
     await expect(save(f.first,image,2)).rejects.toMatchObject({ message: 'client_forbidden' })
     expect((await pool.query('select profile_photo from public.clients where id=$1',[f.card])).rows).toEqual([{profile_photo:{...replacement,version:2}}])
+  })
+
+  it('allows only the owner without a trainer and rejects archived or merged own cards', async () => {
+    const f = await fixture(), other = await fixture()
+    const photo = { path: `${f.card}/${'c'.repeat(64)}.jpg`, sha256: 'c'.repeat(64), sizeBytes: 120 }
+    const save = (who: string) => actor(who, 'select public.save_client_profile_photo($1,$2::jsonb,0) photo', [f.card, JSON.stringify(photo)])
+    await expect(save(other.athlete)).rejects.toMatchObject({ message: 'client_forbidden' })
+    expect(await save(f.athlete)).toEqual([{ photo: { ...photo, version: 1 } }])
+    await pool.query('update public.clients set archived_at=now() where id=$1', [f.card])
+    await expect(save(f.athlete)).rejects.toMatchObject({ message: 'client_forbidden' })
+    await pool.query('update public.clients set archived_at=null,merged_into_client_id=$2 where id=$1', [f.card, other.card])
+    await expect(save(f.athlete)).rejects.toMatchObject({ message: 'client_forbidden' })
+  })
+
+  it('uploads and reads an own photo through the real app-session adapter without media writes for outsiders', async () => {
+    const f = await fixture(), other = await fixture(), token = randomUUID().replaceAll('-', '') + '12345678901'
+    await pool.query("insert into app_private.profile_rollout_assignments(profile_id,target_backend,access_mode,enabled) values($1,'yandex','read_write',true)", [f.athlete])
+    await pool.query("insert into app_private.yandex_app_sessions(token_sha256,profile_id,expires_at) values($1,$2,now()+interval '1 hour')", [createHash('sha256').update(token).digest('hex'), f.athlete])
+    const url = new URL(source!); url.pathname = `/${database}`
+    const runtime = new PgDatabasePool({ connectionString: url.href, options: '-c role=fit_api', max: 1 })
+    const bytes = Buffer.from([255,216,255,217]), hash = createHash('sha256').update(bytes).digest('hex')
+    const write = vi.fn().mockResolvedValue(undefined)
+    const service = new DatabasePilotClientPhotos(runtime, { write, read: vi.fn(), remove: vi.fn(),
+      sign: vi.fn().mockResolvedValue('https://example.test/private-photo'), stat: vi.fn().mockResolvedValue({ sizeBytes: bytes.length, sha256: hash }) })
+    const session = { accessMode: 'read_write' as const, token }
+    const image = { bytes, mimeType: 'image/jpeg' as const, width: 1, height: 1, sizeBytes: bytes.length }
+    try {
+      await expect(service.upload(session, other.card, 0, image)).rejects.toMatchObject({ failure: 'forbidden' })
+      expect(write).not.toHaveBeenCalled()
+      expect(await service.upload(session, f.card, 0, image)).toEqual({ url: 'https://example.test/private-photo', version: 1 })
+      expect(await service.read(session, f.card)).toEqual({ url: 'https://example.test/private-photo', version: 1 })
+      expect(write).toHaveBeenCalledOnce()
+    } finally { await runtime.end() }
   })
 
   it('retains a source photo on merge only when the canonical card has no photo', async () => {
