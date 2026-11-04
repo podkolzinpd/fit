@@ -66,7 +66,7 @@
   font-weight: 500;
 }
 .fit-lime-shell.trainer-client-detail-identity .client-detail-routes a:hover,
-.fit-lime-shell.trainer-client-detail-identity .client-detail-routes a:focus-visible { border-color: #729b27; background: var(--lime-surface-raised) }
+.fit-lime-shell.trainer-client-detail-identity .client-detail-routes a:focus-visible { border-color: color-mix(in srgb, var(--lime-accent, var(--fit-brand-accent)) 55%, #000); background: var(--lime-surface-raised) }
 .fit-lime-shell.trainer-client-detail-identity .client-detail-routes a svg { color: var(--lime-text-secondary) }
 .fit-lime-shell.trainer-client-detail-identity .client-detail-page .goal-block,
 .fit-lime-shell.trainer-client-detail-identity .client-detail-page .goal-block.client-note-block,
@@ -138,3 +138,84 @@
   .fit-lime-shell.trainer-client-detail-identity .client-detail-routes { grid-template-columns: minmax(0, 1fr) }
   .fit-lime-shell.trainer-client-detail-identity .client-detail-vitals > span { white-space: normal }
 }
+
+/* Client profile 1059:22636. Full-name data is not guessed into first/last fields. */
+.fit-lime-shell.trainer-client-detail-identity .client-profile-reference { padding-inline: 2px; max-width: 560px; }
+.fit-lime-shell.trainer-client-detail-identity .client-profile-reference > .page-header { margin: 0 14px 20px; }
+.fit-lime-shell.trainer-client-detail-identity .client-profile-reference > .page-header h1 { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+.fit-lime-shell.trainer-client-detail-identity .client-profile-reference .page-back,
+.fit-lime-shell.trainer-client-detail-identity .client-profile-reference .overflow-trigger { background: transparent; border: 0; }
+.client-profile-header { display: flex; flex-direction: column; align-items: center; gap: 24px; padding: 0 20px; }
+.client-profile-photo { width: 121px; height: 120px; border-radius: 24px; object-fit: cover; }
+.fit-lime-shell .client-profile-header h2 { margin: 0; font-size: 24px; line-height: 24px; font-weight: 500; text-align: center; overflow-wrap: anywhere; }
+.client-profile-vitals { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); width: 100%; margin: 24px 0 40px; text-align: center; }
+.client-profile-vitals dd { margin: 0 0 4px; font-family: 'Doto', monospace; font-variation-settings: 'ROND' 0, 'wght' 800; font-size: 20px; line-height: 20px; }
+.client-profile-vitals dt { color: var(--lime-text-secondary); font-size: 14px; line-height: 14px; }
+.client-profile-reference .client-detail-vitals { display: none; }
+.client-profile-photo-error { color: var(--danger); font-size: 14px; }
+.fit-lime-shell.trainer-client-detail-identity .client-profile-reference .client-detail-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 2px; }
+.client-profile-reference .client-detail-actions > :not(.quick-start-workout):not(.client-detail-plan) { grid-column: 1 / -1; }
+.client-profile-reference .quick-start-workout { margin: 0; padding: 0; min-width: 0; border: 0; background: transparent; }
+.fit-lime-shell.trainer-client-detail-identity .client-profile-reference .quick-start-button,
+.fit-lime-shell.trainer-client-detail-identity .client-profile-reference .client-detail-plan { min-height: 60px; height: auto; padding: 12px 20px; border: 0; border-radius: 20px; font-size: 14px; line-height: 16px; font-weight: 400; text-align: center; justify-content: center; }
+.fit-lime-shell.trainer-client-detail-identity .client-profile-reference .quick-start-button { width: 100%; background: var(--lime-surface-raised); color: var(--lime-text); }
+.client-profile-reference .client-detail-chevron { display: none; }
+.client-profile-reference .quick-start-workout:has(.quick-start-format) { grid-column: 1 / -1; }
+
+.fit-lime-shell .client-profile-reference .quick-start-button::before { content: ''; display: inline-block; flex: 0 0 16px; width: 16px; height: 16px; background: url('../assets/client-profile/play.svg') center / contain no-repeat; }
+.fit-lime-shell .client-profile-reference .quick-start-button { display: flex; align-items: center; justify-content: center; gap: 12px; }
+.fit-lime-shell .client-profile-reference .client-detail-plan .client-detail-chevron { display: none; }
+
+.fit-lime-shell .client-profile-reference .quick-start-button { white-space: normal; line-height: 14px; }
+
+.fit-lime-shell .client-profile-header-actions { display:flex; align-items:center; gap:16px; }
+.fit-lime-shell .client-profile-header-actions > span { display:flex; }
+.fit-lime-shell .client-profile-reference .client-profile-invite { grid-column:1/-1; justify-content:center; color:var(--lime-accent); background:transparent; border:0; min-height:44px; font-size:14px; margin:8px 0 16px; }
+.fit-lime-shell .client-profile-reference .client-profile-invite::before { content:''; width:24px; height:24px; display:inline-block; vertical-align:middle; margin-right:8px; background:url('../assets/client-profile/connected.svg') center / contain no-repeat; }
+
+/* Reference client card: primary content, three destinations, planned sessions. */
+.fit-lime-shell.trainer-client-detail-identity .client-profile-reference .goal-block:not(.client-note-block) { background:transparent; border:0; padding:24px 18px; border-radius:0; margin:0; }
+.fit-lime-shell.trainer-client-detail-identity .client-profile-reference .goal-head h2 { color:var(--lime-text-secondary); font-size:14px; line-height:18px; font-weight:400; display:flex; align-items:center; gap:8px; }
+.fit-lime-shell.trainer-client-detail-identity .client-profile-reference .goal-title { font-size:32px; line-height:34px; font-weight:500; letter-spacing:-.035em; margin:16px 0; }
+.fit-lime-shell.trainer-client-detail-identity .client-profile-reference .goal-placeholder { color:var(--lime-text-secondary); opacity:.65; }
+.fit-lime-shell.trainer-client-detail-identity .client-profile-reference .goal-deadline,
+.fit-lime-shell.trainer-client-detail-identity .client-profile-reference .goal-stage-line { font-size:14px; line-height:18px; }
+.fit-lime-shell.trainer-client-detail-identity .client-profile-reference .client-detail-routes { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:4px; margin:24px 0; }
+.fit-lime-shell.trainer-client-detail-identity .client-profile-reference .client-detail-routes a { position:relative; min-height:120px; padding:20px 14px; border:0; border-radius:24px; background:var(--lime-surface); display:block; font-size:14px; line-height:16px; font-weight:400; }
+.fit-lime-shell.trainer-client-detail-identity .client-profile-reference .client-detail-routes a > svg:not(.client-profile-route-arrow) { display:none; }
+.fit-lime-shell.trainer-client-detail-identity .client-profile-reference .client-profile-route-arrow { position:absolute; bottom:16px; right:14px; width:16px; height:16px; }
+.fit-lime-shell.trainer-client-detail-identity .client-profile-reference .client-detail-upcoming { margin:24px 0; }
+.fit-lime-shell.trainer-client-detail-identity .client-profile-reference .client-detail-upcoming h2 { display:flex; align-items:center; gap:8px; color:var(--lime-text-secondary); font-size:14px; font-weight:400; padding:0 18px; }
+.fit-lime-shell.trainer-client-detail-identity .client-profile-reference .client-detail-upcoming h2 svg { width:18px; height:18px; }
+.fit-lime-shell.trainer-client-detail-identity .client-profile-reference .client-detail-upcoming .cards { gap:2px; }
+.fit-lime-shell.trainer-client-detail-identity .client-profile-reference .client-detail-upcoming .card { display:flex; justify-content:space-between; align-items:center; padding:20px 24px; border:0; border-radius:24px; }
+.fit-lime-shell.trainer-client-detail-identity .client-profile-reference .client-detail-upcoming .card > div { display:grid; gap:4px; min-width:0; }
+.fit-lime-shell.trainer-client-detail-identity .client-profile-reference .client-detail-upcoming .card strong { font-size:16px; line-height:20px; font-weight:400; overflow-wrap:anywhere; }
+.fit-lime-shell.trainer-client-detail-identity .client-profile-reference .client-detail-upcoming .card small { font-size:14px; color:var(--lime-text-secondary); }
+.fit-lime-shell.trainer-client-detail-identity .client-profile-reference .client-detail-upcoming .client-profile-upcoming-today { background:var(--lime-accent-muted); }
+.fit-lime-shell.trainer-client-detail-identity .client-profile-reference .client-profile-upcoming-today .client-profile-workout-date { color:var(--lime-accent); }
+.fit-lime-shell .client-profile-secondary { margin:24px 16px; }
+.fit-lime-shell .client-profile-secondary summary { color:var(--lime-text-secondary); font-size:14px; cursor:pointer; padding:12px 0; }
+.client-detail-page:not(.client-profile-reference) .client-profile-secondary summary { display:none; }
+.client-detail-page:not(.client-profile-reference) .client-profile-route-arrow { display:none; }
+
+.fit-lime-shell.trainer-client-detail-identity .client-profile-reference .client-profile-upcoming-today small.client-profile-workout-date { color:var(--lime-accent); }
+.fit-lime-shell.trainer-client-detail-identity .client-profile-reference .client-detail-upcoming .card > svg { display:block; flex:0 0 16px; width:16px; height:16px; color:var(--lime-text-secondary); }
+.fit-lime-shell.trainer-client-detail-identity .client-profile-reference .client-profile-upcoming-today > svg { color:var(--lime-accent); }
+
+.fit-lime-shell .client-profile-reference .client-profile-note { margin-top:24px; }
+.fit-lime-shell .client-profile-reference .client-profile-note h2 { display:flex; align-items:center; gap:8px; padding:0 20px; color:var(--lime-text-secondary); font-size:14px; line-height:20px; font-weight:400; }
+.fit-lime-shell .client-profile-reference .client-profile-note-surface { background:var(--lime-surface); border-radius:24px; padding:24px; min-height:120px; }
+.fit-lime-shell .client-profile-reference .client-profile-note-surface p { margin:0; white-space:pre-wrap; overflow-wrap:anywhere; font-size:16px; line-height:20px; }
+.client-profile-note-preview { display:-webkit-box; -webkit-line-clamp:8; -webkit-box-orient:vertical; overflow:hidden; }
+.fit-lime-shell .client-profile-reference .client-profile-note-actions { display:flex; flex-wrap:wrap; gap:8px 20px; margin-top:12px; }
+.fit-lime-shell .client-profile-reference .client-profile-note-actions .link { color:var(--lime-text-secondary); font-size:14px; font-weight:400; }
+.client-profile-logo { display:block; width:89px; height:47px; margin:64px auto 32px; }
+.fit-lime-shell .client-profile-reference textarea { scroll-margin-block:16px; }
+.fit-lime-shell.trainer-client-detail-identity .client-profile-reference > .page-header { display:flex; justify-content:space-between; }
+.fit-lime-shell.trainer-client-detail-identity .client-profile-reference .client-profile-header-actions { margin-left:auto; }
+.fit-lime-shell.trainer-client-detail-identity .client-profile-reference .goal-block > .link { display:inline-flex; width:auto; min-height:44px; padding:8px 0; margin:0 20px 0 0; align-items:center; color:var(--lime-accent); font-size:14px; line-height:18px; font-weight:400; text-decoration:none; }
+.fit-lime-shell.trainer-client-detail-identity .client-profile-reference .client-profile-invite { font-weight:400; }
+
+.fit-lime-shell .client-profile-reference .client-profile-empty-upcoming { display:flex; align-items:center; gap:8px; padding:12px 20px; color:var(--lime-text-secondary); font-size:14px; line-height:20px; }
+.fit-lime-shell .client-profile-reference .client-profile-empty-upcoming svg { width:18px; height:18px; }

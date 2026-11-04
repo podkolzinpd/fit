@@ -1,3 +1,4 @@
+import { writeFile } from 'node:fs/promises'
 import { z } from 'zod'
 import { expect, test, type Page } from '@playwright/test'
 import { revealLiveSet, beginClientGesture, coachGestureWorkout, restTimerWorkout, holdClientLiveCard, mockClientStreamingVoice, mockPilot, mockPublicTrainer, publicTrainerDraft, publicTrainerId, newWorkoutId, workoutId, conversationId, messageId, clientId } from './fit-lime-fixtures'
@@ -1236,7 +1237,7 @@ for (const theme of ['dark', 'light']) for (const width of [390, 430]) for (cons
     await expect(page.getByRole('switch', { name: 'Анимация в Live', exact: true })).toBeChecked({ checked: animation })
     const options = page.getByRole('radiogroup', { name: 'Вид Live-тренировки' })
     await expect(options.getByRole('radio', { name: density === 'original' ? 'Оригинальный' : 'Компактный', exact: true })).toHaveAttribute('aria-checked', 'true')
-    await expect(options.getByRole('radio', { name: density === 'original' ? 'Оригинальный' : 'Компактный', exact: true })).toHaveCSS('background-color', 'rgb(182, 239, 77)')
+    await expect(options.getByRole('radio', { name: density === 'original' ? 'Оригинальный' : 'Компактный', exact: true })).toHaveCSS('background-color', 'rgb(209, 253, 45)')
     await page.screenshot({ path: info.outputPath('settings.png') })
     await page.goto(`/workouts/${workoutId}/live`)
     await expect(page.locator(`.client-live-density-${density}`)).toBeVisible()
@@ -4678,4 +4679,64 @@ for (const density of ['original', 'compact'] as const) test(`client group title
   await arrow.click()
   await expect(body).not.toHaveAttribute('inert', '')
   expect(JSON.stringify(backend.getWorkouts()[0])).toBe(before)
+})
+
+
+// The catalog must own its skin even when the legacy editor skin changes.
+// Probe only legacy catalog/control rules; shared overlay/layout is outside MC2.1.
+for (const entry of ['new', 'today', 'live']) for (const theme of ['light', 'dark']) test(`client catalog Lime skin isolation ${entry} ${theme}`, async ({ page }, info) => {
+  await page.setViewportSize({ width: theme === 'light' ? 390 : 430, height: 844 })
+  await page.addInitScript(({ id, theme }) => {
+    localStorage.setItem(`fit.clientLime.theme.${id}`, theme)
+    localStorage.setItem(`fit.coachmarks-seen.${id}`, JSON.stringify(['client-live-reference-timer-2026-10']))
+  }, { id: pilotId, theme })
+  const source = coachGestureWorkout()
+  source.startedAt = new Date(Date.now() - 120000).toISOString()
+  await mockPilot(page, { role: 'client', profileId: pilotId, clientLime: true, workouts: [source] })
+  await page.goto(entry === 'live' ? `/workouts/${workoutId}/live` : entry === 'new' ? '/workouts/new' : '/me?entry=workout')
+  await page.getByRole('button', { name: entry === 'live' ? 'Ещё упражнение' : entry === 'new' ? 'Выбрать упражнения' : 'Выбрать упражнения вручную', exact: true }).click()
+  const picker = page.locator('.client-reference-catalog')
+  await expect(picker).toBeVisible()
+  await page.evaluate(() => document.fonts.ready)
+  const probes: Array<{ state: string; inherited: string[] }> = []
+  async function check(state: string) {
+    await picker.screenshot({ path: info.outputPath(`isolation-${state}.png`), animations: 'disabled' })
+    const computed = await picker.evaluate(element => {
+      const properties = ['color', 'background-color', 'border-color', 'border-radius', 'font-family', 'font-size', 'font-weight', 'line-height', 'min-height', 'padding', 'box-shadow', 'display', 'gap']
+      return [element, ...element.querySelectorAll('*')].map(node => ({ tag: node.tagName, class: node.getAttribute('class') ?? '',
+        style: Object.fromEntries(properties.map(property => [property, getComputedStyle(node).getPropertyValue(property)])) }))
+    })
+    const stylePath = info.outputPath(`catalog-style-${state}.json`)
+    await writeFile(stylePath, JSON.stringify(computed, null, 2))
+    await info.attach(`catalog-style-${state}`, { path: stylePath, contentType: 'application/json' })
+    probes.push({ state, inherited: await picker.evaluate(element => {
+      const changed: Array<[CSSStyleRule, string]> = []
+      function visit(rules: CSSRuleList) {
+        for (const rule of Array.from(rules)) {
+          if (rule instanceof CSSStyleRule && /(^|,\s*)\.workout-create-edit-identity(?:\s|:)/.test(rule.selectorText)
+            && /\.picker-|\.exercise-picker|\bbutton|\.button|\.workout-cta|\.state-panel/.test(rule.selectorText)) {
+            changed.push([rule, rule.style.cssText])
+            rule.style.setProperty('--mc2-legacy-catalog-probe', 'legacy')
+          }
+          if ('cssRules' in rule) visit((rule as CSSGroupingRule).cssRules)
+        }
+      }
+      for (const sheet of Array.from(document.styleSheets)) visit(sheet.cssRules)
+      try {
+        return [element, ...element.querySelectorAll('*')].filter(node => getComputedStyle(node).getPropertyValue('--mc2-legacy-catalog-probe').trim() === 'legacy')
+          .map(node => `${node.tagName}.${node.getAttribute('class') ?? ''}`)
+      } finally { for (const [rule, css] of changed) rule.style.cssText = css }
+    }) })
+  }
+  await check('empty-selection')
+  await picker.locator('.picker-select-mark').first().click()
+  await check('selected')
+  await picker.getByRole('button', { name: /^Фильтровать/ }).click()
+  await check('filters')
+  await picker.getByRole('button', { name: 'Применить фильтры', exact: true }).click()
+  await picker.getByLabel('Поиск упражнения', { exact: true }).fill('несуществующее-упражнение-123')
+  await expect(picker.locator('.picker-item')).toHaveCount(0)
+  await check('empty-search')
+  await info.attach('legacy-skin-consumers', { body: JSON.stringify(probes), contentType: 'application/json' })
+  expect(probes).toEqual(probes.map(probe => ({ state: probe.state, inherited: [] })))
 })

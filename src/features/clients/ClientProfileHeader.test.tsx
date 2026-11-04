@@ -1,0 +1,16 @@
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { beforeEach, expect, it, vi } from 'vitest'
+import { ClientProfileHeader } from './ClientProfileHeader'
+import type { Client } from '../../shared/domain'
+const backend = vi.hoisted(() => ({photo:vi.fn(),uploadPhoto:vi.fn(),prepare:vi.fn()}))
+vi.mock('../../app/data-backend-context',()=>({useDataBackend:()=>({clients:backend})}))
+vi.mock('../../shared/image-prep',()=>({prepareImage:backend.prepare}))
+const client:Client={id:'client-1',fullName:'Анна Иванова',canonicalFullName:'Анна Иванова',hasAccount:false,gender:null,ageYears:null,ageUpdatedAt:null,heightCm:null,goal:null,note:null,currentWeightKg:null,archivedAt:null,version:1,membershipVersion:null}
+const image={dataUrl:'data:image/jpeg;base64,/9j/',mimeType:'image/jpeg',width:1,height:1,sizeBytes:3}
+function show(value=client){const cache=new QueryClient({defaultOptions:{queries:{retry:false},mutations:{retry:false}}});return render(<QueryClientProvider client={cache}><ClientProfileHeader client={value}/></QueryClientProvider>)}
+beforeEach(()=>{backend.photo.mockReset().mockResolvedValue({url:null,version:0});backend.uploadPhoto.mockReset().mockResolvedValue({url:'https://example.test/photo.jpg',version:1});backend.prepare.mockReset().mockResolvedValue(image)})
+it('shows the empty profile without invented metrics or photo',async()=>{show();await waitFor(()=>expect(backend.photo).toHaveBeenCalledWith(client.id));expect(screen.getByRole('heading',{name:client.fullName})).toBeVisible();expect(screen.queryByRole('img')).toBeNull();expect(screen.getAllByText('—')).toHaveLength(4)})
+it('uploads to the same client, uses photo version, and displays the returned photo',async()=>{const {container}=show();const input=container.querySelector('input')!;await waitFor(()=>expect(input).not.toBeDisabled());fireEvent.change(input,{target:{files:[new File(['photo'],'photo.jpg',{type:'image/jpeg'})]}});await waitFor(()=>expect(backend.uploadPhoto).toHaveBeenCalledWith(client.id,0,image));expect(await screen.findByRole('img')).toHaveAttribute('src','https://example.test/photo.jpg')})
+it('retains a failed upload and retries explicitly against the refreshed version',async()=>{backend.uploadPhoto.mockRejectedValueOnce(new Error('Фото изменено, повторите сохранение'));const {container}=show();const input=container.querySelector('input')!;await waitFor(()=>expect(input).not.toBeDisabled());backend.photo.mockResolvedValue({url:null,version:3});fireEvent.change(input,{target:{files:[new File(['photo'],'photo.jpg',{type:'image/jpeg'})]}});await screen.findByRole('alert');const retry=screen.getByRole('button',{name:'Повторить загрузку'});await waitFor(()=>expect(retry).not.toBeDisabled());fireEvent.click(retry);await waitFor(()=>expect(backend.uploadPhoto).toHaveBeenLastCalledWith(client.id,3,image));expect(await screen.findByRole('img')).toBeVisible()})
+it('does not allow uploading to an archived card',async()=>{const {container}=show({...client,archivedAt:'2026-11-01T00:00:00Z'});await waitFor(()=>expect(backend.photo).toHaveBeenCalled());expect(container.querySelector('input')).toBeDisabled()})

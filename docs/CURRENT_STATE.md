@@ -15,7 +15,7 @@ YAFIT-700: [Статусы тренера](design/COACH_WORKOUT_STATUS_DISPLAY_2
 31.10 — YAFIT-697: время быстрого старта обеим ролям, проведение пустой записи
 и «Не состоялась» тренеру. [План, проверки и выпуск](design/COACH_ATTENDANCE_AND_START_TIME_20261031.md).
 PR1906–1908 опубликованы db96685e; итог в YAFIT-697.
-31.10 — YAFIT-693: пакет опубликован и включён всем клиентам. [Результат и ограничения](design/CLIENT_REFERENCE_SCREENS_20261029.md), итерация47; [приёмка](https://st.yandex-team.ru/YAFIT-693).
+YAFIT-693 опубликован всем клиентам; MC2.1: каталог/фильтры, выпуск после разрешения. [План и проверки](design/CLIENT_REFERENCE_SCREENS_20261029.md), §47/115–116.
 30.10 — YAFIT-695 завершён: компактная история у тренера опубликована PR1892/cccecf35. [H101–H107, журнал и production-приёмка](https://st.yandex-team.ru/YAFIT-695).
 29.10 — YAFIT-673: полный список упражнений выбранного дня у тренера, записанные факты под названиями; обычный список/клиентский календарь прежние. План и статус выпуска: [каноническая запись](design/COACH_CALENDAR_FULL_EXERCISES_20261029.md). Локальные целевые/браузерные проверки пройдены, полный check/CI/production ещё гейты.
 Исходная база документа: main203f539d21fbc5cf79b1c930dc8467bbc8dc5c3b,28.10.2026; это не автоматически текущая production-сборка. Перед работой сверить main, нужный тикет и фактический выпуск.
@@ -73,7 +73,7 @@ YAFIT-667 завершён: PR1847/main91ce5582, общие правила и а
 - Frontend/API/PG/media — Cloud.ru, внешний вход — Yandex ID.
 - Vercel — redirect, Supabase — ограниченный legacy, не второй backend.
 - Runtime/decommission: [playbook](YANDEX_CUTOVER_PLAYBOOK.md).
-- Дизайн/механики/пилоты: [индекс решений](ACTIVE_CONTRACTS.md).
+- [Дизайн/механики](ACTIVE_CONTRACTS.md), [карточка/Lime](design/CLIENT_PROFILE_LIME_20261104.md).
 - YAFIT-668 заменил прежний fixed2-запрет: явный coach pilot/all/off; Original54/Compact48 сохраняются. Текущую конфигурацию проверять отдельно.
 - Локальные тесты не используют production-БД; полные макеты/пакет шрифтов не публикуются.
 
