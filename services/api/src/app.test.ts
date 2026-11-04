@@ -1131,6 +1131,7 @@ describe('trainer finance', () => {
 
   function finance() {
     const listClientSelf = vi.fn<PilotTrainerFinance['listClientSelf']>().mockResolvedValue(clientFinance)
+    const listPayments = vi.fn<PilotTrainerFinance['listPayments']>().mockResolvedValue({ month: '2026-09', clientId: null, offset: 0, limit: 50, totalCount: 1, totalCents: payment.amountCents, clients: [{ id: clientId, name: 'Анна' }], payments: [{ ...payment, clientId, clientName: 'Анна', archivedAt: null, serviceTitle: financePackage.title }] })
     const listOverview = vi.fn<PilotTrainerFinance['listOverview']>().mockResolvedValue(overview)
     const listClient = vi.fn<PilotTrainerFinance['listClient']>().mockResolvedValue(bundle)
     const createPackage = vi.fn<PilotTrainerFinance['createPackage']>().mockResolvedValue(financePackage)
@@ -1140,8 +1141,8 @@ describe('trainer finance', () => {
     const voidPayment = vi.fn<PilotTrainerFinance['voidPayment']>().mockResolvedValue(undefined)
     const createManualSession = vi.fn<PilotTrainerFinance['createManualSession']>().mockResolvedValue(financeSession)
     const updateSession = vi.fn<PilotTrainerFinance['updateSession']>().mockResolvedValue({ ...financeSession, disposition: 'free', packageId: null, version: 2 })
-    return { service: { listClientSelf, listOverview, listClient, createPackage, updatePackage, addPayment, updatePayment, voidPayment, updateSession, createManualSession } satisfies PilotTrainerFinance,
-      listClientSelf, listOverview, listClient, createPackage, updatePackage, addPayment, updatePayment, voidPayment, updateSession, createManualSession }
+    return { service: { listPayments, listClientSelf, listOverview, listClient, createPackage, updatePackage, addPayment, updatePayment, voidPayment, updateSession, createManualSession } satisfies PilotTrainerFinance,
+      listPayments, listClientSelf, listOverview, listClient, createPackage, updatePackage, addPayment, updatePayment, voidPayment, updateSession, createManualSession }
   }
 
   it('reads client finance from the authenticated session without a client id', async () => {
@@ -1163,6 +1164,24 @@ describe('trainer finance', () => {
     expect(listOverview).toHaveBeenCalledWith(session, '2026-09-01')
     const invalid = await app.inject({ method: 'GET', url: '/v1/finance/overview?month=2026-13', headers: { 'x-fit-session': session.token } })
     expect(invalid.statusCode).toBe(400)
+  })
+
+  it('reads actor receipts with validated period, client and pagination', async () => {
+    const { service: pilotTrainerFinance, listPayments } = finance()
+    const app = buildApp({ pilotTrainerFinance, logger: false }); apps.push(app)
+    const headers = { 'x-fit-session': session.token }
+    const response = await app.inject({ method: 'GET', url: `/v1/finance/payments?month=2026-09&clientId=${clientId}&offset=50`, headers })
+    expect(response.statusCode).toBe(200)
+    expect(response.headers['cache-control']).toBe('no-store')
+    expect(response.json<{ history: { totalCents: number } }>().history.totalCents).toBe(payment.amountCents)
+    expect(listPayments).toHaveBeenCalledWith(session, '2026-09-01', clientId, 50)
+    for (const query of ['month=2026-13', 'month=2026-09&clientId=wrong', 'month=2026-09&offset=-1', 'month=2026-09&offset=1.5', 'month=2026-09&offset=1000001']) {
+      expect((await app.inject({ method: 'GET', url: `/v1/finance/payments?${query}`, headers })).statusCode).toBe(400)
+    }
+    expect(listPayments).toHaveBeenCalledTimes(1)
+    expect((await app.inject({ method: 'GET', url: '/v1/finance/payments?month=2026-09' })).statusCode).toBe(401)
+    listPayments.mockRejectedValueOnce(new TrainerFinanceError('forbidden'))
+    expect((await app.inject({ method: 'GET', url: '/v1/finance/payments?month=2026-09', headers })).statusCode).toBe(403)
   })
 
   it('reads only the selected client finance bundle', async () => {

@@ -13,6 +13,16 @@
 .phone-frame.fit-lime-shell :is(.chat-send, .client-detail-plan) svg[data-original-icon] { filter: brightness(0); }
 .phone-frame.fit-lime-shell .finance-filter-row button.is-active { background: var(--lime-accent); border-color: var(--lime-accent); color: var(--lime-text-on-accent); }
 .phone-frame.fit-lime-shell .finance-overview-summary { border-radius: var(--lime-radius-card); }
+.phone-frame.fit-lime-shell .finance-overview-search {
+  min-height: 52px; margin-bottom: 12px; border-color: var(--lime-divider);
+  border-radius: 18px; background: var(--lime-surface-raised); color: var(--lime-text);
+}
+.phone-frame.fit-lime-shell .finance-overview-search:focus-within { border-color: var(--lime-accent); }
+.phone-frame.fit-lime-shell .finance-overview-search input { min-height: 44px; color: var(--lime-text); font-size: 16px; }
+.fit-lime-shell :is(.finance-manual-session, .finance-session-editor) > .request-error-inline { grid-column: 1 / -1; min-width: 0; }
+.fit-lime-shell :is(.finance-form, .finance-manual-session, .finance-session-editor) :is(input, select, textarea):disabled {
+  opacity: 1; color: var(--lime-text-secondary); -webkit-text-fill-color: var(--lime-text-secondary);
+}
 
 .fit-lime-shell .lime-finance-form fieldset { min-width: 0; margin: 0; padding: 16px 0; border: 0; border-top: 1px solid var(--lime-divider); }
 .fit-lime-shell .lime-finance-form legend { padding: 0 8px 0 0; font-size: 1rem; font-weight: 500; color: var(--lime-text); }
@@ -45,3 +55,5 @@ html.fit-lime-document .schedule-v2-inbox-row { overflow-wrap: anywhere; }
 html.fit-lime-document .schedule-v2-inbox-row :is(b, strong) { font-size: 16px; line-height: 20px; }
 html.fit-lime-document .schedule-v2-inbox-row small { font-size: 14px; line-height: 20px; }
 html.fit-lime-document:has(.schedule-v2-sheet-backdrop) .phone-frame.fit-lime-shell :is(.content, .day-grid-scroll) { overflow: hidden; }
+
+.phone-frame.fit-lime-shell .finance-receipt-client { font-weight:500; }

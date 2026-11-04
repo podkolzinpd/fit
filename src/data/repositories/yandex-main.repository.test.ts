@@ -244,6 +244,22 @@ describe('Yandex main repository', () => {
     expect(fetchMock).toHaveBeenCalledTimes(1)
   })
 
+  it('reads validated receipts with period/client pagination and no private client requests', async () => {
+    const history = { month: '2026-11', clientId, offset: 50, limit: 50, totalCount: 51, totalCents: 5100000,
+      clients: [{ id: clientId, name: 'Анна' }], payments: [{ id: financePaymentId, packageId: financePackageId,
+        clientId, clientName: 'Анна', archivedAt: '2026-10-01T10:00:00Z', serviceTitle: 'Персональные',
+        amountCents: 100000, receivedOn: '2026-11-03', source: 'manual', comment: null, voidedAt: null,
+        voidReason: null, version: 2, createdAt: '2026-11-03T10:00:00Z', updatedAt: '2026-11-03T10:00:00Z' }] }
+    const fetchMock = vi.fn().mockResolvedValueOnce(jsonResponse({ history }))
+      .mockResolvedValueOnce(jsonResponse({ history: { ...history, totalCents: -1 } }))
+    vi.stubGlobal('fetch', fetchMock)
+    const repository = createYandexMainRepository(apiBaseUrl, sessionToken, actor)
+    expect(await repository.trainerFinance.listPayments('2026-11', clientId, 50)).toEqual(history)
+    expect(fetchMock.mock.calls[0]![0]).toBe(`${apiBaseUrl}/v1/finance/payments?month=2026-11&offset=50&clientId=${clientId}`)
+    await expect(repository.trainerFinance.listPayments('2026-11')).rejects.toMatchObject({ code: 'invalid_response' })
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+  })
+
   it('reads and changes trainer finance only through the Yandex API', async () => {
     const financePackage = {
       id: financePackageId, clientId, trainerId: actor.userId, kind: 'session_pack', title: '10 тренировок',
@@ -267,8 +283,8 @@ describe('Yandex main repository', () => {
       updatedAt: '2026-09-05T10:00:00.000000+00:00',
     }
     const fetchMock = vi.fn()
-      .mockResolvedValueOnce(jsonResponse({ overview: { month: '2026-09', receivedCents: 1000000, dueCents: 1500000, attentionCount: 1, clients: [{ clientId, fullName: 'Анна', archivedAt: null, receivedCents: 1000000, dueCents: 1500000, activePackageCount: 1, upcomingPackageCount: 0, sessionsRemaining: 8, overdue: true, lowSessions: false, unassignedSessions: 0, needsAttention: true }] } }))
-      .mockResolvedValueOnce(jsonResponse({ finance: { clientId, packages: [financePackage], payments: [payment], sessions: [financeSession] } }))
+      .mockResolvedValueOnce(jsonResponse({ overview: { month: '2026-09', receivedCents: 1000000, dueCents: 1500000, attentionCount: 1, clients: [{ clientId, fullName: 'Анна', archivedAt: null, activeClient: false, receivedCents: 1000000, dueCents: 1500000, activePackageCount: 1, upcomingPackageCount: 0, sessionsRemaining: 8, overdue: true, lowSessions: false, unassignedSessions: 0, needsAttention: true }] } }))
+      .mockResolvedValueOnce(jsonResponse({ finance: { clientId, clientName: 'Анна', packages: [financePackage], payments: [payment], sessions: [financeSession] } }))
       .mockResolvedValueOnce(jsonResponse({ package: financePackage }, 201))
       .mockResolvedValueOnce(jsonResponse({ payment }, 201))
       .mockResolvedValueOnce(new Response(null, { status: 204 }))
@@ -276,8 +292,8 @@ describe('Yandex main repository', () => {
     vi.stubGlobal('fetch', fetchMock)
     const repository = createYandexMainRepository(apiBaseUrl, sessionToken, actor)
 
-    await expect(repository.trainerFinance.listOverview('2026-09')).resolves.toMatchObject({ receivedCents: 1000000, attentionCount: 1, clients: [{ nearestPaymentDueOn: null, unpaidPackageCount: 0 }] })
-    await expect(repository.trainerFinance.listClient(clientId)).resolves.toMatchObject({ clientId, packages: [{ sessionsRemaining: 8 }] })
+    await expect(repository.trainerFinance.listOverview('2026-09')).resolves.toMatchObject({ receivedCents: 1000000, attentionCount: 1, clients: [{ activeClient: false, nearestPaymentDueOn: null, unpaidPackageCount: 0 }] })
+    await expect(repository.trainerFinance.listClient(clientId)).resolves.toMatchObject({ clientId, clientName: 'Анна', packages: [{ sessionsRemaining: 8 }] })
     await repository.trainerFinance.createPackage(clientId, {
       kind: 'session_pack', title: '10 тренировок', sessionsTotal: 10, openingUsedSessions: 2,
       priceCents: 2500000, openingPaidCents: 1000000, startsOn: '2026-09-01',

@@ -38,6 +38,7 @@ export function mountFinanceOverviewHarness() {
   if (original) original.style.display = 'none'
   const mount = document.createElement('div')
   mount.id = 'finance-overview-qa'
+  mount.style.height = '100%'
   document.body.append(mount)
   createRoot(mount).render(<Harness />)
 }

@@ -1960,6 +1960,21 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
     }
   }
 
+  app.get('/v1/finance/payments', async (request, reply) => {
+    const session = readCompatibleYandexActorSession(request.headers)
+    const { month, clientId, offset } = request.query as { month?: unknown; clientId?: unknown; offset?: unknown }
+    if (session === undefined) return reply.code(401).send({ error: 'unauthorized' })
+    if (typeof month !== 'string' || !/^\d{4}-(0[1-9]|1[0-2])$/.test(month)
+      || (clientId !== undefined && (typeof clientId !== 'string' || !uuidPattern.test(clientId)))
+      || (offset !== undefined && (typeof offset !== 'string' || !/^\d{1,7}$/.test(offset) || Number(offset) > 1000000))) {
+      return reply.code(400).send({ error: 'invalid_request' })
+    }
+    if (options.pilotTrainerFinance === undefined) return reply.code(503).send({ error: 'service_unavailable' })
+    return sendPilotCommand(reply,
+      () => options.pilotTrainerFinance!.listPayments(session, `${month}-01`, clientId, offset === undefined ? 0 : Number(offset)),
+      (history) => reply.header('cache-control', 'no-store').send({ history }))
+  })
+
   app.get('/v1/finance/overview', async (request, reply) => {
     const session = readCompatibleYandexActorSession(request.headers)
     const { month } = request.query as { month?: unknown }

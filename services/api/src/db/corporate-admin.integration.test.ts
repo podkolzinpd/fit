@@ -15,6 +15,7 @@ describe.skipIf(!source)('corporate administration on real actor/RLS', () => {
   let owner: Pool, pool: Pool
   let created = false
   let connectionString = ''
+  let financeBeforeAdmin: Array<{ row: Record<string, unknown> }> = []
   const card = randomUUID(), workout = randomUUID()
   const admin = randomUUID(), coach = randomUUID(), athlete = randomUUID(), officeId = randomUUID()
   beforeAll(async () => {
@@ -33,6 +34,11 @@ describe.skipIf(!source)('corporate administration on real actor/RLS', () => {
     await pool.query('insert into public.trainers(profile_id) values($1)',[coach])
     await pool.query(`insert into public.clients(id,trainer_id,full_name) values($1,$2,'Synthetic client')`,[card,coach])
     await pool.query(`insert into public.workouts(id,client_id,trainer_id,created_by,workout_date,status,completed_at,training_format) values($1,$2,$3,$3,current_date,'done',now(),'with_trainer')`,[workout,card,coach])
+    financeBeforeAdmin = (await pool.query<{ row: Record<string, unknown> }>(
+      'select to_jsonb(session) row from public.trainer_finance_sessions session order by session.id')).rows
+    expect(financeBeforeAdmin).toHaveLength(1)
+    expect(financeBeforeAdmin).toMatchObject([{ row: { workout_id: workout, client_id: card, trainer_id: coach,
+      disposition: 'unassigned', package_id: null, source: 'automatic' } }])
     await pool.query('insert into app_private.corporate_admins(profile_id) values($1)',[admin])
   }, 90_000)
   afterAll(async () => { if (pool) await pool.end(); if (created) await owner.query(`drop database ${database}`); if(owner) await owner.end() })
@@ -82,9 +88,10 @@ describe.skipIf(!source)('corporate administration on real actor/RLS', () => {
   })
   it('does not alter roles, business records, memberships or existing tenant visibility', async () => {
     expect((await pool.query('select account_role from public.profiles where id=$1',[admin])).rows).toEqual([{account_role:'client'}])
-    for(const table of ['client_trainers','client_trainer_relationships','trainer_finance_sessions']) {
+    for(const table of ['client_trainers','client_trainer_relationships']) {
       expect((await pool.query(`select count(*)::int n from public.${table}`)).rows).toEqual([{n:0}])
     }
+    expect((await pool.query('select to_jsonb(session) row from public.trainer_finance_sessions session order by session.id')).rows).toEqual(financeBeforeAdmin)
     expect((await pool.query('select id,client_id,trainer_id,status,training_format from public.workouts where id=$1',[workout])).rows).toEqual([{id:workout,client_id:card,trainer_id:coach,status:'done',training_format:'with_trainer'}])
     const rows=await actor<{bundle:{offices:unknown[];trainers:Array<{id:string;isYandex:boolean}>}}>(admin,'select app_private.corporate_admin_bundle() bundle')
     expect(rows[0]?.bundle.trainers).toContainEqual(expect.objectContaining({id:coach,isYandex:true}))

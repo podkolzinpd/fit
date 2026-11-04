@@ -1,5 +1,6 @@
 import { workoutTemplateDraftSafetyCases, workoutTemplateSourceCases, workoutTemplateEntryCases, workoutTemplateReliabilityCases } from './workout-template-reliability.cases'
 import { workoutLifecycleCases } from './workout-lifecycle.cases'
+import { financeAccountingCases } from './finance-accounting.cases'
 import { writeFile } from 'node:fs/promises'
 import { expect, test, type Locator, type Page } from '@playwright/test'
 import { buildFitLimeCalendarPlan } from '../services/api/src/db/fit-lime-calendar-plan'
@@ -14,6 +15,7 @@ test.skip(!process.env.FIT_SCHEDULE_V2_VISUAL, 'Dedicated server-backed pilot ha
 workoutTemplateReliabilityCases()
 workoutTemplateEntryCases()
 workoutTemplateSourceCases()
+financeAccountingCases()
 workoutTemplateDraftSafetyCases()
 
 // Narrow client rows and the one-add flow use the production route and fonts.
@@ -3205,12 +3207,16 @@ for (const profileId of [trainerId, '10000000-0000-4000-8000-000000000010']) {
     await save.scrollIntoViewIfNeeded()
     await save.click()
     await expect.poll(() => commands.length).toBe(1)
-    await expect(save).toBeEnabled()
+    // Blocking the submitted fields dismisses the real keyboard.
+    await page.setViewportSize({ width: profileId === trainerId ? 320 : 430, height: 844 })
+    const retry = page.getByRole('button', { name: 'Повторить сохранение', exact: true })
+    await expect(retry).toBeEnabled()
+    await expect(used).toBeDisabled()
     await expect(page.getByLabel('Стоимость, ₽', { exact: true })).toHaveValue('30000')
     await expect(used).toHaveValue('2')
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
     await page.screenshot({ path: testInfo.outputPath('lime-finance-retry.png'), fullPage: true })
-    await save.click()
+    await retry.click()
     await expect(page.locator('.lime-finance-form')).toHaveCount(0)
     expect(commands).toHaveLength(2)
     expect(commands[1]).toEqual(commands[0])

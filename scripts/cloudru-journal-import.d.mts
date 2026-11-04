@@ -14,6 +14,7 @@ export interface JournalReceipt {
   created: { ordinal: number; workoutId: string; requestId: string; workoutDate: string }[]
   replayed: boolean
   createdCard: boolean
+  financeAttendanceVersion?: 1
   appendOnly?: boolean
   preservedState?: Record<string, { count: number; fingerprint: string }>
   ownerPreservedState?: Record<string, { count: number; fingerprint: string }>
