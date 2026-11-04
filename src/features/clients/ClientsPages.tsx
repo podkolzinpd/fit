@@ -1,3 +1,5 @@
+import clientScheduleIcon from '../../assets/client-profile/schedule.svg'
+import { ClientProfileHeader } from './ClientProfileHeader'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Controller, useForm } from 'react-hook-form'
@@ -448,10 +450,12 @@ export function ClientDetailPage() {
     if (fitLimePilot && !client.archivedAt && !await confirm({ message: `Переместить карточку «${client.fullName}» в архив? Её можно восстановить позже.`, confirmLabel: 'В архив', danger: true })) return
     archive.mutate(client)
   }
-  return <Page title={query.data?.fullName ?? 'Клиент'} className="client-detail-page" back="/clients" action={query.data && <OverflowMenu label="Действия с профилем спортсмена" items={[
+  return <Page title={fitLimePilot ? 'Карточка клиента' : query.data?.fullName ?? 'Клиент'} className={`client-detail-page${fitLimePilot ? ' client-profile-reference' : ''}`} back="/clients" action={query.data && <OverflowMenu label="Действия с профилем спортсмена" items={[
     { label: 'Редактировать профиль', onClick: () => navigate(`/clients/${clientId}/edit`) },
+    ...(fitLimePilot && clientsRepository.uploadPhoto && !query.data.archivedAt ? [{ label: 'Загрузить фото', onClick: () => document.getElementById('client-profile-photo-input')?.click() }] : []),
   ]} />}>
     <AsyncView loading={query.isLoading} error={query.error} onRetry={() => void query.refetch()}>{query.data && <>
+      {fitLimePilot && <ClientProfileHeader client={query.data} />}
       <section className="client-detail-snapshot" aria-label="Сводка по спортсмену">
         <p className="client-detail-vitals">
           <span><span className="sr-only">Возраст: </span>{query.data.ageYears ? `${query.data.ageYears} лет` : 'Возраст не указан'}</span>
@@ -475,7 +479,7 @@ export function ClientDetailPage() {
         {actor?.role === 'trainer' && canOpenClientChat(query.data, thread) && <ChatStartButton clientId={clientId} trainerId={thread?.trainerId ?? actor.userId} conversationId={thread?.conversationId} className="secondary wide client-detail-message" />}
         {actor?.role === 'trainer' && !query.data.archivedAt && <QuickStartWorkout role="trainer" clientId={clientId} workouts={workouts.data} loading={workouts.isLoading} error={workouts.error} onRetry={() => void workouts.refetch()} returnTo={`/clients/${clientId}`} compact />}
         <Link className="client-detail-plan" to={`/workouts/new?client=${clientId}`}>
-          <ScheduleIcon />
+          {fitLimePilot ? <img src={clientScheduleIcon} width={16} height={16} alt="" /> : <ScheduleIcon />}
           <span>Запланировать тренировку</span>
           <ChevronRightIcon className="client-detail-chevron" />
         </Link>

@@ -374,6 +374,8 @@ export async function mockPilot(page: Page, options: { role?: 'trainer' | 'clien
     } else if (url.pathname === '/v1/trainer-profile/catalog' && route.request().method() === 'POST') {
       professionalProfile = { ...professionalProfile, listedInCatalog: (route.request().postDataJSON() as { listed: boolean }).listed, version: professionalProfile.version + 1 }
       body = professionalProfile
+    } else if (url.pathname === `/v1/clients/${clientId}/photo` && route.request().method() === 'GET') {
+      body = { url: null, version: 0 }
     } else if (url.pathname === `/v1/clients/${clientId}/workout-stats`) {
       if (failTrainingData) {
         await route.fulfill({ status: 503, contentType: 'application/json', body: '{"error":"unavailable"}' })
