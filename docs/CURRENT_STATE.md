@@ -1,6 +1,6 @@
 28.10 — Чат: плашка даты перед первым сообщением дня («Сегодня», «Вчера», «26 октября», «12 марта 2025»), раньше «Новые сообщения»; в списке чатов дата по давности. День по часам телефона. chat-dates.ts + тесты.
 # Fit — текущий индекс
-ФИТ19: [финансы,5PR](design/trainer-finance-cabinet-20260930.md); PR1962 CI.
+ФИТ19: [финансы](design/trainer-finance-cabinet-20260930.md).
 03.11 — [17 журналов](design/ATHLETE_PROGRAM_HISTORY_IMPORT_20261103.md): подготовка; сверка/запись впереди.
 YAFIT-701: [R101–R106, восстановление карточки у тренера без изменения истории](https://st.yandex-team.ru/YAFIT-701).
 Шаблоны: [TMPA101–108](design/COACH_WORKFLOW_AUDIT_20261031.md);3PR приняты. R01–R04: исправлены локально, CI/выпуск далее.
@@ -8,7 +8,7 @@ YAFIT-701: [R101–R106, восстановление карточки у тре
 [план, сохранность и исправления flaky swipe/video](design/PRODUCTION_BROWSER_CI_SHARDS_20261102.md). CI нового head ещё гейт.
 TC101–107: [план/статус](design/TRAINER_CONNECTION_CONFIRMATION_20261102.md). В работе.
 [Supabase: stage merged; admin cleanup](design/SUPABASE_DECOMMISSION_PLAN_20261023.md).
-Live: [P2/P3, §90](design/CLIENT_REFERENCE_SCREENS_20261029.md).
+Live: [LC101–304,3PR](design/LIVE_SINGLE_ACTIVE_CARD_20261104.md).
 YAFIT-699: компактный список клиентов и гостевое приглашение,2PR. [План/проверки](design/COACH_CLIENTS_AND_INVITATION_20261031.md); [статус выпуска](https://st.yandex-team.ru/YAFIT-699).
 ФИТ20: [все статусы R104-S](design/COACH_RESCHEDULE_AND_DAY_GESTURES_20261031.md), [PR1923: CI](https://github.com/podkolzinpd/fit/pull/1923); [F201–208: CI/выпуск](design/COACH_WORKFLOW_AUDIT_20261031.md).
 YAFIT-698/WQ101–105: проведение и обновление очереди после сохранения. [План](design/COACH_QUICK_COMPLETION_20261031.md); [статус](https://st.yandex-team.ru/YAFIT-698).
