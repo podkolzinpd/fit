@@ -7,7 +7,7 @@ YAFIT-701: [R101–R106, восстановление карточки у тре
 [план, сохранность и исправления flaky swipe/video](design/PRODUCTION_BROWSER_CI_SHARDS_20261102.md). CI нового head ещё гейт.
 TC101–107: [план/статус](design/TRAINER_CONNECTION_CONFIRMATION_20261102.md). В работе.
 [Supabase: stage merged; admin cleanup](design/SUPABASE_DECOMMISSION_PLAN_20261023.md).
-Live: [P2/P3, §90](design/CLIENT_REFERENCE_SCREENS_20261029.md).
+Live: [LC101–304,3PR](design/LIVE_SINGLE_ACTIVE_CARD_20261104.md); [выпуск](https://github.com/podkolzinpd/fit/pull/1972).
 YAFIT-699: компактный список клиентов и гостевое приглашение,2PR. [План/проверки](design/COACH_CLIENTS_AND_INVITATION_20261031.md); [статус выпуска](https://st.yandex-team.ru/YAFIT-699).
 ФИТ20: [все статусы R104-S](design/COACH_RESCHEDULE_AND_DAY_GESTURES_20261031.md), [PR1923: CI](https://github.com/podkolzinpd/fit/pull/1923); [F201–208: CI/выпуск](design/COACH_WORKFLOW_AUDIT_20261031.md).
 YAFIT-698/WQ101–105: проведение и обновление очереди после сохранения. [План](design/COACH_QUICK_COMPLETION_20261031.md); [статус](https://st.yandex-team.ru/YAFIT-698).
@@ -31,7 +31,7 @@ P4/PR1882 опубликован наe5b5aa1d:213 файлов/health и public 
 P1–P4 завершены; итог — итерация26 канонического журнала и YAFIT-674.
 31.10 справочник заполнен:32 офиса добавлены,33/33 после reload; итерация27.
 02.11: [кабинет Яндекса](design/CORPORATE_ADMIN_20261027.md): PR1930/1937 опубликованы.
-SRV301–306: af2 принят, только тест. CRF: PR1970 ждёт CI/выпуска; PR2 локально147unit/68browser, журнал22. Второй admin ждёт входа.
+SRV301–306: af2 принят, только тест. CRF:1970/PR2, журнал23; выпуск далее. Второй admin ждёт входа.
 
 ## Точка продолжения
 [UX:4PR, проверки](design/WORKOUT_LIFECYCLE_UX_AUDIT_20261101.md).
