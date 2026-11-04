@@ -44,7 +44,7 @@ export function PublicTrainerProfilePage() {
       {published && <TrainerProfileCard profile={published} isBrandTrainer={profile.isBrandTrainer} yandexOffices={profile.yandexOffices} publicView
         onAvatarClick={photoItems.length ? (index) => setPhotoIndex(index) : undefined} primaryAction={published.acceptingClients
         ? <PublicTrainerChatButton publicProfileId={publicId} />
-        : <p className="trainer-contact-unavailable">Тренер временно не принимает новых клиентов</p>} />}
+        : undefined} />}
     </AsyncView>
     {photoIndex !== null && photoItems[0] && <FullscreenImageViewer src={photoItems[0].src}
       alt={photoItems[0].alt} images={photoItems} initialIndex={photoIndex}

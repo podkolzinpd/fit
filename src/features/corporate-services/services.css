@@ -33,3 +33,10 @@
 .corporate-services-page .corporate-service-form select { min-height:48px; height:48px; padding:10px 12px; border-radius:var(--radius-md); line-height:1.4; }
 
 .corporate-service-heading { display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; }
+.corporate-service-quick-periods { display:flex; flex-wrap:wrap; gap:8px; }
+.corporate-service-quick-periods button { min-height:44px; }
+.corporate-service-quick-periods [aria-pressed="true"] { background:var(--text); color:var(--bg); }
+.corporate-service-filters { min-width:0; }
+.corporate-service-filters > summary { box-sizing:border-box; min-height:48px; padding:12px 0; cursor:pointer; font-weight:500; }
+.corporate-service-filters > summary:focus-visible { outline:2px solid var(--text); outline-offset:4px; }
+.corporate-service-filters[open] > .corporate-service-period, .corporate-service-filters[open] > .corporate-admin-filters { margin-top:16px; }

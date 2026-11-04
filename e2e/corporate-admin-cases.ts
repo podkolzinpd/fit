@@ -1,7 +1,9 @@
 import { expect, test } from '@playwright/test'
+import { publicTrainerDraft, publicTrainerId } from './fit-lime-fixtures'
 import { mockNativeAiSession, nativeAiUrl } from './native-ai-fixture'
 
 export function registerCorporateAdminCases() {
+  test.beforeEach(async ({ page }) => { await page.routeWebSocket('**/*', socket => socket.close()) })
 
 test('existing trainer settings baseline stays available', async ({ page }) => {
   await mockNativeAiSession(page, 'trainer')
@@ -91,6 +93,45 @@ test('office selection reveals the editor again and retains its unsaved draft', 
     await expect(editor.getByLabel('Город', { exact: true })).toHaveValue('Тестовый город')
   }
   expect(writes).toBe(0)
+})
+
+for (const area of ['office', 'trainer'] as const) test(`late ${area} receipt keeps the next editor and its draft`, async ({ page }) => {
+  await mockNativeAiSession(page, 'client')
+  const offices = [{ id: officeId, city: 'Москва', name: 'Первый', address: 'Тестовый адрес', archived: false, version: 1 }, { id: '20000000-0000-4000-8000-000000000003', city: 'Москва', name: 'Второй', address: 'Тестовый адрес', archived: false, version: 1 }]
+  const trainers = [{ id: coachId, name: 'Первый', isYandex: true, officeIds: [officeId], version: 1 }, { id: '20000000-0000-4000-8000-000000000004', name: 'Второй', isYandex: true, officeIds: [officeId], version: 1 }]
+  await page.route('**/v1/admin/access', route => route.fulfill({ json: { allowed: true } }))
+  await page.route('**/v1/admin/bundle', route => route.fulfill({ json: { offices, trainers } }))
+  let finish!: () => void, writes = 0, writtenId = ''
+  const delayed = new Promise<void>(resolve => { finish = resolve })
+  const endpoint = `/v1/admin/${area === 'office' ? 'offices' : 'trainers'}`
+  await page.route(`**${endpoint}`, async route => {
+    writes++; writtenId = (route.request().postDataJSON() as { id: string }).id
+    await delayed
+    if (area === 'office') offices[0] = { ...offices[0]!, city: 'Сохранённый город', version: 2 }
+    else trainers[0] = { ...trainers[0]!, isYandex: false, version: 2 }
+    return route.fulfill({ json: { saved: true } })
+  })
+  await page.goto(nativeAiUrl(area === 'office' ? '/admin?tab=offices' : '/admin'))
+  const button = (name: string) => page.getByRole('button', { name: `${area === 'office' ? 'Изменить офис' : 'Настроить тренера'} ${name}`, exact: true })
+  await button('Первый').click()
+  if (area === 'office') await page.getByLabel('Город', { exact: true }).fill('Сохранённый город')
+  else await page.getByRole('checkbox', { name: 'Тренер Яндекса', exact: true }).uncheck()
+  await page.getByRole('button', { name: area === 'office' ? 'Сохранить офис' : 'Сохранить тренера', exact: true }).click()
+  await button('Второй').click()
+  if (area === 'office') await page.getByLabel('Город', { exact: true }).fill('Новый черновик')
+  else await page.getByRole('checkbox', { name: 'Тренер Яндекса', exact: true }).uncheck()
+  const ack = page.waitForResponse(response => new URL(response.url()).pathname.endsWith(endpoint) && response.request().method() === 'PUT')
+  finish(); await ack
+  if (area === 'office') {
+    await expect(page.getByText('Сохранённый город · Тестовый адрес', { exact: true })).toBeVisible()
+    await expect(page.getByLabel('Город', { exact: true })).toHaveValue('Новый черновик')
+    await expect(page.getByLabel('Название офиса', { exact: true })).toHaveValue('Второй')
+  } else {
+    await expect(button('Первый')).toHaveCount(0)
+    await expect(page.getByRole('form', { name: 'Настройки Второй', exact: true })).toBeVisible()
+    await expect(page.getByRole('checkbox', { name: 'Тренер Яндекса', exact: true })).not.toBeChecked()
+  }
+  expect(writes).toBe(1); expect(writtenId).toBe(area === 'office' ? officeId : coachId)
 })
 
 test('admin manages offices and trainer flags on a laptop, including validation and retry', async ({ page }, testInfo) => {
@@ -299,6 +340,58 @@ test('corporate invitation creates QR, explicitly claims and waits for administr
   await expect(page.getByRole('button',{name:'Настроить тренера Приглашённый тренер'})).toBeVisible()
   expect(approvals).toBe(1)
   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true)
+})
+
+test('invitation status refresh observes another device without accepting or approving automatically', async ({ page }) => {
+  await mockNativeAiSession(page, 'client')
+  await page.routeWebSocket('**/*', socket => socket.close())
+  const invitationId = '70000000-0000-4000-8000-000000000010', token = 'e'.repeat(43)
+  let status = 'active', reads = 0, previews = 0, writes = 0, failList = false, archived = false
+  await page.route('**/v1/admin/access', route => route.fulfill({ json: { allowed: true } }))
+  await page.route('**/v1/admin/bundle', route => route.fulfill({ json: { offices: [{ id: officeId, city: 'Москва', name: 'Тестовый', address: 'Тестовый адрес', archived, version: 1 }], trainers: [] } }))
+  await page.route('**/v1/admin/invitations', route => {
+    if (route.request().method() !== 'GET') { writes++; return route.abort() }
+    reads++
+    if (failList) { failList = false; return route.fulfill({ status: 503, json: { error: 'unavailable' } }) }
+    return route.fulfill({ json: { invitations: [{ id: invitationId, status, createdAt: '2026-11-01T10:00:00Z', expiresAt: '2099-01-01T00:00:00Z', officeIds: [officeId], trainerName: status === 'active' ? null : 'Тестовый тренер' }] } })
+  })
+  const registerPreview = async () => {
+    await page.route('**/v1/corporate-invitations/preview', route => { previews++; return route.fulfill({ json: { invitation: { status, expiresAt: '2099-01-01T00:00:00Z', offices: [{ city: 'Москва', name: 'Тестовый' }] } } }) })
+    await page.route('**/v1/corporate-invitations/claim', route => { writes++; return route.abort() })
+  }
+  await registerPreview()
+  await page.goto(nativeAiUrl('/admin?tab=invitations'))
+  await expect(page.getByText('Ожидает тренера', { exact: true })).toBeVisible()
+  await expect(page.getByText(/Ссылка действительна до/)).toBeVisible()
+  expect((await page.getByRole('button', { name: 'Обновить', exact: true }).boundingBox())!.height).toBeGreaterThanOrEqual(44)
+  status = 'claimed'; failList = true; archived = true
+  await expect(page.getByRole('button', { name: 'Подтвердить тренера', exact: true })).toHaveCount(0)
+  await page.getByRole('button', { name: 'Обновить', exact: true }).click()
+  await expect(page.getByRole('button', { name: 'Повторить', exact: true })).toBeVisible()
+  await page.getByRole('button', { name: 'Повторить', exact: true }).click()
+  await expect(page.getByRole('button', { name: 'Подтвердить тренера', exact: true })).toBeVisible()
+  await expect(page.getByText('Москва, Тестовый (архив)', { exact: true })).toBeVisible()
+  expect(reads).toBe(3); expect(writes).toBe(0)
+  await mockNativeAiSession(page, 'trainer')
+  await registerPreview()
+  await page.goto(nativeAiUrl(`/corporate-invite#token=${token}`))
+  await expect(page.getByRole('heading', { name: 'Ожидает подтверждения', exact: true })).toBeVisible()
+  expect((await page.getByRole('button', { name: 'Проверить статус', exact: true }).boundingBox())!.height).toBeGreaterThanOrEqual(44)
+  status = 'approved'; archived = false
+  await page.getByRole('button', { name: 'Проверить статус', exact: true }).click()
+  await expect(page.getByRole('heading', { name: 'Приглашение подтверждено', exact: true })).toBeVisible()
+  expect(previews).toBe(2); expect(writes).toBe(0)
+})
+
+test('public unavailable trainer has one clear status and no dead contact action', async ({ page }) => {
+  await mockNativeAiSession(page, 'trainer')
+  await page.routeWebSocket('**/*', socket => socket.close())
+  const profile = { ...publicTrainerDraft, acceptingClients: false, photos: [], avatarDataUrl: null }
+  await page.route(`**/v1/trainers/${publicTrainerId}/public-profile`, route => route.fulfill({ json: { publicId: publicTrainerId, draft: profile, published: profile, listedInCatalog: true, publishedAt: '2026-11-01T00:00:00Z', updatedAt: '2026-11-01T00:00:00Z', version: 1, isBrandTrainer: false, yandexOffices: [] } }))
+  await page.goto(nativeAiUrl(`/trainers/${publicTrainerId}`))
+  await expect(page.getByText('Сейчас без новых клиентов', { exact: true })).toHaveCount(1)
+  await expect(page.getByText('Тренер временно не принимает новых клиентов', { exact: true })).toHaveCount(0)
+  await expect(page.getByRole('button', { name: /Написать тренеру/ })).toHaveCount(0)
 })
 
 test('corporate invitation guest, wrong role and terminal states do not claim automatically',async({page},testInfo)=>{

@@ -1731,7 +1731,7 @@ test('Fit Lime trainer profile has addressed load retry and non-pilot control', 
   await page.goto('/profile')
   await expect(page.getByRole('alert')).toBeVisible()
   backend.setProfileFailure(false)
-  await page.getByRole('button', { name: 'Повторить' }).click()
+  await page.getByRole('button', { name: 'Повторить', exact: true }).click()
   await expect(page.getByRole('button', { name: 'Заполнить анкету' })).toBeVisible()
   await mockPilot(page)
   await page.reload()
