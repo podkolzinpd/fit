@@ -71,6 +71,46 @@ async function uncertainCreateFixture(page: Page, kind: 'payment' | 'package', f
 }
 
 export function financeAccountingCases() {
+  // Payment and service have separate endpoints and native date/amount layouts.
+  for (const kind of ['payment', 'package'] as const) test(`Finance uncertain ${kind} creation restores the same operation`, { tag: ['@lime-finance'] }, async ({ page }, info) => {
+    const { form, commands, open } = await uncertainCreateFixture(page, kind)
+    if (kind === 'package') await form.locator('summary').click()
+    for (const width of [320, 430, 1440]) {
+      await page.setViewportSize({ width, height: 844 })
+      await formGeometry(form)
+      await page.locator('.content').evaluate(node => { node.scrollTop = 0 })
+      await page.screenshot({ path: info.outputPath(`${kind}-uncertain-top-${width}.png`), fullPage: true })
+      await form.getByRole('button', { name: 'Повторить сохранение' }).scrollIntoViewIfNeeded()
+      await expect(form.getByLabel('Комментарий')).toHaveCSS('opacity', '1')
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+      await page.screenshot({ path: info.outputPath(`${kind}-uncertain-${width}.png`), fullPage: true })
+    }
+    await page.setViewportSize({ width: 390, height: 844 })
+    await form.getByRole('button', { name: 'Отмена' }).click()
+    await open()
+    await expect(form.getByLabel('Комментарий')).toHaveValue('Оплата переводом — сохранить исходную запись')
+    await expect(form.getByLabel(kind === 'payment' ? 'Дата' : 'Дата получения', { exact: true })).toHaveValue('2026-10-20')
+    await form.getByRole('button', { name: 'Повторить сохранение' }).scrollIntoViewIfNeeded()
+    await page.screenshot({ path: info.outputPath(`${kind}-retry-restored.png`), fullPage: true })
+    await form.getByRole('button', { name: 'Повторить сохранение' }).click()
+    await expect(form).toHaveCount(0)
+    expect(commands).toHaveLength(2)
+    expect(commands[1]).toEqual(commands[0])
+  })
+  // Short visual-only Mono states cover the different light/dark text tokens;
+  // business replay is exercised above, without multiplying the full chain.
+  for (const theme of ['light', 'dark']) test(`Finance uncertain create forms retain Mono ${theme} readability`, { tag: ['@lime-finance'] }, async ({ page }, info) => {
+    await page.addInitScript(theme => localStorage.setItem('fit.appTheme', theme), theme)
+    await page.setViewportSize({ width: 320, height: 640 })
+    for (const kind of ['payment', 'package'] as const) {
+      const { form } = await uncertainCreateFixture(page, kind, false)
+      expect(await form.evaluate(node => node.scrollWidth <= node.clientWidth + 1)).toBe(true)
+      await expect(form.getByLabel(kind === 'payment' ? 'Дата' : 'Дата получения', { exact: true })).toHaveCSS('opacity', '1')
+      await page.screenshot({ path: info.outputPath(`mono-${theme}-${kind}-uncertain.png`), fullPage: true })
+    }
+  })
+
+
   test('Finance workout deletion clears fresh attendance and overview caches', { tag: ['@lime-finance'] }, async ({ page }, info) => {
     await page.setViewportSize({ width: 390, height: 844 })
     const attendance = { ...workout, trainerId: coach, createdBy: coach, status: 'done' as const,
@@ -198,43 +238,6 @@ export function financeAccountingCases() {
     await expect(row).toContainText(/Просрочено 10\s000/)
     await expect(row).toContainText('Не привязано: 1')
     await page.screenshot({ path: info.outputPath('overview-after-payment.png'), fullPage: true })
-  // Payment and service have separate endpoints and native date/amount layouts.
-  for (const kind of ['payment', 'package'] as const) test(`Finance uncertain ${kind} creation restores the same operation`, { tag: ['@lime-finance'] }, async ({ page }, info) => {
-    const { form, commands, open } = await uncertainCreateFixture(page, kind)
-    if (kind === 'package') await form.locator('summary').click()
-    for (const width of [320, 430, 1440]) {
-      await page.setViewportSize({ width, height: 844 })
-      await formGeometry(form)
-      await page.locator('.content').evaluate(node => { node.scrollTop = 0 })
-      await page.screenshot({ path: info.outputPath(`${kind}-uncertain-top-${width}.png`), fullPage: true })
-      await form.getByRole('button', { name: 'Повторить сохранение' }).scrollIntoViewIfNeeded()
-      await expect(form.getByLabel('Комментарий')).toHaveCSS('opacity', '1')
-      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
-      await page.screenshot({ path: info.outputPath(`${kind}-uncertain-${width}.png`), fullPage: true })
-    }
-    await page.setViewportSize({ width: 390, height: 844 })
-    await form.getByRole('button', { name: 'Отмена' }).click()
-    await open()
-    await expect(form.getByLabel('Комментарий')).toHaveValue('Оплата переводом — сохранить исходную запись')
-    await expect(form.getByLabel(kind === 'payment' ? 'Дата' : 'Дата получения', { exact: true })).toHaveValue('2026-10-20')
-    await form.getByRole('button', { name: 'Повторить сохранение' }).scrollIntoViewIfNeeded()
-    await page.screenshot({ path: info.outputPath(`${kind}-retry-restored.png`), fullPage: true })
-    await form.getByRole('button', { name: 'Повторить сохранение' }).click()
-    await expect(form).toHaveCount(0)
-    expect(commands).toHaveLength(2)
-    expect(commands[1]).toEqual(commands[0])
-  })
-  // Short visual-only Mono states cover the different light/dark text tokens;
-  // business replay is exercised above, without multiplying the full chain.
-  for (const theme of ['light', 'dark']) test(`Finance uncertain create forms retain Mono ${theme} readability`, { tag: ['@lime-finance'] }, async ({ page }, info) => {
-    await page.addInitScript(theme => localStorage.setItem('fit.appTheme', theme), theme)
-    await page.setViewportSize({ width: 320, height: 640 })
-    for (const kind of ['payment', 'package'] as const) {
-      const { form } = await uncertainCreateFixture(page, kind, false)
-      expect(await form.evaluate(node => node.scrollWidth <= node.clientWidth + 1)).toBe(true)
-      await expect(form.getByLabel(kind === 'payment' ? 'Дата' : 'Дата получения', { exact: true })).toHaveCSS('opacity', '1')
-      await page.screenshot({ path: info.outputPath(`mono-${theme}-${kind}-uncertain.png`), fullPage: true })
-    }
   })
 
   // One behavior chain per engine; responsive snapshots resize the same state
