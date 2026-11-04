@@ -77,15 +77,59 @@ describe.skipIf(source===undefined)('bounded weekly-program writes and closed-re
       const before=(await f.owner.query('select to_jsonb(p) value from public.profiles p order by id')).rows
       expect(await runProgramImport(options)).toEqual({status:'identity_requires_review',code:'F01',workouts:0,
         readOnly:true,productionMutated:false,trainerVerified:false,legacyRegistryMatched:missing!=='email_binding',
-        retainedLoginBinding:missing!=='email_binding',reason:missing==='email_binding'?'email_binding_missing':'yandex_identity_missing'})
+        retainedLoginBinding:missing!=='email_binding',reason:missing==='email_binding'?'email_binding_missing':'yandex_identity_missing',
+        identityAuditVersion:1,retainedSourcesChecked:expect.any(Number) as unknown,retainedProfileCandidates:missing==='email_binding'?0:1,
+        linkedTrainerCandidates:0,retainedBindingSources:missing==='email_binding'?[]:['fit_lime_pilot_allowlist']})
       expect(f.receipts).toHaveLength(1)
       expect(f.receipts[0]?.receipt).toMatchObject({kind:'program_identity_inspection',packetSha256:options.approvedSha256})
+      expect(f.receipts[0]?.receipt.targetBinding).toBe(hash(JSON.stringify([
+        options.target.trainerEmailSha256,options.target.trainerLoginSha256,options.target.clientNameSha256])))
       expect(JSON.stringify(f.receipts)).not.toContain(f.coach)
       expect(f.started).toBe(false);expect(f.proof).toBeNull();expect(f.verified).toEqual([])
       for(const mode of ['apply','verify'] as const)await expect(runProgramImport({...options,mode})).rejects.toThrow('current_trainer_identity_required')
       expect(await f.count('clients')).toBe(0);expect(await f.count('workouts')).toBe(0)
       expect((await f.owner.query('select to_jsonb(p) value from public.profiles p order by id')).rows).toEqual(before)
     }
+  })
+  it('reports a retained mapping outside the three importer sources without selecting an actor',async()=>{
+    const f=await fixture()
+    await f.owner.query('delete from app_private.fit_lime_pilot_allowlist where profile_id=$1',[f.coach])
+    await f.owner.query('create table if not exists app_private.program_lookup_fixture(login_sha256 text,profile_id uuid)')
+    await f.owner.query('insert into app_private.program_lookup_fixture values($1,$2)',[f.options.target.trainerLoginSha256,f.coach])
+    const options={...f.options,legacyId:null}
+    expect(await runProgramImport(options)).toEqual({status:'identity_requires_review',code:'F01',workouts:0,
+      readOnly:true,productionMutated:false,trainerVerified:false,legacyRegistryMatched:false,retainedLoginBinding:false,
+      reason:'additional_binding_requires_review',identityAuditVersion:1,retainedSourcesChecked:expect.any(Number) as unknown,
+      retainedProfileCandidates:1,linkedTrainerCandidates:1,retainedBindingSources:['program_lookup_fixture']})
+    expect(JSON.stringify(f.receipts)).not.toContain(f.coach)
+    for(const mode of ['apply','verify'] as const)await expect(runProgramImport({...options,mode})).rejects.toThrow('current_trainer_identity_required')
+    expect(f.started).toBe(false);expect(f.proof).toBeNull()
+    expect(await f.count('clients')).toBe(0);expect(await f.count('workouts')).toBe(0)
+  })
+  it('includes an existing verified login-to-provider-subject mapping as readonly evidence',async()=>{
+    const f=await fixture()
+    await f.owner.query('delete from app_private.fit_lime_pilot_allowlist where profile_id=$1',[f.coach])
+    await f.owner.query(`insert into app_private.corporate_admin_logins(login_sha256,subject_sha256,enabled)
+      select $1,provider_subject_sha256,false from app_private.auth_identities where profile_id=$2 and provider='yandex'`,
+    [f.options.target.trainerLoginSha256,f.coach])
+    const options={...f.options,legacyId:null}
+    expect(await runProgramImport(options)).toMatchObject({status:'identity_requires_review',trainerVerified:false,
+      reason:'additional_binding_requires_review',retainedProfileCandidates:1,linkedTrainerCandidates:1,
+      retainedBindingSources:['corporate_admin_logins']})
+    expect(JSON.stringify(f.receipts)).not.toContain(f.coach)
+    await expect(runProgramImport({...options,mode:'apply'})).rejects.toThrow('current_trainer_identity_required')
+    expect(f.started).toBe(false);expect(await f.count('workouts')).toBe(0)
+  })
+  it('retains ambiguity across additional sources instead of guessing a trainer',async()=>{
+    const f=await fixture()
+    await f.owner.query('delete from app_private.fit_lime_pilot_allowlist where profile_id=$1',[f.coach])
+    await f.owner.query('create table if not exists app_private.program_lookup_fixture(login_sha256 text,profile_id uuid)')
+    await f.owner.query('insert into app_private.program_lookup_fixture values($1,$2),($3,$4)',
+      [f.options.target.trainerLoginSha256,f.coach,f.options.target.trainerEmailSha256,f.other])
+    expect(await runProgramImport({...f.options,legacyId:null})).toMatchObject({status:'identity_requires_review',
+      trainerVerified:false,retainedProfileCandidates:2,linkedTrainerCandidates:1,readOnly:true,productionMutated:false})
+    for(const id of [f.coach,f.other])expect(JSON.stringify(f.receipts)).not.toContain(id)
+    expect(f.started).toBe(false);expect(f.proof).toBeNull();expect(await f.count('workouts')).toBe(0)
   })
   it('keeps own workouts self without changing trainer role or creating an authentication account',async()=>{
     const f=await fixture('self')
