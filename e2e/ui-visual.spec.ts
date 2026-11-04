@@ -1,3 +1,4 @@
+import { clientCardAction } from './fit-lime-fixtures'
 import { test as standaloneTest } from '@playwright/test'
 import { nativeRouteFetch } from './native-local-fixture'
 import { mockTrainingSummaries } from './native-summary-fixture'
@@ -2895,7 +2896,7 @@ test('trainer Client Goal keeps its real create, stage and edit states in both t
   await expect(dialog).toBeVisible()
   await dialog.getByRole('button', { name: 'Архивировать' }).click()
   await expect(page).toHaveURL(new RegExp(`/clients/${clientId}$`))
-  await page.getByRole('button', { name: 'Архивировать клиента' }).click()
+  await (await clientCardAction(page, 'Архивировать клиента')).click()
   await gotoStable(page, '/profile/settings')
   await page.getByRole('switch', { name: 'Тёмная тема' }).uncheck()
 })

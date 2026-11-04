@@ -73,7 +73,7 @@ test('Fit Lime component variants stay inert outside the scoped trainer fixture'
   })
 
   await expect(frame).toHaveCSS('background-color', 'rgb(0, 0, 0)')
-  await expect(frame.locator('.fit-lime-component-fixture .primary')).toHaveCSS('background-color', 'rgb(182, 239, 77)')
+  await expect(frame.locator('.fit-lime-component-fixture .primary')).toHaveCSS('background-color', 'rgb(209, 253, 45)')
   await expect(frame.locator('.fit-lime-component-fixture .secondary')).toHaveCSS('background-color', 'rgb(37, 37, 41)')
   await expect(frame.locator('.fit-lime-component-fixture .card')).toHaveCSS('border-radius', '32px')
   await expect(frame.locator('.fit-lime-component-fixture .field input')).toHaveCSS('font-size', '16px')
@@ -98,7 +98,7 @@ for (const theme of ['light', 'dark']) {
     }, theme)
     const frame = page.locator('#client-lime-foundation')
     await expect(frame).toHaveCSS('background-color', theme === 'light' ? 'rgb(246, 247, 242)' : 'rgb(0, 0, 0)')
-    await expect(frame.locator('.primary')).toHaveCSS('background-color', 'rgb(182, 239, 77)')
+    await expect(frame.locator('.primary')).toHaveCSS('background-color', 'rgb(209, 253, 45)')
     await expect(frame.locator('.primary')).toHaveCSS('color', 'rgb(0, 0, 0)')
     await expect(frame.locator('p')).toHaveCSS('color', theme === 'light' ? 'rgb(85, 92, 76)' : 'rgb(184, 184, 189)')
   })

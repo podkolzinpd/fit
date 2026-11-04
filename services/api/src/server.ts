@@ -1,3 +1,4 @@
+import { DatabasePilotClientPhotos } from './client-profile-photo.js'
 import { TrainerConnectionConfirmationStore } from './trainer-connection-confirmation.js'
 import { CorporateInvitationsStore } from './corporate-invitations.js'
 import { CorporateServicesStore } from './corporate-services.js'
@@ -236,6 +237,7 @@ const mediaStorageConfig = readMediaStorageConfig()
 const yandexMediaStorage = mediaStorageConfig === undefined
   ? undefined
   : new YandexMediaObjectStorage(mediaStorageConfig)
+const pilotClientPhotos = databasePool === undefined || yandexMediaStorage === undefined ? undefined : new DatabasePilotClientPhotos(databasePool, yandexMediaStorage)
 const pilotTrainerProfiles = databasePool === undefined
   ? undefined
   : new DatabasePilotTrainerProfiles(databasePool, yandexMediaStorage)
@@ -297,6 +299,7 @@ const app = buildApp(
     ...(databasePool === undefined ? {} : { clientWorkoutStatsReader: new DatabaseClientWorkoutStatsReader(databasePool) }),
     ...(databasePool === undefined ? {} : { workoutHomeReader: new DatabaseWorkoutHomeReader(databasePool) }),
     ...(pilotTrainerWorkspace === undefined ? {} : { pilotTrainerWorkspace }),
+    ...(pilotClientPhotos === undefined ? {} : { pilotClientPhotos }),
     ...(pilotTrainerProfiles === undefined ? {} : { pilotTrainerProfiles }),
     ...(pilotTrainerDiscovery === undefined ? {} : { pilotTrainerDiscovery }),
     ...(pilotFavoriteWorkouts === undefined ? {} : { pilotFavoriteWorkouts }),

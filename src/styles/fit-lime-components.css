@@ -6,9 +6,9 @@ html.fit-lime-document,
   --lime-surface: #1a1a1c;
   --lime-surface-raised: #252529;
   --lime-surface-high: #3b3b40;
-  --lime-accent: #b6ef4d;
+  --lime-accent: var(--fit-brand-accent);
   --lime-accent-ink: var(--lime-accent);
-  --lime-accent-muted: #25360c;
+  --lime-accent-muted: color-mix(in srgb, var(--lime-accent, var(--fit-brand-accent)) 16%, #000);
   --lime-pink: #ba60ea;
   --lime-yellow: #f8b021;
   --lime-text: #ffffff;
@@ -47,7 +47,7 @@ html.fit-lime-document,
   --accent-border: var(--lime-accent);
   --primary-fill: var(--lime-accent);
   --accent-surface: var(--lime-accent-muted);
-  --accent-surface-border: #729b27;
+  --accent-surface-border: color-mix(in srgb, var(--lime-accent, var(--fit-brand-accent)) 55%, #000);
   --accent-ring: color-mix(in srgb, var(--lime-accent) 38%, transparent);
   --accent-soft: var(--lime-accent-muted);
   --on-accent: var(--lime-text-on-accent);
@@ -122,10 +122,10 @@ html.fit-lime-document,
   box-shadow: none;
 }
 .fit-lime .card { min-height: 76px; padding: 16px }
-.fit-lime .card:hover { border-color: #729b27; transform: none }
+.fit-lime .card:hover { border-color: color-mix(in srgb, var(--lime-accent, var(--fit-brand-accent)) 55%, #000); transform: none }
 .fit-lime .card p { color: var(--lime-text-secondary) }
 .fit-lime :where(.badge, .chip, .status-badge) { border-radius: 999px }
-.fit-lime .status-current { color: var(--lime-accent); border-color: #729b27; background: var(--lime-accent-muted) }
+.fit-lime .status-current { color: var(--lime-accent); border-color: color-mix(in srgb, var(--lime-accent, var(--fit-brand-accent)) 55%, #000); background: var(--lime-accent-muted) }
 .fit-lime .status-upcoming { color: var(--lime-text-secondary); border-color: var(--lime-divider); background: var(--lime-surface-raised) }
 .fit-lime .status-done { color: var(--success-fg); border-color: var(--success-border); background: var(--success-surface) }
 .fit-lime .skeleton-block { border-radius: 10px; background: var(--lime-surface-raised) }

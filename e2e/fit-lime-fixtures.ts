@@ -224,7 +224,7 @@ export const workout = {
 
 export type MockWorkout = Omit<typeof workout, 'trainerReview' | 'trainerReaction' | 'notes' | 'startTime' | 'endTime' | 'startedAt' | 'completedAt' | 'createdBy' | 'trainingFormat' | 'sessionRpe' | 'wellbeing' | 'discomfort' | 'clientComment' | 'feedbackSubmittedAt'> & { trainerReview?: string | null; trainerReaction?: TrainerReaction | null; notes: string | null; clientComment:string | null; feedbackSubmittedAt:string | null; sessionRpe?: number | null; wellbeing?: 'good' | 'normal' | 'bad' | null; discomfort?: boolean | null; createdBy: string | null; startTime: string | null; endTime: string | null; startedAt: string | null; completedAt: string | null; title?: string | null; trainingFormat?: 'self' | 'with_trainer'; plannedDate?: string; plannedStartTime?: string | null; plannedEndTime?: string | null; prepSeconds?: number; actualDurationSec?: number | null; activeCaloriesKcal?: number | null; calorieEstimateBasis?: string | null; calorieEstimateNotice?: string | null }
 
-export async function mockPilot(page: Page, options: { role?: 'trainer' | 'client'; profileId?: string; clientTrainerId?: string; pilot?: boolean; fitLime?: boolean; clientLime?: boolean; scheduleDensity?: 'comfortable' | 'compact'; hasClients?: boolean; clientRecords?: Array<{ id: string; fullName: string; archivedAt: string | null; version: number }>; workouts?: MockWorkout[]; withGoal?: boolean; withMeasurements?: boolean; clientGender?: 'male' | 'female'; withCustomExercise?: boolean; failProgress?: boolean; failProfile?: boolean; failFirstProfileSave?: boolean; failFirstCustomExerciseSave?: boolean; failArchive?: boolean; failClients?: boolean; failTrainingData?: boolean; failConnections?: boolean; failWorkspace?: boolean; failThreads?: boolean; questionWorkout?: boolean; failFirstSetConfirm?: boolean; failFirstSave?: boolean; failFirstChatSend?: boolean; failAppendAfterCommitAt?: number; showFeedbackNotice?: boolean; unseenCoachmarks?: string[] } = {}) {
+export async function mockPilot(page: Page, options: { role?: 'trainer' | 'client'; profileId?: string; clientTrainerId?: string; pilot?: boolean; fitLime?: boolean; clientLime?: boolean; scheduleDensity?: 'comfortable' | 'compact'; hasClients?: boolean; clientHasAccount?: boolean; clientRecords?: Array<{ id: string; fullName: string; archivedAt: string | null; version: number }>; workouts?: MockWorkout[]; withGoal?: boolean; withMeasurements?: boolean; clientGender?: 'male' | 'female'; withCustomExercise?: boolean; failProgress?: boolean; failProfile?: boolean; failFirstProfileSave?: boolean; failFirstCustomExerciseSave?: boolean; failArchive?: boolean; failClients?: boolean; failTrainingData?: boolean; failConnections?: boolean; failWorkspace?: boolean; failThreads?: boolean; questionWorkout?: boolean; failFirstSetConfirm?: boolean; failFirstSave?: boolean; failFirstChatSend?: boolean; failAppendAfterCommitAt?: number; showFeedbackNotice?: boolean; unseenCoachmarks?: string[] } = {}) {
   const profileId = options.profileId ?? trainerId
   const apiOrigin = process.env.VITE_YANDEX_API_BASE_URL ?? 'http://127.0.0.1:4100'
   let snoozedUntil: string | null = null
@@ -374,6 +374,8 @@ export async function mockPilot(page: Page, options: { role?: 'trainer' | 'clien
     } else if (url.pathname === '/v1/trainer-profile/catalog' && route.request().method() === 'POST') {
       professionalProfile = { ...professionalProfile, listedInCatalog: (route.request().postDataJSON() as { listed: boolean }).listed, version: professionalProfile.version + 1 }
       body = professionalProfile
+    } else if (url.pathname === `/v1/clients/${clientId}/photo` && route.request().method() === 'GET') {
+      body = { url: null, version: 0 }
     } else if (url.pathname === `/v1/clients/${clientId}/workout-stats`) {
       if (failTrainingData) {
         await route.fulfill({ status: 503, contentType: 'application/json', body: '{"error":"unavailable"}' })
@@ -490,7 +492,7 @@ export async function mockPilot(page: Page, options: { role?: 'trainer' | 'clien
       body = { clients: options.hasClients === false ? [] : clientRecords.filter((client) => url.searchParams.get('archived') === 'true' ? client.archivedAt !== null : client.archivedAt === null).map((client) => ({
         id: client.id,
         canArchive: true,
-        hasAccount: true,
+        hasAccount: options.clientHasAccount ?? true,
         fullName: client.fullName,
         canonicalFullName: client.fullName,
         gender: options.clientGender ?? null,
@@ -955,4 +957,15 @@ export async function revealLiveSet(page: Page, setId: string) {
     if (await card.locator(':scope > .coach-v79-card-body, :scope > .client-live-card-body').getAttribute('inert') !== null) await card.locator('button.coach-v79-card-toggle').click()
   }
   await expect.poll(() => row.evaluate(element => element.closest('[inert]') === null)).toBe(true)
+}
+
+export async function clientCardAction(page: Page, label: string): Promise<Locator> {
+  await expect(page.locator('.client-detail-page')).toBeVisible()
+  if (await page.locator('.client-profile-reference').count()) {
+    const trigger = page.getByRole('button', { name: 'Действия с профилем спортсмена' })
+    await expect(trigger).toBeVisible()
+    if (await trigger.getAttribute('aria-expanded') !== 'true') await trigger.click()
+    return page.getByRole('menuitem', { name: label, exact: true })
+  }
+  return page.getByRole('button', { name: label, exact: true })
 }

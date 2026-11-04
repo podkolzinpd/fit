@@ -1,3 +1,4 @@
+import { clientCardAction } from './fit-lime-fixtures'
 import { nativeSignIn, nativeRegister } from './native-local-fixture'
 import { expect, test } from './native-local-fixture'
 import { chooseWorkoutTime, expectWorkoutTime } from './workout-time-wheel'
@@ -723,9 +724,10 @@ test('trainer invitation links a client account', async ({ page }, testInfo) => 
   await expect(page.getByText('Карточка клиента и доступная история тренировок готовы к работе.')).toBeVisible()
   await page.getByRole('button', { name: 'Открыть карточку' }).click()
   await expect(page).toHaveURL(/\/clients\/[0-9a-f-]+$/)
-  const leaveButton = page.getByRole('button', { name: 'Отключиться от спортсмена' })
+  const leaveButton = (await clientCardAction(page, 'Отключиться от спортсмена'))
   await expect(leaveButton).toBeVisible()
   await page.keyboard.press('Escape')
+  await clientCardAction(page, 'Отключиться от спортсмена')
   await leaveButton.click()
   // In-app confirm (useConfirm) вместо нативного window.confirm — подтверждаем
   // кнопкой в диалоге.
