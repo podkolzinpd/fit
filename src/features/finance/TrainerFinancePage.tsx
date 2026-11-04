@@ -246,7 +246,9 @@ export function TrainerFinancePage() {
   const packageOperation = useRef<CreateOperation<TrainerFinancePackageDraft, PackageEditor> | null>(null)
   const paymentOperation = useRef<CreateOperation<TrainerFinancePaymentDraft, PaymentEditor> | null>(null)
   const [pendingPackageDraft, setPendingPackageDraft] = useState<TrainerFinancePackageDraft | null>(null)
-  const [pendingPaymentDraft, setPendingPaymentDraft] = useState<TrainerFinancePaymentDraft | null>(null)
+  const [pendingPayment, setPendingPayment] = useState<{ draft: TrainerFinancePaymentDraft; packageId: string } | null>(null)
+  const pendingPaymentDraft = pendingPayment?.draft ?? null
+  const pendingPaymentPackageId = pendingPayment?.packageId ?? null
   const manualOperation = useRef<{ draft: SessionAccountingDraft; requestId: string; attempts: number } | null>(null)
   const [pendingManualDraft, setPendingManualDraft] = useState<SessionAccountingDraft | null>(null)
   const [manualOpen, setManualOpen] = useState(false)
@@ -290,7 +292,7 @@ export function TrainerFinancePage() {
       if (editor.payment) return trainerFinance.updatePayment(editor.payment.id, { ...draft, expectedVersion: editor.payment.version })
       if (!paymentOperation.current) {
         paymentOperation.current = { draft, editor: { ...editor, packageId }, requestId: crypto.randomUUID(), attempts: 0 }
-        setPendingPaymentDraft(draft)
+        setPendingPayment({ draft, packageId })
       }
       const operation = paymentOperation.current
       operation.attempts += 1
@@ -299,12 +301,12 @@ export function TrainerFinancePage() {
     onSuccess: async (_, { editor }) => {
       await refresh()
       const restoredEditor = paymentOperation.current?.editor
-      paymentOperation.current = null; setPendingPaymentDraft(null)
+      paymentOperation.current = null; setPendingPayment(null)
       setPaymentEditor(current => current === editor || current === restoredEditor ? null : current)
     },
     onError: error => {
       if (isFirstRejectedCreate(error, paymentOperation.current)) {
-        paymentOperation.current = null; setPendingPaymentDraft(null)
+        paymentOperation.current = null; setPendingPayment(null)
       }
     },
   })
@@ -387,14 +389,14 @@ export function TrainerFinancePage() {
     <div><strong>{money(payment.amountCents)}</strong><span>{formatLocalDate(localDate(payment.receivedOn))}{payment.comment ? ` · ${payment.comment}` : ''}</span></div>
     {showService && <span className="finance-payment-package">{packageById.get(payment.packageId)?.title ?? 'Услуга удалена'}</span>}
     <OverflowMenu label={`Действия с оплатой ${money(payment.amountCents)}`} items={[
-      { label: 'Изменить', onClick: () => openPayment(payment.packageId, payment) },
+      { label: 'Изменить', disabled: pendingPaymentDraft !== null, onClick: () => openPayment(payment.packageId, payment) },
       { label: 'Удалить', danger: true, onClick: () => void confirm({ message: `Удалить оплату ${money(payment.amountCents)} от ${formatLocalDate(localDate(payment.receivedOn))}?`, confirmLabel: 'Удалить', danger: true }).then((ok) => { if (ok) removePayment.mutate(payment) }) },
     ]} />
   </div>
   const renderPackage = (item: TrainerFinancePackage, history = false) => {
     const servicePayments = payments.filter((payment) => payment.packageId === item.id)
     return <article className={`finance-package card${history ? ' is-history' : ''}`} key={item.id}>
-      <header><div><span className={`finance-status finance-status-${item.packageStatus}`}>{item.kind === 'online_coaching' ? 'Онлайн · ' : ''}{PACKAGE_STATUS[item.packageStatus]}</span><h2>{item.title}</h2></div><OverflowMenu label={`Действия с услугой ${item.title}`} items={[...(canCreate ? [{ label: 'Продлить', onClick: () => openPackage({ mode: 'renew', item }) }] : []), { label: 'Редактировать', onClick: () => openPackage({ mode: 'edit', item }) }]} /></header>
+      <header><div><span className={`finance-status finance-status-${item.packageStatus}`}>{item.kind === 'online_coaching' ? 'Онлайн · ' : ''}{PACKAGE_STATUS[item.packageStatus]}</span><h2>{item.title}</h2></div><OverflowMenu label={`Действия с услугой ${item.title}`} items={[...(canCreate ? [{ label: 'Продлить', disabled: pendingPackageDraft !== null, onClick: () => openPackage({ mode: 'renew', item }) }] : []), { label: 'Редактировать', disabled: pendingPackageDraft !== null, onClick: () => openPackage({ mode: 'edit', item }) }]} /></header>
       <div className="finance-package-summary finance-service-balance">
         {item.kind === 'session_pack'
           ? <p><span>Осталось занятий</span><strong>{item.sessionsRemaining} из {item.sessionsTotal}</strong></p>
@@ -405,14 +407,14 @@ export function TrainerFinancePage() {
         <span>С {formatLocalDate(localDate(item.startsOn))}{item.endsOn ? ` по ${formatLocalDate(localDate(item.endsOn))}` : ''}</span>
         <span className={item.paymentStatus === 'overdue' ? 'is-overdue' : ''}>{item.priceCents === 0 && item.paidCents > 0 ? 'Стоимость не указана' : item.paidCents > item.priceCents ? `Переплата ${money(item.paidCents - item.priceCents)}` : PAYMENT_STATUS[item.paymentStatus]}</span>
       </div>
-      {item.dueCents > 0 && <button type="button" className="secondary finance-inline-action" onClick={() => openPayment(item.id, undefined, true)}>Внести оплату</button>}
+      {(item.dueCents > 0 || pendingPaymentPackageId === item.id) && <button type="button" className="secondary finance-inline-action" disabled={pendingPaymentDraft !== null && pendingPaymentPackageId !== item.id} onClick={() => openPayment(item.id, undefined, true)}>{pendingPaymentPackageId === item.id ? 'Проверить сохранение' : 'Внести оплату'}</button>}
       <details className="finance-service-payments finance-disclosure"><summary><span>Оплаты</span><small>{servicePayments.length}</small></summary><div className="finance-disclosure-content"><div className="finance-payment-list">{servicePayments.map((payment) => renderPayment(payment, false))}</div>{servicePayments.length === 0 && <p className="finance-empty">Оплат пока нет.</p>}</div></details>
       <details className="finance-package-details finance-disclosure">
         <summary><span>Подробнее</span></summary>
         <div className="finance-disclosure-content">
           <div className="finance-package-facts">{item.kind === 'session_pack' && <p><span>Проведено</span><strong>{item.sessionsUsed}</strong></p>}</div>
           {item.comment && <p className="finance-comment">{item.comment}</p>}
-          <div className="finance-package-actions"><>{canCreate && <button type="button" className="secondary" onClick={() => openPackage({ mode: 'renew', item })}>Продлить</button>}</><button type="button" className="secondary" onClick={() => openPackage({ mode: 'edit', item })}>Изменить</button></div>
+          <div className="finance-package-actions"><>{canCreate && <button type="button" className="secondary" disabled={pendingPackageDraft !== null} onClick={() => openPackage({ mode: 'renew', item })}>Продлить</button>}</><button type="button" className="secondary" disabled={pendingPackageDraft !== null} onClick={() => openPackage({ mode: 'edit', item })}>Изменить</button></div>
         </div>
       </details>
     </article>
@@ -430,7 +432,7 @@ export function TrainerFinancePage() {
         <div className="finance-tabs" role="tablist" aria-label="Раздел финансов клиента">{FINANCE_TABS.map((tab) => <button id={`finance-${tab.id}-tab`} key={tab.id} type="button" role="tab" aria-label={`${tab.label}: ${tabCount[tab.id]}`} aria-selected={activeTab === tab.id} aria-controls={`finance-${tab.id}-panel`} className={activeTab === tab.id ? 'is-active' : ''} onClick={() => setActiveTab(tab.id)}><span>{tab.label}</span><small>{tabCount[tab.id]}</small></button>)}</div>
 
         <section id="finance-packages-panel" className="finance-tab-panel" data-finance-tab="packages" role="tabpanel" aria-labelledby="finance-packages-tab" hidden={activeTab !== 'packages'}>
-          <div className="finance-section-heading"><div><p className="eyebrow">УСЛУГИ</p><h2>{activePackages.length ? 'Текущие' : 'Нет активных'}</h2></div>{canCreate && <button type="button" className="primary" onClick={() => openPackage({ mode: 'new' })}>Новая</button>}</div>
+          <div className="finance-section-heading"><div><p className="eyebrow">УСЛУГИ</p><h2>{activePackages.length ? 'Текущие' : 'Нет активных'}</h2></div>{canCreate && <button type="button" className="primary" onClick={() => openPackage({ mode: 'new' })}>{pendingPackageDraft ? 'Проверить сохранение' : 'Новая'}</button>}</div>
           <div className="finance-package-list">{activePackages.map((item) => renderPackage(item))}</div>
           {finance.isSuccess && packages.length === 0 && <p className="finance-empty">Услуг пока нет.</p>}
           {pastPackages.length > 0 && <details className="finance-history finance-disclosure card"><summary><span>История</span><small>{pastPackages.length}</small></summary><div className="finance-disclosure-content finance-package-list">{pastPackages.map((item) => renderPackage(item, true))}</div></details>}
@@ -456,7 +458,7 @@ export function TrainerFinancePage() {
 
         <section id="finance-payments-panel" className="finance-tab-panel" data-finance-tab="payments" role="tabpanel" aria-labelledby="finance-payments-tab" hidden={activeTab !== 'payments'}>
           <div className="finance-payment-overview"><p><span>Получено</span><strong>{money(receivedCents)}</strong></p><p><span>К оплате</span><strong>{money(dueCents)}</strong></p></div>
-          <div className="finance-section-heading"><div><p className="eyebrow">ОПЛАТЫ</p><h2>История</h2></div><button type="button" className="primary" disabled={packages.length === 0} onClick={() => openPayment(activePackages[0]?.id ?? packages[0]!.id)}>Добавить</button></div>
+          <div className="finance-section-heading"><div><p className="eyebrow">ОПЛАТЫ</p><h2>История</h2></div><button type="button" className="primary" disabled={packages.length === 0 && !pendingPaymentDraft} onClick={() => openPayment(activePackages[0]?.id ?? packages[0]?.id ?? '')}>{pendingPaymentDraft ? 'Проверить сохранение' : 'Добавить'}</button></div>
           <div className="finance-payment-list finance-payment-ledger">{payments.map((payment) => renderPayment(payment))}</div>
           {finance.isSuccess && payments.length === 0 && <p className="finance-empty">Оплат пока нет.</p>}
         </section>

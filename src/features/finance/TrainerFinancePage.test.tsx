@@ -410,9 +410,10 @@ describe('TrainerFinancePage', () => {
     const create = kind === 'payment' ? finance.addPayment : finance.createPackage
     create.mockRejectedValueOnce(new Error('Нет сети'))
       .mockRejectedValueOnce(new RepositoryError('PT404', 'Связь временно недоступна'))
+    if (kind === 'payment') finance.listClient.mockResolvedValue({ ...bundle, packages: [...bundle.packages, { ...bundle.packages[0]!, id: workoutId, title: 'Другая услуга' }] })
     renderPage()
     await screen.findByRole('heading', { name: 'Персональные тренировки' })
-    const open = async () => user.click(screen.getByRole('button', { name: kind === 'payment' ? 'Внести оплату' : 'Новая' }))
+    const open = async () => user.click(screen.getAllByRole('button', { name: kind === 'payment' ? 'Внести оплату' : 'Новая' })[0]!)
     await open()
     if (kind === 'package') {
       await user.type(screen.getByLabelText('Стоимость, ₽'), '5000')
@@ -429,7 +430,8 @@ describe('TrainerFinancePage', () => {
     await screen.findByText('Сохранение не подтверждено')
     expect(screen.getByLabelText('Комментарий')).toBeDisabled()
     await user.click(screen.getByRole('button', { name: 'Отмена' }))
-    await open()
+    if (kind === 'payment') expect(screen.getByRole('button', { name: 'Внести оплату' })).toBeDisabled()
+    await user.click(screen.getByRole('button', { name: 'Проверить сохранение' }))
     expect(screen.getByLabelText('Комментарий')).toHaveValue('Получено переводом')
     expect(screen.getByLabelText(kind === 'payment' ? 'Дата' : 'Дата получения')).toHaveValue('2026-09-09')
     expect(screen.getByLabelText(kind === 'payment' ? 'Сумма, ₽' : 'Уже оплачено, ₽')).toHaveValue(2500)
