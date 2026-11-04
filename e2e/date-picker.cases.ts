@@ -22,6 +22,32 @@ async function safeArea(page: Page) {
 }
 
 export function datePickerCases() {
+  // Status dots need theme contrast and must fit outside the selected marker.
+  for (const theme of ['light', 'dark']) {
+    test(`date picker workout dots: ${theme}`, async ({ page }, info) => {
+      await page.setViewportSize({ width: 390, height: 844 })
+      await page.goto(`/e2e/fixtures/date-picker.html?variant=client&theme=${theme}&marks`)
+      await page.getByRole('button', { name: 'Выбрать дату', exact: true }).click()
+      const planned = page.getByRole('button', { name: '2 ноября 2026 г.' })
+      const done = page.getByRole('button', { name: '3 ноября 2026 г.' })
+      await expect(planned).toHaveAttribute('aria-pressed', 'true')
+      const geometry = await planned.evaluate(button => {
+        const dot = getComputedStyle(button, '::after')
+        const marker = button.firstElementChild!.getBoundingClientRect()
+        const day = button.getBoundingClientRect()
+        return { width: dot.width, color: dot.backgroundColor, bottom: day.bottom, markerBottom: marker.bottom }
+      })
+      expect(geometry.width).toBe('4px')
+      expect(geometry.bottom - geometry.markerBottom).toBeGreaterThanOrEqual(4)
+      expect(await done.evaluate(button => getComputedStyle(button, '::after').backgroundColor)).not.toBe(geometry.color)
+      await done.click()
+      await expect(done).toHaveAttribute('aria-pressed', 'true')
+      await expect(done).toHaveAttribute('data-workout-mark', 'done')
+      await page.screenshot({ path: info.outputPath(`dots-${theme}.png`) })
+      await page.getByRole('button', { name: 'Применить дату' }).click()
+      await expect(page.locator('output')).toContainText('2026-11-03')
+    })
+  }
   // Different compositions own different header/padding/height rules. Both
   // client themes matter; trainer keeps its approved dark identity.
   for (const variant of ['trainer', 'reference', 'client-dark', 'client-light']) {
