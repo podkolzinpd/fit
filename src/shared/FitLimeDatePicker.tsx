@@ -5,7 +5,8 @@ import { FitLimeSheetHeader } from './FitLimeSheetHeader'
 import { fitLimeOriginalIcons } from './fit-lime-icons'
 
 /** Presentation-only date choice. Parent owns navigation and persistence. */
-export function FitLimeDatePicker({ value, onChange, time, onTimeChange, triggerLabel, triggerIcon, triggerAriaLabel, onTrigger, controlRef, reference = false, disabled = false, clientLime = false, showEndTime = true, startLabel = 'Начало', today }: {
+export function FitLimeDatePicker({ value, onChange, time, onTimeChange, triggerLabel, triggerIcon, triggerAriaLabel, onTrigger, controlRef, reference = false, disabled = false, clientLime = false, showEndTime = true, startLabel = 'Начало', today, dayMarks }: {
+  dayMarks?: Readonly<Partial<Record<LocalDate, 'planned' | 'done'>>>
   value: LocalDate
   onChange: (date: LocalDate) => void
   time?: { start: string; end: string }
@@ -79,7 +80,7 @@ export function FitLimeDatePicker({ value, onChange, time, onTimeChange, trigger
           {Array.from({ length: offset }, (_, index) => <span key={`blank-${index}`} className={clientLime ? 'fit-lime-month-outside' : undefined} aria-hidden="true">{clientLime ? dayOfMonth(addDays(first, index - offset)) : null}</span>)}
           {Array.from({ length: last }, (_, index) => {
             const date = addDays(first, index)
-            return <button key={date} type="button" aria-label={formatLocalDate(date)} aria-pressed={draft === date} aria-current={clientLime && date === today ? 'date' : undefined} onClick={() => setDraft(date)}><span className={clientLime ? 'lime-calendar-day-marker' : undefined}>{index + 1}</span></button>
+            return <button key={date} type="button" aria-label={formatLocalDate(date)} aria-description={dayMarks?.[date] ? dayMarks[date] === 'planned' ? 'Есть запланированная тренировка' : 'Есть проведённая тренировка' : undefined} data-workout-mark={dayMarks?.[date]} aria-pressed={draft === date} aria-current={clientLime && date === today ? 'date' : undefined} onClick={() => setDraft(date)}><span className={clientLime ? 'lime-calendar-day-marker' : undefined}>{index + 1}</span></button>
           })}
           {clientLime && Array.from({ length: (7 - (offset + last) % 7) % 7 }, (_, index) => <span key={`next-${index}`} className="fit-lime-month-outside" aria-hidden="true">{index + 1}</span>)}
         </div></section>
