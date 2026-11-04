@@ -42,10 +42,12 @@ function optional(form: FormData, name: string) {
   return value || null
 }
 
-export function PackageForm({ current, template, today, saving, error, onCancel, onSubmit, lime = false }: {
+export function PackageForm({ current, template, today, saving, error, initialDraft, locked = false, onCancel, onSubmit, lime = false }: {
   lime?: boolean
   current?: TrainerFinancePackage
   template?: TrainerFinancePackage
+  initialDraft?: TrainerFinancePackageDraft
+  locked?: boolean
   today: string
   saving: boolean
   error: Error | null
@@ -59,13 +61,15 @@ export function PackageForm({ current, template, today, saving, error, onCancel,
   const renewalStart = template?.endsOn && template.endsOn >= today ? addDays(localDate(template.endsOn), 1) : today
   const renewalEnd = template?.endsOn && template.endsOn >= template.startsOn
     ? addDays(localDate(renewalStart), daysBetween(localDate(template.startsOn), localDate(template.endsOn))) : ''
-  const [startsOn, setStartsOn] = useState(current?.startsOn ?? renewalStart)
-  const [kind, setKind] = useState<TrainerFinancePackage['kind']>(source?.kind ?? 'session_pack')
-  const [title, setTitle] = useState(source?.title ?? 'Персональные тренировки')
-  const [priceValue, setPriceValue] = useState(source ? String(source.priceCents / 100) : '')
-  const [paidValue, setPaidValue] = useState('0')
+  const [startsOn, setStartsOn] = useState(initialDraft?.startsOn ?? current?.startsOn ?? renewalStart)
+  const [kind, setKind] = useState<TrainerFinancePackage['kind']>(initialDraft?.kind ?? source?.kind ?? 'session_pack')
+  const [title, setTitle] = useState(initialDraft?.title ?? source?.title ?? 'Персональные тренировки')
+  const [priceValue, setPriceValue] = useState(initialDraft ? String(initialDraft.priceCents / 100) : source ? String(source.priceCents / 100) : '')
+  const [paidValue, setPaidValue] = useState(initialDraft ? String(initialDraft.openingPaidCents / 100) : '0')
   const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
+    if (saving) return
+    if (locked && initialDraft) { onSubmit(initialDraft); return }
     setValidationError(null)
     if (lime) {
       const form = event.currentTarget
@@ -124,28 +128,28 @@ export function PackageForm({ current, template, today, saving, error, onCancel,
   const field = (name: string, label: string, input: ReactNode) => lime
     ? <div key={name} className="lime-finance-field"><Field label={label}>{input}</Field>{fieldErrors[name] && <small className="error" role="alert" id={`${errorId}-${name}`}>{fieldErrors[name]}</small>}</div>
     : <Field key={name} label={label}>{input}</Field>
-  const sessions = kind === 'session_pack' && field('sessionsTotal', lime ? 'Количество занятий' : 'Всего занятий', <input {...validation('sessionsTotal')} name="sessionsTotal" type="number" inputMode="numeric" min="1" max="10000" required defaultValue={source?.sessionsTotal || 10} />)
-  const used = kind === 'session_pack' && !current && field('openingUsedSessions', lime ? 'Уже проведено, занятий' : 'Уже проведено', <input {...validation('openingUsedSessions')} name="openingUsedSessions" type="number" inputMode="numeric" min="0" max="10000" required defaultValue="0" />)
-  const price = field('price', 'Стоимость, ₽', <input {...validation('price')} name="price" type="number" inputMode="decimal" min="0" step="0.01" required value={priceValue} onChange={(event) => setPriceValue(event.target.value)} />)
-  const paid = !current && field('openingPaid', 'Уже оплачено, ₽', <input {...validation('openingPaid')} name="openingPaid" type="number" inputMode="decimal" min="0" step="0.01" required value={paidValue} onChange={(event) => setPaidValue(event.target.value)} />)
+  const sessions = kind === 'session_pack' && field('sessionsTotal', lime ? 'Количество занятий' : 'Всего занятий', <input disabled={saving || locked} {...validation('sessionsTotal')} name="sessionsTotal" type="number" inputMode="numeric" min="1" max="10000" required defaultValue={initialDraft?.sessionsTotal ?? (source?.sessionsTotal || 10)} />)
+  const used = kind === 'session_pack' && !current && field('openingUsedSessions', lime ? 'Уже проведено, занятий' : 'Уже проведено', <input disabled={saving || locked} {...validation('openingUsedSessions')} name="openingUsedSessions" type="number" inputMode="numeric" min="0" max="10000" required defaultValue={initialDraft?.openingUsedSessions ?? 0} />)
+  const price = field('price', 'Стоимость, ₽', <input disabled={saving || locked} {...validation('price')} name="price" type="number" inputMode="decimal" min="0" step="0.01" required value={priceValue} onChange={(event) => setPriceValue(event.target.value)} />)
+  const paid = !current && field('openingPaid', 'Уже оплачено, ₽', <input disabled={saving || locked} {...validation('openingPaid')} name="openingPaid" type="number" inputMode="decimal" min="0" step="0.01" required value={paidValue} onChange={(event) => setPaidValue(event.target.value)} />)
   const costAndPayment = <div className="finance-cost-payment">
     <div className="finance-payment-fields">{price}{paid}</div>
-    {!current && <button type="button" className="link finance-fill-payment" disabled={saving || Number(priceValue) <= 0 || !priceValue} onClick={() => setPaidValue(priceValue)}>Вся сумма</button>}
-    {!current && Number(paidValue) > 0 && field('openingReceivedOn', 'Дата получения', <input {...validation('openingReceivedOn')} name="openingReceivedOn" type="date" required defaultValue={today} />)}
+    {!current && <button type="button" className="link finance-fill-payment" disabled={saving || locked || Number(priceValue) <= 0 || !priceValue} onClick={() => setPaidValue(priceValue)}>Вся сумма</button>}
+    {!current && Number(paidValue) > 0 && field('openingReceivedOn', 'Дата получения', <input disabled={saving || locked} {...validation('openingReceivedOn')} name="openingReceivedOn" type="date" required defaultValue={initialDraft?.openingReceivedOn ?? today} />)}
   </div>
   const dates = <>
-    {field('startsOn', 'Начало', <input {...validation('startsOn')} name="startsOn" type="date" required value={startsOn} onChange={(event) => setStartsOn(event.target.value)} />)}
-    {field('endsOn', 'Окончание', <input {...validation('endsOn')} name="endsOn" type="date" required={kind === 'online_coaching'} min={startsOn} defaultValue={current?.endsOn ?? renewalEnd} />)}
-    {field('paymentDueOn', 'Оплатить до', <input {...validation('paymentDueOn')} name="paymentDueOn" type="date" defaultValue={current?.paymentDueOn ?? ''} />)}
+    {field('startsOn', 'Начало', <input disabled={saving || locked} {...validation('startsOn')} name="startsOn" type="date" required value={startsOn} onChange={(event) => setStartsOn(event.target.value)} />)}
+    {field('endsOn', 'Окончание', <input disabled={saving || locked} {...validation('endsOn')} name="endsOn" type="date" required={kind === 'online_coaching'} min={startsOn} defaultValue={initialDraft ? initialDraft.endsOn ?? '' : current?.endsOn ?? renewalEnd} />)}
+    {field('paymentDueOn', 'Оплатить до', <input disabled={saving || locked} {...validation('paymentDueOn')} name="paymentDueOn" type="date" defaultValue={initialDraft ? initialDraft.paymentDueOn ?? '' : current?.paymentDueOn ?? ''} />)}
   </>
   return <form className={`finance-form card${lime ? ' lime-finance-form' : ''}`} noValidate={lime} aria-busy={saving} onSubmit={submit}>
     <div className="finance-form-heading"><div><p className="eyebrow">ФИНАНСЫ</p><h2>{current ? 'Редактирование' : template ? 'Продление' : 'Новая услуга'}</h2></div></div>
-    <Field label="Тип"><select name="kind" value={kind} disabled={Boolean(current)} onChange={(event) => {
+    <Field label="Тип"><select name="kind" value={kind} disabled={saving || locked || Boolean(current)} onChange={(event) => {
       const next = event.target.value as TrainerFinancePackage['kind']
       setKind(next)
       if (title === 'Персональные тренировки' || title === 'Онлайн-сопровождение') setTitle(next === 'session_pack' ? 'Персональные тренировки' : 'Онлайн-сопровождение')
     }}><option value="session_pack">Пакет занятий</option><option value="online_coaching">Онлайн-сопровождение</option></select></Field>
-    {field('title', 'Название', <input {...validation('title')} name="title" required maxLength={120} value={title} onChange={(event) => setTitle(event.target.value)} />)}
+    {field('title', 'Название', <input disabled={saving || locked} {...validation('title')} name="title" required maxLength={120} value={title} onChange={(event) => setTitle(event.target.value)} />)}
     {lime ? <>
       {kind === 'session_pack' && <fieldset><legend>Занятия</legend>{sessions}</fieldset>}
       <fieldset><legend>Стоимость и оплата</legend>{costAndPayment}</fieldset>
@@ -155,17 +159,19 @@ export function PackageForm({ current, template, today, saving, error, onCancel,
       ? <div className="finance-form-grid">{sessions}{price}</div>
       : <><div className="finance-form-grid">{sessions}{used}</div>{costAndPayment}</>}
       <div className="finance-form-grid">{dates}</div></>}
-    {field('comment', 'Комментарий', <textarea {...validation('comment')} name="comment" rows={2} maxLength={2000} defaultValue={source?.comment ?? ''} />)}
+    {field('comment', 'Комментарий', <textarea disabled={saving || locked} {...validation('comment')} name="comment" rows={2} maxLength={2000} defaultValue={initialDraft?.comment ?? source?.comment ?? ''} />)}
     {validationError && <p className="error" role="alert">{validationError}</p>}
-    {error && <InlineRequestError error={error} />}
+    {error && <InlineRequestError error={error} message={locked ? 'Сохранение не подтверждено' : undefined} />}
     {/* Keep the focused input until click: keyboard recovery on pointerdown
         otherwise moves this row before pointerup and loses the submission. */}
-    <div className="actions"><button type="button" className="secondary" disabled={saving} onPointerDown={(event) => event.preventDefault()} onClick={onCancel}>Отмена</button><button type="submit" className="primary" disabled={saving} onPointerDown={(event) => event.preventDefault()}>{saving ? 'Сохраняем…' : 'Сохранить'}</button></div>
+    <div className="actions"><button type="button" className="secondary" disabled={saving} onPointerDown={(event) => event.preventDefault()} onClick={onCancel}>Отмена</button><button type="submit" className="primary" disabled={saving} onPointerDown={(event) => event.preventDefault()}>{saving ? 'Сохраняем…' : locked ? 'Повторить сохранение' : 'Сохранить'}</button></div>
   </form>
 }
 
-export function PaymentForm({ current, packages = [], packageId, today, saving, error, onCancel, onSubmit }: {
+export function PaymentForm({ current, packages = [], packageId, today, saving, error, initialDraft, locked = false, onCancel, onSubmit }: {
   current?: TrainerFinancePayment
+  initialDraft?: TrainerFinancePaymentDraft
+  locked?: boolean
   packages?: TrainerFinancePackage[]
   packageId?: string
   today: string
@@ -176,9 +182,11 @@ export function PaymentForm({ current, packages = [], packageId, today, saving, 
 }) {
   const [validationError, setValidationError] = useState<string | null>(null)
   const [selectedPackageId, setSelectedPackageId] = useState(packageId ?? packages[0]?.id ?? '')
-  const [amount, setAmount] = useState(current ? String(current.amountCents / 100) : initialPaymentAmount(selectedPackageId, packages))
+  const [amount, setAmount] = useState(initialDraft ? String(initialDraft.amountCents / 100) : current ? String(current.amountCents / 100) : initialPaymentAmount(selectedPackageId, packages))
   return <form className="finance-form card" aria-busy={saving} onSubmit={(event) => {
     event.preventDefault()
+    if (saving) return
+    if (locked && initialDraft && packageId) { onSubmit(initialDraft, packageId); return }
     setValidationError(null)
     try {
       const form = new FormData(event.currentTarget)
@@ -192,12 +200,12 @@ export function PaymentForm({ current, packages = [], packageId, today, saving, 
     }
   }}>
     <div className="finance-form-heading"><div><p className="eyebrow">ОПЛАТА</p><h2>{current ? 'Редактирование' : 'Добавить оплату'}</h2></div></div>
-    {!current && packages.length > 1 && <Field label="Услуга"><select name="packageId" required value={selectedPackageId} onChange={(event) => { setSelectedPackageId(event.target.value); setAmount(initialPaymentAmount(event.target.value, packages)) }}>{packages.map((item) => <option key={item.id} value={item.id}>{item.title}</option>)}</select></Field>}
-    <div className="finance-form-grid"><Field label="Сумма, ₽"><input name="amount" type="number" inputMode="decimal" min="0.01" step="0.01" required value={amount} onChange={(event) => setAmount(event.target.value)} /></Field><Field label="Дата"><input name="receivedOn" type="date" required defaultValue={current?.receivedOn ?? today} /></Field></div>
-    <Field label="Комментарий"><input name="comment" maxLength={2000} defaultValue={current?.comment ?? ''} /></Field>
+    {!current && packages.length > 1 && <Field label="Услуга"><select disabled={saving || locked} name="packageId" required value={selectedPackageId} onChange={(event) => { setSelectedPackageId(event.target.value); setAmount(initialPaymentAmount(event.target.value, packages)) }}>{packages.map((item) => <option key={item.id} value={item.id}>{item.title}</option>)}</select></Field>}
+    <div className="finance-form-grid"><Field label="Сумма, ₽"><input disabled={saving || locked} name="amount" type="number" inputMode="decimal" min="0.01" step="0.01" required value={amount} onChange={(event) => setAmount(event.target.value)} /></Field><Field label="Дата"><input disabled={saving || locked} name="receivedOn" type="date" required defaultValue={initialDraft?.receivedOn ?? current?.receivedOn ?? today} /></Field></div>
+    <Field label="Комментарий"><input disabled={saving || locked} name="comment" maxLength={2000} defaultValue={initialDraft?.comment ?? current?.comment ?? ''} /></Field>
     {validationError && <p className="error" role="alert">{validationError}</p>}
-    {error && <InlineRequestError error={error} />}
-    <div className="actions"><button type="button" className="secondary" disabled={saving} onPointerDown={(event) => event.preventDefault()} onClick={onCancel}>Отмена</button><button type="submit" className="primary" disabled={saving} onPointerDown={(event) => event.preventDefault()}>{saving ? 'Сохраняем…' : 'Сохранить'}</button></div>
+    {error && <InlineRequestError error={error} message={locked ? 'Сохранение не подтверждено' : undefined} />}
+    <div className="actions"><button type="button" className="secondary" disabled={saving} onPointerDown={(event) => event.preventDefault()} onClick={onCancel}>Отмена</button><button type="submit" className="primary" disabled={saving} onPointerDown={(event) => event.preventDefault()}>{saving ? 'Сохраняем…' : locked ? 'Повторить сохранение' : 'Сохранить'}</button></div>
   </form>
 }
 
@@ -207,6 +215,12 @@ function initialPaymentAmount(packageId: string, packages: TrainerFinancePackage
 }
 
 type FinanceTab = 'packages' | 'sessions' | 'payments'
+type PaymentEditor = { packageId: string; payment?: TrainerFinancePayment; direct?: boolean }
+type CreateOperation<D, E> = { draft: D; editor: E; requestId: string; attempts: number }
+function isFirstRejectedCreate(error: Error, operation: { attempts: number } | null) {
+  return operation?.attempts === 1 && error instanceof RepositoryError && ['PT422', 'PT403', 'PT404'].includes(error.code)
+}
+
 type PackageEditor = { mode: 'new' } | { mode: 'edit' | 'renew'; item: TrainerFinancePackage }
 
 const FINANCE_TABS: { id: FinanceTab; label: string }[] = [
@@ -226,9 +240,11 @@ export function TrainerFinancePage() {
   const [activeTab, setActiveTab] = useState<FinanceTab>('packages')
   const [sessionFilter, setSessionFilter] = useState<'all' | 'unassigned' | 'trial'>('all')
   const [packageEditor, setPackageEditor] = useState<PackageEditor | null>(null)
-  const [paymentEditor, setPaymentEditor] = useState<{ packageId: string; payment?: TrainerFinancePayment; direct?: boolean } | null>(null)
-  const packageRequest = useRef<string | null>(null)
-  const paymentRequest = useRef<string | null>(null)
+  const [paymentEditor, setPaymentEditor] = useState<PaymentEditor | null>(null)
+  const packageOperation = useRef<CreateOperation<TrainerFinancePackageDraft, PackageEditor> | null>(null)
+  const paymentOperation = useRef<CreateOperation<TrainerFinancePaymentDraft, PaymentEditor> | null>(null)
+  const [pendingPackageDraft, setPendingPackageDraft] = useState<TrainerFinancePackageDraft | null>(null)
+  const [pendingPaymentDraft, setPendingPaymentDraft] = useState<TrainerFinancePaymentDraft | null>(null)
   const manualOperation = useRef<{ draft: SessionAccountingDraft; requestId: string; attempts: number } | null>(null)
   const [pendingManualDraft, setPendingManualDraft] = useState<SessionAccountingDraft | null>(null)
   const [manualOpen, setManualOpen] = useState(false)
@@ -238,20 +254,49 @@ export function TrainerFinancePage() {
   const finance = useQuery({ queryKey: ['trainer-finance', clientId], queryFn: () => trainerFinance.listClient(clientId) })
   const refresh = async () => { await queryClient.invalidateQueries({ queryKey: ['trainer-finance', clientId] }) }
   const savePackage = useMutation({
-    mutationFn: async (draft: TrainerFinancePackageDraft) => {
-      if (packageEditor?.mode === 'edit') return trainerFinance.updatePackage(packageEditor.item.id, { ...draft, expectedVersion: packageEditor.item.version })
-      packageRequest.current ??= crypto.randomUUID()
-      return trainerFinance.createPackage(clientId, { ...draft, requestId: packageRequest.current })
+    mutationFn: async ({ draft, editor }: { draft: TrainerFinancePackageDraft; editor: PackageEditor }) => {
+      if (editor.mode === 'edit') return trainerFinance.updatePackage(editor.item.id, { ...draft, expectedVersion: editor.item.version })
+      if (!packageOperation.current) {
+        packageOperation.current = { draft, editor, requestId: crypto.randomUUID(), attempts: 0 }
+        setPendingPackageDraft(draft)
+      }
+      const operation = packageOperation.current
+      operation.attempts += 1
+      return trainerFinance.createPackage(clientId, { ...operation.draft, requestId: operation.requestId })
     },
-    onSuccess: async () => { await refresh(); packageRequest.current = null; setPackageEditor(null) },
+    onSuccess: async (_, { editor }) => {
+      await refresh()
+      packageOperation.current = null; setPendingPackageDraft(null)
+      setPackageEditor(current => current === editor ? null : current)
+    },
+    onError: error => {
+      if (isFirstRejectedCreate(error, packageOperation.current)) {
+        packageOperation.current = null; setPendingPackageDraft(null)
+      }
+    },
   })
   const savePayment = useMutation({
-    mutationFn: async ({ draft, packageId }: { draft: TrainerFinancePaymentDraft; packageId: string }) => {
-      if (paymentEditor?.payment) return trainerFinance.updatePayment(paymentEditor.payment.id, { ...draft, expectedVersion: paymentEditor.payment.version })
-      paymentRequest.current ??= crypto.randomUUID()
-      return trainerFinance.addPayment(packageId, { ...draft, requestId: paymentRequest.current })
+    mutationFn: async ({ draft, packageId, editor }: { draft: TrainerFinancePaymentDraft; packageId: string; editor: PaymentEditor }) => {
+      if (editor.payment) return trainerFinance.updatePayment(editor.payment.id, { ...draft, expectedVersion: editor.payment.version })
+      if (!paymentOperation.current) {
+        paymentOperation.current = { draft, editor: { ...editor, packageId }, requestId: crypto.randomUUID(), attempts: 0 }
+        setPendingPaymentDraft(draft)
+      }
+      const operation = paymentOperation.current
+      operation.attempts += 1
+      return trainerFinance.addPayment(operation.editor.packageId, { ...operation.draft, requestId: operation.requestId })
     },
-    onSuccess: async () => { await refresh(); paymentRequest.current = null; setPaymentEditor(null) },
+    onSuccess: async (_, { editor }) => {
+      await refresh()
+      const restoredEditor = paymentOperation.current?.editor
+      paymentOperation.current = null; setPendingPaymentDraft(null)
+      setPaymentEditor(current => current === editor || current === restoredEditor ? null : current)
+    },
+    onError: error => {
+      if (isFirstRejectedCreate(error, paymentOperation.current)) {
+        paymentOperation.current = null; setPendingPaymentDraft(null)
+      }
+    },
   })
   const removePayment = useMutation({
     mutationFn: (payment: TrainerFinancePayment) => trainerFinance.voidPayment(payment.id, payment.version, 'Удалено тренером'),
@@ -318,10 +363,13 @@ export function TrainerFinancePage() {
   const receivedCents = payments.reduce((sum, payment) => sum + payment.amountCents, 0)
   const dueCents = packages.filter((item) => item.closedAt === null).reduce((sum, item) => sum + item.dueCents, 0)
   const tabCount: Record<FinanceTab, number> = { packages: packages.length, sessions: sessions.length, payments: payments.length }
+  const openPackage = (editor: PackageEditor) => {
+    if (!packageOperation.current && !savePackage.isPending) savePackage.reset()
+    setPackageEditor(packageOperation.current?.editor ?? editor)
+  }
   const openPayment = (packageId: string, payment?: TrainerFinancePayment, direct = false) => {
-    paymentRequest.current = null
-    savePayment.reset()
-    setPaymentEditor({ packageId, payment, direct })
+    if (!paymentOperation.current && !savePayment.isPending) savePayment.reset()
+    setPaymentEditor(paymentOperation.current?.editor ?? { packageId, payment, direct })
   }
   const renderPayment = (payment: TrainerFinancePayment, showService = true) => <div className="finance-payment" key={payment.id}>
     <div><strong>{money(payment.amountCents)}</strong><span>{formatLocalDate(localDate(payment.receivedOn))}{payment.comment ? ` · ${payment.comment}` : ''}</span></div>
@@ -334,7 +382,7 @@ export function TrainerFinancePage() {
   const renderPackage = (item: TrainerFinancePackage, history = false) => {
     const servicePayments = payments.filter((payment) => payment.packageId === item.id)
     return <article className={`finance-package card${history ? ' is-history' : ''}`} key={item.id}>
-      <header><div><span className={`finance-status finance-status-${item.packageStatus}`}>{item.kind === 'online_coaching' ? 'Онлайн · ' : ''}{PACKAGE_STATUS[item.packageStatus]}</span><h2>{item.title}</h2></div><OverflowMenu label={`Действия с услугой ${item.title}`} items={[{ label: 'Продлить', onClick: () => setPackageEditor({ mode: 'renew', item }) }, { label: 'Редактировать', onClick: () => setPackageEditor({ mode: 'edit', item }) }]} /></header>
+      <header><div><span className={`finance-status finance-status-${item.packageStatus}`}>{item.kind === 'online_coaching' ? 'Онлайн · ' : ''}{PACKAGE_STATUS[item.packageStatus]}</span><h2>{item.title}</h2></div><OverflowMenu label={`Действия с услугой ${item.title}`} items={[{ label: 'Продлить', onClick: () => openPackage({ mode: 'renew', item }) }, { label: 'Редактировать', onClick: () => openPackage({ mode: 'edit', item }) }]} /></header>
       <div className="finance-package-summary finance-service-balance">
         {item.kind === 'session_pack'
           ? <p><span>Осталось занятий</span><strong>{item.sessionsRemaining} из {item.sessionsTotal}</strong></p>
@@ -352,7 +400,7 @@ export function TrainerFinancePage() {
         <div className="finance-disclosure-content">
           <div className="finance-package-facts">{item.kind === 'session_pack' && <p><span>Проведено</span><strong>{item.sessionsUsed}</strong></p>}</div>
           {item.comment && <p className="finance-comment">{item.comment}</p>}
-          <div className="finance-package-actions"><button type="button" className="secondary" onClick={() => setPackageEditor({ mode: 'renew', item })}>Продлить</button><button type="button" className="secondary" onClick={() => setPackageEditor({ mode: 'edit', item })}>Изменить</button></div>
+          <div className="finance-package-actions"><button type="button" className="secondary" onClick={() => openPackage({ mode: 'renew', item })}>Продлить</button><button type="button" className="secondary" onClick={() => openPackage({ mode: 'edit', item })}>Изменить</button></div>
         </div>
       </details>
     </article>
@@ -364,13 +412,13 @@ export function TrainerFinancePage() {
     : `/clients/${clientId}`
   return <Page title="Финансы" subtitle={client.data?.fullName} back={financeBackTo} swipeBack className="trainer-finance-page">
     <AsyncView loading={client.isLoading || finance.isLoading} error={(client.error ?? finance.error) as Error | null} onRetry={() => { void client.refetch(); void finance.refetch() }}>
-      {packageEditor && <PackageForm lime={isFitLimeEnabled(actor)} current={packageEditor.mode === 'edit' ? packageEditor.item : undefined} template={packageEditor.mode === 'renew' ? packageEditor.item : undefined} today={today} saving={savePackage.isPending} error={savePackage.error} onCancel={() => { packageRequest.current = null; setPackageEditor(null) }} onSubmit={(draft) => savePackage.mutate(draft)} />}
-      {paymentEditor && <PaymentForm current={paymentEditor.payment} packages={paymentEditor.direct ? packages.filter((item) => item.id === paymentEditor.packageId) : packages} packageId={paymentEditor.packageId} today={today} saving={savePayment.isPending} error={savePayment.error} onCancel={() => { paymentRequest.current = null; setPaymentEditor(null) }} onSubmit={(draft, packageId) => savePayment.mutate({ draft, packageId })} />}
+      {packageEditor && <PackageForm lime={isFitLimeEnabled(actor)} current={packageEditor.mode === 'edit' ? packageEditor.item : undefined} template={packageEditor.mode === 'renew' ? packageEditor.item : undefined} today={today} saving={savePackage.isPending} error={savePackage.error} initialDraft={pendingPackageDraft ?? undefined} locked={pendingPackageDraft !== null} onCancel={() => setPackageEditor(null)} onSubmit={(draft) => savePackage.mutate({ draft, editor: packageEditor })} />}
+      {paymentEditor && <PaymentForm current={paymentEditor.payment} packages={paymentEditor.direct ? packages.filter((item) => item.id === paymentEditor.packageId) : packages} packageId={paymentEditor.packageId} today={today} saving={savePayment.isPending} error={savePayment.error} initialDraft={pendingPaymentDraft ?? undefined} locked={pendingPaymentDraft !== null} onCancel={() => setPaymentEditor(null)} onSubmit={(draft, packageId) => savePayment.mutate({ draft, packageId, editor: paymentEditor })} />}
       {!packageEditor && !paymentEditor && <>
         <div className="finance-tabs" role="tablist" aria-label="Раздел финансов клиента">{FINANCE_TABS.map((tab) => <button id={`finance-${tab.id}-tab`} key={tab.id} type="button" role="tab" aria-label={`${tab.label}: ${tabCount[tab.id]}`} aria-selected={activeTab === tab.id} aria-controls={`finance-${tab.id}-panel`} className={activeTab === tab.id ? 'is-active' : ''} onClick={() => setActiveTab(tab.id)}><span>{tab.label}</span><small>{tabCount[tab.id]}</small></button>)}</div>
 
         <section id="finance-packages-panel" className="finance-tab-panel" data-finance-tab="packages" role="tabpanel" aria-labelledby="finance-packages-tab" hidden={activeTab !== 'packages'}>
-          <div className="finance-section-heading"><div><p className="eyebrow">УСЛУГИ</p><h2>{activePackages.length ? 'Текущие' : 'Нет активных'}</h2></div><button type="button" className="primary" onClick={() => setPackageEditor({ mode: 'new' })}>Новая</button></div>
+          <div className="finance-section-heading"><div><p className="eyebrow">УСЛУГИ</p><h2>{activePackages.length ? 'Текущие' : 'Нет активных'}</h2></div><button type="button" className="primary" onClick={() => openPackage({ mode: 'new' })}>Новая</button></div>
           <div className="finance-package-list">{activePackages.map((item) => renderPackage(item))}</div>
           {finance.isSuccess && packages.length === 0 && <p className="finance-empty">Услуг пока нет.</p>}
           {pastPackages.length > 0 && <details className="finance-history finance-disclosure card"><summary><span>История</span><small>{pastPackages.length}</small></summary><div className="finance-disclosure-content finance-package-list">{pastPackages.map((item) => renderPackage(item, true))}</div></details>}
