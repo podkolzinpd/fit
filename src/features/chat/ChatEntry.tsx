@@ -20,17 +20,21 @@ export function ChatThreadsNotice({ loading, error, onRetry }: { loading: boolea
   return null
 }
 
+export function useOpenClientChat(clientId: string, trainerId: string, conversationId: string | null = null, back = 'history') {
+  const { chat } = useDataBackend()
+  const navigate = useNavigate()
+  return useMutation({
+    mutationFn: () => conversationId ? Promise.resolve(conversationId) : chat.open(clientId, trainerId),
+    onSuccess: (id) => navigate(`/chat/${id}`, { state: { chatBack: back } }),
+  })
+}
+
 export function ChatStartButton({ clientId, trainerId, conversationId = null, className = 'link', iconOnly = false,
   partnerName = '', unreadCount = 0, back = 'history', onBeforeOpen }: {
   clientId: string; trainerId: string; conversationId?: string | null; className?: string; iconOnly?: boolean
   partnerName?: string; unreadCount?: number; back?: string; onBeforeOpen?: () => void
 }) {
-  const { chat } = useDataBackend()
-  const navigate = useNavigate()
-  const open = useMutation({
-    mutationFn: () => conversationId ? Promise.resolve(conversationId) : chat.open(clientId, trainerId),
-    onSuccess: (id) => navigate(`/chat/${id}`, { state: { chatBack: back } }),
-  })
+  const open = useOpenClientChat(clientId, trainerId, conversationId, back)
   const label = partnerName
     ? `Сообщения с ${partnerName}${unreadCount > 0 ? `, непрочитанных: ${unreadCount}` : ''}`
     : 'Написать'

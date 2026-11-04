@@ -1,3 +1,4 @@
+import { clientCardAction } from './fit-lime-fixtures'
 import { workoutTemplateDraftSafetyCases, workoutTemplateSourceCases, workoutTemplateEntryCases, workoutTemplateReliabilityCases } from './workout-template-reliability.cases'
 import { workoutLifecycleCases } from './workout-lifecycle.cases'
 import { financeAccountingCases } from './finance-accounting.cases'
@@ -4749,13 +4750,13 @@ for (const [account, profileId] of [
       await page.screenshot({ path: screenshotPath, fullPage: true })
       await testInfo.attach('fit-lime-client-card', { path: screenshotPath, contentType: 'image/png' })
     }
-    await page.getByRole('button', { name: 'Архивировать клиента' }).click()
+    await (await clientCardAction(page, 'Архивировать клиента')).click()
     await expect(page.getByRole('alertdialog', { name: /Переместить карточку/ })).toBeVisible()
     await page.getByRole('alertdialog').getByRole('button', { name: 'Отмена' }).click()
-    await expect(page.getByRole('button', { name: 'Архивировать клиента' })).toBeVisible()
-    await page.getByRole('button', { name: 'Архивировать клиента' }).click()
+    await expect((await clientCardAction(page, 'Архивировать клиента'))).toBeVisible()
+    await (await clientCardAction(page, 'Архивировать клиента')).click()
     await page.getByRole('alertdialog').getByRole('button', { name: 'В архив' }).click()
-    await expect(page.getByRole('button', { name: 'Вернуть из архива' })).toBeVisible()
+    await expect((await clientCardAction(page, 'Вернуть из архива'))).toBeVisible()
     await expect(page.getByRole('status').getByText('Изменение архива сохранено')).toBeVisible()
     await page.getByRole('button', { name: 'Назад' }).click()
     await expect(page).toHaveURL(/\/clients$/)

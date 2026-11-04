@@ -50,4 +50,26 @@ test('Profile actions preserve the selected client and quick-start format',async
   await expect(page).toHaveURL(/\/workouts\/[^/]+\/live$/)
 })
 
+for (const connected of [false,true]) test(`Client connection indicator uses account state ${connected}`,async({page})=>{
+  await mockPilot(page,{fitLime:true,clientHasAccount:connected,workouts:[]})
+  await page.goto(`/clients/${clientId}`)
+  await expect(page.getByRole('img',{name:connected ? 'Клиент подключён к приложению' : 'Клиент ещё не подключён'})).toBeVisible()
+  const invite=page.getByRole('button',{name:'Пригласить в приложение',exact:true})
+  if(connected) await expect(invite).toHaveCount(0)
+  else {
+    await expect(invite).toBeVisible()
+    const plan=await page.getByRole('link',{name:'Запланировать тренировку'}).boundingBox()
+    const invitation=await invite.boundingBox()
+    expect(invitation!.y).toBeGreaterThanOrEqual(plan!.y+plan!.height)
+  }
+  await page.getByRole('button',{name:'Действия с профилем спортсмена'}).click()
+  await expect(page.getByRole('menuitem',{name:'Редактировать профиль'})).toBeVisible()
+  await expect(page.getByRole('menuitem',{name:'Архивировать клиента'})).toBeVisible()
+  await page.getByRole('menuitem',{name:'Архивировать клиента'}).click()
+  await expect(page.getByRole('alertdialog')).toBeVisible()
+  await page.getByRole('button',{name:'Отмена',exact:true}).click()
+  await page.getByRole('button',{name:'Действия с профилем спортсмена'}).click()
+  if(connected){await page.getByRole('menuitem',{name:'Написать',exact:true}).click();await expect(page).toHaveURL(/\/chat\//)}
+})
+
 }
