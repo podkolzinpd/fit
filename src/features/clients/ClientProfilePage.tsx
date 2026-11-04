@@ -56,7 +56,9 @@ export function ClientProfilePage() {
         </section>}
         {isClientLimeEnabled(actor) && <OwnClientProfileGoal client={client.data} />}
         {athleteSportProfile.supportsSportInterests && <section className="client-profile-card athlete-sport-card">
-          <h2>Мой спорт</h2>
+          <div className="client-own-sports-heading"><h2>Мой спорт</h2>
+            {isClientLimeEnabled(actor) && <Link to="/me/edit" state={{ from: '/me/profile' }} aria-label="Изменить мой спорт">Изменить</Link>}
+          </div>
           <AsyncView loading={sport.isLoading} error={sport.error} onRetry={() => void sport.refetch()}>
             {sport.data && (sport.data.sports.length > 0 || sport.data.bio) ? <>
               {sport.data.sports.length > 0 && <>

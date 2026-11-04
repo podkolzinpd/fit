@@ -38,3 +38,37 @@
 .phone-frame.fit-client-lime .client-own-goal-stages li span { display:block; color:var(--lime-text-secondary); font-size:13px; line-height:19px; }
 .phone-frame.fit-client-lime .client-own-goal-stages li[aria-current]::marker { color:var(--lime-accent-ink); }
 .phone-frame.fit-client-lime .client-own-goal-meta { font-size:13px; line-height:19px; color:var(--lime-text-secondary); margin:12px 0 0; }
+
+/* COP301–304: existing private sports, connection and finance actions. */
+.phone-frame.fit-client-lime .client-own-profile .athlete-sport-card { padding:0 8px 28px; border:0; border-radius:0; background:transparent; box-shadow:none; }
+.phone-frame.fit-client-lime .client-own-sports-heading { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:12px; }
+.phone-frame.fit-client-lime .client-own-sports-heading h2 { font-size:20px; line-height:24px; margin:0; }
+.phone-frame.fit-client-lime .client-own-sports-heading a { display:inline-flex; align-items:center; min-height:44px; color:var(--lime-accent-ink); font-size:14px; text-decoration:none; }
+.phone-frame.fit-client-lime .client-own-profile .athlete-sport-options { gap:8px; }
+.phone-frame.fit-client-lime .client-own-profile .athlete-sport-tag { padding:8px 12px; border:0; border-radius:12px; background:var(--lime-surface); color:var(--lime-text); font-size:14px; line-height:20px; }
+.phone-frame.fit-client-lime .client-own-profile .athlete-sport-more { min-height:44px; color:var(--lime-accent-ink); }
+.phone-frame.fit-client-lime .client-own-profile .athlete-sport-bio { margin:16px 0 0; font-size:14px; line-height:21px; color:var(--lime-text-secondary); white-space:pre-wrap; overflow-wrap:anywhere; }
+.phone-frame.fit-client-lime .client-own-profile .client-home-connections { margin:0 8px; padding:0; border:0; border-radius:0; background:transparent; gap:12px; box-shadow:none; }
+.phone-frame.fit-client-lime .client-own-profile .client-home-section-head h2 { margin:0; font-size:20px; line-height:24px; font-weight:500; }
+.phone-frame.fit-client-lime .client-own-profile .client-home-section-head .eyebrow { display:none; }
+.phone-frame.fit-client-lime .client-own-profile .client-trainer-connection-card { gap:10px; padding:16px 0; border:0; border-radius:0; background:transparent; box-shadow:none; }
+.phone-frame.fit-client-lime .client-own-profile .client-trainer-avatar { width:44px; height:44px; flex-basis:44px; border:0; border-radius:14px; background:var(--lime-surface); font-size:16px; }
+.phone-frame.fit-client-lime .client-own-profile .client-trainer-person strong { font-size:16px; line-height:21px; white-space:normal; overflow-wrap:anywhere; }
+.phone-frame.fit-client-lime .client-own-profile .client-trainer-person p { font-size:12px; line-height:17px; font-weight:400; }
+.phone-frame.fit-client-lime .client-own-profile .client-trainer-actions { flex-shrink:0; gap:8px; }
+.phone-frame.fit-client-lime .client-own-profile .client-trainer-actions .chat-start-wrap .link { min-height:44px; padding:0 10px; border:0; border-radius:14px; background:var(--lime-surface); color:var(--lime-text); font-size:14px; }
+.phone-frame.fit-client-lime .client-own-profile .client-trainer-actions .overflow-trigger { width:44px; height:44px; border:0; border-radius:14px; background:var(--lime-surface); }
+.phone-frame.fit-client-lime .client-own-profile .client-home-connections > .client-finance-home { margin:0; padding:16px 0; border:0; border-top:1px solid var(--lime-divider); border-bottom:1px solid var(--lime-divider); border-radius:0; background:transparent; }
+.phone-frame.fit-client-lime .client-own-profile .client-finance-home-heading .eyebrow { display:none; }
+.phone-frame.fit-client-lime .client-own-profile .client-finance-home-heading h2 { font-size:16px; line-height:22px; }
+.phone-frame.fit-client-lime .client-own-profile .client-finance-home-heading a { display:flex; align-items:center; min-height:44px; font-size:14px; color:var(--lime-accent-ink); }
+.phone-frame.fit-client-lime .client-own-profile .client-finance-home-row { padding:12px 0 0; gap:12px; }
+.phone-frame.fit-client-lime .client-own-profile .client-finance-home-row span { min-width:0; overflow-wrap:anywhere; }
+.phone-frame.fit-client-lime .client-own-profile .client-finance-home-row strong { font-size:16px; line-height:22px; }
+.phone-frame.fit-client-lime .client-own-profile .client-finance-home-row small { font-size:13px; line-height:19px; }
+.phone-frame.fit-client-lime .client-own-profile .client-trainer-search { justify-content:flex-start; min-height:48px; border:0; border-radius:14px; background:transparent; color:var(--lime-text); padding:8px 0; }
+.phone-frame.fit-client-lime .client-own-profile .client-trainer-search.primary { justify-content:center; background:var(--lime-accent); color:var(--lime-text-on-accent); padding:12px 16px; }
+.phone-frame.fit-client-lime .client-own-profile .client-trainer-invite-button { min-height:48px; background:var(--lime-surface); border:0; border-radius:14px; }
+.phone-frame.fit-client-lime .client-own-profile .client-home-connections > .muted,
+.phone-frame.fit-client-lime .client-own-profile .client-trainer-empty-description { font-size:13px; line-height:19px; color:var(--lime-text-secondary); }
+.phone-frame.fit-client-lime .client-own-profile :is(a,button,summary):focus-visible { outline:2px solid var(--lime-accent-ink); outline-offset:3px; }

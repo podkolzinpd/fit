@@ -64,6 +64,6 @@ export function OwnClientProfileHeader({ client, email }: { client: Client; emai
       <div><dd>{client.currentWeightKg?.toLocaleString('ru-RU', { maximumFractionDigits: 1 }) ?? '—'}</dd><dt>вес, кг</dt></div>
       <div><dd>{bmiLabel(client.heightCm, client.currentWeightKg).replace('.', ',')}</dd><dt>ИМТ</dt></div>
     </dl>
-    <Link className="client-own-profile-edit" to="/me/edit">Изменить данные</Link>
+    <Link className="client-own-profile-edit" to="/me/edit" state={{ from: '/me/profile' }}>Изменить данные</Link>
   </section>
 }
