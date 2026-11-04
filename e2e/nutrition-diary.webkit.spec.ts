@@ -340,10 +340,17 @@ test('nutrition manual input, empty search and source failure remain separate', 
   await expect(page.locator('.nutrition-entry')).toContainText('250 ккал')
 })
 
+async function openTrainerNutritionSummary(page: Page) {
+  await expect(page.locator('.client-detail-snapshot')).toBeAttached()
+  const secondary = page.locator('.client-profile-secondary')
+  if (await secondary.count()) await secondary.getByText('Статистика, замеры и питание', { exact: true }).click()
+}
+
 for (const theme of ['light', 'dark'] as const) test(`nutrition trainer consent and read-only diary ${theme}`, async ({ page }, info) => {
   const state = await fixture(page, { role: 'trainer', theme })
   await page.setViewportSize({ width: 1440, height: 1000 })
   await page.goto(`/clients/${clientId}`)
+  await openTrainerNutritionSummary(page)
   await expect(page.getByRole('region', { name: 'Питание сегодня' })).toContainText('Клиент пока не разрешил')
   await page.getByRole('link', { name: 'Открыть дневник' }).click()
   await expect(page.getByText('Клиент пока не разрешил просмотр дневника.', { exact: false })).toBeVisible()
@@ -374,11 +381,13 @@ test('nutrition trainer summary keeps count, update time and explicit latest-day
     totals: scaledNutrition(food, '100g', 150), version: 1, updatedAt: '2026-10-10T09:00:00Z', deletedAt: null }
   state.entries.push(entry)
   await page.goto(`/clients/${clientId}`)
+  await openTrainerNutritionSummary(page)
   const summary = page.getByRole('region', { name: 'Питание сегодня' })
   await expect(summary).toContainText('Записей: 1')
   await expect(summary).toContainText('Обновлено в 12:00')
   entry.day = '2026-10-09'
   await page.reload()
+  await openTrainerNutritionSummary(page)
   await expect(summary).toContainText('Сегодня записей нет')
   await expect(summary).not.toContainText('228,3 ккал')
   await summary.getByRole('link', { name: /Последние записи: 9 октября/ }).click()

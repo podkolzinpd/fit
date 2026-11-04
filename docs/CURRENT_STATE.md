@@ -73,7 +73,7 @@ YAFIT-667 завершён: PR1847/main91ce5582, общие правила и а
 - Frontend/API/PG/media — Cloud.ru, внешний вход — Yandex ID.
 - Vercel — redirect, Supabase — ограниченный legacy, не второй backend.
 - Runtime/decommission: [playbook](YANDEX_CUTOVER_PLAYBOOK.md).
-- Дизайн/механики/пилоты: [индекс решений](ACTIVE_CONTRACTS.md).
+- [Дизайн/механики](ACTIVE_CONTRACTS.md), [карточка/Lime](design/CLIENT_PROFILE_LIME_20261104.md).
 - YAFIT-668 заменил прежний fixed2-запрет: явный coach pilot/all/off; Original54/Compact48 сохраняются. Текущую конфигурацию проверять отдельно.
 - Локальные тесты не используют production-БД; полные макеты/пакет шрифтов не публикуются.
 
