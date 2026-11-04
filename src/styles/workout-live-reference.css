@@ -1,7 +1,7 @@
 /* Shared approved Live geometry. Client colours are inherited from its theme;
    fallback values preserve the existing trainer colour values. */
 
-.workout-live-reference.live-identity .live-workout-page { padding-inline: 16px; --coach-live-halo-color: rgb(182 239 77 / 20%); --coach-live-halo: radial-gradient(ellipse 240px 220px at 50% 0, var(--coach-live-halo-color), transparent); background: var(--workout-live-bg, #000) var(--coach-live-halo) no-repeat fixed }
+.workout-live-reference.live-identity .live-workout-page { padding-inline: 16px; --coach-live-halo-color: rgb(209 253 45 / 20%); --coach-live-halo: radial-gradient(ellipse 240px 220px at 50% 0, var(--coach-live-halo-color), transparent); background: var(--workout-live-bg, #000) var(--coach-live-halo) no-repeat fixed }
 .workout-live-reference.live-identity .live-workout-page:has(.coach-live-status.resting) { --coach-live-halo-color: rgb(248 176 33 / 24%) }
 .workout-live-reference.live-identity .live-pinned { --coach-clock-space: 176px; position: sticky; top: calc(44px - var(--coach-clock-space)); z-index: 8; background: var(--workout-live-bg, #000) var(--coach-live-halo) no-repeat fixed }
 /* Keep the reference clock out of the keyboard's working area. No new animation. */
@@ -12,13 +12,13 @@
 .workout-live-reference.live-identity .live-workout-page > .page-header > .coachmark-anchor { margin-left: auto }
 .workout-live-reference.live-identity .page-back { border: 0; background: transparent; border-radius: 99px }
 .workout-live-reference.live-identity .coach-live-finish { margin-left: auto; width: 44px; height: 44px; min-width: 44px; padding: 10px; border: 0; border-radius: 99px; color: var(--workout-live-text, #fff); background: var(--workout-live-surface, #1a1a1c) }
-.workout-live-reference.live-identity .coach-live-status { position: absolute; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 6px; color: var(--workout-live-accent, #b6ef4d); font-size: 16px; font-weight: 400; line-height: 16px; pointer-events: none }
-.workout-live-reference.live-identity .coach-live-status > span { width: 8px; height: 8px; border-radius: 50%; background: currentColor; box-shadow: 0 0 0 5px rgb(182 239 77 / 20%) }
+.workout-live-reference.live-identity .coach-live-status { position: absolute; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 6px; color: var(--workout-live-accent, var(--fit-brand-accent)); font-size: 16px; font-weight: 400; line-height: 16px; pointer-events: none }
+.workout-live-reference.live-identity .coach-live-status > span { width: 8px; height: 8px; border-radius: 50%; background: currentColor; box-shadow: 0 0 0 5px rgb(209 253 45 / 20%) }
 .workout-live-reference.live-identity .coach-live-status.resting { color: var(--workout-live-warning, #f8b021) }
 .workout-live-reference.live-identity .coach-live-status.resting > span { box-shadow: 0 0 0 5px rgb(248 176 33 / 20%) }
 .workout-live-reference.live-identity .live-timer-toolbar { display: block }
 .workout-live-reference.live-identity .live-timer-toolbar .coachmark-anchor { display: block; width: 100% }
-.workout-live-reference.live-identity .coach-live-clock { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 128px; margin: 16px 0 32px; color: var(--workout-live-accent, #b6ef4d) }
+.workout-live-reference.live-identity .coach-live-clock { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 128px; margin: 16px 0 32px; color: var(--workout-live-accent, var(--fit-brand-accent)) }
 .workout-live-reference.live-identity .coach-live-clock-rest { color: var(--workout-live-warning, #f8b021) }
 .workout-live-reference.live-identity .coach-live-digits { font-family: 'Doto', monospace; font-variation-settings: 'ROND' 0, 'wght' 700; font-weight: 700; font-size: clamp(72px, 24vw, 96px); line-height: 104px; letter-spacing: -2px; font-variant-numeric: tabular-nums; white-space: nowrap }
 .workout-live-reference.live-identity .coach-live-digits-long { font-size: clamp(48px, 16vw, 64px); letter-spacing: -1px }
@@ -127,7 +127,7 @@
    card radius32, inset/gaps2, index40, rest60/radius20. Original input/check54;
    compact48 per owner18.10. Dynamic content is never fixed-height. */
 .workout-live-reference.live-identity .live-workout-page.coach-live-density { padding: 0 2px; background: var(--workout-live-bg, #000) }
-.workout-live-reference.live-identity .live-workout-page.coach-live-density { --coach-live-halo-color: rgb(182 239 77 / calc(.2 * var(--coach-live-halo-fade, 1))) }
+.workout-live-reference.live-identity .live-workout-page.coach-live-density { --coach-live-halo-color: rgb(209 253 45 / calc(.2 * var(--coach-live-halo-fade, 1))) }
 .workout-live-reference.live-identity .live-workout-page.coach-live-density:has(.coach-live-status.resting) { --coach-live-halo-color: rgb(248 176 33 / calc(.24 * var(--coach-live-halo-fade, 1))) }
 .workout-live-reference.live-identity .coach-live-density > .page-header { margin: 0; padding-inline: 14px; min-height: 44px; background: var(--workout-live-bg, #000) var(--coach-live-halo) no-repeat scroll center 0 }
 /* Paint locally (not WebKit fixed tiles), but align the world origin through
