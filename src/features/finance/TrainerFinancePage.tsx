@@ -244,7 +244,9 @@ export function TrainerFinancePage() {
   const packageOperation = useRef<CreateOperation<TrainerFinancePackageDraft, PackageEditor> | null>(null)
   const paymentOperation = useRef<CreateOperation<TrainerFinancePaymentDraft, PaymentEditor> | null>(null)
   const [pendingPackageDraft, setPendingPackageDraft] = useState<TrainerFinancePackageDraft | null>(null)
-  const [pendingPaymentDraft, setPendingPaymentDraft] = useState<TrainerFinancePaymentDraft | null>(null)
+  const [pendingPayment, setPendingPayment] = useState<{ draft: TrainerFinancePaymentDraft; packageId: string } | null>(null)
+  const pendingPaymentDraft = pendingPayment?.draft ?? null
+  const pendingPaymentPackageId = pendingPayment?.packageId ?? null
   const manualOperation = useRef<{ draft: SessionAccountingDraft; requestId: string; attempts: number } | null>(null)
   const [pendingManualDraft, setPendingManualDraft] = useState<SessionAccountingDraft | null>(null)
   const [manualOpen, setManualOpen] = useState(false)
@@ -280,7 +282,7 @@ export function TrainerFinancePage() {
       if (editor.payment) return trainerFinance.updatePayment(editor.payment.id, { ...draft, expectedVersion: editor.payment.version })
       if (!paymentOperation.current) {
         paymentOperation.current = { draft, editor: { ...editor, packageId }, requestId: crypto.randomUUID(), attempts: 0 }
-        setPendingPaymentDraft(draft)
+        setPendingPayment({ draft, packageId })
       }
       const operation = paymentOperation.current
       operation.attempts += 1
@@ -289,12 +291,12 @@ export function TrainerFinancePage() {
     onSuccess: async (_, { editor }) => {
       await refresh()
       const restoredEditor = paymentOperation.current?.editor
-      paymentOperation.current = null; setPendingPaymentDraft(null)
+      paymentOperation.current = null; setPendingPayment(null)
       setPaymentEditor(current => current === editor || current === restoredEditor ? null : current)
     },
     onError: error => {
       if (isFirstRejectedCreate(error, paymentOperation.current)) {
-        paymentOperation.current = null; setPendingPaymentDraft(null)
+        paymentOperation.current = null; setPendingPayment(null)
       }
     },
   })
@@ -393,7 +395,7 @@ export function TrainerFinancePage() {
         <span>С {formatLocalDate(localDate(item.startsOn))}{item.endsOn ? ` по ${formatLocalDate(localDate(item.endsOn))}` : ''}</span>
         <span className={item.paymentStatus === 'overdue' ? 'is-overdue' : ''}>{item.priceCents === 0 && item.paidCents > 0 ? 'Стоимость не указана' : item.paidCents > item.priceCents ? `Переплата ${money(item.paidCents - item.priceCents)}` : PAYMENT_STATUS[item.paymentStatus]}</span>
       </div>
-      <button type="button" className="secondary finance-inline-action" disabled={pendingPaymentDraft !== null && paymentOperation.current?.editor.packageId !== item.id} onClick={() => openPayment(item.id, undefined, true)}>{paymentOperation.current?.editor.packageId === item.id ? 'Проверить сохранение' : 'Внести оплату'}</button>
+      <button type="button" className="secondary finance-inline-action" disabled={pendingPaymentDraft !== null && pendingPaymentPackageId !== item.id} onClick={() => openPayment(item.id, undefined, true)}>{pendingPaymentPackageId === item.id ? 'Проверить сохранение' : 'Внести оплату'}</button>
       <details className="finance-service-payments finance-disclosure"><summary><span>Оплаты</span><small>{servicePayments.length}</small></summary><div className="finance-disclosure-content"><div className="finance-payment-list">{servicePayments.map((payment) => renderPayment(payment, false))}</div>{servicePayments.length === 0 && <p className="finance-empty">Оплат пока нет.</p>}</div></details>
       <details className="finance-package-details finance-disclosure">
         <summary><span>Подробнее</span></summary>

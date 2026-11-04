@@ -87,6 +87,8 @@ export function financeAccountingCases() {
     }
     await page.setViewportSize({ width: 390, height: 844 })
     await form.getByRole('button', { name: 'Отмена' }).click()
+    await page.setViewportSize({ width: 320, height: 844 })
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
     await page.screenshot({ path: info.outputPath(`${kind}-pending-return.png`), fullPage: true })
     await page.getByRole('button', { name: 'Проверить сохранение', exact: true }).click()
     await expect(form.getByLabel('Комментарий')).toHaveValue('Оплата переводом — сохранить исходную запись')
