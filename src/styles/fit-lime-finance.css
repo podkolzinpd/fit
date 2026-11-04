@@ -1,0 +1,76 @@
+/* FIN403: finance composition uses the approved Lime roles. No global theme
+   or other screen changes; the shared accent follows the identity rollout. */
+.phone-frame.fit-lime-shell.finance-lime-shell :is(.trainer-finance-page, .finance-overview-page) {
+  width: 100%; max-width: 760px; margin: 0 auto; padding: 12px 12px 24px;
+  color: var(--lime-text);
+}
+.finance-lime-shell .content { scroll-padding-bottom: calc(116px + env(safe-area-inset-bottom)); }
+.phone-frame.fit-lime-shell.finance-lime-shell .trainer-tab-bar { background: var(--lime-surface); border-color: var(--lime-divider); }
+.phone-frame.fit-lime-shell.finance-lime-shell .page-header {
+  display: grid; grid-template-columns: 44px minmax(0, 1fr) 44px;
+  gap: 12px; align-items: center; margin-bottom: 16px;
+}
+.finance-lime-shell .page-header .page-back { grid-column: 1; grid-row: 1; }
+.finance-lime-shell .page-header > :is(h1, .page-title-group) { grid-column: 2; grid-row: 1; min-width: 0; text-align: center; }
+.phone-frame.fit-lime-shell.finance-lime-shell .page-title-group { display: grid; gap: 6px; }
+.phone-frame.fit-lime-shell.finance-lime-shell .page-title-group > p {
+  margin: 0; max-width: 100%; font-size: 14px; line-height: 20px;
+  white-space: normal; overflow-wrap: anywhere; text-overflow: clip;
+}
+.phone-frame.fit-lime-shell.finance-lime-shell :is(.finance-form, .finance-package) {
+  display: grid; grid-template-columns: minmax(0, 1fr); justify-content: stretch;
+  justify-items: stretch; align-items: stretch; gap: 16px; padding: 16px;
+  border: 1px solid var(--lime-divider); border-radius: var(--lime-radius-card);
+  background: var(--lime-surface); box-shadow: none;
+}
+.finance-lime-shell .finance-package > header { display: grid; grid-template-columns: minmax(0, 1fr) 44px; align-items: start; gap: 12px; }
+.finance-lime-shell .finance-package > header .overflow-menu { justify-self: end; }
+.finance-lime-shell .finance-package > * { min-width: 0; }
+.finance-lime-shell .finance-package h2 { margin-top: 8px; }
+.finance-lime-shell :is(.finance-status-active, .finance-status-completed) { color: var(--lime-text); }
+.finance-lime-shell .finance-service-balance { grid-template-columns: minmax(0, 1fr); }
+.finance-lime-shell .finance-service-balance p { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; }
+.finance-lime-shell .finance-service-money { grid-template-columns: repeat(auto-fit, minmax(95px, 1fr)); }
+.finance-lime-shell :is(.finance-package-facts, .finance-payment-overview) p { padding: 10px; border-color: var(--lime-divider); background: var(--lime-surface-raised); }
+.finance-lime-shell :is(.finance-package-facts, .finance-payment-overview) span { font-size: 12px; line-height: 16px; }
+.finance-lime-shell :is(.finance-package-facts, .finance-payment-overview) strong { font-size: 16px; line-height: 22px; overflow-wrap: anywhere; }
+.finance-lime-shell :is(.finance-package-meta, .finance-comment, .finance-empty) { font-size: 14px; line-height: 20px; overflow-wrap: anywhere; }
+.finance-lime-shell .finance-package-meta { align-items: start; flex-direction: column; gap: 4px; }
+.finance-lime-shell .finance-inline-action { margin-top: 0; }
+.finance-lime-shell .finance-section-heading { margin: 12px 0; flex-wrap: wrap; }
+.finance-lime-shell .finance-tabs { background: var(--lime-surface-raised); border-color: var(--lime-divider); border-radius: 24px; }
+.phone-frame.fit-lime-shell.finance-lime-shell .finance-tabs button { font-size: 14px; line-height: 18px; }
+.finance-lime-shell .finance-tabs button.is-active { background: var(--lime-surface); color: var(--lime-text); }
+.finance-lime-shell .finance-tabs button small { font-size: 11px; }
+.finance-lime-shell .finance-form .field { gap: 8px; font-size: 14px; line-height: 20px; }
+.finance-lime-shell .finance-form :is(input, select, textarea) { width: 100%; min-width: 0; border-radius: 20px; }
+.finance-lime-shell .finance-form textarea { resize: vertical; }
+.finance-lime-shell .finance-form .actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.finance-lime-shell .finance-form .actions button { flex: 1 1 120px; }
+.finance-lime-shell .finance-form fieldset { padding-block: 12px; }
+.finance-lime-shell .finance-form legend { margin-bottom: 8px; }
+.finance-lime-shell .finance-form-grid { grid-template-columns: minmax(0, 1fr); gap: 16px; }
+.finance-lime-shell .finance-payment-fields { gap: 12px; }
+.finance-lime-shell .finance-overview-client {
+  grid-template-columns: minmax(0, 1fr) 20px; align-items: center;
+  gap: 8px 12px; padding: 16px; min-height: 76px;
+}
+.finance-lime-shell .finance-overview-client > span:nth-child(2) { grid-column: 1; font-size: 14px; line-height: 20px; }
+.finance-lime-shell .finance-overview-client > svg { grid-column: 2; grid-row: 1 / span 2; }
+.finance-lime-shell .finance-overview-client strong { white-space: normal; overflow-wrap: anywhere; font-size: 16px; line-height: 22px; }
+.finance-lime-shell .finance-overview-summary { margin-bottom: 16px; }
+.finance-lime-shell .finance-overview-summary strong { white-space: normal; overflow-wrap: anywhere; text-overflow: clip; }
+.finance-lime-shell .finance-period-block > span { font-size: 12px; text-transform: none; letter-spacing: normal; }
+.finance-lime-shell .finance-payment-ledger { padding: 0 16px; border-radius: var(--lime-radius-card); background: var(--lime-surface); }
+.finance-lime-shell .finance-payment-ledger .finance-payment { grid-template-columns: minmax(0, 1fr) 44px; align-items: start; gap: 6px 12px; padding: 16px 0; }
+.finance-lime-shell .finance-payment-ledger .finance-payment-package { grid-column: 1; grid-row: 2; text-align: left; }
+.finance-lime-shell .finance-payment-ledger .overflow-menu { grid-column: 2; grid-row: 1 / span 2; }
+.finance-lime-shell .finance-payment :is(strong, span, a) { white-space: normal; overflow-wrap: anywhere; text-overflow: clip; }
+.finance-lime-shell .finance-payment strong { font-size: 16px; line-height: 22px; }
+.finance-lime-shell .finance-payment span { font-size: 14px; line-height: 20px; }
+.finance-lime-shell .finance-payment > div:first-child { gap: 6px; }
+.finance-lime-shell .finance-disclosure { background: var(--lime-surface-raised); border-color: var(--lime-divider); }
+.finance-lime-shell .finance-disclosure > summary { font-size: 14px; font-weight: 500; }
+@media (min-width: 600px) {
+  .phone-frame.fit-lime-shell.finance-lime-shell :is(.trainer-finance-page, .finance-overview-page) { padding-inline: 20px; }
+}

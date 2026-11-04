@@ -131,3 +131,23 @@ Browser2/2 Chromium/WebKit: изменён второй из трёх этапо
 разрешённый локальный запуск прошёл, это не отказ приложения.
 Открыто: PR2 пока локальный, sequential source/main/release после приёмкиPR1.
 Дальше: подготовить COP301–304; PR1989 newsource483aacd8 CI41888524738.
+
+
+## Итерация 6 — 04.11.2026 — Codex / OpenAI
+
+Задача: необходимая интеграция фактического squash1979/d7de75bb.
+Расхождения: actualmain изменился во время CI483; его старый результат не
+заменяет проверку объединённого source. Решение: ordinary merge без конфликтов,
+обе истории сохранены.10incomingfiles213+/19-: финансовые Lime стили/карточки/
+payments/tests/журнал, scopedAppLayout и import. Наши header/photo/API/migration188
+сохранены; package/lock/android/nativepolicy и SQL входящего main не менялись.
+Проверка:13componentpassed, split/partition8passed с новым финансовым сценарием,
+production build/startup/fonts2/2 passed;14/14header/settings/visual browser
+Chromium/WebKit19.7s,0retry/skips. Правила actualmain AGENTS/workflow/contracts
+сверены черезGit, новых инструкций нет. CI483 metadata сохранены перед заменой.
+Дополнительно отдельный own-profile acceptance harness прошёл14/14 локально
+11.3s под запретом realAPIwrites; inventory стадий6/8/14 exactsource проверен.
+Это проверка harness, не публикация/не фактическая production-приёмка.
+Открыто: новый fullsourceCI после merge; actual1979 ещё проходит CI/выпуск.
+Дальше: normal push необходимого объединения и наблюдение точных новых runs,
+без duplicate dispatch и без занятия чужого production окна.
