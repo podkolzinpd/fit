@@ -46,11 +46,17 @@ describe('trainerFinanceClientLabel deadlines', () => {
   it('does not show an obsolete deadline for a paid client', () => {
     expect(trainerFinanceClientLabel({ ...client, dueCents: 0 })).not.toMatch(/до|срок/)
   })
+  it('does not label future debt as overdue and retains exact kopecks', () => {
+    const text = trainerFinanceClientLabel({ ...client, dueCents: 1100001, overdueCents: 100001, overdue: true, unpaidPackageCount: 2 })
+    expect(text).toMatch(/^К оплате 11\s000,01\s₽/)
+    expect(text).toMatch(/Из них просрочено 1\s000,01\s₽/)
+    expect(text).not.toMatch(/просрочено 11/)
+  })
   it('preserves the overdue state and deadline', () => {
-    expect(trainerFinanceClientLabel({ ...client, overdue: true })).toMatch(/^Просрочено .* · до 08\.10$/)
+    expect(trainerFinanceClientLabel({ ...client, overdue: true })).toMatch(/^К оплате .* · до 08\.10\nЕсть просрочка$/)
   })
   it('keeps the debt, overdue state, deadline and unassigned count visible together', () => {
-    expect(trainerFinanceClientLabel({ ...client, unassignedSessions: 2, overdue: true })).toMatch(/^Просрочено 2\s500\s₽ · до 08\.10\nНе привязано: 2$/)
+    expect(trainerFinanceClientLabel({ ...client, unassignedSessions: 2, overdue: true })).toMatch(/^К оплате 2\s500\s₽ · до 08\.10\nЕсть просрочка\nНе привязано: 2$/)
     expect(trainerFinanceClientLabel({ ...client, dueCents: 0, unassignedSessions: 2 })).toBe('Не привязано: 2')
   })
 })
