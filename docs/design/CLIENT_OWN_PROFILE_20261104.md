@@ -398,3 +398,78 @@ integratedbuild/14browser13.3s0retry/skips остаётся локальным �
 PR2draft1990 CI41920954246/Android41920954243 запущен автоматически;егоmerge
 ждёт фактический release/6+6acceptancePR1. PR3 ещё не pushed;actualsquash2
 и новый полныйsourceCI остаются обязательными передmerge3.
+
+## Итерация 17 — 05.11.2026 — Codex / OpenAI — уточнение очереди
+
+Входящий существующий координатор сообщил: после нашей полной публикации/
+приёмки1989 следующим идёт1988, затем наши PR2/3; подготовка/CI могут идти
+параллельно. Исходящих сообщений в другие чаты не отправлялось.
+Факт проверен напрямуюGitHub:1988OPEN/head66007c5db01be26408e05fc9f3d546285c229f0c,
+baseactual1ee,CI41921211836pending; diffсодержит trainercard/assets/voiceinput/
+проверки/журнал, наши ownprofile/photo/API/migration188 не меняет. Это ещё
+не фактическийmain1988 и не квитанцияего публикации; чужие branches/runs
+и operations не изменяются. Main1989CI/API/web/OTA/6+6acceptance продолжаются.
+PR1990 остаётсяdraft:merge удержан до нашейstage1acceptance и фактической
+приёмки1988; после его реальногоsquash — necessary ordinaryactualmainmerge
+с сохранением обеих сторон и новый полный exactsourceCI. СтарыйCI82797
+останется историей; текущий run не повторяется вслепую и не отменяется
+по предположению до реальной сменыhead. PR3 ждёт actualsquashPR2.
+
+## Итерация 18 — 05.11.2026 — Codex / OpenAI — диагностика main1ee
+
+MainCI41920575270attempt1FAILURE:32SUCCESS,normalPR-onlymigration1SKIP,
+auth4job126891829877 иaggregateFAILURE. Единственный flaky —
+client-workout-reference4388/client/reduced-false/single-group/compact:
+на4462 ожидается >2разных scroll positions за1600ms,получено2.
+Retry0failed3660ms, builtinretry1passed3768ms;249otherpassed14.3m.
+Strict --fail-on-flaky-tests сохранён. Fulljoblog/timings/originalerrorcontext/
+retry1trace сохранены до повторов. Вretry1:82frames/3scrollpositions,
+одинscrollTo smooth; originalframeattachment недоступен безretry0trace,
+поэтому точная scheduling/scroll причина не доказана.
+Actualmain1ee tree побайтноsource5dc:его auth4 прошёл250/25011.4m,
+0retry/flaky;mainсостояние/Live/test/CSS не менялись послеgreen.
+Контрольный ровно одинlocal exactcaseproductionWebKit:1passed0retry,
+4.684s (total7.0s);93frames/13scrollpositions/one smoothcall,JSON сохранён.
+Решение: после завершения всей attempt1 и сохранения metadata/identity
+выполнить ровно один failed-only повтор auth4/aggregate того же1ee.
+Не менять assertions/timeouts/retries/baselines/strict-flaky/coverage/CI,
+не делать sourcepush ради повторного CI. Основная публикация пока удержана;
+результат repeat ещё не получен, успехsource/локальногоcase не заменяет его.
+
+Факт18:gh run rerun41920575270 --failed выполнен РОВНО ОДИН раз;
+attempt2 началась, новыйauth4job126903882338in_progress. Других повтора нет.
+
+## Итерация 20 — 05.11.2026 — Codex / OpenAI — actual acceptance harness
+
+Main1ee attempt2SUCCESS34jobs+1normalPR-onlymigrationSKIP;auth4job126903882338
+250passed13.7m0retry/flaky. Ровно один gh --failed request,вся перваяfailure
+сохранена. GeneralGitHubjobsAPI несколько раз вернул502:rawrun+attempt2jobs
+получены напрямую и сохранены, ихсводка содержит все35jobs без подменыданных.
+OfficialAPI41926503867/web41926503869/OTA41926875702SUCCESSexact1ee.
+Первая actualwebUI6cases упали доprofile:fixture router сравнивал /v1,
+аpublicsameoriginAPIидёт /api/v1. Publicfiles/API/RSA/ZIP proof ужеpassed,
+originalwebresults/6traces/report/proofs сохранены отдельно сSHA256/size;
+actualZIPPNG в этомнеуспешномпрогоне ещёне было.
+Исправлен только внешнийfrozenfixture adapter:stripderivedapiBasepathname
+вцентральном syntheticroute dispatcher. Originalsource иadaptedfixture
+сохранены/hashed отдельно;casefile/assertions/retries0/timeouts/guards/
+contextblocker реальныхbusinesswrites не меняются. Native/directorigin
+с пустымprefix остаётся прежним. Это неruntimefix и не новыйrelease.
+
+## Итерация 21 — 05.11.2026 — Codex / OpenAI — фактическая приёмка PR1
+
+PR1989/main1ee23d545450d7df3ffcbaa4547e298eff8cf239 опубликован и принят.
+6public+6exactsignedZIP Chromium/WebKit,0retry/flaky/skips:8.609s+3.818s.
+213/213publicfiles SHA256+size;213ZIPfiles inventory;bothAPIexact1ee/
+healthOK/ready200/auth401;RSA/sourceABI/native9/minmax9 иsameversion final
+readback passed. ABI8922d2e9fc2c9a092d10f7b6066acdc46edf0fbe7ee7a15159e02a44e7126cf9.
+Sequence1793831945141,ZIPe69be287c816faf2b555f9c6b1f6bd022ee79f1629a73ab8ad50e785d6d21aba,
+15140212bytes. Все6actualZIPPNG обеихтем/движков иsyntheticphoto просмотрены,
+скопированыstage1-accepted-png сSHA256/size. Receiptfinal-1ee...acceptance.json
+иoriginal/adaptedsourcehashes сохранены. BannerAIнедоступности существующий,
+другиефункции этимпакетомне включались. Physicalphone/realOAuth/deviceOTA
+непроверены,productionbusinesswrites0,всеbrowserAPI synthetic.
+Окно текущейпубликации освобождено для1988;нашиPR2/3merge удержаны до его
+фактическойприёмки,затем necessaryactualmainmerge+newfullsourceCI.
+Квитанция обновляется в нашемPR/checkpoint/localcanonical безsourcepush;
+исходящих сообщений в другие чаты нет. Полныйпакет3PR ещёне завершён.
