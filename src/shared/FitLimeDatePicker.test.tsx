@@ -25,6 +25,21 @@ function Harness({ clientLime = true, showEndTime = false, reference = false, di
 }
 
 describe('FitLimeDatePicker', () => {
+  it('keeps status dots on selected dates and permits choosing an occupied day', async () => {
+    const user = userEvent.setup()
+    const onChange = vi.fn()
+    render(<FitLimeDatePicker clientLime value={localDate('2026-12-20')} onChange={onChange}
+      dayMarks={{ [localDate('2026-12-20')]: 'done', [localDate('2026-12-21')]: 'planned' }} />)
+    await user.click(screen.getByRole('button', { name: 'Выбрать дату' }))
+    const selected = screen.getByRole('button', { name: '20 декабря 2026 г.' })
+    expect(selected).toHaveAttribute('aria-pressed', 'true')
+    expect(selected).toHaveAttribute('data-workout-mark', 'done')
+    const planned = screen.getByRole('button', { name: '21 декабря 2026 г.' })
+    await user.click(planned)
+    expect(planned).toHaveAttribute('data-workout-mark', 'planned')
+    await user.click(screen.getByRole('button', { name: 'Применить дату' }))
+    expect(onChange).toHaveBeenCalledWith(localDate('2026-12-21'))
+  })
   it('lets the parent return to today while the date heading still opens the same picker', async () => {
     function CalendarSlot() {
       const today = localDate('2026-12-20')
