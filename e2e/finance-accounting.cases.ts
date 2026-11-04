@@ -107,7 +107,7 @@ async function uncertainCreateFixture(page: Page, kind: 'payment' | 'package', f
 export function financeAccountingCases() {
   // Payment and service have separate endpoints and native date/amount layouts.
   for (const kind of ['payment', 'package'] as const) test(`Finance uncertain ${kind} creation restores the same operation`, { tag: ['@lime-finance'] }, async ({ page }, info) => {
-    const { form, commands, open } = await uncertainCreateFixture(page, kind)
+    const { form, commands } = await uncertainCreateFixture(page, kind)
     if (kind === 'package') await form.locator('summary').click()
     for (const width of [320, 430, 1440]) {
       await page.setViewportSize({ width, height: 844 })
@@ -121,7 +121,10 @@ export function financeAccountingCases() {
     }
     await page.setViewportSize({ width: 390, height: 844 })
     await form.getByRole('button', { name: 'Отмена' }).click()
-    await open()
+    await page.setViewportSize({ width: 320, height: 844 })
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+    await page.screenshot({ path: info.outputPath(`${kind}-pending-return.png`), fullPage: true })
+    await page.getByRole('button', { name: 'Проверить сохранение', exact: true }).click()
     await expect(form.getByLabel('Комментарий')).toHaveValue('Оплата переводом — сохранить исходную запись')
     await expect(form.getByLabel(kind === 'payment' ? 'Дата' : 'Дата получения', { exact: true })).toHaveValue('2026-10-20')
     await form.getByRole('button', { name: 'Повторить сохранение' }).scrollIntoViewIfNeeded()
