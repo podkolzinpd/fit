@@ -2,7 +2,7 @@ import { AddActionLabel } from '../../shared/AddActionLabel'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useId, useState } from 'react'
 import { useForm, useWatch } from 'react-hook-form'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from '../../app/auth-context'
 import { useDataBackend } from '../../app/data-backend-context'
 import type { Client, ClientGoal, CustomMetric, ExerciseSnapshot, GoalCriterionMetric, GoalCriterionOperation, GoalStage, SaveGoalCriterionInput } from '../../shared/domain'
@@ -32,19 +32,22 @@ export function GoalPage() {
 }
 
 export function MyGoalPage() {
+  const location = useLocation()
+  const fromProfile = (location.state as { from?: unknown } | null)?.from === '/me/profile'
   const { clients: clientsRepository } = useDataBackend()
   const mine = useQuery({ queryKey: ['my-client'], queryFn: () => clientsRepository.getMine() })
   return <GoalWorkspace client={mine.data} loading={mine.isLoading} error={mine.error}
-    onRetry={() => void mine.refetch()} back="/me/progress" self />
+    onRetry={() => void mine.refetch()} back={fromProfile ? '/me/profile' : '/me/progress'} self returnAfterChange={fromProfile} />
 }
 
-function GoalWorkspace({ client, loading, error, onRetry, back, self = false }: {
+function GoalWorkspace({ client, loading, error, onRetry, back, self = false, returnAfterChange = false }: {
   client: Client | null | undefined
   loading: boolean
   error: Error | null
   onRetry: () => void
   back: string
   self?: boolean
+  returnAfterChange?: boolean
 }) {
   const { goals: goalsRepository } = useDataBackend()
   const { actor } = useAuth()
@@ -57,16 +60,18 @@ function GoalWorkspace({ client, loading, error, onRetry, back, self = false }: 
     await queryClient.invalidateQueries({ queryKey: ['clients'] })
     await queryClient.invalidateQueries({ queryKey: ['my-client'] })
   }
+  const onChanged = async () => { await invalidate(); if (returnAfterChange) navigate(back) }
+  const onDismiss = returnAfterChange ? () => navigate(back) : undefined
   const today = todayInTimeZone(actor?.timezone)
   return <Page title={self ? 'Моя цель' : client?.fullName ?? 'Цель'} back={back} center>
     <AsyncView loading={loading || goalQuery.isLoading} error={error ?? goalQuery.error} empty={!loading && !client}
       onRetry={() => { onRetry(); void goalQuery.refetch() }}
       emptyTitle="Личная карточка не найдена" emptyDescription="Сначала создайте карточку, чтобы настроить цель.">
       {client && (goalQuery.data
-        ? <GoalDetail goal={goalQuery.data} today={today} onChanged={invalidate}
-            onArchived={async () => { await invalidate(); navigate(self ? '/me/progress' : `/clients/${clientId}`) }} />
+        ? <GoalDetail goal={goalQuery.data} today={today} onChanged={onChanged} onDismiss={onDismiss}
+            onArchived={async () => { await invalidate(); navigate(back) }} />
         : <GoalCreate clientId={clientId} initialTitle={client.goal ?? ''}
-            onCreated={invalidate} />
+            onCreated={onChanged} onDismiss={onDismiss} />
       )}
     </AsyncView>
   </Page>
@@ -231,14 +236,14 @@ function GoalForm({ clientId, goal, initialTitle, onSaved, onCancel }: {
   </form>
 }
 
-function GoalCreate({ clientId, initialTitle, onCreated }: {
-  clientId: string; initialTitle: string; onCreated: () => Promise<void>
+function GoalCreate({ clientId, initialTitle, onCreated, onDismiss }: {
+  clientId: string; initialTitle: string; onCreated: () => Promise<void>; onDismiss?: () => void
 }) {
-  return <GoalForm clientId={clientId} initialTitle={initialTitle} onSaved={onCreated} />
+  return <GoalForm clientId={clientId} initialTitle={initialTitle} onSaved={onCreated} onCancel={onDismiss} />
 }
 
-function GoalDetail({ goal, today, onChanged, onArchived }: {
-  goal: ClientGoal; today: string; onChanged: () => Promise<void>; onArchived: () => Promise<void>
+function GoalDetail({ goal, today, onChanged, onArchived, onDismiss }: {
+  goal: ClientGoal; today: string; onChanged: () => Promise<void>; onArchived: () => Promise<void>; onDismiss?: () => void
 }) {
   const { goals: goalsRepository } = useDataBackend()
   const [editingGoal, setEditingGoal] = useState(false)
@@ -252,7 +257,7 @@ function GoalDetail({ goal, today, onChanged, onArchived }: {
   const criteria = goal.criteria
   return <div className="stack">
     {editingGoal
-      ? <GoalForm clientId={goal.clientId} goal={goal} onSaved={async () => { await onChanged(); setEditingGoal(false) }} onCancel={() => setEditingGoal(false)} />
+      ? <GoalForm clientId={goal.clientId} goal={goal} onSaved={async () => { await onChanged(); setEditingGoal(false) }} onCancel={() => { setEditingGoal(false); onDismiss?.() }} />
       : <section className="goal-block">
           <div className="goal-head"><h2>{goal.title}</h2><button type="button" className="link" onClick={() => setEditingGoal(true)}>Изменить</button></div>
           {goal.targetDate && <p className="muted">До {formatLocalDateShort(localDate(goal.targetDate))}</p>}
@@ -271,11 +276,11 @@ function GoalDetail({ goal, today, onChanged, onArchived }: {
       <div className="goal-head"><h2>Этапы</h2>{!addingStage && <button type="button" className="link" onClick={() => setAddingStage(true)}><AddActionLabel>Добавить</AddActionLabel></button>}</div>
       {stages.length === 0 && !addingStage && <p className="muted">Этапов пока нет</p>}
       <div className="stage-list">
-        {stages.map((stage) => <StageRow key={stage.id} stage={stage} today={today} targetDate={goal.targetDate} onChanged={onChanged} />)}
+        {stages.map((stage) => <StageRow key={stage.id} stage={stage} today={today} targetDate={goal.targetDate} onChanged={onChanged} onDismiss={onDismiss} />)}
       </div>
       {addingStage && <StageForm goalId={goal.id} position={stages.length} targetDate={goal.targetDate}
         defaultStart={stages.length ? localDate(stages[stages.length - 1]!.endsOn) : localDate(today)}
-        onSaved={async () => { await onChanged(); setAddingStage(false) }} onCancel={() => setAddingStage(false)} />}
+        onSaved={async () => { await onChanged(); setAddingStage(false) }} onCancel={() => { setAddingStage(false); onDismiss?.() }} />}
     </section>
 
     <button className="danger secondary wide" disabled={archive.isPending}
@@ -287,13 +292,13 @@ function GoalDetail({ goal, today, onChanged, onArchived }: {
   </div>
 }
 
-function StageRow({ stage, today, targetDate, onChanged }: { stage: GoalStage; today: string; targetDate: string | null; onChanged: () => Promise<void> }) {
+function StageRow({ stage, today, targetDate, onChanged, onDismiss }: { stage: GoalStage; today: string; targetDate: string | null; onChanged: () => Promise<void>; onDismiss?: () => void }) {
   const { goals: goalsRepository } = useDataBackend()
   const [editing, setEditing] = useState(false)
   const [confirm, confirmDialog] = useConfirm()
   const remove = useMutation({ mutationFn: (selected: Pick<GoalStage, 'id' | 'version'>) => goalsRepository.deleteStage(selected), onSuccess: () => void onChanged() })
   if (editing) return <StageForm goalId={stage.goalId} stage={stage} position={stage.position} targetDate={targetDate}
-    defaultStart={localDate(stage.startsOn)} onSaved={async () => { await onChanged(); setEditing(false) }} onCancel={() => setEditing(false)} />
+    defaultStart={localDate(stage.startsOn)} onSaved={async () => { await onChanged(); setEditing(false) }} onCancel={() => { setEditing(false); onDismiss?.() }} />
   const status = stageStatus(stage, localDate(today))
   return <article className={`stage-row ${status}`}>
     <div>

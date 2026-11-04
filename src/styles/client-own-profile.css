@@ -18,3 +18,23 @@
 .phone-frame.fit-client-lime .client-own-profile-edit { display:flex; width:100%; align-items:center; justify-content:center; min-height:52px; padding:12px 16px; border:0; border-radius:18px; background:var(--lime-surface-raised); color:var(--lime-text); font-size:14px; line-height:20px; text-decoration:none; }
 .phone-frame.fit-client-lime .client-own-photo-error { margin-top:16px; color:var(--danger); font-size:14px; line-height:20px; }
 .phone-frame.fit-client-lime .client-own-photo-error p { margin:0 0 8px; }
+
+/* COP201-204: real goal aggregate, all stages remain reachable. */
+.phone-frame.fit-client-lime .client-own-goal { padding:0 8px 28px; }
+.phone-frame.fit-client-lime .client-own-goal-heading { display:flex; align-items:center; justify-content:space-between; gap:12px; }
+.phone-frame.fit-client-lime .client-own-goal-heading h2 { display:flex; align-items:center; gap:8px; margin:0; color:var(--lime-text-secondary); font-size:14px; line-height:20px; font-weight:400; }
+.phone-frame.fit-client-lime .client-own-goal-heading h2 img { width:18px; height:18px; }
+.phone-frame.fit-client-lime .client-own-goal-heading a { display:inline-flex; align-items:center; min-height:44px; color:var(--lime-accent-ink); font-size:14px; text-decoration:none; }
+.phone-frame.fit-client-lime .client-own-goal-title { font-family:'YS Geo',sans-serif; font-size:32px; line-height:34px; font-weight:500; letter-spacing:-.035em; margin:10px 0 16px; overflow-wrap:anywhere; }
+.phone-frame.fit-client-lime .client-own-goal-deadline { color:var(--lime-text-secondary); font-size:14px; line-height:20px; margin:0 0 18px; }
+.phone-frame.fit-client-lime .client-own-goal-current { padding:16px 18px; background:var(--lime-surface); border-radius:20px; }
+.phone-frame.fit-client-lime .client-own-goal-current strong { display:block; margin:6px 0; font-size:18px; line-height:24px; overflow-wrap:anywhere; }
+.phone-frame.fit-client-lime .client-own-goal-current p { margin:0; color:var(--lime-text-secondary); font-size:13px; line-height:19px; }
+.phone-frame.fit-client-lime .client-own-goal-stages { margin:12px 0 0; }
+.phone-frame.fit-client-lime .client-own-goal-stages summary { display:list-item; min-height:44px; padding:12px 0; font-size:14px; line-height:20px; }
+.phone-frame.fit-client-lime .client-own-goal-stages ol { margin:0; padding:0 0 0 22px; }
+.phone-frame.fit-client-lime .client-own-goal-stages li { padding:10px 0; font-size:14px; line-height:20px; }
+.phone-frame.fit-client-lime .client-own-goal-stages li strong { font-weight:500; display:block; overflow-wrap:anywhere; }
+.phone-frame.fit-client-lime .client-own-goal-stages li span { display:block; color:var(--lime-text-secondary); font-size:13px; line-height:19px; }
+.phone-frame.fit-client-lime .client-own-goal-stages li[aria-current]::marker { color:var(--lime-accent-ink); }
+.phone-frame.fit-client-lime .client-own-goal-meta { font-size:13px; line-height:19px; color:var(--lime-text-secondary); margin:12px 0 0; }
