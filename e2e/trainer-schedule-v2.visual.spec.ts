@@ -5653,7 +5653,8 @@ for (const theme of ['light', 'dark']) for (const width of [390, 430]) {
           return { separate: message.right < menu.left, contained: menu.right <= card.right }
         })
         expect(geometry.separate && geometry.contained).toBe(true)
-        await expect(page.locator('.client-profile-edit')).toHaveCSS('border-top-left-radius', '0px')
+        await expect(page.getByRole('link', { name: 'Изменить данные', exact: true })).toHaveCSS('border-top-left-radius', '18px')
+        await expect(page.getByRole('link', { name: 'Изменить данные', exact: true })).toHaveCSS('min-height', '52px')
       }
       if (route === '/me/settings') {
         await expect(page.getByRole('button', { name: 'Выйти', exact: true })).toHaveCSS('border-radius', '999px')

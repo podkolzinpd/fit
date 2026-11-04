@@ -24,11 +24,17 @@ export class DatabasePilotClientPhotos implements PilotClientPhotos {
   constructor(private readonly pool: DatabasePool, private readonly media: MediaObjectStorage) {}
   private async current(session: YandexActorSessionInput, id: string, write = false) {
     return withYandexActorSession(this.pool, session, async client => {
+      // Migration149's granted can_access_client wrapper checks ownership OR an
+      // active trainer connection. The internal connection helper is not granted
+      // to fit_api; a non-owner trainer must pass the granted wrapper instead.
       const rows = await client.query<PhotoRow>(`select profile_photo from public.clients where id=$1
         and merged_into_client_id is null
         and ($2::boolean=false or (archived_at is null
           and public.can_access_client(id)
-          and exists(select 1 from public.profiles where id=auth.uid() and account_role='trainer')))`, [id, write])
+          and exists(select 1 from public.profiles where id=auth.uid()
+            and ((account_role='client' and clients.auth_user_id=auth.uid())
+              or (account_role='trainer' and clients.auth_user_id is distinct from auth.uid()
+                and public.can_access_client(clients.id))))))`, [id, write])
       if (!rows[0]) throw new ClientProfilePhotoError('forbidden')
       return rows[0].profile_photo
     }, 'read-only-snapshot')

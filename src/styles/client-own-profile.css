@@ -1,0 +1,20 @@
+/* COP101: own profile only; trainer composition and other client routes stay scoped. */
+.phone-frame.fit-client-lime .client-profile-page.client-own-profile { font-family: 'YS Geo', sans-serif; }
+.phone-frame.fit-client-lime .client-own-profile > .page-header { margin-bottom: 20px; }
+.phone-frame.fit-client-lime .client-own-profile > .page-header h1 { font-family: 'YS Geo', sans-serif; font-size: 20px; line-height: 24px; }
+.phone-frame.fit-client-lime .client-own-profile > .page-header .profile-settings-link { min-width:44px; min-height:44px; border:0; border-radius:16px; background:var(--lime-surface); color:var(--lime-text); }
+.phone-frame.fit-client-lime .client-own-profile > .page-header .profile-settings-link span { position:absolute; width:1px; height:1px; overflow:hidden; clip-path:inset(50%); }
+.phone-frame.fit-client-lime .client-own-profile-hero { display:flex; flex-direction:column; align-items:center; padding:8px 4px 28px; text-align:center; }
+.phone-frame.fit-client-lime .client-own-photo-button { position:relative; padding:0; width:121px; height:120px; min-height:120px; border:0; border-radius:24px; background:var(--lime-surface-raised); color:var(--lime-text-secondary); }
+.phone-frame.fit-client-lime .client-own-photo-button img,
+.phone-frame.fit-client-lime .client-own-photo-placeholder { display:flex; align-items:center; justify-content:center; width:121px; height:120px; border-radius:24px; object-fit:cover; font-size:32px; }
+.phone-frame.fit-client-lime .client-own-photo-action { position:absolute; right:-6px; bottom:-6px; display:grid; place-items:center; width:36px; height:36px; border:4px solid var(--lime-bg); border-radius:50%; background:var(--lime-accent); color:var(--lime-text-on-accent); }
+.phone-frame.fit-client-lime .client-own-photo-action svg { width:16px; height:16px; }
+.phone-frame.fit-client-lime .client-own-profile-hero h2 { font-family:'YS Geo',sans-serif; font-size:24px; line-height:27px; font-weight:500; overflow-wrap:anywhere; margin:24px 0 0; }
+.phone-frame.fit-client-lime .client-own-profile-email { margin:8px 0 0; color:var(--lime-text-secondary); font-size:14px; line-height:20px; overflow-wrap:anywhere; max-width:100%; }
+.phone-frame.fit-client-lime .client-own-profile-vitals { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:4px; width:100%; margin:32px 0 28px; }
+.phone-frame.fit-client-lime .client-own-profile-vitals dd { font-family:'Doto',monospace; font-variation-settings:'ROND' 0,'wght' 800; font-weight:800; font-size:23px; line-height:27px; margin:0 0 5px; }
+.phone-frame.fit-client-lime .client-own-profile-vitals dt { font-size:13px; line-height:18px; color:var(--lime-text-secondary); }
+.phone-frame.fit-client-lime .client-own-profile-edit { display:flex; width:100%; align-items:center; justify-content:center; min-height:52px; padding:12px 16px; border:0; border-radius:18px; background:var(--lime-surface-raised); color:var(--lime-text); font-size:14px; line-height:20px; text-decoration:none; }
+.phone-frame.fit-client-lime .client-own-photo-error { margin-top:16px; color:var(--danger); font-size:14px; line-height:20px; }
+.phone-frame.fit-client-lime .client-own-photo-error p { margin:0 0 8px; }

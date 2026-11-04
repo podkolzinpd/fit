@@ -1,3 +1,4 @@
+import { OwnClientProfileHeader } from './OwnClientProfileHeader'
 import { CorporateAdminEntry } from '../corporate-admin'
 import { ClientLiveDensitySetting } from './ClientLiveDensitySetting'
 import { isClientLimeEnabled } from '../../app/client-lime'
@@ -40,10 +41,10 @@ export function ClientProfilePage() {
   })
   if (!actor || actor.role !== 'client') return null
 
-  return <Page title="Профиль" className="client-profile-page" action={<Link className="profile-settings-link" to="/me/settings" aria-label="Настройки профиля"><SettingsIcon /><span>Настройки</span></Link>}>
+  return <Page title="Профиль" className={`client-profile-page${isClientLimeEnabled(actor) ? ' client-own-profile' : ''}`} action={<Link className="profile-settings-link" to="/me/settings" aria-label="Настройки профиля"><SettingsIcon /><span>Настройки</span></Link>}>
     <AsyncView loading={client.isLoading} error={client.error} empty={!client.data} onRetry={() => void client.refetch()}>
       {client.data && <>
-        <section className="client-profile-card">
+        {isClientLimeEnabled(actor) ? <OwnClientProfileHeader client={client.data} email={actor.email} /> : <section className="client-profile-card">
           <div className="client-profile-identity">
             <span className="client-profile-avatar">
               {client.data.fullName.split(/\s+/).slice(0, 2).map((part) => part[0]).join('').toUpperCase()}
@@ -51,7 +52,7 @@ export function ClientProfilePage() {
             <div><strong>{client.data.fullName}</strong><p>{actor.email}</p></div>
           </div>
           <Link className="client-profile-edit" to="/me/edit">Изменить данные <ChevronRightIcon /></Link>
-        </section>
+        </section>}
         {athleteSportProfile.supportsSportInterests && <section className="client-profile-card athlete-sport-card">
           <h2>Мой спорт</h2>
           <AsyncView loading={sport.isLoading} error={sport.error} onRetry={() => void sport.refetch()}>
