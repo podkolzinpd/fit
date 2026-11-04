@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { mockPilot, clientId } from './fit-lime-fixtures'
+import { mockPilot, clientId, workout } from './fit-lime-fixtures'
 
 export function clientProfileCardCases() {
 
@@ -70,6 +70,29 @@ for (const connected of [false,true]) test(`Client connection indicator uses acc
   await page.getByRole('button',{name:'Отмена',exact:true}).click()
   await page.getByRole('button',{name:'Действия с профилем спортсмена'}).click()
   if(connected){await page.getByRole('menuitem',{name:'Написать',exact:true}).click();await expect(page).toHaveURL(/\/chat\//)}
+})
+
+for (const withGoal of [false,true]) test(`Client reference sections retain their destinations ${withGoal}`,async({page},info)=>{
+  await page.clock.setFixedTime(new Date('2026-09-24T09:00:00+03:00'))
+  await mockPilot(page,{fitLime:true,withGoal,workouts:[{...workout,status:'planned',title:'Верх тела',workoutDate:'2026-09-24',startTime:'14:00',completedAt:null}]})
+  await page.goto(`/clients/${clientId}`)
+  const routes=page.getByRole('navigation',{name:'Разделы спортсмена'})
+  await expect(routes.getByRole('link')).toHaveText(['Прогресс и замеры','История тренировок','Абонементы и оплаты'])
+  await expect(routes.getByRole('link').first()).toHaveAttribute('href',`/progress/${clientId}`)
+  await expect(routes.getByRole('link').nth(1)).toHaveAttribute('href',`/clients/${clientId}/workouts`)
+  await expect(routes.getByRole('link').nth(2)).toHaveAttribute('href',`/clients/${clientId}/finance`)
+  await expect(routes.getByRole('link').first()).toHaveCSS('min-height','120px')
+  const planned=page.locator('.client-detail-upcoming .card').first()
+  await expect(planned).toContainText('Верх тела')
+  await expect(planned).toContainText('Сегодня, 14:00')
+  if(!withGoal) await expect(page.getByRole('link',{name:'Добавить цель',exact:true})).toHaveAttribute('href',`/clients/${clientId}/goal`)
+  await page.getByText('Статистика, замеры и питание',{exact:true}).click()
+  await expect(page.locator('.client-detail-snapshot')).toBeVisible()
+  await page.getByText('Статистика, замеры и питание',{exact:true}).click()
+  await expect(page.locator('.client-detail-snapshot')).not.toBeVisible()
+  await page.screenshot({path:info.outputPath('client-reference-sections.png'),fullPage:true})
+  await planned.click()
+  await expect(page).toHaveURL(new RegExp(`/workouts/${workout.id}$`))
 })
 
 }
