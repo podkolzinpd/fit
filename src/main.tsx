@@ -8,6 +8,7 @@ import { initializeAndroidYandexDeepLink } from './features/auth/android-yandex-
 import '@fontsource-variable/onest/wght.css'
 import '@fontsource/rem/latin-700.css'
 import './styles.css'
+import './styles/client-exercise-catalog.css'
 import './styles/fit-lime-components.css'
 import './styles/fit-lime-shell.css'
 import './styles/fit-lime-today.css'

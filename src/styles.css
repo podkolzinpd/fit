@@ -2585,13 +2585,6 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .picker-photo-preview img { width: 100%; height: 100%; display: block; object-fit: cover; border-radius: 14px }
 .picker-photo-preview button { position: absolute; top: -7px; right: -7px; width: 28px; height: 28px; display: grid; place-items: center; padding: 0; border: 2px solid var(--frame-bg); border-radius: 50%; background: var(--fg); color: var(--frame-bg) }
 .picker-photo-preview button svg { width: 15px; height: 15px }
-/* Второй уровень: детальные мышцы выбранной группы (компактнее и приглушённее). */
-.picker-muscles { flex: 0 0 auto; display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none }.picker-muscles::-webkit-scrollbar { display: none }
-.picker-muscle { flex: 0 0 auto; padding: 6px 12px; border: 1px solid var(--border); border-radius: 99px; background: transparent; color: var(--muted); font-size: 13px; font-weight: 500; box-shadow:none}.picker-muscle.active { border-color: var(--accent); color: var(--accent-label) }
-/* Третий уровень: оборудование выбранной группы/мышцы. */
-.picker-equipment { flex: 0 0 auto; display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none }.picker-equipment::-webkit-scrollbar { display: none }
-.picker-equipment-option { flex: 0 0 auto; padding: 6px 12px; border: 1px solid var(--border); border-radius: 99px; background: var(--surface-sunken); color: var(--muted); font-size: 13px; font-weight: 500; box-shadow:none}.picker-equipment-option.active { border-color: var(--accent-surface-border); color: var(--accent-label); background: var(--accent-surface) }
-.picker-create { flex: 0 0 auto; border: 1px dashed var(--border); background: var(--surface-sunken); color: var(--muted); box-shadow:none}
 .picker-list { flex: 1 1 auto; min-height: 76px; overflow-y: auto; overscroll-behavior: contain; scroll-padding-bottom: 76px; display: flex; flex-direction: column; gap: 6px; padding-bottom: 2px }
 .picker-section-label { margin: 4px 2px 0; color: var(--muted); font-size: var(--text-caption); font-weight: var(--weight-medium); text-transform: uppercase; letter-spacing: var(--tracking-label) }
 .picker-item { flex:0 0 auto; display:grid; grid-template-columns:minmax(0,1fr) 50px; align-items:stretch; width:100%; min-height:78px; overflow:hidden; border:1px solid var(--border); border-radius:14px; background:var(--surface-raised); color:var(--fg-on-surface); font-weight:var(--weight-medium); line-height:var(--leading-snug) }.picker-item small { color: var(--muted); font-size:12px; font-weight:400; line-height:1.3 }
@@ -2961,8 +2954,6 @@ button.workout-duration-trigger:disabled { cursor:default; opacity:1 }
    переопределяем точечно, остальной каталог уже работает на общих токенах. */
 .theme-light .exercise-picker { border-color: var(--border); background: var(--surface-elevated) }
 .theme-light .picker-category { background: var(--surface-sunken); color: var(--fg) }
-.theme-light .picker-muscle.active { color: var(--accent-strong) }
-.theme-light .picker-create { border-color: var(--accent-surface-border); background: var(--accent-surface); color: var(--accent-strong) }
 .exercise-catalog-page { display: grid; gap: 16px }
 .exercise-catalog-page .page-header { margin-bottom: 2px }
 .catalog-custom-section { display: grid; gap: 16px; padding: 20px; border: 1px solid var(--border); border-radius: 22px; background: var(--surface-raised); box-shadow:none}
@@ -4442,17 +4433,17 @@ button.workout-duration-trigger:disabled { cursor:default; opacity:1 }
 .workout-create-edit-identity .workout-header-meta { color:var(--secondary-label-fg); font-size:12px; font-weight:500; line-height:1.35 }
 .workout-create-edit-identity .workout-status { min-height:28px; padding:0 9px; border-color:var(--border); border-radius:10px; background:var(--surface-sunken); color:var(--secondary-label-fg); font-size:12px; font-weight:500 }
 
-.workout-create-edit-identity button,
-.workout-create-edit-identity .button { min-height:48px; border-radius:14px; font-size:14px; font-weight:500 }
-.workout-create-edit-identity button.primary,
-.workout-create-edit-identity .button.primary,
-.workout-create-edit-identity .workout-cta[data-variant='primary'] { border-color:var(--mono-primary); background:var(--mono-primary); color:var(--mono-on-primary); box-shadow:none}
-.workout-create-edit-identity button.secondary,
-.workout-create-edit-identity .button.secondary { border-color:var(--border); background:var(--surface-elevated); color:var(--fg); box-shadow:none}
-.workout-create-edit-identity button.link { min-height:44px; padding-inline:0; border:0; background:transparent; color:var(--fg); box-shadow:none}
-.workout-create-edit-identity button:disabled,
-.workout-create-edit-identity .button[aria-disabled='true'],
-.workout-create-edit-identity .workout-cta:disabled { opacity:1; border-color:var(--border); background:var(--surface-sunken); color:var(--secondary-label-fg); box-shadow:none}
+.workout-create-edit-identity button:where(:not(.client-lime-catalog, .client-lime-catalog *)),
+.workout-create-edit-identity .button:where(:not(.client-lime-catalog, .client-lime-catalog *)) { min-height:48px; border-radius:14px; font-size:14px; font-weight:500 }
+.workout-create-edit-identity button.primary:where(:not(.client-lime-catalog, .client-lime-catalog *)),
+.workout-create-edit-identity .button.primary:where(:not(.client-lime-catalog, .client-lime-catalog *)),
+.workout-create-edit-identity .workout-cta[data-variant='primary']:where(:not(.client-lime-catalog, .client-lime-catalog *)) { border-color:var(--mono-primary); background:var(--mono-primary); color:var(--mono-on-primary); box-shadow:none}
+.workout-create-edit-identity button.secondary:where(:not(.client-lime-catalog, .client-lime-catalog *)),
+.workout-create-edit-identity .button.secondary:where(:not(.client-lime-catalog, .client-lime-catalog *)) { border-color:var(--border); background:var(--surface-elevated); color:var(--fg); box-shadow:none}
+.workout-create-edit-identity button.link:where(:not(.client-lime-catalog, .client-lime-catalog *)) { min-height:44px; padding-inline:0; border:0; background:transparent; color:var(--fg); box-shadow:none}
+.workout-create-edit-identity button:disabled:where(:not(.client-lime-catalog, .client-lime-catalog *)),
+.workout-create-edit-identity .button[aria-disabled='true']:where(:not(.client-lime-catalog, .client-lime-catalog *)),
+.workout-create-edit-identity .workout-cta:disabled:where(:not(.client-lime-catalog, .client-lime-catalog *)) { opacity:1; border-color:var(--border); background:var(--surface-sunken); color:var(--secondary-label-fg); box-shadow:none}
 
 .workout-create-edit-identity .workout-form { gap:20px; padding-bottom:calc(84px + env(safe-area-inset-bottom)) }
 .workout-create-edit-identity .workout-form-section,
@@ -4563,32 +4554,27 @@ button.workout-duration-trigger:disabled { cursor:default; opacity:1 }
 
 .workout-create-edit-identity .sheet-overlay,
 .workout-create-edit-identity .modal-overlay { background:color-mix(in srgb, var(--bg) 76%, transparent); backdrop-filter:none}
-.workout-create-edit-identity .exercise-picker,
+.workout-create-edit-identity .exercise-picker:where(:not(.client-lime-catalog, .client-lime-catalog *)),
 .workout-create-edit-identity .client-picker,
 .workout-create-edit-identity .exercise-settings-sheet,
 .workout-create-edit-identity .modal-dialog { border-color:var(--border); background:var(--surface-elevated); box-shadow:none}
 .workout-create-edit-identity .client-picker,
-.workout-create-edit-identity .exercise-picker,
+.workout-create-edit-identity .exercise-picker:where(:not(.client-lime-catalog, .client-lime-catalog *)),
 .workout-create-edit-identity .exercise-settings-sheet { border-radius:18px 18px 0 0 }
-.workout-create-edit-identity .picker-header h1,
-.workout-create-edit-identity .picker-header h2 { color:var(--fg); font-size:18px; font-weight:600 }
-.workout-create-edit-identity .picker-close { width:44px; height:44px; border-radius:14px; color:var(--fg) }
-.workout-create-edit-identity .picker-search { min-height:48px; border-color:var(--border); border-radius:14px; background:var(--surface-sunken); color:var(--fg); font-size:16px; font-weight:400 }
-.workout-create-edit-identity .picker-category,
-.workout-create-edit-identity .picker-muscle,
-.workout-create-edit-identity .picker-equipment-option { min-height:44px; border-color:var(--border); border-radius:14px; background:var(--surface-sunken); color:var(--secondary-label-fg); font-size:12px; font-weight:500 }
-.workout-create-edit-identity .picker-category.active,
-.workout-create-edit-identity .picker-muscle.active,
-.workout-create-edit-identity .picker-equipment-option.active { border-color:var(--border); background:var(--surface-raised); color:var(--fg) }
-.workout-create-edit-identity .picker-item { min-height:64px; border-color:var(--border); border-radius:14px; background:var(--surface-raised); color:var(--fg); font-size:14px; font-weight:500 }
-.workout-create-edit-identity .picker-item.selected { border-color:var(--mono-primary); background:var(--surface-sunken) }
-.workout-create-edit-identity .picker-select-mark { border-color:var(--border); border-radius:10px; color:var(--muted) }
-.workout-create-edit-identity .picker-item.selected .picker-select-mark { border-color:var(--mono-primary); background:var(--mono-primary); color:var(--mono-on-primary) }
-.workout-create-edit-identity .picker-create { border-color:var(--border); background:transparent; color:var(--secondary-label-fg) }
-.workout-create-edit-identity .state-panel { border-color:var(--border); border-radius:18px; background:var(--surface-raised); box-shadow:none}
-.workout-create-edit-identity .state-panel-mark { border-radius:14px; background:var(--surface-sunken); color:var(--fg) }
-.workout-create-edit-identity .state-panel h2 { color:var(--fg); font-size:18px; font-weight:600 }
-.workout-create-edit-identity .state-panel p { color:var(--secondary-label-fg); font-size:14px; font-weight:400 }
+.workout-create-edit-identity .picker-header h1:where(:not(.client-lime-catalog, .client-lime-catalog *)),
+.workout-create-edit-identity .picker-header h2:where(:not(.client-lime-catalog, .client-lime-catalog *)) { color:var(--fg); font-size:18px; font-weight:600 }
+.workout-create-edit-identity .picker-close:where(:not(.client-lime-catalog, .client-lime-catalog *)) { width:44px; height:44px; border-radius:14px; color:var(--fg) }
+.workout-create-edit-identity .picker-search:where(:not(.client-lime-catalog, .client-lime-catalog *)) { min-height:48px; border-color:var(--border); border-radius:14px; background:var(--surface-sunken); color:var(--fg); font-size:16px; font-weight:400 }
+.workout-create-edit-identity .picker-category:where(:not(.client-lime-catalog, .client-lime-catalog *)) { min-height:44px; border-color:var(--border); border-radius:14px; background:var(--surface-sunken); color:var(--secondary-label-fg); font-size:12px; font-weight:500 }
+.workout-create-edit-identity .picker-category.active:where(:not(.client-lime-catalog, .client-lime-catalog *)) { border-color:var(--border); background:var(--surface-raised); color:var(--fg) }
+.workout-create-edit-identity .picker-item:where(:not(.client-lime-catalog, .client-lime-catalog *)) { min-height:64px; border-color:var(--border); border-radius:14px; background:var(--surface-raised); color:var(--fg); font-size:14px; font-weight:500 }
+.workout-create-edit-identity .picker-item.selected:where(:not(.client-lime-catalog, .client-lime-catalog *)) { border-color:var(--mono-primary); background:var(--surface-sunken) }
+.workout-create-edit-identity .picker-select-mark:where(:not(.client-lime-catalog, .client-lime-catalog *)) { border-color:var(--border); border-radius:10px; color:var(--muted) }
+.workout-create-edit-identity .picker-item.selected .picker-select-mark:where(:not(.client-lime-catalog, .client-lime-catalog *)) { border-color:var(--mono-primary); background:var(--mono-primary); color:var(--mono-on-primary) }
+.workout-create-edit-identity .state-panel:where(:not(.client-lime-catalog, .client-lime-catalog *)) { border-color:var(--border); border-radius:18px; background:var(--surface-raised); box-shadow:none}
+.workout-create-edit-identity .state-panel-mark:where(:not(.client-lime-catalog, .client-lime-catalog *)) { border-radius:14px; background:var(--surface-sunken); color:var(--fg) }
+.workout-create-edit-identity .state-panel h2:where(:not(.client-lime-catalog, .client-lime-catalog *)) { color:var(--fg); font-size:18px; font-weight:600 }
+.workout-create-edit-identity .state-panel p:where(:not(.client-lime-catalog, .client-lime-catalog *)) { color:var(--secondary-label-fg); font-size:14px; font-weight:400 }
 
 @media (max-width:375px) {
   .workout-create-edit-identity .workout-form-page,
