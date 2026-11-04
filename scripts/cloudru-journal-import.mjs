@@ -110,6 +110,24 @@ export async function verifyPreservedState(connection,clientId,excludedIds,expec
  if(finance?.n!==0)failWriter('unexpected_finance_change')
 }
 
+export async function isNewCardFinanceUnchanged(connection,{trainerId,clientId,entries,created,attendanceVersion=1}) {
+ if(attendanceVersion!==0&&attendanceVersion!==1)return false
+ for(const table of ['trainer_finance_packages','trainer_finance_payments']) {
+  if((await connection.query(`select count(*)::int n from public.${table} where client_id=$1`,[clientId])).rows[0]?.n!==0)return false
+ }
+ // Pre-commit and read-only recovery must accept the same exact attendance.
+ // Never accept a charge, payment or a later manual decision as an import fact.
+ // Version0 receipts predate attendance: verify absence, never backfill it.
+ const expectedIds=new Set((attendanceVersion===1?entries:[]).filter(e=>e.draft.trainingFormat==='with_trainer')
+  .map(e=>created.find(c=>c.ordinal===e.ordinal)?.workoutId))
+ const attendance=(await connection.query(`select workout_id,trainer_id,package_id,disposition,voided_at
+  from public.trainer_finance_sessions where client_id=$1`,[clientId])).rows
+ if(attendance.length!==expectedIds.size||new Set(attendance.map(s=>s.workout_id)).size!==expectedIds.size
+  ||attendance.some(s=>!expectedIds.has(s.workout_id)||s.trainer_id!==trainerId||s.package_id!==null
+   ||s.disposition!=='unassigned'||s.voided_at!==null))return false
+ return true
+}
+
 async function keepImportedWorkoutUnassigned(connection,clientId,workoutId,workoutDate) {
  const sessions=(await connection.query(`select id,version::text version,disposition,package_id from public.trainer_finance_sessions
   where client_id=$1 and workout_id=$2 and voided_at is null limit 2`,[clientId,workoutId])).rows
@@ -245,20 +263,7 @@ export async function insertReviewedJournal({runtime,trainerId,clientId,athleteI
      ...(existingCard?{}:{version:saved.version})})
    }
   }
-  if(createdCard) {
-   for(const table of ['trainer_finance_packages','trainer_finance_payments']) {
-    if((await runtime.query(`select count(*)::int n from public.${table} where client_id=$1`,[clientId])).rows[0]?.n!==0)failWriter('unexpected_finance_change')
-   }
-   // Attendance without a pack is now tracked, including newly imported done
-   // workouts. Permit exactly those unassigned rows; never a charge or payment.
-   const expectedIds=new Set(entries.filter(e=>e.draft.trainingFormat==='with_trainer')
-    .map(e=>created.find(c=>c.ordinal===e.ordinal)?.workoutId))
-   const attendance=(await runtime.query(`select workout_id,trainer_id,package_id,disposition,voided_at
-    from public.trainer_finance_sessions where client_id=$1`,[clientId])).rows
-   if(attendance.length!==expectedIds.size||new Set(attendance.map(s=>s.workout_id)).size!==expectedIds.size
-    ||attendance.some(s=>!expectedIds.has(s.workout_id)||s.trainer_id!==trainerId||s.package_id!==null
-     ||s.disposition!=='unassigned'||s.voided_at!==null))failWriter('unexpected_finance_change')
-  }
+  if(createdCard&&!await isNewCardFinanceUnchanged(runtime,{trainerId,clientId,entries,created}))failWriter('unexpected_finance_change')
   if(verifyContent)await verifyContent(runtime,{trainerId,clientId,entries,created})
   if(preservedState)await verifyPreservedState(runtime,clientId,created.map(c=>c.workoutId),preservedState)
   const ids=created.map(e=>e.workoutId)
@@ -272,6 +277,7 @@ export async function insertReviewedJournal({runtime,trainerId,clientId,athleteI
    await runtime.query("select set_config('request.jwt.claim.sub',$1,true)",[trainerId])
   }
   const receipt={schemaVersion:1,trainerId,clientId,athleteId,created,replayed,createdCard,
+   ...(createdCard?{financeAttendanceVersion:1}:{}),
    previousWorkouts:before.workouts.filter(w=>!existingCard||!created.some(c=>c.workoutId===w.id)).map(w=>({id:w.id,fingerprint:hash(w)})),
    ...(preservedState?{appendOnly:true,preservedState,ownerPreservedState}:{}),teacherCount,athleteCount}
   // Keep a private receipt before commit so unknown outcomes remain reconcilable.
