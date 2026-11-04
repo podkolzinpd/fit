@@ -28,8 +28,8 @@ export function datePickerCases() {
       await page.setViewportSize({ width: 390, height: 844 })
       await page.goto(`/e2e/fixtures/date-picker.html?variant=client&theme=${theme}&marks`)
       await page.getByRole('button', { name: 'Выбрать дату', exact: true }).click()
-      const planned = page.getByRole('button', { name: '2 ноября 2026 г.' })
-      const done = page.getByRole('button', { name: '3 ноября 2026 г.' })
+      const planned = page.getByRole('button', { name: '2 ноября 2026 г.', exact: true })
+      const done = page.getByRole('button', { name: '3 ноября 2026 г.', exact: true })
       await expect(planned).toHaveAttribute('aria-pressed', 'true')
       const geometry = await planned.evaluate(button => {
         const dot = getComputedStyle(button, '::after')
@@ -43,6 +43,7 @@ export function datePickerCases() {
       await done.click()
       await expect(done).toHaveAttribute('aria-pressed', 'true')
       await expect(done).toHaveAttribute('data-workout-mark', 'done')
+      await page.evaluate(() => document.fonts.ready)
       await page.screenshot({ path: info.outputPath(`dots-${theme}.png`) })
       await page.getByRole('button', { name: 'Применить дату' }).click()
       await expect(page.locator('output')).toContainText('2026-11-03')
