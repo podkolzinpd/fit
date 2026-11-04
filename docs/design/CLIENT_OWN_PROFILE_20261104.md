@@ -539,3 +539,13 @@ PR2dcfCI41929898416/Android41929898721проверяютсяавтоматиче
 ждётactual1988API/web/OTA+34+34receipt. PR3неpushed,ждётactualsquash2,
 ordinaryactualmainmerge иновыйполныйexactsourceCI. Исходящиечат-сообщения
 непотребовались:координаторподтвердил,чтоувиделнашуPR1989квитанцию/окно.
+
+## Итерация 24 — 05.11.2026 — Codex / OpenAI — локальная source-квитанция
+
+PR1990/headdcf28c112fcdb1a0619025b0f4e8d254c82244cd exactfullCI41929898416
+attempt1SUCCESS35/35;Android41929898721SUCCESS. Полныеfinalmetadata сохранены,
+старыйsource82797failure не скрыт. Старыйtrainer-name2errors regression
+исправленruntimecatchupscope,тесты/assertionsнеослаблялись. Sourcegreen не
+заменяет будущиеactualmainCI/публикацию/8+8приёмку. Currentdraft/mergeheld:
+1988/f222держитwindowдоегоAPI/web/OTA/34+34receipt. Проверенныйdcfнеpush
+радиквитанции;новыеproofsтолькоPR/checkpoint/localcanonical.
