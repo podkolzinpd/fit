@@ -143,3 +143,20 @@ ESLint/diff passed. Исходные metadata/joblog/diagnostics сохране�
 без слепого failed-only повтора. Предшественник1979 принят по фактическому
 PRbody:mainCI41888147254/API41891789173/web41891789081/OTA41893531769SUCCESS,
 213files/36public+36ZIP Chromium/WebKit, финальная квитанция прочитана.
+
+## Итерация 9 — 04.11.2026 — Codex / OpenAI
+
+Source177 fullCI41898916268 первый запускSUCCESS35/35, Android41898915475
+SUCCESS. Исторический auth-recovery failure684 не повторился; все прежние
+assertions сохранены. Перед squash actualmain изменился на5612dbcd/#1982,
+GitHub пометил1989 BEHIND. Выполнен necessary ordinary merge без конфликтов.
+Входящие4files276+/8- — read-only roster audit/его тесты/журнал и регистрация
+теста в package infra:policy:test. Dependencies/lock/API/schema/src/android
+не меняются; nativeABI8922/code9 сохраняются, source177 runtime побайтный.
+Разрешённые обычные merge/release продолжаются без передачи пакета в другой
+чат: фактическая очередь проверяется напрямуюGitHub. Вопрос владельца
+«зачем что-то передавать туда?» снял наше лишнее процедурное предположение;
+исходящих сообщений не было, local bug repro=yes записан без отправки.
+Открыто: новый полный exactheadCI из-за реального necessary main merge;
+полныйgreen177 сохранён как история, им не подменяется новый head.
+Дальше: штатная проверка объединения и squash безforce/admin/bypass.
