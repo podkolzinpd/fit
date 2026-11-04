@@ -87,7 +87,7 @@ test('finance/template visual matrices cannot grow back into full business chain
   assert.doesNotMatch(bodies.get('template'), /page\.clock|page\.reload|commands|\/health|rows\.size/)
 })
 
-test('real Playwright partitions preserve the 723-case union without duplicates in either engine', () => {
+test('real Playwright partitions preserve the 724-case union without duplicates in either engine', () => {
   const collect = (args) => {
     const result = spawnSync(process.execPath, [join(root, 'node_modules/playwright/cli.js'), ...args, '--list', '--reporter=json'],
       { cwd: root, encoding: 'utf8', timeout: 60000, env: { ...process.env, FIT_SCHEDULE_V2_VISUAL: '1' } })
@@ -103,11 +103,12 @@ test('real Playwright partitions preserve the 723-case union without duplicates 
   }
   for (const { project } of engines) {
     const full = collect(fitLimeArgs(project, 'full').args)
-    assert.equal(full.length, 723) // Parent721 plus two FIN304 overview cases; every previous case remains.
+    assert.equal(full.length, 724) // Parent722 plus two FIN304 overview cases; every previous case remains.
     for (const title of ['Finance overview search and archive preserve return context without a duplicate clients entry', 'Finance overview failure and explicit retry remain readable']) {
       assert.equal(full.filter(key => key.endsWith(title)).length, 1, title)
     }
     assert.equal(full.filter(key => key.endsWith('Finance former-client history and refreshed overview keep debt visible with unassigned sessions')).length, 1)
+    assert.equal(full.filter(key => key.endsWith('Finance workout deletion clears fresh attendance and overview caches')).length, 1)
     for (const title of ['Finance accounting dates and uncertain manual retry preserve one operation', 'Finance session date editor retains its current charge and updates eligible services']) {
       assert.equal(full.filter(key => key.endsWith(title)).length, 1, title)
     }
@@ -152,7 +153,7 @@ test('real Playwright partitions preserve the 723-case union without duplicates 
     const scoped = collect(fitLimeArgs(project, 'scoped', 'critical,finance').args)
     const scopedParts = fitLimePartitions('scoped').flatMap(({ lane, shard }) =>
       collect(fitLimeArgs(project, 'scoped', 'critical,finance', lane, shard).args))
-    assert.equal(scoped.length, 141) // Reviewed139 plus two tagged FIN304 cases; no existing case is omitted.
+    assert.equal(scoped.length, 142) // Reviewed140 plus two tagged FIN304 cases; no existing case is omitted.
     assert.equal(new Set(scopedParts).size, scopedParts.length)
     assert.deepEqual(scopedParts.sort(), scoped.sort())
   }
