@@ -219,6 +219,9 @@ for (const width of [375,390,430]) test(`Reference profile dimensions and direct
   await expect(note.getByRole('button',{name:'Сохранить',exact:true})).toBeEnabled()
   const mic=(await note.getByRole('button',{name:'Надиктовать заметку',exact:true}).boundingBox())!, input=(await editor.boundingBox())!
   expect(mic.y+mic.height).toBeLessThanOrEqual(input.y)
+  const micIcon=(await note.locator('.client-profile-note-heading button img').boundingBox())!
+  expect(width-micIcon.x-micIcon.width).toBe(22)
+  expect((await note.locator('.client-profile-note-heading').boundingBox())!.height).toBe(32)
   expect(input.height).toBeGreaterThanOrEqual(136)
   await page.locator('.client-profile-logo').scrollIntoViewIfNeeded()
   await expect(page.locator('.client-profile-logo')).toHaveCSS('width','89px')

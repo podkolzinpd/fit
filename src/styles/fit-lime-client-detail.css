@@ -208,9 +208,10 @@
 
 /* Inline note uses the existing private preference/version command. */
 .fit-lime-shell .client-profile-reference .client-profile-note { margin-top:36px; }
-.fit-lime-shell .client-profile-reference .client-profile-note-heading { display:flex; justify-content:space-between; align-items:center; padding:0 18px; margin-bottom:8px; }
+.fit-lime-shell .client-profile-reference .client-profile-note-heading { display:flex; justify-content:space-between; align-items:center; padding:0 0 0 18px; margin-bottom:8px; }
 .fit-lime-shell .client-profile-reference .client-profile-note h2 { display:flex; align-items:center; gap:8px; margin:0; color:var(--lime-text-secondary); font-size:14px; line-height:14px; font-weight:400; }
-.fit-lime-shell .client-profile-reference .client-profile-note-heading .assistant-icon-button { width:40px; height:40px; min-height:40px; padding:8px; background:transparent; border:0; }
+.fit-lime-shell .client-profile-reference .client-profile-note-heading .voice-input-icon { min-width:64px; align-self:center; margin-block:-4px; }
+.fit-lime-shell .client-profile-reference .client-profile-note-heading .assistant-icon-button { width:64px; height:40px; min-height:40px; padding:8px 20px; background:transparent; border:0; }
 .fit-lime-shell .client-profile-reference .client-profile-note-form .voice-note-field { margin:0; gap:0; }
 .fit-lime-shell.trainer-client-detail-identity .client-profile-reference .client-profile-note textarea { width:100%; min-height:136px; box-sizing:border-box; border:0; border-radius:24px; background:var(--lime-surface); padding:20px 20px 20px 24px; font-family:inherit; font-size:16px; line-height:16px; color:var(--lime-text); resize:none; }
 .fit-lime-shell .client-profile-reference .client-profile-note textarea::placeholder { color:rgba(255,255,255,.2); opacity:1; }

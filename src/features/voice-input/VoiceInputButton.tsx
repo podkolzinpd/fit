@@ -30,8 +30,9 @@ interface VoiceInputButtonProps {
   disabled?: boolean
   showTranscriptStatus?: boolean
   showCancel?: boolean
-  /** Idle-only extra control rendered inside the hero card's label area (e.g. a text-entry alternative). */
+  /** Original artwork for the icon variant while idle; recording still uses Stop. */
   idleIcon?: ReactNode
+  /** Idle-only extra control rendered inside the hero card's label area (e.g. a text-entry alternative). */
   secondaryAction?: ReactNode
 }
 
