@@ -60,7 +60,7 @@ export interface MediaObjectStorage {
   ): Promise<void>
 }
 
-export type MediaNamespace = 'chat-media' | 'fit-exercise-media' | 'trainer-profile-media' | 'custom-exercise-media'
+export type MediaNamespace = 'chat-media' | 'fit-exercise-media' | 'trainer-profile-media' | 'custom-exercise-media' | 'client-profile-media'
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null
@@ -83,6 +83,7 @@ function isExistingObject(error: unknown): boolean {
 }
 
 function namespacePrefix(namespace: MediaNamespace): string {
+  if (namespace === 'client-profile-media') return 'client-profile-media'
   if (namespace === 'chat-media') return CHAT_MEDIA_PREFIX
   if (namespace === 'trainer-profile-media') return TRAINER_PROFILE_MEDIA_PREFIX
   if (namespace === 'custom-exercise-media') return CUSTOM_EXERCISE_MEDIA_PREFIX
