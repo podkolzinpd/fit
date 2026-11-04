@@ -13,7 +13,7 @@ const statusLabels = { done: 'завершён', current: 'идёт', upcoming: 
 export function OwnClientProfileGoal({ client }: { client: Client }) {
   const { actor } = useAuth()
   const { goals } = useDataBackend()
-  useClientRealtime(client.id)
+  useClientRealtime(client.id, 'profile-goal')
   const query = useQuery({ queryKey: ['client-goal', client.id], queryFn: () => goals.get(client.id) })
   const today = todayInTimeZone(actor?.timezone)
   const goal = query.data

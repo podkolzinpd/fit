@@ -31,6 +31,8 @@ const clientSpaceRoots = new Set([
   'progress-metrics',
 ])
 
+const profileGoalRoots = new Set(['my-client', 'client-goal'])
+
 function recordId(change: ClientRealtimeChange, key: string): string | undefined {
   const value = change.new[key] ?? change.old[key]
   return typeof value === 'string' ? value : undefined
@@ -119,11 +121,11 @@ export async function applyClientRealtimeChanges(
   await Promise.all(tasks)
 }
 
-export async function refetchClientSpace(queryClient: QueryClient, clientId: string) {
+export async function refetchClientSpace(queryClient: QueryClient, clientId: string, roots: ReadonlySet<string> = clientSpaceRoots) {
   await queryClient.invalidateQueries({
     predicate: (query) => {
       const [root] = query.queryKey
-      if (typeof root !== 'string' || !clientSpaceRoots.has(root)) return false
+      if (typeof root !== 'string' || !roots.has(root)) return false
       if (root === 'my-client' || root === 'clients' || root === 'workouts' || root === 'workout-home' || root === 'workout' || root === 'workout-personal-records') return true
       return query.queryKey.includes(clientId)
     },
@@ -131,7 +133,7 @@ export async function refetchClientSpace(queryClient: QueryClient, clientId: str
   })
 }
 
-export function useClientRealtime(clientId: string | undefined) {
+export function useClientRealtime(clientId: string | undefined, catchUpScope: 'client-space' | 'profile-goal' = 'client-space') {
   const { realtime: realtimeRepository } = useDataBackend()
   const queryClient = useQueryClient()
   useEffect(() => {
@@ -141,6 +143,9 @@ export function useClientRealtime(clientId: string | undefined) {
     let debounceTimer: ReturnType<typeof setTimeout> | undefined
     let changes: ClientRealtimeChange[] = []
     let stopped = false
+    // Mounting the goal card must not reload unrelated connection widgets.
+    // Incremental table events below retain the shared invalidation rules.
+    const catchUp = () => refetchClientSpace(queryClient, clientId, catchUpScope === 'profile-goal' ? profileGoalRoots : clientSpaceRoots)
 
     const flush = () => {
       if (debounceTimer) clearTimeout(debounceTimer)
@@ -159,7 +164,7 @@ export function useClientRealtime(clientId: string | undefined) {
         // Изменение могло произойти между первым render и фактическим
         // SUBSCRIBED. Одно серверное сравнение при готовности закрывает это
         // окно, а последующие изменения уже приходят обычными событиями.
-        void refetchClientSpace(queryClient, clientId)
+        void catchUp()
       })
     }
     const disconnect = () => {
@@ -172,7 +177,7 @@ export function useClientRealtime(clientId: string | undefined) {
         disconnect()
         return
       }
-      void refetchClientSpace(queryClient, clientId)
+      void catchUp()
       subscribe()
     }
 
@@ -183,5 +188,5 @@ export function useClientRealtime(clientId: string | undefined) {
       document.removeEventListener('visibilitychange', onVisibilityChange)
       disconnect()
     }
-  }, [clientId, queryClient])
+  }, [clientId, queryClient, catchUpScope])
 }

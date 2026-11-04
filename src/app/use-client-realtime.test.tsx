@@ -23,8 +23,8 @@ function change(table: ClientRealtimeChange['table'], values: Record<string, unk
   return { table, eventType: 'UPDATE', new: values, old: {} }
 }
 
-function Probe({ clientId }: { clientId?: string }) {
-  useClientRealtime(clientId)
+function Probe({ clientId, catchUpScope }: { clientId?: string; catchUpScope?: 'client-space' | 'profile-goal' }) {
+  useClientRealtime(clientId, catchUpScope)
   return null
 }
 
@@ -149,6 +149,33 @@ describe('client realtime', () => {
     const readyOptions = invalidate.mock.calls.find(([options]) => options?.predicate)?.[0]
     expect(readyOptions?.predicate).toBeTypeOf('function')
     expect(readyOptions?.refetchType).toBe('active')
+  })
+
+  it('catches up profile goals without expiring connections and retains remote table updates', async () => {
+    const queryClient = new QueryClient()
+    const keys = [['my-client'], ['client-goal', 'client-1'], ['client-trainers', 'client-1'], ['client-invitations', 'client-1'], ['workouts', 'client-1']]
+    const reset = () => keys.forEach(key => queryClient.setQueryData(key, { current: true }))
+    reset()
+    render(<Probe clientId="client-1" catchUpScope="profile-goal" />, { wrapper: wrapper(queryClient) })
+    act(() => realtime.ready?.())
+    await Promise.resolve()
+    expect(keys.map(key => queryClient.getQueryState(key)?.isInvalidated)).toEqual([true, true, false, false, false])
+
+    reset()
+    act(() => { visibility = 'hidden'; document.dispatchEvent(new Event('visibilitychange')) })
+    act(() => { visibility = 'visible'; document.dispatchEvent(new Event('visibilitychange')) })
+    await Promise.resolve()
+    expect(keys.map(key => queryClient.getQueryState(key)?.isInvalidated)).toEqual([true, true, false, false, false])
+
+    reset()
+    await act(async () => {
+      realtime.listener?.(change('goal_stages', { client_id: 'client-1' }))
+      await vi.advanceTimersByTimeAsync(120)
+    })
+    expect(queryClient.getQueryState(['client-goal', 'client-1'])?.isInvalidated).toBe(true)
+    expect(queryClient.getQueryState(['workouts', 'client-1'])?.isInvalidated).toBe(true)
+    expect(queryClient.getQueryState(['client-trainers', 'client-1'])?.isInvalidated).toBe(false)
+    expect(queryClient.getQueryState(['client-invitations', 'client-1'])?.isInvalidated).toBe(false)
   })
 
   it('disconnects in a hidden tab and refetches the client space on return', async () => {
