@@ -364,3 +364,37 @@ light+dark/afterdisconnect WebKit PNG просмотрены, сохранены
 Это synthetic local fixture, не опубликованный web/actualsignedZIP.
 PR2/PR3 ещё не pushed; after actualsquash1/2 — necessary ordinaryactualmain
 merge, fresh exactsourceCI и последовательная фактическая приёмка каждого.
+
+
+## Итерация 15 — 05.11.2026 — Codex / OpenAI
+
+PR1/#1989 штатно squashed21:55:26Z вactualmain1ee23d54 сmatch-head5dc,
+безforce/admin/bypass/branchdelete. Source5dcCI41916007024attempt1SUCCESS35/35,
+Android41916006720SUCCESS. Git treeactual1ee=source5dc=5291f792209e610ccab86ae1b352f2c5395db5a1.
+MainCI41920575270/Android41920575354 созданы автоматически; это ещё не
+публикация. Предшественник967 officialAPI41918375589/web41918375736/
+OTA41919028319SUCCESS;обаAPIexact967/ready200/auth401 иRSAsignednative9/ABI8922
+readiness сверены напрямую. Исходящих сообщений в другие чаты нет.
+PR2 включилactualsquash1ee обычнымmerge.4конфликта add/add/content — только
+план/own-cases/ClientProfilePage/ownCSS:incoming каждого побайтно совпадает
+сsource5dc, который уже ancestor нашей goal-ветки. Это подтверждено вместе
+сравенствомполныхGit trees; сохранены все наши goal additions и журналы,
+никакие входящие изменения не отброшены. Доказательство SHA256 сохранено
+в outputs/client-own-profile-20261104/pr2-main1ee-conflict-preservation.json.
+Runtime/e2e/API/package/lock/android после разрешения побайтно04aad75f;
+diffкactual1ee — только прежние цели/подцели/редактор/проверки и журнал.
+Docs/diff passed; прежние11unit/2goalbrowser и integrated14browser сохраняют
+свой scope, новый точный fullsourceCI PR2 обязателен. СоздатьdraftPR2 и егоCI
+параллельноmainCI1, но merge2 удерживать до фактической приёмки PR1.
+
+## Итерация 16 — 05.11.2026 — Codex / OpenAI
+
+ПодготовленныйPR3 включилsourcePR2/82797 иactualsquashPR1/1ee ordinarymerge.
+Только конфликтжурнала:incoming — exactappend кобщей базе, local отличается
+только вставками; сохранены все строки базы, local и incoming, совпадающая
+запись14 оставлена один раз. Runtime/owncases/API/package/lock/android
+побайтноf744; новые тесты без изменённого runtime не повторяются, последний
+integratedbuild/14browser13.3s0retry/skips остаётся локальным доказательством.
+PR2draft1990 CI41920954246/Android41920954243 запущен автоматически;егоmerge
+ждёт фактический release/6+6acceptancePR1. PR3 ещё не pushed;actualsquash2
+и новый полныйsourceCI остаются обязательными передmerge3.
