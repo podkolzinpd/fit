@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
@@ -29,14 +29,30 @@ vi.mock('../../app/auth-context', () => ({ useAuth: () => ({ actor: { kind: 'tra
 vi.mock('../../app/data-backend-context', () => ({ useDataBackend: () => ({ clients, trainerFinance: finance, workouts }) }))
 
 function renderPage(financeBackTo?: '/finance', queryClient = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: 20_000 }, mutations: { retry: false } } })) {
-  return render(<MemoryRouter initialEntries={[{ pathname: `/clients/${clientId}/finance`, state: financeBackTo ? { financeBackTo } : undefined }]}><QueryClientProvider client={queryClient}><Routes>
+  const view = render(<MemoryRouter initialEntries={[{ pathname: `/clients/${clientId}/finance`, state: financeBackTo ? { financeBackTo } : undefined }]}><QueryClientProvider client={queryClient}><Routes>
     <Route path="/clients/:clientId/finance" element={<TrainerFinancePage />} />
     <Route path="/finance" element={<p>Общий финансовый кабинет</p>} />
     <Route path="/clients/:clientId" element={<p>Профиль спортсмена</p>} />
   </Routes></QueryClientProvider></MemoryRouter>)
+  return { ...view, queryClient }
 }
 
 describe('TrainerFinancePage', () => {
+  it('hides the payment CTA for a fully paid service and retains correction through payment history', async () => {
+    finance.listClient.mockResolvedValue({ ...bundle,
+      packages: [{ ...bundle.packages[0]!, paidCents: 2500000, dueCents: 0, paymentStatus: 'paid' }],
+      payments: [{ ...bundle.payments[0]!, amountCents: 2500000 }],
+    })
+    const user = userEvent.setup()
+    renderPage()
+    await screen.findByRole('heading', { name: 'Персональные тренировки' })
+    expect(screen.queryByRole('button', { name: 'Внести оплату' })).not.toBeInTheDocument()
+    await user.click(screen.getByRole('tab', { name: 'Оплаты: 1' }))
+    await user.click(screen.getByRole('button', { name: /Действия с оплатой/ }))
+    await user.click(screen.getByRole('menuitem', { name: 'Изменить' }))
+    expect(screen.getByLabelText('Сумма, ₽')).toHaveValue(25000)
+    expect(screen.getByRole('button', { name: 'Сохранить' })).toBeVisible()
+  })
   it('refreshes overview months after payment even while their cached balances are fresh', async () => {
     const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: 20_000 } } })
     const months = ['2026-08', '2026-09']
@@ -252,6 +268,26 @@ describe('TrainerFinancePage', () => {
     await waitFor(() => expect(finance.addPayment).toHaveBeenCalledWith(packageId, expect.objectContaining({
       amountCents: 750000, comment: null,
     })))
+  })
+
+  it('keeps checking a lost payment available after a refreshed service becomes fully paid', async () => {
+    const user = userEvent.setup()
+    finance.addPayment.mockRejectedValueOnce(new Error('Нет сети'))
+    const { queryClient } = renderPage()
+    await user.click(await screen.findByRole('button', { name: 'Внести оплату' }))
+    await user.click(screen.getByRole('button', { name: 'Сохранить' }))
+    await screen.findByText('Сохранение не подтверждено')
+    finance.listClient.mockResolvedValue({ ...bundle, packages: bundle.packages.map(item => ({ ...item, paidCents: item.priceCents, dueCents: 0, paymentStatus: 'paid' })) })
+    await act(async () => { await queryClient.invalidateQueries({ queryKey: ['trainer-finance', clientId] }) })
+    await user.click(screen.getByRole('button', { name: 'Отмена' }))
+    expect(screen.queryByRole('button', { name: 'Внести оплату' })).not.toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Проверить сохранение' }))
+    await user.click(screen.getByRole('button', { name: 'Повторить сохранение' }))
+    await waitFor(() => expect(finance.addPayment).toHaveBeenCalledTimes(2))
+    expect(finance.addPayment.mock.calls[1]).toEqual(finance.addPayment.mock.calls[0])
+    await waitFor(() => expect(screen.queryByLabelText('Сумма, ₽')).not.toBeInTheDocument())
+    expect(screen.queryByRole('button', { name: 'Проверить сохранение' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Внести оплату' })).not.toBeInTheDocument()
   })
 
   it('reuses the payment request after an uncertain response and allows a separate next payment', async () => {

@@ -407,7 +407,7 @@ export function TrainerFinancePage() {
         <span>С {formatLocalDate(localDate(item.startsOn))}{item.endsOn ? ` по ${formatLocalDate(localDate(item.endsOn))}` : ''}</span>
         <span className={item.paymentStatus === 'overdue' ? 'is-overdue' : ''}>{item.priceCents === 0 && item.paidCents > 0 ? 'Стоимость не указана' : item.paidCents > item.priceCents ? `Переплата ${money(item.paidCents - item.priceCents)}` : PAYMENT_STATUS[item.paymentStatus]}</span>
       </div>
-      <button type="button" className="secondary finance-inline-action" disabled={pendingPaymentDraft !== null && pendingPaymentPackageId !== item.id} onClick={() => openPayment(item.id, undefined, true)}>{pendingPaymentPackageId === item.id ? 'Проверить сохранение' : 'Внести оплату'}</button>
+      {(item.dueCents > 0 || pendingPaymentPackageId === item.id) && <button type="button" className="secondary finance-inline-action" disabled={pendingPaymentDraft !== null && pendingPaymentPackageId !== item.id} onClick={() => openPayment(item.id, undefined, true)}>{pendingPaymentPackageId === item.id ? 'Проверить сохранение' : 'Внести оплату'}</button>}
       <details className="finance-service-payments finance-disclosure"><summary><span>Оплаты</span><small>{servicePayments.length}</small></summary><div className="finance-disclosure-content"><div className="finance-payment-list">{servicePayments.map((payment) => renderPayment(payment, false))}</div>{servicePayments.length === 0 && <p className="finance-empty">Оплат пока нет.</p>}</div></details>
       <details className="finance-package-details finance-disclosure">
         <summary><span>Подробнее</span></summary>
