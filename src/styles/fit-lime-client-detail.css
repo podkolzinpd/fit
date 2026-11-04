@@ -140,7 +140,7 @@
 }
 
 /* Client profile 1059:22831 / 1059:22951. Full-name data is not guessed into first/last fields. */
-.fit-lime-shell.trainer-client-detail-identity .client-profile-reference { padding-inline: 2px; max-width: 560px; }
+.fit-lime-shell.trainer-client-detail-identity .client-profile-reference { padding-top:12px; padding-inline: 2px; max-width: 560px; }
 .fit-lime-shell.trainer-client-detail-identity .client-profile-reference > .page-header { margin: 0 14px 20px; }
 .fit-lime-shell.trainer-client-detail-identity .client-profile-reference > .page-header h1 { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
 .fit-lime-shell.trainer-client-detail-identity .client-profile-reference .page-back,

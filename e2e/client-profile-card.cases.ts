@@ -191,7 +191,12 @@ for (const width of [375,390,430]) test(`Reference profile dimensions and direct
   await page.goto(`/clients/${clientId}`)
   const header=page.locator('.page-header'), name=page.locator('.client-profile-header h2')
   await expect(name).toBeVisible()
+  await page.evaluate(()=>document.fonts.ready)
+  await expect(name).toHaveCSS('font-family',/YS Geo/)
+  expect(await page.evaluate(()=>document.fonts.check('500 32px "YS Geo"'))).toBe(true)
+  await expect(page.locator('.client-profile-vitals dd').first()).toHaveCSS('font-family',/Doto/)
   const bar=(await header.boundingBox())!, title=(await name.boundingBox())!
+  expect(bar.y).toBe(12)
   expect(Math.abs(title.y-(bar.y+bar.height)-48)).toBeLessThanOrEqual(2)
   const actions=(await page.locator('.client-profile-header-actions').boundingBox())!
   expect(actions.x+actions.width).toBeGreaterThan(width-30)
@@ -212,6 +217,7 @@ for (const width of [375,390,430]) test(`Reference profile dimensions and direct
   const note=page.locator('.client-profile-note'), editor=note.getByRole('textbox',{name:'Заметка',exact:true})
   await note.scrollIntoViewIfNeeded()
   await expect(editor).toHaveAttribute('placeholder','Текст заметки')
+  await expect(editor).toHaveCSS('font-family',/YS Geo/)
   await expect(note.getByRole('button',{name:'Сохранить',exact:true})).toBeDisabled()
   await expect(note.getByRole('button',{name:'Надиктовать заметку',exact:true})).toBeVisible()
   await expect(page.getByRole('dialog')).toHaveCount(0)
