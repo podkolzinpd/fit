@@ -287,3 +287,21 @@ Src/API/package/lock/android/наш профиль и nativeABI8922/code9 пре
 Правила AGENTS/workflow/contracts/currentstate входящимmain не менялись.
 Green e87/attempt2 сохранён, новая объединённая голова требует полногоCI.
 Дальше: штатные проверки incoming workflow и exactsourceCI, без bypass.
+
+## Итерация 12 — 05.11.2026 — Codex / OpenAI
+
+Пока exactsource376 ожидает полный CI, подготовленные PR2/PR3 локально
+объединены ordinary merge с его исправлениями/header и actualmain1986.
+PR2 merge35d292e1 без конфликтов; PR3 mergeff31a8e6 — только конфликт журнала.
+Проверено: входящая сторона добавляет точный suffix, local отличается от
+общей базы только вставленными записями; сохранены все строки базы, все local
+вставки и весь incoming suffix. Никакие записи/сохранённые уточнения не сняты.
+Src/API/own-cases/goal/editor/android/lock каждой ветки побайтно прежние,
+из тестов incoming меняет только уже исправленный recovery-selector177.
+DiffPR2к376:7files233+/16- — только цель/подцели/редактор/проверки/журнал.
+DiffPR3к35d:6files215+/6- — только sports/connections/finance composition,
+контекст возврата/проверки/журнал. Docs/diff проверки пройдены.
+Новые runtime-правки и повтор прежних browser-прогонов не требуются для этой
+интеграции; published actualmain каждого этапа ещё будет ordinary-merged
+перед свежим sourceCI. PR2/PR3 не pushed и не опубликованы. Последовательные
+merge/release/actual-acceptance каждого этапа сохраняются.
