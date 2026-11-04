@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
-import { readAccountLinkTargets, inspectAccountLinks } from './cloudru-account-links-audit.mjs'
+import { readAccountLinkTargets, inspectAccountLinks, readRetainedLoginBindings } from './cloudru-account-links-audit.mjs'
 
 const targets = { emailHashes: ['a'.repeat(64), 'b'.repeat(64)], loginHashes: ['c'.repeat(64)] }
 const oldId = '11111111-1111-4111-8111-111111111111'
@@ -75,6 +75,46 @@ test('scope overflow and query failures roll back rather than emitting partial a
     } }, targets, []))
     assert.equal(calls.at(-1), 'rollback')
     assert.equal(calls.includes('commit'), false)
+  }
+})
+
+test('retained source discovery requires a readonly transaction and bounded exact hashes', async () => {
+  const calls=[]
+  const client={async query(sql){calls.push(sql);return {rows:[{readonly:'off'}]}}}
+  for(const hashes of [[],['plain-login'],Array(9).fill('a'.repeat(64))]) {
+    await assert.rejects(readRetainedLoginBindings(client,hashes),/targets_invalid/)
+  }
+  assert.equal(calls.length,0)
+  await assert.rejects(readRetainedLoginBindings(client,targets.loginHashes),/readonly_required/)
+  assert.equal(calls.some(sql=>sql.includes('pg_class')),false)
+})
+
+test('retained audit includes direct and verified provider-subject mappings without choosing an actor', async () => {
+  const calls=[]
+  const client={async query(sql,params){
+    calls.push({sql,params})
+    if(sql.includes('current_user'))return {rows:[{readonly:'on'}]}
+    if(sql.includes('from pg_class'))return {rows:[{name:'synthetic_direct',binding_kind:'profile'},{name:'synthetic_subject',binding_kind:'subject'}]}
+    if(sql.includes('select identity.profile_id'))return {rows:[{profile_id:newId,login_sha256:targets.loginHashes[0]}]}
+    if(sql.includes('select profile_id,login_sha256'))return {rows:[{profile_id:oldId,login_sha256:targets.emailHashes[0]}]}
+    throw Error('unexpected synthetic query')
+  }}
+  const result=await readRetainedLoginBindings(client,[targets.emailHashes[0],targets.loginHashes[0]])
+  assert.deepEqual(result.bindings.map(row=>row.profile_id),[oldId,newId])
+  assert.deepEqual(result.tables,['synthetic_direct','synthetic_subject'])
+  assert.ok(calls.some(({sql})=>sql.includes("identity.provider='yandex'")))
+  assert.ok(calls.every(({sql})=>!/^\s*(insert|update|delete|grant|alter|create|drop)\b/i.test(sql)))
+  assert.equal('trainerId' in result,false)
+})
+
+test('retained source audit rejects unexpected identifiers or hashes instead of partial evidence', async () => {
+  for(const row of [{profile_id:'not-an-id',login_sha256:targets.loginHashes[0]},
+    {profile_id:newId,login_sha256:'d'.repeat(64)}]) {
+    await assert.rejects(readRetainedLoginBindings({async query(sql){
+      if(sql.includes('current_user'))return {rows:[{readonly:'on'}]}
+      if(sql.includes('from pg_class'))return {rows:[{name:'synthetic_binding'}]}
+      return {rows:[row]}
+    }},targets.loginHashes),/scope_exceeded/)
   }
 })
 

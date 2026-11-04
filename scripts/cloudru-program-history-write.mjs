@@ -7,11 +7,27 @@ import {resolveJournalTrainer,ownerRead,validateJournalDrafts,insertReviewedJour
   verifyJournalContent,isNewCardFinanceUnchanged,preservedJournalState,verifyPreservedState,legacyProfileId,sealJournalReceipt} from './cloudru-journal-import.mjs'
 import {loadCloudruUpload,safeJournalUploadFailure} from './cloudru-journal-upload.mjs'
 import {inspectWorkoutHistoryTarget} from './cloudru-account-history-audit.mjs'
+import {readRetainedLoginBindings} from './cloudru-account-links-audit.mjs'
 
 const fail=code=>{throw new Error(`program_history_write_${code}`)}
 const same=(a,b)=>JSON.stringify(a)===JSON.stringify(b)
 const hash=value=>createHash('sha256').update(JSON.stringify(value)).digest('hex')
 const relevant=cards=>cards.filter(c=>c.exact||c.possible)
+
+async function inspectIdentitySources(owner,target) {
+  return ownerRead(owner,async()=>{
+    const {tables,bindings}=await readRetainedLoginBindings(owner,[target.trainerEmailSha256,target.trainerLoginSha256])
+    const ids=[...new Set(bindings.map(row=>row.profile_id))]
+    if(ids.length>10)fail('identity_sources_scope_exceeded')
+    const profiles=(await owner.query(`select p.id,p.account_role,exists(select 1 from app_private.auth_identities i
+      where i.profile_id=p.id and i.provider='yandex') linked
+      from public.profiles p where p.id=any($1::uuid[]) limit 11`,[ids])).rows
+    if(profiles.length>10)fail('identity_sources_scope_exceeded')
+    return {identityAuditVersion:1,retainedSourcesChecked:tables.length,retainedProfileCandidates:ids.length,
+      linkedTrainerCandidates:profiles.filter(p=>p.account_role==='trainer'&&p.linked===true).length,
+      retainedBindingSources:[...new Set(bindings.map(row=>row.source))].sort()}
+  })
+}
 
 async function runtimeRead(runtime,trainerId,work) {
   return ownerRead(runtime,async()=>{
@@ -81,11 +97,15 @@ export async function runProgramImport({mode,owner,runtime,target,legacyId=null,
     if(mode!=='inspect'||error?.message!=='journal_import_current_trainer_identity_required')throw error
     const evidence=await inspectWorkoutHistoryTarget(owner,runtime,target,legacyId)
     if(evidence.trainerMatched&&evidence.yandexIdentityLinked)fail('selection_changed')
+    const sources=await inspectIdentitySources(owner,target)
     const result={status:'identity_requires_review',code:scope.code,workouts:0,readOnly:true,
       productionMutated:false,trainerVerified:false,legacyRegistryMatched:legacyId!==null,
       retainedLoginBinding:evidence.retainedLoginBinding===true,
-      reason:evidence.trainerMatched?'yandex_identity_missing':'email_binding_missing'}
-    await persistReceipt('readback',{...result,kind:'program_identity_inspection',packetSha256:approvedSha256})
+      reason:evidence.trainerMatched?'yandex_identity_missing'
+        :sources.retainedProfileCandidates?'additional_binding_requires_review':'email_binding_missing',...sources}
+    // The target proof stays only inside the encrypted receipt, never stdout.
+    await persistReceipt('readback',{...result,kind:'program_identity_inspection',packetSha256:approvedSha256,
+      targetBinding:hash([target.trainerEmailSha256,target.trainerLoginSha256,target.clientNameSha256])})
     return result
   }
   const requestIds=payload.workouts.map(w=>w.requestId)
@@ -227,6 +247,7 @@ async function main() {
   }finally{await Promise.allSettled([owner.end(),runtime.end()]);upload.close()}
 }
 const safeCodes=new Set(['mode_invalid','source_invalid','database_target_invalid','receipt_required','private_proof_required',
+  'identity_sources_scope_exceeded',
   'private_proof_invalid','prior_batch_changed','verify_required','source_review_required','selection_required','selection_changed',
   'writer_guard_required','finance_changed','athlete_visibility_changed','historical_notification_created','outcome_requires_readback',
   'packet_invalid','runtime_role_invalid','readonly_required','trainer_ambiguous','current_trainer_identity_required','trainer_role_invalid',
