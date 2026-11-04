@@ -49,7 +49,7 @@
   background: var(--lime-surface);
   color: var(--lime-text);
 }
-.fit-lime-shell.trainer-clients-identity .client-card:hover { border-color: #729b27 }
+.fit-lime-shell.trainer-clients-identity .client-card:hover { border-color: color-mix(in srgb, var(--lime-accent, var(--fit-brand-accent)) 55%, #000) }
 .fit-lime-shell.trainer-clients-identity .client-card-main { min-height: 68px; gap: 10px; padding: 10px 8px 10px 12px }
 .fit-lime-shell.trainer-clients-identity .client-avatar {
   width: 36px;
@@ -81,7 +81,7 @@
   color: var(--lime-text);
 }
 .fit-lime-shell.trainer-clients-identity .client-chat-action:hover,
-.fit-lime-shell.trainer-clients-identity .client-card-menu:hover { border-color: #729b27 }
+.fit-lime-shell.trainer-clients-identity .client-card-menu:hover { border-color: color-mix(in srgb, var(--lime-accent, var(--fit-brand-accent)) 55%, #000) }
 .fit-lime-shell.trainer-clients-identity .client-swipe-actions.is-restore { background: var(--lime-accent) }
 .fit-lime-shell.trainer-clients-identity .client-swipe-actions.is-restore button { color: var(--lime-text-on-accent) }
 .fit-lime-shell.trainer-clients-identity .clients-archive-link {
@@ -94,9 +94,9 @@
   font-weight: 500;
 }
 .fit-lime-shell.trainer-clients-identity .clients-archive-link svg { color: var(--lime-accent) }
-.fit-lime-shell.trainer-clients-identity .clients-archive-link:hover { border-color: #729b27 }
+.fit-lime-shell.trainer-clients-identity .clients-archive-link:hover { border-color: color-mix(in srgb, var(--lime-accent, var(--fit-brand-accent)) 55%, #000) }
 .fit-lime-shell.trainer-clients-identity .clients-archive-feedback {
-  border-color: #729b27;
+  border-color: color-mix(in srgb, var(--lime-accent, var(--fit-brand-accent)) 55%, #000);
   border-radius: 18px;
   background: var(--lime-accent-muted);
   color: var(--lime-text);
