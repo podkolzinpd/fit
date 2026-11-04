@@ -202,3 +202,20 @@
 .fit-lime-shell.trainer-client-detail-identity .client-profile-reference .client-profile-upcoming-today small.client-profile-workout-date { color:var(--lime-accent); }
 .fit-lime-shell.trainer-client-detail-identity .client-profile-reference .client-detail-upcoming .card > svg { display:block; flex:0 0 16px; width:16px; height:16px; color:var(--lime-text-secondary); }
 .fit-lime-shell.trainer-client-detail-identity .client-profile-reference .client-profile-upcoming-today > svg { color:var(--lime-accent); }
+
+.fit-lime-shell .client-profile-reference .client-profile-note { margin-top:24px; }
+.fit-lime-shell .client-profile-reference .client-profile-note h2 { display:flex; align-items:center; gap:8px; padding:0 20px; color:var(--lime-text-secondary); font-size:14px; line-height:20px; font-weight:400; }
+.fit-lime-shell .client-profile-reference .client-profile-note-surface { background:var(--lime-surface); border-radius:24px; padding:24px; min-height:120px; }
+.fit-lime-shell .client-profile-reference .client-profile-note-surface p { margin:0; white-space:pre-wrap; overflow-wrap:anywhere; font-size:16px; line-height:20px; }
+.client-profile-note-preview { display:-webkit-box; -webkit-line-clamp:8; -webkit-box-orient:vertical; overflow:hidden; }
+.fit-lime-shell .client-profile-reference .client-profile-note-actions { display:flex; flex-wrap:wrap; gap:8px 20px; margin-top:12px; }
+.fit-lime-shell .client-profile-reference .client-profile-note-actions .link { color:var(--lime-text-secondary); font-size:14px; font-weight:400; }
+.client-profile-logo { display:block; width:89px; height:47px; margin:64px auto 32px; }
+.fit-lime-shell .client-profile-reference textarea { scroll-margin-block:16px; }
+.fit-lime-shell.trainer-client-detail-identity .client-profile-reference > .page-header { display:flex; justify-content:space-between; }
+.fit-lime-shell.trainer-client-detail-identity .client-profile-reference .client-profile-header-actions { margin-left:auto; }
+.fit-lime-shell.trainer-client-detail-identity .client-profile-reference .goal-block > .link { display:inline-flex; width:auto; min-height:44px; padding:8px 0; margin:0 20px 0 0; align-items:center; color:var(--lime-accent); font-size:14px; line-height:18px; font-weight:400; text-decoration:none; }
+.fit-lime-shell.trainer-client-detail-identity .client-profile-reference .client-profile-invite { font-weight:400; }
+
+.fit-lime-shell .client-profile-reference .client-profile-empty-upcoming { display:flex; align-items:center; gap:8px; padding:12px 20px; color:var(--lime-text-secondary); font-size:14px; line-height:20px; }
+.fit-lime-shell .client-profile-reference .client-profile-empty-upcoming svg { width:18px; height:18px; }

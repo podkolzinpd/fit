@@ -1,3 +1,5 @@
+import clientNoteIcon from '../../assets/client-profile/note.svg'
+import clientProfileLogo from '../../assets/client-profile/logo.svg'
 import clientGoalIcon from '../../assets/client-profile/goal.svg'
 import connectedClientIcon from '../../assets/client-profile/connected.svg'
 import disconnectedClientIcon from '../../assets/client-profile/disconnected.svg'
@@ -301,26 +303,30 @@ function ClientForm({
   return embedded ? contents : <Page title={title} back={fitLimeBack} className={createMode === 'self' ? 'client-self-edit-page' : undefined}>{contents}</Page>
 }
 
-// update_client пишет goal и note одной транзакцией с optimistic-lock (version).
-// Поэтому обе формы (цель / заметка) сохраняют через один хелпер и всегда
-// передают текущее значение соседнего поля — чтобы правка одного не затирала другое.
+// Notes belong to the trainer membership; profile goals use the client version.
 function useSaveClient(client: Client, onDone: () => void) {
   const { clients: clientsRepository } = useDataBackend()
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: (patch: { goal?: string; note?: string }) => {
-      if (!client.gender || !client.ageYears || !client.heightCm || !client.ageUpdatedAt) throw new Error('Сначала дополните профиль клиента')
+    mutationFn: (patch: { goal: string } | { note: string }) => {
+      if ('note' in patch) return clientsRepository.updatePreferences({
+        clientId: client.id, alias: client.fullName,
+        note: patch.note.trim() || undefined, version: client.membershipVersion ?? 1,
+      })
       return clientsRepository.update({
-        id: client.id, version: client.version, fullName: client.fullName, gender: client.gender,
+        id: client.id, version: client.version, fullName: client.canonicalFullName, gender: client.gender,
         ageYears: client.ageYears, ageUpdatedAt: client.ageUpdatedAt, heightCm: client.heightCm,
-        goal: (patch.goal ?? client.goal ?? '').trim() || undefined,
-        note: (patch.note ?? client.note ?? '').trim() || undefined,
+        goal: patch.goal.trim() || undefined,
       })
     },
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['clients'] })
       await queryClient.invalidateQueries({ queryKey: ['client', client.id] })
       onDone()
+    },
+    onError: async (error) => {
+      if (!isRepositoryConflict(error)) return
+      await queryClient.invalidateQueries({ queryKey: ['client', client.id] })
     },
   })
 }
@@ -386,7 +392,8 @@ function ClientGoalBlock({ client, reference = false }: { client: Client; refere
   </section>
 }
 
-function ClientNoteBlock({ client }: { client: Client }) {
+function ClientNoteBlock({ client, reference = false }: { client: Client; reference?: boolean }) {
+  const [expanded, setExpanded] = useState(false)
   const [editing, setEditing] = useState(false)
   const form = useForm<{ note: string }>({ defaultValues: { note: client.note ?? '' } })
   const mutation = useSaveClient(client, () => setEditing(false))
@@ -399,6 +406,16 @@ function ClientNoteBlock({ client }: { client: Client }) {
       {mutation.error && <p className="error">{mutation.error.message}</p>}
       <div className="actions"><button type="button" className="secondary" onClick={() => setEditing(false)}>Отмена</button><button className="primary" disabled={mutation.isPending}>Сохранить</button></div>
     </form>
+  </section>
+  if (reference) return <section className="client-profile-note">
+    <h2><img src={clientNoteIcon} width={20} height={20} alt="" />Заметка</h2>
+    <div className="client-profile-note-surface">
+      {client.note ? <p className={expanded ? undefined : 'client-profile-note-preview'}>{client.note}</p> : <p className="muted">Текст заметки</p>}
+      <div className="client-profile-note-actions">
+        {client.note && client.note.length > 240 && <button type="button" className="link" aria-expanded={expanded} onClick={() => setExpanded(!expanded)}>{expanded ? 'Свернуть заметку' : 'Показать всю заметку'}</button>}
+        <button type="button" className="link" onClick={startEditing}>{client.note ? 'Изменить' : 'Добавить заметку'}</button>
+      </div>
+    </div>
   </section>
   return <section className="goal-block client-note-block">
     <div className="goal-head"><h2>Заметка</h2><button type="button" className="link" onClick={startEditing}>{client.note ? 'Изменить' : '＋ Добавить'}</button></div>
@@ -535,7 +552,7 @@ export function ClientDetailPage() {
       {!fitLimePilot && <>
       {upcoming.length > 0 && <section className="client-detail-upcoming"><h2>Предстоит</h2><div className="cards">{upcoming.map((workout) => <Link className="card" key={workout.id} to={`/workouts/${workout.id}`}><div><strong>{formatLocalDate(workout.workoutDate)}{workout.startTime ? ` · ${workout.startTime.slice(0, 5)}` : ''}</strong><WorkoutExercisesSummary workout={workout} />{workout.stageTitle && <p className="stage-tag">🎯 {workout.stageTitle}</p>}</div><span className={`badge ${workout.status}`}>{workout.status === 'in_progress' ? 'Идёт' : 'План'}</span></Link>)}</div></section>}
       </>}
-      {fitLimePilot && workouts.isSuccess && upcoming.length === 0 && <p className="client-detail-source-state">Ближайших тренировок нет</p>}
+      {fitLimePilot && workouts.isSuccess && upcoming.length === 0 && <p className="client-profile-empty-upcoming"><ScheduleIcon />Тренировки не запланированы</p>}
       {fitLimePilot && <details className="client-profile-secondary"><summary>Статистика, замеры и питание</summary>
       <section className="client-detail-snapshot" aria-label="Сводка по спортсмену">
         <p className="client-detail-vitals">
@@ -557,7 +574,7 @@ export function ClientDetailPage() {
       {stats.data?.needsAttention && <p className="attention">Давно не тренировался</p>}
       {query.data.hasAccount && !query.data.archivedAt && <NutritionSummary clientId={clientId} />}
       </details>}
-      <ClientNoteBlock client={query.data} />
+      <ClientNoteBlock client={query.data} reference={fitLimePilot} />
       <div className="page-actions" id="client-profile-invitations">
         {manageInvitations && <button type="button" className="link" onClick={() => setManageInvitations(false)}>Скрыть приглашения</button>}
         {fitLimePilot && <ClientDetailSourceState label="приглашения и права доступа" loading={invitations.isLoading || trainers.isLoading} error={invitations.error ?? trainers.error} onRetry={() => { void invitations.refetch(); void trainers.refetch() }} />}
@@ -573,6 +590,7 @@ export function ClientDetailPage() {
         </div>}
         {fitLimePilot && archive.isSuccess && <p className="client-detail-source-state" role="status">Изменение архива сохранено</p>}
       </div>
+      {fitLimePilot && <img className="client-profile-logo" src={clientProfileLogo} width={89} height={47} alt="Фит" />}
       {confirmDialog}
     </>}</AsyncView>
   </Page>
