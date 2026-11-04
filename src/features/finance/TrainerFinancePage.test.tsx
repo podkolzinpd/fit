@@ -1,11 +1,12 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { render, screen, waitFor, within } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Client, SessionActor } from '../../shared/domain'
 import type { TrainerFinanceClientBundle, TrainerFinanceRepository } from '../../data/contracts/trainer-finance'
 import { PackageForm, PaymentForm, TrainerFinancePage } from './TrainerFinancePage'
+import { RepositoryError } from '../../data/repositories/error'
 
 const clientId = '1a0c5295-0a0f-4ccb-a39a-e58090967245'
 const trainerId = 'd2b80c5e-f60b-42b0-ae3f-308e91bbcb9b'
@@ -15,28 +16,77 @@ const sessionId = '8938c8e0-3856-469b-b743-ab5942ce4564'
 const workoutId = '77d5776a-337c-466e-a3e6-e098adb03cc7'
 const client: Client = { id: clientId, canArchive: true, hasAccount: true, fullName: 'Анна Смирнова', canonicalFullName: 'анна смирнова', gender: null, ageYears: null, ageUpdatedAt: null, heightCm: null, goal: null, note: null, currentWeightKg: null, archivedAt: null, version: 1, membershipVersion: 1 }
 const bundle: TrainerFinanceClientBundle = {
-  clientId,
+  clientId, clientName: 'Анна Смирнова',
   packages: [{ id: packageId, clientId, trainerId, kind: 'session_pack', title: 'Персональные тренировки', sessionsTotal: 10, sessionsUsed: 2, sessionsRemaining: 8, priceCents: 2500000, paidCents: 1000000, dueCents: 1500000, startsOn: '2026-09-01', endsOn: null, paymentDueOn: '2026-09-10', comment: null, packageStatus: 'active', paymentStatus: 'overdue', closedAt: null, version: 1, createdAt: '2026-09-01T10:00:00.000Z', updatedAt: '2026-09-01T10:00:00.000Z' }],
   payments: [{ id: paymentId, packageId, amountCents: 1000000, receivedOn: '2026-09-01', source: 'manual', comment: null, voidedAt: null, voidReason: null, version: 1, createdAt: '2026-09-01T10:00:00.000Z', updatedAt: '2026-09-01T10:00:00.000Z' }],
   sessions: [{ id: sessionId, packageId, workoutId, disposition: 'charged', source: 'automatic', comment: null, workoutDate: '2026-09-05', voidedAt: null, voidReason: null, version: 1, createdAt: '2026-09-05T10:00:00.000Z', updatedAt: '2026-09-05T10:00:00.000Z' }],
 }
 const clients = vi.hoisted(() => ({ get: vi.fn() }))
-const finance = vi.hoisted(() => ({ listClient: vi.fn(), createPackage: vi.fn<TrainerFinanceRepository['createPackage']>(), updatePackage: vi.fn(), addPayment: vi.fn<TrainerFinanceRepository['addPayment']>(), updatePayment: vi.fn(), voidPayment: vi.fn(), updateSession: vi.fn(), createManualSession: vi.fn() }))
+const finance = vi.hoisted(() => ({ listClient: vi.fn(), createPackage: vi.fn<TrainerFinanceRepository['createPackage']>(), updatePackage: vi.fn(), addPayment: vi.fn<TrainerFinanceRepository['addPayment']>(), updatePayment: vi.fn(), voidPayment: vi.fn(), updateSession: vi.fn(), createManualSession: vi.fn<TrainerFinanceRepository['createManualSession']>() }))
 const workouts = vi.hoisted(() => ({ saveCompleted: vi.fn() }))
 
 vi.mock('../../app/auth-context', () => ({ useAuth: () => ({ actor: { kind: 'trainer', role: 'trainer', userId: trainerId, email: null, firstName: 'Ирина', lastName: null, timezone: 'Europe/Moscow' } as SessionActor }) }))
 vi.mock('../../app/data-backend-context', () => ({ useDataBackend: () => ({ clients, trainerFinance: finance, workouts }) }))
 
-function renderPage(financeBackTo?: '/finance') {
-  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })
-  return render(<MemoryRouter initialEntries={[{ pathname: `/clients/${clientId}/finance`, state: financeBackTo ? { financeBackTo } : undefined }]}><QueryClientProvider client={queryClient}><Routes>
+function renderPage(financeBackTo?: '/finance', queryClient = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: 20_000 }, mutations: { retry: false } } })) {
+  const view = render(<MemoryRouter initialEntries={[{ pathname: `/clients/${clientId}/finance`, state: financeBackTo ? { financeBackTo } : undefined }]}><QueryClientProvider client={queryClient}><Routes>
     <Route path="/clients/:clientId/finance" element={<TrainerFinancePage />} />
     <Route path="/finance" element={<p>Общий финансовый кабинет</p>} />
     <Route path="/clients/:clientId" element={<p>Профиль спортсмена</p>} />
   </Routes></QueryClientProvider></MemoryRouter>)
+  return { ...view, queryClient }
 }
 
 describe('TrainerFinancePage', () => {
+  it('hides the payment CTA for a fully paid service and retains correction through payment history', async () => {
+    finance.listClient.mockResolvedValue({ ...bundle,
+      packages: [{ ...bundle.packages[0]!, paidCents: 2500000, dueCents: 0, paymentStatus: 'paid' }],
+      payments: [{ ...bundle.payments[0]!, amountCents: 2500000 }],
+    })
+    const user = userEvent.setup()
+    renderPage()
+    await screen.findByRole('heading', { name: 'Персональные тренировки' })
+    expect(screen.queryByRole('button', { name: 'Внести оплату' })).not.toBeInTheDocument()
+    await user.click(screen.getByRole('tab', { name: 'Оплаты: 1' }))
+    await user.click(screen.getByRole('button', { name: /Действия с оплатой/ }))
+    await user.click(screen.getByRole('menuitem', { name: 'Изменить' }))
+    expect(screen.getByLabelText('Сумма, ₽')).toHaveValue(25000)
+    expect(screen.getByRole('button', { name: 'Сохранить' })).toBeVisible()
+  })
+  it('refreshes overview months after payment even while their cached balances are fresh', async () => {
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: 20_000 } } })
+    const months = ['2026-08', '2026-09']
+    months.forEach(month => queryClient.setQueryData(['trainer-finance-overview', month], { dueCents: 1500000 }))
+    finance.listClient.mockResolvedValueOnce(bundle).mockResolvedValue({ ...bundle,
+      packages: [{ ...bundle.packages[0]!, dueCents: 1000000, paidCents: 1500000 }] })
+    const user = userEvent.setup()
+    renderPage(undefined, queryClient)
+    await user.click(await screen.findByRole('button', { name: 'Внести оплату' }))
+    await user.clear(screen.getByLabelText('Сумма, ₽'))
+    await user.type(screen.getByLabelText('Сумма, ₽'), '5000')
+    await user.click(screen.getByRole('button', { name: 'Сохранить' }))
+    await screen.findByRole('button', { name: 'Внести оплату' })
+    const read = vi.fn<() => Promise<{ dueCents: number }>>().mockResolvedValue({ dueCents: 1000000 })
+    for (const month of months) {
+      expect(await queryClient.fetchQuery({ queryKey: ['trainer-finance-overview', month], queryFn: read })).toEqual({ dueCents: 1000000 })
+    }
+    expect(read).toHaveBeenCalledTimes(2)
+  })
+
+  it('opens authorized former-client finance without requesting private client data', async () => {
+    clients.get.mockRejectedValue(new RepositoryError('PT404', 'Нет доступа к карточке'))
+    finance.listClient.mockResolvedValue({ ...bundle, clientName: 'Бывший клиент', canCreate: false,
+      packages: [{ ...bundle.packages[0]!, packageStatus: 'expired' }] })
+    const user = userEvent.setup()
+    renderPage('/finance')
+    expect(await screen.findByText('Бывший клиент')).toBeVisible()
+    await user.click(screen.getByText('История', { selector: '.finance-history summary span' }))
+    expect(screen.getByRole('heading', { name: 'Персональные тренировки' })).toBeVisible()
+    expect(screen.queryByRole('button', { name: 'Новая' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Продлить' })).not.toBeInTheDocument()
+    expect(clients.get).not.toHaveBeenCalled()
+    expect(screen.queryByText('Нет доступа к карточке')).not.toBeInTheDocument()
+  })
   it.each([true, false])('shows full or partial opening payment with its actual date: Lime=%s', async (lime) => {
     const user = userEvent.setup()
     const submit = vi.fn()
@@ -162,7 +212,7 @@ describe('TrainerFinancePage', () => {
     finance.updatePayment.mockReset().mockResolvedValue(bundle.payments[0]!)
     finance.voidPayment.mockReset().mockResolvedValue(undefined)
     finance.updateSession.mockReset().mockResolvedValue({ ...bundle.sessions[0], disposition: 'free', packageId: null, version: 2 })
-    finance.createManualSession.mockReset().mockResolvedValue(bundle.sessions[0])
+    finance.createManualSession.mockReset().mockResolvedValue(bundle.sessions[0]!)
     workouts.saveCompleted.mockReset().mockResolvedValue(workoutId)
   })
 
@@ -220,6 +270,26 @@ describe('TrainerFinancePage', () => {
     })))
   })
 
+  it('keeps checking a lost payment available after a refreshed service becomes fully paid', async () => {
+    const user = userEvent.setup()
+    finance.addPayment.mockRejectedValueOnce(new Error('Нет сети'))
+    const { queryClient } = renderPage()
+    await user.click(await screen.findByRole('button', { name: 'Внести оплату' }))
+    await user.click(screen.getByRole('button', { name: 'Сохранить' }))
+    await screen.findByText('Сохранение не подтверждено')
+    finance.listClient.mockResolvedValue({ ...bundle, packages: bundle.packages.map(item => ({ ...item, paidCents: item.priceCents, dueCents: 0, paymentStatus: 'paid' })) })
+    await act(async () => { await queryClient.invalidateQueries({ queryKey: ['trainer-finance', clientId] }) })
+    await user.click(screen.getByRole('button', { name: 'Отмена' }))
+    expect(screen.queryByRole('button', { name: 'Внести оплату' })).not.toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Проверить сохранение' }))
+    await user.click(screen.getByRole('button', { name: 'Повторить сохранение' }))
+    await waitFor(() => expect(finance.addPayment).toHaveBeenCalledTimes(2))
+    expect(finance.addPayment.mock.calls[1]).toEqual(finance.addPayment.mock.calls[0])
+    await waitFor(() => expect(screen.queryByLabelText('Сумма, ₽')).not.toBeInTheDocument())
+    expect(screen.queryByRole('button', { name: 'Проверить сохранение' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Внести оплату' })).not.toBeInTheDocument()
+  })
+
   it('reuses the payment request after an uncertain response and allows a separate next payment', async () => {
     const user = userEvent.setup()
     finance.addPayment.mockRejectedValueOnce(new Error('Нет связи')).mockResolvedValue(bundle.payments[0]!)
@@ -230,7 +300,7 @@ describe('TrainerFinancePage', () => {
     await user.type(screen.getByLabelText('Сумма, ₽'), '7500')
     await user.click(screen.getByRole('button', { name: 'Сохранить' }))
     await waitFor(() => expect(finance.addPayment).toHaveBeenCalledTimes(1))
-    await user.click(screen.getByRole('button', { name: 'Сохранить' }))
+    await user.click(screen.getByRole('button', { name: 'Повторить сохранение' }))
     await waitFor(() => expect(finance.addPayment).toHaveBeenCalledTimes(2))
     const firstRequest = finance.addPayment.mock.calls[0]![1].requestId
     expect(firstRequest).toEqual(expect.any(String))
@@ -251,7 +321,7 @@ describe('TrainerFinancePage', () => {
     await user.type(screen.getByLabelText('Стоимость, ₽'), '25000')
     await user.click(screen.getByRole('button', { name: 'Сохранить' }))
     await waitFor(() => expect(finance.createPackage).toHaveBeenCalledTimes(1))
-    await user.click(screen.getByRole('button', { name: 'Сохранить' }))
+    await user.click(screen.getByRole('button', { name: 'Повторить сохранение' }))
     await waitFor(() => expect(finance.createPackage).toHaveBeenCalledTimes(2))
     expect(finance.createPackage.mock.calls[0]![1].requestId).toEqual(expect.any(String))
     expect(finance.createPackage.mock.calls[1]![1].requestId).toBe(finance.createPackage.mock.calls[0]![1].requestId)
@@ -300,9 +370,11 @@ describe('TrainerFinancePage', () => {
     })))
   })
 
-  it('keeps the manual operation identity and input after a lost response', async () => {
+  it('resolves a lost manual response after cancel before accepting a new operation', async () => {
     const user = userEvent.setup()
-    finance.createManualSession.mockRejectedValueOnce(new Error('Нет сети')).mockResolvedValue(bundle.sessions[0])
+    finance.createManualSession.mockRejectedValueOnce(new Error('Нет сети'))
+      .mockRejectedValueOnce(new RepositoryError('PT404', 'Связь временно недоступна'))
+      .mockResolvedValue(bundle.sessions[0]!)
     renderPage()
     await screen.findByRole('heading', { name: 'Персональные тренировки' })
     await user.click(screen.getByRole('tab', { name: 'Занятия: 1' }))
@@ -310,12 +382,153 @@ describe('TrainerFinancePage', () => {
     await user.type(screen.getByLabelText('Комментарий'), 'Занятие вне Fit')
     await user.selectOptions(screen.getByLabelText('Учёт'), 'trial')
     await user.click(screen.getByRole('button', { name: 'Добавить' }))
-    await screen.findByText('Нет сети')
+    await screen.findByText('Сохранение не подтверждено')
     expect(screen.getByLabelText('Комментарий')).toHaveValue('Занятие вне Fit')
-    await user.click(screen.getByRole('button', { name: 'Добавить' }))
+    expect(screen.getByLabelText('Комментарий')).toBeDisabled()
+    await user.click(screen.getByRole('button', { name: 'Отмена' }))
+    expect(finance.createManualSession).toHaveBeenCalledTimes(1)
+    await user.click(screen.getByRole('button', { name: 'Проверить сохранение' }))
+    expect(screen.getByLabelText('Комментарий')).toHaveValue('Занятие вне Fit')
+    expect(screen.getByLabelText('Учёт')).toHaveValue('trial')
+    await user.click(screen.getByRole('button', { name: 'Повторить сохранение' }))
     await waitFor(() => expect(finance.createManualSession).toHaveBeenCalledTimes(2))
     expect(finance.createManualSession.mock.calls[1]).toEqual(finance.createManualSession.mock.calls[0])
+    // A later access rejection does not prove that the first lost response
+    // represented a rollback. Keep that operation until a successful replay.
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Повторить сохранение' })).toBeEnabled())
+    expect(screen.getByLabelText('Комментарий')).toBeDisabled()
+    await user.click(screen.getByRole('button', { name: 'Повторить сохранение' }))
+    await waitFor(() => expect(finance.createManualSession).toHaveBeenCalledTimes(3))
+    expect(finance.createManualSession.mock.calls[2]).toEqual(finance.createManualSession.mock.calls[0])
+    await waitFor(() => expect(screen.queryByLabelText('Дата занятия')).not.toBeInTheDocument())
+    await user.click(screen.getByRole('button', { name: 'Добавить' }))
+    await user.type(screen.getByLabelText('Комментарий'), 'Другое занятие')
+    await user.click(screen.getByRole('button', { name: 'Добавить' }))
+    await waitFor(() => expect(finance.createManualSession).toHaveBeenCalledTimes(4))
+    expect(finance.createManualSession.mock.calls[3]![1].requestId).not.toBe(finance.createManualSession.mock.calls[0]![1].requestId)
     expect(workouts.saveCompleted).not.toHaveBeenCalled()
+  })
+
+  it.each(['payment', 'package'] as const)('allows correcting a rejected %s creation with a new operation', async (kind) => {
+    const user = userEvent.setup()
+    const create = kind === 'payment' ? finance.addPayment : finance.createPackage
+    create.mockRejectedValueOnce(new RepositoryError('PT422', 'Проверьте данные'))
+    renderPage()
+    await user.click(await screen.findByRole('button', { name: kind === 'payment' ? 'Внести оплату' : 'Новая' }))
+    if (kind === 'package') await user.type(screen.getByLabelText('Стоимость, ₽'), '5000')
+    await user.click(screen.getByRole('button', { name: 'Сохранить' }))
+    await screen.findByText('Проверьте данные')
+    expect(screen.getByLabelText('Комментарий')).toBeEnabled()
+    await user.type(screen.getByLabelText('Комментарий'), 'Исправленная запись')
+    await user.click(screen.getByRole('button', { name: 'Сохранить' }))
+    await waitFor(() => expect(create).toHaveBeenCalledTimes(2))
+    expect(create.mock.calls[1]![1].requestId).not.toBe(create.mock.calls[0]![1].requestId)
+    expect(create.mock.calls[1]![1].comment).toBe('Исправленная запись')
+  })
+
+  it.each(['payment', 'package'] as const)('replays an uncertain %s creation after cancel without creating a second operation', async (kind) => {
+    const user = userEvent.setup()
+    const create = kind === 'payment' ? finance.addPayment : finance.createPackage
+    create.mockRejectedValueOnce(new Error('Нет сети'))
+      .mockRejectedValueOnce(new RepositoryError('PT404', 'Связь временно недоступна'))
+    if (kind === 'payment') finance.listClient.mockResolvedValue({ ...bundle, packages: [...bundle.packages, { ...bundle.packages[0]!, id: workoutId, title: 'Другая услуга' }] })
+    renderPage()
+    await screen.findByRole('heading', { name: 'Персональные тренировки' })
+    const open = async () => user.click(screen.getAllByRole('button', { name: kind === 'payment' ? 'Внести оплату' : 'Новая' })[0]!)
+    await open()
+    if (kind === 'package') {
+      await user.type(screen.getByLabelText('Стоимость, ₽'), '5000')
+      await user.clear(screen.getByLabelText('Уже оплачено, ₽'))
+      await user.type(screen.getByLabelText('Уже оплачено, ₽'), '2500')
+      fireEvent.change(screen.getByLabelText('Дата получения'), { target: { value: '2026-09-09' } })
+    } else {
+      await user.clear(screen.getByLabelText('Сумма, ₽'))
+      await user.type(screen.getByLabelText('Сумма, ₽'), '2500')
+      fireEvent.change(screen.getByLabelText('Дата'), { target: { value: '2026-09-09' } })
+    }
+    await user.type(screen.getByLabelText('Комментарий'), 'Получено переводом')
+    await user.click(screen.getByRole('button', { name: 'Сохранить' }))
+    await screen.findByText('Сохранение не подтверждено')
+    expect(screen.getByLabelText('Комментарий')).toBeDisabled()
+    await user.click(screen.getByRole('button', { name: 'Отмена' }))
+    if (kind === 'payment') expect(screen.getByRole('button', { name: 'Внести оплату' })).toBeDisabled()
+    await user.click(screen.getByRole('button', { name: 'Проверить сохранение' }))
+    expect(screen.getByLabelText('Комментарий')).toHaveValue('Получено переводом')
+    expect(screen.getByLabelText(kind === 'payment' ? 'Дата' : 'Дата получения')).toHaveValue('2026-09-09')
+    expect(screen.getByLabelText(kind === 'payment' ? 'Сумма, ₽' : 'Уже оплачено, ₽')).toHaveValue(2500)
+    await user.click(screen.getByRole('button', { name: 'Повторить сохранение' }))
+    await waitFor(() => expect(create).toHaveBeenCalledTimes(2))
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Повторить сохранение' })).toBeEnabled())
+    expect(screen.getByLabelText('Комментарий')).toBeDisabled()
+    expect(create.mock.calls[1]).toEqual(create.mock.calls[0])
+    await user.click(screen.getByRole('button', { name: 'Повторить сохранение' }))
+    await waitFor(() => expect(create).toHaveBeenCalledTimes(3))
+    expect(create.mock.calls[2]).toEqual(create.mock.calls[0])
+    await waitFor(() => expect(screen.queryByLabelText('Комментарий')).not.toBeInTheDocument())
+    await open()
+    expect(screen.getByLabelText('Комментарий')).toBeEnabled()
+    if (kind === 'package') await user.type(screen.getByLabelText('Стоимость, ₽'), '5000')
+    await user.click(screen.getByRole('button', { name: 'Сохранить' }))
+    await waitFor(() => expect(create).toHaveBeenCalledTimes(4))
+    expect(create.mock.calls[3]![1].requestId).not.toBe(create.mock.calls[0]![1].requestId)
+  })
+
+  it('offers manual packages by entered date including a package expired today', async () => {
+    finance.listClient.mockResolvedValue({ ...bundle, packages: [
+      { ...bundle.packages[0]!, title: 'Сентябрь', endsOn: '2026-09-30', packageStatus: 'expired' },
+      { ...bundle.packages[0]!, id: 'november', title: 'Ноябрь', startsOn: '2026-11-01', endsOn: '2026-11-30' },
+    ] })
+    const user = userEvent.setup()
+    renderPage()
+    await user.click(await screen.findByRole('tab', { name: 'Занятия: 1' }))
+    await user.click(screen.getByRole('button', { name: 'Добавить' }))
+    fireEvent.change(screen.getByLabelText('Дата занятия'), { target: { value: '2026-09-20' } })
+    expect(screen.getByRole('option', { name: 'Списать: Сентябрь' })).toBeInTheDocument()
+    expect(screen.queryByRole('option', { name: 'Списать: Ноябрь' })).not.toBeInTheDocument()
+    await user.selectOptions(screen.getByLabelText('Учёт'), `charged:${packageId}`)
+    await user.click(screen.getByRole('button', { name: 'Добавить' }))
+    await waitFor(() => expect(finance.createManualSession).toHaveBeenCalledWith(clientId, expect.objectContaining({
+      workoutDate: '2026-09-20', disposition: 'charged', packageId,
+    })))
+  })
+
+  it('allows correction after an explicit transaction rejection without replaying the rejected draft', async () => {
+    finance.createManualSession.mockRejectedValueOnce(new RepositoryError('PT422', 'Проверьте дату'))
+    const user = userEvent.setup()
+    renderPage()
+    await user.click(await screen.findByRole('tab', { name: 'Занятия: 1' }))
+    await user.click(screen.getByRole('button', { name: 'Добавить' }))
+    fireEvent.change(screen.getByLabelText('Дата занятия'), { target: { value: '2026-10-20' } })
+    await user.click(screen.getByRole('button', { name: 'Добавить' }))
+    await screen.findByText('Проверьте дату')
+    expect(screen.getByLabelText('Дата занятия')).toBeEnabled()
+    fireEvent.change(screen.getByLabelText('Дата занятия'), { target: { value: '2026-10-21' } })
+    await user.click(screen.getByRole('button', { name: 'Добавить' }))
+    await waitFor(() => expect(finance.createManualSession).toHaveBeenCalledTimes(2))
+    expect(finance.createManualSession.mock.calls[1]![1].requestId).not.toBe(finance.createManualSession.mock.calls[0]![1].requestId)
+  })
+
+  it('recomputes eligible packages after editing a date and credits the existing charge', async () => {
+    finance.listClient.mockResolvedValue({ ...bundle, packages: [
+      { ...bundle.packages[0]!, title: 'Сентябрь', sessionsTotal: 2, sessionsUsed: 2, sessionsRemaining: 0, endsOn: '2026-09-30', packageStatus: 'completed' },
+      { ...bundle.packages[0]!, id: 'november', title: 'Ноябрь', startsOn: '2026-11-01', endsOn: '2026-11-30' },
+    ] })
+    const user = userEvent.setup()
+    renderPage()
+    await user.click(await screen.findByRole('tab', { name: 'Занятия: 1' }))
+    await user.click(screen.getByRole('button', { name: 'Действия с занятием 5 сентября 2026 г.' }))
+    await user.click(screen.getByRole('menuitem', { name: 'Изменить учёт' }))
+    expect(screen.getByRole('option', { name: 'Списать: Сентябрь' })).toBeInTheDocument()
+    expect(screen.getByLabelText('Учёт')).toHaveValue(`charged:${packageId}`)
+    fireEvent.change(screen.getByLabelText('Дата'), { target: { value: '2026-11-10' } })
+    expect(screen.queryByRole('option', { name: 'Списать: Сентябрь' })).not.toBeInTheDocument()
+    expect(screen.getByLabelText('Учёт')).toHaveValue('unassigned')
+    await user.selectOptions(screen.getByLabelText('Учёт'), 'charged:november')
+    await user.click(screen.getByRole('button', { name: 'Сохранить' }))
+    await waitFor(() => expect(finance.updateSession).toHaveBeenCalledWith(sessionId, {
+      expectedVersion: 1, disposition: 'charged', packageId: 'november', workoutDate: '2026-11-10', comment: null,
+    }))
+    expect(finance.createManualSession).not.toHaveBeenCalled()
   })
 
   it('shows free, trial and unassigned sessions in the non-charged filter', async () => {

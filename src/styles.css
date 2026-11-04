@@ -2851,6 +2851,7 @@ button.workout-duration-trigger:disabled { cursor:default; opacity:1 }
 .clients-search input { flex:1; min-width:0; padding:0; border:0; border-radius:0; background:transparent; color:inherit; font-size:var(--type-body-size); line-height:var(--leading-body); outline:none }
 /* Плейсхолдер — осмысленный текст, поэтому использует контрастный secondary. */
 .clients-search input::placeholder { color:var(--secondary-label-fg); opacity:1 }
+.finance-overview-search input { min-height:44px }
 /* У type=search свой нативный крестик: он дублировал бы кнопку очистки и не
    имеет доступного имени. */
 .clients-search input::-webkit-search-cancel-button, .clients-search input::-webkit-search-decoration { -webkit-appearance:none; appearance:none }
@@ -7033,6 +7034,7 @@ details[open] > .progress-details-toggle svg { transform:rotate(180deg); }
 .workout-finance-confirmation { display:flex; align-items:center; justify-content:space-between; gap:14px; margin:12px 0; padding:14px 16px; border:1px solid var(--border); border-radius:17px; background:var(--surface-raised); }.workout-finance-confirmation > div { min-width:0; display:grid; gap:3px; }.workout-finance-confirmation strong { font-size:14px; }.workout-finance-confirmation span { color:var(--muted); font-size:12px; }.workout-finance-confirmation a { color:var(--fg); font-size:12px; font-weight:650; white-space:nowrap; }
 .finance-section-heading { display:flex; min-height:44px; align-items:center; justify-content:space-between; gap:12px; margin-bottom:8px; }.finance-section-heading h2,.finance-section-heading p { margin:0; }.finance-section-heading h2 { margin-top:2px; font-size:18px; }.finance-section-heading .primary { min-height:44px; padding:0 15px; }
 .finance-package-list { display:grid; gap:8px; }.finance-package { display:grid; min-width:0; gap:9px; padding:12px; }.finance-package > header,.finance-form-heading,.finance-payments-heading,.finance-payment { display:flex; align-items:center; justify-content:space-between; gap:10px; }.finance-package > header > div { min-width:0; }.finance-package > header .overflow-menu { flex:0 0 auto; }.finance-package h2,.finance-package h3,.finance-package p,.finance-form h2,.finance-form p { margin:0; }.finance-package h2 { margin-top:3px; overflow-wrap:anywhere; font-size:17px; }.finance-package h3 { font-size:14px; }
+.phone-frame:not(.fit-lime-shell) .trainer-finance-page .finance-form :is(input, select, textarea):disabled { opacity:1; color:var(--fg); -webkit-text-fill-color:var(--fg); }
 .finance-status { display:inline-flex; min-height:22px; align-items:center; padding:2px 8px; border-radius:999px; color:var(--muted); background:var(--secondary-bg); font-size:10px; font-weight:700; }.finance-status-active,.finance-status-completed { color:var(--accent-strong); }
 .finance-package-summary { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:7px; }.finance-package-summary p { min-width:0; display:grid; gap:2px; padding:9px 10px; border:1px solid var(--hairline); border-radius:13px; background:var(--surface); }.finance-package-summary strong { overflow:hidden; color:var(--fg); font-size:17px; text-overflow:ellipsis; white-space:nowrap; }.finance-package-summary span,.finance-package-summary small,.finance-comment,.finance-payment span,.finance-empty { color:var(--muted); font-size:11px; }.finance-package-summary small { overflow:hidden; line-height:1.25; text-overflow:ellipsis; }
 .finance-package-meta { display:flex; align-items:center; justify-content:space-between; gap:10px; color:var(--muted); font-size:12px; }.finance-package-meta strong { color:var(--fg); font-size:12px; white-space:nowrap; }.finance-package-meta strong.is-overdue { color:var(--danger-fg); }
@@ -7429,3 +7431,22 @@ details[open] > .progress-details-toggle svg { transform:rotate(180deg); }
 .phone-frame.fit-lime-shell .coach-plan-template-actions { display:flex; flex-wrap:nowrap; align-items:center; gap:4px }
 .phone-frame.fit-lime-shell.coach-workout-reference .coach-reference-form > .page-header:has(.coach-plan-template-actions .overflow-menu) { grid-template-columns:44px minmax(0,1fr) 92px }
 .coach-plan-template-actions .overflow-trigger { width:44px; min-width:44px; height:44px; min-height:44px; padding:10px }
+
+/* Trainer-wide receipts reuse the existing finance form, ledger and tokens. */
+.finance-overview-tabs { grid-template-columns:repeat(2,minmax(0,1fr)); }
+.finance-receipts { display:grid; min-width:0; gap:12px; }
+.finance-receipts > .field { margin:0; }
+.finance-receipts-filter { position:relative; display:block; min-width:0; }
+.finance-receipts-filter select { appearance:none; height:48px; min-height:48px; min-width:0; width:100%; padding:10px 42px 10px 14px; border:1px solid var(--border); border-radius:16px; font:inherit; font-size:16px; text-overflow:ellipsis; }
+.finance-receipts-filter > svg { position:absolute; top:14px; right:14px; width:20px; height:20px; color:var(--muted); pointer-events:none; }
+.finance-receipts .finance-payment { grid-template-columns:minmax(0,1fr) 44px; align-items:start; }
+.finance-receipts .finance-payment-package { grid-column:1; grid-row:2; text-align:left; }
+.finance-receipts .overflow-menu { grid-column:2; grid-row:1 / span 2; }
+.finance-receipts-total { grid-template-columns:minmax(0,1fr); }
+.finance-receipt-client { display:flex; min-height:44px; align-items:center; color:var(--fg); font-size:16px; font-weight:650; line-height:1.3; text-decoration:none; overflow-wrap:anywhere; }
+.finance-receipts .finance-payment > div:first-child > span { white-space:normal; overflow-wrap:anywhere; }
+.finance-receipts-pages { position:static; display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); align-items:center; gap:8px; padding:0; background:transparent; }
+.finance-receipts-pages button { grid-row:2; min-height:44px; }
+.finance-receipts-pages > span { grid-column:1/-1; grid-row:1; color:var(--muted); font-size:12px; text-align:center; }
+
+.finance-receipts .finance-receipt-comment { display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }

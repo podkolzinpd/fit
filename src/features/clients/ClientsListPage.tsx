@@ -2,6 +2,9 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react'
 import { Link, useLocation, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../../app/auth-context'
+import { isCoachWorkoutRedesignEnabled } from '../../app/coach-workout-redesign'
+import { isTrainerScheduleV2Enabled } from '../../app/trainer-schedule-v2'
+import { invalidateFinanceViews } from '../../app/invalidate-finance-views'
 import { useDataBackend } from '../../app/data-backend-context'
 import { isTrainerFinancePilotEnabled } from '../../app/feature-flags'
 import type { Client } from '../../shared/domain'
@@ -193,6 +196,7 @@ function ClientsListPage({ archivedOnly }: ClientsListPageProps) {
     refetchOnMount: 'always',
   })
   const threads = useChatThreads()
+  const financeInNavigation = isTrainerScheduleV2Enabled(actor) && isCoachWorkoutRedesignEnabled(actor)
   const financeEnabled = actor?.role === 'trainer' && isTrainerFinancePilotEnabled(actor.userId)
   const financeMonth = todayInTimeZone(actor?.timezone).slice(0, 7)
   const finance = useQuery({
@@ -221,11 +225,13 @@ function ClientsListPage({ archivedOnly }: ClientsListPageProps) {
         message: variables.archived ? `Карточка «${updated.fullName}» перемещена в архив` : `Карточка «${updated.fullName}» восстановлена`,
         canUndo: variables.archived,
       })
-      await queryClient.invalidateQueries({ queryKey: ['clients'] })
+      await Promise.all([queryClient.invalidateQueries({ queryKey: ['clients'] }), invalidateFinanceViews(queryClient, updated.id)])
     },
     // A failed response may have followed a committed write. Refresh the list
     // before a manual retry; do not blindly reuse an obsolete client version.
-    onError: async () => { await queryClient.invalidateQueries({ queryKey: ['clients'] }) },
+    onError: async (_error, variables) => { await Promise.all([
+      queryClient.invalidateQueries({ queryKey: ['clients'] }), invalidateFinanceViews(queryClient, variables.client.id),
+    ]) },
     onSettled: () => { archiveInFlight.current = false },
   })
   const changeArchive = (client: Client, archived: boolean) => {
@@ -290,7 +296,7 @@ function ClientsListPage({ archivedOnly }: ClientsListPageProps) {
     </div>}
     {archive.error && <p className="error clients-archive-error" role="alert">{archive.error.message}</p>}
     <ChatThreadsNotice loading={threads.isLoading} error={threads.error} onRetry={() => void threads.refetch()} />
-    {!archivedOnly && financeEnabled && <Link className="clients-finance-entry" to="/finance" onClick={rememberListPosition}>
+    {!archivedOnly && financeEnabled && !financeInNavigation && <Link className="clients-finance-entry" to="/finance" onClick={rememberListPosition}>
       <span><strong>Финансы</strong><small>{finance.data ? `${new Intl.NumberFormat('ru-RU').format(finance.data.receivedCents / 100)} ₽ получено · ${finance.data.attentionCount} требуют внимания` : 'Абонементы, оплаты и занятия'}</small></span><ChevronRightIcon />
     </Link>}
     <AsyncView loading={query.isLoading} error={query.error} empty={!query.data?.length} onRetry={() => void query.refetch()}

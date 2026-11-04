@@ -80,7 +80,7 @@ const hash=value=>createHash('sha256').update(JSON.stringify(value)).digest('hex
 
 // Fingerprint the old card and complete workout graphs, including edited facts
 // and finance rows. Only these fingerprints enter the encrypted receipt.
-async function preservedJournalState(connection,clientId,excludedIds=[]) {
+export async function preservedJournalState(connection,clientId,excludedIds=[]) {
  const state={}
  const queries=[
   ['card','select to_jsonb(c) value from public.clients c where id=$1',1],
@@ -103,11 +103,29 @@ async function preservedJournalState(connection,clientId,excludedIds=[]) {
  }
  return state
 }
-async function verifyPreservedState(connection,clientId,excludedIds,expected) {
+export async function verifyPreservedState(connection,clientId,excludedIds,expected) {
  if(JSON.stringify(await preservedJournalState(connection,clientId,excludedIds))!==JSON.stringify(expected))failWriter('previous_state_changed')
  const finance=(await connection.query(`select count(*)::int n from public.trainer_finance_sessions
   where client_id=$1 and workout_id=any($2::uuid[]) and (voided_at is not null or disposition<>'unassigned' or package_id is not null)`,[clientId,excludedIds])).rows[0]
  if(finance?.n!==0)failWriter('unexpected_finance_change')
+}
+
+export async function isNewCardFinanceUnchanged(connection,{trainerId,clientId,entries,created,attendanceVersion=1}) {
+ if(attendanceVersion!==0&&attendanceVersion!==1)return false
+ for(const table of ['trainer_finance_packages','trainer_finance_payments']) {
+  if((await connection.query(`select count(*)::int n from public.${table} where client_id=$1`,[clientId])).rows[0]?.n!==0)return false
+ }
+ // Pre-commit and read-only recovery must accept the same exact attendance.
+ // Never accept a charge, payment or a later manual decision as an import fact.
+ // Version0 receipts predate attendance: verify absence, never backfill it.
+ const expectedIds=new Set((attendanceVersion===1?entries:[]).filter(e=>e.draft.trainingFormat==='with_trainer')
+  .map(e=>created.find(c=>c.ordinal===e.ordinal)?.workoutId))
+ const attendance=(await connection.query(`select workout_id,trainer_id,package_id,disposition,voided_at
+  from public.trainer_finance_sessions where client_id=$1`,[clientId])).rows
+ if(attendance.length!==expectedIds.size||new Set(attendance.map(s=>s.workout_id)).size!==expectedIds.size
+  ||attendance.some(s=>!expectedIds.has(s.workout_id)||s.trainer_id!==trainerId||s.package_id!==null
+   ||s.disposition!=='unassigned'||s.voided_at!==null))return false
+ return true
 }
 
 async function keepImportedWorkoutUnassigned(connection,clientId,workoutId,workoutDate) {
@@ -133,9 +151,13 @@ export function sourceContent(d) {
    :s[k]??null))])]
 }
 
-export function validateJournalDrafts(workouts,clientId,readRequest) {
- const scope=reviewedScope(workouts)
+export function validateJournalDrafts(workouts,clientId,readRequest,approvedScope=null) {
+ const scope=approvedScope??reviewedScope(workouts)
  if(!uuid.test(clientId)||!scope)failWriter('scope_invalid')
+ if(approvedScope&&(scope.workouts!==workouts.length
+  ||workouts.some(w=>w.trainingFormat!==scope.trainingFormat)
+  ||workouts.reduce((n,w)=>n+w.exercises.length,0)!==scope.exercises
+  ||workouts.reduce((n,w)=>n+w.exercises.reduce((m,e)=>m+e.sets.length,0),0)!==scope.sets))failWriter('scope_invalid')
  const seen=new Set();let previous='';
  return workouts.map((input,index)=>{
   if(!input||input.id!=null||!uuid.test(input.requestId??'')||seen.has(input.requestId)
@@ -158,13 +180,14 @@ export function validateJournalDrafts(workouts,clientId,readRequest) {
 // The runner must resolve these IDs from the separately approved target secret,
 // never accept actor/client IDs or SQL through workflow inputs. readState reads
 // only this card using a distinct owner READ ONLY transaction. No owner writes.
-async function insertReviewedJournal({runtime,trainerId,clientId,athleteId,workouts,
- readRequest,saveCompleted,readState,persistReceipt,newCard=null,existingCard=null,verifyContent=null}) {
+export async function insertReviewedJournal({runtime,trainerId,clientId,athleteId,workouts,
+ readRequest,saveCompleted,readState,persistReceipt,newCard=null,existingCard=null,verifyContent=null,
+ approvedScope=null,checkSelection=null}) {
  if(!uuid.test(trainerId)||(newCard===null&&!uuid.test(clientId))||(athleteId!==null&&!uuid.test(athleteId)))failWriter('selection_invalid')
  if(newCard && (clientId!==null||athleteId!==null||typeof newCard.draft?.fullName!=='string'
   ||Object.keys(newCard.draft).some(k=>!['fullName','gender','ageYears','ageUpdatedAt','heightCm','goal','note'].includes(k))
   ||Object.entries(newCard.draft).some(([k,v])=>k!=='fullName'&&v!==null)))failWriter('new_card_invalid')
- let entries=validateJournalDrafts(workouts,clientId??'00000000-0000-4000-8000-000000000001',readRequest)
+ let entries=validateJournalDrafts(workouts,clientId??'00000000-0000-4000-8000-000000000001',readRequest,approvedScope)
  let createdCard=false
  let commitAttempted=false;let transactionOpen=false
  try {
@@ -178,6 +201,7 @@ async function insertReviewedJournal({runtime,trainerId,clientId,athleteId,worko
   if(actor?.account_role!=='trainer')failWriter('trainer_role_invalid')
   const locked=(await runtime.query('select pg_try_advisory_xact_lock(670,hashtext($1)) locked',[newCard?trainerId:clientId])).rows[0]
   if(locked?.locked!==true)failWriter('busy')
+  if(checkSelection)await checkSelection(runtime)
   if(newCard) {
    const prior=await newCard.readBatch({trainerId,requestIds:entries.map(e=>e.draft.requestId)})
    if(prior!==null&&!uuid.test(prior))failWriter('prior_batch_invalid')
@@ -190,7 +214,7 @@ async function insertReviewedJournal({runtime,trainerId,clientId,athleteId,worko
     if(!uuid.test(result?.id??''))failWriter('new_card_postcondition_failed')
     clientId=result.id;createdCard=true
    }
-   entries=validateJournalDrafts(workouts,clientId,readRequest)
+   entries=validateJournalDrafts(workouts,clientId,readRequest,approvedScope)
   }
   const card=(await runtime.query(`select id,trainer_id,full_name,auth_user_id,archived_at,merged_into_client_id
    from public.clients where id=$1`,[clientId])).rows
@@ -239,9 +263,7 @@ async function insertReviewedJournal({runtime,trainerId,clientId,athleteId,worko
      ...(existingCard?{}:{version:saved.version})})
    }
   }
-  if(createdCard)for(const table of ['trainer_finance_packages','trainer_finance_payments','trainer_finance_sessions']) {
-   if((await runtime.query(`select count(*)::int n from public.${table} where client_id=$1`,[clientId])).rows[0]?.n!==0)failWriter('unexpected_finance_change')
-  }
+  if(createdCard&&!await isNewCardFinanceUnchanged(runtime,{trainerId,clientId,entries,created}))failWriter('unexpected_finance_change')
   if(verifyContent)await verifyContent(runtime,{trainerId,clientId,entries,created})
   if(preservedState)await verifyPreservedState(runtime,clientId,created.map(c=>c.workoutId),preservedState)
   const ids=created.map(e=>e.workoutId)
@@ -255,6 +277,7 @@ async function insertReviewedJournal({runtime,trainerId,clientId,athleteId,worko
    await runtime.query("select set_config('request.jwt.claim.sub',$1,true)",[trainerId])
   }
   const receipt={schemaVersion:1,trainerId,clientId,athleteId,created,replayed,createdCard,
+   ...(createdCard?{financeAttendanceVersion:1}:{}),
    previousWorkouts:before.workouts.filter(w=>!existingCard||!created.some(c=>c.workoutId===w.id)).map(w=>({id:w.id,fingerprint:hash(w)})),
    ...(preservedState?{appendOnly:true,preservedState,ownerPreservedState}:{}),teacherCount,athleteCount}
   // Keep a private receipt before commit so unknown outcomes remain reconcilable.
@@ -274,7 +297,7 @@ async function insertReviewedJournal({runtime,trainerId,clientId,athleteId,worko
 const equal=(a,b)=>JSON.stringify(a)===JSON.stringify(b)
 const metric=v=>v===null?null:Number(v)
 const failContent=()=>{throw new Error('journal_import_content_readback_failed')}
-async function verifyJournalContent(runtime,{trainerId,clientId,entries,created}) {
+export async function verifyJournalContent(runtime,{trainerId,clientId,entries,created}) {
  const ids=created.map(x=>x.workoutId)
  if(ids.length!==entries.length||new Set(ids).size!==entries.length)failContent()
  const workouts=(await runtime.query(`select id,client_id,created_by,status,workout_date::text workout_date,

@@ -45,6 +45,24 @@ export interface TrainerFinancePayment {
   updatedAt: string
 }
 
+export interface TrainerFinanceReceipt extends TrainerFinancePayment {
+  clientId: string
+  clientName: string
+  archivedAt: string | null
+  serviceTitle: string
+}
+
+export interface TrainerFinancePaymentHistory {
+  month: string
+  clientId: string | null
+  offset: number
+  limit: number
+  totalCount: number
+  totalCents: number
+  clients: Array<{ id: string; name: string }>
+  payments: TrainerFinanceReceipt[]
+}
+
 export interface TrainerFinanceSession {
   id: string
   packageId: string | null
@@ -62,6 +80,8 @@ export interface TrainerFinanceSession {
 
 export interface TrainerFinanceClientBundle {
   clientId: string
+  clientName?: string
+  canCreate?: boolean
   packages: TrainerFinancePackage[]
   payments: TrainerFinancePayment[]
   sessions: TrainerFinanceSession[]
@@ -69,6 +89,7 @@ export interface TrainerFinanceClientBundle {
 
 export interface TrainerFinanceOverviewClient {
   clientId: string
+  activeClient?: boolean
   fullName: string
   archivedAt: string | null
   receivedCents: number
@@ -202,6 +223,7 @@ function trainerFinanceError(error: unknown) {
 }
 
 export interface PilotTrainerFinance {
+  listPayments(session: YandexActorSessionInput, monthStart: string, clientId?: string, offset?: number): Promise<TrainerFinancePaymentHistory>
   listClientSelf(session: YandexActorSessionInput): Promise<ClientFinanceSummary>
   listOverview(session: YandexActorSessionInput, monthStart: string): Promise<TrainerFinanceOverview>
   listClient(session: YandexActorSessionInput, clientId: string): Promise<TrainerFinanceClientBundle>
@@ -224,6 +246,16 @@ export class DatabasePilotTrainerFinance implements PilotTrainerFinance {
       } catch (error) {
         throw trainerFinanceError(error) ?? error
       }
+    })
+  }
+
+  listPayments(session: YandexActorSessionInput, monthStart: string, clientId?: string, offset = 0) {
+    return this.run(session, async client => {
+      const rows = await client.query<QueryResultRow & { history: TrainerFinancePaymentHistory }>(
+        'select public.list_trainer_finance_payments($1, $2, $3) as history',
+        [monthStart, clientId ?? null, offset],
+      )
+      return rows[0]!.history
     })
   }
 

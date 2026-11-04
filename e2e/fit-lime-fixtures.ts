@@ -8,7 +8,7 @@ import { localDate } from '../src/shared/local-date'
 // Synthetic, page-scoped mocks shared by behavior and visual acceptance.
 
 export async function mockFinancePaymentLifecycle(page: Page) {
-  const ledger: TrainerFinanceClientBundle = { clientId, packages: [], payments: [], sessions: [] }
+  const ledger: TrainerFinanceClientBundle = { clientId, clientName: 'Алексей Смирнов', packages: [], payments: [], sessions: [] }
   const receiptIds: string[] = []
   const updateTotals = () => {
     const service = ledger.packages[0]!
@@ -343,7 +343,7 @@ export async function mockPilot(page: Page, options: { role?: 'trainer' | 'clien
     } else if (url.pathname === '/v1/finance/overview') {
       body = { overview: { month: url.searchParams.get('month'), receivedCents: 0, dueCents: 0, attentionCount: 0, clients: [] } }
     } else if (url.pathname === `/v1/clients/${clientId}/finance`) {
-      body = { finance: { clientId, packages: [], payments: [], sessions: [] } }
+      body = { finance: { clientId, clientName: 'Алексей Смирнов', packages: [], payments: [], sessions: [] } }
     } else if (url.pathname === '/v1/workout-templates') {
       body = { templates: [] }
     } else if (url.pathname === '/v1/legal/acceptance') {

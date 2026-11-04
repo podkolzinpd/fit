@@ -108,8 +108,11 @@ standaloneTest('trainer finance overview stays compact and readable', async ({ p
 
   const frame = page.locator('#finance-overview-qa .phone-frame')
   await expect(frame).toHaveClass(/trainer-finance-identity/)
+  await expect(page.getByRole('navigation', { name: 'Основная навигация' })).toBeInViewport()
   await expect(page.getByRole('navigation', { name: 'Основная навигация' }).getByRole('link', { name: 'Клиенты' })).toHaveAttribute('aria-current', 'page')
-  await expect(page.getByRole('group', { name: 'Фильтр клиентов' }).getByRole('button')).toHaveCount(6)
+  await expect(page.getByRole('group', { name: 'Фильтр клиентов' }).getByRole('button')).toHaveCount(7)
+  await expect(page.getByRole('button', { name: 'Архив', exact: true })).toBeVisible()
+  await expect(page.getByRole('searchbox', { name: 'Поиск клиента' })).toBeVisible()
   const bounds = await frame.evaluate((element) => ({ clientWidth: element.clientWidth, scrollWidth: element.scrollWidth }))
   expect(bounds.scrollWidth).toBeLessThanOrEqual(bounds.clientWidth)
   const profile = testInfo.project.name === 'visual-trainer-1440' ? 'desktop' : testInfo.project.name.replace('visual-client-', 'mobile-')
