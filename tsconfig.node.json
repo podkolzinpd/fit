@@ -22,6 +22,7 @@
     "scripts/android-ota-contract.d.mts",
     "scripts/cloudru-journal-import.d.mts",
     "scripts/cloudru-program-history-inspect.d.mts",
+    "scripts/cloudru-program-history-write.d.mts",
     "scripts/cloudru-client-restore.d.mts"
   ]
 }

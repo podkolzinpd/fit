@@ -53,6 +53,11 @@ function durableFile(path,body) {
  const fd=openSync(path,'r');try{fsyncSync(fd)}finally{closeSync(fd)}
  const dir=openSync('/session','r');try{fsyncSync(dir)}finally{closeSync(dir)}
 }
+function privateProgramFile(path,maxBytes=4*1024*1024) {
+ const f=lstatSync(path)
+ if(!f.isFile()||f.isSymbolicLink()||f.uid!==0||(f.mode&0o777)!==0o600||f.size>maxBytes)fail()
+ return readFileSync(path,'utf8')
+}
 const digestTarget=target=>createHash('sha256').update(JSON.stringify([
  target.trainerLoginSha256,target.trainerEmailSha256,target.clientNameSha256])).digest('hex')
 async function storage() {
@@ -115,10 +120,11 @@ function readManifest(target,digest,session,{allowExpired=false}={}) {
   ||(!allowExpired&&m.expiresAt<Date.now()))fail()
  return m
 }
-function capability(value,key,session) {
+function capability(value,key,session,name='capability.encrypted.json') {
  // GitHub receives only a short-lived, encrypted single-object capability. Never journal/receipt bytes.
- writeFileSync('/capability/capability.encrypted.json',JSON.stringify(sealUpload(value,key,session)),{mode:0o644,flag:'wx'})
- chmodSync('/capability/capability.encrypted.json',0o644) // independent of a restrictive process umask; ciphertext metadata only
+ if(!['capability.encrypted.json','prepared-capability.encrypted.json'].includes(name))fail()
+ writeFileSync(`/capability/${name}`,JSON.stringify(sealUpload(value,key,session)),{mode:0o644,flag:'wx'})
+ chmodSync(`/capability/${name}`,0o644) // independent of a restrictive process umask; ciphertext metadata only
 }
 export async function prepareCloudruUpload(target,digest,session,operatorPublicPem) {
  journalSession(session);if(!/^[a-f0-9]{64}$/.test(digest??''))fail()
@@ -138,14 +144,47 @@ export async function prepareCloudruUpload(target,digest,session,operatorPublicP
    privacyBoundary:'vm_only_encryption_key',bucketPermissionsInspected:false}
  }finally{client.destroy()}
 }
-export async function loadCloudruUpload(target,digest,session) {
+export async function loadCloudruUpload(target,digest,session,{recoveryReadOnly=false}={}) {
  journalSession(process.env.FIT_JOURNAL_ATTEMPT)
- const manifest=readManifest(target,digest,journalSession(session)),{client,sdk,getSignedUrl}=await storage()
+ if(recoveryReadOnly&&process.env.FIT_JOURNAL_IMPORT_MODE!=='verify')fail()
+ const manifest=readManifest(target,digest,journalSession(session),{allowExpired:recoveryReadOnly}),{client,sdk,getSignedUrl}=await storage()
  try {
   const encrypted=await readCiphertext(client,sdk,journalObject(session,'payload'),uploadBytes,'payload_get')
   const plain=openUpload(JSON.parse(encrypted.toString('utf8')),readFileSync('/session/server.private.pem','utf8'),session)
   if(plain.session!==session||plain.digest!==digest||!Array.isArray(plain.parts)||plain.parts.length!==2)fail()
   return {parts:plain.parts,publicPem:manifest.operatorPublicPem,
+   beginSingleProgramApply:()=>{
+    const path='/session/program-apply.started.json'
+    if(process.env.FIT_JOURNAL_IMPORT_MODE!=='apply'||existsSync(path))throw new Error('program_history_write_verify_required')
+    durableFile(path,JSON.stringify({session,digest,attempt:process.env.FIT_JOURNAL_ATTEMPT}))
+   },
+   persistProgramProof:receipt=>{
+    if(process.env.FIT_JOURNAL_IMPORT_MODE!=='apply')fail()
+    const publicKey=createPublicKey(readFileSync('/session/server.private.pem','utf8')).export({type:'spki',format:'pem'}).toString()
+    durableFile('/session/program-commit-proof.encrypted.json',JSON.stringify(sealUpload({kind:'program_commit_proof',session,digest,receipt},publicKey,session)))
+   },
+   readProgramProof:()=>{
+    if(process.env.FIT_JOURNAL_IMPORT_MODE!=='verify')fail()
+    const path='/session/program-commit-proof.encrypted.json'
+    if(!existsSync(path))return null
+    const proof=openUpload(JSON.parse(privateProgramFile(path)),readFileSync('/session/server.private.pem','utf8'),session)
+    if(proof.kind!=='program_commit_proof'||proof.session!==session||proof.digest!==digest||!proof.receipt)fail()
+    return proof.receipt
+   },
+   markProgramVerified:status=>{
+    if(!['apply','verify'].includes(process.env.FIT_JOURNAL_IMPORT_MODE)||!['complete','not_present','no_commit'].includes(status))fail()
+    const path='/session/program-write.verified.json',value={kind:'program_write_verified',session,digest,status}
+    if(existsSync(path)) {
+     if(JSON.stringify(JSON.parse(privateProgramFile(path,1000)))!==JSON.stringify(value))fail()
+    } else durableFile(path,JSON.stringify(value))
+   },
+   preparedReceiptCapability:async()=>{
+    if(!['apply','verify'].includes(process.env.FIT_JOURNAL_IMPORT_MODE))fail()
+    const key=journalObject(session,'prepared')
+    await stage('cleanup_readback',()=>client.send(new sdk.HeadObjectCommand({Bucket:bucket,Key:key})))
+    const url=await getSignedUrl(client,new sdk.GetObjectCommand({Bucket:bucket,Key:key}),{expiresIn:600})
+    capability({session,digest,url,kind:'prepared',expiresAt:Date.now()+600000},manifest.operatorPublicPem,session,'prepared-capability.encrypted.json')
+   },
    selectionBinding:async(mode,binding)=>{
     const path='/session/append-selection.json'
     if(!['inspect','apply'].includes(mode)||!/^[a-f0-9]{64}$/.test(binding))fail()
@@ -172,13 +211,18 @@ export async function cleanupCloudruUpload(target,digest,session) {
  journalSession(session);sessionDirectory()
  if(readdirSync('/session').length===0)return {status:'empty_upload_removed'}
  readManifest(target,digest,session,{allowExpired:true})
+ if(existsSync('/session/program-apply.started.json')) {
+  const verified=JSON.parse(privateProgramFile('/session/program-write.verified.json',1000))
+  if(verified.kind!=='program_write_verified'||verified.session!==session||verified.digest!==digest
+   ||!['complete','not_present','no_commit'].includes(verified.status))fail()
+ }
  const {client,sdk}=await storage()
  try {
   // Only retire the local decryption key after verified readback. The owner
   // requested writes without object deletion or any storage permission change.
   await stage('cleanup_readback',()=>client.send(new sdk.HeadObjectCommand({Bucket:bucket,Key:journalObject(session,'readback')})))
   for(const file of readdirSync('/session')) {
-   if(!['manifest.json','server.private.pem','append-selection.json'].includes(file)&&! /^(prepared|committed|readback)-\d{1,20}-\d{1,4}\.encrypted\.json$/.test(file))fail()
+   if(!['manifest.json','server.private.pem','append-selection.json','program-apply.started.json','program-commit-proof.encrypted.json','program-write.verified.json'].includes(file)&&! /^(prepared|committed|readback)-\d{1,20}-\d{1,4}\.encrypted\.json$/.test(file))fail()
   }
   for(const file of readdirSync('/session'))unlinkSync(`/session/${file}`)
   return {status:'local_key_removed_encrypted_objects_retained'}
