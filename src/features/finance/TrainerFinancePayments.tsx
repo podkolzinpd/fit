@@ -1,6 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { useAuth } from '../../app/auth-context'
+import { isFitLimeEnabled } from '../../app/fit-lime'
 import { useDataBackend } from '../../app/data-backend-context'
 import { invalidateFinanceViews } from '../../app/invalidate-finance-views'
 import type { TrainerFinancePaymentDraft, TrainerFinanceReceipt } from '../../data/contracts/trainer-finance'
@@ -22,6 +24,7 @@ export function TrainerFinancePayments({ month, clientId, offset, returnTo, onCl
   onOffsetChange: (offset: number) => void
 }) {
   const { trainerFinance } = useDataBackend()
+  const { actor } = useAuth()
   const queryClient = useQueryClient()
   const [confirm, confirmation] = useConfirm()
   const [editor, setEditor] = useState<TrainerFinanceReceipt | null>(null)
@@ -51,7 +54,7 @@ export function TrainerFinancePayments({ month, clientId, offset, returnTo, onCl
   const data = history.data
   return <section className="finance-receipts" aria-label="История оплат">
     {confirmation}
-    {editor && <div ref={editorRef}><PaymentForm key={editor.id} current={editor} packageId={editor.packageId}
+    {editor && <div ref={editorRef}><PaymentForm lime={isFitLimeEnabled(actor)} key={editor.id} current={editor} packageId={editor.packageId}
       today={editor.receivedOn} saving={save.isPending} error={save.error}
       onCancel={() => { if (!save.isPending) setEditor(null) }}
       onSubmit={draft => save.mutate({ receipt: editor, draft })} /></div>}

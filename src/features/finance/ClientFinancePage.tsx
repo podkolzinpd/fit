@@ -17,7 +17,7 @@ const PACKAGE_STATUS: Record<ClientFinancePackage['packageStatus'], string> = {
 
 function money(value: number): string {
   return new Intl.NumberFormat('ru-RU', {
-    style: 'currency', currency: 'RUB', maximumFractionDigits: 0,
+    style: 'currency', currency: 'RUB', maximumFractionDigits: value % 100 === 0 ? 0 : 2,
   }).format(value / 100)
 }
 
