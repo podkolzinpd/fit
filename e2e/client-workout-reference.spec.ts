@@ -4705,6 +4705,8 @@ for (const entry of ['new', 'today', 'live']) for (const theme of ['light', 'dar
   await page.evaluate(() => document.fonts.ready)
   const probes: Array<{ state: string; inherited: string[] }> = []
   async function check(state: string) {
+    // Compare the same pointer state rather than the last clicked row's hover.
+    await page.mouse.move(0, 0)
     await picker.screenshot({ path: info.outputPath(`isolation-${state}.png`), animations: 'disabled' })
     const computed = await picker.evaluate(element => {
       const properties = ['color', 'background-color', 'border-color', 'border-radius', 'font-family', 'font-size', 'font-weight', 'line-height', 'min-height', 'padding', 'box-shadow', 'display', 'gap']
@@ -4739,6 +4741,69 @@ for (const entry of ['new', 'today', 'live']) for (const theme of ['light', 'dar
   await picker.getByRole('button', { name: /^Фильтровать/ }).click()
   await check('filters')
   await picker.getByRole('button', { name: 'Применить фильтры', exact: true }).click()
+  await picker.getByLabel('Поиск упражнения', { exact: true }).fill('несуществующее-упражнение-123')
+  await expect(picker.locator('.picker-item')).toHaveCount(0)
+  await check('empty-search')
+  await info.attach('legacy-skin-consumers', { body: JSON.stringify(probes), contentType: 'application/json' })
+  expect(probes).toEqual(probes.map(probe => ({ state: probe.state, inherited: [] })))
+})
+
+
+// Trainer editor and template consumers must own the same legacy separation.
+for (const entry of ['new', 'template', 'completed']) for (const theme of ['light', 'dark']) test(`trainer catalog Lime skin isolation ${entry} ${theme}`, async ({ page }, info) => {
+  await page.setViewportSize({ width: theme === 'light' ? 390 : 430, height: 844 })
+  await page.addInitScript(({ id, theme }) => {
+    localStorage.setItem('fit.appTheme', theme)
+    localStorage.setItem(`fit.coachmarks-seen.${id}`, JSON.stringify(['client-live-reference-timer-2026-10']))
+  }, { id: 'c0ac0000-6010-4000-8000-000000000001', theme })
+  const source = coachGestureWorkout()
+  source.startedAt = new Date(Date.now() - 120000).toISOString()
+  await mockPilot(page, { profileId: 'c0ac0000-6010-4000-8000-000000000001', fitLime: true, workouts: [source] })
+  await page.goto(entry === 'template' ? '/schedule/templates/new/editor' : `/workouts/new?client=${clientId}${entry === 'completed' ? '&mode=completed' : ''}`)
+  await page.getByRole('button', { name: 'Выбрать упражнения', exact: true }).click()
+  const picker = page.locator('.exercise-picker')
+  await expect(picker).toBeVisible()
+  await page.evaluate(() => document.fonts.ready)
+  const probes: Array<{ state: string; inherited: string[] }> = []
+  async function check(state: string) {
+    // Compare the same pointer state rather than the last clicked row's hover.
+    await page.mouse.move(0, 0)
+    await picker.screenshot({ path: info.outputPath(`isolation-${state}.png`), animations: 'disabled' })
+    const computed = await picker.evaluate(element => {
+      const properties = ['color', 'background-color', 'border-color', 'border-radius', 'font-family', 'font-size', 'font-weight', 'line-height', 'min-height', 'padding', 'box-shadow', 'display', 'gap']
+      return [element, ...element.querySelectorAll('*')].map(node => ({ tag: node.tagName, class: node.getAttribute('class') ?? '',
+        style: Object.fromEntries(properties.map(property => [property, getComputedStyle(node).getPropertyValue(property)])) }))
+    })
+    const stylePath = info.outputPath(`catalog-style-${state}.json`)
+    await writeFile(stylePath, JSON.stringify(computed, null, 2))
+    await info.attach(`catalog-style-${state}`, { path: stylePath, contentType: 'application/json' })
+    probes.push({ state, inherited: await picker.evaluate(element => {
+      const changed: Array<[CSSStyleRule, string]> = []
+      function visit(rules: CSSRuleList) {
+        for (const rule of Array.from(rules)) {
+          if (rule instanceof CSSStyleRule && /(^|,\s*)\.workout-create-edit-identity(?:\s|:)/.test(rule.selectorText)
+            && /\.picker-|\.exercise-picker|\bbutton|\.button|\.workout-cta|\.state-panel/.test(rule.selectorText)) {
+            changed.push([rule, rule.style.cssText])
+            rule.style.setProperty('--mc2-legacy-catalog-probe', 'legacy')
+          }
+          if ('cssRules' in rule) visit((rule as CSSGroupingRule).cssRules)
+        }
+      }
+      for (const sheet of Array.from(document.styleSheets)) visit(sheet.cssRules)
+      try {
+        return [element, ...element.querySelectorAll('*')].filter(node => getComputedStyle(node).getPropertyValue('--mc2-legacy-catalog-probe').trim() === 'legacy')
+          .map(node => `${node.tagName}.${node.getAttribute('class') ?? ''}`)
+      } finally { for (const [rule, css] of changed) rule.style.cssText = css }
+    }) })
+  }
+  await check('empty-selection')
+  await picker.locator('.picker-select-mark').first().click()
+  await check('selected')
+  await picker.locator('.picker-filter-trigger').click()
+  await check('filters')
+  const apply = picker.getByRole('button', { name: 'Применить фильтры', exact: true })
+  if (await apply.count()) await apply.click()
+  else await picker.locator('.picker-filter-trigger').click()
   await picker.getByLabel('Поиск упражнения', { exact: true }).fill('несуществующее-упражнение-123')
   await expect(picker.locator('.picker-item')).toHaveCount(0)
   await check('empty-search')

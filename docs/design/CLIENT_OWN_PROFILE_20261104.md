@@ -233,3 +233,45 @@ DiffPR3к35d:6files215+/6- — только sports/connections/finance compositi
 интеграции; published actualmain каждого этапа ещё будет ordinary-merged
 перед свежим sourceCI. PR2/PR3 не pushed и не опубликованы. Последовательные
 merge/release/actual-acceptance каждого этапа сохраняются.
+
+
+### Локальная подготовка приёмки после freeze376
+
+Новая exactsource376 CI41910798483/Android41910798515 автоматически;
+AndroidSUCCESS, основнойCI в очереди. Никаких дополнительных dispatch.
+Внешний acceptance verifier дополнен явными проверками signed manifest
+schema/appId/platform/channel/sequence/issuedAt/expiry и min/maxNativeBuild
+по точному checkout versionCode, bundleId/checksum/canonical URL.
+Существующие RSA/archive/public-files/API/ABI/finalreadback проверки сохранены;
+это не изменение runtime/CI и не повод делать sourcepush после freeze.
+Node syntax/python compile passed; фактическая production-приёмка впереди.
+
+## Итерация 13 — 05.11.2026 — Codex / OpenAI
+
+Во время последних source376 CI-проверок actualmain изменился на967a42b7/
+PR1987. Это MC2.2 каталог обеих ролей,8files526+/60-: scoped каталог/CSS,
+AppLayout/main import,65строк mandatory browser probes и сохранённый журнал.
+Github1989BEHIND подтверждён; necessary ordinary merge без конфликтов,
+истории/наш header/photo/SQL188/ownership guards сохранены. Правила AGENTS/
+workflow/contracts междуactualmainab961 и967 не меняются; CURRENT_STATE
+MC2-статус и наша строка собственного профиля сохранены. Все65 incoming
+строк testentrypoint и его прежняя own-profile регистрация сохранены.
+AppLayout равен967; main.tsx отличается лишь нашим последним CSSimport.
+API/package/lock/android/publickey/nativepolicy побайтно376, ABI8922/code9
+прежние. Никаких новых deps/grants/CI config/rollout изменений.
+Проверка объединения: properfixture production build/tsc/startup passed,
+changedlint/docs/diff passed;10/10 ownheader+settings Chromium/WebKit11.2s,
+0retry/skips. Оба WebKit header PNG просмотрены; отдельные4profilevisual
+states обоих движков проходят дополнительно и сохраняются своим каталогом.
+До push сохранены результаты исходной376; новый head требует нового полного
+CI. Это necessary actualmain integration, не sourcepush ради квитанции.
+Открыто: exactsource CI→normal squash→fullactualmainCI→API/web/OTA→actualUI.
+
+Дополнение13: source376 fullCI41910798483attempt1SUCCESS35/35,
+Android41910798515SUCCESS; полные финальныеmetadata сохранены.
+Первая отдельная visual-команда без FIT_SCHEDULE_V2_VISUAL дала4skip и не
+считается проверкой. Настроен штатный dedicated harness/project, без правки
+тестов:8/8 Chromium+lime-acceptance-webkit17.7s,0retry/skips. Итого на967
+18/18 localbrowser28.9s. Исходный skippedlog сохранён отдельно, никакие
+assertions/timeouts/retries/baselines не менялись. Both header WebKit PNG
+просмотрены. Новый fullsourceCI из-заnecessary main merge ещё обязателен.

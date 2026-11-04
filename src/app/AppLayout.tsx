@@ -155,7 +155,7 @@ export function AppLayout() {
     monochromeClientProfile ? 'client-profile-shell-identity' : '',
     monochromeClientCardEdit ? 'client-card-edit-identity' : '',
     monochromeWorkoutCreateEdit ? 'workout-create-edit-identity' : '',
-    clientLimeShell && monochromeWorkoutCreateEdit ? 'client-catalog-entry-shell' : '',
+    fitLimeShell && monochromeWorkoutCreateEdit ? 'lime-catalog-entry-shell' : '',
     monochromeWorkoutDetailHistory ? 'workout-detail-history-identity' : '',
     monochromeTrainerToday && !trainerScheduleV2Route ? 'trainer-today-identity' : '',
     monochromeTrainerClients ? 'trainer-clients-identity' : '',
