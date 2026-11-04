@@ -230,7 +230,8 @@ export interface CreateClientInput {
   initialWeightRecordedOn?: LocalDate
 }
 
-export interface UpdateClientInput extends Omit<CreateClientInput, 'initialWeightKg' | 'initialWeightRecordedOn'> {
+export interface UpdateClientInput extends Omit<CreateClientInput, 'initialWeightKg' | 'initialWeightRecordedOn' | 'gender'> {
+  gender: Gender | null
   id: UUID
   version: number
 }

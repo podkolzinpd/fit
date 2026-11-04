@@ -3471,6 +3471,35 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
       }
     })
 
+    it('separates overdue cents from future debt across months and archive', async () => {
+      if (!ownerPool || !runtimePool) throw new Error('Database pools are not ready')
+      const owner = ownerPool, runtime = runtimePool, card = randomUUID()
+      const command = (sql: string, args: unknown[] = [], actor = ACTOR_ID) => withActorTransaction(runtime, actor,
+        client => client.query<JsonResultRow>(sql, args))
+      const overview = async (month: string, actor = ACTOR_ID) => (await command(
+        'select public.list_trainer_finance_overview_v2($1::date) as result', [month], actor))[0]!.result as {
+          clients: Array<{ clientId: string; dueCents: number; overdueCents: number }>
+        }
+      try {
+        await owner.query("insert into public.clients(id,trainer_id,full_name) values($1,$2,'Mixed debt fixture')", [card,ACTOR_ID])
+        await command(`select public.create_trainer_finance_service_v2($1,'session_pack','Expired unpaid',1,1,
+          100001,0,current_date-30,current_date-1,current_date-1,null,null,$2) as result`, [card,randomUUID()])
+        await command(`select public.create_trainer_finance_service_v2($1,'session_pack','Future unpaid',10,0,
+          1000000,0,current_date+1,current_date+30,current_date+10,null,null,$2) as result`, [card,randomUUID()])
+        for (const month of ['2020-01-01','2020-02-01']) {
+          expect((await overview(month)).clients.find(item => item.clientId === card)).toMatchObject({ dueCents: 1100001, overdueCents: 100001, overdue: true })
+        }
+        const version = (await owner.query<{ version: number }>('select version from public.clients where id=$1',[card])).rows[0]!.version
+        await command('select public.set_client_archived($1,true,$2) as result',[card,version])
+        expect((await overview('2020-01-01')).clients.find(item => item.clientId === card)).toMatchObject({ activeClient: false, dueCents: 1100001, overdueCents: 100001 })
+        expect((await overview('2020-01-01',OUTSIDE_TRAINER_ID)).clients.find(item => item.clientId === card)).toBeUndefined()
+      } finally {
+        await owner.query('delete from public.trainer_finance_events where client_id=$1',[card])
+        await owner.query('delete from public.trainer_finance_packages where client_id=$1',[card])
+        await owner.query('delete from public.clients where id=$1',[card])
+      }
+    })
+
     it('flags real finance attention and preserves archived receipts without allowing new operations', async () => {
       if (!ownerPool || !runtimePool) throw new Error('Database pools are not ready')
       const owner = ownerPool, runtime = runtimePool, card = randomUUID(), empty = randomUUID(), workout = randomUUID()

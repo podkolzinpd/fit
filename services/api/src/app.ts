@@ -1,3 +1,4 @@
+import { ClientProfilePhotoError, readClientPhotoUpload, type PilotClientPhotos } from './client-profile-photo.js'
 import { registerTrainerConnectionConfirmationRoutes, type TrainerConnectionConfirmationService } from './trainer-connection-confirmation.js'
 import { registerCorporateInvitationRoutes, type CorporateInvitationsService } from './corporate-invitations.js'
 import { registerCorporateServiceRoutes, type CorporateServicesService } from './corporate-services.js'
@@ -217,6 +218,7 @@ interface BuildAppOptions {
   chatMeetings?: ChatMeetings
   pilotChat?: PilotChat
   chatMediaStore?: ChatMediaStore
+  pilotClientPhotos?: PilotClientPhotos
   pilotCustomExercisePhotos?: PilotCustomExercisePhotos
   pilotClientsReader?: PilotClientsReader
   pilotConnectionsReader?: PilotConnectionsReader
@@ -1924,6 +1926,10 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
         }
         return reply.code(422).send({ error: 'invalid_domain_data' })
       }
+      if (error instanceof ClientProfilePhotoError) {
+        const status = { forbidden: 403, conflict: 409, unavailable: 503 }[error.failure]
+        return reply.code(status).send({ error: error.failure === 'conflict' ? 'version_conflict' : error.failure })
+      }
       if (error instanceof CustomExercisePhotoError) {
         const status = { forbidden: 403, not_found: 404, conflict: 409, unavailable: 503 }[error.failure]
         const code = { forbidden: 'action_not_allowed', not_found: 'resource_not_found', conflict: 'version_conflict', unavailable: 'service_unavailable' }[error.failure]
@@ -2735,6 +2741,30 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
     return sendPilotCommand(reply,
       () => writer.saveOwnAthleteProfile(session, clientId, version, draft, sport),
       (client) => reply.header('cache-control', 'no-store').send({ client }))
+  })
+
+  app.get('/v1/clients/:clientId/photo', async (request, reply) => {
+    const session = readCompatibleYandexActorSession(request.headers)
+    const { clientId } = request.params as { clientId: string }
+    if (!session) return reply.code(401).send({ error: 'unauthorized' })
+    if (!uuidPattern.test(clientId)) return reply.code(400).send({ error: 'invalid_request' })
+    if (!options.pilotClientPhotos) return reply.code(503).send({ error: 'service_unavailable' })
+    return sendPilotCommand(reply, () => options.pilotClientPhotos!.read(session, clientId),
+      photo => reply.header('cache-control', 'no-store').send(photo))
+  })
+  app.put('/v1/clients/:clientId/photo', { bodyLimit: 250_000 }, async (request, reply) => {
+    const session = readYandexActorSession(request.headers)
+    const { clientId } = request.params as { clientId: string }
+    const body = request.body as { photo?: unknown; expectedVersion?: unknown } | null
+    const photo = readClientPhotoUpload(body?.photo)
+    const version = body?.expectedVersion
+    if (!session) return reply.code(401).send({ error: 'unauthorized' })
+    if (session.accessMode !== 'read_write') return reply.code(403).send({ error: 'read_write_session_required' })
+    if (!uuidPattern.test(clientId) || !photo || typeof version !== 'number' || !Number.isSafeInteger(version) || version < 0)
+      return reply.code(400).send({ error: 'invalid_request' })
+    if (!options.pilotClientPhotos) return reply.code(503).send({ error: 'service_unavailable' })
+    return sendPilotCommand(reply, () => options.pilotClientPhotos!.upload(session, clientId, version, photo),
+      result => reply.header('cache-control', 'no-store').send(result))
   })
 
   app.put('/v1/clients/:clientId', async (request, reply) => {

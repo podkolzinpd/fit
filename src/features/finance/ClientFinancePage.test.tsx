@@ -48,6 +48,13 @@ function renderPage() {
 }
 
 describe('Client finance', () => {
+  it('shows a one-kopeck debt and fractional price without rounding them away', async () => {
+    const trainer = summary.trainers[0]!
+    getMine.mockResolvedValue({ trainers: [{ ...trainer, packages: [{ ...trainer.packages[0]!, priceCents: 10001, paidCents: 10000, dueCents: 1 }] }] })
+    renderPage()
+    expect(await screen.findByText(/^0,01\s₽$/)).toBeVisible()
+    expect(screen.getByText(/^100,01\s₽$/)).toBeVisible()
+  })
   beforeEach(() => {
     authState.userId = clientUserId
     getMine.mockReset().mockResolvedValue(summary)

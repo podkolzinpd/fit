@@ -163,6 +163,7 @@ const trainerFinanceOverviewSchema = z.object({
     nearestPaymentDueOn: z.iso.date().nullable().default(null),
     unpaidPackageCount: z.number().int().nonnegative().default(0),
     activePackageCount: z.number().int().nonnegative(), upcomingPackageCount: z.number().int().nonnegative(), sessionsRemaining: z.number().int().nonnegative().nullable(),
+    overdueCents: z.number().int().nonnegative().optional(),
     overdue: z.boolean(), lowSessions: z.boolean(), unassignedSessions: z.number().int().nonnegative(),
     needsAttention: z.boolean(),
   })),
@@ -1301,6 +1302,12 @@ export function createYandexMainRepository(
       },
     },
     clients: {
+      async photo(id) {
+        return readJson(queries, `/v1/clients/${id}/photo`, z.object({ url: z.string().nullable(), version: z.number().int().nonnegative() }))
+      },
+      async uploadPhoto(id, version, photo) {
+        return writeJson(queries, `/v1/clients/${id}/photo`, 'PUT', { photo, expectedVersion: version }, z.object({ url: z.string().nullable(), version: z.number().int().nonnegative() }))
+      },
       async getMine() {
         if (actor.role !== 'client') return null
         const available = await clients()
