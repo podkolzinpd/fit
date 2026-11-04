@@ -1,3 +1,5 @@
+import connectedClientIcon from '../../assets/client-profile/connected.svg'
+import disconnectedClientIcon from '../../assets/client-profile/disconnected.svg'
 import clientScheduleIcon from '../../assets/client-profile/schedule.svg'
 import { ClientProfileHeader } from './ClientProfileHeader'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -19,7 +21,7 @@ import { useAuth } from '../../app/auth-context'
 import { useDataBackend } from '../../app/data-backend-context'
 import { AnalyticsIcon, ChevronRightIcon, HistoryIcon, KeyboardIcon, RecordIcon, ScheduleIcon } from '../../shared/icons'
 import { InvitationShareButton } from '../auth/InvitationShareActions'
-import { canOpenClientChat, ChatStartButton, ChatThreadsNotice, useChatThreads } from '../chat'
+import { canOpenClientChat, useOpenClientChat, ChatStartButton, ChatThreadsNotice, useChatThreads } from '../chat'
 import { isRepositoryConflict } from '../../data/repositories/error'
 import { isFitLimeEnabled } from '../../app/fit-lime'
 import { isTrainerScheduleV2Enabled } from '../../app/trainer-schedule-v2'
@@ -418,6 +420,9 @@ export function ClientDetailPage() {
   const financePilot = actor?.role === 'trainer' && isTrainerFinancePilotEnabled(actor.userId)
   const threads = useChatThreads()
   const thread = threads.data?.find((item) => item.clientId === clientId && item.conversationId)
+  const openChat = useOpenClientChat(clientId, thread?.trainerId ?? actor?.userId ?? '', thread?.conversationId)
+  const [manageInvitations, setManageInvitations] = useState(false)
+  useEffect(() => { if (manageInvitations) document.getElementById('client-profile-invitations')?.scrollIntoView({ block: 'nearest', behavior: 'smooth' }) }, [manageInvitations])
   const today = todayInTimeZone(actor?.timezone)
   useClientRealtime(clientId)
   const query = useQuery({ queryKey: ['client', clientId], queryFn: () => clientsRepository.get(clientId) })
@@ -450,11 +455,16 @@ export function ClientDetailPage() {
     if (fitLimePilot && !client.archivedAt && !await confirm({ message: `Переместить карточку «${client.fullName}» в архив? Её можно восстановить позже.`, confirmLabel: 'В архив', danger: true })) return
     archive.mutate(client)
   }
-  return <Page title={fitLimePilot ? 'Карточка клиента' : query.data?.fullName ?? 'Клиент'} className={`client-detail-page${fitLimePilot ? ' client-profile-reference' : ''}`} back="/clients" action={query.data && <OverflowMenu label="Действия с профилем спортсмена" items={[
+  return <Page title={fitLimePilot ? 'Карточка клиента' : query.data?.fullName ?? 'Клиент'} className={`client-detail-page${fitLimePilot ? ' client-profile-reference' : ''}`} back="/clients" action={query.data && <div className="client-profile-header-actions">{fitLimePilot && <span role="img" aria-label={query.data.hasAccount === true ? 'Клиент подключён к приложению' : query.data.hasAccount === false ? 'Клиент ещё не подключён' : 'Подключение пока неизвестно'}><img src={query.data.hasAccount === true ? connectedClientIcon : disconnectedClientIcon} width={24} height={24} alt="" /></span>}<OverflowMenu label="Действия с профилем спортсмена" items={[
     { label: 'Редактировать профиль', onClick: () => navigate(`/clients/${clientId}/edit`) },
     ...(fitLimePilot && clientsRepository.uploadPhoto && !query.data.archivedAt ? [{ label: 'Загрузить фото', onClick: () => document.getElementById('client-profile-photo-input')?.click() }] : []),
-  ]} />}>
+    ...(fitLimePilot && actor?.role === 'trainer' && canOpenClientChat(query.data, thread) ? [{label:openChat.isPending ? 'Открываем чат…' : 'Написать',disabled:openChat.isPending,onClick:()=>openChat.mutate()}] : []),
+    ...(fitLimePilot && (invitations.data?.length || invitations.error) ? [{label:'Управление приглашениями',onClick:()=>setManageInvitations(value=>!value)}] : []),
+    ...(fitLimePilot && query.data.canArchive === true ? [{label:archive.isPending ? 'Обновляем…' : query.data.archivedAt ? 'Вернуть из архива' : 'Архивировать клиента',danger:!query.data.archivedAt,disabled:archive.isPending,onClick:()=>void changeArchive(query.data!)}] : []),
+    ...(fitLimePilot && currentMembership && query.data.hasAccount && !query.data.archivedAt ? [{label:'Отключиться от спортсмена',danger:true,disabled:leave.isPending,onClick:async()=>{if(await confirm({message:'Отключиться от спортсмена? Текущий доступ к тренировкам и прогрессу будет закрыт. История и авторство сохранятся.',confirmLabel:'Отключиться',danger:true})) leave.mutate()}}] : []),
+  ]} /></div>}>
     <AsyncView loading={query.isLoading} error={query.error} onRetry={() => void query.refetch()}>{query.data && <>
+      {openChat.error && <p role="alert" className="error">Не удалось открыть чат. Повторите действие в меню.</p>}
       {fitLimePilot && <ClientProfileHeader client={query.data} />}
       <section className="client-detail-snapshot" aria-label="Сводка по спортсмену">
         <p className="client-detail-vitals">
@@ -476,13 +486,14 @@ export function ClientDetailPage() {
       {stats.data?.needsAttention && <p className="attention">Давно не тренировался</p>}
       <div className="client-detail-actions">
         {actor?.role === 'trainer' && <ChatThreadsNotice loading={threads.isLoading} error={threads.error} onRetry={() => void threads.refetch()} />}
-        {actor?.role === 'trainer' && canOpenClientChat(query.data, thread) && <ChatStartButton clientId={clientId} trainerId={thread?.trainerId ?? actor.userId} conversationId={thread?.conversationId} className="secondary wide client-detail-message" />}
+        {!fitLimePilot && actor?.role === 'trainer' && canOpenClientChat(query.data, thread) && <ChatStartButton clientId={clientId} trainerId={thread?.trainerId ?? actor.userId} conversationId={thread?.conversationId} className="secondary wide client-detail-message" />}
         {actor?.role === 'trainer' && !query.data.archivedAt && <QuickStartWorkout role="trainer" clientId={clientId} workouts={workouts.data} loading={workouts.isLoading} error={workouts.error} onRetry={() => void workouts.refetch()} returnTo={`/clients/${clientId}`} compact />}
         <Link className="client-detail-plan" to={`/workouts/new?client=${clientId}`}>
           {fitLimePilot ? <img src={clientScheduleIcon} width={16} height={16} alt="" /> : <ScheduleIcon />}
           <span>Запланировать тренировку</span>
           <ChevronRightIcon className="client-detail-chevron" />
         </Link>
+        {fitLimePilot && !query.data.archivedAt && query.data.hasAccount === false && <InvitationShareButton clientId={clientId} targetRole="client" label="Пригласить в приложение" className="client-profile-invite" />}
         <nav className="client-detail-routes" aria-label="Разделы спортсмена">
           <Link to={`/clients/${clientId}/workouts`}><HistoryIcon /><span>История тренировок</span></Link>
           <Link to={`/progress/${clientId}`}><AnalyticsIcon /><span>Прогресс и замеры</span></Link>
@@ -495,14 +506,15 @@ export function ClientDetailPage() {
       {upcoming.length > 0 && <section className="client-detail-upcoming"><h2>Предстоит</h2><div className="cards">{upcoming.map((workout) => <Link className="card" key={workout.id} to={`/workouts/${workout.id}`}><div><strong>{formatLocalDate(workout.workoutDate)}{workout.startTime ? ` · ${workout.startTime.slice(0, 5)}` : ''}</strong><WorkoutExercisesSummary workout={workout} />{workout.stageTitle && <p className="stage-tag">🎯 {workout.stageTitle}</p>}</div><span className={`badge ${workout.status}`}>{workout.status === 'in_progress' ? 'Идёт' : 'План'}</span></Link>)}</div></section>}
       {fitLimePilot && workouts.isSuccess && upcoming.length === 0 && <p className="client-detail-source-state">Ближайших тренировок нет</p>}
       <ClientNoteBlock client={query.data} />
-      <div className="page-actions">
+      <div className="page-actions" id="client-profile-invitations">
+        {manageInvitations && <button type="button" className="link" onClick={() => setManageInvitations(false)}>Скрыть приглашения</button>}
         {fitLimePilot && <ClientDetailSourceState label="приглашения и права доступа" loading={invitations.isLoading || trainers.isLoading} error={invitations.error ?? trainers.error} onRetry={() => { void invitations.refetch(); void trainers.refetch() }} />}
-        {!query.data.archivedAt && query.data.hasAccount === false && <InvitationShareButton clientId={clientId} targetRole="client" label="Пригласить клиента" className="secondary wide" />}
-        {invitations.data?.map((item) => <article className="card" key={item.id}><div><strong>Активное приглашение клиента</strong><p>Действует до {new Date(item.expiresAt).toLocaleDateString('ru-RU', { timeZone: normalizeTimeZone(actor?.timezone) })}</p></div><button className="link danger" disabled={revoke.isPending} aria-busy={revoke.isPending} onClick={async () => { if (await confirm({ message: 'Отозвать это приглашение? Ссылка, QR-код и код больше не будут работать.', confirmLabel: 'Отозвать', danger: true })) revoke.mutate(item.id) }}>{revoke.isPending ? 'Отзываем…' : 'Отозвать'}</button></article>)}
+        {!fitLimePilot && !query.data.archivedAt && query.data.hasAccount === false && <InvitationShareButton clientId={clientId} targetRole="client" label="Пригласить клиента" className="secondary wide" />}
+        {(!fitLimePilot || manageInvitations) && invitations.data?.map((item) => <article className="card" key={item.id}><div><strong>Активное приглашение клиента</strong><p>Действует до {new Date(item.expiresAt).toLocaleDateString('ru-RU', { timeZone: normalizeTimeZone(actor?.timezone) })}</p></div><button className="link danger" disabled={revoke.isPending} aria-busy={revoke.isPending} onClick={async () => { if (await confirm({ message: 'Отозвать это приглашение? Ссылка, QR-код и код больше не будут работать.', confirmLabel: 'Отозвать', danger: true })) revoke.mutate(item.id) }}>{revoke.isPending ? 'Отзываем…' : 'Отозвать'}</button></article>)}
         {revoke.error && <p className="error">{revoke.error.message}</p>}
-        {currentMembership && query.data?.hasAccount && !query.data.archivedAt && <button className="danger secondary wide" disabled={leave.isPending} aria-busy={leave.isPending} onClick={async () => { if (await confirm({ message: 'Отключиться от спортсмена? Текущий доступ к тренировкам и прогрессу будет закрыт. История и авторство сохранятся.', confirmLabel: 'Отключиться', danger: true })) leave.mutate() }}>{leave.isPending ? 'Отключаемся…' : 'Отключиться от спортсмена'}</button>}
+        {!fitLimePilot && currentMembership && query.data?.hasAccount && !query.data.archivedAt && <button className="danger secondary wide" disabled={leave.isPending} aria-busy={leave.isPending} onClick={async () => { if (await confirm({ message: 'Отключиться от спортсмена? Текущий доступ к тренировкам и прогрессу будет закрыт. История и авторство сохранятся.', confirmLabel: 'Отключиться', danger: true })) leave.mutate() }}>{leave.isPending ? 'Отключаемся…' : 'Отключиться от спортсмена'}</button>}
         {leave.error && <p className="error">{leave.error.message}</p>}
-        {actor?.role === 'trainer' && query.data.canArchive === true && <button className={query.data.archivedAt ? 'secondary wide' : 'danger secondary wide'} disabled={archive.isPending} aria-busy={archive.isPending} onClick={() => void changeArchive(query.data!)}>{archive.isPending ? 'Обновляем…' : query.data.archivedAt ? 'Вернуть из архива' : 'Архивировать клиента'}</button>}
+        {!fitLimePilot && actor?.role === 'trainer' && query.data.canArchive === true && <button className={query.data.archivedAt ? 'secondary wide' : 'danger secondary wide'} disabled={archive.isPending} aria-busy={archive.isPending} onClick={() => void changeArchive(query.data!)}>{archive.isPending ? 'Обновляем…' : query.data.archivedAt ? 'Вернуть из архива' : 'Архивировать клиента'}</button>}
         {archive.error && Boolean(archive.variables?.archivedAt) === Boolean(query.data.archivedAt) && <div className="client-detail-source-state is-error" role="alert">
           <span>{query.data.archivedAt ? 'Не удалось вернуть клиента из архива. Повторите попытку.' : 'Не удалось обновить архив. Повторите действие.'}</span>
           {actor?.role === 'trainer' && query.data.canArchive === true && <button type="button" className="secondary" disabled={archive.isPending} onClick={() => void changeArchive(query.data!)}>Повторить</button>}

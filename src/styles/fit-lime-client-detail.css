@@ -167,3 +167,8 @@
 .fit-lime-shell .client-profile-reference .client-detail-plan .client-detail-chevron { display: none; }
 
 .fit-lime-shell .client-profile-reference .quick-start-button { white-space: normal; line-height: 14px; }
+
+.fit-lime-shell .client-profile-header-actions { display:flex; align-items:center; gap:16px; }
+.fit-lime-shell .client-profile-header-actions > span { display:flex; }
+.fit-lime-shell .client-profile-reference .client-profile-invite { grid-column:1/-1; justify-content:center; color:var(--lime-accent); background:transparent; border:0; min-height:44px; font-size:14px; margin:8px 0 16px; }
+.fit-lime-shell .client-profile-reference .client-profile-invite::before { content:''; width:24px; height:24px; display:inline-block; vertical-align:middle; margin-right:8px; background:url('../assets/client-profile/connected.svg') center / contain no-repeat; }

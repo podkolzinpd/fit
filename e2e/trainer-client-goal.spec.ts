@@ -1,3 +1,4 @@
+import { clientCardAction } from './fit-lime-fixtures'
 import { nativeSignIn, nativeRegister } from './native-local-fixture'
 import { expect, test } from './native-local-fixture'
 import { randomUUID } from 'node:crypto'
@@ -68,5 +69,5 @@ test('trainer Client Goal keeps create and date validation under monochrome prev
   await page.getByRole('button', { name: 'Архивировать цель' }).click()
   await page.getByRole('alertdialog').getByRole('button', { name: 'Архивировать' }).click()
   await expect(page).toHaveURL(new RegExp(`/clients/${clientId}$`))
-  await page.getByRole('button', { name: 'Архивировать клиента' }).click()
+  await (await clientCardAction(page, 'Архивировать клиента')).click()
 })
