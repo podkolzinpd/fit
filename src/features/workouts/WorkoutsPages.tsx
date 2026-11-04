@@ -2084,7 +2084,7 @@ export function WorkoutDetailPage() {
   })
   const remove = useMutation({ mutationFn: () => workoutsRepository.remove(query.data!), onSuccess: async () => {
     if (actor?.userId) clearWorkoutInactivityReminder(actor.userId, workoutId)
-    await Promise.all([invalidateWorkoutResults(queryClient), queryClient.invalidateQueries({ queryKey: ['clients'] })])
+    await Promise.all([invalidateWorkoutResults(queryClient), invalidateFinanceViews(queryClient, query.data?.clientId), queryClient.invalidateQueries({ queryKey: ['clients'] })])
     goBack()
   } })
   const removeCompletedExercise = useMutation({
