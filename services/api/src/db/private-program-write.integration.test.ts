@@ -82,6 +82,8 @@ describe.skipIf(source===undefined)('bounded weekly-program writes and closed-re
         linkedTrainerCandidates:0,retainedBindingSources:missing==='email_binding'?[]:['fit_lime_pilot_allowlist']})
       expect(f.receipts).toHaveLength(1)
       expect(f.receipts[0]?.receipt).toMatchObject({kind:'program_identity_inspection',packetSha256:options.approvedSha256})
+      expect(f.receipts[0]?.receipt.targetBinding).toBe(hash(JSON.stringify([
+        options.target.trainerEmailSha256,options.target.trainerLoginSha256,options.target.clientNameSha256])))
       expect(JSON.stringify(f.receipts)).not.toContain(f.coach)
       expect(f.started).toBe(false);expect(f.proof).toBeNull();expect(f.verified).toEqual([])
       for(const mode of ['apply','verify'] as const)await expect(runProgramImport({...options,mode})).rejects.toThrow('current_trainer_identity_required')

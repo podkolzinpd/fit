@@ -103,7 +103,9 @@ export async function runProgramImport({mode,owner,runtime,target,legacyId=null,
       retainedLoginBinding:evidence.retainedLoginBinding===true,
       reason:evidence.trainerMatched?'yandex_identity_missing'
         :sources.retainedProfileCandidates?'additional_binding_requires_review':'email_binding_missing',...sources}
-    await persistReceipt('readback',{...result,kind:'program_identity_inspection',packetSha256:approvedSha256})
+    // The target proof stays only inside the encrypted receipt, never stdout.
+    await persistReceipt('readback',{...result,kind:'program_identity_inspection',packetSha256:approvedSha256,
+      targetBinding:hash([target.trainerEmailSha256,target.trainerLoginSha256,target.clientNameSha256])})
     return result
   }
   const requestIds=payload.workouts.map(w=>w.requestId)
