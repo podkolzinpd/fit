@@ -20,7 +20,7 @@
 .phone-frame.fit-lime-shell .finance-overview-search:focus-within { border-color: var(--lime-accent); }
 .phone-frame.fit-lime-shell .finance-overview-search input { min-height: 44px; color: var(--lime-text); font-size: 16px; }
 .fit-lime-shell :is(.finance-manual-session, .finance-session-editor) > .request-error-inline { grid-column: 1 / -1; min-width: 0; }
-.fit-lime-shell :is(.finance-manual-session, .finance-session-editor) :is(input, select):disabled {
+.fit-lime-shell :is(.finance-form, .finance-manual-session, .finance-session-editor) :is(input, select, textarea):disabled {
   opacity: 1; color: var(--lime-text-secondary); -webkit-text-fill-color: var(--lime-text-secondary);
 }
 
