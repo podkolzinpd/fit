@@ -1,3 +1,9 @@
+import clientMoreIcon from '../../assets/client-profile/more.svg'
+import clientArrowIcon from '../../assets/client-profile/arrow.svg'
+import clientCalendarIcon from '../../assets/client-profile/calendar.svg'
+import clientMicIcon from '../../assets/client-profile/mic.svg'
+import clientUpcomingArrow from '../../assets/client-profile/upcoming-arrow.svg'
+import clientTodayArrow from '../../assets/client-profile/today-arrow.svg'
 import clientNoteIcon from '../../assets/client-profile/note.svg'
 import clientProfileLogo from '../../assets/client-profile/logo.svg'
 import clientGoalIcon from '../../assets/client-profile/goal.svg'
@@ -7,8 +13,8 @@ import clientScheduleIcon from '../../assets/client-profile/schedule.svg'
 import { ClientProfileHeader } from './ClientProfileHeader'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Controller, useForm } from 'react-hook-form'
-import { useEffect, useState } from 'react'
+import { Controller, useForm, useWatch } from 'react-hook-form'
+import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { bmiLabel, splitClientWorkouts } from '../../data/repositories/workout-rules'
 import { ClientFirstRunIntro, PresetWorkoutPicker, TodayPage, WorkoutExercisesSummary, storeFirstWorkoutIntent, workoutCountLabel, type FirstWorkoutIntent } from '../workouts'
@@ -17,7 +23,7 @@ import { currentStage, daysToTarget, stageProgress } from '../../shared/goal-rul
 import { formatLocalDate, formatLocalDateShort, localDate, normalizeTimeZone, todayInTimeZone } from '../../shared/local-date'
 import { AsyncView, Field, OverflowMenu, Page, useConfirm } from '../../shared/ui'
 import { clientSchema } from '../../shared/validation'
-import { VoiceInputButton, VoiceNoteField, type VoiceInputPhase } from '../voice-input'
+import { appendTranscript, VoiceInputButton, VoiceNoteField, type VoiceInputPhase } from '../voice-input'
 import { z } from 'zod'
 import { useClientRealtime } from '../../app/use-client-realtime'
 import { useAuth } from '../../app/auth-context'
@@ -357,7 +363,7 @@ function ClientGoalBlock({ client, reference = false }: { client: Client; refere
     const stage = currentStage(goal, today)
     const progress = stageProgress(goal, today)
     return <section className="goal-block">
-      <div className="goal-head"><h2>{reference && <img src={clientGoalIcon} width={16} height={16} alt="" />}Цель</h2>{!reference && <Link className="link" to={`/clients/${client.id}/goal`}><span>Открыть</span><ChevronRightIcon /></Link>}</div>
+      <div className="goal-head"><h2>{reference && <img src={clientGoalIcon} width={24} height={24} alt="" />}Цель</h2>{!reference && <Link className="link" to={`/clients/${client.id}/goal`}><span>Открыть</span><ChevronRightIcon /></Link>}</div>
       <p className="goal-title">{goal.title}</p>
       {goal.targetDate && <p className="goal-deadline">До {formatLocalDateShort(localDate(goal.targetDate))}{days !== null ? ` · ${targetHint(days)}` : ''}</p>}
       {progress && progress.total > 0 && <p className="goal-stage-line">
@@ -376,7 +382,7 @@ function ClientGoalBlock({ client, reference = false }: { client: Client; refere
     </form>
   </section>
   if (reference) return <section className="goal-block client-profile-goal">
-    <div className="goal-head"><h2><img src={clientGoalIcon} width={16} height={16} alt="" /> Цель</h2></div>
+    <div className="goal-head"><h2><img src={clientGoalIcon} width={24} height={24} alt="" />Цель</h2></div>
     <p className={client.goal ? 'goal-title' : 'goal-title goal-placeholder'}>{client.goal || 'Поставьте цель, чтобы следить за прогрессом в тренировках'}</p>
     {client.goal && <button type="button" className="link" onClick={startEditing}>Изменить</button>}
     <Link className="link" to={`/clients/${client.id}/goal`}>{client.goal ? 'Добавить этапы' : 'Добавить цель'}</Link>
@@ -392,8 +398,48 @@ function ClientGoalBlock({ client, reference = false }: { client: Client; refere
   </section>
 }
 
-function ClientNoteBlock({ client, reference = false }: { client: Client; reference?: boolean }) {
+function ClientReferenceNote({ client }: { client: Client }) {
+  const noteForm = useRef<HTMLFormElement>(null)
+  const [phase, setPhase] = useState<VoiceInputPhase>('idle')
   const [expanded, setExpanded] = useState(false)
+  const form = useForm<{ note: string }>({ defaultValues: { note: client.note ?? '' } })
+  const note = useWatch({ control: form.control, name: 'note' })
+  const dirty = form.formState.isDirty
+  const mutation = useSaveClient(client, () => form.reset({ note: form.getValues('note') }))
+  useEffect(() => {
+    if (!dirty && !mutation.isPending) form.reset({ note: client.note ?? '' })
+  }, [client.note, dirty, form, mutation.isPending])
+  const locked = mutation.isPending || phase !== 'idle'
+  return <section className="client-profile-note">
+    <div className="client-profile-note-heading">
+      <h2><img src={clientNoteIcon} width={24} height={24} alt="" />Заметка</h2>
+      <VoiceInputButton variant="icon" source="client_form" disabled={mutation.isPending} onPhaseChange={setPhase}
+        idleIcon={<img src={clientMicIcon} width={24} height={24} alt="" />} onTranscript={text => {
+          const previous = form.getValues('note')
+          const next = appendTranscript(previous, text)
+          form.setValue('note', next, { shouldDirty: true })
+          noteForm.current?.querySelector<HTMLTextAreaElement>('textarea')?.focus()
+          return () => { if (form.getValues('note') === next) form.setValue('note', previous, { shouldDirty: true }) }
+        }} />
+    </div>
+    <form ref={noteForm} className="client-profile-note-form" onSubmit={event => void form.handleSubmit(values => mutation.mutate({ note: values.note }))(event)}>
+      <Controller control={form.control} name="note" render={({ field }) => <VoiceNoteField name={field.name}
+        source="client_form" label="Заметка" hideLabel showVoice={false} placeholder="Текст заметки" value={field.value}
+        onValueChange={field.onChange} disabled={mutation.isPending} autoResize maxHeightPx={expanded ? 900 : 264} />} />
+      {mutation.error && <p className="error" role="alert">{mutation.error.message}</p>}
+      <div className="client-profile-note-actions">
+        {note.length > 240 && <button type="button" className="link" aria-expanded={expanded} onClick={() => setExpanded(!expanded)}>{expanded ? 'Свернуть заметку' : 'Показать всю заметку'}</button>}
+        <button type="submit" className="link client-profile-note-save" disabled={!dirty || locked}>{mutation.isPending ? 'Сохраняем…' : 'Сохранить'}</button>
+      </div>
+    </form>
+  </section>
+}
+
+function ClientNoteBlock({ client, reference = false }: { client: Client; reference?: boolean }) {
+  return reference ? <ClientReferenceNote key={client.id} client={client} /> : <LegacyClientNoteBlock client={client} />
+}
+
+function LegacyClientNoteBlock({ client }: { client: Client }) {
   const [editing, setEditing] = useState(false)
   const form = useForm<{ note: string }>({ defaultValues: { note: client.note ?? '' } })
   const mutation = useSaveClient(client, () => setEditing(false))
@@ -406,16 +452,6 @@ function ClientNoteBlock({ client, reference = false }: { client: Client; refere
       {mutation.error && <p className="error">{mutation.error.message}</p>}
       <div className="actions"><button type="button" className="secondary" onClick={() => setEditing(false)}>Отмена</button><button className="primary" disabled={mutation.isPending}>Сохранить</button></div>
     </form>
-  </section>
-  if (reference) return <section className="client-profile-note">
-    <h2><img src={clientNoteIcon} width={20} height={20} alt="" />Заметка</h2>
-    <div className="client-profile-note-surface">
-      {client.note ? <p className={expanded ? undefined : 'client-profile-note-preview'}>{client.note}</p> : <p className="muted">Текст заметки</p>}
-      <div className="client-profile-note-actions">
-        {client.note && client.note.length > 240 && <button type="button" className="link" aria-expanded={expanded} onClick={() => setExpanded(!expanded)}>{expanded ? 'Свернуть заметку' : 'Показать всю заметку'}</button>}
-        <button type="button" className="link" onClick={startEditing}>{client.note ? 'Изменить' : 'Добавить заметку'}</button>
-      </div>
-    </div>
   </section>
   return <section className="goal-block client-note-block">
     <div className="goal-head"><h2>Заметка</h2><button type="button" className="link" onClick={startEditing}>{client.note ? 'Изменить' : '＋ Добавить'}</button></div>
@@ -482,7 +518,7 @@ export function ClientDetailPage() {
     if (fitLimePilot && !client.archivedAt && !await confirm({ message: `Переместить карточку «${client.fullName}» в архив? Её можно восстановить позже.`, confirmLabel: 'В архив', danger: true })) return
     archive.mutate(client)
   }
-  return <Page title={fitLimePilot ? 'Карточка клиента' : query.data?.fullName ?? 'Клиент'} className={`client-detail-page${fitLimePilot ? ' client-profile-reference' : ''}`} back="/clients" action={query.data && <div className="client-profile-header-actions">{fitLimePilot && <span role="img" aria-label={query.data.hasAccount === true ? 'Клиент подключён к приложению' : query.data.hasAccount === false ? 'Клиент ещё не подключён' : 'Подключение пока неизвестно'}><img src={query.data.hasAccount === true ? connectedClientIcon : disconnectedClientIcon} width={24} height={24} alt="" /></span>}<OverflowMenu label="Действия с профилем спортсмена" items={[
+  return <Page title={fitLimePilot ? 'Карточка клиента' : query.data?.fullName ?? 'Клиент'} className={`client-detail-page${fitLimePilot ? ' client-profile-reference' : ''}`} back="/clients" action={query.data && <div className="client-profile-header-actions">{fitLimePilot && <span role="img" aria-label={query.data.hasAccount === true ? 'Клиент подключён к приложению' : query.data.hasAccount === false ? 'Клиент ещё не подключён' : 'Подключение пока неизвестно'}><img src={query.data.hasAccount === true ? connectedClientIcon : disconnectedClientIcon} width={40} height={40} alt="" /></span>}<OverflowMenu trigger={fitLimePilot ? <img src={clientMoreIcon} width={24} height={24} alt="" /> : undefined} label="Действия с профилем спортсмена" items={[
     { label: 'Редактировать профиль', onClick: () => navigate(`/clients/${clientId}/edit`) },
     ...(fitLimePilot && clientsRepository.uploadPhoto && !query.data.archivedAt ? [{ label: 'Загрузить фото', onClick: () => document.getElementById('client-profile-photo-input')?.click() }] : []),
     ...(fitLimePilot && actor?.role === 'trainer' && canOpenClientChat(query.data, thread) ? [{label:openChat.isPending ? 'Открываем чат…' : 'Написать',disabled:openChat.isPending,onClick:()=>openChat.mutate()}] : []),
@@ -538,21 +574,21 @@ export function ClientDetailPage() {
       </>}
       {fitLimePilot && <>
         <nav className="client-detail-routes" aria-label="Разделы спортсмена">
-          <Link to={`/progress/${clientId}`}><AnalyticsIcon /><span>Прогресс и замеры</span><ChevronRightIcon className="client-profile-route-arrow" /></Link>
-          <Link to={`/clients/${clientId}/workouts`}><HistoryIcon /><span>История тренировок</span><ChevronRightIcon className="client-profile-route-arrow" /></Link>
-          {financePilot && <Link to={`/clients/${clientId}/finance`}><RecordIcon /><span>Абонементы и оплаты</span><ChevronRightIcon className="client-profile-route-arrow" /></Link>}
+          <Link to={`/progress/${clientId}`}><AnalyticsIcon /><span>Прогресс и замеры</span><img src={clientArrowIcon} className="client-profile-route-arrow" width={20} height={20} alt="" /></Link>
+          <Link to={`/clients/${clientId}/workouts`}><HistoryIcon /><span>История тренировок</span><img src={clientArrowIcon} className="client-profile-route-arrow" width={20} height={20} alt="" /></Link>
+          {financePilot && <Link to={`/clients/${clientId}/finance`}><RecordIcon /><span>Абонементы и оплаты</span><img src={clientArrowIcon} className="client-profile-route-arrow" width={20} height={20} alt="" /></Link>}
         </nav>
       </>}
       {fitLimePilot && <ClientDetailSourceState label="ближайшие тренировки" loading={workouts.isLoading} error={workouts.error} onRetry={() => void workouts.refetch()} />}
-      {fitLimePilot && upcoming.length > 0 && <section className="client-detail-upcoming"><h2><ScheduleIcon /> {fitLimePilot ? 'Запланировано' : 'Предстоит'}</h2><div className="cards">{upcoming.map((workout) => <Link className={`card${workout.workoutDate === today ? ' client-profile-upcoming-today' : ''}`} key={workout.id} to={`/workouts/${workout.id}`}><div>
+      {fitLimePilot && upcoming.length > 0 && <section className="client-detail-upcoming"><h2><img src={clientCalendarIcon} width={24} height={24} alt="" />{fitLimePilot ? 'Запланировано' : 'Предстоит'}</h2><div className="cards">{upcoming.map((workout) => <Link className={`card${workout.workoutDate === today ? ' client-profile-upcoming-today' : ''}`} key={workout.id} to={`/workouts/${workout.id}`}><div>
         <small className="client-profile-workout-date">{workout.workoutDate === today ? 'Сегодня' : formatLocalDate(workout.workoutDate)}{workout.startTime ? `, ${workout.startTime.slice(0,5)}` : ''}</small>
         <strong>{workout.title?.trim() || 'Тренировка'}</strong>
         {fitLimePilot ? <small className="client-profile-workout-count">{workout.exercises.length} упр.{workout.status === 'in_progress' ? ' · Идёт' : ''}</small> : <WorkoutExercisesSummary workout={workout} />}
-        {workout.stageTitle && <p className="stage-tag">🎯 {workout.stageTitle}</p>}</div><ChevronRightIcon /></Link>)}</div></section>}
+        {workout.stageTitle && <p className="stage-tag">🎯 {workout.stageTitle}</p>}</div><img className="client-profile-upcoming-arrow" src={workout.workoutDate === today ? clientTodayArrow : clientUpcomingArrow} width={24} height={24} alt="" /></Link>)}</div></section>}
       {!fitLimePilot && <>
       {upcoming.length > 0 && <section className="client-detail-upcoming"><h2>Предстоит</h2><div className="cards">{upcoming.map((workout) => <Link className="card" key={workout.id} to={`/workouts/${workout.id}`}><div><strong>{formatLocalDate(workout.workoutDate)}{workout.startTime ? ` · ${workout.startTime.slice(0, 5)}` : ''}</strong><WorkoutExercisesSummary workout={workout} />{workout.stageTitle && <p className="stage-tag">🎯 {workout.stageTitle}</p>}</div><span className={`badge ${workout.status}`}>{workout.status === 'in_progress' ? 'Идёт' : 'План'}</span></Link>)}</div></section>}
       </>}
-      {fitLimePilot && workouts.isSuccess && upcoming.length === 0 && <p className="client-profile-empty-upcoming"><ScheduleIcon />Тренировки не запланированы</p>}
+      {fitLimePilot && workouts.isSuccess && upcoming.length === 0 && <p className="client-profile-empty-upcoming"><img src={clientCalendarIcon} width={24} height={24} alt="" />Тренировки не запланированы</p>}
       {fitLimePilot && <details className="client-profile-secondary"><summary>Статистика, замеры и питание</summary>
       <section className="client-detail-snapshot" aria-label="Сводка по спортсмену">
         <p className="client-detail-vitals">
