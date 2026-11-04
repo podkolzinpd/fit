@@ -199,7 +199,7 @@ for (const fitLime of [false, true]) {
     await page.addInitScript((value) => localStorage.setItem('fit.appTheme', value), theme)
     const { ledger, receiptIds } = await mockFinancePaymentLifecycle(page)
     await page.goto(`/clients/${clientId}/finance`)
-    await page.getByRole('button', { name: 'Новая', exact: true }).click()
+    await page.getByRole('button', { name: fitLime ? 'Новая услуга' : 'Новая', exact: true }).click()
     await page.getByLabel('Название', { exact: true }).fill('Персональные тренировки с длинным названием услуги')
     const cost = page.getByLabel('Стоимость, ₽', { exact: true })
     const paid = page.getByLabel('Уже оплачено, ₽', { exact: true })
