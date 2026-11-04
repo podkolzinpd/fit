@@ -1236,7 +1236,7 @@ for (const theme of ['dark', 'light']) for (const width of [390, 430]) for (cons
     await expect(page.getByRole('switch', { name: 'Анимация в Live', exact: true })).toBeChecked({ checked: animation })
     const options = page.getByRole('radiogroup', { name: 'Вид Live-тренировки' })
     await expect(options.getByRole('radio', { name: density === 'original' ? 'Оригинальный' : 'Компактный', exact: true })).toHaveAttribute('aria-checked', 'true')
-    await expect(options.getByRole('radio', { name: density === 'original' ? 'Оригинальный' : 'Компактный', exact: true })).toHaveCSS('background-color', 'rgb(182, 239, 77)')
+    await expect(options.getByRole('radio', { name: density === 'original' ? 'Оригинальный' : 'Компактный', exact: true })).toHaveCSS('background-color', 'rgb(209, 253, 45)')
     await page.screenshot({ path: info.outputPath('settings.png') })
     await page.goto(`/workouts/${workoutId}/live`)
     await expect(page.locator(`.client-live-density-${density}`)).toBeVisible()

@@ -758,8 +758,8 @@ for (const width of [375, 390, 430, 1440]) test(`Figma workout Coach reference f
   await expect(squat.locator('.compact-editor-exercise-fields')).toHaveCSS('border-top', '1px solid rgb(59, 59, 64)')
   await expect(squat.locator('.overflow-trigger svg[data-icon="more"]')).toHaveCSS('width', '24px')
   await expect(squat.locator('.exercise-comment-options > summary')).toHaveCSS('min-height', '44px')
-  await expect(squat.locator('.set-add-row svg')).toHaveCSS('background-color', 'rgb(182, 239, 77)')
-  await expect(page.locator('.trainer-plan-methods .trainer-method-voice')).toHaveCSS('background-color', 'rgb(182, 239, 77)')
+  await expect(squat.locator('.set-add-row svg')).toHaveCSS('background-color', 'rgb(209, 253, 45)')
+  await expect(page.locator('.trainer-plan-methods .trainer-method-voice')).toHaveCSS('background-color', 'rgb(209, 253, 45)')
   await expect(page.locator('.trainer-plan-methods > button').first()).toHaveCSS('background-color', 'rgb(59, 59, 64)')
   await squat.getByLabel('Вес, подход 1').fill('27.5')
   await squat.getByLabel('Повторы, подход 1').fill('10')
@@ -1166,7 +1166,7 @@ for (const width of [375, 390, 430, 1440]) test(`Figma workout Coach reference c
   await expect(picker.locator('.coach-filter-count')).toHaveText('1')
   await expect(picker.locator('.coach-filter-count')).toHaveCSS('width', '20px')
   await expect(picker.locator('.coach-filter-count')).toHaveCSS('height', '20px')
-  await expect(picker.locator('.coach-filter-count')).toHaveCSS('background-color', 'rgb(182, 239, 77)')
+  await expect(picker.locator('.coach-filter-count')).toHaveCSS('background-color', 'rgb(209, 253, 45)')
   const titleCenterOffset = await picker.locator('.coach-catalog-sheet-title').evaluate(node => {
     const title = node.getBoundingClientRect(), sheet = node.closest('.coach-reference-catalog')!.getBoundingClientRect()
     return Math.abs(title.x + title.width / 2 - sheet.x - sheet.width / 2)
@@ -2334,9 +2334,9 @@ for (const width of [375, 390, 430, 1440]) {
     await expect(page.locator('.live-set.confirmed')).toHaveCount(1)
     const addSet = page.locator('.live-add-set').first()
     await expect(addSet).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)')
-    await expect(addSet.locator('svg')).toHaveCSS('color', 'rgb(182, 239, 77)')
+    await expect(addSet.locator('svg')).toHaveCSS('color', 'rgb(209, 253, 45)')
     const originalPlus = addSet.locator('svg[data-original-icon="plus"]')
-    await expect(originalPlus).toHaveCSS('background-color', 'rgb(182, 239, 77)')
+    await expect(originalPlus).toHaveCSS('background-color', 'rgb(209, 253, 45)')
     // Vite embeds this tiny original SVG in CSS; verify the silhouette, not a file URL.
     expect(await originalPlus.evaluate(icon => decodeURIComponent(getComputedStyle(icon).maskImage)))
       .toContain('M11 6V11H6V13H11V18H13V13H18V11H13V6H11Z')
@@ -3906,7 +3906,7 @@ for (const width of [390, 430, 1440]) {
     await format.getByRole('button', { name: 'Самостоятельно', exact: true }).click()
     await expect(format.getByRole('button', { name: 'Самостоятельно', exact: true })).toHaveAttribute('aria-pressed', 'true')
     const start = format.getByRole('button', { name: 'Начать тренировку', exact: true })
-    await expect(start).toHaveCSS('background-color', 'rgb(182, 239, 77)')
+    await expect(start).toHaveCSS('background-color', 'rgb(209, 253, 45)')
     await start.scrollIntoViewIfNeeded()
     for (const button of await format.getByRole('button').all()) {
       const bounds = await button.boundingBox()
@@ -4729,7 +4729,7 @@ for (const [account, profileId] of [
     await expect(page.getByRole('link', { name: /Запланировать тренировку/ })).toBeVisible()
     await expect(page.getByRole('link', { name: /История тренировок/ })).toBeVisible()
     await expect(page.getByRole('link', { name: /Прогресс и замеры/ })).toBeVisible()
-    await expect(page.locator('.client-detail-plan')).toHaveCSS('background-color', 'rgb(182, 239, 77)')
+    await expect(page.locator('.client-detail-plan')).toHaveCSS('background-color', 'rgb(209, 253, 45)')
     for (const icon of await page.locator('.client-detail-plan svg[data-original-icon]').all()) {
       await expect(icon).toHaveCSS('filter', 'brightness(0)')
     }
@@ -4850,7 +4850,7 @@ for (const [account, profileId] of [
     await expect(page.getByRole('heading', { name: 'Подготовка к старту' })).toBeVisible()
     await expect(page.locator('.stage-row.current')).toContainText('База')
     await expect(page.locator('.stage-row.current')).toContainText('идёт')
-    await expect(page.locator('.stage-row.current')).toHaveCSS('border-top-color', 'rgb(182, 239, 77)')
+    await expect(page.locator('.stage-row.current')).toHaveCSS('border-top-color', 'rgb(209, 253, 45)')
     if (account === 'first') {
       const screenshotPath = testInfo.outputPath('fit-lime-client-goal.png')
       await page.screenshot({ path: screenshotPath, fullPage: true })
