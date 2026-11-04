@@ -129,6 +129,7 @@ export function ownProfileCases() {
     const connections = page.getByRole('region', { name: 'Связь с тренером' })
     await expect(connections.getByText('5 из 8', { exact: true })).toBeVisible()
     await expect(connections.getByText('Оплачено', { exact: true })).toBeVisible()
+    await connections.locator('.client-finance-home').screenshot({ path: info.outputPath('own-profile-service-balance.png') })
     await connections.getByRole('link', { name: 'Подробнее' }).click()
     await expect(page).toHaveURL(/\/me\/finance$/)
     await expect(page.getByRole('heading', { name: '8 тренировок' })).toBeVisible()
@@ -153,7 +154,7 @@ export function ownProfileCases() {
     await page.reload()
     await expect(sports.getByText('Бегаю утром и готовлюсь к старту')).toBeVisible()
     await expect(connections.getByRole('button', { name: 'Пригласить тренера' })).toBeVisible()
-    await page.screenshot({ path: info.outputPath('own-profile-sections-after-disconnect.png'), fullPage: true })
+    await connections.screenshot({ path: info.outputPath('own-profile-sections-after-disconnect.png') })
   })
 
   for (const [width, theme] of [[360, 'light'], [375, 'dark']] as const) test(`Own profile sections narrow geometry ${width} ${theme}`, async ({ page }, info) => {
