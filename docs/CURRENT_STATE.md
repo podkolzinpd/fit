@@ -1,8 +1,9 @@
 28.10 — Чат: плашка даты перед первым сообщением дня («Сегодня», «Вчера», «26 октября», «12 марта 2025»), раньше «Новые сообщения»; в списке чатов дата по давности. День по часам телефона. chat-dates.ts + тесты.
 # Fit — текущий индекс
+04.11 — [Профиль клиента:3PR/COP](design/CLIENT_OWN_PROFILE_20261104.md).
 03.11 — [17 журналов](design/ATHLETE_PROGRAM_HISTORY_IMPORT_20261103.md): подготовка; сверка/запись впереди.
 YAFIT-701: [R101–R106, восстановление карточки у тренера без изменения истории](https://st.yandex-team.ru/YAFIT-701).
-Шаблоны: [TMPA101–108](design/COACH_WORKFLOW_AUDIT_20261031.md);3PR приняты. R01–R04: исправлены локально, CI/выпуск далее.
+Шаблоны: [TMPA/R01–R04](design/COACH_WORKFLOW_AUDIT_20261031.md);1957 принят.
 02.11 — CI: production-mode browser набор873 разделяется на4 части без сокращения;
 [план, сохранность и исправления flaky swipe/video](design/PRODUCTION_BROWSER_CI_SHARDS_20261102.md). CI нового head ещё гейт.
 TC101–107: [план/статус](design/TRAINER_CONNECTION_CONFIRMATION_20261102.md). В работе.
