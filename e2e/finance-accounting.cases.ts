@@ -81,7 +81,7 @@ async function uncertainCreateFixture(page: Page, kind: 'payment' | 'package', f
   })
   await page.setViewportSize({ width: 390, height: 844 })
   await page.goto(`/clients/${clientId}/finance`)
-  const open = async () => page.getByRole('button', { name: kind === 'payment' ? 'Внести оплату' : 'Новая', exact: true }).click()
+  const open = async () => page.getByRole('button', { name: kind === 'payment' ? 'Внести оплату' : fitLime ? 'Новая услуга' : 'Новая', exact: true }).click()
   await open()
   const form = page.locator('.finance-form')
   if (kind === 'package') {
@@ -105,6 +105,57 @@ async function uncertainCreateFixture(page: Page, kind: 'payment' | 'package', f
 }
 
 export function financeAccountingCases() {
+  test('Finance Lime owns readable cards, forms and payment actions', { tag: ['@lime-finance'] }, async ({ page }, info) => {
+    await receiptFixture(page)
+    await page.goto(`/clients/${clientId}/finance`)
+    await expect(page.locator('.phone-frame')).toHaveClass(/finance-lime-shell/)
+    await expect(page.locator('.phone-frame')).not.toHaveClass(/trainer-finance-identity/)
+    const card = page.locator('.finance-package').first()
+    for (const width of [320, 390, 430, 1440]) {
+      await page.setViewportSize({ width, height: 844 })
+      await expect(card).toBeVisible()
+      expect(await card.evaluate(node => {
+        const header = node.querySelector('header')!.getBoundingClientRect()
+        const balance = node.querySelector('.finance-service-balance')!.getBoundingClientRect()
+        return Math.abs(header.width - balance.width) < 2 && header.width > node.getBoundingClientRect().width - 36
+      })).toBe(true)
+      const title = page.locator('.page-title-group > p')
+      expect(await title.evaluate(node => node.scrollWidth <= node.clientWidth + 1)).toBe(true)
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+      await page.screenshot({ path: info.outputPath(`lime-service-${width}.png`), fullPage: true })
+    }
+    await page.setViewportSize({ width: 320, height: 500 })
+    // Start with a short viewport; resizing an unfocused page is not a keyboard gesture.
+    await page.reload()
+    await expect(card).toBeVisible()
+    const history = page.locator('.finance-history > summary')
+    await history.click()
+    await expect(page.locator('.finance-history')).toHaveAttribute('open', '')
+    await history.click()
+    await card.locator('.finance-package-details > summary').click()
+    await expect(card.getByRole('button', { name: 'Продлить', exact: true })).toHaveCount(0)
+    await card.getByRole('button', { name: /Действия с услугой/ }).click()
+    await page.getByRole('menuitem', { name: 'Продлить', exact: true }).click()
+    await expect(page.getByRole('heading', { name: 'Продление', exact: true })).toBeVisible()
+    await page.getByRole('button', { name: 'Отмена', exact: true }).click()
+    await page.getByRole('tab', { name: /Оплаты:/ }).click()
+    for (const width of [320, 390, 430, 1440]) {
+      await page.setViewportSize({ width, height: 844 })
+      expect(await page.locator('.finance-payment').first().evaluate(node => [...node.querySelectorAll('span')].every(span => span.scrollWidth <= span.clientWidth + 1))).toBe(true)
+      await page.screenshot({ path: info.outputPath(`lime-payments-${width}.png`), fullPage: true })
+    }
+    await page.getByRole('button', { name: /Действия с оплатой/ }).first().click()
+    await page.getByRole('menuitem', { name: 'Изменить', exact: true }).click()
+    await expect(page.getByRole('heading', { name: 'Изменить оплату', exact: true })).toBeVisible()
+    await expect(page.locator('textarea[name="comment"]')).toBeVisible()
+    await page.locator('textarea[name="comment"]').focus()
+    await page.setViewportSize({ width: 320, height: 500 })
+    await formGeometry(page.locator('.finance-form'))
+    await page.screenshot({ path: info.outputPath('lime-payment-edit-small-viewport.png'), fullPage: true })
+    await page.getByRole('button', { name: 'Отмена', exact: true }).click()
+    await expect(page.locator('.finance-form')).toHaveCount(0)
+  })
+
   test('Finance exact kopecks and mixed overdue debt use separate amounts', { tag: ['@lime-finance'] }, async ({ page }, info) => {
     const ledger = await accountingFixture(page)
     await page.route('**/v1/finance/overview*', route => route.fulfill({ json: { overview: {
