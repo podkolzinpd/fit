@@ -96,6 +96,7 @@ export interface TrainerFinanceOverviewClient {
   activePackageCount: number
   upcomingPackageCount: number
   sessionsRemaining: number | null
+  overdueCents?: number
   overdue: boolean
   lowSessions: boolean
   unassignedSessions: number

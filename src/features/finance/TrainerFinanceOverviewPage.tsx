@@ -32,11 +32,13 @@ export function trainerFinanceClientLabel(client: TrainerFinanceOverviewClient):
   const paymentDeadline = client.dueCents > 0 && client.nearestPaymentDueOn && client.unpaidPackageCount > 0
     ? formatLocalDateShort(localDate(client.nearestPaymentDueOn)).slice(0, 5)
     : null
-  const dueLabel = client.overdue ? `Просрочено ${money(client.dueCents)}` : `К оплате ${money(client.dueCents)}`
+  const dueLabel = `К оплате ${money(client.dueCents)}`
+  const overdueLabel = client.overdue ? client.overdueCents === undefined
+    ? 'Есть просрочка' : `Из них просрочено ${money(client.overdueCents)}` : null
   const unassigned = client.unassignedSessions > 0 ? `Не привязано: ${client.unassignedSessions}` : null
   if (client.dueCents > 0) return `${dueLabel}${paymentDeadline
     ? client.unpaidPackageCount === 1 ? ` · до ${paymentDeadline}` : `\nБлижайший срок — ${paymentDeadline}`
-    : ''}${unassigned ? `\n${unassigned}` : ''}`
+    : ''}${overdueLabel ? `\n${overdueLabel}` : ''}${unassigned ? `\n${unassigned}` : ''}`
   if (unassigned) return unassigned
   if (client.activePackageCount > 1) return 'Несколько абонементов'
   if (client.sessionsRemaining !== null) return `Осталось ${client.sessionsRemaining} ${client.sessionsRemaining === 1 ? 'занятие' : 'занятий'}`
@@ -152,7 +154,7 @@ export function TrainerFinanceOverviewView({ month, data, loading = false, error
   return <Page title="Финансы" back={back} swipeBack className="finance-overview-page">
     {navigation}
     <div className="finance-period-block">
-      <span>Период</span>
+      <span>Месяц поступлений</span>
       <div className="finance-month-switcher" aria-label="Месяц финансов">
       <button type="button" aria-label="Предыдущий месяц" onClick={onPreviousMonth}><BackIcon /></button>
       <strong>{formatMonth(month)}</strong>

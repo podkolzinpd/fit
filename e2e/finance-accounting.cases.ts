@@ -105,6 +105,42 @@ async function uncertainCreateFixture(page: Page, kind: 'payment' | 'package', f
 }
 
 export function financeAccountingCases() {
+  test('Finance exact kopecks and mixed overdue debt use separate amounts', { tag: ['@lime-finance'] }, async ({ page }, info) => {
+    const ledger = await accountingFixture(page)
+    await page.route('**/v1/finance/overview*', route => route.fulfill({ json: { overview: {
+      month: '2026-11', receivedCents: 10001, dueCents: 1100001, attentionCount: 1,
+      clients: [{ clientId, fullName: 'Александра Константинопольская', archivedAt: null, activeClient: true,
+        receivedCents: 10001, dueCents: 1100001, overdueCents: 100001, nearestPaymentDueOn: '2026-11-01', unpaidPackageCount: 2,
+        activePackageCount: 1, upcomingPackageCount: 1, sessionsRemaining: 5, overdue: true, lowSessions: false,
+        unassignedSessions: 0, needsAttention: true }],
+    } } }))
+    await page.goto('/finance')
+    await expect(page.locator('.finance-overview-client')).toContainText(/К оплате 11\s000,01/)
+    await expect(page.locator('.finance-overview-client')).toContainText(/Из них просрочено 1\s000,01/)
+    await expect(page.getByText('Месяц поступлений', { exact: true })).toBeVisible()
+    for (const width of [320, 390, 430, 1440]) {
+      await page.setViewportSize({ width, height: 844 })
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+      await page.screenshot({ path: info.outputPath(`mixed-debt-${width}.png`), fullPage: true })
+    }
+    await mockPilot(page, { role: 'client', profileId: clientId, clientLime: true })
+    const service = { ...ledger.packages[1]!, priceCents: 10001, paidCents: 10000, dueCents: 1, paymentStatus: 'partial' }
+    await page.route('**/v1/me/finance', route => route.fulfill({ json: { finance: { trainers: [{
+      trainerId: coach, trainerName: 'Тестовый тренер', packages: [service], payments: [],
+    }] } } }))
+    for (const theme of ['light', 'dark']) {
+      await page.evaluate(({ id, theme }) => localStorage.setItem(`fit.clientLime.theme.${id}`, theme), { id: clientId, theme })
+      await page.goto('/me/finance')
+      await expect(page.locator('.phone-frame')).toHaveClass(/fit-client-lime/)
+      await expect(page.locator('.client-finance-package-money')).toContainText(/0,01\s₽/)
+      for (const width of [320, 390, 430, 1440]) {
+        await page.setViewportSize({ width, height: 844 })
+        expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+        await page.screenshot({ path: info.outputPath(`client-one-kopeck-${theme}-${width}.png`), fullPage: true })
+      }
+    }
+  })
+
   // Payment and service have separate endpoints and native date/amount layouts.
   for (const kind of ['payment', 'package'] as const) test(`Finance uncertain ${kind} creation restores the same operation`, { tag: ['@lime-finance'] }, async ({ page }, info) => {
     const { form, commands } = await uncertainCreateFixture(page, kind)
@@ -454,7 +490,7 @@ export function financeAccountingCases() {
     await page.route('**/v1/finance/overview*', route => route.fulfill({ json: { overview: {
       month: '2026-11', receivedCents: service.paidCents - 1000000, dueCents: service.dueCents, attentionCount: 1,
       clients: [{ clientId, fullName: ledger.clientName, archivedAt: null, receivedCents: 0,
-        dueCents: service.dueCents, nearestPaymentDueOn: '2026-10-31', unpaidPackageCount: 1,
+        dueCents: service.dueCents, overdueCents: service.dueCents, nearestPaymentDueOn: '2026-10-31', unpaidPackageCount: 1,
         activePackageCount: 1, upcomingPackageCount: 0, sessionsRemaining: 10, overdue: true,
         lowSessions: false, unassignedSessions: 1, needsAttention: true }],
     } } }))
@@ -468,7 +504,8 @@ export function financeAccountingCases() {
     })
     await page.goto('/finance?filter=due')
     const row = page.locator('.finance-overview-client')
-    await expect(row).toContainText(/Просрочено 15\s000/)
+    await expect(row).toContainText(/К оплате 15\s000/)
+    await expect(row).toContainText(/Из них просрочено 15\s000/)
     await expect(row).toContainText('Не привязано: 1')
     for (const width of [320, 430, 1440]) {
       await page.setViewportSize({ width, height: 844 })
@@ -493,7 +530,8 @@ export function financeAccountingCases() {
     await expect(page.locator('.finance-form')).toHaveCount(0)
     await page.getByRole('button', { name: 'Назад', exact: true }).click()
     await expect(page).toHaveURL(/\/finance\?filter=due$/)
-    await expect(row).toContainText(/Просрочено 10\s000/)
+    await expect(row).toContainText(/К оплате 10\s000/)
+    await expect(row).toContainText(/Из них просрочено 10\s000/)
     await expect(row).toContainText('Не привязано: 1')
     await page.screenshot({ path: info.outputPath('overview-after-payment.png'), fullPage: true })
   })
