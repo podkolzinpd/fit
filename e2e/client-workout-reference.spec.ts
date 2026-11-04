@@ -1,6 +1,6 @@
 import { z } from 'zod'
 import { expect, test, type Page } from '@playwright/test'
-import { beginClientGesture, coachGestureWorkout, restTimerWorkout, holdClientLiveCard, mockClientStreamingVoice, mockPilot, mockPublicTrainer, publicTrainerDraft, publicTrainerId, newWorkoutId, workoutId, conversationId, messageId, clientId } from './fit-lime-fixtures'
+import { revealLiveSet, beginClientGesture, coachGestureWorkout, restTimerWorkout, holdClientLiveCard, mockClientStreamingVoice, mockPilot, mockPublicTrainer, publicTrainerDraft, publicTrainerId, newWorkoutId, workoutId, conversationId, messageId, clientId } from './fit-lime-fixtures'
 
 test.skip(process.env.FIT_CLIENT_WORKOUT_ACCEPTANCE !== '1', 'Dedicated native client-workout harness')
 
@@ -539,6 +539,7 @@ for (const grouped of [false, true]) test(`client Live time preference text conf
   await expect(row.locator('.save-status-error')).toBeVisible()
   await expect(seconds).toHaveValue('45')
   await row.getByRole('button', { name: 'Готово, отдых', exact: true }).click()
+  await revealLiveSet(page, exercise.sets[0]!.id)
   await expect(row.getByRole('button', { name: /^Отменить выполнение:/ })).toBeVisible()
   await expect.poll(() => backend.getWorkouts()[0]!.exercises[0]!.sets[0]!.fact.durationSec).toBe(105)
   expect(await node!.evaluate(element => element.isConnected)).toBe(true)
@@ -547,6 +548,7 @@ for (const grouped of [false, true]) test(`client Live time preference text conf
   await expect.poll(() => backend.getWorkouts()[0]!.exercises[0]!.sets[0]!.fact.durationSec).toBe(110)
   expect(backend.getWorkouts()[0]!.exercises[0]!.sets[0]!.confirmedAt).toBe(confirmedAt)
   await page.reload()
+  await revealLiveSet(page, exercise.sets[0]!.id)
   await expect(seconds).toHaveValue('50')
   await row.scrollIntoViewIfNeeded()
   await page.screenshot({ path: info.outputPath('text-time.png') })
@@ -555,6 +557,7 @@ for (const grouped of [false, true]) test(`client Live time preference text conf
   await expect(preference).not.toBeChecked()
   await preference.click()
   await page.goto(`/workouts/${workoutId}/live`)
+  await revealLiveSet(page, exercise.sets[0]!.id)
   const trigger = row.getByRole('button', { name: 'Фактическое время: 1:50', exact: true })
   await trigger.click()
   const sheet = page.getByRole('dialog', { name: 'Фактическое время', exact: true })
@@ -564,6 +567,7 @@ for (const grouped of [false, true]) test(`client Live time preference text conf
   await expect.poll(() => backend.getWorkouts()[0]!.exercises[0]!.sets[0]!.fact.durationSec).toBe(115)
   await page.goto('/me/settings'); await preference.click()
   await page.goto(`/workouts/${workoutId}/live`)
+  await revealLiveSet(page, exercise.sets[0]!.id)
   await expect(seconds).toHaveValue('55')
   expect(backend.getWorkouts()[0]!.exercises[0]!.sets[0]!.confirmedAt).toBe(confirmedAt)
 })
@@ -605,6 +609,7 @@ test('client Live metrics and superset preserve final input and notes', async ({
   const handle = await stroke.elementHandle()
   await row.getByRole('button', { name: 'Готово, отдых', exact: true }).click()
   await expect.poll(() => backend.getWorkouts()[0]!.exercises[0]!.sets[0]!.fact.reps).toBe(28)
+  await revealLiveSet(page, source.exercises[0]!.sets[0]!.id)
   await expect(row.getByRole('button', { name: /^Отменить выполнение:/ })).toBeVisible()
   expect(await handle!.evaluate(element => element.isConnected)).toBe(true)
   const confirmedAt = backend.getWorkouts()[0]!.exercises[0]!.sets[0]!.confirmedAt
@@ -650,6 +655,8 @@ for (const grouped of [false, true]) for (const metric of liveMetricCases) test(
   const rpe = row.getByLabel('Фактический RPE')
   await rpe.selectOption('9')
   await row.getByRole('button', { name: 'Готово, отдых', exact: true }).click()
+  await expect(row).toHaveClass(/confirmed/)
+  await revealLiveSet(page, exercise.sets[0]!.id)
   await expect(row.getByRole('button', { name: /^Отменить выполнение:/ })).toBeVisible()
   await expect.poll(() => backend.getWorkouts()[0]!.exercises[0]!.sets[0]!.fact.rpe).toBe(9)
   await page.reload()
@@ -698,8 +705,10 @@ test('client Live inactive supersets keep manual expansion and ragged rounds', a
   await expect(round.locator('form[data-live-set-id]')).toHaveCount(1)
   await expect(group.getByRole('button', { name: 'Добавить круг', exact: true })).toBeVisible()
   // Any-order confirmation remains available in the future group.
+  await revealLiveSet(page, source.exercises[2]!.sets[0]!.id)
   const futureSet = group.locator('form[data-live-set-id]').first()
   await futureSet.getByRole('button', { name: 'Готово, отдых', exact: true }).click()
+  await revealLiveSet(page, source.exercises[2]!.sets[0]!.id)
   await expect(futureSet.getByRole('button', { name: /^Отменить выполнение:/ })).toBeVisible()
   expect(backend.getWorkouts()[0]!.exercises[2]!.sets[0]!.confirmedAt).toBeTruthy()
 })
@@ -948,6 +957,8 @@ for (const density of ['original', 'compact']) test(`client explicit card folds 
     await expect(card.locator('.live-previous-result')).toHaveCount(0)
     await expect(card.locator('.coach-v79-exercise-tools').getByText('Действия', { exact: true })).toBeVisible()
     const futureCard = page.locator(`[data-workout-block="${future.blockId}"]`)
+    await expect(futureCard.locator('.client-live-card-body')).toHaveAttribute('inert', '')
+    await futureCard.getByRole('button', { name: `Развернуть: ${future.name}`, exact: true }).click()
     await expect(futureCard.getByLabel('Фактический вес', { exact: true }).first()).toBeVisible()
     await futureCard.getByRole('button', { name: `Свернуть: ${future.name}`, exact: true }).click()
     await expect(futureCard.locator('.client-live-card-body')).toHaveAttribute('inert', '')
@@ -956,8 +967,11 @@ for (const density of ['original', 'compact']) test(`client explicit card folds 
     expect(await page.evaluate(id => sessionStorage.getItem(`fit:live-rest-until:${id}`), workoutId)).toBe(deadline)
     expect(backend.getWorkouts()[0]!.exercises.flatMap(e => e.sets).every(s => !s.confirmedAt)).toBe(true)
     expect(await page.locator('.phone-frame').evaluate(e => e.scrollWidth <= e.clientWidth)).toBe(true)
+    await card.locator('button.coach-v79-card-toggle').click()
+    await expect(card.locator('.client-live-card-body')).not.toHaveAttribute('inert', '')
   }
   const futureCard = page.locator(`[data-workout-block="${future.blockId}"]`)
+  await futureCard.locator('button.coach-v79-card-toggle').click()
   await futureCard.locator('.overflow-trigger').click()
   await page.getByRole('menuitem', { name: 'Начать упражнение', exact: true }).click()
   await expect(page.locator('.live-session-progress-copy')).toContainText(`Сейчас: ${future.name}`)
@@ -967,7 +981,7 @@ for (const density of ['original', 'compact']) test(`client explicit card folds 
   await page.screenshot({ path: info.outputPath(`explicit-fold-${density}.png`) })
 })
 
-test('client keyboard Next skips a folded retained card and preserves rest', async ({ page }) => {
+test('client keyboard Next skips folded future cards and preserves rest', async ({ page }) => {
   await modelKeyboard(page)
   const restUntil = String(Date.now() + 47000)
   await page.addInitScript(({ id, workoutId, restUntil }) => {
@@ -977,19 +991,22 @@ test('client keyboard Next skips a folded retained card and preserves rest', asy
   await mockPilot(page, { role: 'client', profileId: pilotId, clientLime: true, workouts: [coachGestureWorkout(false, 3)] })
   await page.goto(`/workouts/${workoutId}/live`)
   const cards = page.locator('.client-live-card'), middle = cards.nth(1), last = cards.nth(2)
-  await expect(middle.locator('.client-live-card-body')).not.toHaveAttribute('inert', '')
-  await expect(last.locator('.client-live-card-body')).not.toHaveAttribute('inert', '')
-  await middle.getByRole('button', { name: /^Свернуть:/ }).click()
   await expect(middle.locator('.client-live-card-body')).toHaveAttribute('inert', '')
-  expect(await middle.locator('input.live-set-input').first().evaluate(e => e.getClientRects().length)).toBeGreaterThan(0)
-  const from = cards.first().locator('input.live-set-input:not([type=hidden])').last()
-  const target = last.locator('input.live-set-input:not([type=hidden])').first()
+  await expect(last.locator('.client-live-card-body')).toHaveAttribute('inert', '')
+  expect(await middle.locator('input.live-set-input').first().evaluate(e => e.isConnected)).toBe(true)
+  const fields = cards.first().locator('input.live-set-input:not([type=hidden])')
+  const from = fields.first(), target = fields.nth(1)
   await from.focus()
   await showModeledKeyboard(page)
   await from.press('Enter')
   await expect(target).toBeFocused()
   expect(await target.evaluate((e: HTMLInputElement) => [e.selectionStart, e.selectionEnd])).toEqual([0, (await target.inputValue()).length])
   await expect(page.locator('html')).toHaveClass(/app-keyboard-open/)
+  await fields.last().focus()
+  await fields.last().press('Enter')
+  await expect(fields.last()).toBeFocused()
+  await expect(middle.locator('.client-live-card-body')).toHaveAttribute('inert', '')
+  await expect(last.locator('.client-live-card-body')).toHaveAttribute('inert', '')
   expect(await page.evaluate(id => sessionStorage.getItem(`fit:live-rest-until:${id}`), workoutId)).toBe(restUntil)
 })
 
@@ -1074,6 +1091,7 @@ for (const rpe of [false, true]) test(`client Live metric keyboard preserves fin
   }
   await expect.poll(() => backend.getWorkouts()[0]!.exercises[0]!.sets[0]!.fact.reps).toBe(27)
   await tapVisible(page, row.getByRole('button', { name: 'Готово, отдых', exact: true }))
+  await revealLiveSet(page, source.exercises[0]!.sets[0]!.id)
   await expect(row.getByRole('button', { name: /^Отменить выполнение:/ })).toBeVisible()
   expect(backend.getWorkouts()[0]!.exercises[0]!.sets[0]!.fact.reps).toBe(27)
 })
@@ -1340,8 +1358,8 @@ test('client reference preserves full-card drag cancellation and stored results'
   await expect(card.getByLabel('Фактический вес', { exact: true }).first()).toHaveValue('25')
 })
 
-test('client reference top finish retains missing cardio time warning', async ({ page }) => {
-  const source = restTimerWorkout(), exercise = source.exercises[0]!
+for (const grouped of [false, true]) test(`client reference top finish retains missing cardio time warning${grouped ? ' grouped' : ''}`, async ({ page }) => {
+  const source = grouped ? coachGestureWorkout(true, 2) : restTimerWorkout(), exercise = source.exercises[0]!
   exercise.inputKind = 'distance'; exercise.ref = 'running'; exercise.muscleGroup = 'cardio'; exercise.name = 'Бег'
   exercise.sets = [ { ...exercise.sets[0]!, confirmedAt: '2026-10-08T09:01:00Z', fact: { distanceKm: 1 }, distanceKm: 1 } ]
   await mockPilot(page, { role: 'client', profileId: pilotId, clientLime: true, workouts: [source] })
@@ -1413,6 +1431,14 @@ test('client reference Live timer mode asks to confirm planned reps before finis
   await expect(page.getByRole('button', { name: 'Подтвердить подходы: Приседания', exact: true })).toBeVisible()
   await page.getByRole('button', { name: 'Завершить тренировку', exact: true }).click()
   await expect(page.locator('.timer-review')).toContainText('Таймер засчитал подходов: 2. Всё верно?')
+  const beforeReview = drafts.length
+  await page.getByRole('button', { name: 'Проверить', exact: true }).click()
+  await expect(page.locator('.timer-review')).toHaveCount(0)
+  await expect(page.locator('.live-exercise > .client-live-card-body:not([inert])')).toHaveCount(1)
+  await expect(page.getByRole('button', { name: 'Подтвердить подходы: Приседания', exact: true })).toBeVisible()
+  await expect(page.locator('.client-live-card-body form[data-live-set-id]').first()).toBeVisible()
+  expect(drafts).toHaveLength(beforeReview)
+  await page.getByRole('button', { name: 'Завершить тренировку', exact: true }).click()
   const finish = page.waitForRequest((request) => new URL(request.url()).pathname === `/v1/workouts/${workoutId}/finish`)
   await page.getByRole('button', { name: 'Всё верно, завершить', exact: true }).click()
   await finish
@@ -2465,17 +2491,24 @@ for (const theme of ['light', 'dark']) for (const density of ['original', 'compa
   for (const set of source.exercises[1]!.sets) { set.confirmedAt = new Date().toISOString(); set.fact = { weightKg: 20, reps: 10 } }
   await mockPilot(page, { role: 'client', profileId: pilotId, clientLime: true, workouts: [source] })
   await page.goto(`/workouts/${workoutId}/live`)
-  await page.getByRole('button', { name: `Развернуть: ${source.exercises[1]!.name}`, exact: true }).click()
   const cards = page.locator('.client-live-card'), footer = cards.first().locator('.coach-v79-exercise-tools'), note = cards.first().locator('.live-exercise-note')
+  await expect(cards).toHaveCount(3)
   for (const width of [390, 430]) {
     await page.setViewportSize({ width, height: 844 })
-    const facts = await cards.evaluateAll(elements => elements.map(card => {
+    const facts = []
+    for (const card of await cards.all()) {
+      const toggle = card.locator('button.coach-v79-card-toggle')
+      if (await toggle.getAttribute('aria-expanded') === 'false') await toggle.click()
+      await expect(card.locator('.client-live-card-body')).not.toHaveAttribute('inert', '')
+      facts.push(await card.evaluate(card => {
       const tools = card.querySelector('.coach-v79-exercise-tools')!, details = card.querySelector('.live-exercise-note')!
       const summary = details.querySelector('summary')!, add = tools.querySelector('.live-add-set')!, menu = tools.querySelector('.overflow-trigger')!
       const n = summary.getBoundingClientRect(), a = add.getBoundingClientRect(), t = tools.getBoundingClientRect(), m = menu.getBoundingClientRect(), style = getComputedStyle(summary), button = getComputedStyle(add)
       return { height: n.height, width: n.width, addHeight: a.height, addWidth: a.width, noteBelow: n.y >= t.bottom, actionsAligned: Math.abs(a.y - m.y) < 1, menuHeight: m.height,
         font: style.fontFamily, weight: style.fontWeight, addWeight: button.fontWeight, color: style.color, addColor: button.color, background: getComputedStyle(card).backgroundColor, filled: details.hasAttribute('data-has-note') }
-    }))
+      }))
+    }
+    await cards.first().locator('button.coach-v79-card-toggle').click()
     expect(facts).toHaveLength(3)
     for (const fact of facts) {
       expect(fact.height).toBe(44); expect(fact.addHeight).toBe(44); expect(fact.menuHeight).toBe(44)
@@ -4341,31 +4374,54 @@ for (const role of ['client', 'trainer'] as const) test(`Live unconfirm preserve
 // A real final-set handoff, rather than synthetic clicks on a scroll helper.
 // Roles change folding structure; reduced motion changes the native scroll path.
 for (const sample of [
-  { role: 'client', reduced: false }, { role: 'trainer', reduced: false },
-  { role: 'trainer', reduced: true },
-] as const) test(`Live transition reveals next exercise without stealing input ${sample.role} reduced-${sample.reduced}`, async ({ page }, info) => {
+  { role: 'client', reduced: false, shape: 'single', density: 'original' },
+  { role: 'trainer', reduced: false, shape: 'single', density: 'original' },
+  { role: 'trainer', reduced: true, shape: 'single', density: 'original' },
+  ...(['group-member', 'group-round', 'group-single', 'single-group', 'group-group'] as const).flatMap(shape =>
+    (['client', 'trainer'] as const).flatMap(role => (['original', 'compact'] as const).map(density => ({ role, reduced: false, shape, density })))),
+] as const) test(`Live transition reveals next exercise without stealing input ${sample.role} reduced-${sample.reduced} ${sample.shape} ${sample.density}`, async ({ page }, info) => {
   await page.clock.setFixedTime(new Date('2026-11-03T09:00:00Z'))
   await page.emulateMedia({ reducedMotion: sample.reduced ? 'reduce' : 'no-preference' })
   const id = sample.role === 'client' ? pilotId : 'c0ac0000-6010-4000-8000-000000000001'
-  await page.addInitScript(id => {
+  await page.addInitScript(({ id, density }) => {
     const key = `fit.coachmarks-seen.${id}`
     const seen = JSON.parse(localStorage.getItem(key) ?? '[]') as string[]
     localStorage.setItem(key, JSON.stringify([...seen, 'client-live-reference-timer-2026-10']))
     localStorage.setItem(`fit.liveExerciseAnimation.${id}`, 'false')
-    localStorage.setItem(`fit.clientLiveDensity.${id}`, 'original')
-    localStorage.setItem(`fit.coachLiveDensity.${id}`, 'original')
-  }, id)
-  const source = coachGestureWorkout(false, 3)
+    localStorage.setItem(`fit.clientLiveDensity.${id}`, density)
+    localStorage.setItem(`fit.coachLiveDensity.${id}`, density)
+  }, { id, density: sample.density })
+  const source = coachGestureWorkout(sample.shape.startsWith('group'), 4)
   source.startedAt = '2026-11-03T08:59:00Z'
-  Object.assign(source.exercises[0]!.sets[0]!, { confirmedAt: '2026-11-03T08:59:30Z', fact: { weightKg: 30, reps: 12 } })
+  if (sample.shape === 'single-group' || sample.shape === 'group-group') {
+    const first = sample.shape === 'single-group' ? 1 : 2
+    for (const exercise of source.exercises.slice(first, first + 2)) {
+      exercise.blockId = source.exercises[first]!.blockId
+      exercise.blockType = 'group'
+    }
+  }
+  for (const exercise of source.exercises.filter(exercise => exercise.blockType !== 'single')) {
+    exercise.blockRounds = 2
+    exercise.restBetweenExercisesSec = 15
+    exercise.restBetweenRoundsSec = 90
+  }
+  let currentExercise = 0, currentSet = 1, nextExercise = 1, nextSet = 0
+  const mark = (exercise: number, set: number) => Object.assign(source.exercises[exercise]!.sets[set]!, { confirmedAt: '2026-11-03T08:59:30Z', fact: { weightKg: 30, reps: 12 } })
+  if (sample.shape === 'group-member') { currentSet = 0 }
+  else if (sample.shape === 'group-round') { mark(0, 0); currentExercise = 1; currentSet = 0; nextExercise = 0; nextSet = 1 }
+  else if (sample.shape === 'group-single' || sample.shape === 'group-group') { mark(0, 0); mark(1, 0); mark(0, 1); currentExercise = 1; nextExercise = 2 }
+  else mark(0, 0)
+  const confirmedFacts = source.exercises.flatMap(exercise => exercise.sets).filter(set => set.confirmedAt).map(set => ({ id: set.id, fact: structuredClone(set.fact) }))
+  const currentId = source.exercises[currentExercise]!.sets[currentSet]!.id
+  const nextId = source.exercises[nextExercise]!.sets[nextSet]!.id
   const backend = await mockPilot(page, { role: sample.role, profileId: id, clientLime: true, fitLime: true, workouts: [source] })
   await page.goto(`/workouts/${workoutId}/live`)
   await page.evaluate(() => document.fonts.ready)
-  const row = page.locator(`[data-live-set-id="${source.exercises[0]!.sets[1]!.id}"]`)
+  const row = page.locator(`[data-live-set-id="${currentId}"]`)
   const button = row.getByRole('button', { name: 'Готово, отдых', exact: true })
   await button.scrollIntoViewIfNeeded()
   const handle = await row.getByLabel('Фактический вес', { exact: true }).elementHandle()
-  const next = page.locator(`[data-live-set-id="${source.exercises[1]!.sets[0]!.id}"]`)
+  const next = page.locator(`[data-live-set-id="${nextId}"]`)
   const measurements = page.evaluate(setId => new Promise<{ frames: Array<{ t: number; scroll: number }>; calls: ScrollToOptions[] }>(resolve => {
     const content = document.querySelector<HTMLElement>('.content')!
     const target = document.querySelector<HTMLElement>(`[data-live-set-id="${setId}"]`)!
@@ -4389,9 +4445,9 @@ for (const sample of [
       else { content.scrollTo = original; resolve({ frames, calls }) }
     }
     requestAnimationFrame(sampleFrame)
-  }), source.exercises[1]!.sets[0]!.id)
+  }), nextId)
   await button.click()
-  await expect.poll(() => backend.getWorkouts()[0]!.exercises[0]!.sets[1]!.confirmedAt).not.toBeNull()
+  await expect.poll(() => backend.getWorkouts()[0]!.exercises[currentExercise]!.sets[currentSet]!.confirmedAt).not.toBeNull()
   const trace = await measurements
   await info.attach('live-handoff-frames', { body: JSON.stringify(trace), contentType: 'application/json' })
   expect(trace.calls.length).toBeLessThanOrEqual(1)
@@ -4409,7 +4465,217 @@ for (const sample of [
     return row.top >= Math.max(content.top, header.bottom) && row.bottom <= Math.min(content.bottom, viewport.offsetTop + viewport.height)
   })).toBe(true)
   expect(await page.evaluate(() => window.scrollY)).toBe(0)
-  expect(backend.getWorkouts()[0]!.exercises[0]!.sets[0]!.fact).toEqual({ weightKg: 30, reps: 12 })
+  for (const preserved of confirmedFacts) expect(backend.getWorkouts()[0]!.exercises.flatMap(exercise => exercise.sets).find(set => set.id === preserved.id)!.fact).toEqual(preserved.fact)
+  expect(await next.evaluate(element => Boolean(element.closest('[inert]')))).toBe(false)
+  expect(backend.getWorkouts()[0]!.exercises[currentExercise]!.sets[currentSet]!.fact).toMatchObject({ weightKg: sample.shape === 'group-member' || sample.shape === 'group-round' ? 20 : 30, reps: 10 })
   expect(await page.evaluate(id => sessionStorage.getItem(`fit:live-rest-until:${id}`), workoutId)).not.toBeNull()
   await page.screenshot({ path: info.outputPath('live-handoff.png') })
+})
+
+// LIVE-ONE-20261104: a single retained editor for both actors/densities.
+for (const role of ['client', 'trainer'] as const) for (const density of ['original', 'compact'] as const) test(`Live single disclosure follows active exercise ${role} ${density}`, async ({ page }, info) => {
+  await page.clock.setFixedTime(new Date('2026-11-04T09:00:00Z'))
+  const id = role === 'client' ? pilotId : 'c0ac0000-6010-4000-8000-000000000001'
+  await page.addInitScript(({ id, density }) => {
+    localStorage.setItem(`fit.liveExerciseAnimation.${id}`, 'false')
+    localStorage.setItem(`fit.clientLiveDensity.${id}`, density)
+    localStorage.setItem(`fit.coachLiveDensity.${id}`, density)
+    localStorage.setItem(`fit.coachmarks-seen.${id}`, JSON.stringify(['client-live-reference-timer-2026-10']))
+  }, { id, density })
+  const source = coachGestureWorkout(false, 3)
+  source.startedAt = '2026-11-04T08:59:00Z'
+  for (const set of source.exercises[0]!.sets) Object.assign(set, { confirmedAt: '2026-11-04T08:59:30Z', fact: { weightKg: 30, reps: 12 } })
+  const backend = await mockPilot(page, { role, profileId: id, clientLime: true, fitLime: true, workouts: [source] })
+  await page.goto(`/workouts/${workoutId}/live`)
+  const bodies = page.locator('.live-exercise > .client-live-card-body, .live-exercise > .coach-v79-card-body')
+  await expect(bodies).toHaveCount(3)
+  await expect(bodies.nth(0)).toHaveAttribute('inert', '')
+  await expect(bodies.nth(1)).not.toHaveAttribute('inert', '')
+  await expect(bodies.nth(2)).toHaveAttribute('inert', '')
+  const nextInput = await bodies.nth(2).getByLabel('Фактический вес', { exact: true }).first().elementHandle()
+  // Reviewing a result closes the current editor without choosing execution.
+  await page.locator('.live-exercise').nth(0).locator('button.coach-v79-card-toggle').click()
+  await expect(bodies.nth(0)).not.toHaveAttribute('inert', '')
+  await expect(bodies.nth(1)).toHaveAttribute('inert', '')
+  await expect(page.locator('.live-session-progress-copy')).toContainText(source.exercises[1]!.name)
+  await page.locator('.live-exercise').nth(1).locator('button.coach-v79-card-toggle').click()
+  await expect(bodies.nth(0)).toHaveAttribute('inert', '')
+  for (const set of source.exercises[1]!.sets) {
+    await page.locator(`[data-live-set-id="${set.id}"]`).getByRole('button', { name: 'Готово, отдых', exact: true }).click()
+    await expect.poll(() => backend.getWorkouts()[0]!.exercises[1]!.sets.find(item => item.id === set.id)!.confirmedAt).not.toBeNull()
+  }
+  await expect(bodies.nth(1)).toHaveAttribute('inert', '')
+  await expect(bodies.nth(2)).not.toHaveAttribute('inert', '')
+  expect(await nextInput!.evaluate(input => input.isConnected)).toBe(true)
+  await expect(page.locator('.live-exercise > :is(.client-live-card-body,.coach-v79-card-body):not([inert])')).toHaveCount(1)
+  await expect(page.locator('.live-set-input:focus')).toHaveCount(0)
+  expect(await page.evaluate(() => window.scrollY)).toBe(0)
+  await expect.poll(() => nextInput!.evaluate(input => {
+    const row = input.closest('form')!.getBoundingClientRect(), content = input.closest('.content')!.getBoundingClientRect()
+    const header = document.querySelector('.live-workout-page > .page-header')!.getBoundingClientRect()
+    return row.top >= Math.max(content.top, header.bottom) && row.bottom <= Math.min(content.bottom, visualViewport!.offsetTop + visualViewport!.height)
+  })).toBe(true)
+  await page.screenshot({ path: info.outputPath('single-active-card.png') })
+  await page.reload()
+  await expect(bodies.nth(0)).toHaveAttribute('inert', '')
+  await expect(bodies.nth(1)).toHaveAttribute('inert', '')
+  await expect(bodies.nth(2)).not.toHaveAttribute('inert', '')
+})
+
+for (const role of ['client', 'trainer'] as const) for (const density of ['original', 'compact'] as const) test(`Live single round and item disclosure ${role} ${density}`, async ({ page }, info) => {
+  await page.clock.setFixedTime(new Date('2026-11-04T09:00:00Z'))
+  const id = role === 'client' ? pilotId : 'c0ac0000-6010-4000-8000-000000000001'
+  await page.addInitScript(({ id, density }) => {
+    localStorage.setItem(`fit.liveExerciseAnimation.${id}`, 'false')
+    localStorage.setItem(`fit.clientLiveDensity.${id}`, density)
+    localStorage.setItem(`fit.coachLiveDensity.${id}`, density)
+    localStorage.setItem(`fit.coachmarks-seen.${id}`, JSON.stringify(['client-live-reference-timer-2026-10']))
+  }, { id, density })
+  const source = coachGestureWorkout(true, 4)
+  source.startedAt = '2026-11-04T08:59:00Z'
+  const backend = await mockPilot(page, { role, profileId: id, fitLime: true, clientLime: true, workouts: [source] })
+  await page.goto(`/workouts/${workoutId}/live`)
+  const group = page.locator('.exercise-block.live'), rounds = group.locator('.circuit-round')
+  const roundBody = (index: number) => rounds.nth(index).locator(':scope > .coach-v79-round-body,:scope > .client-circuit-round-body')
+  const cardBody = (exercise: number, round: number) => page.locator(`[data-live-card-key="round:${source.exercises[exercise]!.sets[round]!.id}"] > :is(.coach-v79-card-body,.client-live-card-body)`)
+  const blockBody = group.locator(':scope > .coach-v79-circuit-body,:scope > .client-circuit-body')
+  await expect(rounds).toHaveCount(2)
+  await expect(roundBody(0)).not.toHaveAttribute('inert', '')
+  await expect(roundBody(1)).toHaveAttribute('inert', '')
+  await expect(cardBody(0, 0)).not.toHaveAttribute('inert', '')
+  await expect(cardBody(1, 0)).toHaveAttribute('inert', '')
+  await page.screenshot({ path: info.outputPath('one-round-initial.png') })
+  await expect(page.locator('.live-exercise.upcoming > :is(.coach-v79-card-body,.client-live-card-body):not([inert])')).toHaveCount(0)
+  const retained = await page.locator(`[data-live-set-id="${source.exercises[0]!.sets[1]!.id}"]`).elementHandle()
+  const currentHeader = page.locator(`[data-live-card-key="round:${source.exercises[0]!.sets[0]!.id}"]`).locator(role === 'client' ? 'button.coach-v79-card-toggle' : '.exercise-technique-trigger')
+  await currentHeader.click()
+  await expect(cardBody(0, 0)).toHaveAttribute('inert', '')
+  await expect(roundBody(0)).not.toHaveAttribute('inert', '')
+  await expect(blockBody).not.toHaveAttribute('inert', '')
+  await currentHeader.click()
+  await expect(cardBody(0, 0)).not.toHaveAttribute('inert', '')
+  const progress = await page.locator('.live-session-progress-copy').innerText()
+  const rest = await page.evaluate(id => sessionStorage.getItem(`fit:live-rest-until:${id}`), workoutId)
+  await rounds.nth(1).locator('.circuit-round-toggle').click()
+  await expect(roundBody(0)).toHaveAttribute('inert', '')
+  await expect(roundBody(1)).not.toHaveAttribute('inert', '')
+  await expect(cardBody(0, 1)).not.toHaveAttribute('inert', '')
+  await expect(cardBody(1, 1)).toHaveAttribute('inert', '')
+  await expect(page.locator('.live-session-progress-copy')).toHaveText(progress, { useInnerText: true })
+  expect(await page.evaluate(id => sessionStorage.getItem(`fit:live-rest-until:${id}`), workoutId)).toBe(rest)
+  await rounds.nth(0).locator('.circuit-round-toggle').click()
+  for (let round = 0; round < 2; round++) for (let exercise = 0; exercise < 2; exercise++) {
+    const set = source.exercises[exercise]!.sets[round]!
+    await expect(cardBody(exercise, round)).not.toHaveAttribute('inert', '')
+    await expect(group.locator('[data-live-card-key] > :is(.coach-v79-card-body,.client-live-card-body):not([inert])')).toHaveCount(1)
+    await page.locator(`[data-live-set-id="${set.id}"]`).getByRole('button', { name: 'Готово, отдых', exact: true }).click()
+    await expect.poll(() => backend.getWorkouts()[0]!.exercises[exercise]!.sets[round]!.confirmedAt).not.toBeNull()
+  }
+  await expect(blockBody).toHaveAttribute('inert', '')
+  await expect(page.locator('.live-session-progress-copy')).toContainText(source.exercises[2]!.name)
+  await expect(page.locator('.live-exercise.current > :is(.coach-v79-card-body,.client-live-card-body)')).not.toHaveAttribute('inert', '')
+  expect(await retained!.evaluate(element => element.isConnected)).toBe(true)
+  await expect.poll(() => blockBody.evaluate(body => body.getBoundingClientRect().height)).toBeLessThan(1)
+  await page.screenshot({ path: info.outputPath('one-round-completed.png') })
+})
+
+
+for (const role of ['client', 'trainer'] as const) test(`Live removing a reviewed upcoming card restores the active editor ${role}`, async ({ page }) => {
+  const id = role === 'client' ? pilotId : 'c0ac0000-6010-4000-8000-000000000001'
+  await page.clock.setFixedTime(new Date('2026-11-04T09:00:00Z'))
+  await page.addInitScript(id => { localStorage.setItem(`fit.liveExerciseAnimation.${id}`, 'false'); localStorage.setItem(`fit.coachmarks-seen.${id}`, JSON.stringify(['client-live-reference-timer-2026-10'])) }, id)
+  const source = coachGestureWorkout(false, 3)
+  source.startedAt = '2026-11-04T08:59:00Z'
+  const removedId = source.exercises[1]!.id
+  const backend = await mockPilot(page, { role, profileId: id, fitLime: true, clientLime: true, workouts: [source] })
+  await page.route(`**/v1/workouts/${workoutId}/exercises/${removedId}`, async route => {
+    expect(route.request().method()).toBe('DELETE')
+    const workout = backend.getWorkouts()[0]!
+    expect(route.request().postDataJSON()).toMatchObject({ expectedVersion: workout.version })
+    workout.exercises = workout.exercises.filter(exercise => exercise.id !== removedId)
+    workout.version += 1
+    await route.fulfill({ json: { workout: { version: workout.version } } })
+  })
+  await page.goto(`/workouts/${workoutId}/live`)
+  const future = page.locator('.live-exercise').nth(1)
+  await future.locator('button.coach-v79-card-toggle').click()
+  await future.locator('.overflow-trigger').click()
+  await page.getByRole('menuitem', { name: 'Удалить упражнение', exact: true }).click()
+  await page.getByRole('alertdialog').getByRole('button', { name: 'Удалить', exact: true }).click()
+  await expect.poll(() => backend.getWorkouts()[0]!.exercises.some(exercise => exercise.id === removedId)).toBe(false)
+  await expect(page.locator('.live-exercise')).toHaveCount(2)
+  await expect(page.locator('.live-exercise.current > :is(.coach-v79-card-body,.client-live-card-body)')).not.toHaveAttribute('inert', '')
+  await expect(page.locator('.live-exercise > :is(.coach-v79-card-body,.client-live-card-body):not([inert])')).toHaveCount(1)
+  expect(backend.getWorkouts()[0]!.exercises.every(exercise => exercise.sets.every(set => !set.confirmedAt))).toBe(true)
+})
+
+for (const role of ['client', 'trainer'] as const) test(`Live time picker retains its editor after delayed confirmation ${role}`, async ({ page }) => {
+  await page.clock.setFixedTime(new Date('2026-11-04T09:00:00Z'))
+  const id = role === 'client' ? pilotId : 'c0ac0000-6010-4000-8000-000000000001'
+  await page.addInitScript(id => {
+    localStorage.setItem('fit.workoutTimeWheel', 'true')
+    localStorage.setItem(`fit.liveExerciseAnimation.${id}`, 'false')
+    localStorage.setItem(`fit.coachmarks-seen.${id}`, JSON.stringify(['client-live-reference-timer-2026-10']))
+  }, id)
+  const source = { ...coachGestureWorkout(false, 2), executionMode: 'manual' as const }
+  source.startedAt = '2026-11-04T08:59:00Z'
+  const first = source.exercises[0]!
+  first.inputKind = 'duration'; first.ref = 'plank'; first.name = 'Планка'
+  first.sets = [{ ...first.sets[0]!, weightKg: undefined, reps: undefined, durationSec: 3 }]
+  const backend = await mockPilot(page, { role, profileId: id, fitLime: true, clientLime: true, workouts: [source] })
+  let release!: () => void
+  const gate = new Promise<void>(resolve => { release = resolve })
+  await page.route('**/v1/workout-sets/*/confirm', async route => { await gate; await route.fallback() })
+  await page.goto(`/workouts/${workoutId}/live`)
+  const row = page.locator(`[data-live-set-id="${first.sets[0]!.id}"]`)
+  const field = await row.locator('.workout-duration-trigger').elementHandle()
+  await row.getByRole('button', { name: 'Готово, отдых', exact: true }).click()
+  await row.locator('.workout-duration-trigger').focus()
+  await row.locator('.workout-duration-trigger').press('Enter')
+  const picker = page.getByRole('dialog', { name: 'Фактическое время', exact: true })
+  await expect(picker).toBeVisible()
+  release()
+  await expect.poll(() => backend.getWorkouts()[0]!.exercises[0]!.sets[0]!.confirmedAt).not.toBeNull()
+  expect(await field!.evaluate(element => element.isConnected)).toBe(true)
+  expect(await row.evaluate(element => Boolean(element.closest('[inert]')))).toBe(false)
+  await expect(picker).toBeVisible()
+  await picker.getByRole('listbox', { name: 'секунды', exact: true }).getByRole('option', { name: '10 секунды', exact: true }).click()
+  await picker.getByRole('button', { name: 'Применить · 0:10', exact: true }).click()
+  await expect(picker).toHaveCount(0)
+  await row.locator('.workout-duration-trigger').blur()
+  await expect.poll(() => backend.getWorkouts()[0]!.exercises[0]!.sets[0]!.fact.durationSec).toBe(10)
+  expect(await page.evaluate(() => window.scrollY)).toBe(0)
+})
+
+for (const density of ['original', 'compact'] as const) test(`client group title retains technique while the arrow folds ${density}`, async ({ page }) => {
+  await page.clock.setFixedTime(new Date('2026-11-04T09:00:00Z'))
+  await page.addInitScript(({ id, density }) => {
+    localStorage.setItem(`fit.clientLiveDensity.${id}`, density)
+    localStorage.setItem(`fit.liveExerciseAnimation.${id}`, 'false')
+    localStorage.setItem(`fit.coachmarks-seen.${id}`, JSON.stringify(['client-live-reference-timer-2026-10']))
+  }, { id: pilotId, density })
+  const source = coachGestureWorkout(true, 3)
+  source.startedAt = '2026-11-04T08:59:00Z'
+  Object.assign(source.exercises[0]!, { ref: 'barbell-squat', name: 'Присед со штангой' })
+  const backend = await mockPilot(page, { role: 'client', profileId: pilotId, clientLime: true, fitLime: true, workouts: [source] })
+  await page.goto(`/workouts/${workoutId}/live`)
+  const card = page.locator('[data-live-card-key="round:' + source.exercises[0]!.sets[0]!.id + '"]')
+  const arrow = card.locator('button.coach-v79-card-toggle')
+  const body = card.locator('.client-live-card-body')
+  await expect(arrow).toHaveAttribute('aria-expanded', 'true')
+  const before = JSON.stringify(backend.getWorkouts()[0])
+  await card.locator('.exercise-technique-trigger').click()
+  const sheet = page.getByRole('dialog', { name: 'Техника: Присед со штангой', exact: true })
+  await expect(sheet).toBeVisible()
+  await sheet.getByRole('button', { name: 'Закрыть технику', exact: true }).click()
+  await expect(arrow).toHaveAttribute('aria-expanded', 'true')
+  await arrow.click()
+  await expect(body).toHaveAttribute('inert', '')
+  await card.locator('.exercise-technique-trigger').click()
+  await expect(sheet).toBeVisible()
+  await sheet.getByRole('button', { name: 'Закрыть технику', exact: true }).click()
+  await expect(body).toHaveAttribute('inert', '')
+  await arrow.click()
+  await expect(body).not.toHaveAttribute('inert', '')
+  expect(JSON.stringify(backend.getWorkouts()[0])).toBe(before)
 })
