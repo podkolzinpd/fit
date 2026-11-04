@@ -13,6 +13,7 @@ import '../../src/styles/fit-lime-type.css'
 import '../../src/styles/fit-client-lime.css'
 import '../../src/styles/fit-client-lime-sheets.css'
 import '../../src/styles/fit-client-lime-date.css'
+import '../../src/styles/fit-client-lime-calendar.css'
 import { AppViewportProvider } from '../../src/app/app-viewport'
 import { FitLimeDatePicker } from '../../src/shared/FitLimeDatePicker'
 import { localDate } from '../../src/shared/local-date'
@@ -28,7 +29,7 @@ function Fixture() {
   const [date, setDate] = useState(localDate('2026-11-02'))
   const [time, setTime] = useState({ start: '10:00', end: '11:00' })
   return <AppViewportProvider><div className={`phone-frame fit-lime-shell${client ? ' fit-client-lime' : ''}${reference ? ' coach-workout-reference' : ''}${light ? ' theme-light' : ''}`}>
-    <main className="content"><FitLimeDatePicker value={date} onChange={setDate} clientLime={client} reference={reference} time={params.has('time') ? time : undefined} onTimeChange={params.has('time') ? setTime : undefined} />
+    <main className="content"><FitLimeDatePicker dayMarks={params.has('marks') ? { [localDate('2026-11-02')]: 'planned', [localDate('2026-11-03')]: 'done' } : undefined} value={date} onChange={setDate} clientLime={client} reference={reference} time={params.has('time') ? time : undefined} onTimeChange={params.has('time') ? setTime : undefined} />
       <output data-testid="saved-date">{date} {time.start} {time.end}</output>
     </main>
   </div></AppViewportProvider>
