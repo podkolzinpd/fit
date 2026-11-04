@@ -3411,6 +3411,66 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
       }
     })
 
+    it('lists actor receipts across clients with exact totals, archive, pagination and safe corrections', async () => {
+      if (!ownerPool || !runtimePool) throw new Error('Database pools are not ready')
+      const owner = ownerPool, runtime = runtimePool
+      const cards = [randomUUID(), randomUUID(), randomUUID()]
+      const command = (sql: string, args: unknown[] = [], actor = ACTOR_ID) => withActorTransaction(runtime, actor,
+        client => client.query<JsonResultRow>(sql, args))
+      type History = { totalCents: number; totalCount: number; clients: Array<{ id: string; name: string }>; payments: Array<{ id: string; clientId: string; clientName: string; archivedAt: string | null; amountCents: number; version: number }> }
+      const history = async (card: string | null = null, offset = 0, actor = ACTOR_ID) =>
+        (await command("select public.list_trainer_finance_payments(date '2020-01-01',$1,$2) as result", [card,offset],actor))[0]!.result as History
+      const overview = async () => (await command("select public.list_trainer_finance_overview_v2(date '2020-01-01') as result"))[0]!.result as { receivedCents: number }
+      try {
+        await owner.query("insert into public.clients(id,trainer_id,full_name) values($1,$4,'Receipt active fixture'),($2,$4,'Receipt archive fixture'),($3,$5,'Receipt outside fixture')", [...cards,ACTOR_ID,OUTSIDE_TRAINER_ID])
+        const ids: string[] = []
+        for (let index = 0; index < cards.length; index++) {
+          const rows = await command(`select public.create_trainer_finance_service_v2(
+            $1,'session_pack','Receipt service',10,0,100000, $2, date '2020-01-01', date '2030-12-31',
+            null,null,date '2020-01-01',$3) as result`, [cards[index],(index+1)*1000,randomUUID()],index === 2 ? OUTSIDE_TRAINER_ID : ACTOR_ID)
+          ids.push((rows[0]!.result as { id: string }).id)
+        }
+        await owner.query(`insert into public.trainer_finance_payments(package_id,trainer_id,client_id,amount_cents,received_on,source)
+          select $1,$2,$3,100,date '2020-01-02','manual' from generate_series(1,52)`, [ids[0],ACTOR_ID,cards[0]])
+        await owner.query('update public.clients set archived_at=now() where id=$1', [cards[1]])
+        const all = await history()
+        expect(all.totalCount).toBe(54)
+        expect(all.totalCents).toBe(8200)
+        expect(all.totalCents).toBe((await overview()).receivedCents)
+        expect(all.payments).toHaveLength(50)
+        const rest = await history(null,50)
+        expect(rest.payments).toHaveLength(4)
+        expect(new Set([...all.payments,...rest.payments].map(payment => payment.id)).size).toBe(54)
+        expect([...all.payments,...rest.payments].reduce((sum,payment) => sum+payment.amountCents,0)).toBe(all.totalCents)
+        expect(all.clients.map(client => client.id)).toContain(cards[1])
+        expect(all.clients.map(client => client.id)).not.toContain(cards[2])
+        const archive = await history(cards[1])
+        expect(archive.totalCents).toBe(2000)
+        expect(archive.payments[0]).toMatchObject({ clientId: cards[1], clientName: 'Receipt archive fixture' })
+        expect(archive.payments[0]!.archivedAt).not.toBeNull()
+        const payment = archive.payments[0]!
+        await expect(command("select public.update_trainer_finance_payment($1,$2,1500,date '2020-01-01',null) as result",[payment.id,payment.version],OUTSIDE_TRAINER_ID)).rejects.toMatchObject({code:'PT404'})
+        await command("select public.update_trainer_finance_payment($1,$2,1500,date '2020-02-01',null) as result",[payment.id,payment.version])
+        expect((await history()).totalCents).toBe(6200)
+        expect((await history()).totalCents).toBe((await overview()).receivedCents)
+        const february = (await command("select public.list_trainer_finance_payments(date '2020-02-01',$1,0) as result",[cards[1]]))[0]!.result as History
+        expect(february.totalCents).toBe(1500)
+        await command("select public.void_trainer_finance_payment($1,$2,'Test correction') as result",[payment.id,payment.version+1])
+        expect(((await command("select public.list_trainer_finance_payments(date '2020-02-01',$1,0) as result",[cards[1]]))[0]!.result as History).totalCents).toBe(0)
+        expect((await history(cards[2])).payments).toEqual([])
+        expect((await history(null,0,OUTSIDE_TRAINER_ID)).totalCents).toBe(3000)
+        await expect(command("select public.list_trainer_finance_payments(date '2020-01-02',null,0) as result")).rejects.toMatchObject({code:'PT422'})
+        await expect(command("select public.list_trainer_finance_payments(date '2020-01-01',null,-1) as result")).rejects.toMatchObject({code:'PT422'})
+        await expect(command("select public.list_trainer_finance_payments(date '2020-01-01',null,0) as result",[],DOMAIN_CLIENT_ACTOR_ID)).rejects.toMatchObject({code:'PT403'})
+      } finally {
+        for (const table of ['trainer_finance_events','trainer_finance_payments','trainer_finance_packages']) {
+          await owner.query(`delete from public.${table} where client_id=any($1::uuid[])`,[cards])
+        }
+        await owner.query("delete from app_private.finance_payment_requests where payload->>'clientId'=any($1::text[])",[cards])
+        await owner.query('delete from public.clients where id=any($1::uuid[])',[cards])
+      }
+    })
+
     it('flags real finance attention and preserves archived receipts without allowing new operations', async () => {
       if (!ownerPool || !runtimePool) throw new Error('Database pools are not ready')
       const owner = ownerPool, runtime = runtimePool, card = randomUUID(), empty = randomUUID(), workout = randomUUID()

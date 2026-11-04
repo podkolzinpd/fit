@@ -1,5 +1,5 @@
 import { expect, test, type Locator, type Page } from '@playwright/test'
-import type { TrainerFinanceClientBundle, TrainerFinanceManualSessionDraft } from '../src/data/contracts/trainer-finance'
+import type { TrainerFinanceClientBundle, TrainerFinanceManualSessionDraft, TrainerFinancePaymentUpdate, TrainerFinanceReceipt } from '../src/data/contracts/trainer-finance'
 import { clientId, conversationId, newWorkoutId, workoutId, workout, mockPilot, type MockWorkout } from './fit-lime-fixtures'
 
 const coach = 'c0ac0000-6010-4000-8000-000000000001'
@@ -21,14 +21,48 @@ async function accountingFixture(page: Page, fitLime = true, workouts?: MockWork
   return ledger
 }
 
-async function formGeometry(form: Locator) {
+async function formGeometry(form: Locator, lime = true) {
   expect(await form.locator('input,select,button').evaluateAll(nodes => nodes.every(node => {
     const r = node.getBoundingClientRect(), parent = node.closest('form')!.getBoundingClientRect()
     return r.width >= 44 && r.height >= 44 && r.left >= parent.left - 1 && r.right <= parent.right + 1
   }))).toBe(true)
   const actions = form.locator('.actions')
   expect(await actions.evaluate(node => node.scrollWidth <= node.clientWidth + 1)).toBe(true)
-  expect(await form.evaluate(node => getComputedStyle(node).fontFamily)).toContain('YS Geo')
+  if (lime) expect(await form.evaluate(node => getComputedStyle(node).fontFamily)).toContain('YS Geo')
+}
+
+async function receiptFixture(page: Page, fitLime = true, extraReceipts = 0) {
+  const ledger = await accountingFixture(page, fitLime)
+  const name = 'Александра Константинопольская — персональные тренировки'
+  ledger.clientName = name
+  const service = ledger.packages[1]!
+  Object.assign(service, { paidCents: 600000, dueCents: 400000, paymentStatus: 'partial' })
+  const receipts: TrainerFinanceReceipt[] = [
+    { id: clientId, packageId: service.id, clientId, clientName: name, archivedAt: null,
+      serviceTitle: service.title, amountCents: 600000, receivedOn: '2026-11-03', source: 'manual' as const,
+      comment: 'Оплата персональных тренировок', voidedAt: null as string | null, voidReason: null, version: 1, createdAt: stamp, updatedAt: stamp },
+    { id: conversationId, packageId: conversationId, clientId: conversationId, clientName: 'Дарья Иванова', archivedAt: stamp,
+      serviceTitle: 'Персональные тренировки', amountCents: 400000, receivedOn: '2026-11-02', source: 'opening' as const,
+      comment: null, voidedAt: null as string | null, voidReason: null, version: 1, createdAt: stamp, updatedAt: stamp },
+  ]
+  for (let index = 1; index <= extraReceipts; index++) receipts.push({ ...receipts[0]!,
+    id: `10000000-0000-4000-9000-${String(index).padStart(12, '0')}`, amountCents: 10000,
+    receivedOn: '2026-11-01', comment: null })
+  service.paidCents += extraReceipts * 10000
+  service.dueCents = Math.max(0, service.priceCents - service.paidCents)
+  ledger.payments = receipts.filter(item => item.clientId === clientId)
+  const monthTotal = () => receipts.filter(item => !item.voidedAt && item.receivedOn.startsWith('2026-11')).reduce((sum,item) => sum+item.amountCents,0)
+  await page.route('**/v1/finance/overview*', route => route.fulfill({ json: { overview: { month: '2026-11',
+    receivedCents: monthTotal(), dueCents: service.dueCents, attentionCount: 0, clients: [] } } }))
+  await page.route(/\/v1\/finance\/payments\?/, route => {
+    const params = new URL(route.request().url()).searchParams
+    const month = params.get('month')!, selected = params.get('clientId'), offset = Number(params.get('offset'))
+    const payments = receipts.filter(item => !item.voidedAt && item.receivedOn.startsWith(month) && (!selected || item.clientId === selected))
+    return route.fulfill({ json: { history: { month, clientId: selected, offset: Number(params.get('offset')), limit: 50,
+      totalCount: payments.length, totalCents: payments.reduce((sum,item) => sum+item.amountCents,0),
+      clients: [...new Map(receipts.filter(item => !item.voidedAt).map(item => [item.clientId, { id: item.clientId, name: item.clientName }])).values()], payments: payments.slice(offset, offset + 50) } } })
+  })
+  return { name, service, receipts }
 }
 
 async function uncertainCreateFixture(page: Page, kind: 'payment' | 'package', fitLime = true) {
@@ -114,6 +148,149 @@ export function financeAccountingCases() {
   })
 
 
+  test('Finance receipts filter, correct and delete across clients with retained context', { tag: ['@lime-finance'] }, async ({ page }, info) => {
+    const { name, service, receipts } = await receiptFixture(page)
+    await page.route(`**/v1/finance/payments/${clientId}`, route => {
+      const draft = route.request().postDataJSON() as TrainerFinancePaymentUpdate
+      expect(draft).toMatchObject({ amountCents: 500000, receivedOn: '2026-11-03', expectedVersion: 1 })
+      Object.assign(receipts[0]!, draft, { version: 2 })
+      Object.assign(service, { paidCents: 500000, dueCents: 500000 })
+      return route.fulfill({ json: { payment: receipts[0] } })
+    })
+    await page.route(`**/v1/finance/payments/${conversationId}`, route => {
+      expect(route.request().method()).toBe('DELETE')
+      expect(route.request().postDataJSON()).toMatchObject({ expectedVersion: 1 })
+      receipts[1]!.voidedAt = stamp
+      return route.fulfill({ status: 204 })
+    })
+    await page.goto('/finance?month=2026-11')
+    await expect(page.locator('.finance-overview-summary')).toContainText(/10\s000/)
+    await page.getByRole('group', { name: 'Раздел финансов' }).getByRole('button', { name: 'Оплаты', exact: true }).click()
+    const history = page.getByRole('region', { name: 'История оплат' })
+    await expect(history.locator('.finance-payment')).toHaveCount(2)
+    await expect(history.locator('.finance-receipts-total')).toContainText(/10\s000/)
+    for (const width of [320, 430, 1440]) {
+      await page.setViewportSize({ width, height: 844 })
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+      const select = await page.getByLabel('Клиент оплат').boundingBox()
+      expect(select!.height).toBeGreaterThanOrEqual(44)
+      expect(await page.getByLabel('Клиент оплат').evaluate(node => getComputedStyle(node).fontSize)).toBe('16px')
+      await page.screenshot({ path: info.outputPath(`receipts-all-${width}.png`), fullPage: true })
+    }
+    await page.getByLabel('Клиент оплат').selectOption(clientId)
+    await expect(history.locator('.finance-payment')).toHaveCount(1)
+    const returnUrl = page.url()
+    await history.getByRole('link', { name }).click()
+    await expect(page.locator('.page-title-group')).toContainText(name)
+    await page.getByRole('button', { name: 'Назад', exact: true }).click()
+    await expect(page).toHaveURL(returnUrl)
+    await expect(page.getByLabel('Клиент оплат')).toHaveValue(clientId)
+    await history.getByRole('button', { name: /Действия с оплатой/ }).click()
+    await page.getByRole('menuitem', { name: 'Изменить' }).click()
+    await page.getByLabel('Сумма, ₽').fill('5000')
+    for (const width of [320, 1440]) {
+      await page.setViewportSize({ width, height: 844 })
+      await page.locator('.finance-form').scrollIntoViewIfNeeded()
+      await page.screenshot({ path: info.outputPath(`receipt-edit-${width}.png`), fullPage: true })
+    }
+    await page.getByRole('button', { name: 'Сохранить', exact: true }).click()
+    await expect(page.locator('.finance-form')).toHaveCount(0)
+    await expect(history.locator('.finance-receipts-total')).toContainText(/5\s000/)
+    await page.getByLabel('Клиент оплат').selectOption('')
+    await expect(history.locator('.finance-receipts-total')).toContainText(/9\s000/)
+    await history.getByRole('button', { name: /Действия с оплатой Дарья/ }).click()
+    await page.getByRole('menuitem', { name: 'Удалить' }).click()
+    await page.setViewportSize({ width: 320, height: 844 })
+    await page.screenshot({ path: info.outputPath('receipt-delete-confirm.png'), fullPage: true })
+    await page.getByRole('alertdialog').getByRole('button', { name: 'Удалить', exact: true }).click()
+    await expect(history.locator('.finance-payment')).toHaveCount(1)
+    await expect(history.locator('.finance-receipts-total')).toContainText(/5\s000/)
+    await page.getByRole('button', { name: 'Предыдущий месяц' }).click()
+    await expect(page.getByText('Оплат за этот месяц нет.')).toBeVisible()
+    await page.screenshot({ path: info.outputPath('receipts-empty-month.png'), fullPage: true })
+    await page.getByRole('button', { name: 'Следующий месяц' }).click()
+    await page.getByRole('group', { name: 'Раздел финансов' }).getByRole('button', { name: 'Клиенты', exact: true }).click()
+    await expect(page.locator('.finance-overview-summary')).toContainText(/5\s000/)
+  })
+
+  // Theme variants seed the same ledger; only rendering, native controls and
+  // keyboard/scroll geometry repeat. The correction/delete chain above runs once.
+  for (const [fitLime, theme] of [[false, 'light'], [false, 'dark'], [true, 'light']] as const) {
+    test(`Finance receipt layout ${fitLime ? 'Lime' : 'Mono'} ${theme}`, { tag: ['@lime-finance'] }, async ({ page }, info) => {
+      await page.addInitScript(value => localStorage.setItem('fit.appTheme', value), theme)
+      await receiptFixture(page, fitLime, 50)
+      await page.goto('/finance?month=2026-11&view=payments')
+      const history = page.getByRole('region', { name: 'История оплат' })
+      await expect(history.locator('.finance-payment')).toHaveCount(50)
+      for (const width of [320, 430, 1440]) {
+        await page.setViewportSize({ width, height: 844 })
+        expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+        expect((await page.getByLabel('Клиент оплат').boundingBox())!.height).toBeGreaterThanOrEqual(44)
+        await page.screenshot({ path: info.outputPath(`receipt-ledger-${width}.png`), fullPage: true })
+      }
+      const pagination = page.getByLabel('Страницы оплат')
+      for (const width of [320, 1440]) {
+        await page.setViewportSize({ width, height: 844 })
+        await pagination.scrollIntoViewIfNeeded()
+        expect(await pagination.evaluate(node => node.scrollWidth <= node.clientWidth)).toBe(true)
+        for (const button of await pagination.getByRole('button').all()) expect((await button.boundingBox())!.height).toBeGreaterThanOrEqual(44)
+        await expect(pagination).toBeInViewport()
+        await pagination.screenshot({ path: info.outputPath(`receipt-pagination-controls-${width}.png`) })
+        await page.screenshot({ path: info.outputPath(`receipt-pagination-${width}.png`) })
+      }
+      await pagination.getByRole('button', { name: 'Следующие', exact: true }).click()
+      await expect(history.locator('.finance-payment')).toHaveCount(2)
+      await expect(pagination).toContainText('51–52 из 52')
+      await pagination.getByRole('button', { name: 'Предыдущие', exact: true }).click()
+      await expect(history.locator('.finance-payment')).toHaveCount(50)
+      await history.getByRole('button', { name: /Действия с оплатой Александра/ }).first().click()
+      await page.getByRole('menuitem', { name: 'Изменить' }).click()
+      const form = page.locator('.finance-form')
+      for (const width of [320, 1440]) {
+        await page.setViewportSize({ width, height: 844 })
+        await form.scrollIntoViewIfNeeded()
+        await formGeometry(form, fitLime)
+        await page.screenshot({ path: info.outputPath(`receipt-editor-${width}.png`), fullPage: true })
+      }
+      await page.setViewportSize({ width: 320, height: 400 })
+      await form.getByLabel('Комментарий').focus()
+      await form.getByRole('button', { name: 'Сохранить', exact: true }).scrollIntoViewIfNeeded()
+      await expect(form.getByRole('button', { name: 'Сохранить', exact: true })).toBeInViewport()
+    })
+  }
+
+  test('Finance receipt loading, failure and retry retain the selected period and client', { tag: ['@lime-finance'] }, async ({ page }, info) => {
+    await accountingFixture(page)
+    await page.addInitScript(() => document.addEventListener('click', event => {
+      if ((event.target as Element).closest('button')?.textContent === 'Повторить') sessionStorage.setItem('receipt-explicit-retry', 'yes')
+    }, true))
+    let release!: () => void
+    const gate = new Promise<void>(resolve => { release = resolve })
+    await page.route(/\/v1\/finance\/payments\?/, async route => {
+      await gate
+      const retry = await page.evaluate(() => sessionStorage.getItem('receipt-explicit-retry') === 'yes')
+      if (!retry) return route.fulfill({ status: 503, json: {} })
+      const params = new URL(route.request().url()).searchParams
+      expect(params.get('month')).toBe('2026-10')
+      expect(params.get('clientId')).toBe(clientId)
+      return route.fulfill({ json: { history: { month: '2026-10', clientId, offset: 0, limit: 50, totalCount: 0,
+        totalCents: 0, clients: [{ id: clientId, name: 'Алексей Смирнов' }], payments: [] } } })
+    })
+    await page.goto(`/finance?view=payments&month=2026-10&client=${clientId}`)
+    await expect(page.getByRole('status', { name: 'Загрузка' })).toBeVisible()
+    await page.screenshot({ path: info.outputPath('receipts-loading.png'), fullPage: true })
+    release()
+    await expect(page.getByRole('button', { name: 'Повторить', exact: true })).toBeVisible()
+    for (const width of [320, 1440]) {
+      await page.setViewportSize({ width, height: 844 })
+      await page.screenshot({ path: info.outputPath(`receipts-error-${width}.png`), fullPage: true })
+    }
+    await page.getByRole('button', { name: 'Повторить', exact: true }).click()
+    await expect(page.getByText('Оплат за этот месяц нет.')).toBeVisible()
+    await expect(page.getByLabel('Клиент оплат')).toHaveValue(clientId)
+    await expect(page.getByText('Октябрь 2026')).toBeVisible()
+  })
+
   test('Finance overview search and archive preserve return context without a duplicate clients entry', { tag: ['@lime-finance'] }, async ({ page }, info) => {
     const ledger = await accountingFixture(page)
     const active = { clientId, fullName: ledger.clientName!, archivedAt: null, activeClient: true,
@@ -129,6 +306,13 @@ export function financeAccountingCases() {
     } } }))
     await page.goto('/clients')
     await expect(page.locator('.clients-finance-entry')).toHaveCount(0)
+    await expect(page.getByRole('searchbox', { name: 'Поиск клиента' })).toBeVisible()
+    await page.getByRole('button', { name: 'Понятно', exact: true }).click()
+    for (const width of [320, 430, 1440]) {
+      await page.setViewportSize({ width, height: 844 })
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+      await page.screenshot({ path: info.outputPath(`clients-single-finance-entry-${width}.png`), fullPage: true })
+    }
     await page.getByRole('navigation', { name: 'Основная навигация' }).getByRole('link', { name: 'Финансы' }).click()
     const rows = page.locator('.finance-overview-client')
     await expect(rows).toHaveCount(1)

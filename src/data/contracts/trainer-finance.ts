@@ -42,6 +42,24 @@ export interface TrainerFinancePayment {
   updatedAt: string
 }
 
+export interface TrainerFinanceReceipt extends TrainerFinancePayment {
+  clientId: string
+  clientName: string
+  archivedAt: string | null
+  serviceTitle: string
+}
+
+export interface TrainerFinancePaymentHistory {
+  month: string
+  clientId: string | null
+  offset: number
+  limit: number
+  totalCount: number
+  totalCents: number
+  clients: Array<{ id: string; name: string }>
+  payments: TrainerFinanceReceipt[]
+}
+
 export interface TrainerFinanceSession {
   id: string
   packageId: string | null
@@ -125,6 +143,7 @@ export type TrainerFinanceSessionUpdate = Pick<TrainerFinanceSession, 'dispositi
 export type TrainerFinanceManualSessionDraft = Omit<TrainerFinanceSessionUpdate, 'expectedVersion'> & { requestId: string }
 
 export interface TrainerFinanceRepository {
+  listPayments(month: string, clientId?: string, offset?: number): Promise<TrainerFinancePaymentHistory>
   listOverview(month: string): Promise<TrainerFinanceOverview>
   listClient(clientId: string): Promise<TrainerFinanceClientBundle>
   createPackage(clientId: string, draft: TrainerFinancePackageDraft): Promise<TrainerFinancePackage>

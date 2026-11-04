@@ -55,3 +55,5 @@ html.fit-lime-document .schedule-v2-inbox-row { overflow-wrap: anywhere; }
 html.fit-lime-document .schedule-v2-inbox-row :is(b, strong) { font-size: 16px; line-height: 20px; }
 html.fit-lime-document .schedule-v2-inbox-row small { font-size: 14px; line-height: 20px; }
 html.fit-lime-document:has(.schedule-v2-sheet-backdrop) .phone-frame.fit-lime-shell :is(.content, .day-grid-scroll) { overflow: hidden; }
+
+.phone-frame.fit-lime-shell .finance-receipt-client { font-weight:500; }
