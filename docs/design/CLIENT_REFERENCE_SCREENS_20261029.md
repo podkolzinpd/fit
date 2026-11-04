@@ -4059,3 +4059,63 @@ MC-RELEASE-01 уточнён только для выпуска MC2.2: свод�
 Lime-слои тренера/клиента и legacy потребители не смешиваются. Очередь ФИТ14
 сохраняется, свежий main перепроверяется перед публикацией. Никаких новых gates,
 flags, API или изменений механик не разрешается. Следующий шаг — baseline/tests.
+
+
+### Итерация 122 — 2026-11-04 — Codex / OpenAI
+
+MC2.2 реализован с прямым разрешением121 на выпуск после проверок. Чистая PR
+ветка feat/catalog-both-roles-isolation-v2-20261104 создана от actual mainc8bb299b:
+предыдущий1975 был squash, поэтому старая собственная история имела merge-base
+071652a7. Вместо дублирования старого PR в diff перенесены только локальные
+квитанции119–121 и текущий runtime60401dac; прежняя ветка сохранена без reset.
+Расхождений с разрешённым scope нет.
+
+Сделано: существующий client-exercise-catalog.css заменён общим
+lime-exercise-catalog.css с теми же20группами свойств и семантическими Lime tokens.
+Собственный CSSscope lime-catalog-entry-shell применяется обеим Lime ролям на
+существующих entry routes. В27ветках старых editor controls/catalog/state rules
+styles.css исключены вложенные Lime-каталоги тренера; клиентское исключение
+сохранено. :where не повышает specificity. Старый отдельный client-only scope
+удалён. В src/features/exercises/ExercisePicker.tsx и обработчиках WorkoutsPages
+нет изменений; DOM/сохранение/выбор/таймеры/клавиатура/жесты прежние.
+
+Не удалялись общие button/state-panel правила целиком: есть потребители вне
+каталога и вне Lime. Остатки: client-picker,exercise-settings-sheet,modal-dialog,
+общие sheet-overlay/modal-overlay и формы редактора, non-Lime ExercisePicker.
+Их наличие явно сохраняется до соответствующих MC-этапов. Никаких изменений
+охвата,флагов,Onest,глобальных tokens,API/БД/native/deps/CI/CD нет.
+
+Проверено:
+-Новые8тренерских probes(new/template×theme×engine) на baseline дали8red,
+  клиентские12green. Дополнительный completed дал4red. Падения именно из-за
+  наследования старых правил. Первоначальный harness ошибочно закрывал весь
+  new-picker через Escape; заменён на реальную имеющуюся apply/toggle кнопку
+  без ослабления утверждений. Повторный валидный baseline сохранён отдельно.
+-После переноса20/20 probes плюс4completed passed. 80/80 computed samples и
+  80/80PNG на основной матрице точно совпали;16/16 completed samples/PNG тоже.
+  Итого mobile96/96 одинаковых состояний. Первые4PNGdiff были hover/cadre,
+  pointer приведён к одинаковому(0,0) перед снимком, без masks/golden changes.
+-Desktop1440:6/6 сценариев(new/template/completed×Chromium/WebKit) passed,
+  24/24computed совпали;19/24PNG точны,5diff ограничены кадрами миниатюр в левой
+  колонке, пары просмотрены. Тренер сохраняет действующую принудительную тёмную
+  Lime-палитру при системных light/dark; клиент проверен в обеих реальных темах.
+-Основной набор92passed/8skipped(3.1m); пропущенные8шаблонов отдельно запущены
+  с их штатным FIT_SCHEDULE_V2_VISUAL=1,8/8 passed(19.2s). Их пропуск не выдаётся
+  за успех. Дополнительно4/4 Избранного passed(8.2s). Вместе с8новыми trainer
+  probes и6desktop это118различных успешных локальныхbrowser сценариев.
+-Проверены поиск/фильтры/reset/empty/error/retry, multiple/add/replace/cancel,
+  draft, firsttap/keyboard, headerdrag/nested views, trainer singleadd/Live,
+  Original/Compact, row/exercise swipes, unconfirm/rest/reload и template entry.
+-ExercisePicker+AppLayout150/150 unit passed; build/tsc/startup-photo и полный
+  lint passed; после последней правки probes их ESLint повторно passed.
+
+Артефакты /tmp/fit-mc22-{baseline-final,candidate-final,baseline-completed,
+regression,template,favorite,desktop-baseline,desktop-candidate}-results,
+/tmp/fit-mc22-final-comparison.json и /tmp/fit-mc22-extra-comparison.json.
+Фикстуры синтетические, production-записей не делалось. Старые immutable dist
+сохранены в/tmp/fit-mc22-baseline-dist. Новый дизайн не придумывался.
+
+Открыто: полный source CI и очередь приоритетного ФИТ14; свежий main повторно
+интегрировать перед merge. Физические телефоны/реальный OAuth/публичная изменённая
+версия пока не проверены. Дальше: PR→CI→сводка без повторного запроса разрешения
+(получено121)→очередь→main CI/штатный выпуск→фактическая приёмка обеих ролей.
