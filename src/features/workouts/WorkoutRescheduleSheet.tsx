@@ -4,7 +4,7 @@ import { useDataBackend } from '../../app/data-backend-context'
 import type { Workout, WorkoutSlotDraft } from '../../shared/domain'
 import { addDays, formatLocalDate, type LocalDate } from '../../shared/local-date'
 import { CloseIcon } from '../../shared/icons'
-import { FitLimeDatePicker } from '../../shared/FitLimeDatePicker'
+import { WorkoutDatePicker } from './WorkoutDatePicker'
 import { isRepositoryConflict } from '../../data/repositories/error'
 import { overlappingWorkoutSlots, shiftWorkoutSlot, slotClock, slotDurationMinutes, slotMinutes, slotTimeLabel, workoutSlot } from './workout-slot'
 import { workoutDisplayTitle } from './workout-chronicle'
@@ -64,7 +64,7 @@ export function WorkoutRescheduleSheet({ workout: sourceWorkout, initialSlot, on
         submitting.current = true; save.mutate({ ...slot })
       }
     }}>
-      <div className="workout-reschedule-date"><span>Дата</span><FitLimeDatePicker value={slot.workoutDate}
+      <div className="workout-reschedule-date"><span>Дата</span><WorkoutDatePicker clientId={workout.clientId} excludeWorkoutId={workout.id} value={slot.workoutDate}
         onChange={workoutDate => setSlot({ ...slot, workoutDate })} triggerLabel={formatLocalDate(slot.workoutDate)}
         reference disabled={busy || conflict} /></div>
       <fieldset className="workout-reschedule-times" aria-label="Время занятия" disabled={busy || conflict}>
