@@ -813,14 +813,18 @@ export async function beginClientGesture(page: Page, surface: Locator, browserNa
   // Expanded content can still be clipped by its height transition. Keep the
   // hit-target assertion, but wait for the actual point before sending a touch.
   await expect.poll(async () => {
+    await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))))
     const currentBox = await surface.boundingBox()
     const currentOrigin = origin ? await origin.boundingBox() : null
     if (!currentBox || (origin && !currentOrigin)) return false
     const currentFrom = currentOrigin ? { x: currentOrigin.x + currentOrigin.width / 2, y: currentOrigin.y + currentOrigin.height / 2 }
       : { x: currentBox.x + currentBox.width * 0.88, y: currentBox.y + currentBox.height / 2 }
-    const reachable = await surface.evaluate((element, point) => element.contains(document.elementFromPoint(point.x, point.y)), currentFrom)
-    if (reachable) { box = currentBox; from = currentFrom }
-    return reachable
+    const reachable = await (origin ?? surface).evaluate((element, point) => element.contains(document.elementFromPoint(point.x, point.y)), currentFrom)
+    const stable = Math.abs(box.x - currentBox.x) < 0.5 && Math.abs(box.y - currentBox.y) < 0.5
+      && Math.abs(box.width - currentBox.width) < 0.5 && Math.abs(box.height - currentBox.height) < 0.5
+      && Math.abs(from.x - currentFrom.x) < 0.5 && Math.abs(from.y - currentFrom.y) < 0.5
+    box = currentBox; from = currentFrom
+    return reachable && stable
   }).toBe(true)
   const cdp = browserName === 'chromium' ? await page.context().newCDPSession(page) : null
   if (cdp) await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [from] })
@@ -930,13 +934,16 @@ export async function mockPublicTrainer(page: Page) {
 export async function revealLiveSet(page: Page, setId: string) {
   const row = page.locator(`[data-live-set-id="${setId}"]`)
   await expect(row).toHaveCount(1)
+  await expect(row.locator('.live-set-check')).not.toHaveAttribute('aria-busy', 'true')
   const group = page.locator('.exercise-block.live').filter({ has: row })
   if (await group.count()) {
     const body = group.locator(':scope > .coach-v79-circuit-body, :scope > .client-circuit-body')
     if (await body.getAttribute('inert') !== null) await group.locator(':scope > .circuit-head button.coach-v79-circuit-heading, :scope > .circuit-head button.client-circuit-toggle').click()
+    await expect(body).not.toHaveAttribute('inert', '')
     const round = group.locator('.circuit-round').filter({ has: row })
     const roundBody = round.locator(':scope > .coach-v79-round-body, :scope > .client-circuit-round-body')
     if (await roundBody.getAttribute('inert') !== null) await round.locator(':scope > .circuit-round-toggle').click()
+    await expect(roundBody).not.toHaveAttribute('inert', '')
     const card = group.locator('[data-live-card-key]').filter({ has: row })
     if (await card.locator(':scope > .coach-v79-card-body, :scope > .client-live-card-body').getAttribute('inert') !== null) {
       const arrow = card.locator('button.coach-v79-card-toggle')

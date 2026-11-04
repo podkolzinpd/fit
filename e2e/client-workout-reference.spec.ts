@@ -655,6 +655,7 @@ for (const grouped of [false, true]) for (const metric of liveMetricCases) test(
   const rpe = row.getByLabel('Фактический RPE')
   await rpe.selectOption('9')
   await row.getByRole('button', { name: 'Готово, отдых', exact: true }).click()
+  await expect(row).toHaveClass(/confirmed/)
   await revealLiveSet(page, exercise.sets[0]!.id)
   await expect(row.getByRole('button', { name: /^Отменить выполнение:/ })).toBeVisible()
   await expect.poll(() => backend.getWorkouts()[0]!.exercises[0]!.sets[0]!.fact.rpe).toBe(9)
