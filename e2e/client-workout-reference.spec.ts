@@ -4374,31 +4374,54 @@ for (const role of ['client', 'trainer'] as const) test(`Live unconfirm preserve
 // A real final-set handoff, rather than synthetic clicks on a scroll helper.
 // Roles change folding structure; reduced motion changes the native scroll path.
 for (const sample of [
-  { role: 'client', reduced: false }, { role: 'trainer', reduced: false },
-  { role: 'trainer', reduced: true },
-] as const) test(`Live transition reveals next exercise without stealing input ${sample.role} reduced-${sample.reduced}`, async ({ page }, info) => {
+  { role: 'client', reduced: false, shape: 'single', density: 'original' },
+  { role: 'trainer', reduced: false, shape: 'single', density: 'original' },
+  { role: 'trainer', reduced: true, shape: 'single', density: 'original' },
+  ...(['group-member', 'group-round', 'group-single', 'single-group', 'group-group'] as const).flatMap(shape =>
+    (['client', 'trainer'] as const).flatMap(role => (['original', 'compact'] as const).map(density => ({ role, reduced: false, shape, density })))),
+] as const) test(`Live transition reveals next exercise without stealing input ${sample.role} reduced-${sample.reduced} ${sample.shape} ${sample.density}`, async ({ page }, info) => {
   await page.clock.setFixedTime(new Date('2026-11-03T09:00:00Z'))
   await page.emulateMedia({ reducedMotion: sample.reduced ? 'reduce' : 'no-preference' })
   const id = sample.role === 'client' ? pilotId : 'c0ac0000-6010-4000-8000-000000000001'
-  await page.addInitScript(id => {
+  await page.addInitScript(({ id, density }) => {
     const key = `fit.coachmarks-seen.${id}`
     const seen = JSON.parse(localStorage.getItem(key) ?? '[]') as string[]
     localStorage.setItem(key, JSON.stringify([...seen, 'client-live-reference-timer-2026-10']))
     localStorage.setItem(`fit.liveExerciseAnimation.${id}`, 'false')
-    localStorage.setItem(`fit.clientLiveDensity.${id}`, 'original')
-    localStorage.setItem(`fit.coachLiveDensity.${id}`, 'original')
-  }, id)
-  const source = coachGestureWorkout(false, 3)
+    localStorage.setItem(`fit.clientLiveDensity.${id}`, density)
+    localStorage.setItem(`fit.coachLiveDensity.${id}`, density)
+  }, { id, density: sample.density })
+  const source = coachGestureWorkout(sample.shape.startsWith('group'), 4)
   source.startedAt = '2026-11-03T08:59:00Z'
-  Object.assign(source.exercises[0]!.sets[0]!, { confirmedAt: '2026-11-03T08:59:30Z', fact: { weightKg: 30, reps: 12 } })
+  if (sample.shape === 'single-group' || sample.shape === 'group-group') {
+    const first = sample.shape === 'single-group' ? 1 : 2
+    for (const exercise of source.exercises.slice(first, first + 2)) {
+      exercise.blockId = source.exercises[first]!.blockId
+      exercise.blockType = 'group'
+    }
+  }
+  for (const exercise of source.exercises.filter(exercise => exercise.blockType !== 'single')) {
+    exercise.blockRounds = 2
+    exercise.restBetweenExercisesSec = 15
+    exercise.restBetweenRoundsSec = 90
+  }
+  let currentExercise = 0, currentSet = 1, nextExercise = 1, nextSet = 0
+  const mark = (exercise: number, set: number) => Object.assign(source.exercises[exercise]!.sets[set]!, { confirmedAt: '2026-11-03T08:59:30Z', fact: { weightKg: 30, reps: 12 } })
+  if (sample.shape === 'group-member') { currentSet = 0 }
+  else if (sample.shape === 'group-round') { mark(0, 0); currentExercise = 1; currentSet = 0; nextExercise = 0; nextSet = 1 }
+  else if (sample.shape === 'group-single' || sample.shape === 'group-group') { mark(0, 0); mark(1, 0); mark(0, 1); currentExercise = 1; nextExercise = 2 }
+  else mark(0, 0)
+  const confirmedFacts = source.exercises.flatMap(exercise => exercise.sets).filter(set => set.confirmedAt).map(set => ({ id: set.id, fact: structuredClone(set.fact) }))
+  const currentId = source.exercises[currentExercise]!.sets[currentSet]!.id
+  const nextId = source.exercises[nextExercise]!.sets[nextSet]!.id
   const backend = await mockPilot(page, { role: sample.role, profileId: id, clientLime: true, fitLime: true, workouts: [source] })
   await page.goto(`/workouts/${workoutId}/live`)
   await page.evaluate(() => document.fonts.ready)
-  const row = page.locator(`[data-live-set-id="${source.exercises[0]!.sets[1]!.id}"]`)
+  const row = page.locator(`[data-live-set-id="${currentId}"]`)
   const button = row.getByRole('button', { name: 'Готово, отдых', exact: true })
   await button.scrollIntoViewIfNeeded()
   const handle = await row.getByLabel('Фактический вес', { exact: true }).elementHandle()
-  const next = page.locator(`[data-live-set-id="${source.exercises[1]!.sets[0]!.id}"]`)
+  const next = page.locator(`[data-live-set-id="${nextId}"]`)
   const measurements = page.evaluate(setId => new Promise<{ frames: Array<{ t: number; scroll: number }>; calls: ScrollToOptions[] }>(resolve => {
     const content = document.querySelector<HTMLElement>('.content')!
     const target = document.querySelector<HTMLElement>(`[data-live-set-id="${setId}"]`)!
@@ -4422,9 +4445,9 @@ for (const sample of [
       else { content.scrollTo = original; resolve({ frames, calls }) }
     }
     requestAnimationFrame(sampleFrame)
-  }), source.exercises[1]!.sets[0]!.id)
+  }), nextId)
   await button.click()
-  await expect.poll(() => backend.getWorkouts()[0]!.exercises[0]!.sets[1]!.confirmedAt).not.toBeNull()
+  await expect.poll(() => backend.getWorkouts()[0]!.exercises[currentExercise]!.sets[currentSet]!.confirmedAt).not.toBeNull()
   const trace = await measurements
   await info.attach('live-handoff-frames', { body: JSON.stringify(trace), contentType: 'application/json' })
   expect(trace.calls.length).toBeLessThanOrEqual(1)
@@ -4442,7 +4465,9 @@ for (const sample of [
     return row.top >= Math.max(content.top, header.bottom) && row.bottom <= Math.min(content.bottom, viewport.offsetTop + viewport.height)
   })).toBe(true)
   expect(await page.evaluate(() => window.scrollY)).toBe(0)
-  expect(backend.getWorkouts()[0]!.exercises[0]!.sets[0]!.fact).toEqual({ weightKg: 30, reps: 12 })
+  for (const preserved of confirmedFacts) expect(backend.getWorkouts()[0]!.exercises.flatMap(exercise => exercise.sets).find(set => set.id === preserved.id)!.fact).toEqual(preserved.fact)
+  expect(await next.evaluate(element => Boolean(element.closest('[inert]')))).toBe(false)
+  expect(backend.getWorkouts()[0]!.exercises[currentExercise]!.sets[currentSet]!.fact).toMatchObject({ weightKg: sample.shape === 'group-member' || sample.shape === 'group-round' ? 20 : 30, reps: 10 })
   expect(await page.evaluate(id => sessionStorage.getItem(`fit:live-rest-until:${id}`), workoutId)).not.toBeNull()
   await page.screenshot({ path: info.outputPath('live-handoff.png') })
 })
