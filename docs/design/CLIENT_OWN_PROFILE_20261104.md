@@ -473,3 +473,30 @@ Sequence1793831945141,ZIPe69be287c816faf2b555f9c6b1f6bd022ee79f1629a73ab8ad50e78
 фактическойприёмки,затем necessaryactualmainmerge+newfullsourceCI.
 Квитанция обновляется в нашемPR/checkpoint/localcanonical безsourcepush;
 исходящих сообщений в другие чаты нет. Полныйпакет3PR ещёне завершён.
+
+
+## Итерация 19 — 05.11.2026 — Codex / OpenAI
+
+DraftPR2/82797CI41920954246attempt1FAILURE:33SUCCESS,auth4job126896678665+
+aggregateFAILURE. Сохраненыfullmetadata/log/timings/diagnostics. Помимо прежнего
+Live4388frame flaky (retry0/1two positions,retry2pass) естьдетерминированный
+trainer-name lime failure808/908:3attempts `.client-home-connections .error`
+находятдваодинаковых403. Ровнототжеexisting test/assertions оставлены.
+Причина: добавленныйOwnGoal useClientRealtime приSUBSCRIBED/visibility
+безусловноinvalidates весьclientspace, включая обеconnections queries;
+это новый побочныйэффект goalcard, а не основание выбратьпервуюошибкувтесте.
+Решение COP204: optional profile-goal catch-up в существующем hook обновляет
+толькоmy-client/client-goal. Default всех прежнихпотребителей прежний;
+incremental tableevents/merge/canonical/workoutinvalidations по прежним
+общимправилам не меняются. Один lifecycle/debounce/subscription сохраняется,
+никакого второго канала/новыхdeps/schema/API/permissions/CI изменений.
+Новыйbehaviorunit проверяетready/visibility goal updates безconnections
+invalidations и сохранённый remote goal_stages→goal/workouts path.
+Проверка:20tests/4files2.76s, ESLint/type/build/startup passed. Первоеlocal
+legacy-воспроизведение не дошло до908: сборка имела localhostAPI вместо
+hardcoded stage.example.test fixture,логсохранён и проверкойне считается.
+После правильнойfixtureсборки:прежние2trainer-name/error/retry Mono+Lime
+и8ownheader/goalcases Chromium/WebKit10/10passed12.6s,0retry/skips.
+Тесты/assertions/лимиты/strict-flaky не ослаблены. Source82797 не повторяется
+вслепую; codefix покаlocal, до merge2 необходимactual1988ordinarymerge и
+новый full exactsourceCI. ОсновнойPR1публикуетсянаunchanged1ee отдельно.
