@@ -124,6 +124,14 @@ export function financeAccountingCases() {
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
       await page.screenshot({ path: info.outputPath(`lime-service-${width}.png`), fullPage: true })
     }
+    await page.setViewportSize({ width: 320, height: 500 })
+    // Start with a short viewport; resizing an unfocused page is not a keyboard gesture.
+    await page.reload()
+    await expect(card).toBeVisible()
+    const history = page.locator('.finance-history > summary')
+    await history.click()
+    await expect(page.locator('.finance-history')).toHaveAttribute('open', '')
+    await history.click()
     await card.locator('.finance-package-details > summary').click()
     await expect(card.getByRole('button', { name: 'Продлить', exact: true })).toHaveCount(0)
     await card.getByRole('button', { name: /Действия с услугой/ }).click()
@@ -140,9 +148,12 @@ export function financeAccountingCases() {
     await page.getByRole('menuitem', { name: 'Изменить', exact: true }).click()
     await expect(page.getByRole('heading', { name: 'Изменить оплату', exact: true })).toBeVisible()
     await expect(page.locator('textarea[name="comment"]')).toBeVisible()
+    await page.locator('textarea[name="comment"]').focus()
     await page.setViewportSize({ width: 320, height: 500 })
     await formGeometry(page.locator('.finance-form'))
     await page.screenshot({ path: info.outputPath('lime-payment-edit-small-viewport.png'), fullPage: true })
+    await page.getByRole('button', { name: 'Отмена', exact: true }).click()
+    await expect(page.locator('.finance-form')).toHaveCount(0)
   })
 
   test('Finance exact kopecks and mixed overdue debt use separate amounts', { tag: ['@lime-finance'] }, async ({ page }, info) => {
