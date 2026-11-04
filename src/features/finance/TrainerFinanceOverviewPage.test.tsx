@@ -49,8 +49,9 @@ describe('trainerFinanceClientLabel deadlines', () => {
   it('preserves the overdue state and deadline', () => {
     expect(trainerFinanceClientLabel({ ...client, overdue: true })).toMatch(/^Просрочено .* · до 08\.10$/)
   })
-  it('preserves the unassigned-session priority without hiding the nearest deadline', () => {
-    expect(trainerFinanceClientLabel({ ...client, unassignedSessions: 2 })).toBe('Не привязано: 2\nБлижайший срок — 08.10')
+  it('keeps the debt, overdue state, deadline and unassigned count visible together', () => {
+    expect(trainerFinanceClientLabel({ ...client, unassignedSessions: 2, overdue: true })).toMatch(/^Просрочено 2\s500\s₽ · до 08\.10\nНе привязано: 2$/)
+    expect(trainerFinanceClientLabel({ ...client, dueCents: 0, unassignedSessions: 2 })).toBe('Не привязано: 2')
   })
 })
 

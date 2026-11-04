@@ -268,7 +268,7 @@ describe('Yandex main repository', () => {
     }
     const fetchMock = vi.fn()
       .mockResolvedValueOnce(jsonResponse({ overview: { month: '2026-09', receivedCents: 1000000, dueCents: 1500000, attentionCount: 1, clients: [{ clientId, fullName: 'Анна', archivedAt: null, receivedCents: 1000000, dueCents: 1500000, activePackageCount: 1, upcomingPackageCount: 0, sessionsRemaining: 8, overdue: true, lowSessions: false, unassignedSessions: 0, needsAttention: true }] } }))
-      .mockResolvedValueOnce(jsonResponse({ finance: { clientId, packages: [financePackage], payments: [payment], sessions: [financeSession] } }))
+      .mockResolvedValueOnce(jsonResponse({ finance: { clientId, clientName: 'Анна', packages: [financePackage], payments: [payment], sessions: [financeSession] } }))
       .mockResolvedValueOnce(jsonResponse({ package: financePackage }, 201))
       .mockResolvedValueOnce(jsonResponse({ payment }, 201))
       .mockResolvedValueOnce(new Response(null, { status: 204 }))
@@ -277,7 +277,7 @@ describe('Yandex main repository', () => {
     const repository = createYandexMainRepository(apiBaseUrl, sessionToken, actor)
 
     await expect(repository.trainerFinance.listOverview('2026-09')).resolves.toMatchObject({ receivedCents: 1000000, attentionCount: 1, clients: [{ nearestPaymentDueOn: null, unpaidPackageCount: 0 }] })
-    await expect(repository.trainerFinance.listClient(clientId)).resolves.toMatchObject({ clientId, packages: [{ sessionsRemaining: 8 }] })
+    await expect(repository.trainerFinance.listClient(clientId)).resolves.toMatchObject({ clientId, clientName: 'Анна', packages: [{ sessionsRemaining: 8 }] })
     await repository.trainerFinance.createPackage(clientId, {
       kind: 'session_pack', title: '10 тренировок', sessionsTotal: 10, openingUsedSessions: 2,
       priceCents: 2500000, openingPaidCents: 1000000, startsOn: '2026-09-01',

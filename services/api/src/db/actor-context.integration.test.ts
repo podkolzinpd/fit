@@ -3695,6 +3695,19 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
         await ownerPool.query("update public.workouts set status='done', completed_at=now() where id=$1",[planned.id])
         expect((await ownerPool.query('select id from public.trainer_finance_sessions where workout_id=$1', [planned.id])).rowCount).toBe(0)
         expect((await ownerPool.query('select id from public.trainer_finance_sessions where workout_id=$1', [saved.id])).rowCount).toBe(1)
+        const canReadCard = await withActorTransaction(runtimePool, ACTOR_ID, client => client.query<{ allowed: boolean }>(
+          'select public.can_access_client($1) as allowed', [clientId]))
+        expect(canReadCard[0]!.allowed).toBe(false)
+        const history = () => withActorTransaction(runtimePool!, ACTOR_ID, client => client.query<JsonResultRow>(
+          'select public.list_trainer_finance_client_v2($1) as result', [clientId]))
+        expect((await history())[0]!.result).toMatchObject({ clientName: 'Finance author fixture', canCreate: false,
+          packages: [{ title: 'Author package' }], sessions: [{ disposition: 'free' }] })
+        // A session-only historical ledger is authorized by its own trainer,
+        // without restoring the former relationship or exposing the other pack.
+        await ownerPool.query('delete from public.trainer_finance_packages where client_id=$1 and trainer_id=$2', [clientId, ACTOR_ID])
+        expect((await history())[0]!.result).toMatchObject({ clientName: 'Finance author fixture', canCreate: false, packages: [], sessions: [{ disposition: 'free' }] })
+        await expect(withActorTransaction(runtimePool, OUTSIDE_TRAINER_ID, client => client.query(
+          'select public.list_trainer_finance_client_v2($1)', [clientId]))).rejects.toMatchObject({ code: 'PT404' })
       } finally {
         await ownerPool.query('delete from public.trainer_finance_events where client_id=$1',[clientId])
         await ownerPool.query('delete from public.trainer_finance_sessions where client_id=$1',[clientId])

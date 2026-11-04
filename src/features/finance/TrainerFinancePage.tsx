@@ -4,6 +4,8 @@ import { Link, useLocation, useParams } from 'react-router-dom'
 import { useAuth } from '../../app/auth-context'
 import { isFitLimeEnabled } from '../../app/fit-lime'
 import { useDataBackend } from '../../app/data-backend-context'
+import { invalidateFinanceViews } from '../../app/invalidate-finance-views'
+import { invalidateWorkoutResults } from '../../app/invalidate-workout-results'
 import { RepositoryError } from '../../data/repositories/error'
 import { SessionAccountingForm, type SessionAccountingDraft } from './SessionAccountingForm'
 import type { TrainerFinancePackage, TrainerFinancePackageDraft, TrainerFinancePayment, TrainerFinanceSession, TrainerFinancePaymentDraft } from '../../data/contracts/trainer-finance'
@@ -234,7 +236,7 @@ export function TrainerFinancePage() {
   const location = useLocation()
   const routeState: unknown = location.state
   const { actor } = useAuth()
-  const { clients, trainerFinance } = useDataBackend()
+  const { trainerFinance } = useDataBackend()
   const queryClient = useQueryClient()
   const today = todayInTimeZone(actor?.timezone)
   const [activeTab, setActiveTab] = useState<FinanceTab>('packages')
@@ -252,9 +254,17 @@ export function TrainerFinancePage() {
   const [manualOpen, setManualOpen] = useState(false)
   const [sessionEditor, setSessionEditor] = useState<string | null>(null)
   const [confirm, confirmDialog] = useConfirm()
-  const client = useQuery({ queryKey: ['client', clientId], queryFn: () => clients.get(clientId) })
   const finance = useQuery({ queryKey: ['trainer-finance', clientId], queryFn: () => trainerFinance.listClient(clientId) })
-  const refresh = async () => { await queryClient.invalidateQueries({ queryKey: ['trainer-finance', clientId] }) }
+  const refresh = () => invalidateFinanceViews(queryClient, clientId)
+  const refreshSession = async (session: TrainerFinanceSession) => {
+    const key = ['workout', session.workoutId]
+    await queryClient.cancelQueries({ queryKey: key })
+    await Promise.all([refresh(), invalidateWorkoutResults(queryClient),
+      queryClient.invalidateQueries({ queryKey: key }),
+      queryClient.invalidateQueries({ queryKey: ['today-workouts'] }),
+      queryClient.invalidateQueries({ queryKey: ['trainer-attention'] }),
+      queryClient.invalidateQueries({ queryKey: ['clients'] })])
+  }
   const savePackage = useMutation({
     mutationFn: async ({ draft, editor }: { draft: TrainerFinancePackageDraft; editor: PackageEditor }) => {
       if (editor.mode === 'edit') return trainerFinance.updatePackage(editor.item.id, { ...draft, expectedVersion: editor.item.version })
@@ -320,9 +330,10 @@ export function TrainerFinancePage() {
         comment: draft.comment, workoutDate: draft.workoutDate,
       })
     },
-    onSuccess: async () => { setManualOpen(false); manualOperation.current = null; setPendingManualDraft(null); await refresh() },
+    onSuccess: async session => { await refreshSession(session); setManualOpen(false); manualOperation.current = null; setPendingManualDraft(null) },
     onError: error => {
-      // A later rejection cannot prove that an earlier lost response rolled back.
+      // A first explicit rejection confirms no write. A later rejection cannot
+      // resolve an earlier lost response: keep its payload/ID for a real replay.
       if (manualOperation.current?.attempts === 1 && error instanceof RepositoryError
         && ['PT422', 'PT403', 'PT404'].includes(error.code)) {
         manualOperation.current = null
@@ -341,8 +352,9 @@ export function TrainerFinancePage() {
         workoutDate,
       })
     },
-    onSuccess: async () => { setSessionEditor(null); await refresh() },
+    onSuccess: async session => { await refreshSession(session); setSessionEditor(null) },
   })
+  const canCreate = finance.data?.canCreate ?? true
   const packages = finance.data?.packages ?? []
   const activePackages = packages.filter((item) => item.packageStatus === 'active' || item.packageStatus === 'upcoming')
   const pastPackages = packages.filter((item) => item.packageStatus !== 'active' && item.packageStatus !== 'upcoming')
@@ -384,7 +396,7 @@ export function TrainerFinancePage() {
   const renderPackage = (item: TrainerFinancePackage, history = false) => {
     const servicePayments = payments.filter((payment) => payment.packageId === item.id)
     return <article className={`finance-package card${history ? ' is-history' : ''}`} key={item.id}>
-      <header><div><span className={`finance-status finance-status-${item.packageStatus}`}>{item.kind === 'online_coaching' ? 'Онлайн · ' : ''}{PACKAGE_STATUS[item.packageStatus]}</span><h2>{item.title}</h2></div><OverflowMenu label={`Действия с услугой ${item.title}`} items={[{ label: 'Продлить', disabled: pendingPackageDraft !== null, onClick: () => openPackage({ mode: 'renew', item }) }, { label: 'Редактировать', disabled: pendingPackageDraft !== null, onClick: () => openPackage({ mode: 'edit', item }) }]} /></header>
+      <header><div><span className={`finance-status finance-status-${item.packageStatus}`}>{item.kind === 'online_coaching' ? 'Онлайн · ' : ''}{PACKAGE_STATUS[item.packageStatus]}</span><h2>{item.title}</h2></div><OverflowMenu label={`Действия с услугой ${item.title}`} items={[...(canCreate ? [{ label: 'Продлить', disabled: pendingPackageDraft !== null, onClick: () => openPackage({ mode: 'renew', item }) }] : []), { label: 'Редактировать', disabled: pendingPackageDraft !== null, onClick: () => openPackage({ mode: 'edit', item }) }]} /></header>
       <div className="finance-package-summary finance-service-balance">
         {item.kind === 'session_pack'
           ? <p><span>Осталось занятий</span><strong>{item.sessionsRemaining} из {item.sessionsTotal}</strong></p>
@@ -402,7 +414,7 @@ export function TrainerFinancePage() {
         <div className="finance-disclosure-content">
           <div className="finance-package-facts">{item.kind === 'session_pack' && <p><span>Проведено</span><strong>{item.sessionsUsed}</strong></p>}</div>
           {item.comment && <p className="finance-comment">{item.comment}</p>}
-          <div className="finance-package-actions"><button type="button" className="secondary" disabled={pendingPackageDraft !== null} onClick={() => openPackage({ mode: 'renew', item })}>Продлить</button><button type="button" className="secondary" disabled={pendingPackageDraft !== null} onClick={() => openPackage({ mode: 'edit', item })}>Изменить</button></div>
+          <div className="finance-package-actions"><>{canCreate && <button type="button" className="secondary" disabled={pendingPackageDraft !== null} onClick={() => openPackage({ mode: 'renew', item })}>Продлить</button>}</><button type="button" className="secondary" disabled={pendingPackageDraft !== null} onClick={() => openPackage({ mode: 'edit', item })}>Изменить</button></div>
         </div>
       </details>
     </article>
@@ -412,22 +424,22 @@ export function TrainerFinancePage() {
     && /^\/finance(?:\?[^#]*)?$/.test(routeState.financeBackTo)
     ? routeState.financeBackTo
     : `/clients/${clientId}`
-  return <Page title="Финансы" subtitle={client.data?.fullName} back={financeBackTo} swipeBack className="trainer-finance-page">
-    <AsyncView loading={client.isLoading || finance.isLoading} error={(client.error ?? finance.error) as Error | null} onRetry={() => { void client.refetch(); void finance.refetch() }}>
+  return <Page title="Финансы" subtitle={finance.data?.clientName} back={financeBackTo} swipeBack className="trainer-finance-page">
+    <AsyncView loading={finance.isLoading} error={finance.error} onRetry={() => void finance.refetch()}>
       {packageEditor && <PackageForm lime={isFitLimeEnabled(actor)} current={packageEditor.mode === 'edit' ? packageEditor.item : undefined} template={packageEditor.mode === 'renew' ? packageEditor.item : undefined} today={today} saving={savePackage.isPending} error={savePackage.error} initialDraft={pendingPackageDraft ?? undefined} locked={pendingPackageDraft !== null} onCancel={() => setPackageEditor(null)} onSubmit={(draft) => savePackage.mutate({ draft, editor: packageEditor })} />}
       {paymentEditor && <PaymentForm current={paymentEditor.payment} packages={paymentEditor.direct ? packages.filter((item) => item.id === paymentEditor.packageId) : packages} packageId={paymentEditor.packageId} today={today} saving={savePayment.isPending} error={savePayment.error} initialDraft={pendingPaymentDraft ?? undefined} locked={pendingPaymentDraft !== null} onCancel={() => setPaymentEditor(null)} onSubmit={(draft, packageId) => savePayment.mutate({ draft, packageId, editor: paymentEditor })} />}
       {!packageEditor && !paymentEditor && <>
         <div className="finance-tabs" role="tablist" aria-label="Раздел финансов клиента">{FINANCE_TABS.map((tab) => <button id={`finance-${tab.id}-tab`} key={tab.id} type="button" role="tab" aria-label={`${tab.label}: ${tabCount[tab.id]}`} aria-selected={activeTab === tab.id} aria-controls={`finance-${tab.id}-panel`} className={activeTab === tab.id ? 'is-active' : ''} onClick={() => setActiveTab(tab.id)}><span>{tab.label}</span><small>{tabCount[tab.id]}</small></button>)}</div>
 
         <section id="finance-packages-panel" className="finance-tab-panel" data-finance-tab="packages" role="tabpanel" aria-labelledby="finance-packages-tab" hidden={activeTab !== 'packages'}>
-          <div className="finance-section-heading"><div><p className="eyebrow">УСЛУГИ</p><h2>{activePackages.length ? 'Текущие' : 'Нет активных'}</h2></div><button type="button" className="primary" onClick={() => openPackage({ mode: 'new' })}>{pendingPackageDraft ? 'Проверить сохранение' : 'Новая'}</button></div>
+          <div className="finance-section-heading"><div><p className="eyebrow">УСЛУГИ</p><h2>{activePackages.length ? 'Текущие' : 'Нет активных'}</h2></div>{canCreate && <button type="button" className="primary" onClick={() => openPackage({ mode: 'new' })}>{pendingPackageDraft ? 'Проверить сохранение' : 'Новая'}</button>}</div>
           <div className="finance-package-list">{activePackages.map((item) => renderPackage(item))}</div>
           {finance.isSuccess && packages.length === 0 && <p className="finance-empty">Услуг пока нет.</p>}
           {pastPackages.length > 0 && <details className="finance-history finance-disclosure card"><summary><span>История</span><small>{pastPackages.length}</small></summary><div className="finance-disclosure-content finance-package-list">{pastPackages.map((item) => renderPackage(item, true))}</div></details>}
         </section>
 
         <section id="finance-sessions-panel" className="finance-tab-panel" data-finance-tab="sessions" role="tabpanel" aria-labelledby="finance-sessions-tab" hidden={activeTab !== 'sessions'}>
-          <div className="finance-section-heading"><div><p className="eyebrow">ЗАНЯТИЯ</p><h2>Проведённые</h2></div>{!manualOpen && <button type="button" className="primary" onClick={() => { if (!manualOperation.current) addManualSession.reset(); setManualOpen(true) }}>{pendingManualDraft ? 'Проверить сохранение' : 'Добавить'}</button>}</div>
+          <div className="finance-section-heading"><div><p className="eyebrow">ЗАНЯТИЯ</p><h2>Проведённые</h2></div>{!manualOpen && (canCreate || pendingManualDraft) && <button type="button" className="primary" onClick={() => { if (!manualOperation.current) addManualSession.reset(); setManualOpen(true) }}>{pendingManualDraft ? 'Проверить сохранение' : 'Добавить'}</button>}</div>
           <div className="finance-filter-row finance-session-filters" role="group" aria-label="Фильтр занятий"><button type="button" className={sessionFilter === 'all' ? 'is-active' : ''} aria-pressed={sessionFilter === 'all'} onClick={() => setSessionFilter('all')}>Все</button><button type="button" className={sessionFilter === 'unassigned' ? 'is-active' : ''} aria-pressed={sessionFilter === 'unassigned'} onClick={() => setSessionFilter('unassigned')}>Без списания</button><button type="button" className={sessionFilter === 'trial' ? 'is-active' : ''} aria-pressed={sessionFilter === 'trial'} onClick={() => setSessionFilter('trial')}>Пробные</button></div>
           {manualOpen && <SessionAccountingForm packages={packages} today={today} initialDraft={pendingManualDraft ?? undefined}
             locked={pendingManualDraft !== null} saving={addManualSession.isPending} error={addManualSession.error}

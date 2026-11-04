@@ -30,10 +30,11 @@ export function trainerFinanceClientLabel(client: TrainerFinanceOverviewClient):
     ? formatLocalDateShort(localDate(client.nearestPaymentDueOn)).slice(0, 5)
     : null
   const dueLabel = client.overdue ? `Просрочено ${money(client.dueCents)}` : `К оплате ${money(client.dueCents)}`
-  if (client.unassignedSessions > 0) return `Не привязано: ${client.unassignedSessions}${paymentDeadline ? `\nБлижайший срок — ${paymentDeadline}` : ''}`
+  const unassigned = client.unassignedSessions > 0 ? `Не привязано: ${client.unassignedSessions}` : null
   if (client.dueCents > 0) return `${dueLabel}${paymentDeadline
     ? client.unpaidPackageCount === 1 ? ` · до ${paymentDeadline}` : `\nБлижайший срок — ${paymentDeadline}`
-    : ''}`
+    : ''}${unassigned ? `\n${unassigned}` : ''}`
+  if (unassigned) return unassigned
   if (client.activePackageCount > 1) return 'Несколько абонементов'
   if (client.sessionsRemaining !== null) return `Осталось ${client.sessionsRemaining} ${client.sessionsRemaining === 1 ? 'занятие' : 'занятий'}`
   if (client.upcomingPackageCount > 0) return 'Абонемент начнётся позже'
