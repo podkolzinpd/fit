@@ -1,7 +1,7 @@
 -- Up Migration
-alter table public.clients add column profile_photo jsonb;
+alter table public.clients add column if not exists profile_photo jsonb;
 
-create function public.save_client_profile_photo(p_id uuid, p_photo jsonb, p_version bigint)
+create or replace function public.save_client_profile_photo(p_id uuid, p_photo jsonb, p_version bigint)
 returns jsonb language plpgsql security definer set search_path = '' as $$
 declare current_photo jsonb; next_photo jsonb;
 begin
@@ -37,7 +37,7 @@ grant execute on function public.save_client_profile_photo(uuid,jsonb,bigint) to
 
 -- Joining an existing athlete account must not discard the trainer's photo.
 -- Keep an existing target photo authoritative; reuse the private object reference.
-create function app_private.preserve_merged_client_photo()
+create or replace function app_private.preserve_merged_client_photo()
 returns trigger language plpgsql security definer set search_path = '' as $$
 begin
   if old.merged_into_client_id is null and new.merged_into_client_id is not null
@@ -48,8 +48,13 @@ begin
   return new;
 end $$;
 revoke all on function app_private.preserve_merged_client_photo() from public,fit_api;
-create trigger preserve_merged_client_photo after update of merged_into_client_id on public.clients
-  for each row execute function app_private.preserve_merged_client_photo();
+do $$ begin
+  if not exists (select 1 from pg_catalog.pg_trigger where tgrelid='public.clients'::regclass
+    and tgname='preserve_merged_client_photo') then
+    create trigger preserve_merged_client_photo after update of merged_into_client_id on public.clients
+      for each row execute function app_private.preserve_merged_client_photo();
+  end if;
+end $$;
 
 -- Down Migration
 -- Forward-only: retain client photographs and their references.
