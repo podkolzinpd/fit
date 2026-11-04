@@ -87,7 +87,7 @@ test('finance/template visual matrices cannot grow back into full business chain
   assert.doesNotMatch(bodies.get('template'), /page\.clock|page\.reload|commands|\/health|rows\.size/)
 })
 
-test('real Playwright partitions preserve the 722-case union without duplicates in either engine', () => {
+test('real Playwright partitions preserve the 726-case union without duplicates in either engine', () => {
   const collect = (args) => {
     const result = spawnSync(process.execPath, [join(root, 'node_modules/playwright/cli.js'), ...args, '--list', '--reporter=json'],
       { cwd: root, encoding: 'utf8', timeout: 60000, env: { ...process.env, FIT_SCHEDULE_V2_VISUAL: '1' } })
@@ -103,7 +103,7 @@ test('real Playwright partitions preserve the 722-case union without duplicates 
   }
   for (const { project } of engines) {
     const full = collect(fitLimeArgs(project, 'full').args)
-    assert.equal(full.length, 722) // Parent720 plus the FIN303 history/deletion cache cases; every previous case remains.
+    assert.equal(full.length, 726) // Parent724 plus the FIN303 history/deletion cache cases; every previous case remains.
     assert.equal(full.filter(key => key.endsWith('Finance former-client history and refreshed overview keep debt visible with unassigned sessions')).length, 1)
     assert.equal(full.filter(key => key.endsWith('Finance workout deletion clears fresh attendance and overview caches')).length, 1)
     for (const title of ['Finance accounting dates and uncertain manual retry preserve one operation', 'Finance session date editor retains its current charge and updates eligible services']) {
@@ -150,7 +150,7 @@ test('real Playwright partitions preserve the 722-case union without duplicates 
     const scoped = collect(fitLimeArgs(project, 'scoped', 'critical,finance').args)
     const scopedParts = fitLimePartitions('scoped').flatMap(({ lane, shard }) =>
       collect(fitLimeArgs(project, 'scoped', 'critical,finance', lane, shard).args))
-    assert.equal(scoped.length, 140) // Reviewed138 plus both tagged FIN303 cache cases; no existing case is omitted.
+    assert.equal(scoped.length, 144) // Reviewed142 plus both tagged FIN303 cache cases; no existing case is omitted.
     assert.equal(new Set(scopedParts).size, scopedParts.length)
     assert.deepEqual(scopedParts.sort(), scoped.sort())
   }
