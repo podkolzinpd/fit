@@ -151,3 +151,67 @@ Chromium/WebKit19.7s,0retry/skips. Правила actualmain AGENTS/workflow/con
 Открыто: новый fullsourceCI после merge; actual1979 ещё проходит CI/выпуск.
 Дальше: normal push необходимого объединения и наблюдение точных новых runs,
 без duplicate dispatch и без занятия чужого production окна.
+
+## Итерация 8 — 04.11.2026 — Codex / OpenAI
+
+Source684 CI41891218478 завершился:33success, auth4 и aggregate failure.
+Единственный упавший сценарий — восстановление merged client-card после
+временно пустого списка, yandex-only-auth.webkit:1686/1713. Все три попытки
+искали старый .client-profile-identity strong; это прежний selector, не новая
+ошибка account recovery. Его собственные sessionReads/clientReads/no-writes
+assertions не меняются. Новый semantic selector region«Мои данные»/heading
+проверяет то же точное имя в утверждённой шапке.
+Проверка: тот же production fixture WebKit1/1passed5.9s,0retry/skips;
+ESLint/diff passed. Исходные metadata/joblog/diagnostics сохранены.
+Дальше: новый точный полный source CI (head действительно меняется из-за теста),
+без слепого failed-only повтора. Предшественник1979 принят по фактическому
+PRbody:mainCI41888147254/API41891789173/web41891789081/OTA41893531769SUCCESS,
+213files/36public+36ZIP Chromium/WebKit, финальная квитанция прочитана.
+
+## Итерация 9 — 04.11.2026 — Codex / OpenAI
+
+Source177 fullCI41898916268 первый запускSUCCESS35/35, Android41898915475
+SUCCESS. Исторический auth-recovery failure684 не повторился; все прежние
+assertions сохранены. Перед squash actualmain изменился на5612dbcd/#1982,
+GitHub пометил1989 BEHIND. Выполнен necessary ordinary merge без конфликтов.
+Входящие4files276+/8- — read-only roster audit/его тесты/журнал и регистрация
+теста в package infra:policy:test. Dependencies/lock/API/schema/src/android
+не меняются; nativeABI8922/code9 сохраняются, source177 runtime побайтный.
+Разрешённые обычные merge/release продолжаются без передачи пакета в другой
+чат: фактическая очередь проверяется напрямуюGitHub. Вопрос владельца
+«зачем что-то передавать туда?» снял наше лишнее процедурное предположение;
+исходящих сообщений не было, local bug repro=yes записан без отправки.
+Открыто: новый полный exactheadCI из-за реального necessary main merge;
+полныйgreen177 сохранён как история, им не подменяется новый head.
+Дальше: штатная проверка объединения и squash безforce/admin/bypass.
+
+## Итерация 10 — 04.11.2026 — Codex / OpenAI — локальная квитанция после freeze
+
+Sourcee87 CI41903246584 attempt1FAILURE:33success, auth4 иaggregate failure.
+Конкретный flaky — nutrition-diary.webkit:349:49/dark, trainer consent;
+на354 ожидается region«Питание сегодня»/«Клиент пока не разрешил», timeout5s.
+Retry0 failed7359ms; встроенныйretry1 passed5592ms, light retry0 passed4200ms.
+246другихcases passed, strict --fail-on-flaky-tests корректно завершилjob1.
+Исходный snapshot показывает закрытый«Статистика, замеры и питание» и роль
+тренера; passed retry trace содержит нажатие summary и успешный consent-check.
+Точная причина гонки не доказана без retry0trace; условный helper count()
+до стабилизации раскрытия — гипотеза. Изменений питания/его теста/src/API
+междуполностьюзелёным177 иe87 нет; наш UI scoped только own-client profile.
+Metadata/joblog/timings/errorcontext/retry1trace сохранены отдельно до повторов.
+Решение: один failed-only повтор auth4/aggregate того же e87 после окончания
+всей попытки; main5612/head identity проверены. Assertions/timeouts/retries/
+strict-flaky/coverage не меняются, исходная failure история не удаляется.
+Открыто: фактический repeat результат; до полного green merge/deploy удержан.
+Итог: attempt2SUCCESS35/35, auth4 job126847068163247passed13.4m,
+0retry/flaky;полный лог сохранён. Выполнен ровно один failed-only повтор.
+
+## Итерация 11 — 04.11.2026 — Codex / OpenAI
+
+Перед squash freshmain сталab961d51/#1986, GitHub1989BEHIND. Включён
+необходимый ordinary merge без конфликтов, локальная история10 сохранена.
+Входящие3files150+/0-:manual inspect-account-history workflow, его контрактный
+тест и журнал восстановления. Выполнение самой диагностики не запускалось.
+Src/API/package/lock/android/наш профиль и nativeABI8922/code9 прежние.
+Правила AGENTS/workflow/contracts/currentstate входящимmain не менялись.
+Green e87/attempt2 сохранён, новая объединённая голова требует полногоCI.
+Дальше: штатные проверки incoming workflow и exactsourceCI, без bypass.

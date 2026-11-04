@@ -1710,7 +1710,7 @@ test('client profile recovers a merged card and transient empty list without a n
     return clientReads === 1 ? route.fulfill({ json: { clients: [] } }) : route.fallback()
   })
   await page.goto('/me/profile')
-  await expect(page.locator('.client-profile-identity strong')).toHaveText('Алексей Смирнов')
+  await expect(page.getByRole('region', { name: 'Мои данные' }).getByRole('heading')).toHaveText('Алексей Смирнов')
   await expect(page.getByRole('link', { name: 'Изменить данные' })).toBeVisible()
   await expect(page.getByText('Пока ничего нет', { exact: true })).toHaveCount(0)
   expect(sessionReads).toBeGreaterThanOrEqual(2)
