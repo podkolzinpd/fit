@@ -483,7 +483,7 @@ export function financeAccountingCases() {
     await page.route('**/v1/finance/overview*', route => route.fulfill({ json: { overview: {
       month: '2026-11', receivedCents: service.paidCents - 1000000, dueCents: service.dueCents, attentionCount: 1,
       clients: [{ clientId, fullName: ledger.clientName, archivedAt: null, receivedCents: 0,
-        dueCents: service.dueCents, nearestPaymentDueOn: '2026-10-31', unpaidPackageCount: 1,
+        dueCents: service.dueCents, overdueCents: service.dueCents, nearestPaymentDueOn: '2026-10-31', unpaidPackageCount: 1,
         activePackageCount: 1, upcomingPackageCount: 0, sessionsRemaining: 10, overdue: true,
         lowSessions: false, unassignedSessions: 1, needsAttention: true }],
     } } }))
@@ -497,7 +497,8 @@ export function financeAccountingCases() {
     })
     await page.goto('/finance?filter=due')
     const row = page.locator('.finance-overview-client')
-    await expect(row).toContainText(/Просрочено 15\s000/)
+    await expect(row).toContainText(/К оплате 15\s000/)
+    await expect(row).toContainText(/Из них просрочено 15\s000/)
     await expect(row).toContainText('Не привязано: 1')
     for (const width of [320, 430, 1440]) {
       await page.setViewportSize({ width, height: 844 })
@@ -522,7 +523,8 @@ export function financeAccountingCases() {
     await expect(page.locator('.finance-form')).toHaveCount(0)
     await page.getByRole('button', { name: 'Назад', exact: true }).click()
     await expect(page).toHaveURL(/\/finance\?filter=due$/)
-    await expect(row).toContainText(/Просрочено 10\s000/)
+    await expect(row).toContainText(/К оплате 10\s000/)
+    await expect(row).toContainText(/Из них просрочено 10\s000/)
     await expect(row).toContainText('Не привязано: 1')
     await page.screenshot({ path: info.outputPath('overview-after-payment.png'), fullPage: true })
   })
