@@ -14,7 +14,7 @@ import { ClientProfileHeader } from './ClientProfileHeader'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Controller, useForm, useWatch } from 'react-hook-form'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { bmiLabel, splitClientWorkouts } from '../../data/repositories/workout-rules'
 import { ClientFirstRunIntro, PresetWorkoutPicker, TodayPage, WorkoutExercisesSummary, storeFirstWorkoutIntent, workoutCountLabel, type FirstWorkoutIntent } from '../workouts'
@@ -399,6 +399,7 @@ function ClientGoalBlock({ client, reference = false }: { client: Client; refere
 }
 
 function ClientReferenceNote({ client }: { client: Client }) {
+  const noteForm = useRef<HTMLFormElement>(null)
   const [phase, setPhase] = useState<VoiceInputPhase>('idle')
   const [expanded, setExpanded] = useState(false)
   const form = useForm<{ note: string }>({ defaultValues: { note: client.note ?? '' } })
@@ -417,13 +418,14 @@ function ClientReferenceNote({ client }: { client: Client }) {
           const previous = form.getValues('note')
           const next = appendTranscript(previous, text)
           form.setValue('note', next, { shouldDirty: true })
+          noteForm.current?.querySelector<HTMLTextAreaElement>('textarea')?.focus()
           return () => { if (form.getValues('note') === next) form.setValue('note', previous, { shouldDirty: true }) }
         }} />
     </div>
-    <form className="client-profile-note-form" onSubmit={event => void form.handleSubmit(values => mutation.mutate({ note: values.note }))(event)}>
+    <form ref={noteForm} className="client-profile-note-form" onSubmit={event => void form.handleSubmit(values => mutation.mutate({ note: values.note }))(event)}>
       <Controller control={form.control} name="note" render={({ field }) => <VoiceNoteField name={field.name}
         source="client_form" label="Заметка" hideLabel showVoice={false} placeholder="Текст заметки" value={field.value}
-        onValueChange={field.onChange} disabled={locked} autoResize maxHeightPx={expanded ? 900 : 264} />} />
+        onValueChange={field.onChange} disabled={mutation.isPending} autoResize maxHeightPx={expanded ? 900 : 264} />} />
       {mutation.error && <p className="error" role="alert">{mutation.error.message}</p>}
       <div className="client-profile-note-actions">
         {note.length > 240 && <button type="button" className="link" aria-expanded={expanded} onClick={() => setExpanded(!expanded)}>{expanded ? 'Свернуть заметку' : 'Показать всю заметку'}</button>}

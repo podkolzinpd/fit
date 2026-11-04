@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { mockPilot, clientId, workout } from './fit-lime-fixtures'
+import { mockPilot, mockClientStreamingVoice, clientId, workout } from './fit-lime-fixtures'
 
 export function clientProfileCardCases() {
 
@@ -76,7 +76,7 @@ for (const connected of [false,true]) test(`Client connection indicator uses acc
 
 for (const withGoal of [false,true]) test(`Client reference sections retain their destinations ${withGoal}`,async({page},info)=>{
   await page.clock.setFixedTime(new Date('2026-09-24T09:00:00+03:00'))
-  await mockPilot(page,{fitLime:true,withGoal,workouts:[{...workout,status:'planned',title:'Верх тела',workoutDate:'2026-09-24',startTime:'14:00',completedAt:null}]})
+  await mockPilot(page,{fitLime:true,withGoal,workouts:[{...workout,status:'planned',title:'Верх тела',workoutDate:'2026-09-24',startTime:'14:00',completedAt:null},{...workout,id:'30000000-0000-4000-8000-0000000000f2',status:'planned',title:'Низ тела',workoutDate:'2026-09-30',startTime:'14:00',completedAt:null}]})
   await page.goto(`/clients/${clientId}`)
   const routes=page.getByRole('navigation',{name:'Разделы спортсмена'})
   await expect(routes.getByRole('link')).toHaveText(['Прогресс и замеры','История тренировок','Абонементы и оплаты'])
@@ -89,6 +89,12 @@ for (const withGoal of [false,true]) test(`Client reference sections retain thei
   await expect(planned).toContainText('Сегодня, 14:00')
   expect((await planned.boundingBox())!.height).toBe(94)
   await expect(page.locator('.goal-head h2 img')).toHaveCSS('width','24px')
+  if(withGoal) await expect(page.locator('.goal-title')).toHaveCSS('color','rgb(255, 255, 255)')
+  const future=page.locator('.client-detail-upcoming .card').nth(1)
+  await expect(future).toContainText('Низ тела')
+  await expect(future).toHaveCSS('background-color','rgb(26, 26, 28)')
+  await expect(future.locator('.client-profile-upcoming-arrow')).toHaveCSS('width','24px')
+  expect((await future.boundingBox())!.height).toBe(94)
   if(!withGoal) await expect(page.getByRole('link',{name:'Добавить цель',exact:true})).toHaveAttribute('href',`/clients/${clientId}/goal`)
   await page.getByText('Статистика, замеры и питание',{exact:true}).click()
   await expect(page.locator('.client-detail-snapshot')).toBeVisible()
@@ -164,6 +170,7 @@ test('Legacy goal saves nullable profile fields without renaming the client', as
   await expect(page.locator('.phone-frame')).toHaveClass(/keyboard-open/)
   await expect(page.locator('html')).toHaveCSS('--app-visible-height','440px')
   await page.evaluate(()=>document.fonts.ready)
+  await editor.evaluate((el:HTMLTextAreaElement)=>el.setSelectionRange(el.value.length,el.value.length))
   await editor.scrollIntoViewIfNeeded()
   // Measure typing after the viewport-opening transition has settled.
   await editor.evaluate(el=>new Promise<void>(resolve=>{
@@ -171,9 +178,10 @@ test('Legacy goal saves nullable profile fields without renaming the client', as
     const frame=()=>{const y=el.getBoundingClientRect().y;stable=Math.abs(y-previous)<.5?stable+1:0;previous=y;if(stable>=4)resolve();else requestAnimationFrame(frame)}
     requestAnimationFrame(frame)
   }))
+  await expect(editor).toBeFocused()
   const before=(await editor.boundingBox())!
-  await editor.press('End')
   await editor.press('Space')
+  await expect(editor).toHaveValue('Выносливость ')
   const after=(await editor.boundingBox())!
   expect(Math.abs(after.y-before.y)).toBeLessThanOrEqual(2)
   expect(after.y).toBeGreaterThanOrEqual(0)
@@ -204,6 +212,7 @@ for (const width of [375,390,430]) test(`Reference profile dimensions and direct
   const goal=page.locator('.client-profile-goal')
   const goalIcon=(await goal.locator('h2 img').boundingBox())!, goalTitle=(await goal.locator('.goal-title').boundingBox())!
   const add=goal.getByRole('link',{name:'Добавить цель',exact:true}), addBox=(await add.boundingBox())!
+  await expect(goal.locator('.goal-placeholder')).toHaveCSS('color','rgba(255, 255, 255, 0.2)')
   expect(goalIcon.x).toBe(20);expect(goalTitle.x).toBe(20);expect(addBox.x).toBe(20)
   await expect(add).toHaveCSS('color','rgb(209, 253, 45)')
   await expect(add).toHaveCSS('text-decoration-line','none')
@@ -249,6 +258,29 @@ test('Inline private note preserves the draft when microphone permission is deni
   await expect(editor).toHaveValue('Сохраняем набранный текст')
   await expect(editor).toBeEnabled()
   await expect(note.getByRole('button',{name:'Сохранить',exact:true})).toBeEnabled()
+  await expect(page.getByRole('dialog')).toHaveCount(0)
+})
+
+
+test('Relocated note microphone appends to current text, restores focus and supports undo',async({page})=>{
+  await mockPilot(page,{fitLime:true,withGoal:false,workouts:[]})
+  await mockClientStreamingVoice(page,'Добавлено голосом')
+  let writes=0
+  await page.route(`**/v1/clients/${clientId}/preferences`,async route=>{writes++;await route.fulfill({json:{client:{membershipVersion:2}}})})
+  await page.goto(`/clients/${clientId}`)
+  const note=page.locator('.client-profile-note'),editor=note.getByRole('textbox',{name:'Заметка',exact:true})
+  await editor.fill('Ручной текст')
+  await note.getByRole('button',{name:'Надиктовать заметку',exact:true}).click()
+  await expect(note.getByRole('button',{name:'Сохранить',exact:true})).toBeDisabled()
+  await expect(editor).toBeEnabled()
+  await editor.fill('Ручной текст. Дополнено вручную')
+  await note.getByRole('button',{name:/Завершить голосовой ввод/}).click()
+  await expect(editor).toHaveValue('Ручной текст. Дополнено вручную\nДобавлено голосом')
+  await expect(editor).toBeFocused()
+  await expect(note.getByRole('button',{name:'Сохранить',exact:true})).toBeEnabled()
+  await note.locator('.voice-input-status').getByRole('button',{name:'Отменить',exact:true}).click()
+  await expect(editor).toHaveValue('Ручной текст. Дополнено вручную')
+  expect(writes).toBe(0)
   await expect(page.getByRole('dialog')).toHaveCount(0)
 })
 
