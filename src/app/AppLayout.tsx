@@ -159,7 +159,7 @@ export function AppLayout() {
     monochromeTrainerToday && !trainerScheduleV2Route ? 'trainer-today-identity' : '',
     monochromeTrainerClients ? 'trainer-clients-identity' : '',
     monochromeTrainerClientDetail ? 'trainer-client-detail-identity' : '',
-    monochromeTrainerFinance ? 'trainer-finance-identity' : '',
+    monochromeTrainerFinance ? fitLimeShell ? 'finance-lime-shell' : 'trainer-finance-identity' : '',
     monochromeTrainerClientForm ? 'trainer-client-form-identity' : '',
     monochromeTrainerClientGoal ? 'trainer-client-goal-identity' : '',
     monochromeTrainerSchedule && !trainerScheduleV2Route ? 'trainer-schedule-identity' : '',
