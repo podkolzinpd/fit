@@ -28,6 +28,21 @@ function recognizer(overrides: Partial<SpeechRecognizer> = {}): SpeechRecognizer
 }
 
 describe('VoiceInputButton', () => {
+
+  it('keeps the reference microphone idle-only and restores it after transcription', async () => {
+    const user = userEvent.setup()
+    const onTranscript = vi.fn()
+    render(<VoiceInputButton variant="icon" idleIcon={<img src="/reference-mic.svg" alt="Reference microphone" />}
+      onTranscript={onTranscript} source="client_form" recorderFactory={() => recorder()}
+      recognizerFactory={() => recognizer()} decodeAudio={vi.fn().mockResolvedValue(new ArrayBuffer(4))} />)
+    expect(screen.getByRole('img', { name: 'Reference microphone' })).toBeVisible()
+    await user.click(screen.getByRole('button', { name: 'Надиктовать заметку' }))
+    expect(screen.queryByRole('img', { name: 'Reference microphone' })).not.toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: /Завершить голосовой ввод/ }))
+    await waitFor(() => expect(onTranscript).toHaveBeenCalledWith('Жим лёжа 40 килограмм'))
+    expect(screen.getByRole('img', { name: 'Reference microphone' })).toBeVisible()
+  })
+
   it('records, transcribes and returns editable text', async () => {
     const user = userEvent.setup()
     const stop = vi.fn().mockResolvedValue(new Blob(['audio']))

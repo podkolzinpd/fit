@@ -31,6 +31,7 @@ interface VoiceInputButtonProps {
   showTranscriptStatus?: boolean
   showCancel?: boolean
   /** Idle-only extra control rendered inside the hero card's label area (e.g. a text-entry alternative). */
+  idleIcon?: ReactNode
   secondaryAction?: ReactNode
 }
 
@@ -56,6 +57,7 @@ export function VoiceInputButton({
   showTranscriptStatus = true,
   showCancel = false,
   secondaryAction,
+  idleIcon,
 }: VoiceInputButtonProps) {
   const [phase, setPhase] = useState<VoiceInputPhase>('idle')
   const [elapsedSeconds, setElapsedSeconds] = useState(0)
@@ -318,7 +320,7 @@ export function VoiceInputButton({
       disabled={(busy && phase !== 'requesting') || disabled}
       onClick={() => { if (phase === 'requesting') { cancelRecording(); return }; if (recording) { void (streamingRef.current ? finishStreaming() : finishRecording()); return }; trackGoal(`voice_note_start_click_${source}`); void startRecording() }}
     >
-      {recording || phase === 'requesting' ? <StopIcon /> : <MicIcon />}
+      {recording || phase === 'requesting' ? <StopIcon /> : idleIcon ?? <MicIcon />}
     </button>
     {message && <VoiceInputStatus message={message} undo={undo} onUndo={() => { undo?.(); setUndo(null); setMessage(null) }} onDismiss={() => setMessage(null)} />}
   </div>
