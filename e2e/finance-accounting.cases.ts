@@ -123,15 +123,22 @@ export function financeAccountingCases() {
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
       await page.screenshot({ path: info.outputPath(`mixed-debt-${width}.png`), fullPage: true })
     }
-    await mockPilot(page, { role: 'client', clientLime: true })
+    await mockPilot(page, { role: 'client', profileId: clientId, clientLime: true })
     const service = { ...ledger.packages[1]!, priceCents: 10001, paidCents: 10000, dueCents: 1, paymentStatus: 'partial' }
     await page.route('**/v1/me/finance', route => route.fulfill({ json: { finance: { trainers: [{
       trainerId: coach, trainerName: 'Тестовый тренер', packages: [service], payments: [],
     }] } } }))
-    await page.setViewportSize({ width: 390, height: 844 })
-    await page.goto('/me/finance')
-    await expect(page.locator('.client-finance-package-money')).toContainText(/0,01\s₽/)
-    await page.screenshot({ path: info.outputPath('client-one-kopeck.png'), fullPage: true })
+    for (const theme of ['light', 'dark']) {
+      await page.evaluate(({ id, theme }) => localStorage.setItem(`fit.clientLime.theme.${id}`, theme), { id: clientId, theme })
+      await page.goto('/me/finance')
+      await expect(page.locator('.phone-frame')).toHaveClass(/fit-client-lime/)
+      await expect(page.locator('.client-finance-package-money')).toContainText(/0,01\s₽/)
+      for (const width of [320, 390, 430, 1440]) {
+        await page.setViewportSize({ width, height: 844 })
+        expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+        await page.screenshot({ path: info.outputPath(`client-one-kopeck-${theme}-${width}.png`), fullPage: true })
+      }
+    }
   })
 
   // Payment and service have separate endpoints and native date/amount layouts.
