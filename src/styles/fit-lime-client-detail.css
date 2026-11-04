@@ -66,7 +66,7 @@
   font-weight: 500;
 }
 .fit-lime-shell.trainer-client-detail-identity .client-detail-routes a:hover,
-.fit-lime-shell.trainer-client-detail-identity .client-detail-routes a:focus-visible { border-color: #729b27; background: var(--lime-surface-raised) }
+.fit-lime-shell.trainer-client-detail-identity .client-detail-routes a:focus-visible { border-color: color-mix(in srgb, var(--lime-accent, var(--fit-brand-accent)) 55%, #000); background: var(--lime-surface-raised) }
 .fit-lime-shell.trainer-client-detail-identity .client-detail-routes a svg { color: var(--lime-text-secondary) }
 .fit-lime-shell.trainer-client-detail-identity .client-detail-page .goal-block,
 .fit-lime-shell.trainer-client-detail-identity .client-detail-page .goal-block.client-note-block,
