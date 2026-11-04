@@ -22,6 +22,40 @@ export function readAccountLinkTargets(raw) {
   return value
 }
 
+// Evidence only: discovering a retained mapping never authorizes an actor.
+// Callers must already hold a READ ONLY transaction. Both direct profile and
+// provider-subject mappings are retained by existing verified-login features.
+export async function readRetainedLoginBindings(client, hashes) {
+  if (!Array.isArray(hashes) || hashes.length < 1 || hashes.length > 8
+    || hashes.some(value => typeof value !== 'string' || !sha256.test(value))) throw Error('account_links_targets_invalid')
+  const state = (await client.query("select current_user username,current_setting('transaction_read_only') readonly")).rows[0]
+  if (state?.readonly !== 'on') throw Error('account_links_readonly_required')
+  const tables = bound((await client.query(`select c.relname name,
+    case when exists(select 1 from pg_attribute a where a.attrelid=c.oid and a.attname='profile_id' and not a.attisdropped)
+      then 'profile' else 'subject' end binding_kind
+    from pg_class c join pg_namespace n on n.oid=c.relnamespace
+    where n.nspname='app_private' and c.relkind='r'
+    and exists(select 1 from pg_attribute a where a.attrelid=c.oid and a.attname='login_sha256' and not a.attisdropped)
+    and exists(select 1 from pg_attribute a where a.attrelid=c.oid and a.attname in('profile_id','subject_sha256') and not a.attisdropped)
+    order by c.relname limit 21`)).rows, 20)
+  const bindings = []
+  for (const table of tables) {
+    const sql = table.binding_kind === 'subject'
+      ? `select identity.profile_id,retained.login_sha256 from app_private.${quote(table.name)} retained
+        join app_private.auth_identities identity on identity.provider='yandex'
+          and identity.provider_subject_sha256=retained.subject_sha256
+        where retained.login_sha256=any($1::text[]) limit 21`
+      : `select profile_id,login_sha256 from app_private.${quote(table.name)}
+        where login_sha256=any($1::text[]) and profile_id is not null limit 21`
+    const rows = bound((await client.query(sql, [[...new Set(hashes)]])).rows, 20)
+    if (rows.some(row => !uuid.test(row.profile_id ?? '') || !hashes.includes(row.login_sha256))) {
+      throw Error('account_links_scope_exceeded')
+    }
+    bindings.push(...rows.map(row => ({ ...row, source: table.name })))
+  }
+  return { tables: tables.map(table => table.name), bindings }
+}
+
 // No names, contacts, IDs, login/subject hashes or session tokens leave this transaction.
 export async function inspectAccountLinks(client, targets, legacyMatches) {
   await client.query('begin transaction isolation level repeatable read read only')
@@ -31,19 +65,7 @@ export async function inspectAccountLinks(client, targets, legacyMatches) {
     const state = (await client.query("select current_user username,current_setting('transaction_read_only') readonly")).rows[0]
     if (state?.username !== 'fit_owner' || state.readonly !== 'on') throw Error('account_links_readonly_required')
     const hashes = [...new Set([...targets.emailHashes, ...targets.loginHashes])]
-    // Discover every retained login-binding table by its exact column contract.
-    // Only app_private base tables are accepted; identifiers come from pg_catalog.
-    const tables = bound((await client.query(`select c.relname name from pg_class c join pg_namespace n on n.oid=c.relnamespace
-      where n.nspname='app_private' and c.relkind='r'
-      and exists(select 1 from pg_attribute a where a.attrelid=c.oid and a.attname='login_sha256' and not a.attisdropped)
-      and exists(select 1 from pg_attribute a where a.attrelid=c.oid and a.attname='profile_id' and not a.attisdropped)
-      order by c.relname limit 21`)).rows, 20)
-    const bindings = []
-    for (const table of tables) {
-      const rows = bound((await client.query(`select profile_id,login_sha256 from app_private.${quote(table.name)}
-        where login_sha256=any($1::text[]) and profile_id is not null limit 21`, [hashes])).rows, 20)
-      bindings.push(...rows.map(row => ({ ...row, source: table.name })))
-    }
+    const { bindings } = await readRetainedLoginBindings(client, hashes)
     const ids = [...new Set([...legacyMatches.map(row => row.id), ...bindings.map(row => row.profile_id)])].sort()
     if (ids.length > 10 || ids.some(id => !uuid.test(id))) throw Error('account_links_scope_exceeded')
     const labels = new Map(ids.map((id, i) => [id, `account${i + 1}`]))
