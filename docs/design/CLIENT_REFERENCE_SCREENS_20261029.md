@@ -3840,3 +3840,51 @@ Chromium/WebKit. Новый дизайн и второй Picker/механика
 Открыто: реализация, локальные/CI проверки, сводка перед выпуском.
 Дальше: подготовить reviewable PR безmerge/deploy и запросить разрешение
 только после представления конкретного результата и ограничений проверки.
+
+
+### Итерация 116 — 2026-11-04 — Codex / OpenAI
+
+MC2.1 реализован, без разрешения сливать/публиковать. Runtime 7bd2105e0f6e559a74e6e7ccab001d9461cadf78 включает
+actualmain05c5ed1468577a8e6bea06f44901e405f2232e37 обычным merge; чужие изменения
+кабинета1973 сохранены. Локальные проверки ниже проведены на791c+нашихruntime
+изменениях до этого merge; новый exact-head CI обязателен, их не переносим на
+непроверенный объединённый SHA. У1973 нет пересечения с кодом каталога.
+
+Сделано: client-exercise-catalog.css владеет20группами ранее наследуемого
+оформления controls/header/search/list/selection/empty state, с Lime tokens.
+AppLayout добавляет собственный scope только клиентскому Lime в entry routes;
+styles.css исключает вложенный client-lime-catalog из старого editor skin.
+:where сохраняет specificity прежних потребителей. Новый CSS подключён сразу
+после базового, до действующих SVG/Lime overrides. Общие sheet/modal layout,
+Live, поведение ExercisePicker/обработчики/DOM форм/flags/API/Onest не меняются.
+Удалены17исходных веток селекторов пяти неиспользуемых классов: picker-muscle,
+picker-equipment-option,picker-create,picker-muscles,picker-equipment.
+Проверены точные имена во всех src TS/TSX: нет renderer consumers; похожие
+picker-muscle-filter-strip/client-picker-create не удалены. У остальных старых
+правил есть legacy/trainer потребители: они сохранены с прежней specificity.
+
+Доказательство: новая browser probe помечает действующие legacy editor control/
+catalog CSS rules и проверяет отсутствие их влияния внутри Lime каталога.
+На исходной production-сборке8failed/28passed(36cases); падения именно new/today
+в обеих темах/движках, Live без этого skin проходил. Assertions не ослаблялись.
+После реализации все12изоляционных и финальный применимый набор84/84(2.8m)
+Chromium/WebKit passed,retries0. Покрыты search/filter/reset,empty/create/retry,
+multiple/add,replace/cancel/error,draft,keyboardfirsttap,headerdrag/nested views,
+coachcatalog,Livefocus/density/row/exercise swipes и unconfirm/rest/reload.
+Компонентные ExercisePicker+AppLayout150/150(11.7s),build/tsc/startup-photo и
+lint passed. Lint нашёл только unsafe SVG className в новом diagnostic snapshot;
+заменён на getAttribute('class'), runtime/проверяемое поведение не менялись.
+
+До/после48computed-state samples(13CSSсвойств всех вложенных элементов) совпали.
+48PNGпар:44точноидентичны;4различаются только кадром движущейся Aerobike
+миниатюры WebKitLive, bbox67,770–237,941 внутриimg, дизайн/геометрия совпали.
+PNG тёмного/светлого каталога/фильтров просмотрены. Baseline build неизменённо
+сохранён в/tmp/fit-mc2-baseline-dist; снимки/JSON:
+/tmp/fit-mc2-final-baseline-results,/tmp/fit-mc2-final-regression-results,
+/tmp/fit-mc2-visual-comparison.json. Ни масок, ни обновления золотых снимков,
+ни новых зависимостей/изменения CI нет. Реальные production APIwrites не делались.
+
+Открыто: полный CI окончательного PR, затем сводка владельцу и его явное
+разрешение на выпуск. ФизическийiPhone/публичнаяприёмка изменённойверсии не
+проверены: публикации не было. Другие этапы очистки не начинаются.
+Дальше: PR/CI→готовый результат/ошибки/сценарии проверки→ожидание разрешения.
