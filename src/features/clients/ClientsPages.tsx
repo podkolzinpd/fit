@@ -1,3 +1,4 @@
+import clientGoalIcon from '../../assets/client-profile/goal.svg'
 import connectedClientIcon from '../../assets/client-profile/connected.svg'
 import disconnectedClientIcon from '../../assets/client-profile/disconnected.svg'
 import clientScheduleIcon from '../../assets/client-profile/schedule.svg'
@@ -331,7 +332,7 @@ function targetHint(days: number): string {
   return `осталось ${days} дн.`
 }
 
-function ClientGoalBlock({ client }: { client: Client }) {
+function ClientGoalBlock({ client, reference = false }: { client: Client; reference?: boolean }) {
   const { goals: goalsRepository } = useDataBackend()
   const { actor } = useAuth()
   const goalQuery = useQuery({ queryKey: ['client-goal', client.id], queryFn: () => goalsRepository.get(client.id) })
@@ -339,6 +340,8 @@ function ClientGoalBlock({ client }: { client: Client }) {
   const form = useForm<{ goal: string }>({ defaultValues: { goal: client.goal ?? '' } })
   const mutation = useSaveClient(client, () => setEditingText(false))
   const startEditing = () => { form.reset({ goal: client.goal ?? '' }); setEditingText(true) }
+
+  if (reference && (goalQuery.isLoading || goalQuery.error)) return <ClientDetailSourceState label="цель" loading={goalQuery.isLoading} error={goalQuery.error} onRetry={() => void goalQuery.refetch()} />
 
   // Цель как сущность (client_goals) — приоритетна: заголовок + дата + текущий этап.
   const goal = goalQuery.data
@@ -348,12 +351,13 @@ function ClientGoalBlock({ client }: { client: Client }) {
     const stage = currentStage(goal, today)
     const progress = stageProgress(goal, today)
     return <section className="goal-block">
-      <div className="goal-head"><h2>Цель</h2><Link className="link" to={`/clients/${client.id}/goal`}><span>Открыть</span><ChevronRightIcon /></Link></div>
+      <div className="goal-head"><h2>{reference && <img src={clientGoalIcon} width={16} height={16} alt="" />}Цель</h2>{!reference && <Link className="link" to={`/clients/${client.id}/goal`}><span>Открыть</span><ChevronRightIcon /></Link>}</div>
       <p className="goal-title">{goal.title}</p>
       {goal.targetDate && <p className="goal-deadline">До {formatLocalDateShort(localDate(goal.targetDate))}{days !== null ? ` · ${targetHint(days)}` : ''}</p>}
       {progress && progress.total > 0 && <p className="goal-stage-line">
         {stage ? <><span>Этап {progress.index} из {progress.total}</span><span className="goal-stage-title">«{stage.title}»</span></> : <span>{progress.total} {progress.total === 1 ? 'этап' : 'этапа'}, между периодами</span>}
       </p>}
+      {reference && <Link className="link" to={`/clients/${client.id}/goal`}>Открыть</Link>}
     </section>
   }
 
@@ -364,6 +368,12 @@ function ClientGoalBlock({ client }: { client: Client }) {
       {mutation.error && <p className="error">{mutation.error.message}</p>}
       <div className="actions"><button type="button" className="secondary" onClick={() => setEditingText(false)}>Отмена</button><button className="primary" disabled={mutation.isPending}>Сохранить</button></div>
     </form>
+  </section>
+  if (reference) return <section className="goal-block client-profile-goal">
+    <div className="goal-head"><h2><img src={clientGoalIcon} width={16} height={16} alt="" /> Цель</h2></div>
+    <p className={client.goal ? 'goal-title' : 'goal-title goal-placeholder'}>{client.goal || 'Поставьте цель, чтобы следить за прогрессом в тренировках'}</p>
+    {client.goal && <button type="button" className="link" onClick={startEditing}>Изменить</button>}
+    <Link className="link" to={`/clients/${client.id}/goal`}>{client.goal ? 'Добавить этапы' : 'Добавить цель'}</Link>
   </section>
   return <section className="goal-block">
     <div className="goal-head"><h2>Цель</h2><button type="button" className="link" onClick={startEditing}>{client.goal ? 'Изменить' : '＋ Добавить'}</button></div>
@@ -466,6 +476,7 @@ export function ClientDetailPage() {
     <AsyncView loading={query.isLoading} error={query.error} onRetry={() => void query.refetch()}>{query.data && <>
       {openChat.error && <p role="alert" className="error">Не удалось открыть чат. Повторите действие в меню.</p>}
       {fitLimePilot && <ClientProfileHeader client={query.data} />}
+      {!fitLimePilot && <>
       <section className="client-detail-snapshot" aria-label="Сводка по спортсмену">
         <p className="client-detail-vitals">
           <span><span className="sr-only">Возраст: </span>{query.data.ageYears ? `${query.data.ageYears} лет` : 'Возраст не указан'}</span>
@@ -484,6 +495,7 @@ export function ClientDetailPage() {
       {progress.data && <InBodyProgressCard entries={progress.data} compact />}
       <ClientDetailSourceState label="данные InBody" loading={progress.isLoading} error={progress.error} onRetry={() => void progress.refetch()} />
       {stats.data?.needsAttention && <p className="attention">Давно не тренировался</p>}
+      </>}
       <div className="client-detail-actions">
         {actor?.role === 'trainer' && <ChatThreadsNotice loading={threads.isLoading} error={threads.error} onRetry={() => void threads.refetch()} />}
         {!fitLimePilot && actor?.role === 'trainer' && canOpenClientChat(query.data, thread) && <ChatStartButton clientId={clientId} trainerId={thread?.trainerId ?? actor.userId} conversationId={thread?.conversationId} className="secondary wide client-detail-message" />}
@@ -494,17 +506,57 @@ export function ClientDetailPage() {
           <ChevronRightIcon className="client-detail-chevron" />
         </Link>
         {fitLimePilot && !query.data.archivedAt && query.data.hasAccount === false && <InvitationShareButton clientId={clientId} targetRole="client" label="Пригласить в приложение" className="client-profile-invite" />}
+
+        {!fitLimePilot && <>
         <nav className="client-detail-routes" aria-label="Разделы спортсмена">
           <Link to={`/clients/${clientId}/workouts`}><HistoryIcon /><span>История тренировок</span></Link>
           <Link to={`/progress/${clientId}`}><AnalyticsIcon /><span>Прогресс и замеры</span></Link>
           {financePilot && <Link to={`/clients/${clientId}/finance`}><RecordIcon /><span>Абонементы и оплаты</span></Link>}
         </nav>
+        </>}
       </div>
-      <ClientGoalBlock client={query.data} />
+      <ClientGoalBlock client={query.data} reference={fitLimePilot} />
+      {!fitLimePilot && <>
       {query.data.hasAccount && !query.data.archivedAt && <NutritionSummary clientId={clientId} />}
+      </>}
+      {fitLimePilot && <>
+        <nav className="client-detail-routes" aria-label="Разделы спортсмена">
+          <Link to={`/progress/${clientId}`}><AnalyticsIcon /><span>Прогресс и замеры</span><ChevronRightIcon className="client-profile-route-arrow" /></Link>
+          <Link to={`/clients/${clientId}/workouts`}><HistoryIcon /><span>История тренировок</span><ChevronRightIcon className="client-profile-route-arrow" /></Link>
+          {financePilot && <Link to={`/clients/${clientId}/finance`}><RecordIcon /><span>Абонементы и оплаты</span><ChevronRightIcon className="client-profile-route-arrow" /></Link>}
+        </nav>
+      </>}
       {fitLimePilot && <ClientDetailSourceState label="ближайшие тренировки" loading={workouts.isLoading} error={workouts.error} onRetry={() => void workouts.refetch()} />}
+      {fitLimePilot && upcoming.length > 0 && <section className="client-detail-upcoming"><h2><ScheduleIcon /> {fitLimePilot ? 'Запланировано' : 'Предстоит'}</h2><div className="cards">{upcoming.map((workout) => <Link className={`card${workout.workoutDate === today ? ' client-profile-upcoming-today' : ''}`} key={workout.id} to={`/workouts/${workout.id}`}><div>
+        <small className="client-profile-workout-date">{workout.workoutDate === today ? 'Сегодня' : formatLocalDate(workout.workoutDate)}{workout.startTime ? `, ${workout.startTime.slice(0,5)}` : ''}</small>
+        <strong>{workout.title?.trim() || 'Тренировка'}</strong>
+        {fitLimePilot ? <small className="client-profile-workout-count">{workout.exercises.length} упр.{workout.status === 'in_progress' ? ' · Идёт' : ''}</small> : <WorkoutExercisesSummary workout={workout} />}
+        {workout.stageTitle && <p className="stage-tag">🎯 {workout.stageTitle}</p>}</div><ChevronRightIcon /></Link>)}</div></section>}
+      {!fitLimePilot && <>
       {upcoming.length > 0 && <section className="client-detail-upcoming"><h2>Предстоит</h2><div className="cards">{upcoming.map((workout) => <Link className="card" key={workout.id} to={`/workouts/${workout.id}`}><div><strong>{formatLocalDate(workout.workoutDate)}{workout.startTime ? ` · ${workout.startTime.slice(0, 5)}` : ''}</strong><WorkoutExercisesSummary workout={workout} />{workout.stageTitle && <p className="stage-tag">🎯 {workout.stageTitle}</p>}</div><span className={`badge ${workout.status}`}>{workout.status === 'in_progress' ? 'Идёт' : 'План'}</span></Link>)}</div></section>}
+      </>}
       {fitLimePilot && workouts.isSuccess && upcoming.length === 0 && <p className="client-detail-source-state">Ближайших тренировок нет</p>}
+      {fitLimePilot && <details className="client-profile-secondary"><summary>Статистика, замеры и питание</summary>
+      <section className="client-detail-snapshot" aria-label="Сводка по спортсмену">
+        <p className="client-detail-vitals">
+          <span><span className="sr-only">Возраст: </span>{query.data.ageYears ? `${query.data.ageYears} лет` : 'Возраст не указан'}</span>
+          <span><span className="sr-only">Рост: </span>{query.data.heightCm ? `${query.data.heightCm} см` : 'Рост не указан'}</span>
+          <span><span className="sr-only">Вес: </span>{query.data.currentWeightKg ? `${query.data.currentWeightKg.toLocaleString('ru-RU', { maximumFractionDigits: 1 })} кг` : 'Вес не указан'}</span>
+          <span>ИМТ {bmiLabel(query.data.heightCm, query.data.currentWeightKg).replace('.', ',')}</span>
+        </p>
+        {fitLimePilot && <ClientDetailSourceState label="статистику тренировок" loading={stats.isLoading} error={stats.error} onRetry={() => void stats.refetch()} />}
+        {stats.data && <div className="client-detail-activity">
+          <p><strong>{workoutCountLabel(stats.data.doneCount)}</strong><span>проведено за всё время</span></p>
+          <p>{stats.data.completionPercent === null
+            ? <><strong>Нет данных</strong><span>о выполнении тренировок</span></>
+            : <><strong>{stats.data.completionPercent}%</strong><span>прошедших тренировок выполнено</span></>}</p>
+        </div>}
+      </section>
+      {progress.data && <InBodyProgressCard entries={progress.data} compact />}
+      <ClientDetailSourceState label="данные InBody" loading={progress.isLoading} error={progress.error} onRetry={() => void progress.refetch()} />
+      {stats.data?.needsAttention && <p className="attention">Давно не тренировался</p>}
+      {query.data.hasAccount && !query.data.archivedAt && <NutritionSummary clientId={clientId} />}
+      </details>}
       <ClientNoteBlock client={query.data} />
       <div className="page-actions" id="client-profile-invitations">
         {manageInvitations && <button type="button" className="link" onClick={() => setManageInvitations(false)}>Скрыть приглашения</button>}

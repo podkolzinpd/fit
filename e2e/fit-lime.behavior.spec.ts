@@ -1589,6 +1589,7 @@ test('Fit Lime client card isolates secondary data failures and retries', { tag:
   await page.goto(`/clients/${clientId}`)
   await expect(page.getByRole('heading', { name: 'Алексей Смирнов' })).toBeVisible()
   await expect(page.getByRole('link', { name: /Запланировать тренировку/ })).toBeVisible()
+  await page.getByText('Статистика, замеры и питание', { exact: true }).click()
   await expect(page.getByRole('alert').filter({ hasText: 'Не удалось загрузить статистику тренировок' })).toBeVisible({ timeout: 15_000 })
   await expect(page.getByRole('alert').filter({ hasText: 'Не удалось загрузить приглашения и права доступа' })).toBeVisible({ timeout: 15_000 })
   backend.setTrainingDataFailure(false)
