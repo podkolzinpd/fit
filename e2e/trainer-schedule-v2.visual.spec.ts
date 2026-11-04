@@ -3188,7 +3188,7 @@ for (const profileId of [trainerId, '10000000-0000-4000-8000-000000000010']) {
       }
     })
     await page.goto(`/clients/${clientId}/finance`)
-    await page.getByRole('button', { name: 'Новая', exact: true }).click()
+    await page.getByRole('button', { name: 'Новая услуга', exact: true }).click()
     await expect(page.getByRole('group', { name: 'Стоимость и оплата' })).toBeVisible()
     await expect(page.getByLabel('Уже проведено, занятий', { exact: true })).not.toBeVisible()
     await page.getByLabel('Стоимость, ₽', { exact: true }).fill('30000')
@@ -3233,7 +3233,7 @@ for (const fitLime of [false, true]) for (const theme of ['light', 'dark']) for 
     await page.addInitScript((value) => localStorage.setItem('fit.appTheme', value), theme)
     const { ledger } = await mockFinancePaymentLifecycle(page)
     await page.goto(`/clients/${clientId}/finance`)
-    await page.getByRole('button', { name: 'Новая', exact: true }).click()
+    await page.getByRole('button', { name: fitLime ? 'Новая услуга' : 'Новая', exact: true }).click()
     await page.getByLabel('Название', { exact: true }).fill('Персональные тренировки с длинным названием услуги')
     const cost = page.getByLabel('Стоимость, ₽', { exact: true })
     const paid = page.getByLabel('Уже оплачено, ₽', { exact: true })
