@@ -108,3 +108,22 @@ fixture-сборке (нет Compact radio); исправлен только л�
 4Chromium visual)14.1s; отдельно4/4WebKit visual,0retry/skips. Production
 build/startup/fonts2/2, ESLint/docs/diff passed; WebKit PNG просмотрен/сохранён.
 Дальше: normal push исправления и fresh source CI.
+
+## Итерация 6 — 04.11.2026 — Codex / OpenAI
+
+Задача: необходимая интеграция фактического squash1979/d7de75bb.
+Расхождения: actualmain изменился во время CI483; его старый результат не
+заменяет проверку объединённого source. Решение: ordinary merge без конфликтов,
+обе истории сохранены.10incomingfiles213+/19-: финансовые Lime стили/карточки/
+payments/tests/журнал, scopedAppLayout и import. Наши header/photo/API/migration188
+сохранены; package/lock/android/nativepolicy и SQL входящего main не менялись.
+Проверка:13componentpassed, split/partition8passed с новым финансовым сценарием,
+production build/startup/fonts2/2 passed;14/14header/settings/visual browser
+Chromium/WebKit19.7s,0retry/skips. Правила actualmain AGENTS/workflow/contracts
+сверены черезGit, новых инструкций нет. CI483 metadata сохранены перед заменой.
+Дополнительно отдельный own-profile acceptance harness прошёл14/14 локально
+11.3s под запретом realAPIwrites; inventory стадий6/8/14 exactsource проверен.
+Это проверка harness, не публикация/не фактическая production-приёмка.
+Открыто: новый fullsourceCI после merge; actual1979 ещё проходит CI/выпуск.
+Дальше: normal push необходимого объединения и наблюдение точных новых runs,
+без duplicate dispatch и без занятия чужого production окна.
