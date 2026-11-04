@@ -71,7 +71,7 @@ function Offices({ data }: { data: CorporateAdminBundle }) {
   const [showArchive, setShowArchive] = useState(false)
   const save = useSave()
   const [confirm, confirmation] = useConfirm()
-  const select = (office: CorporateOffice | null) => { save.reset(); setSelected(office) }
+  const select = (office: CorporateOffice | null) => { save.reset(); setSelected(office ? { ...office } : null) }
   const archive = async (office: CorporateOffice) => {
     if (!await confirm({ message: office.archived ? `Восстановить офис «${office.name}»?` : `Архивировать офис «${office.name}»? История сохранится.`, confirmLabel: office.archived ? 'Восстановить' : 'Архивировать' })) return
     save.mutate({ kind: 'office', value: { ...office, archived: !office.archived } })
@@ -93,12 +93,18 @@ function Offices({ data }: { data: CorporateAdminBundle }) {
 }
 
 function OfficeForm({ office, onClose }: { office: CorporateOffice; onClose: () => void }) {
+  const editorRef = useRef<HTMLFormElement>(null)
+  const headingRef = useRef<HTMLHeadingElement>(null)
+  useLayoutEffect(() => {
+    editorRef.current?.scrollIntoView({ block: 'start', behavior: 'instant' })
+    headingRef.current?.focus({ preventScroll: true })
+  }, [office])
   const form = useForm({ defaultValues: office })
   const save = useSave()
-  return <form className="corporate-admin-editor" aria-label="Данные офиса" onSubmit={form.handleSubmit(async value => {
+  return <form ref={editorRef} className="corporate-admin-editor" aria-label="Данные офиса" onSubmit={form.handleSubmit(async value => {
     try { await save.mutateAsync({ kind: 'office', value }); onClose() } catch { /* The mutation renders its error and retains the form. */ }
   })}>
-    <h3>{office.version ? 'Изменить офис' : 'Новый офис'}</h3>
+    <h3 ref={headingRef} tabIndex={-1}>{office.version ? 'Изменить офис' : 'Новый офис'}</h3>
     <fieldset disabled={save.isPending}>
       <Field label="Город" error={form.formState.errors.city?.message}><input autoFocus {...form.register('city', { required: 'Укажите город', maxLength: { value: 100, message: 'Не более 100 символов' }, validate: v => Boolean(v.trim()) || 'Укажите город' })} maxLength={100} /></Field>
       <Field label="Название офиса" error={form.formState.errors.name?.message}><input {...form.register('name', { required: 'Укажите название', validate: v => Boolean(v.trim()) || 'Укажите название' })} maxLength={160} /></Field>

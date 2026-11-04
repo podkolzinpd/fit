@@ -1,7 +1,7 @@
-import { useRef, useState, type PropsWithChildren } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState, type PropsWithChildren } from 'react'
 import { useForm, useWatch } from 'react-hook-form'
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
+import { Link, useBeforeUnload, useBlocker, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../../app/auth-context'
 import { isFitLimeEnabled } from '../../app/fit-lime'
 import { CorporateServiceError, corporateServiceKind, corporateServicesRepository as repository, type CorporateService, type CorporateServiceKind, type ServiceCursor, type ServiceDraft, type ServiceOffice } from '../../data/repositories/corporate-services.repository'
@@ -10,9 +10,9 @@ import { currentTimeInTimeZone, formatLocalDate, localDate, todayInTimeZone } fr
 import { AsyncView, EmptyState, Field, Page, SaveStatus, StatePanel, useConfirm } from '../../shared/ui'
 import { ServicePeriod } from './ServicePeriod'
 import { serviceInstant, serviceKinds, serviceLabels, servicePeriod, serviceTimeLabel } from './service-time'
+import { historyRange, rangeSearch, savedRange, servicesRoot as root } from './service-navigation'
 import './services.css'
 
-const root = '/profile/yandex-services'
 const accessKey = (id?: string) => ['corporate-services-access', id]
 function useServiceAccess() {
   const { actor } = useAuth()
@@ -36,28 +36,32 @@ export function CorporateServicesPage() {
 }
 function ServicesWorkspace() {
   const { actor } = useAuth()
-  const [params] = useSearchParams()
+  const [params, setParams] = useSearchParams()
   const zone = actor!.timezone
-  const [range, setRange] = useState(() => servicePeriod(zone, 'month'))
-  const history = useInfiniteQuery({ queryKey: ['corporate-services', actor!.userId, range], queryFn: ({ pageParam }) => repository.list(range, pageParam), initialPageParam: undefined as ServiceCursor | undefined, getNextPageParam: page => page.nextCursor ?? undefined, retry: false })
+  const range = historyRange(params, zone)
+  const setRange = (value: typeof range) => setParams(rangeSearch(value), { replace: true })
+  const history = useInfiniteQuery({ queryKey: ['corporate-services', actor!.userId, range], queryFn: ({ pageParam }) => repository.list(range, pageParam), initialPageParam: undefined as ServiceCursor | undefined, getNextPageParam: page => page.nextCursor ?? undefined, retry: false, staleTime: 0, refetchOnMount: 'always' })
   const rows = history.data?.pages.flatMap(page => page.records)
   const effectiveZone = history.data?.pages[0]?.timeZone ?? zone
   return <div className="corporate-service-workspace">
     <p className="corporate-service-note">Отмечайте услуги, оказанные сотрудникам Яндекса. Регистрация посетителя не нужна.</p>
-    <div className="corporate-service-actions" aria-label="Отметить услугу">{serviceKinds.map(kind => <Link className="secondary" key={kind} to={`${root}/new?kind=${kind}`}>{serviceLabels[kind]}</Link>)}</div>
+    <div className="corporate-service-actions" aria-label="Отметить услугу">{serviceKinds.map(kind => <Link className="secondary" key={kind} to={`${root}/new?kind=${kind}&${rangeSearch(range)}`}>{serviceLabels[kind]}</Link>)}</div>
     {params.get('saved') === '1' && <SaveStatus status="saved" />}
-    <section className="corporate-service-history"><div className="corporate-service-heading"><h2>Мои услуги</h2><button className="secondary" type="button" disabled={history.isFetching} onClick={() => void history.refetch()}>Обновить</button></div><ServicePeriod range={range} zone={effectiveZone} onChange={setRange} />
+    <section className="corporate-service-history"><div className="corporate-service-heading"><h2>Мои услуги</h2><button className="secondary" type="button" disabled={history.isFetching} onClick={() => void history.refetch()}>Обновить</button></div><ServicePeriod key={rangeSearch(range)} range={range} zone={effectiveZone} onChange={setRange} />
       <p className="corporate-service-note">Время аккаунта: {effectiveZone}</p>
-      <AsyncView loading={history.isPending} error={history.error} onRetry={() => void history.refetch()}>
-        {rows?.length ? <ul className="corporate-service-list">{rows.map(row => <li key={row.id}><div><strong>{serviceLabels[row.kind]}</strong><p>{row.city} · {row.officeName}</p><p>{serviceTimeLabel(row.occurredAt, effectiveZone)}</p>{row.voidedAt && <p>Отменена · не входит в статистику</p>}</div><Link className="secondary" to={`${root}/${row.id}`}>{row.voidedAt ? 'История' : 'Исправить'}</Link></li>)}</ul> : rows && <EmptyState title="За этот период услуг нет" description="Отметьте оказанную услугу или выберите другой период." />}
+      <AsyncView loading={history.isPending || history.isRefetching} error={history.error} onRetry={() => void history.refetch()}>
+        {rows?.length ? <ul className="corporate-service-list">{rows.map(row => <li key={row.id}><div><strong>{serviceLabels[row.kind]}</strong><p>{row.city} · {row.officeName}</p><p>{serviceTimeLabel(row.occurredAt, effectiveZone)}</p>{row.voidedAt && <p>Отменена · не входит в статистику</p>}</div><Link className="secondary" to={`${root}/${row.id}?${rangeSearch(range)}`}>{row.voidedAt ? 'История' : 'Исправить'}</Link></li>)}</ul> : rows && <EmptyState title="За этот период услуг нет" description="Отметьте оказанную услугу или выберите другой период." />}
       </AsyncView>
-      {history.hasNextPage && <button type="button" className="secondary" disabled={history.isFetchingNextPage} onClick={() => void history.fetchNextPage()}>{history.isFetchingNextPage ? 'Загружаем…' : 'Показать ещё'}</button>}
+      {history.hasNextPage && <button type="button" className="secondary" disabled={history.isFetching} onClick={() => void history.fetchNextPage()}>{history.isFetchingNextPage ? 'Загружаем…' : 'Показать ещё'}</button>}
     </section>
   </div>
 }
 export function CorporateServiceRecordPage() {
   const { id } = useParams()
-  return <Page title={id ? 'Запись услуги' : 'Отметить услугу'} back={root} swipeBack className="corporate-services-page ym-hide-content"><ServiceGate><RecordLoader id={id} /></ServiceGate></Page>
+  const { actor } = useAuth()
+  const [params] = useSearchParams()
+  const back = `${root}?${rangeSearch(historyRange(params, actor?.timezone ?? 'Europe/Moscow'))}`
+  return <Page title={id ? 'Запись услуги' : 'Отметить услугу'} back={back} swipeBack className="corporate-services-page ym-hide-content"><ServiceGate><RecordLoader id={id} /></ServiceGate></Page>
 }
 function RecordLoader({ id }: { id?: string }) {
   const { actor } = useAuth()
@@ -66,13 +70,18 @@ function RecordLoader({ id }: { id?: string }) {
   const metadata = useQuery({ queryKey: ['corporate-service-offices', actor!.userId, range], queryFn: () => repository.list(range), retry: false, staleTime: 0, refetchOnWindowFocus: false, refetchOnReconnect: false })
   const record = useQuery({ queryKey: ['corporate-service-record', actor!.userId, id], queryFn: () => repository.record(id!), enabled: Boolean(id), retry: false, staleTime: 0, refetchOnWindowFocus: false, refetchOnReconnect: false })
   const kind = corporateServiceKind.safeParse(params.get('kind'))
-  return <AsyncView loading={metadata.isPending || Boolean(id && record.isPending)} error={metadata.error ?? record.error} onRetry={() => { void metadata.refetch(); if (id) void record.refetch() }}>
-    {metadata.data && (!id || record.data) && <ServiceForm key={record.data ? `${record.data.id}:${record.data.version}` : 'new'} record={record.data} initialKind={kind.success ? kind.data : 'consultation'} offices={metadata.data.offices} zone={metadata.data.timeZone} />}
+  return <AsyncView loading={metadata.isPending || metadata.isFetching || Boolean(id && (record.isPending || record.isFetching))} error={metadata.error ?? record.error} onRetry={() => { void metadata.refetch(); if (id) void record.refetch() }}>
+    {metadata.data && (!id || record.data) && <ServiceForm key={`${actor!.userId}:${record.data ? `${record.data.id}:${record.data.version}` : 'new'}`} record={record.data} initialKind={kind.success ? kind.data : 'consultation'} offices={metadata.data.offices} zone={metadata.data.timeZone} />}
   </AsyncView>
 }
 function ServiceForm({ record, initialKind, offices, zone }: { record?: CorporateService; initialKind: CorporateServiceKind; offices: ServiceOffice[]; zone: string }) {
   const { actor } = useAuth()
   const client = useQueryClient(), navigate = useNavigate()
+  const [params] = useSearchParams()
+  const range = historyRange(params, zone)
+  const back = `${root}?${rangeSearch(range)}`
+  const active = useRef(true), finished = useRef(false)
+  useLayoutEffect(() => { active.current = true; return () => { active.current = false } }, [])
   const [confirm, confirmation] = useConfirm()
   const [initial] = useState(() => ({ id: record?.id ?? crypto.randomUUID(), at: record?.occurredAt ?? new Date().toISOString() }))
   const [auditOpen, setAuditOpen] = useState(Boolean(record?.voidedAt))
@@ -80,15 +89,45 @@ function ServiceForm({ record, initialKind, offices, zone }: { record?: Corporat
   const voidCommand = useRef(crypto.randomUUID())
   const form = useForm({ defaultValues: { kind: record?.kind ?? initialKind, officeId: record?.officeId ?? (offices.length === 1 ? offices[0]!.id : ''), date: todayInTimeZone(zone, new Date(initial.at)), time: currentTimeInTimeZone(zone, new Date(initial.at)) } })
   const date = useWatch({ control: form.control, name: 'date' }), time = useWatch({ control: form.control, name: 'time' })
-  const refresh = async () => {
-    await Promise.all([client.invalidateQueries({ queryKey: ['corporate-services', actor!.userId] }), client.invalidateQueries({ queryKey: ['corporate-service-record', actor!.userId] }), client.invalidateQueries({ queryKey: ['corporate-service-statistics'] })])
-    navigate(`${root}?saved=1`, { replace: true })
+  const refresh = async (occurredAt: string) => {
+    // Cancel inactive reads before invalidation: a late pre-save GET must not restore stale data.
+    const keys = [['corporate-services', actor!.userId], ['corporate-service-audit', actor!.userId, initial.id], ['corporate-service-statistics']]
+    const recordKey = ['corporate-service-record', actor!.userId, initial.id]
+    await Promise.all(keys.map(queryKey => client.cancelQueries({ queryKey })))
+    await client.cancelQueries({ queryKey: recordKey, exact: true })
+    // Keep an existing draft; resume a mounted loader that has no record yet. Other IDs are independent.
+    await client.invalidateQueries({ queryKey: recordKey, exact: true, refetchType: client.getQueryData(recordKey) === undefined ? 'active' : 'none' })
+    await Promise.all(keys.map(queryKey => client.invalidateQueries({ queryKey })))
+    if (!active.current) return
+    const next = savedRange(range, occurredAt, zone)
+    finished.current = true
+    navigate(`${root}?saved=1&${rangeSearch(next)}`, { replace: true })
   }
   const denied = (error: Error) => { if (error instanceof CorporateServiceError && error.status === 403) void client.invalidateQueries({ queryKey: accessKey(actor!.userId) }) }
-  const save = useMutation({ mutationFn: (draft: ServiceDraft) => repository.save(draft), onSuccess: refresh, onError: denied })
-  const cancel = useMutation({ mutationFn: () => repository.void(initial.id, voidCommand.current, record!.version), onSuccess: refresh, onError: denied })
-  const recover = useMutation({ mutationFn: () => repository.record(initial.id), onSuccess: value => { client.setQueryData(['corporate-service-record', actor!.userId, initial.id], value); navigate(`${root}/${initial.id}`, { replace: true }) } })
+  const save = useMutation({ mutationFn: (draft: ServiceDraft) => repository.save(draft), onSuccess: (_receipt, draft) => refresh(draft.occurredAt), onError: denied })
+  const cancel = useMutation({ mutationFn: () => repository.void(initial.id, voidCommand.current, record!.version), onSuccess: () => refresh(record!.occurredAt), onError: denied })
+  const recover = useMutation({ mutationFn: () => repository.record(initial.id), onSuccess: value => {
+    if (!active.current) return
+    form.reset({ kind: value.kind, officeId: value.officeId ?? '', date: todayInTimeZone(zone, new Date(value.occurredAt)), time: currentTimeInTimeZone(zone, new Date(value.occurredAt)) })
+    save.reset(); cancel.reset(); command.current = null; voidCommand.current = crypto.randomUUID()
+    finished.current = true
+    client.setQueryData(['corporate-service-record', actor!.userId, initial.id], value)
+    navigate(`${root}/${initial.id}?${rangeSearch(range)}`, { replace: true })
+    finished.current = false
+  } })
   const busy = save.isPending || cancel.isPending || recover.isPending
+  const blocker = useBlocker(() => !finished.current && busy)
+  useEffect(() => {
+    if (blocker.state !== 'blocked') return
+    let current = true
+    void confirm({ message: 'Запрос ещё выполняется. Если уйти, он может завершиться. Перед повтором проверьте историю услуг.', confirmLabel: 'Уйти', cancelLabel: 'Остаться' }).then(leave => {
+      if (!current || !active.current) return
+      if (leave) { finished.current = true; blocker.proceed() }
+      else blocker.reset()
+    })
+    return () => { current = false }
+  }, [blocker, confirm])
+  useBeforeUnload(event => { if (!finished.current && busy) { event.preventDefault(); event.returnValue = '' } })
   return <div className="corporate-service-workspace">
     {record?.voidedAt ? <StatePanel tone="info" title="Услуга отменена" description="Запись и история сохранены. В статистику эта услуга не входит." /> : <form className="corporate-service-form" aria-label="Данные услуги" onSubmit={event => { void form.handleSubmit(value => {
       let at: string
@@ -104,10 +143,10 @@ function ServiceForm({ record, initialKind, offices, zone }: { record?: Corporat
         <Field label="Офис" error={form.formState.errors.officeId?.message}><select aria-label="Офис" {...form.register('officeId', { required: 'Выберите офис', validate: value => offices.some(office => office.id === value) || 'Выберите действующий назначенный офис' })}><option value="">Выберите офис</option>{record?.officeId && !offices.some(o => o.id === record.officeId) && <option disabled value={record.officeId}>{record.city} · {record.officeName} (недоступен)</option>}{offices.map(office => <option value={office.id} key={office.id}>{office.city} · {office.name}</option>)}</select></Field>
         <div className="corporate-service-date"><span>Дата и время</span><FitLimeDatePicker reference={isFitLimeEnabled(actor)} today={todayInTimeZone(zone)} value={localDate(date)} onChange={value => { form.setValue('date', value); form.clearErrors('time') }} time={{ start: time, end: '' }} onTimeChange={value => { form.setValue('time', value.start); form.clearErrors('time') }} showEndTime={false} startLabel="Время" triggerLabel={`${formatLocalDate(localDate(date))} · ${time}`} />{form.formState.errors.time?.message && <p className="error" role="alert">{form.formState.errors.time.message}</p>}</div>
         <p className="corporate-service-note">Время аккаунта: {zone}</p>
-        <div className="actions"><button className="primary" type="submit" aria-busy={save.isPending}>{record ? 'Сохранить исправление' : 'Сохранить услугу'}</button><Link className="secondary" to={root}>Назад к услугам</Link></div>
+        <div className="actions"><button className="primary" type="submit" aria-busy={save.isPending}>{record ? 'Сохранить исправление' : 'Сохранить услугу'}</button><Link className="secondary" to={back}>Назад к услугам</Link></div>
       </fieldset>
       <SaveStatus status={save.isPending ? 'saving' : save.isError ? 'error' : 'idle'} error={save.error?.message} />
-      {save.isError && <button className="secondary" type="button" disabled={busy} onClick={async () => { if (await confirm({ message: 'Загрузить сохранённую запись? Несохранённый ввод будет заменён.', confirmLabel: 'Загрузить запись' })) recover.mutate() }}>Загрузить сохранённую запись</button>}
+      {(save.isError || cancel.isError) && <button className="secondary" type="button" disabled={busy} onClick={async () => { if (await confirm({ message: 'Загрузить сохранённую запись? Несохранённый ввод будет заменён.', confirmLabel: 'Загрузить запись' }) && active.current) recover.mutate() }}>Загрузить сохранённую запись</button>}
       {recover.isError && <p role="alert" className="error">{recover.error.message}</p>}
     </form>}
     {record && <section className="corporate-service-record-actions">
@@ -121,6 +160,6 @@ function ServiceForm({ record, initialKind, offices, zone }: { record?: Corporat
 }
 function ServiceAudit({ id, zone }: { id: string; zone: string }) {
   const { actor } = useAuth()
-  const audit = useInfiniteQuery({ queryKey: ['corporate-service-audit', actor!.userId, id], queryFn: ({ pageParam }) => repository.audit(id, pageParam), initialPageParam: undefined as number | undefined, getNextPageParam: page => page.nextBeforeVersion ?? undefined, retry: false })
-  return <AsyncView loading={audit.isPending} error={audit.error} onRetry={() => void audit.refetch()}><ol className="corporate-service-audit">{audit.data?.pages.flatMap(page => page.events).map(event => <li key={event.version}><strong>{event.action === 'create' ? 'Создана' : event.action === 'update' ? 'Исправлена' : 'Отменена'} · версия {event.version}</strong><p>{serviceTimeLabel(event.at, zone)}</p><p>{serviceLabels[event.after.kind]} · {event.after.city}, {event.after.officeName} · {serviceTimeLabel(event.after.occurredAt, zone)}</p>{event.before && <p>До изменения: {serviceLabels[event.before.kind]} · {event.before.city}, {event.before.officeName} · {serviceTimeLabel(event.before.occurredAt, zone)}</p>}</li>)}</ol>{audit.hasNextPage && <button type="button" className="secondary" disabled={audit.isFetchingNextPage} onClick={() => void audit.fetchNextPage()}>Ещё изменения</button>}</AsyncView>
+  const audit = useInfiniteQuery({ queryKey: ['corporate-service-audit', actor!.userId, id], queryFn: ({ pageParam }) => repository.audit(id, pageParam), initialPageParam: undefined as number | undefined, getNextPageParam: page => page.nextBeforeVersion ?? undefined, retry: false, staleTime: 0, refetchOnMount: 'always' })
+  return <AsyncView loading={audit.isPending || audit.isRefetching} error={audit.error} onRetry={() => void audit.refetch()}><ol className="corporate-service-audit">{audit.data?.pages.flatMap(page => page.events).map(event => <li key={event.version}><strong>{event.action === 'create' ? 'Создана' : event.action === 'update' ? 'Исправлена' : 'Отменена'} · версия {event.version}</strong><p>{serviceTimeLabel(event.at, zone)}</p><p>{serviceLabels[event.after.kind]} · {event.after.city}, {event.after.officeName} · {serviceTimeLabel(event.after.occurredAt, zone)}</p>{event.before && <p>До изменения: {serviceLabels[event.before.kind]} · {event.before.city}, {event.before.officeName} · {serviceTimeLabel(event.before.occurredAt, zone)}</p>}</li>)}</ol>{audit.hasNextPage && <button type="button" className="secondary" disabled={audit.isFetching} onClick={() => void audit.fetchNextPage()}>Ещё изменения</button>}</AsyncView>
 }

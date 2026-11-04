@@ -18,6 +18,7 @@ import { ContestWinnerDialog } from '../features/contest'
 import { FitLimeIconsContext } from '../shared/fit-lime-icons'
 import { isCoachWorkoutRedesignEnabled } from './coach-workout-redesign'
 import { isCoachLiveV79Enabled } from './coach-live-v79'
+import { historyRange, rangeSearch, servicesRoot } from '../features/corporate-services/service-navigation'
 
 export { appViewportMetrics } from './app-viewport'
 
@@ -37,7 +38,10 @@ export function AppLayout() {
   const calendarParams = new URLSearchParams(search)
   const retainedOverview = pathname === '/today' && trainerScheduleV2Route && !calendarParams.has('date')
     && (calendarParams.has('week') || calendarParams.get('mode') === 'list')
-  const retainedScrollKey = unifiedCoachCalendar && (retainedOverview || pathname === '/finance')
+  const serviceHistory = actor?.role === 'trainer' && pathname === servicesRoot
+  const retainedScrollKey = serviceHistory
+    ? `${actor.userId}:${servicesRoot}?${rangeSearch(historyRange(calendarParams, actor.timezone))}`
+    : unifiedCoachCalendar && (retainedOverview || pathname === '/finance')
     ? `${actor?.userId}:${pathname}${search}` : null
   useCoachNavigationScroll(contentRef, retainedScrollKey)
   const clientLimeShell = isClientLimeShellRoute(actor, pathname)
