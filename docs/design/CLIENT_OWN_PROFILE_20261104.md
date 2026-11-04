@@ -549,3 +549,20 @@ attempt1SUCCESS35/35;Android41929898721SUCCESS. Полныеfinalmetadata сох
 заменяет будущиеactualmainCI/публикацию/8+8приёмку. Currentdraft/mergeheld:
 1988/f222держитwindowдоегоAPI/web/OTA/34+34receipt. Проверенныйdcfнеpush
 радиквитанции;новыеproofsтолькоPR/checkpoint/localcanonical.
+
+## Итерация 25 — 05.11.2026 — Codex / OpenAI
+
+Предшественник1988/f222 фактически принят: source/mainCI и officialAPI41933585705/
+web41933585732/OTA41933890036 success;213publicfiles,обаAPIexactf222,подписи,
+34public+34exactZIPChromium/WebKit0retry/skip,PNGviewed/finalreadback.
+Квитанция6645385321проверена, окноосвобождено входящимкоординатором.
+PR1990 штатно squashed сmatch-headdcf вactualmainb4eba30ef12677f3876cb266cfc991612d589576
+23:47:55Z. Git treeactualb4=sourceDCF=ac8897450f404e889749fb2799acdeb5cd9975f7.
+Автоматические mainCI41936529587/Android41936529607 ещёpending, это не публикация.
+PR3 включилactualsquash2 ordinarymerge. Триконфликта толькоplan/cases/scopedCSS:
+incoming каждого побайтноDCF, который уже ancestorPR3; сохраненывсеowncomposition
+добавления иобеистории. SHA256proof pr3-mainb4-conflict-preservation.json.
+Итоговый runtime/e2e/API/package/lock/android diff кпроверенному276/340 пуст.
+Никаких assertions/лимитов/strict-flaky/guards не менялось. Предыдущие36unit/
+16browser0retry/skips/build/types/lint/docs остаются проверкойэтогорuntime;
+новыйsource3 fullCI обязателен. Merge3 удерживаетсядоactual8+8stage2приёмки.
