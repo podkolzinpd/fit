@@ -204,6 +204,7 @@ describe('TrainerFinancePage', () => {
   })
 
   beforeEach(() => {
+    sessionStorage.clear()
     clients.get.mockReset().mockResolvedValue(client)
     finance.listClient.mockReset().mockResolvedValue(bundle)
     finance.createPackage.mockReset().mockResolvedValue(bundle.packages[0]!)
@@ -409,6 +410,38 @@ describe('TrainerFinancePage', () => {
     expect(workouts.saveCompleted).not.toHaveBeenCalled()
   })
 
+  it.each(['payment', 'package'] as const)('restores the exact uncertain %s operation after remount', async kind => {
+    const user = userEvent.setup()
+    const create = kind === 'payment' ? finance.addPayment : finance.createPackage
+    create.mockRejectedValueOnce(new Error('Нет сети'))
+      .mockRejectedValueOnce(new RepositoryError('invalid_request', 'Проверьте данные'))
+    const view = renderPage()
+    await user.click(await screen.findByRole('button', { name: kind === 'payment' ? 'Внести оплату' : 'Новая' }))
+    if (kind === 'package') await user.type(screen.getByLabelText('Стоимость, ₽'), '5000')
+    await user.type(screen.getByLabelText('Комментарий'), 'Проверка восстановления')
+    await user.click(screen.getByRole('button', { name: 'Сохранить' }))
+    await screen.findByText('Сохранение не подтверждено')
+    const first = create.mock.calls[0]![1]
+    view.unmount()
+    const restored = renderPage()
+    await user.click(await screen.findByRole('button', { name: 'Проверить сохранение' }))
+    expect(screen.getByLabelText('Комментарий')).toHaveValue('Проверка восстановления')
+    expect(screen.getByLabelText('Комментарий')).toBeDisabled()
+    await user.click(screen.getByRole('button', { name: 'Повторить сохранение' }))
+    await screen.findByText('Сохранение не подтверждено')
+    expect(create.mock.calls[1]![1]).toEqual(first)
+    // A late rejection cannot erase the first uncertain attempt.
+    expect(screen.getByLabelText('Комментарий')).toBeDisabled()
+    restored.unmount()
+    renderPage()
+    await user.click(await screen.findByRole('button', { name: 'Проверить сохранение' }))
+    await user.click(screen.getByRole('button', { name: 'Повторить сохранение' }))
+    await waitFor(() => expect(create).toHaveBeenCalledTimes(3))
+    expect(create.mock.calls[2]![1]).toEqual(first)
+    await waitFor(() => expect(screen.queryByRole('button', { name: 'Повторить сохранение' })).not.toBeInTheDocument())
+    expect(sessionStorage.length).toBe(0)
+  })
+
   it.each(['payment', 'package'] as const)('allows correcting a rejected %s creation with a new operation', async (kind) => {
     const user = userEvent.setup()
     const create = kind === 'payment' ? finance.addPayment : finance.createPackage
@@ -424,6 +457,36 @@ describe('TrainerFinancePage', () => {
     await waitFor(() => expect(create).toHaveBeenCalledTimes(2))
     expect(create.mock.calls[1]![1].requestId).not.toBe(create.mock.calls[0]![1].requestId)
     expect(create.mock.calls[1]![1].comment).toBe('Исправленная запись')
+  })
+
+  it('does not send a payment when recovery storage cannot be written', async () => {
+    const user = userEvent.setup()
+    renderPage()
+    await user.click(await screen.findByRole('button', { name: 'Внести оплату' }))
+    const storage = sessionStorage
+    vi.stubGlobal('sessionStorage', { getItem: storage.getItem.bind(storage), setItem: () => { throw new DOMException('Full', 'QuotaExceededError') } })
+    await user.click(screen.getByRole('button', { name: 'Сохранить' }))
+    await screen.findByText('Сохранение не подтверждено')
+    expect(finance.addPayment).not.toHaveBeenCalled()
+    vi.stubGlobal('sessionStorage', storage)
+    await user.click(screen.getByRole('button', { name: 'Повторить сохранение' }))
+    await waitFor(() => expect(finance.addPayment).toHaveBeenCalledTimes(1))
+  })
+
+  it('unlocks a first API validation rejection and accepts corrected payment', async () => {
+    finance.addPayment.mockRejectedValueOnce(new RepositoryError('invalid_request', 'Проверьте данные'))
+    const user = userEvent.setup()
+    renderPage()
+    await user.click(await screen.findByRole('button', { name: 'Внести оплату' }))
+    await user.click(screen.getByRole('button', { name: 'Сохранить' }))
+    await screen.findByText('Проверьте данные')
+    expect(screen.getByLabelText('Сумма, ₽')).toBeEnabled()
+    expect(sessionStorage.length).toBe(0)
+    await user.clear(screen.getByLabelText('Сумма, ₽'))
+    await user.type(screen.getByLabelText('Сумма, ₽'), '10.01')
+    await user.click(screen.getByRole('button', { name: 'Сохранить' }))
+    await waitFor(() => expect(finance.addPayment).toHaveBeenCalledTimes(2))
+    expect(finance.addPayment.mock.calls[1]![1].amountCents).toBe(1001)
   })
 
   it.each(['payment', 'package'] as const)('replays an uncertain %s creation after cancel without creating a second operation', async (kind) => {

@@ -29,7 +29,8 @@ function integer(value: unknown, minimum: number, maximum: number): number | und
 function date(value: unknown, nullable = false): string | null | undefined {
   if (nullable && value === null) return null
   if (typeof value !== 'string' || !localDatePattern.test(value)
-    || Number.isNaN(Date.parse(`${value}T00:00:00Z`))) return undefined
+    || value.startsWith('0000-') || Number.isNaN(Date.parse(`${value}T00:00:00Z`))
+    || new Date(`${value}T00:00:00Z`).toISOString().slice(0, 10) !== value) return undefined
   return value
 }
 

@@ -108,6 +108,10 @@ export function financeAccountingCases() {
   // Payment and service have separate endpoints and native date/amount layouts.
   for (const kind of ['payment', 'package'] as const) test(`Finance uncertain ${kind} creation restores the same operation`, { tag: ['@lime-finance'] }, async ({ page }, info) => {
     const { form, commands } = await uncertainCreateFixture(page, kind)
+    await page.reload()
+    await page.getByRole('button', { name: 'Проверить сохранение', exact: true }).click()
+    await expect(form.getByLabel('Комментарий')).toHaveValue('Оплата переводом — сохранить исходную запись')
+    await expect(form.getByLabel('Комментарий')).toBeDisabled()
     if (kind === 'package') await form.locator('summary').click()
     for (const width of [320, 430, 1440]) {
       await page.setViewportSize({ width, height: 844 })
