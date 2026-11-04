@@ -7,6 +7,7 @@ import { useDataBackend } from '../../app/data-backend-context'
 import { invalidateFinanceViews } from '../../app/invalidate-finance-views'
 import { invalidateWorkoutResults } from '../../app/invalidate-workout-results'
 import { RepositoryError } from '../../data/repositories/error'
+import { clearFinanceOperation, financeOperationKey, pendingPackageSchema, pendingPaymentSchema, pendingSessionSchema, readFinanceOperation, writeFinanceOperation } from './pending-finance-operation'
 import { SessionAccountingForm, type SessionAccountingDraft } from './SessionAccountingForm'
 import type { TrainerFinancePackage, TrainerFinancePackageDraft, TrainerFinancePayment, TrainerFinanceSession, TrainerFinancePaymentDraft } from '../../data/contracts/trainer-finance'
 import { addDays, daysBetween, formatLocalDate, localDate, todayInTimeZone } from '../../shared/local-date'
@@ -29,7 +30,7 @@ function money(cents: number) {
 function cents(value: FormDataEntryValue | null): number {
   const normalized = String(value ?? '').trim().replace(/\s/g, '').replace(',', '.')
   const amount = Number(normalized)
-  if (!Number.isFinite(amount) || amount < 0) throw new Error('Проверьте сумму')
+  if (!Number.isFinite(amount) || amount < 0 || amount > 1000000000 || !/^\d+(?:\.\d{1,2})?$/.test(normalized)) throw new Error('Проверьте сумму')
   return Math.round(amount * 100)
 }
 
@@ -85,8 +86,8 @@ export function PackageForm({ current, template, today, saving, error, initialDr
       const messages: Record<string, string> = {
         title: 'Укажите название до 120 символов', sessionsTotal: 'Укажите целое количество занятий от 1 до 10 000',
         openingUsedSessions: 'Укажите целое количество проведённых занятий от 0 до общего количества',
-        price: 'Укажите стоимость в рублях: от 0, не больше двух знаков после запятой',
-        openingPaid: 'Укажите оплату в рублях: от 0, не больше двух знаков после запятой',
+        price: 'Укажите стоимость в рублях: от 0 до 1 000 000 000, максимум два знака после запятой',
+        openingPaid: 'Укажите оплату в рублях: от 0 до 1 000 000 000, максимум два знака после запятой',
         startsOn: 'Укажите дату начала', endsOn: 'Укажите дату окончания не раньше начала',
         openingReceivedOn: 'Укажите дату получения', paymentDueOn: 'Проверьте дату оплаты', comment: 'Сократите комментарий до 2000 символов',
       }
@@ -114,6 +115,10 @@ export function PackageForm({ current, template, today, saving, error, initialDr
       if (kind === 'session_pack' && (sessionsTotal < 1 || openingUsedSessions > sessionsTotal)) throw new Error('Проведённых занятий не может быть больше общего количества')
       if (openingPaidCents > priceCents) throw new Error('Начальная оплата не может быть больше стоимости абонемента')
       const endsOn = optional(form, 'endsOn')
+      localDate(startsOn)
+      if (endsOn) localDate(endsOn)
+      if (optional(form, 'paymentDueOn')) localDate(String(form.get('paymentDueOn')))
+      if (openingPaidCents > 0) localDate(String(form.get('openingReceivedOn')))
       if (endsOn && endsOn < startsOn) throw new Error('Окончание не может быть раньше начала')
       onSubmit({
         kind, title: String(form.get('title') ?? '').trim(), sessionsTotal, openingUsedSessions,
@@ -132,8 +137,8 @@ export function PackageForm({ current, template, today, saving, error, initialDr
     : <Field key={name} label={label}>{input}</Field>
   const sessions = kind === 'session_pack' && field('sessionsTotal', lime ? 'Количество занятий' : 'Всего занятий', <input disabled={saving || locked} {...validation('sessionsTotal')} name="sessionsTotal" type="number" inputMode="numeric" min="1" max="10000" required defaultValue={initialDraft?.sessionsTotal ?? (source?.sessionsTotal || 10)} />)
   const used = kind === 'session_pack' && !current && field('openingUsedSessions', lime ? 'Уже проведено, занятий' : 'Уже проведено', <input disabled={saving || locked} {...validation('openingUsedSessions')} name="openingUsedSessions" type="number" inputMode="numeric" min="0" max="10000" required defaultValue={initialDraft?.openingUsedSessions ?? 0} />)
-  const price = field('price', 'Стоимость, ₽', <input disabled={saving || locked} {...validation('price')} name="price" type="number" inputMode="decimal" min="0" step="0.01" required value={priceValue} onChange={(event) => setPriceValue(event.target.value)} />)
-  const paid = !current && field('openingPaid', 'Уже оплачено, ₽', <input disabled={saving || locked} {...validation('openingPaid')} name="openingPaid" type="number" inputMode="decimal" min="0" step="0.01" required value={paidValue} onChange={(event) => setPaidValue(event.target.value)} />)
+  const price = field('price', 'Стоимость, ₽', <input disabled={saving || locked} {...validation('price')} name="price" type="number" inputMode="decimal" min="0" max="1000000000" step="0.01" required value={priceValue} onChange={(event) => setPriceValue(event.target.value)} />)
+  const paid = !current && field('openingPaid', 'Уже оплачено, ₽', <input disabled={saving || locked} {...validation('openingPaid')} name="openingPaid" type="number" inputMode="decimal" min="0" max="1000000000" step="0.01" required value={paidValue} onChange={(event) => setPaidValue(event.target.value)} />)
   const costAndPayment = <div className="finance-cost-payment">
     <div className="finance-payment-fields">{price}{paid}</div>
     {!current && <button type="button" className="link finance-fill-payment" disabled={saving || locked || Number(priceValue) <= 0 || !priceValue} onClick={() => setPaidValue(priceValue)}>Вся сумма</button>}
@@ -163,6 +168,7 @@ export function PackageForm({ current, template, today, saving, error, initialDr
       <div className="finance-form-grid">{dates}</div></>}
     {field('comment', 'Комментарий', <textarea disabled={saving || locked} {...validation('comment')} name="comment" rows={2} maxLength={2000} defaultValue={initialDraft?.comment ?? source?.comment ?? ''} />)}
     {validationError && <p className="error" role="alert">{validationError}</p>}
+    {locked && !error && <p role="status">Сохранение не подтверждено</p>}
     {error && <InlineRequestError error={error} message={locked ? 'Сохранение не подтверждено' : undefined} />}
     {/* Keep the focused input until click: keyboard recovery on pointerdown
         otherwise moves this row before pointerup and loses the submission. */}
@@ -196,16 +202,17 @@ export function PaymentForm({ current, packages = [], packageId, today, saving, 
       if (amountCents < 1) throw new Error('Сумма должна быть больше нуля')
       const targetPackageId = current ? packageId : String(form.get('packageId') ?? packageId ?? '')
       if (!targetPackageId) throw new Error('Выберите услугу')
-      onSubmit({ amountCents, receivedOn: String(form.get('receivedOn') ?? ''), comment: optional(form, 'comment') }, targetPackageId)
+      onSubmit({ amountCents, receivedOn: localDate(String(form.get('receivedOn') ?? '')), comment: optional(form, 'comment') }, targetPackageId)
     } catch (cause) {
       setValidationError(cause instanceof Error ? cause.message : 'Проверьте данные')
     }
   }}>
     <div className="finance-form-heading"><div><p className="eyebrow">ОПЛАТА</p><h2>{current ? 'Редактирование' : 'Добавить оплату'}</h2></div></div>
     {!current && packages.length > 1 && <Field label="Услуга"><select disabled={saving || locked} name="packageId" required value={selectedPackageId} onChange={(event) => { setSelectedPackageId(event.target.value); setAmount(initialPaymentAmount(event.target.value, packages)) }}>{packages.map((item) => <option key={item.id} value={item.id}>{item.title}</option>)}</select></Field>}
-    <div className="finance-form-grid"><Field label="Сумма, ₽"><input disabled={saving || locked} name="amount" type="number" inputMode="decimal" min="0.01" step="0.01" required value={amount} onChange={(event) => setAmount(event.target.value)} /></Field><Field label="Дата"><input disabled={saving || locked} name="receivedOn" type="date" required defaultValue={initialDraft?.receivedOn ?? current?.receivedOn ?? today} /></Field></div>
+    <div className="finance-form-grid"><Field label="Сумма, ₽"><input disabled={saving || locked} name="amount" type="number" inputMode="decimal" min="0.01" max="1000000000" step="0.01" required value={amount} onChange={(event) => setAmount(event.target.value)} /></Field><Field label="Дата"><input disabled={saving || locked} name="receivedOn" type="date" required defaultValue={initialDraft?.receivedOn ?? current?.receivedOn ?? today} /></Field></div>
     <Field label="Комментарий"><input disabled={saving || locked} name="comment" maxLength={2000} defaultValue={initialDraft?.comment ?? current?.comment ?? ''} /></Field>
     {validationError && <p className="error" role="alert">{validationError}</p>}
+    {locked && !error && <p role="status">Сохранение не подтверждено</p>}
     {error && <InlineRequestError error={error} message={locked ? 'Сохранение не подтверждено' : undefined} />}
     <div className="actions"><button type="button" className="secondary" disabled={saving} onPointerDown={(event) => event.preventDefault()} onClick={onCancel}>Отмена</button><button type="submit" className="primary" disabled={saving} onPointerDown={(event) => event.preventDefault()}>{saving ? 'Сохраняем…' : locked ? 'Повторить сохранение' : 'Сохранить'}</button></div>
   </form>
@@ -220,7 +227,7 @@ type FinanceTab = 'packages' | 'sessions' | 'payments'
 type PaymentEditor = { packageId: string; payment?: TrainerFinancePayment; direct?: boolean }
 type CreateOperation<D, E> = { draft: D; editor: E; requestId: string; attempts: number }
 function isFirstRejectedCreate(error: Error, operation: { attempts: number } | null) {
-  return operation?.attempts === 1 && error instanceof RepositoryError && ['PT422', 'PT403', 'PT404'].includes(error.code)
+  return operation?.attempts === 1 && error instanceof RepositoryError && ['invalid_request', 'PT422', 'PT403', 'PT404'].includes(error.code)
 }
 
 type PackageEditor = { mode: 'new' } | { mode: 'edit' | 'renew'; item: TrainerFinancePackage }
@@ -233,6 +240,12 @@ const FINANCE_TABS: { id: FinanceTab; label: string }[] = [
 
 export function TrainerFinancePage() {
   const { clientId = '' } = useParams()
+  const { actor } = useAuth()
+  return <TrainerFinanceClientPage key={`${actor?.userId}:${clientId}`} />
+}
+
+function TrainerFinanceClientPage() {
+  const { clientId = '' } = useParams()
   const location = useLocation()
   const routeState: unknown = location.state
   const { actor } = useAuth()
@@ -243,14 +256,24 @@ export function TrainerFinancePage() {
   const [sessionFilter, setSessionFilter] = useState<'all' | 'unassigned' | 'trial'>('all')
   const [packageEditor, setPackageEditor] = useState<PackageEditor | null>(null)
   const [paymentEditor, setPaymentEditor] = useState<PaymentEditor | null>(null)
-  const packageOperation = useRef<CreateOperation<TrainerFinancePackageDraft, PackageEditor> | null>(null)
-  const paymentOperation = useRef<CreateOperation<TrainerFinancePaymentDraft, PaymentEditor> | null>(null)
-  const [pendingPackageDraft, setPendingPackageDraft] = useState<TrainerFinancePackageDraft | null>(null)
-  const [pendingPayment, setPendingPayment] = useState<{ draft: TrainerFinancePaymentDraft; packageId: string } | null>(null)
+  const packageKey = financeOperationKey(actor?.userId ?? '', clientId, 'package')
+  const paymentKey = financeOperationKey(actor?.userId ?? '', clientId, 'payment')
+  const manualKey = financeOperationKey(actor?.userId ?? '', clientId, 'session')
+  const [restored] = useState(() => ({
+    package: readFinanceOperation(packageKey, pendingPackageSchema),
+    payment: readFinanceOperation(paymentKey, pendingPaymentSchema),
+    manual: readFinanceOperation(manualKey, pendingSessionSchema),
+  }))
+  const packageOperation = useRef<CreateOperation<TrainerFinancePackageDraft, PackageEditor> | null>(restored.package
+    ? { ...restored.package, editor: { mode: 'new' } } : null)
+  const paymentOperation = useRef<CreateOperation<TrainerFinancePaymentDraft, PaymentEditor> | null>(restored.payment
+    ? { ...restored.payment, editor: { packageId: restored.payment.packageId, direct: true } } : null)
+  const [pendingPackageDraft, setPendingPackageDraft] = useState<TrainerFinancePackageDraft | null>(restored.package?.draft ?? null)
+  const [pendingPayment, setPendingPayment] = useState<{ draft: TrainerFinancePaymentDraft; packageId: string } | null>(restored.payment)
   const pendingPaymentDraft = pendingPayment?.draft ?? null
   const pendingPaymentPackageId = pendingPayment?.packageId ?? null
-  const manualOperation = useRef<{ draft: SessionAccountingDraft; requestId: string; attempts: number } | null>(null)
-  const [pendingManualDraft, setPendingManualDraft] = useState<SessionAccountingDraft | null>(null)
+  const manualOperation = useRef<{ draft: SessionAccountingDraft; requestId: string; attempts: number } | null>(restored.manual)
+  const [pendingManualDraft, setPendingManualDraft] = useState<SessionAccountingDraft | null>(restored.manual?.draft ?? null)
   const [manualOpen, setManualOpen] = useState(false)
   const [sessionEditor, setSessionEditor] = useState<string | null>(null)
   const [confirm, confirmDialog] = useConfirm()
@@ -274,15 +297,18 @@ export function TrainerFinancePage() {
       }
       const operation = packageOperation.current
       operation.attempts += 1
+      writeFinanceOperation(packageKey, { draft: operation.draft, requestId: operation.requestId, attempts: operation.attempts })
       return trainerFinance.createPackage(clientId, { ...operation.draft, requestId: operation.requestId })
     },
     onSuccess: async (_, { editor }) => {
       await refresh()
+      clearFinanceOperation(packageKey, packageOperation.current?.requestId)
       packageOperation.current = null; setPendingPackageDraft(null)
       setPackageEditor(current => current === editor ? null : current)
     },
     onError: error => {
       if (isFirstRejectedCreate(error, packageOperation.current)) {
+        clearFinanceOperation(packageKey, packageOperation.current?.requestId)
         packageOperation.current = null; setPendingPackageDraft(null)
       }
     },
@@ -296,16 +322,19 @@ export function TrainerFinancePage() {
       }
       const operation = paymentOperation.current
       operation.attempts += 1
+      writeFinanceOperation(paymentKey, { draft: operation.draft, packageId: operation.editor.packageId, requestId: operation.requestId, attempts: operation.attempts })
       return trainerFinance.addPayment(operation.editor.packageId, { ...operation.draft, requestId: operation.requestId })
     },
     onSuccess: async (_, { editor }) => {
       await refresh()
       const restoredEditor = paymentOperation.current?.editor
+      clearFinanceOperation(paymentKey, paymentOperation.current?.requestId)
       paymentOperation.current = null; setPendingPayment(null)
       setPaymentEditor(current => current === editor || current === restoredEditor ? null : current)
     },
     onError: error => {
       if (isFirstRejectedCreate(error, paymentOperation.current)) {
+        clearFinanceOperation(paymentKey, paymentOperation.current?.requestId)
         paymentOperation.current = null; setPendingPayment(null)
       }
     },
@@ -322,6 +351,7 @@ export function TrainerFinancePage() {
       }
       if (JSON.stringify(manualOperation.current.draft) !== JSON.stringify(draft)) throw new Error('Сначала повторите сохранение предыдущего занятия')
       manualOperation.current.attempts += 1
+      writeFinanceOperation(manualKey, manualOperation.current)
       const [disposition, packageId = ''] = draft.value.split(':')
       return trainerFinance.createManualSession(clientId, {
         requestId: manualOperation.current.requestId,
@@ -330,12 +360,13 @@ export function TrainerFinancePage() {
         comment: draft.comment, workoutDate: draft.workoutDate,
       })
     },
-    onSuccess: async session => { await refreshSession(session); setManualOpen(false); manualOperation.current = null; setPendingManualDraft(null) },
+    onSuccess: async session => { await refreshSession(session); setManualOpen(false); clearFinanceOperation(manualKey, manualOperation.current?.requestId); manualOperation.current = null; setPendingManualDraft(null) },
     onError: error => {
       // A first explicit rejection confirms no write. A later rejection cannot
       // resolve an earlier lost response: keep its payload/ID for a real replay.
       if (manualOperation.current?.attempts === 1 && error instanceof RepositoryError
-        && ['PT422', 'PT403', 'PT404'].includes(error.code)) {
+        && ['invalid_request', 'PT422', 'PT403', 'PT404'].includes(error.code)) {
+        clearFinanceOperation(manualKey, manualOperation.current?.requestId)
         manualOperation.current = null
         setPendingManualDraft(null)
       }
