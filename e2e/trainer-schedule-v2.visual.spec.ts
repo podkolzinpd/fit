@@ -4279,7 +4279,18 @@ for (const [account, profileId] of [
       labelBackground: getComputedStyle(element).backgroundColor,
       numberStripBackground: getComputedStyle(element, '::before').backgroundColor,
     }))
-    expect(weekstripSurface).toEqual({ labelBackground: 'rgba(0, 0, 0, 0)', numberStripBackground: 'rgb(37, 54, 12)' })
+    // Normalize the approved literal through the browser's own color serializer:
+    // WebKit and Chromium round color(srgb) at different decimal precision.
+    const approvedWeekstripColor = await page.evaluate(() => {
+      const probe = document.createElement('span')
+      probe.style.backgroundColor = 'color-mix(in srgb, #D1FD2D 16%, #000)'
+      probe.hidden = true
+      document.body.append(probe)
+      const color = getComputedStyle(probe).backgroundColor
+      probe.remove()
+      return color
+    })
+    expect(weekstripSurface).toEqual({ labelBackground: 'rgba(0, 0, 0, 0)', numberStripBackground: approvedWeekstripColor })
     await expect(page.locator('.schedule-v2-period-summary')).toHaveText('1 тренировка · 1 клиент')
     await expect(page.locator('.schedule-v2-day-card').first()).toContainText('Свободный день')
     await expect(page.locator('.schedule-v2-day-card').nth(3)).toContainText('Алексей Смирнов')
