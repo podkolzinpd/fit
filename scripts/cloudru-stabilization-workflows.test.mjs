@@ -236,6 +236,26 @@ test('account history operation is manual, main-only, fixed-scope and does not e
   assert.doesNotMatch(script, /@gmail|@yandex|@glitchy|method: '(?:POST|PUT|DELETE|PATCH)'/)
 })
 
+test('standalone account history inspection remains manual, fixed-scope and independent of monitor and repair jobs', () => {
+  const workflow = read('.github/workflows/inspect-account-history.yml')
+  assert.match(workflow, /on:\n  workflow_dispatch:\npermissions:\n  contents: read/)
+  assert.doesNotMatch(workflow, /\b(?:inputs|schedule|workflow_run):|needs:|continue-on-error|always\(\)/)
+  assert.match(workflow, /group: cloudru-stage-vm\n  cancel-in-progress: false/)
+  assert.match(workflow, /test "\$GITHUB_REPOSITORY" = podkolzinpd\/fit/)
+  assert.match(workflow, /test "\$GITHUB_REF" = refs\/heads\/main/)
+  assert.match(workflow, /test "\$\(hostname\)" = fit-stage-app/)
+  for (const secret of ['FIT_ACCOUNT_HISTORY_TARGETS', 'FIT_ACCOUNT_HISTORY_EVIDENCE']) {
+    assert.ok(workflow.includes(`${secret}: \${{ secrets.${secret} }}`))
+  }
+  assert.match(workflow, /\.MIGRATION_DATABASE_USER == "fit_owner"/)
+  assert.match(workflow, /\.DATABASE_USER == "fit_api"/)
+  assert.match(workflow, /DATABASE_SSL_MODE=require/)
+  assert.match(workflow, /trap 'sudo rm -f -- "\$owner"' EXIT/)
+  assert.match(workflow, /--read-only.*--timeout=120 --cap-drop=ALL/)
+  assert.match(workflow, /cloudru-account-history-audit\.mjs:\/inspection\.mjs:ro/)
+  assert.doesNotMatch(workflow, /api\.env|FIT_WORKOUT_HISTORY_TARGET|Config\.Env|--privileged|ssh |psql|pg_restore|register_yandex|identity-unlink|import-cloudru/)
+})
+
 test('journal preflight accepts only private login/email/name hashes, never SQL, names or actor overrides', () => {
   const value = { trainerLoginSha256: 'a'.repeat(64), trainerEmailSha256: 'c'.repeat(64), clientNameSha256: 'b'.repeat(64) }
   assert.deepEqual(readWorkoutHistoryTarget(JSON.stringify(value)), value)
