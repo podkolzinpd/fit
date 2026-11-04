@@ -87,7 +87,7 @@ test('finance/template visual matrices cannot grow back into full business chain
   assert.doesNotMatch(bodies.get('template'), /page\.clock|page\.reload|commands|\/health|rows\.size/)
 })
 
-test('real Playwright partitions preserve the 733-case union without duplicates in either engine', () => {
+test('real Playwright partitions preserve the 734-case union without duplicates in either engine', () => {
   const collect = (args) => {
     const result = spawnSync(process.execPath, [join(root, 'node_modules/playwright/cli.js'), ...args, '--list', '--reporter=json'],
       { cwd: root, encoding: 'utf8', timeout: 60000, env: { ...process.env, FIT_SCHEDULE_V2_VISUAL: '1' } })
@@ -103,7 +103,8 @@ test('real Playwright partitions preserve the 733-case union without duplicates 
   }
   for (const { project } of engines) {
     const full = collect(fitLimeArgs(project, 'full').args)
-    assert.equal(full.length, 733) // Current parent724 plus five FIN305 cases; every previous case remains.
+    assert.equal(full.length, 734) // Parent733 plus the FIN402 exact-money scenario; all previous cases remain.
+    assert.equal(full.filter(key => key.endsWith('Finance exact kopecks and mixed overdue debt use separate amounts')).length, 1)
     for (const title of ['Finance receipts filter, correct and delete across clients with retained context', 'Finance receipt loading, failure and retry retain the selected period and client', ...['Mono light','Mono dark','Lime light'].map(variant => `Finance receipt layout ${variant}`)]) {
       assert.equal(full.filter(key => key.endsWith(title)).length, 1, title)
     }
@@ -156,7 +157,7 @@ test('real Playwright partitions preserve the 733-case union without duplicates 
     const scoped = collect(fitLimeArgs(project, 'scoped', 'critical,finance').args)
     const scopedParts = fitLimePartitions('scoped').flatMap(({ lane, shard }) =>
       collect(fitLimeArgs(project, 'scoped', 'critical,finance', lane, shard).args))
-    assert.equal(scoped.length, 151) // Reviewed146 plus five tagged FIN305 cases; no existing case is omitted.
+    assert.equal(scoped.length, 152) // Parent151 plus FIN402; no existing case is omitted.
     assert.equal(new Set(scopedParts).size, scopedParts.length)
     assert.deepEqual(scopedParts.sort(), scoped.sort())
   }
