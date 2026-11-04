@@ -1493,6 +1493,8 @@ test('exercise catalog and technique detail keep their visual baselines in both 
 })
 
 async function mockOwnTrainerProfile(page: VisualPage) {
+  // This baseline covers a trainer without the independent services pilot.
+  await page.route('**/v1/corporate-services/access', (route) => route.fulfill({ json: { allowed: false } }))
   const draft = {
     displayName: 'Анна Иванова',
     bio: 'Помогаю безопасно начать силовые тренировки и видеть понятный прогресс.',

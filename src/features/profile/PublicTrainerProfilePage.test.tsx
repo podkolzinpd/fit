@@ -155,7 +155,8 @@ describe('PublicTrainerProfilePage', () => {
     })
     renderPage()
 
-    expect(await screen.findByText('Тренер временно не принимает новых клиентов')).toBeVisible()
+    expect(await screen.findByText('Сейчас без новых клиентов')).toBeVisible()
+    expect(screen.queryByText('Тренер временно не принимает новых клиентов')).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /Написать тренеру/ })).toBeNull()
   })
 

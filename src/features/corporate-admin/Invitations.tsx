@@ -21,7 +21,7 @@ export function CorporateInvitations({data,initialCreate=false}:{data:CorporateA
   const decide=useMutation({mutationFn:({id,approve}:{id:string;approve:boolean})=>repository.decide(id,approve),onSuccess:refresh})
   const open=()=>{create.reset();setShare(null);setOfficeIds([]);setOperationId(crypto.randomUUID());setCreating(true)}
   return <section className="corporate-admin-workspace ym-hide-content">
-    <div className="corporate-admin-toolbar"><h2>Приглашения</h2><button type="button" className="primary" disabled={create.isPending} onClick={open}>Пригласить тренера</button></div>
+    <div className="corporate-admin-toolbar"><h2>Приглашения</h2><div className="actions"><button type="button" className="secondary" disabled={query.isFetching||create.isPending||decide.isPending} aria-busy={query.isFetching} onClick={()=>void refresh()}>Обновить</button><button type="button" className="primary" disabled={create.isPending} onClick={open}>Пригласить тренера</button></div></div>
     {creating&&<form className="corporate-admin-editor" aria-label="Новое приглашение" onSubmit={e=>{e.preventDefault();create.mutate()}}>
       <h3>Офисы тренера</h3>
       <fieldset disabled={create.isPending}>
@@ -34,7 +34,7 @@ export function CorporateInvitations({data,initialCreate=false}:{data:CorporateA
     {share&&<CorporateInvitationShare token={share.token} onClose={()=>setShare(null)}/>}
     <SaveStatus status={decide.isError?'error':decide.isPending?'saving':'idle'} error={decide.error?.message}/>
     <AsyncView loading={query.isPending} error={query.error} onRetry={()=>void query.refetch()}>
-      {query.data?.length?<ul className="corporate-admin-list">{query.data.map(i=><li key={i.id}><div><strong>{i.trainerName??'Приглашение тренеру'}</strong><p>{labels[i.status]}</p><p>{i.officeIds.map(id=>data.offices.find(o=>o.id===id)).filter(o=>o!==undefined).map(o=>`${o.city}, ${o.name}${o.archived?' (архив)':''}`).join('; ')}</p><p>Действует до {new Date(i.expiresAt).toLocaleDateString('ru-RU')}</p></div><div className="actions">
+      {query.data?.length?<ul className="corporate-admin-list">{query.data.map(i=><li key={i.id}><div><strong>{i.trainerName??'Приглашение тренеру'}</strong><p>{labels[i.status]}</p><p>{i.officeIds.map(id=>data.offices.find(o=>o.id===id)).filter(o=>o!==undefined).map(o=>`${o.city}, ${o.name}${o.archived?' (архив)':''}`).join('; ')}</p><p>Ссылка действительна до {new Date(i.expiresAt).toLocaleDateString('ru-RU')}</p></div><div className="actions">
         {i.status==='claimed'&&<button type="button" className="primary" disabled={decide.isPending} onClick={async()=>{if(await confirm({message:`Добавить тренера «${i.trainerName}» в кабинет Яндекса с указанными офисами?`,confirmLabel:'Добавить тренера'}))decide.mutate({id:i.id,approve:true})}}>Подтвердить тренера</button>}
         {['active','claimed'].includes(i.status)&&<button type="button" className="secondary" disabled={decide.isPending} onClick={async()=>{if(await confirm({message:'Отменить приглашение? Ссылка перестанет работать.',confirmLabel:'Отменить приглашение'}))decide.mutate({id:i.id,approve:false})}}>Отменить приглашение</button>}
       </div></li>)}</ul>:query.data&&<EmptyState title="Приглашений пока нет" description="Пригласите тренера по ссылке или QR-коду."/>}

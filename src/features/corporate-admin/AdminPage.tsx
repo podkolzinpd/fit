@@ -92,7 +92,15 @@ function Offices({ data }: { data: CorporateAdminBundle }) {
   </section>
 }
 
+// A late receipt belongs to its original editor, not the next selected record.
+function useEditorActivity() {
+  const active = useRef(true)
+  useLayoutEffect(() => { active.current = true; return () => { active.current = false } }, [])
+  return active
+}
+
 function OfficeForm({ office, onClose }: { office: CorporateOffice; onClose: () => void }) {
+  const active = useEditorActivity()
   const editorRef = useRef<HTMLFormElement>(null)
   const headingRef = useRef<HTMLHeadingElement>(null)
   useLayoutEffect(() => {
@@ -102,7 +110,7 @@ function OfficeForm({ office, onClose }: { office: CorporateOffice; onClose: () 
   const form = useForm({ defaultValues: office })
   const save = useSave()
   return <form ref={editorRef} className="corporate-admin-editor" aria-label="Данные офиса" onSubmit={form.handleSubmit(async value => {
-    try { await save.mutateAsync({ kind: 'office', value }); onClose() } catch { /* The mutation renders its error and retains the form. */ }
+    try { await save.mutateAsync({ kind: 'office', value }); if (active.current) onClose() } catch { /* The mutation renders its error and retains the form. */ }
   })}>
     <h3 ref={headingRef} tabIndex={-1}>{office.version ? 'Изменить офис' : 'Новый офис'}</h3>
     <fieldset disabled={save.isPending}>
@@ -148,6 +156,7 @@ function AdminTrainerPhoto({ trainer }: { trainer: CorporateTrainer }) {
 }
 
 function TrainerForm({ trainer, offices, onClose }: { trainer: CorporateTrainer; offices: CorporateOffice[]; onClose: () => void }) {
+  const active = useEditorActivity()
   const editorRef = useRef<HTMLFormElement>(null)
   const headingRef = useRef<HTMLHeadingElement>(null)
   // Explicit selections reveal the editor again; edits keep their scroll position.
@@ -160,7 +169,7 @@ function TrainerForm({ trainer, offices, onClose }: { trainer: CorporateTrainer;
   const enabled = useWatch({ control: form.control, name: 'isYandex' })
   return <form ref={editorRef} className="corporate-admin-editor" aria-label={`Настройки ${trainer.name}`} onSubmit={form.handleSubmit(async value => {
     if (value.isYandex && !value.officeIds.length) { form.setError('officeIds', { message: 'Выберите хотя бы один офис' }); return }
-    try { await save.mutateAsync({ kind: 'trainer', value }); onClose() } catch { /* Retain unsaved edits; show server error below. */ }
+    try { await save.mutateAsync({ kind: 'trainer', value }); if (active.current) onClose() } catch { /* Retain unsaved edits; show server error below. */ }
   })}>
     <h3 ref={headingRef} tabIndex={-1}>{trainer.name}</h3>
     <fieldset disabled={save.isPending}>
