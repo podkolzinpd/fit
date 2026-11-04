@@ -808,19 +808,24 @@ export async function beginClientGesture(page: Page, surface: Locator, browserNa
   let box = initialBox
   const originBox = origin ? await origin.boundingBox() : null
   if (origin && !originBox) throw new Error('Gesture origin is not visible')
+  const live = await surface.evaluate(element => Boolean(element.closest('.client-live-v79, .coach-live-v79')))
   let from = originBox ? { x: originBox.x + originBox.width / 2, y: originBox.y + originBox.height / 2 }
     : { x: box.x + box.width * 0.88, y: box.y + box.height / 2 }
-  // Expanded content can still be clipped by its height transition. Keep the
-  // hit-target assertion, but wait for the actual point before sending a touch.
+  // Live folds/dialogs must settle at the intended touch origin. Other screens
+  // retain their existing surface hit area, including decorative calendar grid lines.
   await expect.poll(async () => {
+    if (live) await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))))
     const currentBox = await surface.boundingBox()
     const currentOrigin = origin ? await origin.boundingBox() : null
     if (!currentBox || (origin && !currentOrigin)) return false
     const currentFrom = currentOrigin ? { x: currentOrigin.x + currentOrigin.width / 2, y: currentOrigin.y + currentOrigin.height / 2 }
       : { x: currentBox.x + currentBox.width * 0.88, y: currentBox.y + currentBox.height / 2 }
-    const reachable = await surface.evaluate((element, point) => element.contains(document.elementFromPoint(point.x, point.y)), currentFrom)
-    if (reachable) { box = currentBox; from = currentFrom }
-    return reachable
+    const reachable = await (live && origin ? origin : surface).evaluate((element, point) => element.contains(document.elementFromPoint(point.x, point.y)), currentFrom)
+    const stable = !live || Math.abs(box.x - currentBox.x) < 0.5 && Math.abs(box.y - currentBox.y) < 0.5
+      && Math.abs(box.width - currentBox.width) < 0.5 && Math.abs(box.height - currentBox.height) < 0.5
+      && Math.abs(from.x - currentFrom.x) < 0.5 && Math.abs(from.y - currentFrom.y) < 0.5
+    box = currentBox; from = currentFrom
+    return reachable && stable
   }).toBe(true)
   const cdp = browserName === 'chromium' ? await page.context().newCDPSession(page) : null
   if (cdp) await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [from] })
@@ -924,4 +929,30 @@ export const publicTrainerDraft = {
 export async function mockPublicTrainer(page: Page) {
   await page.route(`**/v1/trainers/${publicTrainerId}/public-profile`, (route) => route.fulfill({ contentType: 'application/json', body: JSON.stringify({ publicId: publicTrainerId, draft: publicTrainerDraft, published: publicTrainerDraft, listedInCatalog: true, publishedAt: '2026-09-24T09:00:00.000Z', updatedAt: '2026-09-24T09:00:00.000Z', version: 1, isBrandTrainer: false }) }))
   await page.route('**/v1/trainers/catalog*', (route) => route.fulfill({ contentType: 'application/json', body: JSON.stringify({ items: [{ publicId: publicTrainerId, profile: publicTrainerDraft, isBrandTrainer: false }], totalCount: 1, nextOffset: null }) }))
+}
+
+/** Open the existing retained editor through its real disclosure controls. */
+export async function revealLiveSet(page: Page, setId: string) {
+  const row = page.locator(`[data-live-set-id="${setId}"]`)
+  await expect(row).toHaveCount(1)
+  await expect(row.locator('.live-set-check')).not.toHaveAttribute('aria-busy', 'true')
+  const group = page.locator('.exercise-block.live').filter({ has: row })
+  if (await group.count()) {
+    const body = group.locator(':scope > .coach-v79-circuit-body, :scope > .client-circuit-body')
+    if (await body.getAttribute('inert') !== null) await group.locator(':scope > .circuit-head button.coach-v79-circuit-heading, :scope > .circuit-head button.client-circuit-toggle').click()
+    await expect(body).not.toHaveAttribute('inert', '')
+    const round = group.locator('.circuit-round').filter({ has: row })
+    const roundBody = round.locator(':scope > .coach-v79-round-body, :scope > .client-circuit-round-body')
+    if (await roundBody.getAttribute('inert') !== null) await round.locator(':scope > .circuit-round-toggle').click()
+    await expect(roundBody).not.toHaveAttribute('inert', '')
+    const card = group.locator('[data-live-card-key]').filter({ has: row })
+    if (await card.locator(':scope > .coach-v79-card-body, :scope > .client-live-card-body').getAttribute('inert') !== null) {
+      const arrow = card.locator('button.coach-v79-card-toggle')
+      await (await arrow.count() ? arrow : card.locator('.exercise-technique-trigger')).click()
+    }
+  } else {
+    const card = page.locator('.live-exercise').filter({ has: row })
+    if (await card.locator(':scope > .coach-v79-card-body, :scope > .client-live-card-body').getAttribute('inert') !== null) await card.locator('button.coach-v79-card-toggle').click()
+  }
+  await expect.poll(() => row.evaluate(element => element.closest('[inert]') === null)).toBe(true)
 }
