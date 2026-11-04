@@ -71,12 +71,8 @@ export function compareProgramHistory(workouts,graph) {
   return result
 }
 
-export async function inspectProgramHistory({owner,runtime,target,legacyId=null,parts,approvedSha256,readRequest,persistInspection,scopes=reviewedProgramPackets}) {
-  const {payload,scope}=readProgramPacket(parts,approvedSha256,readRequest,scopes)
-  if(typeof persistInspection!=='function')fail('private_receipt_required')
-  const {trainerId}=await resolveJournalTrainer(owner,target,legacyId)
-  const cards=await ownerRead(owner,async()=>{
-    const rows=(await owner.query(`select distinct c.id,c.full_name,c.trainer_id,c.auth_user_id,c.archived_at,c.merged_into_client_id,ct.alias,
+export async function readProgramCardCandidates(connection,trainerId,payload) {
+    const rows=(await connection.query(`select distinct c.id,c.full_name,c.trainer_id,c.auth_user_id,c.archived_at,c.merged_into_client_id,ct.alias,
       (c.trainer_id=$1 and c.auth_user_id is null or exists(select 1 from public.client_trainer_relationships r where r.client_id=c.id and r.trainer_id=$1 and r.status='active')) connected,
       (lower(btrim(c.full_name)) in (select lower(btrim(n)) from unnest($2::text[]) n)
         or lower(btrim(ct.alias)) in (select lower(btrim(n)) from unnest($2::text[]) n)) exact,
@@ -87,7 +83,13 @@ export async function inspectProgramHistory({owner,runtime,target,legacyId=null,
       order by c.id limit 1001`,[trainerId,payload.matchNames,payload.clientName.split(/\s+/u)])).rows
     if(rows.length>1000)fail('roster_too_large')
     return rows
-  })
+}
+
+export async function inspectProgramHistory({owner,runtime,target,legacyId=null,parts,approvedSha256,readRequest,persistInspection,scopes=reviewedProgramPackets}) {
+  const {payload,scope}=readProgramPacket(parts,approvedSha256,readRequest,scopes)
+  if(typeof persistInspection!=='function')fail('private_receipt_required')
+  const {trainerId}=await resolveJournalTrainer(owner,target,legacyId)
+  const cards=await ownerRead(owner,()=>readProgramCardCandidates(owner,trainerId,payload))
   const exact=cards.filter(c=>c.exact),possible=cards.filter(c=>c.possible)
   const selected=exact.length===1&&exact[0].connected===true&&exact[0].archived_at===null&&exact[0].merged_into_client_id===null?exact[0]:null
   let status=selected?'existing_ready':exact.length||possible.length?'selection_requires_review':'new_card_ready'
