@@ -163,6 +163,7 @@ const trainerFinanceOverviewSchema = z.object({
     nearestPaymentDueOn: z.iso.date().nullable().default(null),
     unpaidPackageCount: z.number().int().nonnegative().default(0),
     activePackageCount: z.number().int().nonnegative(), upcomingPackageCount: z.number().int().nonnegative(), sessionsRemaining: z.number().int().nonnegative().nullable(),
+    overdueCents: z.number().int().nonnegative().optional(),
     overdue: z.boolean(), lowSessions: z.boolean(), unassignedSessions: z.number().int().nonnegative(),
     needsAttention: z.boolean(),
   })),

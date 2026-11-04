@@ -105,6 +105,35 @@ async function uncertainCreateFixture(page: Page, kind: 'payment' | 'package', f
 }
 
 export function financeAccountingCases() {
+  test('Finance exact kopecks and mixed overdue debt use separate amounts', { tag: ['@lime-finance'] }, async ({ page }, info) => {
+    const ledger = await accountingFixture(page)
+    await page.route('**/v1/finance/overview*', route => route.fulfill({ json: { overview: {
+      month: '2026-11', receivedCents: 10001, dueCents: 1100001, attentionCount: 1,
+      clients: [{ clientId, fullName: 'Александра Константинопольская', archivedAt: null, activeClient: true,
+        receivedCents: 10001, dueCents: 1100001, overdueCents: 100001, nearestPaymentDueOn: '2026-11-01', unpaidPackageCount: 2,
+        activePackageCount: 1, upcomingPackageCount: 1, sessionsRemaining: 5, overdue: true, lowSessions: false,
+        unassignedSessions: 0, needsAttention: true }],
+    } } }))
+    await page.goto('/finance')
+    await expect(page.locator('.finance-overview-client')).toContainText(/К оплате 11\s000,01/)
+    await expect(page.locator('.finance-overview-client')).toContainText(/Из них просрочено 1\s000,01/)
+    await expect(page.getByText('Месяц поступлений', { exact: true })).toBeVisible()
+    for (const width of [320, 390, 430, 1440]) {
+      await page.setViewportSize({ width, height: 844 })
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+      await page.screenshot({ path: info.outputPath(`mixed-debt-${width}.png`), fullPage: true })
+    }
+    await mockPilot(page, { role: 'client', clientLime: true })
+    const service = { ...ledger.packages[1]!, priceCents: 10001, paidCents: 10000, dueCents: 1, paymentStatus: 'partial' }
+    await page.route('**/v1/me/finance', route => route.fulfill({ json: { finance: { trainers: [{
+      trainerId: coach, trainerName: 'Тестовый тренер', packages: [service], payments: [],
+    }] } } }))
+    await page.setViewportSize({ width: 390, height: 844 })
+    await page.goto('/me/finance')
+    await expect(page.locator('.client-finance-package-money')).toContainText(/0,01\s₽/)
+    await page.screenshot({ path: info.outputPath('client-one-kopeck.png'), fullPage: true })
+  })
+
   // Payment and service have separate endpoints and native date/amount layouts.
   for (const kind of ['payment', 'package'] as const) test(`Finance uncertain ${kind} creation restores the same operation`, { tag: ['@lime-finance'] }, async ({ page }, info) => {
     const { form, commands } = await uncertainCreateFixture(page, kind)
