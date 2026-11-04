@@ -62,7 +62,7 @@ describe.skipIf(source===undefined)('bounded weekly-program writes and closed-re
     expect(await runProgramImport(f.options)).toMatchObject({status:'ready',selectionBound:true,willCreateCard:true})
     expect(await runProgramImport({...f.options,mode:'apply'})).toMatchObject({status:'imported',workouts:3,createdCard:true,contentVerified:true})
     expect(await f.count('clients')).toBe(2);expect(await f.count('workouts')).toBe(3)
-    expect(f.proof).toMatchObject({programCode:'F01',packetSha256:f.options.approvedSha256,createdCard:true})
+    expect(f.proof).toMatchObject({programCode:'F01',packetSha256:f.options.approvedSha256,createdCard:true,financeAttendanceVersion:1})
     expect(f.verified).toEqual(['complete'])
     expect(f.receipts.map(r=>r.state)).toEqual(['readback','prepared','committed','readback'])
     await expect(runProgramImport({...f.options,mode:'apply'})).rejects.toThrow('verify_required')
@@ -130,6 +130,37 @@ describe.skipIf(source===undefined)('bounded weekly-program writes and closed-re
     await expect(runProgramImport({...f.options,mode:'apply'})).rejects.toThrow('verify_required')
     expect(await runProgramImport({...f.options,mode:'verify'})).toMatchObject({status:'verified',readOnly:true,contentVerified:true,workouts:3})
     expect(f.verified).toEqual(['complete']);expect(await f.count('clients')).toBe(1)
+  })
+  it('verifies a pre-attendance receipt without backfilling historical sessions',async()=>{
+    const f=await fixture();await runProgramImport(f.options)
+    await expect(runProgramImport({...f.options,mode:'apply',persistReceipt:async(state,receipt)=>{
+      await f.options.persistReceipt(state,receipt);if(state==='committed')throw Error('synthetic lost receipt reply')
+    }})).rejects.toThrow('outcome_requires_readback')
+    // Emulate a committed pre-182 packet and its original receipt, not a new write.
+    delete f.proof!.financeAttendanceVersion
+    await f.owner.query("delete from public.trainer_finance_sessions where trainer_id=$1 and disposition='unassigned' and package_id is null",[f.coach])
+    expect(await runProgramImport({...f.options,mode:'verify'})).toMatchObject({status:'verified',readOnly:true,workouts:3})
+    expect(await f.count('trainer_finance_sessions')).toBe(0)
+    expect(await f.count('workouts')).toBe(3);expect(f.verified).toEqual(['complete'])
+  })
+  it('retains a later manual attendance decision and rejects changed finance during readback',async()=>{
+    const f=await fixture();await runProgramImport(f.options)
+    await expect(runProgramImport({...f.options,mode:'apply',persistReceipt:async(state,receipt)=>{
+      await f.options.persistReceipt(state,receipt);if(state==='committed')throw Error('synthetic lost receipt reply')
+    }})).rejects.toThrow('outcome_requires_readback')
+    const session=(await f.owner.query<{id:string;version:string;workout_date:string}>(`select s.id,s.version::text version,w.workout_date::text workout_date
+      from public.trainer_finance_sessions s join public.workouts w on w.id=s.workout_id
+      where s.trainer_id=$1 order by s.id limit 1`,[f.coach])).rows[0]!
+    await f.runtime.query('begin')
+    await f.runtime.query("select set_config('request.jwt.claim.sub',$1,true)",[f.coach])
+    await f.runtime.query("select public.update_trainer_finance_session_details_v2($1,$2,'free',null,$3,$4::date)",
+      [session.id,session.version,'Synthetic manual decision',session.workout_date])
+    await f.runtime.query('commit')
+    const rows=async()=>(await f.owner.query<{value:unknown}>('select to_jsonb(s) value from public.trainer_finance_sessions s where trainer_id=$1 order by id',[f.coach])).rows
+    const before=await rows()
+    await expect(runProgramImport({...f.options,mode:'verify'})).rejects.toThrow('finance_changed')
+    expect(await rows()).toEqual(before);expect(await f.count('workouts')).toBe(3)
+    expect(f.verified).toEqual([]);expect(f.receipts.at(-1)?.state).toBe('prepared')
   })
   it('keeps a prepared proof after rollback and reconciles absence without retrying a write',async()=>{
     const f=await fixture();await runProgramImport(f.options)

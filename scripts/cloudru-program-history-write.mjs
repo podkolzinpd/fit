@@ -4,7 +4,7 @@ import {pathToFileURL} from 'node:url'
 import {readProgramPacket,inspectProgramHistory,readProgramCardCandidates} from './cloudru-program-history-inspect.mjs'
 import {reviewedProgramPackets} from './private-program-history-scopes.mjs'
 import {resolveJournalTrainer,ownerRead,validateJournalDrafts,insertReviewedJournal,
-  verifyJournalContent,preservedJournalState,verifyPreservedState,legacyProfileId,sealJournalReceipt} from './cloudru-journal-import.mjs'
+  verifyJournalContent,isNewCardFinanceUnchanged,preservedJournalState,verifyPreservedState,legacyProfileId,sealJournalReceipt} from './cloudru-journal-import.mjs'
 import {loadCloudruUpload,safeJournalUploadFailure} from './cloudru-journal-upload.mjs'
 import {inspectWorkoutHistoryTarget} from './cloudru-account-history-audit.mjs'
 
@@ -51,9 +51,7 @@ async function verifyReceipt({owner,runtime,trainerId,payload,scope,readRequest,
   const content=await runtimeRead(runtime,trainerId,async()=>{
     const value=await verifyJournalContent(runtime,{trainerId,clientId:receipt.clientId,entries:expected,created:receipt.created})
     if(receipt.preservedState)await verifyPreservedState(runtime,receipt.clientId,ids,receipt.preservedState)
-    if(receipt.createdCard)for(const table of ['trainer_finance_packages','trainer_finance_payments','trainer_finance_sessions']) {
-      if((await runtime.query(`select count(*)::int n from public.${table} where client_id=$1`,[receipt.clientId])).rows[0]?.n!==0)fail('finance_changed')
-    }
+    if(receipt.createdCard&&!await isNewCardFinanceUnchanged(runtime,{trainerId,clientId:receipt.clientId,entries:expected,created:receipt.created,attendanceVersion:receipt.financeAttendanceVersion===undefined?0:receipt.financeAttendanceVersion}))fail('finance_changed')
     if(receipt.athleteId) {
       await runtime.query("select set_config('request.jwt.claim.sub',$1,true)",[receipt.athleteId])
       if((await runtime.query('select count(*)::int n from public.workouts where id=any($1::uuid[])',[ids])).rows[0]?.n!==scope.workouts)fail('athlete_visibility_changed')

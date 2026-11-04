@@ -634,13 +634,13 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
           from public.workouts w where w.id=$1`,[id,exercise,packageId])).rows
         let version = 4
         for (const status of ['in_progress','done','cancelled']) {
-          await ownerPool.query("update public.workouts set status=$2,started_at=case when $2='cancelled' then null else coalesce(started_at,now()) end,completed_at=case when $2='done' then now() else null end where id=$1",[id,status])
           if (status === 'done') {
             await ownerPool.query(`insert into public.trainer_finance_packages(id,trainer_id,client_id,title,sessions_total,price_cents,starts_on)
               values($1,$2,$3,'Slot preservation',10,250000,current_date)`,[packageId,ACTOR_ID,CLIENT_ID])
-            await ownerPool.query(`insert into public.trainer_finance_sessions(workout_id,trainer_id,client_id,package_id,disposition,source)
-              values($1,$2,$3,$4,'charged','automatic')`,[id,ACTOR_ID,CLIENT_ID,packageId])
           }
+          // Seed the service before completion; the real accounting sync owns
+          // the single active session, including clients without prior packs.
+          await ownerPool.query("update public.workouts set status=$2,started_at=case when $2='cancelled' then null else coalesce(started_at,now()) end,completed_at=case when $2='done' then now() else null end where id=$1",[id,status])
           if (status === 'cancelled') await ownerPool.query("update public.trainer_finance_sessions set voided_at=now(),void_reason='Synthetic cancellation' where workout_id=$1",[id])
           const before = await snapshot(), op = randomUUID()
           if (status === 'done') {
@@ -7589,9 +7589,18 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
           }
           await ownerPool.query(`insert into public.workouts(id,trainer_id,client_id,created_by,workout_date,status,training_format)
             values($1,$2,$3,$2,current_date,'planned',$4)`,[id,ACTOR_ID,card,scenario==='online'?'self':'with_trainer'])
-          await withActorTransaction(runtimePool,ACTOR_ID,c=>finishLiveWorkout(c,id,1,randomUUID(),{disposition:'auto',packageId:null}))
+          const operation = randomUUID()
+          await withActorTransaction(runtimePool,ACTOR_ID,c=>finishLiveWorkout(c,id,1,operation,{disposition:'auto',packageId:null}))
+          expect(await withActorTransaction(runtimePool,ACTOR_ID,c=>finishLiveWorkout(c,id,1,operation,{disposition:'auto',packageId:null})))
+            .toEqual({version:2,replayed:true})
           const sessions=await ownerPool.query<{disposition:string;package_id:string|null}>(`select disposition,package_id from public.trainer_finance_sessions where workout_id=$1 and voided_at is null`,[id])
-          expect(sessions.rows).toEqual(['multiple','expired'].includes(scenario)?[{disposition:'unassigned',package_id:null}]:[])
+          expect(sessions.rows).toEqual(scenario !== 'online' ? [{disposition:'unassigned',package_id:null}] : [])
+          const finance = await withActorTransaction(runtimePool,ACTOR_ID,c=>c.query<JsonResultRow>(
+            "select public.list_trainer_finance_overview_v2(date_trunc('month',current_date)::date) as result"))
+          const overview = finance[0]!.result as { clients: Array<{ clientId: string }> }
+          expect(overview.clients.find(item => item.clientId === card)).toMatchObject({
+            dueCents: 0, unassignedSessions: scenario === 'online' ? 0 : 1,
+          })
           expect((await ownerPool.query('select status from public.workouts where id=$1',[id])).rows).toEqual([{status:'done'}])
         } finally {
           await ownerPool.query('delete from public.trainer_finance_sessions where client_id=$1',[card])
