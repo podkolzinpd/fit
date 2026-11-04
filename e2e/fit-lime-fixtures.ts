@@ -808,19 +808,20 @@ export async function beginClientGesture(page: Page, surface: Locator, browserNa
   let box = initialBox
   const originBox = origin ? await origin.boundingBox() : null
   if (origin && !originBox) throw new Error('Gesture origin is not visible')
+  const live = await surface.evaluate(element => Boolean(element.closest('.client-live-v79, .coach-live-v79')))
   let from = originBox ? { x: originBox.x + originBox.width / 2, y: originBox.y + originBox.height / 2 }
     : { x: box.x + box.width * 0.88, y: box.y + box.height / 2 }
-  // Expanded content can still be clipped by its height transition. Keep the
-  // hit-target assertion, but wait for the actual point before sending a touch.
+  // Live folds/dialogs must settle at the intended touch origin. Other screens
+  // retain their existing surface hit area, including decorative calendar grid lines.
   await expect.poll(async () => {
-    await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))))
+    if (live) await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))))
     const currentBox = await surface.boundingBox()
     const currentOrigin = origin ? await origin.boundingBox() : null
     if (!currentBox || (origin && !currentOrigin)) return false
     const currentFrom = currentOrigin ? { x: currentOrigin.x + currentOrigin.width / 2, y: currentOrigin.y + currentOrigin.height / 2 }
       : { x: currentBox.x + currentBox.width * 0.88, y: currentBox.y + currentBox.height / 2 }
-    const reachable = await (origin ?? surface).evaluate((element, point) => element.contains(document.elementFromPoint(point.x, point.y)), currentFrom)
-    const stable = Math.abs(box.x - currentBox.x) < 0.5 && Math.abs(box.y - currentBox.y) < 0.5
+    const reachable = await (live && origin ? origin : surface).evaluate((element, point) => element.contains(document.elementFromPoint(point.x, point.y)), currentFrom)
+    const stable = !live || Math.abs(box.x - currentBox.x) < 0.5 && Math.abs(box.y - currentBox.y) < 0.5
       && Math.abs(box.width - currentBox.width) < 0.5 && Math.abs(box.height - currentBox.height) < 0.5
       && Math.abs(from.x - currentFrom.x) < 0.5 && Math.abs(from.y - currentFrom.y) < 0.5
     box = currentBox; from = currentFrom
