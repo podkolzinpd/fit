@@ -500,3 +500,42 @@ hardcoded stage.example.test fixture,логсохранён и проверко�
 Тесты/assertions/лимиты/strict-flaky не ослаблены. Source82797 не повторяется
 вслепую; codefix покаlocal, до merge2 необходимactual1988ordinarymerge и
 новый full exactsourceCI. ОсновнойPR1публикуетсянаunchanged1ee отдельно.
+
+## Итерация 22 — 05.11.2026 — Codex / OpenAI
+
+Necessary actualmain1988/f222f8caa97a160dbc1ab5a28d50f441f49127e9 включён
+вgoal-ветку321 обычнымmerge без конфликтов. Incoming20files531+/64-:
+CPA101–105trainercard/assets/inline note+optionalvoiceidleIcon, точныйfontlane/
+partitioninventory738 и оба журнальныхконтракта. AGENTS/FIT_WORKFLOW прежние;
+ACTIVE_CONTRACTS/CURRENT_STATE уточняютCPA и сохраняютнашCOP. API/photo188/
+package/lock/android/nativekey побайтно прежние,ABI8922/code9 неизменны.
+OwnGoal/catchupfix/myprofile/cases побайтно321, все входящие изменениясохранены.
+Проверка:5unitfiles36passed4.53s (включаяsharedVoiceInputButton),8partition
+checks passed13.56s,properstagefixture productionbuild/type/startup/lint/docs/
+diff passed.8ownprofilecases+2прежнихtrainer-name/retryMonoLime10/10passed
+12.5s,0retry/skips;никакиеassertions/лимиты/coverage/CI guards не менялись.
+НашPR1/main1ee ужефактическипринят6public+6signedZIP/213files/API/RSA/native9/
+finalreadback,all6actualZIPPNGviewed;receiptвPR1989. Окноосвобождено1988.
+Входящийкоординатор подтвердилегоmainCI41928769161/Android41928769374 и
+удержаниеwindowдоofficialAPI/web/OTA+34public34signedZIPприёмки. Этоне наша
+8+8stage2приёмка. PR2newheadполучитновыйfullsourceCIавтоматическипослеpush,
+ноегоmerge удерживаетсядофактическойквитанции1988. PR3preparedlocalea6
+содержитcatchupfix;послеэтогоmergeбудетподнятнаактуальнуюбазу ссохранением
+обеихисторий. Ниforeignoperations/branches/CI,ниисточникиsources не менялись.
+
+## Итерация 23 — 05.11.2026 — Codex / OpenAI
+
+PreparedPR3 включилsourcePR2/dcf иactual1988/f222 ordinarymerge. Единственный
+конфликт —триimportстрокиClientsPages:сохраненыincominguseWatch/useRef для
+inline trainer note инашuseLocation дляMyClientEditprofile return. После
+разрешениявесьdiffэтогофайлакdcf —ровнопрежний6lineownreturnchange,новый
+trainerbody/voice не менялся. Журналавтоматическисохранилобестороны.
+OwnGoalcards/sharedrealtime/VoiceInput/API/package/lock/android побайтноdcf.
+Проверка:36unit/5files4.08s,build/tsc/startup/lint/docs/diff passed;16/16
+productionbrowser14.2s0retry/skips (14fullprofile+2legacytrainername/retry
+MonoLime). Подцели/criteria/editreturn/sports/services/chat/disconnect/narrow
+360/375сохранены. Толькоlocalfixtures;этоещёнеactual14+14stage3acceptance.
+PR2dcfCI41929898416/Android41929898721проверяютсяавтоматически,егоmerge
+ждётactual1988API/web/OTA+34+34receipt. PR3неpushed,ждётactualsquash2,
+ordinaryactualmainmerge иновыйполныйexactsourceCI. Исходящиечат-сообщения
+непотребовались:координаторподтвердил,чтоувиделнашуPR1989квитанцию/окно.
