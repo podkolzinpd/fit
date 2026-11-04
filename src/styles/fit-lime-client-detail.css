@@ -138,3 +138,32 @@
   .fit-lime-shell.trainer-client-detail-identity .client-detail-routes { grid-template-columns: minmax(0, 1fr) }
   .fit-lime-shell.trainer-client-detail-identity .client-detail-vitals > span { white-space: normal }
 }
+
+/* Client profile 1059:22636. Full-name data is not guessed into first/last fields. */
+.fit-lime-shell.trainer-client-detail-identity .client-profile-reference { padding-inline: 2px; max-width: 560px; }
+.fit-lime-shell.trainer-client-detail-identity .client-profile-reference > .page-header { margin: 0 14px 20px; }
+.fit-lime-shell.trainer-client-detail-identity .client-profile-reference > .page-header h1 { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+.fit-lime-shell.trainer-client-detail-identity .client-profile-reference .page-back,
+.fit-lime-shell.trainer-client-detail-identity .client-profile-reference .overflow-trigger { background: transparent; border: 0; }
+.client-profile-header { display: flex; flex-direction: column; align-items: center; gap: 24px; padding: 0 20px; }
+.client-profile-photo { width: 121px; height: 120px; border-radius: 24px; object-fit: cover; }
+.fit-lime-shell .client-profile-header h2 { margin: 0; font-size: 24px; line-height: 24px; font-weight: 500; text-align: center; overflow-wrap: anywhere; }
+.client-profile-vitals { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); width: 100%; margin: 24px 0 40px; text-align: center; }
+.client-profile-vitals dd { margin: 0 0 4px; font-family: 'Doto', monospace; font-variation-settings: 'ROND' 0, 'wght' 800; font-size: 20px; line-height: 20px; }
+.client-profile-vitals dt { color: var(--lime-text-secondary); font-size: 14px; line-height: 14px; }
+.client-profile-reference .client-detail-vitals { display: none; }
+.client-profile-photo-error { color: var(--danger); font-size: 14px; }
+.fit-lime-shell.trainer-client-detail-identity .client-profile-reference .client-detail-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 2px; }
+.client-profile-reference .client-detail-actions > :not(.quick-start-workout):not(.client-detail-plan) { grid-column: 1 / -1; }
+.client-profile-reference .quick-start-workout { margin: 0; padding: 0; min-width: 0; border: 0; background: transparent; }
+.fit-lime-shell.trainer-client-detail-identity .client-profile-reference .quick-start-button,
+.fit-lime-shell.trainer-client-detail-identity .client-profile-reference .client-detail-plan { min-height: 60px; height: auto; padding: 12px 20px; border: 0; border-radius: 20px; font-size: 14px; line-height: 16px; font-weight: 400; text-align: center; justify-content: center; }
+.fit-lime-shell.trainer-client-detail-identity .client-profile-reference .quick-start-button { width: 100%; background: var(--lime-surface-raised); color: var(--lime-text); }
+.client-profile-reference .client-detail-chevron { display: none; }
+.client-profile-reference .quick-start-workout:has(.quick-start-format) { grid-column: 1 / -1; }
+
+.fit-lime-shell .client-profile-reference .quick-start-button::before { content: ''; display: inline-block; flex: 0 0 16px; width: 16px; height: 16px; background: url('../assets/client-profile/play.svg') center / contain no-repeat; }
+.fit-lime-shell .client-profile-reference .quick-start-button { display: flex; align-items: center; justify-content: center; gap: 12px; }
+.fit-lime-shell .client-profile-reference .client-detail-plan .client-detail-chevron { display: none; }
+
+.fit-lime-shell .client-profile-reference .quick-start-button { white-space: normal; line-height: 14px; }

@@ -73,6 +73,8 @@ export interface DataBackend {
   source: 'yandex'
   trainerConnections?: TrainerConnectionsRepository
   clients: {
+    photo?(id: string): Promise<{ url: string | null; version: number }>
+    uploadPhoto?(id: string, version: number, photo: PreparedImage): Promise<{ url: string | null; version: number }>
     getMine(): Promise<Client | null>
     resolveId: (id: string) => Promise<string>
     list(includeArchived?: boolean): Promise<Client[]>

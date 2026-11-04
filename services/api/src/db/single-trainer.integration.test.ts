@@ -95,6 +95,37 @@ describe.skipIf(source === undefined)('one active trainer through every connecti
       (select count(*)::int from public.client_trainers where client_id=$1) memberships`, [card])).rows[0]
   }
 
+  it('stores a photo only for the active trainer, rejects stale updates and preserves idempotency', async () => {
+    const f = await fixture()
+    await pool.query('insert into public.client_trainer_relationships(client_id,trainer_id,connected_by) values($1,$2,$3)', [f.card,f.first,f.athlete])
+    const image = { path: `${f.card}/${'a'.repeat(64)}.jpg`, sha256: 'a'.repeat(64), sizeBytes: 120 }
+    const save = (who: string, value: unknown, version: number | null) => actor(who,
+      'select public.save_client_profile_photo($1,$2::jsonb,$3) photo', [f.card,JSON.stringify(value),version])
+    for (const who of [f.athlete,f.second,f.outsider]) await expect(save(who,image,0)).rejects.toMatchObject({ message: 'client_forbidden' })
+    for (const value of [null,{}, {...image,sha256:null},{...image,sizeBytes:null},{...image,sizeBytes:160001},{...image,path:'another/photo.jpg'}])
+      await expect(save(f.first,value,0)).rejects.toMatchObject({ message: 'client_invalid' })
+    await expect(save(f.first,image,null)).rejects.toMatchObject({ message: 'client_invalid' })
+    expect(await save(f.first,image,0)).toEqual([{ photo: {...image,version:1} }])
+    expect(await save(f.first,image,0)).toEqual([{ photo: {...image,version:1} }])
+    const replacement = {...image,path:`${f.card}/${'b'.repeat(64)}.jpg`,sha256:'b'.repeat(64)}
+    await expect(save(f.first,replacement,0)).rejects.toMatchObject({ message: 'client_conflict' })
+    expect(await save(f.first,replacement,1)).toEqual([{ photo:{...replacement,version:2} }])
+    await actor(f.first,'select public.leave_client_space($1)',[f.card])
+    await expect(save(f.first,image,2)).rejects.toMatchObject({ message: 'client_forbidden' })
+    expect((await pool.query('select profile_photo from public.clients where id=$1',[f.card])).rows).toEqual([{profile_photo:{...replacement,version:2}}])
+  })
+
+  it('retains a source photo on merge only when the canonical card has no photo', async () => {
+    const f=await fixture(), source=randomUUID(), another=randomUUID()
+    const photo={path:`${source}/${'a'.repeat(64)}.jpg`,sha256:'a'.repeat(64),sizeBytes:120,version:4}
+    await pool.query("insert into public.clients(id,trainer_id,full_name,profile_photo) values($1,$2,'Synthetic source',$3::jsonb)",[source,f.first,JSON.stringify(photo)])
+    await pool.query('update public.clients set merged_into_client_id=$2,archived_at=now() where id=$1',[source,f.card])
+    expect((await pool.query('select profile_photo from public.clients where id=$1',[f.card])).rows).toEqual([{profile_photo:{...photo,version:1}}])
+    await pool.query("insert into public.clients(id,trainer_id,full_name,profile_photo) values($1,$2,'Synthetic other',$3::jsonb)",[another,f.first,JSON.stringify({...photo,sha256:'b'.repeat(64)})])
+    await pool.query('update public.clients set merged_into_client_id=$2,archived_at=now() where id=$1',[another,f.card])
+    expect((await pool.query('select profile_photo from public.clients where id=$1',[f.card])).rows).toEqual([{profile_photo:{...photo,version:1}}])
+  })
+
   it('never grants a second membership current access, and does not require a membership for the active trainer', async () => {
     const f = await fixture()
     await pool.query('insert into public.client_trainer_relationships(client_id,trainer_id,connected_by) values($1,$2,$3)', [f.card, f.first, f.athlete])

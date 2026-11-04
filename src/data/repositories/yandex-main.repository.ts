@@ -1301,6 +1301,12 @@ export function createYandexMainRepository(
       },
     },
     clients: {
+      async photo(id) {
+        return readJson(queries, `/v1/clients/${id}/photo`, z.object({ url: z.string().nullable(), version: z.number().int().nonnegative() }))
+      },
+      async uploadPhoto(id, version, photo) {
+        return writeJson(queries, `/v1/clients/${id}/photo`, 'PUT', { photo, expectedVersion: version }, z.object({ url: z.string().nullable(), version: z.number().int().nonnegative() }))
+      },
       async getMine() {
         if (actor.role !== 'client') return null
         const available = await clients()
