@@ -127,3 +127,19 @@ Chromium/WebKit19.7s,0retry/skips. Правила actualmain AGENTS/workflow/con
 Открыто: новый fullsourceCI после merge; actual1979 ещё проходит CI/выпуск.
 Дальше: normal push необходимого объединения и наблюдение точных новых runs,
 без duplicate dispatch и без занятия чужого production окна.
+
+## Итерация 8 — 04.11.2026 — Codex / OpenAI
+
+Source684 CI41891218478 завершился:33success, auth4 и aggregate failure.
+Единственный упавший сценарий — восстановление merged client-card после
+временно пустого списка, yandex-only-auth.webkit:1686/1713. Все три попытки
+искали старый .client-profile-identity strong; это прежний selector, не новая
+ошибка account recovery. Его собственные sessionReads/clientReads/no-writes
+assertions не меняются. Новый semantic selector region«Мои данные»/heading
+проверяет то же точное имя в утверждённой шапке.
+Проверка: тот же production fixture WebKit1/1passed5.9s,0retry/skips;
+ESLint/diff passed. Исходные metadata/joblog/diagnostics сохранены.
+Дальше: новый точный полный source CI (head действительно меняется из-за теста),
+без слепого failed-only повтора. Предшественник1979 принят по фактическому
+PRbody:mainCI41888147254/API41891789173/web41891789081/OTA41893531769SUCCESS,
+213files/36public+36ZIP Chromium/WebKit, финальная квитанция прочитана.
