@@ -74,6 +74,20 @@ export function compareProgramHistory(workouts,graph) {
   return result
 }
 
+// A verified current roster may resolve an archived predecessor only when its
+// explicit merge points directly to the sole live exact card. Keep every row
+// in the receipt/binding; unrelated archived rows and live duplicates still block.
+export function selectProgramCard(cards,rosterVerified=false) {
+  const exact=cards.filter(c=>c.exact)
+  const live=exact.filter(c=>c.archived_at===null&&c.merged_into_client_id===null)
+  if(live.length!==1||live[0].connected!==true)return null
+  const selected=live[0]
+  if(exact.length===1)return selected
+  if(!rosterVerified||exact.some(c=>c.id!==selected.id&&
+    (c.archived_at===null||c.merged_into_client_id!==selected.id||c.trainer_id!==selected.trainer_id)))return null
+  return selected
+}
+
 export async function readProgramCardCandidates(connection,trainerId,payload,aliasHash=null) {
     const rows=(await connection.query(`select distinct c.id,c.full_name,c.trainer_id,c.auth_user_id,c.archived_at,c.merged_into_client_id,ct.alias,
       (c.auth_user_id=$1 or c.trainer_id=$1 and c.auth_user_id is null or exists(select 1 from public.client_trainer_relationships r where r.client_id=c.id and r.trainer_id=$1 and r.status='active')) connected,
@@ -96,7 +110,7 @@ export async function inspectProgramHistory({owner,runtime,target,legacyId=null,
   const aliasHash=programMatchNameHash(trainerEvidence,payload)
   const cards=await ownerRead(owner,()=>readProgramCardCandidates(owner,trainerId,payload,aliasHash))
   const exact=cards.filter(c=>c.exact),possible=cards.filter(c=>c.possible)
-  const selected=exact.length===1&&exact[0].connected===true&&exact[0].archived_at===null&&exact[0].merged_into_client_id===null?exact[0]:null
+  const selected=selectProgramCard(cards,identityEvidence?.method==='current_roster')
   let status=selected?'existing_ready':exact.length||possible.length?'selection_requires_review':'new_card_ready'
   const graph={workouts:[],exercises:[],sets:[]}
   if(selected) await ownerRead(owner,async()=>{
