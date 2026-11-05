@@ -700,6 +700,8 @@ test('background journal distinguishes transaction limits from work and keeps on
   const messages = [
     { event: 'background_transaction_failed', transactionPhase: 'timeout', errorCode: '22023', message: 'private-sql' },
     { event: 'background_transaction_failed', transactionPhase: 'private-phase', errorCode: '22023' },
+    { event: 'background_push_query_failed', step: 'reminder_enqueue', errorCode: '22023', message: 'private-query' },
+    { event: 'background_push_query_failed', step: 'private-step', errorCode: '22023' },
     { event: 'cloudru_background_failed', dispatchOperation: 'push', dispatchPhase: 'prepare', errorCode: '22023' },
     { event: 'yandex_session_cleanup_failed', dispatchOperation: 'auth_sessions', dispatchPhase: 'cleanup', errorCode: '22023' },
     { event: 'cloudru_background_failed', dispatchOperation: 'private-op', dispatchPhase: 'prepare', errorCode: 'private-code' },
@@ -708,6 +710,7 @@ test('background journal distinguishes transaction limits from work and keeps on
   assert.equal(result.status, 0)
   const report = JSON.parse(result.stdout)
   assert.deepEqual(report.transactionFailures, [{ phase: 'timeout', code: '22023' }])
+  assert.deepEqual(report.pushQueryFailures, [{ step: 'reminder_enqueue', code: '22023' }])
   assert.deepEqual(report.dispatchFailures, [
     { operation: 'push', phase: 'prepare', code: '22023' }, { operation: 'auth_sessions', phase: 'cleanup', code: '22023' },
   ])
