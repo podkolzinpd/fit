@@ -7,6 +7,7 @@ import {ownerRead,sourceContent,sealJournalReceipt,legacyProfileId} from './clou
 import {resolveProgramTrainer,readProgramTrainerEvidence,programMatchNameHash} from './cloudru-program-trainer-evidence.mjs'
 import {normalizedRosterNameSql} from './cloudru-account-links-audit.mjs'
 import {safeJournalUploadFailure} from './cloudru-journal-upload.mjs'
+import {readHistoryRegistry} from './cloudru-account-history-audit.mjs'
 
 // This phase has no writer, mutation adapter, actor/client override or apply mode.
 const fail = code => {throw new Error(`program_history_inspect_${code}`)}
@@ -129,13 +130,7 @@ export async function inspectProgramHistory({owner,runtime,target,legacyId=null,
     newWorkouts:comparison.newRecords.length,duplicates:comparison.exactDuplicates.length,conflicts:comparison.conflicts.length}
 }
 
-async function main() {
-  if(process.env.GITHUB_REF!=='refs/heads/main'||process.env.GITHUB_REPOSITORY!=='podkolzinpd/fit'||process.env.FIT_JOURNAL_IMPORT_MODE!=='inspect')fail('source_invalid')
-  const {readWorkoutHistoryTarget,readHistoryRegistry}=await import('./cloudru-account-history-audit.mjs')
-  const target=readWorkoutHistoryTarget(process.env.FIT_WORKOUT_HISTORY_TARGET)
-  const trainerEvidence=readProgramTrainerEvidence(process.env.FIT_PROGRAM_TRAINER_EVIDENCE,target)
-  const {loadCloudruUpload}=await import('./cloudru-journal-upload.mjs')
-  const upload=await loadCloudruUpload(target,process.env.FIT_JOURNAL_IMPORT_SHA256,process.env.FIT_JOURNAL_UPLOAD_SESSION)
+export async function executeProgramHistoryInspection({target,trainerEvidence,upload}) {
   const {buildDatabaseConnectionConfig}=await import('/app/dist/db/connection-config.js')
   if(process.env.DATABASE_URL||process.env.MIGRATION_DATABASE_URL)fail('database_target_invalid')
   const ownerConfig=buildDatabaseConnectionConfig('MIGRATION_DATABASE'),runtimeConfig=buildDatabaseConnectionConfig('DATABASE')
@@ -152,9 +147,19 @@ async function main() {
     const result=await inspectProgramHistory({owner,runtime,target,legacyId,trainerEvidence,parts:upload.parts,approvedSha256:process.env.FIT_JOURNAL_IMPORT_SHA256,
       readRequest:readSavePlannedWorkoutRequest,persistInspection:receipt=>upload.persistReceipt('readback',receipt,sealJournalReceipt)})
     if(interrupted)fail('connection_interrupted')
-    console.log(JSON.stringify(result))
+    return result
   }finally{await Promise.allSettled([owner.end(),runtime.end()]);upload.close()}
 }
+async function main() {
+  if(process.env.GITHUB_REF!=='refs/heads/main'||process.env.GITHUB_REPOSITORY!=='podkolzinpd/fit'||process.env.FIT_JOURNAL_IMPORT_MODE!=='inspect')fail('source_invalid')
+  const {readWorkoutHistoryTarget}=await import('./cloudru-account-history-audit.mjs')
+  const target=readWorkoutHistoryTarget(process.env.FIT_WORKOUT_HISTORY_TARGET)
+  const trainerEvidence=readProgramTrainerEvidence(process.env.FIT_PROGRAM_TRAINER_EVIDENCE,target)
+  const {loadCloudruUpload}=await import('./cloudru-journal-upload.mjs')
+  const upload=await loadCloudruUpload(target,process.env.FIT_JOURNAL_IMPORT_SHA256,process.env.FIT_JOURNAL_UPLOAD_SESSION)
+  console.log(JSON.stringify(await executeProgramHistoryInspection({target,trainerEvidence,upload})))
+}
+
 if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href)main().catch(error=>{
   // No SQL/server message, names, IDs, target hashes or private graph in logs.
   const codes=new Set(['packet_invalid','private_receipt_required','roster_too_large','history_too_large','runtime_role_invalid','visibility_changed','source_invalid','database_target_invalid','connection_interrupted',
