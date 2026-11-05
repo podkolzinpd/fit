@@ -1750,3 +1750,53 @@ Android debug build по штатным path filters не запускается
 3grant и5отдельных inspect с сохранением прежних назначений. Никаких новых grant
 ещё не было. Активный старый sourceCI не дублируется ручным запуском; synchronize
 на новый head управляется штатной concurrency самого CI.
+
+### Итерация 34 нового выпуска — 2026-11-05 — GPT / OpenAI
+
+Задача: завершить ADM103–106 — выпустить согласованное расширение до пяти
+администраторов и фактически добавить три закрытые учётки, сохранив прежние две.
+Расхождения: нет; явное поручение владельца из32 заменяет только прежний лимит2.
+Сделано: [PR2008](https://github.com/podkolzinpd/fit/pull/2008) штатно squash-слит
+с проверкой head64ab30de в main6ddf1344877f569d149d9b11ffdc723375fb060c.
+Дерево source/main побайтно одинаковое. SourceCI42085084600 прошёл35/35;
+[полный mainCI](https://github.com/podkolzinpd/fit/actions/runs/42089912802) —34success+1штатный migration-safety skip.
+Официальные [API](https://github.com/podkolzinpd/fit/actions/runs/42095291850), [сайт](https://github.com/podkolzinpd/fit/actions/runs/42095291855), [AndroidOTA](https://github.com/podkolzinpd/fit/actions/runs/42095596061)
+успешны на этом же main. Pending migration190 применена штатным API release.
+Фактическая проверка: оба health/ready200 с releaseId6ddf1344, приватные clients401;
+DNS3/3 и endpoints8/8. По manifest официального web-артефакта все213/213 реальных
+публичных файлов совпали по размеру/SHA256. RSA-подписи публичных OTA manifest/ZIP,
+SHA256, source6ddf1344, ABI8922d2e9 и nativeBuild9 проверены. Версия APK/ABI прежняя;
+физическое устройство и личные входы получателей не проверялись.
+
+Решение: после завершения общей очереди публикаций выполнить только штатные
+administrator-операции по отдельным закрытым целям. Перед записью прежние primary/
+additional независимо прочитаны:42096053528/42096203689, обаenabled; первыйbound/
+ready1, второйunbound/ready0. Затем выполнены три отдельные grant-транзакции:
+
+| Закрытый слот | Grant | Отдельный committed inspect после всех добавлений | Итог |
+| --- | --- | --- | --- |
+| third | [42096349053](https://github.com/podkolzinpd/fit/actions/runs/42096349053) | [42097185231](https://github.com/podkolzinpd/fit/actions/runs/42097185231) | enabled=true, bound=false, readyProfiles=0, otherEnabledAdmins=4 |
+| fourth | [42096625972](https://github.com/podkolzinpd/fit/actions/runs/42096625972) | [42097327331](https://github.com/podkolzinpd/fit/actions/runs/42097327331) | enabled=true, bound=false, readyProfiles=0, otherEnabledAdmins=4 |
+| fifth | [42096904352](https://github.com/podkolzinpd/fit/actions/runs/42096904352) | [42097052610](https://github.com/podkolzinpd/fit/actions/runs/42097052610) | enabled=true, bound=false, readyProfiles=0, otherEnabledAdmins=4 |
+
+Промежуточные отдельные inspect третьего/четвёртого:42096488020/42096755927,
+обаenabled; при добавлениях общее число последовательно3→4→5.
+Финальные прежние [primary42097460772](https://github.com/podkolzinpd/fit/actions/runs/42097460772) и
+[additional42097586407](https://github.com/podkolzinpd/fit/actions/runs/42097586407): обаenabled, otherEnabledAdmins=4,
+bound/ready соответственноtrue/1 иfalse/0, как до записи.
+Каждый из пяти итоговых readback подтверждает своё включённое назначение и
+четыре остальных. Первый verified subject сохраняется; роли/пилоты/офисы/данные
+не менялись. Контакты, UUID, digest и секреты в Git/PR/эту запись не включены.
+Отвергнуто: заменить старые назначения, повторять grant после неизвестного
+результата, прямые production SQL/SSH, расширять какие-либо независимые допуски.
+Один watch нового inspect сначала получил временный GitHub404 после dispatch;
+проверено существование того жеrun, наблюдение продолжено без повторной операции.
+Проверка: ADM103–105 подтверждены локальными/CI проверками32–33; ADM106 — тремя
+реальными grant и пятью независимыми финальными committed inspect выше.
+Открыто: личный OAuth трёх новых получателей ещё не подтверждён; enabled не означает
+bound/ready. Для завершения привязки нужен обычный вход в соответствующий ЯндексID;
+при уже открытой старой сессии — выход и новый вход. Прежний дополнительный admin
+также по-прежнему ждёт своего первого входа; его право не отзывалось.
+Дальше: задача назначения прав завершена. Эта post-release квитанция хранится
+отдельным docs-only commit от реально опубликованного main; новая публикация
+runtime и новый implementation PR ради записи не запускаются.
