@@ -217,14 +217,7 @@ export async function runProgramImport({mode,owner,runtime,target,legacyId=null,
   }
 }
 
-async function main() {
-  const mode=process.env.FIT_JOURNAL_IMPORT_MODE
-  if(process.env.GITHUB_REF!=='refs/heads/main'||process.env.GITHUB_REPOSITORY!=='podkolzinpd/fit'
-    ||!['inspect','apply','verify'].includes(mode))fail('source_invalid')
-  const {readWorkoutHistoryTarget,readHistoryRegistry}=await import('./cloudru-account-history-audit.mjs')
-  const target=readWorkoutHistoryTarget(process.env.FIT_WORKOUT_HISTORY_TARGET)
-  const trainerEvidence=readProgramTrainerEvidence(process.env.FIT_PROGRAM_TRAINER_EVIDENCE,target)
-  const upload=await loadCloudruUpload(target,process.env.FIT_JOURNAL_IMPORT_SHA256,process.env.FIT_JOURNAL_UPLOAD_SESSION,{recoveryReadOnly:mode==='verify'})
+export async function executeProgramHistoryWrite({mode,target,trainerEvidence,upload}) {
   const {buildDatabaseConnectionConfig}=await import('/app/dist/db/connection-config.js')
   if(process.env.DATABASE_URL||process.env.MIGRATION_DATABASE_URL)fail('database_target_invalid')
   const ownerConfig=buildDatabaseConnectionConfig('MIGRATION_DATABASE'),runtimeConfig=buildDatabaseConnectionConfig('DATABASE')
@@ -246,9 +239,20 @@ async function main() {
       selectionBinding:upload.selectionBinding,beginSingleApply:upload.beginSingleProgramApply,persistProof:upload.persistProgramProof,
       readProof:upload.readProgramProof,markVerified:upload.markProgramVerified,preparedReceiptCapability:upload.preparedReceiptCapability})
     if(interrupted)fail('outcome_requires_readback')
-    console.log(JSON.stringify({event:'program_history_write',...result}))
+    return {event:'program_history_write',...result}
   }finally{await Promise.allSettled([owner.end(),runtime.end()]);upload.close()}
 }
+async function main() {
+  const mode=process.env.FIT_JOURNAL_IMPORT_MODE
+  if(process.env.GITHUB_REF!=='refs/heads/main'||process.env.GITHUB_REPOSITORY!=='podkolzinpd/fit'
+    ||!['inspect','apply','verify'].includes(mode))fail('source_invalid')
+  const {readWorkoutHistoryTarget,readHistoryRegistry}=await import('./cloudru-account-history-audit.mjs')
+  const target=readWorkoutHistoryTarget(process.env.FIT_WORKOUT_HISTORY_TARGET)
+  const trainerEvidence=readProgramTrainerEvidence(process.env.FIT_PROGRAM_TRAINER_EVIDENCE,target)
+  const upload=await loadCloudruUpload(target,process.env.FIT_JOURNAL_IMPORT_SHA256,process.env.FIT_JOURNAL_UPLOAD_SESSION,{recoveryReadOnly:mode==='verify'})
+  console.log(JSON.stringify(await executeProgramHistoryWrite({mode,target,trainerEvidence,upload})))
+}
+
 const safeCodes=new Set(['mode_invalid','source_invalid','database_target_invalid','receipt_required','private_proof_required',
   'identity_sources_scope_exceeded','alias_source_mismatch','invalid','target_mismatch','roster_changed','sources_disagree',
   'private_proof_invalid','prior_batch_changed','verify_required','source_review_required','selection_required','selection_changed',

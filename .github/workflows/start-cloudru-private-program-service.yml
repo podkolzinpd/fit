@@ -1,0 +1,139 @@
+name: Install reviewed Cloud.ru private program service
+
+on:
+  workflow_dispatch:
+    inputs:
+      operator_public_key_b64:
+        description: Operator PUBLIC RSA key; no customer parameters are accepted
+        type: string
+        required: true
+
+permissions:
+  contents: read
+  actions: read
+
+# The installer holds the existing VM queue while the independent system service
+# works. It never receives a target, roster, packet digest, journal or receipt.
+concurrency:
+  group: cloudru-stage-vm
+  cancel-in-progress: false
+
+jobs:
+  service:
+    runs-on: [self-hosted, cloudru-stage]
+    timeout-minutes: 130
+    steps:
+      - name: Require successful exact current main before installing code
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REPOSITORY" = podkolzinpd/fit
+          test "$GITHUB_REF" = refs/heads/main
+          test "$(hostname)" = fit-stage-app
+          api() {
+            curl --fail --silent --show-error --max-time 15 \
+              -H "Authorization: Bearer $GH_TOKEN" -H 'Accept: application/vnd.github+json' \
+              "https://api.github.com/repos/podkolzinpd/fit/$1"
+          }
+          test "$(api commits/main | jq -er .sha)" = "$GITHUB_SHA"
+          api "actions/workflows/ci.yml/runs?head_sha=$GITHUB_SHA&event=push&per_page=20" | \
+            jq -e --arg sha "$GITHUB_SHA" --arg repo "$GITHUB_REPOSITORY" \
+              'any(.workflow_runs[]; .head_sha == $sha and .head_branch == "main" and
+                .head_repository.full_name == $repo and .path == ".github/workflows/ci.yml" and
+                .event == "push" and .status == "completed" and .conclusion == "success")' >/dev/null
+          test "$(cat /opt/fit/RUNNING_SHA)" = "$GITHUB_SHA"
+          test "$(sudo podman inspect fit-api-stage --format '{{.Config.Image}}')" = "localhost/fit-api:$GITHUB_SHA"
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Install only code and infrastructure credentials for the isolated service
+        env:
+          CLOUDRU_DATABASE_CONFIG_JSON: ${{ secrets.CLOUDRU_STAGE_DATABASE_CONFIG_JSON }}
+          CLOUDRU_MEDIA_KEY_ID: ${{ secrets.CLOUDRU_MEDIA_MIGRATION_KEY_ID }}
+          CLOUDRU_MEDIA_KEY_SECRET: ${{ secrets.CLOUDRU_MEDIA_MIGRATION_KEY_SECRET }}
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
+          OPERATOR_PUBLIC_KEY_B64: ${{ inputs.operator_public_key_b64 }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          id="$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
+          [[ "$id" =~ ^[0-9]{1,20}-[0-9]{1,4}$ ]]
+          root="/opt/fit/secrets/program-direct-$id"
+          sudo test ! -L /opt/fit/secrets
+          test "$(sudo stat -c '%u:%a' /opt/fit/secrets)" = 0:700
+          sudo test ! -e "$root"
+          sudo install -d -m 700 "$root" "$root/code" "$root/runtime" "$root/capabilities" "$root/responses"
+          sudo install -d -m 755 "$root/bootstrap"
+          git archive "$GITHUB_SHA" scripts | sudo tar -x -C "$root/code"
+          [[ "$OPERATOR_PUBLIC_KEY_B64" =~ ^[A-Za-z0-9+/=]{400,11000}$ ]]
+          printf '%s' "$OPERATOR_PUBLIC_KEY_B64" | base64 --decode | sudo tee "$root/operator.public.pem" >/dev/null
+          sudo chmod 600 "$root/operator.public.pem"
+          sudo openssl pkey -pubin -in "$root/operator.public.pem" -noout >/dev/null
+          jq -e '.MIGRATION_DATABASE_HOST == "10.70.10.67" and .MIGRATION_DATABASE_PORT == "5432" and
+            .MIGRATION_DATABASE_NAME == "fit" and .MIGRATION_DATABASE_USER == "fit_owner" and
+            .DATABASE_HOST == "10.70.10.67" and .DATABASE_PORT == "5432" and
+            .DATABASE_NAME == "fit" and .DATABASE_USER == "fit_api" and
+            .MIGRATION_DATABASE_URL == null and .DATABASE_URL == null and
+            all(.[]; type == "string" and length > 0 and (test("[\u0000-\u001f\u007f]") | not))' \
+            <<<"$CLOUDRU_DATABASE_CONFIG_JSON" >/dev/null
+          jq -r 'to_entries[] | select(.key | test("^(MIGRATION_DATABASE|DATABASE)_(HOST|PORT|NAME|USER|PASSWORD)$")) | "\(.key)=\(.value|@json)"' \
+            <<<"$CLOUDRU_DATABASE_CONFIG_JSON" | sudo tee "$root/service.env" >/dev/null
+          for name in CLOUDRU_MEDIA_KEY_ID CLOUDRU_MEDIA_KEY_SECRET SUPABASE_ACCESS_TOKEN SUPABASE_PROJECT_ID; do
+            value=${!name}
+            test -n "$value"
+            test "$value" = "${value//$'\n'/}"
+            test "$value" = "${value//$'\r'/}"
+            printf '%s' "$value" | jq -Rs --arg name "$name" '$name+"="+(.|@json)' | sudo tee -a "$root/service.env" >/dev/null
+          done
+          printf 'FIT_DIRECT_MAIN=%s\nFIT_DIRECT_SESSION=%s\nFIT_DIRECT_ROOT=%s\n' "$GITHUB_SHA" "$id" "$root" | \
+            sudo tee -a "$root/service.env" >/dev/null
+          sudo chmod 600 "$root/service.env"
+          # Reuse the exact reviewed image dependencies; no new runtime packages.
+          cid=$(sudo podman create "localhost/fit-api:$GITHUB_SHA")
+          trap 'sudo podman rm "$cid" >/dev/null' EXIT
+          sudo podman cp "$cid:/app/package.json" "$root/runtime/package.json"
+          sudo podman cp "$cid:/app/node_modules" "$root/runtime/node_modules"
+          sudo podman rm "$cid" >/dev/null
+          trap - EXIT
+          # systemd supplies a clean environment. No Actions variables or tokens
+          # are inherited by either bootstrap or the data-processing service.
+          sudo systemd-run --quiet --wait --collect --unit="fit-program-direct-bootstrap-$id" \
+            --property="EnvironmentFile=$root/service.env" --property=UMask=0077 \
+            "$(command -v node)" "$root/code/scripts/cloudru-program-direct-worker.mjs" bootstrap
+          output="$RUNNER_TEMP/direct-program-infrastructure-$id"
+          install -d -m 700 "$output"
+          sudo cp "$root/bootstrap/capability.encrypted.json" "$output/capability.encrypted.json"
+          sudo chown "$(id -u):$(id -g)" "$output/capability.encrypted.json"
+          chmod 600 "$output/capability.encrypted.json"
+      - name: Return only encrypted infrastructure capability created before customer input
+        uses: actions/upload-artifact@v4
+        with:
+          name: direct-program-infrastructure-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/direct-program-infrastructure-${{ github.run_id }}-${{ github.run_attempt }}/capability.encrypted.json
+          retention-days: 1
+          if-no-files-found: error
+      - name: Reserve VM serialization while the independent Cloud.ru service runs
+        shell: bash
+        run: |
+          set -euo pipefail
+          id="$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
+          [[ "$id" =~ ^[0-9]{1,20}-[0-9]{1,4}$ ]]
+          root="/opt/fit/secrets/program-direct-$id"
+          unit="fit-program-direct-$id"
+          # Cancellation drains an in-flight operation before releasing the VM
+          # queue. The service retains closed proof for unknown-COMMIT recovery.
+          trap 'sudo systemctl stop "$unit" >/dev/null 2>&1 || true' EXIT
+          sudo systemd-run --quiet --service-type=exec --unit="$unit" --property="EnvironmentFile=$root/service.env" \
+            --property=UMask=0077 --property=RuntimeMaxSec=7200 --property=TimeoutStopSec=240 --property=RemainAfterExit=yes \
+            --property=KillMode=mixed --property=StandardOutput=null --property=StandardError=null \
+            "$(command -v node)" "$root/code/scripts/cloudru-program-direct-worker.mjs" run
+          while test "$(sudo systemctl show "$unit" --property=SubState --value)" = running; do sleep 5; done
+          test "$(sudo systemctl show "$unit" --property=Result --value)" = success
+          # Infrastructure credentials are retired only after guarded completion.
+          sudo rm -- "$root/service.env"
+          sudo systemctl stop "$unit" >/dev/null
+          trap - EXIT

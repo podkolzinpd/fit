@@ -696,3 +696,76 @@ fit_owner: две новые fixtures оставляли свой временн
 shared dependencies. Это предотвращает утечку между suites без изменения
 production ролей, проверок, таймаутов или recovery setup. Новый exact-head CI
 после такого исправления обязателен.
+
+
+## Итерация 11 — 05.11.2026 — Codex / OpenAI
+
+Задача: после остановки прежнего secret-based варианта владелец явно поручил
+доработать и выполнить все17 переносов напрямую через Cloud.ru, без передачи
+клиентских данных в GitHub. Последующее уточнение — использовать сохранённый
+путь предыдущего переноса. Исходники, original target и даты не меняются.
+
+Расхождение: прежний транспорт уже отправлял encrypted payload прямо в Cloud.ru,
+но Actions получали target/evidence secrets, packet checksum inputs и агрегаты.
+Один лишь отказ от нового evidence secret не исполняет новую границу. Отдельного
+локального SSH-доступа сейчас нет; новый вход/ключ не требуется для выбранного
+переиспользования существующего Cloud.ru транспорта и reviewed code installer.
+
+Решение PHI-DIRECT-CLOUDRU-01: GitHub устанавливает только проверенный код и
+инфраструктурные credentials, принимает только публичный ключ оператора и
+удерживает прежнюю очередь cloudru-stage-vm. Единственный возвращаемый artifact
+создаётся ДО клиентского ввода: encrypted infrastructure capability. Обработка
+команд выполняется отдельной Cloud.ru systemd-службой с чистым окружением,
+которая отвергает любые GITHUB_/ACTIONS_/RUNNER_/CI variables. Нет app endpoint,
+публичного порта, новой зависимости, миграции или расширения pilot/role/binding.
+Техническая возможность администратора runner выполнять root-код на той же VM
+сохраняется: это разделение потоков данных, не изоляция от владельца VM/GitHub.
+
+Target, отдельный roster evidence, packet digest и все результаты идут только
+через зашифрованный канал local↔Cloud.ru S3. Запросы дополнительно подписаны
+ключом оператора; control session/sequence/main, срок2часа, fixed object paths,
+400-командный предел,65KiB input и write-once PUT закрывают подмену/replay.
+Private state хранится0600 под root0700. Контейнер на одну операцию сохраняет
+read-only root, cap-drop/no-new-privileges, лимиты и mount ровно одной сессии.
+В Actions нет клиентского target/roster/digest, upload receipt или summary.
+Отдельная служба не наследует токены Actions; её stdout/stderr не транслируются.
+Отмена installer сначала завершает текущую bounded операцию и останавливает
+службу, затем освобождает общий VM slot; неизвестный COMMIT не повторяется.
+
+Сделано: выделены bootstrap-функции существующих inspect/write CLI без изменения
+SQL/actor/RLS/identity/finance/write/verify/expiry/cleanup guards. Старые CLI
+по-прежнему требуют trusted main и свои прежние источники. Новый direct entry
+принимает только bounded private input; допускается тот же approved набор17.
+Control ledger требует старое READ verify/no_commit и штатный cleanup, затем
+F01..F17 по одному: отдельная review-сессия, transfer preflight, единственный
+apply, отдельный verify, закрытая локальная проверка prepared/readback и
+подписанное acknowledgement ДО cleanup/следующего человека. Старые runs не
+перезаписываются. Неполный roster, новые карточки, дубли/финансовые изменения
+и неизвестный исход останавливают перенос. Receipt validators/source checks
+локального оператора сохраняются; старые workflow operator gates закрыты.
+
+Проверка:9 новых protocol/entry/security cases и24 targeted cases PASS;
+infra423/423 иspeech7/7 PASS, root lint/types и API lint/build PASS. Первый
+speech-запуск был ограничен локальным запретом loopback; тот же набор прошёл
+после штатного разрешения loopback, assertions не менялись. Изолированная Linux-репетиция без сети прошла15 подписанных control requests:
+11 bounded container calls, единственный apply, отклонение replay и cleanup до
+acknowledgement; команды контейнеров в этой транспортной репетиции synthetic,
+production БД не использовалась. Свой test container удалён штатным --rm.
+Полный обычный exact-head CI, PostgreSQL и live bootstrap ещё не выполнены. Полная frontend
+сборка и стартовая проверка PASS; CI scope не сокращён.
+
+Отвергнуто: повторно отправлять target/evidence или checksum через GitHub,
+получать клиентские квитанции Actions artifacts, притворяться GitHub-окружением
+для обхода прежнего CLI, raw SQL/dashboard writer, новый пользовательский
+аккаунт, ручная смена роли или ослабление финансов/cleanup. Прежний cloud
+transport/proofs переиспользуются, а не заменяются непроверенным импортом.
+
+Открыто: reviewed PR/exact-head CI, публикация текущего main, один code-only
+installer, закрытый direct control readback и фактические17 imports. Прежний
+новый evidence secret не создан; реальных apply по-прежнему0/17. Слияние кода
+не является переносом данных. PHI104/105 остаются открытыми до production
+соответствий,17 независимых readbacks и полного guarded cleanup.
+
+Приёмка DIRECT101 — отсутствие клиентского data flow через Actions;
+DIRECT102 — authenticated bounded channel и serial/recovery/ack guards.
+Оба локально проверены новым security набором; production запуск ещё гейт.
