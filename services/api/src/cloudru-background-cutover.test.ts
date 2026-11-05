@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { Pool, type PoolClient, type QueryResultRow } from 'pg'
-import { activateCloudruFreshPush, archiveCloudruPushHistory, archiveCloudruPushSnapshot, previewCloudruPushHistory, safeCutoverFailure } from './cloudru-background-cutover.js'
+import { activateCloudruFreshPush, archiveCloudruPushHistory, archiveCloudruPushSnapshot, holdCloudruPush, previewCloudruPushHistory, safeCutoverFailure } from './cloudru-background-cutover.js'
 import type { DatabaseClient } from './db/types.js'
 import { inspectCloudruQueue } from './cloudru-operations-health.js'
 
@@ -101,6 +101,27 @@ describe.skipIf(!process.env.TEST_CLOUDRU_OPERATIONS_DATABASE_URL && !process.en
   const wrap = (connection: PoolClient): DatabaseClient => ({
     query: async <Row extends QueryResultRow>(text: string, values: readonly unknown[] = []) =>
       (await connection.query<Row>(text, [...values])).rows,
+  })
+
+  it('pauses delivery idempotently while preserving the boundary, receipt and uncertain outcomes', async () => {
+    const cutoff = new Date('2026-11-05T09:00:00Z')
+    const connection = await pool.connect(), client = wrap(connection)
+    try {
+      const snapshot = await previewCloudruPushHistory(client, cutoff)
+      await archiveCloudruPushSnapshot(client, cutoff, snapshot.fingerprint)
+      await activateCloudruFreshPush(client, cutoff, snapshot.fingerprint, cutoff)
+      await connection.query(`insert into app_private.push_notifications_outbox
+        (id,created_at,kind,dispatch_token,dispatch_started_at)
+        values(1,'2026-11-05T09:01:00Z','test','uncertain','2026-11-05T09:01:00Z')`)
+      const before = (await connection.query('select * from app_private.push_delivery_control')).rows[0] as Record<string, unknown>
+      const pending = (await connection.query('select * from app_private.push_notifications_outbox')).rows
+      expect(await holdCloudruPush(client)).toEqual({ held: true, alreadyHeld: false, leased: 1 })
+      expect(await holdCloudruPush(client)).toEqual({ held: true, alreadyHeld: true, leased: 1 })
+      expect((await connection.query('select * from app_private.push_delivery_control')).rows[0])
+        .toEqual({ ...before, delivery_enabled: false })
+      expect((await connection.query('select * from app_private.push_notifications_outbox')).rows).toEqual(pending)
+      await expect(activateCloudruFreshPush(client, cutoff, snapshot.fingerprint, cutoff)).rejects.toThrow('cloudru_push_receipt_rejected')
+    } finally { connection.release() }
   })
 
   it('activates only the exact preserved snapshot, keeps new events and safely replays activation', async () => {

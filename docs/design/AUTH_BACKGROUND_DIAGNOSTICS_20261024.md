@@ -381,3 +381,14 @@ before retry сохранены. Это позволяет отличить drif
 и не перезапускать операции вслепую после неизвестного COMMIT-исхода.
 Негативный тест unknown message/code не допускает частных значений в отчёт.
 Lint/types и9unit passed;14условных PG cases не запускались локально.
+
+Для условия «при проблеме блокировать отправку» добавлен typed hold в том же
+операторе проверяемой ревизии. Default остаётся preview; hold не ослабляет
+main/CI/owner/VM-lock guards, меняет только delivery_enabled=false и сохраняет
+receipt/boundary/неопределённые leases. Повтор идемпотентен. Если leased>0,
+пауза всё равно сохраняется, но CLI завершает job с1 для разбора неопределённой
+доставки; её receipts не сбрасываются. Новая активация проверяет leases и
+свежесть cutoff как раньше. Новый PG case проверяет неизменность outbox и
+метаданных при повторной паузе; требует полного PostgreSQL CI.
+CLI dispatch теперь явный switch: неизвестный mode не попадёт в legacy archive.
+Lint/types и61workflow tests passed; production hold не применялся.

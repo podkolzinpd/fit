@@ -71,7 +71,7 @@ test('push recovery is a manual typed exact-main operation, never a sender or ar
   assert.match(workflow, /on:\n  workflow_dispatch:/)
   assert.doesNotMatch(workflow, /^  (?:push|pull_request|schedule|workflow_run):/m)
   assert.match(workflow, /default: preview/)
-  assert.match(workflow, /options: \[preview, archive_verified, activate\]/)
+  assert.match(workflow, /options: \[preview, hold, archive_verified, activate\]/)
   assert.match(workflow, /test "\$GITHUB_REF" = refs\/heads\/main/)
   assert.match(workflow, /\.status == "completed" and \.conclusion == "success"/)
   assert.match(workflow, /test "\$commit" = "\$GITHUB_SHA"/)

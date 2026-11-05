@@ -78,6 +78,26 @@ export async function previewCloudruPushHistory(client: HistoryClient, cutoff: D
   } catch (error) { await client.query('rollback'); throw error }
 }
 
+// Emergency pause retains the existing receipt and never clears uncertain
+// leases. The workflow drains the bounded worker under its launcher lock.
+export async function holdCloudruPush(client: HistoryClient) {
+  await client.query('begin')
+  try {
+    await client.query("set local statement_timeout = '20s'")
+    await client.query("set local lock_timeout = '3s'")
+    await client.query("select pg_advisory_xact_lock(hashtextextended('fit-cloudru-push-cutover', 0))")
+    const control = await lockDelivery(client)
+    await client.query('update app_private.push_delivery_control set delivery_enabled=false where singleton')
+    const rows = await client.query(`select count(*)::integer as leased
+      from app_private.push_notifications_outbox where sent_at is null and discarded_at is null
+        and (dispatch_token is not null or dispatch_started_at is not null)`)
+    const leased = rows[0]?.leased
+    if (typeof leased !== 'number' || !Number.isSafeInteger(leased) || leased < 0) throw new Error('cloudru_push_control_rejected')
+    await client.query('commit')
+    return { held: true, alreadyHeld: !control.delivery_enabled, leased }
+  } catch (error) { await client.query('rollback'); throw error }
+}
+
 // Not an automatic recovery hook. The recovery operator must hold delivery
 // before applying this exact, previously inspected snapshot.
 export async function archiveCloudruPushSnapshot(client: HistoryClient, cutoff: Date, fingerprint: string) {
@@ -199,7 +219,7 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
       || process.env.CLOUDRU_PUSH_CONFIRMATION !== 'START_CLOUDRU_FRESH_PUSH_ONLY') throw new Error('rejected')
     const cutoff = new Date(process.env.CLOUDRU_PUSH_CUTOFF ?? '')
     const mode = process.env.CLOUDRU_PUSH_MODE ?? 'archive'
-    if (!['preview', 'archive', 'archive_verified', 'activate'].includes(mode) || !Number.isFinite(cutoff.getTime())
+    if (!['preview', 'hold', 'archive', 'archive_verified', 'activate'].includes(mode) || !Number.isFinite(cutoff.getTime())
       || cutoff.getTime() > Date.now()
       || (['archive', 'archive_verified'].includes(mode) && Date.now() - cutoff.getTime() > 300_000)) throw new Error('rejected')
     const fingerprint = process.env.CLOUDRU_PUSH_FINGERPRINT ?? ''
@@ -212,14 +232,17 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
       const identity = await client.query<{ valid: boolean }>("select current_user='fit_owner' and current_database()='fit' as valid")
       if (identity.rows[0]?.valid !== true) throw new Error('cloudru_push_target_rejected')
       const wrapper: DatabaseClient = { query: async <Row extends QueryResultRow>(text: string, values: readonly unknown[] = []) => (await client.query<Row>(text, [...values])).rows }
-      const result = mode === 'preview'
-        ? { event: 'cloudru_push_history_preview', ...await previewCloudruPushHistory(wrapper, cutoff) }
-        : mode === 'archive_verified'
-          ? { event: 'cloudru_push_history_preserved', ...await archiveCloudruPushSnapshot(wrapper, cutoff, fingerprint) }
-          : mode === 'activate'
-            ? { event: 'cloudru_push_fresh_delivery_activated', ...await activateCloudruFreshPush(wrapper, cutoff, fingerprint) }
-            : { event: 'cloudru_push_history_preserved', archived: await archiveCloudruPushHistory(wrapper, cutoff) }
+      let result: Record<string, unknown>
+      switch (mode) {
+        case 'preview': result = { event: 'cloudru_push_history_preview', ...await previewCloudruPushHistory(wrapper, cutoff) }; break
+        case 'hold': result = { event: 'cloudru_push_delivery_held', ...await holdCloudruPush(wrapper) }; break
+        case 'archive_verified': result = { event: 'cloudru_push_history_preserved', ...await archiveCloudruPushSnapshot(wrapper, cutoff, fingerprint) }; break
+        case 'activate': result = { event: 'cloudru_push_fresh_delivery_activated', ...await activateCloudruFreshPush(wrapper, cutoff, fingerprint) }; break
+        case 'archive': result = { event: 'cloudru_push_history_preserved', archived: await archiveCloudruPushHistory(wrapper, cutoff) }; break
+        default: throw new Error('rejected')
+      }
       console.log(JSON.stringify(result))
+      if (mode === 'hold' && typeof result.leased === 'number' && result.leased > 0) process.exitCode = 1
     } finally { await client.end() }
   }
   main().catch((error: unknown) => {
