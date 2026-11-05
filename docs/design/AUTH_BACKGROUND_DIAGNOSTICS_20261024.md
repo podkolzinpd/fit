@@ -418,3 +418,17 @@ BG2 source87 и BG3 source13e имеют полный CI35/35success, но BG2 �
 новой версии. Root cause остаётся открыта до production-аудита2003;
 защита/архивация/активация на production не применялись. Дальше: очередь2003,
 доказательство причины, затем полный CI окончательного BG2.
+
+### BG2 — объединённый аудит и фактическая локальная SQL-проверка
+
+В собственную BG2-ветку включён обновлённый BG1.2/mainb2b76fcd, конфликты
+трёх принадлежащих задаче файлов разрешены с сохранением component/date/time
+проверок, SELECT-only control и всех записей журнала.63/63 infrastructure,
+явный JS lint, docs/whitespace passed. Патч producer всё ещё не вносился.
+
+Собственный остановленный PostgreSQL-контейнер запущен отдельно от shared VM.
+Реальный READ ONLY+ROLLBACK auditDeliveryControl подтвердил present/valid/held,
+без boundary/receipt. Production не подключалась, данных/claims/sender не было.
+Первый запуск Node не нашёл pg в frontend root; повтор использовал установленный
+API-драйвер через createRequire, затем SQL-проверка прошла. Общие зависимости
+и конфигурация проекта не менялись. Дальше: production proof2003 и root fix.
