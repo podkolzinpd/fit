@@ -63,6 +63,8 @@ jobs:
         run: |
           set -euo pipefail
           umask 077
+          install_stage=private_root
+          trap 'printf "direct_installer_failed stage=%s\n" "$install_stage" >&2' ERR
           id="$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
           [[ "$id" =~ ^[0-9]{1,20}-[0-9]{1,4}$ ]]
           root="/opt/fit/secrets/program-direct-$id"
@@ -71,6 +73,7 @@ jobs:
           sudo test ! -e "$root"
           sudo install -d -m 700 "$root" "$root/code" "$root/runtime" "$root/capabilities" "$root/responses"
           sudo install -d -m 755 "$root/bootstrap"
+          install_stage=code_and_public_key
           git archive "$GITHUB_SHA" scripts | sudo tar -x -C "$root/code"
           [[ "$OPERATOR_PUBLIC_KEY_B64" =~ ^[A-Za-z0-9+/=]{400,11000}$ ]]
           printf '%s' "$OPERATOR_PUBLIC_KEY_B64" | base64 --decode | sudo tee "$root/operator.public.pem" >/dev/null
@@ -78,6 +81,7 @@ jobs:
           sudo openssl pkey -pubin -in "$root/operator.public.pem" -noout >/dev/null
           # Retire only this operator's pre-channel infrastructure orphans.
           # A durable control key/state means customer input could exist: preserve it.
+          install_stage=own_orphan_cleanup
           sudo find /opt/fit/secrets -mindepth 1 -maxdepth 1 -name 'program-direct-*' -print0 | while IFS= read -r -d '' failed; do
             [[ "$failed" =~ ^/opt/fit/secrets/program-direct-[0-9]{1,20}-[0-9]{1,4}$ ]] || continue
             test "$failed" != "$root" || continue
@@ -87,6 +91,7 @@ jobs:
             sudo cmp -s "$root/operator.public.pem" "$failed/operator.public.pem" || continue
             sudo rm -r -- "$failed"
           done
+          install_stage=database_environment
           jq -e '.MIGRATION_DATABASE_HOST == "10.70.10.67" and .MIGRATION_DATABASE_PORT == "5432" and
             .MIGRATION_DATABASE_NAME == "fit" and .MIGRATION_DATABASE_USER == "fit_owner" and
             .DATABASE_HOST == "10.70.10.67" and .DATABASE_PORT == "5432" and
@@ -96,17 +101,19 @@ jobs:
             <<<"$CLOUDRU_DATABASE_CONFIG_JSON" >/dev/null
           jq -r 'to_entries[] | select(.key | test("^(MIGRATION_DATABASE|DATABASE)_(HOST|PORT|NAME|USER|PASSWORD)$")) | "\(.key)=\(.value|@json)"' \
             <<<"$CLOUDRU_DATABASE_CONFIG_JSON" | sudo tee "$root/service.env" >/dev/null
+          install_stage=infrastructure_environment
           for name in CLOUDRU_MEDIA_KEY_ID CLOUDRU_MEDIA_KEY_SECRET SUPABASE_ACCESS_TOKEN SUPABASE_PROJECT_ID; do
             value=${!name}
             test -n "$value"
             test "$value" = "${value//$'\n'/}"
             test "$value" = "${value//$'\r'/}"
-            printf '%s' "$value" | jq -Rs --arg name "$name" '$name+"="+(.|@json)' | sudo tee -a "$root/service.env" >/dev/null
+            printf '%s' "$value" | jq -rRs --arg name "$name" '$name+"="+(.|@json)' | sudo tee -a "$root/service.env" >/dev/null
           done
           printf 'FIT_DIRECT_MAIN=%s\nFIT_DIRECT_SESSION=%s\nFIT_DIRECT_ROOT=%s\n' "$GITHUB_SHA" "$id" "$root" | \
             sudo tee -a "$root/service.env" >/dev/null
           sudo chmod 600 "$root/service.env"
           # Reuse the exact reviewed image dependencies; no new runtime packages.
+          install_stage=reviewed_image_dependencies
           cid=$(sudo podman create "localhost/fit-api:$GITHUB_SHA")
           trap 'sudo podman rm "$cid" >/dev/null' EXIT
           sudo podman cp "$cid:/app/package.json" "$root/runtime/package.json"
@@ -115,9 +122,11 @@ jobs:
           trap - EXIT
           # systemd supplies a clean environment. No Actions variables or tokens
           # are inherited by either bootstrap or the data-processing service.
+          install_stage=isolated_bootstrap
           sudo systemd-run --quiet --wait --collect --unit="fit-program-direct-bootstrap-$id" \
             --property="EnvironmentFile=$root/service.env" --property=UMask=0077 \
             "$(command -v node)" "$root/code/scripts/cloudru-program-direct-worker.mjs" bootstrap
+          install_stage=infrastructure_capability
           output="$RUNNER_TEMP/direct-program-infrastructure-$id"
           install -d -m 700 "$output"
           sudo cp "$root/bootstrap/capability.encrypted.json" "$output/capability.encrypted.json"

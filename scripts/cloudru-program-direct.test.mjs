@@ -1,4 +1,5 @@
 import test from 'node:test'
+import {spawnSync} from 'node:child_process'
 import assert from 'node:assert/strict'
 import {createHash,generateKeyPairSync} from 'node:crypto'
 import {readFileSync} from 'node:fs'
@@ -141,4 +142,17 @@ test('installer supplies its host Node runtime before systemd bootstrap and pres
   assert.match(cleanup,/sudo test ! -e "\$failed\/server.private.pem" && sudo test ! -e "\$failed\/state.json" \|\| continue/)
   assert.ok(cleanup.indexOf('sudo cmp -s')<cleanup.indexOf('sudo rm -r'))
   assert.doesNotMatch(cleanup,/journal-upload-|target|receipt|client|roster/i)
+})
+
+
+test('installer emits valid systemd environment assignments without serializing the whole line as JSON',()=>{
+  const workflow=readFileSync(new URL('../.github/workflows/start-cloudru-private-program-service.yml',import.meta.url),'utf8')
+  const command=workflow.match(/printf '%s' "\$value" \| (jq .*?) \| sudo tee -a/)[1]
+  for(const value of ['synthetic-key','synthetic "quoted" key','synthetic\\key']) {
+    const result=spawnSync('bash',['-c',`name=CLOUDRU_MEDIA_KEY_ID; ${command}`],{input:value,encoding:'utf8'})
+    assert.equal(result.status,0)
+    assert.equal(result.stdout,`CLOUDRU_MEDIA_KEY_ID=${JSON.stringify(value)}\n`)
+  }
+  assert.match(workflow,/trap 'printf "direct_installer_failed stage=%s\\n" "\$install_stage" >&2' ERR/)
+  assert.doesNotMatch(workflow,/BASH_COMMAND|set -x/)
 })
