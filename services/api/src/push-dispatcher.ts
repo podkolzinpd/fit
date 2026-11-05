@@ -1,4 +1,4 @@
-import { dispatchStage } from './background-dispatch-error.js'
+import { backgroundDispatchDiagnostics, dispatchStage } from './background-dispatch-error.js'
 import type { DatabasePool } from './db/types.js'
 import { withBackgroundTransaction } from './background-transaction.js'
 import {
@@ -35,8 +35,8 @@ export class PushDispatcher {
 
     const prepared = await dispatchStage('push', 'prepare', () =>
       withBackgroundTransaction(this.pool, async (client) => {
-        const remindersEnqueued = await enqueueWorkoutReminders(client, now)
-        const batch = await claimPushNotifications(client, now)
+        const remindersEnqueued = await diagnosePushQuery('reminder_enqueue', () => enqueueWorkoutReminders(client, now))
+        const batch = await diagnosePushQuery('queue_claim', () => claimPushNotifications(client, now))
         return { batch, remindersEnqueued }
       }))
     if (prepared.batch === null) {
@@ -67,5 +67,12 @@ export class PushDispatcher {
       remindersEnqueued: prepared.remindersEnqueued,
       ...finalized,
     }
+  }
+}
+
+async function diagnosePushQuery<Result>(step: 'reminder_enqueue' | 'queue_claim', work: () => Promise<Result>): Promise<Result> {
+  try { return await work() } catch (error) {
+    console.warn(JSON.stringify({ event: 'background_push_query_failed', step, ...backgroundDispatchDiagnostics(error) }))
+    throw error
   }
 }

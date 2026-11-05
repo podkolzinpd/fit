@@ -30,6 +30,10 @@ on:
         description: Read-only runtime-role connection and transaction-limit probe, without application queries
         type: boolean
         default: false
+      background_audit:
+        description: Read-only push queue age/type aggregates and reminder timezone expression diagnostics; never sends or claims
+        type: boolean
+        default: false
       account_history:
         description: Read only the four owner-approved account history matches and visibility counts
         type: boolean
@@ -227,6 +231,7 @@ jobs:
         if: always()
         env:
           CLOUDRU_DATABASE_CONFIG_JSON: ${{ secrets.CLOUDRU_STAGE_DATABASE_CONFIG_JSON }}
+          BACKGROUND_AUDIT: ${{ github.event_name == 'workflow_dispatch' && inputs.background_audit }}
         run: |
           set -euo pipefail
           test "$GITHUB_REPOSITORY" = podkolzinpd/fit
@@ -248,6 +253,12 @@ jobs:
           printf 'MIGRATION_DATABASE_SSL_MODE=require\n' | sudo tee -a "$owner" >/dev/null
           revision=$(cat /opt/fit/RUNNING_SHA)
           [[ "$revision" =~ ^[a-f0-9]{40}$ ]]
+          if test "$BACKGROUND_AUDIT" = true; then
+            sudo podman run --rm --read-only --memory=128m --cpus=0.5 --timeout=60 --cap-drop=ALL \
+              --security-opt=no-new-privileges --env-file "$owner" \
+              -v "$PWD/scripts/cloudru-background-audit.mjs:/inspection.mjs:ro" \
+              "localhost/fit-api:$revision" node /inspection.mjs | tee -a "$GITHUB_STEP_SUMMARY"
+          fi
           sudo podman run --rm --read-only --memory=128m --cpus=0.5 --timeout=20 --cap-drop=ALL \
             --security-opt=no-new-privileges --env-file "$owner" \
             "localhost/fit-api:$revision" node dist/cloudru-operations-health.js | tee -a "$GITHUB_STEP_SUMMARY"
