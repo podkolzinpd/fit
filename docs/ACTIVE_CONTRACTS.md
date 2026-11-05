@@ -154,3 +154,8 @@ Plan/apply/verify, backup, история и RLS прежние.
 05.11 — SB-PILOT-MANAGER-RETIRE-01: старый dual-plane Schedule V2 pilot
 workflow удаляется; назначения и текущие Cloud.ru настройки не меняются.
 [Scope и проверки](design/SUPABASE_DECOMMISSION_PLAN_20261023.md#sb-pilot-manager-retire-01--pilot-manager--05112026).
+
+05.11 — ADM-FIVE-SLOTS-20261105: по прямому поручению владельца кабинет получает
+ещё три закрытых администраторских назначения; лимит1–5 сохраняет прежние1/2.
+Это заменяет только прежний two-slots лимит; subject binding, запрет самовыдачи,
+роли и независимые пилоты прежние. [План/журнал32](design/CORPORATE_ADMIN_20261027.md).
