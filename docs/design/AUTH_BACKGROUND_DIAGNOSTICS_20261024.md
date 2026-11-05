@@ -365,3 +365,12 @@ current_user=fit_owner/current_database=fit. Эти результаты не з
 05.11 владелец повторил правило очереди: ждать активные PR, обходить только
 те, по которым вообще не идёт работа; координация сообщениями в другие чаты
 не разрешена. Это не новая точка согласования выпуска наших PR.
+
+Добавлен push-recovery-flow.integration.test.ts в обязательный test:db:
+полная цепочка актуальных миграций → default held → exact preview/preserve
+и повтор → activation → claim/finalize через fit_api только свежего события.
+Проверяет все поля старых pending после нормализации двух maintenance-полей,
+нетронутый old sent, профили/подписки и безопасный повтор активации. Отдельная
+локальная fixture создаётся только на localhost/fit_actor_test, не рабочая БД.
+Lint/types passed; сам новый сценарий ещё требует PostgreSQL CI и не объявлен
+прошедшим. Legacy broadcast sender явно запрещён contract-test нового workflow.
