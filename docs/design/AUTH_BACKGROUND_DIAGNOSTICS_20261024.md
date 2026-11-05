@@ -681,3 +681,30 @@ e2e,config,packages/API между опубликованнымb2 иf70 пуст
 исправленным или доказанным infrastructure-flaky. Текущий root CI включает
 те же сценарии полностью; перед публикацией требуется полный green source
 и новый green main. Никакой обход через admin/ослабление тестов не допускается.
+
+### BG3 — объединение с доказанным root fix и повторная локальная приёмка
+
+В own BG3 включён BG2/c9cb:191 root isolation, integer/NULL контракт,
+SELECT-only current candidate probe и последовательные private fixtures.
+Конфликт package разрешён объединением всех16унаследованных test paths:
+каждый ровно1раз, flow отдельно после основной группы, private3последовательно.
+История обоих документов сохранена полностью.110/110 ops/configure/CI-contract
+checks,docs/whitespace passed. Полный API check1590passed/386conditionalDBskip,
+lint/types/build passed. Реальный PostgreSQL полный-schema flow после всех
+191миграций1/1passed: held→preview→preserve→повтор→activate→APIclaim/finalize
+только fresh, old fields/old sent/profiles/subscriptions сохранены. Это без
+реального network sender/физического устройства, production не подключалась.
+Собственный локальный контейнер после проверки остановлен.
+
+BG2 текущий sourcec9cb/CI42087069867 ещё проверяется. Заменённыйa514 CI
+42084656890 удерживал queued always-агрегатор после штатной отмены; повторная
+штатная отмена не завершала run и блокировалаc9cb. После сверки точных
+old/new head, branch и PR выполнен force-cancel только этого собственного
+устаревшего run; результатcancelled, неgreen. Чужие CI не трогались, все
+проверки текущего source обязательны. c9cb начал создавать jobs.
+
+BG3 остаётся локально подготовленным stacked draft. После merge/публикации
+BG2 вheld обновить main/base, принять полный текущий CI и только потом
+публиковать/оперативно выполнять preview/preserve/activate. Старый compiled
+cutover CLI по-прежнему не использовать для preview/hold. Production
+root/guard/очередь пока не изменены, source/publication не подменяются тестами.
