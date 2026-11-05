@@ -24,7 +24,20 @@ describe.skipIf(source===undefined)('bounded weekly-program writes and closed-re
     pool=new Pool({connectionString:url.href,max:5})
   })
   afterEach(()=>{for(const connection of connections.splice(0))connection.release(true)})
-  afterAll(async()=>{if(pool)await pool.end();if(created)await admin.query(`drop database ${database}`);if(admin)await admin.end()})
+  afterAll(async()=>{
+    if(pool)await pool.end()
+    if(created)await admin.query(`drop database ${database}`)
+    if(admin){
+      // The last disposable database releases the shared fixture role. A later
+      // recovery CI step must be able to create its own unrelated fit_owner.
+      await admin.query(`do $$ begin perform pg_advisory_xact_lock(193635,2);
+        if exists(select 1 from pg_roles r where r.rolname='fit_owner'
+          and shobj_description(r.oid,'pg_authid')='private-program-roster-fixture-20261105'
+          and not exists(select 1 from pg_shdepend d where d.refclassid='pg_authid'::regclass and d.refobjid=r.oid))
+        then execute 'drop role fit_owner';end if;end $$`)
+      await admin.end()
+    }
+  })
 
   async function fixture(format='with_trainer') {
     const owner=await pool.connect(),runtime=await pool.connect();connections.push(owner,runtime);await runtime.query('set role fit_api')
@@ -62,7 +75,7 @@ describe.skipIf(source===undefined)('bounded weekly-program writes and closed-re
     for(let i=1;i<17;i++){const name=`Synthetic writer roster ${f.coach} ${i}`;names.push(name);await f.card(name)}
     await f.owner.query('delete from app_private.fit_lime_pilot_allowlist where profile_id=$1',[f.coach])
     // Migrations run as postgres in this disposable fixture; emulate their production owner only for the readonly connection.
-    await f.owner.query("do $$ begin perform pg_advisory_xact_lock(193635,2);if not exists(select 1 from pg_roles where rolname='fit_owner') then create role fit_owner;end if;end $$;alter role fit_owner bypassrls;grant usage on schema public,app_private to fit_owner;grant select on all tables in schema public,app_private to fit_owner;grant execute on function public.is_active_client_trainer_connection(uuid,uuid) to fit_owner")
+    await f.owner.query("do $$ begin perform pg_advisory_xact_lock(193635,2);if not exists(select 1 from pg_roles where rolname='fit_owner') then create role fit_owner;comment on role fit_owner is 'private-program-roster-fixture-20261105';elsif not exists(select 1 from pg_roles r where r.rolname='fit_owner' and shobj_description(r.oid,'pg_authid')='private-program-roster-fixture-20261105') then raise exception 'foreign_fixture_owner_role';end if;end $$;alter role fit_owner bypassrls;grant usage on schema public,app_private to fit_owner;grant select on all tables in schema public,app_private to fit_owner;grant execute on function public.is_active_client_trainer_connection(uuid,uuid) to fit_owner")
     const target=f.options.target,trainerEvidence={version:1,targetBinding:hash(JSON.stringify([target.trainerEmailSha256,target.trainerLoginSha256,target.clientNameSha256])),
       rosterNameHashes:names.map(n=>hash(n.toLowerCase()))}
     await f.owner.query('set role fit_owner')

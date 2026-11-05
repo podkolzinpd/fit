@@ -686,3 +686,13 @@ API41945411286/web41945411351/OTA41945707900 success. Опубликованна
 Открыто: штатный reviewed PR, exact-head CI, main/release; затем private evidence
 secret, no_commit recovery исходного READ иF01..F17 строго по одному с закрытыми
 readbacks и полным cleanup. До выполнения этих стадий журналы не загружены.
+
+Уточнение CI этой итерации: первый source7d327577 прошёл реальные native и
+program suites, но следующий recovery step остановился на уже существующей
+fit_owner: две новые fixtures оставляли свой временный cluster role после
+удаления DB. Сам recovery gate не менялся/не повторялся вслепую. Fixture role
+помечается своим comment, неизвестная роль не изменяется; последний тестовый DB
+по тому же advisory lock удаляет только эту роль после исчезновения всех её
+shared dependencies. Это предотвращает утечку между suites без изменения
+production ролей, проверок, таймаутов или recovery setup. Новый exact-head CI
+после такого исправления обязателен.
