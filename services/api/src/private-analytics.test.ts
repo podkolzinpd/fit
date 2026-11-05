@@ -23,4 +23,17 @@ describe('private analytics route', () => {
     expect(result.json()).toEqual({ error: 'analytics_forbidden' })
     await app.close()
   })
+
+  it('returns data only from the session-aware store and fails closed on unexpected errors', async () => {
+    const app = Fastify()
+    const bundle = vi.fn().mockResolvedValueOnce({ trainers: [] }).mockRejectedValueOnce(new Error('unavailable'))
+    registerPrivateAnalyticsRoutes(app, { bundle })
+    const request = { url: '/v1/private-analytics', headers: { 'x-fit-session': 'synthetic' } }
+    const success = await app.inject(request)
+    expect(success.statusCode).toBe(200)
+    expect(success.headers['cache-control']).toBe('no-store')
+    expect(bundle).toHaveBeenCalledWith({ accessMode: 'read_write', token: 'synthetic' })
+    expect((await app.inject(request)).statusCode).toBe(503)
+    await app.close()
+  })
 })
