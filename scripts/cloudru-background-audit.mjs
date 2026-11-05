@@ -2,6 +2,10 @@ import { createRequire } from 'node:module'
 import { pathToFileURL } from 'node:url'
 
 const code = error => typeof error?.code === 'string' && /^[0-9][0-9A-Z]{4}$/.test(error.code) ? error.code : 'unknown'
+export const safeFailure = error => ({ code: code(error), category:
+  /time zone .*not recognized/i.test(error?.message ?? '') ? 'timezone_unrecognized'
+    : /cannot (?:extract|call).*?(?:scalar|object|array)/i.test(error?.message ?? '') ? 'json_shape'
+      : /configuration parameter/i.test(error?.message ?? '') ? 'configuration' : 'other' })
 const count = value => {
   if (!Number.isSafeInteger(value) || value < 0) throw new Error('background_audit_count_rejected')
   return value
@@ -21,6 +25,29 @@ export const reminderCandidates = `select count(*)::integer as count
     and (now() at time zone profile.timezone)::date = workout.workout_date
     and (now() at time zone profile.timezone)::time >= time '09:00'
     and (now() at time zone profile.timezone)::time < time '09:05'`
+
+const joined = reminderCandidates.slice(0, reminderCandidates.indexOf('    and coalesce'))
+const preferences = reminderCandidates.slice(0, reminderCandidates.indexOf('    and (now()'))
+export const componentQueries = [
+  ['subscriptions', 'select count(*)::integer as count from public.push_subscriptions'],
+  ['preferences', 'select count(*)::integer as count from public.notification_preferences'],
+  ['joined_planned', joined],
+  ['joined_preferences', preferences],
+  ['local_date', `${preferences} and (now() at time zone profile.timezone)::date = workout.workout_date`],
+  ['local_time', `${preferences} and (now() at time zone profile.timezone)::time >= time '09:00'
+    and (now() at time zone profile.timezone)::time < time '09:05'`],
+]
+
+async function probe(client, sql, values) {
+  await client.query('savepoint component_probe')
+  try {
+    const result = await client.query(sql, values)
+    return { ready: true, count: count(result.rows[0]?.count) }
+  } catch (error) {
+    await client.query('rollback to savepoint component_probe')
+    return { ready: false, ...safeFailure(error) }
+  } finally { await client.query('release savepoint component_probe') }
+}
 
 export async function auditBackground(client) {
   let started = false
@@ -49,23 +76,27 @@ export async function auditBackground(client) {
       const rows = await client.query(reminderCandidates)
       reminder = { ready: true, count: count(rows.rows[0]?.count) }
     } catch (error) {
-      reminder = { ready: false, code: code(error) }
+      reminder = { ready: false, ...safeFailure(error) }
       await client.query('rollback to savepoint reminder_probe')
     }
     await client.query('release savepoint reminder_probe')
+    const components = []
+    for (const [step, sql] of componentQueries) components.push({ step, ...await probe(client, sql) })
     // Validate PostgreSQL's actual conversion, not a guessed timezone-name list.
     // Values remain in process memory; the report contains only counts/codes.
-    const zones = await client.query(`select distinct profile.timezone from public.profiles profile
-      join public.clients client on client.auth_user_id = profile.id
-      join public.workouts workout on workout.client_id = client.id
-      where workout.status = 'planned' and workout.deleted_at is null limit 101`)
+    // The planner may evaluate profile predicates before joining planned workouts.
+    // Check all profile zones, not only zones surviving the join.
+    const zones = await client.query(`select distinct profile.timezone collate "C" as timezone
+      from public.profiles profile limit 101`)
     if (zones.rows.length > 100) throw new Error('background_audit_zone_bound_exceeded')
     const invalid = new Map()
     for (const row of zones.rows) {
       await client.query('savepoint zone_probe')
-      try { await client.query('select (now() at time zone $1::text)::date is not null as valid', [row.timezone]) }
+      try { await client.query(`select (now() at time zone $1::text)::date is not null
+        and (now() at time zone $1::text)::time is not null as valid`, [row.timezone]) }
       catch (error) {
-        invalid.set(code(error), (invalid.get(code(error)) ?? 0) + 1)
+        const key = JSON.stringify(safeFailure(error))
+        invalid.set(key, (invalid.get(key) ?? 0) + 1)
         await client.query('rollback to savepoint zone_probe')
       }
       await client.query('release savepoint zone_probe')
@@ -73,7 +104,8 @@ export async function auditBackground(client) {
     await client.query('rollback')
     started = false
     return { event: 'cloudru_background_audit', groups, reminderCandidates: reminder,
-      timezoneChecks: { checked: zones.rows.length, failures: [...invalid].map(([code, count]) => ({ code, count })) } }
+      components, timezoneChecks: { scope: 'all_profiles', checked: zones.rows.length,
+        failures: [...invalid].map(([failure, count]) => ({ ...JSON.parse(failure), count })) } }
   } finally { if (started) await client.query('rollback') }
 }
 
