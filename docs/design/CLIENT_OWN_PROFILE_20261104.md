@@ -566,3 +566,38 @@ incoming каждого побайтноDCF, который уже ancestorPR3; 
 Никаких assertions/лимитов/strict-flaky/guards не менялось. Предыдущие36unit/
 16browser0retry/skips/build/types/lint/docs остаются проверкойэтогорuntime;
 новыйsource3 fullCI обязателен. Merge3 удерживаетсядоactual8+8stage2приёмки.
+
+## Итерация 26 — 05.11.2026 — Codex / OpenAI — локальная merge-квитанция
+
+PR1990 штатно MERGED вb4eba30ef12677f3876cb266cfc991612d589576 сmatch-headDCF,
+безforce/admin/bypass/branchdelete. SourceDCF fullCI41929898416attempt1SUCCESS35/35,
+Android41929898721SUCCESS;Git treeactualb4=sourceDCF=ac8897450f404e889749fb2799acdeb5cd9975f7.
+ActualmainCI41936529587/Android41936529607 созданыавтоматически и ещёpending.
+Предшественник1988/f222 принят34+34 обоихдвижков,входящееокноосвобождено,
+квитанция6645385321проверена. Новыеsourcepush/releaseрадиproofне делаются.
+Третий draftPR1991/head163ec28d1d034c69e988b22d5e4976dc2b5f3638 подготовлен
+наactualb4, егоsourceCIидётпараллельно. Runtime/e2e побайтно276,36unit/16browser
+0retry/skips/build/type/lint/docsпроверкаприменима;newfullCIещёгейт.
+Нашаstage2публикация/8+8приёмка иsource3green обязательныдоmerge3.
+
+## Итерация 27 — 05.11.2026 — Codex / OpenAI
+
+ActualPR1990/mainb4 fullCI41936529587attempt1SUCCESS34jobs+1normalPR-only
+migrationskip;Android41936529607SUCCESS. Auth4job126946413302:251passed13.5m,
+0retry/flaky. OfficialAPI41939141890/web41939141718/OTA41939397599SUCCESSexactb4.
+Фактическаяstage2приёмка8public+8exactZIPChromium/WebKit0retry/flaky/skips:
+213publicSHA256/size+213ZIPinventory,обаAPIexactb4/ready200/auth401,RSA/sourceABI/
+native9/sequence1793837575748/ZIP6bb7b618e89e4b3a827d29082224f96429249e299cacc1d9c346ad8262c5e110
+15143449bytes/finalsameversionreadback. Все8actualZIPPNGпросмотрены/сохранены
+сhash/size вstage2-accepted-png. Триorderedподцели/даты/критерий послеизменения
+второгоэтапа/reloadсохранены. Productionbusinesswrites0;phone/OAuth/deviceOTA
+неподтверждены. Исходящиечат-сообщениянеотправлялись.
+ВизуальныйreviewвыявилwhitegoalSVGнаlightbackground. ЭтоосталосьотPR2
+и исправляетсявутверждённомфинальномCOP304/themepassPR1991:однаscoped
+lightthemebrightness(0)rule, исходныйSVG/opacity0.6/darkтема/данныепрежние.
+Новыеassertions/лимиты/retries/CIguardsнеослаблялись. Properfixturebuild/
+types/startup/docs/diffpassed;14/14ownprofileproductionChromium/WebKit12.8s,
+0retry/skips. Обаlight430PNGпросмотрены:иконкатеперьразличима. Source163
+становитсяисторическим;изменённыйheadполучитновыйполныйexactsourceCI.
+Общийпакетещёнезавершён:source3green→normalmerge→fullactualmainCI→official
+API/web/compatibleOTA→14public+14exactZIP/PNG/finalreadback остаютсяобязательными.
