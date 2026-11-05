@@ -850,3 +850,35 @@ prepare/apply и публикация старого main поверх свеж�
 Открыто: accepted source/main/release Node fix, затем единственный code-only
 installer и прямой sequential transfer с17 независимыми readbacks/cleanup.
 Дальше: штатный CI и актуальная очередь; данные по-прежнему0/17.
+
+
+## Итерация 14 — 05.11.2026 — Codex / OpenAI
+
+Задача: завершить тот же Node prerequisite fix, сохранив гарантированную
+очистку собственной pre-channel инфраструктуры до клиентского канала.
+Расхождение: shell glob внутри root0700 parent раскрывался обычным вызывающим
+shell до sudo. У непривилегированного runner он оставлял literal pattern и
+молча пропускал свой orphan; sudo проверок внутри цикла этого не исправлял.
+
+Сделано: ровно перечисление кандидатов выполняется sudo find на глубине1,
+NUL-delimited pipe в прежний bounded цикл. Ошибка перечисления останавливает
+job через pipefail. Numeric path, current-root exclusion, root0700 ownership,
+no-symlink, отсутствие обоих durable control files и точное совпадение operator
+PUBLIC key сохранены. Удаление иных сессий, Cloud objects или клиентских данных
+не вводится. Node22 prerequisite и data/identity/finance/expiry guards прежние.
+
+Проверка: непривилегированный локальный POSIX probe на недоступном parent
+воспроизвёл literal glob; свой временный каталог восстановлен и удалён.
+Дополненный существующий policy case сначала RED (9pass/1fail) на прежнем
+workflow и GREEN10/10 после изменения; YAML и все3 shell blocks bash-n PASS.
+Это не заявляется фактической Cloud.ru очисткой. Новые контейнеры не запускались.
+Предыдущие shell6 predicates и security cases сохраняются без ослабления.
+
+Решение: исправление включается в существующий PR2000 до production, без
+нового PR, dependencies, чата или изменения клиентского input. Предыдущий
+sourceee1767c3/CI42035637731 становится историческим; новый обычный synchronize
+CI обязателен именно из-за этой новой code delta, не вслепую rerun старого head.
+Отвергнуто: ослаблять permissions root directory, обходить cleanup или оставлять
+непроверенную старую инфраструктуру после заявления о полном завершении.
+Открыто: новый exact-head CI/main/release и реальное исполнение17 журналов.
+Дальше: штатный выпуск исправленного prerequisite; production apply0/17.

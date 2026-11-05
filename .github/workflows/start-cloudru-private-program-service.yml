@@ -78,7 +78,7 @@ jobs:
           sudo openssl pkey -pubin -in "$root/operator.public.pem" -noout >/dev/null
           # Retire only this operator's pre-channel infrastructure orphans.
           # A durable control key/state means customer input could exist: preserve it.
-          for failed in /opt/fit/secrets/program-direct-*; do
+          sudo find /opt/fit/secrets -mindepth 1 -maxdepth 1 -name 'program-direct-*' -print0 | while IFS= read -r -d '' failed; do
             [[ "$failed" =~ ^/opt/fit/secrets/program-direct-[0-9]{1,20}-[0-9]{1,4}$ ]] || continue
             test "$failed" != "$root" || continue
             sudo test -d "$failed" && sudo test ! -L "$failed" || continue
