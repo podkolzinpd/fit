@@ -376,10 +376,14 @@ jobs:
           CHAT_ID: ${{ secrets.FIT_ALERT_TELEGRAM_CHAT_ID }}
         run: |
           python3 - <<'PYTHON'
-          import json, os, urllib.request, urllib.parse
+          import json, os, re, urllib.request, urllib.parse
           phase = 'getMe'
           try:
-              base = 'https://api.telegram.org/bot' + os.environ['BOT_TOKEN']
+              raw = os.environ['BOT_TOKEN']
+              candidates = re.findall(r'[0-9]{6,}:[A-Za-z0-9_-]{20,}', raw)
+              print(json.dumps({'event':'fit_token_format','candidate_count':len(candidates),'whitespace_trimmed':raw != raw.strip()}), flush=True)
+              if len(candidates) != 1: raise ValueError('invalid_token_format')
+              base = 'https://api.telegram.org/bot' + candidates[0]
               with urllib.request.urlopen(base + '/getMe', timeout=10) as response:
                   bot = json.load(response)
               if not bot.get('ok'): raise RuntimeError()
