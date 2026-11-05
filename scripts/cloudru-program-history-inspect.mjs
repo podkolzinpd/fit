@@ -77,14 +77,15 @@ export function compareProgramHistory(workouts,graph) {
 // A verified current roster may resolve an archived predecessor only when its
 // explicit merge points directly to the sole live exact card. Keep every row
 // in the receipt/binding; unrelated archived rows and live duplicates still block.
-export function selectProgramCard(cards,rosterVerified=false) {
+export function selectProgramCard(cards,rosterVerified=false,trainerId=null) {
   const exact=cards.filter(c=>c.exact)
   const live=exact.filter(c=>c.archived_at===null&&c.merged_into_client_id===null)
   if(live.length!==1||live[0].connected!==true)return null
   const selected=live[0]
   if(exact.length===1)return selected
   if(!rosterVerified||exact.some(c=>c.id!==selected.id&&
-    (c.archived_at===null||c.merged_into_client_id!==selected.id||c.trainer_id!==selected.trainer_id)))return null
+    (c.archived_at===null||c.merged_into_client_id!==selected.id||c.trainer_id!==(trainerId??selected.trainer_id))))return null
+  if(trainerId!==null&&selected.trainer_id!==trainerId&&selected.auth_user_id==null)return null
   return selected
 }
 
@@ -110,7 +111,7 @@ export async function inspectProgramHistory({owner,runtime,target,legacyId=null,
   const aliasHash=programMatchNameHash(trainerEvidence,payload)
   const cards=await ownerRead(owner,()=>readProgramCardCandidates(owner,trainerId,payload,aliasHash))
   const exact=cards.filter(c=>c.exact),possible=cards.filter(c=>c.possible)
-  const selected=selectProgramCard(cards,identityEvidence?.method==='current_roster')
+  const selected=selectProgramCard(cards,identityEvidence?.method==='current_roster',trainerId)
   let status=selected?'existing_ready':exact.length||possible.length?'selection_requires_review':'new_card_ready'
   const graph={workouts:[],exercises:[],sets:[]}
   if(selected) await ownerRead(owner,async()=>{

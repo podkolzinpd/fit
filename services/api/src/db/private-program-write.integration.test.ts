@@ -70,10 +70,12 @@ describe.skipIf(source===undefined)('bounded weekly-program writes and closed-re
     return {owner,runtime,coach,other,name,options,workouts,receipts,verified,card,count,get proof(){return proof},get started(){return started}}
   }
 
-  it.each([false,true])('uses separate live roster evidence and preserves the existing card and merged predecessor: %s',async merged=>{
-    const f=await fixture(),id=await f.card(),names=[f.name]
+  it.each(['single','merged','linked-merged'])('uses separate live roster evidence and preserves the existing card and merged predecessor: %s',async kind=>{
+    const merged=kind!=='single',linked=kind==='linked-merged'
+    const f=await fixture(),id=await f.card(f.name,linked?f.other:f.coach,linked?f.other:null),names=[f.name]
     const old=merged?await f.card():null
     if(old)await f.owner.query('update public.clients set archived_at=now(),merged_into_client_id=$1 where id=$2',[id,old])
+    const currentBefore=(await f.owner.query('select to_jsonb(c) value from public.clients c where id=$1',[id])).rows
     const archivedBefore=old?(await f.owner.query('select to_jsonb(c) value from public.clients c where id=$1',[old])).rows:null
     for(let i=1;i<17;i++){const name=`Synthetic writer roster ${f.coach} ${i}`;names.push(name);await f.card(name)}
     await f.owner.query('delete from app_private.fit_lime_pilot_allowlist where profile_id=$1',[f.coach])
@@ -87,7 +89,8 @@ describe.skipIf(source===undefined)('bounded weekly-program writes and closed-re
     expect(await runProgramImport({...options,mode:'apply'})).toMatchObject({status:'imported',createdCard:false,workouts:3,contentVerified:true,previousStateVerified:true})
     expect(f.proof).toMatchObject({clientId:id,trainerId:f.coach,createdCard:false})
     expect(await runProgramImport({...options,mode:'verify'})).toMatchObject({status:'verified',workouts:3,readOnly:true})
-    expect(await f.count('clients')).toBe(merged?18:17)
+    expect(await f.count('clients')).toBe((merged?18:17)-(linked?1:0))
+    expect((await f.owner.query('select to_jsonb(c) value from public.clients c where id=$1',[id])).rows).toEqual(currentBefore)
     if(old)expect((await f.owner.query('select to_jsonb(c) value from public.clients c where id=$1',[old])).rows).toEqual(archivedBefore)
   })
   it('creates one new card, writes all source rows and verifies the committed graph',async()=>{
