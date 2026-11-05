@@ -105,7 +105,7 @@ const router = createBrowserRouter([
   { path: '/invite', element: <ClientLimeStandaloneLayout invitation><InvitationRoute /></ClientLimeStandaloneLayout> },
   { element: <Protected />, children: [
     { path: '/admin', element: <CorporateAdminPage /> },
-    { path: '/analytics', element: <PrivateAnalyticsPage /> },
+    { path: '/private-analytics', element: <PrivateAnalyticsPage /> },
     { element: <AppLayout />, children: [
     { index: true, element: <Home /> },
     { path: '/join', element: <JoinPage /> },

@@ -12,7 +12,7 @@ test('private analytics shows data and limits client filtering to clients', asyn
   } }))
   for (const width of [1366, 390]) {
     await page.setViewportSize({ width, height: width === 390 ? 844 : 768 })
-    await page.goto(nativeAiUrl('/analytics'))
+    await page.goto(nativeAiUrl('/private-analytics'))
     await expect(page.getByRole('heading', { name: 'Аналитика Fit' })).toBeVisible()
     await expect(page.getByText('Тестовое сообщение')).toBeVisible()
     await page.getByLabel('Регистрация').selectOption('self')
@@ -26,7 +26,13 @@ test('private analytics shows data and limits client filtering to clients', asyn
 test('private analytics does not expose data when the server denies access', async ({ page }) => {
   await mockNativeAiSession(page, 'client')
   await page.route('**/v1/private-analytics', route => route.fulfill({ status: 403, json: { error: 'analytics_forbidden' } }))
-  await page.goto(nativeAiUrl('/analytics'))
+  await page.goto(nativeAiUrl('/private-analytics'))
   await expect(page.getByRole('alert')).toContainText('Нет доступа')
   await expect(page.getByText('Данные клиентов')).toHaveCount(0)
+})
+
+test('the former analytics URL retains its existing trainer fallback', async ({ page }) => {
+  await mockNativeAiSession(page, 'trainer')
+  await page.goto(nativeAiUrl('/analytics'))
+  await expect(page.getByRole('heading', { name: 'Сегодня', exact: true })).toBeVisible()
 })
