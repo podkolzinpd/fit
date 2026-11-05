@@ -576,3 +576,108 @@ Python compile, явный JS lint и whitespace passed. Полный новый
 впереди после окончательного BG2; source13e green не считается его заменой.
 Production очередь/контроль/доставка пока не изменялись. Дальше: proof2003,
 root fix, held-публикацияBG2, затем обновление и полная приёмкаBG3.
+
+## BG-ROOT-22023-01 —05.11.2026 — Codex / OpenAI: причина доказана
+
+BG1.2/PR2003: sourceb9a4ece2, CI42075784089 success35/35; активный2001
+дождались до завершения публикаций и plan/apply/verify. Владелец отдельно
+разрешил обходить стоящий2002; он оставался на65b4/15:22Z без нового CI.
+2003 слитf70ce717,18:12:24Z. Другие PR/ветки не изменялись, сообщения
+соседним чатам не отправлялись. Общая очередь соблюдена.
+
+Production SELECT-only audit42081994466 установил timezone_unrecognized/22023
+в full/local_time; joined_planned/preferences проходят70/70, local_date3.
+Проверены все29distinct profile-зон:1не распознаётся PostgreSQL. Queue58:
+52старых scheduled+1младше суток,3chat,2test;0staleLeases/terminalFailures.
+Runtime DB connection исправно. Это подтверждённая причина общего сбоя
+reminder_enqueue, а не ошибка соединения/timeout/cleanup/транспорта.
+Значения зон, IDs, payload/секреты не экспортировались. Аудит завершился
+failure из-за реально неисправного worker/overdue; это не объявлено green.
+
+Решение: private strict/stable timestamp-конверсия изолирует только22023,
+использует настоящий PostgreSQL parser без whitelist/подстановки Москвы.
+МATERIALIZED eligible-кандидаты сохраняют planned/deleted/preferences,
+подписки, окно09:00≤time<09:05 и дату. Нераспознанный eligible-профиль
+пропускается с явным invalidTimezoneProfiles count; остальные обрабатываются.
+Новый private prepare RPC возвращает enqueued+count; старый integer enqueue
+RPC сохранён для прежних callers/отката. API пишет только фиксированное
+событие/count, без зоны/пользователя. Неожиданные ошибки/форматы не скрываются.
+
+Миграция191 добавляется после190guard в том же защищённом выпуске; сначала
+held и fresh-only claim, только затем root fix. DOWN сохраняет защиту/исправление
+и совместимость, не возвращает аварийный общий запрос. Часовые пояса и данные
+людей не исправляются предположительно. Отвергнуты whitelist pg_timezone_names
+(теряет допустимые PostgreSQL POSIX-зоны), замена зоны, catch всех ошибок,
+исправление producer до guard, replay58 и прежний массовый cutover CLI.
+
+Read-only audit оставляет старый SELECT как доказательную legacy-пробу и отдельно
+проверяет currentReminderCandidates через единственную чистую timestamp-функцию
+при её наличии. Никакого enqueue/prepare/claim из инспектора; READ ONLY+ROLLBACK.
+Это позволяет после выпуска отличить сохранённое плохое значение от исправно
+работающего текущего producer, не замалчивая исходную неисправность данных.
+
+Проверка на этом шаге: PostgreSQL17 root+guard27/27passed: unrelated/eligible
+invalid, count по профилям при3устройствах, valid multi-device/dedupe, integer
+RPC, границы09:00/09:05/другая дата, disabled/done/deleted/no subscription,
+PostgreSQL UTC/Moscow/EST5EDT/GMT+3, rollback и ACL. Новый API command+dispatcher
+17/17passed; lint/types/build passed.64/64 infrastructure, migration safety2files,
+docs/whitespace passed. Полные API/DB-наборы ещё выполняются. Production guard,
+root migration, preserve и activation пока не применялись. Дальше: полная
+приёмка BG2, source CI, held-публикация; затем BG3 current-head CI и recovery.
+
+### BG2/root — локальный итог перед source CI
+
+Полный API check прошёл: lint/types/build,1585passed/371conditionalDBskip.
+Целевые реальные PostgreSQL root+guard27/27passed и infrastructure64/64.
+Полный локальный DB-проход остановился в неизменённом athlete-access-restore:
+10passed/5failed (4timeouts5s и последующаяserialization failure). Отдельный
+запуск без параллельной API-нагрузки дал13passed/2timeouts на других случаях
+и afterAll timeout. Значит, таймауты не устранены; причина не объявляется
+доказанной нагрузкой или исправленным flaky. Эти tests/config/таймауты не
+менялись и не выключались. Остальные последовательные DB-группы после
+первого failed не выполнялись. Новые root fixtures проходят отдельно.
+
+Source публикуется только как draft для полной PostgreSQL/CI-приёмки на Linux;
+до её успеха никакого merge/production migration/activation. Локальная среда
+не выдаётся за green полного DB-набора. Актуальный source CI и все механики
+остаются обязательным гейтом, как и сохранность истории.
+
+BG2 дополнительная совместимость: старый RPC при явном NULL p_now возвращал0.
+Новая metadata теперь сохраняет0/0 без ложного invalid-профильного count;
+обычный default now() и окно не меняются. PostgreSQL root suite15/15passed
+после этой правки; прежние13guard cases не менялись. Новая metadata не
+подменяет ошибочные значения времени/профиля догадкой. Текущий source CI
+будет заново принят после этого последнего дополнения.
+
+### BG2/a514 — CI установил отдельную гонку общей тестовой роли
+
+CI42084656890/database127447950431 подтвердил восстановление15/15,
+основную DB-группу294passed+1skip (actor173+1skip,corporate19/19,
+root15/15,guard13/13). Локальные restore timeouts не повторились на Linux;
+это свидетельство среды, не доказательство конкретной локальной причины.
+Private-группа дала52passed/1failed: pg_authid_rolname_index23505 при
+create role fit_owner в private-program-history.rosterEvidence, одновременно
+с private-program-write. Это реальная гонка shared global fixture-role,
+не ошибка producer и не допустимый зелёный результат.
+
+В test:db только эти3набора переведены из одного параллельного vitest вызова
+в3последовательных. Каждый исходный путь сохраняется ровно1раз; все53кейса,
+assertions/RLS/fixture ownership guards, собственные проверки конкуренции,
+таймауты и fail-on-flaky сохранены. Не ловим23505, не меняем роли/права
+production и не редактируем код коллег ради устранения гонки.42/42CI-contract
+checks и whitespace passed. Последовательность полагается на существующую
+очистку роли между наборами; текущий полный CI должен подтвердить это.
+
+Отдельная чистая локальная PostgreSQL-fixture запускала последовательность,
+но первый private-journal набор упёрся в прежние5s limits:14passed/8failed,
+частьпоследующих ошибок после timeout; остальные2не запускались из-за&&.
+Это не приёмка исправления гонки. Контейнер собственный, после проверки
+остановлен/удалён; shared PostgreSQL/машина не перезапускались. Полное
+подтверждение последовательных53cases остаётся CI-гейтом.
+
+Main CI42081992704/f70 завершёнfailure: прежние auth/catalog Chromium
+30s timeouts,1failed+1flaky,103passed/610conditional skips; diff frontend,
+e2e,config,packages/API между опубликованнымb2 иf70 пустой. Не названо
+исправленным или доказанным infrastructure-flaky. Текущий root CI включает
+те же сценарии полностью; перед публикацией требуется полный green source
+и новый green main. Никакой обход через admin/ослабление тестов не допускается.
