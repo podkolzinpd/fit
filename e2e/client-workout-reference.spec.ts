@@ -4466,7 +4466,7 @@ for (const sample of [
   for (const call of trace.calls) expect(call.behavior).toBe(sample.reduced ? 'instant' : 'smooth')
   await expect(next.getByLabel('Фактический вес', { exact: true })).not.toBeFocused()
   expect(await handle!.evaluate(element => element.isConnected)).toBe(true)
-  expect(await next.evaluate(element => {
+  await expect.poll(() => next.evaluate(element => {
     const row = element.getBoundingClientRect(), content = element.closest('.content')!.getBoundingClientRect()
     const header = document.querySelector('.live-workout-page > .page-header')!.getBoundingClientRect()
     const viewport = window.visualViewport!

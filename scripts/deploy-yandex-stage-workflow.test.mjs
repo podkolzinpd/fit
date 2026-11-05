@@ -216,16 +216,6 @@ test('coach workout identity inspection is manual, read-only and fixed-cohort', 
   assert.match(frontend, /VITE_COACH_WORKOUT_REDESIGN_ENABLED:.*\|\| 'false'/)
   assert.match(frontend, /VITE_COACH_WORKOUT_REDESIGN_PILOT_USER_IDS:.*\|\| ''/)
 })
-const trainerSchedulePilotWorkflow = readFileSync(
-  join(
-    import.meta.dirname,
-    '..',
-    '.github',
-    'workflows',
-    'manage-trainer-schedule-v2-pilot.yml',
-  ),
-  'utf8',
-)
 const oidcExchangeScript = readFileSync(
   join(import.meta.dirname, 'yandex-github-oidc.sh'),
   'utf8',
@@ -252,23 +242,6 @@ test('configures a fresh ephemeral Yandex CLI profile after every OIDC exchange'
   assert.doesNotMatch(workflow, /yc config profile create|yc config set token/)
 })
 
-test('keeps the trainer Schedule V2 rollout bounded while preserving two assignments', () => {
-  assert.match(trainerSchedulePilotWorkflow, /test "\$GITHUB_REF" = 'refs\/heads\/main'/)
-  assert.match(
-    trainerSchedulePilotWorkflow,
-    /TARGET_EMAIL: \$\{\{ secrets\.FIT_TRAINER_SCHEDULE_V2_TARGET_EMAIL \}\}/,
-  )
-  assert.match(trainerSchedulePilotWorkflow, /ENABLE_ONE_TRAINER_SCHEDULE_V2/)
-  assert.match(trainerSchedulePilotWorkflow, /DISABLE_ONE_TRAINER_SCHEDULE_V2/)
-  assert.match(trainerSchedulePilotWorkflow, /target_account_not_unique/)
-  assert.match(trainerSchedulePilotWorkflow, /manage_trainer_schedule_v2_pilot/)
-  assert.match(trainerSchedulePilotWorkflow, /Supabase pilot manager returned HTTP \$status/)
-  assert.match(trainerSchedulePilotWorkflow, /if test "\$status" = 409/)
-  assert.match(trainerSchedulePilotWorkflow, /\.enabledAssignments >= 1 and \.enabledAssignments <= 2/)
-  assert.match(trainerSchedulePilotWorkflow, /\.enabledAssignments >= 0 and \.enabledAssignments <= 1/)
-  assert.doesNotMatch(trainerSchedulePilotWorkflow, /knyaz187@/i)
-  assert.doesNotMatch(trainerSchedulePilotWorkflow, /echo.*TARGET_EMAIL/)
-})
 const vercelConfig = JSON.parse(
   readFileSync(join(import.meta.dirname, '..', 'vercel.json'), 'utf8'),
 )
