@@ -63,6 +63,7 @@ begin
         is_self_registered, is_test_account, workouts_total, workouts_done, workouts_in_progress, workouts_planned,
         questions_asked_total, last_question_asked_at, goals_created_total, last_goal_activity_at, custom_exercises_total,
         last_custom_exercise_at, connection_changes_total, last_connection_change_at from analytics.client_overview
+      where is_test_account = false
     ) c),
     'feedback', (select coalesce(jsonb_agg(to_jsonb(f) order by f.created_at desc), '[]'::jsonb)
       from (select id, message, account_role, created_at, display_mode, email, kind, screen_path
