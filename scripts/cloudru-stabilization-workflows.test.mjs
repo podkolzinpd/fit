@@ -721,6 +721,23 @@ test('background journal report keeps only fixed flags and allowlisted database 
   assert.doesNotMatch(result.stdout, /private-/)
 })
 
+test('background journal exposes only the last complete numeric push result without recipient contents', () => {
+  const summary = { claimed: 2, discarded: 0, failed: 1, remindersEnqueued: 1, succeeded: 1 }
+  const entries = [
+    { ...summary, succeeded: 0 }, summary,
+    ...[-1, 1.5, true, 'private-value', 9007199254740992, null].map(value => ({ ...summary, claimed: value })),
+    { claimed: 2, failed: 0 },
+  ].map(entry => ({ ...entry, event: 'cloudru_background_completed', endpoint: 'private-endpoint',
+    notifications: [{ id: 'private-recipient', body: 'private-body' }], sessionCleanup: { deleted: 'private-count' } }))
+  const result = spawnSync('python3', ['scripts/cloudru-background-diagnostics.py'], {
+    input: entries.map(entry => JSON.stringify({ MESSAGE: JSON.stringify(entry) })).join('\n'), encoding: 'utf8',
+  })
+  assert.equal(result.status, 0)
+  assert.equal(JSON.parse(result.stdout).workerCompleted, true)
+  assert.deepEqual(JSON.parse(result.stdout).latestCompletedPush, summary)
+  assert.doesNotMatch(result.stdout, /private-/)
+})
+
 test('background journal distinguishes transaction limits from work and keeps only bounded dispatch stages', () => {
   const messages = [
     { event: 'background_transaction_failed', transactionPhase: 'timeout', errorCode: '22023', message: 'private-sql' },
