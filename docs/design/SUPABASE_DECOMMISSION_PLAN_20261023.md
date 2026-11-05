@@ -669,3 +669,23 @@ passed, coverage83.64/78.6/82.94/88.33; infra434/435, прежний Mac mock cu
 API1575passed/336skipped без DB env, API lint/types/build и frontend build
 passed отдельно. Docs/archive integrity и whitespace passed; полного зелёного
 host check не заявляем. Новый exact-head CI — в PR после push.
+
+CI repair2 —05.11.2026: в42026439686 прежний trainer-name case passed,
+но строгий flaky gate отклонил два других WebKit cases: Live single→group
+viewport geometry и nutrition trainer dark disclosure. Оба прошли на retry.
+В nutrition helper убран racy optional count(): нужный layout известен fixture,
+для Lime ожидаются summary/click/open, mono передаётся явно. Consent/read-only
+assertions сохранены. Live final geometry теперь ожидается как асинхронное
+состояние через expect.poll с прежними строгими границами;1600ms frame capture,
+число scroll calls, smooth/instant, focus/inert, history/facts checks сохранены.
+Ни tolerance, ни sleep, ни timeout/retry/gate overrides не добавлены.
+
+Локально первый Live прогон3/3 failed на неверной build-конфигурации (rollout
+флаги отсутствовали), это не выдано за продуктовую регрессию. После сборки с
+точными CI client/coach rollout flags:6 существующих cases×3повтора=18/18
+без retries passed33.1s (Live+nutrition+name). Все23 существующих Live variants
+на WebKit passed58.1s. Постоянная matrix не расширена, cases не удалены;
+reduced/roles/densities сохранены. Сопоставимого benchmark до/после нет.
+ESLint трёх затронутых specs, whitespace и docs проверяются перед push.
+Product/SQL/restore implementation не менялись; результаты общих checks для
+6558656b остаются применимыми к неизменённому app коду. Новый exact-head CI в PR.
