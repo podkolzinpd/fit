@@ -1,5 +1,6 @@
 import { CorporateServicesPage, CorporateServiceRecordPage } from '../features/corporate-services'
 import { CorporateInvitationPage, CorporateAdminPage } from '../features/corporate-admin'
+import { PrivateAnalyticsPage } from '../features/private-analytics/PrivateAnalyticsPage'
 import { Navigate, Outlet, RouterProvider, createBrowserRouter, useLocation } from 'react-router-dom'
 import { useAuth } from './auth-context'
 import { trackPageView } from '../shared/yandex-metrika'
@@ -104,6 +105,7 @@ const router = createBrowserRouter([
   { path: '/invite', element: <ClientLimeStandaloneLayout invitation><InvitationRoute /></ClientLimeStandaloneLayout> },
   { element: <Protected />, children: [
     { path: '/admin', element: <CorporateAdminPage /> },
+    { path: '/private-analytics', element: <PrivateAnalyticsPage /> },
     { element: <AppLayout />, children: [
     { index: true, element: <Home /> },
     { path: '/join', element: <JoinPage /> },
