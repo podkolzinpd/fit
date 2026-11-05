@@ -70,6 +70,7 @@ jobs:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
           SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
           FIT_WORKOUT_HISTORY_TARGET: ${{ secrets.FIT_ATHLETE_PROGRAM_HISTORY_TARGET }}
+          FIT_PROGRAM_TRAINER_EVIDENCE: ${{ secrets.FIT_ATHLETE_PROGRAM_TRAINER_EVIDENCE }}
           FIT_JOURNAL_IMPORT_SHA256: ${{ inputs.approved_sha256 }}
           FIT_JOURNAL_RECEIPT_PUBLIC_KEY_B64: ${{ inputs.receipt_public_key_b64 }}
           FIT_JOURNAL_UPLOAD_SESSION: ${{ inputs.upload_session }}
@@ -127,6 +128,10 @@ jobs:
             CLOUDRU_MEDIA_KEY_ID CLOUDRU_MEDIA_KEY_SECRET)
           if test "$MODE" = inspect || test "$MODE" = apply || test "$MODE" = verify; then names+=(SUPABASE_ACCESS_TOKEN SUPABASE_PROJECT_ID); fi
           if test "$MODE" = prepare; then names+=(FIT_JOURNAL_RECEIPT_PUBLIC_KEY_B64); fi
+          # Optional, separately approved evidence never changes the upload target.
+          if test -n "$FIT_PROGRAM_TRAINER_EVIDENCE" && test "$MODE" != prepare && test "$MODE" != cleanup; then
+            names+=(FIT_PROGRAM_TRAINER_EVIDENCE)
+          fi
           for name in "${names[@]}"; do
             value=${!name}
             test -n "$value"

@@ -2,7 +2,7 @@ interface Connection {query(sql:string,values?:unknown[]):Promise<{rows:Record<s
 interface Scope {code:string;sha256:string;workouts:number;exercises:number;sets:number;from:string;to:string;trainingFormat:string}
 export function runProgramImport(options:{
   mode:'inspect'|'apply'|'verify';owner:Connection;runtime:Connection;
-  target:{trainerLoginSha256:string;trainerEmailSha256:string;clientNameSha256:string};legacyId?:string|null;
+  target:{trainerLoginSha256:string;trainerEmailSha256:string;clientNameSha256:string};legacyId?:string|null;trainerEvidence?:{version:number;targetBinding:string;rosterNameHashes:string[];programAlias?:{code:string;sourceNameSha256:string;rosterNameSha256:string}}|null;
   parts:string[];approvedSha256:string;
   readRequest:(...args:never[])=>{draft:object;expectedVersion:number|null}|undefined;
   saveCompleted:(...args:never[])=>Promise<{id:string;version:number}>;
