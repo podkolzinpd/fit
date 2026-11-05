@@ -48,6 +48,9 @@ jobs:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
       - name: Install only code and infrastructure credentials for the isolated service
         env:
           CLOUDRU_DATABASE_CONFIG_JSON: ${{ secrets.CLOUDRU_STAGE_DATABASE_CONFIG_JSON }}
@@ -73,6 +76,17 @@ jobs:
           printf '%s' "$OPERATOR_PUBLIC_KEY_B64" | base64 --decode | sudo tee "$root/operator.public.pem" >/dev/null
           sudo chmod 600 "$root/operator.public.pem"
           sudo openssl pkey -pubin -in "$root/operator.public.pem" -noout >/dev/null
+          # Retire only this operator's pre-channel infrastructure orphans.
+          # A durable control key/state means customer input could exist: preserve it.
+          sudo find /opt/fit/secrets -mindepth 1 -maxdepth 1 -name 'program-direct-*' -print0 | while IFS= read -r -d '' failed; do
+            [[ "$failed" =~ ^/opt/fit/secrets/program-direct-[0-9]{1,20}-[0-9]{1,4}$ ]] || continue
+            test "$failed" != "$root" || continue
+            sudo test -d "$failed" && sudo test ! -L "$failed" || continue
+            test "$(sudo stat -c '%u:%a' "$failed")" = 0:700 || continue
+            sudo test ! -e "$failed/server.private.pem" && sudo test ! -e "$failed/state.json" || continue
+            sudo cmp -s "$root/operator.public.pem" "$failed/operator.public.pem" || continue
+            sudo rm -r -- "$failed"
+          done
           jq -e '.MIGRATION_DATABASE_HOST == "10.70.10.67" and .MIGRATION_DATABASE_PORT == "5432" and
             .MIGRATION_DATABASE_NAME == "fit" and .MIGRATION_DATABASE_USER == "fit_owner" and
             .DATABASE_HOST == "10.70.10.67" and .DATABASE_PORT == "5432" and

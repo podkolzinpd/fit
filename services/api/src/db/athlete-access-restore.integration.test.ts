@@ -66,6 +66,14 @@ describe.skipIf(source===undefined)('proven athlete card access preserves both p
  async function plan(f:AthletePair){const c=await owner.connect();try{return await planAthleteRestore(c,{legacyId:f.legacyId,currentId:f.currentId,trainerId:f.trainerId})}finally{c.release()}}
  async function apply(p:AthletePlan,backupVerified=true){const c=await owner.connect();try{return await applyAthleteRestore(c,p,{backupVerified})}finally{c.release()}}
  async function verify(p:AthletePlan){const c=await runtime.connect();try{return await verifyAthleteRestore(c,p,{readProfile:()=>readOwnProfile({query:async<Row extends QueryResultRow>(text:string,values?:readonly unknown[])=>(await c.query<Row>(text,values?[...values]:undefined)).rows})})}finally{c.release()}}
+ async function chat(f:Awaited<ReturnType<typeof fixture>>,clientId=f.card,trainerId=f.trainerId){
+  const id=randomUUID(),message=randomUUID()
+  await owner.query(`insert into public.chat_conversations(id,client_id,client_user_id,trainer_id,client_last_read_at,trainer_last_read_at)
+    values($1,$2,$3,$4,'2026-01-01T10:00:00Z','2026-01-02T10:00:00Z')`,[id,clientId,f.legacyId,trainerId])
+  await owner.query(`insert into public.chat_messages(id,conversation_id,sender_id,body,image_path,image_mime_type,image_width,image_height,image_size_bytes)
+    values($1,$2,$3,'Synthetic coach history','synthetic/retained.jpg','image/jpeg',3,4,100)`,[message,id,trainerId])
+  return {id,message}
+ }
  it('changes only one card owner; keeps 21 done + active workout, decimal facts, both profiles and new private history',async()=>{
   const f=await fixture(),p=await plan(f)
   expect(p.ready).toBe(true)
@@ -83,6 +91,7 @@ describe.skipIf(source===undefined)('proven athlete card access preserves both p
  })
  it('refuses old actor-owned private history rather than leaving it behind',async()=>{
   const f=await fixture()
+  await chat(f)
   await owner.query(`insert into public.assistant_conversations(owner_id,title) values($1,'Old private synthetic history')`,[f.legacyId])
   const p=await plan(f);expect(p.ready).toBe(false)
   expect(p.report).toMatchObject({uncoveredOldData:[{table:'assistant_conversations',count:1}]})
@@ -91,6 +100,7 @@ describe.skipIf(source===undefined)('proven athlete card access preserves both p
  })
  it('unknown private owner history also blocks a repair instead of being treated as infrastructure',async()=>{
   const f=await fixture()
+  await chat(f)
   await owner.query('create table app_private.athlete_restore_unknown_private_data(owner_id uuid references public.profiles(id),payload text)')
   await owner.query(`insert into app_private.athlete_restore_unknown_private_data values($1,'Private synthetic unpublished plan')`,[f.legacyId])
   const p=await plan(f);expect(p.ready).toBe(false)
@@ -126,5 +136,88 @@ describe.skipIf(source===undefined)('proven athlete card access preserves both p
    }},p,{backupVerified:true})).rejects.toThrow('synthetic postcondition failure')
    expect((await c.query<{auth_user_id:string}>('select auth_user_id from public.clients where id=$1',[f.card])).rows[0]?.auth_user_id).toBe(f.legacyId)
   }finally{c.release()}
+ })
+ it('restores one proven chat and all its unchanged history while preserving a new private conversation',async()=>{
+  const f=await fixture(),old=await chat(f),newCard=randomUUID(),newChat=randomUUID(),newMessage=randomUUID()
+  await owner.query(`insert into public.clients(id,trainer_id,full_name) values($1,$2,'Synthetic unrelated new card')`,[newCard,f.trainerId])
+  await owner.query('insert into public.chat_conversations(id,client_id,client_user_id,trainer_id) values($1,$2,$3,$4)',[newChat,newCard,f.currentId,f.trainerId])
+  await owner.query(`insert into public.chat_messages(id,conversation_id,sender_id,body) values($1,$2,$3,'Synthetic new private message')`,[newMessage,newChat,f.currentId])
+  const meeting=randomUUID()
+  await owner.query(`insert into public.chat_meetings(id,conversation_id,ended_at) values($1,$2,'2026-01-03T10:00:00Z')`,[meeting,old.id])
+  await owner.query(`insert into public.chat_meeting_sessions(id,meeting_id,user_id,expires_at,joined) values($1,$2,$3,'2026-01-03T10:00:00Z',true)`,[randomUUID(),meeting,f.trainerId])
+  await owner.query('insert into public.chat_meeting_notices(meeting_id,user_id,message_id) values($1,$2,$3)',[meeting,f.trainerId,old.message])
+  const rows=(await owner.query<{row:Record<string,unknown>}>('select to_jsonb(c) row from public.chat_conversations c where id=any($1::uuid[]) order by id',[[old.id,newChat]])).rows
+  const messages=(await owner.query<{row:Record<string,unknown>}>('select to_jsonb(m) row from public.chat_messages m where id=any($1::uuid[]) order by id',[[old.message,newMessage]])).rows
+  const p=await plan(f);expect(p.ready).toBe(true)
+  expect(p.report).toMatchObject({chat:{oldConversations:1,eligibleConversations:1,oldAuthoredMessages:0,currentConversations:1}})
+  expect(await apply(p)).toMatchObject({changedCards:1,restoredChatParticipants:1})
+  expect(await verify(p)).toMatchObject({restoredChats:1,preservedWorkouts:22})
+  expect(await apply(p)).toMatchObject({replayed:true})
+  const after=(await owner.query<{row:Record<string,unknown>}>('select to_jsonb(c) row from public.chat_conversations c where id=any($1::uuid[]) order by id',[[old.id,newChat]])).rows
+  expect(after).toEqual(rows.map(r=>({row:r.row.id===old.id?{...r.row,client_user_id:f.currentId}:r.row})))
+  expect((await owner.query('select to_jsonb(m) row from public.chat_messages m where id=any($1::uuid[]) order by id',[[old.message,newMessage]])).rows).toEqual(messages)
+  const c=await runtime.connect()
+  try{
+   await c.query('begin transaction read only');await c.query("select set_config('request.jwt.claim.sub',$1,true)",[f.currentId])
+   expect((await c.query('select id,body,image_path from public.list_chat_messages_v3($1)',[old.id])).rows).toEqual([{id:old.message,body:'Synthetic coach history',image_path:'synthetic/retained.jpg'}])
+   await c.query('commit')
+  }finally{c.release()}
+ })
+ it('keeps the original merged-card chat ID and exposes its canonical UI link to both participants',async()=>{
+  const f=await fixture(),old=await chat(f,f.old),p=await plan(f)
+  expect(p.ready).toBe(true);await apply(p)
+  expect(await verify(p)).toMatchObject({restoredChats:1,athleteCanReadHistory:true,trainerCanReadHistory:true})
+  expect((await owner.query('select client_id,client_user_id from public.chat_conversations where id=$1',[old.id])).rows).toEqual([{client_id:f.old,client_user_id:f.currentId}])
+ })
+ it('refuses old-account-authored messages instead of changing their authors or hiding private data',async()=>{
+  const f=await fixture(),old=await chat(f)
+  await owner.query(`insert into public.chat_messages(id,conversation_id,sender_id,body) values($1,$2,$3,'Synthetic original authored message')`,[randomUUID(),old.id,f.legacyId])
+  const p=await plan(f);expect(p.ready).toBe(false)
+  expect(p.report).toMatchObject({chat:{eligibleConversations:0,oldAuthoredMessages:1}})
+  await expect(apply(p)).rejects.toThrow('plan')
+ })
+ it('refuses a conversation outside the proven card chain or with a different coach',async()=>{
+  const f=await fixture(),foreign=randomUUID()
+  await owner.query(`insert into public.clients(id,trainer_id,full_name) values($1,$2,'Synthetic foreign card')`,[foreign,f.trainerId])
+  await chat(f,foreign);expect((await plan(f)).ready).toBe(false)
+  const g=await fixture(),other=randomUUID()
+  await owner.query(`insert into public.profiles(id,account_role,first_name) values($1,'trainer','Synthetic other coach')`,[other])
+  await owner.query('insert into public.trainers(profile_id) values($1)',[other])
+  await chat(g,g.card,other);expect((await plan(g)).ready).toBe(false)
+ })
+ it('rejects a stale chat snapshot and retains messages arriving before the next plan',async()=>{
+  const f=await fixture(),old=await chat(f),p=await plan(f),message=randomUUID()
+  await owner.query(`insert into public.chat_messages(id,conversation_id,sender_id,body) values($1,$2,$3,'Synthetic newer coach message')`,[message,old.id,f.trainerId])
+  await expect(apply(p)).rejects.toThrow('state_changed')
+  const fresh=await plan(f);await apply(fresh);expect(await verify(fresh)).toMatchObject({restoredChats:1})
+  expect((await owner.query('select body from public.chat_messages where id=$1',[message])).rows).toEqual([{body:'Synthetic newer coach message'}])
+ })
+ it('rolls back both ownership fields when a failure occurs after the chat change',async()=>{
+  const f=await fixture(),old=await chat(f),p=await plan(f),c=await owner.connect()
+  try{
+   await expect(applyAthleteRestore({query:async(sql:string,values?:unknown[])=>{
+    const r=await c.query(sql,values)
+    if(sql.startsWith('update public.chat_conversations set client_user_id'))throw Error('synthetic failure after chat mutation')
+    return r
+   }},p,{backupVerified:true})).rejects.toThrow('synthetic failure after chat mutation')
+   expect((await c.query<{auth_user_id:string}>('select auth_user_id from public.clients where id=$1',[f.card])).rows[0]?.auth_user_id).toBe(f.legacyId)
+   expect((await c.query<{client_user_id:string}>('select client_user_id from public.chat_conversations where id=$1',[old.id])).rows[0]?.client_user_id).toBe(f.legacyId)
+  }finally{c.release()}
+ })
+ it('refuses multiple old conversations and never treats a partial prior mutation as completed recovery',async()=>{
+  const f=await fixture();await chat(f);await chat(f,f.old)
+  expect((await plan(f)).ready).toBe(false)
+  const g=await fixture();await chat(g);const p=await plan(g)
+  await owner.query('update public.clients set auth_user_id=$1 where id=$2',[g.currentId,g.card])
+  await expect(apply(p)).rejects.toThrow('chat_postcondition')
+ })
+ it('refuses self-authored old workouts rather than silently dropping original author permissions',async()=>{
+  const f=await fixture();await chat(f)
+  await owner.query(`insert into public.workouts(client_id,trainer_id,created_by,workout_date,status,completed_at)
+    values($1,$2,$2,current_date,'done',now())`,[f.card,f.legacyId])
+  const p=await plan(f);expect(p.ready).toBe(false)
+  expect(p.report).toMatchObject({oldAuthoredWorkouts:1,uncoveredOldData:[{table:'workouts.created_by',count:1}]})
+  await expect(apply(p)).rejects.toThrow('plan')
+  expect((await owner.query<{auth_user_id:string}>('select auth_user_id from public.clients where id=$1',[f.card])).rows[0]?.auth_user_id).toBe(f.legacyId)
  })
 })

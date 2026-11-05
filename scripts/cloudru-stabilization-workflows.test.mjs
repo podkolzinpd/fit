@@ -13,7 +13,7 @@ import { readHistoryTargets, readHistoryRegistry, readHistoryPages, summarizeHis
   readHistoryEvidenceSecret, resolveHistoryEvidence, readHistoryVisibility,
   readWorkoutHistoryTarget, inspectWorkoutHistoryTarget } from './cloudru-account-history-audit.mjs'
 import { probeRuntimeDatabase } from './cloudru-runtime-db-probe.mjs'
-import { auditBackground, reminderCandidates, auditDeliveryControl } from './cloudru-background-audit.mjs'
+import { auditBackground, reminderCandidates, componentQueries, safeFailure, auditDeliveryControl } from './cloudru-background-audit.mjs'
 
 test('delivery gate inspection is SELECT-only for absent, held and active controls', async () => {
   for (const present of [false, true]) for (const held of [false, true]) {
@@ -48,15 +48,17 @@ test('background audit reports only bounded aggregates and recovers failed reado
     if (sql.includes('to_regclass')) return { rows: [{ present: false }] }
     if (sql.includes('group by 1,2')) return { rows: [{ kind: 'test', age: 'older', count: 2 }] }
     if (sql === reminderCandidates || values?.[0] === privateZone) {
-      throw Object.assign(new Error('private-error-text'), { code: '22023' })
+      throw Object.assign(new Error(`time zone "${privateZone}" not recognized`), { code: '22023' })
     }
     if (sql.includes('select distinct profile.timezone')) return { rows: [{ timezone: privateZone }, { timezone: 'UTC' }] }
+    if (componentQueries.some(([, query]) => query === sql)) return { rows: [{ count: 0 }] }
     return { rows: [] }
   } }
   const report = await auditBackground(client)
   assert.deepEqual(report, { event: 'cloudru_background_audit', groups: [{ kind: 'test', age: 'older', count: 2 }],
-    reminderCandidates: { ready: false, code: '22023' }, deliveryControl: { present: false },
-    timezoneChecks: { checked: 2, failures: [{ code: '22023', count: 1 }] } })
+    reminderCandidates: { ready: false, code: '22023', category: 'timezone_unrecognized' }, deliveryControl: { present: false },
+    components: componentQueries.map(([step]) => ({ step, ready: true, count: 0 })),
+    timezoneChecks: { scope: 'all_profiles', checked: 2, failures: [{ code: '22023', category: 'timezone_unrecognized', count: 1 }] } })
   assert.equal(statements[0], 'begin read only')
   assert.equal(statements.at(-1), 'rollback')
   assert.ok(statements.includes('rollback to savepoint reminder_probe'))
@@ -71,13 +73,33 @@ test('background audit fails closed on excessive timezone cardinality or wrong d
     const client = { query: async sql => {
       statements.push(sql)
       if (sql.includes('current_user')) return { rows: [{ valid: !wrongRole }] }
-      if (sql === reminderCandidates) return { rows: [{ count: 0 }] }
+      if (sql === reminderCandidates || componentQueries.some(([, query]) => query === sql)) return { rows: [{ count: 0 }] }
       if (sql.includes('select distinct')) return { rows: Array.from({ length: 101 }, () => ({ timezone: 'UTC' })) }
       return { rows: [] }
     } }
     await assert.rejects(auditBackground(client), /background_audit_(?:role_rejected|zone_bound_exceeded)/)
     assert.equal(statements.at(-1), 'rollback')
   }
+})
+
+test('background component probes recover independently without exposing database messages', async () => {
+  const statements = []
+  const client = { query: async sql => {
+    statements.push(sql)
+    if (sql.includes('current_user')) return { rows: [{ valid: true }] }
+    if (sql.includes('to_regclass')) return { rows: [{ present: false }] }
+    if (sql.includes('group by 1,2') || sql.includes('select distinct')) return { rows: [] }
+    if (sql === componentQueries[2][1]) throw Object.assign(new Error('private query text'), { code: '22023' })
+    return { rows: [{ count: 3 }] }
+  } }
+  const report = await auditBackground(client)
+  assert.deepEqual(report.components[2], { step: 'joined_planned', ready: false, code: '22023', category: 'other' })
+  assert.equal(report.components[3].ready, true)
+  assert.ok(statements.includes('rollback to savepoint component_probe'))
+  assert.doesNotMatch(JSON.stringify(report), /private/)
+  assert.deepEqual(safeFailure({ code: 'secret', message: 'secret' }), { code: 'unknown', category: 'other' })
+  assert.deepEqual(safeFailure({ code: '22023', message: 'unrecognized configuration parameter "private"' }),
+    { code: '22023', category: 'configuration' })
 })
 
 test('background audit is explicit manual readonly and precedes queue health exit', () => {

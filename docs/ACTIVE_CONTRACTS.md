@@ -24,7 +24,7 @@
 | Финансы тренера / ФИТ19 | [FIN301–305, пять PR](design/trainer-finance-cabinet-20260930.md#утверждённые-исправления-финансов--03112026--фит19) | Реальный расход и даты, непривязанный учёт без выдуманной цены, единые суммы/архив/поступления; Lime и проверка всех изменённых состояний |
 | Ачивки | [progress states](design/ACHIEVEMENT_PROGRESS_STATES_20261004.md), [regularity](design/ACHIEVEMENT_REGULARITY_COPY_20261005.md) | Принятые изображения/условия; перед правкой сверить последующие решения и текущий каталог |
 | Корпоративные тренеры | [кабинет](design/CORPORATE_ADMIN_20261027.md), [анкеты/офисы](design/TRAINER_PROFILES_OFFICES_20261029.md) | Права отдельно от роли; фото из публикации; статус/офисы утверждает администратор; клуб отдельно |
-| Точечное восстановление доступа спортсмена | [AH-STABLE-NATIVE-01](design/ACCOUNT_HISTORY_RECOVERY_20261022.md#итерация-7--05112026--codex--openai) | Только подтверждённая пара: нынешний login/userId прежние, условный доступ к существующей карточке после private inventory/backup/restore; unknown private history блокирует запись, не общий merge; production-проверка ещё гейт |
+| Точечное восстановление доступа спортсмена | [AH-STABLE-NATIVE-02](design/ACCOUNT_HISTORY_RECOVERY_20261022.md#итерация-8--05112026--codex--openai) | Только подтверждённая пара: нынешний login/userId прежние; guarded карточка и один проверенный чат без старого авторства; unknown private history блокирует запись, не общий merge; production-проверка ещё гейт |
 | Backend/публикация | [playbook](YANDEX_CUTOVER_PLAYBOOK.md), [engineering](ENGINEERING_RULES.md), OPERATIONS.md в корне | Cloud.ru, ownership/RLS, forward migrations, отсутствие dual-write |
 | Перенос недельных журналов | [PHI101–105](design/ATHLETE_PROGRAM_HISTORY_IMPORT_20261103.md) | 16спортсменов+собственный журнал тренера; даты/финансы/связи сохраняются; PHI-DIRECT-CLOUDRU-01: клиентский ввод и readbacks только local↔Cloud.ru, Actions только code installer/VM queue |
 | Decommission | [план](design/SUPABASE_DECOMMISSION_PLAN_20261023.md), [P0](design/SUPABASE_P0_RESOURCE_AUDIT_20261024.md) | Не удалять rollback/legacy по возрасту; проверить фактические незакрытые гейты |
@@ -145,3 +145,12 @@ viewer grant допускает отзыв; native ресурсы защищен
 Заметка редактируется в самой карточке, сохраняется кнопкой под полем;
 микрофон в заголовке. [Решение/история](design/CLIENT_PROFILE_LIME_20261104.md#итерация-14--2026-11-04--codex--openai).
 04.11 — [Собственный профиль/COP101–304](design/CLIENT_OWN_PROFILE_20261104.md): три PR со слиянием/выпуском разрешены; общее приватное фото существующей карточки, все подцели/критерии и клиентские механики сохраняются.
+
+05.11 — SB-NATIVE-RESTORE-01: ручной restore сохраняется, поиск пары через
+Supabase заменён подтверждёнными native profile ID в закрытом secret.
+Plan/apply/verify, backup, история и RLS прежние.
+[Контракт и проверки](design/SUPABASE_DECOMMISSION_PLAN_20261023.md#sb-native-restore-01--native-restore--05112026).
+
+05.11 — SB-PILOT-MANAGER-RETIRE-01: старый dual-plane Schedule V2 pilot
+workflow удаляется; назначения и текущие Cloud.ru настройки не меняются.
+[Scope и проверки](design/SUPABASE_DECOMMISSION_PLAN_20261023.md#sb-pilot-manager-retire-01--pilot-manager--05112026).
