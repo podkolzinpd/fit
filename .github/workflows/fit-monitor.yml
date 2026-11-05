@@ -1,0 +1,95 @@
+name: Fit monitoring and Telegram alerts
+
+on:
+  schedule:
+    - cron: '*/5 * * * *'
+  workflow_dispatch:
+    inputs:
+      install_host:
+        description: Install minute monitoring on the existing Cloud.ru VM
+        type: boolean
+        default: false
+      test_delivery:
+        description: Send one explicit Telegram connection test
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  public:
+    if: vars.FIT_MONITOR_ENABLED == 'true' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 3
+    concurrency:
+      group: fit-public-monitor
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/cache/restore@v4
+        with:
+          path: .fit-monitor-state
+          key: fit-monitor-public-v1-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: fit-monitor-public-v1-
+      - name: Check public endpoints and report only state transitions
+        env:
+          FIT_ALERT_TELEGRAM_BOT_TOKEN: ${{ secrets.FIT_ALERT_TELEGRAM_BOT_TOKEN }}
+          FIT_ALERT_TELEGRAM_CHAT_ID: ${{ secrets.FIT_ALERT_TELEGRAM_CHAT_ID }}
+          TEST_DELIVERY: ${{ inputs.test_delivery }}
+        run: |
+          set -euo pipefail
+          test -n "$FIT_ALERT_TELEGRAM_BOT_TOKEN"
+          test -n "$FIT_ALERT_TELEGRAM_CHAT_ID"
+          args=()
+          if test "$TEST_DELIVERY" = true; then args+=(--test-delivery); fi
+          python3 infra/monitoring/monitor.py --mode public --state .fit-monitor-state/state.json "${args[@]}"
+      - uses: actions/cache/save@v4
+        if: success() && inputs.test_delivery != true
+        with:
+          path: .fit-monitor-state
+          key: fit-monitor-public-v1-${{ github.run_id }}-${{ github.run_attempt }}
+  install:
+    if: github.event_name == 'workflow_dispatch' && inputs.install_host
+    runs-on: [self-hosted, cloudru-stage]
+    timeout-minutes: 3
+    concurrency:
+      group: cloudru-stage-vm
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Validate and install only monitoring files
+        env:
+          FIT_ALERT_TELEGRAM_BOT_TOKEN: ${{ secrets.FIT_ALERT_TELEGRAM_BOT_TOKEN }}
+          FIT_ALERT_TELEGRAM_CHAT_ID: ${{ secrets.FIT_ALERT_TELEGRAM_CHAT_ID }}
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REPOSITORY" = podkolzinpd/fit
+          test "$GITHUB_REF" = refs/heads/main
+          test "$(hostname)" = fit-stage-app
+          python3 -m unittest discover -s infra/monitoring -p 'test_*.py'
+          python3 - <<'PY'
+          import os, re, subprocess
+          token = os.environ['FIT_ALERT_TELEGRAM_BOT_TOKEN']
+          chat = os.environ['FIT_ALERT_TELEGRAM_CHAT_ID']
+          if not re.fullmatch(r'[0-9]+:[A-Za-z0-9_-]+', token) or not re.fullmatch(r'-[0-9]+', chat):
+              raise SystemExit('invalid_monitor_configuration')
+          subprocess.run(['sudo', 'install', '-d', '-m', '700', '/opt/fit/secrets'], check=True)
+          subprocess.run(['sudo', 'install', '-m', '600', '/dev/null', '/opt/fit/secrets/monitor.env'], check=True)
+          subprocess.run(['sudo', 'tee', '/opt/fit/secrets/monitor.env'],
+                         input=f'FIT_ALERT_TELEGRAM_BOT_TOKEN={token}\nFIT_ALERT_TELEGRAM_CHAT_ID={chat}\n',
+                         text=True, stdout=subprocess.DEVNULL, check=True)
+          PY
+          sudo install -d -m 755 /opt/fit-monitor
+          sudo install -m 644 infra/monitoring/monitor.py /opt/fit-monitor/monitor.py
+          sudo install -m 644 infra/monitoring/fit-monitor.service infra/monitoring/fit-monitor.timer /etc/systemd/system/
+          sudo systemd-analyze verify /etc/systemd/system/fit-monitor.service /etc/systemd/system/fit-monitor.timer
+          sudo systemctl daemon-reload
+          sudo systemctl enable --now fit-monitor.timer
+          sudo systemctl start fit-monitor.service
+          sudo systemctl is-active --quiet fit-monitor.timer
+          sudo systemctl show fit-monitor.service --property=Result --property=ExecMainStatus
