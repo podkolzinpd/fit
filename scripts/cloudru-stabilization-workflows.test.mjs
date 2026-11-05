@@ -83,7 +83,7 @@ test('push recovery is a manual typed exact-main operation, never a sender or ar
   assert.match(workflow, /0:600/)
   assert.match(workflow, /0:700/)
   assert.match(workflow, /node dist\/cloudru-background-cutover\.js/)
-  assert.doesNotMatch(workflow, /dist\/(?:cloudru-background-worker|push-dispatcher|cloudru-push-recovery)\.js|psql|shell_command|sql_input|--publish|VAPID|start fit-background\.service/)
+  assert.doesNotMatch(workflow, /dist\/(?:cloudru-background-worker|push-dispatcher|cloudru-push-recovery|cloudru-recovery-push)\.js|psql|shell_command|sql_input|--publish|VAPID|start fit-background\.service/)
   for (const body of workflow.split('run: |').slice(1)) {
     const shell = body.split('\n').filter(line => line.startsWith('          ') || line.trim() === '').map(line => line.slice(10)).join('\n')
     const parsed = spawnSync('bash', ['-n'], { input: shell, encoding: 'utf8' })
