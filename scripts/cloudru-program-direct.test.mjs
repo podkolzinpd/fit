@@ -127,3 +127,16 @@ test('installer has no customer inputs, secrets, result uploads or data-processi
   assert.ok(workflow.indexOf('uses: actions/upload-artifact')<workflow.indexOf('Reserve VM serialization'))
   assert.doesNotMatch(workflow,/node.*cloudru-program-history-(?:write|inspect)/)
 })
+
+
+test('installer supplies its host Node runtime before systemd bootstrap and preserves any durable control lease',()=>{
+  const workflow=readFileSync(new URL('../.github/workflows/start-cloudru-private-program-service.yml',import.meta.url),'utf8')
+  assert.match(workflow,/uses: actions\/setup-node@v4\s+with:\s+node-version: 22/)
+  assert.ok(workflow.indexOf('uses: actions/setup-node@v4')<workflow.indexOf('Install only code and infrastructure credentials'))
+  const start=workflow.indexOf('for failed in /opt/fit/secrets/program-direct-*; do')
+  const cleanup=workflow.slice(start,workflow.indexOf('          jq -e',start))
+  assert.match(cleanup,/sudo cmp -s "\$root\/operator.public.pem" "\$failed\/operator.public.pem"/)
+  assert.match(cleanup,/sudo test ! -e "\$failed\/server.private.pem" && sudo test ! -e "\$failed\/state.json" \|\| continue/)
+  assert.ok(cleanup.indexOf('sudo cmp -s')<cleanup.indexOf('sudo rm -r'))
+  assert.doesNotMatch(cleanup,/journal-upload-|target|receipt|client|roster/i)
+})

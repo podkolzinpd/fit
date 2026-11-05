@@ -778,3 +778,38 @@ No-undef/no-unused-vars этих entry/worker/bootstrap модулей тепе�
 в обязательный infra gate, чтобы shared CLI closure проверялся и после extraction.
 Исход20cb заменён этой корректировкой до merge/production; новый обычный
 exact-head CI обязателен. Ни один production запрос/импорт не запускался.
+
+
+## Итерация 12 — 05.11.2026 — Codex / OpenAI
+
+Задача: завершить разрешённый direct перенос без новой функциональности.
+PR1994 штатно слит на29b23913; его mainCI42000101542, Android42000101519,
+API42005538273/web42005538396/OTA42006080679 success. Независимо213/213 файлов,
+8/8 публичных проб, DNS3/3, оба точных API и подпись/ABI/public OTA проверены.
+Это выпуск кода, бизнес-данных по-прежнему0/17.
+
+Реальный code-only installer42007740418 остановился ДО private channel:
+command -v node вернул пустой путь, systemd сообщил отсутствие executable.
+Причина моя: в job не было setup-node, а host PATH не наследует Node из других
+Actions jobs. Выполнение bootstrap не началось; encrypted infrastructure
+capability не создана, клиентский target/evidence/payload не отправлялись,
+import/verify/apply не выполнялись и оба operator gate остаются закрытыми.
+Исходная old READ сессия/ключ сохраняются. Backup restore текущего запуска
+прошёл; отдельный media ACL read403 не выдаётся за ошибку journal object I/O
+и не используется для изменения bucket permissions.
+
+Сделано: перед host bootstrap добавлен прежний trusted setup-node@v4/Node22.
+Транспорт, protocol/actor/RLS/finance/expiry/verify/cleanup guards не менялись.
+Неудачная pre-channel попытка оставила собственные infrastructure credentials
+в root0700. Следующий installer может удалить только orphan с совпадающим
+operator PUBLIC key, root0700 ownership и отсутствием ОБОИХ durable control
+key/state. Любая durable lease, чужой public key, symlink и journal-upload
+сессии сохраняются. Новых customer inputs или секретов GitHub не добавлено.
+
+Проверка: новый targeted workflow case требует Node ДО bootstrap и проверяет
+границы orphan cleanup. Синтаксис YAML/shell и существующие protocol tests
+проверяются повторно по изменённой причине; остальные ранее зелёные проверки
+не называются новой приёмкой этого исправления. Открыто: штатные reviewed PR,
+exact-head CI/актуальный main с соблюдением очереди; после него одна новая
+code-only попытка, direct канал и17 последовательных переносов. Старый
+failed bootstrap не повторяется вслепую и не объявляется загрузкой данных.
