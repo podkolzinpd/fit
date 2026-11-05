@@ -253,3 +253,49 @@ fixtures; переименована только собственная рол�
 expression22023, timezone22023, очередь1→1. Это ещё не production-причина.
 CI и очередь выпуска остаются обязательными; PR автоматически прикрепить к чату
 не удалось из-за лимита100attachments, сам PR доступен по номеру1997.
+
+## BG2 PREP —05.11.2026 — Codex / OpenAI: защита до восстановления
+
+Первый этап ещё открыт:1997 опубликован9cb95bc1 (API release42027299153),
+read-only42029039387 локализовал reminder_enqueue/22023,58pending/overdue,
+0staleLeases/terminalFailures, соединение и session cleanup исправны.
+Все7planned-зон допустимы. BG1.2/PR2003 проверяет все profile-зоны и части
+SELECT; его CI42026081120 зелёный, он ждёт старшие активные PR.
+Точная production-причина ещё не доказана; этот BG2-черновик её не объявляет.
+
+Независимая подготовка: forward migration000190 создаёт owner-only control
+с выключенной доставкой. Missing row/hold/future boundary возвращают null до
+каких-либо claims. После проверенной активации берутся только созданные не
+раньше fresh_after; TTL15min для reminder/test,1day для других, включая
+произвольные kind. История/исходные события не удаляются. Lease,20/50limit,
+10attempts,410/multi-device/dedupe/finalize остаются прежними.
+При неопределённом lease миграция отказывается применяться. API-откат guard
+не убирает. Control содержит cutoff/fingerprint предыдущей verified-preserve
+операции для будущей безопасной активации BG3; API-role не имеет table grants.
+
+Release использует тот же flock, что launcher: ждёт завершения bounded worker,
+затем держит замок на протяжении backup/migration; новый worker его не обходит.
+Producer/claim теперь раздельные транзакции: producer failure не блокирует
+другие новые события, но исходная ошибка возвращается после finalize и не
+делает проблемный запуск зелёным. Cleanup остаётся независимым. Не меняются
+UI/ввод/клавиатура/Live/локальный rest timer/хранение тренировок и сообщений.
+
+Проверено промежуточно: API lint/types/build,1576unit passed/347conditional
+DBskips;19dispatcher tests;42workflow tests;12изолированных PGguard cases
+(held/missing,history/expiry,generic kinds,SKIP LOCKED,rollback,retry,owner ACL,
+maintenance serialization,active-lease refusal). Старый push pipeline также
+прошёл в общем actor run; его fixture-clock2099 теперь явным образом отражена
+в created_at и control, исходные5/2/3/410/10assertions сохранены.
+
+Общий actor сначала171passed/2fail, затем169passed/4timeouts; после restart
+172passed/1session-count mismatch/1skip, плюс12guard passed. Отдельно6/6ранее
+упавших сценариев проходят. Только собственная fixture пересоздавалась после
+прерываний. Затем локальный Podman/port-forward перестал стабильно отвечать,
+отдельный Linux pull оборвался unexpected EOF. Таймауты, тесты и assertions
+не ослаблялись. Полная приёмка должна пройти в CI PostgreSQL, это не READY.
+
+Отвергнуто: исправить enqueue до guard; сначала включить старую очередь;
+поменять профильные timezone предположительно; скрывать ошибку producer;
+сужать kind; обходить проверку main/owner или принудительно сливать черновик.
+Дальше: BG1.2 production proof → добавить доказанное исправление в этот PR →
+полный зелёный CI и очередной выпуск в held → BG3 preview/preserve/activation.
