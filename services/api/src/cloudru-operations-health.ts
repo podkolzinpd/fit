@@ -14,16 +14,26 @@ export async function inspectCloudruQueue(client: { query(text: string): Promise
         count(*) filter (where sent_at is null and discarded_at is null
           and dispatch_started_at < now() - interval '10 minutes')::integer as "staleLeases",
         count(*) filter (where discarded_at > now() - interval '1 hour' and attempts >= 10
-          and last_error is distinct from 'cloudru_cutover_history_preserved')::integer as "terminalFailures"
+          and last_error is distinct from 'cloudru_cutover_history_preserved'
+          and coalesce(last_error, '') !~ '^cloudru_recovery_history_preserved:[a-f0-9]{64}$')::integer as "terminalFailures",
+        not coalesce((select delivery_enabled from app_private.push_delivery_control where singleton),false) as "deliveryHeld",
+        count(*) filter (where sent_at is null and discarded_at is null and
+          (not coalesce((select delivery_enabled from app_private.push_delivery_control where singleton),false)
+            or created_at < (select fresh_after from app_private.push_delivery_control where singleton)))::integer as quarantined,
+        count(*) filter (where sent_at is null and discarded_at is null and
+          coalesce((select delivery_enabled from app_private.push_delivery_control where singleton),false)
+          and created_at >= (select fresh_after from app_private.push_delivery_control where singleton)
+          and created_at < now() - interval '15 minutes')::integer as "freshOverdue"
       from app_private.push_notifications_outbox`)
     const result = rows[0]
-    if (!result) throw new Error('cloudru_queue_report_rejected')
+    if (!result || typeof result.deliveryHeld !== 'boolean') throw new Error('cloudru_queue_report_rejected')
     const count = (value: unknown): number => {
       if (typeof value !== 'number' || !Number.isSafeInteger(value) || value < 0) throw new Error('cloudru_queue_report_rejected')
       return value
     }
     const report = { pending: count(result.pending), overdue: count(result.overdue),
-      staleLeases: count(result.staleLeases), terminalFailures: count(result.terminalFailures) }
+      staleLeases: count(result.staleLeases), terminalFailures: count(result.terminalFailures),
+      deliveryHeld: result.deliveryHeld, quarantined: count(result.quarantined), freshOverdue: count(result.freshOverdue) }
     await client.query('commit')
     return report
   } catch (error) { await client.query('rollback'); throw error }
@@ -44,7 +54,7 @@ async function main() {
       (await client.query<Row>(text, [...values])).rows }
     const report = await inspectCloudruQueue(wrapper)
     console.log(JSON.stringify({ event: 'cloudru_queue_health', ...report }))
-    if (report.overdue || report.staleLeases || report.terminalFailures) process.exitCode = 1
+    if (report.deliveryHeld || report.overdue || report.staleLeases || report.terminalFailures) process.exitCode = 1
   } finally { await client.end() }
 }
 

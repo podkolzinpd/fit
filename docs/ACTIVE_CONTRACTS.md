@@ -25,6 +25,7 @@
 | Ачивки | [progress states](design/ACHIEVEMENT_PROGRESS_STATES_20261004.md), [regularity](design/ACHIEVEMENT_REGULARITY_COPY_20261005.md) | Принятые изображения/условия; перед правкой сверить последующие решения и текущий каталог |
 | Корпоративные тренеры | [кабинет](design/CORPORATE_ADMIN_20261027.md), [анкеты/офисы](design/TRAINER_PROFILES_OFFICES_20261029.md) | Права отдельно от роли; фото из публикации; статус/офисы утверждает администратор; клуб отдельно |
 | Точечное восстановление доступа спортсмена | [AH-STABLE-NATIVE-02](design/ACCOUNT_HISTORY_RECOVERY_20261022.md#итерация-8--05112026--codex--openai) | Только подтверждённая пара: нынешний login/userId прежние; guarded карточка и один проверенный чат без старого авторства; unknown private history блокирует запись, не общий merge; production-проверка ещё гейт |
+| Фоновые push | [BG-ROOT-22023-01 / BG2–BG3](design/AUTH_BACKGROUND_DIAGNOSTICS_20261024.md#bg-root-22023-01-05112026--codex--openai-причина-доказана) | Сначала held/fresh-only guard, затем исправление producer; история только по проверенному fingerprint без replay. Старый integer RPC, preferences, multi-device, lease/retry и текущие механики сохраняются |
 | Backend/публикация | [playbook](YANDEX_CUTOVER_PLAYBOOK.md), [engineering](ENGINEERING_RULES.md), OPERATIONS.md в корне | Cloud.ru, ownership/RLS, forward migrations, отсутствие dual-write |
 | Перенос недельных журналов | [PHI101–105](design/ATHLETE_PROGRAM_HISTORY_IMPORT_20261103.md) | 16спортсменов+собственный журнал тренера; даты/финансы/связи сохраняются; PHI-LEGACY-ROUTE-RESUME-01: журналы/readbacks только local↔Cloud.ru; прежний Actions маршрут с разрешёнными hashed target/evidence и packet checksum |
 | Decommission | [план](design/SUPABASE_DECOMMISSION_PLAN_20261023.md), [P0](design/SUPABASE_P0_RESOURCE_AUDIT_20261024.md) | Не удалять rollback/legacy по возрасту; проверить фактические незакрытые гейты |
@@ -154,3 +155,8 @@ Plan/apply/verify, backup, история и RLS прежние.
 05.11 — SB-PILOT-MANAGER-RETIRE-01: старый dual-plane Schedule V2 pilot
 workflow удаляется; назначения и текущие Cloud.ru настройки не меняются.
 [Scope и проверки](design/SUPABASE_DECOMMISSION_PLAN_20261023.md#sb-pilot-manager-retire-01--pilot-manager--05112026).
+
+05.11 — ADM-FIVE-SLOTS-20261105: по прямому поручению владельца кабинет получает
+ещё три закрытых администраторских назначения; лимит1–5 сохраняет прежние1/2.
+Это заменяет только прежний two-slots лимит; subject binding, запрет самовыдачи,
+роли и независимые пилоты прежние. [План/журнал32](design/CORPORATE_ADMIN_20261027.md).

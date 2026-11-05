@@ -145,6 +145,33 @@ describe('readBearerToken', () => {
 })
 
 describe('closed corporate admin login observer', () => {
+  it('preserves the exact legacy login and also binds the equivalent Yandex login without its suffix', async () => {
+    const observe=vi.fn().mockResolvedValue(undefined)
+    const client=new YandexIdentityClient({expectedClientId:CLIENT_ID,corporateAdminObserver:{observe},
+      fetchImplementation:vi.fn<typeof fetch>().mockResolvedValue(jsonResponse({id:'synthetic',psuid:'synthetic-subject',client_id:CLIENT_ID,
+        login:' Synthetic-Admin@YANDEX.RU ',default_email:'unrelated@example.test'}))})
+    const identity=await client.verifyAccessToken('synthetic-token')
+    expect(observe.mock.calls).toEqual([
+      [identity.subjectHash,createHash('sha256').update('synthetic-admin@yandex.ru').digest('hex')],
+      [identity.subjectHash,createHash('sha256').update('synthetic-admin').digest('hex')],
+    ])
+  })
+  it('keeps external-domain logins exact and never derives access from default_email', async () => {
+    const observe=vi.fn().mockResolvedValue(undefined)
+    const client=new YandexIdentityClient({expectedClientId:CLIENT_ID,corporateAdminObserver:{observe},
+      fetchImplementation:vi.fn<typeof fetch>().mockResolvedValue(jsonResponse({id:'synthetic',psuid:'synthetic-subject',client_id:CLIENT_ID,
+        login:' Synthetic-Admin@EXAMPLE.TEST ',default_email:'approved@yandex.ru'}))})
+    const identity=await client.verifyAccessToken('synthetic-token')
+    expect(observe).toHaveBeenCalledExactlyOnceWith(identity.subjectHash,createHash('sha256').update('synthetic-admin@example.test').digest('hex'))
+  })
+  it('never removes a suffix from a nested address to grant an external-domain alias', async () => {
+    const observe=vi.fn().mockResolvedValue(undefined)
+    const login='synthetic-admin@example.test@yandex.ru'
+    const client=new YandexIdentityClient({expectedClientId:CLIENT_ID,corporateAdminObserver:{observe},
+      fetchImplementation:vi.fn<typeof fetch>().mockResolvedValue(jsonResponse({id:'synthetic',psuid:'synthetic-subject',client_id:CLIENT_ID,login}))})
+    const identity=await client.verifyAccessToken('synthetic-token')
+    expect(observe).toHaveBeenCalledExactlyOnceWith(identity.subjectHash,createHash('sha256').update(login).digest('hex'))
+  })
   it('receives only provider-verified subject and exact login hashes, never a claimed email', async () => {
     const observe=vi.fn().mockResolvedValue(undefined)
     const client=new YandexIdentityClient({expectedClientId:CLIENT_ID,corporateAdminObserver:{observe},

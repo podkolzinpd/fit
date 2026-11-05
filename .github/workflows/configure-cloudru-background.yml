@@ -110,7 +110,7 @@ jobs:
           sudo systemctl start fit-background.service
           sudo systemctl is-active --quiet fit-background.timer
           test "$(sudo systemctl show fit-background.service --property=Result --value)" = success
-          echo 'Cloud.ru push and session cleanup active; old notification history retained without delivery.' >> "$GITHUB_STEP_SUMMARY"
+          echo 'Cloud.ru background worker and session cleanup active; delivery guard retained. If held, use the reviewed fresh-push recovery workflow before claiming delivery.' >> "$GITHUB_STEP_SUMMARY"
       - name: Remove unconsumed private staging
         if: always()
         run: |
