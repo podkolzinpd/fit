@@ -602,3 +602,44 @@ cloudru-client-restore mock curl (вызван реальный GitHub API,401).
 образом mock curl изолированно работает без сети в Linux; Mac-host запуск
 полного check не объявляется зелёным. SQL/product не менялись, отдельного
 локального DB/browser прогона нет. CI/Android нового PR1964 ожидаются.
+
+### SB-NATIVE-RESTORE-01 — native restore — 05.11.2026
+
+Последнее решение владельца: сохранить удобный ручной restore, отвязав его от
+Supabase. Удаление отменено; PR1996 закрыт без merge. Native-вариант подготовлен
+от main29b23913; прежний локальный эксперимент5c3c17f2 используется только для
+совпадающих пяти runtime/test файлов, свежие main/docs сохраняются.
+Поток assistant-ops; схемы/миграции и продуктовые команды не меняются.
+
+Native profiles не хранят email, retained login bindings неполные. Вместо
+недоказанного поиска по имени/email или fallback на source реестр используется
+явная подтверждённая пара native UUID в FIT_CLIENT_RESTORE_TARGETS:
+trainerProfileId/athleteProfileId. Перед будущим plan оператор обновляет только
+этот закрытый secret; прежние email-хеши fail-closed. Реальные цели/секреты и
+production данные не читались/не менялись. Автоматического восстановления нет.
+
+Удалены shared source registry import/mount, Management API/service-role и
+Auth fetch/pagination, оба Supabase env. Сохраняются owner read-only plan,
+роли, canonical/source cards, прежний disconnected period, backup, TTL,
+fingerprint, locks, idempotency, protected history и отдельный fit_api RLS
+verify. Формат приватного плана schema1 и apply/verify не меняются.
+
+Mapping тестов: старое email-registry matching заменено строгим target parsing
+(лишние/старые ключи, malformed/equal UUID); остальные unit/workflow проверки
+сохранены и добавлен native-only guard. Пять прежних DB сценариев проходят через
+новый parser, один новый case проверяет missing/swapped/unrelated profiles и
+отсутствие записей. Матрицы/browser specs и CI gates не меняются.
+Локальные проверки и exact-head CI фиксируются после выполнения. Открыто:
+обновление закрытого target перед следующим plan; другие source ops отдельно.
+Deploy/restore и изменение production secrets из этой задачи не выполняются.
+
+Локальная приёмка:42/42 DB tests (6restore+36single-trainer) на Podman
+PostgreSQL17 passed3.58s;5/5 unit/workflow tests на Linux Node22 без сети,
+read-only checkout passed. Полный check на Mac: lint/typecheck и340frontend
+files/3047tests passed, coverage83.66/78.63/82.91/88.35; infra422/423,
+единственный fail — прежний mock curl, вызывающий реальный GitHub API401.
+Linux case выше проверяет его без внешней сети; test не ослаблялся.
+Оставшиеся части check отдельно passed:calendar22/22, hosting196/196,
+API1569passed/328skipped без DB env, API lint/types/build и frontend build.
+Docs/archive integrity, whitespace и migration safety0SQL passed. Host полный
+check не объявляется зелёным. Exact-head CI/Android после push — в PR.

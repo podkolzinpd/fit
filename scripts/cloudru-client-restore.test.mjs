@@ -4,17 +4,16 @@ import {readFileSync,mkdtempSync,writeFileSync,rmSync} from 'node:fs'
 import {tmpdir} from 'node:os'
 import {join} from 'node:path'
 import {spawnSync} from 'node:child_process'
-import {readRestoreTarget,resolveRestorePair,planClientRestore,applyClientRestore,verifyClientRestore} from './cloudru-client-restore.mjs'
+import {readRestoreTarget,planClientRestore,applyClientRestore,verifyClientRestore} from './cloudru-client-restore.mjs'
 
-test('only the two privately approved address hashes resolve a unique pair',()=>{
- const target={trainerEmailSha256:'a'.repeat(64),athleteEmailSha256:'b'.repeat(64)}
- assert.deepEqual(readRestoreTarget(JSON.stringify(target)),target)
- for(const value of [null,{}, {...target,athleteEmailSha256:target.trainerEmailSha256}, {...target,email:'synthetic@example.test'}, {...target,trainerEmailSha256:'synthetic@example.test'}])
+test('only an explicit privately approved native profile pair is accepted',()=>{
+ const target={trainerProfileId:'11111111-1111-4111-8111-111111111111',athleteProfileId:'22222222-2222-4222-8222-222222222222'}
+ assert.deepEqual(readRestoreTarget(JSON.stringify(target)),{trainerId:target.trainerProfileId,athleteId:target.athleteProfileId})
+ for(const value of [null,{}, {...target,athleteProfileId:target.trainerProfileId}, {...target,email:'synthetic@example.test'},
+   {...target,trainerProfileId:'a'.repeat(64)}, {...target,trainerProfileId:3},
+   {trainerEmailSha256:'a'.repeat(64),athleteEmailSha256:'b'.repeat(64)}])
    assert.throws(()=>readRestoreTarget(JSON.stringify(value)),/client_restore_target/)
- const trainer={label:'trainer',id:'11111111-1111-4111-8111-111111111111'},athlete={label:'athlete',id:'22222222-2222-4222-8222-222222222222'}
- assert.deepEqual(resolveRestorePair([trainer,athlete]),{trainerId:trainer.id,athleteId:athlete.id})
- for(const rows of [[],[trainer],[athlete],[trainer,athlete,athlete],[trainer,{...athlete,id:trainer.id}]])
-   assert.throws(()=>resolveRestorePair(rows),/identity_ambiguous/)
+ assert.throws(()=>readRestoreTarget('invalid'),/client_restore_target/)
 })
 
 test('plan and runtime role gates fail closed before application reads',async()=>{
@@ -45,6 +44,8 @@ test('transport is explicit trusted-main plan/apply/verify and keeps private rec
  assert.match(source,/Restore downloaded backup into a disposable PostgreSQL without network/)
  assert.match(source,/all\(\.\[\]; \.conclusion == "success"\)/)
  assert.match(source,/FIT_CLIENT_RESTORE_TARGETS/)
+ const runtime=readFileSync(new URL('./cloudru-client-restore.mjs',import.meta.url),'utf8')
+ assert.doesNotMatch(source+runtime,/supabase|readHistoryRegistry|cloudru-account-history-audit|\bfetch\(/i)
  assert.match(source,/test "\$GITHUB_REF" = refs\/heads\/main/)
  assert.match(source,/group: cloudru-stage-vm/)
  assert.match(source,/--cap-drop=ALL/)
