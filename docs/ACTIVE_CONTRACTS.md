@@ -27,7 +27,7 @@
 | Точечное восстановление доступа спортсмена | [AH-STABLE-NATIVE-02](design/ACCOUNT_HISTORY_RECOVERY_20261022.md#итерация-8--05112026--codex--openai) | Только подтверждённая пара: нынешний login/userId прежние; guarded карточка и один проверенный чат без старого авторства; unknown private history блокирует запись, не общий merge; production-проверка ещё гейт |
 | Фоновые push | [BG-ROOT-22023-01 / BG2–BG3](design/AUTH_BACKGROUND_DIAGNOSTICS_20261024.md#bg-root-22023-01-05112026--codex--openai-причина-доказана) | Сначала held/fresh-only guard, затем исправление producer; история только по проверенному fingerprint без replay. Старый integer RPC, preferences, multi-device, lease/retry и текущие механики сохраняются |
 | Backend/публикация | [playbook](YANDEX_CUTOVER_PLAYBOOK.md), [engineering](ENGINEERING_RULES.md), OPERATIONS.md в корне | Cloud.ru, ownership/RLS, forward migrations, отсутствие dual-write |
-| Перенос недельных журналов | [PHI101–105](design/ATHLETE_PROGRAM_HISTORY_IMPORT_20261103.md) | 16спортсменов+собственный журнал тренера; даты/финансы/связи сохраняются; PHI-DIRECT-CLOUDRU-01: клиентский ввод и readbacks только local↔Cloud.ru, Actions только code installer/VM queue |
+| Перенос недельных журналов | [PHI101–105](design/ATHLETE_PROGRAM_HISTORY_IMPORT_20261103.md) | 16спортсменов+собственный журнал тренера; даты/финансы/связи сохраняются; PHI-LEGACY-ROUTE-RESUME-01: журналы/readbacks только local↔Cloud.ru; прежний Actions маршрут с разрешёнными hashed target/evidence и packet checksum |
 | Decommission | [план](design/SUPABASE_DECOMMISSION_PLAN_20261023.md), [P0](design/SUPABASE_P0_RESOURCE_AUDIT_20261024.md) | Не удалять rollback/legacy по возрасту; проверить фактические незакрытые гейты |
 
 ## Известные уточнения и конфликты
