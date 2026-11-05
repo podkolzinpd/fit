@@ -731,3 +731,38 @@ PR переводится из подготовительного draft в об�
 сливать с pending/red CI. Требования green exact source/main, очередь и held→
 verified recovery неизменны; ранний draft нужен был для незавершённого root proof.
 Текущий новый source публикуется на обязательный CI, до успеха не сливается.
+
+### BG2 принят, BG3 на свежем main —05.11.2026
+
+BG2/sourcec0b26975 CI42092541086 success35/35. Текущий PostgreSQL job
+127476029657:restore15,core295+1skip,private22+13+18,Node6,финальныйDB10.
+API и все browser/visual suites зелёные.2002 оставался65b4/15:22Z без работы;
+его обход повторно явно разрешён владельцем.2004 слитfd5092c8,19:53:58Z.
+Root/guard production ещё не применялись:main CI42098268303 выполняется,
+Build Cloud.ru API42098268350 success не является публикацией.
+
+BG3 обновлён обычным merge наfd5092c8. Проверено точное равенство tree main
+принятомуc0source и наличиеc0в ancestry собственной BG3-ветки; конфликты
+разрешены только в canonical history и package. Все строки main history
+сохранены в исходном порядке, все16унаследованных DB test paths ровно1раз,
+flow отдельно и private3последовательны. Новые main/code не отброшены.
+
+Локально на актуальном полном составе: API check1593passed/387conditional
+DBskip,lint/types/build;110ops/configure/CI-contract tests; current PostgreSQL
+cutover+полный-schema flow23/23passed после всех192миграций. История/old sent/
+profiles/subscriptions неизменны, в APIclaim/finalize только fresh; реального
+сетевого sender/физического уведомления в этом тесте нет. Docs/whitespace
+passed. Собственный контейнер остановить после выполненной проверки.
+
+Уточнение технического порядка: source CI финального PR запускается после
+merge BG2 параллельно с main CI/публикацией BG2. Это подготовка проверяемого
+кода, не параллельное применение production. Ранняя формулировка «CI после
+публикации BG2» заменена только в этой части ради устранения лишнего ожидания.
+Merge/публикация BG3 и любая recovery-операция всё ещё запрещены до успешной
+held-публикации BG2 и её SELECT-only приёмки. Порядок production неизменен.
+
+BG3 переводится из подготовительного draft в готовый к рассмотрению активный
+PR: причина/реализация уже определены, следующий full current-head CI обязателен.
+Ни pending CI, ни источник старого13e, ни локальные тесты не заменяют этот гейт.
+Активация только новым typed workflow, exact current main/running image,
+свежий preview/fingerprint/lease check и verified preserve; старое не replay.
