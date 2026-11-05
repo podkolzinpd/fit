@@ -300,6 +300,23 @@ maintenance serialization,active-lease refusal). Старый push pipeline та
 Дальше: BG1.2 production proof → добавить доказанное исправление в этот PR →
 полный зелёный CI и очередной выпуск в held → BG3 preview/preserve/activation.
 
+### BG2/PR2004 — уточнение совместимости отката
+
+CI42032403665: API/repository quality зелёные; PostgreSQL подтвердил
+actor173passed+1skip и все12guard cases. Corporate suite обнаружил реальный
+конфликт: общий тест откатывает независимые feature migrations, а исключение
+в DOWN000190 прерывало эту цепочку и вызывало5последующих fixture-ошибок.
+Это не списывается на flaky и не исправляется ослаблением корпоративных тестов.
+
+DOWN теперь явно сохраняет guard/control/boundary/receipt, не восстанавливает
+старый claim и не блокирует откат независимых миграций. Повторный UP идемпотентен
+для control и не сбрасывает активную границу/receipt. Добавлен13-й guard case:
+после DOWN+UP точный control сохранён, старое не claims, новое claims.
+Первое применение по-прежнему held; активный/неопределённый lease по-прежнему
+запрещает применение. API-откат не снимает защиту.
+Lint/types/migration safety/whitespace passed; полный CI нового head обязателен.
+Production-защита/исправление/активация ещё не применялись.
+
 ## BG3 PREP —05.11.2026 — Codex / OpenAI: проверяемая история
 
 Локальная ветка поверх BG2/d3d0b736; не опубликована/не активирована.

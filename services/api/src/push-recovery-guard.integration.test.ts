@@ -9,6 +9,7 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)('push recovery guard on isolated
   const database = `fit_push_guard_${process.pid}`
   const now = new Date('2099-01-01T09:02:00Z')
   let migration: string
+  let retainedRollback: string
   beforeAll(async () => {
     const url = new URL(process.env.TEST_DATABASE_URL ?? '')
     if (!['localhost', '127.0.0.1'].includes(url.hostname) || url.pathname !== '/fit_actor_test') {
@@ -31,7 +32,9 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)('push recovery guard on isolated
         created_at timestamptz not null,sent_at timestamptz,discarded_at timestamptz,
         dispatch_started_at timestamptz,dispatch_token uuid,attempts integer default 0,last_error text);
       insert into public.push_subscriptions values(gen_random_uuid(),'https://push.example/fixture','public','fixture');`)
-    migration = (await readFile(new URL('../db/migrations/000190_push_recovery_fresh_guard.sql', import.meta.url), 'utf8')).split('-- Down Migration')[0] ?? ''
+    const parts = (await readFile(new URL('../db/migrations/000190_push_recovery_fresh_guard.sql', import.meta.url), 'utf8')).split('-- Down Migration')
+    migration = parts[0] ?? ''
+    retainedRollback = parts[1] ?? ''
     await pool.query(`begin; ${migration} commit`)
   })
   afterAll(async () => {
@@ -134,5 +137,18 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)('push recovery guard on isolated
       await connection.query('rollback')
       expect((await pool.query<{ leased: boolean }>('select dispatch_token is not null as leased from app_private.push_notifications_outbox where id=$1', [id])).rows[0]?.leased).toBe(true)
     } finally { connection.release() }
+  })
+  it('retains the protection and exact active boundary through rollback and reapplication', async () => {
+    await activate()
+    await add('chat_message', new Date(now.getTime() - 120_000))
+    const fresh = await add('chat_message', now)
+    await pool.query(`update app_private.push_delivery_control
+      set history_fingerprint=$1,history_cutoff=fresh_after`, ['a'.repeat(64)])
+    const before = (await pool.query('select * from app_private.push_delivery_control')).rows
+    await pool.query(retainedRollback)
+    expect((await pool.query('select * from app_private.push_delivery_control')).rows).toEqual(before)
+    await pool.query(`begin; ${migration} commit`)
+    expect((await pool.query('select * from app_private.push_delivery_control')).rows).toEqual(before)
+    expect((await claim())?.notifications.map(row => row.id)).toEqual([fresh])
   })
 })
