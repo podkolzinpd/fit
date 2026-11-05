@@ -16,8 +16,9 @@ function DataTable({ title, rows, columns }: { title: string; rows: Row[]; colum
 
 function Breakdown({ title, items }: { title: string; items: Array<{ label: string; value: number }> }) {
   const max = Math.max(...items.map(item => item.value), 1)
+  const total = items.reduce((acc, item) => acc + item.value, 0)
   return <section><h2>{title}</h2><div className="private-analytics-bars">{items.map(item => <div key={item.label}>
-    <span>{item.label}</span><div className="private-analytics-bar"><i style={{ width: `${item.value / max * 100}%` }} /></div><strong>{item.value}</strong>
+    <span>{item.label}</span><div className="private-analytics-bar"><i style={{ width: `${item.value / max * 100}%` }} /></div><strong>{item.value} {total > 0 && <small>({Math.round(item.value / total * 100)}%)</small>}</strong>
   </div>)}</div></section>
 }
 
@@ -26,15 +27,26 @@ function RegistrationTrend({ title, rows }: { title: string; rows: Row[] }) {
   for (const row of rows) {
     if (typeof row.registered_at !== 'string') continue
     const day = row.registered_at.slice(0, 10)
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(day) || !Number.isFinite(Date.parse(`${day}T00:00:00Z`))) continue
     counts.set(day, (counts.get(day) ?? 0) + 1)
   }
-  const days = [...counts].sort(([a], [b]) => a.localeCompare(b))
+  const keys = [...counts.keys()].sort()
+  const days: Array<[string, number]> = []
+  if (keys.length) {
+    const first = Date.parse(`${keys[0]}T00:00:00Z`), last = Date.parse(`${keys.at(-1)}T00:00:00Z`)
+    for (let time = first; time <= last; time += 86_400_000) {
+      const day = new Date(time).toISOString().slice(0, 10)
+      days.push([day, counts.get(day) ?? 0])
+    }
+  }
   const max = Math.max(...days.map(([, count]) => count), 1)
   const width = Math.max(320, days.length * 22)
   return <section><h2>{title}</h2>{days.length ? <>
     <div className="private-analytics-chart"><svg role="img" aria-label={`${title}: количество регистраций по дням`} viewBox={`0 0 ${width} 130`} style={{ minWidth: width }}>
       {days.map(([day, count], index) => <rect key={day} x={index * 22 + 3} y={110 - count / max * 100} width="15" height={count / max * 100} fill="#83a900"><title>{day}: {count}</title></rect>)}
       <line x1="0" x2={width} y1="110" y2="110" stroke="currentColor" />
+      <text x="0" y="125" fontSize="10" fill="currentColor">{days[0]?.[0]}</text>
+      {days.length > 1 && <text x={width} y="125" textAnchor="end" fontSize="10" fill="currentColor">{days.at(-1)?.[0]}</text>}
     </svg></div>
     <details><summary>Данные по дням</summary><div className="private-analytics-trend">{days.map(([day, count]) => <div key={day}><span>{day}</span><strong>{count}</strong></div>)}</div></details>
   </> : <p>Регистраций нет.</p>}</section>
