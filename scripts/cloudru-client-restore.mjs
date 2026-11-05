@@ -2,28 +2,19 @@ import {createHash, randomUUID} from 'node:crypto'
 import {createRequire} from 'node:module'
 import {readFile, writeFile} from 'node:fs/promises'
 import {pathToFileURL} from 'node:url'
-import {readHistoryRegistry} from './cloudru-account-history-audit.mjs'
 
 const uuid=/^[a-f0-9]{8}-[a-f0-9]{4}-[1-5][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/
-const sha=/^[a-f0-9]{64}$/
 const fingerprint=value=>createHash('sha256').update(JSON.stringify(value)).digest('hex')
 const requireState=(condition,code)=>{if(!condition)throw Error(`client_restore_${code}`)}
 const bounded=(rows,max)=>{requireState(Array.isArray(rows)&&rows.length<=max,'scope');return rows}
 
 export function readRestoreTarget(raw){
  let value;try{value=JSON.parse(raw)}catch{throw Error('client_restore_target')}
- requireState(value&&Object.keys(value).sort().join(',')==='athleteEmailSha256,trainerEmailSha256'
-   &&typeof value.athleteEmailSha256==='string'&&typeof value.trainerEmailSha256==='string'
-   &&sha.test(value.athleteEmailSha256)&&sha.test(value.trainerEmailSha256)
-   &&value.athleteEmailSha256!==value.trainerEmailSha256,'target')
- return value
-}
-
-export function resolveRestorePair(matches){
- const trainer=matches.filter(row=>row.label==='trainer'),athlete=matches.filter(row=>row.label==='athlete')
- requireState(trainer.length===1&&athlete.length===1&&uuid.test(trainer[0].id)&&uuid.test(athlete[0].id)
-   &&trainer[0].id!==athlete[0].id,'identity_ambiguous')
- return {trainerId:trainer[0].id,athleteId:athlete[0].id}
+ requireState(value&&Object.keys(value).sort().join(',')==='athleteProfileId,trainerProfileId'
+   &&typeof value.athleteProfileId==='string'&&typeof value.trainerProfileId==='string'
+   &&uuid.test(value.athleteProfileId)&&uuid.test(value.trainerProfileId)
+   &&value.athleteProfileId!==value.trainerProfileId,'target')
+ return {trainerId:value.trainerProfileId,athleteId:value.athleteProfileId}
 }
 
 async function ownerGate(client,write=false){
@@ -169,12 +160,6 @@ export async function verifyClientRestore(runtime,plan){
  }catch(error){await runtime.query('rollback');throw error}
 }
 
-async function json(url,headers){
- const r=await fetch(url,{headers,redirect:'error',signal:AbortSignal.timeout(15000)})
- requireState(r.ok,'registry');const chunks=[];let size=0
- for await(const chunk of r.body){size+=chunk.length;requireState(size<=5*1024*1024,'scope');chunks.push(chunk)}
- return JSON.parse(Buffer.concat(chunks).toString('utf8'))
-}
 async function main(){
  requireState(process.env.GITHUB_REF==='refs/heads/main'&&process.env.GITHUB_REPOSITORY==='podkolzinpd/fit','environment')
  const phase=process.env.RESTORE_PHASE,planPath='/repair/plan.json'
@@ -188,13 +173,8 @@ async function main(){
  const client=new Client({...config,connectionTimeoutMillis:5000,query_timeout:15000});await client.connect()
  try{
    if(phase==='plan'){
-     const target=readRestoreTarget(process.env.FIT_CLIENT_RESTORE_TARGETS),project=process.env.SUPABASE_PROJECT_ID
-     requireState(/^[a-z0-9]{20}$/.test(project??''),'environment')
-     const keys=await json(`https://api.supabase.com/v1/projects/${project}/api-keys`,{Authorization:`Bearer ${process.env.SUPABASE_ACCESS_TOKEN}`})
-     const key=keys.find(k=>k.name==='service_role')?.api_key;requireState(typeof key==='string'&&key.length>0,'registry')
-     const matches=await readHistoryRegistry(page=>json(`https://${project}.supabase.co/auth/v1/admin/users?page=${page}&per_page=1000`,{Authorization:`Bearer ${key}`,apikey:key}),
-       [{label:'trainer',role:'trainer',emailHash:target.trainerEmailSha256},{label:'athlete',role:'client',emailHash:target.athleteEmailSha256}])
-     const plan=await planClientRestore(client,resolveRestorePair(matches));plan.requestedBy=process.env.GITHUB_ACTOR
+     const pair=readRestoreTarget(process.env.FIT_CLIENT_RESTORE_TARGETS)
+     const plan=await planClientRestore(client,pair);plan.requestedBy=process.env.GITHUB_ACTOR
      await writeFile(planPath,JSON.stringify(plan),{flag:'wx',mode:0o600});console.log(JSON.stringify(plan.report))
    }else{
      const plan=JSON.parse(await readFile(planPath,'utf8'))
