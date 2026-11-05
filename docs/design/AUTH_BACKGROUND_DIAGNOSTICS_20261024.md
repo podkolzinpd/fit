@@ -299,3 +299,44 @@ maintenance serialization,active-lease refusal). Старый push pipeline та
 сужать kind; обходить проверку main/owner или принудительно сливать черновик.
 Дальше: BG1.2 production proof → добавить доказанное исправление в этот PR →
 полный зелёный CI и очередной выпуск в held → BG3 preview/preserve/activation.
+
+## BG3 PREP —05.11.2026 — Codex / OpenAI: проверяемая история
+
+Локальная ветка поверх BG2/d3d0b736; не опубликована/не активирована.
+Не заменяет ещё открытое доказательство production-root из BG1.2.
+
+Реализовано: READ ONLY preview с UTC-сериализацией, ограничением500кандидатов,
+агрегатами kind/lease и SHA256 полного набора/содержимого внутри БД. IDs,
+payload и subscription secrets из базы в отчёт не выходят. Verified preserve
+требует выключенной доставки и того же fingerprint/cutoff, берёт owner/control
+и outbox locks в одном порядке, отказывается при lease/drift. Помечает только
+проверенное pending как discarded с точным receipt, не меняя sent/источник,
+подписки/attempts/lease. При потерянном COMMIT-ответе сверяет сохранённый
+receipt; не повторяет широкое update. Control хранит fingerprint/cutoff.
+
+Активация требует точного receipt, отсутствия старого pending/неопределённых
+leases и границы не старше5минут. После потери ответа точный повтор читает уже
+активную границу, не двигает её и не отправляет повторно. Пустая история имеет
+отдельный проверяемый empty fingerprint. Слишком старую held-границу открыть
+нельзя: нужен новый preview/preserve, включая накопленное во время hold.
+
+Manual-only workflow recover-cloudru-fresh-push: preview default, только
+archive_verified/activate, exact-green/current-main/running image/hostname,
+active timer/ready API, тот же VM concurrency/launcher flock, owner root600
+staging, bounded read-only container. Нет произвольного SQL, sender, VAPID,
+новых секретов или отправки старого. Legacy initial-cutover CLI сохранён;
+новый workflow не позволяет вызвать legacy broad archive.
+
+Health показывает deliveryHeld/quarantined/freshOverdue отдельно от общего
+pending/overdue; hold не объявляется зелёным. Только точные64hex maintenance
+receipts исключены из transport terminal failures, malformed/реальные ошибки
+сохраняются. Цель не pending=0 через сокрытие старого.
+
+Проверки промежуточной версии:19unit/PG cases до последних уточнений passed,
+API lint/types/build и1575unit passed/339conditional DBskips;61workflow tests.
+Новые activation-reply/metrics assertions требуют полного PostgreSQL CI:
+локальный Podman потерял соединение/образ pull EOF, тесты не ослаблялись.
+Применения на production/фактической активации/реальной доставки ещё нет.
+Остаток: BG1.2 proof → окончательный BG2 → полный CI BG3 → read-only preview,
+сверка текущего набора → preserve → activate → проверить новые события и
+неизменность старых источников; исторические уведомления не replay.

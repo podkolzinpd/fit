@@ -65,6 +65,31 @@ test('background audit is explicit manual readonly and precedes queue health exi
 })
 
 const read = name => readFileSync(new URL(`../${name}`, import.meta.url), 'utf8')
+
+test('push recovery is a manual typed exact-main operation, never a sender or arbitrary SQL route', () => {
+  const workflow = read('.github/workflows/recover-cloudru-fresh-push.yml')
+  assert.match(workflow, /on:\n  workflow_dispatch:/)
+  assert.doesNotMatch(workflow, /^  (?:push|pull_request|schedule|workflow_run):/m)
+  assert.match(workflow, /default: preview/)
+  assert.match(workflow, /options: \[preview, archive_verified, activate\]/)
+  assert.match(workflow, /test "\$GITHUB_REF" = refs\/heads\/main/)
+  assert.match(workflow, /\.status == "completed" and \.conclusion == "success"/)
+  assert.match(workflow, /test "\$commit" = "\$GITHUB_SHA"/)
+  assert.match(workflow, /github_api commits\/main \| jq -er \.sha/)
+  assert.match(workflow, /test "\$\(cat \/opt\/fit\/RUNNING_SHA\)" = "\$commit"/)
+  assert.match(workflow, /RECOVER_CLOUDRU_FRESH_PUSH_ONLY/)
+  assert.match(workflow, /group: cloudru-stage-vm/)
+  assert.match(workflow, /flock --timeout 65 \/run\/lock\/fit-cloudru-background\.lock/)
+  assert.match(workflow, /0:600/)
+  assert.match(workflow, /0:700/)
+  assert.match(workflow, /node dist\/cloudru-background-cutover\.js/)
+  assert.doesNotMatch(workflow, /dist\/(?:cloudru-background-worker|push-dispatcher|cloudru-push-recovery)\.js|psql|shell_command|sql_input|--publish|VAPID|start fit-background\.service/)
+  for (const body of workflow.split('run: |').slice(1)) {
+    const shell = body.split('\n').filter(line => line.startsWith('          ') || line.trim() === '').map(line => line.slice(10)).join('\n')
+    const parsed = spawnSync('bash', ['-n'], { input: shell, encoding: 'utf8' })
+    assert.equal(parsed.status, 0, parsed.stderr)
+  }
+})
 const configurations = ['configure-cloudru-ai', 'configure-cloudru-background', 'configure-cloudru-speech', 'configure-cloudru-nutrition']
 
 const historyFixtureIds = [1, 2, 3, 4, 5].map(n => `a0000000-0000-4000-8000-${String(n).padStart(12, '0')}`)
