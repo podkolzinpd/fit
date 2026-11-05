@@ -417,3 +417,11 @@ actor173passed+1skip; основная группа300passed+1skip, recovery7+53
 или таймаутов. Это проверка кода/схемы, не факт production-активации или доставки.
 Остальные CI checks идут. Root через2003, BG2/полныйCI/очередь остаются gates;
 2006 нельзя сливать в родительскую ветку или активировать до них.
+
+Перед любым вызовом нового cutover CLI обязательна публикация именно BG3 API
+image и exact RUNNING_SHA/GITHUB_SHA guard. В старом compiled CLI переменная
+CLOUDRU_PUSH_MODE не поддерживается: попытка «preview» на старом image вызвала
+бы legacy archive. Такой production-вызов не делался и не допускается.
+Для приёмки BG2/held использовать SELECT-only audit, добавив проверку control
+в его окончательный root-fix patch; не запускать cutover CLI до BG3 release.
+Нельзя ослаблять version guard даже для hold. Это сохраняет целостность этапов.
