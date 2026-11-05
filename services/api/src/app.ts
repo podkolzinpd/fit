@@ -5,6 +5,7 @@ import { registerCorporateServiceRoutes, type CorporateServicesService } from '.
 import { readWorkoutTitleRequest } from './workout-title-request.js'
 import type { ChatMeetings, MeetingAction } from './chat-meetings.js'
 import { registerCorporateAdminRoutes, type CorporateAdminService } from './corporate-admin.js'
+import { registerPrivateAnalyticsRoutes, type PrivateAnalyticsService } from './private-analytics.js'
 import Fastify, { type FastifyInstance, type FastifyReply } from 'fastify'
 import { yandexAuthFailureDiagnostics, type YandexAuthStage } from './auth/yandex-auth-diagnostics.js'
 
@@ -204,6 +205,7 @@ interface BuildAppOptions {
   corporateInvitations?: CorporateInvitationsService
   corporateServices?: CorporateServicesService
   corporateAdmin?: CorporateAdminService
+  privateAnalytics?: PrivateAnalyticsService
   nutritionAutoActivator?: import('./nutrition-pilot.js').NutritionAutoActivator
   nutritionDiary?: NutritionDiary
   allowedOrigins?: readonly string[]
@@ -277,6 +279,7 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
   })
   registerTrainerConnectionConfirmationRoutes(app, options.trainerConnectionConfirmation)
   registerCorporateAdminRoutes(app, options.corporateAdmin)
+  registerPrivateAnalyticsRoutes(app, options.privateAnalytics)
   registerCorporateInvitationRoutes(app, options.corporateInvitations)
   registerCorporateServiceRoutes(app, options.corporateServices)
   const allowedOrigins = new Set(options.allowedOrigins ?? [])

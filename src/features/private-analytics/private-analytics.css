@@ -1,0 +1,19 @@
+.private-analytics { display: grid; gap: 24px; }
+.private-analytics > * { min-width: 0; }
+.private-analytics section { min-width: 0; }
+.private-analytics-header { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.private-analytics-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; }
+.private-analytics-cards > div { display: grid; gap: 8px; padding: 16px; border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--surface); }
+.private-analytics-cards strong { font-size: 28px; }
+.private-analytics-table { overflow: auto; max-height: 600px; border: 1px solid var(--border); }
+.private-analytics-table table { border-collapse: collapse; font-size: 14px; }
+.private-analytics-table th, .private-analytics-table td { padding: 10px; text-align: left; border-bottom: 1px solid var(--border); vertical-align: top; min-width: 130px; }
+.private-analytics-table th { position: sticky; top: 0; background: var(--surface); }
+.private-analytics-bars { display: grid; gap: 10px; max-width: 700px; }
+.private-analytics-bars > div { display: grid; grid-template-columns: minmax(130px, 1fr) 2fr auto; gap: 12px; align-items: center; }
+.private-analytics-bar { height: 12px; background: var(--border); border-radius: 8px; overflow: hidden; }
+.private-analytics-bar i { display: block; height: 100%; background: #83a900; }
+.private-analytics-trend { display: grid; grid-template-columns: repeat(auto-fit, minmax(125px, 1fr)); gap: 8px; max-height: 300px; overflow: auto; padding: 12px 0; }
+.private-analytics-trend > div { display: flex; justify-content: space-between; gap: 8px; }
+.private-analytics-chart { overflow-x: auto; max-width: 100%; }
+.private-analytics-chart svg { display: block; height: 130px; }
