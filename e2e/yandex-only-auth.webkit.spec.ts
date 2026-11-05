@@ -833,6 +833,8 @@ for (const lime of [false, true]) {
         gender: null, ageYears: null, ageUpdatedAt: null, heightCm: null, goal: null, note: null,
         currentWeightKg: null, archivedAt: null, version: 1, membershipVersion: null,
       }] } })
+      if (path === `/v1/clients/${clientId}/photo`) return route.fulfill({ json: { url: null, version: 0 } })
+      if (path === `/v1/clients/${clientId}/progress`) return route.fulfill({ json: { entries: [], customMetrics: [], goal: null } })
       if (path === '/v1/me/finance') return route.fulfill({ json: { finance: { trainers: [] } } })
       if (path === '/v1/me/sport-profile') return route.fulfill({ json: { sport: { sports: [], bio: null } } })
       if (path === '/v1/chat/conversations') return route.fulfill({ json: { conversationId } })
@@ -892,9 +894,13 @@ for (const lime of [false, true]) {
     await page.goBack()
     await expect(page).toHaveURL(/\/me\/profile$/)
     await expect(page.locator('.client-trainer-person strong')).toHaveText(displayName)
-    await page.screenshot({ path: testInfo.outputPath('trainer-name-renamed.png'), fullPage: true })
     expect(connectionsReads).toBeGreaterThan(1)
-    await page.getByRole('button', { name: 'Написать' }).click()
+    const messageButton = page.getByRole('button', { name: 'Написать', exact: true })
+    // Settle mobile scrolling before the tap; full-page screenshots can move WebKit's viewport.
+    await messageButton.scrollIntoViewIfNeeded()
+    await expect(messageButton).toBeInViewport()
+    await messageButton.click()
+    await expect(page).toHaveURL(`/chat/${conversationId}`)
     await expect(page.getByRole('heading', { name: displayName, exact: true })).toBeVisible()
     await expect(page.getByText('Напишите первое сообщение.', { exact: true })).toBeVisible()
     await expect(page.locator('.chat-conversation-page .error')).toHaveCount(0)
@@ -910,6 +916,7 @@ for (const lime of [false, true]) {
     await page.locator('.client-home-connections').getByRole('button', { name: 'Повторить', exact: true }).click()
     await expect(page.locator('.client-home-connections .error')).toHaveCount(0)
     await expect(page.locator('.client-trainer-person strong')).toHaveText(displayName)
+    await page.screenshot({ path: testInfo.outputPath('trainer-name-renamed.png'), fullPage: true })
     profilePublished = false
     await page.reload()
     await expect(page.getByText('Анкета не опубликована', { exact: true })).toBeVisible()

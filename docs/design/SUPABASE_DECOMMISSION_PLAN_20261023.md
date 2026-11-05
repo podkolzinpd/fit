@@ -643,3 +643,29 @@ Linux case выше проверяет его без внешней сети; te
 API1569passed/328skipped без DB env, API lint/types/build и frontend build.
 Docs/archive integrity, whitespace и migration safety0SQL passed. Host полный
 check не объявляется зелёным. Exact-head CI/Android после push — в PR.
+
+Синхронизация/CI repair PR1998 —05.11.2026: сохранён удалённый head af70190d,
+main9cb95bc1 подлит обычным merge без конфликтов; новые shared main contracts
+не переписывались. CI42021489757 отклонён fail-on-flaky-tests: первый WebKit
+trainer display-name lime case остался на profile после tap, повтор прошёл.
+Snapshot также показывает503 у отсутствовавших photo/progress fixtures.
+
+В двух существующих mono/lime cases добавлены нейтральные photo/progress
+ответы; диагностический full-page screenshot перенесён после возврата из чата,
+чтобы не двигать mobile viewport перед tap. Добавлены явные in-viewport и
+URL assertions до прежних name/empty/error checks. Это устраняет лишние
+переходные ошибки fixture и делает этап navigation наблюдаемым; точная
+внутренняя причина потерянного WebKit tap по trace первой попытки не доказана.
+Assertions/таймауты/retries/fail-on-flaky/protected inventory не ослаблялись.
+Число committed cases прежнее2, mono/lime покрывают разные UI surfaces;
+три повтора выполнены только как локальная диагностика, не новая CI-матрица.
+Локально production build и WebKit6/6 без retries passed19.8s, cases1.6–4.1s;
+раньше неуспешная CI попытка7.27s, полноценного сопоставимого замера нет.
+Общий check и новый exact-head CI фиксируются после выполнения.
+
+После merge/repair локально: lint/typecheck и341frontend files/3050tests
+passed, coverage83.64/78.6/82.94/88.33; infra434/435, прежний Mac mock curl401.
+Тот же restore suite на Linux Node22 без сети:5/5 passed. Calendar/hosting,
+API1575passed/336skipped без DB env, API lint/types/build и frontend build
+passed отдельно. Docs/archive integrity и whitespace passed; полного зелёного
+host check не заявляем. Новый exact-head CI — в PR после push.
