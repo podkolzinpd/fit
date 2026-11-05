@@ -392,3 +392,10 @@ receipt/boundary/неопределённые leases. Повтор идемпо�
 метаданных при повторной паузе; требует полного PostgreSQL CI.
 CLI dispatch теперь явный switch: неизвестный mode не попадёт в legacy archive.
 Lint/types и61workflow tests passed; production hold не применялся.
+
+OPERATIONS дополнен порядком preview/preserve/activation/hold, границей
+fresh_after как authority вместо исходного BACKGROUND_STARTED_AT, поведением
+после неизвестного COMMIT и запретом использовать старый campaign send для
+проверки обычной очереди. Summary Configure больше не утверждает, что push
+доставляются лишь потому, что worker установлен/запущен. Runtime-настройка
+Configure не менялась.63ops/configure contract tests и docs/whitespace passed.

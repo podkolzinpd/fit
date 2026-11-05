@@ -322,6 +322,28 @@ API проксирует в Cloud.ru с сохранением CORS Origin и с
   Launcher публикует только фиксированный этап/exit code, worker — существующие
   безопасные dispatch diagnostics. Исходный публичный VAPID хранится в repo
   variable VITE_VAPID_PUBLIC_KEY; после его изменения нужен rebuild frontend.
+- После000190 фактический допуск доставки хранится в
+  `app_private.push_delivery_control`. Missing row/held означают отсутствие
+  claims. `BACKGROUND_STARTED_AT` остаётся исходным launch marker и не заменяет
+  текущий `fresh_after`; повторный Configure не открывает новый guard.
+  Для восстановления использовать только `Recover Cloud.ru fresh push without
+  history replay` на проверенном текущем main/running image:
+  `preview` (по умолчанию) → сверить количества/leased/fingerprint →
+  `archive_verified` с точными cutoff/fingerprint → `activate` той же границы.
+  Preserve/activation требуют свежего cutoff, максимум5минут; при устаревании
+  нужен новый preview, включая накопленное во время hold. Drift/lease/несовпадение
+  receipt останавливают применение. Не подменять снимок общим pending и не
+  возвращать старый claim при откате API. DOWN/повторный UP сохраняют защиту.
+  `hold` — пауза обычного исполнителя на проверяемой ревизии: сохраняет границу,
+  receipt и неопределённые leases. Leased>0 даёт pause-applied +неуспех job для
+  разбора, а не разрешение сбросить receipt/повторить отправку. После неизвестного
+  COMMIT-исхода сначала сверять состояние; точный повтор идемпотентен.
+  Новый оператор не вызывает sender. Старый `Manage Cloud.ru recovery push`
+  отправляет отдельную кампанию; для проверки/возобновления обычной очереди
+  его `send` не использовать. После активации проверять worker summary и
+  queue health (`deliveryHeld`, `quarantined`, `freshOverdue` вместе с исходными
+  pending/overdue/terminalFailures). Worker success не доказывает получение
+  на телефоне. История сохраняется без replay и без изменения сообщений/тренировок.
 - `Backup and restore-check Cloud.ru production`: отдельный приватный bucket
   fit-cloudru-backups-c2ad3760. Разовый bootstrap, затем ежедневно05:35МСК.
   Bootstrap также включает versioning приватного media bucket; ежедневная
