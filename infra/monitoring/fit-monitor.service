@@ -6,7 +6,6 @@ After=network-online.target
 Type=oneshot
 User=nobody
 Group=nogroup
-EnvironmentFile=/opt/fit/secrets/monitor.env
 ExecStart=/usr/bin/python3 /opt/fit-monitor/monitor.py --mode host --state /var/lib/fit-monitor/state.json
 StateDirectory=fit-monitor
 StateDirectoryMode=0700

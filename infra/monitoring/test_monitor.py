@@ -1,4 +1,8 @@
 import unittest
+import tempfile
+import json
+from pathlib import Path
+from monitor import main
 from unittest.mock import patch
 from monitor import send
 from monitor import advance
@@ -47,6 +51,39 @@ class AlertLifecycle(unittest.TestCase):
         self.assertEqual(repr(state), original)
         _, events = advance(next_state, {'api': True}, 120)
         self.assertEqual(events, [])
+
+
+class Routing(unittest.TestCase):
+    def test_vm_persists_incident_without_telegram_credentials(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / 'state.json'
+            path.write_text(json.dumps({'at':100,'checks':{'api':{'active':False,'since':0}}}))
+            with patch('sys.argv',['monitor','--mode','host','--state',str(path)]), patch('time.time',return_value=180), patch('monitor.host_conditions',return_value=({'api':True},{},{})), patch('monitor.send') as send_mock:
+                main()
+                send_mock.assert_not_called()
+            self.assertTrue(json.loads(path.read_text())['checks']['api']['active'])
+
+    def test_external_relay_deduplicates_and_reports_recovery(self):
+        with tempfile.TemporaryDirectory() as directory:
+            state = Path(directory) / 'state.json'
+            snapshot = Path(directory) / 'snapshot.json'
+            with patch('sys.argv',['monitor','--mode','relay','--state',str(state),'--snapshot',str(snapshot)]), patch('time.time',return_value=180), patch('monitor.send') as send_mock:
+                snapshot.write_text(json.dumps({'at':180,'active':{'api':True}}))
+                main(); main()
+                self.assertEqual(send_mock.call_count,1)
+                snapshot.write_text(json.dumps({'at':180,'active':{'api':False}}))
+                main()
+                self.assertEqual(send_mock.call_count,2)
+
+    def test_delivery_failure_keeps_previous_state_for_retry(self):
+        with tempfile.TemporaryDirectory() as directory:
+            state = Path(directory) / 'state.json'
+            snapshot = Path(directory) / 'snapshot.json'
+            state.write_text('{}')
+            snapshot.write_text(json.dumps({'at':180,'active':{'api':True}}))
+            with patch('sys.argv',['monitor','--mode','relay','--state',str(state),'--snapshot',str(snapshot)]), patch('time.time',return_value=180), patch('monitor.send',side_effect=TimeoutError):
+                with self.assertRaises(TimeoutError): main()
+            self.assertEqual(state.read_text(),'{}')
 
 
 if __name__ == '__main__':

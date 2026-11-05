@@ -1,6 +1,6 @@
 # Fit: monitoring on the existing VM
 
-Status: implementation prepared; installation and Telegram delivery are not yet verified.
+Status: replacement Telegram delivery verified; final installation is pending CI and production read-back.
 No additional cloud resources or application records are created.
 
 The minute systemd timer collects host CPU deltas, available memory, free disk,
@@ -21,10 +21,7 @@ loss can cause a duplicate incident. A full GitHub outage is outside this monito
 
 Configure repository secrets FIT_ALERT_TELEGRAM_BOT_TOKEN and
 FIT_ALERT_TELEGRAM_CHAT_ID through secure secret input, never source control.
-The owner selected @Rukis_Nakachadze_bot and a private Telegram forum. Existing
-feedback integration uses APP_FEEDBACK_TELEGRAM_BOT_TOKEN in the historical
-fit-stage-app-feedback-integrations Lockbox secret; its presence and bot identity
-must be checked before reuse. Do not change bot permissions or rotate keys as part
+The owner selected @Rukis_Nakachadze_bot and a private Telegram forum. The configured replacement bot was verified by getMe and a successful sendMessage receipt; credentials stay only in GitHub Secrets. Do not change bot permissions or rotate keys as part
 of monitoring installation. Test delivery must be acknowledged by Telegram.
 
 After green CI on main, manually dispatch fit-monitor.yml with install_host=true
@@ -39,3 +36,16 @@ Not covered yet: API business-route p95/error-rate instrumentation, PostgreSQL
 CPU/storage/locks, active video/voice counts, Jitsi cgroup throttling and network
 capacity. Readiness is not a substitute for these metrics. The initial monitoring
 must not claim all scaling thresholds are implemented.
+
+## External delivery after VM network failure
+
+The VM collector never receives a Telegram token and never contacts Telegram.
+It evaluates sustained conditions every minute and saves active incident state.
+Every five minutes a bounded self-hosted Actions job exports only timestamp and
+known boolean incident flags. A GitHub-hosted job compares that snapshot with its
+previous acknowledged state and sends transitions from the external network.
+Public checks run independently of the VM export. A failed delivery preserves the
+previous state for retry. Snapshot freshness is checked; pending self-hosted jobs
+can delay resource notifications if the runner is unavailable. The independent
+public checker still detects site/API failure. Actions scheduling is best effort,
+not a one-minute availability guarantee.

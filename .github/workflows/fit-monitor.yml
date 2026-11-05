@@ -63,27 +63,12 @@ jobs:
         with:
           persist-credentials: false
       - name: Validate and install only monitoring files
-        env:
-          FIT_ALERT_TELEGRAM_BOT_TOKEN: ${{ secrets.FIT_ALERT_TELEGRAM_BOT_TOKEN }}
-          FIT_ALERT_TELEGRAM_CHAT_ID: ${{ secrets.FIT_ALERT_TELEGRAM_CHAT_ID }}
         run: |
           set -euo pipefail
           test "$GITHUB_REPOSITORY" = podkolzinpd/fit
           test "$GITHUB_REF" = refs/heads/main
           test "$(hostname)" = fit-stage-app
           python3 -m unittest discover -s infra/monitoring -p 'test_*.py'
-          python3 - <<'PY'
-          import os, re, subprocess
-          token = os.environ['FIT_ALERT_TELEGRAM_BOT_TOKEN']
-          chat = os.environ['FIT_ALERT_TELEGRAM_CHAT_ID']
-          if not re.fullmatch(r'[0-9]+:[A-Za-z0-9_-]+', token) or not re.fullmatch(r'-[0-9]+', chat):
-              raise SystemExit('invalid_monitor_configuration')
-          subprocess.run(['sudo', 'install', '-d', '-m', '700', '/opt/fit/secrets'], check=True)
-          subprocess.run(['sudo', 'install', '-m', '600', '/dev/null', '/opt/fit/secrets/monitor.env'], check=True)
-          subprocess.run(['sudo', 'tee', '/opt/fit/secrets/monitor.env'],
-                         input=f'FIT_ALERT_TELEGRAM_BOT_TOKEN={token}\nFIT_ALERT_TELEGRAM_CHAT_ID={chat}\n',
-                         text=True, stdout=subprocess.DEVNULL, check=True)
-          PY
           sudo install -d -m 755 /opt/fit-monitor
           sudo install -m 644 infra/monitoring/monitor.py /opt/fit-monitor/monitor.py
           sudo install -m 644 infra/monitoring/fit-monitor.service infra/monitoring/fit-monitor.timer /etc/systemd/system/
@@ -93,3 +78,54 @@ jobs:
           sudo systemctl start fit-monitor.service
           sudo systemctl is-active --quiet fit-monitor.timer
           sudo systemctl show fit-monitor.service --property=Result --property=ExecMainStatus
+
+  host-export:
+    if: vars.FIT_MONITOR_ENABLED == 'true' && !inputs.install_host && !inputs.test_delivery
+    runs-on: [self-hosted, cloudru-stage]
+    timeout-minutes: 2
+    concurrency:
+      group: fit-monitor-export
+      cancel-in-progress: true
+    outputs:
+      snapshot: ${{ steps.export.outputs.snapshot }}
+    steps:
+      - name: Export only technical alert state from installed collector
+        id: export
+        run: |
+          set -euo pipefail
+          test "$(hostname)" = fit-stage-app
+          snapshot=$(sudo /usr/bin/python3 /opt/fit-monitor/monitor.py --mode export --state /var/lib/fit-monitor/state.json)
+          echo "snapshot=$snapshot" >> "$GITHUB_OUTPUT"
+  host-notify:
+    needs: host-export
+    if: always() && vars.FIT_MONITOR_ENABLED == 'true' && !inputs.install_host && !inputs.test_delivery
+    runs-on: ubuntu-24.04
+    timeout-minutes: 3
+    concurrency:
+      group: fit-host-monitor-notify
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/cache/restore@v4
+        with:
+          path: .fit-host-alert-state
+          key: fit-host-alert-v1-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: fit-host-alert-v1-
+      - name: Deliver VM incidents from external network only
+        env:
+          SNAPSHOT: ${{ needs.host-export.outputs.snapshot }}
+          FIT_ALERT_TELEGRAM_BOT_TOKEN: ${{ secrets.FIT_ALERT_TELEGRAM_BOT_TOKEN }}
+          FIT_ALERT_TELEGRAM_CHAT_ID: ${{ secrets.FIT_ALERT_TELEGRAM_CHAT_ID }}
+        run: |
+          python3 - <<'PYTHON'
+          import os, pathlib
+          pathlib.Path('host-snapshot.json').write_text(os.environ.get('SNAPSHOT') or '{}')
+          PYTHON
+          python3 infra/monitoring/monitor.py --mode relay --state .fit-host-alert-state/state.json --snapshot host-snapshot.json
+      - uses: actions/cache/save@v4
+        if: success()
+        with:
+          path: .fit-host-alert-state
+          key: fit-host-alert-v1-${{ github.run_id }}-${{ github.run_attempt }}

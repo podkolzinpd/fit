@@ -13,6 +13,7 @@ import urllib.parse
 import urllib.request
 
 LABELS = {
+    'host_monitor': 'Нет свежих данных минутного мониторинга VM',
     'cpu': 'CPU VM выше 70%: проверить потребителя и планировать увеличение vCPU',
     'memory': 'Доступная память VM ниже 20%: проверить утечку и объём RAM',
     'disk': 'Свободное место на диске ниже 25%: проверить retention и расширение',
@@ -118,8 +119,9 @@ def send(message):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--mode', choices=['host', 'public'], required=True)
+    parser.add_argument('--mode', choices=['host', 'public', 'export', 'relay'], required=True)
     parser.add_argument('--state', required=True)
+    parser.add_argument('--snapshot')
     parser.add_argument('--test-delivery', action='store_true')
     args = parser.parse_args()
     if args.test_delivery:
@@ -129,15 +131,31 @@ def main():
     path = Path(args.state)
     state = json.loads(path.read_text()) if path.exists() else {}
     now = time.time()
-    if args.mode == 'host':
+    if args.mode == 'export':
+        print(json.dumps({'at':state.get('at',0),'active':{key:bool(value.get('active')) for key,value in state.get('checks',{}).items() if key in LABELS}}))
+        return
+    if args.mode == 'relay':
+        snapshot = json.loads(Path(args.snapshot).read_text()) if args.snapshot else {}
+        fresh = 0 <= now - snapshot.get('at',0) <= 600
+        next_state, events = advance(state, {'host_monitor':not fresh}, now)
+        if fresh:
+            previous = state.get('host_active', {})
+            current = {key: value for key,value in snapshot.get('active',{}).items() if key in LABELS and type(value) is bool}
+            for key,value in current.items():
+                if value != previous.get(key,False):
+                    events.append(('Fit: ПРОБЛЕМА. ' + LABELS[key]) if value else ('Fit: ВОССТАНОВЛЕНО. ' + key))
+            next_state['host_active'] = current
+        conditions, extra, metrics = {}, {}, {}
+    elif args.mode == 'host':
         conditions, extra, metrics = host_conditions(state)
     else:
         conditions = {'public_api': not healthy('https://api.fit-training.ru/ready'),
                       'public_frontend': not healthy('https://fit-training.ru/auth')}
         extra, metrics = {}, {}
-    next_state, events = advance(state, conditions, now)
+    if args.mode != 'relay':
+        next_state, events = advance(state, conditions, now)
     # Commit alert/recovery transitions only after acknowledged delivery; failures retry.
-    if events:
+    if events and args.mode != 'host':
         send('\n'.join(events))
     next_state.update(extra)
     path.parent.mkdir(parents=True, exist_ok=True)
