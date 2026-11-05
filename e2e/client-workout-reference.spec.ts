@@ -2,12 +2,14 @@ import { writeFile } from 'node:fs/promises'
 import { z } from 'zod'
 import { expect, test, type Page } from '@playwright/test'
 import { ownProfileCases } from './client-own-profile.cases'
+import { limeLiveCardShellCases } from './lime-live-card-shell.cases'
 import { revealLiveSet, beginClientGesture, coachGestureWorkout, restTimerWorkout, holdClientLiveCard, mockClientStreamingVoice, mockPilot, mockPublicTrainer, publicTrainerDraft, publicTrainerId, newWorkoutId, workoutId, conversationId, messageId, clientId } from './fit-lime-fixtures'
 
 test.skip(process.env.FIT_CLIENT_WORKOUT_ACCEPTANCE !== '1', 'Dedicated native client-workout harness')
 
 // Own-profile fixtures require the same compiled client Lime/auth configuration.
 ownProfileCases()
+limeLiveCardShellCases()
 
 const pilotId = 'c11e0000-6010-4000-8000-000000000001'
 

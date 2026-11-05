@@ -3736,11 +3736,12 @@ button.workout-duration-trigger:disabled { cursor:default; opacity:1 }
 
 .live-identity .live-reorder-mode { margin:0 0 12px; padding:10px 12px; border-color:var(--border); border-radius:14px; background:var(--surface-raised); color:var(--fg); font-size:14px; font-weight:500 }
 .live-identity .live-reorder-mode .secondary { min-height:44px; border-radius:14px }
-.live-identity .workout-exercise-contract { box-shadow:none}
-.live-identity .live-exercise.current { margin:0 0 12px; padding:0; border:0; border-radius:0; background:transparent; box-shadow:none}
-.live-identity .live-exercise-head { gap:10px }
-.live-identity .live-exercise-head h2, .live-identity .live-exercise-head h3 { color:var(--fg); font-size:18px; font-weight:600; line-height:1.2; letter-spacing:-.012em }
-.live-identity .overflow-trigger { width:44px; height:44px; border-color:var(--border); border-radius:14px; background:transparent; color:var(--fg) }
+/* Modern Lime/v79 card shells already own these styles; retain legacy consumers. */
+.live-identity .workout-exercise-contract:where(:not(.fit-lime-shell.workout-live-reference :is(.coach-live-v79,.client-live-v79) .workout-exercise-contract)) { box-shadow:none}
+.live-identity .live-exercise.current:where(:not(.fit-lime-shell.workout-live-reference :is(.coach-live-v79,.client-live-v79) .live-exercise.current)) { margin:0 0 12px; padding:0; border:0; border-radius:0; background:transparent; box-shadow:none}
+.live-identity .live-exercise-head:where(:not(.fit-lime-shell.workout-live-reference :is(.coach-live-v79,.client-live-v79) .live-exercise-head)) { gap:10px }
+.live-identity .live-exercise-head h2:where(:not(.fit-lime-shell.workout-live-reference :is(.coach-live-v79,.client-live-v79) .live-exercise-head h2)), .live-identity .live-exercise-head h3:where(:not(.fit-lime-shell.workout-live-reference :is(.coach-live-v79,.client-live-v79) .live-exercise-head h3)) { color:var(--fg); font-size:18px; font-weight:600; line-height:1.2; letter-spacing:-.012em }
+.live-identity .overflow-trigger:where(:not(.fit-lime-shell.workout-live-reference :is(.coach-live-v79,.client-live-v79) .workout-exercise-contract .overflow-trigger)) { width:44px; height:44px; border-color:var(--border); border-radius:14px; background:transparent; color:var(--fg) }
 .live-identity .overflow-list { padding:6px; border-color:var(--border); border-radius:14px; background:var(--surface-elevated); box-shadow:none}
 .live-identity .overflow-item { min-height:48px; border-radius:10px; font-size:14px; font-weight:500 }
 .live-identity .live-previous-result { margin:4px 0 0; color:var(--secondary-label-fg); font-size:12px; font-weight:500 }
@@ -3801,9 +3802,9 @@ button.workout-duration-trigger:disabled { cursor:default; opacity:1 }
 .live-identity .live-exercise-note summary span { color:var(--secondary-label-fg); font-weight:400 }
 .live-identity .exercise-comment { min-height:96px; border-color:var(--border); border-radius:14px; background:var(--surface-sunken); color:var(--fg); font-size:16px; font-weight:400 }
 
-.live-identity .live-exercise-upcoming { margin:12px 0; padding:16px 18px; border-color:var(--border); border-radius:18px; background:transparent; opacity:1 }
-.live-identity .live-exercise-upcoming.started { border-color:var(--warning-border); background:var(--warning-surface) }
-.live-identity .live-exercise-upcoming .live-exercise-head h2 { font-size:16px }
+.live-identity .live-exercise-upcoming:where(:not(.fit-lime-shell.workout-live-reference :is(.coach-live-v79,.client-live-v79) .live-exercise-upcoming)) { margin:12px 0; padding:16px 18px; border-color:var(--border); border-radius:18px; background:transparent; opacity:1 }
+.live-identity .live-exercise-upcoming.started:where(:not(.fit-lime-shell.workout-live-reference :is(.coach-live-v79,.client-live-v79) .live-exercise-upcoming.started)) { border-color:var(--warning-border); background:var(--warning-surface) }
+.live-identity .live-exercise-upcoming .live-exercise-head h2:where(:not(.fit-lime-shell.workout-live-reference :is(.coach-live-v79,.client-live-v79) .live-exercise-upcoming .live-exercise-head h2)) { font-size:16px }
 .live-identity .live-upcoming-summary { color:var(--secondary-label-fg); font-size:12px; font-weight:500 }
 .live-identity .live-exercise-start { min-height:44px; border-radius:14px; background:var(--surface-raised); color:var(--fg); font-size:14px; font-weight:500 }
 .live-identity .workout-exercise-compact { min-height:64px; margin:8px 0; padding:10px 0; border-color:var(--border); color:var(--fg) }
