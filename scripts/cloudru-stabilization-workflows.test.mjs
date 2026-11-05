@@ -13,7 +13,31 @@ import { readHistoryTargets, readHistoryRegistry, readHistoryPages, summarizeHis
   readHistoryEvidenceSecret, resolveHistoryEvidence, readHistoryVisibility,
   readWorkoutHistoryTarget, inspectWorkoutHistoryTarget } from './cloudru-account-history-audit.mjs'
 import { probeRuntimeDatabase } from './cloudru-runtime-db-probe.mjs'
-import { auditBackground, reminderCandidates } from './cloudru-background-audit.mjs'
+import { auditBackground, reminderCandidates, auditDeliveryControl } from './cloudru-background-audit.mjs'
+
+test('delivery gate inspection is SELECT-only for absent, held and active controls', async () => {
+  for (const present of [false, true]) for (const held of [false, true]) {
+    const statements = []
+    const client = { query: async sql => {
+      statements.push(sql)
+      return { rows: [sql.includes('to_regclass') ? { present }
+        : { count: 1, held, boundary_set: !held, receipt_set: !held }] }
+    } }
+    assert.deepEqual(await auditDeliveryControl(client), present
+      ? { present: true, valid: true, held, boundarySet: !held, receiptSet: !held } : { present: false })
+    assert.equal(statements.length, present ? 2 : 1)
+    assert.ok(statements.every(sql => /^select /i.test(sql)))
+    assert.doesNotMatch(statements.join('\n'), /\b(?:update|insert|delete|claim|enqueue)\b/i)
+  }
+})
+
+test('delivery gate inspection reports missing singleton and rejects malformed database output', async () => {
+  for (const row of [{ count: 0 }, { count: 2 }, { count: 1, held: null }, undefined]) {
+    const client = { query: async sql => ({ rows: sql.includes('to_regclass') ? [{ present: true }] : row ? [row] : [] }) }
+    if (row?.count === 0) assert.deepEqual(await auditDeliveryControl(client), { present: true, valid: false })
+    else await assert.rejects(auditDeliveryControl(client), /background_audit_control_rejected/)
+  }
+})
 
 test('background audit reports only bounded aggregates and recovers failed readonly timezone expressions', async () => {
   const statements = []
@@ -21,6 +45,7 @@ test('background audit reports only bounded aggregates and recovers failed reado
   const client = { query: async (sql, values) => {
     statements.push(sql)
     if (sql.includes('current_user')) return { rows: [{ valid: true }] }
+    if (sql.includes('to_regclass')) return { rows: [{ present: false }] }
     if (sql.includes('group by 1,2')) return { rows: [{ kind: 'test', age: 'older', count: 2 }] }
     if (sql === reminderCandidates || values?.[0] === privateZone) {
       throw Object.assign(new Error('private-error-text'), { code: '22023' })
@@ -30,7 +55,8 @@ test('background audit reports only bounded aggregates and recovers failed reado
   } }
   const report = await auditBackground(client)
   assert.deepEqual(report, { event: 'cloudru_background_audit', groups: [{ kind: 'test', age: 'older', count: 2 }],
-    reminderCandidates: { ready: false, code: '22023' }, timezoneChecks: { checked: 2, failures: [{ code: '22023', count: 1 }] } })
+    reminderCandidates: { ready: false, code: '22023' }, deliveryControl: { present: false },
+    timezoneChecks: { checked: 2, failures: [{ code: '22023', count: 1 }] } })
   assert.equal(statements[0], 'begin read only')
   assert.equal(statements.at(-1), 'rollback')
   assert.ok(statements.includes('rollback to savepoint reminder_probe'))
