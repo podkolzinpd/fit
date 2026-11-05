@@ -377,17 +377,20 @@ jobs:
         run: |
           python3 - <<'PYTHON'
           import json, os, urllib.request, urllib.parse
+          phase = 'getMe'
           try:
               base = 'https://api.telegram.org/bot' + os.environ['BOT_TOKEN']
               with urllib.request.urlopen(base + '/getMe', timeout=10) as response:
                   bot = json.load(response)
               if not bot.get('ok'): raise RuntimeError()
+              print(json.dumps({'event':'fit_telegram_bot_verified','bot_username':bot['result']['username']}), flush=True)
+              phase = 'sendMessage'
               payload = urllib.parse.urlencode({'chat_id': os.environ['CHAT_ID'], 'text': 'Fit: тест мониторинга. Бот подключён, доставка алертов в этот чат работает.'}).encode()
               with urllib.request.urlopen(urllib.request.Request(base + '/sendMessage', data=payload), timeout=10) as response:
                   result = json.load(response)
               if not result.get('ok'): raise RuntimeError()
               print(json.dumps({'event':'fit_telegram_test','delivered':True,'bot_username':bot['result']['username'],'message_id':result['result']['message_id']}))
-          except Exception:
-              print('fit_telegram_test_failed')
+          except Exception as error:
+              print(json.dumps({'event':'fit_telegram_test_failed','phase':phase,'error_type':type(error).__name__,'http_status':getattr(error,'code',None)}))
               raise SystemExit(1)
           PYTHON
