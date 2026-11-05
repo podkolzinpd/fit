@@ -778,3 +778,122 @@ No-undef/no-unused-vars этих entry/worker/bootstrap модулей тепе�
 в обязательный infra gate, чтобы shared CLI closure проверялся и после extraction.
 Исход20cb заменён этой корректировкой до merge/production; новый обычный
 exact-head CI обязателен. Ни один production запрос/импорт не запускался.
+
+
+## Итерация 12 — 05.11.2026 — Codex / OpenAI
+
+Задача: завершить разрешённый direct перенос без новой функциональности.
+PR1994 штатно слит на29b23913; его mainCI42000101542, Android42000101519,
+API42005538273/web42005538396/OTA42006080679 success. Независимо213/213 файлов,
+8/8 публичных проб, DNS3/3, оба точных API и подпись/ABI/public OTA проверены.
+Это выпуск кода, бизнес-данных по-прежнему0/17.
+
+Реальный code-only installer42007740418 остановился ДО private channel:
+command -v node вернул пустой путь, systemd сообщил отсутствие executable.
+Причина моя: в job не было setup-node, а host PATH не наследует Node из других
+Actions jobs. Выполнение bootstrap не началось; encrypted infrastructure
+capability не создана, клиентский target/evidence/payload не отправлялись,
+import/verify/apply не выполнялись и оба operator gate остаются закрытыми.
+Исходная old READ сессия/ключ сохраняются. Backup restore текущего запуска
+прошёл; отдельный media ACL read403 не выдаётся за ошибку journal object I/O
+и не используется для изменения bucket permissions.
+
+Сделано: перед host bootstrap добавлен прежний trusted setup-node@v4/Node22.
+Транспорт, protocol/actor/RLS/finance/expiry/verify/cleanup guards не менялись.
+Неудачная pre-channel попытка оставила собственные infrastructure credentials
+в root0700. Следующий installer может удалить только orphan с совпадающим
+operator PUBLIC key, root0700 ownership и отсутствием ОБОИХ durable control
+key/state. Любая durable lease, чужой public key, symlink и journal-upload
+сессии сохраняются. Новых customer inputs или секретов GitHub не добавлено.
+
+Проверка: новый targeted workflow case требует Node ДО bootstrap и проверяет
+границы orphan cleanup. Синтаксис YAML/shell и существующие protocol tests
+проверяются повторно по изменённой причине; остальные ранее зелёные проверки
+не называются новой приёмкой этого исправления. Открыто: штатные reviewed PR,
+exact-head CI/актуальный main с соблюдением очереди; после него одна новая
+code-only попытка, direct канал и17 последовательных переносов. Старый
+failed bootstrap не повторяется вслепую и не объявляется загрузкой данных.
+
+
+## Итерация 13 — 05.11.2026 — Codex / OpenAI
+
+Задача: завершить исправление существующего direct запуска и все17 переносов
+в этом же чате, без клиентских данных GitHub. Владелец разрешил пропускать
+действительно зависший старший PR; это не отменяет exact-head CI, полноту
+публикации, VM serialization и guards данных. На проверке PR1998 получил
+новый source4afa42d7 и обычный CI42034321901: он не объявляется неактивным.
+Подготовка своего исправления продолжается независимо, без чужого merge/write.
+
+Расхождения: прежний CI42009184403 остановился в неизменённом WebKit-case
+перехода упражнений:2 sampled scroll positions вместо больше2. У этого PR
+нет изменения UI; assertion и timeout сохранены. Неудачный старый head не
+перезапускался вслепую; актуальная основа получает обычный synchronize CI.
+
+Сделано: включён опубликованный main9cb95bc1, все чужие изменения сохранены.
+Его mainCI42023047257 attempt3, API42027299153, web42027299110 attempt2 и
+OTA42028974254 success; независимо213/213 файлов,8/8 публичных проб, DNS3/3,
+оба точных API, подписанные публичные OTA manifest/archive и ABI проверены.
+Отменённый дублирующий API42027335002 не исполнил ни одного job step и не
+является новой публикацией. Клиентский runtime/import/финансовые guards
+побайтно прежние принятого direct выпуска29b23913; миграция189 не меняет
+импортируемые таблицы или writer triggers. Собственная дельта остаётся
+Node22 prerequisite, bounded own orphan cleanup и его policy case.
+
+Решение: текущий code fix обновляется внутри существующего PR2000. Новых
+чатов или PR для этой итерации нет. Исправлен режим продолжения: существующий
+heartbeat адресован исходному чату, standalone cron выключен.
+Отвергнуто: bypass защиты или CI, изменение UI assertions, повторные старые
+prepare/apply и публикация старого main поверх свежего.
+
+Проверка:10 целевых protocol/entry/workflow cases и canonical docs validator
+проверяются на обновлённой основе; полный новый exact-head CI остаётся гейтом.
+Открыто: accepted source/main/release Node fix, затем единственный code-only
+installer и прямой sequential transfer с17 независимыми readbacks/cleanup.
+Дальше: штатный CI и актуальная очередь; данные по-прежнему0/17.
+
+
+## Итерация 14 — 05.11.2026 — Codex / OpenAI
+
+Задача: завершить тот же Node prerequisite fix, сохранив гарантированную
+очистку собственной pre-channel инфраструктуры до клиентского канала.
+Расхождение: shell glob внутри root0700 parent раскрывался обычным вызывающим
+shell до sudo. У непривилегированного runner он оставлял literal pattern и
+молча пропускал свой orphan; sudo проверок внутри цикла этого не исправлял.
+
+Сделано: ровно перечисление кандидатов выполняется sudo find на глубине1,
+NUL-delimited pipe в прежний bounded цикл. Ошибка перечисления останавливает
+job через pipefail. Numeric path, current-root exclusion, root0700 ownership,
+no-symlink, отсутствие обоих durable control files и точное совпадение operator
+PUBLIC key сохранены. Удаление иных сессий, Cloud objects или клиентских данных
+не вводится. Node22 prerequisite и data/identity/finance/expiry guards прежние.
+
+Проверка: непривилегированный локальный POSIX probe на недоступном parent
+воспроизвёл literal glob; свой временный каталог восстановлен и удалён.
+Дополненный существующий policy case сначала RED (9pass/1fail) на прежнем
+workflow и GREEN10/10 после изменения; YAML и все3 shell blocks bash-n PASS.
+Это не заявляется фактической Cloud.ru очисткой. Новые контейнеры не запускались.
+Предыдущие shell6 predicates и security cases сохраняются без ослабления.
+
+Решение: исправление включается в существующий PR2000 до production, без
+нового PR, dependencies, чата или изменения клиентского input. Предыдущий
+sourceee1767c3/CI42035637731 становится историческим; новый обычный synchronize
+CI обязателен именно из-за этой новой code delta, не вслепую rerun старого head.
+Отвергнуто: ослаблять permissions root directory, обходить cleanup или оставлять
+непроверенную старую инфраструктуру после заявления о полном завершении.
+Открыто: новый exact-head CI/main/release и реальное исполнение17 журналов.
+Дальше: штатный выпуск исправленного prerequisite; production apply0/17.
+
+
+Синхронизация этой итерации после штатного PR1998: source17b4d05c завершил
+полный CI42041884232 success35checks. Предшественник принят GitHub на4afa42d7
+после CI42034321901 attempt2,35checks success и штатно merged вc9935ffb;
+условное исключение очереди не потребовалось. Теперь PR2000 первый обычный PR.
+В свою ветку включён c9935ffb обычным merge, без правки чужих restore/UI tests.
+Свежие инструкции/контракт native restore прочитаны: отдельный ручной target,
+plan/apply/verify и data guards не заменяют program import. Нет новых миграций;
+program runtime/transport/trainer evidence остаются побайтно прежними9cb95bc1.
+Уточнения WebKit fixture/geometry предшественника сохранены полностью.
+Подготовка source CI ведётся параллельно mainCI42045460289 предшественника;
+own merge/main и любые private операции ждут полной приёмки его выпуска.
+Новая основа требует normal exact-head CI; прежний зелёный17b не переносится.
+Это синхронизация существующего fix, без нового PR/чата или импорта данных.
