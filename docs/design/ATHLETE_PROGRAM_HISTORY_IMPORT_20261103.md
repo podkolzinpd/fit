@@ -769,3 +769,12 @@ installer, закрытый direct control readback и фактические17 
 Приёмка DIRECT101 — отсутствие клиентского data flow через Actions;
 DIRECT102 — authenticated bounded channel и serial/recovery/ack guards.
 Оба локально проверены новым security набором; production запуск ещё гейт.
+
+
+Уточнение проверки direct runtime: отдельная no-undef проверка выявила перенос
+readHistoryRegistry за пределы прежней lexical scope при выделении CLI bootstrap.
+Helper импортирован явно в оба модуля; SQL/источники/guards не менялись.
+No-undef/no-unused-vars этих entry/worker/bootstrap модулей теперь включены
+в обязательный infra gate, чтобы shared CLI closure проверялся и после extraction.
+Исход20cb заменён этой корректировкой до merge/production; новый обычный
+exact-head CI обязателен. Ни один production запрос/импорт не запускался.

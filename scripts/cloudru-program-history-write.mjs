@@ -6,7 +6,7 @@ import {reviewedProgramPackets} from './private-program-history-scopes.mjs'
 import {ownerRead,validateJournalDrafts,insertReviewedJournal,
   verifyJournalContent,isNewCardFinanceUnchanged,preservedJournalState,verifyPreservedState,legacyProfileId,sealJournalReceipt} from './cloudru-journal-import.mjs'
 import {loadCloudruUpload,safeJournalUploadFailure} from './cloudru-journal-upload.mjs'
-import {inspectWorkoutHistoryTarget} from './cloudru-account-history-audit.mjs'
+import {inspectWorkoutHistoryTarget,readHistoryRegistry} from './cloudru-account-history-audit.mjs'
 import {resolveProgramTrainer,readProgramTrainerEvidence,programMatchNameHash} from './cloudru-program-trainer-evidence.mjs'
 import {readRetainedLoginBindings} from './cloudru-account-links-audit.mjs'
 
@@ -246,7 +246,7 @@ async function main() {
   const mode=process.env.FIT_JOURNAL_IMPORT_MODE
   if(process.env.GITHUB_REF!=='refs/heads/main'||process.env.GITHUB_REPOSITORY!=='podkolzinpd/fit'
     ||!['inspect','apply','verify'].includes(mode))fail('source_invalid')
-  const {readWorkoutHistoryTarget,readHistoryRegistry}=await import('./cloudru-account-history-audit.mjs')
+  const {readWorkoutHistoryTarget}=await import('./cloudru-account-history-audit.mjs')
   const target=readWorkoutHistoryTarget(process.env.FIT_WORKOUT_HISTORY_TARGET)
   const trainerEvidence=readProgramTrainerEvidence(process.env.FIT_PROGRAM_TRAINER_EVIDENCE,target)
   const upload=await loadCloudruUpload(target,process.env.FIT_JOURNAL_IMPORT_SHA256,process.env.FIT_JOURNAL_UPLOAD_SESSION,{recoveryReadOnly:mode==='verify'})

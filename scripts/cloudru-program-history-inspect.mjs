@@ -7,6 +7,7 @@ import {ownerRead,sourceContent,sealJournalReceipt,legacyProfileId} from './clou
 import {resolveProgramTrainer,readProgramTrainerEvidence,programMatchNameHash} from './cloudru-program-trainer-evidence.mjs'
 import {normalizedRosterNameSql} from './cloudru-account-links-audit.mjs'
 import {safeJournalUploadFailure} from './cloudru-journal-upload.mjs'
+import {readHistoryRegistry} from './cloudru-account-history-audit.mjs'
 
 // This phase has no writer, mutation adapter, actor/client override or apply mode.
 const fail = code => {throw new Error(`program_history_inspect_${code}`)}
@@ -151,7 +152,7 @@ export async function executeProgramHistoryInspection({target,trainerEvidence,up
 }
 async function main() {
   if(process.env.GITHUB_REF!=='refs/heads/main'||process.env.GITHUB_REPOSITORY!=='podkolzinpd/fit'||process.env.FIT_JOURNAL_IMPORT_MODE!=='inspect')fail('source_invalid')
-  const {readWorkoutHistoryTarget,readHistoryRegistry}=await import('./cloudru-account-history-audit.mjs')
+  const {readWorkoutHistoryTarget}=await import('./cloudru-account-history-audit.mjs')
   const target=readWorkoutHistoryTarget(process.env.FIT_WORKOUT_HISTORY_TARGET)
   const trainerEvidence=readProgramTrainerEvidence(process.env.FIT_PROGRAM_TRAINER_EVIDENCE,target)
   const {loadCloudruUpload}=await import('./cloudru-journal-upload.mjs')
