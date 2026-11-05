@@ -67,3 +67,15 @@ test('verified roster selects the sole current card with its explicitly merged a
   assert.equal(selectProgramCard([merged],true),null)
   assert.equal(selectProgramCard([{...live,connected:false},merged],true),null)
 })
+
+
+test('roster-proven linked authenticated card accepts only the importing trainers merged predecessor',()=>{
+  const live={id:'current',trainer_id:'origin-trainer',auth_user_id:'athlete',exact:true,connected:true,archived_at:null,merged_into_client_id:null}
+  const old={...live,id:'old',trainer_id:'importing-trainer',auth_user_id:null,archived_at:'2026-01-01',merged_into_client_id:live.id}
+  assert.equal(selectProgramCard([live,old],true,'importing-trainer'),live)
+  assert.equal(selectProgramCard([live,old],false,'importing-trainer'),null)
+  assert.equal(selectProgramCard([live,old],true,'unrelated-trainer'),null)
+  assert.equal(selectProgramCard([{...live,auth_user_id:null},old],true,'importing-trainer'),null)
+  assert.equal(selectProgramCard([{...live,connected:false},old],true,'importing-trainer'),null)
+  assert.equal(selectProgramCard([live,{...old,trainer_id:live.trainer_id}],true,'importing-trainer'),null)
+})

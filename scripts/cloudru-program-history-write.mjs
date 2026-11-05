@@ -159,7 +159,7 @@ export async function runProgramImport({mode,owner,runtime,target,legacyId=null,
   const currentSelection=async connection=>{
     const matches=relevant(await readProgramCardCandidates(connection,trainerId,payload,aliasHash))
     if(selected) {
-      const current=selectProgramCard(matches,identityEvidence?.method==='current_roster')
+      const current=selectProgramCard(matches,identityEvidence?.method==='current_roster',trainerId)
       if(!current||current.id!==selected.id||current.trainer_id!==selected.trainer_id
         ||current.auth_user_id!==selected.auth_user_id)fail('selection_changed')
       return current
