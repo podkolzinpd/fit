@@ -408,3 +408,12 @@ lint/types/build; новая schema-flow проверка обязательна
 стать main, полный текущий head пройти приёмку, и только затем возможны операции
 preview/preserve/activation. Очередь активных чужих PR сохраняется; сообщений
 в соседние чаты нет. Production-root через2003 и данные очереди ещё не менялись.
+
+BG3 создан как draft PR2006, base=remote BG2/87c097d7, head13e5d2ed.
+API job127341916288/CI42055292467 зелёный. PostgreSQL job127341916412 зелёный:
+cutover22/22, full-schema-flow1/1, guard13/13, corporate19/19,
+actor173passed+1skip; основная группа300passed+1skip, recovery7+53+10passed.
+Итого371DB-lane cases passed плюс1conditionalSkip, без изменения assertions
+или таймаутов. Это проверка кода/схемы, не факт production-активации или доставки.
+Остальные CI checks идут. Root через2003, BG2/полныйCI/очередь остаются gates;
+2006 нельзя сливать в родительскую ветку или активировать до них.
