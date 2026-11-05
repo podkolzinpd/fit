@@ -3,7 +3,7 @@ import { fileURLToPath } from 'node:url'
 import { runner } from 'node-pg-migrate'
 import { Pool } from 'pg'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
-import { planClientRestore, applyClientRestore, verifyClientRestore, type RestorePlan } from '../../../../scripts/cloudru-client-restore.mjs'
+import { readRestoreTarget, planClientRestore, applyClientRestore, verifyClientRestore, type RestorePlan } from '../../../../scripts/cloudru-client-restore.mjs'
 
 const source = process.env.TEST_DATABASE_URL
 const database = `fit_client_restore_${process.pid}`
@@ -60,7 +60,7 @@ describe.skipIf(source === undefined)('owner-approved canonical client restorati
     return { athleteId, trainerId, other, card, old }
   }
   async function plan(f: { athleteId: string; trainerId: string }) {
-    const c = await owner.connect(); try { return await planClientRestore(c, f) } finally { c.release() }
+    const c = await owner.connect(); try { return await planClientRestore(c, readRestoreTarget(JSON.stringify({ trainerProfileId: f.trainerId, athleteProfileId: f.athleteId }))) } finally { c.release() }
   }
   async function apply(p: RestorePlan, backupVerified = true) {
     const c = await owner.connect(); try { return await applyClientRestore(c, p, { backupVerified }) } finally { c.release() }
@@ -81,6 +81,14 @@ describe.skipIf(source === undefined)('owner-approved canonical client restorati
     expect(notes).toEqual([{ note: 'Private synthetic note' }, { note: 'Private synthetic note' }])
     expect(JSON.stringify(p.report)).not.toContain(f.athleteId)
     expect(JSON.stringify(p.report)).not.toContain('Private synthetic')
+  })
+  it('rejects missing, swapped or unrelated native profiles before any restoration', async () => {
+    const f = await fixture()
+    await expect(plan({ trainerId: f.athleteId, athleteId: f.trainerId })).rejects.toThrow('role')
+    await expect(plan({ trainerId: randomUUID(), athleteId: f.athleteId })).rejects.toThrow('role')
+    await expect(plan({ trainerId: f.other, athleteId: f.athleteId })).rejects.toThrow('source')
+    expect((await owner.query("select count(*)::int count from public.client_trainer_relationships where client_id=$1 and status='active'", [f.card])).rows).toEqual([{ count: 0 }])
+    expect((await owner.query('select client_id from public.client_trainers where client_id=$1 and trainer_id=$2', [f.card, f.trainerId])).rows).toEqual([])
   })
   it('rejects a concurrent trainer and preserves all state without restoring a second active trainer', async () => {
     const f = await fixture(), p = await plan(f)
