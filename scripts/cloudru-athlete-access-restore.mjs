@@ -11,6 +11,12 @@ const bound=(rows,max)=>{need(Array.isArray(rows)&&rows.length<=max,'scope');ret
 const quote=value=>{need(/^[a-z_][a-z0-9_]*$/.test(value),'catalog');return '"'+value+'"'}
 const metadata=new Set(['app_feedback','user_legal_acceptances','notification_preferences','push_subscriptions',
   'trainer_discovery_prompt_preferences','client_invitations','client_trainers','client_trainer_relationships','client_merge_operations'])
+const operationalMetadata=new Set(['auth_identities','yandex_app_sessions','yandex_pilot_sessions','yandex_auth_handoffs',
+  'profile_rollout_assignments','user_experiment_assignments','fit_lime_pilot_allowlist','client_lime_pilot_allowlist',
+  'trainer_schedule_v2_allowlist','assistant_feature_links_pilot_allowlist','nutrition_native_bindings',
+  'corporate_admins','corporate_admin_logins','corporate_service_pilot_trainers','corporate_invitation_pilot_trainers',
+  'push_notifications_outbox','workout_create_requests','quick_start_operations','live_workout_operations',
+  'lime_plan_create_requests','new_client_invitation_operations'])
 
 async function gate(client,write=false){
  const r=(await client.query("select current_user username,current_setting('transaction_read_only') readonly")).rows[0]
@@ -25,7 +31,7 @@ export async function profileReferences(client,ids,cardIds){
  const tables=bound((await client.query(`select n.nspname schema,c.relname name,
    array_agg(distinct a.attname::text order by a.attname::text) columns,
    exists(select 1 from pg_attribute x where x.attrelid=c.oid and x.attname='client_id' and not x.attisdropped) has_client,
-   exists(select 1 from pg_attribute x where x.attrelid=c.oid and x.attname in('owner_id','user_id','client_user_id') and not x.attisdropped) private_owner
+   exists(select 1 from pg_attribute x where x.attrelid=c.oid and x.attname in('owner_id','user_id','client_user_id','profile_id','auth_user_id') and not x.attisdropped) private_owner
    from pg_class c join pg_namespace n on n.oid=c.relnamespace
    join pg_attribute a on a.attrelid=c.oid and a.atttypid='uuid'::regtype and not a.attisdropped and a.attnum>0
    where n.nspname in('public','app_private') and c.relkind='r' and c.relname not in('profiles','clients')
@@ -44,7 +50,7 @@ export async function profileReferences(client,ids,cardIds){
   need(stats&&stats.count<=50000&&Number(stats.bytes)<=20*1024*1024,'scope')
   const hash=(await client.query(`select encode(sha256(convert_to(coalesce(string_agg(j,E'\n' order by j),''),'UTF8')),'hex') digest
     from (select to_jsonb(r)::text j from ${table} r where ${predicate}) s`,[ids])).rows[0].digest
-  let covered=t.schema==='app_private'||metadata.has(t.name)
+  let covered=t.schema==='app_private'?operationalMetadata.has(t.name):metadata.has(t.name)
   if(!covered&&t.has_client&&!t.private_owner){
    covered=(await client.query(`select count(*)::int count from ${table} r where (${predicate}) and (${old})
      and (r.client_id is null or not r.client_id=any($3::uuid[]))`,[ids,ids[0],cardIds])).rows[0].count===0

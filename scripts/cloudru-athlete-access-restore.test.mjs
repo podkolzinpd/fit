@@ -43,6 +43,8 @@ test('native and current profile proof are required and unknown private history 
  assert.match(source,/uncovered=state\.references\.filter\(r=>r\.legacy>0&&!r\.covered\)/)
  assert.match(source,/ready:uncovered\.length===0/)
  assert.match(source,/legacy_session_active/)
+ assert.match(source,/operationalMetadata\.has\(t\.name\)/)
+ assert.doesNotMatch(source,/t\.schema==='app_private'\|\|/)
  assert.match(source,/deletion_pending/)
 })
 test('transport is fixed main-only, uses closed evidence, preserves backups and shares the normal VM lock',()=>{

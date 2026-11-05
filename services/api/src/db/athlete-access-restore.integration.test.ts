@@ -89,6 +89,14 @@ describe.skipIf(source===undefined)('proven athlete card access preserves both p
   await expect(apply(p)).rejects.toThrow('plan')
   expect((await owner.query<{auth_user_id:string}>('select auth_user_id from public.clients where id=$1',[f.card])).rows[0]?.auth_user_id).toBe(f.legacyId)
  })
+ it('unknown private owner history also blocks a repair instead of being treated as infrastructure',async()=>{
+  const f=await fixture()
+  await owner.query('create table app_private.athlete_restore_unknown_private_data(owner_id uuid references public.profiles(id),payload text)')
+  await owner.query(`insert into app_private.athlete_restore_unknown_private_data values($1,'Private synthetic unpublished plan')`,[f.legacyId])
+  const p=await plan(f);expect(p.ready).toBe(false)
+  expect(p.report).toMatchObject({uncoveredOldData:[{table:'athlete_restore_unknown_private_data',count:1}]})
+  await expect(apply(p)).rejects.toThrow('plan')
+ })
  it('retains new training data by rejecting a stale plan and including it in the next plan',async()=>{
   const f=await fixture(),p=await plan(f)
   await owner.query(`insert into public.workouts(client_id,trainer_id,created_by,workout_date,status,completed_at) values($1,$2,$3,current_date,'done',now())`,[f.card,f.legacyId,f.trainerId])
