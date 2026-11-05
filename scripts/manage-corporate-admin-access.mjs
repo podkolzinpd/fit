@@ -3,7 +3,7 @@ import { pathToFileURL } from 'node:url'
 
 export async function manageCorporateAdminAccess(client, action, loginHash, accessSlot = 1) {
   if (!['inspect','grant','revoke'].includes(action) || !/^[a-f0-9]{64}$/.test(loginHash)) throw new Error('admin_target_rejected')
-  if (!Number.isInteger(accessSlot) || accessSlot < 1 || accessSlot > 5) throw new Error('admin_target_rejected')
+  if (!Number.isInteger(accessSlot) || accessSlot < 1 || accessSlot > 6) throw new Error('admin_target_rejected')
   await client.query(action==='inspect'?'begin read only':'begin')
   try {
     await client.query("set local statement_timeout='5s'")
@@ -11,7 +11,7 @@ export async function manageCorporateAdminAccess(client, action, loginHash, acce
     if(action!=='inspect') await client.query('select pg_advisory_xact_lock(159,1)')
     const direct=await client.query('select count(*)::int n from app_private.corporate_admins where enabled')
     const other=await client.query('select count(*)::int n from app_private.corporate_admin_logins where enabled and login_sha256<>$1',[loginHash])
-    if(direct.rows[0]?.n!==0 || ![0,1,2,3,4].includes(other.rows[0]?.n)) throw new Error('admin_exclusive_target_conflict')
+    if(direct.rows[0]?.n!==0 || ![0,1,2,3,4,5].includes(other.rows[0]?.n)) throw new Error('admin_exclusive_target_conflict')
     if(action==='grant') await client.query(`insert into app_private.corporate_admin_logins(login_sha256,access_slot) values($1,$2)
       on conflict(login_sha256) do update set enabled=true where corporate_admin_logins.access_slot=excluded.access_slot`,[loginHash,accessSlot])
     if(action==='revoke') await client.query('update app_private.corporate_admin_logins set enabled=false where login_sha256=$1 and access_slot=$2',[loginHash,accessSlot])
