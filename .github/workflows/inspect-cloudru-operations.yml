@@ -74,7 +74,7 @@ jobs:
       phase: ${{ inputs.jitsi_phase }}
       qa_public_key: ${{ inputs.qa_public_key }}
   capacity:
-    if: github.event_name == 'workflow_dispatch' && inputs.capacity && !inputs.prepare_jitsi
+    if: github.event_name == 'workflow_dispatch' && inputs.capacity && !inputs.prepare_jitsi && !inputs.telegram_test
     runs-on: [self-hosted, cloudru-stage]
     timeout-minutes: 3
     concurrency:
@@ -104,7 +104,7 @@ jobs:
           printf 'Listening port numbers (no addresses/process arguments)\n'
           ss -H -lntu | awk '{n=split($5,a,":"); print $1, a[n]}' | sort -u
   inspect:
-    if: github.event_name != 'workflow_dispatch' || (!inputs.capacity && !inputs.prepare_jitsi)
+    if: github.event_name != 'workflow_dispatch' || (!inputs.capacity && !inputs.prepare_jitsi && !inputs.telegram_test)
     runs-on: [self-hosted, cloudru-stage]
     timeout-minutes: 8
     concurrency:
