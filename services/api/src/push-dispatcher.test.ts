@@ -63,6 +63,7 @@ describe('PushDispatcher', () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
     const failure = Object.assign(new Error('private-query-and-values'), { code: '22023' })
     commandMocks.enqueueWorkoutReminders.mockResolvedValue(0)
+    commandMocks.claimPushNotifications.mockResolvedValue(null)
     const target = step === 'reminder_enqueue' ? commandMocks.enqueueWorkoutReminders : commandMocks.claimPushNotifications
     target.mockRejectedValue(failure)
     const sender = { send: vi.fn() }
@@ -124,6 +125,7 @@ describe('PushDispatcher', () => {
     expect(pool.connections.map((connection) => connection.queries)).toEqual([
       ['begin', "set local statement_timeout = '10s'", 'commit'],
       ['begin', "set local statement_timeout = '10s'", 'commit'],
+      ['begin', "set local statement_timeout = '10s'", 'commit'],
     ])
     expect(pool.connections.every((connection) => connection.released)).toBe(true)
   })
@@ -149,6 +151,7 @@ describe('PushDispatcher', () => {
     commandMocks.enqueueWorkoutReminders.mockRejectedValueOnce(
       new Error('producer failed'),
     )
+    commandMocks.claimPushNotifications.mockResolvedValueOnce(null)
     const sender = { send: vi.fn() }
 
     await expect(new PushDispatcher(pool, sender).run()).rejects.toMatchObject({
@@ -157,8 +160,23 @@ describe('PushDispatcher', () => {
     expect(sender.send).not.toHaveBeenCalled()
     expect(pool.connections.map((connection) => connection.queries)).toEqual([
       ['begin', "set local statement_timeout = '10s'", 'rollback'],
+      ['begin', "set local statement_timeout = '10s'", 'commit'],
     ])
     expect(pool.connections[0]?.released).toBe(true)
+  })
+
+  it('delivers and finalizes fresh queued events independently, then preserves the producer failure', async () => {
+    const failure = new Error('producer failed')
+    const pool = new TransactionPool()
+    commandMocks.enqueueWorkoutReminders.mockRejectedValueOnce(failure)
+    commandMocks.claimPushNotifications.mockResolvedValueOnce({ dispatchToken: 'lease', notifications: [notification] })
+    commandMocks.finalizePushNotifications.mockResolvedValueOnce({ succeeded: 1, failed: 0, discarded: 0 })
+    const sender = { send: vi.fn().mockResolvedValue([{ id: notification.id, ok: true }]) }
+    await expect(new PushDispatcher(pool, sender).run()).rejects.toMatchObject({ cause: failure })
+    expect(sender.send).toHaveBeenCalledOnce()
+    expect(commandMocks.finalizePushNotifications).toHaveBeenCalledOnce()
+    expect(pool.connections.map(connection => connection.queries.at(-1))).toEqual(['rollback', 'commit', 'commit'])
+    expect(pool.connections.every(connection => connection.released)).toBe(true)
   })
 
   it('releases every claimed row through bounded failure finalization', async () => {

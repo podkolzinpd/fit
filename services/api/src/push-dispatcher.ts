@@ -33,23 +33,39 @@ export class PushDispatcher {
   async run(now = new Date()): Promise<PushDispatchSummary> {
     if (!Number.isFinite(now.getTime())) throw new Error('Push dispatch time is invalid')
 
-    const prepared = await dispatchStage('push', 'prepare', () =>
-      withBackgroundTransaction(this.pool, async (client) => {
-        const remindersEnqueued = await diagnosePushQuery('reminder_enqueue', () => enqueueWorkoutReminders(client, now))
-        const batch = await diagnosePushQuery('queue_claim', () => claimPushNotifications(client, now))
-        return { batch, remindersEnqueued }
-      }))
-    if (prepared.batch === null) {
-      return {
+    let remindersEnqueued = 0
+    let producerFailed = false
+    let producerFailure: unknown
+    try {
+      remindersEnqueued = await dispatchStage('push', 'prepare', () =>
+        withBackgroundTransaction(this.pool, client =>
+          diagnosePushQuery('reminder_enqueue', () => enqueueWorkoutReminders(client, now))))
+    } catch (error) {
+      producerFailed = true
+      producerFailure = error
+    }
+    // A failed reminder transaction must not roll back or block delivery of
+    // independently queued events. The database guard still excludes history.
+    const batch = await dispatchStage('push', 'prepare', () =>
+      withBackgroundTransaction(this.pool, client =>
+        diagnosePushQuery('queue_claim', () => claimPushNotifications(client, now))))
+    const finish = (summary: PushDispatchSummary): PushDispatchSummary => {
+      if (producerFailed) {
+        console.warn(JSON.stringify({ event: 'background_push_delivery_after_producer_failure', ...summary }))
+        throw producerFailure
+      }
+      return summary
+    }
+    if (batch === null) {
+      return finish({
         claimed: 0,
         discarded: 0,
         failed: 0,
-        remindersEnqueued: prepared.remindersEnqueued,
+        remindersEnqueued,
         succeeded: 0,
-      }
+      })
     }
 
-    const batch = prepared.batch
     let results: PushNotificationResult[]
     try {
       results = await this.sender.send(batch.notifications)
@@ -62,11 +78,11 @@ export class PushDispatcher {
     const finalized = await dispatchStage('push', 'finalize', () =>
       withBackgroundTransaction(this.pool, (client) =>
         finalizePushNotifications(client, batch.dispatchToken, results, now)))
-    return {
+    return finish({
       claimed: batch.notifications.length,
-      remindersEnqueued: prepared.remindersEnqueued,
+      remindersEnqueued,
       ...finalized,
-    }
+    })
   }
 }
 

@@ -296,3 +296,267 @@ whitespace passed. Старый35/35 CI относится к56ff, не к об�
 для объединённой версии требуется новый CI. Другие PR не сливались, чужие
 ветки/данные не изменялись. Диагностика production и исправление причины
 остаются следующим шагом после собственной очереди/green current head.
+
+## BG2 PREP —05.11.2026 — Codex / OpenAI: защита до восстановления
+
+Первый этап ещё открыт:1997 опубликован9cb95bc1 (API release42027299153),
+read-only42029039387 локализовал reminder_enqueue/22023,58pending/overdue,
+0staleLeases/terminalFailures, соединение и session cleanup исправны.
+Все7planned-зон допустимы. BG1.2/PR2003 проверяет все profile-зоны и части
+SELECT; его CI42026081120 зелёный, он ждёт старшие активные PR.
+Точная production-причина ещё не доказана; этот BG2-черновик её не объявляет.
+
+Независимая подготовка: forward migration000190 создаёт owner-only control
+с выключенной доставкой. Missing row/hold/future boundary возвращают null до
+каких-либо claims. После проверенной активации берутся только созданные не
+раньше fresh_after; TTL15min для reminder/test,1day для других, включая
+произвольные kind. История/исходные события не удаляются. Lease,20/50limit,
+10attempts,410/multi-device/dedupe/finalize остаются прежними.
+При неопределённом lease миграция отказывается применяться. API-откат guard
+не убирает. Control содержит cutoff/fingerprint предыдущей verified-preserve
+операции для будущей безопасной активации BG3; API-role не имеет table grants.
+
+Release использует тот же flock, что launcher: ждёт завершения bounded worker,
+затем держит замок на протяжении backup/migration; новый worker его не обходит.
+Producer/claim теперь раздельные транзакции: producer failure не блокирует
+другие новые события, но исходная ошибка возвращается после finalize и не
+делает проблемный запуск зелёным. Cleanup остаётся независимым. Не меняются
+UI/ввод/клавиатура/Live/локальный rest timer/хранение тренировок и сообщений.
+
+Проверено промежуточно: API lint/types/build,1576unit passed/347conditional
+DBskips;19dispatcher tests;42workflow tests;12изолированных PGguard cases
+(held/missing,history/expiry,generic kinds,SKIP LOCKED,rollback,retry,owner ACL,
+maintenance serialization,active-lease refusal). Старый push pipeline также
+прошёл в общем actor run; его fixture-clock2099 теперь явным образом отражена
+в created_at и control, исходные5/2/3/410/10assertions сохранены.
+
+Общий actor сначала171passed/2fail, затем169passed/4timeouts; после restart
+172passed/1session-count mismatch/1skip, плюс12guard passed. Отдельно6/6ранее
+упавших сценариев проходят. Только собственная fixture пересоздавалась после
+прерываний. Затем локальный Podman/port-forward перестал стабильно отвечать,
+отдельный Linux pull оборвался unexpected EOF. Таймауты, тесты и assertions
+не ослаблялись. Полная приёмка должна пройти в CI PostgreSQL, это не READY.
+
+Отвергнуто: исправить enqueue до guard; сначала включить старую очередь;
+поменять профильные timezone предположительно; скрывать ошибку producer;
+сужать kind; обходить проверку main/owner или принудительно сливать черновик.
+Дальше: BG1.2 production proof → добавить доказанное исправление в этот PR →
+полный зелёный CI и очередной выпуск в held → BG3 preview/preserve/activation.
+
+### BG2/PR2004 — уточнение совместимости отката
+
+CI42032403665: API/repository quality зелёные; PostgreSQL подтвердил
+actor173passed+1skip и все12guard cases. Corporate suite обнаружил реальный
+конфликт: общий тест откатывает независимые feature migrations, а исключение
+в DOWN000190 прерывало эту цепочку и вызывало5последующих fixture-ошибок.
+Это не списывается на flaky и не исправляется ослаблением корпоративных тестов.
+
+DOWN теперь явно сохраняет guard/control/boundary/receipt, не восстанавливает
+старый claim и не блокирует откат независимых миграций. Повторный UP идемпотентен
+для control и не сбрасывает активную границу/receipt. Добавлен13-й guard case:
+после DOWN+UP точный control сохранён, старое не claims, новое claims.
+Первое применение по-прежнему held; активный/неопределённый lease по-прежнему
+запрещает применение. API-откат не снимает защиту.
+Lint/types/migration safety/whitespace passed; полный CI нового head обязателен.
+Production-защита/исправление/активация ещё не применялись.
+
+### BG2/87c097d7: фактическая приёмка и нестабильный UI-check
+
+CI42034403572 PostgreSQL job127269653956 зелёный:actor173passed+1skip,
+corporate19/19,guard13/13; основная группа278passed+1skip, recovery-группы
+7+53+10passed. API job127269654278 зелёный. Конфликт retained rollback закрыт.
+
+Итог attempt1 красный только из-за e2e-yandex-auth4/4 и его агрегатора:
+trainer/reduced-false/single-group/compact, ожидалось>2scroll positions,
+получилось2; на автоматическом retry тот же код прошёл (260passed+1flaky).
+Strict fail-on-flaky сохранён. CI retry trace:86frames,3positions,
+max gap160ms, один scrollTo(behavior=smooth). Первичный frame JSON в
+артефакте не сохранился; причина потери промежуточного замера не объявляется
+доказанной. В src/e2e/Playwright-config diff с main9cb отсутствует.
+
+Локальный первый запуск без FIT_CLIENT_WORKOUT_ACCEPTANCE дал5skips;
+следующий без V79-флага проверял legacy-компоновку и дал5viewport failures,
+это невалидное сравнение с CI. С правильными флагами нового coach Live и
+проверенными YS Geo2/2 исходный сценарий5/5passed без retry. Есть Vite warning
+о legacy Onest asset за allow-list symlink, primary YS Geo проверен; локальный
+dev/WebKit не выдаётся за Linux production-mode CI. После сверки этого
+доказательства и head87 запрошен только failed-job rerun, attempt2 идёт.
+Продуктовые UI/test assertions/retries/timeouts не менялись.
+
+Исправлена собственная ошибка опроса CI: run.jobs.conclusion возвращается
+lowercase, тогда как PR.statusCheckRollup.conclusion uppercase. Старый jq
+фильтр FAILURE ошибочно показывал пустой failed; итоговое conclusion=failure
+было проверено до любого merge. В чате исправление признано. Дальнейший
+опрос нормализует регистр и считает ready только completed+success.
+Приёмка/слияние по одному пустому failed не допускаются. Это ошибка отчёта,
+не исправление приложения и не разрешение ослабить CI.
+
+### BG2 — независимая SELECT-проверка закрытой отправки
+
+Владелец уточнил очередь: ждать активные старшие PR, обходить только те, по
+которым работа вообще не идёт. Сообщения соседним чатам не разрешены и не
+отправлялись. На момент проверки2001 активен и обновляет CI,2002 имеет
+непройденный infrastructure check;2003 не сливался вне очереди.
+
+Расхождение: production cutover CLI старой версии не распознаёт новые mode и
+вместо preview/hold может выполнить прежний archive. Поэтому до публикации
+BG3 использовать его для осмотра запрещено. В существующий READ ONLY аудит
+BG2 добавлена SELECT-only проверка наличия control, singleton, held,
+наличия границы и квитанции. Значения границы/квитанции не раскрываются;
+отсутствие таблицы допустимо до миграции, пустой singleton явно invalid.
+Не вызываются claim/enqueue/cutover, транзакция по-прежнему ROLLBACK.
+
+Проверка:62/62 infrastructure tests, включая отсутствие таблицы, held/active,
+пустой singleton и некорректный результат; явный JS lint с Node globals,
+workflow docs/whitespace passed. Первые вызовы общего frontend ESLint были
+неприменимы к scripts: ignore/project-service, затем неуказанные Node globals;
+исправлена только команда запуска, продуктовая конфигурация не менялась.
+Фактическая SQL-проверка нового probe на production ещё не выполнена.
+
+BG2 source87 и BG3 source13e имеют полный CI35/35success, но BG2 локально
+получил этот новый probe: прежний зелёный source не объявляется приёмкой
+новой версии. Root cause остаётся открыта до production-аудита2003;
+защита/архивация/активация на production не применялись. Дальше: очередь2003,
+доказательство причины, затем полный CI окончательного BG2.
+
+### BG2 — объединённый аудит и фактическая локальная SQL-проверка
+
+В собственную BG2-ветку включён обновлённый BG1.2/mainb2b76fcd, конфликты
+трёх принадлежащих задаче файлов разрешены с сохранением component/date/time
+проверок, SELECT-only control и всех записей журнала.63/63 infrastructure,
+явный JS lint, docs/whitespace passed. Патч producer всё ещё не вносился.
+
+Собственный остановленный PostgreSQL-контейнер запущен отдельно от shared VM.
+Реальный READ ONLY+ROLLBACK auditDeliveryControl подтвердил present/valid/held,
+без boundary/receipt. Production не подключалась, данных/claims/sender не было.
+Первый запуск Node не нашёл pg в frontend root; повтор использовал установленный
+API-драйвер через createRequire, затем SQL-проверка прошла. Общие зависимости
+и конфигурация проекта не менялись. Дальше: production proof2003 и root fix.
+
+## BG-ROOT-22023-01 —05.11.2026 — Codex / OpenAI: причина доказана
+
+BG1.2/PR2003: sourceb9a4ece2, CI42075784089 success35/35; активный2001
+дождались до завершения публикаций и plan/apply/verify. Владелец отдельно
+разрешил обходить стоящий2002; он оставался на65b4/15:22Z без нового CI.
+2003 слитf70ce717,18:12:24Z. Другие PR/ветки не изменялись, сообщения
+соседним чатам не отправлялись. Общая очередь соблюдена.
+
+Production SELECT-only audit42081994466 установил timezone_unrecognized/22023
+в full/local_time; joined_planned/preferences проходят70/70, local_date3.
+Проверены все29distinct profile-зон:1не распознаётся PostgreSQL. Queue58:
+52старых scheduled+1младше суток,3chat,2test;0staleLeases/terminalFailures.
+Runtime DB connection исправно. Это подтверждённая причина общего сбоя
+reminder_enqueue, а не ошибка соединения/timeout/cleanup/транспорта.
+Значения зон, IDs, payload/секреты не экспортировались. Аудит завершился
+failure из-за реально неисправного worker/overdue; это не объявлено green.
+
+Решение: private strict/stable timestamp-конверсия изолирует только22023,
+использует настоящий PostgreSQL parser без whitelist/подстановки Москвы.
+МATERIALIZED eligible-кандидаты сохраняют planned/deleted/preferences,
+подписки, окно09:00≤time<09:05 и дату. Нераспознанный eligible-профиль
+пропускается с явным invalidTimezoneProfiles count; остальные обрабатываются.
+Новый private prepare RPC возвращает enqueued+count; старый integer enqueue
+RPC сохранён для прежних callers/отката. API пишет только фиксированное
+событие/count, без зоны/пользователя. Неожиданные ошибки/форматы не скрываются.
+
+Миграция191 добавляется после190guard в том же защищённом выпуске; сначала
+held и fresh-only claim, только затем root fix. DOWN сохраняет защиту/исправление
+и совместимость, не возвращает аварийный общий запрос. Часовые пояса и данные
+людей не исправляются предположительно. Отвергнуты whitelist pg_timezone_names
+(теряет допустимые PostgreSQL POSIX-зоны), замена зоны, catch всех ошибок,
+исправление producer до guard, replay58 и прежний массовый cutover CLI.
+
+Read-only audit оставляет старый SELECT как доказательную legacy-пробу и отдельно
+проверяет currentReminderCandidates через единственную чистую timestamp-функцию
+при её наличии. Никакого enqueue/prepare/claim из инспектора; READ ONLY+ROLLBACK.
+Это позволяет после выпуска отличить сохранённое плохое значение от исправно
+работающего текущего producer, не замалчивая исходную неисправность данных.
+
+Проверка на этом шаге: PostgreSQL17 root+guard27/27passed: unrelated/eligible
+invalid, count по профилям при3устройствах, valid multi-device/dedupe, integer
+RPC, границы09:00/09:05/другая дата, disabled/done/deleted/no subscription,
+PostgreSQL UTC/Moscow/EST5EDT/GMT+3, rollback и ACL. Новый API command+dispatcher
+17/17passed; lint/types/build passed.64/64 infrastructure, migration safety2files,
+docs/whitespace passed. Полные API/DB-наборы ещё выполняются. Production guard,
+root migration, preserve и activation пока не применялись. Дальше: полная
+приёмка BG2, source CI, held-публикация; затем BG3 current-head CI и recovery.
+
+### BG2/root — локальный итог перед source CI
+
+Полный API check прошёл: lint/types/build,1585passed/371conditionalDBskip.
+Целевые реальные PostgreSQL root+guard27/27passed и infrastructure64/64.
+Полный локальный DB-проход остановился в неизменённом athlete-access-restore:
+10passed/5failed (4timeouts5s и последующаяserialization failure). Отдельный
+запуск без параллельной API-нагрузки дал13passed/2timeouts на других случаях
+и afterAll timeout. Значит, таймауты не устранены; причина не объявляется
+доказанной нагрузкой или исправленным flaky. Эти tests/config/таймауты не
+менялись и не выключались. Остальные последовательные DB-группы после
+первого failed не выполнялись. Новые root fixtures проходят отдельно.
+
+Source публикуется только как draft для полной PostgreSQL/CI-приёмки на Linux;
+до её успеха никакого merge/production migration/activation. Локальная среда
+не выдаётся за green полного DB-набора. Актуальный source CI и все механики
+остаются обязательным гейтом, как и сохранность истории.
+
+BG2 дополнительная совместимость: старый RPC при явном NULL p_now возвращал0.
+Новая metadata теперь сохраняет0/0 без ложного invalid-профильного count;
+обычный default now() и окно не меняются. PostgreSQL root suite15/15passed
+после этой правки; прежние13guard cases не менялись. Новая metadata не
+подменяет ошибочные значения времени/профиля догадкой. Текущий source CI
+будет заново принят после этого последнего дополнения.
+
+### BG2/a514 — CI установил отдельную гонку общей тестовой роли
+
+CI42084656890/database127447950431 подтвердил восстановление15/15,
+основную DB-группу294passed+1skip (actor173+1skip,corporate19/19,
+root15/15,guard13/13). Локальные restore timeouts не повторились на Linux;
+это свидетельство среды, не доказательство конкретной локальной причины.
+Private-группа дала52passed/1failed: pg_authid_rolname_index23505 при
+create role fit_owner в private-program-history.rosterEvidence, одновременно
+с private-program-write. Это реальная гонка shared global fixture-role,
+не ошибка producer и не допустимый зелёный результат.
+
+В test:db только эти3набора переведены из одного параллельного vitest вызова
+в3последовательных. Каждый исходный путь сохраняется ровно1раз; все53кейса,
+assertions/RLS/fixture ownership guards, собственные проверки конкуренции,
+таймауты и fail-on-flaky сохранены. Не ловим23505, не меняем роли/права
+production и не редактируем код коллег ради устранения гонки.42/42CI-contract
+checks и whitespace passed. Последовательность полагается на существующую
+очистку роли между наборами; текущий полный CI должен подтвердить это.
+
+Отдельная чистая локальная PostgreSQL-fixture запускала последовательность,
+но первый private-journal набор упёрся в прежние5s limits:14passed/8failed,
+частьпоследующих ошибок после timeout; остальные2не запускались из-за&&.
+Это не приёмка исправления гонки. Контейнер собственный, после проверки
+остановлен/удалён; shared PostgreSQL/машина не перезапускались. Полное
+подтверждение последовательных53cases остаётся CI-гейтом.
+
+Main CI42081992704/f70 завершёнfailure: прежние auth/catalog Chromium
+30s timeouts,1failed+1flaky,103passed/610conditional skips; diff frontend,
+e2e,config,packages/API между опубликованнымb2 иf70 пустой. Не названо
+исправленным или доказанным infrastructure-flaky. Текущий root CI включает
+те же сценарии полностью; перед публикацией требуется полный green source
+и новый green main. Никакой обход через admin/ослабление тестов не допускается.
+
+### BG2 — main6ddf и устранение коллизии неприменённых миграций
+
+Пока sourcec9cb проходил оставшиеся UI-группы (31completed,0failed), в main
+вошёл2008/6ddf с000190_corporate_admin_five_slots. Этот опубликованный файл
+сохранён побайтно. В собственную ветку включён6ddf, только наши ещё ни разу
+не применённые guard/root файлы перенумерованы в000191_push_recovery_fresh_guard
+и000192_push_reminder_timezone_isolation. Их SQL не менялся, два fixture-path
+обновлены. Старые190/191названия в исторических записях относятся к draft,
+не к выполненным production migrations. Forward-порядок теперь corporate190→
+held191→root192; ни guard, ни root не применены отдельно/заранее.
+
+Новая локальная приёмка: PostgreSQL guard/root28/28passed; полный API check
+1588passed/373conditionalDBskip,lint/types/build passed. В новом main менялись
+корпоративные роли/auth, поэтому прежний source CI не выдаётся за эту версию.
+Migration safety/docs/whitespace passed. Полный current-head CI обязателен.
+
+PR переводится из подготовительного draft в обычный готовый к рассмотрению PR:
+причина уже доказана, реализация закончена, полная PG-приёмка прежнего source
+подтверждена. Это техническая видимость активной работы в очереди, не разрешение
+сливать с pending/red CI. Требования green exact source/main, очередь и held→
+verified recovery неизменны; ранний draft нужен был для незавершённого root proof.
+Текущий новый source публикуется на обязательный CI, до успеха не сливается.
