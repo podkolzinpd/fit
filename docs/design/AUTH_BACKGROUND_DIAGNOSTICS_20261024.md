@@ -357,3 +357,11 @@ API lint/types/build и1575unit passed/339conditional DBskips;61workflow tests.
 Остаток: BG1.2 proof → окончательный BG2 → полный CI BG3 → read-only preview,
 сверка текущего набора → preserve → activate → проверить новые события и
 неизменность старых источников; исторические уведомления не replay.
+
+BG3 после объединения с BG2/87c097d7:61workflow tests, API lint/typecheck/build,
+1580unit passed/360conditional DBskips. CLI дополнительно сверяет фактические
+current_user=fit_owner/current_database=fit. Эти результаты не заменяют ещё
+открытый PostgreSQL CI последней версии; фактических записей/активации нет.
+05.11 владелец повторил правило очереди: ждать активные PR, обходить только
+те, по которым вообще не идёт работа; координация сообщениями в другие чаты
+не разрешена. Это не новая точка согласования выпуска наших PR.

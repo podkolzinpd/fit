@@ -189,6 +189,8 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
     const client = new Client({ ...config, connectionTimeoutMillis: 5000 })
     await client.connect()
     try {
+      const identity = await client.query<{ valid: boolean }>("select current_user='fit_owner' and current_database()='fit' as valid")
+      if (identity.rows[0]?.valid !== true) throw new Error('cloudru_push_target_rejected')
       const wrapper: DatabaseClient = { query: async <Row extends QueryResultRow>(text: string, values: readonly unknown[] = []) => (await client.query<Row>(text, [...values])).rows }
       const result = mode === 'preview'
         ? { event: 'cloudru_push_history_preview', ...await previewCloudruPushHistory(wrapper, cutoff) }
