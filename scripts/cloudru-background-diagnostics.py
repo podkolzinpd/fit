@@ -37,6 +37,12 @@ def summarize(lines):
         event = entry.get("event")
         result["workerFailed"] |= message == '"cloudru_background_failed"' or event == "cloudru_background_failed"
         result["workerCompleted"] |= event == "cloudru_background_completed"
+        if event == "cloudru_background_completed":
+            fields = ("claimed", "discarded", "failed", "remindersEnqueued", "succeeded")
+            # Report only the last complete numeric summary, never arbitrary
+            # service fields, recipient IDs, endpoints or nested payloads.
+            if all(type(entry.get(field)) is int and 0 <= entry[field] <= 9007199254740991 for field in fields):
+                result["latestCompletedPush"] = {field: entry[field] for field in fields}
         result["sessionCleanupFailed"] |= event == "yandex_session_cleanup_failed"
         code = entry.get("databaseErrorCode", entry.get("errorCode"))
         if event in ("database_pool_window", "database_pool_idle_error", "yandex_session_cleanup_failed", "cloudru_background_failed", "background_transaction_failed", "background_push_query_failed") \

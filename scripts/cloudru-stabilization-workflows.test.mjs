@@ -134,6 +134,31 @@ test('background audit is explicit manual readonly and precedes queue health exi
 })
 
 const read = name => readFileSync(new URL(`../${name}`, import.meta.url), 'utf8')
+
+test('push recovery is a manual typed exact-main operation, never a sender or arbitrary SQL route', () => {
+  const workflow = read('.github/workflows/recover-cloudru-fresh-push.yml')
+  assert.match(workflow, /on:\n  workflow_dispatch:/)
+  assert.doesNotMatch(workflow, /^  (?:push|pull_request|schedule|workflow_run):/m)
+  assert.match(workflow, /default: preview/)
+  assert.match(workflow, /options: \[preview, hold, archive_verified, activate\]/)
+  assert.match(workflow, /test "\$GITHUB_REF" = refs\/heads\/main/)
+  assert.match(workflow, /\.status == "completed" and \.conclusion == "success"/)
+  assert.match(workflow, /test "\$commit" = "\$GITHUB_SHA"/)
+  assert.match(workflow, /github_api commits\/main \| jq -er \.sha/)
+  assert.match(workflow, /test "\$\(cat \/opt\/fit\/RUNNING_SHA\)" = "\$commit"/)
+  assert.match(workflow, /RECOVER_CLOUDRU_FRESH_PUSH_ONLY/)
+  assert.match(workflow, /group: cloudru-stage-vm/)
+  assert.match(workflow, /flock --timeout 65 \/run\/lock\/fit-cloudru-background\.lock/)
+  assert.match(workflow, /0:600/)
+  assert.match(workflow, /0:700/)
+  assert.match(workflow, /node dist\/cloudru-background-cutover\.js/)
+  assert.doesNotMatch(workflow, /dist\/(?:cloudru-background-worker|push-dispatcher|cloudru-push-recovery|cloudru-recovery-push)\.js|psql|shell_command|sql_input|--publish|VAPID|start fit-background\.service/)
+  for (const body of workflow.split('run: |').slice(1)) {
+    const shell = body.split('\n').filter(line => line.startsWith('          ') || line.trim() === '').map(line => line.slice(10)).join('\n')
+    const parsed = spawnSync('bash', ['-n'], { input: shell, encoding: 'utf8' })
+    assert.equal(parsed.status, 0, parsed.stderr)
+  }
+})
 const configurations = ['configure-cloudru-ai', 'configure-cloudru-background', 'configure-cloudru-speech', 'configure-cloudru-nutrition']
 
 const historyFixtureIds = [1, 2, 3, 4, 5].map(n => `a0000000-0000-4000-8000-${String(n).padStart(12, '0')}`)
@@ -762,6 +787,23 @@ test('background journal report keeps only fixed flags and allowlisted database 
   assert.equal(report.sessionCleanupFailed, true)
   assert.deepEqual(report.databaseCodes, ['42501', 'ETIMEDOUT'])
   assert.deepEqual(report.launcherFailures, [{ stage: 'container', exitCode: 125 }])
+  assert.doesNotMatch(result.stdout, /private-/)
+})
+
+test('background journal exposes only the last complete numeric push result without recipient contents', () => {
+  const summary = { claimed: 2, discarded: 0, failed: 1, remindersEnqueued: 1, succeeded: 1 }
+  const entries = [
+    { ...summary, succeeded: 0 }, summary,
+    ...[-1, 1.5, true, 'private-value', 9007199254740992, null].map(value => ({ ...summary, claimed: value })),
+    { claimed: 2, failed: 0 },
+  ].map(entry => ({ ...entry, event: 'cloudru_background_completed', endpoint: 'private-endpoint',
+    notifications: [{ id: 'private-recipient', body: 'private-body' }], sessionCleanup: { deleted: 'private-count' } }))
+  const result = spawnSync('python3', ['scripts/cloudru-background-diagnostics.py'], {
+    input: entries.map(entry => JSON.stringify({ MESSAGE: JSON.stringify(entry) })).join('\n'), encoding: 'utf8',
+  })
+  assert.equal(result.status, 0)
+  assert.equal(JSON.parse(result.stdout).workerCompleted, true)
+  assert.deepEqual(JSON.parse(result.stdout).latestCompletedPush, summary)
   assert.doesNotMatch(result.stdout, /private-/)
 })
 

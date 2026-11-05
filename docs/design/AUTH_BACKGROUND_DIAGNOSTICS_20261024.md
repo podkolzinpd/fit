@@ -433,6 +433,150 @@ BG2 source87 и BG3 source13e имеют полный CI35/35success, но BG2 �
 API-драйвер через createRequire, затем SQL-проверка прошла. Общие зависимости
 и конфигурация проекта не менялись. Дальше: production proof2003 и root fix.
 
+## BG3 PREP —05.11.2026 — Codex / OpenAI: проверяемая история
+
+Локальная ветка поверх BG2/d3d0b736; не опубликована/не активирована.
+Не заменяет ещё открытое доказательство production-root из BG1.2.
+
+Реализовано: READ ONLY preview с UTC-сериализацией, ограничением500кандидатов,
+агрегатами kind/lease и SHA256 полного набора/содержимого внутри БД. IDs,
+payload и subscription secrets из базы в отчёт не выходят. Verified preserve
+требует выключенной доставки и того же fingerprint/cutoff, берёт owner/control
+и outbox locks в одном порядке, отказывается при lease/drift. Помечает только
+проверенное pending как discarded с точным receipt, не меняя sent/источник,
+подписки/attempts/lease. При потерянном COMMIT-ответе сверяет сохранённый
+receipt; не повторяет широкое update. Control хранит fingerprint/cutoff.
+
+Активация требует точного receipt, отсутствия старого pending/неопределённых
+leases и границы не старше5минут. После потери ответа точный повтор читает уже
+активную границу, не двигает её и не отправляет повторно. Пустая история имеет
+отдельный проверяемый empty fingerprint. Слишком старую held-границу открыть
+нельзя: нужен новый preview/preserve, включая накопленное во время hold.
+
+Manual-only workflow recover-cloudru-fresh-push: preview default, только
+archive_verified/activate, exact-green/current-main/running image/hostname,
+active timer/ready API, тот же VM concurrency/launcher flock, owner root600
+staging, bounded read-only container. Нет произвольного SQL, sender, VAPID,
+новых секретов или отправки старого. Legacy initial-cutover CLI сохранён;
+новый workflow не позволяет вызвать legacy broad archive.
+
+Health показывает deliveryHeld/quarantined/freshOverdue отдельно от общего
+pending/overdue; hold не объявляется зелёным. Только точные64hex maintenance
+receipts исключены из transport terminal failures, malformed/реальные ошибки
+сохраняются. Цель не pending=0 через сокрытие старого.
+
+Проверки промежуточной версии:19unit/PG cases до последних уточнений passed,
+API lint/types/build и1575unit passed/339conditional DBskips;61workflow tests.
+Новые activation-reply/metrics assertions требуют полного PostgreSQL CI:
+локальный Podman потерял соединение/образ pull EOF, тесты не ослаблялись.
+Применения на production/фактической активации/реальной доставки ещё нет.
+Остаток: BG1.2 proof → окончательный BG2 → полный CI BG3 → read-only preview,
+сверка текущего набора → preserve → activate → проверить новые события и
+неизменность старых источников; исторические уведомления не replay.
+
+BG3 после объединения с BG2/87c097d7:61workflow tests, API lint/typecheck/build,
+1580unit passed/360conditional DBskips. CLI дополнительно сверяет фактические
+current_user=fit_owner/current_database=fit. Эти результаты не заменяют ещё
+открытый PostgreSQL CI последней версии; фактических записей/активации нет.
+05.11 владелец повторил правило очереди: ждать активные PR, обходить только
+те, по которым вообще не идёт работа; координация сообщениями в другие чаты
+не разрешена. Это не новая точка согласования выпуска наших PR.
+
+Добавлен push-recovery-flow.integration.test.ts в обязательный test:db:
+полная цепочка актуальных миграций → default held → exact preview/preserve
+и повтор → activation → claim/finalize через fit_api только свежего события.
+Проверяет все поля старых pending после нормализации двух maintenance-полей,
+нетронутый old sent, профили/подписки и безопасный повтор активации. Отдельная
+локальная fixture создаётся только на localhost/fit_actor_test, не рабочая БД.
+Lint/types passed; сам новый сценарий ещё требует PostgreSQL CI и не объявлен
+прошедшим. Legacy broadcast sender явно запрещён contract-test нового workflow.
+
+CLI ошибок recovery теперь выводит только фиксированную allowlisted причину
+guard либо SQLSTATE, без текста PG/endpoint/пароля; exit1 и инструкция inspect
+before retry сохранены. Это позволяет отличить drift/lease/hold/stale boundary
+и не перезапускать операции вслепую после неизвестного COMMIT-исхода.
+Негативный тест unknown message/code не допускает частных значений в отчёт.
+Lint/types и9unit passed;14условных PG cases не запускались локально.
+
+Для условия «при проблеме блокировать отправку» добавлен typed hold в том же
+операторе проверяемой ревизии. Default остаётся preview; hold не ослабляет
+main/CI/owner/VM-lock guards, меняет только delivery_enabled=false и сохраняет
+receipt/boundary/неопределённые leases. Повтор идемпотентен. Если leased>0,
+пауза всё равно сохраняется, но CLI завершает job с1 для разбора неопределённой
+доставки; её receipts не сбрасываются. Новая активация проверяет leases и
+свежесть cutoff как раньше. Новый PG case проверяет неизменность outbox и
+метаданных при повторной паузе; требует полного PostgreSQL CI.
+CLI dispatch теперь явный switch: неизвестный mode не попадёт в legacy archive.
+Lint/types и61workflow tests passed; production hold не применялся.
+
+OPERATIONS дополнен порядком preview/preserve/activation/hold, границей
+fresh_after как authority вместо исходного BACKGROUND_STARTED_AT, поведением
+после неизвестного COMMIT и запретом использовать старый campaign send для
+проверки обычной очереди. Summary Configure больше не утверждает, что push
+доставляются лишь потому, что worker установлен/запущен. Runtime-настройка
+Configure не менялась.63ops/configure contract tests и docs/whitespace passed.
+
+BG3/b0f4bb5f: полный API check зелёный —1581unit passed/362conditional DBskips,
+lint/types/build; новая schema-flow проверка обязательна в test:db и запускается
+отдельно после основной группы, чтобы не конкурировать за подготовку fixtures.
+Далее готовится stacked draft/CI поверх remote BG2/87c097d7; это не выпуск и не
+разрешение объединить этапы. После BG2 merge/release base третьего PR должен
+стать main, полный текущий head пройти приёмку, и только затем возможны операции
+preview/preserve/activation. Очередь активных чужих PR сохраняется; сообщений
+в соседние чаты нет. Production-root через2003 и данные очереди ещё не менялись.
+
+BG3 создан как draft PR2006, base=remote BG2/87c097d7, head13e5d2ed.
+API job127341916288/CI42055292467 зелёный. PostgreSQL job127341916412 зелёный:
+cutover22/22, full-schema-flow1/1, guard13/13, corporate19/19,
+actor173passed+1skip; основная группа300passed+1skip, recovery7+53+10passed.
+Итого371DB-lane cases passed плюс1conditionalSkip, без изменения assertions
+или таймаутов. Это проверка кода/схемы, не факт production-активации или доставки.
+Остальные CI checks идут. Root через2003, BG2/полныйCI/очередь остаются gates;
+2006 нельзя сливать в родительскую ветку или активировать до них.
+
+Перед любым вызовом нового cutover CLI обязательна публикация именно BG3 API
+image и exact RUNNING_SHA/GITHUB_SHA guard. В старом compiled CLI переменная
+CLOUDRU_PUSH_MODE не поддерживается: попытка «preview» на старом image вызвала
+бы legacy archive. Такой production-вызов не делался и не допускается.
+Для приёмки BG2/held использовать SELECT-only audit, добавив проверку control
+в его окончательный root-fix patch; не запускать cutover CLI до BG3 release.
+Нельзя ослаблять version guard даже для hold. Это сохраняет целостность этапов.
+
+### BG3/source13e5d2ed — полный CI подтверждён
+
+CI42055292467 завершёнsuccess,35/35jobs; source13e5d2ed совпадает с PR2006.
+PostgreSQL/API результаты предыдущей записи подтверждены итогом всего CI,
+включая браузерные и visual suites; frontend/mechanics в этом PR не менялись.
+Локальные следующие коммиты содержат только квитанции и version-guard warning.
+
+Это приёмка подготовленного черновика, не публикация и не восстановленная
+доставка. BG2 всё ещё требует доказанного root fix; после его завершения
+обновить stacked BG3, перевести base на main и проверить итоговый source заново.
+Production preview/preserve/activate не запускались. Ограничение текущей
+очереди соблюдается: активные старшие PR не обходились.
+
+### BG3 — наблюдение результата после активации без private log export
+
+Владелец отдельно разрешил обходить стоящий2002; source65b4/updated15:22Z
+и завершённый red CI не менялись. Активный2001 дождались: mergedb2b76fcd.
+Наша диагностика обновлена на него и проходит новый CI42075784089; old green
+не используется как готовность нового head. Переписка с соседями не отправлялась.
+
+Расхождение проверки выпуска: прежний allowlisted journal parser показывал
+только workerCompleted, но не различал успешную/неуспешную сетевую отправку.
+Добавлен optional latestCompletedPush: только пять известных неотрицательных
+safe-integer счётчиков последнего полного completed result. Чужие поля,
+вложенные payload/IDs/endpoints и некорректные значения не выводятся; malformed
+запись не заменяет предыдущий корректный итог. Sender и worker не меняются.
+Это свидетельство backend-результата, не проверка физического уведомления.
+
+Проверка:64/64 ops/configure tests, включая неизвестные приватные поля,
+отрицательные/дробные/bool/string/null/unsafe integer и неполный summary;
+Python compile, явный JS lint и whitespace passed. Полный новый head CI ещё
+впереди после окончательного BG2; source13e green не считается его заменой.
+Production очередь/контроль/доставка пока не изменялись. Дальше: proof2003,
+root fix, held-публикацияBG2, затем обновление и полная приёмкаBG3.
+
 ## BG-ROOT-22023-01 —05.11.2026 — Codex / OpenAI: причина доказана
 
 BG1.2/PR2003: sourceb9a4ece2, CI42075784089 success35/35; активный2001
@@ -538,6 +682,33 @@ e2e,config,packages/API между опубликованнымb2 иf70 пуст
 те же сценарии полностью; перед публикацией требуется полный green source
 и новый green main. Никакой обход через admin/ослабление тестов не допускается.
 
+### BG3 — объединение с доказанным root fix и повторная локальная приёмка
+
+В own BG3 включён BG2/c9cb:191 root isolation, integer/NULL контракт,
+SELECT-only current candidate probe и последовательные private fixtures.
+Конфликт package разрешён объединением всех16унаследованных test paths:
+каждый ровно1раз, flow отдельно после основной группы, private3последовательно.
+История обоих документов сохранена полностью.110/110 ops/configure/CI-contract
+checks,docs/whitespace passed. Полный API check1590passed/386conditionalDBskip,
+lint/types/build passed. Реальный PostgreSQL полный-schema flow после всех
+191миграций1/1passed: held→preview→preserve→повтор→activate→APIclaim/finalize
+только fresh, old fields/old sent/profiles/subscriptions сохранены. Это без
+реального network sender/физического устройства, production не подключалась.
+Собственный локальный контейнер после проверки остановлен.
+
+BG2 текущий sourcec9cb/CI42087069867 ещё проверяется. Заменённыйa514 CI
+42084656890 удерживал queued always-агрегатор после штатной отмены; повторная
+штатная отмена не завершала run и блокировалаc9cb. После сверки точных
+old/new head, branch и PR выполнен force-cancel только этого собственного
+устаревшего run; результатcancelled, неgreen. Чужие CI не трогались, все
+проверки текущего source обязательны. c9cb начал создавать jobs.
+
+BG3 остаётся локально подготовленным stacked draft. После merge/публикации
+BG2 вheld обновить main/base, принять полный текущий CI и только потом
+публиковать/оперативно выполнять preview/preserve/activate. Старый compiled
+cutover CLI по-прежнему не использовать для preview/hold. Production
+root/guard/очередь пока не изменены, source/publication не подменяются тестами.
+
 ### BG2 — main6ddf и устранение коллизии неприменённых миграций
 
 Пока sourcec9cb проходил оставшиеся UI-группы (31completed,0failed), в main
@@ -560,3 +731,38 @@ PR переводится из подготовительного draft в об�
 сливать с pending/red CI. Требования green exact source/main, очередь и held→
 verified recovery неизменны; ранний draft нужен был для незавершённого root proof.
 Текущий новый source публикуется на обязательный CI, до успеха не сливается.
+
+### BG2 принят, BG3 на свежем main —05.11.2026
+
+BG2/sourcec0b26975 CI42092541086 success35/35. Текущий PostgreSQL job
+127476029657:restore15,core295+1skip,private22+13+18,Node6,финальныйDB10.
+API и все browser/visual suites зелёные.2002 оставался65b4/15:22Z без работы;
+его обход повторно явно разрешён владельцем.2004 слитfd5092c8,19:53:58Z.
+Root/guard production ещё не применялись:main CI42098268303 выполняется,
+Build Cloud.ru API42098268350 success не является публикацией.
+
+BG3 обновлён обычным merge наfd5092c8. Проверено точное равенство tree main
+принятомуc0source и наличиеc0в ancestry собственной BG3-ветки; конфликты
+разрешены только в canonical history и package. Все строки main history
+сохранены в исходном порядке, все16унаследованных DB test paths ровно1раз,
+flow отдельно и private3последовательны. Новые main/code не отброшены.
+
+Локально на актуальном полном составе: API check1593passed/387conditional
+DBskip,lint/types/build;110ops/configure/CI-contract tests; current PostgreSQL
+cutover+полный-schema flow23/23passed после всех192миграций. История/old sent/
+profiles/subscriptions неизменны, в APIclaim/finalize только fresh; реального
+сетевого sender/физического уведомления в этом тесте нет. Docs/whitespace
+passed. Собственный контейнер остановить после выполненной проверки.
+
+Уточнение технического порядка: source CI финального PR запускается после
+merge BG2 параллельно с main CI/публикацией BG2. Это подготовка проверяемого
+кода, не параллельное применение production. Ранняя формулировка «CI после
+публикации BG2» заменена только в этой части ради устранения лишнего ожидания.
+Merge/публикация BG3 и любая recovery-операция всё ещё запрещены до успешной
+held-публикации BG2 и её SELECT-only приёмки. Порядок production неизменен.
+
+BG3 переводится из подготовительного draft в готовый к рассмотрению активный
+PR: причина/реализация уже определены, следующий full current-head CI обязателен.
+Ни pending CI, ни источник старого13e, ни локальные тесты не заменяют этот гейт.
+Активация только новым typed workflow, exact current main/running image,
+свежий preview/fingerprint/lease check и verified preserve; старое не replay.
