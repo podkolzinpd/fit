@@ -7,6 +7,26 @@ type HistoryClient = {
   query(text: string, values?: readonly unknown[]): Promise<readonly Record<string, unknown>[]>
 }
 
+const failureReasons = new Set([
+  'rejected', 'cloudru_push_control_rejected', 'cloudru_push_preview_rejected',
+  'cloudru_push_cutoff_rejected', 'cloudru_push_snapshot_rejected',
+  'cloudru_push_delivery_not_held', 'cloudru_push_snapshot_changed',
+  'cloudru_push_snapshot_leased', 'cloudru_push_activation_rejected',
+  'cloudru_push_activation_changed', 'cloudru_push_boundary_stale',
+  'cloudru_push_history_not_preserved', 'cloudru_push_receipt_rejected',
+  'cloudru_push_archive_rejected', 'cloudru_push_target_rejected',
+])
+
+export function safeCutoverFailure(error: unknown) {
+  const record = typeof error === 'object' && error !== null ? error as Record<string, unknown> : {}
+  const code = typeof record.code === 'string' && /^[0-9][0-9A-Z]{4}$/.test(record.code) ? record.code : undefined
+  return {
+    reason: typeof record.message === 'string' && failureReasons.has(record.message)
+      ? record.message : code ? 'database_failure' : 'unknown',
+    ...(code ? { code } : {}),
+  }
+}
+
 async function lockDelivery(client: HistoryClient) {
   const rows = await client.query(`select delivery_enabled, fresh_after, history_fingerprint, history_cutoff
     from app_private.push_delivery_control where singleton for update`)
@@ -202,5 +222,8 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
       console.log(JSON.stringify(result))
     } finally { await client.end() }
   }
-  main().catch(() => { console.error('cloudru_push_cutover_failed'); process.exitCode = 1 })
+  main().catch((error: unknown) => {
+    console.error(JSON.stringify({ event: 'cloudru_push_cutover_failed', ...safeCutoverFailure(error), next: 'inspect_before_retry' }))
+    process.exitCode = 1
+  })
 }

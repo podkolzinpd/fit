@@ -1,10 +1,18 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { Pool, type PoolClient, type QueryResultRow } from 'pg'
-import { activateCloudruFreshPush, archiveCloudruPushHistory, archiveCloudruPushSnapshot, previewCloudruPushHistory } from './cloudru-background-cutover.js'
+import { activateCloudruFreshPush, archiveCloudruPushHistory, archiveCloudruPushSnapshot, previewCloudruPushHistory, safeCutoverFailure } from './cloudru-background-cutover.js'
 import type { DatabaseClient } from './db/types.js'
 import { inspectCloudruQueue } from './cloudru-operations-health.js'
 
 describe('Cloud.ru fresh push cutover', () => {
+  it('reports fixed safety guards and SQLSTATE without database messages or unknown codes', () => {
+    expect(safeCutoverFailure(new Error('cloudru_push_snapshot_changed'))).toEqual({ reason: 'cloudru_push_snapshot_changed' })
+    const privateMessage = 'private-subscription-endpoint-and-password'
+    expect(safeCutoverFailure({ message: privateMessage, code: '22023' })).toEqual({ reason: 'database_failure', code: '22023' })
+    const unknown = safeCutoverFailure({ message: privateMessage, code: privateMessage })
+    expect(unknown).toEqual({ reason: 'unknown' })
+    expect(JSON.stringify(unknown)).not.toContain(privateMessage)
+  })
   it('rejects an invalid snapshot capability before opening a transaction', async () => {
     const query = vi.fn()
     await expect(archiveCloudruPushSnapshot({ query }, new Date(), 'not-a-snapshot')).rejects.toThrow('cloudru_push_snapshot_rejected')

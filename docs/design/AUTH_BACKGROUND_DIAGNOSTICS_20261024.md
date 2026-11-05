@@ -374,3 +374,10 @@ current_user=fit_owner/current_database=fit. Эти результаты не з
 локальная fixture создаётся только на localhost/fit_actor_test, не рабочая БД.
 Lint/types passed; сам новый сценарий ещё требует PostgreSQL CI и не объявлен
 прошедшим. Legacy broadcast sender явно запрещён contract-test нового workflow.
+
+CLI ошибок recovery теперь выводит только фиксированную allowlisted причину
+guard либо SQLSTATE, без текста PG/endpoint/пароля; exit1 и инструкция inspect
+before retry сохранены. Это позволяет отличить drift/lease/hold/stale boundary
+и не перезапускать операции вслепую после неизвестного COMMIT-исхода.
+Негативный тест unknown message/code не допускает частных значений в отчёт.
+Lint/types и9unit passed;14условных PG cases не запускались локально.
