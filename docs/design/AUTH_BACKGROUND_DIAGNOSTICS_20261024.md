@@ -316,3 +316,34 @@ DOWN теперь явно сохраняет guard/control/boundary/receipt, н
 запрещает применение. API-откат не снимает защиту.
 Lint/types/migration safety/whitespace passed; полный CI нового head обязателен.
 Production-защита/исправление/активация ещё не применялись.
+
+### BG2/87c097d7: фактическая приёмка и нестабильный UI-check
+
+CI42034403572 PostgreSQL job127269653956 зелёный:actor173passed+1skip,
+corporate19/19,guard13/13; основная группа278passed+1skip, recovery-группы
+7+53+10passed. API job127269654278 зелёный. Конфликт retained rollback закрыт.
+
+Итог attempt1 красный только из-за e2e-yandex-auth4/4 и его агрегатора:
+trainer/reduced-false/single-group/compact, ожидалось>2scroll positions,
+получилось2; на автоматическом retry тот же код прошёл (260passed+1flaky).
+Strict fail-on-flaky сохранён. CI retry trace:86frames,3positions,
+max gap160ms, один scrollTo(behavior=smooth). Первичный frame JSON в
+артефакте не сохранился; причина потери промежуточного замера не объявляется
+доказанной. В src/e2e/Playwright-config diff с main9cb отсутствует.
+
+Локальный первый запуск без FIT_CLIENT_WORKOUT_ACCEPTANCE дал5skips;
+следующий без V79-флага проверял legacy-компоновку и дал5viewport failures,
+это невалидное сравнение с CI. С правильными флагами нового coach Live и
+проверенными YS Geo2/2 исходный сценарий5/5passed без retry. Есть Vite warning
+о legacy Onest asset за allow-list symlink, primary YS Geo проверен; локальный
+dev/WebKit не выдаётся за Linux production-mode CI. После сверки этого
+доказательства и head87 запрошен только failed-job rerun, attempt2 идёт.
+Продуктовые UI/test assertions/retries/timeouts не менялись.
+
+Исправлена собственная ошибка опроса CI: run.jobs.conclusion возвращается
+lowercase, тогда как PR.statusCheckRollup.conclusion uppercase. Старый jq
+фильтр FAILURE ошибочно показывал пустой failed; итоговое conclusion=failure
+было проверено до любого merge. В чате исправление признано. Дальнейший
+опрос нормализует регистр и считает ready только completed+success.
+Приёмка/слияние по одному пустому failed не допускаются. Это ошибка отчёта,
+не исправление приложения и не разрешение ослабить CI.
