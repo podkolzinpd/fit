@@ -150,3 +150,7 @@ viewer grant допускает отзыв; native ресурсы защищен
 Supabase заменён подтверждёнными native profile ID в закрытом secret.
 Plan/apply/verify, backup, история и RLS прежние.
 [Контракт и проверки](design/SUPABASE_DECOMMISSION_PLAN_20261023.md#sb-native-restore-01--native-restore--05112026).
+
+05.11 — SB-PILOT-MANAGER-RETIRE-01: старый dual-plane Schedule V2 pilot
+workflow удаляется; назначения и текущие Cloud.ru настройки не меняются.
+[Scope и проверки](design/SUPABASE_DECOMMISSION_PLAN_20261023.md#sb-pilot-manager-retire-01--pilot-manager--05112026).

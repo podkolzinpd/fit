@@ -689,3 +689,35 @@ reduced/roles/densities сохранены. Сопоставимого benchmark
 ESLint трёх затронутых specs, whitespace и docs проверяются перед push.
 Product/SQL/restore implementation не менялись; результаты общих checks для
 6558656b остаются применимыми к неизменённому app коду. Новый exact-head CI в PR.
+
+### SB-PILOT-MANAGER-RETIRE-01 — pilot manager — 05.11.2026
+
+Запрос: удалить старый manage-trainer-schedule-v2-pilot.yml следующим этапом
+вывода Supabase. Поток assistant-ops, baseline mainc9935ffb (PR1998 merged).
+Фактура: оператор использует Supabase Auth/CLI, пишет source RPC и старый
+Yandex migration-container endpoint; текущий Cloud.ru rollout не обслуживает.
+Удалён весь согласованный workflow, включая retired Yandex leg. Существующие
+назначения/данные/backend-команды и действующие native rollout gates сохранены.
+
+Удалены только loader и один policy case прекращённого workflow из общего
+stage-workflow test файла. Остальные native stage/OIDC/storage/trust tests
+сохраняются. Retired assertions проверяли bounded old dual-plane operation;
+заменяющего runtime контракта нет, новые тестовые cases не добавляются.
+Матрицы, retries/timeouts, coverage thresholds, CI gates и protected inventory
+не меняются. Historical inventories/SQL не переписываются, secrets не читаются
+и не удаляются. Active playbook/индексы обновлены. Remote operations/deploy нет.
+
+Параллельно проверен shared history helper: это не только email→ID mapping,
+он читает source clients/workouts для reconciliation. Поэтому его нельзя
+заменить native ID одним механическим удалением fetch. Общая идентификация
+и data comparison остаются отдельной следующей задачей; здесь их контракт не
+ослабляется. Отвергнуто молча выбросить source reconciliation вместе с lookup.
+Локальные проверки и exact-head CI фиксируются после выполнения.
+
+Локально54 оставшихся stage-workflow/OIDC/storage cases passed0.30s; docs
+budgets/links/archive, whitespace и migration safety0SQL passed. Общий check:
+lint/typecheck и341frontend files/3050tests, coverage83.64/78.6/82.94/88.33
+passed; infra433/434, единственный прежний Mac mock curl401. Полный host check
+не объявляется зелёным. Оставшиеся calendar/hosting/API1575passed/336skipped
+и оба build прошли отдельно. Product/API/SQL не меняются; отдельный local
+DB/browser прогон не добавляется. Exact-head CI после push — в PR.
