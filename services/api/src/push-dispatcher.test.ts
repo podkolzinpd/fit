@@ -59,6 +59,21 @@ beforeEach(() => {
 })
 
 describe('PushDispatcher', () => {
+  it.each(['reminder_enqueue', 'queue_claim'] as const)('identifies %s SQL failure without sending or leaking messages', async (step) => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const failure = Object.assign(new Error('private-query-and-values'), { code: '22023' })
+    commandMocks.enqueueWorkoutReminders.mockResolvedValue(0)
+    const target = step === 'reminder_enqueue' ? commandMocks.enqueueWorkoutReminders : commandMocks.claimPushNotifications
+    target.mockRejectedValue(failure)
+    const sender = { send: vi.fn() }
+    try {
+      await expect(new PushDispatcher(new TransactionPool(), sender).run()).rejects.toMatchObject({ cause: failure })
+      expect(sender.send).not.toHaveBeenCalled()
+      const reports = warn.mock.calls.map(([value]) => JSON.parse(String(value)) as Record<string, unknown>)
+      expect(reports).toContainEqual(expect.objectContaining({ event: 'background_push_query_failed', step, errorCode: '22023' }))
+      expect(JSON.stringify(reports)).not.toContain('private-query-and-values')
+    } finally { warn.mockRestore() }
+  })
   it('identifies finalization failure without resending', async () => {
     const pool = new TransactionPool()
     const cause = Object.assign(new Error('private'), { code: '42501' })
