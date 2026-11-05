@@ -119,6 +119,12 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)('reminder timezone isolation on 
     expect(await prepare()).toEqual({ enqueued: 1, invalidTimezoneProfiles: 0 })
     expect(await prepare()).toEqual({ enqueued: 0, invalidTimezoneProfiles: 0 })
   })
+  it('preserves the legacy explicit NULL clock without false invalid-profile diagnostics', async () => {
+    await person()
+    expect((await pool.query<{ result: unknown }>('select app_private.prepare_workout_reminders(null) as result')).rows[0]?.result)
+      .toEqual({ enqueued: 0, invalidTimezoneProfiles: 0 })
+    expect((await pool.query<{ count: number }>('select app_private.enqueue_workout_reminders(null) as count')).rows[0]?.count).toBe(0)
+  })
   it('grants only the two producer entry points to the API role', async () => {
     const row = (await pool.query<{ prepared: boolean; legacy: boolean; helper: boolean }>(`select
       has_function_privilege('fit_api','app_private.prepare_workout_reminders(timestamptz)','execute') as prepared,

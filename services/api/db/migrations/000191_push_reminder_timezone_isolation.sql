@@ -22,6 +22,9 @@ set search_path = ''
 as $$
 declare result jsonb;
 begin
+  -- The previous integer entry point returned zero for an explicit NULL clock.
+  -- Do not misclassify every valid profile as an invalid timezone in that case.
+  if p_now is null then return '{"enqueued":0,"invalidTimezoneProfiles":0}'::jsonb; end if;
   with candidates as materialized (
     select workout.id, workout.workout_date, workout.start_time,
       client.auth_user_id as user_id, subscription.id as subscription_id,
