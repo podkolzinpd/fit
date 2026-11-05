@@ -399,3 +399,12 @@ fresh_after как authority вместо исходного BACKGROUND_STARTED_
 проверки обычной очереди. Summary Configure больше не утверждает, что push
 доставляются лишь потому, что worker установлен/запущен. Runtime-настройка
 Configure не менялась.63ops/configure contract tests и docs/whitespace passed.
+
+BG3/b0f4bb5f: полный API check зелёный —1581unit passed/362conditional DBskips,
+lint/types/build; новая schema-flow проверка обязательна в test:db и запускается
+отдельно после основной группы, чтобы не конкурировать за подготовку fixtures.
+Далее готовится stacked draft/CI поверх remote BG2/87c097d7; это не выпуск и не
+разрешение объединить этапы. После BG2 merge/release base третьего PR должен
+стать main, полный текущий head пройти приёмку, и только затем возможны операции
+preview/preserve/activation. Очередь активных чужих PR сохраняется; сообщений
+в соседние чаты нет. Production-root через2003 и данные очереди ещё не менялись.
