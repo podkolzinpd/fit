@@ -1,0 +1,122 @@
+name: Recover Cloud.ru fresh push without history replay
+
+on:
+  workflow_dispatch:
+    inputs:
+      ci_run_id:
+        description: Successful CI for the running current main
+        required: true
+        type: string
+      mode:
+        description: Preview, preserve the verified snapshot, then activate fresh delivery
+        required: true
+        default: preview
+        type: choice
+        options: [preview, hold, archive_verified, activate]
+      cutoff:
+        description: Exact UTC cutoff from preview; blank for preview or emergency hold
+        type: string
+        default: ''
+      fingerprint:
+        description: Exact SHA256 from preview; required for preserve and activation
+        type: string
+        default: ''
+      confirmation:
+        description: RECOVER_CLOUDRU_FRESH_PUSH_ONLY never replays historical notifications
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: cloudru-stage-vm
+  cancel-in-progress: false
+
+jobs:
+  recover:
+    runs-on: [self-hosted, cloudru-stage]
+    timeout-minutes: 5
+    env:
+      RUN_ID: ${{ inputs.ci_run_id }}
+      MODE: ${{ inputs.mode }}
+      CUTOFF: ${{ inputs.cutoff }}
+      FINGERPRINT: ${{ inputs.fingerprint }}
+      CONFIRMATION: ${{ inputs.confirmation }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Verify green exact main, running revision and bounded operation
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REPOSITORY" = podkolzinpd/fit
+          test "$GITHUB_REF" = refs/heads/main
+          test "$(hostname)" = fit-stage-app
+          test "$CONFIRMATION" = RECOVER_CLOUDRU_FRESH_PUSH_ONLY
+          [[ "$RUN_ID" =~ ^[0-9]+$ ]]
+          case "$MODE" in preview|hold|archive_verified|activate) ;; *) exit 1 ;; esac
+          if [ -n "$FINGERPRINT" ]; then [[ "$FINGERPRINT" =~ ^[a-f0-9]{64}$ ]]; fi
+          if [ "$MODE" = archive_verified ] || [ "$MODE" = activate ]; then [[ "$FINGERPRINT" =~ ^[a-f0-9]{64}$ ]]; fi
+          if [ -n "$CUTOFF" ]; then
+            [[ "$CUTOFF" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\.[0-9]{3})?Z$ ]]
+          else test "$MODE" = preview || test "$MODE" = hold; fi
+          github_api() {
+            curl --fail --silent --show-error --max-time 15 \
+              --header "Authorization: Bearer $GH_TOKEN" --header 'Accept: application/vnd.github+json' \
+              "https://api.github.com/repos/$GITHUB_REPOSITORY/$1"
+          }
+          run=$(github_api "actions/runs/$RUN_ID")
+          commit=$(jq -er --arg repo "$GITHUB_REPOSITORY" 'select(.path == ".github/workflows/ci.yml" and
+            .head_repository.full_name == $repo and .head_branch == "main" and
+            (.event == "push" or .event == "workflow_dispatch") and
+            .status == "completed" and .conclusion == "success") | .head_sha' <<<"$run")
+          test "$commit" = "$GITHUB_SHA"
+          test "$commit" = "$(github_api commits/main | jq -er .sha)"
+          test "$(cat /opt/fit/RUNNING_SHA)" = "$commit"
+          test "$(sudo podman inspect fit-api-stage --format '{{.Config.Image}}')" = "localhost/fit-api:$commit"
+          curl --fail --silent --show-error http://127.0.0.1:18080/ready >/dev/null
+          sudo systemctl is-active --quiet fit-background.timer
+      - name: Inspect or apply only the verified historical snapshot
+        env:
+          CLOUDRU_DATABASE_CONFIG_JSON: ${{ secrets.CLOUDRU_STAGE_DATABASE_CONFIG_JSON }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          set +x
+          test "$(git ls-remote origin refs/heads/main | cut -f1)" = "$GITHUB_SHA"
+          test "$(cat /opt/fit/RUNNING_SHA)" = "$GITHUB_SHA"
+          expected='["DATABASE_HOST","DATABASE_NAME","DATABASE_PASSWORD","DATABASE_PORT","DATABASE_USER","MIGRATION_DATABASE_HOST","MIGRATION_DATABASE_NAME","MIGRATION_DATABASE_PASSWORD","MIGRATION_DATABASE_PORT","MIGRATION_DATABASE_USER"]'
+          jq -e --argjson expected "$expected" 'type == "object" and (keys|sort) == $expected and
+            all(.[]; type == "string" and length > 0 and (test("[\u0000-\u001f\u007f]")|not)) and
+            .MIGRATION_DATABASE_HOST == "10.70.10.67" and .MIGRATION_DATABASE_PORT == "5432" and
+            .MIGRATION_DATABASE_NAME == "fit" and .MIGRATION_DATABASE_USER == "fit_owner" and
+            .DATABASE_USER == "fit_api"' <<<"$CLOUDRU_DATABASE_CONFIG_JSON" >/dev/null
+          while IFS= read -r value; do echo "::add-mask::${value//%/%25}"; done < <(jq -r '.[]' <<<"$CLOUDRU_DATABASE_CONFIG_JSON")
+          test "$(sudo stat -c '%u:%a' /opt/fit/secrets)" = 0:700
+          sudo test ! -L /opt/fit/secrets
+          owner="/opt/fit/secrets/push-recovery-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT.env"
+          container="fit-push-recovery-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
+          sudo test ! -e "$owner"
+          sudo test ! -L "$owner"
+          if sudo podman container exists "$container"; then exit 1; fi
+          trap 'sudo podman rm --force --ignore "$container" >/dev/null; sudo rm -f -- "$owner"' EXIT
+          sudo sh -c 'umask 077; set -C; : > "$1"' _ "$owner"
+          jq -r 'to_entries[]|select(.key|startswith("MIGRATION_DATABASE_"))|"\(.key)=\(.value)"' \
+            <<<"$CLOUDRU_DATABASE_CONFIG_JSON" | sudo tee "$owner" >/dev/null
+          if [ -z "$CUTOFF" ]; then CUTOFF=$(date -u +%Y-%m-%dT%H:%M:%SZ); fi
+          printf 'MIGRATION_DATABASE_SSL_MODE=require\nCLOUDRU_PUSH_CONFIRMATION=START_CLOUDRU_FRESH_PUSH_ONLY\nCLOUDRU_PUSH_MODE=%s\nCLOUDRU_PUSH_CUTOFF=%s\nCLOUDRU_PUSH_FINGERPRINT=%s\n' \
+            "$MODE" "$CUTOFF" "$FINGERPRINT" | sudo tee -a "$owner" >/dev/null
+          test "$(sudo stat -c '%u:%a' "$owner")" = 0:600
+          sudo flock --timeout 65 /run/lock/fit-cloudru-background.lock \
+            podman run --rm --read-only --memory=128m --cpus=0.5 --pids-limit=64 --timeout=55 \
+            --name "$container" --cap-drop=ALL --security-opt=no-new-privileges \
+            --env-file "$owner" "localhost/fit-api:$GITHUB_SHA" node dist/cloudru-background-cutover.js
+          echo 'Bounded push recovery completed; no sender or historical replay invoked.' >> "$GITHUB_STEP_SUMMARY"

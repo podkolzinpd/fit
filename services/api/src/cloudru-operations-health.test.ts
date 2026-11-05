@@ -5,8 +5,8 @@ describe('Cloud.ru private queue monitoring', () => {
   it('reports only safe aggregate counts inside an explicitly read-only transaction', async () => {
     const query = vi.fn<Parameters<typeof inspectCloudruQueue>[0]['query']>().mockResolvedValue([])
     query.mockResolvedValueOnce([]).mockResolvedValueOnce([])
-      .mockResolvedValueOnce([{ pending: 2, overdue: 1, staleLeases: 0, terminalFailures: 0 }])
-    await expect(inspectCloudruQueue({ query })).resolves.toEqual({ pending: 2, overdue: 1, staleLeases: 0, terminalFailures: 0 })
+      .mockResolvedValueOnce([{ pending: 2, overdue: 1, staleLeases: 0, terminalFailures: 0, deliveryHeld: false, quarantined: 1, freshOverdue: 0 }])
+    await expect(inspectCloudruQueue({ query })).resolves.toEqual({ pending: 2, overdue: 1, staleLeases: 0, terminalFailures: 0, deliveryHeld: false, quarantined: 1, freshOverdue: 0 })
     expect(query.mock.calls[0]?.[0]).toBe('begin read only')
     expect(query.mock.calls.at(-1)?.[0]).toBe('commit')
     const sql = query.mock.calls[2]?.[0] ?? ''
