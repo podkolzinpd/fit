@@ -3,10 +3,11 @@ import {createRequire} from 'node:module'
 import {pathToFileURL} from 'node:url'
 import {readProgramPacket,inspectProgramHistory,readProgramCardCandidates} from './cloudru-program-history-inspect.mjs'
 import {reviewedProgramPackets} from './private-program-history-scopes.mjs'
-import {resolveJournalTrainer,ownerRead,validateJournalDrafts,insertReviewedJournal,
+import {ownerRead,validateJournalDrafts,insertReviewedJournal,
   verifyJournalContent,isNewCardFinanceUnchanged,preservedJournalState,verifyPreservedState,legacyProfileId,sealJournalReceipt} from './cloudru-journal-import.mjs'
 import {loadCloudruUpload,safeJournalUploadFailure} from './cloudru-journal-upload.mjs'
 import {inspectWorkoutHistoryTarget} from './cloudru-account-history-audit.mjs'
+import {resolveProgramTrainer,readProgramTrainerEvidence,programMatchNameHash} from './cloudru-program-trainer-evidence.mjs'
 import {readRetainedLoginBindings} from './cloudru-account-links-audit.mjs'
 
 const fail=code=>{throw new Error(`program_history_write_${code}`)}
@@ -83,14 +84,14 @@ async function verifyReceipt({owner,runtime,trainerId,payload,scope,readRequest,
   return {...content,previousStateVerified:true,athleteLinked:receipt.athleteId!==null}
 }
 
-export async function runProgramImport({mode,owner,runtime,target,legacyId=null,parts,approvedSha256,readRequest,
+export async function runProgramImport({mode,owner,runtime,target,legacyId=null,trainerEvidence=null,parts,approvedSha256,readRequest,
   saveCompleted,createCard,persistReceipt,selectionBinding,beginSingleApply,persistProof,readProof,
   markVerified,preparedReceiptCapability,scopes=reviewedProgramPackets}) {
   if(!['inspect','apply','verify'].includes(mode))fail('mode_invalid')
   const {payload,scope}=readProgramPacket(parts,approvedSha256,readRequest,scopes)
   if(typeof persistReceipt!=='function')fail('receipt_required')
   let trainerId
-  try {({trainerId}=await resolveJournalTrainer(owner,target,legacyId))} catch(error) {
+  try {({trainerId}=await resolveProgramTrainer(owner,target,legacyId,trainerEvidence))} catch(error) {
     // The old importer deliberately uses one identity error for two causes.
     // Diagnose them through its existing READ ONLY preflight, without choosing
     // a new identity, binding an apply selection or weakening the writer guard.
@@ -108,6 +109,7 @@ export async function runProgramImport({mode,owner,runtime,target,legacyId=null,
       targetBinding:hash([target.trainerEmailSha256,target.trainerLoginSha256,target.clientNameSha256])})
     return result
   }
+  const aliasHash=programMatchNameHash(trainerEvidence,payload)
   const requestIds=payload.workouts.map(w=>w.requestId)
   if(mode==='verify') {
     if(![readProof,markVerified].every(f=>typeof f==='function'))fail('private_proof_required')
@@ -138,7 +140,7 @@ export async function runProgramImport({mode,owner,runtime,target,legacyId=null,
   const prior=await batchRows(owner,trainerId,requestIds)
   if(prior.length)fail('verify_required')
   let inspection
-  const summary=await inspectProgramHistory({owner,runtime,target,legacyId,parts,approvedSha256,readRequest,scopes,
+  const summary=await inspectProgramHistory({owner,runtime,target,legacyId,trainerEvidence,parts,approvedSha256,readRequest,scopes,
     persistInspection:async receipt=>{inspection=receipt}})
   if(!['existing_ready','new_card_ready'].includes(summary.status))fail('source_review_required')
   const selected=inspection.selected
@@ -155,7 +157,7 @@ export async function runProgramImport({mode,owner,runtime,target,legacyId=null,
   if(![saveCompleted,createCard,beginSingleApply,persistProof,markVerified].every(f=>typeof f==='function'))fail('writer_guard_required')
   await beginSingleApply()
   const currentSelection=async connection=>{
-    const matches=relevant(await readProgramCardCandidates(connection,trainerId,payload))
+    const matches=relevant(await readProgramCardCandidates(connection,trainerId,payload,aliasHash))
     if(selected) {
       const exact=matches.filter(c=>c.exact)
       if(exact.length!==1||exact[0].id!==selected.id||exact[0].trainer_id!==selected.trainer_id
@@ -173,7 +175,7 @@ export async function runProgramImport({mode,owner,runtime,target,legacyId=null,
       workouts:payload.workouts,approvedScope:scope,readRequest,saveCompleted,
       checkSelection:async connection=>{
         await currentSelection(connection)
-        const candidates=await ownerRead(owner,()=>readProgramCardCandidates(owner,trainerId,payload))
+        const candidates=await ownerRead(owner,()=>readProgramCardCandidates(owner,trainerId,payload,aliasHash))
         if(!same(relevant(candidates),inspection.candidates))fail('selection_changed')
         if(selected)await verifyPreservedState(connection,selected.id,[],baselineRuntime)
       },
@@ -221,6 +223,7 @@ async function main() {
     ||!['inspect','apply','verify'].includes(mode))fail('source_invalid')
   const {readWorkoutHistoryTarget,readHistoryRegistry}=await import('./cloudru-account-history-audit.mjs')
   const target=readWorkoutHistoryTarget(process.env.FIT_WORKOUT_HISTORY_TARGET)
+  const trainerEvidence=readProgramTrainerEvidence(process.env.FIT_PROGRAM_TRAINER_EVIDENCE,target)
   const upload=await loadCloudruUpload(target,process.env.FIT_JOURNAL_IMPORT_SHA256,process.env.FIT_JOURNAL_UPLOAD_SESSION,{recoveryReadOnly:mode==='verify'})
   const {buildDatabaseConnectionConfig}=await import('/app/dist/db/connection-config.js')
   if(process.env.DATABASE_URL||process.env.MIGRATION_DATABASE_URL)fail('database_target_invalid')
@@ -237,7 +240,7 @@ async function main() {
   try {
     await owner.connect();await runtime.connect()
     const legacyId=await legacyProfileId(process.env,target,readHistoryRegistry)
-    const result=await runProgramImport({mode,owner,runtime,target,legacyId,parts:upload.parts,approvedSha256:process.env.FIT_JOURNAL_IMPORT_SHA256,
+    const result=await runProgramImport({mode,owner,runtime,target,legacyId,trainerEvidence,parts:upload.parts,approvedSha256:process.env.FIT_JOURNAL_IMPORT_SHA256,
       readRequest:readSavePlannedWorkoutRequest,saveCompleted:saveCompletedWorkout,createCard:createClientCard,
       persistReceipt:(state,receipt)=>upload.persistReceipt(state,receipt,sealJournalReceipt),
       selectionBinding:upload.selectionBinding,beginSingleApply:upload.beginSingleProgramApply,persistProof:upload.persistProgramProof,
@@ -247,7 +250,7 @@ async function main() {
   }finally{await Promise.allSettled([owner.end(),runtime.end()]);upload.close()}
 }
 const safeCodes=new Set(['mode_invalid','source_invalid','database_target_invalid','receipt_required','private_proof_required',
-  'identity_sources_scope_exceeded',
+  'identity_sources_scope_exceeded','alias_source_mismatch','invalid','target_mismatch','roster_changed','sources_disagree',
   'private_proof_invalid','prior_batch_changed','verify_required','source_review_required','selection_required','selection_changed',
   'writer_guard_required','finance_changed','athlete_visibility_changed','historical_notification_created','outcome_requires_readback',
   'packet_invalid','runtime_role_invalid','readonly_required','trainer_ambiguous','current_trainer_identity_required','trainer_role_invalid',
@@ -256,7 +259,7 @@ const safeCodes=new Set(['mode_invalid','source_invalid','database_target_invali
   'legacy_registry_unavailable','legacy_registry_config_missing','legacy_registry_credential_missing'])
 if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href)main().catch(error=>{
   const message=error instanceof Error?error.message:''
-  const prefix=['program_history_write_','program_history_inspect_','journal_import_'].find(value=>message.startsWith(value))
+  const prefix=['program_history_write_','program_history_inspect_','program_trainer_evidence_','journal_import_'].find(value=>message.startsWith(value))
   const code=prefix?message.slice(prefix.length):''
   console.error(JSON.stringify({event:'program_history_write_failed',code:safeCodes.has(code)?code:'failed',...safeJournalUploadFailure(error)}));process.exitCode=1
 })
