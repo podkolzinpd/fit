@@ -8,7 +8,7 @@ def summarize(lines):
     result = {"event": "cloudru_background_diagnostics", "messages": 0, "workerFailed": False,
               "workerCompleted": False, "moduleMissing": False, "containerError": False,
               "databaseCodes": [], "sessionCleanupFailed": False, "launcherFailures": [],
-              "dispatchFailures": [], "transactionFailures": []}
+              "dispatchFailures": [], "transactionFailures": [], "pushQueryFailures": []}
     codes = set()
     launcher_failures = set()
     for line in lines:
@@ -39,9 +39,13 @@ def summarize(lines):
         result["workerCompleted"] |= event == "cloudru_background_completed"
         result["sessionCleanupFailed"] |= event == "yandex_session_cleanup_failed"
         code = entry.get("databaseErrorCode", entry.get("errorCode"))
-        if event in ("database_pool_window", "database_pool_idle_error", "yandex_session_cleanup_failed", "cloudru_background_failed", "background_transaction_failed") \
+        if event in ("database_pool_window", "database_pool_idle_error", "yandex_session_cleanup_failed", "cloudru_background_failed", "background_transaction_failed", "background_push_query_failed") \
                 and isinstance(code, str) and re.fullmatch(r"(?:[0-9][0-9A-Z]{4}|ECONNREFUSED|ECONNRESET|ENETUNREACH|ENOTFOUND|EPIPE|ETIMEDOUT)", code):
             codes.add(code)
+            if event == "background_push_query_failed" and entry.get("step") in {"reminder_enqueue", "queue_claim"}:
+                failure = {"step": entry["step"], "code": code}
+                if failure not in result["pushQueryFailures"]:
+                    result["pushQueryFailures"].append(failure)
             if event == "background_transaction_failed" and entry.get("transactionPhase") in {"connect", "begin", "timeout", "work", "commit"}:
                 failure = {"phase": entry["transactionPhase"], "code": code}
                 if failure not in result["transactionFailures"]:
