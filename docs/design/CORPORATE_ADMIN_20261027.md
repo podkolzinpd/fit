@@ -1900,3 +1900,70 @@ head получает штатный synchronizeCI. Предшествующий
 новая проверка остаётся обязательной. Никаких новых productiongrant ещё нет.
 Дальше: принять актуальный sourceCI без ослаблений, дождаться очереди и выпуска;
 шестой grant и committedreadbacks6 остаются условием завершения ADM109.
+
+
+### Итерация 38 нового выпуска — 2026-11-06 — GPT / OpenAI
+
+Задача: завершить ADM107–109 — опубликовать шестой ограниченный слот и реально
+выдать одно согласованное назначение с сохранением прежних пяти.
+Расхождения: нет; прямое поручение владельца из35 заменяет только лимит5→6.
+Сделано: [PR2010](https://github.com/podkolzinpd/fit/pull/2010) штатно squash-слит
+с match-head429f0dde в mainb3dac282625743cdea0d2d59d3172945c661fc37;
+деревья source/main побайтно одинаковы. Перед слиянием фактически проверено
+свободное окно: соседние шаги verify(no_commit)/cleanup/READprepare/inspect
+завершены, перенос остановлен своим guard до записи, активных WRITE не было.
+Исходящих сообщений другим чатам не отправлялось; ожидавшийся вопрос о переписке
+не использовался как разрешение. Чужие workflows/ветки/данные не изменялись.
+
+Проверка: [полный sourceCI42110772160](https://github.com/podkolzinpd/fit/actions/runs/42110772160)
+exact429 —35/35success; [полный mainCI42116994040](https://github.com/podkolzinpd/fit/actions/runs/42116994040)
+exactb3 —34success+1штатный migration-safety skip.
+Официальные [API42120683587](https://github.com/podkolzinpd/fit/actions/runs/42120683587),
+[сайт42120683416](https://github.com/podkolzinpd/fit/actions/runs/42120683416),
+[подписанный AndroidOTA42121042698](https://github.com/podkolzinpd/fit/actions/runs/42121042698)
+успешны на том жеb3. APIbuild42116994082 не выдаётся за публикацию.
+Migration193 применена штатным API release. Оба публичных health/ready200,
+releaseIdb3; приватные clients401, DNS3/3/endpoints8/8. Все213/213 файлов реального
+сайта совпали с manifest официального артефакта по размеру/SHA256.
+RSA-подписи публичных OTAmanifest/ZIP, SHA256 и sourceb3 проверены;
+sequence1793917477742, ZIP15147008байт, ABI8922d2e9, nativeBuild9 сохранены.
+Android source build не применим по штатным pathfilters; assemble-skip не
+выдаётся за сборку. Физическое устройство и личный OAuth получателя не проверялись.
+Локальные проверки35–37 сохраняют свой scope; дополнительная собственная PG17
+проба подтвердила verified binding6→is_corporate_admin/admin bundle, обычный
+actor не пишет(42501), пять прежних строк побайтно равны. Уточнение37:
+1.61.1 — версия Playwright, локальный WebKit на macOS, не версия engine и не
+замена LinuxCI. На текущих429/b3 строгий CI прошёл без ослабления проверок.
+
+Решение: после принятой публикации только штатные administrator-операции по
+закрытым слотам. Все пять baselineinspect показалиenabled=true и4других;
+grant sixth выполнен один раз, затем отдельный committedinspect шестого и
+пять отдельных финальных committedinspect. Все операции ниже на exactb3;
+перед каждой сверены фактические main и свободная очередь общей VM.
+
+| Закрытый слот | Baseline до добавления / grant | Финальный отдельный committed inspect | enabled / bound / readyProfiles / otherEnabledAdmins |
+| --- | --- | --- | --- |
+| primary | [42121442364](https://github.com/podkolzinpd/fit/actions/runs/42121442364) | [42122757649](https://github.com/podkolzinpd/fit/actions/runs/42122757649) | true / true / 1 / 5 |
+| additional | [42121564837](https://github.com/podkolzinpd/fit/actions/runs/42121564837) | [42122876650](https://github.com/podkolzinpd/fit/actions/runs/42122876650) | true / true / 1 / 5 |
+| third | [42121733942](https://github.com/podkolzinpd/fit/actions/runs/42121733942) | [42123069189](https://github.com/podkolzinpd/fit/actions/runs/42123069189) | true / true / 1 / 5 |
+| fourth | [42121854530](https://github.com/podkolzinpd/fit/actions/runs/42121854530) | [42123205762](https://github.com/podkolzinpd/fit/actions/runs/42123205762) | true / false / 0 / 5 |
+| fifth | [42122375850](https://github.com/podkolzinpd/fit/actions/runs/42122375850) | [42123319674](https://github.com/podkolzinpd/fit/actions/runs/42123319674) | true / true / 1 / 5 |
+| sixth | grant [42122500527](https://github.com/podkolzinpd/fit/actions/runs/42122500527) | [42122635875](https://github.com/podkolzinpd/fit/actions/runs/42122635875) | true / false / 0 / 5 |
+
+Первый verified subject, прежние права/роли/пилоты/офисы/данные/native сохраняются.
+У primary/additional/third/fifth bound=true/ready1 уже в baseline; у fourth
+bound=false/ready0 до и после. Это уточняет старую квитанцию34: additional
+и часть новых администраторов с тех пор прошли настоящий первый вход;
+старое ожидание входа не означает нынешний отзыв прав. Шестойenabled=true,
+bound=false/ready0: назначение выдано, для привязки нужен обычный первый вход
+соответствующим ЯндексID; при старой сессии — выход и повторный вход.
+Контакты, digest, UUID, секреты и приватные журналы не опубликованы.
+Отвергнуто: менять старые пять ключей, прямые productionSQL/SSH, admin/bypass/
+force/deletebranch, повторять grant без проверки исхода, расширять иные допуски.
+Проверка ADM107/108 — локальные/CI35–37 и текущий source/mainCI; ADM109 —
+реальная grant-транзакция и шесть независимых финальных чтений выше.
+Открыто: личный OAuth шестого и физический телефон не заявляются проверенными;
+enabled не подменяет bound/ready. Назначение прав завершено, блокеров нет.
+Дальше: эта post-release квитанция сохраняется отдельным docs-only commit от
+реально опубликованного main; новая runtime-публикация и новый implementation
+PR ради записи не запускаются. Старые автоматизации завершены и не возобновлялись.
