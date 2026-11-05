@@ -80,6 +80,39 @@ async function cardReferences(client,ids){
  return result
 }
 
+// Recovery is not a general chat reparenting rule. Only one existing thread
+// on the proven card chain, with the proven coach and no old-account-authored
+// messages, may retain its ID/history while its same-person participant moves.
+async function readChatState(client,pair,cardIds){
+ const conversations=bound((await client.query(`select c.id,c.client_id,c.client_user_id,c.trainer_id,
+   encode(sha256(convert_to((to_jsonb(c)-'client_user_id')::text,'UTF8')),'hex') metadata_digest
+   from public.chat_conversations c where c.client_id=any($1::uuid[])
+   or c.client_user_id=any($2::uuid[]) or c.trainer_id=any($2::uuid[])
+   order by c.id limit 101`,[cardIds,[pair.legacyId,pair.currentId]])).rows,100)
+ const ids=conversations.map(c=>c.id),children={}
+ const definitions=[
+  ['chat_messages','id','public.chat_messages r','r.conversation_id'],
+  ['chat_meetings','id','public.chat_meetings r','r.conversation_id'],
+  ['chat_meeting_sessions','id','public.chat_meeting_sessions r join public.chat_meetings m on m.id=r.meeting_id','m.conversation_id'],
+  ['chat_meeting_notices','message_id','public.chat_meeting_notices r join public.chat_meetings m on m.id=r.meeting_id','m.conversation_id'],
+ ]
+ for(const [table,key,from,conversation] of definitions){
+  const stats=(await client.query(`select count(*)::int count,coalesce(sum(octet_length(to_jsonb(r)::text)),0)::bigint bytes
+    from ${from} where ${conversation}=any($1::uuid[])`,[ids])).rows[0]
+  need(stats.count<=50000&&Number(stats.bytes)<=20*1024*1024,'scope')
+  const snapshot=(await client.query(`select count(*)::int count,
+    encode(sha256(convert_to(coalesce(string_agg(to_jsonb(r)::text,E'\n' order by r.${key}),''),'UTF8')),'hex') digest,
+    coalesce(jsonb_agg(jsonb_build_object('id',r.${key},'conversationId',${conversation}) order by r.${key}),'[]'::jsonb) records
+    from ${from} where ${conversation}=any($1::uuid[])`,[ids])).rows[0]
+  children[table]={...snapshot,key}
+ }
+ const oldAuthored=(await client.query('select count(*)::int count from public.chat_messages where sender_id=$1',[pair.legacyId])).rows[0].count
+ const old=conversations.filter(c=>c.client_user_id===pair.legacyId)
+ const eligible=old.length===1&&cardIds.includes(old[0].client_id)&&old[0].trainer_id===pair.trainerId&&oldAuthored===0
+ return {conversations,children,oldAuthored,moveIds:eligible?[old[0].id]:[],oldCount:old.length,
+  currentCount:conversations.filter(c=>c.client_user_id===pair.currentId).length}
+}
+
 export async function readAthleteState(client,pair){
  need(pair&&['legacyId','currentId','trainerId'].every(k=>uuid.test(pair[k]??''))&&new Set(Object.values(pair)).size===3,'pair')
  const profiles=bound((await client.query(`select p.id,p.account_role,
@@ -126,30 +159,45 @@ export async function readAthleteState(client,pair){
    where client_id=any($1::uuid[]) group by status,deleted_at is not null order by status,deleted`,[cardIds])).rows
  const references=await profileReferences(client,[pair.legacyId,pair.currentId],cardIds)
  const cardData=await cardReferences(client,cardIds)
- return {profiles,cards,card,periods,memberships,auth,history,groups,references,cardData}
+ const chat=await readChatState(client,pair,cardIds)
+ return {profiles,cards,card,periods,memberships,auth,history,groups,references,cardData,chat}
 }
 
-function protectedState(state){
- const clean=c=>{const {auth_user_id:_owner,version:_version,updated_at:_updated,...rest}=c;return rest}
- return {...state,card:clean(state.card),cards:state.cards.map(c=>c.id===state.card.id?clean(c):c)}
+function protectedState(state,moveIds=[]){
+ const clean=c=>{const row={...c};delete row.auth_user_id;delete row.version;delete row.updated_at;return row}
+ const isChat=r=>r.schema==='public'&&r.table==='chat_conversations'
+ // Explicit full thread metadata/descendant snapshots cover the generic chat
+ // hashes below. Only the proven participant field is allowed to differ.
+ const conversations=state.chat.conversations.map(c=>{
+  if(!moveIds.includes(c.id))return c
+  const row={...c};delete row.client_user_id;return row
+ })
+ return {...state,card:clean(state.card),cards:state.cards.map(c=>c.id===state.card.id?clean(c):c),
+  references:state.references.filter(r=>!isChat(r)),cardData:state.cardData.filter(r=>!isChat(r)),
+  chat:{conversations,children:state.chat.children}}
 }
 export async function planAthleteRestore(client,pair){
  await client.query('begin transaction isolation level repeatable read read only')
  try{
   await gate(client);const state=await readAthleteState(client,pair)
   need(state.card.auth_user_id===pair.legacyId,'already_restored')
-  const uncovered=state.references.filter(r=>r.legacy>0&&!r.covered)
-  const plan={schema:1,ticket:'YAFIT-646',createdAt:Date.now(),pair,state,fingerprint:digest(state),ready:uncovered.length===0}
+  let uncovered=state.references.filter(r=>r.legacy>0&&!r.covered)
+  uncovered=uncovered.filter(r=>!(r.schema==='public'&&r.table==='chat_conversations'
+    &&state.chat.moveIds.length===r.legacy))
+  const plan={schema:2,ticket:'YAFIT-646',createdAt:Date.now(),pair,state,fingerprint:digest(state),ready:uncovered.length===0}
   await client.query('commit')
   return {...plan,report:{event:'athlete_access_plan',readOnly:true,repairReady:plan.ready,
     workouts:state.groups,protectedTables:state.references.length,
-    uncoveredOldData:uncovered.map(r=>({table:r.table,count:r.legacy})),newProfileDataPreserved:true}}
+    uncoveredOldData:uncovered.map(r=>({table:r.table,count:r.legacy})),newProfileDataPreserved:true,
+    chat:{oldConversations:state.chat.oldCount,eligibleConversations:state.chat.moveIds.length,
+      oldAuthoredMessages:state.chat.oldAuthored,currentConversations:state.chat.currentCount}}}
  }catch(e){await client.query('rollback');throw e}
 }
 
 export async function applyAthleteRestore(client,plan,{backupVerified=false}={}){
  need(backupVerified,'backup_required')
- need(plan?.schema===1&&plan.ticket==='YAFIT-646'&&plan.ready===true&&digest(plan.state)===plan.fingerprint
+ need(plan?.schema===2&&plan.ticket==='YAFIT-646'&&plan.ready===true&&digest(plan.state)===plan.fingerprint
+   &&Array.isArray(plan.state.chat?.moveIds)&&plan.state.chat.moveIds.length<=1
    &&Number.isSafeInteger(plan.createdAt)&&Date.now()-plan.createdAt>=0&&Date.now()-plan.createdAt<=3600000,'plan')
  await client.query('begin transaction isolation level serializable read write')
  try{
@@ -157,22 +205,34 @@ export async function applyAthleteRestore(client,plan,{backupVerified=false}={})
   for(const id of [plan.pair.legacyId,plan.pair.currentId].sort())await client.query("select pg_advisory_xact_lock(hashtextextended('fit-client-claim:'||$1::text,0))",[id])
   await client.query('select id from public.profiles where id=any($1::uuid[]) order by id for update',[[plan.pair.legacyId,plan.pair.currentId]])
   await client.query('select id from public.clients where id=any($1::uuid[]) order by id for update',[plan.state.cards.map(c=>c.id)])
+  const moveIds=plan.state.chat.moveIds
+  await client.query('select id from public.chat_conversations where id=any($1::uuid[]) order by id for update',[moveIds])
   const before=await readAthleteState(client,plan.pair)
   if(before.card.auth_user_id===plan.pair.currentId){
-   need(digest(protectedState(before))===digest(protectedState(plan.state)),'replay_state_changed')
+   need(moveIds.every(id=>before.chat.conversations.some(c=>c.id===id&&c.client_user_id===plan.pair.currentId)),'chat_postcondition')
+   need(digest(protectedState(before,moveIds))===digest(protectedState(plan.state,moveIds)),'replay_state_changed')
    await client.query('commit');return {event:'athlete_access_applied',replayed:true,historyUnchanged:true}
   }
   need(digest(before)===plan.fingerprint,'state_changed')
-  need(before.references.every(r=>r.legacy===0||r.covered),'old_private_data')
+  need(before.references.every(r=>r.legacy===0||r.covered||(r.schema==='public'
+    &&r.table==='chat_conversations'&&moveIds.length===r.legacy)),'old_private_data')
   const changed=(await client.query(`update public.clients set auth_user_id=$1,version=version+1
     where id=$2 and auth_user_id=$3 and version=$4 returning id`,
   [plan.pair.currentId,before.card.id,plan.pair.legacyId,before.card.version])).rows
   need(changed.length===1,'card_changed')
+  if(moveIds.length){
+   const chats=(await client.query(`update public.chat_conversations set client_user_id=$1
+     where id=any($2::uuid[]) and client_user_id=$3 and trainer_id=$4 and client_id=any($5::uuid[]) returning id`,
+   [plan.pair.currentId,moveIds,plan.pair.legacyId,plan.pair.trainerId,before.cards.map(c=>c.id)])).rows
+   need(chats.length===moveIds.length,'chat_changed')
+  }
   const after=await readAthleteState(client,plan.pair)
   need(after.card.auth_user_id===plan.pair.currentId&&BigInt(after.card.version)===BigInt(before.card.version)+1n,'card_postcondition')
-  need(digest(protectedState(after))===digest(protectedState(before)),'protected_state_changed')
+  need(moveIds.every(id=>after.chat.conversations.some(c=>c.id===id&&c.client_user_id===plan.pair.currentId)),'chat_postcondition')
+  need(digest(protectedState(after,moveIds))===digest(protectedState(before,moveIds)),'protected_state_changed')
   await client.query('commit')
-  return {event:'athlete_access_applied',replayed:false,changedCards:1,historyUnchanged:true,identityAndCurrentProfileUnchanged:true}
+  return {event:'athlete_access_applied',replayed:false,changedCards:1,restoredChatParticipants:moveIds.length,
+    historyUnchanged:true,identityAndCurrentProfileUnchanged:true}
  }catch(e){await client.query('rollback');throw e}
 }
 
@@ -195,10 +255,21 @@ export async function verifyAthleteRestore(runtime,plan,{readProfile}={}){
     const count=(await runtime.query(`select count(*)::int count from public.${table} where id=any($1::uuid[])`,[plan.state.history[table].ids])).rows[0].count
     need(count===plan.state.history[table].count,'runtime_history')
    }
+   const moveIds=plan.state.chat.moveIds
+   if(moveIds.length){
+    const threads=(await runtime.query(`select conversation_id,client_id from public.list_chat_threads()
+      where conversation_id=any($1::uuid[])`,[moveIds])).rows
+    need(threads.length===moveIds.length&&threads.every(c=>c.client_id===plan.state.card.id),'runtime_chat_threads')
+    for(const [table,child] of Object.entries(plan.state.chat.children)){
+     const ids=child.records.filter(r=>moveIds.includes(r.conversationId)).map(r=>r.id)
+     const count=(await runtime.query(`select count(*)::int count from public.${quote(table)} where ${quote(child.key)}=any($1::uuid[])`,[ids])).rows[0].count
+     need(count===ids.length,'runtime_chat')
+    }
+   }
   }
   await runtime.query('commit')
   return {event:'athlete_access_verified',readOnly:true,athleteCanReadHistory:true,trainerCanReadHistory:true,
-    preservedWorkouts:plan.state.history.workouts.count,currentLoginUnchanged:true}
+    preservedWorkouts:plan.state.history.workouts.count,restoredChats:plan.state.chat.moveIds.length,currentLoginUnchanged:true}
  }catch(e){await runtime.query('rollback');throw e}
 }
 
@@ -241,6 +312,6 @@ async function main(){
  }finally{await client.end()}
 }
 if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href){
- main().catch(e=>{const allowed=/^athlete_restore_(owner_gate|scope|catalog|pair|profile_proof|canonical|source_claimed|trainer_connection|trainer_membership|legacy_session_active|deletion_pending|empty_history|already_restored|backup_required|plan|replay_state_changed|state_changed|old_private_data|card_changed|card_postcondition|protected_state_changed|runtime_role|runtime_card|runtime_history|runtime_own_profile|profile_reader_required|registry|environment|phase|fresh_feedback_required)$/
+ main().catch(e=>{const allowed=/^athlete_restore_(owner_gate|scope|catalog|pair|profile_proof|canonical|source_claimed|trainer_connection|trainer_membership|legacy_session_active|deletion_pending|empty_history|already_restored|backup_required|plan|replay_state_changed|state_changed|old_private_data|card_changed|card_postcondition|chat_changed|chat_postcondition|protected_state_changed|runtime_role|runtime_card|runtime_history|runtime_chat|runtime_chat_threads|runtime_own_profile|profile_reader_required|registry|environment|phase|fresh_feedback_required)$/
   console.error(allowed.test(e?.message??'')?e.message:'athlete_restore_failed');process.exitCode=1})
 }
