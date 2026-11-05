@@ -68,6 +68,17 @@ export async function auditDeliveryControl(client) {
   return { present: true, valid: true, held: row.held, boundarySet: row.boundary_set, receiptSet: row.receipt_set }
 }
 
+export async function auditCurrentReminders(client) {
+  const exists = await client.query("select to_regprocedure('app_private.push_reminder_local_time(timestamp with time zone,text)') is not null as present")
+  if (exists.rows[0]?.present === false) return { available: false }
+  if (exists.rows[0]?.present !== true) throw new Error('background_audit_reminder_probe_rejected')
+  // Only the pure timestamp conversion is called. READ ONLY still prohibits
+  // writes; never invoke the producer itself from the inspector.
+  const sql = reminderCandidates.replaceAll('(now() at time zone profile.timezone)',
+    'app_private.push_reminder_local_time(now(),profile.timezone)')
+  return { available: true, ...await probe(client, sql) }
+}
+
 export async function auditBackground(client) {
   let started = false
   try {
@@ -121,9 +132,10 @@ export async function auditBackground(client) {
       await client.query('release savepoint zone_probe')
     }
     const deliveryControl = await auditDeliveryControl(client)
+    const currentReminderCandidates = await auditCurrentReminders(client)
     await client.query('rollback')
     started = false
-    return { event: 'cloudru_background_audit', groups, reminderCandidates: reminder, deliveryControl,
+    return { event: 'cloudru_background_audit', groups, reminderCandidates: reminder, deliveryControl, currentReminderCandidates,
       components, timezoneChecks: { scope: 'all_profiles', checked: zones.rows.length,
         failures: [...invalid].map(([failure, count]) => ({ ...JSON.parse(failure), count })) } }
   } finally { if (started) await client.query('rollback') }
