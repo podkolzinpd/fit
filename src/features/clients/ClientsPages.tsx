@@ -15,7 +15,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Controller, useForm, useWatch } from 'react-hook-form'
 import { useEffect, useRef, useState } from 'react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { bmiLabel, splitClientWorkouts } from '../../data/repositories/workout-rules'
 import { ClientFirstRunIntro, PresetWorkoutPicker, TodayPage, WorkoutExercisesSummary, storeFirstWorkoutIntent, workoutCountLabel, type FirstWorkoutIntent } from '../workouts'
 import type { Client, Gender } from '../../shared/domain'
@@ -131,6 +131,8 @@ export function ClientFormPage() {
 }
 
 export function MyClientEditPage() {
+  const location = useLocation()
+  const fromProfile = (location.state as { from?: unknown } | null)?.from === '/me/profile'
   const { clients: clientsRepository, progress: progressRepository, athleteSportProfile } = useDataBackend()
   const navigate = useNavigate(); const queryClient = useQueryClient()
   const { actor, refresh } = useAuth()
@@ -159,7 +161,7 @@ export function MyClientEditPage() {
         await queryClient.invalidateQueries({ queryKey: ['my-sport-profile'] })
         await queryClient.invalidateQueries({ queryKey: ['progress', query.data?.id] })
         await refresh()
-        navigate('/me')
+        navigate(fromProfile ? '/me/profile' : '/me')
       }}
       onCancel={() => navigate(query.data ? '/me/profile' : '/me')}
     />}

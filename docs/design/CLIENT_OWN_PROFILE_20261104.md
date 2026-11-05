@@ -132,6 +132,39 @@ Browser2/2 Chromium/WebKit: изменён второй из трёх этапо
 Открыто: PR2 пока локальный, sequential source/main/release после приёмкиPR1.
 Дальше: подготовить COP301–304; PR1989 newsource483aacd8 CI41888524738.
 
+## Итерация 5 — 04.11.2026 — Codex / OpenAI
+
+Задача: COP301–304, собрать остальные разделы без изменения их механики.
+Сделано: scoped стили личного спорта, тегов/bio, связи с тренером и услуг;
+существующие данные/разделы/кнопки используются без копии финансового учёта.
+Из спорта открыт прежний редактор; только from=/me/profile возвращает после
+сохранения в профиль. Другие входы сохраняют прежний возврат в кабинет.
+Приватная заметка тренера не добавляется клиенту; новые API/schema не нужны.
+Проверка:26unit в4прежних files (own edit/profile/connections/finance), types/
+production build/startup/fonts2/2 passed. Полный14browser:12passed,2новых
+сценария остановились на точном label заполненного textarea. По snapshot
+элемент существует; getByRole(textbox,accessible name) исправляет тест,
+проверка заполнения/фокуса/сохранения сохранена. Исправленный story2/2 passed:
+спорт после save/reload, возврат в профиль, фактические5из8/Оплачено/подробности,
+чат правильной пары, отмена disconnect без записи, явный disconnect1раз,
+поиск/приглашение/финансовая история после отключения доступны.
+Narrow geometry4/4 360light/375dark обоих движков: кнопки44+, без перекрытий/
+горизонтального overflow, фокус проверен. Отдельные WebKit PNG строки тренера
+обеих тем просмотрены/сохранены; fullpage после focus не выдаётся за полный
+снимок всей длинной страницы. Нативная клавиатура/телефон не подтверждены.
+В outputs подготовлен отдельный accept-own-profile-release.py (не старый1957):
+6+6/8+8/14+14 public/exactZIP для этапов1/2/3, exactsource fixtures изGit,
+запрет сетевых businesswrites, private synthetic API, publicmanifest SHA/size,
+RSA/ZIP/source/ABI, inventory ZIP, sameversion final manifest readback.
+Синтаксис harness проверен; actualproduction приёмка ещё не запускалась.
+Открыто: PR2/3 локальные до последовательной приёмкиPR1; новыйCI483 идёт.
+СтарыйнашCIade20 остановлен после проверкиidentity и сохранения всех jobs/
+четырёх диагностических логов, чужие проверки/релизы не менялись.
+Дальше: CI1989→сверка releasequeue→обычный merge/officialrelease/actualQA,
+затем ordinary actualmain merge в локальный PR2, его полный CI и выпуск;
+PR3 аналогично, без sourcepush только ради квитанций.
+
+
 
 ## Итерация 6 — 04.11.2026 — Codex / OpenAI
 
@@ -151,6 +184,45 @@ Chromium/WebKit19.7s,0retry/skips. Правила actualmain AGENTS/workflow/con
 Открыто: новый fullsourceCI после merge; actual1979 ещё проходит CI/выпуск.
 Дальше: normal push необходимого объединения и наблюдение точных новых runs,
 без duplicate dispatch и без занятия чужого production окна.
+
+## Итерация 7 — 04.11.2026 — Codex / OpenAI
+
+Сделано: source PR1989 теперь684c72aa с main1979/d7de, новый обязательный
+CI41891218478/Android41891218474 созданы автоматически. PR2 локально48728f6f,
+PR3 локальноd4582ab0 включают тот же main обычными merge; единственные
+конфликты append-only канонического журнала разрешены сохранением обеих
+сторон, runtime-конфликтов нет. Эти PR ещё не открыты/не опубликованы.
+Проверка итогового локального PR3 с main1979: production build/startup/fonts2/2
+и14/14browser Chromium/WebKit13.9s,0retry/skips. Перед новым запуском отдельного
+acceptance harness его14/14локальные results/report сохранены сSHA256/size.
+Actualproduction приёмка всех трёх этапов ещё не выполнялась.
+На последнем снимке CI684:3success,0fail,остальные pending; это не полныйgreen.
+CI483 исторический:18success0fail до замены, автоматическая отмена9jobs,
+metadata сохранены; новый source не подменяется его результатом.
+Открыто: sourceCI684, actualmain1979/выпуск предшественника и очередь.
+Отдельный запрос разрешения только на исходящую координацию текущего пакета
+с существующим ФИТ14 остаётся без ответа после automatic-review rejection.
+Повторного разрешения обычных слияний/выпусков не требуется; они утверждены.
+Дальше: точныйCI684/очередь → squash1989→actualmainCI/API/web/OTA→stage1QA;
+затем PR2 иPR3 в согласованном порядке. Эта локальная квитанция не источник
+нового sourcepush/релиза; checkpoint outputs/client-own-profile-20261104.
+Уточнение визуальной квитанции PR3: отдельные locator-PNG услуг и всего блока
+после disconnect просмотрены вWebKit;5из8/Оплачено, поиск/приглашение и
+сохранённая финансовая история видны. Для их получения story2/2 повторён
+5.9s без изменения assertions/runtime; прежний fullpage не захватывал низ
+фиксированной мобильной оболочки. Эти снимки остаются synthetic local.
+
+## Уточнение очереди — 04.11.2026
+
+На вопрос владельца «зачем что-то передавать туда?» пересмотрено собственное
+процедурное предположение: передача текущего пакета в ФИТ14 не является
+обязательным условием этой задачи. Прямые PR/CI/workflow metadata и квитанции
+позволяют сверить общую очередь без исходящих сообщений в другой чат.
+Прежний automatic-review rejection не обходится: сообщение не отправляется.
+Разрешённые реализация/обычные слияния/выпуск продолжаются здесь; новый допуск
+на публикацию не запрашивается. Дальше: диагностика actualCI684, проверка
+предшественника1979 по его фактической квитанции и официальный выпуск.
+
 
 ## Итерация 8 — 04.11.2026 — Codex / OpenAI
 
@@ -235,6 +307,7 @@ DiffPR3к35d:6files215+/6- — только sports/connections/finance compositi
 merge/release/actual-acceptance каждого этапа сохраняются.
 
 
+
 ### Локальная подготовка приёмки после freeze376
 
 Новая exactsource376 CI41910798483/Android41910798515 автоматически;
@@ -292,6 +365,7 @@ light+dark/afterdisconnect WebKit PNG просмотрены, сохранены
 PR2/PR3 ещё не pushed; after actualsquash1/2 — necessary ordinaryactualmain
 merge, fresh exactsourceCI и последовательная фактическая приёмка каждого.
 
+
 ## Итерация 15 — 05.11.2026 — Codex / OpenAI
 
 PR1/#1989 штатно squashed21:55:26Z вactualmain1ee23d54 сmatch-head5dc,
@@ -312,6 +386,94 @@ diffкactual1ee — только прежние цели/подцели/реда
 Docs/diff passed; прежние11unit/2goalbrowser и integrated14browser сохраняют
 свой scope, новый точный fullsourceCI PR2 обязателен. СоздатьdraftPR2 и егоCI
 параллельноmainCI1, но merge2 удерживать до фактической приёмки PR1.
+
+## Итерация 16 — 05.11.2026 — Codex / OpenAI
+
+ПодготовленныйPR3 включилsourcePR2/82797 иactualsquashPR1/1ee ordinarymerge.
+Только конфликтжурнала:incoming — exactappend кобщей базе, local отличается
+только вставками; сохранены все строки базы, local и incoming, совпадающая
+запись14 оставлена один раз. Runtime/owncases/API/package/lock/android
+побайтноf744; новые тесты без изменённого runtime не повторяются, последний
+integratedbuild/14browser13.3s0retry/skips остаётся локальным доказательством.
+PR2draft1990 CI41920954246/Android41920954243 запущен автоматически;егоmerge
+ждёт фактический release/6+6acceptancePR1. PR3 ещё не pushed;actualsquash2
+и новый полныйsourceCI остаются обязательными передmerge3.
+
+## Итерация 17 — 05.11.2026 — Codex / OpenAI — уточнение очереди
+
+Входящий существующий координатор сообщил: после нашей полной публикации/
+приёмки1989 следующим идёт1988, затем наши PR2/3; подготовка/CI могут идти
+параллельно. Исходящих сообщений в другие чаты не отправлялось.
+Факт проверен напрямуюGitHub:1988OPEN/head66007c5db01be26408e05fc9f3d546285c229f0c,
+baseactual1ee,CI41921211836pending; diffсодержит trainercard/assets/voiceinput/
+проверки/журнал, наши ownprofile/photo/API/migration188 не меняет. Это ещё
+не фактическийmain1988 и не квитанцияего публикации; чужие branches/runs
+и operations не изменяются. Main1989CI/API/web/OTA/6+6acceptance продолжаются.
+PR1990 остаётсяdraft:merge удержан до нашейstage1acceptance и фактической
+приёмки1988; после его реальногоsquash — necessary ordinaryactualmainmerge
+с сохранением обеих сторон и новый полный exactsourceCI. СтарыйCI82797
+останется историей; текущий run не повторяется вслепую и не отменяется
+по предположению до реальной сменыhead. PR3 ждёт actualsquashPR2.
+
+## Итерация 18 — 05.11.2026 — Codex / OpenAI — диагностика main1ee
+
+MainCI41920575270attempt1FAILURE:32SUCCESS,normalPR-onlymigration1SKIP,
+auth4job126891829877 иaggregateFAILURE. Единственный flaky —
+client-workout-reference4388/client/reduced-false/single-group/compact:
+на4462 ожидается >2разных scroll positions за1600ms,получено2.
+Retry0failed3660ms, builtinretry1passed3768ms;249otherpassed14.3m.
+Strict --fail-on-flaky-tests сохранён. Fulljoblog/timings/originalerrorcontext/
+retry1trace сохранены до повторов. Вretry1:82frames/3scrollpositions,
+одинscrollTo smooth; originalframeattachment недоступен безretry0trace,
+поэтому точная scheduling/scroll причина не доказана.
+Actualmain1ee tree побайтноsource5dc:его auth4 прошёл250/25011.4m,
+0retry/flaky;mainсостояние/Live/test/CSS не менялись послеgreen.
+Контрольный ровно одинlocal exactcaseproductionWebKit:1passed0retry,
+4.684s (total7.0s);93frames/13scrollpositions/one smoothcall,JSON сохранён.
+Решение: после завершения всей attempt1 и сохранения metadata/identity
+выполнить ровно один failed-only повтор auth4/aggregate того же1ee.
+Не менять assertions/timeouts/retries/baselines/strict-flaky/coverage/CI,
+не делать sourcepush ради повторного CI. Основная публикация пока удержана;
+результат repeat ещё не получен, успехsource/локальногоcase не заменяет его.
+
+Факт18:gh run rerun41920575270 --failed выполнен РОВНО ОДИН раз;
+attempt2 началась, новыйauth4job126903882338in_progress. Других повтора нет.
+
+## Итерация 20 — 05.11.2026 — Codex / OpenAI — actual acceptance harness
+
+Main1ee attempt2SUCCESS34jobs+1normalPR-onlymigrationSKIP;auth4job126903882338
+250passed13.7m0retry/flaky. Ровно один gh --failed request,вся перваяfailure
+сохранена. GeneralGitHubjobsAPI несколько раз вернул502:rawrun+attempt2jobs
+получены напрямую и сохранены, ихсводка содержит все35jobs без подменыданных.
+OfficialAPI41926503867/web41926503869/OTA41926875702SUCCESSexact1ee.
+Первая actualwebUI6cases упали доprofile:fixture router сравнивал /v1,
+аpublicsameoriginAPIидёт /api/v1. Publicfiles/API/RSA/ZIP proof ужеpassed,
+originalwebresults/6traces/report/proofs сохранены отдельно сSHA256/size;
+actualZIPPNG в этомнеуспешномпрогоне ещёне было.
+Исправлен только внешнийfrozenfixture adapter:stripderivedapiBasepathname
+вцентральном syntheticroute dispatcher. Originalsource иadaptedfixture
+сохранены/hashed отдельно;casefile/assertions/retries0/timeouts/guards/
+contextblocker реальныхbusinesswrites не меняются. Native/directorigin
+с пустымprefix остаётся прежним. Это неruntimefix и не новыйrelease.
+
+## Итерация 21 — 05.11.2026 — Codex / OpenAI — фактическая приёмка PR1
+
+PR1989/main1ee23d545450d7df3ffcbaa4547e298eff8cf239 опубликован и принят.
+6public+6exactsignedZIP Chromium/WebKit,0retry/flaky/skips:8.609s+3.818s.
+213/213publicfiles SHA256+size;213ZIPfiles inventory;bothAPIexact1ee/
+healthOK/ready200/auth401;RSA/sourceABI/native9/minmax9 иsameversion final
+readback passed. ABI8922d2e9fc2c9a092d10f7b6066acdc46edf0fbe7ee7a15159e02a44e7126cf9.
+Sequence1793831945141,ZIPe69be287c816faf2b555f9c6b1f6bd022ee79f1629a73ab8ad50e785d6d21aba,
+15140212bytes. Все6actualZIPPNG обеихтем/движков иsyntheticphoto просмотрены,
+скопированыstage1-accepted-png сSHA256/size. Receiptfinal-1ee...acceptance.json
+иoriginal/adaptedsourcehashes сохранены. BannerAIнедоступности существующий,
+другиефункции этимпакетомне включались. Physicalphone/realOAuth/deviceOTA
+непроверены,productionbusinesswrites0,всеbrowserAPI synthetic.
+Окно текущейпубликации освобождено для1988;нашиPR2/3merge удержаны до его
+фактическойприёмки,затем necessaryactualmainmerge+newfullsourceCI.
+Квитанция обновляется в нашемPR/checkpoint/localcanonical безsourcepush;
+исходящих сообщений в другие чаты нет. Полныйпакет3PR ещёне завершён.
+
 
 ## Итерация 19 — 05.11.2026 — Codex / OpenAI
 
@@ -360,3 +522,82 @@ finalreadback,all6actualZIPPNGviewed;receiptвPR1989. Окноосвобожде
 ноегоmerge удерживаетсядофактическойквитанции1988. PR3preparedlocalea6
 содержитcatchupfix;послеэтогоmergeбудетподнятнаактуальнуюбазу ссохранением
 обеихисторий. Ниforeignoperations/branches/CI,ниисточникиsources не менялись.
+
+## Итерация 23 — 05.11.2026 — Codex / OpenAI
+
+PreparedPR3 включилsourcePR2/dcf иactual1988/f222 ordinarymerge. Единственный
+конфликт —триimportстрокиClientsPages:сохраненыincominguseWatch/useRef для
+inline trainer note инашuseLocation дляMyClientEditprofile return. После
+разрешениявесьdiffэтогофайлакdcf —ровнопрежний6lineownreturnchange,новый
+trainerbody/voice не менялся. Журналавтоматическисохранилобестороны.
+OwnGoalcards/sharedrealtime/VoiceInput/API/package/lock/android побайтноdcf.
+Проверка:36unit/5files4.08s,build/tsc/startup/lint/docs/diff passed;16/16
+productionbrowser14.2s0retry/skips (14fullprofile+2legacytrainername/retry
+MonoLime). Подцели/criteria/editreturn/sports/services/chat/disconnect/narrow
+360/375сохранены. Толькоlocalfixtures;этоещёнеactual14+14stage3acceptance.
+PR2dcfCI41929898416/Android41929898721проверяютсяавтоматически,егоmerge
+ждётactual1988API/web/OTA+34+34receipt. PR3неpushed,ждётactualsquash2,
+ordinaryactualmainmerge иновыйполныйexactsourceCI. Исходящиечат-сообщения
+непотребовались:координаторподтвердил,чтоувиделнашуPR1989квитанцию/окно.
+
+## Итерация 24 — 05.11.2026 — Codex / OpenAI — локальная source-квитанция
+
+PR1990/headdcf28c112fcdb1a0619025b0f4e8d254c82244cd exactfullCI41929898416
+attempt1SUCCESS35/35;Android41929898721SUCCESS. Полныеfinalmetadata сохранены,
+старыйsource82797failure не скрыт. Старыйtrainer-name2errors regression
+исправленruntimecatchupscope,тесты/assertionsнеослаблялись. Sourcegreen не
+заменяет будущиеactualmainCI/публикацию/8+8приёмку. Currentdraft/mergeheld:
+1988/f222держитwindowдоегоAPI/web/OTA/34+34receipt. Проверенныйdcfнеpush
+радиквитанции;новыеproofsтолькоPR/checkpoint/localcanonical.
+
+## Итерация 25 — 05.11.2026 — Codex / OpenAI
+
+Предшественник1988/f222 фактически принят: source/mainCI и officialAPI41933585705/
+web41933585732/OTA41933890036 success;213publicfiles,обаAPIexactf222,подписи,
+34public+34exactZIPChromium/WebKit0retry/skip,PNGviewed/finalreadback.
+Квитанция6645385321проверена, окноосвобождено входящимкоординатором.
+PR1990 штатно squashed сmatch-headdcf вactualmainb4eba30ef12677f3876cb266cfc991612d589576
+23:47:55Z. Git treeactualb4=sourceDCF=ac8897450f404e889749fb2799acdeb5cd9975f7.
+Автоматические mainCI41936529587/Android41936529607 ещёpending, это не публикация.
+PR3 включилactualsquash2 ordinarymerge. Триконфликта толькоplan/cases/scopedCSS:
+incoming каждого побайтноDCF, который уже ancestorPR3; сохраненывсеowncomposition
+добавления иобеистории. SHA256proof pr3-mainb4-conflict-preservation.json.
+Итоговый runtime/e2e/API/package/lock/android diff кпроверенному276/340 пуст.
+Никаких assertions/лимитов/strict-flaky/guards не менялось. Предыдущие36unit/
+16browser0retry/skips/build/types/lint/docs остаются проверкойэтогорuntime;
+новыйsource3 fullCI обязателен. Merge3 удерживаетсядоactual8+8stage2приёмки.
+
+## Итерация 26 — 05.11.2026 — Codex / OpenAI — локальная merge-квитанция
+
+PR1990 штатно MERGED вb4eba30ef12677f3876cb266cfc991612d589576 сmatch-headDCF,
+безforce/admin/bypass/branchdelete. SourceDCF fullCI41929898416attempt1SUCCESS35/35,
+Android41929898721SUCCESS;Git treeactualb4=sourceDCF=ac8897450f404e889749fb2799acdeb5cd9975f7.
+ActualmainCI41936529587/Android41936529607 созданыавтоматически и ещёpending.
+Предшественник1988/f222 принят34+34 обоихдвижков,входящееокноосвобождено,
+квитанция6645385321проверена. Новыеsourcepush/releaseрадиproofне делаются.
+Третий draftPR1991/head163ec28d1d034c69e988b22d5e4976dc2b5f3638 подготовлен
+наactualb4, егоsourceCIидётпараллельно. Runtime/e2e побайтно276,36unit/16browser
+0retry/skips/build/type/lint/docsпроверкаприменима;newfullCIещёгейт.
+Нашаstage2публикация/8+8приёмка иsource3green обязательныдоmerge3.
+
+## Итерация 27 — 05.11.2026 — Codex / OpenAI
+
+ActualPR1990/mainb4 fullCI41936529587attempt1SUCCESS34jobs+1normalPR-only
+migrationskip;Android41936529607SUCCESS. Auth4job126946413302:251passed13.5m,
+0retry/flaky. OfficialAPI41939141890/web41939141718/OTA41939397599SUCCESSexactb4.
+Фактическаяstage2приёмка8public+8exactZIPChromium/WebKit0retry/flaky/skips:
+213publicSHA256/size+213ZIPinventory,обаAPIexactb4/ready200/auth401,RSA/sourceABI/
+native9/sequence1793837575748/ZIP6bb7b618e89e4b3a827d29082224f96429249e299cacc1d9c346ad8262c5e110
+15143449bytes/finalsameversionreadback. Все8actualZIPPNGпросмотрены/сохранены
+сhash/size вstage2-accepted-png. Триorderedподцели/даты/критерий послеизменения
+второгоэтапа/reloadсохранены. Productionbusinesswrites0;phone/OAuth/deviceOTA
+неподтверждены. Исходящиечат-сообщениянеотправлялись.
+ВизуальныйreviewвыявилwhitegoalSVGнаlightbackground. ЭтоосталосьотPR2
+и исправляетсявутверждённомфинальномCOP304/themepassPR1991:однаscoped
+lightthemebrightness(0)rule, исходныйSVG/opacity0.6/darkтема/данныепрежние.
+Новыеassertions/лимиты/retries/CIguardsнеослаблялись. Properfixturebuild/
+types/startup/docs/diffpassed;14/14ownprofileproductionChromium/WebKit12.8s,
+0retry/skips. Обаlight430PNGпросмотрены:иконкатеперьразличима. Source163
+становитсяисторическим;изменённыйheadполучитновыйполныйexactsourceCI.
+Общийпакетещёнезавершён:source3green→normalmerge→fullactualmainCI→official
+API/web/compatibleOTA→14public+14exactZIP/PNG/finalreadback остаютсяобязательными.
