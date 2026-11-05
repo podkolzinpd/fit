@@ -602,3 +602,122 @@ cloudru-client-restore mock curl (вызван реальный GitHub API,401).
 образом mock curl изолированно работает без сети в Linux; Mac-host запуск
 полного check не объявляется зелёным. SQL/product не менялись, отдельного
 локального DB/browser прогона нет. CI/Android нового PR1964 ожидаются.
+
+### SB-NATIVE-RESTORE-01 — native restore — 05.11.2026
+
+Последнее решение владельца: сохранить удобный ручной restore, отвязав его от
+Supabase. Удаление отменено; PR1996 закрыт без merge. Native-вариант подготовлен
+от main29b23913; прежний локальный эксперимент5c3c17f2 используется только для
+совпадающих пяти runtime/test файлов, свежие main/docs сохраняются.
+Поток assistant-ops; схемы/миграции и продуктовые команды не меняются.
+
+Native profiles не хранят email, retained login bindings неполные. Вместо
+недоказанного поиска по имени/email или fallback на source реестр используется
+явная подтверждённая пара native UUID в FIT_CLIENT_RESTORE_TARGETS:
+trainerProfileId/athleteProfileId. Перед будущим plan оператор обновляет только
+этот закрытый secret; прежние email-хеши fail-closed. Реальные цели/секреты и
+production данные не читались/не менялись. Автоматического восстановления нет.
+
+Удалены shared source registry import/mount, Management API/service-role и
+Auth fetch/pagination, оба Supabase env. Сохраняются owner read-only plan,
+роли, canonical/source cards, прежний disconnected period, backup, TTL,
+fingerprint, locks, idempotency, protected history и отдельный fit_api RLS
+verify. Формат приватного плана schema1 и apply/verify не меняются.
+
+Mapping тестов: старое email-registry matching заменено строгим target parsing
+(лишние/старые ключи, malformed/equal UUID); остальные unit/workflow проверки
+сохранены и добавлен native-only guard. Пять прежних DB сценариев проходят через
+новый parser, один новый case проверяет missing/swapped/unrelated profiles и
+отсутствие записей. Матрицы/browser specs и CI gates не меняются.
+Локальные проверки и exact-head CI фиксируются после выполнения. Открыто:
+обновление закрытого target перед следующим plan; другие source ops отдельно.
+Deploy/restore и изменение production secrets из этой задачи не выполняются.
+
+Локальная приёмка:42/42 DB tests (6restore+36single-trainer) на Podman
+PostgreSQL17 passed3.58s;5/5 unit/workflow tests на Linux Node22 без сети,
+read-only checkout passed. Полный check на Mac: lint/typecheck и340frontend
+files/3047tests passed, coverage83.66/78.63/82.91/88.35; infra422/423,
+единственный fail — прежний mock curl, вызывающий реальный GitHub API401.
+Linux case выше проверяет его без внешней сети; test не ослаблялся.
+Оставшиеся части check отдельно passed:calendar22/22, hosting196/196,
+API1569passed/328skipped без DB env, API lint/types/build и frontend build.
+Docs/archive integrity, whitespace и migration safety0SQL passed. Host полный
+check не объявляется зелёным. Exact-head CI/Android после push — в PR.
+
+Синхронизация/CI repair PR1998 —05.11.2026: сохранён удалённый head af70190d,
+main9cb95bc1 подлит обычным merge без конфликтов; новые shared main contracts
+не переписывались. CI42021489757 отклонён fail-on-flaky-tests: первый WebKit
+trainer display-name lime case остался на profile после tap, повтор прошёл.
+Snapshot также показывает503 у отсутствовавших photo/progress fixtures.
+
+В двух существующих mono/lime cases добавлены нейтральные photo/progress
+ответы; диагностический full-page screenshot перенесён после возврата из чата,
+чтобы не двигать mobile viewport перед tap. Добавлены явные in-viewport и
+URL assertions до прежних name/empty/error checks. Это устраняет лишние
+переходные ошибки fixture и делает этап navigation наблюдаемым; точная
+внутренняя причина потерянного WebKit tap по trace первой попытки не доказана.
+Assertions/таймауты/retries/fail-on-flaky/protected inventory не ослаблялись.
+Число committed cases прежнее2, mono/lime покрывают разные UI surfaces;
+три повтора выполнены только как локальная диагностика, не новая CI-матрица.
+Локально production build и WebKit6/6 без retries passed19.8s, cases1.6–4.1s;
+раньше неуспешная CI попытка7.27s, полноценного сопоставимого замера нет.
+Общий check и новый exact-head CI фиксируются после выполнения.
+
+После merge/repair локально: lint/typecheck и341frontend files/3050tests
+passed, coverage83.64/78.6/82.94/88.33; infra434/435, прежний Mac mock curl401.
+Тот же restore suite на Linux Node22 без сети:5/5 passed. Calendar/hosting,
+API1575passed/336skipped без DB env, API lint/types/build и frontend build
+passed отдельно. Docs/archive integrity и whitespace passed; полного зелёного
+host check не заявляем. Новый exact-head CI — в PR после push.
+
+CI repair2 —05.11.2026: в42026439686 прежний trainer-name case passed,
+но строгий flaky gate отклонил два других WebKit cases: Live single→group
+viewport geometry и nutrition trainer dark disclosure. Оба прошли на retry.
+В nutrition helper убран racy optional count(): нужный layout известен fixture,
+для Lime ожидаются summary/click/open, mono передаётся явно. Consent/read-only
+assertions сохранены. Live final geometry теперь ожидается как асинхронное
+состояние через expect.poll с прежними строгими границами;1600ms frame capture,
+число scroll calls, smooth/instant, focus/inert, history/facts checks сохранены.
+Ни tolerance, ни sleep, ни timeout/retry/gate overrides не добавлены.
+
+Локально первый Live прогон3/3 failed на неверной build-конфигурации (rollout
+флаги отсутствовали), это не выдано за продуктовую регрессию. После сборки с
+точными CI client/coach rollout flags:6 существующих cases×3повтора=18/18
+без retries passed33.1s (Live+nutrition+name). Все23 существующих Live variants
+на WebKit passed58.1s. Постоянная matrix не расширена, cases не удалены;
+reduced/roles/densities сохранены. Сопоставимого benchmark до/после нет.
+ESLint трёх затронутых specs, whitespace и docs проверяются перед push.
+Product/SQL/restore implementation не менялись; результаты общих checks для
+6558656b остаются применимыми к неизменённому app коду. Новый exact-head CI в PR.
+
+### SB-PILOT-MANAGER-RETIRE-01 — pilot manager — 05.11.2026
+
+Запрос: удалить старый manage-trainer-schedule-v2-pilot.yml следующим этапом
+вывода Supabase. Поток assistant-ops, baseline mainc9935ffb (PR1998 merged).
+Фактура: оператор использует Supabase Auth/CLI, пишет source RPC и старый
+Yandex migration-container endpoint; текущий Cloud.ru rollout не обслуживает.
+Удалён весь согласованный workflow, включая retired Yandex leg. Существующие
+назначения/данные/backend-команды и действующие native rollout gates сохранены.
+
+Удалены только loader и один policy case прекращённого workflow из общего
+stage-workflow test файла. Остальные native stage/OIDC/storage/trust tests
+сохраняются. Retired assertions проверяли bounded old dual-plane operation;
+заменяющего runtime контракта нет, новые тестовые cases не добавляются.
+Матрицы, retries/timeouts, coverage thresholds, CI gates и protected inventory
+не меняются. Historical inventories/SQL не переписываются, secrets не читаются
+и не удаляются. Active playbook/индексы обновлены. Remote operations/deploy нет.
+
+Параллельно проверен shared history helper: это не только email→ID mapping,
+он читает source clients/workouts для reconciliation. Поэтому его нельзя
+заменить native ID одним механическим удалением fetch. Общая идентификация
+и data comparison остаются отдельной следующей задачей; здесь их контракт не
+ослабляется. Отвергнуто молча выбросить source reconciliation вместе с lookup.
+Локальные проверки и exact-head CI фиксируются после выполнения.
+
+Локально54 оставшихся stage-workflow/OIDC/storage cases passed0.30s; docs
+budgets/links/archive, whitespace и migration safety0SQL passed. Общий check:
+lint/typecheck и341frontend files/3050tests, coverage83.64/78.6/82.94/88.33
+passed; infra433/434, единственный прежний Mac mock curl401. Полный host check
+не объявляется зелёным. Оставшиеся calendar/hosting/API1575passed/336skipped
+и оба build прошли отдельно. Product/API/SQL не меняются; отдельный local
+DB/browser прогон не добавляется. Exact-head CI после push — в PR.

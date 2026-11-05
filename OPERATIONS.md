@@ -2361,3 +2361,20 @@ activate the server client mode in the coordinated release. Roll back by restori
 server pilot/off and the frontend mode/kill switch with a verified rebuild; no
 user data or preferences are rolled back. Factual activation receipt and limits:
 YAFIT-693 and docs/design/CLIENT_REFERENCE_SCREENS_20261029.md.
+
+## Native-only восстановление карточки — 05.11.2026
+
+`restore-client-history.yml` не получает Supabase credentials и не читает старый
+Auth registry. `FIT_CLIENT_RESTORE_TARGETS` принимает только JSON с ключами
+`trainerProfileId` и `athleteProfileId`: разные native UUID подтверждённой пары.
+Перед следующим `plan` оператор заменяет прежний email-hash формат в этом
+закрытом secret; автоматического перевода по login/email нет. Значения не
+передаются в workflow inputs/логи/артефакты. Секрет этой правкой не менялся;
+неполная, лишняя или старая конфигурация останавливает операцию.
+
+Существующие профили/роли, canonical/source cards и прежний disconnected period
+проверяются в read-only native owner-транзакции. Сохранены snapshot/fingerprint,
+backup, TTL, блокировки, идемпотентность и отдельная `fit_api` RLS-проверка.
+Существующие приватные планы `apply/verify` совместимы; target нужен только
+новому `plan`. Запуск — только для явно согласованного восстановления;
+public linking, Yandex ID и обычные команды подключения не меняются.

@@ -80,14 +80,29 @@ Supabase Auth diagnostics и её CLI helper. Замороженный SQL-ар�
 source consumers, включая восстановление карточек, пока работают отдельно.
 Native migrations/releases и ручной Yandex parser deployment сохраняются.
 
+## Удаление старого Schedule V2 pilot manager — 05.11.2026
+
+SB-PILOT-MANAGER-RETIRE-01 удаляет ручной workflow, который находил профиль
+через Supabase Auth и менял назначение в Supabase и старом Yandex-контуре.
+Существующие назначения, текущая конфигурация Cloud.ru и backend-команды не
+меняются; новые operator credentials/inputs не вводятся. Общие source secrets
+и исторические SQL сохранены для остальных consumers. Это не запуск remote
+изменений и не изменение текущего пользовательского допуска.
+
 ## Общая методика продуктовой разработки
 
 ### Точечное восстановление подтверждённой связи — YAFIT-701
 
 `restore-client-history.yml` — ручной main-only оператор для согласованной пары,
 не публичный способ переподключения. План и журнал: [YAFIT-701](https://st.yandex-team.ru/YAFIT-701).
-`plan` только читает; два хеша подтверждённых legacy-адресов передаются закрытым
-`FIT_CLIENT_RESTORE_TARGETS`, без контактов/UUID в inputs. План и квитанции остаются
+`plan` только читает; подтверждённая пара native profile ID передаётся закрытым
+`FIT_CLIENT_RESTORE_TARGETS` с точными ключами `trainerProfileId` и
+`athleteProfileId`, без контактов/UUID в inputs. Старый формат с email-хешами
+отклоняется; перед новым `plan` оператор обновляет только этот закрытый secret
+на подтверждённые native ID. Supabase Auth/Management API и shared source
+registry helper больше не используются. `plan` проверяет существование/роли
+профилей и прежнюю связь в native БД; догадок по имени/email нет. Формат уже
+созданного приватного плана и `apply/verify` не изменён. План и квитанции остаются
 root-only в `/opt/fit/client-restores/<plan_run_id>`, без публичных артефактов.
 `apply` требует неизменного плана не старше часа, отсутствия активного тренера,
 свежей зашифрованной DB-копии и успешной проверки её восстановления. Ошибка

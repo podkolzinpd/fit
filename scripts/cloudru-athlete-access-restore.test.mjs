@@ -24,15 +24,24 @@ test('visibility verification cannot use owner or bypass-RLS credentials',async(
  assert.equal(calls.at(-1),'rollback')
  assert.equal(calls.some(s=>s.includes('set_config')),false)
 })
-test('the only business write changes one existing card; identities, sessions and histories are never rewritten',()=>{
+test('only one card and a proven same-person chat participant may change; message history and identities never change',()=>{
  const writes=[...source.matchAll(/(?:client|runtime)\.query\(`?\s*(update|insert|delete)\b([^`]*?)(?:`)/gi)]
- assert.equal(writes.length,1)
+ assert.equal(writes.length,2)
  assert.match(writes[0][0],/update public\.clients set auth_user_id=\$1,version=version\+1/)
  assert.match(writes[0][0],/auth_user_id=\$3 and version=\$4 returning id/)
+ assert.match(writes[1][0],/update public\.chat_conversations set client_user_id=\$1/)
+ assert.match(writes[1][0],/client_user_id=\$3 and trainer_id=\$4 and client_id=any\(\$5::uuid\[\]\) returning id/)
  assert.doesNotMatch(source,/(?:update|insert into|delete from)\s+(?:app_private\.(?:auth_identities|yandex_app_sessions)|public\.(?:workouts|workout_exercises|workout_sets|profiles))/i)
  assert.match(source,/begin transaction isolation level serializable read write/)
  assert.match(source,/protected_state_changed/)
  assert.match(source,/old_private_data/)
+ assert.doesNotMatch(source,/(?:update|insert into|delete from)\s+public\.chat_(?:messages|meetings|meeting_sessions|meeting_notices)/i)
+ assert.match(source,/old\.length===1/)
+ assert.match(source,/oldAuthored===0/)
+ assert.match(source,/plan\.state\.authorship\?\.legacyWorkouts===0/)
+ assert.match(source,/old_authored_workouts/)
+ assert.match(source,/metadata_digest/)
+ assert.match(source,/runtime_chat_threads/)
 })
 test('native and current profile proof are required and unknown private history prevents a ready plan',()=>{
  assert.match(source,/resolveHistoryEvidence\(client,readHistoryEvidenceSecret/)
