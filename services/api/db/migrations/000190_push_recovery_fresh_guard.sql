@@ -14,7 +14,7 @@ begin
 end;
 $$;
 
-create table app_private.push_delivery_control (
+create table if not exists app_private.push_delivery_control (
   singleton boolean primary key default true check (singleton),
   delivery_enabled boolean not null default false,
   fresh_after timestamptz,
@@ -29,7 +29,8 @@ create table app_private.push_delivery_control (
       and fresh_after <= activated_at))
 );
 revoke all on app_private.push_delivery_control from public, fit_api;
-insert into app_private.push_delivery_control(singleton) values (true);
+insert into app_private.push_delivery_control(singleton) values (true)
+on conflict (singleton) do nothing;
 
 create or replace function app_private.claim_push_notifications(
   p_limit integer default 20,
@@ -158,6 +159,9 @@ grant execute on function app_private.claim_push_notifications(integer,timestamp
 
 -- Down Migration
 
+-- Retain the protection, boundary and receipts when unrelated feature/API
+-- migrations are rolled back. Reapplying UP preserves the existing control.
+-- Never restore the historical unguarded claim or drop the control table.
 do $$ begin
-  raise exception '000190_push_recovery_guard_is_forward_only';
+  raise notice 'push_recovery_guard_retained';
 end; $$;
