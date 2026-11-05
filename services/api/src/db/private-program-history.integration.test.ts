@@ -25,7 +25,7 @@ describe.skipIf(source===undefined)('private weekly-program read-only inventory 
   })
   afterEach(()=>{for(const connection of connections.splice(0))connection.release(true)})
   afterAll(async()=>{if(pool)await pool.end();if(created)await admin.query(`drop database ${database}`);if(admin)await admin.end()})
-  async function fixture({linked=true,format='with_trainer'}={}) {
+  async function fixture({linked=true,format='with_trainer',code='F01'}={}) {
     const owner=await pool.connect(),runtime=await pool.connect();connections.push(owner,runtime)
     await runtime.query('set role fit_api')
     const coach=randomUUID(),other=randomUUID(),login=hash(`synthetic-program-${coach}`)
@@ -33,7 +33,7 @@ describe.skipIf(source===undefined)('private weekly-program read-only inventory 
     await owner.query('insert into public.trainers(profile_id) values($1),($2)',[coach,other])
     await owner.query('insert into app_private.fit_lime_pilot_allowlist(login_sha256,profile_id,enabled) values($1,$2,true)',[login,coach])
     if(linked)await owner.query("insert into app_private.auth_identities(provider,provider_subject_sha256,profile_id,identity_origin) values('yandex',$1,$2,'native')",[hash(`synthetic-subject-${coach}`),coach])
-    const name='Тестовая Спортсменка',data={schemaVersion:4,code:'F01',batchId:'program-history-20261103-f01',clientName:name,matchNames:[name,'Спортсменка Тестовая'],workouts:[{
+    const name='Тестовая Спортсменка',data={schemaVersion:4,code,batchId:`program-history-20261103-${code.toLowerCase()}`,clientName:name,matchNames:[name,'Спортсменка Тестовая'],workouts:[{
       requestId:randomUUID(),workoutDate:'2026-10-26',startTime:null,endTime:null,actualDurationSec:null,trainingFormat:format,notes:'Synthetic historical source',title:'Synthetic program',
       exercises:[{position:0,source:'system',ref:'snapshot:synthetic-program',customExerciseId:null,name:'Synthetic movement',muscleGroup:'other',inputKind:'strength',blockId:randomUUID(),blockType:'single',blockPreset:'set',blockRounds:1,restBetweenExercisesSec:0,restBetweenRoundsSec:0,restBetweenSetsSec:0,trainerComment:'Synthetic source',sets:[]}],
     }]}
@@ -41,13 +41,58 @@ describe.skipIf(source===undefined)('private weekly-program read-only inventory 
     const receipts:Record<string,unknown>[]=[]
     const options={owner,runtime,legacyId:coach,target:{trainerLoginSha256:login,trainerEmailSha256:hash(`synthetic-email-${coach}`),clientNameSha256:hash(name)},
       parts:[encoded.slice(0,split),encoded.slice(split)],approvedSha256,readRequest:readSavePlannedWorkoutRequest,
-      scopes:[{code:'F01',sha256:approvedSha256,workouts:1,exercises:1,sets:0,from:'2026-10-26',to:'2026-10-26',trainingFormat:format}],
+      scopes:[{code,sha256:approvedSha256,workouts:1,exercises:1,sets:0,from:'2026-10-26',to:'2026-10-26',trainingFormat:format}],
       persistInspection:(receipt:Record<string,unknown>)=>{receipts.push(receipt);return Promise.resolve()}}
     async function card(fullName=name,trainerId=coach,archived=false) {
       const id=randomUUID();await owner.query('insert into public.clients(id,trainer_id,full_name,archived_at) values($1,$2,$3,$4)',[id,trainerId,fullName,archived?'2026-01-01':null]);return id
     }
     return {owner,runtime,coach,other,name,options,receipts,card,data}
   }
+  async function rosterEvidence(f:Awaited<ReturnType<typeof fixture>>,self=false) {
+    const first=await f.card(),names=[f.name]
+    if(self)await f.owner.query('update public.clients set auth_user_id=$1,trainer_id=$2 where id=$3',[f.coach,f.other,first])
+    for(let i=1;i<17;i++){const name=`Synthetic roster ${f.coach} ${i}`;names.push(name);await f.card(name)}
+    await f.owner.query('delete from app_private.fit_lime_pilot_allowlist where profile_id=$1',[f.coach])
+    // Migrations run as postgres in this disposable fixture; emulate their production owner only for the readonly connection.
+    await f.owner.query("do $$ begin perform pg_advisory_xact_lock(193635,2);if not exists(select 1 from pg_roles where rolname='fit_owner') then create role fit_owner;end if;end $$;alter role fit_owner bypassrls;grant usage on schema public,app_private to fit_owner;grant select on all tables in schema public,app_private to fit_owner;grant execute on function public.is_active_client_trainer_connection(uuid,uuid) to fit_owner")
+    const target=f.options.target
+    return {first,evidence:{version:1,targetBinding:hash(JSON.stringify([target.trainerEmailSha256,target.trainerLoginSha256,target.clientNameSha256])),
+      rosterNameHashes:names.map(n=>hash(n.toLowerCase().replaceAll('ё','е')))}}
+  }
+  it('resolves the full current roster without email binding through fit_owner and independently verifies actual actor visibility',async()=>{
+    const f=await fixture(),r=await rosterEvidence(f)
+    await f.owner.query('set role fit_owner')
+    expect(await inspectProgramHistory({...f.options,legacyId:null,trainerEvidence:r.evidence})).toMatchObject({status:'existing_ready',exactCards:1,newWorkouts:1})
+    expect(f.receipts[0]).toMatchObject({trainerId:f.coach,selected:{id:r.first},identityEvidence:{method:'current_roster',matchedCards:17,sourcesAgree:true}})
+  })
+  it('recognizes the trainers own authenticated card without a second auth account or another trainer relationship',async()=>{
+    const f=await fixture({format:'self'}),r=await rosterEvidence(f,true)
+    const before=(await f.owner.query('select to_jsonb(p) value from public.profiles p order by id')).rows
+    await f.owner.query('set role fit_owner')
+    expect(await inspectProgramHistory({...f.options,legacyId:null,trainerEvidence:r.evidence})).toMatchObject({status:'existing_ready',exactCards:1})
+    expect(f.receipts[0]).toMatchObject({selected:{id:r.first,auth_user_id:f.coach,trainer_id:f.other}})
+    expect((await f.owner.query('select to_jsonb(p) value from public.profiles p order by id')).rows).toEqual(before)
+  })
+  it.each(['duplicate','archived','conflicting_binding'])('rejects %s as roster import evidence',async cause=>{
+      const f=await fixture(),r=await rosterEvidence(f)
+      if(cause==='duplicate')await f.card()
+      if(cause==='archived')await f.owner.query('update public.clients set archived_at=now() where id=$1',[r.first])
+      if(cause==='conflicting_binding')await f.owner.query('insert into app_private.fit_lime_pilot_allowlist(login_sha256,profile_id,enabled) values($1,$2,true)',[f.options.target.trainerLoginSha256,f.other])
+      await f.owner.query('set role fit_owner')
+      await expect(inspectProgramHistory({...f.options,legacyId:null,trainerEvidence:r.evidence})).rejects.toThrow(cause==='conflicting_binding'?'sources_disagree':cause==='archived'?'trainer_ambiguous':'roster_changed')
+      expect(f.receipts).toHaveLength(0)
+  })
+  it('matches a separate approved F13 spelling without editing packet aliases and still rejects multiple matching cards',async()=>{
+    const f=await fixture({code:'F13'}),r=await rosterEvidence(f),canonical=f.name.slice(0,-1)+'я'
+    await f.owner.query('update public.clients set full_name=$1 where id=$2',[canonical,r.first])
+    r.evidence.rosterNameHashes[0]=hash(canonical.toLowerCase())
+    const trainerEvidence={...r.evidence,programAlias:{code:'F13',sourceNameSha256:hash(f.name.toLowerCase()),rosterNameSha256:r.evidence.rosterNameHashes[0]}}
+    await f.owner.query('set role fit_owner')
+    expect(await inspectProgramHistory({...f.options,legacyId:null,trainerEvidence})).toMatchObject({status:'existing_ready',exactCards:1})
+    expect(f.receipts[0]).toMatchObject({selected:{id:r.first},identityEvidence:{sourceAliasVerified:true}})
+    await f.owner.query('reset role');await f.card(canonical);await f.owner.query('set role fit_owner')
+    await expect(inspectProgramHistory({...f.options,legacyId:null,trainerEvidence})).rejects.toThrow('roster_changed')
+  })
   it('finds a new card only within the verified trainer; no business writes or account changes',async()=>{
     const f=await fixture();await f.card(f.name,f.other)
     const before=(await f.owner.query('select to_jsonb(p) value from public.profiles p order by id')).rows

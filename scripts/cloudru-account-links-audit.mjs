@@ -24,6 +24,8 @@ export function readRosterTargets(value) {
   return value
 }
 
+export const normalizedRosterNameSql = nameHash
+
 // Match a supplied roster as a subset, using the same active access predicate
 // and per-trainer display aliases as the existing clients screen. Historical
 // partition keys and old note memberships alone never establish ownership.

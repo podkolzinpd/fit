@@ -57,6 +57,22 @@ describe.skipIf(source===undefined)('bounded weekly-program writes and closed-re
     return {owner,runtime,coach,other,name,options,workouts,receipts,verified,card,count,get proof(){return proof},get started(){return started}}
   }
 
+  it('uses separate live roster evidence for inspect, apply and independent verify while preserving the existing card',async()=>{
+    const f=await fixture(),id=await f.card(),names=[f.name]
+    for(let i=1;i<17;i++){const name=`Synthetic writer roster ${f.coach} ${i}`;names.push(name);await f.card(name)}
+    await f.owner.query('delete from app_private.fit_lime_pilot_allowlist where profile_id=$1',[f.coach])
+    // Migrations run as postgres in this disposable fixture; emulate their production owner only for the readonly connection.
+    await f.owner.query("do $$ begin perform pg_advisory_xact_lock(193635,2);if not exists(select 1 from pg_roles where rolname='fit_owner') then create role fit_owner;end if;end $$;alter role fit_owner bypassrls;grant usage on schema public,app_private to fit_owner;grant select on all tables in schema public,app_private to fit_owner;grant execute on function public.is_active_client_trainer_connection(uuid,uuid) to fit_owner")
+    const target=f.options.target,trainerEvidence={version:1,targetBinding:hash(JSON.stringify([target.trainerEmailSha256,target.trainerLoginSha256,target.clientNameSha256])),
+      rosterNameHashes:names.map(n=>hash(n.toLowerCase()))}
+    await f.owner.query('set role fit_owner')
+    const options={...f.options,legacyId:null,trainerEvidence}
+    expect(await runProgramImport(options)).toMatchObject({status:'ready',willCreateCard:false})
+    expect(await runProgramImport({...options,mode:'apply'})).toMatchObject({status:'imported',createdCard:false,workouts:3,contentVerified:true,previousStateVerified:true})
+    expect(f.proof).toMatchObject({clientId:id,trainerId:f.coach,createdCard:false})
+    expect(await runProgramImport({...options,mode:'verify'})).toMatchObject({status:'verified',workouts:3,readOnly:true})
+    expect(await f.count('clients')).toBe(17)
+  })
   it('creates one new card, writes all source rows and verifies the committed graph',async()=>{
     const f=await fixture();await f.card('Unrelated fixture')
     expect(await runProgramImport(f.options)).toMatchObject({status:'ready',selectionBound:true,willCreateCard:true})

@@ -620,3 +620,69 @@ bounded roster audit из trusted main. До этого тренер не най
 удаление только своего audit secret и подтверждение absence; original target,
 старый expired READ и ключ сохраняются. Дальше — проверенный результат поиска
 либо конкретное недостающее решение, а не очередной статус подготовки.
+
+
+## Итерация 10 — 05.11.2026 — Codex / OpenAI
+
+Задача: по прямому «загружай» возобновить все17 последовательных переносов.
+Предыдущий PR1982 опубликован и независимо принят на5612dbcd; единственный
+roster audit41906452727 подтвердил одну существующую trainer/Yandex учётку,
+17/17 разных текущих карточек,0 неоднозначностей. Его временный secret удалён.
+Пауза пользователя завершена только этим новым прямым решением; apply ещё0/17.
+
+Расхождение: проверка списка намеренно не выбирала actor, а старый importer
+разрешает identity только из retained email/legacy. У этой учётки такого mapping
+нет. Обходить guard, записывать binding или менять original session-bound target
+нельзя. Подготовлен отдельный bounded evidence resolver для уже доказанного
+совместного списка; прежний journal resolver и его потребители не меняются.
+
+Решение PHI-ROSTER-RESOLVER-01: отдельный private evidence принимает version1,
+17 уникальных roster signatures и binding к трём исходным target digests. Ни
+profile ID, ни SQL, ни произвольный actor не принимаются. При каждом inspect,
+apply и verify заново нужны fit_owner/REPEATABLE READ READ ONLY до app query,
+один полный текущий roster,17 разных карточек, trainer role/Yandex и согласие
+всех обнаруженных retained sources и legacy, если они существуют. Любое
+расхождение/дубль/архив/потеря текущей связи закрывает операцию. Дополнительные
+клиенты разрешены. Отсутствующий evidence сохраняет прежний resolver без fallback.
+
+Закрытая сверка исходников с присланным списком дала16 точных соответствий и
+одну букву уF13; все17 образуют взаимно однозначное соответствие. ДляF13 отдельный
+private source-name hash связан с одним hash из полного roster, дополнительно
+сверяется с SHA-approved packet name. Это evidence для выбора существующей
+карточки, исходные файлы, payload и aliases не переписываются. Другой code,
+имя источника или hash вне полного списка отклоняются; два подходящих варианта
+не выбираются. Тренерская собственная auth_user_id-карточка учитывается как self,
+без второй учётки/смены роли. Sealed inspection хранит evidence method/counts;
+stdout остаётся обезличенным. Новый optional secret передаётся только этим двум
+program workflows через прежний0600 env; prepare/cleanup его не используют.
+
+Сохранены source digests/даты/564–3933–8708,9 явных дат и фиксированная неделя
+26.10–01.11.2026. Scope, selected-card/duplicate checks, serializable writer,
+prepared proof, unknown-COMMIT verify, previous history/finance/readback guards,
+no-push и expiry/cleanup прежние. Старый expired READ не переназначается новому
+сеансу: после trusted main используется отдельный local recovery stage и
+существующий verify/no_commit, затем штатный cleanup. Локальный operator хранит
+старые runs и требует завершения/независимого verify/cleanup предыдущего кода.
+
+Проверенная runtime-версия: blob d6f29315b066b57495e0e3d8f9b94e226894d1c2.
+Локально PASS:29 targeted cases, infra414/414 иspeech7/7, root/API lint/types,
+обе сборки и startup. Реальная изолированная PG17/C/UTF8:31/31 inspection/write
+cases, включая новое evidence inspect/apply/verify, own auth card, F13 spelling,
+архив/дубли/конфликт retained. Fixtures исправлены: native ARM64 Node вместо
+эмуляции, owner-equivalent visibility/точный function grant после миграций от
+postgres; три независимых отрицательных case освобождают свои2 connections
+после каждого, вместо удержания6 при pool.max5. Assertions, таймауты, CI gates
+и production роли не ослаблены; эти fixture grants живут только в synthetic DB.
+
+Актуальная основа2d1a3588/PR1991 прочитана: полный mainCI41942846006,
+API41945411286/web41945411351/OTA41945707900 success. Опубликованная приёмка
+предшественника14public/14signedZIP и213 файлов подтверждена его PR; собственные
+публичные проверки8/8, DNS3/3 и оба точных API PASS. Его выпуск не повторяется,
+новые profile/photo/UI изменения сохраняются. Своей бизнес-записи ещё нет.
+
+Отвергнуто: email/name-only выбор, правка bindings/roles/pilots, передача actor
+или идентификаторов в input/logs, перезапись original target, ослабление финансов
+или cleanup, повтор старых отказов и blind retry COMMIT.
+Открыто: штатный reviewed PR, exact-head CI, main/release; затем private evidence
+secret, no_commit recovery исходного READ иF01..F17 строго по одному с закрытыми
+readbacks и полным cleanup. До выполнения этих стадий журналы не загружены.
