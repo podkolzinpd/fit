@@ -32,7 +32,7 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)('push recovery guard on isolated
         created_at timestamptz not null,sent_at timestamptz,discarded_at timestamptz,
         dispatch_started_at timestamptz,dispatch_token uuid,attempts integer default 0,last_error text);
       insert into public.push_subscriptions values(gen_random_uuid(),'https://push.example/fixture','public','fixture');`)
-    const parts = (await readFile(new URL('../db/migrations/000190_push_recovery_fresh_guard.sql', import.meta.url), 'utf8')).split('-- Down Migration')
+    const parts = (await readFile(new URL('../db/migrations/000191_push_recovery_fresh_guard.sql', import.meta.url), 'utf8')).split('-- Down Migration')
     migration = parts[0] ?? ''
     retainedRollback = parts[1] ?? ''
     await pool.query(`begin; ${migration} commit`)

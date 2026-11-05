@@ -133,7 +133,14 @@ export class YandexIdentityClient implements YandexIdentityProvider {
     // Preserve all other characters; a changed subject can never take over a binding.
     const analyticsLogin = identity.login.trim().toLowerCase().replace(/@yandex\.ru$/, '')
     const analyticsLoginHash = createHash('sha256').update(analyticsLogin, 'utf8').digest('hex')
-    try { await this.corporateAdminObserver?.observe(subjectHash, loginHash) } catch {
+    try {
+      // Keep legacy exact hashes valid; only the provider's own Yandex suffix
+      // has an equivalent spelling. Claimed/default emails never grant access.
+      await this.corporateAdminObserver?.observe(subjectHash, loginHash)
+      if (/^[a-z0-9._-]+@yandex\.ru$/i.test(identity.login.trim())) {
+        await this.corporateAdminObserver?.observe(subjectHash, analyticsLoginHash)
+      }
+    } catch {
       // Closed admin access must never prevent ordinary trainer/client sign-in.
     }
     try { await this.privateAnalyticsObserver?.observe(subjectHash, analyticsLoginHash) } catch {

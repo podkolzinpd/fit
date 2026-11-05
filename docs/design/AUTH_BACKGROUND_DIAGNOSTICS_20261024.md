@@ -708,3 +708,26 @@ BG2 вheld обновить main/base, принять полный текущи�
 публиковать/оперативно выполнять preview/preserve/activate. Старый compiled
 cutover CLI по-прежнему не использовать для preview/hold. Production
 root/guard/очередь пока не изменены, source/publication не подменяются тестами.
+
+### BG2 — main6ddf и устранение коллизии неприменённых миграций
+
+Пока sourcec9cb проходил оставшиеся UI-группы (31completed,0failed), в main
+вошёл2008/6ddf с000190_corporate_admin_five_slots. Этот опубликованный файл
+сохранён побайтно. В собственную ветку включён6ddf, только наши ещё ни разу
+не применённые guard/root файлы перенумерованы в000191_push_recovery_fresh_guard
+и000192_push_reminder_timezone_isolation. Их SQL не менялся, два fixture-path
+обновлены. Старые190/191названия в исторических записях относятся к draft,
+не к выполненным production migrations. Forward-порядок теперь corporate190→
+held191→root192; ни guard, ни root не применены отдельно/заранее.
+
+Новая локальная приёмка: PostgreSQL guard/root28/28passed; полный API check
+1588passed/373conditionalDBskip,lint/types/build passed. В новом main менялись
+корпоративные роли/auth, поэтому прежний source CI не выдаётся за эту версию.
+Migration safety/docs/whitespace passed. Полный current-head CI обязателен.
+
+PR переводится из подготовительного draft в обычный готовый к рассмотрению PR:
+причина уже доказана, реализация закончена, полная PG-приёмка прежнего source
+подтверждена. Это техническая видимость активной работы в очереди, не разрешение
+сливать с pending/red CI. Требования green exact source/main, очередь и held→
+verified recovery неизменны; ранний draft нужен был для незавершённого root proof.
+Текущий новый source публикуется на обязательный CI, до успеха не сливается.

@@ -30,7 +30,7 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)('reminder timezone isolation on 
       create table public.notification_preferences(user_id uuid,kind text,enabled boolean,unique(user_id,kind));
       create table app_private.push_notifications_outbox(id uuid default gen_random_uuid(),kind text,user_id uuid,title text,body text,data jsonb,subscription_id uuid,
         unique(kind,user_id,data,subscription_id));`)
-    const sql = (await readFile(new URL('../db/migrations/000191_push_reminder_timezone_isolation.sql', import.meta.url), 'utf8')).split('-- Down Migration')[0]
+    const sql = (await readFile(new URL('../db/migrations/000192_push_reminder_timezone_isolation.sql', import.meta.url), 'utf8')).split('-- Down Migration')[0]
     await pool.query(`begin; ${sql} commit`)
   })
   afterAll(async () => {
