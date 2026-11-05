@@ -137,7 +137,9 @@ export class YandexIdentityClient implements YandexIdentityProvider {
       // Keep legacy exact hashes valid; only the provider's own Yandex suffix
       // has an equivalent spelling. Claimed/default emails never grant access.
       await this.corporateAdminObserver?.observe(subjectHash, loginHash)
-      if (analyticsLoginHash !== loginHash) await this.corporateAdminObserver?.observe(subjectHash, analyticsLoginHash)
+      if (/^[a-z0-9._-]+@yandex\.ru$/i.test(identity.login.trim())) {
+        await this.corporateAdminObserver?.observe(subjectHash, analyticsLoginHash)
+      }
     } catch {
       // Closed admin access must never prevent ordinary trainer/client sign-in.
     }

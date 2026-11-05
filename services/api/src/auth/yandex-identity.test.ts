@@ -164,6 +164,14 @@ describe('closed corporate admin login observer', () => {
     const identity=await client.verifyAccessToken('synthetic-token')
     expect(observe).toHaveBeenCalledExactlyOnceWith(identity.subjectHash,createHash('sha256').update('synthetic-admin@example.test').digest('hex'))
   })
+  it('never removes a suffix from a nested address to grant an external-domain alias', async () => {
+    const observe=vi.fn().mockResolvedValue(undefined)
+    const login='synthetic-admin@example.test@yandex.ru'
+    const client=new YandexIdentityClient({expectedClientId:CLIENT_ID,corporateAdminObserver:{observe},
+      fetchImplementation:vi.fn<typeof fetch>().mockResolvedValue(jsonResponse({id:'synthetic',psuid:'synthetic-subject',client_id:CLIENT_ID,login}))})
+    const identity=await client.verifyAccessToken('synthetic-token')
+    expect(observe).toHaveBeenCalledExactlyOnceWith(identity.subjectHash,createHash('sha256').update(login).digest('hex'))
+  })
   it('receives only provider-verified subject and exact login hashes, never a claimed email', async () => {
     const observe=vi.fn().mockResolvedValue(undefined)
     const client=new YandexIdentityClient({expectedClientId:CLIENT_ID,corporateAdminObserver:{observe},
