@@ -602,3 +602,40 @@ cloudru-client-restore mock curl (вызван реальный GitHub API,401).
 образом mock curl изолированно работает без сети в Linux; Mac-host запуск
 полного check не объявляется зелёным. SQL/product не менялись, отдельного
 локального DB/browser прогона нет. CI/Android нового PR1964 ожидаются.
+
+### SB-RESTORE-RETIRE-01 — restore retirement — 05.11.2026
+
+Задача владельца: удалить разовый restore-инструмент целиком вместо перевода
+его Supabase registry на native ID. Поток assistant-ops, baseline main1d6bd9bb.
+Прежнее предложение сохранить оператор отменено прямым решением владельца.
+Неотправленный native-эксперимент сохранён только локально в5c3c17f2;
+ни его формат secret, ни новый runtime не попадают в этот PR.
+
+Удалены restore-client-history workflow, cloudru-client-restore CLI/types,
+пять unit/workflow cases и пять DB cases только прекращённого оператора.
+Убраны npm infra/test:db callers и TypeScript include. Общий source audit helper
+с другими consumers не удаляется. SQL/migrations/data и пользовательские
+команды подключения/смены тренера не меняются. Сохранены single-trainer,
+actor-context и прочие действующие API/DB проверки; уникальные assertions
+разового plan/apply/verify удаляются только вместе с самим контрактом.
+Новых тестовых случаев/матриц нет; CI gates, retries/timeouts, coverage thresholds
+и protected inventory неизменны. Не используем удаление для обхода сбоя
+Mac mock curl: Linux case раньше проходил, прекращён сам согласованный workflow.
+
+Отвергнуты native-перенос и сохранение выключенного оператора: разовый инструмент
+не нужен для обычной работы, новые конфигурация/поддержка избыточны. Обновлены
+playbook/индекс. FIT_CLIENT_RESTORE_TARGETS больше не имеет caller; удалённые
+секреты, приватные планы/квитанции и существующие периоды/карточки/история не
+читаются/не меняются. Backup и восстановление всей БД не затрагиваются.
+Проверки/CI фиксируются после выполнения; merge/deploy не выполняются.
+
+Итог локально: полный npm run check passed —340frontend files/3047tests,
+coverage83.66/78.63/82.89/88.35 при прежних thresholds; API1569passed/322skipped
+без DB env, lint/typecheck/infra/calendar/hosting/build passed. Дополнительно
+существующий single-trainer DB/RLS набор на локальном Podman PostgreSQL17:
+36/36 passed3.04s (ordinary connection/change/access; без restore оператора).
+Docs budgets/links/archive integrity, whitespace и migration safety0SQL passed.
+Поиск в .github/scripts/services/package/tsconfig не находит retired callers.
+Browser specs/матрицы не менялись, отдельный локальный browser прогон не нужен
+для удаления operator-only кода; full browser CI — в PR. Remote restore,
+production и secrets не запускались/не менялись; точный CI после push.
