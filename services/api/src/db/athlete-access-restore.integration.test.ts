@@ -211,4 +211,13 @@ describe.skipIf(source===undefined)('proven athlete card access preserves both p
   await owner.query('update public.clients set auth_user_id=$1 where id=$2',[g.currentId,g.card])
   await expect(apply(p)).rejects.toThrow('chat_postcondition')
  })
+ it('refuses self-authored old workouts rather than silently dropping original author permissions',async()=>{
+  const f=await fixture();await chat(f)
+  await owner.query(`insert into public.workouts(client_id,trainer_id,created_by,workout_date,status,completed_at)
+    values($1,$2,$2,current_date,'done',now())`,[f.card,f.legacyId])
+  const p=await plan(f);expect(p.ready).toBe(false)
+  expect(p.report).toMatchObject({oldAuthoredWorkouts:1,uncoveredOldData:[{table:'workouts.created_by',count:1}]})
+  await expect(apply(p)).rejects.toThrow('plan')
+  expect((await owner.query<{auth_user_id:string}>('select auth_user_id from public.clients where id=$1',[f.card])).rows[0]?.auth_user_id).toBe(f.legacyId)
+ })
 })

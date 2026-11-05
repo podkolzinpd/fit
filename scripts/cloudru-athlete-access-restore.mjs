@@ -160,7 +160,8 @@ export async function readAthleteState(client,pair){
  const references=await profileReferences(client,[pair.legacyId,pair.currentId],cardIds)
  const cardData=await cardReferences(client,cardIds)
  const chat=await readChatState(client,pair,cardIds)
- return {profiles,cards,card,periods,memberships,auth,history,groups,references,cardData,chat}
+ const legacyWorkouts=(await client.query('select count(*)::int count from public.workouts where created_by=$1',[pair.legacyId])).rows[0].count
+ return {profiles,cards,card,periods,memberships,auth,history,groups,references,cardData,chat,authorship:{legacyWorkouts}}
 }
 
 function protectedState(state,moveIds=[]){
@@ -184,11 +185,15 @@ export async function planAthleteRestore(client,pair){
   let uncovered=state.references.filter(r=>r.legacy>0&&!r.covered)
   uncovered=uncovered.filter(r=>!(r.schema==='public'&&r.table==='chat_conversations'
     &&state.chat.moveIds.length===r.legacy))
+  // A new profile must not lose the old author's plan-edit/delete rights or
+  // make self-authored history appear coach-authored. Never rewrite authors.
+  if(state.authorship.legacyWorkouts)uncovered.push({table:'workouts.created_by',legacy:state.authorship.legacyWorkouts})
   const plan={schema:2,ticket:'YAFIT-646',createdAt:Date.now(),pair,state,fingerprint:digest(state),ready:uncovered.length===0}
   await client.query('commit')
   return {...plan,report:{event:'athlete_access_plan',readOnly:true,repairReady:plan.ready,
     workouts:state.groups,protectedTables:state.references.length,
     uncoveredOldData:uncovered.map(r=>({table:r.table,count:r.legacy})),newProfileDataPreserved:true,
+    oldAuthoredWorkouts:state.authorship.legacyWorkouts,
     chat:{oldConversations:state.chat.oldCount,eligibleConversations:state.chat.moveIds.length,
       oldAuthoredMessages:state.chat.oldAuthored,currentConversations:state.chat.currentCount}}}
  }catch(e){await client.query('rollback');throw e}
@@ -198,6 +203,7 @@ export async function applyAthleteRestore(client,plan,{backupVerified=false}={})
  need(backupVerified,'backup_required')
  need(plan?.schema===2&&plan.ticket==='YAFIT-646'&&plan.ready===true&&digest(plan.state)===plan.fingerprint
    &&Array.isArray(plan.state.chat?.moveIds)&&plan.state.chat.moveIds.length<=1
+   &&plan.state.authorship?.legacyWorkouts===0
    &&Number.isSafeInteger(plan.createdAt)&&Date.now()-plan.createdAt>=0&&Date.now()-plan.createdAt<=3600000,'plan')
  await client.query('begin transaction isolation level serializable read write')
  try{
@@ -208,6 +214,7 @@ export async function applyAthleteRestore(client,plan,{backupVerified=false}={})
   const moveIds=plan.state.chat.moveIds
   await client.query('select id from public.chat_conversations where id=any($1::uuid[]) order by id for update',[moveIds])
   const before=await readAthleteState(client,plan.pair)
+  need(before.authorship.legacyWorkouts===0,'old_authored_workouts')
   if(before.card.auth_user_id===plan.pair.currentId){
    need(moveIds.every(id=>before.chat.conversations.some(c=>c.id===id&&c.client_user_id===plan.pair.currentId)),'chat_postcondition')
    need(digest(protectedState(before,moveIds))===digest(protectedState(plan.state,moveIds)),'replay_state_changed')
@@ -312,6 +319,6 @@ async function main(){
  }finally{await client.end()}
 }
 if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href){
- main().catch(e=>{const allowed=/^athlete_restore_(owner_gate|scope|catalog|pair|profile_proof|canonical|source_claimed|trainer_connection|trainer_membership|legacy_session_active|deletion_pending|empty_history|already_restored|backup_required|plan|replay_state_changed|state_changed|old_private_data|card_changed|card_postcondition|chat_changed|chat_postcondition|protected_state_changed|runtime_role|runtime_card|runtime_history|runtime_chat|runtime_chat_threads|runtime_own_profile|profile_reader_required|registry|environment|phase|fresh_feedback_required)$/
+ main().catch(e=>{const allowed=/^athlete_restore_(owner_gate|scope|catalog|pair|profile_proof|canonical|source_claimed|trainer_connection|trainer_membership|legacy_session_active|deletion_pending|empty_history|already_restored|backup_required|plan|replay_state_changed|state_changed|old_private_data|old_authored_workouts|card_changed|card_postcondition|chat_changed|chat_postcondition|protected_state_changed|runtime_role|runtime_card|runtime_history|runtime_chat|runtime_chat_threads|runtime_own_profile|profile_reader_required|registry|environment|phase|fresh_feedback_required)$/
   console.error(allowed.test(e?.message??'')?e.message:'athlete_restore_failed');process.exitCode=1})
 }

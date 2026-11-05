@@ -38,6 +38,8 @@ test('only one card and a proven same-person chat participant may change; messag
  assert.doesNotMatch(source,/(?:update|insert into|delete from)\s+public\.chat_(?:messages|meetings|meeting_sessions|meeting_notices)/i)
  assert.match(source,/old\.length===1/)
  assert.match(source,/oldAuthored===0/)
+ assert.match(source,/plan\.state\.authorship\?\.legacyWorkouts===0/)
+ assert.match(source,/old_authored_workouts/)
  assert.match(source,/metadata_digest/)
  assert.match(source,/runtime_chat_threads/)
 })
