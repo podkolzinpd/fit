@@ -4,6 +4,8 @@ import { CorporateInvitationsStore } from './corporate-invitations.js'
 import { CorporateServicesStore } from './corporate-services.js'
 import { DatabaseChatMeetings, readJitsiConfig } from './chat-meetings.js'
 import { DatabaseCorporateAdminLoginObserver } from './corporate-admin-login.js'
+import { DatabasePrivateAnalyticsLoginObserver } from './private-analytics-login.js'
+import { PrivateAnalyticsStore } from './private-analytics.js'
 import { CorporateAdminStore } from './corporate-admin.js'
 import { buildApp } from './app.js'
 import { DatabasePilotCustomExercisePhotos } from './custom-exercise-photo.js'
@@ -93,6 +95,7 @@ const identityProvider =
     ? undefined
     : new YandexIdentityClient({
       ...(databasePool === undefined ? {} : { corporateAdminObserver: new DatabaseCorporateAdminLoginObserver(databasePool) }),
+      ...(databasePool === undefined ? {} : { privateAnalyticsObserver: new DatabasePrivateAnalyticsLoginObserver(databasePool) }),
         expectedClientId: process.env.YANDEX_OAUTH_CLIENT_ID,
       })
 const oauthCodeProvider =
@@ -304,6 +307,7 @@ const app = buildApp(
     ...(pilotTrainerDiscovery === undefined ? {} : { pilotTrainerDiscovery }),
     ...(pilotFavoriteWorkouts === undefined ? {} : { pilotFavoriteWorkouts }),
     ...(databasePool === undefined ? {} : { corporateAdmin: new CorporateAdminStore(databasePool, yandexMediaStorage), corporateInvitations: new CorporateInvitationsStore(databasePool), corporateServices: new CorporateServicesStore(databasePool) }),
+    ...(databasePool === undefined ? {} : { privateAnalytics: new PrivateAnalyticsStore(databasePool) }),
     ...(pilotTrainerFinance === undefined ? {} : { pilotTrainerFinance }),
     ...(pilotWorkoutsWriter === undefined ? {} : { pilotWorkoutsWriter }),
     ...(pilotWorkoutTemplates === undefined ? {} : { pilotWorkoutTemplates }),

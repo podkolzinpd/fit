@@ -23,6 +23,7 @@
     "scripts/cloudru-journal-import.d.mts",
     "scripts/cloudru-program-history-inspect.d.mts",
     "scripts/cloudru-program-history-write.d.mts",
-    "scripts/cloudru-client-restore.d.mts"
+    "scripts/cloudru-client-restore.d.mts",
+    "scripts/cloudru-athlete-access-restore.d.mts"
   ]
 }

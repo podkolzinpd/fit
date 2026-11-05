@@ -13,6 +13,56 @@ import { readHistoryTargets, readHistoryRegistry, readHistoryPages, summarizeHis
   readHistoryEvidenceSecret, resolveHistoryEvidence, readHistoryVisibility,
   readWorkoutHistoryTarget, inspectWorkoutHistoryTarget } from './cloudru-account-history-audit.mjs'
 import { probeRuntimeDatabase } from './cloudru-runtime-db-probe.mjs'
+import { auditBackground, reminderCandidates } from './cloudru-background-audit.mjs'
+
+test('background audit reports only bounded aggregates and recovers failed readonly timezone expressions', async () => {
+  const statements = []
+  const privateZone = 'private-invalid-zone'
+  const client = { query: async (sql, values) => {
+    statements.push(sql)
+    if (sql.includes('current_user')) return { rows: [{ valid: true }] }
+    if (sql.includes('group by 1,2')) return { rows: [{ kind: 'test', age: 'older', count: 2 }] }
+    if (sql === reminderCandidates || values?.[0] === privateZone) {
+      throw Object.assign(new Error('private-error-text'), { code: '22023' })
+    }
+    if (sql.includes('select distinct profile.timezone')) return { rows: [{ timezone: privateZone }, { timezone: 'UTC' }] }
+    return { rows: [] }
+  } }
+  const report = await auditBackground(client)
+  assert.deepEqual(report, { event: 'cloudru_background_audit', groups: [{ kind: 'test', age: 'older', count: 2 }],
+    reminderCandidates: { ready: false, code: '22023' }, timezoneChecks: { checked: 2, failures: [{ code: '22023', count: 1 }] } })
+  assert.equal(statements[0], 'begin read only')
+  assert.equal(statements.at(-1), 'rollback')
+  assert.ok(statements.includes('rollback to savepoint reminder_probe'))
+  assert.ok(statements.includes('rollback to savepoint zone_probe'))
+  assert.doesNotMatch(statements.join('\n'), /\b(?:insert|update|delete|commit|grant|alter|enqueue_workout_reminders|claim_push_notifications)\b/i)
+  assert.doesNotMatch(JSON.stringify(report), /private/)
+})
+
+test('background audit fails closed on excessive timezone cardinality or wrong database role', async () => {
+  for (const wrongRole of [true, false]) {
+    const statements = []
+    const client = { query: async sql => {
+      statements.push(sql)
+      if (sql.includes('current_user')) return { rows: [{ valid: !wrongRole }] }
+      if (sql === reminderCandidates) return { rows: [{ count: 0 }] }
+      if (sql.includes('select distinct')) return { rows: Array.from({ length: 101 }, () => ({ timezone: 'UTC' })) }
+      return { rows: [] }
+    } }
+    await assert.rejects(auditBackground(client), /background_audit_(?:role_rejected|zone_bound_exceeded)/)
+    assert.equal(statements.at(-1), 'rollback')
+  }
+})
+
+test('background audit is explicit manual readonly and precedes queue health exit', () => {
+  const workflow = read('.github/workflows/inspect-cloudru-operations.yml')
+  assert.match(workflow, /background_audit:\n[\s\S]*?default: false/)
+  const step = workflow.split('- name: Inspect only private queue aggregates')[1]?.split('- name:')[0]
+  assert.match(step, /github.event_name == 'workflow_dispatch' && inputs.background_audit/)
+  assert.match(step, /if test "\$BACKGROUND_AUDIT" = true/)
+  assert.match(step, /cloudru-background-audit\.mjs:\/inspection\.mjs:ro/)
+  assert.ok(step.indexOf('node /inspection.mjs') < step.indexOf('node dist/cloudru-operations-health.js'))
+})
 
 const read = name => readFileSync(new URL(`../${name}`, import.meta.url), 'utf8')
 const configurations = ['configure-cloudru-ai', 'configure-cloudru-background', 'configure-cloudru-speech', 'configure-cloudru-nutrition']
@@ -650,6 +700,8 @@ test('background journal distinguishes transaction limits from work and keeps on
   const messages = [
     { event: 'background_transaction_failed', transactionPhase: 'timeout', errorCode: '22023', message: 'private-sql' },
     { event: 'background_transaction_failed', transactionPhase: 'private-phase', errorCode: '22023' },
+    { event: 'background_push_query_failed', step: 'reminder_enqueue', errorCode: '22023', message: 'private-query' },
+    { event: 'background_push_query_failed', step: 'private-step', errorCode: '22023' },
     { event: 'cloudru_background_failed', dispatchOperation: 'push', dispatchPhase: 'prepare', errorCode: '22023' },
     { event: 'yandex_session_cleanup_failed', dispatchOperation: 'auth_sessions', dispatchPhase: 'cleanup', errorCode: '22023' },
     { event: 'cloudru_background_failed', dispatchOperation: 'private-op', dispatchPhase: 'prepare', errorCode: 'private-code' },
@@ -658,6 +710,7 @@ test('background journal distinguishes transaction limits from work and keeps on
   assert.equal(result.status, 0)
   const report = JSON.parse(result.stdout)
   assert.deepEqual(report.transactionFailures, [{ phase: 'timeout', code: '22023' }])
+  assert.deepEqual(report.pushQueryFailures, [{ step: 'reminder_enqueue', code: '22023' }])
   assert.deepEqual(report.dispatchFailures, [
     { operation: 'push', phase: 'prepare', code: '22023' }, { operation: 'auth_sessions', phase: 'cleanup', code: '22023' },
   ])
