@@ -40,7 +40,7 @@ def advance(state, conditions, now):
         if bad:
             entry.pop('healthy_since', None)
             entry.setdefault('since', now)
-            duration = 900 if key in ('cpu', 'memory', 'disk') else 120
+            duration = 900 if key in ('cpu', 'memory', 'disk') else (0 if key in ('api', 'frontend', 'public_api', 'public_frontend') else 120)
             if not entry['active'] and now - entry['since'] >= duration:
                 events.append('Fit: ПРОБЛЕМА. ' + LABELS[key])
                 entry['active'] = True
@@ -132,7 +132,7 @@ def main():
     state = json.loads(path.read_text()) if path.exists() else {}
     now = time.time()
     if args.mode == 'export':
-        print(json.dumps({'at':state.get('at',0),'active':{key:bool(value.get('active')) for key,value in state.get('checks',{}).items() if key in LABELS}}))
+        print(json.dumps({'at':state.get('at',0),'metrics':state.get('metrics',{}),'active':{key:bool(value.get('active')) for key,value in state.get('checks',{}).items() if key in LABELS}}))
         return
     if args.mode == 'relay':
         snapshot = json.loads(Path(args.snapshot).read_text()) if args.snapshot else {}
@@ -146,6 +146,13 @@ def main():
                     events.append(('Fit: ПРОБЛЕМА. ' + LABELS[key]) if value else ('Fit: ВОССТАНОВЛЕНО. ' + key))
             next_state['host_active'] = current
         conditions, extra, metrics = {}, {}, {}
+        local = datetime.datetime.fromtimestamp(now, datetime.timezone(datetime.timedelta(hours=3)))
+        day = local.date().isoformat()
+        if fresh and local.hour >= 9 and state.get('summary_day') != day:
+            values = snapshot.get('metrics', {})
+            active = [key for key,value in snapshot.get('active',{}).items() if value and key in LABELS]
+            events.append('Fit: ежедневный срез ресурсов, ' + day + '\n' + '\n'.join(key + ': ' + str(values.get(key, 'нет данных')) for key in ('cpu_percent','memory_available_percent','disk_free_percent')) + '\nАктивные проблемы: ' + (', '.join(active) or 'нет'))
+            next_state['summary_day'] = day
     elif args.mode == 'host':
         conditions, extra, metrics = host_conditions(state)
     else:
@@ -158,6 +165,8 @@ def main():
     if events and args.mode != 'host':
         send('\n'.join(events))
     next_state.update(extra)
+    if args.mode == 'host':
+        next_state['metrics'] = metrics
     path.parent.mkdir(parents=True, exist_ok=True)
     temporary = path.with_suffix('.tmp')
     temporary.write_text(json.dumps(next_state))

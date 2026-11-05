@@ -7,16 +7,14 @@ The minute systemd timer collects host CPU deltas, available memory, free disk,
 API/database readiness, frontend and SpeechKit health, last background worker
 result, and the existing verified-backup marker. It retains only technical
 counters and alert state in a private local state directory. CPU/memory/disk
-alerts require 15 minutes of observed pressure. Other host failures require
+alerts require 15 minutes of observed pressure. API/frontend outages alert on first observation. Other host failures require
 2 minutes. Recovery requires 5 healthy minutes. Repeated unchanged conditions
 are silent. Gaps over 10 minutes reset pending streaks, not active incidents.
 Telegram transitions are committed only after acknowledged delivery; retry after
 an ambiguous network failure can produce a duplicate (Telegram has no idempotency key).
 
 External GitHub-hosted checks poll API readiness and frontend every five minutes
-(best effort: Actions schedule can be delayed). They need two consecutive failed
-observations, about five minutes apart, before sending an incident; recovery also
-needs two healthy observations. Durable cache state suppresses repeats. Cache
+(best effort: Actions schedule can be delayed). API/frontend failures alert on first failed observation; recovery needs two healthy observations. Durable cache state suppresses repeats. Cache
 loss can cause a duplicate incident. A full GitHub outage is outside this monitor.
 
 Configure repository secrets FIT_ALERT_TELEGRAM_BOT_TOKEN and
@@ -49,3 +47,5 @@ previous state for retry. Snapshot freshness is checked; pending self-hosted job
 can delay resource notifications if the runner is unavailable. The independent
 public checker still detects site/API failure. Actions scheduling is best effort,
 not a one-minute availability guarantee.
+
+A resource snapshot is sent once per Moscow calendar day at the first fresh export after 09:00. This is a current technical snapshot, not 24-hour averages. Critical availability alerts have no daily cap and notify on first observation; unchanged incidents remain silent. CPU/memory/disk still require 15-minute sustained pressure.

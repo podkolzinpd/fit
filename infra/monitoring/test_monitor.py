@@ -22,20 +22,24 @@ class AlertLifecycle(unittest.TestCase):
         self.assertEqual(len(events), 2)
         self.assertIn('ВОССТАНОВЛЕНО', events[-1])
 
+    def test_critical_outage_alerts_on_first_observation(self):
+        _, events = advance({}, {'public_api': True}, 0)
+        self.assertEqual(len(events), 1)
+
     def test_missing_samples_do_not_establish_sustained_load(self):
         state, _ = advance({}, {'cpu': True}, 0)
         state, events = advance(state, {'cpu': True}, 1000)
         self.assertEqual(events, [])
         self.assertEqual(state['checks']['cpu']['since'], 1000)
 
-    def test_api_failure_requires_repeated_observation(self):
-        state, events = advance({}, {'api': True}, 0)
+    def test_background_failure_requires_repeated_observation(self):
+        state, events = advance({}, {'background': True}, 0)
         self.assertEqual(events, [])
-        state, events = advance(state, {'api': True}, 60)
+        state, events = advance(state, {'background': True}, 60)
         self.assertEqual(events, [])
-        state, events = advance(state, {'api': True}, 120)
+        state, events = advance(state, {'background': True}, 120)
         self.assertEqual(len(events), 1)
-        _, events = advance(state, {'api': True}, 180)
+        _, events = advance(state, {'background': True}, 180)
         self.assertEqual(events, [])
 
     def test_delivery_failure_propagates_for_retry(self):
@@ -45,15 +49,25 @@ class AlertLifecycle(unittest.TestCase):
                     send('synthetic')
 
     def test_flapping_does_not_alert_and_input_not_mutated(self):
-        state, _ = advance({}, {'api': True}, 0)
+        state, _ = advance({}, {'background': True}, 0)
         original = repr(state)
-        next_state, _ = advance(state, {'api': False}, 60)
+        next_state, _ = advance(state, {'background': False}, 60)
         self.assertEqual(repr(state), original)
-        _, events = advance(next_state, {'api': True}, 120)
+        _, events = advance(next_state, {'background': True}, 120)
         self.assertEqual(events, [])
 
 
 class Routing(unittest.TestCase):
+    def test_daily_summary_once_per_moscow_day(self):
+        with tempfile.TemporaryDirectory() as directory:
+            state = Path(directory) / 'state.json'
+            snapshot = Path(directory) / 'snapshot.json'
+            snapshot.write_text(json.dumps({'at':21600,'active':{},'metrics':{'cpu_percent':5}}))
+            with patch('sys.argv',['monitor','--mode','relay','--state',str(state),'--snapshot',str(snapshot)]), patch('time.time',return_value=21600), patch('monitor.send') as send_mock:
+                main(); main()
+                self.assertEqual(send_mock.call_count,1)
+                self.assertIn('ежедневный',send_mock.call_args[0][0])
+
     def test_vm_persists_incident_without_telegram_credentials(self):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / 'state.json'
