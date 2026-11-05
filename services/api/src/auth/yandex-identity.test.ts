@@ -18,6 +18,20 @@ function jsonResponse(body: unknown, status = 200): Response {
 }
 
 describe('YandexIdentityClient', () => {
+  it('binds analytics only after verifying the provider and does not block sign-in on observer failure', async () => {
+    const observe = vi.fn().mockRejectedValue(new Error('synthetic failure'))
+    const payload = { id: 'provider-user-id', psuid: 'subject', client_id: CLIENT_ID, login: 'login@yandex.ru' }
+    const client = new YandexIdentityClient({ expectedClientId: CLIENT_ID, privateAnalyticsObserver: { observe },
+      fetchImplementation: vi.fn<typeof fetch>().mockResolvedValue(jsonResponse(payload)) })
+    await expect(client.verifyAccessToken('token')).resolves.toHaveProperty('subjectHash')
+    expect(observe).toHaveBeenCalledOnce()
+    expect(observe).toHaveBeenCalledWith(createHash('sha256').update('subject').digest('hex'), createHash('sha256').update('login').digest('hex'))
+    const deniedObserve = vi.fn()
+    const rejected = new YandexIdentityClient({ expectedClientId: CLIENT_ID, privateAnalyticsObserver: { observe: deniedObserve },
+      fetchImplementation: vi.fn<typeof fetch>().mockResolvedValue(jsonResponse({ ...payload, client_id: 'wrong' })) })
+    await expect(rejected.verifyAccessToken('token')).rejects.toBeInstanceOf(YandexIdentityRejectedError)
+    expect(deniedObserve).not.toHaveBeenCalled()
+  })
   it('validates the OAuth app and separately hashes the subject and normalized login', async () => {
     const fetchImplementation = vi.fn<typeof fetch>().mockResolvedValue(
       jsonResponse({

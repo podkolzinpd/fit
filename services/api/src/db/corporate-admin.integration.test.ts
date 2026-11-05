@@ -4,6 +4,7 @@ import { Pool, type PoolClient, type QueryResultRow } from 'pg'
 import { runner } from 'node-pg-migrate'
 import { CorporateInvitationsStore } from '../corporate-invitations.js'
 import { CorporateAdminStore } from '../corporate-admin.js'
+import { PrivateAnalyticsStore } from '../private-analytics.js'
 import { PgDatabasePool } from './pg-pool.js'
 import { beforeAll, afterAll, describe, expect, it } from 'vitest'
 
@@ -53,6 +54,32 @@ describe.skipIf(!source)('corporate administration on real actor/RLS', () => {
     'select app_private.save_corporate_office($1,$2,$3,$4,$5,$6)',[id,'Санкт-Петербург',name,'Синтетический адрес',archived,version])
   const saveTrainer = (enabled: boolean, offices: string[], version: number) => actor(admin,
     'select app_private.save_corporate_trainer($1,$2,$3::uuid[],$4)',[coach,enabled,offices,version])
+
+  it('keeps private analytics separate, binds once, and enforces revocation', async () => {
+    const profile = randomUUID(), subject = 'a'.repeat(64), otherSubject = 'b'.repeat(64), login = 'c'.repeat(64)
+    await pool.query("insert into public.profiles(id,first_name,account_role) values($1,'Analytics test','client')", [profile])
+    await pool.query("insert into app_private.auth_identities(provider,provider_subject_sha256,profile_id) values('yandex',$1,$2)", [subject, profile])
+    await expect(actor(admin, 'select app_private.private_analytics_bundle()')).rejects.toMatchObject({ code: 'PT403' })
+    await expect(actor(profile, 'select * from app_private.private_analytics_logins')).rejects.toMatchObject({ code: '42501' })
+    await pool.query('insert into app_private.private_analytics_logins(login_sha256,enabled) values($1,true)', [login])
+    expect(await actor(profile, 'select app_private.bind_private_analytics_login($1,$2) bound', [subject, login])).toEqual([{ bound: true }])
+    expect(await actor(profile, 'select app_private.bind_private_analytics_login($1,$2) bound', [otherSubject, login])).toEqual([{ bound: false }])
+    const rows = await actor<{ bundle: { trainers: unknown[]; clients: unknown[]; feedback: unknown[] } }>(profile, 'select app_private.private_analytics_bundle() bundle')
+    expect(rows[0]?.bundle.trainers).toHaveLength(1)
+    expect(Array.isArray(rows[0]?.bundle.clients)).toBe(true)
+    expect(Array.isArray(rows[0]?.bundle.feedback)).toBe(true)
+    const token = 'p'.repeat(43)
+    await pool.query("insert into app_private.profile_rollout_assignments(profile_id,target_backend,access_mode,enabled) values($1,'yandex','read_write',true)", [profile])
+    await pool.query("insert into app_private.yandex_app_sessions(token_sha256,profile_id,expires_at) values($1,$2,now()+interval '1 hour')", [createHash('sha256').update(token).digest('hex'), profile])
+    const runtime = new PgDatabasePool({ connectionString, max: 1 })
+    try {
+      const store = new PrivateAnalyticsStore(runtime)
+      expect(await store.bundle({ accessMode: 'read_write', token })).toHaveProperty('trainers')
+      await pool.query('update app_private.private_analytics_logins set enabled=false where login_sha256=$1', [login])
+      await expect(store.bundle({ accessMode: 'read_write', token })).rejects.toMatchObject({ code: 'PT403' })
+    } finally { await runtime.end() }
+    await expect(actor(profile, 'select app_private.private_analytics_bundle()')).rejects.toMatchObject({ code: 'PT403' })
+  })
 
   it('does not grant admin by account role and denies direct reads, writes and self-elevation', async () => {
     for(const id of [coach,athlete]) {
