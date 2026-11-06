@@ -1459,7 +1459,7 @@ passed/395 DB-gated skipped, lint/typecheck/build прошли. Полный fin
 только после его полной опубликованной приёмки. Реальные финансы не менялись.
 
 FIN-27, после включения FIN602 formatter/адаптивного размера: frontend345files/
-3075tests и coverage83.72/78.82/83.07/88.4 прошли; typecheck/build/target lint,
+3075tests и coverage83.72/78.82/83.04/88.38 прошли; typecheck/build/target lint,
 policy8/8 (741/156) и полный finance40/40 без retries прошли. Дополнительный
 личный stress2/2 Chromium/WebKit: большая личная сумма и общий итог вплоть до
 MAX_SAFE_INTEGER видимы без потери копейки и контакта с кольцом; снимки
