@@ -535,3 +535,36 @@ Safe error handler выводит только allowlisted error names и HTTP s
 key binding mismatch до запросов. Syntax/lint и docs budget/link checks пройдены.
 CI и реальный inspect нового main ещё впереди; полное backup/media принятие
 MHA104–105 остаётся открытым.
+
+Точная причина найдена через owner-console editor после первой публикации
+PR2018: действующая policy содержит два private Allow только приложению:
+`s3:ListBucket` на media bucket и `s3:GetObject`/`s3:PutObject` на его objects.
+Metadata actions отсутствуют. По алгоритму Cloud.ru наличие policy заменяет
+ACL-ветку проверки; добавление IAM viewer-acl не добавляет отсутствующий
+Allow в policy. Versioning в owner console уже Enabled; менять его не нужно.
+Исходная policy сохранена приватно для точного сравнения, без публикации ключей.
+
+Коррекция плана MHA-POLICY-READONLY-01: ACL не переписывать, admin повторно
+не выдавать. В ту же policy предлагается добавить только GetBucketAcl,
+GetBucketPolicy, GetBucketOwnershipControls, GetBucketVersioning для того же
+app principal и того же bucket ARN, сохранив оба исходных statements.
+Применение требует отдельного action-time подтверждения этой конкретной
+постоянной read-only добавки, потому что это другой механизм, чем временный
+admin. Подготовка и локальная проверка идут в том же PR; production policy
+ещё не изменена.
+
+Существующий media health ошибочно требует полного отсутствия policy.
+Подготовлено точное исключение только для существующего media bucket:
+проверяются exact app principal, два фиксированных resource ARN, полный
+набор прежних object/list и четырёх read-only metadata actions. Public,
+другие principals/buckets/actions, Not* и непустые Conditions, отсутствие
+или дублирование обязательных actions отклоняются. Положительная ACL
+проверка, versioning/inventory/content gates сохраняются. Строгий
+assertNoBucketPolicy у DB backups не меняется и отдельно проверен.
+Inspect служит только независимым metadata read: наличие policy фиксируется
+без утверждения о её безопасности; repair по-прежнему отвергает любую policy.
+
+Новая локальная проверка: API media+backup18/18,69/69 operational, API
+lint/typecheck/build прошли. Прежний собственный CI42235270861 отменён из-за
+новой версии diff; чужие CI/PR не менялись. Нужны новое CI и согласование
+точной policy, затем штатный API release и полный MHA104–105.

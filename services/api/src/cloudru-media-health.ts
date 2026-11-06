@@ -22,6 +22,62 @@ export async function assertNoBucketPolicy(client: { send(command: GetBucketPoli
   throw new Error('cloudru_bucket_policy_requires_review')
 }
 
+const mediaBucket = 'fit-cloudru-stage-media-c2ad3760'
+const mediaPrincipal = 'arn:aws:iam::f071c7d5-cf0f-4538-9415-bbf9a9c94338:service_account/b87cd7c3-c737-4cd7-87b3-6591dd9b3ec9'
+const metadataActions = ['s3:GetBucketAcl', 's3:GetBucketPolicy', 's3:GetBucketOwnershipControls', 's3:GetBucketVersioning']
+const bucketActions = ['s3:ListBucket', ...metadataActions]
+const objectActions = ['s3:GetObject', 's3:PutObject']
+
+function record(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
+}
+
+// This is an exact exception for the existing app-only media policy, not an
+// arbitrary-policy allowance. Backup buckets still require no policy at all.
+export function assertReviewedPrivateMediaPolicy(raw: unknown): void {
+  const reject = () => { throw new Error('cloudru_bucket_policy_requires_review') }
+  if (typeof raw !== 'string' || raw.length > 20_000) return reject()
+  let policy: unknown
+  try { policy = JSON.parse(raw) } catch { return reject() }
+  if (!record(policy) || policy.Version !== '2012-10-17'
+    || Object.keys(policy).some(key => !['Version', 'Statement'].includes(key))
+    || !Array.isArray(policy.Statement) || policy.Statement.length === 0 || policy.Statement.length > 3) return reject()
+  const seen = new Set<string>()
+  for (const statement of policy.Statement) {
+    if (!record(statement) || statement.Effect !== 'Allow'
+      || Object.keys(statement).some(key => !['Sid', 'Effect', 'Principal', 'NotPrincipal', 'Action', 'NotAction', 'Resource', 'NotResource', 'Condition'].includes(key))
+      || !record(statement.Principal) || Object.keys(statement.Principal).length !== 1
+      || statement.Principal.AWS !== mediaPrincipal) return reject()
+    for (const key of ['NotPrincipal', 'Condition']) {
+      if (statement[key] !== undefined && (!record(statement[key]) || Object.keys(statement[key]).length > 0)) return reject()
+    }
+    for (const key of ['NotAction', 'NotResource']) {
+      if (statement[key] !== undefined && (!Array.isArray(statement[key]) || statement[key].length > 0)) return reject()
+    }
+    const actions: unknown[] = typeof statement.Action === 'string' ? [statement.Action]
+      : Array.isArray(statement.Action) ? statement.Action : []
+    const allowed = statement.Resource === `arn:aws:s3:::${mediaBucket}` ? bucketActions
+      : statement.Resource === `arn:aws:s3:::${mediaBucket}/*` ? objectActions : []
+    if (actions.length === 0) return reject()
+    for (const action of actions) {
+      if (typeof action !== 'string' || !allowed.includes(action) || seen.has(action)) return reject()
+      seen.add(action)
+    }
+  }
+  if ([...bucketActions, ...objectActions].some(action => !seen.has(action))) return reject()
+}
+
+export async function assertPrivateMediaPolicy(client: { send(command: GetBucketPolicyCommand): Promise<unknown> }, bucket: string): Promise<void> {
+  if (bucket !== mediaBucket) throw new Error('cloudru_bucket_policy_requires_review')
+  let response: unknown
+  try { response = await client.send(new GetBucketPolicyCommand({ Bucket: bucket })) }
+  catch (error) {
+    if (error instanceof Error && error.name === 'NoSuchBucketPolicy') return
+    throw error
+  }
+  assertReviewedPrivateMediaPolicy(record(response) ? response.Policy : undefined)
+}
+
 async function main() {
   const { CLOUDRU_MEDIA_KEY_ID: keyId, CLOUDRU_MEDIA_KEY_SECRET: secretAccessKey, CLOUDRU_TENANT_ID: tenantId } = process.env
   if (!keyId || !secretAccessKey || tenantId !== 'f071c7d5-cf0f-4538-9415-bbf9a9c94338'
@@ -33,7 +89,7 @@ async function main() {
     console.log('{"event":"cloudru_media_stage","stage":"acl_read"}')
     assertPrivateMediaAcl(await client.send(new GetBucketAclCommand({ Bucket: bucket })))
     console.log('{"event":"cloudru_media_stage","stage":"policy_read"}')
-    await assertNoBucketPolicy(client, bucket)
+    await assertPrivateMediaPolicy(client, bucket)
     if (process.env.BACKUP_MODE === 'bootstrap') {
       console.log('{"event":"cloudru_media_stage","stage":"versioning_write"}')
       await client.send(new PutBucketVersioningCommand({ Bucket: bucket, VersioningConfiguration: { Status: 'Enabled' } }))

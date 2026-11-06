@@ -2161,6 +2161,18 @@ bucket-scoped admin before full backup/restore/media acceptance, on success or
 failure. Actual run outcomes and remaining work are recorded in
 docs/design/CLOUDRU_STABILIZATION_20261014.md under MHA101–105.
 
+The06.11 inspection found the media bucket already has an app-only policy
+allowing ListBucket/GetObject/PutObject. Preserve it. MHA-POLICY-READONLY-01
+adds only GetBucketAcl/GetBucketPolicy/GetBucketOwnershipControls/
+GetBucketVersioning for that same principal and bucket, after explicit owner
+confirmation. Media health accepts only this exact private capability set,
+fixed principal/resources and empty console Not*/Condition fields; unknown,
+public or expanded access remains fatal. ACL, versioning and object-read gates
+still run. The dedicated backup bucket continues to require no policy at all.
+The manual ACL repair is for policy-free buckets only; inspect reports policy
+presence without claiming privacy. A media policy change does not require or
+authorize further IAM elevation, new credentials or changes to object data.
+
 The disposable restore image extends the pinned PostgreSQL17 base with pinned
 PGDG postgresql-17-pgaudit17.1-2.pgdg13+1 and preloads pg_stat_statements/pgaudit.
 Both extensions occur in the real archive; they are restored, not excluded.

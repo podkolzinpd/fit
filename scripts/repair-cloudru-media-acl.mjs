@@ -40,7 +40,7 @@ export async function inspectMediaAccess(client, commands, emit) {
       const value = await client.send(new commands[command]({ Bucket: bucket }))
       let metadata = {}
       if (stage === 'acl_read') metadata = { privateAcl: true, needsAclReadGrant: planMediaAclReadRepair(value).changed }
-      if (stage === 'policy_read') throw new Error('media_acl_policy_requires_review')
+      if (stage === 'policy_read') metadata = { policyPresent: true, privacyNotVerified: true }
       if (stage === 'ownership_read') {
         const ownership = value.OwnershipControls?.Rules?.[0]?.ObjectOwnership
         if (!['ObjectWriter', 'BucketOwnerPreferred', 'BucketOwnerEnforced'].includes(ownership)) {
