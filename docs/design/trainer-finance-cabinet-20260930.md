@@ -1417,3 +1417,19 @@ FIN-26, расширенная проверка крупных значений:
 приёмка344files/3071tests, coverage83.68/78.72/82.98/88.36; target112, typecheck,
 lint/build, policy8/8 прошли. Finance38/38 +large2/2 Chromium/WebKit, retries0.
 Реальные данные/цены/платежи не менялись. Новый sourceCI после commit обязателен.
+
+
+FIN-28 — FIN601 опубликованная приёмка: PR2019 source4e5d0a90, полный
+CI42248616971 SUCCESS; обычный squash main34b51a53532096fe477bf0c886e1f67b4d0b3e85,
+mainCI42279331824 SUCCESS. API42282700710 применил ровно1 pending migration195,
+revision exact34b51a53, health/ready и protected401 прошли. Web42282700725:
+все213 файлов совпали побайтно с immutable cloudru-release artifact.
+OTA42283352874 SUCCESS, sourceCommit34b51a53, ABI8922d2e9, bundle2e7186f0,
+manifest/ZIP signatures и SHA256 проверены. Public browser38/38 и verifiedZIP
+38/38 Chromium/WebKit без retries; PNG просмотрены. При первом запуске
+внешнего harness same-origin /api prefix не нормализовался в копии mockPilot,
+поэтому сессия не восстанавливалась; исправлен только URL adapter внешнего
+синтетического harness, исходные assertions/приложение не менялись.
+Реальные финансовые данные не использовались для мутаций. Физические
+iPhone/PWA/Android не проверены. FIN601 принят; далее FIN602 только после
+зелёного актуального source CI и сверки более ранних2020/2017.
