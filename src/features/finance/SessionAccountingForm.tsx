@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import type { TrainerFinancePackage, TrainerFinanceSession } from '../../data/contracts/trainer-finance'
 import { Field, InlineRequestError } from '../../shared/ui'
+import { FinanceAccountingChoices } from './FinanceAccountingChoices'
 
 export interface SessionAccountingDraft {
   workoutDate: string
@@ -8,13 +9,14 @@ export interface SessionAccountingDraft {
   comment: string | null
 }
 
-export function SessionAccountingForm({ packages, today, session, initialDraft, locked = false, saving, error,
+export function SessionAccountingForm({ packages, today, session, initialDraft, locked = false, lime = false, saving, error,
   onCancel, onSubmit }: {
   packages: TrainerFinancePackage[]
   today: string
   session?: TrainerFinanceSession
   initialDraft?: SessionAccountingDraft
   locked?: boolean
+  lime?: boolean
   saving: boolean
   error?: Error | null
   onCancel: () => void
@@ -41,12 +43,13 @@ export function SessionAccountingForm({ packages, today, session, initialDraft, 
         setDate(next)
         if (value.startsWith('charged:') && !eligibleAt(next).some(item => `charged:${item.id}` === value)) setValue('unassigned')
       }} /></Field>
-    <Field label="Учёт"><select name="accounting" value={value} disabled={saving || locked} onChange={event => setValue(event.target.value)}>
+    {lime ? <FinanceAccountingChoices packages={eligible} value={value} disabled={saving || locked}
+      unavailableValue={invalidCharge ? value : undefined} onChange={setValue} /> : <Field label="Учёт"><select name="accounting" value={value} disabled={saving || locked} onChange={event => setValue(event.target.value)}>
       <option value="unassigned">Выбрать позже</option>
       {eligible.map(item => <option key={item.id} value={`charged:${item.id}`}>Списать: {item.title}</option>)}
       {invalidCharge && <option value={value} disabled>Абонемент недоступен</option>}
       <option value="free">Без списания</option><option value="trial">Пробное</option>
-    </select></Field>
+    </select></Field>}
     <Field label="Комментарий"><input name="comment" maxLength={2000} value={comment} disabled={saving || locked} onChange={event => setComment(event.target.value)} /></Field>
     {error && <InlineRequestError error={error} message={locked ? 'Сохранение не подтверждено' : undefined} />}
     <div className="actions"><button type="button" className="secondary" disabled={saving} onPointerDown={event => event.preventDefault()} onClick={onCancel}>Отмена</button>
