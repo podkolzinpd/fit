@@ -1154,3 +1154,45 @@ YAML/bash syntax и diff-check PASS. Все собственные тестов�
 read-only plan и один ремонт этой пары с независимым verify/cleanup.
 Дальше: обычный reviewed выпуск; сначала сверить private plan с закрытым
 импортным доказательством, затем backup/apply/verify, без повторов неизвестного write.
+
+## Итерация 22 — 07.11.2026 — Codex / OpenAI
+
+Задача: завершить тот же ремонт связи после принятого выпуска2020, без нового
+поиска учёток и без передачи клиентских параметров в GitHub.
+Сделано:2020/source54ccf91e прошёл полный CI42286603692, main26e231f5 —
+CI42292024443; API42294773404/web42294773712/OTA42295102101 успешны.
+Независимо сверены213 файлов,8 публичных probes,DNS3, точные API и подпись OTA.
+Encrypted DB backup и настоящий disposable restore успешны; отдельный полный
+media inventory остановлен, штатный cleanup подтверждён. DB guards сохранены.
+
+Расхождение: prepare остановился ДО клиентского ввода. Я создала capability
+каталог runner-owned0700, хотя проверенный journal transport уже требует
+root-owned0755: UID0 с cap-drop=ALL не имеет DAC_OVERRIDE. Это моя ошибка
+переноса существующей границы, а не отсутствие доступа к клиентской учётке.
+Клиентский payload не загружался; plan/apply не запускались.
+
+Исправлено: используется тот же root0755/ciphertext0644 boundary, что исходный
+рабочий маршрут. Session/private key остаются root0700/0600; права DB/контейнера
+не расширяются. Generic failure выдаёт только прежний allowlisted technical
+reason/stage/http code, без исходного текста ошибки, SQL или параметров.
+
+Для своего failed pre-input root добавлен cleanup-prepare: только failed
+attempt1 того же workflow/main/actor, отсутствие экспортированных artifacts,
+точный operator PUBLIC key/session/purpose, только manifest+VM key в каталоге,
+положительное404 для каждого payload/prepared/committed/readback объекта.
+Полученный, pending, чужой или неизвестный ввод не очищается. Удаляются только
+два локальных инфраструктурных файла и пустой root, не Cloud.ru objects/ACL.
+Cleanup не создаёт DB client и не восстанавливает импортную READ сессию.
+
+Решение: исправить границу в существующем операторе и штатно закрыть только
+свою неполученную подготовку; прежние импортные, identity, backup, TTL, finance,
+serializable, single-apply и обе runtime роли остаются прежними.
+Отвергнуто: DAC_OVERRIDE/privileged контейнер, chmod777, чужой secret, повтор
+неизвестного apply, cleanup полученного payload и прямое изменение production.
+Проверка:14 Node cases и infra461+speech7 PASS; реальный Linux cap-drop тест
+воспроизводит отказ runner0700 и успех root0755, uploader1001 читает только
+ciphertext и не пишет каталог/не читает session key. Свой тестовый volume
+удалён, отсутствие проверено. YAML/bash и diff-check PASS.
+Открыто: reviewed CI/main/release этого исправления, owned pre-input cleanup,
+свежая подготовка, один план/ремонт и независимый verify обеих ролей.
+Дальше: продолжить этот же операционный ремонт;17 журналов не повторять.
