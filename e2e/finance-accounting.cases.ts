@@ -204,6 +204,13 @@ export function financeAccountingCases() {
       await page.setViewportSize({width,height:844})
       expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true)
       expect(await page.locator('.finance-monthly-name').evaluateAll(nodes=>nodes.every(node=>getComputedStyle(node).fontFamily.includes('YS Geo')))).toBe(true)
+      expect(await page.locator('.finance-monthly-switch').evaluate(node=>{
+        const items=[...node.querySelectorAll('button')].map(button=>button.getBoundingClientRect())
+        const bounds=node.getBoundingClientRect(),style=getComputedStyle(node),first=items[0],last=items[1]
+        return !!first && !!last && Math.abs(first.width-last.width)<=1
+          && Math.abs(first.left-bounds.left-parseFloat(style.paddingLeft)-parseFloat(style.borderLeftWidth))<=1
+          && Math.abs(bounds.right-last.right-parseFloat(style.paddingRight)-parseFloat(style.borderRightWidth))<=1
+      })).toBe(true)
       await page.locator('.finance-monthly').scrollIntoViewIfNeeded()
       expect(await page.locator('.finance-monthly-current-summary p').evaluateAll(nodes=>{
         const [first,last]=nodes.map(node=>node.getBoundingClientRect())
