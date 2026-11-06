@@ -1358,6 +1358,7 @@ archive-empty сценарий выявил, что при расширении 
 сохранён актуальный public.is_active_client_trainer_connection для чтения,
 canCreate по-прежнему запрещён архиву; собственный historical workout только
 добавляет read-scope. Старый тест/права не ослаблены. Новый полный CI обязателен.
+<<<<<<< HEAD
 
 
 FIN-26 — FIN602 подготовка новой Lime сводки: общий FinanceMonthlySummary,
@@ -1380,3 +1381,19 @@ verified YS Geo400/500 (2/2), без hex/зависимости/новой би�
 Период назван Месяц; full frontend coverage/finance browser ещё проверяются.
 Публикация FIN602 только после полной приёмки FIN601 и актуального main.
 Физический iPhone/PWA/Android не проверялись, реальные деньги не менялись.
+=======
+>>>>>>> origin/main
+
+
+FIN-26, локальная приёмка: frontend344files/3070tests прошли, coverage
+83.67/78.72/82.97/88.36, repository lint и typecheck/build прошли.
+38/38 финансовых browser-cases на production-build Chromium/WebKit без retries.
+Первый полный локальный build не включал VITE_CLIENT_LIME_ENABLED в синтетическом
+окружении, два клиентских Lime сценария верно остановились на legacy shell.
+Уточнена только локальная build-конфигурация по действующему флагу; assertions
+и production-конфигурация не менялись, полный повтор38/38. Новые scoped стили
+не меняют Mono. Проверены PNG и hit-test последней строки; физического
+устройства нет. FIN601/source4e5d0a90 прошёл полный CI42248616971; PR2019
+слит обычным squash в34b51a53532096fe477bf0c886e1f67b4d0b3e85 после принятия
+предыдущего834302ec (backup/restore/media и published operations SUCCESS).
+Его mainCI/публикация ещё гейты, FIN602 sourcePR пока не создаётся.
