@@ -4978,3 +4978,62 @@ Exact-sourceCI42190338621SUCCESS35/35attempt1,Android42190338590SUCCESS.
 Дальше: дождаться mainCI и штатныхAPI/web/OTA; проверить public bytes/health,
 подписи/source/ABI и тот же Live обеихролей на сайте и подписанномZIP.
 Финальная квитанция локальным docs-коммитом без sourcepush ради журнала.
+
+
+### Итерация 149 — 2026-11-06 — Codex / OpenAI — MC3.2/2014 опубликован и проверен
+
+Разрешённый выпуск2014 завершён на2950416a653aa49e9f24a59e4a4a0b0304b0c5e0
+после полного выпуска/приёмки2015, без обхода активной очереди.
+MainCI42192929006SUCCESS35/35attempt1,Android42192929121SUCCESS.
+Штатные API42195359755,web42195359738,OTA42195696743SUCCESS.
+Ручного дублирующего deployment/измененийCI/пилотов не выполнялось.
+Main при финальном чтении остаётся2950416a. Все исходники src/e2e и package
+побайтно совпадают с принятым sourcebfca1b46; локальные новые commits толькоdocs.
+
+Официальный web artifact cloudru-frontend-2950416a проверен собственным
+verifyRelease и чтением с реального fit-training.ru:213/213 файлов совпали
+по размеру/SHA256. Release2950416a-53655b1d270db909e43406c85bf82cdf82512fbf2d7c269b75f66808f7730dba.
+DNS трёхhost совпал сVM,HTTPS>=14дней,auth200,health/ready200,protected401.
+Обаhealth указывают именно2950416a; все проверки passed.
+
+Public Live:56/56ownership cases прошли; все52modern computed-style/geometry
+и12/12PNG идентичны настоящему публичномуbaseline2015. Representative
+light Original/client иdark Compact/trainer снимки просмотрены.
+Всего84публичных сценария:82 прошли в первом прогоне,2timer-finish
+остановились на waitForRequest, ожидавшем /v1 вместо публичного /api/v1.
+Трассы обоих движков подтвердили настоящий synthetic POST /api/v1/.../finish
+с200 и экран «Тренировка завершена». Адаптирован только этот URL predicate
+во временной QA-копии: прежний точный путь после снятия /api, всеassertions/
+таймауты/повторы неизменны. Оба сценария повторно2/2 прошли. Приложение/
+репозиторные тесты под приёмку не менялись. Реальных API-записей нет.
+
+Публичные legacy controls4/4 сохраняют legacy matches/geometry. В одном
+клиентскомWebKit control у трёх DIV.live-set-confirm менялся только
+color/currentColor (outline/border-color), геометрия неизменна. Это ровно
+ранее воспроизведённая исходная вариативность144–146; её устранение не
+заявляется и modern scope она не затрагивает. Других ошибок не найдено.
+
+ПодписанныйAndroidZIP/manifest проверены штатнымverifyOtaDirectory и
+публичнымreadbackOta:source2950416a,ABI8922d2e9fc2c9a092d10f7b6066acdc46edf0fbe7ee7a15159e02a44e7126cf9,
+nativeBuild9,sequence1793957574938; подписи,source/provenance/совместимость
+совпали. Bundle af922259ff565629bf0fa85309bfd7f131a766dbae806358c1539ecc0b0ebc41,
+15148165байт. ZIP распакован только после проверки, безsymlinks/../absolute,
+в отдельный /tmp/fit-live-mc32-ota-ui-2950416a. android-ota-build.json
+подтвердил source/ABI/APIhttps://api.fit-training.ru.
+На его настоящихJS/CSS прошли84/84 сценарияChromium/WebKit безповторов.
+Все52modern computed-style/geometry и12/12PNG совпали сpublicbaseline;
+здесь также4/4legacy controls совпали целиком.
+
+MC3-201–205 завершены включая реальную публикацию и автоматизированную
+приёмку. Ввод/select-all/клавиатура/первыйтап/подтверждение/правка факта/
+явная отмена галочки/latestinput/rest/reload,54/48,свайпы/перенос,сворачивание,
+RPE/time/distance/группы/retry/partial finish сохранены проверками.
+Физические iPhone/PWA/Android, реальныйOAuth/нативная установка не проверены.
+Это ограничение сохраняется; browser из signedZIP не выдаётся за телефон.
+Владельцу после обновления: обе роли,Original/Compact,темы клиента; видполей/
+номеров/галочек,выделение/заменачисла и положение надклавиатурой; подтвердить,
+изменитьбезотмены,явноснятьгалочкубезпотерифакта; add/remove/swipe/reorder/
+fold; отдых/пауза/минус и сохранение послеперезахода. Внешний вид прежний.
+MC4/глобальноеудалениеOnest/другиеэкраны не начинались; следующийMCтребует
+отдельного согласования. Итоговая квитанция локальнымdocs-коммитом,
+без повторногоsourcepush/новогоCI ради журнала.
