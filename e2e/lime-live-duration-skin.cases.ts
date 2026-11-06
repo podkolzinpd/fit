@@ -72,7 +72,7 @@ export function limeLiveDurationSkinCases() {
     })
     const before = await capture()
     if (sample.lime && (sample.state === 'sheet' || sample.state === 'overdue')) await page.screenshot({ path: info.outputPath('duration-skin.png'), animations: 'disabled' })
-    const result = await page.evaluate(() => {
+    const ablation = await page.evaluateHandle(() => {
       const common = new Set(['.workout-decision-sheet', '.rest-time-wheel-field > span', '.rest-time-wheel', '.rest-time-wheel:focus-visible', ".rest-time-wheel [role='option']", ".rest-time-wheel [role='option'].selected", '.rest-time-separator'])
       const visual = /^(?:color|background(?:-.+)?|border(?:-.+)?|box-shadow|font-(?:family|size|weight)|outline(?:-.+)?|animation)$/
       const strip = (selector: string) => {
@@ -125,35 +125,32 @@ export function limeLiveDurationSkinCases() {
       document.head.append(probe)
       const inherited = Array.from(document.querySelectorAll('.workout-duration-sheet,.workout-duration-sheet *')).filter(node => getComputedStyle(node).getPropertyValue('--mc42-legacy-duration-probe').trim() === 'legacy').length
       probe.remove()
-      const restore: { selector: string; current: string; text: string }[] = []
+      const restore: { rule: CSSStyleRule; selector: string; text: string }[] = []
       for (const { rule, selectors, selected } of changed) {
         if (!selected.some(selector => document.querySelector(selector))) continue
+        // These seven families already separate paint from neutral layout.
+        // Keep the original declaration objects: cssText cannot round-trip a
+        // var() border shorthand followed by a border-bottom override.
+        const neutral = Array.from(rule.style).filter(property => !visual.test(property))
+        if (neutral.length) throw new Error('Duration paint contains neutral layout: ' + neutral.join(', '))
         const selector = rule.selectorText, text = rule.style.cssText
         const retained = selectors.filter(branch => !selected.includes(branch))
         // Preserve unrelated branches that the optimizer merged into this rule.
-        if (retained.length) rule.selectorText = retained.join(', ')
-        else rule.style.cssText = ''
-        restore.push({ selector, current: rule.selectorText, text })
+        rule.selectorText = retained.length ? retained.join(', ') : ':not(*)'
+        restore.push({ rule, selector, text })
       }
       return { rules: changed.length, families: [...new Set(selected.map(strip))], matches, inherited, legacyMatches, restore }
     })
+    const result = await ablation.evaluate(value => ({ rules: value.rules, families: value.families,
+      matches: value.matches, inherited: value.inherited, legacyMatches: value.legacyMatches }))
     await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))))
     const after = await capture()
-    await page.evaluate(restore => {
-      let index = 0
-      const visit = (rules: CSSRuleList) => {
-        for (const rule of Array.from(rules)) {
-          const saved = restore[index]
-          if (rule instanceof CSSStyleRule && saved && rule.selectorText === saved.current) {
-            rule.selectorText = saved.selector
-            rule.style.cssText = saved.text
-            index++
-          }
-          if ('cssRules' in rule) visit((rule as CSSGroupingRule).cssRules)
-        }
-      }
-      for (const sheet of Array.from(document.styleSheets)) visit(sheet.cssRules)
-    }, result.restore)
+    const restoration = await ablation.evaluate(({ restore }) => {
+      for (const saved of restore) saved.rule.selectorText = saved.selector
+      return restore.every(saved => saved.rule.selectorText === saved.selector && saved.rule.style.cssText === saved.text)
+    })
+    await ablation.dispose()
+    expect(restoration).toBe(true)
     expect(after).toHaveLength(before.length)
     const differences=before.flatMap((a,i)=>{const b=after[i]!;const changes=Object.fromEntries(Object.keys(a.style).filter(p=>a.style[p]!==b.style[p]).map(p=>[p,[a.style[p],b.style[p]]]));return Object.keys(changes).length||JSON.stringify(a.rect)!==JSON.stringify(b.rect)?[{tag:a.tag,class:a.class,changes,rect:JSON.stringify(a.rect)!==JSON.stringify(b.rect)?[a.rect,b.rect]:undefined}]:[]})
     await writeFile(info.outputPath('duration-skin.json'),JSON.stringify({sample,before,...result,differences,errors,requests,consoleErrors,responses},null,2))

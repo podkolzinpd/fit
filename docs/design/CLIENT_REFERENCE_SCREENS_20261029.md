@@ -5540,3 +5540,36 @@ Coverage statements83.64%,branches78.65%,functions82.92%,lines88.33%; порог
 за повтор полного набора после2021. Свежий sourceCI будет самостоятельным
 гейтом нового PR. Модельного/продуктового расширения,merge/deploy нет;
 MC-RELEASE-01 требует отдельного разрешения конкретного выпуска.
+
+Дополнение к проверкам MC4.2: draft PR2023 на 01eb39ed получил source CI
+42300439515 SUCCESS35/35 и Android42300439509 SUCCESS. Timing-артефакты
+подтверждают 22 новых duration cases без retries. Разрешение на выпуск
+запрошено отдельно; ответа пока нет, слияние и публикация не начинались.
+
+При независимой проверке самого harness найден дефект только QA-восстановления
+CSSOM у четырёх legacy controls. Сочетание border:1px solid var(--border) и
+border-bottom:0 сериализуется браузером с пустыми pending longhands;
+присваивание сохранённого style.cssText теряло верхнюю/боковые границы.
+Внешний audit сравнил CSSOM с неизменённым CSS asset: 18 modern clean,
+4 legacy failures. Снимки и computed styles до абляции оставались правильными;
+приложение и опубликованные стили этим тестом не изменялись.
+
+Helper исправлен: CSSRule refs удерживаются через JSHandle, временно меняются
+только selectorText; исходные declaration objects не сериализуются заново.
+Семь выбранных семейств уже содержат только paint; отдельная проверка отклоняет
+нейтральные layout declarations. После восстановления строго проверяется тот же
+селектор и неизменённый style.cssText. Assertions поведения и ownership сохранены.
+
+Новый независимый прогон 22/22 Chromium/WebKit,36.3s,exit0,retries0 подтвердил
+полное равенство всех внешних CSSRule исходным assets после каждого сценария.
+В одинаковой audit-конфигурации до/после helper:22/22 computed styles/geometry
+и18/18 полных PNG идентичны, диагностика0. С более ранней PR-конфигурацией
+22/22 styles/geometry совпадают;8 клиентских full-page PNG отличаются в области
+фона под скруглёнными углами окна. Это сравнение не объявляется18/18 pass;
+контролируемая пара с одинаковыми настройками приведена отдельно.
+Targeted lint и diff-check passed. Изменены только новый E2E helper и этот журнал;
+runtime CSS/DOM/handlers/флаги/данные на 01eb39ed не менялись. Источники:
+/tmp/fit-cssom-pr2023.log (исходный red), /tmp/fit-cssom-pr2023-fixed.log,
+/tmp/fit-cssom-pr2023-fixed-results, /tmp/fit-cssom-pr2023-comparison.json.
+После тестовой правки требуется новый exact-source CI; прежний green не
+приписывается новому head. MC-RELEASE-01 сохраняется.
