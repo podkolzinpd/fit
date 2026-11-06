@@ -114,7 +114,10 @@ export async function inspectProgramHistory({owner,runtime,target,legacyId=null,
   const selected=selectProgramCard(cards,identityEvidence?.method==='current_roster',trainerId)
   let status=selected?'existing_ready':exact.length||possible.length?'selection_requires_review':'new_card_ready'
   const graph={workouts:[],exercises:[],sets:[]}
+  let actorVisibleIds=[]
   if(selected) await ownerRead(owner,async()=>{
+    await owner.query("select set_config('request.jwt.claim.sub',$1,true)",[trainerId])
+    actorVisibleIds=(await owner.query('select id from public.workouts where client_id=$1 and public.can_read_workout(id) order by id limit 5001',[selected.id])).rows.map(w=>w.id)
     graph.workouts=(await owner.query(`select to_jsonb(w)||jsonb_build_object('workout_date',w.workout_date::text) value from public.workouts w where client_id=$1 order by id limit 5001`,[selected.id])).rows.map(r=>r.value)
     graph.exercises=(await owner.query(`select to_jsonb(e) value from public.workout_exercises e join public.workouts w on w.id=e.workout_id where w.client_id=$1 order by e.id limit 20001`,[selected.id])).rows.map(r=>r.value)
     graph.sets=(await owner.query(`select to_jsonb(s) value from public.workout_sets s join public.workout_exercises e on e.id=s.workout_exercise_id join public.workouts w on w.id=e.workout_id where w.client_id=$1 order by s.id limit 100001`,[selected.id])).rows.map(r=>r.value)
@@ -130,8 +133,10 @@ export async function inspectProgramHistory({owner,runtime,target,legacyId=null,
       await runtime.query("select set_config('request.jwt.claim.sub',$1,true)",[trainerId])
       const visible=(await runtime.query('select id,trainer_id,auth_user_id from public.clients where id=$1',[selected.id])).rows
       const rows=(await runtime.query(`select id from public.workouts where client_id=$1 order by id limit 5001`,[selected.id])).rows
-      if(visible.length!==1||visible[0].trainer_id!==selected.trainer_id||visible[0].auth_user_id!==selected.auth_user_id
-        ||!same(rows.map(w=>w.id),graph.workouts.map(w=>w.id)))fail('visibility_changed')
+      if(visible.length!==1||visible[0].trainer_id!==selected.trainer_id||visible[0].auth_user_id!==selected.auth_user_id)fail('client_visibility_changed')
+      // Preserve the entire owner graph, while checking runtime RLS against
+      // the same actor policy rather than requiring access to hidden history.
+      if(!same(rows.map(w=>w.id),actorVisibleIds))fail('history_visibility_changed')
       await runtime.query('commit')
     } catch(error){await runtime.query('rollback');throw error}
   }
@@ -177,7 +182,7 @@ async function main() {
 
 if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href)main().catch(error=>{
   // No SQL/server message, names, IDs, target hashes or private graph in logs.
-  const codes=new Set(['packet_invalid','private_receipt_required','roster_too_large','history_too_large','runtime_role_invalid','visibility_changed','source_invalid','database_target_invalid','connection_interrupted',
+  const codes=new Set(['packet_invalid','private_receipt_required','roster_too_large','history_too_large','runtime_role_invalid','visibility_changed','client_visibility_changed','history_visibility_changed','source_invalid','database_target_invalid','connection_interrupted',
     'alias_source_mismatch','invalid','target_mismatch','roster_changed','sources_disagree','trainer_ambiguous','current_trainer_identity_required','trainer_role_invalid','target_invalid','readonly_required',
     'legacy_registry_unavailable','legacy_registry_too_large','legacy_registry_invalid','legacy_registry_config_missing','legacy_registry_credential_missing'])
   const message=error instanceof Error?error.message:''
