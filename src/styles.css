@@ -1438,7 +1438,8 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .workout-detail-primary-actions { display:grid; gap:var(--space-2); margin-top:-3px }
 .workout-detail-primary-actions > .wide { width:100%; min-height:var(--control-height-primary); margin:0 }
 .workout-detail-primary-actions > .coachmark-anchor, .workout-detail-primary-actions > .coachmark-anchor > .wide { width:100% }
-.workout-decision-sheet { width:min(100%, 440px); max-height:min(88dvh, 680px); overflow-y:auto; display:grid; gap:var(--space-4); padding:var(--space-5) var(--card-padding) calc(var(--space-5) + env(safe-area-inset-bottom)); border:1px solid var(--border); border-bottom:0; border-radius:28px 28px 0 0; background:var(--surface-elevated); box-shadow:none}
+.workout-decision-sheet { width:min(100%, 440px); max-height:min(88dvh, 680px); overflow-y:auto; display:grid; gap:var(--space-4); padding:var(--space-5) var(--card-padding) calc(var(--space-5) + env(safe-area-inset-bottom)) }
+.workout-decision-sheet:where(:not(.fit-lime-shell.workout-live-reference:has(.coach-live-v79,.client-live-v79) .live-rest-sheet)) { border:1px solid var(--border); border-bottom:0; border-radius:28px 28px 0 0; background:var(--surface-elevated); box-shadow:none }
 .workout-decision-sheet .picker-header { align-items:flex-start }
 .workout-decision-sheet .picker-header .eyebrow { margin:0 0 var(--space-1); font-size:var(--type-caption-size) }
 .workout-decision-sheet .picker-header h2 { margin:0; font-size:var(--type-title-size); line-height:var(--leading-tight) }
@@ -3717,15 +3718,15 @@ button.workout-duration-trigger:disabled { cursor:default; opacity:1 }
 .live-identity .live-session-progress-track { height:4px; border-radius:10px; background:var(--surface-sunken) }
 .live-identity .live-session-progress-track > span { border-radius:10px; background:var(--mono-primary) }
 
-.live-identity .live-pinned { top:0; gap:8px; margin:0 0 12px; padding:6px 0 10px; background:var(--bg) }
-.live-identity .live-timer { width:100%; min-height:72px; justify-content:center; gap:10px; padding:0 18px; border:0; border-radius:18px; background:var(--surface-raised); color:var(--fg); font-size:30px; font-weight:600; line-height:1; letter-spacing:-.018em; box-shadow:none}
-.live-identity .live-timer .live-dot-mark { width:8px; height:8px; background:var(--muted) }
-.live-identity .live-timer.resting { border:1px solid var(--warning-border); background:var(--warning-surface); color:var(--warning-fg) }
-.live-identity .live-timer.resting .live-dot-mark { background:var(--warning); box-shadow:none; animation:none }
-.live-identity .rest-timer { padding:12px 14px; border:1px solid var(--warning-border); border-radius:14px; background:var(--warning-surface); color:var(--warning-fg) }
-.live-identity .rest-timer strong { font-size:16px; font-weight:600; font-variant-numeric:tabular-nums }
-.live-identity .rest-step { min-width:48px; min-height:48px; border-color:var(--warning-border); border-radius:14px; background:transparent; color:var(--fg); font-size:14px; font-weight:500 }
-.live-identity .rest-controls .link { min-height:48px; color:var(--warning-fg); font-size:14px; font-weight:500 }
+.live-identity .live-pinned:where(:not(.fit-lime-shell.workout-live-reference:has(.coach-live-v79,.client-live-v79) .live-pinned)) { top:0; gap:8px; margin:0 0 12px; padding:6px 0 10px; background:var(--bg) }
+.live-identity .live-timer:where(:not(.fit-lime-shell.workout-live-reference:has(.coach-live-v79,.client-live-v79) .live-timer)) { width:100%; min-height:72px; justify-content:center; gap:10px; padding:0 18px; border:0; border-radius:18px; background:var(--surface-raised); color:var(--fg); font-size:30px; font-weight:600; line-height:1; letter-spacing:-.018em; box-shadow:none}
+.live-identity .live-timer .live-dot-mark:where(:not(.fit-lime-shell.workout-live-reference:has(.coach-live-v79,.client-live-v79) .live-timer .live-dot-mark)) { width:8px; height:8px; background:var(--muted) }
+.live-identity .live-timer.resting:where(:not(.fit-lime-shell.workout-live-reference:has(.coach-live-v79,.client-live-v79) .live-timer.resting)) { border:1px solid var(--warning-border); background:var(--warning-surface); color:var(--warning-fg) }
+.live-identity .live-timer.resting .live-dot-mark:where(:not(.fit-lime-shell.workout-live-reference:has(.coach-live-v79,.client-live-v79) .live-timer.resting .live-dot-mark)) { background:var(--warning); box-shadow:none; animation:none }
+.live-identity .rest-timer:where(:not(.fit-lime-shell.workout-live-reference:has(.coach-live-v79,.client-live-v79) .rest-timer)) { padding:12px 14px; border:1px solid var(--warning-border); border-radius:14px; background:var(--warning-surface); color:var(--warning-fg) }
+.live-identity .rest-timer strong:where(:not(.fit-lime-shell.workout-live-reference:has(.coach-live-v79,.client-live-v79) .rest-timer strong)) { font-size:16px; font-weight:600; font-variant-numeric:tabular-nums }
+.live-identity .rest-step:where(:not(.fit-lime-shell.workout-live-reference:has(.coach-live-v79,.client-live-v79) .rest-step)) { min-width:48px; min-height:48px; border-color:var(--warning-border); border-radius:14px; background:transparent; color:var(--fg); font-size:14px; font-weight:500 }
+.live-identity .rest-controls .link:where(:not(.fit-lime-shell.workout-live-reference:has(.coach-live-v79,.client-live-v79) .rest-controls .link)) { min-height:48px; color:var(--warning-fg); font-size:14px; font-weight:500 }
 .live-identity .circuit-head.pinned { padding:12px 14px; border-color:var(--border); border-radius:14px; background:var(--surface-raised) }
 .live-identity .block-badge, .live-identity .circuit-counter { font-size:12px; font-weight:500 }
 .live-identity .block-badge { border-color:var(--border); border-radius:10px; background:var(--surface-sunken); color:var(--secondary-label-fg) }
@@ -3869,7 +3870,7 @@ button.workout-duration-trigger:disabled { cursor:default; opacity:1 }
   .live-identity .live-session-header { grid-template-columns:minmax(0,1fr) }
   .live-identity .live-session-header .workout-header-side { grid-row:1; justify-self:end; margin-bottom:-37px }
   .live-identity .live-session-header h2 { padding-right:88px; font-size:18px }
-  .live-identity .live-timer { min-height:68px; font-size:28px }
+  .live-identity .live-timer:where(:not(.fit-lime-shell.workout-live-reference:has(.coach-live-v79,.client-live-v79) .live-timer)) { min-height:68px; font-size:28px }
 }
 
 /* ── Gate 5 / Client Progress: данные остаются главным объектом, а цвет
@@ -6312,35 +6313,42 @@ details[open] > .progress-details-toggle svg { transform:rotate(180deg); }
 #ai-analysis, #results, #body-map { scroll-margin-top:20px; }
 
 .live-timer-toolbar { display: grid; grid-template-columns: minmax(0, 1fr) minmax(148px, 1fr); align-items: stretch; gap: 8px; }
-.live-identity .live-timer-toolbar .live-timer { margin: 0; padding: 8px 12px; min-height: 56px; font-size: 24px; }
+.live-identity .live-timer-toolbar .live-timer:where(:not(.fit-lime-shell.workout-live-reference:has(.coach-live-v79,.client-live-v79) .live-timer-toolbar .live-timer)) { margin: 0; padding: 8px 12px; min-height: 56px; font-size: 24px; }
 .live-rest-trigger { display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 56px; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .live-rest-trigger svg { width: 20px; height: 20px; flex: none; }
 .live-timer-toolbar .coachmark-anchor, .live-timer-toolbar .live-rest-trigger { width: 100%; }
 .live-timer-toolbar .coachmark-anchor { display: flex; align-items: stretch; }
-.live-identity .live-timer-toolbar button.live-rest-trigger { min-height: 56px; }
+.live-identity .live-timer-toolbar button.live-rest-trigger:where(:not(.fit-lime-shell.workout-live-reference:has(.coach-live-v79,.client-live-v79) .live-timer-toolbar button.live-rest-trigger)) { min-height: 56px; }
 .live-rest-sheet { display: grid; gap: 16px; }
 .live-rest-sheet button { min-height: 48px; }
 .live-rest-sheet .picker-close { width: 48px; height: 48px; }
 .live-rest-sheet .rest-controls { display: flex; flex-wrap: wrap; gap: 8px; }
 .live-rest-sheet .rest-controls > button { flex: 1; }
-.live-rest-countdown { margin: 0; text-align: center; font-size: 40px; font-variant-numeric: tabular-nums; }
-.live-rest-countdown.overdue { color:var(--danger); }
-.live-rest-divider { border-top:1px solid var(--border); }
-.live-rest-new-time { font-size:var(--type-body-size); text-align:center; }
+.live-rest-countdown { margin: 0; text-align: center; font-variant-numeric: tabular-nums }
+.live-rest-countdown:where(:not(.fit-lime-shell.workout-live-reference:has(.coach-live-v79,.client-live-v79) .live-rest-sheet .live-rest-countdown)) { font-size: 40px }
+.live-rest-countdown.overdue:where(:not(.fit-lime-shell.workout-live-reference:has(.coach-live-v79,.client-live-v79) .live-rest-sheet .live-rest-countdown.overdue)) { color:var(--danger) }
+.live-rest-divider:where(:not(.fit-lime-shell.workout-live-reference:has(.coach-live-v79,.client-live-v79) .live-rest-sheet .live-rest-divider)) { border-top:1px solid var(--border) }
+.live-rest-new-time { text-align:center }
+.live-rest-new-time:where(:not(.fit-lime-shell.workout-live-reference:has(.coach-live-v79,.client-live-v79) .live-rest-sheet .live-rest-new-time)) { font-size:var(--type-body-size) }
 .rest-time-picker { display:grid; grid-template-columns:minmax(0,1fr) auto minmax(0,1fr); align-items:end; gap:8px; }
 .rest-time-wheel-field { min-width:0; display:grid; gap:8px; }
-.rest-time-wheel-field > span { color:var(--secondary-label-fg); font-size:var(--type-caption-size); font-weight:var(--weight-medium); text-align:center; }
-.rest-time-wheel { height:176px; overflow-y:auto; overscroll-behavior:contain; scroll-snap-type:y mandatory; scrollbar-width:none; border:1px solid var(--border); border-radius:var(--radius-md); background:var(--surface-sunken); font-variant-numeric:tabular-nums; touch-action:pan-y; }
+.rest-time-wheel-field > span { text-align:center }
+.rest-time-wheel-field > span:where(:not(.fit-lime-shell.workout-live-reference:has(.coach-live-v79,.client-live-v79) .live-rest-sheet .rest-time-wheel-field > span)) { color:var(--secondary-label-fg); font-size:var(--type-caption-size); font-weight:var(--weight-medium) }
+.rest-time-wheel { height:176px; overflow-y:auto; overscroll-behavior:contain; scroll-snap-type:y mandatory; scrollbar-width:none; font-variant-numeric:tabular-nums; touch-action:pan-y }
+.rest-time-wheel:where(:not(.fit-lime-shell.workout-live-reference:has(.coach-live-v79,.client-live-v79) .live-rest-sheet .rest-time-wheel)) { border:1px solid var(--border); border-radius:var(--radius-md); background:var(--surface-sunken) }
 .rest-time-wheel::-webkit-scrollbar { display:none; }
-.rest-time-wheel:focus-visible { outline:2px solid var(--fg); outline-offset:2px; }
+.rest-time-wheel:focus-visible:where(:not(.fit-lime-shell.workout-live-reference:has(.coach-live-v79,.client-live-v79) .live-rest-sheet .rest-time-wheel:focus-visible)) { outline:2px solid var(--fg); outline-offset:2px }
 .rest-time-wheel-spacer { height:66px; flex:none; }
-.rest-time-wheel [role='option'] { height:44px; display:grid; place-items:center; scroll-snap-align:center; color:var(--muted); font-size:18px; font-weight:var(--weight-medium); cursor:pointer; user-select:none; }
-.rest-time-wheel [role='option'].selected { border-block:1px solid var(--border); background:var(--surface-raised); color:var(--fg); font-weight:var(--weight-semibold); }
+.rest-time-wheel [role='option'] { height:44px; display:grid; place-items:center; scroll-snap-align:center; cursor:pointer; user-select:none }
+.rest-time-wheel [role='option']:where(:not(.fit-lime-shell.workout-live-reference:has(.coach-live-v79,.client-live-v79) .live-rest-sheet .rest-time-wheel [role='option'])) { color:var(--muted); font-size:18px; font-weight:var(--weight-medium) }
+.rest-time-wheel [role='option'].selected:where(:not(.fit-lime-shell.workout-live-reference:has(.coach-live-v79,.client-live-v79) .live-rest-sheet .rest-time-wheel [role='option'].selected)) { border-block:1px solid var(--border); background:var(--surface-raised); color:var(--fg); font-weight:var(--weight-semibold) }
 .rest-time-wheel-field.disabled .rest-time-wheel { overflow:hidden; }
-.rest-time-separator { align-self:center; margin-top:20px; font-size:24px; font-weight:var(--weight-semibold); }
+.rest-time-separator { align-self:center; margin-top:20px }
+.rest-time-separator:where(:not(.fit-lime-shell.workout-live-reference:has(.coach-live-v79,.client-live-v79) .live-rest-sheet .rest-time-separator)) { font-size:24px; font-weight:var(--weight-semibold) }
 .live-rest-sheet .rest-presets { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); }
 .live-rest-sheet .rest-presets > button { min-width:0; padding-inline:6px; }
-.live-rest-apply { position:sticky; z-index:2; bottom:-1px; padding-top:8px; background:var(--surface-elevated); }
+.live-rest-apply { position:sticky; z-index:2; bottom:-1px; padding-top:8px }
+.live-rest-apply:where(:not(.fit-lime-shell.workout-live-reference:has(.coach-live-v79,.client-live-v79) .live-rest-sheet .live-rest-apply)) { background:var(--surface-elevated) }
 .live-rest-apply > button { width:100%; }
 .live-set-plan-caption { display: block; min-height: 20px; padding-left: 32px; color: var(--secondary-label-fg); font-size: 12px; }
 .live-exercise-note:not([open]) .live-note-preview { display:inline; min-width:0; margin-left:6px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
@@ -6348,18 +6356,18 @@ details[open] > .progress-details-toggle svg { transform:rotate(180deg); }
 .live-note-preview { display: block; color: var(--secondary-label-fg); font-weight: 400; overflow-wrap: anywhere; white-space: pre-wrap; }
 .live-trainer-cue { color: var(--secondary-label-fg); font-size: 14px; white-space: pre-wrap; overflow-wrap: anywhere; }
 .live-identity .live-previous-result { min-height: 20px; }
-.live-rest-trigger.resting { color: var(--warning-fg); }
-.live-rest-trigger.rest-overdue { border-color:var(--danger-border); background:var(--danger-surface); color:var(--danger); animation:live-rest-overdue-pulse 1s ease-in-out infinite; }
+.live-rest-trigger.resting:where(:not(.fit-lime-shell.workout-live-reference:has(.coach-live-v79,.client-live-v79) .live-rest-trigger.resting)) { color: var(--warning-fg) }
+.live-rest-trigger.rest-overdue:where(:not(.fit-lime-shell.workout-live-reference:has(.coach-live-v79,.client-live-v79) .live-rest-trigger.rest-overdue)) { border-color:var(--danger-border); background:var(--danger-surface); color:var(--danger); animation:live-rest-overdue-pulse 1s ease-in-out infinite }
 @keyframes live-rest-overdue-pulse {
   0%, 100% { border-color:var(--danger-border); background:var(--danger-surface); }
   50% { border-color:var(--danger); background:color-mix(in srgb, var(--danger) 14%, var(--danger-surface)); }
 }
-@media (prefers-reduced-motion:reduce) { .live-rest-trigger.rest-overdue { animation:none; } }
+@media (prefers-reduced-motion:reduce) { .live-rest-trigger.rest-overdue:where(:not(.fit-lime-shell.workout-live-reference:has(.coach-live-v79,.client-live-v79) .live-rest-trigger.rest-overdue)) { animation:none } }
 /* Удержание открывает настройки таймера: без системного меню iOS и выделения текста. */
 .live-rest-trigger { -webkit-touch-callout:none; -webkit-user-select:none; user-select:none; touch-action:manipulation; }
 /* Фаза видна по цвету издалека и по подписи («Подготовка», «Подход», «Отдых») вблизи. */
-.live-rest-trigger.phase-prep { border-color:var(--accent-strong); background:var(--accent-surface); color:var(--fg); }
-.live-rest-trigger.phase-work { border-color:color-mix(in srgb, var(--success-fg) 45%, var(--border)); background:color-mix(in srgb, var(--success-fg) 14%, var(--surface-raised)); color:var(--success-fg); }
+.live-rest-trigger.phase-prep:where(:not(.fit-lime-shell.workout-live-reference:has(.coach-live-v79,.client-live-v79) .live-rest-trigger.phase-prep)) { border-color:var(--accent-strong); background:var(--accent-surface); color:var(--fg) }
+.live-rest-trigger.phase-work:where(:not(.fit-lime-shell.workout-live-reference:has(.coach-live-v79,.client-live-v79) .live-rest-trigger.phase-work)) { border-color:color-mix(in srgb, var(--success-fg) 45%, var(--border)); background:color-mix(in srgb, var(--success-fg) 14%, var(--surface-raised)); color:var(--success-fg) }
 .live-phase-notice { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-top:8px; padding:6px 6px 6px 14px; border:1px solid var(--border); border-radius:14px; background:var(--surface-raised); color:var(--fg); font-size:14px; }
 .live-phase-notice button { flex:none; min-height:44px; padding:0 14px; }
 .live-identity .live-workout-page .live-set-table > .live-set:where(:not(.fit-lime-shell.workout-live-reference :is(.coach-live-v79,.client-live-v79) .live-set-table > .live-set)),
@@ -6891,8 +6899,8 @@ details[open] > .progress-details-toggle svg { transform:rotate(180deg); }
 .live-empty-start h2 { font-size:16px; font-weight:600; }
 .live-empty-start .primary { min-height:48px; margin:0; }
 .live-empty-start .live-empty-error { color:var(--danger); font-size:13px; line-height:1.4; }
-.live-identity .live-pinned-empty .live-timer-toolbar .live-timer { min-height:48px; font-size:22px; }
-.live-identity .live-pinned-empty .live-timer-toolbar button.live-rest-trigger { min-height:48px; }
+.live-identity .live-pinned-empty .live-timer-toolbar .live-timer:where(:not(.fit-lime-shell.workout-live-reference:has(.coach-live-v79,.client-live-v79) .live-pinned-empty .live-timer-toolbar .live-timer)) { min-height:48px; font-size:22px; }
+.live-identity .live-pinned-empty .live-timer-toolbar button.live-rest-trigger:where(:not(.fit-lime-shell.workout-live-reference:has(.coach-live-v79,.client-live-v79) .live-pinned-empty .live-timer-toolbar button.live-rest-trigger)) { min-height:48px; }
 .live-identity .live-bottom-bar-empty { justify-items:end; padding:8px 16px calc(8px + env(safe-area-inset-bottom)); }
 .live-bottom-bar-empty .live-sync-state { width:100%; }
 .live-empty-delete { display:grid; place-items:center; width:48px; min-height:48px; padding:0; border:0; border-radius:14px; background:transparent; color:var(--danger); }
@@ -7359,7 +7367,7 @@ details[open] > .progress-details-toggle svg { transform:rotate(180deg); }
 /* Пауза всей тренировки (YAFIT-627): часы — кнопка, на паузе жёлтые с надписью «Пауза». */
 .live-timer-toggle { font:inherit; cursor:pointer; box-shadow:none; -webkit-tap-highlight-color:transparent }
 .live-timer.paused { border-color:var(--warning-border); background:var(--warning-surface); color:var(--warning-fg) }
-.live-identity .live-timer.paused { border:1px solid var(--warning-border); background:var(--warning-surface); color:var(--warning-fg) }
+.live-identity .live-timer.paused:where(:not(.fit-lime-shell.workout-live-reference:has(.coach-live-v79,.client-live-v79) .live-timer.paused)) { border:1px solid var(--warning-border); background:var(--warning-surface); color:var(--warning-fg) }
 .live-timer.paused .live-dot-mark { background:var(--warning); box-shadow:none; animation:none }
 /* Опция «Таймер сам ведёт подходы» в конструкторе: одна строка с переключателем и подписью. */
 .workout-execution-mode { display:grid; gap:2px; margin-top:var(--space-2) }
