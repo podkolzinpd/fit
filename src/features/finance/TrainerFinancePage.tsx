@@ -1,6 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useId, useRef, useState, type FormEvent, type ReactNode } from 'react'
 import { Link, useLocation, useParams } from 'react-router-dom'
+import { FinanceMonthlySummary } from './FinanceMonthlySummary'
+import { financeMoney } from './finance-monthly'
+import { useTrainerFinanceMonth } from './use-trainer-finance-month'
+import { BackIcon, ChevronRightIcon } from '../../shared/icons'
 import { useAuth } from '../../app/auth-context'
 import { isFitLimeEnabled } from '../../app/fit-lime'
 import { useDataBackend } from '../../app/data-backend-context'
@@ -10,7 +14,7 @@ import { RepositoryError } from '../../data/repositories/error'
 import { clearFinanceOperation, financeOperationKey, pendingPackageSchema, pendingPaymentSchema, pendingSessionSchema, readFinanceOperation, writeFinanceOperation } from './pending-finance-operation'
 import { SessionAccountingForm, type SessionAccountingDraft } from './SessionAccountingForm'
 import type { TrainerFinancePackage, TrainerFinancePackageDraft, TrainerFinancePayment, TrainerFinanceSession, TrainerFinancePaymentDraft } from '../../data/contracts/trainer-finance'
-import { addDays, daysBetween, formatLocalDate, localDate, todayInTimeZone } from '../../shared/local-date'
+import { addDays, daysBetween, formatLocalDate, formatMonth, localDate, todayInTimeZone } from '../../shared/local-date'
 import { AsyncView, Field, InlineRequestError, OverflowMenu, Page, useConfirm } from '../../shared/ui'
 
 const PACKAGE_STATUS: Record<TrainerFinancePackage['packageStatus'], string> = {
@@ -253,7 +257,12 @@ function TrainerFinanceClientPage() {
   const { trainerFinance } = useDataBackend()
   const queryClient = useQueryClient()
   const today = todayInTimeZone(actor?.timezone)
-  const [activeTab, setActiveTab] = useState<FinanceTab>('packages')
+  const monthView = useTrainerFinanceMonth(today, isFitLimeEnabled(actor))
+  const [activeTab, setActiveTab] = useState<FinanceTab>(() => monthView.enabled ? monthView.metric === 'sessions' ? 'sessions' : 'payments' : 'packages')
+  const changeTab = (tab: FinanceTab) => {
+    setActiveTab(tab)
+    if (monthView.enabled && tab !== 'packages') monthView.changeMetric(tab === 'sessions' ? 'sessions' : 'money')
+  }
   const [sessionFilter, setSessionFilter] = useState<'all' | 'unassigned' | 'trial'>('all')
   const [packageEditor, setPackageEditor] = useState<PackageEditor | null>(null)
   const [paymentEditor, setPaymentEditor] = useState<PaymentEditor | null>(null)
@@ -405,10 +414,23 @@ function TrainerFinanceClientPage() {
     nextNumberByPackage.set(session.packageId, next)
     sessionNumberById.set(session.id, next)
   }
-  const filteredSessions = sessions.filter((session) => sessionFilter === 'all' || (sessionFilter === 'unassigned' ? session.disposition !== 'charged' : session.disposition === 'trial'))
-  const receivedCents = payments.reduce((sum, payment) => sum + payment.amountCents, 0)
+  const attendedWorkouts = finance.data?.attendedWorkouts ?? []
+  const attendanceIds = new Set(attendedWorkouts.map(item => item.workoutId))
+  const inPeriod = (date: string) => !monthView.enabled || monthView.allHistory || date.startsWith(monthView.month.slice(0,7))
+  const periodSessions = sessions.filter(session => inPeriod(session.workoutDate)
+    && (!monthView.enabled || monthView.allHistory || attendanceIds.has(session.workoutId)))
+  const sessionWorkoutIds = new Set(sessions.map(session => session.workoutId))
+  const attendanceWithoutLedger = monthView.enabled ? attendedWorkouts.filter(item => !sessionWorkoutIds.has(item.workoutId) && inPeriod(item.workoutDate)) : []
+  const visiblePayments = payments.filter(payment => inPeriod(payment.receivedOn))
+  const filteredSessions = periodSessions.filter((session) => sessionFilter === 'all' || (sessionFilter === 'unassigned' ? session.disposition !== 'charged' : session.disposition === 'trial'))
+  const sessionRows = [
+    ...filteredSessions.map(session => ({ kind: 'ledger' as const, session, workoutDate: session.workoutDate })),
+    ...(sessionFilter === 'trial' ? [] : attendanceWithoutLedger).map(workout => ({ kind: 'attendance' as const, workout, workoutDate: workout.workoutDate })),
+  ]
+  const orderedSessions = monthView.enabled ? sessionRows.sort((a,b) => b.workoutDate.localeCompare(a.workoutDate)) : sessionRows
+  const receivedCents = visiblePayments.reduce((sum, payment) => sum + payment.amountCents, 0)
   const dueCents = packages.filter((item) => item.closedAt === null).reduce((sum, item) => sum + item.dueCents, 0)
-  const tabCount: Record<FinanceTab, number> = { packages: packages.length, sessions: sessions.length, payments: payments.length }
+  const tabCount: Record<FinanceTab, number> = { packages: packages.length, sessions: periodSessions.length + attendanceWithoutLedger.length, payments: visiblePayments.length }
   const openPackage = (editor: PackageEditor) => {
     if (!packageOperation.current && !savePackage.isPending) savePackage.reset()
     setPackageEditor(packageOperation.current?.editor ?? editor)
@@ -440,7 +462,7 @@ function TrainerFinanceClientPage() {
         <span className={item.paymentStatus === 'overdue' ? 'is-overdue' : ''}>{item.priceCents === 0 && item.paidCents > 0 ? 'Стоимость не указана' : item.paidCents > item.priceCents ? `Переплата ${money(item.paidCents - item.priceCents)}` : PAYMENT_STATUS[item.paymentStatus]}</span>
       </div>
       {(item.dueCents > 0 || pendingPaymentPackageId === item.id) && <button type="button" className="secondary finance-inline-action" disabled={pendingPaymentDraft !== null && pendingPaymentPackageId !== item.id} onClick={() => openPayment(item.id, undefined, true)}>{pendingPaymentPackageId === item.id ? 'Проверить сохранение' : 'Внести оплату'}</button>}
-      <details className="finance-service-payments finance-disclosure"><summary><span>Оплаты</span><small>{servicePayments.length}</small></summary><div className="finance-disclosure-content"><div className="finance-payment-list">{servicePayments.map((payment) => renderPayment(payment, false))}</div>{servicePayments.length === 0 && <p className="finance-empty">Оплат пока нет.</p>}</div></details>
+      <details className="finance-service-payments finance-disclosure"><summary><span>Оплаты</span><small>{servicePayments.length}</small></summary><div className="finance-disclosure-content"><div className="finance-payment-list">{servicePayments.map((payment) => renderPayment(payment, false))}</div>{servicePayments.length === 0 && <p className="finance-empty">{monthView.enabled && !monthView.allHistory ? 'За этот месяц оплат нет.' : 'Оплат пока нет.'}</p>}</div></details>
       <details className="finance-package-details finance-disclosure">
         <summary><span>Подробнее</span></summary>
         <div className="finance-disclosure-content">
@@ -458,12 +480,28 @@ function TrainerFinanceClientPage() {
     ? routeState.financeBackTo
     : `/clients/${clientId}`
   return <Page title="Финансы" subtitle={finance.data?.clientName} back={financeBackTo} swipeBack className="trainer-finance-page">
+    {monthView.enabled && <>
+      <div className="finance-period-block"><span>Месяц</span><div className="finance-month-switcher" aria-label="Месяц финансов спортсмена">
+        <button type="button" aria-label="Предыдущий месяц" onClick={() => monthView.move(-1)}><BackIcon /></button>
+        <strong>{formatMonth(monthView.month)}</strong>
+        <button type="button" aria-label="Следующий месяц" onClick={() => monthView.move(1)}><ChevronRightIcon /></button>
+      </div></div>
+      <AsyncView loading={monthView.query.isLoading} error={monthView.query.error} onRetry={() => void monthView.query.refetch()}>
+        {monthView.query.data && monthView.query.data.completedSessions !== undefined && <FinanceMonthlySummary
+          data={monthView.query.data} metric={monthView.metric} clientId={clientId} showMetricSwitch={false}
+          onMetricChange={monthView.changeMetric} />}
+      </AsyncView>
+    </>}
     <AsyncView loading={finance.isLoading} error={finance.error} onRetry={() => void finance.refetch()}>
       {packageEditor && <PackageForm lime={isFitLimeEnabled(actor)} current={packageEditor.mode === 'edit' ? packageEditor.item : undefined} template={packageEditor.mode === 'renew' ? packageEditor.item : undefined} today={today} saving={savePackage.isPending} error={savePackage.error} initialDraft={pendingPackageDraft ?? undefined} locked={pendingPackageDraft !== null} onCancel={() => setPackageEditor(null)} onSubmit={(draft) => savePackage.mutate({ draft, editor: packageEditor })} />}
       {paymentEditor && <PaymentForm lime={isFitLimeEnabled(actor)} current={paymentEditor.payment} packages={paymentEditor.direct ? packages.filter((item) => item.id === paymentEditor.packageId) : packages} packageId={paymentEditor.packageId} today={today} saving={savePayment.isPending} error={savePayment.error} initialDraft={pendingPaymentDraft ?? undefined} locked={pendingPaymentDraft !== null} onCancel={() => setPaymentEditor(null)} onSubmit={(draft, packageId) => savePayment.mutate({ draft, packageId, editor: paymentEditor })} />}
       {!packageEditor && !paymentEditor && <>
-        <div className="finance-tabs" role="tablist" aria-label="Раздел финансов клиента">{FINANCE_TABS.map((tab) => <button id={`finance-${tab.id}-tab`} key={tab.id} type="button" role="tab" aria-label={`${tab.label}: ${tabCount[tab.id]}`} aria-selected={activeTab === tab.id} aria-controls={`finance-${tab.id}-panel`} className={activeTab === tab.id ? 'is-active' : ''} onClick={() => setActiveTab(tab.id)}><span>{tab.label}</span><small>{tabCount[tab.id]}</small></button>)}</div>
+        <div className="finance-tabs" role="tablist" aria-label="Раздел финансов клиента">{FINANCE_TABS.map((tab) => <button id={`finance-${tab.id}-tab`} key={tab.id} type="button" role="tab" aria-label={`${tab.label}: ${tabCount[tab.id]}`} aria-selected={activeTab === tab.id} aria-controls={`finance-${tab.id}-panel`} className={activeTab === tab.id ? 'is-active' : ''} onClick={() => changeTab(tab.id)}><span>{tab.label}</span><small>{tabCount[tab.id]}</small></button>)}</div>
 
+        {monthView.enabled && activeTab !== 'packages' && <div className="finance-filter-row" role="group" aria-label="Период истории">
+          <button type="button" className={!monthView.allHistory ? 'is-active' : ''} aria-pressed={!monthView.allHistory} onClick={() => monthView.changeHistory(false)}>За месяц</button>
+          <button type="button" className={monthView.allHistory ? 'is-active' : ''} aria-pressed={monthView.allHistory} onClick={() => monthView.changeHistory(true)}>Вся история</button>
+        </div>}
         <section id="finance-packages-panel" className="finance-tab-panel" data-finance-tab="packages" role="tabpanel" aria-labelledby="finance-packages-tab" hidden={activeTab !== 'packages'}>
           <div className="finance-section-heading"><div>{!isFitLimeEnabled(actor) && <p className="eyebrow">УСЛУГИ</p>}<h2>{isFitLimeEnabled(actor) ? activePackages.length ? 'Текущие услуги' : 'Услуги' : activePackages.length ? 'Текущие' : 'Нет активных'}</h2></div>{canCreate && <button type="button" className="primary" onClick={() => openPackage({ mode: 'new' })}>{pendingPackageDraft ? 'Проверить сохранение' : isFitLimeEnabled(actor) ? 'Новая услуга' : 'Новая'}</button>}</div>
           <div className="finance-package-list">{activePackages.map((item) => renderPackage(item))}</div>
@@ -472,13 +510,19 @@ function TrainerFinanceClientPage() {
         </section>
 
         <section id="finance-sessions-panel" className="finance-tab-panel" data-finance-tab="sessions" role="tabpanel" aria-labelledby="finance-sessions-tab" hidden={activeTab !== 'sessions'}>
-          <div className="finance-section-heading"><div>{!isFitLimeEnabled(actor) && <p className="eyebrow">ЗАНЯТИЯ</p>}<h2>{isFitLimeEnabled(actor) ? 'Проведённые занятия' : 'Проведённые'}</h2></div>{!manualOpen && (canCreate || pendingManualDraft) && <button type="button" className="primary" onClick={() => { if (!manualOperation.current) addManualSession.reset(); setManualOpen(true) }}>{pendingManualDraft ? 'Проверить сохранение' : 'Добавить'}</button>}</div>
+          <div className="finance-section-heading"><div>{!isFitLimeEnabled(actor) && <p className="eyebrow">ЗАНЯТИЯ</p>}<h2>{monthView.enabled ? monthView.allHistory ? 'Все занятия' : 'Занятия за месяц' : isFitLimeEnabled(actor) ? 'Проведённые занятия' : 'Проведённые'}</h2></div>{!manualOpen && (canCreate || pendingManualDraft) && <button type="button" className="primary" onClick={() => { if (!manualOperation.current) addManualSession.reset(); setManualOpen(true) }}>{pendingManualDraft ? 'Проверить сохранение' : 'Добавить'}</button>}</div>
           <div className="finance-filter-row finance-session-filters" role="group" aria-label="Фильтр занятий"><button type="button" className={sessionFilter === 'all' ? 'is-active' : ''} aria-pressed={sessionFilter === 'all'} onClick={() => setSessionFilter('all')}>Все</button><button type="button" className={sessionFilter === 'unassigned' ? 'is-active' : ''} aria-pressed={sessionFilter === 'unassigned'} onClick={() => setSessionFilter('unassigned')}>Без списания</button><button type="button" className={sessionFilter === 'trial' ? 'is-active' : ''} aria-pressed={sessionFilter === 'trial'} onClick={() => setSessionFilter('trial')}>Пробные</button></div>
           {manualOpen && <SessionAccountingForm lime={isFitLimeEnabled(actor)} packages={packages} today={today} initialDraft={pendingManualDraft ?? undefined}
             locked={pendingManualDraft !== null} saving={addManualSession.isPending} error={addManualSession.error}
             onCancel={() => { setManualOpen(false); if (!manualOperation.current) addManualSession.reset() }}
             onSubmit={draft => addManualSession.mutate(draft)} />}
-          <div className="finance-session-list">{filteredSessions.map((session) => {
+          <div className="finance-session-list">{orderedSessions.map((row) => {
+            if (row.kind === 'attendance') return <div className="finance-session" key={row.workout.workoutId}>
+              <div className="finance-session-row"><div className="finance-session-leading"><span className="finance-session-number">—</span>
+                <div className="finance-monthly-source"><strong>{formatLocalDate(localDate(row.workout.workoutDate))}</strong><span>{row.workout.title ?? 'С тренером'}</span></div></div>
+                <div className="finance-session-accounting"><strong>Проведена</strong></div></div>
+            </div>
+            const session = row.session
             const editing = sessionEditor === session.id
             const sessionPackage = session.packageId ? packageById.get(session.packageId) : undefined
             const number = sessionNumberById.get(session.id)
@@ -486,14 +530,16 @@ function TrainerFinanceClientPage() {
               saving={updateSession.isPending} error={updateSession.error} onCancel={() => setSessionEditor(null)}
               onSubmit={draft => updateSession.mutate({ session, ...draft })} />}</div>
           })}</div>
-          {finance.isSuccess && filteredSessions.length === 0 && <p className="finance-empty">В этом разделе занятий нет.</p>}
+          {finance.isSuccess && orderedSessions.length === 0 && <p className="finance-empty">В этом разделе занятий нет.</p>}
         </section>
 
         <section id="finance-payments-panel" className="finance-tab-panel" data-finance-tab="payments" role="tabpanel" aria-labelledby="finance-payments-tab" hidden={activeTab !== 'payments'}>
-          <div className="finance-payment-overview"><p><span>Получено</span><strong>{money(receivedCents)}</strong></p><p><span>К оплате</span><strong>{money(dueCents)}</strong></p></div>
-          <div className="finance-section-heading"><div>{!isFitLimeEnabled(actor) && <p className="eyebrow">ОПЛАТЫ</p>}<h2>{isFitLimeEnabled(actor) ? 'История оплат' : 'История'}</h2></div><button type="button" className="primary" disabled={packages.length === 0 && !pendingPaymentDraft} onClick={() => openPayment(activePackages[0]?.id ?? packages[0]?.id ?? '')}>{pendingPaymentDraft ? 'Проверить сохранение' : 'Добавить'}</button></div>
-          <div className="finance-payment-list finance-payment-ledger">{payments.map((payment) => renderPayment(payment))}</div>
-          {finance.isSuccess && payments.length === 0 && <p className="finance-empty">Оплат пока нет.</p>}
+          <div className={`finance-payment-overview${monthView.enabled && !monthView.allHistory ? ' finance-monthly-payments-summary' : ''}`}>
+            {(!monthView.enabled || monthView.allHistory) && <p><span>{monthView.enabled ? 'Получено за всю историю' : 'Получено'}</span><strong>{monthView.enabled ? financeMoney(receivedCents) : money(receivedCents)}</strong></p>}
+            <p><span>{monthView.enabled ? 'К оплате сейчас' : 'К оплате'}</span><strong>{money(dueCents)}</strong></p></div>
+          <div className="finance-section-heading"><div>{!isFitLimeEnabled(actor) && <p className="eyebrow">ОПЛАТЫ</p>}<h2>{monthView.enabled ? monthView.allHistory ? 'Все оплаты' : 'Оплаты за месяц' : isFitLimeEnabled(actor) ? 'История оплат' : 'История'}</h2></div><button type="button" className="primary" disabled={packages.length === 0 && !pendingPaymentDraft} onClick={() => openPayment(activePackages[0]?.id ?? packages[0]?.id ?? '')}>{pendingPaymentDraft ? 'Проверить сохранение' : 'Добавить'}</button></div>
+          <div className="finance-payment-list finance-payment-ledger">{visiblePayments.map((payment) => renderPayment(payment))}</div>
+          {finance.isSuccess && visiblePayments.length === 0 && <p className="finance-empty">{monthView.enabled && !monthView.allHistory ? 'За этот месяц оплат нет.' : 'Оплат пока нет.'}</p>}
         </section>
       </>}
       {removePayment.error && <InlineRequestError error={removePayment.error} />}

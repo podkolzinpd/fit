@@ -2,11 +2,12 @@ import type { TrainerFinanceOverview } from '../../data/contracts/trainer-financ
 import { financeChartSegments, financeClientColor, financeMetricValue, financeMoney, type FinanceMetric } from './finance-monthly'
 import './finance-monthly.css'
 
-export function FinanceMonthlySummary({ data, metric, onMetricChange, clientId }: {
+export function FinanceMonthlySummary({ data, metric, onMetricChange, clientId, showMetricSwitch = true }: {
   data: TrainerFinanceOverview
   metric: FinanceMetric
   onMetricChange: (value: FinanceMetric) => void
   clientId?: string
+  showMetricSwitch?: boolean
 }) {
   const client = clientId ? data.clients.find(item => item.clientId === clientId) : undefined
   const total = metric === 'money' ? data.receivedCents : data.completedSessions ?? 0
@@ -20,10 +21,10 @@ export function FinanceMonthlySummary({ data, metric, onMetricChange, clientId }
   ].filter(item => item.value > 0) : financeChartSegments(data.clients, metric)
   const circumference = 2 * Math.PI * 94
   return <section className="finance-monthly" aria-label="Итоги за месяц">
-    <div className="finance-tabs finance-monthly-switch" role="group" aria-label="Показатель итогов">
+    {showMetricSwitch && <div className="finance-tabs finance-monthly-switch" role="group" aria-label="Показатель итогов">
       <button type="button" className={metric === 'money' ? 'is-active' : ''} aria-pressed={metric === 'money'} onClick={() => onMetricChange('money')}>Поступления</button>
       <button type="button" className={metric === 'sessions' ? 'is-active' : ''} aria-pressed={metric === 'sessions'} onClick={() => onMetricChange('sessions')}>Тренировки</button>
-    </div>
+    </div>}
     <div className="finance-monthly-card">
       <div className="finance-monthly-ring">
         <svg viewBox="0 0 220 220" role="img" aria-label={`${metric === 'money' ? 'Поступления' : 'Проведено'}: ${formatted(value)}`}>
@@ -41,7 +42,7 @@ export function FinanceMonthlySummary({ data, metric, onMetricChange, clientId }
         <div className="finance-monthly-center">
           <span>{metric === 'money' ? 'Получено за месяц' : 'Проведено за месяц'}</span>
           <strong data-finance-monthly-total>{formatted(value)}</strong>
-          <small>{clientId ? `Всего ${formatted(total)}` : metric === 'money' ? 'Все спортсмены' : 'тренировок · все спортсмены'}</small>
+          {(!clientId || value !== total) && <small>{clientId ? `Общий итог ${formatted(total)}` : metric === 'money' ? 'Все спортсмены' : 'тренировок · все спортсмены'}</small>}
         </div>
       </div>
       {total === 0 && <p className="finance-monthly-empty">{metric === 'money' ? 'Поступлений за месяц нет' : 'Проведённых занятий за месяц нет'}</p>}

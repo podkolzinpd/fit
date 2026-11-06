@@ -3512,7 +3512,11 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
         await owner.query('update public.clients set archived_at=now() where id=$1',[cards[2]])
         await owner.query('delete from public.client_trainers where client_id=$1',[cards[2]])
         const historicBundle = (await command('select public.list_trainer_finance_client_v2($1) as result',[cards[2]]))[0]!.result
-        expect(historicBundle).toMatchObject({ clientId: cards[2], canCreate: false, sessions: [], packages: [] })
+        expect(historicBundle).toMatchObject({ clientId: cards[2], canCreate: false, sessions: [], packages: [],
+          attendedWorkouts: [{workoutId:historical,workoutDate:'2020-01-20',title:null}] })
+        const attendance = (await command('select public.list_trainer_finance_client_v2($1) as result',[cards[0]]))[0]!.result as { attendedWorkouts:Array<{workoutId:string}> }
+        expect(attendance.attendedWorkouts).toHaveLength(4)
+        expect(new Set(attendance.attendedWorkouts.map(item=>item.workoutId)).size).toBe(4)
         await expect(command('select public.list_trainer_finance_client_v2($1) as result',[cards[2]],OUTSIDE_TRAINER_ID)).rejects.toMatchObject({code:'PT404'})
         let result = await overview()
         expect(result.completedSessions).toBe(before.completedSessions + 4)
