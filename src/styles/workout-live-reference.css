@@ -259,3 +259,22 @@
 .phone-frame.fit-lime-shell.workout-live-reference.live-identity .coach-live-density .live-exercise-collapsed > .live-exercise-start { min-height: 44px; margin: 0 auto; padding: 8px 12px }
 .phone-frame.fit-lime-shell.workout-live-reference.live-identity .coach-live-density-compact .live-session-header { padding-block: 8px }
 .phone-frame.fit-lime-shell.workout-live-reference.live-identity .coach-live-density-compact .live-exercise-collapsed .live-exercise-head { padding-block: 12px 4px }
+
+/* MC4.1: modern timer visual ownership; shared scrolling/interaction rules stay in styles.css. */
+:where(.fit-lime-shell.workout-live-reference:has(.coach-live-v79,.client-live-v79)) .live-rest-sheet { border:1px solid var(--border); border-bottom:0; border-radius:28px 28px 0 0; background:var(--surface-elevated); box-shadow:none }
+:where(.fit-lime-shell.workout-live-reference:has(.coach-live-v79,.client-live-v79)) :where(.live-rest-sheet) .live-rest-countdown { font-size: 40px }
+:where(.fit-lime-shell.workout-live-reference:has(.coach-live-v79,.client-live-v79)) :where(.live-rest-sheet) .live-rest-countdown.overdue { color:var(--danger) }
+:where(.fit-lime-shell.workout-live-reference:has(.coach-live-v79,.client-live-v79)) :where(.live-rest-sheet) .live-rest-divider { border-top:1px solid var(--border) }
+:where(.fit-lime-shell.workout-live-reference:has(.coach-live-v79,.client-live-v79)) :where(.live-rest-sheet) .live-rest-new-time { font-size:var(--type-body-size) }
+:where(.fit-lime-shell.workout-live-reference:has(.coach-live-v79,.client-live-v79)) :where(.live-rest-sheet) .rest-time-wheel-field > span { color:var(--secondary-label-fg); font-size:var(--type-caption-size); font-weight:var(--weight-medium) }
+:where(.fit-lime-shell.workout-live-reference:has(.coach-live-v79,.client-live-v79)) :where(.live-rest-sheet) .rest-time-wheel { border:1px solid var(--border); border-radius:var(--radius-md); background:var(--surface-sunken) }
+:where(.fit-lime-shell.workout-live-reference:has(.coach-live-v79,.client-live-v79)) :where(.live-rest-sheet) .rest-time-wheel [role='option'] { color:var(--muted); font-size:18px; font-weight:var(--weight-medium) }
+:where(.fit-lime-shell.workout-live-reference:has(.coach-live-v79,.client-live-v79)) :where(.live-rest-sheet) .rest-time-wheel [role='option'].selected { border-block:1px solid var(--border); background:var(--surface-raised); color:var(--fg); font-weight:var(--weight-semibold) }
+:where(.fit-lime-shell.workout-live-reference:has(.coach-live-v79,.client-live-v79)) :where(.live-rest-sheet) .rest-time-separator { font-size:24px; font-weight:var(--weight-semibold) }
+:where(.fit-lime-shell.workout-live-reference:has(.coach-live-v79,.client-live-v79)) :where(.live-rest-sheet) .live-rest-apply { background:var(--surface-elevated) }
+:where(.fit-lime-shell.workout-live-reference:has(.coach-live-v79,.client-live-v79)) .live-rest-trigger.resting { color: var(--warning-fg) }
+:where(.fit-lime-shell.workout-live-reference:has(.coach-live-v79,.client-live-v79)) .live-rest-trigger.rest-overdue { border-color:var(--danger-border); background:var(--danger-surface); color:var(--danger); animation:live-rest-overdue-pulse 1s ease-in-out infinite }
+@media (prefers-reduced-motion:reduce) { :where(.fit-lime-shell.workout-live-reference:has(.coach-live-v79,.client-live-v79)) .live-rest-trigger.rest-overdue { animation:none } }
+:where(.fit-lime-shell.workout-live-reference:has(.coach-live-v79,.client-live-v79)) .live-rest-trigger.phase-prep { border-color:var(--accent-strong); background:var(--accent-surface); color:var(--fg) }
+:where(.fit-lime-shell.workout-live-reference:has(.coach-live-v79,.client-live-v79)) .live-rest-trigger.phase-work { border-color:color-mix(in srgb, var(--success-fg) 45%, var(--border)); background:color-mix(in srgb, var(--success-fg) 14%, var(--surface-raised)); color:var(--success-fg) }
+.workout-live-reference:where(.fit-lime-shell:has(.coach-live-v79,.client-live-v79)) .live-pinned { padding-bottom: 10px; margin-bottom: 12px; }
