@@ -1526,3 +1526,10 @@ Typecheck/build и оба месячных browser-case в Chromium/WebKit4/4 п
 Конфликты только в append-журнале и scoped CSS сведены с сохранением обеих
 частей; diff/docs checks passed. Финальные source/main CI после актуального
 main2020 и принятого выпуска FIN602 остаются гейтами.
+
+
+FIN-27 — 07.11: RL-FINANCE-TWO-CONTROL-GRID-20261107 сохраняет причину двух
+собственных ошибок inherited3-column grid и существующую защиту геометрией
+на4ширинах. Это документация в третьем PR, без новых продуктовых правок и
+без перезапуска уже идущего sourceCI второго. Docs/diff checks passed;
+публикация FIN603 по-прежнему после полной приёмки FIN602.
