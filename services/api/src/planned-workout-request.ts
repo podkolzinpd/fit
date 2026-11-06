@@ -181,7 +181,7 @@ function readSet(value: unknown): PlannedWorkoutSetDraft | undefined {
     || durationSec === undefined
     || distanceKm === undefined
     || rpe === undefined
-    || (rpe !== null && (rpe < 6 || !Number.isInteger(rpe * 2)))
+    || (rpe !== null && (rpe < 5 || !Number.isInteger(rpe * 2)))
   ) return undefined
   return {
     ...(sourceSetId === null ? {} : { sourceSetId }),

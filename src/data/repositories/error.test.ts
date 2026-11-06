@@ -103,7 +103,7 @@ describe('repositoryError', () => {
     const error = repositoryError({ code: '23514', message: 'new row for relation "workout_sets" violates check constraint "workout_sets_rpe_valid"' })
 
     expect(error.code).toBe('23514')
-    expect(error.message).toBe('В одном из подходов указано некорректное RPE. Выберите значение от 6 до 10 с шагом 0,5.')
+    expect(error.message).toBe('В одном из подходов указано некорректное RPE. Выберите значение от 5 до 10 с шагом 0,5.')
   })
 
   it.each([

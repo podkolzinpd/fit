@@ -51,6 +51,21 @@ function validRequest() {
 }
 
 describe('planned workout request', () => {
+  it('shares the expanded RPE range across plans, results and favorites', () => {
+    for (const rpe of [5, 5.5, 6, 10, null]) {
+      const request = validRequest()
+      const exercise = request.exercises[0]!
+      const payload = { ...request, exercises: [{ ...exercise, sets: [{ ...exercise.sets[0]!, rpe }] }] }
+      expect(readSavePlannedWorkoutRequest(payload, null)?.draft.exercises[0]?.sets[0]?.rpe).toBe(rpe)
+      expect(readFavoriteWorkoutExercises(payload.exercises)?.[0]?.sets[0]?.rpe).toBe(rpe)
+    }
+    for (const rpe of [4.5, 5.25, 10.5]) {
+      const request = validRequest()
+      request.exercises[0]!.sets[0]!.rpe = rpe
+      expect(readSavePlannedWorkoutRequest(request, null)).toBeUndefined()
+      expect(readFavoriteWorkoutExercises(request.exercises)).toBeUndefined()
+    }
+  })
   it('accepts a named empty plan and distinguishes omitted and cleared names', () => {
     expect(readSavePlannedWorkoutRequest({ ...validRequest(), title: ' Всё тело ', exercises: [] }, null)?.draft)
       .toMatchObject({ title: 'Всё тело', exercises: [] })

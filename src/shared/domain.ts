@@ -411,7 +411,7 @@ export interface WorkoutSetDraft {
   /** Совместимость с историческими тренировками, записанными до секунд. */
   durationMin?: number
   distanceKm?: number
-  /** Целевая субъективная нагрузка в плане: 6–10, шаг 0,5. */
+  /** Целевая субъективная нагрузка в плане: 5–10, шаг 0,5. */
   rpe?: number
   /** Provenance of factual metrics, never inferred from a filled value. */
   metricSources?: WorkoutMetricSources
@@ -505,7 +505,7 @@ export interface LiveSetDraft {
   durationSec?: number
   durationMin?: number
   distanceKm?: number
-  /** Фактическая субъективная нагрузка: 6–10, шаг 0,5. */
+  /** Фактическая субъективная нагрузка: 5–10, шаг 0,5. */
   rpe?: number
   metricSources?: WorkoutMetricSources
   /** Черновик сохраняет таймер перед автоподтверждением; любое другое сохранение снимает пометку. */

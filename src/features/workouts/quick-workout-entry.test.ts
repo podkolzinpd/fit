@@ -468,8 +468,13 @@ describe('parseQuickWorkoutEntry', () => {
     expect(result.parsed[0]?.sets).toEqual(Array.from({ length: 3 }, (_, position) => ({ position, weightKg: 20, reps: 10 })))
   })
 
+  it('сохраняет ИВН5 и5,5 при быстром вводе', () => {
+    const result = parseQuickWorkoutEntry('Присед со штангой 3×8 80 кг RPE 5\nЖим лёжа 3×8 60 кг RPE 5.5', catalog)
+    expect(result.parsed.map(item => item.sets.map(set => set.rpe))).toEqual([[5, 5, 5], [5.5, 5.5, 5.5]])
+  })
+
   it('не передаёт RPE, который не примет ограничение базы', () => {
-    const result = parseQuickWorkoutEntry('Присед со штангой 3×8 80 кг RPE 5\nЖим лёжа 3×8 60 кг RPE 6.2', catalog)
+    const result = parseQuickWorkoutEntry('Присед со штангой 3×8 80 кг RPE 4.5\nЖим лёжа 3×8 60 кг RPE 6.2', catalog)
     expect(result.parsed[0]?.sets).toEqual([
       { position: 0, weightKg: 80, reps: 8 },
       { position: 1, weightKg: 80, reps: 8 },

@@ -125,7 +125,7 @@ const workoutSetValuesSchema = z.object({
   durationMin: nullableMetricSchema,
   durationSec: z.number().int().nonnegative().nullable(),
   distanceKm: nullableMetricSchema,
-  rpe: z.number().min(6).max(10).nullable(),
+  rpe: z.number().min(5).max(10).nullable(),
 })
 const workoutSetSchema = z.object({
   id: z.uuid(),
