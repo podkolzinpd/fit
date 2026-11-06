@@ -1546,3 +1546,28 @@ Git tree main/source совпал полностью. Его main включён
 при add/add conflicts доказано наличие всего parent source в собственной
 истории и точное равенство tree до/после merge; сохранены все FIN603 правки
 и оба контракта. MainCI/публикация/приёмка FIN602 пока впереди.
+
+
+FIN-29 — 07.11 — FIN602 опубликованная приёмка: PR2021/sourceb5581841
+прошёлCI42295047084 SUCCESS35/35; normal squash вmain69cb6789ef1d5e5135d7bf014ca2aaa957756ffb.
+MainCI42298445241 SUCCESS34; tree main/source совпадает. API42301048990 и
+web42301049003 SUCCESS: все213 файлов совпали с immutable artifact,
+health/ready/protected401 и точная API revision69cb6789 проверены.
+OTA42301788554 SUCCESS, sourceCommit69cb6789, ABI8922d2e9,
+bundleb387cf44124339fd3f6b56ff55097b390911ed9c3696db7c896e3ecc0c51b458, manifest/ZIP signatures и SHA256 проверены.
+Public40/40 и verifiedZIP40/40 Chromium/WebKit без retries, PNG и вся
+матрица320/390/430/1440 просмотрены. Большие суммы, поиск/фильтры, архив,
+клавиатура/повтор оплаты и прежний учёт сохранены; проценты/счётчик под именем
+не добавлялись. Mono не менялся, реальные финансовые данные не изменялись.
+Физические iPhone/PWA/Android не проверены. FIN602 принят.
+
+FIN-30 — FIN603 подготовлен от принятого69cb6789: свежие typecheck/build и
+полный finance40/40 Chromium/WebKit без retries прошли; финальные личные
+PNG320/390/430/1440 и строки source/ledger просмотрены. API check137files/
+1603passed/401DB-gated skipped прошёл, lint/types/build прошли. Реальный
+локальный PG186passed/1skipped уже подтверждён; единственный skip — прежний
+custom-photo S3 test безTEST_CUSTOM_PHOTO_S3_ENDPOINT, вне финансов.
+Frontend345files/3075tests и coverage83.72/78.82/83.04/88.38 сохранены для
+неизменного кода FIN603; новые parent CSS проверены полным browser40/40.
+Полный exact-head CI/cleanPG, normal merge и official API196/web/OTA ещё
+гейты. Подготовка/проверка совпадающего API guard не меняла workflow.
