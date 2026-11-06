@@ -1,0 +1,13 @@
+/* FIN503: the existing Lime radio-row pattern, inside the current form. */
+.phone-frame.fit-lime-shell .finance-accounting-choices { min-width:0; margin:0; padding:0; border:0; }
+.phone-frame.fit-lime-shell .finance-accounting-choices legend { margin:0 0 8px; padding:0; color:var(--lime-text-secondary); font-size:14px; line-height:20px; }
+.phone-frame.fit-lime-shell .finance-accounting-choices label { display:grid; grid-template-columns:20px minmax(0,1fr); align-items:center; gap:12px; min-height:60px; padding:14px 0; border-bottom:1px solid var(--lime-divider); color:var(--lime-text); font:inherit; font-size:16px; line-height:22px; cursor:pointer; }
+.phone-frame.fit-lime-shell .finance-accounting-choices input { appearance:auto; width:20px; height:20px; min-height:0; margin:0; padding:0; accent-color:var(--lime-accent); }
+.phone-frame.fit-lime-shell .finance-accounting-choices label > span { min-width:0; overflow-wrap:anywhere; }
+.phone-frame.fit-lime-shell .finance-accounting-choice-title { display:block; }
+.phone-frame.fit-lime-shell .finance-accounting-choice-detail { display:block; margin-top:4px; color:var(--lime-text-secondary); font-size:14px; line-height:20px; }
+.phone-frame.fit-lime-shell .finance-accounting-choices:disabled label { cursor:default; }
+
+.phone-frame.fit-lime-shell :is(.finance-manual-session,.finance-session-editor) { grid-template-columns:minmax(0,1fr); gap:16px; padding:16px; border-radius:var(--lime-radius-card); background:var(--lime-surface-raised); }
+.phone-frame.fit-lime-shell :is(.finance-manual-session,.finance-session-editor) .field { gap:8px; font-size:14px; line-height:20px; }
+.phone-frame.fit-lime-shell .workout-attendance-accounting p { overflow-wrap:anywhere; }

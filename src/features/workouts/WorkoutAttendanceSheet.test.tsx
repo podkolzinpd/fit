@@ -5,9 +5,10 @@ import type { Workout } from '../../shared/domain'
 import { localDate } from '../../shared/local-date'
 import { WorkoutAttendanceSheet } from './WorkoutAttendanceSheet'
 
+const identity = vi.hoisted(() => ({ lime: false }))
 const backend = vi.hoisted(() => ({ confirmAttendance: vi.fn(), cancelPlanned: vi.fn(), get: vi.fn(), listClient: vi.fn() }))
 vi.mock('../../app/data-backend-context', () => ({ useDataBackend: () => ({ workouts: backend, trainerFinance: backend }) }))
-vi.mock('../../app/auth-context', () => ({ useAuth: () => ({ actor: { timezone: 'Europe/Moscow' } }) }))
+vi.mock('../../app/auth-context', () => ({ useAuth: () => ({ actor: { role: 'trainer', experiments: { fitLime: identity.lime }, timezone: 'Europe/Moscow' } }) }))
 const workout: Workout = { id:'workout-1',clientId:'client-1',clientName:'Спортсмен',workoutDate:localDate('2026-10-31'),
   status:'planned',trainingFormat:'with_trainer',title:'Название',startTime:'10:00',endTime:null,startedAt:null,completedAt:null,
   notes:null,stageId:null,stageTitle:null,version:7,exercises:[] }
@@ -20,6 +21,7 @@ function show(action: 'complete' | 'cancel', onCompleted=vi.fn().mockResolvedVal
 beforeAll(() => { HTMLDialogElement.prototype.showModal = function () { this.setAttribute('open','') } })
 beforeEach(() => {
   vi.clearAllMocks()
+  identity.lime = false
   backend.confirmAttendance.mockResolvedValue(8);backend.cancelPlanned.mockResolvedValue(8)
   backend.listClient.mockResolvedValue({clientId:workout.clientId,packages:[],sessions:[],payments:[]})
 })
@@ -156,4 +158,43 @@ it('never offers deletion of a populated Live or loads packages for self trainin
   expect(screen.queryByRole('radio',{name:'Удалить пустую тренировку'})).not.toBeInTheDocument()
   expect(screen.getByText('Абонемент не списывается')).toBeVisible()
   expect(backend.listClient).not.toHaveBeenCalled()
+})
+
+
+it('Lime distinguishes same-name packages by period and submits the explicitly chosen ID', async () => {
+  identity.lime=true
+  backend.listClient.mockResolvedValue({packages:[
+    {...packageFixture('one'),title:'Персональные тренировки',startsOn:'2026-10-01',endsOn:'2026-10-31',sessionsRemaining:3},
+    {...packageFixture('two'),title:'Персональные тренировки',startsOn:'2026-10-15',endsOn:'2026-11-14',sessionsRemaining:8},
+  ]})
+  show('complete');await screen.findByText('Абонемент не выбран')
+  fireEvent.click(screen.getByRole('button',{name:'Выбрать'}))
+  expect(screen.queryByText('По текущим условиям')).not.toBeInTheDocument()
+  const first=screen.getByRole('radio',{name:/Персональные тренировки 01.10.2026 — 31.10.2026 · осталось 3/})
+  const second=screen.getByRole('radio',{name:/Персональные тренировки 15.10.2026 — 14.11.2026 · осталось 8/})
+  expect(first).not.toBeChecked();expect(second).not.toBeChecked()
+  fireEvent.click(second)
+  expect(screen.getByText(/Персональные тренировки · 15.10.2026 — 14.11.2026 · останется 7/)).toBeVisible()
+  fireEvent.click(screen.getByRole('button',{name:'Подтвердить проведение'}))
+  await waitFor(()=>expect(backend.confirmAttendance).toHaveBeenCalledWith(workout,{disposition:'charged',packageId:'two'},expect.any(String)))
+})
+
+it('Lime shows the unique automatic package without changing the automatic server command', async () => {
+  identity.lime=true
+  backend.listClient.mockResolvedValue({packages:[packageFixture('one')]})
+  show('complete');await screen.findByText('Спишется 1 занятие')
+  fireEvent.click(screen.getByRole('button',{name:'Изменить учёт'}))
+  expect(screen.getByRole('radio',{name:/Абонемент one/})).toBeChecked()
+  fireEvent.click(screen.getByRole('button',{name:'Подтвердить проведение'}))
+  await waitFor(()=>expect(backend.confirmAttendance).toHaveBeenCalledWith(workout,{disposition:'auto',packageId:null},expect.any(String)))
+})
+
+it('Lime explicit deferral does not charge even without available packages', async () => {
+  identity.lime=true
+  show('complete');await screen.findByText('Нет подходящего абонемента')
+  fireEvent.click(screen.getByRole('button',{name:'Изменить учёт'}))
+  expect(screen.queryByText('По текущим условиям')).not.toBeInTheDocument()
+  fireEvent.click(screen.getByRole('radio',{name:'Выбрать абонемент позже'}))
+  fireEvent.click(screen.getByRole('button',{name:'Подтвердить проведение'}))
+  await waitFor(()=>expect(backend.confirmAttendance).toHaveBeenCalledWith(workout,{disposition:'unassigned',packageId:null},expect.any(String)))
 })
