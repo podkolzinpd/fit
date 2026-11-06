@@ -126,7 +126,8 @@ function capability(value,key,session,name='capability.encrypted.json') {
  writeFileSync(`/capability/${name}`,JSON.stringify(sealUpload(value,key,session)),{mode:0o644,flag:'wx'})
  chmodSync(`/capability/${name}`,0o644) // independent of a restrictive process umask; ciphertext metadata only
 }
-export async function prepareCloudruUpload(target,digest,session,operatorPublicPem) {
+export async function prepareCloudruUpload(target,digest,session,operatorPublicPem,{prepareReadback=false}={}) {
+ if(typeof prepareReadback!=='boolean')fail()
  journalSession(session);if(!/^[a-f0-9]{64}$/.test(digest??''))fail()
  sealUpload({validation:true},operatorPublicPem,session)
  sessionDirectory()
@@ -139,7 +140,11 @@ export async function prepareCloudruUpload(target,digest,session,operatorPublicP
   durableFile('/session/manifest.json',JSON.stringify(manifest))
   const url=await getSignedUrl(client,new sdk.PutObjectCommand({Bucket:bucket,Key:journalObject(session,'payload'),
    ContentType:'application/octet-stream',ContentLength:uploadBytes,IfNoneMatch:'*'}),{expiresIn:600})
-  capability({session,digest,url,bytes:uploadBytes,publicKey:keys.publicKey,expiresAt:Date.now()+600000},operatorPublicPem,session)
+  // Optional reply access is also created BEFORE customer input. It permits a
+  // local operator to read an encrypted reply without uploading later artifacts.
+  const readbackUrl=prepareReadback?await getSignedUrl(client,new sdk.GetObjectCommand({Bucket:bucket,Key:journalObject(session,'readback')}),{expiresIn:600}):null
+  capability({session,digest,url,bytes:uploadBytes,publicKey:keys.publicKey,expiresAt:Date.now()+600000,
+   ...(readbackUrl?{readbackUrl}:{})},operatorPublicPem,session)
   return {status:'upload_prepared',objectAccessVerified:true,objectDeletionRequired:false,
    privacyBoundary:'vm_only_encryption_key',bucketPermissionsInspected:false}
  }finally{client.destroy()}

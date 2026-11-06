@@ -1,4 +1,4 @@
-import { randomUUID } from 'node:crypto'
+import { createHash, randomUUID } from 'node:crypto'
 import { fileURLToPath } from 'node:url'
 import { runner } from 'node-pg-migrate'
 import { Pool } from 'pg'
@@ -126,4 +126,74 @@ describe.skipIf(source === undefined)('owner-approved canonical client restorati
       expect((await c.query('select client_id from public.client_trainers where client_id=$1 and trainer_id=$2', [f.card, f.trainerId])).rows).toEqual([])
     } finally { c.release() }
   })
+  async function privateFixture() {
+    const f = await fixture()
+    for (const id of [f.athleteId, f.trainerId]) await owner.query("insert into app_private.auth_identities(provider,provider_subject_sha256,profile_id,identity_origin) values('yandex',$1,$2,'native')", [createHash('sha256').update(id).digest('hex'), id])
+    const workoutIds = (await owner.query<{ id: string }>("select id from public.workouts where client_id=$1 and status='done' order by id", [f.card])).rows.map(w => w.id)
+    await owner.query(`insert into public.workouts(client_id,trainer_id,created_by,workout_date,status,notes)
+      values($1,$2,$3,current_date,'planned','Keep planned'),($1,$2,$3,current_date,'cancelled','Keep cancelled')`, [f.card, f.athleteId, f.trainerId])
+    await owner.query("insert into public.trainer_finance_packages(trainer_id,client_id,title,sessions_total,price_cents,starts_on) values($1,$2,'Preserve synthetic finance',10,50000,current_date)", [f.trainerId, f.card])
+    return { ...f, expected: { clientId: f.card, workoutIds, workouts: 21, exercises: 1, sets: 1 } }
+  }
+  async function privatePlan(f: Awaited<ReturnType<typeof privateFixture>>) {
+    const c = await owner.connect()
+    try { return await planClientRestore(c, { trainerId: f.trainerId, athleteId: f.athleteId }, f.expected) } finally { c.release() }
+  }
+  it('private proven history preserves planned/cancelled rows and finance and verifies BOTH runtime actors', async () => {
+    const f = await privateFixture()
+    await expect(plan(f)).rejects.toThrow('history')
+    const before = (await owner.query('select to_jsonb(w) value from public.workouts w where client_id=$1 order by id', [f.card])).rows
+    const financial = (await owner.query('select to_jsonb(p) value from public.trainer_finance_packages p where client_id=$1 order by id', [f.card])).rows
+    const p = await privatePlan(f)
+    await expect(apply(p, false)).rejects.toThrow('backup_required')
+    expect(await apply(p)).toMatchObject({ historyUnchanged: true, replayed: false, done: 21 })
+    expect(await verify(p)).toMatchObject({ trainerCanReadCanonical: true, athleteCanReadCanonical: true, bothCanReadImported: true, done: 21 })
+    expect((await owner.query('select to_jsonb(w) value from public.workouts w where client_id=$1 order by id', [f.card])).rows).toEqual(before)
+    expect((await owner.query('select to_jsonb(p) value from public.trainer_finance_packages p where client_id=$1 order by id', [f.card])).rows).toEqual(financial)
+    expect(await apply(p)).toMatchObject({ replayed: true, historyUnchanged: true })
+  })
+  it('private history rejects another canonical card or missing native identity before repair', async () => {
+    const f = await privateFixture()
+    await owner.query('delete from app_private.auth_identities where profile_id=$1', [f.athleteId])
+    await expect(privatePlan(f)).rejects.toThrow('expected_identity')
+    const g = await privateFixture()
+    g.expected.clientId = randomUUID()
+    await expect(privatePlan(g)).rejects.toThrow('expected_identity')
+  })
+  it('private history refuses another same-name live card linked to this trainer', async () => {
+    const f = await privateFixture()
+    await owner.query("insert into public.clients(id,trainer_id,full_name) values($1,$2,'Synthetic canonical')", [randomUUID(), f.trainerId])
+    await expect(privatePlan(f)).rejects.toThrow('other_canonical_candidate')
+    expect((await owner.query<{ n: number }>("select count(*)::int n from public.client_trainer_relationships where client_id=$1 and status='active'", [f.card])).rows[0]?.n).toBe(0)
+  })
+  it('private history rejects foreign/missing imported IDs and modified expected bindings', async () => {
+    const f = await privateFixture()
+    f.expected.workoutIds[0] = randomUUID()
+    await expect(privatePlan(f)).rejects.toThrow('imported_history_changed')
+    const g = await privateFixture(), p = await privatePlan(g)
+    const changed = structuredClone(p)
+    changed.expectedHistory = { ...g.expected, sets: 2 }
+    await expect(apply(changed)).rejects.toThrow('expected_binding')
+    expect((await owner.query<{ n: number }>("select count(*)::int n from public.client_trainer_relationships where client_id=$1 and status='active'", [g.card])).rows[0]?.n).toBe(0)
+  })
+  it('private finance or prior planned-row changes invalidate the plan without writes', async () => {
+    const f = await privateFixture(), p = await privatePlan(f)
+    await owner.query("update public.trainer_finance_packages set title='Legitimate newer finance' where client_id=$1", [f.card])
+    await expect(apply(p)).rejects.toThrow('state_changed')
+    const g = await privateFixture(), q = await privatePlan(g)
+    await owner.query("update public.workouts set notes='Legitimate newer plan' where client_id=$1 and status='planned'", [g.card])
+    await expect(apply(q)).rejects.toThrow('state_changed')
+    expect((await owner.query<{ n: number }>("select count(*)::int n from public.client_trainer_relationships where client_id=any($1::uuid[]) and status='active'", [[f.card, g.card]])).rows[0]?.n).toBe(0)
+  })
+  it('private verification rejects changed ownership or a lost imported set', async () => {
+    const f = await privateFixture(), p = await privatePlan(f)
+    await apply(p)
+    await owner.query('delete from public.workout_sets where client_id=$1', [f.card])
+    await expect(verify(p)).rejects.toThrow('trainer_imported_visibility')
+    const g = await privateFixture(), q = await privatePlan(g)
+    await apply(q)
+    await owner.query('update public.clients set auth_user_id=null where id=$1', [g.card])
+    await expect(verify(q)).rejects.toThrow('runtime_receipt')
+  })
+
 })
