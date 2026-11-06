@@ -5108,3 +5108,49 @@ CSSscroll-snap/touch-action/overflow/доступность, порталвphone
 Дальше:production-modebaseline и отключение только выбранногоskin,
 минимальныйdiff/внешнийвид/регрессии,точныйsourceCI иreviewablePR;
 затем сводка владельцу без слияния/публикации.
+
+
+### Итерация 152 — 2026-11-06 — Codex / OpenAI — MC4.1 реализован, проверки
+
+Изолированы15Identity-групп таймера, включая375px, и visualсвойства17групп
+общего окна/колёс/состояний, включаяreducedmotion. Только styles.css и
+существующий workout-live-reference.css. Функциональные sharedlayout/
+scroll-snap/touch-action/overflow/selected44px остаются общими. НовомуLime
+закреплены visualсвойства в прежнемслое и измеренные padding-bottom10px/
+margin-bottom12px блока.live-pinned; безних baselineablation менял высоту.
+Root :has(v79) учитывает портал окна вphone-frame; внеmodernLime старые
+селекторы сохраняютспецифичность черезzero-specificityguard.
+СтатическийPostCSSproof:6064→6072правила,5982семейства,все исходные
+свойства/значения сохранены (functional+visual partition),0расхождений.
+DOM/React/таймер/handlers/данные/API/flags/шрифты/CIне менялись.
+
+Новый импортируемый lime-live-timer-skin.cases проверяет52modern+4legacy
+случая:роли,темыклиента,Original/Compact,clock/rest/overdue/sheet,375/390/430,
+Chromium/WebKit. Это визуальнаяownershipматрица, не размножение механик.
+Доизменения52modern показывали зависимость,4legacy controls проходили;
+после56/56passed,52/52computed-style/geometry и28/28PNG идентичныbaseline,
+4/4legacyсовпали. LightclientOriginal/darktrainerCompact просмотрены;
+не унифицируется исходный вид разных ролей без нового согласования.
+
+Первый baseline прерван: :visible выбирал inertкопию кнопки вшапке.
+Уточнён активный .coach-v79-actions trigger, безforceclick; baseline56измерен.
+В новомтесте исправлен TSтип сравнениядлин, приложение не подстраивалось.
+Полныеbuild/tsc/startup-photo/global lint прошли.9файлов77unitpassed.
+Browser202/202passed3.7m/retries0:146существующих timer/keyboard/undo/
+swipe/drag/fold/phase/RPE/retry/finish и56ownership.
+
+При усилении диагностики обнаружены объединённые minifierселекторы и
+CSSOMдвойныекавычки. Тест теперь разбираетветви с учётомскобок/кавычек,
+проверяет30уникальныхсемейств и не отключает чужиеветви объединённогоrule.
+Программныйfocus послекасания не даёт обязательныйfocus-visible; ожидание
+2px было неверным, прогон адресно прерван. РеальныйTab/ShiftTab сохраняет
+фактфокуса и даёт существующую2pxобводку; calibration2/2passed.
+Новые полный56baseline и56candidate нужны именно с этой финальной
+диагностикой; прежние успешные результаты не выдаются за её полныйпрогон.
+Для повторногоbaseline подтверждено совпадение appsrc/package/vite с51b5
+и исходногоCSSasset index-BMiLhQOj в сохранённой сборке.
+
+Открыто MC4-104/105: финальная ownershipприёмка,точныйCI/PR и сводкавладельцу.
+Слияние/публикация запрещены до нового разрешения. Физическийтелефон/
+realOAuth/public/signedZIP этогоPR не проверены. Новых продуктовыхошибок
+не найдено, диагностические неуспешныепопытки сохранены в /tmp/fit-mc41*.
