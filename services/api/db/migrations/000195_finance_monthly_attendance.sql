@@ -148,7 +148,7 @@ language plpgsql stable security definer set search_path = ''
 as $$
 declare actor_id uuid := app_private.trainer_finance_assert_trainer();
 begin
-  if not app_private.trainer_finance_has_connection(actor_id, p_client_id)
+  if not public.is_active_client_trainer_connection(p_client_id, actor_id)
     and not exists (
       select 1 from public.trainer_finance_packages package
       where package.trainer_id = actor_id and package.client_id = p_client_id
@@ -341,7 +341,7 @@ language plpgsql stable security definer set search_path = ''
 as $$
 declare actor_id uuid := app_private.trainer_finance_assert_trainer();
 begin
-  if not app_private.trainer_finance_has_connection(actor_id, p_client_id)
+  if not public.is_active_client_trainer_connection(p_client_id, actor_id)
     and not exists (
       select 1 from public.trainer_finance_packages package
       where package.trainer_id = actor_id and package.client_id = p_client_id
