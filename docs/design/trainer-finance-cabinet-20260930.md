@@ -1495,3 +1495,12 @@ independently прошёл1/1 (174 неподходящих case skipped,257ms t
 вывода значения и без production. Подтверждены новые attendedWorkouts,
 historical/no-ledger и отказ чужому actor. Это дополняет локальный API check,
 но не заменяет полный clean PG source/main CI перед выпуском.
+
+
+FIN-27, совместная приёмка parent46635408/main9ab3b6ce: сохранены две равные
+текущие KPI колонки, точные крупные суммы и личные source/ledger строки.
+Typecheck/build и оба месячных browser-case в Chromium/WebKit4/4 прошли
+без retries; PNG просмотрены, включая320px личную карточку и оплату.
+Конфликты только в append-журнале и scoped CSS сведены с сохранением обеих
+частей; diff/docs checks passed. Финальные source/main CI после актуального
+main2020 и принятого выпуска FIN602 остаются гейтами.
