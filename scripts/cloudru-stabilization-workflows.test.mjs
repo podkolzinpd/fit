@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { spawnSync } from 'node:child_process'
 import test from 'node:test'
-import { planMediaAclReadRepair } from './repair-cloudru-media-acl.mjs'
+import { planMediaAclReadRepair, inspectMediaAccess, safeMediaRepairFailure, verifyMediaKeyBinding } from './repair-cloudru-media-acl.mjs'
 import { createHash, generateKeyPairSync, privateDecrypt, createDecipheriv, constants } from 'node:crypto'
 import { gzipSync } from 'node:zlib'
 import { readJournalTransport, sealJournalReceipt } from './cloudru-journal-import.mjs'
@@ -589,6 +589,62 @@ test('media ACL repair is manual, bucket-bound and uses only existing media cred
   assert.match(command, /const bucket = 'fit-cloudru-stage-media-c2ad3760'/)
   assert.doesNotMatch(command, /PutBucketPolicyCommand|PutBucketOwnershipControlsCommand|CreateAccessKey|DATABASE_/)
   assert.doesNotMatch(workflow, /schedule:|push:|pull_request:|add-access-binding/)
+  assert.match(workflow, /default: inspect\n        options: \[inspect, repair\]/)
+})
+
+const metadataCommands = Object.fromEntries(['GetBucketAclCommand', 'GetBucketPolicyCommand',
+  'GetBucketOwnershipControlsCommand', 'GetBucketVersioningCommand'].map(name => [name, class {
+  constructor(input) { this.name = name; this.input = input }
+}]))
+
+test('media inspection reads only fixed bucket metadata and never mutates grants', async () => {
+  const calls = []
+  const events = []
+  await inspectMediaAccess({ send: async command => {
+    calls.push(command)
+    if (command.name === 'GetBucketPolicyCommand') throw Object.assign(new Error('private-policy-path'), { name: 'NoSuchBucketPolicy' })
+    if (command.name === 'GetBucketAclCommand') return mediaAcl()
+    if (command.name === 'GetBucketOwnershipControlsCommand') return { OwnershipControls: { Rules: [{ ObjectOwnership: 'BucketOwnerPreferred' }] } }
+    return { Status: 'Enabled' }
+  } }, metadataCommands, event => events.push(event))
+  assert.equal(calls.length, 4)
+  assert.ok(calls.every(command => command.name.startsWith('GetBucket')
+    && JSON.stringify(command.input) === JSON.stringify({ Bucket: 'fit-cloudru-stage-media-c2ad3760' })))
+  assert.ok(events.every(event => event.ok === true))
+  assert.equal(events[0].needsAclReadGrant, true)
+  assert.equal(events[1].policyAbsent, true)
+  assert.doesNotMatch(JSON.stringify(events), /fixture-owner|private-policy-path|b87cd7c3/)
+})
+
+test('media inspection continues independent reads after denials and redacts storage payloads', async () => {
+  const calls = []
+  const events = []
+  await assert.rejects(inspectMediaAccess({ send: async command => {
+    calls.push(command.name)
+    if (command.name === 'GetBucketOwnershipControlsCommand') return { OwnershipControls: { Rules: [{ ObjectOwnership: 'BucketOwnerEnforced' }] } }
+    if (command.name === 'GetBucketVersioningCommand') return {}
+    throw Object.assign(new Error('private-key/path?Signature=secret'), {
+      name: 'AccessDenied', $metadata: { httpStatusCode: 403, requestId: 'private-request-id' },
+    })
+  } }, metadataCommands, event => events.push(event)), /media_acl_inspection_failed/)
+  assert.equal(calls.length, 4)
+  assert.deepEqual(events.map(event => event.ok), [false, false, true, true])
+  assert.equal(events[0].reason, 'AccessDenied')
+  assert.equal(events[0].httpStatus, 403)
+  assert.equal(events[3].versioning, 'Unconfigured')
+  assert.doesNotMatch(JSON.stringify(events), /private-|Signature|secret/)
+})
+
+test('media key binding rejects mismatched or malformed fingerprints without revealing credentials', () => {
+  const keyId = 'fixture-key-id'
+  const digest = createHash('sha256').update(keyId).digest('hex')
+  assert.doesNotThrow(() => verifyMediaKeyBinding(keyId, digest))
+  for (const expected of ['a'.repeat(64), 'not-a-digest', '']) {
+    assert.throws(() => verifyMediaKeyBinding(keyId, expected), /media_key_binding_rejected/)
+  }
+  assert.deepEqual(safeMediaRepairFailure(Object.assign(new Error('private-error-and-key'), {
+    name: 'arbitrary-private-name', $metadata: { httpStatusCode: 403, resource: 'private-object' },
+  })), { code: 'storage_request_failed', reason: 'unclassified', httpStatus: 403 })
 })
 
 test('legacy routing is manually confirmed and never changes database or IAM resources', () => {

@@ -451,3 +451,120 @@ main сохраняет ту же реализацию runtime; отдельны
 bounded journal100 записей не содержит worker/cleanup/launcher failures и DB
 error codes; queue pending/overdue/stale/terminal=0. Это операционная проверка,
 не закрытие observation/rollback window и не device-delivery acceptance.
+
+## Итерация — 06.11.2026 — Codex / OpenAI — восстановление media metadata access
+
+Задача: владелец разрешил исправить доступ медиахранилища и довести полный
+backup/restore/media запуск до проверенного результата без потери данных.
+Новое прямое решение заменяет прежнее «оставить media без изменений» только
+для точечного ремонта этого доступа. Голосовой и текстовый разбор, SpeechKit,
+LLM, промпты, matching, fallback и параметры не менять.
+
+План и критерии MHA101–105:
+
+| ID | Действие | Приёмка |
+| --- | --- | --- |
+| MHA101 | Сверить текущий отказ, используемый principal и bucket-scoped права | Подтверждён точный отказ, без публикации ключей и приватных путей |
+| MHA102 | Исправить только доказанный недостаток доступа | Существующие private owner/app grants сохранены; нет public/admin или доступа к другим бакетам |
+| MHA103 | Менять служебный код одним PR только при необходимости | Существующие privacy/versioning/readability gates не ослаблены; голос/текст/БД вне diff |
+| MHA104 | Проверить права и выполнить полный штатный backup/restore/media | Успешны encrypted backup/readback, isolated restore и все этапы media health |
+| MHA105 | Проверить runtime чтение media и записать результат | Подтверждены реальные чтения, отсутствуют незавершённые временные расширения доступа |
+
+Исходные факты: main62929b47; свежий scheduled run42197595689 снова падает
+на `acl_read / AccessDenied / 403`, но DB backup и isolated restore проходят.
+Существующий repair workflow ещё не запускался. Его script сначала читает
+bucket policy и ACL текущим media principal, поэтому не может сам выдать себе
+недостающее разрешение чтения. Ключи не ротировать по одному факту403.
+Сначала проверить фактическую конфигурацию и выбрать минимальную правку.
+
+Сделано: проверены актуальные main/workflows, безопасные stage/error события
+и история решения15.10. Консоль владельца требует повторного входа; запрос
+на вход отправлен, секретные значения не запрашиваются.
+Открыто: фактический ACL/роль и runtime media read ещё не проверены;
+изменения доступа, production-кода и данных ещё не выполнялись.
+Дальше: проверить существующий manual path и owner readback, применить только
+минимальную подтверждённую правку и получить MHA104–105.
+
+Проверка manual path: четыре существующих media ACL unit/workflow tests
+пройдены. Workflow42214779666 на main62929b47 завершился403
+`cloudru_media_acl_repair_failed / storage_request_failed` до `PutBucketAcl`:
+script сначала вызывает `GetBucketPolicy`, а catch немедленно прекращает
+операцию для всех ошибок кроме `NoSuchBucketPolicy`. Правки ACL/IAM/данных
+этим запуском не выполнялись. Нужен действующий owner-console вход для
+чтения текущей конфигурации и минимальной правки; запрос входа ожидает ответа.
+Повторять repair без изменения предусловий и запускать заведомо падающий
+полный backup ради повторного403 не требуется. MHA102–105 ещё не выполнены.
+
+Owner-console readback06.11: текущая учётка приложения активна; общая
+`s3e.viewer` и bucket-only `s3e.editor`, `s3e.editor-acl`, `s3e.viewer-acl`
+уже назначены. Media secrets не менялись с13.10, после которого15.10 была
+проверена принадлежность существующего key этой учётке. Public access switch
+выключен; inventory в консоли2349 objects/83.23MB. Это ещё не чтение ACL.
+Документация Cloud.ru подтверждает отдельную проверку IAM и ACL, отсутствие
+ACL editor в консоли и bypass для s3e.admin. Подготовлена, но НЕ сохранена
+только временная bucket-only s3e.admin; исходные grants/прочие роли не сняты.
+Перед сохранением требуется action-time browser confirmation; вопрос отправлен.
+Temporary role снимать при любом результате repair до полной backup-приёмки.
+
+Независимый runtime read до ремонта: public trainer catalog200 и одно фото
+через выданный API signed URL200/image-jpeg/83884bytes; значения URL/личности
+не сохранены в публичный журнал. Это подтверждает один реальный object read,
+не полноту инвентаря или исправность metadata checks. Данные не записывались.
+
+Владелец отдельно подтвердил временную media-only s3e.admin и немедленное
+снятие при любом результате. Роль сохранена, readback показал только одну
+добавку на media; repair42233813619 снова завершился generic403. Роль сразу
+снята, owner readback подтвердил прежние62 Evolution roles и только исходные
+media editor/editor-acl/viewer-acl. Временного admin больше нет.
+
+Уточнение прежнего вывода: старый generic error handler не фиксирует stage,
+поэтому по403 ремонта нельзя однозначно отличить policy/ACL read от write
+или readback. Успешный полный ACL readback не получен; объектные записи и
+удаления не входят в этот script. Расширение прав повторно вслепую не выдавать.
+
+Необходимая одна code-правка MHA103: у существующей manual workflow добавить
+default-inspect режим независимого чтения ACL/policy/ownership/versioning,
+не меняющий ничего даже при отказе первого запроса; repair сохраняет прежний
+guard и получает постоянные stage labels. Проверка Key ID по опциональному
+SHA256 из owner console пишет только matches=true, без ID/хеша/ключа в вывод.
+Safe error handler выводит только allowlisted error names и HTTP status,
+не SDK message/resource/request URL. Новых credentials и IAM API нет.
+
+Локально69/69 operational tests прошли, в том числе три новых сценария:
+только fixed-bucket GET, независимые reads после403 с редактированием вывода,
+key binding mismatch до запросов. Syntax/lint и docs budget/link checks пройдены.
+CI и реальный inspect нового main ещё впереди; полное backup/media принятие
+MHA104–105 остаётся открытым.
+
+Точная причина найдена через owner-console editor после первой публикации
+PR2018: действующая policy содержит два private Allow только приложению:
+`s3:ListBucket` на media bucket и `s3:GetObject`/`s3:PutObject` на его objects.
+Metadata actions отсутствуют. По алгоритму Cloud.ru наличие policy заменяет
+ACL-ветку проверки; добавление IAM viewer-acl не добавляет отсутствующий
+Allow в policy. Versioning в owner console уже Enabled; менять его не нужно.
+Исходная policy сохранена приватно для точного сравнения, без публикации ключей.
+
+Коррекция плана MHA-POLICY-READONLY-01: ACL не переписывать, admin повторно
+не выдавать. В ту же policy предлагается добавить только GetBucketAcl,
+GetBucketPolicy, GetBucketOwnershipControls, GetBucketVersioning для того же
+app principal и того же bucket ARN, сохранив оба исходных statements.
+Применение требует отдельного action-time подтверждения этой конкретной
+постоянной read-only добавки, потому что это другой механизм, чем временный
+admin. Подготовка и локальная проверка идут в том же PR; production policy
+ещё не изменена.
+
+Существующий media health ошибочно требует полного отсутствия policy.
+Подготовлено точное исключение только для существующего media bucket:
+проверяются exact app principal, два фиксированных resource ARN, полный
+набор прежних object/list и четырёх read-only metadata actions. Public,
+другие principals/buckets/actions, Not* и непустые Conditions, отсутствие
+или дублирование обязательных actions отклоняются. Положительная ACL
+проверка, versioning/inventory/content gates сохраняются. Строгий
+assertNoBucketPolicy у DB backups не меняется и отдельно проверен.
+Inspect служит только независимым metadata read: наличие policy фиксируется
+без утверждения о её безопасности; repair по-прежнему отвергает любую policy.
+
+Новая локальная проверка: API media+backup18/18,69/69 operational, API
+lint/typecheck/build прошли. Прежний собственный CI42235270861 отменён из-за
+новой версии diff; чужие CI/PR не менялись. Нужны новое CI и согласование
+точной policy, затем штатный API release и полный MHA104–105.

@@ -3,6 +3,15 @@ name: Repair Cloud.ru media ACL read access
 on:
   workflow_dispatch:
     inputs:
+      mode:
+        description: Read metadata independently without mutation, or run the existing guarded repair
+        type: choice
+        default: inspect
+        options: [inspect, repair]
+      expected_key_sha256:
+        description: Optional SHA256 of the console-confirmed Key ID; logs only match success
+        type: string
+        default: ''
       confirmation:
         description: GRANT_APP_MEDIA_ACL_READ_ONLY preserves existing private grants
         type: string
@@ -36,9 +45,11 @@ jobs:
         with:
           node-version: 24
       - run: npm ci --prefix services/api --ignore-scripts
-      - name: Preserve private media ACL and add only app READ_ACP
+      - name: Inspect media metadata or preserve private ACL and add only app READ_ACP
         env:
           MEDIA_ACL_CONFIRMATION: ${{ inputs.confirmation }}
+          MEDIA_ACL_MODE: ${{ inputs.mode }}
+          EXPECTED_MEDIA_KEY_SHA256: ${{ inputs.expected_key_sha256 }}
           CLOUDRU_MEDIA_KEY_ID: ${{ secrets.CLOUDRU_MEDIA_MIGRATION_KEY_ID }}
           CLOUDRU_MEDIA_KEY_SECRET: ${{ secrets.CLOUDRU_MEDIA_MIGRATION_KEY_SECRET }}
         run: node scripts/repair-cloudru-media-acl.mjs
