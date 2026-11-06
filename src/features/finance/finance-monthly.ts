@@ -1,9 +1,16 @@
 import type { TrainerFinanceOverviewClient } from '../../data/contracts/trainer-finance'
 
 export type FinanceMetric = 'money' | 'sessions'
-export const financeMoney = (cents: number) => new Intl.NumberFormat('ru-RU', {
-  style: 'currency', currency: 'RUB', maximumFractionDigits: cents % 100 === 0 ? 0 : 2,
-}).format(cents / 100)
+export function financeMoney(cents: number) {
+  // Keep integer cents exact even when dividing a large safe integer would
+  // lose a kopeck in floating-point rubles. The read model validates integers.
+  const value = BigInt(cents), fraction = value % 100n
+  const formatter = new Intl.NumberFormat('ru-RU', {
+    style: 'currency', currency: 'RUB', maximumFractionDigits: fraction === 0n ? 0 : 2,
+  })
+  return formatter.formatToParts(value / 100n).map(part =>
+    part.type === 'fraction' ? fraction.toString().padStart(2,'0') : part.value).join('')
+}
 export const financeMetricValue = (client: TrainerFinanceOverviewClient, metric: FinanceMetric) =>
   metric === 'money' ? client.receivedCents : client.completedSessions ?? 0
 export function financeClientColor(clientId: string) {

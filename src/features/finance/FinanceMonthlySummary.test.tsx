@@ -60,3 +60,8 @@ describe('monthly finance readout', () => {
     expect(container.querySelector('[data-finance-monthly-total]')?.textContent).toBe(financeMoney(0))
   })
 })
+
+
+it('preserves every kopeck at the safe integer boundary of the read model', () => {
+  expect(financeMoney(Number.MAX_SAFE_INTEGER)).toMatch(/^90\s071\s992\s547\s409,91\s₽$/)
+})
