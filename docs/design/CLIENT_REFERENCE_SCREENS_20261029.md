@@ -5182,3 +5182,38 @@ Mainостаётся51b5e4bb;2016ещёopen, его выпуск не блоки
 межсборочноеCSS/geometry/28PNGсравнение,build/types/lint и exact-sourceCI.
 77unit/9files относятсякнеизменнымReact/handler/таймернымисходникам.
 Выпуск2017по-прежнему не разрешён, другиесемейства/flags/данные неизменны.
+
+
+### Итерация 154 — 2026-11-06 — Codex / OpenAI — MC4.1 local acceptance завершена
+
+Финальныйremotehead283c62c0547e4dfcd08f98a0eff8f35365f90b0b вdraftPR2017.
+Build/tsc/startup-photo иtargetedlint/types послеfocusfix прошли;global lint
+исходнойреализации тожеgreen (последующиеproductdiffтолькоCSS).
+Unit9файлов77passed, React/handlers/таймерныеисходники не менялись.
+На окончательнойсборке202/202browser3.3m/retries0:146existing и56новых
+ownership. Отдельно существующаяclock/rest-sheet flowматрица32/32passed57.1s:
+light/dark,Original/Compact,390/430x844/568,Chromium/WebKit,доступностьapply/
+колёс/пресетов/±15/stop/scroll иtimerexpansion. Всего234финальныхbrowser.
+
+Новаяbaseline56сTab/ShiftTab/outline-offset измерена на исходномbuild:
+52modern negative и4legacy positive,значит выбраннаязависимость была.
+Candidate56/56passed: вкаждомслучае30уникальныхCSSсемейств учтены независимо
+отminifierкомбинаций/кавычек,modernне наследует выбранныйskin.
+Межсборочно52/52modern styles/geometry,28/28PNG и4/4legacyконтроля совпали
+полностью. Focusregression153 исправлена; исходныйLimefocusвладеетцветом/
+offset,не копируется старыйoutline. Первый46/52/12PNG результат не скрыт.
+Статическийproof6064→6072правила,5982исходныхсемейств,0измененийсвойств
+дляпрочихпотребителей. Чужиеконтуры/другиеокна/flags/API/данные/Onest прежние.
+
+Сохранены существующие тесты clock→dock/empty/phase/overdue/пауза/reload,
+ввод/selection/keyboard/firsttap,undo/latestinput/таймер,swipe/drag/fold,
+RPE/cardio/суперсеты/retry/finish. UIзаписи толькоsyntheticmock,реальные
+пользовательскиеданные не читались/не менялись. Новых открытых ошибок
+проверенногоscope нет. Физическийтелефон/realOAuth не проверялись.
+
+CI42211412330 ещёin_progress(последняя18done/16active),Android42211412327
+SUCCESS(отдельныйauth-smoke штатноskipped,непроверен). MC4-105 пока открыт
+до полногоCI. Draftиauto-mergeoff сохраняются, merge/publication не было.
+Послеgreen — итоговаясводка владельцу иожиданиеегоразрешения именно2017,
+затемобщаяочередь/mainCI/API/web/OTA/publicприёмка. Этаdocsквитанциялокальная
+без повторногоsourcepush радижурнала; source283c62c0 прежний.
