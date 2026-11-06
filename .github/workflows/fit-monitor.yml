@@ -1,0 +1,131 @@
+name: Fit monitoring and Telegram alerts
+
+on:
+  schedule:
+    - cron: '*/5 * * * *'
+  workflow_dispatch:
+    inputs:
+      install_host:
+        description: Install minute monitoring on the existing Cloud.ru VM
+        type: boolean
+        default: false
+      test_delivery:
+        description: Send one explicit Telegram connection test
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  public:
+    if: vars.FIT_MONITOR_ENABLED == 'true' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 3
+    concurrency:
+      group: fit-public-monitor
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/cache/restore@v4
+        with:
+          path: .fit-monitor-state
+          key: fit-monitor-public-v1-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: fit-monitor-public-v1-
+      - name: Check public endpoints and report only state transitions
+        env:
+          FIT_ALERT_TELEGRAM_BOT_TOKEN: ${{ secrets.FIT_ALERT_TELEGRAM_BOT_TOKEN }}
+          FIT_ALERT_TELEGRAM_CHAT_ID: ${{ secrets.FIT_ALERT_TELEGRAM_CHAT_ID }}
+          TEST_DELIVERY: ${{ inputs.test_delivery }}
+        run: |
+          set -euo pipefail
+          test -n "$FIT_ALERT_TELEGRAM_BOT_TOKEN"
+          test -n "$FIT_ALERT_TELEGRAM_CHAT_ID"
+          args=()
+          if test "$TEST_DELIVERY" = true; then args+=(--test-delivery); fi
+          python3 infra/monitoring/monitor.py --mode public --state .fit-monitor-state/state.json "${args[@]}"
+      - uses: actions/cache/save@v4
+        if: success() && inputs.test_delivery != true
+        with:
+          path: .fit-monitor-state
+          key: fit-monitor-public-v1-${{ github.run_id }}-${{ github.run_attempt }}
+  install:
+    if: github.event_name == 'workflow_dispatch' && inputs.install_host
+    runs-on: [self-hosted, cloudru-stage]
+    timeout-minutes: 3
+    concurrency:
+      group: cloudru-stage-vm
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Validate and install only monitoring files
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REPOSITORY" = podkolzinpd/fit
+          test "$GITHUB_REF" = refs/heads/main
+          test "$(hostname)" = fit-stage-app
+          python3 -m unittest discover -s infra/monitoring -p 'test_*.py'
+          sudo install -d -m 755 /opt/fit-monitor
+          sudo install -m 644 infra/monitoring/monitor.py /opt/fit-monitor/monitor.py
+          sudo install -m 644 infra/monitoring/fit-monitor.service infra/monitoring/fit-monitor.timer /etc/systemd/system/
+          sudo systemd-analyze verify /etc/systemd/system/fit-monitor.service /etc/systemd/system/fit-monitor.timer
+          sudo systemctl daemon-reload
+          sudo systemctl enable --now fit-monitor.timer
+          sudo systemctl start fit-monitor.service
+          sudo systemctl is-active --quiet fit-monitor.timer
+          sudo systemctl show fit-monitor.service --property=Result --property=ExecMainStatus
+
+  host-export:
+    if: vars.FIT_MONITOR_ENABLED == 'true' && !inputs.install_host && !inputs.test_delivery
+    runs-on: [self-hosted, cloudru-stage]
+    timeout-minutes: 2
+    concurrency:
+      group: fit-monitor-export
+      cancel-in-progress: true
+    outputs:
+      snapshot: ${{ steps.export.outputs.snapshot }}
+    steps:
+      - name: Export only technical alert state from installed collector
+        id: export
+        run: |
+          set -euo pipefail
+          test "$(hostname)" = fit-stage-app
+          snapshot=$(sudo /usr/bin/python3 /opt/fit-monitor/monitor.py --mode export --state /var/lib/fit-monitor/state.json)
+          echo "snapshot=$snapshot" >> "$GITHUB_OUTPUT"
+  host-notify:
+    needs: host-export
+    if: always() && vars.FIT_MONITOR_ENABLED == 'true' && !inputs.install_host && !inputs.test_delivery
+    runs-on: ubuntu-24.04
+    timeout-minutes: 3
+    concurrency:
+      group: fit-host-monitor-notify
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/cache/restore@v4
+        with:
+          path: .fit-host-alert-state
+          key: fit-host-alert-v1-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: fit-host-alert-v1-
+      - name: Deliver VM incidents from external network only
+        env:
+          SNAPSHOT: ${{ needs.host-export.outputs.snapshot }}
+          FIT_ALERT_TELEGRAM_BOT_TOKEN: ${{ secrets.FIT_ALERT_TELEGRAM_BOT_TOKEN }}
+          FIT_ALERT_TELEGRAM_CHAT_ID: ${{ secrets.FIT_ALERT_TELEGRAM_CHAT_ID }}
+        run: |
+          python3 - <<'PYTHON'
+          import os, pathlib
+          pathlib.Path('host-snapshot.json').write_text(os.environ.get('SNAPSHOT') or '{}')
+          PYTHON
+          python3 infra/monitoring/monitor.py --mode relay --state .fit-host-alert-state/state.json --snapshot host-snapshot.json
+      - uses: actions/cache/save@v4
+        if: success()
+        with:
+          path: .fit-host-alert-state
+          key: fit-host-alert-v1-${{ github.run_id }}-${{ github.run_attempt }}

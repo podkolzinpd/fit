@@ -5,6 +5,10 @@ on:
     - cron: '43 * * * *'
   workflow_dispatch:
     inputs:
+      telegram_test:
+        description: Send one owner-requested monitoring connection test
+        type: boolean
+        default: false
       prepare_jitsi:
         description: Run one explicit bounded meeting setup action on the existing VM
         type: boolean
@@ -74,7 +78,7 @@ jobs:
       phase: ${{ inputs.jitsi_phase }}
       qa_public_key: ${{ inputs.qa_public_key }}
   capacity:
-    if: github.event_name == 'workflow_dispatch' && inputs.capacity && !inputs.prepare_jitsi
+    if: github.event_name == 'workflow_dispatch' && inputs.capacity && !inputs.prepare_jitsi && !inputs.telegram_test
     runs-on: [self-hosted, cloudru-stage]
     timeout-minutes: 3
     concurrency:
@@ -104,7 +108,7 @@ jobs:
           printf 'Listening port numbers (no addresses/process arguments)\n'
           ss -H -lntu | awk '{n=split($5,a,":"); print $1, a[n]}' | sort -u
   inspect:
-    if: github.event_name != 'workflow_dispatch' || (!inputs.capacity && !inputs.prepare_jitsi)
+    if: github.event_name != 'workflow_dispatch' || (!inputs.capacity && !inputs.prepare_jitsi && !inputs.telegram_test)
     runs-on: [self-hosted, cloudru-stage]
     timeout-minutes: 8
     concurrency:
@@ -368,3 +372,40 @@ jobs:
             echo 'Certificate renewal dry-run: failed' >> "$GITHUB_STEP_SUMMARY"
             exit 1
           fi
+
+  telegram-test:
+    if: github.event_name == 'workflow_dispatch' && inputs.telegram_test
+    runs-on: ubuntu-24.04
+    timeout-minutes: 2
+    concurrency:
+      group: fit-telegram-delivery-test
+      cancel-in-progress: false
+    steps:
+      - name: Verify bot and send one technical connection message
+        env:
+          BOT_TOKEN: ${{ secrets.FIT_ALERT_TELEGRAM_BOT_TOKEN }}
+          CHAT_ID: ${{ secrets.FIT_ALERT_TELEGRAM_CHAT_ID }}
+        run: |
+          python3 - <<'PYTHON'
+          import json, os, re, urllib.request, urllib.parse
+          phase = 'getMe'
+          try:
+              raw = os.environ['BOT_TOKEN']
+              candidates = re.findall(r'[0-9]{6,}:[A-Za-z0-9_-]{20,}', raw)
+              print(json.dumps({'event':'fit_token_format','candidate_count':len(candidates),'whitespace_trimmed':raw != raw.strip()}), flush=True)
+              if len(candidates) != 1: raise ValueError('invalid_token_format')
+              base = 'https://api.telegram.org/bot' + candidates[0]
+              with urllib.request.urlopen(base + '/getMe', timeout=10) as response:
+                  bot = json.load(response)
+              if not bot.get('ok'): raise RuntimeError()
+              print(json.dumps({'event':'fit_telegram_bot_verified','bot_username':bot['result']['username']}), flush=True)
+              phase = 'sendMessage'
+              payload = urllib.parse.urlencode({'chat_id': os.environ['CHAT_ID'], 'text': 'Fit: тест мониторинга. Бот подключён, доставка алертов в этот чат работает.'}).encode()
+              with urllib.request.urlopen(urllib.request.Request(base + '/sendMessage', data=payload), timeout=10) as response:
+                  result = json.load(response)
+              if not result.get('ok'): raise RuntimeError()
+              print(json.dumps({'event':'fit_telegram_test','delivered':True,'bot_username':bot['result']['username'],'message_id':result['result']['message_id']}))
+          except Exception as error:
+              print(json.dumps({'event':'fit_telegram_test_failed','phase':phase,'error_type':type(error).__name__,'http_status':getattr(error,'code',None)}))
+              raise SystemExit(1)
+          PYTHON
