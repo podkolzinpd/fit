@@ -1134,6 +1134,8 @@ Upload/reply capability создаётся ДО клиентского ввод�
 Apply сохраняет serializable/TTL/backup/locks/replay/current-state guards,
 добавляет только недостающие membership и активный период. Роли, owner partition,
 профили, прежние периоды, история, финансы, merge operations и пилоты неизменны.
+Между prepare и plan допускается новый main только при точном совпадении
+workflow и всех трёх executable blobs; expiry не обходится.
 Отдельный fit_api READ ONLY verify проверяет trainer и athlete: одну карточку,
 активную связь и весь ожидаемый imported graph. Actions получает только
 allowlisted технические flags; полный private plan/receipt остаётся в Cloud.ru.

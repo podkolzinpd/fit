@@ -116,10 +116,21 @@ jobs:
             program=/cloudru-client-restore-private.mjs
           elif test "$RESTORE_PHASE" = plan && test -n "$PREPARE_RUN_ID"; then
             [[ "$PREPARE_RUN_ID" =~ ^[0-9]+$ ]]
-            github_api "actions/runs/$PREPARE_RUN_ID" | jq -e --arg head "$GITHUB_SHA" \
+            preparation=$(github_api "actions/runs/$PREPARE_RUN_ID")
+            jq -e \
               '.path == ".github/workflows/restore-client-history.yml" and .head_branch == "main" and
-               .head_sha == $head and .event == "workflow_dispatch" and .run_attempt == 1 and
-               .status == "completed" and .conclusion == "success"' >/dev/null
+               .event == "workflow_dispatch" and .run_attempt == 1 and
+               .status == "completed" and .conclusion == "success"' <<<"$preparation" >/dev/null
+            prepare_commit=$(jq -er .head_sha <<<"$preparation")
+            [[ "$prepare_commit" =~ ^[a-f0-9]{40}$ ]]
+            # An unrelated main commit cannot strand the short-lived upload.
+            # Every executable dependency must still be the exact reviewed blob.
+            if test "$prepare_commit" != "$GITHUB_SHA"; then
+              for file in .github/workflows/restore-client-history.yml scripts/cloudru-client-restore.mjs scripts/cloudru-client-restore-private.mjs scripts/cloudru-journal-upload.mjs; do
+                before=$(github_api "contents/$file?ref=$prepare_commit" | jq -er .sha)
+                test "$before" = "$(git rev-parse "$GITHUB_SHA:$file")"
+              done
+            fi
             private_session="$PREPARE_RUN_ID-1"
             sudo test ! -L "$root/$PREPARE_RUN_ID"
             test "$(sudo stat -c '%u:%a' "$root/$PREPARE_RUN_ID")" = 0:700

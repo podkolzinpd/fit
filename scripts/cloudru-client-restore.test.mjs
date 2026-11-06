@@ -56,6 +56,8 @@ test('transport is explicit trusted-main plan/apply/verify and keeps private rec
  assert.match(source,/if: inputs.phase == 'prepare'/)
  assert.match(source,/created before customer input/)
  assert.match(source,/prepare_run_id:/)
+ assert.match(source,/git rev-parse "\$GITHUB_SHA:\$file"/)
+ assert.match(source,/scripts\/cloudru-client-restore-private\.mjs scripts\/cloudru-journal-upload\.mjs/)
  assert.match(source,/phase:|RESTORE_PHASE/)
  assert.doesNotMatch(source,/inputs\.(trainer|athlete|client|digest|checksum)/)
 })
