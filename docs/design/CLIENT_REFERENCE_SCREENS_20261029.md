@@ -5243,3 +5243,27 @@ build/tsc/startup-photo прошли. Targetunit дополнен rpe/WorkoutExe
 не заменяет новый. Draft2017/auto-mergeoff/отсутствиепубликации сохраняются;
 соседний2016владеетсвоимокномвыпуска,main/егоCI не меняем. СлияниенашегоPR
 только после новогоразрешения владельца и свежей очереди/проверок.
+
+
+### Итерация 156 — 2026-11-06 — Codex / OpenAI — MC4.1/2016 совместная local приёмка
+
+Текущийremote sourcecd95522ed66ee3356eb6694a05544d248229b872,база62929b47.
+Послеинтеграции2016полныеbuild/tsc/startup-photo иglobal lint прошли.
+11unit/componentfiles120passed7.67s,включаяnewrpe/WorkoutExerciseEditor.
+Финальныйbrowser242/242passed4.1m/retries0:234из154плюс8existing
+RPE5/5.5план/факт/reloadобеихролей. Все56timer ownershipвключенывэти242.
+Повторноеcomputed-style/geometry52/52modern,28/28PNGи4/4legacyсовпало
+с прежнимbaseline. Отдельно просмотрены итоговыеWebKit lightclientOriginal
+иdarktrainerCompact с настоящимTabfocus,обводка/offsetисходные.
+
+PostCSSproof5982семейства/6064→6072rules/0измененийсвойствпрежнихconsumers
+сохраняется. Включённые API/RPE/domain/migration194побайтно совпадают сmain:
+gitdiff origin/main -- services/api src/shared/rpe.ts src/shared/domain.ts пуст.
+Они не переписаны подMC4.1. Новые найденныеошибки интеграции отсутствуют.
+Пилоты/роль/анимации/54–48/клиентскиепредпочтения/данные неизменны.
+
+НовыйCI42214586267ещёидётбезошибок,Android42214586260SUCCESS. Старые
+CI283green не выдаются за новуюпроверкуcd. Draft2017/auto-mergeoff;
+слияние/публикацияне было и не разрешены. Открыттолькоfull-sourceCI
+и сводкавладельцу. Physicalphone/realOAuth/public/signedZIPне проверены.
+Квитанциялокальнымdocs-коммитом безsourcepushрадижурнала.
