@@ -1,7 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '../../app/auth-context'
+import { isFitLimeEnabled } from '../../app/fit-lime'
 import { useDataBackend } from '../../app/data-backend-context'
+import { FinanceAccountingChoices } from '../finance/FinanceAccountingChoices'
+import { financePackagePeriod } from '../finance/finance-package-label'
 import type { Workout, WorkoutAttendanceDraft } from '../../shared/domain'
 import { formatLocalDate, todayInTimeZone } from '../../shared/local-date'
 import { CheckSmallIcon, CloseIcon } from '../../shared/icons'
@@ -16,6 +19,7 @@ export function WorkoutAttendanceSheet({ workout, action, onCompleted, onClose, 
 }) {
   const { workouts, trainerFinance } = useDataBackend()
   const { actor } = useAuth()
+  const lime = isFitLimeEnabled(actor)
   const queryClient = useQueryClient()
   const [target, setTarget] = useState(workout)
   const [selection, setSelection] = useState('auto')
@@ -42,7 +46,7 @@ export function WorkoutAttendanceSheet({ workout, action, onCompleted, onClose, 
   const accountingTitle = selection === 'trial' ? 'Пробное занятие' : selection === 'free' || !withTrainer ? 'Без списания'
     : selection === 'unassigned' ? 'Абонемент не выбран' : pack ? 'Спишется 1 занятие'
       : eligible.length > 1 ? 'Абонемент не выбран' : 'Нет подходящего абонемента'
-  const accountingDetail = pack ? `${pack.title} · останется ${pack.sessionsRemaining - 1}`
+  const accountingDetail = pack ? `${pack.title}${lime ? ` · ${financePackagePeriod(pack)}` : ''} · останется ${pack.sessionsRemaining - 1}`
     : !withTrainer ? 'Абонемент не списывается' : 'Занятие сохранится без списания'
   useEffect(() => {
     const previous = document.activeElement instanceof HTMLElement ? document.activeElement : null
@@ -95,10 +99,12 @@ export function WorkoutAttendanceSheet({ workout, action, onCompleted, onClose, 
         {financePending ? <p role={finance.isError ? 'alert' : 'status'}>{finance.isError ? 'Не удалось загрузить абонементы.' : 'Проверяем абонементы…'}{finance.isError && <button type="button" className="link" onClick={() => void finance.refetch()}>Повторить</button>}</p>
           : <><strong><CheckSmallIcon />{accountingTitle}</strong><p>{accountingDetail}</p></>}
         {withTrainer && !financePending && <><button type="button" className="link" disabled={busy || needsReload} onClick={() => setEditing(!editing)}>{!pack && eligible.length > 1 ? 'Выбрать' : 'Изменить учёт'}</button>
-          {editing && <label>Учёт занятия<select value={selection} disabled={busy || needsReload} onChange={event => setSelection(event.target.value)}>
+          {editing && (lime ? <FinanceAccountingChoices packages={eligible}
+            value={automatic ? `charged:${automatic.id}` : selection === 'auto' ? '' : selection}
+            disabled={busy || needsReload} onChange={setSelection} /> : <label>Учёт занятия<select value={selection} disabled={busy || needsReload} onChange={event => setSelection(event.target.value)}>
             <option value="auto">По текущим условиям</option>{eligible.map(p => <option key={p.id} value={`charged:${p.id}`}>Списать: {p.title}</option>)}
             <option value="unassigned">Выбрать позже</option><option value="trial">Пробное</option><option value="free">Без списания</option>
-          </select></label>}</>}
+          </select></label>)}</>}
       </section> : !live && <p className="workout-attendance-accounting">Запись и план сохранятся. Занятие не спишется.</p>}
       {!live && !completed && target.exercises.some(exercise => exercise.sets.some(set => set.confirmedAt)) && <p className="workout-attendance-note">В тренировке есть записанные результаты. Они сохранятся, занятие не спишется.</p>}
       {!live && completed && <p className="workout-attendance-note">Записанные результаты сохранятся. Остальные можно добавить позже.</p>}

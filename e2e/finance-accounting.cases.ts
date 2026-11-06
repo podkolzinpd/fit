@@ -23,7 +23,8 @@ async function accountingFixture(page: Page, fitLime = true, workouts?: MockWork
 
 async function formGeometry(form: Locator, lime = true) {
   expect(await form.locator('input,select,button').evaluateAll(nodes => nodes.every(node => {
-    const r = node.getBoundingClientRect(), parent = node.closest('form')!.getBoundingClientRect()
+    const target = node.matches('input[type="radio"]') ? node.closest('label')! : node
+    const r = target.getBoundingClientRect(), parent = node.closest('form')!.getBoundingClientRect()
     return r.width >= 44 && r.height >= 44 && r.left >= parent.left - 1 && r.right <= parent.right + 1
   }))).toBe(true)
   const actions = form.locator('.actions')
@@ -105,6 +106,67 @@ async function uncertainCreateFixture(page: Page, kind: 'payment' | 'package', f
 }
 
 export function financeAccountingCases() {
+  test('Finance package choice distinguishes periods and preserves explicit attendance accounting', { tag: ['@lime-finance'] }, async ({ page }, info) => {
+    const target: MockWorkout = { ...workout, createdBy: coach, workoutDate: '2026-11-03', status: 'planned', exercises: [] }
+    const ledger = await accountingFixture(page, true, [target])
+    const title = 'Персональные тренировки с индивидуальной программой'
+    Object.assign(ledger.packages[0]!, { title, startsOn: '2026-11-01', endsOn: '2026-11-30', packageStatus: 'active', sessionsTotal: 10, sessionsUsed: 7, sessionsRemaining: 3 })
+    Object.assign(ledger.packages[1]!, { title, startsOn: '2026-11-03', endsOn: '2026-12-02' })
+    ledger.sessions = []
+    const commands: Array<{ attendance: { disposition: string; packageId: string } }> = []
+    await page.route(`**/v1/workouts/${workoutId}/finish`, async route => {
+      const command = route.request().postDataJSON() as typeof commands[number]
+      commands.push(command)
+      expect(command.attendance).toEqual({ disposition: 'charged', packageId: newWorkoutId })
+      Object.assign(target, { status: 'done', version: target.version + 1, completedAt: '2026-11-03T09:00:00Z' })
+      Object.assign(ledger.packages[1]!, { sessionsUsed: 1, sessionsRemaining: 9 })
+      ledger.sessions.push({ id: workoutId, packageId: newWorkoutId, workoutId, disposition: 'charged', source: 'manual',
+        comment: null, workoutDate: target.workoutDate, voidedAt: null, voidReason: null, version: 1, createdAt: stamp, updatedAt: stamp })
+      await route.fulfill({ json: { workout: { version: target.version, replayed: false } } })
+    })
+    await page.goto(`/workouts/${workoutId}`)
+    await page.getByRole('button', { name: 'Отметить проведённой', exact: true }).click()
+    const sheet = page.getByRole('dialog', { name: 'Отметить проведённой', exact: true })
+    await expect(sheet.getByText('Абонемент не выбран', { exact: true })).toBeVisible()
+    await sheet.getByRole('button', { name: 'Выбрать', exact: true }).click()
+    await expect(sheet.getByText('По текущим условиям')).toHaveCount(0)
+    const first = sheet.getByRole('radio', { name: /01.11.2026 — 30.11.2026 · осталось 3/ })
+    const second = sheet.getByRole('radio', { name: /03.11.2026 — 02.12.2026 · осталось 10/ })
+    await expect(first).not.toBeChecked(); await expect(second).not.toBeChecked()
+    for (const width of [320, 390, 430, 1440]) {
+      await page.setViewportSize({ width, height: 844 })
+      await first.scrollIntoViewIfNeeded()
+      expect(await sheet.locator('.finance-accounting-choices label').evaluateAll(nodes => nodes.every(node => {
+        const r = node.getBoundingClientRect(), parent = node.closest('fieldset')!.getBoundingClientRect()
+        return r.width >= 44 && r.height >= 44 && r.left >= parent.left - 1 && r.right <= parent.right + 1 && node.scrollWidth <= node.clientWidth + 1
+      }))).toBe(true)
+      expect(await sheet.evaluate(node => getComputedStyle(node).fontFamily)).toContain('YS Geo')
+      await page.screenshot({ path: info.outputPath(`package-choice-${width}.png`) })
+    }
+    await page.setViewportSize({ width: 320, height: 600 })
+    await second.click()
+    await expect(sheet.getByText(/03.11.2026 — 02.12.2026 · останется 9/)).toBeVisible()
+    await sheet.getByRole('button', { name: 'Подтвердить проведение', exact: true }).click()
+    await expect(sheet).toHaveCount(0)
+    expect(commands).toHaveLength(1)
+    await expect(page.locator('.workout-finance-confirmation')).toContainText('03.11.2026 — 02.12.2026 · осталось 9')
+    await page.goto(`/clients/${clientId}/finance`)
+    await page.getByRole('tab', { name: 'Занятия: 1' }).click()
+    await page.getByRole('button', { name: 'Добавить', exact: true }).click()
+    const form = page.locator('.finance-manual-session')
+    await expect(form.getByRole('radio', { name: /03.11.2026 — 02.12.2026 · осталось 9/ })).toBeVisible()
+    for (const width of [320, 390, 430, 1440]) {
+      await page.setViewportSize({ width, height: 844 })
+      await form.scrollIntoViewIfNeeded()
+      await formGeometry(form)
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+      await page.screenshot({ path: info.outputPath(`manual-package-choice-${width}.png`), fullPage: true })
+    }
+    await form.getByRole('button', { name: 'Отмена', exact: true }).click()
+    await expect(form).toHaveCount(0)
+    expect(ledger.sessions).toHaveLength(1)
+  })
+
   test('Finance Lime owns readable cards, forms and payment actions', { tag: ['@lime-finance'] }, async ({ page }, info) => {
     await receiptFixture(page)
     await page.goto(`/clients/${clientId}/finance`)
@@ -609,8 +671,8 @@ export function financeAccountingCases() {
     const form = page.locator('.finance-manual-session')
     await form.getByLabel('Дата занятия').fill('2026-10-20')
     // A fully consumed October service is unavailable to a new session.
-    await expect(form.getByRole('option', { name: /Списать:/ })).toHaveCount(0)
-    await form.getByLabel('Учёт').selectOption('trial')
+    await expect(form.locator('input[type=radio][value^="charged:"]')).toHaveCount(0)
+    await form.getByRole('radio', { name: 'Пробное занятие' }).click()
     await form.getByLabel('Комментарий').fill('Пробное занятие после перерыва')
     await form.getByRole('button', { name: 'Добавить', exact: true }).click()
     await expect(form.getByRole('button', { name: 'Повторить сохранение' })).toBeEnabled()
@@ -633,8 +695,8 @@ export function financeAccountingCases() {
     expect(commands[1]).toEqual(commands[0])
     await page.getByRole('button', { name: 'Добавить', exact: true }).click()
     await form.getByLabel('Дата занятия').fill('2026-11-03')
-    await expect(form.getByRole('option', { name: 'Списать: Ноябрь' })).toBeAttached()
-    await form.getByLabel('Учёт').selectOption(`charged:${newWorkoutId}`)
+    await expect(form.getByRole('radio', { name: /Ноябрь.*осталось/ })).toBeAttached()
+    await form.locator(`input[type=radio][value="charged:${newWorkoutId}"]`).check()
     await form.getByRole('button', { name: 'Добавить', exact: true }).click()
     await expect(page.getByRole('tab', { name: 'Занятия: 3' })).toBeVisible()
     expect(commands[2]!.requestId).not.toBe(commands[0]!.requestId)
@@ -648,12 +710,12 @@ export function financeAccountingCases() {
     await page.getByRole('button', { name: /Действия с занятием/ }).click()
     await page.getByRole('menuitem', { name: 'Изменить учёт' }).click()
     const form = page.locator('.finance-session-editor')
-    await expect(form.getByLabel('Учёт')).toHaveValue(`charged:${conversationId}`)
+    await expect(form.locator(`input[type=radio][value="charged:${conversationId}"]`)).toBeChecked()
     await page.screenshot({ path: info.outputPath('current-charge.png'), fullPage: true })
     await form.getByLabel('Дата').fill('2026-11-03')
-    await expect(form.getByLabel('Учёт')).toHaveValue('unassigned')
-    await expect(form.getByRole('option', { name: /Списать: Октябрь/ })).toHaveCount(0)
-    await form.getByLabel('Учёт').selectOption(`charged:${newWorkoutId}`)
+    await expect(form.getByRole('radio', { name: 'Выбрать абонемент позже' })).toBeChecked()
+    await expect(form.getByRole('radio', { name: /Октябрь/ })).toHaveCount(0)
+    await form.locator(`input[type=radio][value="charged:${newWorkoutId}"]`).check()
     await page.route(`**/v1/finance/sessions/${workoutId}`, route => {
       expect(route.request().postDataJSON()).toMatchObject({ workoutDate: '2026-11-03', packageId: newWorkoutId, disposition: 'charged' })
       Object.assign(ledger.sessions[0]!, { workoutDate: '2026-11-03', packageId: newWorkoutId, version: 2 })
