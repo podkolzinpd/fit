@@ -1108,9 +1108,9 @@ describe('trainer finance', () => {
   }
   const bundle: TrainerFinanceClientBundle = { clientId, packages: [financePackage], payments: [payment], sessions: [financeSession] }
   const overview: TrainerFinanceOverview = {
-    month: '2026-09', receivedCents: 1000000, dueCents: 1500000,
+    month: '2026-09', completedSessions: 1, receivedCents: 1000000, dueCents: 1500000,
     attentionCount: 1, clients: [{
-      clientId, fullName: 'Анна Смирнова', archivedAt: null,
+      clientId, fullName: 'Анна Смирнова', archivedAt: null, completedSessions: 1,
       receivedCents: 1000000, dueCents: 1500000, nearestPaymentDueOn: '2026-09-10', unpaidPackageCount: 1, activePackageCount: 1, upcomingPackageCount: 0,
       sessionsRemaining: 8, overdue: true, lowSessions: false,
       unassignedSessions: 0, needsAttention: true,
