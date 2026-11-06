@@ -1053,3 +1053,44 @@ F10 verify/no_commit42134096494 подтверждён; cleanup42134308755 пр�
 отдельно, прежние9 apply/proofs сохраняются.
 Открыто:8 оставшихся журналов, итоговые564/3933/8708 и полный cleanup.
 Дальше: проверенный fix/main/release, продолжение сF10 без повторенияF01–F09.
+
+## Итерация 20 — 06.11.2026 — Codex / OpenAI
+
+Задача: завершить разрешённый перенос17 журналов и убрать собственные временные
+ресурсы. PR2012 принят на11694a4c: sourceCI42134617218,
+mainCI42136964788, API42139219681/web42139219659/OTA42139513612;
+независимые213files/8probes/DNS3, точные API и подписанная OTA проверены.
+После этого F10–F17 последовательно загружены без повторения F01–F09.
+
+Фактический результат:17/17 отдельных закрытых readbacks,17 различных
+существующих карточек,564 различных тренировок,3933 упражнения,8708 подходов.
+Содержимое сверено с исходниками, прежние owner/runtime история и финансы
+сохранены; новых карточек нет. Все review/transfer сеансы штатно очищены,
+исходный expired READ закрыт через verify/no_commit и normal cleanup.
+Журналы и закрытые квитанции передавались только local↔Cloud.ru по ранее
+разрешённому PHI-LEGACY-ROUTE-RESUME-01; публичная запись обезличена.
+
+Расхождение: заброшенный installer до открытия private channel мог оставить
+собственный root с инфраструктурными credentials. Повторять install ради
+очистки нельзя: он создаёт новый root. Это не незагруженный журнал.
+
+Сделано: существующий installer получает отдельный cleanup-prechannel режим.
+Вход — только operator PUBLIC key и не более двух явных failed run-attempt;
+GitHub проверяет completed/failure и точный workflow/attempt. Установка,
+credentials inputs, capability artifact и запуск службы в этом режиме
+пропускаются. Exact accepted main/CI/runtime и VM serialization сохраняются.
+Перед любым удалением проверяется весь набор: root ownership/mode, точный
+public key, неработающие units, отсутствие durable/pending state, control key,
+operation input и непустых capability/response/bootstrap каталогов. Удаляются
+только указанные собственные pre-channel roots; отсутствие подтверждается.
+
+Решение PHI-PRECHANNEL-CLEANUP-01: закрыть только долг собственной неудачной
+установки, не запускать новый канал и не затрагивать клиентские данные.
+Отвергнуто: повторный bootstrap, общий rm по маске, удаление durable/foreign
+lease, ослабление expiry или повторение выполненных apply.
+Проверка:14 targeted cases, включая отказ при чужом ключе/правах/symlink,
+active unit/durable/pending/nonempty channel и проверку всего batch до удаления;
+infra449 плюс speech7 PASS; YAML и4 shell blocks валидны. Полный CI/main и
+production cleanup ещё не выполнены, это открытая часть этой итерации.
+Дальше: reviewed cleanup/main, отсутствие собственных временных roots,
+удаление оставшихся operator keys и завершение paused automation.
