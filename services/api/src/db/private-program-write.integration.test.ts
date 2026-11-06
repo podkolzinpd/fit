@@ -80,7 +80,7 @@ describe.skipIf(source===undefined)('bounded weekly-program writes and closed-re
     for(let i=1;i<17;i++){const name=`Synthetic writer roster ${f.coach} ${i}`;names.push(name);await f.card(name)}
     await f.owner.query('delete from app_private.fit_lime_pilot_allowlist where profile_id=$1',[f.coach])
     // Migrations run as postgres in this disposable fixture; emulate their production owner only for the readonly connection.
-    await f.owner.query("do $$ begin perform pg_advisory_xact_lock(193635,2);if not exists(select 1 from pg_roles where rolname='fit_owner') then create role fit_owner;comment on role fit_owner is 'private-program-roster-fixture-20261105';elsif not exists(select 1 from pg_roles r where r.rolname='fit_owner' and shobj_description(r.oid,'pg_authid')='private-program-roster-fixture-20261105') then raise exception 'foreign_fixture_owner_role';end if;end $$;alter role fit_owner bypassrls;grant usage on schema public,app_private to fit_owner;grant select on all tables in schema public,app_private to fit_owner;grant execute on function public.is_active_client_trainer_connection(uuid,uuid) to fit_owner")
+    await f.owner.query("do $$ begin perform pg_advisory_xact_lock(193635,2);if not exists(select 1 from pg_roles where rolname='fit_owner') then create role fit_owner;comment on role fit_owner is 'private-program-roster-fixture-20261105';elsif not exists(select 1 from pg_roles r where r.rolname='fit_owner' and shobj_description(r.oid,'pg_authid')='private-program-roster-fixture-20261105') then raise exception 'foreign_fixture_owner_role';end if;end $$;alter role fit_owner bypassrls;grant usage on schema public,app_private to fit_owner;grant select on all tables in schema public,app_private to fit_owner;grant execute on function public.is_active_client_trainer_connection(uuid,uuid) to fit_owner;grant execute on function public.can_read_workout(uuid) to fit_owner")
     const target=f.options.target,trainerEvidence={version:1,targetBinding:hash(JSON.stringify([target.trainerEmailSha256,target.trainerLoginSha256,target.clientNameSha256])),
       rosterNameHashes:names.map(n=>hash(n.toLowerCase()))}
     await f.owner.query('set role fit_owner')
@@ -179,17 +179,23 @@ describe.skipIf(source===undefined)('bounded weekly-program writes and closed-re
     const f=await fixture(),athlete=randomUUID()
     await f.owner.query("insert into public.profiles(id,account_role) values($1,'client')",[athlete])
     await f.owner.query("insert into public.push_subscriptions(user_id,endpoint,p256dh,auth_key) values($1,'https://push.example.test/program-history','synthetic-key','synthetic-auth')",[athlete])
-    const card=await f.card(f.name,f.coach,athlete),old=randomUUID(),packageId=randomUUID()
+    const card=await f.card(f.name,f.coach,athlete),old=randomUUID(),foreign=randomUUID(),deleted=randomUUID(),packageId=randomUUID()
     await f.owner.query("insert into public.workouts(id,trainer_id,created_by,client_id,workout_date,status,completed_at,notes) values($1,$2,$2,$3,'2026-10-26','done',now(),'Keep old')",[old,f.coach,card])
+    await f.owner.query("insert into public.workouts(id,trainer_id,created_by,client_id,workout_date,status,completed_at,notes,deleted_at) values($1,$2,$3,$4,'2025-01-01','done',now(),'Keep foreign history',null),($5,$2,$2,$4,'2025-01-02','done',now(),'Keep soft-deleted history',now())",[foreign,f.coach,f.other,card,deleted])
+    await f.runtime.query('begin transaction read only')
+    await f.runtime.query("select set_config('request.jwt.claim.sub',$1,true)",[f.coach])
+    expect((await f.runtime.query('select id from public.workouts where client_id=$1 order by id',[card])).rows).toEqual([{id:old}])
+    await f.runtime.query('rollback')
     await f.owner.query("insert into public.trainer_finance_packages(id,trainer_id,client_id,title,sessions_total,price_cents,starts_on) values($1,$2,$3,'Keep package',10,50000,'2025-01-01')",[packageId,f.coach,card])
     await f.owner.query("insert into public.trainer_finance_payments(package_id,trainer_id,client_id,amount_cents,received_on) values($1,$2,$3,50000,'2025-01-01')",[packageId,f.coach,card])
-    const before=(await f.owner.query('select to_jsonb(w) value from public.workouts w where id=$1',[old])).rows
+    const before=(await f.owner.query('select to_jsonb(w) value from public.workouts w where id=any($1::uuid[]) order by id',[[old,foreign,deleted]])).rows
     const finances=async()=>Promise.all(['trainer_finance_packages','trainer_finance_payments'].map(async table=>(await f.owner.query<{value:unknown}>(`select to_jsonb(x) value from public.${table} x where client_id=$1 order by id`,[card])).rows))
     const financialBefore=await finances()
     await runProgramImport(f.options)
     expect(await runProgramImport({...f.options,mode:'apply'})).toMatchObject({createdCard:false,contentVerified:true,previousStateVerified:true})
-    expect((await f.owner.query('select to_jsonb(w) value from public.workouts w where id=$1',[old])).rows).toEqual(before)
-    expect(await finances()).toEqual(financialBefore);expect(await f.count('workouts')).toBe(4)
+    expect((await f.owner.query('select to_jsonb(w) value from public.workouts w where id=any($1::uuid[]) order by id',[[old,foreign,deleted]])).rows).toEqual(before)
+    expect(await finances()).toEqual(financialBefore);expect(await f.count('workouts')).toBe(6)
+    expect(await runProgramImport({...f.options,mode:'verify'})).toMatchObject({status:'verified',workouts:3,readOnly:true})
     expect((await f.owner.query<{n:number}>("select count(*)::int n from public.trainer_finance_sessions where client_id=$1 and (package_id is not null or disposition<>'unassigned')",[card])).rows[0]?.n).toBe(0)
   })
   it('rolls back the new card and all rows after a late domain-command failure',async()=>{

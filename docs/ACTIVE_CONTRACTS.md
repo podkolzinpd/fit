@@ -171,3 +171,8 @@ Merge pointer/полный binding/RLS/history/finance неизменны.
 ровно шестого закрытого администратора, сохраняя прежние пять. Заменяет только
 лимит1–5 изADM-FIVE-SLOTS; subject/capability/роли и независимые пилоты прежние.
 [План/журнал35](design/CORPORATE_ADMIN_20261027.md).
+
+06.11 — PHI-HISTORY-VISIBILITY-01: owner-история полностью сохраняется;
+видимость fit_api сравнивается с существующим can_read_workout для точного
+actor, включая закономерно скрытые записи. Policy/ACL/RLS не меняются.
+[Проверка и сохранность](design/ATHLETE_PROGRAM_HISTORY_IMPORT_20261103.md#итерация-19--06112026--codex--openai).
