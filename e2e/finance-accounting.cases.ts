@@ -106,6 +106,91 @@ async function uncertainCreateFixture(page: Page, kind: 'payment' | 'package', f
 }
 
 export function financeAccountingCases() {
+  test('Finance monthly totals switch without percentages or athlete sublines', { tag: ['@lime-finance'] }, async ({ page }, info) => {
+    await accountingFixture(page)
+    const clients = Array.from({length:7},(_,index) => ({
+      clientId: index===0?clientId:`60000000-0000-4000-8000-${String(index).padStart(12,'0')}`,
+      fullName: index===0?'Александра Константинопольская — длинное имя':`Спортсмен ${index}`,
+      archivedAt: index===6?stamp:null, activeClient:index!==6, completedSessions:index+1,
+      receivedCents:(index+1)*10001, dueCents:0, nearestPaymentDueOn:null, unpaidPackageCount:0,
+      activePackageCount:1, upcomingPackageCount:0, sessionsRemaining:10, overdue:false,
+      lowSessions:false, unassignedSessions:0, needsAttention:false,
+    }))
+    let failed = false
+    await page.route('**/v1/finance/overview*',route => {
+      if(failed)return route.fulfill({status:503,json:{error:'temporarily_unavailable'}})
+      const month = new URL(route.request().url()).searchParams.get('month')!
+      const rows = month==='2026-11'?clients:[]
+      return route.fulfill({json:{overview:{month,receivedCents:rows.reduce((n,c)=>n+c.receivedCents,0),
+        completedSessions:rows.reduce((n,c)=>n+c.completedSessions,0),dueCents:0,attentionCount:0,clients:rows}}})
+    })
+    await page.goto('/finance?month=2026-11')
+    const total=page.locator('[data-finance-monthly-total]')
+    await expect(total).toContainText(/2\s800,28/)
+    await expect(page.locator('.finance-monthly-name').first()).toHaveText(clients[0]!.fullName)
+    await expect(page.locator('.finance-monthly-name small')).toHaveCount(0)
+    await expect(page.locator('.finance-monthly')).not.toContainText('%')
+    await expect(page.locator('.finance-monthly-client')).toHaveCount(6)
+    for(const width of [320,390,430,1440]){
+      await page.setViewportSize({width,height:844})
+      expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true)
+      expect(await page.locator('.finance-monthly-name').evaluateAll(nodes=>nodes.every(node=>getComputedStyle(node).fontFamily.includes('YS Geo')))).toBe(true)
+      expect(await page.locator('.finance-monthly-switch').evaluate(node=>{
+        const items=[...node.querySelectorAll('button')].map(button=>button.getBoundingClientRect())
+        const bounds=node.getBoundingClientRect(),style=getComputedStyle(node),first=items[0],last=items[1]
+        return !!first && !!last && Math.abs(first.width-last.width)<=1
+          && Math.abs(first.left-bounds.left-parseFloat(style.paddingLeft)-parseFloat(style.borderLeftWidth))<=1
+          && Math.abs(bounds.right-last.right-parseFloat(style.paddingRight)-parseFloat(style.borderRightWidth))<=1
+      })).toBe(true)
+      await page.locator('.finance-monthly').scrollIntoViewIfNeeded()
+      expect(await page.locator('.finance-monthly-current-summary p').evaluateAll(nodes=>{
+        const [first,last]=nodes.map(node=>node.getBoundingClientRect())
+        return !!first && !!last && Math.abs(first.y-last.y)<=1 && Math.abs(first.width-last.width)<=1
+      })).toBe(true)
+      await page.screenshot({path:info.outputPath(`monthly-money-${width}.png`),fullPage:true})
+      const last = page.locator('.finance-monthly-client').last()
+      await last.scrollIntoViewIfNeeded()
+      expect(await last.evaluate(node=>{const r=node.getBoundingClientRect();return document.elementFromPoint(r.x+r.width/2,r.y+r.height/2)?.closest('a')===node})).toBe(true)
+      await page.screenshot({path:info.outputPath(`monthly-clients-${width}.png`),fullPage:true})
+    }
+    await page.getByRole('button',{name:'Тренировки',exact:true}).click()
+    await expect(total).toHaveText('28')
+    await expect(page.locator('.finance-monthly-value').first()).toHaveText('1')
+    const search=page.getByRole('searchbox',{name:'Поиск клиента'})
+    await search.fill('Александра')
+    await expect(page.locator('.finance-monthly-client')).toHaveCount(1)
+    await expect(total).toHaveText('28')
+    await expect(page.locator('.finance-monthly-client')).toHaveAttribute('href',`/clients/${clientId}/finance?month=2026-11&metric=sessions`)
+    await page.getByRole('button',{name:'Очистить поиск'}).click()
+    await page.getByRole('button',{name:'Архив',exact:true}).click()
+    await expect(page.locator('.finance-monthly-client')).toHaveCount(1)
+    await expect(page.locator('.finance-monthly-client')).toContainText('Спортсмен 6')
+    await expect(total).toHaveText('28')
+    await page.screenshot({path:info.outputPath('monthly-sessions-archive.png'),fullPage:true})
+    await page.getByRole('button',{name:'Предыдущий месяц'}).click()
+    await expect(total).toHaveText('0')
+    await expect(page.getByText('Проведённых занятий за месяц нет')).toBeVisible()
+    failed=true
+    await page.goto('/finance?month=2026-09')
+    await expect(page.getByRole('button',{name:'Повторить'})).toBeVisible()
+    failed=false
+    await page.getByRole('button',{name:'Повторить'}).click()
+    await expect(page.locator('.finance-monthly')).toBeVisible()
+    // A long amount must fit inside the inner disk, not merely its container.
+    clients[0]!.receivedCents=98765432101
+    await page.goto('/finance?month=2026-11')
+    await expect(total).toContainText(/987\s657\s021,28/)
+    await page.evaluate(()=>document.fonts.ready)
+    for(const width of [320,430]){
+      await page.setViewportSize({width,height:844})
+      await page.locator('.finance-monthly').scrollIntoViewIfNeeded()
+      expect(await total.evaluate(node=>{const r=node.getBoundingClientRect(),ring=node.closest('.finance-monthly-ring')!.getBoundingClientRect(),cx=ring.x+ring.width/2,cy=ring.y+ring.height/2,limit=ring.width*87.5/220-4;return [r.left,r.right].every(x=>[r.top,r.bottom].every(y=>Math.hypot(x-cx,y-cy)<=limit))})).toBe(true)
+      await page.screenshot({path:info.outputPath(`monthly-large-ring-${width}.png`),fullPage:true})
+      await page.locator('.finance-monthly-client').first().scrollIntoViewIfNeeded()
+      expect(await page.locator('.finance-monthly-value').first().evaluate(node=>node.scrollWidth<=node.clientWidth+1)).toBe(true)
+      await page.screenshot({path:info.outputPath(`monthly-large-row-${width}.png`),fullPage:true})
+    }
+  })
   test('Finance package choice distinguishes periods and preserves explicit attendance accounting', { tag: ['@lime-finance'] }, async ({ page }, info) => {
     const target: MockWorkout = { ...workout, createdBy: coach, workoutDate: '2026-11-03', status: 'planned', exercises: [] }
     const ledger = await accountingFixture(page, true, [target])

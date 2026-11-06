@@ -231,15 +231,15 @@ describe('Yandex main repository', () => {
 
   it('preserves the additive overview deadline without per-client requests', async () => {
     const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ overview: {
-      month: '2026-10', receivedCents: 0, dueCents: 250000, attentionCount: 0,
-      clients: [{ clientId, fullName: 'Анна', archivedAt: null, receivedCents: 0, dueCents: 250000,
+      month: '2026-10', completedSessions: 2, receivedCents: 0, dueCents: 250000, attentionCount: 0,
+      clients: [{ clientId, fullName: 'Анна', archivedAt: null, completedSessions: 2, receivedCents: 0, dueCents: 250000,
         nearestPaymentDueOn: '2026-10-08', unpaidPackageCount: 2, activePackageCount: 1, upcomingPackageCount: 0,
         sessionsRemaining: 8, overdue: false, lowSessions: false, unassignedSessions: 0, needsAttention: false }],
     } }))
     vi.stubGlobal('fetch', fetchMock)
     const repository = createYandexMainRepository(apiBaseUrl, sessionToken, actor)
     await expect(repository.trainerFinance.listOverview('2026-10')).resolves.toMatchObject({
-      clients: [{ nearestPaymentDueOn: '2026-10-08', unpaidPackageCount: 2 }],
+      completedSessions: 2, clients: [{ completedSessions: 2, nearestPaymentDueOn: '2026-10-08', unpaidPackageCount: 2 }],
     })
     expect(fetchMock).toHaveBeenCalledTimes(1)
   })

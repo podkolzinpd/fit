@@ -103,7 +103,7 @@ test('real Playwright partitions preserve the 738-case union without duplicates 
   }
   for (const { project } of engines) {
     const full = collect(fitLimeArgs(project, 'full').args)
-    assert.equal(full.length, 739) // Parent738 plus FIN501; all previous cases remain.
+    assert.equal(full.length, 740) // Parent739 plus FIN602; all previous cases remain.
     for (const width of [375, 390, 430]) {
       assert.equal(full.filter(key => key.endsWith(`Client profile loads approved YS Geo at ${width}`)).length, 1)
     }
@@ -162,7 +162,7 @@ test('real Playwright partitions preserve the 738-case union without duplicates 
     const scoped = collect(fitLimeArgs(project, 'scoped', 'critical,finance').args)
     const scopedParts = fitLimePartitions('scoped').flatMap(({ lane, shard }) =>
       collect(fitLimeArgs(project, 'scoped', 'critical,finance', lane, shard).args))
-    assert.equal(scoped.length, 154) // Parent153 plus FIN501; no existing case is omitted.
+    assert.equal(scoped.length, 155) // Parent154 plus FIN602; no existing case is omitted.
     assert.equal(new Set(scopedParts).size, scopedParts.length)
     assert.deepEqual(scopedParts.sort(), scoped.sort())
   }
