@@ -74,7 +74,7 @@ describe.skipIf(!source)('atomic Live history prefill with real ownership', () =
   it.each([coach, athlete])('round-trips RPE5 and5.5 through Live for actor %s without rewriting history', async actorId => {
     const previous = await history()
     await pool.query('update public.workout_sets set plan_rpe=7.5,fact_rpe=8 where workout_exercise_id=$1', [previous.exerciseId])
-    const snapshot = async () => (await pool.query('select to_jsonb(s) snapshot from public.workout_sets s where workout_exercise_id=$1 order by position', [previous.exerciseId])).rows
+    const snapshot = async () => (await pool.query<{ snapshot: unknown }>('select to_jsonb(s) snapshot from public.workout_sets s where workout_exercise_id=$1 order by position', [previous.exerciseId])).rows
     const before = await snapshot()
     const currentWorkout = await target()
     const added = await append(coach, currentWorkout)
