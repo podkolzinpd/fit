@@ -154,11 +154,11 @@ const trainerFinanceBundleSchema = z.object({
 })
 const trainerFinanceOverviewSchema = z.object({
   month: z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/),
-  receivedCents: z.number().int().nonnegative(), dueCents: z.number().int().nonnegative(),
+  receivedCents: z.number().int().nonnegative(), completedSessions: z.number().int().nonnegative().optional(), dueCents: z.number().int().nonnegative(),
   attentionCount: z.number().int().nonnegative(),
   clients: z.array(z.object({
     clientId: uuid, fullName: z.string(), archivedAt: yandexDateTimeSchema.nullable(), activeClient: z.boolean().optional(),
-    receivedCents: z.number().int().nonnegative(), dueCents: z.number().int().nonnegative(),
+    receivedCents: z.number().int().nonnegative(), completedSessions: z.number().int().nonnegative().optional(), dueCents: z.number().int().nonnegative(),
     // Additive rollout: an older API still renders the original finance label.
     nearestPaymentDueOn: z.iso.date().nullable().default(null),
     unpaidPackageCount: z.number().int().nonnegative().default(0),
