@@ -66,6 +66,27 @@
 .phone-frame.fit-lime-shell.workout-live-reference.live-identity .live-exercise-collapsed { display: block }
 .workout-live-reference.live-identity .live-exercise-collapsed > .live-exercise-start { display: block; margin: 0 auto }
 .workout-live-reference.live-identity .live-technique-collapsed { min-height: 44px; margin: 0 auto 8px; background: transparent; color: var(--lime-text-secondary); font-size: 13px; line-height: 18px }
+/* MC3.2: structural resets still needed by the approved v79 fields. The
+   modern skin below owns their appearance; legacy Identity no longer does.
+   :where keeps this base weaker than the existing role/density variants. */
+.workout-live-reference:where(.fit-lime-shell) :where(.coach-live-v79,.client-live-v79) .workout-set-table { position: relative; margin-top: 8px; border-top: 0 }
+.workout-live-reference:where(.fit-lime-shell) :where(.coach-live-v79,.client-live-v79) .workout-set-table-head { min-height: 28px; font-weight: 500; grid-template-columns: 28px minmax(0,1fr) minmax(0,1fr) 52px }
+.workout-live-reference:where(.fit-lime-shell) :where(.coach-live-v79,.client-live-v79) .workout-set-table-head.rpe-visible { grid-template-columns: 24px minmax(0,1fr) minmax(0,1fr) 44px 52px }
+.workout-live-reference:where(.fit-lime-shell) :where(.coach-live-v79,.client-live-v79) .live-set-table > .live-set,
+.workout-live-reference:where(.fit-lime-shell) :where(.coach-live-v79,.client-live-v79) .circuit-round .live-set { padding: 0; border: 0; box-shadow: none }
+.workout-live-reference:where(.fit-lime-shell) :where(.coach-live-v79,.client-live-v79) .live-set-grid { position: static; padding: 0 }
+.workout-live-reference:where(.fit-lime-shell) :where(.coach-live-v79,.client-live-v79) :is(.live-set-input,.live-set-rpe) { border: 0; color: var(--fg) }
+.workout-live-reference:where(.fit-lime-shell) :where(.coach-live-v79,.client-live-v79) :is(.live-set-input,.live-set-rpe):focus { border: 0; outline: 0 }
+.workout-live-reference:where(.fit-lime-shell) :where(.coach-live-v79,.client-live-v79) .live-set-number { font-weight: 500 }
+.workout-live-reference:where(.fit-lime-shell) :where(.coach-live-v79,.client-live-v79) .live-set.confirmed .live-set-number { min-height: 48px }
+.workout-live-reference:where(.fit-lime-shell) :where(.coach-live-v79,.client-live-v79) :is(.live-set-check,.live-set-save) { display: flex; align-items: center; justify-content: center; padding: 0; border: 0; font-size: 18px; font-weight: 500; line-height: 1; box-shadow: none }
+.workout-live-reference:where(.fit-lime-shell) :where(.coach-live-v79,.client-live-v79) .workout-duration-trigger.live-set-input { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: pointer }
+.workout-live-reference:where(.fit-lime-shell) :where(.coach-live-v79,.client-live-v79) .live-set-validation { margin: 5px 0 0; color: var(--danger); font-size: 12px; font-weight: 500; line-height: 1.3 }
+@media (max-width:375px) {
+  .workout-live-reference:where(.fit-lime-shell) :where(.coach-live-v79,.client-live-v79) .workout-set-table-head { grid-template-columns: 24px minmax(0,1fr) minmax(0,1fr) 48px; gap: 0 }
+  .workout-live-reference:where(.fit-lime-shell) :where(.coach-live-v79,.client-live-v79) .workout-set-table-head.rpe-visible { grid-template-columns: 20px minmax(0,1fr) minmax(0,1fr) 40px 48px }
+}
+
 /* Input geometry deliberately remains the existing 48px / 16px contract. */
 .phone-frame.fit-lime-shell.workout-live-reference.live-identity .live-set-grid { background: transparent; border-color: transparent; border-radius: 0 }
 .phone-frame.fit-lime-shell.workout-live-reference.live-identity .live-set-grid > :not(:first-child) { border-left-color: transparent }
