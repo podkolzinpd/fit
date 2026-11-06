@@ -9700,6 +9700,13 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
           (client) => enqueueWorkoutReminders(client, dispatchTime),
         )).resolves.toBe(0)
 
+        // The fixture dispatch clock is2099; align its queue creation clock and
+        // explicitly activate fresh delivery rather than bypassing the guard.
+        await ownerPool.query(`update app_private.push_notifications_outbox
+          set created_at=$1 where user_id=$2`, [dispatchTime, OTHER_ACTOR_ID])
+        await ownerPool.query(`update app_private.push_delivery_control
+          set delivery_enabled=true,fresh_after=$1,activated_at=$1`, [dispatchTime])
+
         const batch = await withActorTransaction(
           runtimePool,
           ACTOR_ID,
@@ -9784,6 +9791,8 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
           ),
         )).resolves.toBeNull()
       } finally {
+        await ownerPool.query(`update app_private.push_delivery_control
+          set delivery_enabled=false,fresh_after=null,activated_at=null`)
         await ownerPool.query(
           'delete from app_private.push_notifications_outbox where user_id = $1',
           [OTHER_ACTOR_ID],

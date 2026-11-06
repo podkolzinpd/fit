@@ -139,7 +139,10 @@ jobs:
             "$RELEASE_SHA" | sudo tee -a "$migration_env" >/dev/null
           test "$(sudo stat -c '%u:%a' "$migration_env")" = '0:600'
           sudo install -d -m 700 "$backup_dir"
-          sudo podman run --rm --read-only --user 0 --cap-drop=ALL \
+          # Drain the existing bounded worker, then exclude new invocations for
+          # the whole migration. The launcher uses this same nonblocking lock.
+          sudo flock --timeout 65 /run/lock/fit-cloudru-background.lock \
+            podman run --rm --read-only --user 0 --cap-drop=ALL \
             --name "$migration_container" \
             --security-opt=no-new-privileges --tmpfs /tmp:rw,nosuid,nodev,size=64m \
             --env-file "$migration_env" --mount "type=bind,src=$backup_dir,dst=/backup" \

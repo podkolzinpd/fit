@@ -11,7 +11,7 @@ const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 
 interface EnqueuedRow extends QueryResultRow {
-  enqueued: number
+  result: unknown
 }
 
 interface ClaimedRow extends QueryResultRow {
@@ -72,10 +72,20 @@ export async function enqueueWorkoutReminders(
   now: Date,
 ): Promise<number> {
   const rows = await client.query<EnqueuedRow>(
-    'select app_private.enqueue_workout_reminders($1) as enqueued',
+    'select app_private.prepare_workout_reminders($1) as result',
     [now.toISOString()],
   )
-  return parseCount(rows[0]?.enqueued, 'Reminder producer')
+  const result = rows[0]?.result
+  if (typeof result !== 'object' || result === null || Array.isArray(result)) {
+    throw new Error('Reminder producer returned an unsupported format')
+  }
+  const record = result as Record<string, unknown>
+  const enqueued = parseCount(record.enqueued, 'Reminder producer')
+  const invalidTimezoneProfiles = parseCount(record.invalidTimezoneProfiles, 'Reminder timezone diagnostic')
+  if (invalidTimezoneProfiles > 0) console.warn(JSON.stringify({
+    event: 'background_push_invalid_timezone_profiles', count: invalidTimezoneProfiles,
+  }))
+  return enqueued
 }
 
 export async function claimPushNotifications(

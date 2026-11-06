@@ -3745,25 +3745,34 @@ button.workout-duration-trigger:disabled { cursor:default; opacity:1 }
 .live-identity .overflow-list { padding:6px; border-color:var(--border); border-radius:14px; background:var(--surface-elevated); box-shadow:none}
 .live-identity .overflow-item { min-height:48px; border-radius:10px; font-size:14px; font-weight:500 }
 .live-identity .live-previous-result { margin:4px 0 0; color:var(--secondary-label-fg); font-size:12px; font-weight:500 }
-.live-identity .workout-set-table { position:relative; margin-top:8px; border-top:0 }
-.live-identity .workout-set-table-head { min-height:28px; color:var(--secondary-label-fg); font-size:12px; font-weight:500; letter-spacing:.06em }
-.live-identity .live-set-table > .live-set, .live-identity .circuit-round .live-set { padding:0 }
-.live-identity .live-set-table > .live-set + .live-set, .live-identity .circuit-round .live-set + .live-set { margin-top:8px; border:0 }
-.live-identity .live-set-grid { position:static; min-height:48px; gap:0; padding:0; overflow:hidden; border:1px solid var(--border); border-radius:12px; background:var(--surface-sunken) }
-.live-identity .live-set-grid, .live-identity .live-set-table-head { grid-template-columns:28px minmax(0,1fr) minmax(0,1fr) 52px }
-.live-identity .live-set.rpe-visible .live-set-grid, .live-identity .live-set-table-head.rpe-visible { grid-template-columns:24px minmax(0,1fr) minmax(0,1fr) 44px 52px }
-.live-identity .live-set-grid > :not(:first-child) { border-left:1px solid var(--border) }
-.live-identity .workout-duration-trigger.live-set-input { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; cursor:pointer }
-.live-identity .live-set-number { color:var(--muted); font-size:12px; font-weight:500 }
-.live-identity .live-set-input, .live-identity .live-set-rpe { min-height:48px; padding:4px 5px; border:0; border-radius:0; background:transparent; color:var(--fg); font-size:16px; font-weight:400 }
-.live-identity .live-set-input:focus, .live-identity .live-set-rpe:focus { border:0; outline:0; box-shadow:inset 0 0 0 2px var(--fg) }
-.live-identity .live-set-input.plan-hint { color:var(--secondary-label-fg); font-weight:400 }
-.live-identity .live-set-confirm { min-height:48px }
-.live-identity .live-set-check, .live-identity .live-set-save, .live-identity .live-set-expanded .live-set-check, .live-identity .live-set-expanded .live-set-save { width:100%; min-height:48px; display:flex; align-items:center; justify-content:center; padding:0; border:0; border-radius:0; background:var(--mono-primary); color:var(--mono-on-primary); font-size:18px; font-weight:500; line-height:1; box-shadow:none}
-.live-identity .live-set.editing > .live-set-grid { border-color:var(--border-strong); box-shadow:inset 0 0 0 1px var(--border-strong) }
-.live-identity .live-set.editing .live-set-save { background:transparent; color:var(--fg) }
-.live-identity .live-set-check.done { border-color:var(--border); background:var(--surface-sunken); color:var(--success-fg) }
-.live-identity .live-set.confirmed > .live-set-grid {
+.live-identity .workout-set-table:where(:not(.fit-lime-shell.workout-live-reference :is(.coach-live-v79,.client-live-v79) .workout-set-table)) { position:relative; margin-top:8px; border-top:0 }
+.live-identity .workout-set-table-head:where(:not(.fit-lime-shell.workout-live-reference :is(.coach-live-v79,.client-live-v79) .workout-set-table-head)) { min-height:28px; color:var(--secondary-label-fg); font-size:12px; font-weight:500; letter-spacing:.06em }
+.live-identity .live-set-table > .live-set:where(:not(.fit-lime-shell.workout-live-reference :is(.coach-live-v79,.client-live-v79) .live-set-table > .live-set)),
+.live-identity .circuit-round .live-set:where(:not(.fit-lime-shell.workout-live-reference :is(.coach-live-v79,.client-live-v79) .circuit-round .live-set)) { padding:0 }
+.live-identity .live-set-table > .live-set + .live-set:where(:not(.fit-lime-shell.workout-live-reference :is(.coach-live-v79,.client-live-v79) .live-set-table > .live-set + .live-set)),
+.live-identity .circuit-round .live-set + .live-set:where(:not(.fit-lime-shell.workout-live-reference :is(.coach-live-v79,.client-live-v79) .circuit-round .live-set + .live-set)) { margin-top:8px; border:0 }
+.live-identity .live-set-grid:where(:not(.fit-lime-shell.workout-live-reference :is(.coach-live-v79,.client-live-v79) .live-set-grid)) { position:static; min-height:48px; gap:0; padding:0; overflow:hidden; border:1px solid var(--border); border-radius:12px; background:var(--surface-sunken) }
+.live-identity .live-set-grid:where(:not(.fit-lime-shell.workout-live-reference :is(.coach-live-v79,.client-live-v79) .live-set-grid)),
+.live-identity .live-set-table-head:where(:not(.fit-lime-shell.workout-live-reference :is(.coach-live-v79,.client-live-v79) .live-set-table-head)) { grid-template-columns:28px minmax(0,1fr) minmax(0,1fr) 52px }
+.live-identity .live-set.rpe-visible .live-set-grid:where(:not(.fit-lime-shell.workout-live-reference :is(.coach-live-v79,.client-live-v79) .live-set.rpe-visible .live-set-grid)),
+.live-identity .live-set-table-head.rpe-visible:where(:not(.fit-lime-shell.workout-live-reference :is(.coach-live-v79,.client-live-v79) .live-set-table-head.rpe-visible)) { grid-template-columns:24px minmax(0,1fr) minmax(0,1fr) 44px 52px }
+.live-identity .live-set-grid > :not(:first-child):where(:not(.fit-lime-shell.workout-live-reference :is(.coach-live-v79,.client-live-v79) .live-set-grid > :not(:first-child))) { border-left:1px solid var(--border) }
+.live-identity .workout-duration-trigger.live-set-input:where(:not(.fit-lime-shell.workout-live-reference :is(.coach-live-v79,.client-live-v79) .workout-duration-trigger.live-set-input)) { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; cursor:pointer }
+.live-identity .live-set-number:where(:not(.fit-lime-shell.workout-live-reference :is(.coach-live-v79,.client-live-v79) .live-set-number)) { color:var(--muted); font-size:12px; font-weight:500 }
+.live-identity .live-set-input:where(:not(.fit-lime-shell.workout-live-reference :is(.coach-live-v79,.client-live-v79) .live-set-input)),
+.live-identity .live-set-rpe:where(:not(.fit-lime-shell.workout-live-reference :is(.coach-live-v79,.client-live-v79) .live-set-rpe)) { min-height:48px; padding:4px 5px; border:0; border-radius:0; background:transparent; color:var(--fg); font-size:16px; font-weight:400 }
+.live-identity .live-set-input:focus:where(:not(.fit-lime-shell.workout-live-reference :is(.coach-live-v79,.client-live-v79) .live-set-input:focus)),
+.live-identity .live-set-rpe:focus:where(:not(.fit-lime-shell.workout-live-reference :is(.coach-live-v79,.client-live-v79) .live-set-rpe:focus)) { border:0; outline:0; box-shadow:inset 0 0 0 2px var(--fg) }
+.live-identity .live-set-input.plan-hint:where(:not(.fit-lime-shell.workout-live-reference :is(.coach-live-v79,.client-live-v79) .live-set-input.plan-hint)) { color:var(--secondary-label-fg); font-weight:400 }
+.live-identity .live-set-confirm:where(:not(.fit-lime-shell.workout-live-reference :is(.coach-live-v79,.client-live-v79) .live-set-confirm)) { min-height:48px }
+.live-identity .live-set-check:where(:not(.fit-lime-shell.workout-live-reference :is(.coach-live-v79,.client-live-v79) .live-set-check)),
+.live-identity .live-set-save:where(:not(.fit-lime-shell.workout-live-reference :is(.coach-live-v79,.client-live-v79) .live-set-save)),
+.live-identity .live-set-expanded .live-set-check:where(:not(.fit-lime-shell.workout-live-reference :is(.coach-live-v79,.client-live-v79) .live-set-expanded .live-set-check)),
+.live-identity .live-set-expanded .live-set-save:where(:not(.fit-lime-shell.workout-live-reference :is(.coach-live-v79,.client-live-v79) .live-set-expanded .live-set-save)) { width:100%; min-height:48px; display:flex; align-items:center; justify-content:center; padding:0; border:0; border-radius:0; background:var(--mono-primary); color:var(--mono-on-primary); font-size:18px; font-weight:500; line-height:1; box-shadow:none}
+.live-identity .live-set.editing > .live-set-grid:where(:not(.fit-lime-shell.workout-live-reference :is(.coach-live-v79,.client-live-v79) .live-set.editing > .live-set-grid)) { border-color:var(--border-strong); box-shadow:inset 0 0 0 1px var(--border-strong) }
+.live-identity .live-set.editing .live-set-save:where(:not(.fit-lime-shell.workout-live-reference :is(.coach-live-v79,.client-live-v79) .live-set.editing .live-set-save)) { background:transparent; color:var(--fg) }
+.live-identity .live-set-check.done:where(:not(.fit-lime-shell.workout-live-reference :is(.coach-live-v79,.client-live-v79) .live-set-check.done)) { border-color:var(--border); background:var(--surface-sunken); color:var(--success-fg) }
+.live-identity .live-set.confirmed > .live-set-grid:where(:not(.fit-lime-shell.workout-live-reference :is(.coach-live-v79,.client-live-v79) .live-set.confirmed > .live-set-grid)) {
   gap:0;
   min-height:48px;
   padding:0;
@@ -3772,23 +3781,23 @@ button.workout-duration-trigger:disabled { cursor:default; opacity:1 }
   background:color-mix(in srgb, var(--success) 18%, var(--surface-raised));
   box-shadow:inset 0 0 0 1px color-mix(in srgb, var(--success) 42%, var(--border));
 }
-.live-identity .live-set.confirmed > .live-set-grid > :not(:first-child) { border-left:1px solid color-mix(in srgb, var(--success) 30%, var(--border)) }
-.live-identity .live-set.confirmed .live-set-number,
-.live-identity .live-set.confirmed .live-set-confirm { min-height:48px }
-.live-identity .live-set.confirmed .live-set-number { color:var(--success-fg) }
-.live-identity .live-set.confirmed .live-set-input,
-.live-identity .live-set.confirmed .live-set-rpe,
-.live-identity .live-set.confirmed .live-set-check.done {
+.live-identity .live-set.confirmed > .live-set-grid > :not(:first-child):where(:not(.fit-lime-shell.workout-live-reference :is(.coach-live-v79,.client-live-v79) .live-set.confirmed > .live-set-grid > :not(:first-child))) { border-left:1px solid color-mix(in srgb, var(--success) 30%, var(--border)) }
+.live-identity .live-set.confirmed .live-set-number:where(:not(.fit-lime-shell.workout-live-reference :is(.coach-live-v79,.client-live-v79) .live-set.confirmed .live-set-number)),
+.live-identity .live-set.confirmed .live-set-confirm:where(:not(.fit-lime-shell.workout-live-reference :is(.coach-live-v79,.client-live-v79) .live-set.confirmed .live-set-confirm)) { min-height:48px }
+.live-identity .live-set.confirmed .live-set-number:where(:not(.fit-lime-shell.workout-live-reference :is(.coach-live-v79,.client-live-v79) .live-set.confirmed .live-set-number)) { color:var(--success-fg) }
+.live-identity .live-set.confirmed .live-set-input:where(:not(.fit-lime-shell.workout-live-reference :is(.coach-live-v79,.client-live-v79) .live-set.confirmed .live-set-input)),
+.live-identity .live-set.confirmed .live-set-rpe:where(:not(.fit-lime-shell.workout-live-reference :is(.coach-live-v79,.client-live-v79) .live-set.confirmed .live-set-rpe)),
+.live-identity .live-set.confirmed .live-set-check.done:where(:not(.fit-lime-shell.workout-live-reference :is(.coach-live-v79,.client-live-v79) .live-set.confirmed .live-set-check.done)) {
   min-height:48px;
   border:0;
   border-radius:0;
   background:transparent;
   color:var(--fg);
 }
-.live-identity .live-set.confirmed .live-set-check.done { width:100%; color:var(--success-fg) }
-.live-identity .live-set-save-feedback .save-status { position:absolute; z-index:1; top:2px; right:0; min-height:24px; padding:0 2px; background:var(--bg); pointer-events:none }
-.live-identity .live-set.invalid > .live-set-grid { border-color:var(--danger); box-shadow:inset 0 0 0 1px var(--danger) }
-.live-identity .live-set-validation { margin:5px 0 0; color:var(--danger); font-size:12px; font-weight:500; line-height:1.3 }
+.live-identity .live-set.confirmed .live-set-check.done:where(:not(.fit-lime-shell.workout-live-reference :is(.coach-live-v79,.client-live-v79) .live-set.confirmed .live-set-check.done)) { width:100%; color:var(--success-fg) }
+.live-identity .live-set-save-feedback .save-status:where(:not(.fit-lime-shell.workout-live-reference :is(.coach-live-v79,.client-live-v79) .live-set-save-feedback .save-status)) { position:absolute; z-index:1; top:2px; right:0; min-height:24px; padding:0 2px; background:var(--bg); pointer-events:none }
+.live-identity .live-set.invalid > .live-set-grid:where(:not(.fit-lime-shell.workout-live-reference :is(.coach-live-v79,.client-live-v79) .live-set.invalid > .live-set-grid)) { border-color:var(--danger); box-shadow:inset 0 0 0 1px var(--danger) }
+.live-identity .live-set-validation:where(:not(.fit-lime-shell.workout-live-reference :is(.coach-live-v79,.client-live-v79) .live-set-validation)) { margin:5px 0 0; color:var(--danger); font-size:12px; font-weight:500; line-height:1.3 }
 .live-identity .live-set-compact { grid-template-columns:24px minmax(0,1fr) 52px; min-height:56px; border-color:var(--border) }
 .live-identity .live-set-compact-values strong { color:var(--fg); font-size:14px; font-weight:500 }
 .live-identity .live-set-compact-values small { color:var(--secondary-label-fg); font-size:12px; font-weight:500 }
@@ -3849,9 +3858,14 @@ button.workout-duration-trigger:disabled { cursor:default; opacity:1 }
 
 @media (max-width:375px) {
   .live-identity .live-workout-page { padding-inline:14px }
-  .live-identity .live-set-grid, .live-identity .live-set-table-head { grid-template-columns:24px minmax(0,1fr) minmax(0,1fr) 48px; gap:0 }
-  .live-identity .live-set.rpe-visible .live-set-grid, .live-identity .live-set-table-head.rpe-visible { grid-template-columns:20px minmax(0,1fr) minmax(0,1fr) 40px 48px; gap:0 }
-  .live-identity .live-set-check, .live-identity .live-set-save, .live-identity .live-set-expanded .live-set-check, .live-identity .live-set-expanded .live-set-save { width:100% }
+  .live-identity .live-set-grid:where(:not(.fit-lime-shell.workout-live-reference :is(.coach-live-v79,.client-live-v79) .live-set-grid)),
+.live-identity .live-set-table-head:where(:not(.fit-lime-shell.workout-live-reference :is(.coach-live-v79,.client-live-v79) .live-set-table-head)) { grid-template-columns:24px minmax(0,1fr) minmax(0,1fr) 48px; gap:0 }
+  .live-identity .live-set.rpe-visible .live-set-grid:where(:not(.fit-lime-shell.workout-live-reference :is(.coach-live-v79,.client-live-v79) .live-set.rpe-visible .live-set-grid)),
+.live-identity .live-set-table-head.rpe-visible:where(:not(.fit-lime-shell.workout-live-reference :is(.coach-live-v79,.client-live-v79) .live-set-table-head.rpe-visible)) { grid-template-columns:20px minmax(0,1fr) minmax(0,1fr) 40px 48px; gap:0 }
+  .live-identity .live-set-check:where(:not(.fit-lime-shell.workout-live-reference :is(.coach-live-v79,.client-live-v79) .live-set-check)),
+.live-identity .live-set-save:where(:not(.fit-lime-shell.workout-live-reference :is(.coach-live-v79,.client-live-v79) .live-set-save)),
+.live-identity .live-set-expanded .live-set-check:where(:not(.fit-lime-shell.workout-live-reference :is(.coach-live-v79,.client-live-v79) .live-set-expanded .live-set-check)),
+.live-identity .live-set-expanded .live-set-save:where(:not(.fit-lime-shell.workout-live-reference :is(.coach-live-v79,.client-live-v79) .live-set-expanded .live-set-save)) { width:100% }
   .live-identity .live-session-header { grid-template-columns:minmax(0,1fr) }
   .live-identity .live-session-header .workout-header-side { grid-row:1; justify-self:end; margin-bottom:-37px }
   .live-identity .live-session-header h2 { padding-right:88px; font-size:18px }
@@ -6348,10 +6362,10 @@ details[open] > .progress-details-toggle svg { transform:rotate(180deg); }
 .live-rest-trigger.phase-work { border-color:color-mix(in srgb, var(--success-fg) 45%, var(--border)); background:color-mix(in srgb, var(--success-fg) 14%, var(--surface-raised)); color:var(--success-fg); }
 .live-phase-notice { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-top:8px; padding:6px 6px 6px 14px; border:1px solid var(--border); border-radius:14px; background:var(--surface-raised); color:var(--fg); font-size:14px; }
 .live-phase-notice button { flex:none; min-height:44px; padding:0 14px; }
-.live-identity .live-workout-page .live-set-table > .live-set,
-.live-identity .live-workout-page .circuit-round .live-set { border:0; }
-.live-identity .live-workout-page .live-set-table > .live-set + .live-set,
-.live-identity .live-workout-page .circuit-round .live-set + .live-set { box-shadow:none; }
+.live-identity .live-workout-page .live-set-table > .live-set:where(:not(.fit-lime-shell.workout-live-reference :is(.coach-live-v79,.client-live-v79) .live-set-table > .live-set)),
+.live-identity .live-workout-page .circuit-round .live-set:where(:not(.fit-lime-shell.workout-live-reference :is(.coach-live-v79,.client-live-v79) .circuit-round .live-set)) { border:0; }
+.live-identity .live-workout-page .live-set-table > .live-set + .live-set:where(:not(.fit-lime-shell.workout-live-reference :is(.coach-live-v79,.client-live-v79) .live-set-table > .live-set + .live-set)),
+.live-identity .live-workout-page .circuit-round .live-set + .live-set:where(:not(.fit-lime-shell.workout-live-reference :is(.coach-live-v79,.client-live-v79) .circuit-round .live-set + .live-set)) { box-shadow:none; }
 
 /* Trainer professional profile: a quiet form for the trainer and the same
    readable card in preview and on the public link. */

@@ -1,5 +1,6 @@
 import { createHash, randomUUID } from 'node:crypto'
 import { fileURLToPath } from 'node:url'
+import { readFileSync } from 'node:fs'
 import { Pool, type PoolClient, type QueryResultRow } from 'pg'
 import { runner } from 'node-pg-migrate'
 import { CorporateInvitationsStore } from '../corporate-invitations.js'
@@ -244,6 +245,71 @@ describe.skipIf(!source)('corporate administration on real actor/RLS', () => {
     expect((await pool.query('select enabled from app_private.corporate_admin_logins where login_sha256=$1',[first])).rows).toEqual([{enabled:true}])
     await pool.query('delete from app_private.auth_identities where profile_id=$1',[coach])
     await pool.query('delete from app_private.corporate_admin_logins where login_sha256=any($1::text[])',[[first,second]])
+  })
+  it('migrates two retained administrators to five independent slots without replacing identities', async () => {
+    const migration = readFileSync(new URL('../../db/migrations/000190_corporate_admin_five_slots.sql', import.meta.url), 'utf8')
+    const [up, down] = migration.split('-- Down Migration')
+    const hashes = ['5','6','7','8','9'].map(value => value.repeat(64))
+    const subject = 'a'.repeat(64)
+    const operator = await import(new URL('../../../../scripts/manage-corporate-admin-access.mjs', import.meta.url).href) as {
+      manageCorporateAdminAccess(client: PoolClient, action: 'grant', hash: string | undefined, slot: number): Promise<{enabled: boolean; bound: boolean; readyProfiles: number}>
+    }
+    await pool.query(down!)
+    await pool.query(`insert into app_private.corporate_admin_logins(login_sha256,access_slot,subject_sha256,bound_at)
+      values($1,1,$3,now()),($2,2,null,null)`, [hashes[0],hashes[1],subject])
+    const retained = (await pool.query('select to_jsonb(a) row from app_private.corporate_admin_logins a order by access_slot')).rows
+    try {
+      await pool.query(up!)
+      expect((await pool.query('select to_jsonb(a) row from app_private.corporate_admin_logins a order by access_slot')).rows).toEqual(retained)
+      for (const slot of [3,4,5]) {
+        const client = await pool.connect()
+        try { expect(await operator.manageCorporateAdminAccess(client,'grant',hashes[slot-1],slot)).toMatchObject({enabled:true,bound:false,readyProfiles:0}) }
+        finally { client.release() }
+      }
+      expect((await pool.query('select to_jsonb(a) row from app_private.corporate_admin_logins a where access_slot<=2 order by access_slot')).rows).toEqual(retained)
+      expect((await pool.query('select count(*)::int n from app_private.corporate_admin_logins where enabled')).rows).toEqual([{n:5}])
+      await expect(pool.query('insert into app_private.corporate_admin_logins(login_sha256,access_slot) values($1,6)', ['b'.repeat(64)])).rejects.toMatchObject({code:'23514'})
+      await expect(pool.query('insert into app_private.corporate_admin_logins(login_sha256,access_slot) values($1,3)', ['b'.repeat(64)])).rejects.toMatchObject({code:'23505'})
+      await expect(actor(coach,'update app_private.corporate_admin_logins set enabled=false')).rejects.toMatchObject({code:'42501'})
+      await expect(pool.query(down!)).rejects.toMatchObject({message:'corporate_admin_extended_slots_in_use'})
+      expect((await pool.query('select count(*)::int n from app_private.corporate_admin_logins where enabled')).rows).toEqual([{n:5}])
+    } finally {
+      await pool.query('delete from app_private.corporate_admin_logins where login_sha256=any($1::text[])',[hashes])
+    }
+  })
+  it('adds a sixth approved administrator while preserving five retained identities and rollback safety', async () => {
+    const migration = readFileSync(new URL('../../db/migrations/000193_corporate_admin_six_slots.sql', import.meta.url), 'utf8')
+    const [up, down] = migration.split('-- Down Migration')
+    const hashes = ['1','2','3','4','5','6'].map(value => value.repeat(64))
+    const operator = await import(new URL('../../../../scripts/manage-corporate-admin-access.mjs', import.meta.url).href) as {
+      manageCorporateAdminAccess(client: PoolClient, action: 'grant' | 'inspect', hash: string | undefined, slot: number): Promise<{enabled: boolean; bound: boolean; readyProfiles: number; otherEnabledAdmins: number}>
+    }
+    await pool.query(down!)
+    await pool.query(`insert into app_private.corporate_admin_logins(login_sha256,access_slot,subject_sha256,bound_at)
+      select value, slot, case when slot<=2 then repeat((slot+10)::text,32) end,
+        case when slot<=2 then now() end from unnest($1::text[]) with ordinality as a(value,slot)`, [hashes.slice(0,5)])
+    const retained = (await pool.query('select to_jsonb(a) row from app_private.corporate_admin_logins a order by access_slot')).rows
+    try {
+      await expect(pool.query('insert into app_private.corporate_admin_logins(login_sha256,access_slot) values($1,6)', [hashes[5]])).rejects.toMatchObject({code:'23514'})
+      await pool.query(up!)
+      expect((await pool.query('select to_jsonb(a) row from app_private.corporate_admin_logins a order by access_slot')).rows).toEqual(retained)
+      const client = await pool.connect()
+      try {
+        expect(await operator.manageCorporateAdminAccess(client,'grant',hashes[5],6)).toEqual({status:'applied',enabled:true,bound:false,readyProfiles:0,otherEnabledAdmins:5})
+        expect(await operator.manageCorporateAdminAccess(client,'inspect',hashes[5],6)).toEqual({status:'inspected',enabled:true,bound:false,readyProfiles:0,otherEnabledAdmins:5})
+      } finally { client.release() }
+      expect((await pool.query('select to_jsonb(a) row from app_private.corporate_admin_logins a where access_slot<=5 order by access_slot')).rows).toEqual(retained)
+      await expect(pool.query('insert into app_private.corporate_admin_logins(login_sha256,access_slot) values($1,7)', ['b'.repeat(64)])).rejects.toMatchObject({code:'23514'})
+      await expect(pool.query('insert into app_private.corporate_admin_logins(login_sha256,access_slot) values($1,6)', ['b'.repeat(64)])).rejects.toMatchObject({code:'23505'})
+      await expect(actor(coach,'update app_private.corporate_admin_logins set enabled=false')).rejects.toMatchObject({code:'42501'})
+      await expect(pool.query(down!)).rejects.toMatchObject({message:'corporate_admin_sixth_slot_in_use'})
+      await pool.query('update app_private.corporate_admin_logins set enabled=false where access_slot=6')
+      await expect(pool.query(down!)).rejects.toMatchObject({message:'corporate_admin_sixth_slot_in_use'})
+      expect((await pool.query('select to_jsonb(a) row from app_private.corporate_admin_logins a where access_slot<=5 order by access_slot')).rows).toEqual(retained)
+    } finally {
+      await pool.query('delete from app_private.corporate_admin_logins where login_sha256=any($1::text[])',[hashes])
+      await pool.query(up!)
+    }
   })
   it('grants only the owner-approved login after verified binding, before or after account creation', async () => {
     const login='c'.repeat(64), subject='d'.repeat(64)

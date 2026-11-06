@@ -51,6 +51,37 @@ test('additional slot preserves a separately enabled administrator',async()=>{
  assert.equal(client.calls.some(x=>/update.*where.*<>/.test(x.sql)),false)
 })
 
+test('six owner-approved slots preserve every other administrator and reject a seventh',async()=>{
+ for(const slot of [3,4,5,6]){
+  const client=database();const query=client.query.bind(client)
+  client.query=async(sql,args)=>sql.includes('login_sha256<>$1')?{rows:[{n:5}]}:query(sql,args)
+  const result=await manageCorporateAdminAccess(client,'grant',hash,slot)
+  assert.equal(result.otherEnabledAdmins,5)
+  assert.deepEqual(client.calls.find(x=>x.sql.startsWith('insert into')).args,[hash,slot])
+  assert.equal(client.calls.some(x=>/update.*where.*<>/.test(x.sql)),false)
+ }
+ for(const slot of [0,7,1.5]){
+  const client=database()
+  await assert.rejects(manageCorporateAdminAccess(client,'grant',hash,slot),/target_rejected/)
+  assert.equal(client.calls.length,0)
+ }
+ const client=database();const query=client.query.bind(client)
+ client.query=async(sql,args)=>sql.includes('login_sha256<>$1')?{rows:[{n:6}]}:query(sql,args)
+ await assert.rejects(manageCorporateAdminAccess(client,'grant',hash,5),/exclusive_target_conflict/)
+ assert.equal(client.calls.some(x=>x.sql.startsWith('insert into')),false)
+})
+
+test('six workflow choices keep five existing secrets and add only the sixth',()=>{
+ const workflow=readFileSync(new URL('../.github/workflows/manage-corporate-admin.yml',import.meta.url),'utf8')
+ assert.ok(workflow.includes('options: [primary, additional, third, fourth, fifth, sixth]'))
+ for(const [name,slot] of [['PRIMARY',1],['ADDITIONAL',2],['THIRD',3],['FOURTH',4],['FIFTH',5],['SIXTH',6]]){
+  const secret=name==='PRIMARY'?'FIT_CORPORATE_ADMIN_LOGIN_SHA256':`FIT_CORPORATE_ADMIN_${name}_LOGIN_SHA256`
+  assert.ok(workflow.includes(`secrets.${secret}`))
+  assert.ok(workflow.includes(`CORPORATE_ADMIN_LOGIN_SHA256=$${name}_ADMIN_LOGIN_SHA256; CORPORATE_ADMIN_ACCESS_SLOT=${slot}`))
+ }
+ assert.equal(workflow.includes('type: string'),false)
+})
+
 test('invitation pilot resolves exactly one linked trainer and never exposes identity',async()=>{
  const {manageCorporateInvitationPilot}=await import('./manage-corporate-admin-access.mjs')
  const calls=[]

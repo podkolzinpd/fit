@@ -9,10 +9,10 @@ on:
         default: inspect
         options: [inspect, grant, revoke]
       account:
-        description: Existing primary administrator or the separately approved additional administrator
+        description: One of the six separately owner-approved administrators
         type: choice
         default: primary
-        options: [primary, additional]
+        options: [primary, additional, third, fourth, fifth, sixth]
       scope:
         description: Administrator capability or the independent invitation/services test pilots
         type: choice
@@ -39,6 +39,10 @@ jobs:
           CLOUDRU_DATABASE_CONFIG_JSON: ${{ secrets.CLOUDRU_STAGE_DATABASE_CONFIG_JSON }}
           PRIMARY_ADMIN_LOGIN_SHA256: ${{ secrets.FIT_CORPORATE_ADMIN_LOGIN_SHA256 }}
           ADDITIONAL_ADMIN_LOGIN_SHA256: ${{ secrets.FIT_CORPORATE_ADMIN_ADDITIONAL_LOGIN_SHA256 }}
+          THIRD_ADMIN_LOGIN_SHA256: ${{ secrets.FIT_CORPORATE_ADMIN_THIRD_LOGIN_SHA256 }}
+          FOURTH_ADMIN_LOGIN_SHA256: ${{ secrets.FIT_CORPORATE_ADMIN_FOURTH_LOGIN_SHA256 }}
+          FIFTH_ADMIN_LOGIN_SHA256: ${{ secrets.FIT_CORPORATE_ADMIN_FIFTH_LOGIN_SHA256 }}
+          SIXTH_ADMIN_LOGIN_SHA256: ${{ secrets.FIT_CORPORATE_ADMIN_SIXTH_LOGIN_SHA256 }}
           ADMIN_ACCOUNT: ${{ inputs.account }}
           CORPORATE_ADMIN_SCOPE: ${{ inputs.scope }}
           PILOT_TRAINER_LOGIN_SHA256: ${{ secrets.FIT_CORPORATE_INVITATION_PILOT_LOGIN_SHA256 }}
@@ -55,6 +59,10 @@ jobs:
           case "$ADMIN_ACCOUNT" in
             primary) CORPORATE_ADMIN_LOGIN_SHA256=$PRIMARY_ADMIN_LOGIN_SHA256; CORPORATE_ADMIN_ACCESS_SLOT=1 ;;
             additional) CORPORATE_ADMIN_LOGIN_SHA256=$ADDITIONAL_ADMIN_LOGIN_SHA256; CORPORATE_ADMIN_ACCESS_SLOT=2 ;;
+            third) CORPORATE_ADMIN_LOGIN_SHA256=$THIRD_ADMIN_LOGIN_SHA256; CORPORATE_ADMIN_ACCESS_SLOT=3 ;;
+            fourth) CORPORATE_ADMIN_LOGIN_SHA256=$FOURTH_ADMIN_LOGIN_SHA256; CORPORATE_ADMIN_ACCESS_SLOT=4 ;;
+            fifth) CORPORATE_ADMIN_LOGIN_SHA256=$FIFTH_ADMIN_LOGIN_SHA256; CORPORATE_ADMIN_ACCESS_SLOT=5 ;;
+            sixth) CORPORATE_ADMIN_LOGIN_SHA256=$SIXTH_ADMIN_LOGIN_SHA256; CORPORATE_ADMIN_ACCESS_SLOT=6 ;;
             *) exit 1 ;;
           esac
           case "$CORPORATE_ADMIN_SCOPE" in

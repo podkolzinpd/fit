@@ -1,13 +1,13 @@
 28.10 — Чат: плашка даты перед первым сообщением дня («Сегодня», «Вчера», «26 октября», «12 марта 2025»), раньше «Новые сообщения»; в списке чатов дата по давности. День по часам телефона. chat-dates.ts + тесты.
 # Fit — текущий индекс
 04.11 — [Профиль клиента:3PR/COP](design/CLIENT_OWN_PROFILE_20261104.md).
-05.11 — [17 журналов](design/ATHLETE_PROGRAM_HISTORY_IMPORT_20261103.md): direct Cloud.ru путь; код готовится, данные0/17.
+06.11 — [17 журналов](design/ATHLETE_PROGRAM_HISTORY_IMPORT_20261103.md):17/17 проверены; cleanup installer в работе.
 YAFIT-701: [R101–R106, восстановление карточки у тренера без изменения истории](https://st.yandex-team.ru/YAFIT-701).
 Шаблоны: [TMPA/R01–R04](design/COACH_WORKFLOW_AUDIT_20261031.md);1957 принят.
 02.11 — CI: production-mode browser набор873 разделяется на4 части без сокращения;
 [план, сохранность и исправления flaky swipe/video](design/PRODUCTION_BROWSER_CI_SHARDS_20261102.md). CI нового head ещё гейт.
 TC101–107: [план/статус](design/TRAINER_CONNECTION_CONFIRMATION_20261102.md). В работе.
-[Supabase: admin merged; native restore](design/SUPABASE_DECOMMISSION_PLAN_20261023.md).
+[Supabase: native restore merged; pilot cleanup](design/SUPABASE_DECOMMISSION_PLAN_20261023.md).
 Live: [LC101–304,3PR](design/LIVE_SINGLE_ACTIVE_CARD_20261104.md); [выпуск](https://github.com/podkolzinpd/fit/pull/1972).
 YAFIT-699: компактный список клиентов и гостевое приглашение,2PR. [План/проверки](design/COACH_CLIENTS_AND_INVITATION_20261031.md); [статус выпуска](https://st.yandex-team.ru/YAFIT-699).
 ФИТ20: [все статусы R104-S](design/COACH_RESCHEDULE_AND_DAY_GESTURES_20261031.md), [PR1923: CI](https://github.com/podkolzinpd/fit/pull/1923); [F201–208: CI/выпуск](design/COACH_WORKFLOW_AUDIT_20261031.md).
@@ -16,7 +16,7 @@ YAFIT-700: [Статусы тренера](design/COACH_WORKOUT_STATUS_DISPLAY_2
 31.10 — YAFIT-697: время быстрого старта обеим ролям, проведение пустой записи
 и «Не состоялась» тренеру. [План, проверки и выпуск](design/COACH_ATTENDANCE_AND_START_TIME_20261031.md).
 PR1906–1908 опубликованы db96685e; итог в YAFIT-697.
-MC2.2/1987 принят; MC3.1/1993 разрешён, обновлённая база/проверки выпуска. [План/статус](design/CLIENT_REFERENCE_SCREENS_20261029.md), §47/137.
+MC3.1 принят; MC3.2/2014 разрешён после выпуска2015. [План/проверки](design/CLIENT_REFERENCE_SCREENS_20261029.md), §142–146.
 30.10 — YAFIT-695 завершён: компактная история у тренера опубликована PR1892/cccecf35. [H101–H107, журнал и production-приёмка](https://st.yandex-team.ru/YAFIT-695).
 29.10 — YAFIT-673: полный список упражнений выбранного дня у тренера, записанные факты под названиями; обычный список/клиентский календарь прежние. План и статус выпуска: [каноническая запись](design/COACH_CALENDAR_FULL_EXERCISES_20261029.md). Локальные целевые/браузерные проверки пройдены, полный check/CI/production ещё гейты.
 Исходная база документа: main203f539d21fbc5cf79b1c930dc8467bbc8dc5c3b,28.10.2026; это не автоматически текущая production-сборка. Перед работой сверить main, нужный тикет и фактический выпуск.
@@ -32,7 +32,7 @@ P4/PR1882 опубликован наe5b5aa1d:213 файлов/health и public 
 P1–P4 завершены; итог — итерация26 канонического журнала и YAFIT-674.
 31.10 справочник заполнен:32 офиса добавлены,33/33 после reload; итерация27.
 02.11: [кабинет Яндекса](design/CORPORATE_ADMIN_20261027.md): PR1930/1937 опубликованы.
-SRV301–306: af2 принят, только тест. CRF1970 принят; PR1973 CI/журнал28. Второй admin ждёт входа.
+SRV301–306: только тест. CRF1970/1973 иADM103–106 приняты; ADM107–109:шестой admin в работе, журнал37.
 
 ## Точка продолжения
 [UX:4PR, проверки](design/WORKOUT_LIFECYCLE_UX_AUDIT_20261101.md).

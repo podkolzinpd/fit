@@ -13,7 +13,52 @@ import { readHistoryTargets, readHistoryRegistry, readHistoryPages, summarizeHis
   readHistoryEvidenceSecret, resolveHistoryEvidence, readHistoryVisibility,
   readWorkoutHistoryTarget, inspectWorkoutHistoryTarget } from './cloudru-account-history-audit.mjs'
 import { probeRuntimeDatabase } from './cloudru-runtime-db-probe.mjs'
-import { auditBackground, reminderCandidates } from './cloudru-background-audit.mjs'
+import { auditBackground, reminderCandidates, componentQueries, safeFailure, auditDeliveryControl, auditCurrentReminders } from './cloudru-background-audit.mjs'
+
+test('delivery gate inspection is SELECT-only for absent, held and active controls', async () => {
+  for (const present of [false, true]) for (const held of [false, true]) {
+    const statements = []
+    const client = { query: async sql => {
+      statements.push(sql)
+      return { rows: [sql.includes('to_regclass') ? { present }
+        : { count: 1, held, boundary_set: !held, receipt_set: !held }] }
+    } }
+    assert.deepEqual(await auditDeliveryControl(client), present
+      ? { present: true, valid: true, held, boundarySet: !held, receiptSet: !held } : { present: false })
+    assert.equal(statements.length, present ? 2 : 1)
+    assert.ok(statements.every(sql => /^select /i.test(sql)))
+    assert.doesNotMatch(statements.join('\n'), /\b(?:update|insert|delete|claim|enqueue)\b/i)
+  }
+})
+
+test('delivery gate inspection reports missing singleton and rejects malformed database output', async () => {
+  for (const row of [{ count: 0 }, { count: 2 }, { count: 1, held: null }, undefined]) {
+    const client = { query: async sql => ({ rows: sql.includes('to_regclass') ? [{ present: true }] : row ? [row] : [] }) }
+    if (row?.count === 0) assert.deepEqual(await auditDeliveryControl(client), { present: true, valid: false })
+    else await assert.rejects(auditDeliveryControl(client), /background_audit_control_rejected/)
+  }
+})
+
+test('current reminder verification calls only the pure conversion and fails visibly on unexpected SQL errors', async () => {
+  for (const available of [false, true]) for (const broken of [false, true]) {
+    const statements = []
+    const client = { query: async sql => {
+      statements.push(sql)
+      if (sql.includes('to_regprocedure')) return { rows: [{ present: available }] }
+      if (sql.includes('count(*)')) {
+        if (broken) throw Object.assign(new Error('private-sql'), { code: '42501' })
+        return { rows: [{ count: 2 }] }
+      }
+      return { rows: [] }
+    } }
+    assert.deepEqual(await auditCurrentReminders(client), !available ? { available: false } : broken
+      ? { available: true, ready: false, code: '42501', category: 'other' } : { available: true, ready: true, count: 2 })
+    if (available) {
+      assert.ok(statements.some(sql => sql.includes('app_private.push_reminder_local_time(now(),profile.timezone)')))
+      assert.doesNotMatch(statements.join('\n'), /at time zone profile\.timezone|\b(?:insert|update|delete|commit|enqueue_workout_reminders|prepare_workout_reminders|claim_push_notifications)\b/i)
+    }
+  }
+})
 
 test('background audit reports only bounded aggregates and recovers failed readonly timezone expressions', async () => {
   const statements = []
@@ -21,16 +66,20 @@ test('background audit reports only bounded aggregates and recovers failed reado
   const client = { query: async (sql, values) => {
     statements.push(sql)
     if (sql.includes('current_user')) return { rows: [{ valid: true }] }
+    if (sql.includes('to_regclass') || sql.includes('to_regprocedure')) return { rows: [{ present: false }] }
     if (sql.includes('group by 1,2')) return { rows: [{ kind: 'test', age: 'older', count: 2 }] }
     if (sql === reminderCandidates || values?.[0] === privateZone) {
-      throw Object.assign(new Error('private-error-text'), { code: '22023' })
+      throw Object.assign(new Error(`time zone "${privateZone}" not recognized`), { code: '22023' })
     }
     if (sql.includes('select distinct profile.timezone')) return { rows: [{ timezone: privateZone }, { timezone: 'UTC' }] }
+    if (componentQueries.some(([, query]) => query === sql)) return { rows: [{ count: 0 }] }
     return { rows: [] }
   } }
   const report = await auditBackground(client)
   assert.deepEqual(report, { event: 'cloudru_background_audit', groups: [{ kind: 'test', age: 'older', count: 2 }],
-    reminderCandidates: { ready: false, code: '22023' }, timezoneChecks: { checked: 2, failures: [{ code: '22023', count: 1 }] } })
+    reminderCandidates: { ready: false, code: '22023', category: 'timezone_unrecognized' }, deliveryControl: { present: false }, currentReminderCandidates: { available: false },
+    components: componentQueries.map(([step]) => ({ step, ready: true, count: 0 })),
+    timezoneChecks: { scope: 'all_profiles', checked: 2, failures: [{ code: '22023', category: 'timezone_unrecognized', count: 1 }] } })
   assert.equal(statements[0], 'begin read only')
   assert.equal(statements.at(-1), 'rollback')
   assert.ok(statements.includes('rollback to savepoint reminder_probe'))
@@ -45,13 +94,33 @@ test('background audit fails closed on excessive timezone cardinality or wrong d
     const client = { query: async sql => {
       statements.push(sql)
       if (sql.includes('current_user')) return { rows: [{ valid: !wrongRole }] }
-      if (sql === reminderCandidates) return { rows: [{ count: 0 }] }
+      if (sql === reminderCandidates || componentQueries.some(([, query]) => query === sql)) return { rows: [{ count: 0 }] }
       if (sql.includes('select distinct')) return { rows: Array.from({ length: 101 }, () => ({ timezone: 'UTC' })) }
       return { rows: [] }
     } }
     await assert.rejects(auditBackground(client), /background_audit_(?:role_rejected|zone_bound_exceeded)/)
     assert.equal(statements.at(-1), 'rollback')
   }
+})
+
+test('background component probes recover independently without exposing database messages', async () => {
+  const statements = []
+  const client = { query: async sql => {
+    statements.push(sql)
+    if (sql.includes('current_user')) return { rows: [{ valid: true }] }
+    if (sql.includes('to_regclass') || sql.includes('to_regprocedure')) return { rows: [{ present: false }] }
+    if (sql.includes('group by 1,2') || sql.includes('select distinct')) return { rows: [] }
+    if (sql === componentQueries[2][1]) throw Object.assign(new Error('private query text'), { code: '22023' })
+    return { rows: [{ count: 3 }] }
+  } }
+  const report = await auditBackground(client)
+  assert.deepEqual(report.components[2], { step: 'joined_planned', ready: false, code: '22023', category: 'other' })
+  assert.equal(report.components[3].ready, true)
+  assert.ok(statements.includes('rollback to savepoint component_probe'))
+  assert.doesNotMatch(JSON.stringify(report), /private/)
+  assert.deepEqual(safeFailure({ code: 'secret', message: 'secret' }), { code: 'unknown', category: 'other' })
+  assert.deepEqual(safeFailure({ code: '22023', message: 'unrecognized configuration parameter "private"' }),
+    { code: '22023', category: 'configuration' })
 })
 
 test('background audit is explicit manual readonly and precedes queue health exit', () => {
@@ -65,6 +134,31 @@ test('background audit is explicit manual readonly and precedes queue health exi
 })
 
 const read = name => readFileSync(new URL(`../${name}`, import.meta.url), 'utf8')
+
+test('push recovery is a manual typed exact-main operation, never a sender or arbitrary SQL route', () => {
+  const workflow = read('.github/workflows/recover-cloudru-fresh-push.yml')
+  assert.match(workflow, /on:\n  workflow_dispatch:/)
+  assert.doesNotMatch(workflow, /^  (?:push|pull_request|schedule|workflow_run):/m)
+  assert.match(workflow, /default: preview/)
+  assert.match(workflow, /options: \[preview, hold, archive_verified, activate\]/)
+  assert.match(workflow, /test "\$GITHUB_REF" = refs\/heads\/main/)
+  assert.match(workflow, /\.status == "completed" and \.conclusion == "success"/)
+  assert.match(workflow, /test "\$commit" = "\$GITHUB_SHA"/)
+  assert.match(workflow, /github_api commits\/main \| jq -er \.sha/)
+  assert.match(workflow, /test "\$\(cat \/opt\/fit\/RUNNING_SHA\)" = "\$commit"/)
+  assert.match(workflow, /RECOVER_CLOUDRU_FRESH_PUSH_ONLY/)
+  assert.match(workflow, /group: cloudru-stage-vm/)
+  assert.match(workflow, /flock --timeout 65 \/run\/lock\/fit-cloudru-background\.lock/)
+  assert.match(workflow, /0:600/)
+  assert.match(workflow, /0:700/)
+  assert.match(workflow, /node dist\/cloudru-background-cutover\.js/)
+  assert.doesNotMatch(workflow, /dist\/(?:cloudru-background-worker|push-dispatcher|cloudru-push-recovery|cloudru-recovery-push)\.js|psql|shell_command|sql_input|--publish|VAPID|start fit-background\.service/)
+  for (const body of workflow.split('run: |').slice(1)) {
+    const shell = body.split('\n').filter(line => line.startsWith('          ') || line.trim() === '').map(line => line.slice(10)).join('\n')
+    const parsed = spawnSync('bash', ['-n'], { input: shell, encoding: 'utf8' })
+    assert.equal(parsed.status, 0, parsed.stderr)
+  }
+})
 const configurations = ['configure-cloudru-ai', 'configure-cloudru-background', 'configure-cloudru-speech', 'configure-cloudru-nutrition']
 
 const historyFixtureIds = [1, 2, 3, 4, 5].map(n => `a0000000-0000-4000-8000-${String(n).padStart(12, '0')}`)
@@ -693,6 +787,23 @@ test('background journal report keeps only fixed flags and allowlisted database 
   assert.equal(report.sessionCleanupFailed, true)
   assert.deepEqual(report.databaseCodes, ['42501', 'ETIMEDOUT'])
   assert.deepEqual(report.launcherFailures, [{ stage: 'container', exitCode: 125 }])
+  assert.doesNotMatch(result.stdout, /private-/)
+})
+
+test('background journal exposes only the last complete numeric push result without recipient contents', () => {
+  const summary = { claimed: 2, discarded: 0, failed: 1, remindersEnqueued: 1, succeeded: 1 }
+  const entries = [
+    { ...summary, succeeded: 0 }, summary,
+    ...[-1, 1.5, true, 'private-value', 9007199254740992, null].map(value => ({ ...summary, claimed: value })),
+    { claimed: 2, failed: 0 },
+  ].map(entry => ({ ...entry, event: 'cloudru_background_completed', endpoint: 'private-endpoint',
+    notifications: [{ id: 'private-recipient', body: 'private-body' }], sessionCleanup: { deleted: 'private-count' } }))
+  const result = spawnSync('python3', ['scripts/cloudru-background-diagnostics.py'], {
+    input: entries.map(entry => JSON.stringify({ MESSAGE: JSON.stringify(entry) })).join('\n'), encoding: 'utf8',
+  })
+  assert.equal(result.status, 0)
+  assert.equal(JSON.parse(result.stdout).workerCompleted, true)
+  assert.deepEqual(JSON.parse(result.stdout).latestCompletedPush, summary)
   assert.doesNotMatch(result.stdout, /private-/)
 })
 

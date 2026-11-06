@@ -80,6 +80,15 @@ Supabase Auth diagnostics и её CLI helper. Замороженный SQL-ар�
 source consumers, включая восстановление карточек, пока работают отдельно.
 Native migrations/releases и ручной Yandex parser deployment сохраняются.
 
+## Удаление старого Schedule V2 pilot manager — 05.11.2026
+
+SB-PILOT-MANAGER-RETIRE-01 удаляет ручной workflow, который находил профиль
+через Supabase Auth и менял назначение в Supabase и старом Yandex-контуре.
+Существующие назначения, текущая конфигурация Cloud.ru и backend-команды не
+меняются; новые operator credentials/inputs не вводятся. Общие source secrets
+и исторические SQL сохранены для остальных consumers. Это не запуск remote
+изменений и не изменение текущего пользовательского допуска.
+
 ## Общая методика продуктовой разработки
 
 ### Точечное восстановление подтверждённой связи — YAFIT-701

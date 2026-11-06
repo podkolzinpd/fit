@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import {createHash,randomUUID} from 'node:crypto'
 import {gzipSync} from 'node:zlib'
 import {readFileSync} from 'node:fs'
-import {readProgramPacket,compareProgramHistory} from './cloudru-program-history-inspect.mjs'
+import {readProgramPacket,compareProgramHistory,selectProgramCard} from './cloudru-program-history-inspect.mjs'
 const fixture=()=>({schemaVersion:4,code:'F01',batchId:'program-history-20261103-f01',clientName:'Synthetic Athlete',matchNames:['Synthetic Athlete','Athlete Synthetic'],workouts:[{
   requestId:randomUUID(),workoutDate:'2026-10-26',startTime:null,endTime:null,actualDurationSec:null,trainingFormat:'with_trainer',notes:'Synthetic source',title:'Synthetic program',
   exercises:[{position:0,source:'system',ref:'snapshot:synthetic',customExerciseId:null,name:'Synthetic movement',muscleGroup:'other',inputKind:'strength',blockId:randomUUID(),blockType:'single',blockPreset:'set',blockRounds:1,restBetweenExercisesSec:0,restBetweenRoundsSec:0,restBetweenSetsSec:0,trainerComment:'СЕТЫ-ПОВТОРЫ: 1*10',sets:[{position:0,weightKg:0,reps:10,durationMin:null,durationSec:null,distanceKm:null,rpe:null}]}],
@@ -52,4 +52,30 @@ test('read-only workflow preserves trusted main, fixed target, encryption and VM
   assert.doesNotMatch(workflow,/cloudru-journal-import.mjs|options:.*apply|secrets.FIT_WORKOUT_HISTORY_TARGET/u)
   const source=readFileSync(new URL('./cloudru-program-history-inspect.mjs',import.meta.url),'utf8')
   assert.doesNotMatch(source,/saveCompletedWorkout|createClientCard|mode==='apply'/u)
+})
+
+
+test('verified roster selects the sole current card with its explicitly merged archived predecessor only',()=>{
+  const live={id:'current',trainer_id:'trainer',exact:true,connected:true,archived_at:null,merged_into_client_id:null}
+  const merged={...live,id:'old',archived_at:'2026-01-01',merged_into_client_id:live.id}
+  assert.equal(selectProgramCard([live,merged],true),live)
+  assert.equal(selectProgramCard([live,merged]),null)
+  for(const unsafe of [{...merged,archived_at:null},{...merged,merged_into_client_id:null},
+    {...merged,merged_into_client_id:'other'},{...merged,trainer_id:'other'}, {...live,id:'duplicate'}]) {
+    assert.equal(selectProgramCard([live,unsafe],true),null)
+  }
+  assert.equal(selectProgramCard([merged],true),null)
+  assert.equal(selectProgramCard([{...live,connected:false},merged],true),null)
+})
+
+
+test('roster-proven linked authenticated card accepts only the importing trainers merged predecessor',()=>{
+  const live={id:'current',trainer_id:'origin-trainer',auth_user_id:'athlete',exact:true,connected:true,archived_at:null,merged_into_client_id:null}
+  const old={...live,id:'old',trainer_id:'importing-trainer',auth_user_id:null,archived_at:'2026-01-01',merged_into_client_id:live.id}
+  assert.equal(selectProgramCard([live,old],true,'importing-trainer'),live)
+  assert.equal(selectProgramCard([live,old],false,'importing-trainer'),null)
+  assert.equal(selectProgramCard([live,old],true,'unrelated-trainer'),null)
+  assert.equal(selectProgramCard([{...live,auth_user_id:null},old],true,'importing-trainer'),null)
+  assert.equal(selectProgramCard([{...live,connected:false},old],true,'importing-trainer'),null)
+  assert.equal(selectProgramCard([live,{...old,trainer_id:live.trainer_id}],true,'importing-trainer'),null)
 })

@@ -1,7 +1,7 @@
 import {createHash} from 'node:crypto'
 import {createRequire} from 'node:module'
 import {pathToFileURL} from 'node:url'
-import {readProgramPacket,inspectProgramHistory,readProgramCardCandidates} from './cloudru-program-history-inspect.mjs'
+import {readProgramPacket,inspectProgramHistory,readProgramCardCandidates,selectProgramCard} from './cloudru-program-history-inspect.mjs'
 import {reviewedProgramPackets} from './private-program-history-scopes.mjs'
 import {ownerRead,validateJournalDrafts,insertReviewedJournal,
   verifyJournalContent,isNewCardFinanceUnchanged,preservedJournalState,verifyPreservedState,legacyProfileId,sealJournalReceipt} from './cloudru-journal-import.mjs'
@@ -90,8 +90,8 @@ export async function runProgramImport({mode,owner,runtime,target,legacyId=null,
   if(!['inspect','apply','verify'].includes(mode))fail('mode_invalid')
   const {payload,scope}=readProgramPacket(parts,approvedSha256,readRequest,scopes)
   if(typeof persistReceipt!=='function')fail('receipt_required')
-  let trainerId
-  try {({trainerId}=await resolveProgramTrainer(owner,target,legacyId,trainerEvidence))} catch(error) {
+  let trainerId,identityEvidence
+  try {({trainerId,identityEvidence}=await resolveProgramTrainer(owner,target,legacyId,trainerEvidence))} catch(error) {
     // The old importer deliberately uses one identity error for two causes.
     // Diagnose them through its existing READ ONLY preflight, without choosing
     // a new identity, binding an apply selection or weakening the writer guard.
@@ -159,11 +159,10 @@ export async function runProgramImport({mode,owner,runtime,target,legacyId=null,
   const currentSelection=async connection=>{
     const matches=relevant(await readProgramCardCandidates(connection,trainerId,payload,aliasHash))
     if(selected) {
-      const exact=matches.filter(c=>c.exact)
-      if(exact.length!==1||exact[0].id!==selected.id||exact[0].trainer_id!==selected.trainer_id
-        ||exact[0].auth_user_id!==selected.auth_user_id||exact[0].connected!==true
-        ||exact[0].archived_at!==null||exact[0].merged_into_client_id!==null)fail('selection_changed')
-      return exact[0]
+      const current=selectProgramCard(matches,identityEvidence?.method==='current_roster',trainerId)
+      if(!current||current.id!==selected.id||current.trainer_id!==selected.trainer_id
+        ||current.auth_user_id!==selected.auth_user_id)fail('selection_changed')
+      return current
     }
     if(matches.length)fail('selection_changed')
     return null

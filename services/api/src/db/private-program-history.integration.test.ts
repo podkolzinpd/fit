@@ -67,7 +67,7 @@ describe.skipIf(source===undefined)('private weekly-program read-only inventory 
     for(let i=1;i<17;i++){const name=`Synthetic roster ${f.coach} ${i}`;names.push(name);await f.card(name)}
     await f.owner.query('delete from app_private.fit_lime_pilot_allowlist where profile_id=$1',[f.coach])
     // Migrations run as postgres in this disposable fixture; emulate their production owner only for the readonly connection.
-    await f.owner.query("do $$ begin perform pg_advisory_xact_lock(193635,2);if not exists(select 1 from pg_roles where rolname='fit_owner') then create role fit_owner;comment on role fit_owner is 'private-program-roster-fixture-20261105';elsif not exists(select 1 from pg_roles r where r.rolname='fit_owner' and shobj_description(r.oid,'pg_authid')='private-program-roster-fixture-20261105') then raise exception 'foreign_fixture_owner_role';end if;end $$;alter role fit_owner bypassrls;grant usage on schema public,app_private to fit_owner;grant select on all tables in schema public,app_private to fit_owner;grant execute on function public.is_active_client_trainer_connection(uuid,uuid) to fit_owner")
+    await f.owner.query("do $$ begin perform pg_advisory_xact_lock(193635,2);if not exists(select 1 from pg_roles where rolname='fit_owner') then create role fit_owner;comment on role fit_owner is 'private-program-roster-fixture-20261105';elsif not exists(select 1 from pg_roles r where r.rolname='fit_owner' and shobj_description(r.oid,'pg_authid')='private-program-roster-fixture-20261105') then raise exception 'foreign_fixture_owner_role';end if;end $$;alter role fit_owner bypassrls;grant usage on schema public,app_private to fit_owner;grant select on all tables in schema public,app_private to fit_owner;grant execute on function public.is_active_client_trainer_connection(uuid,uuid) to fit_owner;grant execute on function public.can_read_workout(uuid) to fit_owner")
     const target=f.options.target
     return {first,evidence:{version:1,targetBinding:hash(JSON.stringify([target.trainerEmailSha256,target.trainerLoginSha256,target.clientNameSha256])),
       rosterNameHashes:names.map(n=>hash(n.toLowerCase().replaceAll('ё','е')))}}
@@ -77,6 +77,18 @@ describe.skipIf(source===undefined)('private weekly-program read-only inventory 
     await f.owner.query('set role fit_owner')
     expect(await inspectProgramHistory({...f.options,legacyId:null,trainerEvidence:r.evidence})).toMatchObject({status:'existing_ready',exactCards:1,newWorkouts:1})
     expect(f.receipts[0]).toMatchObject({trainerId:f.coach,selected:{id:r.first},identityEvidence:{method:'current_roster',matchedCards:17,sourcesAgree:true}})
+  })
+  it('keeps an archived predecessor in the receipt while selecting only its roster-proven current card',async()=>{
+    const f=await fixture(),r=await rosterEvidence(f),old=await f.card(f.name,f.coach,true)
+    await f.owner.query('update public.clients set merged_into_client_id=$1 where id=$2',[r.first,old])
+    await f.owner.query('set role fit_owner')
+    expect(await inspectProgramHistory({...f.options,legacyId:null,trainerEvidence:r.evidence})).toMatchObject({status:'existing_ready',exactCards:2})
+    expect(f.receipts[0]).toMatchObject({selected:{id:r.first}})
+    expect((f.receipts[0]?.candidates as {id:string}[]).map(c=>c.id).sort()).toEqual([r.first,old].sort())
+    await f.owner.query('reset role')
+    await f.owner.query('update public.clients set merged_into_client_id=null where id=$1',[old])
+    await f.owner.query('set role fit_owner')
+    expect(await inspectProgramHistory({...f.options,legacyId:null,trainerEvidence:r.evidence})).toMatchObject({status:'selection_requires_review'})
   })
   it('recognizes the trainers own authenticated card without a second auth account or another trainer relationship',async()=>{
     const f=await fixture({format:'self'}),r=await rosterEvidence(f,true)

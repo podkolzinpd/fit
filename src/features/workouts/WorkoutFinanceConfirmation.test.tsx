@@ -11,7 +11,7 @@ const bundle: TrainerFinanceClientBundle = {
 
 describe('workoutFinanceConfirmation', () => {
   it('shows the package and remaining sessions after an automatic charge', () => {
-    expect(workoutFinanceConfirmation(bundle, 'workout')).toEqual({ title: 'Занятие списано', detail: '10 тренировок · осталось 7' })
+    expect(workoutFinanceConfirmation(bundle, 'workout')).toEqual({ title: 'Занятие списано', detail: '10 тренировок · 01.09.2026 — без срока · осталось 7' })
   })
 
   it('does not show finance when the trainer has not enabled it for the workout', () => {
