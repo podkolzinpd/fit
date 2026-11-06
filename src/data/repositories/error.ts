@@ -47,7 +47,7 @@ function mapRepositoryError(error: unknown): RepositoryError {
     return new RepositoryError('signup_disabled', 'Регистрация по email сейчас недоступна. Попробуйте позже.')
   }
   if (normalizedMessage.includes('workout_sets_rpe_valid')) {
-    return new RepositoryError(code, 'В одном из подходов указано некорректное RPE. Выберите значение от 6 до 10 с шагом 0,5.')
+    return new RepositoryError(code, 'В одном из подходов указано некорректное RPE. Выберите значение от 5 до 10 с шагом 0,5.')
   }
   if (normalizedMessage.includes('invitation_invalid')) {
     return new RepositoryError('invitation_invalid', 'Приглашение недействительно или срок его действия истёк. Попросите новый код.')

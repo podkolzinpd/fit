@@ -1,5 +1,5 @@
 import { spawnSync } from 'node:child_process'
-import { mkdtemp, rm, writeFile } from 'node:fs/promises'
+import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
@@ -74,6 +74,24 @@ describe.skipIf(source === undefined)('Cloud.ru forward release migrations on lo
       .toEqual([{ name: baseline }])
     expect((await client.query<{ value: number }>('select value from public.release_fixture')).rows).toEqual([{ value: 5 }])
   }
+
+  it('widens set RPE without rewriting rows and refuses a lossy rollback', async () => {
+    await client.query(`create table public.workout_sets(id integer primary key, plan_rpe numeric(3,1), fact_rpe numeric(3,1), version integer,
+      constraint workout_sets_rpe_valid check ((plan_rpe is null or (plan_rpe between 6 and 10 and mod(plan_rpe*10,5)=0))
+      and (fact_rpe is null or (fact_rpe between 6 and 10 and mod(fact_rpe*10,5)=0))));
+      insert into public.workout_sets values(1,6,7.5,4),(2,10,10,8),(3,null,null,1)`)
+    const snapshot = async () => (await client.query<{ id: number; plan_rpe: string | null; fact_rpe: string | null; version: number }>('select * from public.workout_sets order by id')).rows
+    const before = await snapshot()
+    const sql = await readFile(new URL('../db/migrations/000194_workout_set_rpe_five.sql', import.meta.url), 'utf8')
+    const [up, down] = sql.split('-- Down Migration')
+    expect(up).toBeDefined(); expect(down).toBeDefined()
+    await client.query(up!)
+    expect(await snapshot()).toEqual(before)
+    await client.query('insert into public.workout_sets values(4,5,5.5,1)')
+    await expect(client.query(down!)).rejects.toThrow('workout_set_rpe_five_in_use')
+    expect((await snapshot()).slice(0,3)).toEqual(before)
+    expect((await snapshot())[3]).toMatchObject({ plan_rpe: '5.0', fact_rpe: '5.5' })
+  })
 
   it('backs up before applying, retains the standard lock across backup, verifies history and becomes a no-op on retry', async () => {
     await pending()
