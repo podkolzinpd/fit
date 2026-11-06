@@ -1439,7 +1439,7 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .workout-detail-primary-actions > .wide { width:100%; min-height:var(--control-height-primary); margin:0 }
 .workout-detail-primary-actions > .coachmark-anchor, .workout-detail-primary-actions > .coachmark-anchor > .wide { width:100% }
 .workout-decision-sheet { width:min(100%, 440px); max-height:min(88dvh, 680px); overflow-y:auto; display:grid; gap:var(--space-4); padding:var(--space-5) var(--card-padding) calc(var(--space-5) + env(safe-area-inset-bottom)) }
-.workout-decision-sheet:where(:not(.fit-lime-shell.workout-live-reference:has(.coach-live-v79,.client-live-v79) .live-rest-sheet)) { border:1px solid var(--border); border-bottom:0; border-radius:28px 28px 0 0; background:var(--surface-elevated); box-shadow:none }
+.workout-decision-sheet:where(:not(.fit-lime-shell.workout-live-reference:has(.coach-live-v79,.client-live-v79) :is(.live-rest-sheet,.workout-duration-sheet))) { border:1px solid var(--border); border-bottom:0; border-radius:28px 28px 0 0; background:var(--surface-elevated); box-shadow:none }
 .workout-decision-sheet .picker-header { align-items:flex-start }
 .workout-decision-sheet .picker-header .eyebrow { margin:0 0 var(--space-1); font-size:var(--type-caption-size) }
 .workout-decision-sheet .picker-header h2 { margin:0; font-size:var(--type-title-size); line-height:var(--leading-tight) }
@@ -6333,18 +6333,18 @@ details[open] > .progress-details-toggle svg { transform:rotate(180deg); }
 .rest-time-picker { display:grid; grid-template-columns:minmax(0,1fr) auto minmax(0,1fr); align-items:end; gap:8px; }
 .rest-time-wheel-field { min-width:0; display:grid; gap:8px; }
 .rest-time-wheel-field > span { text-align:center }
-.rest-time-wheel-field > span:where(:not(.fit-lime-shell.workout-live-reference:has(.coach-live-v79,.client-live-v79) .live-rest-sheet .rest-time-wheel-field > span)) { color:var(--secondary-label-fg); font-size:var(--type-caption-size); font-weight:var(--weight-medium) }
+.rest-time-wheel-field > span:where(:not(.fit-lime-shell.workout-live-reference:has(.coach-live-v79,.client-live-v79) :is(.live-rest-sheet,.workout-duration-sheet) .rest-time-wheel-field > span)) { color:var(--secondary-label-fg); font-size:var(--type-caption-size); font-weight:var(--weight-medium) }
 .rest-time-wheel { height:176px; overflow-y:auto; overscroll-behavior:contain; scroll-snap-type:y mandatory; scrollbar-width:none; font-variant-numeric:tabular-nums; touch-action:pan-y }
-.rest-time-wheel:where(:not(.fit-lime-shell.workout-live-reference:has(.coach-live-v79,.client-live-v79) .live-rest-sheet .rest-time-wheel)) { border:1px solid var(--border); border-radius:var(--radius-md); background:var(--surface-sunken) }
+.rest-time-wheel:where(:not(.fit-lime-shell.workout-live-reference:has(.coach-live-v79,.client-live-v79) :is(.live-rest-sheet,.workout-duration-sheet) .rest-time-wheel)) { border:1px solid var(--border); border-radius:var(--radius-md); background:var(--surface-sunken) }
 .rest-time-wheel::-webkit-scrollbar { display:none; }
-.rest-time-wheel:focus-visible:where(:not(.fit-lime-shell.workout-live-reference:has(.coach-live-v79,.client-live-v79) .live-rest-sheet .rest-time-wheel:focus-visible)) { outline:2px solid var(--fg); outline-offset:2px }
+.rest-time-wheel:focus-visible:where(:not(.fit-lime-shell.workout-live-reference:has(.coach-live-v79,.client-live-v79) :is(.live-rest-sheet,.workout-duration-sheet) .rest-time-wheel:focus-visible)) { outline:2px solid var(--fg); outline-offset:2px }
 .rest-time-wheel-spacer { height:66px; flex:none; }
 .rest-time-wheel [role='option'] { height:44px; display:grid; place-items:center; scroll-snap-align:center; cursor:pointer; user-select:none }
-.rest-time-wheel [role='option']:where(:not(.fit-lime-shell.workout-live-reference:has(.coach-live-v79,.client-live-v79) .live-rest-sheet .rest-time-wheel [role='option'])) { color:var(--muted); font-size:18px; font-weight:var(--weight-medium) }
-.rest-time-wheel [role='option'].selected:where(:not(.fit-lime-shell.workout-live-reference:has(.coach-live-v79,.client-live-v79) .live-rest-sheet .rest-time-wheel [role='option'].selected)) { border-block:1px solid var(--border); background:var(--surface-raised); color:var(--fg); font-weight:var(--weight-semibold) }
+.rest-time-wheel [role='option']:where(:not(.fit-lime-shell.workout-live-reference:has(.coach-live-v79,.client-live-v79) :is(.live-rest-sheet,.workout-duration-sheet) .rest-time-wheel [role='option'])) { color:var(--muted); font-size:18px; font-weight:var(--weight-medium) }
+.rest-time-wheel [role='option'].selected:where(:not(.fit-lime-shell.workout-live-reference:has(.coach-live-v79,.client-live-v79) :is(.live-rest-sheet,.workout-duration-sheet) .rest-time-wheel [role='option'].selected)) { border-block:1px solid var(--border); background:var(--surface-raised); color:var(--fg); font-weight:var(--weight-semibold) }
 .rest-time-wheel-field.disabled .rest-time-wheel { overflow:hidden; }
 .rest-time-separator { align-self:center; margin-top:20px }
-.rest-time-separator:where(:not(.fit-lime-shell.workout-live-reference:has(.coach-live-v79,.client-live-v79) .live-rest-sheet .rest-time-separator)) { font-size:24px; font-weight:var(--weight-semibold) }
+.rest-time-separator:where(:not(.fit-lime-shell.workout-live-reference:has(.coach-live-v79,.client-live-v79) :is(.live-rest-sheet,.workout-duration-sheet) .rest-time-separator)) { font-size:24px; font-weight:var(--weight-semibold) }
 .live-rest-sheet .rest-presets { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); }
 .live-rest-sheet .rest-presets > button { min-width:0; padding-inline:6px; }
 .live-rest-apply { position:sticky; z-index:2; bottom:-1px; padding-top:8px }

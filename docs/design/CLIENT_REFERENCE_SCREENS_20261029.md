@@ -5423,3 +5423,106 @@ API всё ещё9ab3b6ce; доказательства2017 не смешаны 
 предпочтения и флаги прежние. Приёмка владельца на устройстве — следующий
 шаг; новыйMCэтап до неё не начинать. Квитанция сохраняется локальным
 docs-коммитом без sourcepush ради журнала и лишнегоCI.
+
+
+### Итерация 161 — 2026-11-07 — GPT-6.1-sol / OpenAI — возобновление локальной миграции
+
+Задача: прямое поручение владельца продолжить принятую миграцию агентом
+`design_cleanup` по сохранённому прогрессу. Новая команда разрешает локальную
+подготовку следующих однозначных участков; не является физической приёмкой
+MC4.1 и не разрешает новые merge/deploy. MC-RELEASE-01 сохраняется. Ограничение
+итерации160 о следующем этапе уточнено только для этой локальной подготовки.
+Физические телефоны, реальный OAuth и нативная установка OTA остаются НЕ ПРОВЕРЕНЫ.
+
+Сверены fresh origin/main26e231f5 (#2020), clean tracked source старой рабочей
+копии и открытые PR: только draft2021, месячная финансовая сводка. Его работа
+не меняется. Своя worktree `worktrees/design-cleanup-mc42-20261107`, ветка
+`feat/design-cleanup-mc42-20261107`, от origin/main. Сохранённые квитанции159–160
+из90eda8c5 перенесены отдельным docs-коммитом6155878f; старую ветку не занимали.
+Исходный indexed main заканчивается158 и сам по себе не отменяет выпуск2017.
+Прочитаны действующие инструкции, индекс/дизайн-код/каталог и уроки Live/input.
+Адресная межсессионная память по FIT/MC4/MC5/design_cleanup вернула0 совпадений;
+основание продолжения — репозиторий и сохранённые квитанции, не выдуманная память.
+
+Практическая оставшаяся очередь по проверенному коду (не новый продуктовый план):
+
+| Участок | Конкретные потребители / состояния | Следующий шаг и ограничение |
+| --- | --- | --- |
+| MC4.2 | WorkoutDurationField: portal выбора фактических минут/секунд в Live обеих ролей; темы,54/48,focus,apply/remove/cancel | Отделить6 общих visual-семейств и старый focus guard от modern Live, сохранив layout/TimeWheel/обработчики; см.162 |
+| MC4.3 | Shared useConfirm в Live: удаление подхода/упражнения, замена начатого, разделение; modal overlay/dialog/message/danger | Узкий portal-scope обеих ролей, baseline/ablation, Escape/отмена/подтверждение; другие маршруты сохраняют старую основу |
+| MC4.4 | Тренерское завершение WorkoutAttendanceSheet и клиентское inline finish-confirm/timer-review | Отдельно доказать фактические legacy visual matches, включая incomplete/cardio/pending/error/retry; учёт/финансы не менять; пересечение с2021 перепроверить |
+| MC5.1 | Не-Live тренировки: создание/редактор, план/история/результат, WorkoutActualDuration, duration/date/time portals, WorkoutCompletionReport/share canvas | Оставшиеся visual-зависимости,loading/empty/error,редактирование и сохранение; canvas !clientLime ещё явно использует Onest |
+| MC5.2 | Главная и список/календарь клиента: карточки,voice/text/draft,вкладки,меню и подтверждения | CR1/CR2 уже внедрены; переносить только доказанный остаточный skin, не повторять композицию |
+| MC5.3 | Профиль/настройки,связи/каталог тренеров,сообщения/чат и вложенные окна | Учитывать уже принятые COP/CPA/CR3/CR4,темы/плотность/анимации; не затронуть независимые пилоты |
+| MC5.4 | Прогресс/замеры/цели,ассистент/черновики,питание и финансы | CR5/CR6 и специализированные графики сохраняются; финансовую сводку2021 не дублировать; делить по доказанному семейству |
+| MC6 | Вход/регистрация/join/onboarding,bootstrap/system-state/error/retry | Есть активные Onest fallback и system-state-identity; реальные OAuth/телефон не подменять synthetic проверкой |
+| MC7 | Onest import/main/root; fallback fit-lime-type/client/auth/registration/trainer-routes; canvas !clientLime | Удалять только после карты всех живых потребителей и разрешённой замены; имя шрифта не доказательство ненужности |
+| MC8 | Остальные старые visual-ветки,общие стили и fallback вне включённых Lime scopes | Сначала подтвердить отсутствие потребителей/rollout-off/других ролей; живые fallback нельзя удалить по возрасту |
+
+Все следующие реализации остаются локальными до отдельной сводки и явного
+разрешения конкретного выпуска. Sources зеркала, production-флаги, CI, секреты,
+реальные пользовательские данные и чужие рабочие копии не меняются.
+
+### Итерация 162 — 2026-11-07 — GPT-6.1-sol / OpenAI — MC4.2, время подхода Live
+
+Задача: закончить узкий оставшийся time-picker skin обеих ролей после MC4.1.
+Исходная версия26e231f5 плюс docs6155878f. Consumer proof: WorkoutDurationField
+общий для Live/плана/результата/ассистента; его portal находится в phone-frame.
+MC4.1 исключил7 общих visual-семейств только для live-rest-sheet, duration
+продолжал их наследовать. Новый scope ограничен fit-lime-shell +
+workout-live-reference + наличием coach/client-live-v79 и workout-duration-sheet.
+Вне Live и при Lime off выбранные старые правила сохраняют прежнюю специфичность.
+
+Сделано:7 существующих zero-specificity guards в styles.css расширены на
+workout-duration-sheet;6 уже перенесённых visual selectors Lime-слоя расширены
+на то же окно. Перенос включает оболочку,подписи колёс,рамку/фон,options/selected
+и разделитель. Старый focus исключён без копирования outline: существующий
+Lime владеет цветом и offset. Rest-only countdown/apply/trigger states не расширены.
+React/DOM, TimeWheel,44px option geometry,scroll-snap,touch-action,ввод/сохранение,
+таймер,флаги,шрифты и CI не менялись. Полные общие стили не удалены: у них
+живые не-Live/off потребители. Удалена именно modern duration-зависимость от skin.
+
+Проверки: production-build/types/startup и global lint прошли;21 unit в двух
+duration файлах passed. Новая узкая ownership-матрица22:18 modern (обе роли,
+клиент light/dark,Original/Compact,375/390/430 и trainer1440) и4 legacy controls,
+Chromium/WebKit. Перед правкой18 modern отрицательны,4 legacy положительны:
+зависимость7 семейств доказана. На кандидате22/22 passed. Все22 computed-style/
+geometry capture и18/18 PNG полностью совпали с baseline, включая реальный
+Tab/ShiftTab,outline-offset; представительские client light Original390 и trainer
+dark Compact375 снимки просмотрены исполнителем и родительским агентом.
+Все22 capture без pageerror/console.error/requestfailed/HTTP>=400.
+
+Отдельный финальный прогон52/52,57.9s,retries0:22 ownership +30 существующих
+сценариев duration/rest и не-Live plan/done/assistant, обе роли/движка.
+Проверены выбор секунд,отмена без записи,apply/remove,повторное открытие,
+сохранённый факт/reload,54/48,связанные RPE/distance/reduced-motion и focus return.
+56/56 старых timer ownership прошли в более раннем смешанном прогоне на том же
+runtime CSS; это отдельная выборка, не110 успешных случаев одного прогона.
+
+Неуспешные диагностические прогоны сохранены. Первый смешанный110-case прогон:
+88 passed,18 failed,4 skipped.14 failed — console404 фоновых API, отсутствующих
+в default mockPilot (push-notifications/status у клиента,exercise-media/sign-batch
+в legacy). Новая узкая fixture дополняет только эти ответы по реальным схемам,
+медиа — существующий локальный image double; строгие console/network assertions
+не ослаблены.4 failed assistant pilot — в старом build helper отсутствовал
+VITE_ASSISTANT_PROGRAM_ENABLED; CI.yml уже передаёт true. В новом локальном helper
+восстановлен тот же контракт, product/CI не правились.4 skipped coach-v79 — не
+задан dedicated acceptance opt-in; финальный52 прогон получил его и прошёл.
+Baseline повторён с финальной диагностикой/fixture на отдельной исходной сборке:
+18 отрицательных modern +4 положительных legacy, без console/network ошибок.
+
+Подтверждения локальны: /tmp/fit-mc42-baseline-final-results,
+/tmp/fit-mc42-accepted-results,/tmp/fit-mc42-comparison.json и
+/tmp/fit-mc42-parent-review.json; build/lint/unit/browser logs /tmp/fit-mc42-*.
+Первый полный frontend coverage дал3056 passed/5 failed (4 timeout5000ms и один
+TimeWheel1815 vs1800 после timeout в том же файле), параллельно шёл browser.
+Ни код,ни assertions,ни timeout не менялись. Повтор всего набора с2workers без
+конкурирующего browser завершён:343/343 файлов,3061/3061 tests,143.65s,exit0.
+Coverage statements83.64%,branches78.65%,functions82.92%,lines88.33%; пороги
+сохранены. Причина первого сбоя согласуется с конкурирующей нагрузкой; продуктовый
+код и тесты не менялись для получения green. Статический PostCSS proof6299 правил
+двух изменённых CSS: ровно13 изменений selector scope,0 изменений declarations/
+порядка/прочих селекторов после нормализации явного duration расширения.
+Открыто: exact-source CI/PR и отдельное
+разрешение выпуска. Никакого push/PR/merge/deploy этого этапа не было.
+Физический телефон/реальный OAuth не проверены. Дальше — MC4.3 после фиксации162.
