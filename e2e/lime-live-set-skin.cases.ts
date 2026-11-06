@@ -58,7 +58,15 @@ export function limeLiveSetSkinCases() {
     } else await expect(page.locator('.phone-frame')).not.toHaveClass(/fit-lime-shell/)
     await page.evaluate(() => document.fonts.ready)
     // Actual focus, rather than a painted focus class; never change form state.
-    if (strength) await root.locator('input[name="weightKg"]').first().focus()
+    if (strength) {
+      const input = root.locator('input[name="weightKg"]:enabled').first()
+      await input.focus()
+      await expect(input).toBeFocused()
+      // WebKit may report its native focus outline until the actual
+      // :focus-visible rule is resolved, even after two animation frames.
+      // Assert the existing approved rule before measuring its preservation.
+      if (sample.lime) await expect(input).toHaveCSS('outline-width', '1px')
+    }
     await page.evaluate(() => new Promise<void>(done => requestAnimationFrame(() => requestAnimationFrame(() => done()))))
     if (sample.kind === 'strength' && sample.lime && sample.width !== 375) await page.screenshot({ path: info.outputPath('set-skin.png'), animations: 'disabled' })
     const before = await root.evaluate(element => {
