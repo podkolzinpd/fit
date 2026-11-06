@@ -233,6 +233,32 @@ export async function cleanupCloudruUpload(target,digest,session) {
   return {status:'local_key_removed_encrypted_objects_retained'}
  }finally{client.destroy()}
 }
+export function assertUnreceivedUploadFiles(manifest,files,operatorPublicPem) {
+ if(manifest.operatorPublicPem!==operatorPublicPem)fail()
+ if(JSON.stringify([...files].sort())!==JSON.stringify(['manifest.json','server.private.pem']))fail()
+}
+export async function assertUnreceivedCloudruObjects({client,sdk},session) {
+ journalSession(session)
+  for(const name of ['payload','prepared','committed','readback']) {
+   let absent=false
+   try {await client.send(new sdk.HeadObjectCommand({Bucket:bucket,Key:journalObject(session,name)}))}
+   catch(error){absent=(error?.name==='NotFound'||error?.name==='NoSuchKey')&&error?.$metadata?.httpStatusCode===404}
+   if(!absent)fail()
+  }
+}
+export async function cleanupUnreceivedCloudruUpload(target,digest,session,operatorPublicPem) {
+ journalSession(session);sessionDirectory()
+ const manifest=readManifest(target,digest,session,{allowExpired:true}),files=readdirSync('/session')
+ assertUnreceivedUploadFiles(manifest,files,operatorPublicPem)
+ const {client,sdk}=await storage()
+ try {
+  await assertUnreceivedCloudruObjects({client,sdk},session)
+  // Only a proven unreceived, unexported preparation can lose its VM key.
+  // Never delete ciphertext objects or retire a received/unknown operation.
+  for(const file of files)unlinkSync(`/session/${file}`)
+  return {event:'client_restore_unreceived_preparation_cleaned',customerInputAbsent:true,localKeyRemoved:true}
+ }finally{client.destroy()}
+}
 async function main() {
  if(process.env.GITHUB_REF!=='refs/heads/main'||process.env.GITHUB_REPOSITORY!=='podkolzinpd/fit')fail()
  const {readWorkoutHistoryTarget}=await import('./cloudru-account-history-audit.mjs')

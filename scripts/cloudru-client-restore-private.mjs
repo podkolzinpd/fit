@@ -2,7 +2,7 @@ import {createHash,sign,verify,constants} from 'node:crypto'
 import {createRequire} from 'node:module'
 import {writeFileSync} from 'node:fs'
 import {pathToFileURL} from 'node:url'
-import {prepareCloudruUpload,loadCloudruUpload,cleanupCloudruUpload,sealUpload,journalSession,journalObject,validateUploadCapability} from './cloudru-journal-upload.mjs'
+import {prepareCloudruUpload,loadCloudruUpload,cleanupCloudruUpload,cleanupUnreceivedCloudruUpload,sealUpload,journalSession,journalObject,validateUploadCapability,safeJournalUploadFailure} from './cloudru-journal-upload.mjs'
 import {readRestoreTarget,readExpectedRestoreHistory,planClientRestore} from './cloudru-client-restore.mjs'
 
 // Public protocol identifiers; these are NEVER derived from a customer.
@@ -42,7 +42,8 @@ export function readPrivateRestoreInput(parts,session,operatorPublicPem){
 }
 export async function executePrivateRestoreInput({phase,session,operatorPublicPem,store,createOwner,savePlan,operator}){
  journalSession(session)
- need(['prepare','plan'].includes(phase),'private_phase')
+ need(['prepare','cleanup-prepare','plan'].includes(phase),'private_phase')
+ if(phase==='cleanup-prepare')return store.cleanupUnreceived(target,clientRestoreInputDigest,session,operatorPublicPem)
  if(phase==='prepare'){
   await store.prepare(target,clientRestoreInputDigest,session,operatorPublicPem,{prepareReadback:true})
   return {event:'client_restore_private_input_prepared',customerInputReceived:false}
@@ -77,7 +78,7 @@ async function main(){
  const phase=process.env.RESTORE_PHASE,session=journalSession(process.env.RESTORE_PREPARE_SESSION)
  const result=await executePrivateRestoreInput({phase,session,operator:process.env.GITHUB_ACTOR,
   operatorPublicPem:Buffer.from(process.env.RESTORE_OPERATOR_PUBLIC_KEY_B64??'','base64').toString('utf8'),
-  store:{prepare:prepareCloudruUpload,load:loadCloudruUpload,cleanup:cleanupCloudruUpload},
+  store:{prepare:prepareCloudruUpload,load:loadCloudruUpload,cleanup:cleanupCloudruUpload,cleanupUnreceived:cleanupUnreceivedCloudruUpload},
   createOwner:async()=>{
    const {buildDatabaseConnectionConfig}=await import('/app/dist/db/connection-config.js')
    const config=buildDatabaseConnectionConfig('MIGRATION_DATABASE')
@@ -89,5 +90,7 @@ async function main(){
  console.log(JSON.stringify(result))
 }
 if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href)main().catch(error=>{
- console.error(/^client_restore_[a-z_]+$/u.test(error?.message??'')?error.message:'client_restore_private_failed');process.exitCode=1
+ if(/^client_restore_[a-z_]+$/u.test(error?.message??''))console.error(error.message)
+ else console.error(JSON.stringify({event:'client_restore_private_failed',...safeJournalUploadFailure(error)}))
+ process.exitCode=1
 })

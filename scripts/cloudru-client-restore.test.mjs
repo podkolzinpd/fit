@@ -7,6 +7,7 @@ import {join} from 'node:path'
 import {spawnSync} from 'node:child_process'
 import {readRestoreTarget,planClientRestore,applyClientRestore,verifyClientRestore,privateRestoreTechnicalResult} from './cloudru-client-restore.mjs'
 import {readPrivateRestoreInput,executePrivateRestoreInput,clientRestoreInputDigest,validatePrivateRestoreCapability,privateRestoreInputParts} from './cloudru-client-restore-private.mjs'
+import {assertUnreceivedUploadFiles,assertUnreceivedCloudruObjects} from './cloudru-journal-upload.mjs'
 
 test('only an explicit privately approved native profile pair is accepted',()=>{
  const target={trainerProfileId:'11111111-1111-4111-8111-111111111111',athleteProfileId:'22222222-2222-4222-8222-222222222222'}
@@ -41,7 +42,9 @@ test('apply cannot run from malformed or substituted private plans',async()=>{
 
 test('transport is explicit trusted-main plan/apply/verify and keeps private receipts off artifacts',()=>{
  const source=readFileSync(new URL('../.github/workflows/restore-client-history.yml',import.meta.url),'utf8')
- assert.match(source,/options: \[prepare, plan, apply, verify\]/)
+ assert.match(source,/options: \[prepare, cleanup-prepare, plan, apply, verify\]/)
+ assert.match(source,/sudo install -d -m 755 "\$capability"/)
+ assert.match(source,/\.total_count == 0/)
  assert.match(source,/RESTORE_CONFIRMED_CLIENT_TO_TRAINER/)
  assert.match(source,/Restore downloaded backup into a disposable PostgreSQL without network/)
  assert.match(source,/all\(\.\[\]; \.conclusion == "success"\)/)
@@ -113,6 +116,30 @@ test('private preparation never creates a database client or receives customer p
    store:{prepare:async(target,digest,session,key,options)=>{prepared=true;assert.equal(digest,clientRestoreInputDigest);assert.equal(session,'123-1');assert.equal(key,'synthetic public key');assert.deepEqual(options,{prepareReadback:true});assert.ok(Object.values(target).every(v=>v===clientRestoreInputDigest))}},
    createOwner:async()=>{assert.fail('no database during preparation')},savePlan:async()=>assert.fail('no customer plan during preparation')})
  assert.equal(prepared,true);assert.equal(result.customerInputReceived,false)
+})
+test('unreceived preparation cleanup never creates a database client or plan',async()=>{
+ let called=false
+ const result=await executePrivateRestoreInput({phase:'cleanup-prepare',session:'123-1',operatorPublicPem:'synthetic-public',
+  store:{cleanupUnreceived:async(target,digest,session,key)=>{called=true;assert.ok(Object.values(target).every(v=>v===clientRestoreInputDigest));assert.equal(digest,clientRestoreInputDigest);assert.equal(session,'123-1');assert.equal(key,'synthetic-public');return{localKeyRemoved:true}}},
+  createOwner:async()=>assert.fail('no DB during pre-input cleanup'),savePlan:async()=>assert.fail('no plan during cleanup')})
+ assert.ok(called&&result.localKeyRemoved)
+})
+test('pre-input cleanup rejects foreign keys, pending proofs and incomplete file sets',()=>{
+ const manifest={operatorPublicPem:'synthetic-public'},files=['manifest.json','server.private.pem']
+ assert.doesNotThrow(()=>assertUnreceivedUploadFiles(manifest,files,'synthetic-public'))
+ assert.throws(()=>assertUnreceivedUploadFiles(manifest,files,'foreign-public'))
+ for(const other of [[],['manifest.json'],[...files,'program-apply.started.json'],[...files,'readback-124-1.encrypted.json']])
+  assert.throws(()=>assertUnreceivedUploadFiles(manifest,other,'synthetic-public'))
+})
+test('pre-input cleanup requires positive absence of every customer-bearing object',async()=>{
+ class HeadObjectCommand {constructor(input){this.input=input}}
+ const sdk={HeadObjectCommand},seen=[]
+ const absent=()=>Object.assign(Error('synthetic missing'),{name:'NotFound',$metadata:{httpStatusCode:404}})
+ await assertUnreceivedCloudruObjects({sdk,client:{send:async c=>{seen.push(c.input.Key);throw absent()}}},'123-1')
+ assert.equal(seen.length,4);assert.ok(seen.every(x=>x.includes('/123-1/')))
+ for(const error of [null,Object.assign(Error('denied'),{name:'AccessDenied',$metadata:{httpStatusCode:403}}),Object.assign(Error('unknown'),{name:'NotFound'})]){
+  await assert.rejects(assertUnreceivedCloudruObjects({sdk,client:{send:async()=>{if(error)throw error;return{}}}},'123-1'))
+ }
 })
 test('private plan rejects malformed input before any database access and closes only a persisted reply',async()=>{
  const events=[]
