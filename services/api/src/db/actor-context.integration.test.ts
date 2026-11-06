@@ -3471,6 +3471,83 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
       }
     })
 
+    it('counts monthly trainer attendance independently of payments, consumption and current connection', async () => {
+      if (!ownerPool || !runtimePool) throw new Error('Database pools are not ready')
+      const owner = ownerPool, runtime = runtimePool, cards = [randomUUID(), randomUUID(), randomUUID()]
+      const command = (sql: string, args: unknown[] = [], actor = ACTOR_ID) => withActorTransaction(runtime, actor,
+        client => client.query<JsonResultRow>(sql, args))
+      type Overview = { receivedCents: number; completedSessions: number; clients: Array<{
+        clientId: string; receivedCents: number; completedSessions: number; activeClient: boolean }> }
+      const overview = async (month = '2020-01-01', actor = ACTOR_ID) => (await command(
+        'select public.list_trainer_finance_overview_v2($1::date) as result', [month], actor))[0]!.result as Overview
+      const before = await overview()
+      const ids: string[] = []
+      const workout = async (card: string, date: string, options: { status?: string; format?: string; author?: string; deleted?: boolean } = {}) => {
+        const id = randomUUID(); ids.push(id)
+        await owner.query(`insert into public.workouts(id,trainer_id,client_id,created_by,workout_date,status,training_format,deleted_at,started_at,completed_at)
+          values($1,$2,$3,$4,$5,$6,$7,case when $8 then now() else null end,
+            case when $6 in ('in_progress','done') then now() else null end,case when $6='done' then now() else null end)`,
+          [id,ACTOR_ID,card,options.author ?? ACTOR_ID,date,options.status ?? 'done',options.format ?? 'with_trainer',options.deleted ?? false])
+        return id
+      }
+      try {
+        await owner.query("insert into public.clients(id,trainer_id,full_name) values($1,$4,'Monthly active'),($2,$4,'Monthly online'),($3,$4,'Monthly historical')", [...cards,ACTOR_ID])
+        await command(`select public.create_trainer_finance_service_v2($1,'session_pack','Monthly pack',10,0,
+          100000,10001,date '2020-01-01',null,null,null,date '2020-01-01',$2) as result`, [cards[0],randomUUID()])
+        await command(`select public.create_trainer_finance_service_v2($1,'session_pack','Second pack',10,0,
+          100000,0,date '2020-01-01',null,null,null,null,$2) as result`, [cards[0],randomUUID()])
+        await command(`select public.create_trainer_finance_service_v2($1,'online_coaching','Online only',0,0,
+          100000,20002,date '2020-01-01',date '2020-02-28',null,null,date '2020-01-31',$2) as result`, [cards[1],randomUUID()])
+        const first = await workout(cards[0]!, '2020-01-01')
+        const last = await workout(cards[0]!, '2020-01-31')
+        await workout(cards[1]!, '2020-01-15') // Online-only deliberately has no finance session.
+        await workout(cards[0]!, '2019-12-31'); await workout(cards[0]!, '2020-02-01')
+        await workout(cards[0]!, '2020-01-10', { format: 'self' })
+        await workout(cards[0]!, '2020-01-10', { status: 'planned' })
+        await workout(cards[0]!, '2020-01-10', { status: 'in_progress' })
+        await workout(cards[0]!, '2020-01-10', { deleted: true })
+        await workout(cards[0]!, '2020-01-10', { author: OTHER_ACTOR_ID })
+        const historical = await workout(cards[2]!, '2020-01-20')
+        await owner.query('delete from public.trainer_finance_sessions where workout_id=$1',[historical])
+        await owner.query('update public.clients set archived_at=now() where id=$1',[cards[2]])
+        await owner.query('delete from public.client_trainers where client_id=$1',[cards[2]])
+        const historicBundle = (await command('select public.list_trainer_finance_client_v2($1) as result',[cards[2]]))[0]!.result
+        expect(historicBundle).toMatchObject({ clientId: cards[2], canCreate: false, sessions: [], packages: [] })
+        await expect(command('select public.list_trainer_finance_client_v2($1) as result',[cards[2]],OUTSIDE_TRAINER_ID)).rejects.toMatchObject({code:'PT404'})
+        let result = await overview()
+        expect(result.completedSessions).toBe(before.completedSessions + 4)
+        expect(result.receivedCents).toBe(before.receivedCents + 30003)
+        expect(result.completedSessions).toBe(result.clients.reduce((n,c) => n+c.completedSessions,0))
+        expect(result.receivedCents).toBe(result.clients.reduce((n,c) => n+c.receivedCents,0))
+        expect(result.clients.find(c => c.clientId === cards[0])).toMatchObject({ completedSessions: 2, receivedCents: 10001 })
+        expect(result.clients.find(c => c.clientId === cards[1])).toMatchObject({ completedSessions: 1, receivedCents: 20002 })
+        expect((await owner.query('select id from public.trainer_finance_sessions where client_id=$1',[cards[1]])).rows).toEqual([])
+        for (const disposition of ['free','trial','unassigned']) {
+          await owner.query('update public.trainer_finance_sessions set disposition=$1,package_id=null where workout_id=$2',[disposition,first])
+          expect((await overview()).completedSessions).toBe(result.completedSessions)
+        }
+        await owner.query("update public.workouts set status='planned',started_at=null,completed_at=null where id=$1",[first])
+        await owner.query("update public.workouts set workout_date='2020-02-01' where id=$1",[last])
+        expect((await overview()).completedSessions).toBe(before.completedSessions + 2)
+        const version = (await owner.query<{ version: number }>('select version from public.clients where id=$1',[cards[1]])).rows[0]!.version
+        await command('select public.set_client_archived($1,true,$2) as result',[cards[1],version])
+        await owner.query('delete from public.client_trainers where client_id=$1',[cards[1]])
+        result = await overview()
+        expect(result.clients.find(c => c.clientId === cards[1])).toMatchObject({ activeClient: false, completedSessions: 1, receivedCents: 20002 })
+        expect((await overview('2020-02-01')).clients.find(c => c.clientId === cards[0])).toMatchObject({ completedSessions: 2, receivedCents: 0 })
+        expect((await overview('2020-01-01',OUTSIDE_TRAINER_ID)).clients.some(c => cards.some(id => id === c.clientId))).toBe(false)
+        await expect(command("select public.list_trainer_finance_overview_v2(date '2020-01-01') as result",[],DOMAIN_CLIENT_ACTOR_ID)).rejects.toMatchObject({code:'PT403'})
+        await expect(overview('2020-01-02')).rejects.toMatchObject({code:'PT422'})
+      } finally {
+        for (const table of ['trainer_finance_events','trainer_finance_sessions','trainer_finance_payments','trainer_finance_packages']) {
+          await owner.query(`delete from public.${table} where client_id=any($1::uuid[])`,[cards])
+        }
+        await owner.query('delete from public.workouts where id=any($1::uuid[])',[ids])
+        await owner.query("delete from app_private.finance_payment_requests where payload->>'clientId'=any($1::text[])",[cards])
+        await owner.query('delete from public.clients where id=any($1::uuid[])',[cards])
+      }
+    })
+
     it('separates overdue cents from future debt across months and archive', async () => {
       if (!ownerPool || !runtimePool) throw new Error('Database pools are not ready')
       const owner = ownerPool, runtime = runtimePool, card = randomUUID()
