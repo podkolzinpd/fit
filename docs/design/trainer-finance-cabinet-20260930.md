@@ -1244,3 +1244,42 @@ FIN-22, уточнение: полный frontend342files/3057tests и coverage
 доступ к выбранной radio-строке и добавлена проверка checked; прежние смысловые
 проверки проведения/отмены сохранены. Целевой Lifecycle2/2 прошёл в обоих
 движках. Runtime после5e2caebd не менялся. Новый полный CI обязателен.
+
+
+### FIN-23 — source приёмка и слияние FIN501–504 — 06.11.2026
+
+Финальный source146d93e5 прошёл полный CI42185584745 и Android42185584724.
+Перед обычным squash проверены main84c4267e/head146/base main/CLEAN/non-draft.
+ФИТ16 подтвердил: draft2014 ждёт владельца и не занимает окно; старший2002
+стоит без активного выпуска с05.11. Применено прежнее правило очереди владельца.
+PR2015 штатно слит в0f0dbaffdaab07b2cd406cfd153c543fe568ad9e.
+Git tree source и main одинаковый a6e4587d6213656aadabaac74fec3c6efc0bce75;
+это не заменяет обязательный mainCI42187887881. Он ещё выполняется.
+Подготовлена приёмка точного main:36 finance+2 Lifecycle-cancel Chromium/WebKit,
+синтетические API и блокировка неперехваченных запросов. Public/API/web/signedOTA
+ещё не приняты; фактический выпуск не объявлен завершённым.
+
+### FIN-24 — опубликованная приёмка FIN501–504 — 06.11.2026
+
+PR #2015 завершён. Опубликованный main:
+0f0dbaffdaab07b2cd406cfd153c543fe568ad9e; дерево совпадает с финальным
+source146d93e5 (a6e4587d6213656aadabaac74fec3c6efc0bce75).
+Полный mainCI42187887881 и Android42187887879 SUCCESS.
+Официальные API42190243421/web42190243488/AndroidOTA42190496361 SUCCESS.
+Public:213/213 файлов совпали по размеру/hash; health/ready/auth подтвердили
+точную версию. Приёмка на сайте38/38 и из подписанного AndroidZIP38/38,
+Chromium/WebKit, retries0: финансовые сценарии и LifecycleP4 с отменой.
+Проверены manifest/ZIP signatures, sourceCommit, checksum и ABI
+8922d2e9fc2c9a092d10f7b6066acdc46edf0fbe7ee7a15159e02a44e7126cf9.
+Принятый bundle4d4636bbd77a4158cbda85b4dcc4abfe87f4489344588050abd4cc6c7254c5ca,
+15147561bytes, sequence1793955162488. ZIP проверен через браузерный стенд,
+это не приёмка физического Android. Снимки новой айдентики320/390/430/1440
+просмотрены, включая public desktop и signedZIP mobile; длинные варианты
+переносятся, выбор обычным нажатием работает. Артефакты текущего чата:
+outputs/finance-choice-20261106/{public-final-results,signed-zip-results,
+public-verification.json,ota-proof.json,public-design.jpg,public-desktop-design.jpg}.
+Все данные синтетические, неперехваченные реальные API-запросы блокировались.
+Физические iPhone/PWA/Android не проверялись; реальные деньги не изменялись.
+FIN501–504 выполнены, общая очистка Mono остаётся отдельной задачей.
+Окно освобождено и передано ФИТ16 для #2014 по прямому разрешению владельца;
+итоговая квитанция сохраняется в закрытой feature-ветке без нового runtime PR.
