@@ -4,8 +4,16 @@ on:
     inputs:
       phase:
         type: choice
-        options: [plan, apply, verify]
+        options: [prepare, plan, apply, verify]
         default: plan
+      operator_public_key_b64:
+        description: Prepare only; operator PUBLIC RSA key, never customer parameters
+        type: string
+        default: ''
+      prepare_run_id:
+        description: Successful private upload preparation run; no IDs, contacts or checksums
+        type: string
+        default: ''
       plan_run_id:
         description: Private plan run ID; no contacts, client IDs or SQL
         type: string
@@ -37,10 +45,14 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           RESTORE_PHASE: ${{ inputs.phase }}
           PLAN_RUN_ID: ${{ inputs.plan_run_id }}
+          PREPARE_RUN_ID: ${{ inputs.prepare_run_id }}
+          OPERATOR_PUBLIC_KEY_B64: ${{ inputs.operator_public_key_b64 }}
           BACKUP_RUN_ID: ${{ inputs.backup_run_id }}
           CONFIRMATION: ${{ inputs.confirmation }}
           CLOUDRU_DATABASE_CONFIG_JSON: ${{ secrets.CLOUDRU_STAGE_DATABASE_CONFIG_JSON }}
           FIT_CLIENT_RESTORE_TARGETS: ${{ secrets.FIT_CLIENT_RESTORE_TARGETS }}
+          CLOUDRU_MEDIA_KEY_ID: ${{ secrets.CLOUDRU_MEDIA_MIGRATION_KEY_ID }}
+          CLOUDRU_MEDIA_KEY_SECRET: ${{ secrets.CLOUDRU_MEDIA_MIGRATION_KEY_SECRET }}
         shell: bash
         run: |
           set -euo pipefail
@@ -55,7 +67,19 @@ jobs:
           }
           test "$(github_api commits/main | jq -er .sha)" = "$GITHUB_SHA"
           [[ "$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT" =~ ^[0-9]+-[0-9]+$ ]]
-          case "$RESTORE_PHASE" in plan|apply|verify) ;; *) exit 1 ;; esac
+          case "$RESTORE_PHASE" in prepare|plan|apply|verify) ;; *) exit 1 ;; esac
+          if test "$RESTORE_PHASE" = prepare; then
+            test "$GITHUB_RUN_ATTEMPT" = 1
+            [[ "$OPERATOR_PUBLIC_KEY_B64" =~ ^[A-Za-z0-9+/=]{400,11000}$ ]]
+          else
+            test -z "$OPERATOR_PUBLIC_KEY_B64"
+          fi
+          if test "$RESTORE_PHASE" != plan; then test -z "$PREPARE_RUN_ID"; fi
+          if test -n "$PREPARE_RUN_ID"; then [[ "$PREPARE_RUN_ID" =~ ^[0-9]+$ ]]; fi
+          if test "$RESTORE_PHASE" = prepare -o "$RESTORE_PHASE" = apply; then
+            github_api 'actions/workflows/ci.yml/runs?branch=main&status=success&per_page=30' | \
+              jq -e --arg commit "$GITHUB_SHA" '[.workflow_runs[] | select(.head_sha == $commit and .head_branch == "main" and .event == "push" and .status == "completed" and .conclusion == "success")] | length > 0' >/dev/null
+          fi
           umask 077
           test "$(sudo stat -c '%u:%a' /opt/fit/secrets)" = 0:700
           sudo test ! -L /opt/fit/secrets
@@ -63,7 +87,7 @@ jobs:
           if ! sudo test -e "$root"; then sudo install -d -m 700 "$root"; fi
           sudo test ! -L "$root"
           test "$(sudo stat -c '%u:%a' "$root")" = 0:700
-          if test "$RESTORE_PHASE" = plan; then
+          if test "$RESTORE_PHASE" = plan -o "$RESTORE_PHASE" = prepare; then
             PLAN_RUN_ID="$GITHUB_RUN_ID"
             [[ "$PLAN_RUN_ID" =~ ^[0-9]+$ ]]
             directory="$root/$PLAN_RUN_ID"
@@ -71,12 +95,53 @@ jobs:
             sudo install -d -m 700 "$directory"
           else
             [[ "$PLAN_RUN_ID" =~ ^[0-9]+$ ]]
+            github_api "actions/runs/$PLAN_RUN_ID" | jq -e \
+              '.path == ".github/workflows/restore-client-history.yml" and .head_branch == "main" and
+               .event == "workflow_dispatch" and .status == "completed" and .conclusion == "success"' >/dev/null
             directory="$root/$PLAN_RUN_ID"
             sudo test ! -L "$directory"
             test "$(sudo stat -c '%u:%a' "$directory")" = 0:700
             sudo test ! -L "$directory/plan.json"
             test "$(sudo stat -c '%u:%a' "$directory/plan.json")" = 0:600
           fi
+          program=/cloudru-client-restore.mjs
+          upload="$directory/unused-upload"
+          capability="$RUNNER_TEMP/client-restore-capability-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
+          install -d -m 700 "$capability"
+          private_session=''
+          if test "$RESTORE_PHASE" = prepare; then
+            test -z "$PREPARE_RUN_ID"
+            test "$GITHUB_RUN_ATTEMPT" = 1
+            private_session="$GITHUB_RUN_ID-1"
+            upload="$directory/upload"
+            sudo install -d -m 700 "$upload"
+            program=/cloudru-client-restore-private.mjs
+          elif test "$RESTORE_PHASE" = plan && test -n "$PREPARE_RUN_ID"; then
+            [[ "$PREPARE_RUN_ID" =~ ^[0-9]+$ ]]
+            preparation=$(github_api "actions/runs/$PREPARE_RUN_ID")
+            jq -e \
+              '.path == ".github/workflows/restore-client-history.yml" and .head_branch == "main" and
+               .event == "workflow_dispatch" and .run_attempt == 1 and
+               .status == "completed" and .conclusion == "success"' <<<"$preparation" >/dev/null
+            prepare_commit=$(jq -er .head_sha <<<"$preparation")
+            [[ "$prepare_commit" =~ ^[a-f0-9]{40}$ ]]
+            # An unrelated main commit cannot strand the short-lived upload.
+            # Every executable dependency must still be the exact reviewed blob.
+            if test "$prepare_commit" != "$GITHUB_SHA"; then
+              for file in .github/workflows/restore-client-history.yml scripts/cloudru-client-restore.mjs scripts/cloudru-client-restore-private.mjs scripts/cloudru-journal-upload.mjs; do
+                before=$(github_api "contents/$file?ref=$prepare_commit" | jq -er .sha)
+                test "$before" = "$(git rev-parse "$GITHUB_SHA:$file")"
+              done
+            fi
+            private_session="$PREPARE_RUN_ID-1"
+            sudo test ! -L "$root/$PREPARE_RUN_ID"
+            test "$(sudo stat -c '%u:%a' "$root/$PREPARE_RUN_ID")" = 0:700
+            upload="$root/$PREPARE_RUN_ID/upload"
+            sudo test ! -L "$upload"
+            test "$(sudo stat -c '%u:%a' "$upload")" = 0:700
+            program=/cloudru-client-restore-private.mjs
+          fi
+          if test -z "$private_session"; then sudo install -d -m 700 "$upload"; fi
           verified=false
           if test "$RESTORE_PHASE" = apply; then
             test "$CONFIRMATION" = RESTORE_CONFIRMED_CLIENT_TO_TRAINER
@@ -86,7 +151,7 @@ jobs:
             # Media health is separate: require the actual encrypted DB backup and restore,
             # never turn a failed backup/restore into a pass because another step succeeded.
             github_api "actions/runs/$BACKUP_RUN_ID/jobs?per_page=100" |
-              jq -e '[.jobs[].steps[] | select(.name == "Back up only Cloud.ru PostgreSQL into encrypted private Cloud.ru S3" or .name == "Restore downloaded backup into a disposable PostgreSQL without network")] | length == 2 and all(.[]; .conclusion == "success")' >/dev/null
+              jq -e '[.jobs[].steps[] | select(.name == "Back up only Cloud.ru PostgreSQL into encrypted private Cloud.ru S3" or .name == "Restore downloaded backup into a disposable PostgreSQL without network")] | length == 2 and all(.[]; .conclusion == "success") and all(.[]; ((now - (.completed_at | fromdateiso8601)) >= 0) and ((now - (.completed_at | fromdateiso8601)) <= 3600))' >/dev/null
             verified=true
           fi
           private_env="/opt/fit/secrets/client-restore-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT.env"
@@ -97,12 +162,12 @@ jobs:
           if test "$RESTORE_PHASE" = verify; then
             sudo awk '/^DATABASE_(HOST|PORT|NAME|USER|PASSWORD|SSL_MODE)=/' /opt/fit/secrets/api.env |
               sudo tee -a "$private_env" >/dev/null
-          else
+          elif test "$RESTORE_PHASE" != prepare; then
             jq -e '.MIGRATION_DATABASE_HOST == "10.70.10.67" and .MIGRATION_DATABASE_PORT == "5432" and .MIGRATION_DATABASE_NAME == "fit" and .MIGRATION_DATABASE_USER == "fit_owner" and .MIGRATION_DATABASE_URL == null and all(.[]; type == "string" and length > 0 and (test("[\u0000-\u001f\u007f]") | not))' <<<"$CLOUDRU_DATABASE_CONFIG_JSON" >/dev/null
             jq -r 'to_entries[] | select(.key | test("^MIGRATION_DATABASE_(HOST|PORT|NAME|USER|PASSWORD)$")) | "\(.key)=\(.value)"' <<<"$CLOUDRU_DATABASE_CONFIG_JSON" | sudo tee -a "$private_env" >/dev/null
             printf 'MIGRATION_DATABASE_SSL_MODE=require\n' | sudo tee -a "$private_env" >/dev/null
           fi
-          if test "$RESTORE_PHASE" = plan; then
+          if test "$RESTORE_PHASE" = plan && test -z "$PREPARE_RUN_ID"; then
             for name in FIT_CLIENT_RESTORE_TARGETS; do
               value=${!name}
               test -n "$value"
@@ -112,9 +177,35 @@ jobs:
               printf '%s=%s\n' "$name" "$value" | sudo tee -a "$private_env" >/dev/null
             done
           fi
+          if test -n "$private_session"; then
+            for name in CLOUDRU_MEDIA_KEY_ID CLOUDRU_MEDIA_KEY_SECRET; do
+              value=${!name}
+              test -n "$value"
+              test "$value" = "${value//$'\n'/}"
+              test "$value" = "${value//$'\r'/}"
+              printf '%s=%s\n' "$name" "$value" | sudo tee -a "$private_env" >/dev/null
+            done
+            printf 'RESTORE_PREPARE_SESSION=%s\nRESTORE_OPERATOR_PUBLIC_KEY_B64=%s\nFIT_JOURNAL_ATTEMPT=%s\nFIT_JOURNAL_IMPORT_MODE=inspect\n' \
+              "$private_session" "$OPERATOR_PUBLIC_KEY_B64" "$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT" | sudo tee -a "$private_env" >/dev/null
+          fi
           printf 'RESTORE_PHASE=%s\nRESTORE_BACKUP_VERIFIED=%s\nGITHUB_REF=refs/heads/main\nGITHUB_REPOSITORY=podkolzinpd/fit\nGITHUB_RUN_ID=%s\nGITHUB_RUN_ATTEMPT=%s\nGITHUB_ACTOR=%s\n' "$RESTORE_PHASE" "$verified" "$GITHUB_RUN_ID" "$GITHUB_RUN_ATTEMPT" "$GITHUB_ACTOR" | sudo tee -a "$private_env" >/dev/null
           revision=$(cat /opt/fit/RUNNING_SHA)
           [[ "$revision" =~ ^[a-f0-9]{40}$ ]]
           sudo podman run --rm --read-only --user 0 --memory=256m --cpus=0.5 --timeout=180 --cap-drop=ALL --security-opt=no-new-privileges --env-file "$private_env" \
-            -v "$PWD/scripts/cloudru-client-restore.mjs:/restore.mjs:ro" \
-            -v "$directory:/repair" "localhost/fit-api:$revision" node /restore.mjs | tee -a "$GITHUB_STEP_SUMMARY"
+            -v "$PWD/scripts/cloudru-client-restore.mjs:/cloudru-client-restore.mjs:ro" \
+            -v "$PWD/scripts/cloudru-client-restore-private.mjs:/cloudru-client-restore-private.mjs:ro" \
+            -v "$PWD/scripts/cloudru-journal-upload.mjs:/cloudru-journal-upload.mjs:ro" \
+            -v "$upload:/session" -v "$capability:/capability" \
+            -v "$directory:/repair" "localhost/fit-api:$revision" node "$program" | tee -a "$GITHUB_STEP_SUMMARY"
+          if test -n "$private_session" && test "$RESTORE_PHASE" = plan; then
+            sudo rmdir -- "$upload"
+            sudo rmdir -- "$root/$PREPARE_RUN_ID"
+          fi
+      - name: Return encrypted upload and reply access created before customer input
+        if: inputs.phase == 'prepare'
+        uses: actions/upload-artifact@v4
+        with:
+          name: private-client-restore-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/client-restore-capability-${{ github.run_id }}-${{ github.run_attempt }}/capability.encrypted.json
+          retention-days: 1
+          if-no-files-found: error

@@ -2402,3 +2402,23 @@ backup, TTL, блокировки, идемпотентность и отдел�
 Существующие приватные планы `apply/verify` совместимы; target нужен только
 новому `plan`. Запуск — только для явно согласованного восстановления;
 public linking, Yandex ID и обычные команды подключения не меняются.
+
+## Private Cloud.ru parameters for an existing connection restore — 2026-11-06
+
+`restore-client-history.yml` also supports `prepare` with only an operator PUBLIC
+RSA key. Its encrypted upload/reply capability is created before customer input.
+The local operator sends a session-bound RSA-PSS signed pair and exact imported
+card/workout IDs/counts directly to encrypted Cloud.ru storage, then invokes
+`plan` with `prepare_run_id`. The legacy target secret is not read for this path.
+No customer IDs, contacts, fingerprints or payload checksum are Actions inputs.
+
+The public protocol digest is a purpose constant; target authenticity comes from
+the operator signature and SQL checks of the exact existing native card/history.
+The private plan and full receipts stay on Cloud.ru/local. After a closed plan
+reply, the upload decryption key is retired; unknown results must be read back
+before retry. Apply still requires successful exact current-main CI, a fresh
+private database backup and disposable restore, explicit confirmation, plan TTL,
+serializable locks and unchanged protected state. A private expected-history plan
+preserves planned/cancelled/hidden old rows and all finance rows while verifying
+the imported graph under both actual fit_api/RLS actors. Only technical completion
+flags enter Actions logs. Existing successful legacy plans remain compatible.

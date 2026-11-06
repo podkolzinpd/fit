@@ -1094,3 +1094,63 @@ infra449 плюс speech7 PASS; YAML и4 shell blocks валидны. Полны
 production cleanup ещё не выполнены, это открытая часть этой итерации.
 Дальше: reviewed cleanup/main, отсутствие собственных временных roots,
 удаление оставшихся operator keys и завершение paused automation.
+
+## Итерация 21 — 06.11.2026 — Codex / OpenAI
+
+Задача: после завершённого переноса восстановить прежнюю связь одной пары после
+ручного отключения и вернуть обеим ролям доступ к загруженному журналу.
+Владелец повторил поручение восстановить существующую пару без нового обращения
+спортсмена. Перенос17/17 завершён; повторных import/apply журналов не будет.
+Действующая пара, canonical card и100 новых workout IDs уже подтверждены
+закрытой квитанцией импорта. Контакты/IDs/содержимое остаются приватными.
+
+Сначала выполнен только отдельно разрешённый поиск по отпечаткам двух адресов:
+42245674091 SUCCESS. Во время dispatch main сменился; фактический единственный
+run найден чтением, повтора не было. Workflow/audit/transitive blobs идентичны.
+Ни один адрес не разрешился через legacy/retained login bindings; это НЕ
+отсутствие учёток. Свой временный secret удалён, отсутствие проверено.
+
+Расхождения: готовый restore принимает native IDs через GitHub secret и
+рассчитан на историю только done. В доказанной карточке100 импортированных
+занятий и две прежние planned/cancelled записи. Передавать IDs в GitHub либо
+отбрасывать старые записи нельзя. Нужна проверка athlete и trainer отдельно.
+
+Сделано: существующий restore-client-history получает prepare/private plan;
+повторно используется проверенный encrypted Cloud.ru journal transport.
+В GitHub идут только operator PUBLIC key, run IDs и публичный constant purpose,
+не контакты, клиентские IDs, их fingerprints или checksum клиентского payload.
+Upload/reply capability создаётся ДО клиентского ввода и шифруется operator key.
+Пара/card/imported IDs/counts подписываются RSA-PSS с привязкой к session,
+шифруются для VM-only key и загружаются напрямую local→Cloud.ru. Закрытый план
+читается напрямую из Cloud.ru; customer-derived artifacts после ввода нет.
+Успех/отказ read-only плана закрывает receipt и удаляет upload decryption key;
+при непроверенном исходе ключ сохраняется. Прежний transport default неизменен.
+
+Решение PHI-PRIVATE-CONNECTION-01: восстановление только известной native пары
+с exact canonical card/imported IDs, двумя Yandex identities и отсутствием
+другой live same-name карточки у этого тренера. Для этого bounded private input
+разрешена смешанная прежняя история: весь owner graph и три finance таблицы
+проверяются до/после побайтными fingerprints. Прежний legacy guard не ослаблен.
+Apply сохраняет serializable/TTL/backup/locks/replay/current-state guards,
+добавляет только недостающие membership и активный период. Роли, owner partition,
+профили, прежние периоды, история, финансы, merge operations и пилоты неизменны.
+Между prepare и plan допускается новый main только при точном совпадении
+workflow и всех трёх executable blobs; expiry не обходится.
+Отдельный fit_api READ ONLY verify проверяет trainer и athlete: одну карточку,
+активную связь и весь ожидаемый imported graph; спортсмен читает тренера через
+тот же list_accessible_client_trainers, что приложение. Actions получает только
+allowlisted технические flags; полный private plan/receipt остаётся в Cloud.ru.
+
+Отвергнуто: выбирать новый actor по одному имени/почте, переносить историю на
+другой профиль, повторять импорт, удалять planned/cancelled, использовать чужой
+secret, запускать новый standalone service или обходить RLS/expiry/очередь/CI.
+Проверка:12 реальных PG17/C/UTF8 случаев, включая legacy6 и private6, PASS;
+planned/cancelled/финансы сохранены, обе роли действительно читают импорт.
+При смене owner исходная защита отклоняет раньше runtime_receipt; test ожидание
+уточнено без ослабления отказа.11 Node/security/transport cases PASS;
+infra458+speech7 PASS, API lint/types/build PASS,
+YAML/bash syntax и diff-check PASS. Все собственные тестовые контейнеры удалены.
+Открыто: exact-head CI, очередь/merge/main release acceptance, фактический
+read-only plan и один ремонт этой пары с независимым verify/cleanup.
+Дальше: обычный reviewed выпуск; сначала сверить private plan с закрытым
+импортным доказательством, затем backup/apply/verify, без повторов неизвестного write.
