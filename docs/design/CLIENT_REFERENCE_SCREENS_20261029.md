@@ -5526,3 +5526,17 @@ Coverage statements83.64%,branches78.65%,functions82.92%,lines88.33%; порог
 Открыто: exact-source CI/PR и отдельное
 разрешение выпуска. Никакого push/PR/merge/deploy этого этапа не было.
 Физический телефон/реальный OAuth не проверены. Дальше — MC4.3 после фиксации162.
+
+
+Подготовка первого PR MC4.2 родительским агентом: fresh main69cb6789 (#2021,
+финансовая сводка) включён обычным merge19608daf без конфликтов; финансовые
+13файлов/446additions/14deletions сохранены, новый PR их не переоткрывает.
+Повторный production build/types/startup прошёл на объединённой версии.
+Новая22-case Chromium/WebKit выборка без повторов прошла;22/22 styles/geometry
+и18/18PNG идентичны исходной сборке, console/pageerror/network0.
+Подтверждения:/tmp/fit-mc42-pr-build.log,/tmp/fit-mc42-pr-browser.log,
+/tmp/fit-mc42-pr-results,/tmp/fit-mc42-pr-comparison.json.
+Исходные52browser/56timer/3061unit относятся к88ac6fb1 и не выдаются
+за повтор полного набора после2021. Свежий sourceCI будет самостоятельным
+гейтом нового PR. Модельного/продуктового расширения,merge/deploy нет;
+MC-RELEASE-01 требует отдельного разрешения конкретного выпуска.
