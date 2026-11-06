@@ -205,6 +205,10 @@ export function financeAccountingCases() {
       expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true)
       expect(await page.locator('.finance-monthly-name').evaluateAll(nodes=>nodes.every(node=>getComputedStyle(node).fontFamily.includes('YS Geo')))).toBe(true)
       await page.locator('.finance-monthly').scrollIntoViewIfNeeded()
+      expect(await page.locator('.finance-monthly-current-summary p').evaluateAll(nodes=>{
+        const [first,last]=nodes.map(node=>node.getBoundingClientRect())
+        return !!first && !!last && Math.abs(first.y-last.y)<=1 && Math.abs(first.width-last.width)<=1
+      })).toBe(true)
       await page.screenshot({path:info.outputPath(`monthly-money-${width}.png`),fullPage:true})
       const last = page.locator('.finance-monthly-client').last()
       await last.scrollIntoViewIfNeeded()

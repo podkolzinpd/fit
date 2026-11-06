@@ -174,7 +174,7 @@ export function TrainerFinanceOverviewView({ month, data, lime = false, metric: 
     {paymentHistory ?? <AsyncView loading={loading} error={error} onRetry={onRetry}>
       {data && <>
         {monthly && <FinanceMonthlySummary data={data} metric={metric} onMetricChange={onMetricChange ?? setLocalMetric} />}
-        <section className="finance-overview-summary" aria-label="Финансовая сводка">
+        <section className={`finance-overview-summary${monthly ? ' finance-monthly-current-summary' : ''}`} aria-label="Финансовая сводка">
           {!monthly && <p><span>Получено за месяц</span><strong>{money(data.receivedCents)}</strong></p>}
           <p><span>К оплате сейчас</span><strong>{money(data.dueCents)}</strong></p>
           <p><span>Требуют внимания сейчас</span><strong>{data.attentionCount}</strong></p>
