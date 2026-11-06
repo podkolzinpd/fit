@@ -90,6 +90,7 @@ export interface TrainerFinanceOverviewClient {
   fullName: string
   archivedAt: string | null
   receivedCents: number
+  completedSessions?: number
   dueCents: number
   nearestPaymentDueOn: string | null
   unpaidPackageCount: number
@@ -106,6 +107,7 @@ export interface TrainerFinanceOverviewClient {
 export interface TrainerFinanceOverview {
   month: string
   receivedCents: number
+  completedSessions?: number
   dueCents: number
   attentionCount: number
   clients: TrainerFinanceOverviewClient[]

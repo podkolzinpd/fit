@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { TrainerFinanceOverviewClient } from '../../data/contracts/trainer-finance'
-import { TrainerFinanceOverviewPage, trainerFinanceClientLabel } from './TrainerFinanceOverviewPage'
+import { TrainerFinanceOverviewPage, TrainerFinanceOverviewView, trainerFinanceClientLabel } from './TrainerFinanceOverviewPage'
 
 const listOverview = vi.hoisted(() => vi.fn())
 vi.mock('../../app/auth-context', () => ({ useAuth: () => ({ actor: { role: 'trainer', userId: 'trainer-1', timezone: 'Europe/Moscow' } }) }))
@@ -158,4 +158,29 @@ it.each(['0000-01', '0099-01', '2026-13', 'wrong'])('keeps invalid finance URL m
   await screen.findByRole('region', { name: 'Финансовая сводка' })
   expect(listOverview).toHaveBeenCalledTimes(1)
   expect(listOverview.mock.calls[0]?.[0]).not.toBe(month)
+})
+
+
+it('keeps monthly totals independent of search and displays only one value next to each name', async () => {
+  const user = userEvent.setup()
+  const base: TrainerFinanceOverviewClient = { clientId: 'one', fullName: 'Анна', archivedAt: null,
+    activeClient: true, receivedCents: 10001, completedSessions: 2, dueCents: 0,
+    nearestPaymentDueOn: null, unpaidPackageCount: 0, activePackageCount: 1,
+    upcomingPackageCount: 0, sessionsRemaining: 8, overdue: false, lowSessions: false,
+    unassignedSessions: 0, needsAttention: false }
+  const data = { month: '2026-11', receivedCents: 30003, completedSessions: 5,
+    dueCents: 0, attentionCount: 0, clients: [base,{...base,clientId:'two',fullName:'Ирина',receivedCents:20002,completedSessions:3}] }
+  const { container } = render(<MemoryRouter><TrainerFinanceOverviewView month={'2026-11-01' as import('../../shared/local-date').LocalDate}
+    data={data} lime onPreviousMonth={vi.fn()} onNextMonth={vi.fn()} /></MemoryRouter>)
+  expect(screen.getByRole('region',{name:'Итоги за месяц'})).toHaveTextContent(/300,03/)
+  expect(container.querySelector('.finance-monthly-name')?.textContent).toBe('Анна')
+  expect(container.querySelector('.finance-monthly-name small')).toBeNull()
+  expect(container.querySelector('.finance-overview-list')?.textContent).not.toContain('%')
+  await user.type(screen.getByRole('searchbox',{name:'Поиск клиента'}),'Анна')
+  expect(container.querySelectorAll('.finance-monthly-client')).toHaveLength(1)
+  expect(screen.getByRole('region',{name:'Итоги за месяц'})).toHaveTextContent(/300,03/)
+  await user.click(screen.getByRole('button',{name:'Тренировки'}))
+  expect(container.querySelector('[data-finance-monthly-total]')?.textContent).toBe('5')
+  expect(container.querySelector('.finance-monthly-value')?.textContent).toBe('2')
+  expect(screen.getByRole('link',{name:/Анна/})).toHaveAttribute('href','/clients/one/finance?month=2026-11&metric=sessions')
 })
