@@ -1358,7 +1358,6 @@ archive-empty сценарий выявил, что при расширении 
 сохранён актуальный public.is_active_client_trainer_connection для чтения,
 canCreate по-прежнему запрещён архиву; собственный historical workout только
 добавляет read-scope. Старый тест/права не ослаблены. Новый полный CI обязателен.
-<<<<<<< HEAD
 
 
 FIN-26 — FIN602 подготовка новой Lime сводки: общий FinanceMonthlySummary,
@@ -1381,8 +1380,6 @@ verified YS Geo400/500 (2/2), без hex/зависимости/новой би�
 Период назван Месяц; full frontend coverage/finance browser ещё проверяются.
 Публикация FIN602 только после полной приёмки FIN601 и актуального main.
 Физический iPhone/PWA/Android не проверялись, реальные деньги не менялись.
-=======
->>>>>>> origin/main
 
 
 FIN-26, локальная приёмка: frontend344files/3070tests прошли, coverage
