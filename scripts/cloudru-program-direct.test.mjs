@@ -1,7 +1,9 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import {createHash,generateKeyPairSync} from 'node:crypto'
-import {readFileSync} from 'node:fs'
+import {readFileSync,mkdtempSync,mkdirSync,writeFileSync,rmSync,existsSync,symlinkSync,chmodSync} from 'node:fs'
+import {tmpdir} from 'node:os'
+import {prechannelCleanup} from './cloudru-program-direct-cleanup.mjs'
 import {assertOutsideActions,directObject,validateDirectRequest,bindDirectState,completeDirectState,
   acknowledgeDirect,sealDirectRequest,openDirectRequest,validateDirectCapability} from './cloudru-program-direct-protocol.mjs'
 import {executeDirectEntry} from './cloudru-program-direct-entry.mjs'
@@ -142,3 +144,49 @@ test('installer supplies its host Node runtime before systemd bootstrap and pres
   assert.ok(cleanup.indexOf('sudo cmp -s')<cleanup.indexOf('sudo rm -r'))
   assert.doesNotMatch(cleanup,/journal-upload-|target|receipt|client|roster/i)
 })
+
+function cleanupFixture(run) {
+  const parent=mkdtempSync(tmpdir()+'/fit-prechannel-')
+  chmodSync(parent,0o700)
+  const root=parent+'/program-direct-123-1'
+  mkdirSync(root,{mode:0o700})
+  writeFileSync(root+'/operator.public.pem',operator.publicKey,{mode:0o600})
+  mkdirSync(root+'/bootstrap',{mode:0o755})
+  mkdirSync(root+'/runtime',{mode:0o700})
+  const options={parent,uid:process.getuid(),sessions:['123-1'],publicKey:operator.publicKey,
+    unitStatus:()=>({LoadState:'not-found',ActiveState:'inactive',MainPID:'0'})}
+  try {run({parent,root,options})} finally {rmSync(parent,{recursive:true,force:true})}
+}
+test('pre-channel cleanup removes only explicit owned root and is idempotent',()=>cleanupFixture(({parent,root,options})=>{
+  const foreign=parent+'/program-direct-456-1';mkdirSync(foreign,{mode:0o700})
+  assert.deepEqual(prechannelCleanup(options),{event:'prechannel_cleanup_verified',requested:1,removed:1,absent:1})
+  assert.equal(existsSync(root),false);assert.equal(existsSync(foreign),true)
+  assert.equal(prechannelCleanup(options).removed,0)
+}))
+test('pre-channel cleanup rejects durable and pending channel evidence before deleting',()=>{
+  for(const name of ['server.private.pem','server.private.pem.pending','state.json','state.json.pending','operation.env','operation.json'])
+    cleanupFixture(({root,options})=>{writeFileSync(root+'/'+name,'fixture');assert.throws(()=>prechannelCleanup(options));assert.equal(existsSync(root),true)})
+  for(const name of ['capabilities','responses','bootstrap'])cleanupFixture(({root,options})=>{
+    if(!existsSync(root+'/'+name))mkdirSync(root+'/'+name)
+    writeFileSync(root+'/'+name+'/evidence','fixture');assert.throws(()=>prechannelCleanup(options));assert.equal(existsSync(root),true)
+  })
+})
+test('pre-channel cleanup rejects foreign keys, symlinks, permissions and active units',()=>{
+  for(const alter of [
+    ({options})=>{options.publicKey=server.publicKey},
+    ({root})=>chmodSync(root,0o755),
+    ({root})=>chmodSync(root+'/operator.public.pem',0o644),
+    ({options})=>{options.uid+=1},
+    ({options})=>{options.unitStatus=()=>({LoadState:'loaded',ActiveState:'active',MainPID:'1'})},
+    ({options})=>{options.unitStatus=()=>({LoadState:'loaded',ActiveState:'failed',MainPID:'1'})},
+    ({root,parent})=>{writeFileSync(parent+'/other-key',operator.publicKey);rmSync(root+'/operator.public.pem');symlinkSync(parent+'/other-key',root+'/operator.public.pem')},
+    ({root,parent})=>{mkdirSync(parent+'/other-root');rmSync(root,{recursive:true});symlinkSync(parent+'/other-root',root)},
+  ])cleanupFixture(value=>{alter(value);assert.throws(()=>prechannelCleanup(value.options));assert.equal(existsSync(value.root),true)})
+})
+test('pre-channel cleanup validates the whole bounded batch before deleting a valid first root',()=>cleanupFixture(({parent,root,options})=>{
+  for(const sessions of [[],['../123-1'],['123-1','123-1'],['123-1','456-1','789-1']])assert.throws(()=>prechannelCleanup({...options,sessions}))
+  const second=parent+'/program-direct-456-1';mkdirSync(second,{mode:0o700})
+  writeFileSync(second+'/operator.public.pem',server.publicKey,{mode:0o600})
+  assert.throws(()=>prechannelCleanup({...options,sessions:['123-1','456-1']}))
+  assert.equal(existsSync(root),true);assert.equal(existsSync(second),true)
+}))

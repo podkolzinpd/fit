@@ -3,6 +3,15 @@ name: Install reviewed Cloud.ru private program service
 on:
   workflow_dispatch:
     inputs:
+      action:
+        description: Install the service or retire only explicitly named failed pre-channel leases
+        type: choice
+        default: install
+        options: [install, cleanup-prechannel]
+      failed_sessions:
+        description: Cleanup only; one or two failed installer run-attempt pairs, comma separated
+        type: string
+        default: ''
       operator_public_key_b64:
         description: Operator PUBLIC RSA key; no customer parameters are accepted
         type: string
@@ -51,7 +60,33 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+      - name: Retire only owned failed pre-channel infrastructure
+        if: inputs.action == 'cleanup-prechannel'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          FAILED_SESSIONS: ${{ inputs.failed_sessions }}
+          OPERATOR_PUBLIC_KEY_B64: ${{ inputs.operator_public_key_b64 }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$FAILED_SESSIONS" =~ ^[0-9]{1,20}-[0-9]{1,4}(,[0-9]{1,20}-[0-9]{1,4})?$ ]]
+          IFS=',' read -r -a sessions <<<"$FAILED_SESSIONS"
+          for session in "${sessions[@]}"; do
+            run=${session%-*}
+            attempt=${session##*-}
+            curl --fail --silent --show-error --max-time 15 \
+              -H "Authorization: Bearer $GH_TOKEN" -H 'Accept: application/vnd.github+json' \
+              "https://api.github.com/repos/$GITHUB_REPOSITORY/actions/runs/$run" | jq -e \
+              --argjson run "$run" --argjson attempt "$attempt" \
+              '.id == $run and .run_attempt == $attempt and .event == "workflow_dispatch" and
+               .path == ".github/workflows/start-cloudru-private-program-service.yml" and
+               .status == "completed" and .conclusion == "failure"' >/dev/null
+          done
+          [[ "$OPERATOR_PUBLIC_KEY_B64" =~ ^[A-Za-z0-9+/=]{400,11000}$ ]]
+          printf '%s' "$OPERATOR_PUBLIC_KEY_B64" | base64 --decode | \
+            sudo "$(command -v node)" scripts/cloudru-program-direct-cleanup.mjs "$FAILED_SESSIONS"
       - name: Install only code and infrastructure credentials for the isolated service
+        if: inputs.action != 'cleanup-prechannel'
         env:
           CLOUDRU_DATABASE_CONFIG_JSON: ${{ secrets.CLOUDRU_STAGE_DATABASE_CONFIG_JSON }}
           CLOUDRU_MEDIA_KEY_ID: ${{ secrets.CLOUDRU_MEDIA_MIGRATION_KEY_ID }}
@@ -124,6 +159,7 @@ jobs:
           sudo chown "$(id -u):$(id -g)" "$output/capability.encrypted.json"
           chmod 600 "$output/capability.encrypted.json"
       - name: Return only encrypted infrastructure capability created before customer input
+        if: inputs.action != 'cleanup-prechannel'
         uses: actions/upload-artifact@v4
         with:
           name: direct-program-infrastructure-${{ github.run_id }}-${{ github.run_attempt }}
@@ -131,6 +167,7 @@ jobs:
           retention-days: 1
           if-no-files-found: error
       - name: Reserve VM serialization while the independent Cloud.ru service runs
+        if: inputs.action != 'cleanup-prechannel'
         shell: bash
         run: |
           set -euo pipefail

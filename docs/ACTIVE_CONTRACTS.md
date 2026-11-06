@@ -176,3 +176,8 @@ Merge pointer/полный binding/RLS/history/finance неизменны.
 видимость fit_api сравнивается с существующим can_read_workout для точного
 actor, включая закономерно скрытые записи. Policy/ACL/RLS не меняются.
 [Проверка и сохранность](design/ATHLETE_PROGRAM_HISTORY_IMPORT_20261103.md#итерация-19--06112026--codex--openai).
+
+06.11 — PHI-PRECHANNEL-CLEANUP-01: только явные failed installer leases,
+совпавший operator public key и отсутствие durable/pending channel допускают
+очистку; никакого повторного bootstrap или клиентского ввода.
+[Границы и проверки](design/ATHLETE_PROGRAM_HISTORY_IMPORT_20261103.md#итерация-20--06112026--codex--openai).
