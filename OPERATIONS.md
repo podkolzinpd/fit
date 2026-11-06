@@ -2149,6 +2149,18 @@ repair is not authorized to run. ACL-read403 remains an open metadata check.
 Voice is also intentionally OFF; operations inspection expects its service and
 health only when CLOUDRU_SPEECHKIT_RELAY_URL is configured to the canonical URL.
 
+Owner follow-up06.11 authorizes only the scoped media access repair, replacing
+the15.10 media hold; it does not change current voice/text/AI configuration.
+The existing manual repair workflow now defaults to `mode=inspect`: independent
+ACL/policy/ownership/versioning reads, no mutations. Optional
+`expected_key_sha256` verifies the console-confirmed Key ID before any S3 call;
+only a match flag is logged. Explicit `mode=repair` retains the original private
+grant preservation and full ACL readback. Failures expose constant stages and
+allowlisted storage codes only. Remove any separately authorized temporary
+bucket-scoped admin before full backup/restore/media acceptance, on success or
+failure. Actual run outcomes and remaining work are recorded in
+docs/design/CLOUDRU_STABILIZATION_20261014.md under MHA101–105.
+
 The disposable restore image extends the pinned PostgreSQL17 base with pinned
 PGDG postgresql-17-pgaudit17.1-2.pgdg13+1 and preloads pg_stat_statements/pgaudit.
 Both extensions occur in the real archive; they are restored, not excluded.
