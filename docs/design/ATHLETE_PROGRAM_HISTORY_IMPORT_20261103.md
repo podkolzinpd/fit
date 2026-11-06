@@ -1137,7 +1137,8 @@ Apply сохраняет serializable/TTL/backup/locks/replay/current-state guar
 Между prepare и plan допускается новый main только при точном совпадении
 workflow и всех трёх executable blobs; expiry не обходится.
 Отдельный fit_api READ ONLY verify проверяет trainer и athlete: одну карточку,
-активную связь и весь ожидаемый imported graph. Actions получает только
+активную связь и весь ожидаемый imported graph; спортсмен читает тренера через
+тот же list_accessible_client_trainers, что приложение. Actions получает только
 allowlisted технические flags; полный private plan/receipt остаётся в Cloud.ru.
 
 Отвергнуто: выбирать новый actor по одному имени/почте, переносить историю на

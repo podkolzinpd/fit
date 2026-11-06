@@ -147,7 +147,7 @@ describe.skipIf(source === undefined)('owner-approved canonical client restorati
     const p = await privatePlan(f)
     await expect(apply(p, false)).rejects.toThrow('backup_required')
     expect(await apply(p)).toMatchObject({ historyUnchanged: true, replayed: false, done: 21 })
-    expect(await verify(p)).toMatchObject({ trainerCanReadCanonical: true, athleteCanReadCanonical: true, bothCanReadImported: true, done: 21 })
+    expect(await verify(p)).toMatchObject({ trainerCanReadCanonical: true, athleteCanReadCanonical: true, athleteCanReadTrainer: true, bothCanReadImported: true, done: 21 })
     expect((await owner.query('select to_jsonb(w) value from public.workouts w where client_id=$1 order by id', [f.card])).rows).toEqual(before)
     expect((await owner.query('select to_jsonb(p) value from public.trainer_finance_packages p where client_id=$1 order by id', [f.card])).rows).toEqual(financial)
     expect(await apply(p)).toMatchObject({ replayed: true, historyUnchanged: true })

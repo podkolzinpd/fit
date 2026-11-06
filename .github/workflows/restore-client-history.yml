@@ -69,11 +69,13 @@ jobs:
           [[ "$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT" =~ ^[0-9]+-[0-9]+$ ]]
           case "$RESTORE_PHASE" in prepare|plan|apply|verify) ;; *) exit 1 ;; esac
           if test "$RESTORE_PHASE" = prepare; then
+            test "$GITHUB_RUN_ATTEMPT" = 1
             [[ "$OPERATOR_PUBLIC_KEY_B64" =~ ^[A-Za-z0-9+/=]{400,11000}$ ]]
           else
             test -z "$OPERATOR_PUBLIC_KEY_B64"
           fi
           if test "$RESTORE_PHASE" != plan; then test -z "$PREPARE_RUN_ID"; fi
+          if test -n "$PREPARE_RUN_ID"; then [[ "$PREPARE_RUN_ID" =~ ^[0-9]+$ ]]; fi
           if test "$RESTORE_PHASE" = prepare -o "$RESTORE_PHASE" = apply; then
             github_api 'actions/workflows/ci.yml/runs?branch=main&status=success&per_page=30' | \
               jq -e --arg commit "$GITHUB_SHA" '[.workflow_runs[] | select(.head_sha == $commit and .head_branch == "main" and .event == "push" and .status == "completed" and .conclusion == "success")] | length > 0' >/dev/null

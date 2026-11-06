@@ -9,7 +9,7 @@ const requireState=(condition,code)=>{if(!condition)throw Error(`client_restore_
 const bounded=(rows,max)=>{requireState(Array.isArray(rows)&&rows.length<=max,'scope');return rows}
 export function privateRestoreTechnicalResult(result){
  const allowed=new Set(['event','readOnly','replayed','newPeriods','historyUnchanged','restoredPeriodActive',
-   'canonicalMembership','trainerCanReadCanonical','athleteCanReadCanonical','bothCanReadImported'])
+   'canonicalMembership','trainerCanReadCanonical','athleteCanReadCanonical','athleteCanReadTrainer','bothCanReadImported'])
  return Object.fromEntries(Object.entries(result).filter(([key])=>allowed.has(key)))
 }
 
@@ -231,8 +231,12 @@ export async function verifyClientRestore(runtime,plan){
        exists(select 1 from public.client_trainer_relationships where id=$3 and client_id=$1 and trainer_id=$4 and status='active') active_trainer
        from public.clients where id=$1`,[expected.clientId,plan.pair.athleteId,plan.periodId,plan.pair.trainerId])).rows[0]
      requireState(own?.owns_card&&own.active_trainer,'athlete_connection')
+     // The application uses this protected read model; direct trainer/profile
+     // table reads are intentionally narrower and must not be granted here.
+     const trainers=(await runtime.query('select trainer_id from public.list_accessible_client_trainers() where client_id=$1',[expected.clientId])).rows
+     requireState(trainers.length===1&&trainers[0].trainer_id===plan.pair.trainerId,'athlete_trainer_visibility')
      requireState(countsMatch(await importedCounts(runtime,expected),expected),'athlete_imported_visibility')
-     bothActors={athleteCanReadCanonical:true,bothCanReadImported:true}
+     bothActors={athleteCanReadCanonical:true,athleteCanReadTrainer:true,bothCanReadImported:true}
    }
    await runtime.query('commit')
    return {event:'client_restore_verified',readOnly:true,restoredPeriodActive:true,canonicalMembership:true,trainerCanReadCanonical:true,...bothActors,done:count}
