@@ -165,6 +165,20 @@ export function financeAccountingCases() {
     failed=false
     await page.getByRole('button',{name:'Повторить'}).click()
     await expect(page.locator('.finance-monthly')).toBeVisible()
+    // A long amount must fit inside the inner disk, not merely its container.
+    clients[0]!.receivedCents=98765432101
+    await page.goto('/finance?month=2026-11')
+    await expect(total).toContainText(/987\s657\s021,28/)
+    await page.evaluate(()=>document.fonts.ready)
+    for(const width of [320,430]){
+      await page.setViewportSize({width,height:844})
+      await page.locator('.finance-monthly').scrollIntoViewIfNeeded()
+      expect(await total.evaluate(node=>{const r=node.getBoundingClientRect(),ring=node.closest('.finance-monthly-ring')!.getBoundingClientRect(),cx=ring.x+ring.width/2,cy=ring.y+ring.height/2,limit=ring.width*87.5/220-4;return [r.left,r.right].every(x=>[r.top,r.bottom].every(y=>Math.hypot(x-cx,y-cy)<=limit))})).toBe(true)
+      await page.screenshot({path:info.outputPath(`monthly-large-ring-${width}.png`),fullPage:true})
+      await page.locator('.finance-monthly-client').first().scrollIntoViewIfNeeded()
+      expect(await page.locator('.finance-monthly-value').first().evaluate(node=>node.scrollWidth<=node.clientWidth+1)).toBe(true)
+      await page.screenshot({path:info.outputPath(`monthly-large-row-${width}.png`),fullPage:true})
+    }
   })
   test('Finance package choice distinguishes periods and preserves explicit attendance accounting', { tag: ['@lime-finance'] }, async ({ page }, info) => {
     const target: MockWorkout = { ...workout, createdBy: coach, workoutDate: '2026-11-03', status: 'planned', exercises: [] }

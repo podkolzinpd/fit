@@ -14,6 +14,8 @@ export function FinanceMonthlySummary({ data, metric, onMetricChange, clientId }
   const received = client ? client.receivedCents : clientId ? 0 : data.receivedCents
   const sessions = client ? client.completedSessions : clientId ? 0 : data.completedSessions
   const formatted = (amount: number) => metric === 'money' ? financeMoney(amount) : String(amount)
+  const totalText = formatted(value)
+  const totalFontSize = Math.max(16, Math.min(28, 364 / totalText.length))
   const segments = clientId ? [
     { id: clientId, label: client?.fullName ?? 'Спортсмен', value, color: financeClientColor(clientId) },
     { id: 'others', label: 'Остальные спортсмены', value: Math.max(0, total - value), color: 'var(--lime-surface-high)' },
@@ -40,7 +42,7 @@ export function FinanceMonthlySummary({ data, metric, onMetricChange, clientId }
         </svg>
         <div className="finance-monthly-center">
           <span>{metric === 'money' ? 'Получено за месяц' : 'Проведено за месяц'}</span>
-          <strong data-finance-monthly-total>{formatted(value)}</strong>
+          <strong data-finance-monthly-total style={{fontSize:totalFontSize}}>{totalText}</strong>
           <small>{clientId ? `Всего ${formatted(total)}` : metric === 'money' ? 'Все спортсмены' : 'тренировок · все спортсмены'}</small>
         </div>
       </div>

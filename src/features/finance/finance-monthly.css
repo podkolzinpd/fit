@@ -6,7 +6,7 @@
 .phone-frame.fit-lime-shell .finance-monthly-ring svg { display: block; width: 100%; height: 100%; transform: rotate(-90deg); }
 .phone-frame.fit-lime-shell .finance-monthly-ring circle { fill: none; stroke-width: 13; }
 .phone-frame.fit-lime-shell .finance-monthly-track { stroke: var(--lime-surface-raised); }
-.phone-frame.fit-lime-shell .finance-monthly-center { position: absolute; inset: 0 20px; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 8px; text-align: center; pointer-events: none; }
+.phone-frame.fit-lime-shell .finance-monthly-center { position: absolute; inset: 0 28px; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 8px; text-align: center; pointer-events: none; }
 .phone-frame.fit-lime-shell .finance-monthly-center :is(span,small) { color: var(--lime-text-secondary); font-size: 12px; line-height: 16px; }
 .phone-frame.fit-lime-shell .finance-monthly-center strong { max-width: 100%; font-size: 28px; line-height: 32px; letter-spacing: -.03em; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
 .phone-frame.fit-lime-shell .finance-monthly-companion { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding-block: 16px; margin-top: 18px; border-top: 1px solid var(--lime-surface-high); font-size: 14px; line-height: 20px; }
