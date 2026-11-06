@@ -1474,3 +1474,13 @@ FIN-27, форма из месячной карточки: тот же новы�
 записи. Chromium/WebKit2/2 passed, PNG просмотрены; исходная месячная сумма
 и список после отмены сохранены. Test inventory не вырос, продуктовый код
 не менялся. Это эмуляция viewport, не физическая iPhone/PWA клавиатура.
+
+
+FIN-27, локальное PG доказательство196: собственный изолированный
+fit-fin601-pg-20261106/fit_actor_test, pending196 применён официальным
+db:migrate. Целевой actor-context scenario counts monthly trainer attendance
+independently прошёл1/1 (174 неподходящих case skipped,257ms tests).
+Работа шла через локальный55439 с тестовой credential только в env, без
+вывода значения и без production. Подтверждены новые attendedWorkouts,
+historical/no-ledger и отказ чужому actor. Это дополняет локальный API check,
+но не заменяет полный clean PG source/main CI перед выпуском.
