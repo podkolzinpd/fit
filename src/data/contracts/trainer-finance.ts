@@ -79,6 +79,7 @@ export interface TrainerFinanceClientBundle {
   clientId: string
   clientName?: string
   canCreate?: boolean
+  attendedWorkouts?: Array<{ workoutId: string; workoutDate: string; title: string | null }>
   packages: TrainerFinancePackage[]
   payments: TrainerFinancePayment[]
   sessions: TrainerFinanceSession[]
