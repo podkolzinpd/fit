@@ -2405,6 +2405,13 @@ public linking, Yandex ID и обычные команды подключени�
 
 ## Private Cloud.ru parameters for an existing connection restore — 2026-11-06
 
+Capability output follows the original journal boundary: root-owned0755,
+ciphertext0644; the capability-free UID0 writer cannot write runner-owned0700.
+Session keys remain root0700/0600. `cleanup-prepare` is only for the caller's
+failed/unexported attempt1, bound to the same public key, with exactly the two
+infrastructure files and positively absent payload/prepared/committed/readback.
+It never creates a database client, deletes S3 objects, or cleans received input.
+
 `restore-client-history.yml` also supports `prepare` with only an operator PUBLIC
 RSA key. Its encrypted upload/reply capability is created before customer input.
 The local operator sends a session-bound RSA-PSS signed pair and exact imported
