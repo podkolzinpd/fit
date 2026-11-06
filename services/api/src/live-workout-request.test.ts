@@ -46,6 +46,10 @@ describe('live workout request validation', () => {
     })
   })
 
+  it.each([5, 5.5, 6, 10])('accepts set RPE %s without normalization', (rpe) => {
+    expect(readLiveSetRequest({ operationId, expectedVersion: 1, draft: { rpe } })?.draft.rpe).toBe(rpe)
+  })
+
   it('preserves explicit metric provenance and rejects forged values', () => {
     const metricSources = { duration: 'entered', distance: 'planned', rpe: 'unknown' }
     expect(readLiveSetRequest({ operationId, expectedVersion: 4, draft: { durationSec: 900, metricSources } })?.draft.metricSources)
@@ -75,7 +79,8 @@ describe('live workout request validation', () => {
     { reps: 1.5 },
     { durationSec: -1 },
     { distanceKm: Number.POSITIVE_INFINITY },
-    { rpe: 5.5 },
+    { rpe: 4.5 },
+    { rpe: 10.5 },
     { rpe: 7.25 },
   ])('rejects invalid set metrics', (draft) => {
     expect(readLiveSetRequest({ operationId, expectedVersion: 1, draft }))

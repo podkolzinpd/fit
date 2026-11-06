@@ -71,6 +71,36 @@ describe.skipIf(!source)('atomic Live history prefill with real ownership', () =
   const sets = async (id: string) => (await pool.query<PrefilledSetRow>(`select position,plan_weight_kg,plan_reps,plan_duration_sec,plan_distance_km,fact_weight_kg,confirmed_at
     from public.workout_sets where workout_exercise_id=$1 order by position`, [id])).rows
 
+  it.each([coach, athlete])('round-trips RPE5 and5.5 through Live for actor %s without rewriting history', async actorId => {
+    const previous = await history()
+    await pool.query('update public.workout_sets set plan_rpe=7.5,fact_rpe=8 where workout_exercise_id=$1', [previous.exerciseId])
+    const snapshot = async () => (await pool.query('select to_jsonb(s) snapshot from public.workout_sets s where workout_exercise_id=$1 order by position', [previous.exerciseId])).rows
+    const before = await snapshot()
+    const currentWorkout = await target()
+    const added = await append(coach, currentWorkout)
+    const setId = (await pool.query<{ id: string }>('select id from public.workout_sets where workout_exercise_id=$1', [added.resource_id])).rows[0]!.id
+    await pool.query('update public.workout_sets set plan_rpe=5 where id=$1', [setId])
+    for (const rpe of [5, 5.5]) {
+      const version = (await pool.query<{ version: string }>('select version from public.workout_sets where id=$1', [setId])).rows[0]!.version
+      const client = await pool.connect()
+      try {
+        await client.query('begin')
+        await client.query("select set_config('request.jwt.claim.sub',$1,true)", [actorId])
+        await client.query('set local role fit_api')
+        await client.query('select * from public.save_live_set_draft($1,$2::jsonb,$3,$4)', [setId, JSON.stringify({ reps: 10, weightKg: 20, rpe }), version, randomUUID()])
+        const result = await client.query('select plan_rpe,fact_rpe from public.workout_sets where id=$1', [setId])
+        expect(result.rows).toEqual([{ plan_rpe: '5.0', fact_rpe: rpe.toFixed(1) }])
+        await client.query('commit')
+      } catch (error) { await client.query('rollback'); throw error } finally { client.release() }
+    }
+    await pool.query('update public.workout_sets set plan_rpe=5.5 where id=$1', [setId])
+    for (const value of [4.5, 5.2, 10.5]) {
+      await expect(pool.query('update public.workout_sets set plan_rpe=$2 where id=$1', [setId, value])).rejects.toMatchObject({ code: '23514' })
+    }
+    expect(await snapshot()).toEqual(before)
+    await expect(append(outsider, currentWorkout)).rejects.toMatchObject({ code: 'PT403' })
+  })
+
   it.each(['strength', 'reps', 'duration', 'distance'])('seeds confirmed %s values as an unconfirmed plan for either actor role', async kind => {
     const before = await history(kind)
     await history(kind, '2026-10-28', card, coach, coach, false)

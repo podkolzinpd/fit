@@ -435,6 +435,22 @@ describe('workout exercise editor rules', () => {
     expect(screen.getByText('В прошлый раз: 55 кг × 8 повт.')).toBeInTheDocument()
   })
 
+  it.each(['plan', 'fact'] as const)('retains RPE5 and5.5 in the %s editor', async (entryMode) => {
+    function RpeHarness() {
+      const [draft, setDraft] = useState(exercises)
+      return <WorkoutExerciseEditor entryMode={entryMode} showRpeByDefault exercises={draft} onChange={setDraft} onOpenPicker={vi.fn()} onReplaceExercise={vi.fn()} />
+    }
+    const user = userEvent.setup()
+    render(<RpeHarness />)
+    const select = screen.getByLabelText(`${entryMode === 'plan' ? 'Целевой' : 'Фактический'} RPE, подход 1`)
+    await user.selectOptions(select, '5')
+    expect(select).toHaveValue('5')
+    await user.selectOptions(select, '5.5')
+    expect(select).toHaveValue('5.5')
+    await user.selectOptions(select, '')
+    expect(select).toHaveValue('')
+  })
+
   it('keeps RPE hidden until it is requested from the exercise menu', async () => {
     const user = userEvent.setup()
     render(<EditorHarness onOpenPicker={vi.fn()} />)
