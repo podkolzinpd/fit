@@ -1,0 +1,51 @@
+/* FIN701: the approved compact overview is scoped to Lime. Personal and Mono
+   summaries retain their existing composition. */
+.phone-frame.fit-lime-shell.finance-lime-shell .finance-compact-page > .page-header {
+  grid-template-columns: 44px minmax(0, 1fr) auto; gap: 10px; margin-bottom: 8px;
+}
+.phone-frame.fit-lime-shell.finance-lime-shell .finance-compact-page > .page-header > h1 { text-align: left; }
+.phone-frame.fit-lime-shell .finance-compact-period { grid-column: 3; grid-row: 1; min-width: 0; }
+.phone-frame.fit-lime-shell .finance-compact-period .overflow-trigger {
+  min-height: 44px; padding: 0; background: transparent; color: var(--lime-text); font-size: 13px; border: 0;
+}
+.phone-frame.fit-lime-shell .finance-compact-period .overflow-trigger > span,
+.phone-frame.fit-lime-shell .finance-monthly-compact .overflow-trigger > span { display: flex; align-items: center; gap: 4px; }
+.phone-frame.fit-lime-shell .finance-compact-period svg,
+.phone-frame.fit-lime-shell .finance-monthly-compact .overflow-trigger svg { width: 14px; height: 14px; }
+.phone-frame.fit-lime-shell .finance-monthly-compact { margin-block: 8px 0; }
+.phone-frame.fit-lime-shell .finance-monthly-compact .finance-monthly-card {
+  display: grid; grid-template-columns: 112px minmax(0, 1fr); align-items: center; gap: 18px;
+  padding: 16px; min-height: 144px; border-radius: var(--lime-radius-card);
+}
+.phone-frame.fit-lime-shell .finance-monthly-compact .finance-monthly-ring { width: 112px; margin: 0; }
+.phone-frame.fit-lime-shell .finance-monthly-figures { min-width: 0; display: flex; flex-direction: column; align-items: flex-start; }
+.phone-frame.fit-lime-shell .finance-monthly-figures .overflow-trigger {
+  min-height: 44px; padding: 0; color: var(--lime-text-secondary); background: transparent; border: 0; font-size: 13px;
+}
+.phone-frame.fit-lime-shell .finance-monthly-figures > strong {
+  max-width: 100%; font-weight: 500; line-height: 1.15; letter-spacing: -.03em;
+  white-space: normal; overflow-wrap: anywhere; font-variant-numeric: tabular-nums;
+}
+.phone-frame.fit-lime-shell .finance-monthly-figures > :is(span, small) {
+  max-width: 100%; margin-top: 5px; color: var(--lime-text-secondary); font-size: 12px; line-height: 18px; overflow-wrap: anywhere;
+}
+.phone-frame.fit-lime-shell .finance-compact-current {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  margin: 4px 0 8px; min-height: 48px; font-size: 12px; color: var(--lime-text-secondary);
+}
+.phone-frame.fit-lime-shell .finance-compact-current > span { flex: none; font-size: 11px; }
+.phone-frame.fit-lime-shell .finance-compact-current button {
+  display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 4px;
+  min-width: 44px; min-height: 44px; padding: 0; border: 0; border-radius: 12px;
+  color: inherit; background: transparent; font-size: 12px; line-height: 18px;
+}
+.phone-frame.fit-lime-shell .finance-compact-current strong { color: var(--lime-text); overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
+.phone-frame.fit-lime-shell .finance-compact-current button:last-child strong { color: var(--lime-yellow); }
+@media(max-width:360px) {
+  .phone-frame.fit-lime-shell.finance-lime-shell .finance-compact-page > .page-header { gap: 6px; }
+  .phone-frame.fit-lime-shell .finance-compact-period .overflow-trigger { font-size: 12px; }
+  .phone-frame.fit-lime-shell .finance-monthly-compact .finance-monthly-card { grid-template-columns: 96px minmax(0, 1fr); padding: 12px; gap: 12px; min-height: 124px; }
+  .phone-frame.fit-lime-shell .finance-monthly-compact .finance-monthly-ring { width: 96px; }
+  .phone-frame.fit-lime-shell .finance-compact-current { gap: 5px; }
+  .phone-frame.fit-lime-shell .finance-compact-current button { font-size: 11px; }
+}

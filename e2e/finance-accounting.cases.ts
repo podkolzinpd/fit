@@ -4,6 +4,18 @@ import { clientId, conversationId, newWorkoutId, workoutId, workout, mockPilot, 
 
 const coach = 'c0ac0000-6010-4000-8000-000000000001'
 const stamp = '2026-10-01T10:00:00Z'
+async function changeFinanceMonth(page: Page, direction: 'Предыдущий месяц' | 'Следующий месяц') {
+  const direct = page.getByRole('button', { name: direction, exact: true })
+  if (await direct.count()) return direct.click()
+  await page.getByRole('button', { name: /^Месяц финансов:/ }).click()
+  await page.getByRole('menuitem', { name: direction, exact: true }).click()
+}
+async function changeFinanceMetric(page: Page, label: 'Поступления' | 'Тренировки') {
+  const direct = page.getByRole('button', { name: label, exact: true })
+  if (await direct.count()) return direct.click()
+  await page.getByRole('button', { name: /^Показатель итогов:/ }).click()
+  await page.getByRole('menuitem', { name: label, exact: true }).click()
+}
 async function accountingFixture(page: Page, fitLime = true, workouts?: MockWorkout[]) {
   await page.clock.setFixedTime(new Date('2026-11-03T09:00:00Z'))
   await mockPilot(page, { profileId: coach, fitLime, ...(workouts ? { workouts } : {}) })
@@ -141,7 +153,7 @@ export function financeAccountingCases() {
     await expect(page.locator('#finance-payments-panel .finance-payment')).toHaveCount(2)
     await expect(total).toContainText(/100,01/)
     await page.getByRole('button',{name:'За месяц',exact:true}).click()
-    await page.getByRole('button',{name:'Предыдущий месяц'}).click()
+    await changeFinanceMonth(page, 'Предыдущий месяц')
     await expect(total).toContainText(/200,02/)
     await expect(page.locator('#finance-payments-panel .finance-payment')).toHaveCount(1)
     await page.locator('.page-back').click()
@@ -183,7 +195,7 @@ export function financeAccountingCases() {
       archivedAt: index===6?stamp:null, activeClient:index!==6, completedSessions:index+1,
       receivedCents:(index+1)*10001, dueCents:0, nearestPaymentDueOn:null, unpaidPackageCount:0,
       activePackageCount:1, upcomingPackageCount:0, sessionsRemaining:10, overdue:false,
-      lowSessions:false, unassignedSessions:0, needsAttention:false,
+      lowSessions:false, unassignedSessions:index===0?1:0, needsAttention:index===0,
     }))
     let failed = false
     await page.route('**/v1/finance/overview*',route => {
@@ -191,7 +203,7 @@ export function financeAccountingCases() {
       const month = new URL(route.request().url()).searchParams.get('month')!
       const rows = month==='2026-11'?clients:[]
       return route.fulfill({json:{overview:{month,receivedCents:rows.reduce((n,c)=>n+c.receivedCents,0),
-        completedSessions:rows.reduce((n,c)=>n+c.completedSessions,0),dueCents:0,attentionCount:0,clients:rows}}})
+        completedSessions:rows.reduce((n,c)=>n+c.completedSessions,0),dueCents:0,attentionCount:rows.filter(c=>c.needsAttention).length,clients:rows}}})
     })
     await page.goto('/finance?month=2026-11')
     const total=page.locator('[data-finance-monthly-total]')
@@ -200,21 +212,27 @@ export function financeAccountingCases() {
     await expect(page.locator('.finance-monthly-name small')).toHaveCount(0)
     await expect(page.locator('.finance-monthly')).not.toContainText('%')
     await expect(page.locator('.finance-monthly-client')).toHaveCount(6)
+    await page.getByRole('button',{name:'Требуют внимания сейчас: 1'}).click()
+    await expect(page.locator('.finance-monthly-client')).toHaveCount(1)
+    await expect(total).toContainText(/2\s800,28/)
+    await page.getByRole('button',{name:'Все',exact:true}).click()
     for(const width of [320,390,430,1440]){
       await page.setViewportSize({width,height:844})
       expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true)
       expect(await page.locator('.finance-monthly-name').evaluateAll(nodes=>nodes.every(node=>getComputedStyle(node).fontFamily.includes('YS Geo')))).toBe(true)
-      expect(await page.locator('.finance-monthly-switch').evaluate(node=>{
-        const items=[...node.querySelectorAll('button')].map(button=>button.getBoundingClientRect())
-        const bounds=node.getBoundingClientRect(),style=getComputedStyle(node),first=items[0],last=items[1]
-        return !!first && !!last && Math.abs(first.width-last.width)<=1
-          && Math.abs(first.left-bounds.left-parseFloat(style.paddingLeft)-parseFloat(style.borderLeftWidth))<=1
-          && Math.abs(bounds.right-last.right-parseFloat(style.paddingRight)-parseFloat(style.borderRightWidth))<=1
+      expect(await page.locator('.finance-monthly-card').evaluate(node=>{
+        const ring=node.querySelector('.finance-monthly-ring')!.getBoundingClientRect()
+        const figures=node.querySelector('.finance-monthly-figures')!.getBoundingClientRect()
+        const bounds=node.getBoundingClientRect()
+        return ring.width<=112.5 && figures.left>=ring.right+10 && figures.right<=bounds.right-11 && bounds.height<=190
       })).toBe(true)
+      await expect(page.locator('.finance-monthly-companion')).toHaveCount(0)
+      await expect(page.locator('.finance-period-block')).toHaveCount(0)
+      await expect(page.locator('.page-header').getByRole('button',{name:/^Месяц финансов:/})).toBeVisible()
       await page.locator('.finance-monthly').scrollIntoViewIfNeeded()
-      expect(await page.locator('.finance-monthly-current-summary p').evaluateAll(nodes=>{
+      expect(await page.locator('.finance-compact-current button').evaluateAll(nodes=>{
         const [first,last]=nodes.map(node=>node.getBoundingClientRect())
-        return !!first && !!last && Math.abs(first.y-last.y)<=1 && Math.abs(first.width-last.width)<=1
+        return !!first && !!last && Math.abs(first.y-last.y)<=1 && first.height>=44 && last.height>=44
       })).toBe(true)
       await page.screenshot({path:info.outputPath(`monthly-money-${width}.png`),fullPage:true})
       const last = page.locator('.finance-monthly-client').last()
@@ -222,7 +240,7 @@ export function financeAccountingCases() {
       expect(await last.evaluate(node=>{const r=node.getBoundingClientRect();return document.elementFromPoint(r.x+r.width/2,r.y+r.height/2)?.closest('a')===node})).toBe(true)
       await page.screenshot({path:info.outputPath(`monthly-clients-${width}.png`),fullPage:true})
     }
-    await page.getByRole('button',{name:'Тренировки',exact:true}).click()
+    await changeFinanceMetric(page, 'Тренировки')
     await expect(total).toHaveText('28')
     await expect(page.locator('.finance-monthly-value').first()).toHaveText('1')
     const search=page.getByRole('searchbox',{name:'Поиск клиента'})
@@ -236,7 +254,7 @@ export function financeAccountingCases() {
     await expect(page.locator('.finance-monthly-client')).toContainText('Спортсмен 6')
     await expect(total).toHaveText('28')
     await page.screenshot({path:info.outputPath('monthly-sessions-archive.png'),fullPage:true})
-    await page.getByRole('button',{name:'Предыдущий месяц'}).click()
+    await changeFinanceMonth(page, 'Предыдущий месяц')
     await expect(total).toHaveText('0')
     await expect(page.getByText('Проведённых занятий за месяц нет')).toBeVisible()
     failed=true
@@ -245,7 +263,7 @@ export function financeAccountingCases() {
     failed=false
     await page.getByRole('button',{name:'Повторить'}).click()
     await expect(page.locator('.finance-monthly')).toBeVisible()
-    // A long amount must fit inside the inner disk, not merely its container.
+    // The accepted compact layout puts the exact amount beside the disk; neither may overlap or overflow.
     clients[0]!.receivedCents=98765432101
     await page.goto('/finance?month=2026-11')
     await expect(total).toContainText(/987\s657\s021,28/)
@@ -253,7 +271,7 @@ export function financeAccountingCases() {
     for(const width of [320,430]){
       await page.setViewportSize({width,height:844})
       await page.locator('.finance-monthly').scrollIntoViewIfNeeded()
-      expect(await total.evaluate(node=>{const r=node.getBoundingClientRect(),ring=node.closest('.finance-monthly-ring')!.getBoundingClientRect(),cx=ring.x+ring.width/2,cy=ring.y+ring.height/2,limit=ring.width*87.5/220-4;return [r.left,r.right].every(x=>[r.top,r.bottom].every(y=>Math.hypot(x-cx,y-cy)<=limit))})).toBe(true)
+      expect(await total.evaluate(node=>{const r=node.getBoundingClientRect(),card=node.closest('.finance-monthly-card')!.getBoundingClientRect(),ring=node.closest('.finance-monthly-card')!.querySelector('.finance-monthly-ring')!.getBoundingClientRect();return node.scrollWidth<=node.clientWidth+1 && r.left>=ring.right+10 && r.right<=card.right-11 && r.bottom<=card.bottom-11})).toBe(true)
       await page.screenshot({path:info.outputPath(`monthly-large-ring-${width}.png`),fullPage:true})
       await page.locator('.finance-monthly-client').first().scrollIntoViewIfNeeded()
       expect(await page.locator('.finance-monthly-value').first().evaluate(node=>node.scrollWidth<=node.clientWidth+1)).toBe(true)
@@ -512,10 +530,10 @@ export function financeAccountingCases() {
     await page.getByRole('alertdialog').getByRole('button', { name: 'Удалить', exact: true }).click()
     await expect(history.locator('.finance-payment')).toHaveCount(1)
     await expect(history.locator('.finance-receipts-total')).toContainText(/5\s000/)
-    await page.getByRole('button', { name: 'Предыдущий месяц' }).click()
+    await changeFinanceMonth(page, 'Предыдущий месяц')
     await expect(page.getByText('Оплат за этот месяц нет.')).toBeVisible()
     await page.screenshot({ path: info.outputPath('receipts-empty-month.png'), fullPage: true })
-    await page.getByRole('button', { name: 'Следующий месяц' }).click()
+    await changeFinanceMonth(page, 'Следующий месяц')
     await page.getByRole('group', { name: 'Раздел финансов' }).getByRole('button', { name: 'Клиенты', exact: true }).click()
     await expect(page.locator('.finance-overview-summary')).toContainText(/5\s000/)
   })
