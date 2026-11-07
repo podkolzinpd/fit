@@ -118,9 +118,9 @@
 .fit-lime-shell .coach-fortnight-appointment > svg { flex: 0 0 12px; width: 12px; height: 12px; align-self: center; }
 .fit-lime-shell .coach-fortnight-appointment.schedule-event-skipped .coach-fortnight-client { text-decoration: line-through; }
 
-/* The fortnight overview scrolls above its existing FAB and navigation, not behind them. */
+/* Keep the full scrollport; trailing space lets the last rows clear the FAB and navigation. */
 .fit-lime-shell .schedule-v2.coach-fortnight-view { padding-bottom: 0; }
-.fit-lime-shell:has(.coach-fortnight-view) .content { margin-bottom: calc(max(10px, env(safe-area-inset-bottom)) + 166px); padding-bottom: 12px; }
+.fit-lime-shell:has(.coach-fortnight-view) .content { margin-bottom: 0; padding-bottom: calc(max(10px, env(safe-area-inset-bottom)) + 166px); scroll-padding-bottom: calc(max(10px, env(safe-area-inset-bottom)) + 166px); }
 .fit-lime-shell .coach-fortnight-view .coach-calendar-filters { align-items: center; min-height: 44px; margin-bottom: 0; }
 .fit-lime-shell .coach-fortnight-view .coach-calendar-year { flex: 0 0 auto; color: var(--lime-text-secondary); font-size: 12px; }
 .fit-lime-shell .coach-fortnight-view .coach-calendar-filters > .coach-schedule-filter-options { min-width: 0; }
