@@ -1,11 +1,11 @@
 import {test} from 'node:test'
-import {generateKeyPairSync} from 'node:crypto'
+import {generateKeyPairSync,randomUUID} from 'node:crypto'
 import assert from 'node:assert/strict'
 import {readFileSync,mkdtempSync,writeFileSync,rmSync} from 'node:fs'
 import {tmpdir} from 'node:os'
 import {join} from 'node:path'
 import {spawnSync} from 'node:child_process'
-import {readRestoreTarget,readCurrentProfileEvidence,readConfirmedRestoreInvitation,readConfirmedRestoreVisibility,planClientRestore,applyClientRestore,verifyClientRestore,privateRestoreTechnicalResult} from './cloudru-client-restore.mjs'
+import {readRestoreTarget,readCurrentProfileEvidence,readConfirmedRestoreInvitation,readConfirmedRestoreVisibility,readImportedAccessAudit,planClientRestore,applyClientRestore,verifyClientRestore,privateRestoreTechnicalResult} from './cloudru-client-restore.mjs'
 import {readPrivateRestoreInput,executePrivateRestoreInput,clientRestoreInputDigest,validatePrivateRestoreCapability,privateRestoreInputParts} from './cloudru-client-restore-private.mjs'
 import {assertUnreceivedUploadFiles,assertUnreceivedCloudruObjects} from './cloudru-journal-upload.mjs'
 
@@ -217,5 +217,20 @@ test('invalid owner confirmation never reads the database and runtime evidence n
   await assert.rejects(readConfirmedRestoreVisibility({query:async sql=>{calls.push(sql);return{rows:[row]}}},
    {confirmedCardEvidence:{writePlanReady:false,currentId:privateTarget.athleteProfileId,cards:[]}}),/runtime_role/)
   assert.equal(calls.at(-1),'rollback');assert.equal(calls.some(sql=>sql.includes('public.')),false)
+ }
+})
+
+test('all seventeen import scopes are bounded, distinct and signed; the audit cannot request writes',async()=>{
+ const scope=Array.from({length:17},(_,i)=>({code:'F'+String(i+1).padStart(2,'0'),profileId:randomUUID(),journalKind:i===16?'trainer_self':'athlete',
+  expectedHistory:{clientId:randomUUID(),workoutIds:[randomUUID()],workouts:1,exercises:1,sets:1}}))
+ const signed=privateRestoreInputParts({...privatePayload,importedAccessAudit:scope},'123-1',operatorKeys.privateKey)
+ assert.deepEqual(readPrivateRestoreInput(signed,'123-1',operatorKeys.publicKey).importedAccessAudit,scope)
+ const value=JSON.parse(Buffer.from(signed.join(''),'base64').toString())
+ value.importedAccessAudit[0].profileId=randomUUID()
+ assert.throws(()=>readPrivateRestoreInput(parts(value),'123-1',operatorKeys.publicKey),/private_signature/)
+ assert.equal(readImportedAccessAudit(scope.map((v,i)=>i===0?{...v,profileId:null}:v)).length,17)
+ for(const bad of [scope.slice(1),[...scope,scope[0]],scope.map(v=>({...v,code:'F01'})),scope.map(v=>({...v,profileId:scope[0].profileId})),scope.map(v=>({...v,extra:'write'}))]){
+  assert.throws(()=>readImportedAccessAudit(bad),/imported_audit_scope/)
+  await assert.rejects(planClientRestore({query:async()=>assert.fail('invalid scope must not query')},{},privateExpected,null,null,bad),/imported_audit_scope/)
  }
 })

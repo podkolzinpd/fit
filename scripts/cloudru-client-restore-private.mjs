@@ -3,7 +3,7 @@ import {createRequire} from 'node:module'
 import {writeFileSync} from 'node:fs'
 import {pathToFileURL} from 'node:url'
 import {prepareCloudruUpload,loadCloudruUpload,cleanupCloudruUpload,cleanupUnreceivedCloudruUpload,sealUpload,journalSession,journalObject,validateUploadCapability,safeJournalUploadFailure} from './cloudru-journal-upload.mjs'
-import {readRestoreTarget,readExpectedRestoreHistory,readCurrentProfileEvidence,readConfirmedRestoreInvitation,readConfirmedRestoreVisibility,planClientRestore} from './cloudru-client-restore.mjs'
+import {readRestoreTarget,readExpectedRestoreHistory,readCurrentProfileEvidence,readConfirmedRestoreInvitation,readConfirmedRestoreVisibility,readImportedAccessAudit,readImportedAccessVisibility,planClientRestore} from './cloudru-client-restore.mjs'
 
 // Public protocol identifiers; these are NEVER derived from a customer.
 export const clientRestoreInputDigest=createHash('sha256').update('fit-private-client-restore-input-v1').digest('hex')
@@ -18,18 +18,19 @@ export function validatePrivateRestoreCapability(cap,session,now=Date.now()){
    &&url.searchParams.get('X-Amz-SignedHeaders')==='host'&&/^[a-f0-9]{64}$/u.test(url.searchParams.get('X-Amz-Signature')??''),'private_reply_capability')
  return cap
 }
-const signingBody=(session,pair,expected,evidence,confirmed)=>JSON.stringify(['fit-private-client-restore-input-v1',session,pair.trainerId,pair.athleteId,
+const signingBody=(session,pair,expected,evidence,confirmed,audit)=>JSON.stringify(['fit-private-client-restore-input-v1',session,pair.trainerId,pair.athleteId,
  expected.clientId,expected.workoutIds,expected.workouts,expected.exercises,expected.sets,...(evidence?[evidence]:[]),
- ...(confirmed?[{confirmedInvitation:confirmed}]:[])])
+ ...(confirmed?[{confirmedInvitation:confirmed}]:[]),...(audit?[{importedAccessAudit:audit}]:[])])
 export function privateRestoreInputParts(value,session,operatorPrivatePem){
  journalSession(session)
  const pair=readRestoreTarget(JSON.stringify(value.target)),expected=readExpectedRestoreHistory(value.expectedHistory)
  const evidence=value.currentProfileEvidence===undefined?null:readCurrentProfileEvidence(value.currentProfileEvidence)
  const confirmed=value.confirmedInvitation===undefined?null:readConfirmedRestoreInvitation(value.confirmedInvitation)
- need(!(evidence&&confirmed),'conflicting_evidence')
- const signature=sign('sha256',Buffer.from(signingBody(session,pair,expected,evidence,confirmed)),{key:operatorPrivatePem,padding:constants.RSA_PKCS1_PSS_PADDING,saltLength:32}).toString('base64')
+ const audit=value.importedAccessAudit===undefined?null:readImportedAccessAudit(value.importedAccessAudit)
+ need(!(evidence&&(confirmed||audit)),'conflicting_evidence')
+ const signature=sign('sha256',Buffer.from(signingBody(session,pair,expected,evidence,confirmed,audit)),{key:operatorPrivatePem,padding:constants.RSA_PKCS1_PSS_PADDING,saltLength:32}).toString('base64')
  const encoded=Buffer.from(JSON.stringify({version:1,session,target:value.target,expectedHistory:expected,signature,
-   ...(evidence?{currentProfileEvidence:evidence}:{}),...(confirmed?{confirmedInvitation:confirmed}:{})})).toString('base64')
+   ...(evidence?{currentProfileEvidence:evidence}:{}),...(confirmed?{confirmedInvitation:confirmed}:{}),...(audit?{importedAccessAudit:audit}:{})})).toString('base64')
  const at=Math.ceil(encoded.length/2);return [encoded.slice(0,at),encoded.slice(at)]
 }
 export function readPrivateRestoreInput(parts,session,operatorPublicPem){
@@ -39,15 +40,18 @@ export function readPrivateRestoreInput(parts,session,operatorPublicPem){
  let value;try{value=JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(bytes))}catch{throw Error('client_restore_private_input')}
  const keys=value&&Object.keys(value).sort().join(',')
  need(value&&['expectedHistory,session,signature,target,version','currentProfileEvidence,expectedHistory,session,signature,target,version',
-   'confirmedInvitation,expectedHistory,session,signature,target,version'].includes(keys)&&value.version===1
+   'confirmedInvitation,expectedHistory,session,signature,target,version',
+   'expectedHistory,importedAccessAudit,session,signature,target,version',
+   'confirmedInvitation,expectedHistory,importedAccessAudit,session,signature,target,version'].includes(keys)&&value.version===1
    &&value.session===journalSession(session),'private_input')
  const pair=readRestoreTarget(JSON.stringify(value.target)),expectedHistory=readExpectedRestoreHistory(value.expectedHistory)
  const evidence=value.currentProfileEvidence===undefined?null:readCurrentProfileEvidence(value.currentProfileEvidence)
  const confirmed=value.confirmedInvitation===undefined?null:readConfirmedRestoreInvitation(value.confirmedInvitation)
+ const audit=value.importedAccessAudit===undefined?null:readImportedAccessAudit(value.importedAccessAudit)
  need(typeof value.signature==='string'&&value.signature.length<=1500&&/^[A-Za-z0-9+/]+={0,2}$/u.test(value.signature),'private_signature')
- need(verify('sha256',Buffer.from(signingBody(session,pair,expectedHistory,evidence,confirmed)),
+ need(verify('sha256',Buffer.from(signingBody(session,pair,expectedHistory,evidence,confirmed,audit)),
    {key:operatorPublicPem,padding:constants.RSA_PKCS1_PSS_PADDING,saltLength:32},Buffer.from(value.signature,'base64')),'private_signature')
- return {pair,expectedHistory,...(evidence?{currentProfileEvidence:evidence}:{}),...(confirmed?{confirmedInvitation:confirmed}:{})}
+ return {pair,expectedHistory,...(evidence?{currentProfileEvidence:evidence}:{}),...(confirmed?{confirmedInvitation:confirmed}:{}),...(audit?{importedAccessAudit:audit}:{})}
 }
 export async function executePrivateRestoreInput({phase,session,operatorPublicPem,store,createOwner,createRuntime,savePlan,operator}){
  journalSession(session)
@@ -63,12 +67,13 @@ export async function executePrivateRestoreInput({phase,session,operatorPublicPe
   const input=readPrivateRestoreInput(io.parts,session,io.publicPem)
   owner=await createOwner()
   let plan
-  try{plan=await planClientRestore(owner,input.pair,input.expectedHistory,input.currentProfileEvidence,input.confirmedInvitation)}
+  try{plan=await planClientRestore(owner,input.pair,input.expectedHistory,input.currentProfileEvidence,input.confirmedInvitation,input.importedAccessAudit)}
   catch(error){
-   if(error?.privateDiagnostic?.confirmedCardEvidence){
+   if(error?.privateDiagnostic?.confirmedCardEvidence||error?.privateDiagnostic?.importedAccessAudit){
     need(typeof createRuntime==='function','runtime_reader_required')
     runtime=await createRuntime()
-    error.privateDiagnostic.runtimeVisibility=await readConfirmedRestoreVisibility(runtime,error.privateDiagnostic)
+    if(error.privateDiagnostic.confirmedCardEvidence)error.privateDiagnostic.runtimeVisibility=await readConfirmedRestoreVisibility(runtime,error.privateDiagnostic)
+    if(error.privateDiagnostic.importedAccessAudit)error.privateDiagnostic.importedRuntimeVisibility=await readImportedAccessVisibility(runtime,error.privateDiagnostic)
    }
    throw error
   }
