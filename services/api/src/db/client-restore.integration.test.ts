@@ -3,7 +3,7 @@ import { fileURLToPath } from 'node:url'
 import { runner } from 'node-pg-migrate'
 import { Pool } from 'pg'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
-import { readRestoreTarget, planClientRestore, applyClientRestore, verifyClientRestore, type RestorePlan } from '../../../../scripts/cloudru-client-restore.mjs'
+import { readRestoreTarget, planClientRestore, applyClientRestore, verifyClientRestore, readConfirmedRestoreVisibility, type RestorePlan } from '../../../../scripts/cloudru-client-restore.mjs'
 
 const source = process.env.TEST_DATABASE_URL
 const database = `fit_client_restore_${process.pid}`
@@ -255,6 +255,88 @@ describe.skipIf(source === undefined)('owner-approved canonical client restorati
     await apply(q)
     await owner.query('update public.clients set auth_user_id=null where id=$1', [g.card])
     await expect(verify(q)).rejects.toThrow('runtime_receipt')
+  })
+
+  async function confirmedFixture() {
+    const f = await privateFixture(), current = randomUUID(), currentCard = randomUUID(), invitationId = randomUUID()
+    await owner.query('delete from app_private.auth_identities where profile_id=$1', [f.athleteId])
+    await owner.query("insert into public.profiles(id,first_name,account_role) values($1,'Synthetic current','client')", [current])
+    await owner.query("insert into app_private.auth_identities(provider,provider_subject_sha256,profile_id,identity_origin) values('yandex',$1,$2,'native')", [createHash('sha256').update(current).digest('hex'), current])
+    await owner.query("insert into public.clients(id,trainer_id,full_name) values($1,$2,'Synthetic current card')", [currentCard, f.trainerId])
+    await owner.query('insert into public.client_trainers(client_id,trainer_id) values($1,$2)', [currentCard, f.trainerId])
+    const code = randomUUID().toUpperCase()
+    await owner.query(`insert into public.client_invitations(id,client_id,created_by,target_role,code_hash,expires_at)
+      values($1,$2,$3,'client',$4,now()+interval '1 day')`, [invitationId, currentCard, f.trainerId, createHash('sha256').update(code).digest('hex')])
+    const c = await runtime.connect()
+    try {
+      await c.query('begin'); await c.query("select set_config('request.jwt.claim.sub',$1,true)", [current])
+      expect((await c.query('select public.claim_client_invitation($1) id', [code])).rows).toEqual([{ id: currentCard }])
+      await c.query('commit')
+    } finally { c.release() }
+    const claimed = (await owner.query<{ claimed_at: Date }>('select claimed_at from public.client_invitations where id=$1', [invitationId])).rows[0]!
+    const proof = { invitationId, claimedAt: claimed.claimed_at.toISOString(), ownerConfirmedAt: new Date().toISOString() }
+    return { ...f, current, currentCard, code, proof }
+  }
+
+  async function confirmedDiagnosis(f: Awaited<ReturnType<typeof confirmedFixture>>, proof = f.proof) {
+    const c = await owner.connect()
+    try {
+      return await planClientRestore(c, { trainerId: f.trainerId, athleteId: f.athleteId }, f.expected, null, proof)
+        .then(() => { throw Error('two-card evidence must not produce an apply plan') }, (error: unknown) => error) as {
+          message: string; privateDiagnostic: { confirmedCardEvidence: {
+            cards: { id: string; auth_user_id: string }[]
+            periods: { client_id: string; trainer_id: string; status: string }[]
+            cardData: { table: string; rows: { client_id: string; count: number }[] }[]
+          } }
+        }
+    } finally { c.release() }
+  }
+
+  it('reproduces a real accepted invitation on a different card: coach is visible there, imported history is not', async () => {
+    const f = await confirmedFixture(), e = await confirmedDiagnosis(f)
+    expect(e.message).toBe('client_restore_confirmed_cards_review_required')
+    expect(e.privateDiagnostic).toMatchObject({ confirmedCardEvidence: { currentId: f.current, writePlanReady: false,
+      importedCounts: { workouts: 21, exercises: 1, sets: 1 } } })
+    expect(e.privateDiagnostic.confirmedCardEvidence.cards).toContainEqual(expect.objectContaining({ id: f.card, auth_user_id: f.athleteId }))
+    expect(e.privateDiagnostic.confirmedCardEvidence.cards).toContainEqual(expect.objectContaining({ id: f.currentCard, auth_user_id: f.current }))
+    const c = await runtime.connect()
+    try {
+      const view = await readConfirmedRestoreVisibility(c, e.privateDiagnostic)
+      expect(view).toMatchObject({ athlete: { ownCards: [{ id: f.currentCard }], trainers: [{ client_id: f.currentCard, trainer_id: f.trainerId }], importedCounts: { workouts: 0, exercises: 0, sets: 0 } } })
+    } finally { c.release() }
+    expect(JSON.stringify(e.privateDiagnostic)).not.toMatch(/Synthetic|token_sha256|provider_subject_sha256|code_hash/)
+    await expect(apply(e.privateDiagnostic as unknown as RestorePlan)).rejects.toThrow('client_restore_plan')
+  })
+
+  it('records both cards finance/history and distinguishes a real unlink from a broken normal trainer read', async () => {
+    const f = await confirmedFixture()
+    await owner.query("insert into public.trainer_finance_packages(trainer_id,client_id,title,sessions_total,price_cents,starts_on) values($1,$2,'Current private finance',5,10000,current_date)", [f.trainerId, f.currentCard])
+    const c = await runtime.connect()
+    try {
+      await c.query('begin'); await c.query("select set_config('request.jwt.claim.sub',$1,true)", [f.current])
+      await c.query('select public.remove_client_trainer($1,$2)', [f.currentCard, f.trainerId])
+      await c.query('commit')
+      const e = await confirmedDiagnosis(f)
+      expect(e.privateDiagnostic.confirmedCardEvidence.periods).toContainEqual(expect.objectContaining({ client_id: f.currentCard, trainer_id: f.trainerId, status: 'disconnected' }))
+      const finance = e.privateDiagnostic.confirmedCardEvidence.cardData.find(t => t.table === 'trainer_finance_packages')
+      expect(finance?.rows).toContainEqual(expect.objectContaining({ client_id: f.currentCard, count: 1 }))
+      expect(finance?.rows).toContainEqual(expect.objectContaining({ client_id: f.card, count: 1 }))
+      expect(await readConfirmedRestoreVisibility(c, e.privateDiagnostic)).toMatchObject({ athlete: { ownCards: [{ id: f.currentCard }], trainers: [], importedCounts: { workouts: 0, exercises: 0, sets: 0 } } })
+      await c.query('begin'); await c.query("select set_config('request.jwt.claim.sub',$1,true)", [f.current])
+      await expect(c.query('select public.claim_client_invitation($1)', [f.code])).rejects.toThrow('invitation_connection_ended')
+      await c.query('rollback')
+    } finally { c.release() }
+  })
+
+  it('rejects stale or foreign invitation bindings and changed imported history without creating repair state', async () => {
+    const f = await confirmedFixture()
+    expect((await confirmedDiagnosis(f, { ...f.proof, invitationId: randomUUID() })).message).toBe('client_restore_confirmed_invitation_binding')
+    expect((await confirmedDiagnosis(f, { ...f.proof, claimedAt: new Date(Date.parse(f.proof.claimedAt)-1000).toISOString() })).message).toBe('client_restore_confirmed_invitation_binding')
+    await owner.query('update public.client_invitations set created_by=$2 where id=$1', [f.proof.invitationId, f.other])
+    expect((await confirmedDiagnosis(f)).message).toBe('client_restore_confirmed_invitation_binding')
+    const g = await confirmedFixture()
+    await owner.query('delete from public.workout_sets where client_id=$1', [g.card])
+    expect((await confirmedDiagnosis(g)).message).toBe('client_restore_imported_history_changed')
   })
 
 })

@@ -5,7 +5,7 @@ import {readFileSync,mkdtempSync,writeFileSync,rmSync} from 'node:fs'
 import {tmpdir} from 'node:os'
 import {join} from 'node:path'
 import {spawnSync} from 'node:child_process'
-import {readRestoreTarget,readCurrentProfileEvidence,planClientRestore,applyClientRestore,verifyClientRestore,privateRestoreTechnicalResult} from './cloudru-client-restore.mjs'
+import {readRestoreTarget,readCurrentProfileEvidence,readConfirmedRestoreInvitation,readConfirmedRestoreVisibility,planClientRestore,applyClientRestore,verifyClientRestore,privateRestoreTechnicalResult} from './cloudru-client-restore.mjs'
 import {readPrivateRestoreInput,executePrivateRestoreInput,clientRestoreInputDigest,validatePrivateRestoreCapability,privateRestoreInputParts} from './cloudru-client-restore-private.mjs'
 import {assertUnreceivedUploadFiles,assertUnreceivedCloudruObjects} from './cloudru-journal-upload.mjs'
 
@@ -191,4 +191,31 @@ test('malformed, future or stale current-profile proof fails before database acc
 test('private Actions results allow only technical flags, never customer fields or counts',()=>{
  const result=privateRestoreTechnicalResult({event:'client_restore_verified',bothCanReadImported:true,done:100,trainerId:'synthetic-private-id',clientEmail:'synthetic@example.test',plan:{private:'fixture'},unexpectedCustomerField:'hidden'})
  assert.deepEqual(result,{event:'client_restore_verified',bothCanReadImported:true})
+})
+
+test('an owner-confirmed invitation is session-signed and cannot substitute a different claimant or claim time',()=>{
+ const proof={invitationId:'77777777-7777-4777-8777-777777777777',claimedAt:new Date(Date.now()-120000).toISOString(),ownerConfirmedAt:new Date(Date.now()-60000).toISOString()}
+ const signed=privateRestoreInputParts({...privatePayload,confirmedInvitation:proof},'123-1',operatorKeys.privateKey)
+ assert.deepEqual(readPrivateRestoreInput(signed,'123-1',operatorKeys.publicKey).confirmedInvitation,proof)
+ const value=JSON.parse(Buffer.from(signed.join(''),'base64').toString())
+ for(const change of [{invitationId:'88888888-8888-4888-8888-888888888888'},{claimedAt:new Date(Date.now()-180000).toISOString()},{ownerConfirmedAt:new Date(Date.now()-30000).toISOString()}])
+  assert.throws(()=>readPrivateRestoreInput(parts({...value,confirmedInvitation:{...proof,...change}}),'123-1',operatorKeys.publicKey),/private_signature/)
+ delete value.confirmedInvitation
+ assert.throws(()=>readPrivateRestoreInput(parts(value),'123-1',operatorKeys.publicKey),/private_signature/)
+ assert.throws(()=>privateRestoreInputParts({...privatePayload,confirmedInvitation:proof,currentProfileEvidence:{messageSha256:'a'.repeat(64),since:new Date().toISOString()}},'123-1',operatorKeys.privateKey),/conflicting_evidence/)
+})
+
+test('invalid owner confirmation never reads the database and runtime evidence never uses owner privileges',async()=>{
+ const proof={invitationId:'77777777-7777-4777-8777-777777777777',claimedAt:new Date(Date.now()-120000).toISOString(),ownerConfirmedAt:new Date(Date.now()-60000).toISOString()}
+ for(const value of [{}, {...proof,profileId:privateTarget.athleteProfileId},{...proof,claimedAt:new Date(Date.now()+60000).toISOString()},
+  {...proof,ownerConfirmedAt:new Date(Date.now()-180000).toISOString()}, {...proof,claimedAt:new Date(Date.now()-8*86400000).toISOString()}]){
+  assert.throws(()=>readConfirmedRestoreInvitation(value),/confirmed_invitation/)
+  await assert.rejects(planClientRestore({query:async()=>assert.fail('invalid proof must not query')},{},privateExpected,null,value),/confirmed_invitation/)
+ }
+ for(const row of [{username:'fit_owner',readonly:'on'},{username:'fit_api',readonly:'on',rolsuper:false,rolbypassrls:true}]){
+  const calls=[]
+  await assert.rejects(readConfirmedRestoreVisibility({query:async sql=>{calls.push(sql);return{rows:[row]}}},
+   {confirmedCardEvidence:{writePlanReady:false,currentId:privateTarget.athleteProfileId,cards:[]}}),/runtime_role/)
+  assert.equal(calls.at(-1),'rollback');assert.equal(calls.some(sql=>sql.includes('public.')),false)
+ }
 })
