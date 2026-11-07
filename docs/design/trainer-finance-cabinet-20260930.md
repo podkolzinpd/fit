@@ -2014,3 +2014,21 @@ head/assertion/timeouts/CI изменений; предыдущий b20 Live fla
 наш2029 обычным merge, mainCI и полной фактической приёмкой. При новой основе
 обновить ветку и exact-head CI. FIN703 уже включает sourcec8ff обычным merge,
 собственный product palette/локальные40+targeted2 результаты прежние; PR ещё нет.
+
+
+FIN-52 — 2026-11-07 — Codex / OpenAI. FIN702/#2029 слит штатным squash
+в main6434a207b87e1c5a1fd66c610bc4f7b48e9831cc после фактического принятия2028:
+213/213public,68web+68signedZIP, обеAPI и штатный readback/pilotOFF подтверждены
+владельцем. Перед merge: freshC5, sourcec8ff35/35success, CLEAN/MERGEABLE,
+нет active workflow_dispatch;2032 ФИТ14 ещёBLOCKED12done/12running/12queued,
+поэтому неготовый приоритетный пакет не заморозил готовую очередь.
+Hold ФИТ19 объявлен обоим активным координаторам до принятия2029; ФИТ13 не пинговали.
+Полное дерево6434 равно sourcec8ff; mainCI42379068116 запущен и обязателен.
+Public/ZIP harness подготовлен из exact6434 (исходные20finance+1lifecycle на
+каждый движок, реальные немокированные API закрыты); пока не исполнялся,
+публикация/приёмка впереди. FIN703 включила actual6434 обычным merge d9ee5314:
+конфликты3файлов разрешены только после доказательства6434tree==c8ff иc8ff
+ancestor собственного HEAD; итог merge имеет НУЛЕВОЙ file delta к прежнему
+FIN703 tree. Поэтому все upstream и свои изменения сохранены. Diff кmain
+теперь7файлов: palette/map/summary/tests и журнал, без API/SQL/Mono/toolbar
+изменений. Третий PR пока не открыт; ждёт опубликованного/принятого FIN702.
