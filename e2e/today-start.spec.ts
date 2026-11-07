@@ -320,7 +320,7 @@ test('today: quick review наследует настройку RPE тренер
   await mockNativeAiSession(page, 'trainer')
   await page.goto(nativeAiUrl('/today'))
 
-  await page.goto(nativeAiUrl('/profile/settings'))
+  await page.goto(nativeAiUrl('/profile/settings?section=training'))
   await page.getByRole('switch', { name: 'Показывать RPE', exact: true }).check()
   await page.goto(nativeAiUrl('/today'))
   await page.getByRole('button', { name: 'Ввести текстом' }).click()

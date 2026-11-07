@@ -36,6 +36,7 @@ export function AppLayout() {
   const calendarDestination = useCoachCalendarDestination(actor?.userId, unifiedCoachCalendar, pathname, search)
   const financeDestination = useCoachFinanceDestination(actor?.userId, unifiedCoachCalendar, pathname, search)
   const calendarParams = new URLSearchParams(search)
+  const trainerSettingsSection = pathname === '/profile/settings' ? calendarParams.get('section') : null
   const retainedOverview = pathname === '/today' && trainerScheduleV2Route && !calendarParams.has('date')
     && (calendarParams.has('week') || calendarParams.get('mode') === 'list')
   const serviceHistory = actor?.role === 'trainer' && pathname === servicesRoot
@@ -127,7 +128,7 @@ export function AppLayout() {
     if (retainedScrollKey) return
     const frame = window.requestAnimationFrame(() => contentRef.current?.scrollTo(0, 0))
     return () => window.cancelAnimationFrame(frame)
-  }, [pathname, routeStep, retainedScrollKey])
+  }, [pathname, routeStep, retainedScrollKey, trainerSettingsSection])
 
   // Создание, проверка, редактирование и live — один сфокусированный путь
   // тренировки. Нижняя навигация возвращается на списках и после выхода из
