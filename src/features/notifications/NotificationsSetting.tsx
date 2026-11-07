@@ -25,7 +25,7 @@ const STATUS_COPY: Record<DisplayState, string> = {
   'needs-connection': 'Нужно восстановить подключение',
 }
 
-export function NotificationsSetting({ userId, role = 'client' }: { userId: string; role?: 'trainer' | 'client' }) {
+export function NotificationsSetting({ userId, role = 'client', summary = false }: { userId: string; role?: 'trainer' | 'client'; summary?: boolean }) {
   const { pushNotifications: repository } = useDataBackend()
   const queryClient = useQueryClient()
   const native = isNativeWorkoutInactivityReminderSupported()
@@ -100,6 +100,8 @@ export function NotificationsSetting({ userId, role = 'client' }: { userId: stri
     if (native) void nativePermission.refetch()
   }
   const error = status.error ?? nativePermission.error
+
+  if (summary) return <span role="status">{native && role === 'trainer' ? 'Сообщения внутри Fit' : STATUS_COPY[state]}</span>
 
   if (native && role === 'trainer') return <p className="notification-channel-note"><strong>Новые сообщения</strong><span>Пока только внутри Fit.</span></p>
 

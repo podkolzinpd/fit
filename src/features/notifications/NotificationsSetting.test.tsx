@@ -55,6 +55,20 @@ function primeDefaults() {
 }
 
 describe('NotificationsSetting', () => {
+  it('uses the existing connection read for the trainer overview without rendering or changing preferences', async () => {
+    primeDefaults()
+    vi.stubGlobal('Notification', { permission: 'granted' })
+    repository.status.mockRejectedValue(new Error('offline'))
+    render(<NotificationsSetting userId={USER_ID} role="trainer" summary />, { wrapper: wrapper() })
+    expect(await screen.findByText('Не удалось проверить подключение')).toBeVisible()
+    expect(screen.queryByRole('switch')).not.toBeInTheDocument()
+    expect(screen.queryByRole('button')).not.toBeInTheDocument()
+    expect(screen.queryByText('Уведомления настроены')).not.toBeInTheDocument()
+    expect(repository.enable).not.toHaveBeenCalled()
+    expect(repository.setCategoryEnabled).not.toHaveBeenCalled()
+    expect(repository.sendTestPush).not.toHaveBeenCalled()
+  })
+
   it('keeps saved opt-outs visible and disabled when a refresh fails', async () => {
     primeDefaults()
     repository.status.mockRejectedValue(new Error('offline'))
