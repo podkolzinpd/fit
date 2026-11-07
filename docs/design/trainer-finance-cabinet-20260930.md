@@ -1466,3 +1466,117 @@ MAX_SAFE_INTEGER stress2/2 подтвердил точность копейки 
 суммы/строки во всех4ширинах, PNG просмотрены; финансовый frontend code466
 совпадает с4284 за исключением новой switch-правки. Full sourceCI новой
 версии обязателен; прежний CI4284 не используется для слияния нового head.
+
+FIN-27 — FIN603 локальная реализация: выбранные month/metric передаются в
+существующую карточку спортсмена; личный круг и второй итог используют тот же
+overview. Существующие tabs управляют показателем без второго переключателя;
+За месяц/Вся история меняют только список. Абонементы, оплаты/исправления,
+текущий долг и учёт сохраняются. Forward196 добавляет только read-only
+attendedWorkouts из собственных done/with_trainer, включая онлайн без ledger;
+source/ledger объединяются по workoutId без второго списания. Mono прежний.
+Причина отдельного source: ledger не описывает все состоявшиеся занятия;
+синтезировать оплату/учёт ради счётчика отвергнуто. Сохранён route state при
+replaceSearchParams, иначе терялся financeBackTo. Месяц/поиск/фильтр/scroll
+возвращаются существующим механизмом; нового хранилища прокрутки нет.
+Локально frontend345files/3074tests, coverage83.71/78.81/83.02/88.38; API1603
+passed/395 DB-gated skipped, lint/typecheck/build прошли. Полный finance browser
+40/40 Chromium/WebKit без retries, policy741/156, ровно один новый сценарий.
+Проверены финальные снимки320/390/430/1440 и история без ledger. Во время
+приёмки исправлены ожидание destination-root вместо совпавшего общего итога
+и scope видимого payment tabpanel. Переключение viewport вынесено после
+функционального roundtrip: изменение высоты WebKit запускает keyboard heuristic,
+не доказывая потерю scroll на реальном возврате. Assertions не ослаблялись.
+Физический iPhone/PWA/Android недоступен. Публикация/PG196 ещё гейты; новый
+общий formatter/размер крупных сумм FIN602 будет включён до финального CI.
+Дальше: включить принятый FIN602/main, проверить совместимость и выпустить
+только после его полной опубликованной приёмки. Реальные финансы не менялись.
+
+FIN-27, после включения FIN602 formatter/адаптивного размера: frontend345files/
+3075tests и coverage83.72/78.82/83.04/88.38 прошли; typecheck/build/target lint,
+policy8/8 (741/156) и полный finance40/40 без retries прошли. Дополнительный
+личный stress2/2 Chromium/WebKit: большая личная сумма и общий итог вплоть до
+MAX_SAFE_INTEGER видимы без потери копейки и контакта с кольцом; снимки
+320/390/430/1440 просмотрены. Новый месячный all-history итог использует тот
+же точный formatter, старый Mono money helper не меняется. FIN601 квитанция
+FIN-28 сохранена. SourceCI/PG196 и выпуск после FIN602 ещё обязательны.
+
+
+FIN-27, форма из месячной карточки: тот же новый browser-case дополнен
+открытием Добавить оплату после возврата, formGeometry320px, вводом комментария
+и emulated400px keyboard viewport, native hit кнопки Сохранить и отменой без
+записи. Chromium/WebKit2/2 passed, PNG просмотрены; исходная месячная сумма
+и список после отмены сохранены. Test inventory не вырос, продуктовый код
+не менялся. Это эмуляция viewport, не физическая iPhone/PWA клавиатура.
+
+
+FIN-27, локальное PG доказательство196: собственный изолированный
+fit-fin601-pg-20261106/fit_actor_test, pending196 применён официальным
+db:migrate. Целевой actor-context scenario counts monthly trainer attendance
+independently прошёл1/1 (174 неподходящих case skipped,257ms tests).
+Работа шла через локальный55439 с тестовой credential только в env, без
+вывода значения и без production. Подтверждены новые attendedWorkouts,
+historical/no-ledger и отказ чужому actor. Это дополняет локальный API check,
+но не заменяет полный clean PG source/main CI перед выпуском.
+
+
+FIN-27, совместная приёмка parent46635408/main9ab3b6ce: сохранены две равные
+текущие KPI колонки, точные крупные суммы и личные source/ledger строки.
+Typecheck/build и оба месячных browser-case в Chromium/WebKit4/4 прошли
+без retries; PNG просмотрены, включая320px личную карточку и оплату.
+Конфликты только в append-журнале и scoped CSS сведены с сохранением обеих
+частей; diff/docs checks passed. Финальные source/main CI после актуального
+main2020 и принятого выпуска FIN602 остаются гейтами.
+
+
+FIN-27 — 07.11: RL-FINANCE-TWO-CONTROL-GRID-20261107 сохраняет причину двух
+собственных ошибок inherited3-column grid и существующую защиту геометрией
+на4ширинах. Это документация в третьем PR, без новых продуктовых правок и
+без перезапуска уже идущего sourceCI второго. Docs/diff checks passed;
+публикация FIN603 по-прежнему после полной приёмки FIN602.
+
+
+FIN-27 — 07.11, расширенная локальная PG-проверка: actor-context и
+client-restore вместе дали7timeout/167passed/13skipped, без assertion mismatch.
+При последовательном запуске тех же2файлов в собственном изолированном PG
+получено186passed/1skipped (187),11.40s tests. Тайм-ауты5/10s и assertions
+не менялись, источник196/HTTP/ACL не менялся; устранена только конкуренция
+локальных suite за одну базу. Полный clean PG CI остаётся гейтом.
+PR2021/sourceb5581841 прошёл35/35 CI и обычный squash вmain69cb6789.
+Git tree main/source совпал полностью. Его main включён в третий PR:
+при add/add conflicts доказано наличие всего parent source в собственной
+истории и точное равенство tree до/после merge; сохранены все FIN603 правки
+и оба контракта. MainCI/публикация/приёмка FIN602 пока впереди.
+
+
+FIN-29 — 07.11 — FIN602 опубликованная приёмка: PR2021/sourceb5581841
+прошёлCI42295047084 SUCCESS35/35; normal squash вmain69cb6789ef1d5e5135d7bf014ca2aaa957756ffb.
+MainCI42298445241 SUCCESS34; tree main/source совпадает. API42301048990 и
+web42301049003 SUCCESS: все213 файлов совпали с immutable artifact,
+health/ready/protected401 и точная API revision69cb6789 проверены.
+OTA42301788554 SUCCESS, sourceCommit69cb6789, ABI8922d2e9,
+bundleb387cf44124339fd3f6b56ff55097b390911ed9c3696db7c896e3ecc0c51b458, manifest/ZIP signatures и SHA256 проверены.
+Public40/40 и verifiedZIP40/40 Chromium/WebKit без retries, PNG и вся
+матрица320/390/430/1440 просмотрены. Большие суммы, поиск/фильтры, архив,
+клавиатура/повтор оплаты и прежний учёт сохранены; проценты/счётчик под именем
+не добавлялись. Mono не менялся, реальные финансовые данные не изменялись.
+Физические iPhone/PWA/Android не проверены. FIN602 принят.
+
+FIN-30 — FIN603 подготовлен от принятого69cb6789: свежие typecheck/build и
+полный finance40/40 Chromium/WebKit без retries прошли; финальные личные
+PNG320/390/430/1440 и строки source/ledger просмотрены. API check137files/
+1603passed/401DB-gated skipped прошёл, lint/types/build прошли. Реальный
+локальный PG186passed/1skipped уже подтверждён; единственный skip — прежний
+custom-photo S3 test безTEST_CUSTOM_PHOTO_S3_ENDPOINT, вне финансов.
+Frontend345files/3075tests и coverage83.72/78.82/83.04/88.38 сохранены для
+неизменного кода FIN603; новые parent CSS проверены полным browser40/40.
+Полный exact-head CI/cleanPG, normal merge и official API196/web/OTA ещё
+гейты. Подготовка/проверка совпадающего API guard не меняла workflow.
+
+
+FIN-30 — 07.11, очередь: после полной приёмки2021 более ранний2022 слит в
+33e32bc7780f0a29c349550bc0bc881514751a7e. Его actual main включён в финальный
+source FIN603, приватные executable/workflow изменения сохранены без правок;
+собственный frontend/API код не менялся. Слияние FIN603 ждёт приёмку2022
+и собственный зелёный CI.2023 остаётся отдельным MC4.2 draft с явным запретом
+слияния/публикации до разрешения поMC-RELEASE-01; один draft-статус не
+используется как причина обхода. Перед своим merge очередь сверяется заново.
