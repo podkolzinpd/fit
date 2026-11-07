@@ -11374,15 +11374,20 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
     })
     it('nutrition: migration down/up restores RLS and least-privilege grants without changing committed test data', async () => {
       if (ownerPool === undefined) throw new Error('Database pool not ready')
+      const [analyticsUp, analyticsDown] = (await readFile(new URL('../../db/migrations/000198_private_analytics_explorer.sql', import.meta.url), 'utf8')).split('-- Down Migration')
+      if (analyticsUp === undefined || analyticsDown === undefined) throw new Error('analytics migration sections missing')
       const migrationUrl = new URL('../../db/migrations/000142_nutrition_diary.sql', import.meta.url)
       const [up, down] = (await readFile(migrationUrl, 'utf8')).split('-- Down Migration')
       if (up === undefined || down === undefined) throw new Error('migration sections are missing')
       const connection = await ownerPool.connect()
       try {
         await connection.query('begin')
+        // Roll back dependent analytics views before the diary they reference.
+        await connection.query(analyticsDown)
         await connection.query(down)
         expect((await connection.query("select to_regclass('public.nutrition_entries') entries")).rows).toEqual([{ entries: null }])
         await connection.query(up)
+        await connection.query(analyticsUp)
         expect((await connection.query(`select
           (select bool_and(relrowsecurity) from pg_class where oid in
             ('public.nutrition_entries'::regclass, 'public.nutrition_consents'::regclass, 'app_private.nutrition_food_catalog'::regclass)) rls,
