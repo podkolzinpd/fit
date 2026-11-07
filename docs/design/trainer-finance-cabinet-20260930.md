@@ -1728,3 +1728,24 @@ native-dialog sheet-паттерн с сохранением фокуса/без
 клиента Lime-журнала передаётся месяц; financeBackTo сохраняет весь контекст.
 Операции изменения/удаления, версии/инвалидации и pending guards прежние.
 Локальные types и targeted25 пока прошли; browser/CI ещё не проверены.
+
+
+FIN-37 — 2026-11-07 — Codex / OpenAI. FIN702 локальная приёмка:
+frontend345files/3076tests passed, coverage83.58/78.71/82.74/88.28;
+full lint/types/build/startup passed. Browser40/40 + общий cross-route2/2
+Chromium/WebKit passed, retries0. PNG320/390/430/1440 и native sheet320
+просмотрены: круг/сумма, короткая строка, toolbar у списка, длинные имена,
+оригинальная иконка, YS Geo. Первый клиент <=390px от начала main.
+Снимки перед resize теперь явно возвращают scroll0, чтобы показывать шапку;
+самостоятельные nonzero scroll/return проверки сохранены.
+Первый browser35/40: два obsolete caller поиска (включая неверно заменённый
+поиск на /clients), strict status с двумя независимыми query, и реальная
+потеря фокуса WebKit. Исправлены только callers/region scope; assertions те же.
+Второй39/40 подтвердил focus race при смене серверного client query и remount.
+Диагностика focus events: WebKit tap не фокусирует кнопку. Native dialog
+закрывается в layout cleanup до удаления DOM; затем фокус surviving trigger.
+Проверка этой гонки6/6 (repeat-each3, retries0), затем полный40/40 passed.
+Фильтры:4ширины, target>=44, viewportbounds, Escape и возврат фокуса.
+API/деньги/Mono/версии мутаций прежние. Открыто: свежая parent/main интеграция,
+source/mainCI и официальный выпуск после полной приёмки FIN701. Физических
+телефонов нет. Дальше — последовательная публикация без расширения scope.
