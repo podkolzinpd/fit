@@ -278,6 +278,21 @@ test('Figma calendar Coach fortnight compares aligned weekdays and keeps every a
     await expect(comparison.locator('.coach-fortnight-day')).toHaveCount(14)
     const scrollport = page.locator('.content')
     expect(await scrollport.evaluate(el => el.getBoundingClientRect().bottom >= el.closest('.phone-frame')!.getBoundingClientRect().bottom - 2)).toBe(true)
+    // Native focus must reveal a row even when it is already inside the
+    // scrollport but visually covered by the floating navigation.
+    await scrollport.evaluate(el => {
+      const last = [...el.querySelectorAll('.coach-fortnight-day')].at(-1)!.getBoundingClientRect()
+      const nav = document.querySelector('.trainer-tab-bar')!.getBoundingClientRect()
+      el.scrollTop += last.bottom - nav.top - 12
+    })
+    await comparison.locator('.coach-fortnight-day').last().evaluate(el => (el as HTMLElement).focus())
+    await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))))
+    expect(await page.evaluate(() => {
+      const last = [...document.querySelectorAll('.coach-fortnight-day')].at(-1)!.getBoundingClientRect()
+      const fab = document.querySelector('.schedule-v2-fab')!.getBoundingClientRect()
+      const nav = document.querySelector('.trainer-tab-bar')!.getBoundingClientRect()
+      return last.bottom <= Math.min(fab.top, nav.top) - 8
+    })).toBe(true)
     await scrollport.evaluate(el => { el.scrollTop = el.scrollHeight })
     const safeArea = await page.evaluate(() => {
       const content = document.querySelector('.content')!.getBoundingClientRect()
