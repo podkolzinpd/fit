@@ -2,6 +2,9 @@ import {test,expect} from './source/node_modules/@playwright/test/index.mjs'
 import {writeFileSync,appendFileSync} from 'node:fs'
 const api=process.env.FIT_AUDIT_API_ORIGIN
 const events=[]
+let coreCycleState;
+test.describe.configure({mode:'serial'});
+test.afterAll(async()=>{if(coreCycleState){await coreCycleState.trainerContext.close();await coreCycleState.clientContext.close()}})
 function record(event,data={}){const entry={event,at:new Date().toISOString(),...data};events.push(entry);appendFileSync(new URL('./browser-events.jsonl',import.meta.url),JSON.stringify(entry)+'\n')}
 async function fixture(path,body){const r=await fetch(api+'/__fixtures/'+path,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)});expect(r.ok).toBeTruthy();return r.json()}
 async function signIn(context,key,role){
@@ -43,7 +46,7 @@ test('native program creation assignment client execution trainer results',async
  await composer.fill('Составь программу для Анны Смирновой на 1 неделю: общая форма, два занятия в неделю по вторникам (день недели 2) и субботам (день недели 6), начать 2026-11-07, по 60 минут; новичок, полностью оборудованный зал, ограничений нет, предпочтений нет, другой нагрузки нет, мне 31 год, это все тренировки.')
  const firstTurn=t.waitForResponse(r=>r.url().endsWith('/v1/assistant/turn')&&r.request().method()==='POST',{timeout:600000})
  await t.getByRole('button',{name:'Отправить сообщение',exact:true}).click()
- const first=await firstTurn;const body=await first.json();writeFileSync(new URL('./first-response.json',import.meta.url),JSON.stringify({status:first.status(),body},null,2));expect(first.ok()).toBeTruthy();record('creation_brief',{actionTool:body.action?.tool,step:body.action?.payload?.step,ready:body.action?.payload?.readyToGenerate,brief:body.action?.payload?.briefState,askedFields:body.action?.payload?.askedFields});writeFileSync(new URL('./first-turn.json',import.meta.url),JSON.stringify(body,null,2)+'\n')
+ const first=await firstTurn;const creationConversationId=first.request().postDataJSON().conversation_id;expect(typeof creationConversationId).toBe('string');record('creation_conversation',{conversationId:creationConversationId});const body=await first.json();writeFileSync(new URL('./first-response.json',import.meta.url),JSON.stringify({status:first.status(),body},null,2));expect(first.ok()).toBeTruthy();record('creation_brief',{actionTool:body.action?.tool,step:body.action?.payload?.step,ready:body.action?.payload?.readyToGenerate,brief:body.action?.payload?.briefState,askedFields:body.action?.payload?.askedFields});writeFileSync(new URL('./first-turn.json',import.meta.url),JSON.stringify(body,null,2)+'\n')
  let current=body;
  const answers={weeks:'1 неделя',scope:'Программа на 1 неделю',weekdays:'Вторник и суббота, номера дней недели 2 и 6',adult:'Мне 31 год, я совершеннолетняя',startDate:'Дата начала 2026-11-07',historyComplete:'Это все тренировки',continuationPlan:'Начать с нуля, предыдущих тренировок нет',frequency:'Два занятия в неделю',durationMin:'60 минут',equipment:'Полностью оборудованный зал',limitations:'Нет ограничений',preferences:'Нет предпочтений',otherActivity:'Нет другой нагрузки'};
  for(let q=0;q<4 && current.action?.payload?.step==='brief' && !current.action?.payload?.readyToGenerate;q++){
@@ -69,15 +72,6 @@ test('native program creation assignment client execution trainer results',async
  await t.getByRole('button',{name:'Добавить в расписание',exact:true}).click()
  const apply=await applyPromise;expect(apply.ok()).toBeTruthy();record('ui_apply',{httpStatus:apply.status()})
  await expect(t.getByText('Программа добавлена в расписание: 2 тренировок.',{exact:true})).toBeVisible()
- await t.reload();
- const savedReceipt=t.getByText('Программа добавлена в расписание: 2 тренировок.',{exact:true});
- const history=t.getByRole('button',{name:/^История /});
- await expect(savedReceipt.or(history)).toBeVisible();
- if(!await savedReceipt.isVisible()){
-  await history.click();
-  const savedConversation=t.locator('#assistant-session-history button');await expect(savedConversation).toHaveCount(1);await savedConversation.click();
- }
- await expect(savedReceipt).toBeVisible();record('saved_conversation_restored',{programId:draft.programId,method:'reload then existing conversation via history'})
  const planned=(await read(trainer.session,'/v1/training-data?clientId=11111111-1111-4111-8111-111111111111')).workouts.sort((a,b)=>a.workoutDate.localeCompare(b.workoutDate))
  expect(planned).toHaveLength(2);expect(planned.map(w=>w.workoutDate)).toEqual(draft.canonicalWorkouts.map(w=>w.workoutDate).sort());expect(planned.map(w=>w.status)).toEqual(['planned','planned'])
  for(const w of planned){expect(w.exercises.length).toBeGreaterThanOrEqual(3);expect(w.exercises.flatMap(e=>e.sets).length).toBeGreaterThan(0)}
@@ -119,6 +113,32 @@ test('native program creation assignment client execution trainer results',async
  }
  const final=(await read(trainer.session,'/v1/training-data?clientId=11111111-1111-4111-8111-111111111111')).workouts
  expect(final).toHaveLength(2);expect(final.every(w=>w.status==='done')).toBeTruthy();record('roundtrip_passed',{programWorkouts:2,completedWorkouts:2,confirmedSets:final.flatMap(w=>w.exercises.flatMap(e=>e.sets)).length})
- writeFileSync(new URL('./program-result.json',import.meta.url),JSON.stringify({passed:true,events},null,2)+'\n')
- }finally{await trainerContext.close();await clientContext.close()}
+ coreCycleState={trainerPage:t,trainerContext,clientContext,programId:draft.programId,conversationId:creationConversationId};
+ writeFileSync(new URL('./program-result.json',import.meta.url),JSON.stringify({passed:true,coreCyclePassed:true,events},null,2)+'\n')
+ }finally{if(!coreCycleState){await trainerContext.close();await clientContext.close()}}
+})
+
+test('saved program receipt survives assistant reload and exact conversation selection',async({},info)=>{
+ expect(coreCycleState).toBeTruthy();
+ const t=coreCycleState.trainerPage;
+ const isMessages=r=>/\/v1\/assistant\/conversations\/[^/]+\/messages$/.test(r.url())&&r.request().method()==='GET';
+ try{
+  const opened=t.waitForResponse(isMessages);await t.goto('/assistant');expect((await opened).ok()).toBeTruthy();
+  const reloaded=t.waitForResponse(isMessages);await t.reload();const response=await reloaded;expect(response.ok()).toBeTruthy();
+  const selectedId=new URL(response.url()).pathname.split('/').at(-2);
+  const loaded=await response.json();record('history_reload_readback',{expectedConversationId:coreCycleState.conversationId,selectedId,messageCount:loaded.messages?.length});
+  if(selectedId!==coreCycleState.conversationId){
+   await t.getByRole('button',{name:/^История /}).click();
+   const savedConversation=t.locator('#assistant-session-history button');await expect(savedConversation).toHaveCount(1);
+   const original=t.waitForResponse(r=>isMessages(r)&&r.url().includes('/'+coreCycleState.conversationId+'/messages'));
+   await savedConversation.click();expect((await original).ok()).toBeTruthy();
+  }
+  await expect(t.getByText('Программа добавлена в расписание: 2 тренировок.',{exact:true})).toBeVisible();
+  record('saved_conversation_restored',{programId:coreCycleState.programId,conversationId:coreCycleState.conversationId,method:'reload and exact native message-route selection'});
+  await t.screenshot({path:info.outputPath('07-saved-conversation-restored.png'),fullPage:true});
+  writeFileSync(new URL('./history-check-result.json',import.meta.url),JSON.stringify({passed:true,programId:coreCycleState.programId,conversationId:coreCycleState.conversationId},null,2)+'\n');
+ }catch(error){
+  record('saved_conversation_check_failed',{programId:coreCycleState.programId,category:error.name,message:String(error.message).slice(0,400)});
+  writeFileSync(new URL('./history-check-result.json',import.meta.url),JSON.stringify({passed:false,programId:coreCycleState.programId,category:error.name,message:String(error.message).slice(0,1000)},null,2)+'\n');throw error;
+ }
 })

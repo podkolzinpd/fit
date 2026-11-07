@@ -114,6 +114,7 @@ jobs:
             ${{ runner.temp }}/trainer-iso/lifecycle.jsonl
             ${{ runner.temp }}/trainer-iso/browser-events.jsonl
             ${{ runner.temp }}/trainer-iso/program-result.json
+            ${{ runner.temp }}/trainer-iso/history-check-result.json
             ${{ runner.temp }}/trainer-iso/program-playwright.json
             ${{ runner.temp }}/trainer-iso/program-artifacts/
             ${{ runner.temp }}/trainer-iso/model-rpc-events.jsonl
@@ -143,6 +144,7 @@ jobs:
             ${{ runner.temp }}/trainer-iso/lifecycle.jsonl
             ${{ runner.temp }}/trainer-iso/browser-events.jsonl
             ${{ runner.temp }}/trainer-iso/program-result.json
+            ${{ runner.temp }}/trainer-iso/history-check-result.json
             ${{ runner.temp }}/trainer-iso/program-playwright.json
             ${{ runner.temp }}/trainer-iso/model-rpc-events.jsonl
             ${{ runner.temp }}/trainer-iso/model-runs/
