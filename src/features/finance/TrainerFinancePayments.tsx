@@ -1,33 +1,39 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../../app/auth-context'
 import { isFitLimeEnabled } from '../../app/fit-lime'
 import { useDataBackend } from '../../app/data-backend-context'
 import { invalidateFinanceViews } from '../../app/invalidate-finance-views'
 import type { TrainerFinancePaymentDraft, TrainerFinanceReceipt } from '../../data/contracts/trainer-finance'
-import { ChevronDownIcon } from '../../shared/icons'
+import { ChevronDownIcon, CloseIcon } from '../../shared/icons'
 import { formatLocalDate, localDate } from '../../shared/local-date'
 import { AsyncView, Field, InlineRequestError, OverflowMenu, useConfirm } from '../../shared/ui'
 import { PaymentForm } from './TrainerFinancePage'
+import { FinanceFilterSheet, FinanceListToolbar } from './FinanceListControls'
+import { financeMoney } from './finance-monthly'
 
 function money(cents: number) {
   return new Intl.NumberFormat('ru-RU', { style: 'currency', currency: 'RUB', maximumFractionDigits: cents % 100 === 0 ? 0 : 2 }).format(cents / 100)
 }
 
-export function TrainerFinancePayments({ month, clientId, offset, returnTo, onClientChange, onOffsetChange }: {
+export function TrainerFinancePayments({ month, clientId, offset, returnTo, onClientChange, onOffsetChange, compact = false, summaryShown = false, navigation }: {
   month: string
   clientId?: string
   offset: number
   returnTo: string
   onClientChange: (clientId: string) => void
   onOffsetChange: (offset: number) => void
+  compact?: boolean
+  summaryShown?: boolean
+  navigation?: ReactNode
 }) {
   const { trainerFinance } = useDataBackend()
   const { actor } = useAuth()
   const queryClient = useQueryClient()
   const [confirm, confirmation] = useConfirm()
   const [editor, setEditor] = useState<TrainerFinanceReceipt | null>(null)
+  const [filtersOpen, setFiltersOpen] = useState(false)
   const editorRef = useRef<HTMLDivElement>(null)
   const history = useQuery({
     queryKey: ['trainer-finance-payments', month, clientId ?? '', offset],
@@ -51,9 +57,27 @@ export function TrainerFinancePayments({ month, clientId, offset, returnTo, onCl
       if (editor?.id === receipt.id) setEditor(null)
     },
   })
+  const chooseClient = (id: string) => {
+    if (save.isPending || remove.isPending) return
+    setEditor(null)
+    save.reset()
+    remove.reset()
+    onClientChange(id)
+  }
   const data = history.data
+  const formatMoney = compact ? financeMoney : money
+  const clientOptions = [{ id: '', label: 'Все клиенты' },
+    ...(clientId && !data?.clients.some(client => client.id === clientId) ? [{ id: clientId, label: 'Выбранный клиент' }] : []),
+    ...(data?.clients.map(client => ({ id: client.id, label: client.name })) ?? [])]
+  const selectedName = clientOptions.find(client => client.id === clientId)?.label ?? 'Выбранный клиент'
   return <section className="finance-receipts" aria-label="История оплат">
     {confirmation}
+    {compact && <>
+      <FinanceListToolbar navigation={navigation} onFilter={() => setFiltersOpen(true)} filterOpen={filtersOpen} filtered={Boolean(clientId)} disabled={save.isPending || remove.isPending} />
+      {clientId && <div className="finance-active-filter"><button type="button" disabled={save.isPending || remove.isPending} aria-label="Сбросить фильтр оплат" onClick={() => chooseClient('')}>{selectedName}<CloseIcon /></button></div>}
+      {filtersOpen && <FinanceFilterSheet label="Фильтр оплат по клиенту" value={clientId ?? ''} options={clientOptions}
+        onChange={chooseClient} onClose={() => setFiltersOpen(false)} />}
+    </>}
     {editor && <div ref={editorRef}><PaymentForm lime={isFitLimeEnabled(actor)} key={editor.id} current={editor} packageId={editor.packageId}
       today={editor.receivedOn} saving={save.isPending} error={save.error}
       onCancel={() => { if (!save.isPending) setEditor(null) }}
@@ -61,24 +85,24 @@ export function TrainerFinancePayments({ month, clientId, offset, returnTo, onCl
     {remove.error && <InlineRequestError error={remove.error} />}
     <AsyncView loading={history.isLoading} error={history.error} onRetry={() => void history.refetch()}>
       {data && <>
-        <Field label="Клиент"><span className="finance-receipts-filter"><select aria-label="Клиент оплат" value={clientId ?? ''} disabled={save.isPending || remove.isPending} onChange={event => { setEditor(null); onClientChange(event.target.value) }}>
+        {!compact && <Field label="Клиент"><span className="finance-receipts-filter"><select aria-label="Клиент оплат" value={clientId ?? ''} disabled={save.isPending || remove.isPending} onChange={event => { setEditor(null); onClientChange(event.target.value) }}>
           <option value="">Все клиенты</option>
           {clientId && !data.clients.some(client => client.id === clientId) && <option value={clientId}>Выбранный клиент</option>}
           {data.clients.map(client => <option key={client.id} value={client.id}>{client.name}</option>)}
-        </select><ChevronDownIcon aria-hidden="true" /></span></Field>
-        <div className="finance-payment-overview finance-receipts-total"><p><span>{clientId ? 'Получено от клиента за месяц' : 'Получено за месяц'}</span><strong>{money(data.totalCents)}</strong></p></div>
+        </select><ChevronDownIcon aria-hidden="true" /></span></Field>}
+        {(!compact || !summaryShown || clientId) && <div className={`finance-payment-overview finance-receipts-total${compact ? ' finance-compact-receipts-total' : ''}`}><p><span>{clientId ? 'Получено от клиента за месяц' : 'Получено за месяц'}</span><strong>{formatMoney(data.totalCents)}</strong></p></div>}
         <div className="finance-payment-list finance-payment-ledger">{data.payments.map(receipt => <article className="finance-payment" key={receipt.id}>
-          <div><Link className="finance-receipt-client" to={`/clients/${receipt.clientId}/finance`} state={{ financeBackTo: returnTo }}>{receipt.clientName}</Link>
-            <strong>{money(receipt.amountCents)}</strong>
+          <div><Link className="finance-receipt-client" to={`/clients/${receipt.clientId}/finance${compact ? `?month=${month}&metric=money` : ''}`} state={{ financeBackTo: returnTo }}>{receipt.clientName}</Link>
+            <strong>{formatMoney(receipt.amountCents)}</strong>
             <span>{formatLocalDate(localDate(receipt.receivedOn))}{receipt.source === 'opening' ? ' · Начальный оплаченный остаток' : ''}</span>
             {receipt.archivedAt && <span>В архиве</span>}
             {receipt.comment && !(receipt.source === 'opening' && receipt.comment.trim() === 'Начальный оплаченный остаток') && <span className="finance-receipt-comment">{receipt.comment}</span>}
           </div>
           <span className="finance-payment-package">{receipt.serviceTitle}</span>
-          <OverflowMenu label={`Действия с оплатой ${receipt.clientName} ${money(receipt.amountCents)}`} items={[
+          <OverflowMenu label={`Действия с оплатой ${receipt.clientName} ${formatMoney(receipt.amountCents)}`} items={[
             { label: 'Изменить', disabled: save.isPending || remove.isPending, onClick: () => { save.reset(); setEditor(receipt) } },
             { label: 'Удалить', danger: true, disabled: save.isPending || remove.isPending, onClick: () => void confirm({
-              message: `Удалить оплату ${money(receipt.amountCents)} от ${formatLocalDate(localDate(receipt.receivedOn))}?`,
+              message: `Удалить оплату ${formatMoney(receipt.amountCents)} от ${formatLocalDate(localDate(receipt.receivedOn))}?`,
               confirmLabel: 'Удалить', danger: true,
             }).then(ok => { if (ok) remove.mutate(receipt) }) },
           ]} />
