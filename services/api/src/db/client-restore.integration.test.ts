@@ -135,9 +135,9 @@ describe.skipIf(source === undefined)('owner-approved canonical client restorati
     await owner.query("insert into public.trainer_finance_packages(trainer_id,client_id,title,sessions_total,price_cents,starts_on) values($1,$2,'Preserve synthetic finance',10,50000,current_date)", [f.trainerId, f.card])
     return { ...f, expected: { clientId: f.card, workoutIds, workouts: 21, exercises: 1, sets: 1 } }
   }
-  async function privatePlan(f: Awaited<ReturnType<typeof privateFixture>>) {
+  async function privatePlan(f: Awaited<ReturnType<typeof privateFixture>>, evidence?: { messageSha256: string; since: string }) {
     const c = await owner.connect()
-    try { return await planClientRestore(c, { trainerId: f.trainerId, athleteId: f.athleteId }, f.expected) } finally { c.release() }
+    try { return await planClientRestore(c, { trainerId: f.trainerId, athleteId: f.athleteId }, f.expected, evidence) } finally { c.release() }
   }
   it('private proven history preserves planned/cancelled rows and finance and verifies BOTH runtime actors', async () => {
     const f = await privateFixture()
@@ -187,6 +187,21 @@ describe.skipIf(source === undefined)('owner-approved canonical client restorati
     ]))
     expect(evidence.profiles.find(p => p.id === current)).toMatchObject({ active_sessions: 1 })
     expect(JSON.stringify(evidence)).not.toMatch(/token_sha256|provider_subject_sha256|code_hash|Synthetic|Private synthetic/)
+    expect((await owner.query("select count(*)::int n from public.client_trainer_relationships where client_id=$1 and status='active'", [f.card])).rows).toEqual([{ n: 0 }])
+  })
+  it('feedback evidence stays private and can never produce an apply plan, even for linked identities or ambiguous messages', async () => {
+    const f = await privateFixture(), message = 'Synthetic profile verification '+randomUUID()
+    const evidence = { messageSha256: createHash('sha256').update(message).digest('hex'), since: new Date(Date.now()-60000).toISOString() }
+    for (const [user, role] of [[f.athleteId, 'client'], [f.trainerId, 'trainer']]) {
+      await owner.query(`insert into public.app_feedback(user_id,account_role,kind,message,screen_path,app_version,display_mode,user_agent)
+        values($1,$2,'problem',$3,'/synthetic-private-screen','synthetic','browser','synthetic-private-agent')`, [user, role, message])
+    }
+    const failure = await privatePlan(f, evidence).then(() => { throw Error('evidence must never produce a plan') }, (error: unknown) => error)
+    expect(failure).toMatchObject({ message: 'client_restore_identity_evidence_review_required', privateDiagnostic: { identityEvidence: { actorSelected: false } } })
+    const found = (failure as { privateDiagnostic: { identityEvidence: { feedback: { user_id: string; account_role: string }[] } } }).privateDiagnostic.identityEvidence
+    expect(found.feedback).toHaveLength(2)
+    expect(found.feedback).toEqual(expect.arrayContaining([expect.objectContaining({ user_id: f.athleteId, account_role: 'client' }), expect.objectContaining({ user_id: f.trainerId, account_role: 'trainer' })]))
+    expect(JSON.stringify(found)).not.toMatch(/Synthetic|synthetic-private|token_sha256|provider_subject_sha256|messageSha256/)
     expect((await owner.query("select count(*)::int n from public.client_trainer_relationships where client_id=$1 and status='active'", [f.card])).rows).toEqual([{ n: 0 }])
   })
   it('private history refuses another same-name live card linked to this trainer', async () => {

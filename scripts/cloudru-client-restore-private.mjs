@@ -3,7 +3,7 @@ import {createRequire} from 'node:module'
 import {writeFileSync} from 'node:fs'
 import {pathToFileURL} from 'node:url'
 import {prepareCloudruUpload,loadCloudruUpload,cleanupCloudruUpload,cleanupUnreceivedCloudruUpload,sealUpload,journalSession,journalObject,validateUploadCapability,safeJournalUploadFailure} from './cloudru-journal-upload.mjs'
-import {readRestoreTarget,readExpectedRestoreHistory,planClientRestore} from './cloudru-client-restore.mjs'
+import {readRestoreTarget,readExpectedRestoreHistory,readCurrentProfileEvidence,planClientRestore} from './cloudru-client-restore.mjs'
 
 // Public protocol identifiers; these are NEVER derived from a customer.
 export const clientRestoreInputDigest=createHash('sha256').update('fit-private-client-restore-input-v1').digest('hex')
@@ -18,13 +18,15 @@ export function validatePrivateRestoreCapability(cap,session,now=Date.now()){
    &&url.searchParams.get('X-Amz-SignedHeaders')==='host'&&/^[a-f0-9]{64}$/u.test(url.searchParams.get('X-Amz-Signature')??''),'private_reply_capability')
  return cap
 }
-const signingBody=(session,pair,expected)=>JSON.stringify(['fit-private-client-restore-input-v1',session,pair.trainerId,pair.athleteId,
- expected.clientId,expected.workoutIds,expected.workouts,expected.exercises,expected.sets])
+const signingBody=(session,pair,expected,evidence)=>JSON.stringify(['fit-private-client-restore-input-v1',session,pair.trainerId,pair.athleteId,
+ expected.clientId,expected.workoutIds,expected.workouts,expected.exercises,expected.sets,...(evidence?[evidence]:[])])
 export function privateRestoreInputParts(value,session,operatorPrivatePem){
  journalSession(session)
  const pair=readRestoreTarget(JSON.stringify(value.target)),expected=readExpectedRestoreHistory(value.expectedHistory)
- const signature=sign('sha256',Buffer.from(signingBody(session,pair,expected)),{key:operatorPrivatePem,padding:constants.RSA_PKCS1_PSS_PADDING,saltLength:32}).toString('base64')
- const encoded=Buffer.from(JSON.stringify({version:1,session,target:value.target,expectedHistory:expected,signature})).toString('base64')
+ const evidence=value.currentProfileEvidence===undefined?null:readCurrentProfileEvidence(value.currentProfileEvidence)
+ const signature=sign('sha256',Buffer.from(signingBody(session,pair,expected,evidence)),{key:operatorPrivatePem,padding:constants.RSA_PKCS1_PSS_PADDING,saltLength:32}).toString('base64')
+ const encoded=Buffer.from(JSON.stringify({version:1,session,target:value.target,expectedHistory:expected,signature,
+   ...(evidence?{currentProfileEvidence:evidence}:{})})).toString('base64')
  const at=Math.ceil(encoded.length/2);return [encoded.slice(0,at),encoded.slice(at)]
 }
 export function readPrivateRestoreInput(parts,session,operatorPublicPem){
@@ -32,13 +34,15 @@ export function readPrivateRestoreInput(parts,session,operatorPublicPem){
  const encoded=parts.join(''),bytes=Buffer.from(encoded,'base64')
  need(bytes.toString('base64')===encoded&&bytes.length<=64000,'private_input')
  let value;try{value=JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(bytes))}catch{throw Error('client_restore_private_input')}
- need(value&&Object.keys(value).sort().join(',')==='expectedHistory,session,signature,target,version'&&value.version===1
+ const keys=value&&Object.keys(value).sort().join(',')
+ need(value&&(keys==='expectedHistory,session,signature,target,version'||keys==='currentProfileEvidence,expectedHistory,session,signature,target,version')&&value.version===1
    &&value.session===journalSession(session),'private_input')
  const pair=readRestoreTarget(JSON.stringify(value.target)),expectedHistory=readExpectedRestoreHistory(value.expectedHistory)
+ const evidence=value.currentProfileEvidence===undefined?null:readCurrentProfileEvidence(value.currentProfileEvidence)
  need(typeof value.signature==='string'&&value.signature.length<=1500&&/^[A-Za-z0-9+/]+={0,2}$/u.test(value.signature),'private_signature')
- need(verify('sha256',Buffer.from(signingBody(session,pair,expectedHistory)),
+ need(verify('sha256',Buffer.from(signingBody(session,pair,expectedHistory,evidence)),
    {key:operatorPublicPem,padding:constants.RSA_PKCS1_PSS_PADDING,saltLength:32},Buffer.from(value.signature,'base64')),'private_signature')
- return {pair,expectedHistory}
+ return {pair,expectedHistory,...(evidence?{currentProfileEvidence:evidence}:{})}
 }
 export async function executePrivateRestoreInput({phase,session,operatorPublicPem,store,createOwner,savePlan,operator}){
  journalSession(session)
@@ -53,7 +57,7 @@ export async function executePrivateRestoreInput({phase,session,operatorPublicPe
   io=await store.load(target,clientRestoreInputDigest,session)
   const input=readPrivateRestoreInput(io.parts,session,io.publicPem)
   owner=await createOwner()
-  const plan=await planClientRestore(owner,input.pair,input.expectedHistory)
+  const plan=await planClientRestore(owner,input.pair,input.expectedHistory,input.currentProfileEvidence)
   plan.requestedBy=operator;plan.privateInputSession=session
   await savePlan(plan)
   await io.persistReceipt('readback',{kind:'client_restore_private_plan',session,digest:clientRestoreInputDigest,plan},(value,key)=>sealUpload(value,key,session))
