@@ -1547,7 +1547,7 @@ test('trainer Profile and feedback keep their visual baselines in both themes', 
   await expect(page.getByRole('link', { name: /^Уведомления/ })).toBeVisible()
   await page.getByRole('link', { name: 'Помощь и документы' }).click()
   await page.getByRole('button', { name: 'Предложение или проблема' }).click()
-  await expect(page.getByRole('form', { name: 'Напишите команде Fit' })).toBeVisible()
+  await expect(page.getByRole('form', { name: 'Напишите нам' })).toBeVisible()
   await expectVisualBaseline(page, `trainer-profile-feedback-${process.platform}.png`, [], true)
   await page.getByRole('button', { name: 'Закрыть' }).click()
 
@@ -1565,7 +1565,7 @@ test('trainer Profile and feedback keep their visual baselines in both themes', 
   await page.getByRole('link', { name: 'Настройки профиля' }).click()
   await page.getByRole('link', { name: 'Помощь и документы' }).click()
   await page.getByRole('button', { name: 'Предложение или проблема' }).click()
-  await expect(page.getByRole('form', { name: 'Напишите команде Fit' })).toBeVisible()
+  await expect(page.getByRole('form', { name: 'Напишите нам' })).toBeVisible()
   await expectVisualBaseline(page, `trainer-profile-feedback-dark-${process.platform}.png`, [], true, '#1d1e21')
   await page.getByRole('button', { name: 'Закрыть' }).click()
   await page.getByRole('button', { name: 'Назад', exact: true }).click()

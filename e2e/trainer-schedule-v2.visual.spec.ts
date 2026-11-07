@@ -6380,7 +6380,7 @@ for (const theme of ['light', 'dark']) for (const width of [390, 430]) {
     await filters.getByRole('button', { name: 'Закрыть фильтры' }).click()
     await page.goto('/me/settings')
     await page.getByRole('button', { name: 'Предложение или проблема' }).click()
-    const form = page.getByRole('form', { name: 'Напишите команде Fit' })
+    const form = page.getByRole('form', { name: 'Напишите нам' })
     const suggestion = form.getByRole('button', { name: 'Предложение', exact: true })
     const problem = form.getByRole('button', { name: 'Проблема', exact: true })
     const background = async () => suggestion.evaluate((element) => getComputedStyle(element).backgroundColor)
