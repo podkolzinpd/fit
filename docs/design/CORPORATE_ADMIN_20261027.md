@@ -2676,3 +2676,45 @@ SQL/SSH/admin/bypass/force/deletebranch или включить personal все�
 match-head/mainCI/officialAPIwebOTA/все файлы/8negativeAPI/110web+110ZIP+8live;
 после обоих CPT этапов один закрытый test personal grant и отдельный committed
 inspect. Физический телефон не проверен. Дальше: пройти эти гейты до завершения.
+
+### Итерация 62 нового выпуска — 2026-11-08 — GPT / OpenAI
+
+Задача: выпустить2035 следующим по новому прямому указанию владельца.
+Новое решение: «напиши всем, что идете дальше по порядку, если какой-то PR
+стоит, то его обходим; ты следующий выкатываешься». Это явно заменяет только
+прежнее ожидание отдельной приёмки застрявшего2034 в55–61; полные собственные
+source/main гейты, сохранность уже слитого кода и отсутствие наложений остаются.
+Разрешено сообщить всем активным участникам очереди; фактически уведомлены
+ФИТ14/16/18/19 и активный аудитор. Все5 send tool responses SUCCESS. ФИТ16
+прочитал точное поручение и отложил свой отдельный main retry/publication;
+ФИТ19 подтвердил ожидание2035. Новые будущие пакеты окно не резервируют.
+Расхождения: нет. Main2034/ddf уже содержит его код, отката/переписывания нет.
+Сделано: проверенный source2149ec20f9565419f2c6563ad7f7dd9b1f5e3a68 завершил
+CI42417605327 SUCCESS35/35 attempt1 и Android42417605275 SUCCESS. Фактически:
+frontend348files/3102tests, coverage83.6/78.7/82.79/88.24; API1623passed/
+416standardconditional skips, PostgreSQL17 personal12 внутри343pass+1standard
+skip, actor15/restore/private/push успешны. Source WebKit лог сохраняет2 старых
+mobile-shell cases658/2141, прошедших штатные builtin retries: один browser
+process crash с libEGL/libsoup trace и один missing-control assertion. Это не
+retries0; CI workflow/таймауты/assertions не менялись, manual rerun не было.
+Полный raw log fit674-personal-2149-webkit.log сохранён наряду с app/api/db.
+Проверка до merge: свежий origin/main=ddf ancestor2149, root/branch clean,
+PR CLEAN/auto-mergeOFF, all35CI+Android exacthead, allow_squash=true и
+DeleteBranchOnMerge=false, inprogress/queued официальных API/web/OTA нет.
+Слила штатным squash --match-head-commit2149 безadmin/force/deletebranch;
+actualmain aa4be2a33ec8cff53de84653ca0e0a63ff5dc2c6, mergedAt07.11T22:27:03Z.
+Полное дерево main побайтно равно проверенному2149. Чужие CI вручную не
+менялись; старый main2034 завершилсяfailure, его официальные runs штатноskip.
+Новые собственные mainCI42420666603 и Android42420666552 запущены автоматически;
+повторных dispatch нет. Публикация/приёмка2035 ещё не состоялись, grant не делала.
+Решение: pinned source2149 остаётся неизменным; последующие квитанции пишутся
+в тот же канонический путь отдельной docs-only receipt ветки от actualmainaa4,
+без третьего runtime PR/повторного выпуска/сдвига checked feature head.
+CURRENT_STATE получает только краткий указатель. Отвергнуто: считать merge
+доставкой, убрать уже слитый2034, скрыть source retries, обойти ownmainCI или
+включить pilot до фактической приёмки обоих этапов. Локальные111unit/110browser
+и будущие фактические110web+110ZIP+8live сохраняютretries0/realAPIWSdeny.
+Открыто: полный mainCI/официальные API/web/signedOTA, manifest каждыйsize/SHA,
+обаAPI/source/health/ready/8negative/DNS/TLS, actualpublic/extractedweb/signedZIP
+UI; затем один закрытый test personal grant и отдельный committed inspect.
+Физический телефон не проверен. Дальше: завершить эти гейты и освободить окно.
