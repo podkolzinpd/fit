@@ -2758,3 +2758,43 @@ personal-pilot использует существующий services закры
 Открыто: один grant и отдельный committed inspect того же test target;
 после этого окончательная квитанция/сообщение владельцу и hold released очереди.
 Дальше: выполнить только этот закрытый оператор и проверить сохранённый результат.
+
+### Итерация 64 нового выпуска — 2026-11-08 — GPT / OpenAI
+
+Задача: завершить оба принятых CPT этапа единственным закрытым тестовым включением.
+Расхождения: нет. Только после фактической приёмки63 выполнен ровно один
+штатный grant42425086969 наmainaa4be2a33ec8cff53de84653ca0e0a63ff5dc2c6,
+action=grant/account=primary/scope=personal-pilot. Workflow использует прежний
+закрытый services test target, а не администраторский grant. SUCCESS, результат
+status=applied, uniqueTrainer=true, enabled=true, eligible=true,
+otherEnabledTrainers=0. Без ручного productionSQL/SSH, admin/bypass/force и без
+изменения secrets/прочих назначений. Оператор пишет только personal-pilot scope.
+Затем отдельный новый запуск42425466062 action=inspect того же scope/target
+на том жеcommittedmain завершилсяSUCCESS: status=inspected,
+uniqueTrainer=true, enabled=true, eligible=true, otherEnabledTrainers=0.
+Это новый readback после commit grant, не повтор того же ответа. Других
+включённых personal тренеров нет; is_yandex/role подтверждены, прежний test target
+сохранён. Остальные независимые услуги/invitation/admin flags/офисы/права и native
+не менялись; реальные клиентские отметки/тренировки/финансовые записи дляQA
+не создавались. Старая история не заполнялась и не пересчитывалась.
+Техническое уточнение: первый private postgrant parser ожидал строкуgranted;
+committed оператор по контракту возвращаетapplied (scripts/manage-corporate-admin-access.mjs:143).
+Assertion остановился до dispatch inspect. Исправлена только private проверка
+точного статуса; grant не повторялся, source/runtime/tests не изменялись.
+Квитанции: personal-grant/inspect-result.json и rawmaskedlogs вместе с полной
+acceptance-summary.json в приватном каталоге63; никаких идентификаторов клиента/
+тренера, login hashes или контактов в GitHub не добавлено.
+Итог: backend2028 и UI2035 фактически опубликованы/приняты, закрытый personal
+pilot включён только прежнему тестовому тренеру и подтверждён отдельным
+committed inspect. Source2149 и runtimeaa4 неизменны; postrelease docs-only
+receipt содержит только канонический журнал/CURRENT, третьего runtime PR нет.
+Физический телефон/реальный OAuth не проверены; actualweb110+signedZIP110+
+public8 Chromium/WebKit прошлиretries0 с realAPI/WSdeny, ABI1.1.4/code9 прежний.
+Решение: production hold2035 освобождается после публикации этих квитанций;
+все5 участников очереди получают фактические source/гейты/grant+inspect и
+прямое правило владельца «готовые PR по порядку, застрявшие пропускаем».
+Открыто: обязательных работ CPT101–108 в этих двух PR нет. Реальные рабочие
+отметки делает сам тестовый тренер в активных карточках; считаются следующие
+проведённые with_trainer, self исключены, backfill нет. Дежурства/редактирование
+анкеты админом и расширение пилота — следующие отдельные согласования.
+Дальше: сообщить владельцу итог; текущий двухэтапный выпуск завершён.
