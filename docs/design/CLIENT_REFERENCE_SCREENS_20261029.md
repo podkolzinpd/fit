@@ -7342,3 +7342,51 @@ edit. В следующем шаге четыре статуса исправл�
 с match-head, main CI, официальные API/web/OTA и полный readback. Физический
 телефон/OAuth/native install остаются непроверенными; память с заполненной
 квотой повторно не записывалась, долговечный прогресс сохранён здесь.
+
+
+### MC4.3 — интеграция итогового main ФИТ14 перед новым source CI
+
+Итерация — 08.11.2026 — GPT-6.1-sol / OpenAI. #2032 и #2033 опубликованы и
+приняты по проверяемым квитанциям ФИТ14; #2036 слит 07.11 в 21:05:51 UTC.
+Его итоговый main — adbef9feb3e139d5e52d349a301039f5f9fd20da. Публикация и
+приёмка #2036 ещё впереди: они остаются гейтом нашего merge, но не мешают
+параллельному source CI. Включён весь итоговый main обычным merge
+99e447ad98c1dc28053fb34721d812f99cb3134a без конфликтов, с сохранением обеих
+историй. Чужие PR, CI, данные и флаги не менялись, исходящих сообщений в чаты нет.
+
+Изменения ФИТ14 прочитаны. AppLayout вводит trainerSettingsSection только на
+/profile/settings; в Live он null, прежний scroll-путь сохраняется. Все новые
+profile CSS scoped к trainer-compact-settings. NotificationsSetting summary
+по умолчанию false, install initiallyExpanded по умолчанию false. Root отдельно
+подтвердила эту совместимость чтением кода. Наши два CSS, helper и импорт
+побайтно равны source 11849349; shared/ui.tsx и WorkoutsPages.tsx побайтно равны
+итоговому main. Package-lock и применимые engineering/workflow правила прежние.
+AST proof /tmp/fit-mc43-source-proof-adbef.json: 25 714 исходных записей
+сохранены, ровно 12 guards и 16 paint additions, existing Lime unchanged.
+
+Production build/types/startup/fonts прошли. На этом дереве единый запуск
+70/70 Chromium/WebKit завершён за 1,4 минуты, retries 0/skips 0, с прежним
+FIT_SCHEDULE_V2_VISUAL. Сравнение с проверенным c454: 26/26 modal styles,
+geometry/frame и 22/22 полных PNG byte-exact, diagnostics 0. Финальные WebKit
+кадры client light Original 390 и trainer dark Compact 375 просмотрены.
+Артефакты: /tmp/fit-mc43-adbef-build.log, -browser.log, -results,
+-comparison.json и -checked-files.json. Никаких ослаблений assertions или
+повторения полного coverage без новой причины; обязательный новый source CI
+дополнительно проверит всё объединённое дерево.
+
+Светлая настройка не вводит trainer-light Lime Live: это прямо сказано новым
+appearance UI; AppLayout исключает theme-light у trainer fitLimeShell. Отдельный
+временный QA в /tmp проверил по двум плотностям и движкам: 4/4 случая,
+10,4 секунды, retries 0, при сохранённых dark и light стили и геометрия Live и
+confirm строго равны, root не получает theme-light, факты сохраняются,
+diagnostics 0. Это проверка реального тёмного runtime при светлой общей
+настройке, не утверждение о поддержке новой светлой темы тренера. В Git новые
+QA-файлы не добавлялись; лог /tmp/fit-mc43-adbef-theme.log и четыре JSON в
+/tmp/fit-mc43-adbef-theme-results. Runtime приложения не менялся.
+
+Docs/diff прошли. Следующее действие — один push точного итогового source и
+его полный CI; green 11849349 остаётся историческим и не подменяет новый head.
+Перед merge проверить завершение публикации/приёмки #2036 и fresh main, затем
+обычный squash по match-head, main CI, официальные API/web/подписанный OTA и
+полный readback. Разрешение владельца «выкатывай» действует только на #2034;
+следующие MC не начинаются. Физический телефон/OAuth/native install не проверены.
