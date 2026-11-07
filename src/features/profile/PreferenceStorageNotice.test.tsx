@@ -15,7 +15,7 @@ describe('PreferenceStorageNotice', () => {
   it('shows one section notice until all failed writes in that section recover', () => {
     render(<PreferenceStorageNotice keys={['notice-a', 'notice-b']} />)
     expect(screen.queryByText(message)).not.toBeInTheDocument()
-    const blocked = vi.spyOn(window.localStorage, 'setItem').mockImplementation(() => { throw new Error('quota') })
+    const blocked = vi.spyOn(Object.hasOwn(window.localStorage, 'setItem') ? window.localStorage : Object.getPrototypeOf(window.localStorage) as Storage, 'setItem').mockImplementation(() => { throw new Error('quota') })
     act(() => {
       writePreferenceStorage('notice-a', 'true')
       writePreferenceStorage('notice-b', 'false')
@@ -30,7 +30,7 @@ describe('PreferenceStorageNotice', () => {
 
   it('does not show another account or section failure and clears an externally saved override', () => {
     const view = render(<PreferenceStorageNotice keys={['account-a']} />)
-    const blocked = vi.spyOn(window.localStorage, 'setItem').mockImplementation(() => { throw new Error('quota') })
+    const blocked = vi.spyOn(Object.hasOwn(window.localStorage, 'setItem') ? window.localStorage : Object.getPrototypeOf(window.localStorage) as Storage, 'setItem').mockImplementation(() => { throw new Error('quota') })
     act(() => writePreferenceStorage('account-a', 'transient'))
     view.rerender(<PreferenceStorageNotice keys={['account-b']} />)
     expect(screen.queryByText(message)).not.toBeInTheDocument()
