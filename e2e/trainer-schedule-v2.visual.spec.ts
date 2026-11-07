@@ -187,6 +187,8 @@ test('Figma calendar Coach fortnight compares aligned weekdays and keeps every a
   }))
   rows.push({ ...rows[0]!, id: '30000000-0000-4000-8000-000000000009', workoutDate: '2027-01-05', clientName: 'Без времени', startTime: null, endTime: null })
   rows.push({ ...rows[0]!, id: '30000000-0000-4000-8000-000000000010', clientName: 'Без времени первым', startTime: null, endTime: null })
+  rows.push({ ...rows[0]!, id: '30000000-0000-4000-8000-000000000011', workoutDate: '2027-01-03', clientName: 'Последняя запись первой недели' })
+  rows.push({ ...rows[0]!, id: '30000000-0000-4000-8000-000000000012', workoutDate: '2027-01-10', clientName: 'Последняя запись второй недели' })
   rows[1]!.status = 'done'; rows[1]!.completedAt = '2026-12-28T10:00:00Z'
   rows[2]!.status = 'cancelled'
   rows[3]!.status = 'in_progress'
@@ -197,7 +199,7 @@ test('Figma calendar Coach fortnight compares aligned weekdays and keeps every a
   expect(await comparison.locator('.coach-fortnight-day').evaluateAll(nodes => nodes.map(n => n.getAttribute('data-date')))).toEqual([
     '2026-12-28','2027-01-04','2026-12-29','2027-01-05','2026-12-30','2027-01-06','2026-12-31','2027-01-07','2027-01-01','2027-01-08','2027-01-02','2027-01-09','2027-01-03','2027-01-10',
   ])
-  await expect(comparison.locator('.coach-fortnight-appointment')).toHaveCount(10)
+  await expect(comparison.locator('.coach-fortnight-appointment')).toHaveCount(12)
   await expect(comparison.locator('[data-date="2026-12-28"] time')).toHaveText(['—','09:00','10:00','11:00','12:00','13:00','14:00'])
   await expect(comparison.locator('[data-date="2027-01-05"] time')).toHaveText('—')
   await expect(comparison.locator('.coach-fortnight-headings > span > span')).toHaveText(['28 дек.–3 янв.','4–10 янв.'])
@@ -247,28 +249,69 @@ test('Figma calendar Coach fortnight compares aligned weekdays and keeps every a
   await comparison.locator('[data-date="2027-01-04"]').click()
   await expect(page).toHaveURL(/date=2027-01-04/)
   await expect(page.locator('.schedule-v2-event')).toHaveCount(2)
-  await page.goBack();await expect(comparison).toBeVisible();await expect(comparison.locator('.coach-fortnight-appointment')).toHaveCount(10)
+  await page.goBack();await expect(comparison).toBeVisible();await expect(comparison.locator('.coach-fortnight-appointment')).toHaveCount(12)
   await comparison.getByRole('button', { name: 'Следующие 2 недели' }).click()
   await expect(comparison.locator('.coach-fortnight-day').first()).toHaveAttribute('data-date', '2027-01-11')
   await comparison.getByRole('button', { name: 'Предыдущие 2 недели' }).click()
   await expect(comparison.locator('.coach-fortnight-day').first()).toHaveAttribute('data-date', '2026-12-28')
-  await page.setViewportSize({ width: 320, height: 620 })
-  // A short device starts at this height; shrinking an existing viewport also
-  // exercises the separate keyboard detector and temporarily hides navigation.
-  await page.reload()
-  await expect(page.getByRole('navigation', { name: 'Основная навигация' })).toBeVisible()
-  await expect(comparison.locator('.coach-fortnight-day')).toHaveCount(14)
-  await page.locator('.content').evaluate(el => { el.scrollTop = el.scrollHeight })
-  const safeArea = await page.evaluate(() => {
-    const content = document.querySelector('.content')!.getBoundingClientRect()
-    const fab = document.querySelector('.schedule-v2-fab')!.getBoundingClientRect()
-    const nav = document.querySelector('.trainer-tab-bar')!.getBoundingClientRect()
-    const last = [...document.querySelectorAll('.coach-fortnight-day')].at(-1)!.getBoundingClientRect()
-    return { fabGap: fab.top - content.bottom, navGap: nav.top - content.bottom, lastVisible: last.bottom <= content.bottom + 1, trailingGap: content.bottom - last.bottom }
-  })
-  expect(safeArea.fabGap).toBeGreaterThanOrEqual(0);expect(safeArea.navGap).toBeGreaterThanOrEqual(0);expect(safeArea.lastVisible).toBe(true)
-  expect(safeArea.trailingGap).toBeLessThanOrEqual(40)
-  await page.screenshot({ path: info.outputPath('fortnight-short-screen-safe-bottom.png') })
+  // The scrollport fills the screen, while its final real appointments can
+  // clear both floating controls. Safe-area and short screens affect geometry.
+  for (const viewport of [{ width: 390, height: 844, inset: 34 }, { width: 320, height: 620, inset: 0 }]) {
+    await page.setViewportSize({ width: viewport.width, height: viewport.height })
+    // Reload models a device starting at this height, rather than a keyboard resize.
+    await page.reload()
+    // Desktop browser emulation has no hardware home-indicator inset. Substitute
+    // only that environment value; all actual layout declarations stay intact.
+    await page.evaluate(inset => {
+      function applyInset(rules: CSSRuleList) {
+        for (const rule of rules) {
+          if (rule instanceof CSSStyleRule) {
+            for (const property of [...rule.style]) {
+              const value = rule.style.getPropertyValue(property)
+              if (value.includes('env(safe-area-inset-bottom')) rule.style.setProperty(property, value.replace(/env\(safe-area-inset-bottom(?:,\s*[^)]+)?\)/g, `${inset}px`), rule.style.getPropertyPriority(property))
+            }
+          } else if (rule instanceof CSSGroupingRule) applyInset(rule.cssRules)
+        }
+      }
+      for (const sheet of [...document.styleSheets]) applyInset(sheet.cssRules)
+    }, viewport.inset)
+    await expect(page.getByRole('navigation', { name: 'Основная навигация' })).toBeVisible()
+    await expect(comparison.locator('.coach-fortnight-day')).toHaveCount(14)
+    const scrollport = page.locator('.content')
+    expect(await scrollport.evaluate(el => el.getBoundingClientRect().bottom >= el.closest('.phone-frame')!.getBoundingClientRect().bottom - 2)).toBe(true)
+    // Native focus must reveal a row even when it is already inside the
+    // scrollport but visually covered by the floating navigation.
+    await scrollport.evaluate(el => {
+      const last = [...el.querySelectorAll('.coach-fortnight-day')].at(-1)!.getBoundingClientRect()
+      const nav = document.querySelector('.trainer-tab-bar')!.getBoundingClientRect()
+      el.scrollTop += last.bottom - nav.top - 12
+    })
+    await comparison.locator('.coach-fortnight-day').last().evaluate(el => (el as HTMLElement).focus())
+    await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))))
+    expect(await page.evaluate(() => {
+      const last = [...document.querySelectorAll('.coach-fortnight-day')].at(-1)!.getBoundingClientRect()
+      const fab = document.querySelector('.schedule-v2-fab')!.getBoundingClientRect()
+      const nav = document.querySelector('.trainer-tab-bar')!.getBoundingClientRect()
+      return last.bottom <= Math.min(fab.top, nav.top) - 8
+    })).toBe(true)
+    await scrollport.evaluate(el => { el.scrollTop = el.scrollHeight })
+    const safeArea = await page.evaluate(() => {
+      const content = document.querySelector('.content')!.getBoundingClientRect()
+      const fab = document.querySelector('.schedule-v2-fab')!.getBoundingClientRect()
+      const nav = document.querySelector('.trainer-tab-bar')!.getBoundingClientRect()
+      const cells = [...document.querySelectorAll('.coach-fortnight-day')].slice(-2)
+      return cells.map(el => {
+        const last = el.getBoundingClientRect()
+        const hit = [0.25, 0.5, 0.75].every(x => [0.25, 0.5, 0.75].every(y => el.contains(document.elementFromPoint(last.left + last.width * x, last.top + last.height * y))))
+        return { fabGap: fab.top - last.bottom, navGap: nav.top - last.bottom, lastVisible: last.top >= content.top && last.bottom <= content.bottom, hit }
+      })
+    })
+    for (const last of safeArea) {
+      expect(last.fabGap).toBeGreaterThanOrEqual(8);expect(last.navGap).toBeGreaterThanOrEqual(8)
+      expect(last.lastVisible).toBe(true);expect(last.hit).toBe(true)
+    }
+    await page.screenshot({ path: info.outputPath(`fortnight-safe-bottom-${viewport.width}.png`) })
+  }
 })
 
 test('Figma calendar Coach compact navigation keeps date access, menu and all views', { tag: ['@lime-critical'] }, async ({ page }, info) => {
@@ -546,7 +589,7 @@ test('Figma workout Coach Live density setting persists for the second pilot onl
   const pilot = 'c0ac0000-6010-4000-8000-000000000002'
   await page.clock.setFixedTime(new Date('2026-10-08T09:01:00Z'))
   const backend = await mockPilot(page, { profileId: pilot, fitLime: true, workouts: [restTimerWorkout()], unseenCoachmarks: ['live-timer-2026-09', 'coach-live-finish-top-2026-10', 'coach-live-set-swipe-2026-10-16'] })
-  await page.goto('/profile/settings')
+  await page.goto('/profile/settings?section=training')
   const group = page.getByRole('radiogroup', { name: 'Вид Live-тренировки', exact: true })
   const animation = page.getByRole('switch', { name: 'Анимация упражнения', exact: true })
   await expect(animation).not.toBeChecked()
@@ -586,7 +629,7 @@ test('Figma workout Coach Live density setting persists for the second pilot onl
   await expect.poll(() => backend.getWorkouts()[0]!.exercises[0]!.sets[0]!.confirmedAt).not.toBeNull()
   const deadline = await page.evaluate(id => sessionStorage.getItem(`fit:live-rest-until:${id}`), workoutId)
   expect(deadline).not.toBeNull()
-  await page.goto('/profile/settings')
+  await page.goto('/profile/settings?section=training')
   await group.getByRole('radio', { name: 'Оригинальный', exact: true }).click()
   await page.goto(`/workouts/${workoutId}/live`)
   await expect(page.locator('.coach-live-density-original')).toBeVisible()
@@ -650,7 +693,7 @@ for (const role of ['trainer', 'client'] as const) test(`Figma workout Coach Liv
   const id = role === 'trainer' ? 'c0ac0000-6010-4000-8000-000000000003' : 'c0ac0000-6010-4000-8000-000000000001'
   await page.addInitScript(id => localStorage.setItem(`fit.coachLiveDensity.${id}`, 'compact'), id)
   await mockPilot(page, { role, profileId: id, fitLime: true, clientLime: role === 'client', workouts: [restTimerWorkout()] })
-  await page.goto('/profile/settings')
+  await page.goto('/profile/settings?section=training')
   await expect(page.getByRole('radiogroup', { name: 'Вид Live-тренировки', exact: true })).toHaveCount(0)
   if (role === 'trainer') await expect(page.getByRole('switch', { name: 'Анимация упражнения', exact: true })).toBeChecked()
   await page.goto(`/workouts/${workoutId}/live`)
@@ -3406,8 +3449,12 @@ for (const profileId of [trainerId, '10000000-0000-4000-8000-000000000010']) {
       }
       await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(path.endsWith('/subscription/status') ? { subscribed: true } : { status: { subscribed: true, preferences: { workout_reminder: false, workout_scheduled: true, chat_message: false } } }) })
     })
-    await page.goto(clientRole ? '/me/settings' : '/profile/settings')
-    if (!clientRole) await expect(page.getByText('Fit открыт как приложение', { exact: true })).toBeVisible()
+    await page.goto(clientRole ? '/me/settings' : '/profile/settings?section=notifications')
+    if (!clientRole) {
+      await page.goto('/profile/settings?section=install')
+      await expect(page.getByText('Fit открыт как приложение', { exact: true })).toBeVisible()
+      await page.goto('/profile/settings?section=notifications')
+    }
     await expect(page.getByRole('button', { name: 'Как установить Fit' })).toHaveCount(0)
     await expect(page.getByText('Уведомления настроены', { exact: true })).toBeVisible()
     await expect(page.getByRole('button', { name: 'Включить', exact: true })).toHaveCount(0)
@@ -3472,7 +3519,7 @@ test('Lime notification settings show safe diagnostics when browser push initial
     json: { status: { subscribed: false, preferences: { workout_reminder: true, workout_scheduled: true, chat_message: true } } },
   }))
 
-  await page.goto('/profile/settings')
+  await page.goto('/profile/settings?section=notifications')
   await page.getByRole('button', { name: 'Включить', exact: true }).click()
   await expect(page.getByRole('alert').filter({ hasText: 'Не удалось подключить уведомления' })).toBeVisible()
   await expect(page.getByText(/Код для поддержки: FIT-/)).toBeVisible()
@@ -4404,7 +4451,7 @@ test('trainer switches day-grid density from schedule and profile settings', { t
 
   await page.reload()
   await expect(page.locator('.schedule-density-compact')).toBeVisible()
-  await page.goto('/profile/settings')
+  await page.goto('/profile/settings?section=schedule')
   const densityGroup = page.getByRole('radiogroup', { name: 'Плотность временной сетки' })
   await expect(densityGroup.getByRole('radio', { name: 'Компактная' })).toHaveAttribute('aria-checked', 'true')
   await densityGroup.getByRole('radio', { name: 'Обычная' }).click()
@@ -4989,9 +5036,13 @@ for (const [account, profileId] of [
     await page.getByRole('link', { name: 'Настройки профиля' }).click()
     await expect(page).toHaveURL(/\/profile\/settings$/)
     await expect(page.locator('.phone-frame')).toHaveClass(/fit-lime-shell/)
-    await expect(page.getByText('Lime пока доступна только на экранах тренера из пилота.')).toBeVisible()
-    await expect(page.getByRole('switch', { name: 'Тёмная тема остальных экранов' })).toBeVisible()
     await expect(page.getByRole('button', { name: 'Выйти' })).toBeVisible()
+    if (account === 'first') await page.screenshot({ path: testInfo.outputPath('trainer-settings-overview.png'), fullPage: true })
+    await page.getByRole('link', { name: /^Оформление/ }).click()
+    await expect(page.getByText('Экраны Lime сохраняют тёмное оформление.')).toBeVisible()
+    await expect(page.getByRole('switch', { name: 'Тёмная тема остальных экранов' })).toBeVisible()
+    if (account === 'first') await page.screenshot({ path: testInfo.outputPath('trainer-settings-appearance.png'), fullPage: true })
+    await page.getByRole('button', { name: 'Назад', exact: true }).click()
     await page.getByRole('button', { name: 'Назад' }).click()
     await expect(page).toHaveURL(/\/profile$/)
     await page.goto('/profile/trainer')
