@@ -213,3 +213,8 @@ running/pending layout transitions. Отмена ручным фокусом д�
 геометрию первого/последнего элемента до внутренних краёв строки, равенство
 ширин и снимки320/390/430/1440, а не только наличие кнопок или scrollWidth.
 Причина, red/green и границы — [финансы, FIN-26](design/trainer-finance-cabinet-20260930.md#fin601603--месячные-итоги--06112026--codex--openai).
+
+Новый закрытый API-модуль подключается также к native browser harness настоящим
+store, как в production: отсутствие optional store даёт503 и меняет прежние
+карточки вместо default-off. Error/retry controls проверяются в legacy/Lime,
+включая реальный44px target. [CPT, итерация51](design/CORPORATE_ADMIN_20261027.md).

@@ -4,3 +4,4 @@
 .corporate-personal-total strong { font-size: 32px; line-height: 1.2; }
 .corporate-personal-statistics .corporate-admin-list li { gap: 12px; }
 .corporate-personal-statistics .corporate-admin-list li > div { min-width: 0; overflow-wrap: anywhere; }
+.corporate-personal-access-error .corporate-personal-retry { min-width: 44px; min-height: 44px; }

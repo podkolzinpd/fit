@@ -93,9 +93,12 @@ export function registerCorporatePersonalCases() {
     const f=await setup(page,{allowed:false});await page.goto(nativeAiUrl(card));await expect(page.getByRole('heading',{name:'Алексей Смирнов',exact:true})).toBeVisible()
     await expect.poll(()=>f.gateReads).toBeGreaterThan(0);await expect(page.getByRole('switch',{name:'Сотрудник Яндекса'})).toHaveCount(0);expect(f.markReads).toBe(0)
   })
-  test('failed gate is recoverable and cannot become a positive permission',async({page})=>{
-    await setup(page,{failGate:true});await page.goto(nativeAiUrl(card));await expect(page.getByRole('switch')).toHaveCount(0)
-    await page.getByRole('button',{name:'Повторить проверку'}).click();await expect(page.getByRole('switch')).not.toBeChecked()
+  for(const theme of ['dark','light'])test(`failed gate is recoverable with a full retry target in legacy ${theme}`,async({page})=>{
+    await setup(page,{failGate:true,legacy:true});await page.addInitScript(value=>localStorage.setItem('fit.appTheme',value),theme)
+    await page.setViewportSize({width:1440,height:1000});await page.goto(nativeAiUrl(card));await expect(page.getByRole('switch')).toHaveCount(0)
+    const retry=page.getByRole('button',{name:'Повторить проверку'});await expect(retry).toBeVisible()
+    const box=await retry.boundingBox();expect(box!.height).toBeGreaterThanOrEqual(44);expect(box!.width).toBeGreaterThanOrEqual(44)
+    await retry.click();await expect(page.getByRole('switch')).not.toBeChecked()
   })
   test('admin can switch between existing services and personal statistics from the current page',async({page})=>{
     await setup(page);await page.goto(nativeAiUrl('/admin'));await page.getByRole('button',{name:'Статистика',exact:true}).click()

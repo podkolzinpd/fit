@@ -11,7 +11,7 @@ export function CorporateEmployeeMark({ clientId }: {clientId:string}) {
   const access = useQuery({queryKey:['corporate-personal-access',actor?.userId],queryFn:()=>repository.access(),
     enabled:actor?.role === 'trainer',staleTime:0,retry:false})
   if (actor?.role !== 'trainer') return null
-  if (access.error) return <p className="error" role="alert">Не удалось проверить доступ к учёту Яндекса. <button type="button" className="secondary" onClick={()=>void access.refetch()}>Повторить проверку</button></p>
+  if (access.error) return <p className="error corporate-personal-access-error" role="alert">Не удалось проверить доступ к учёту Яндекса. <button type="button" className="secondary corporate-personal-retry" onClick={()=>void access.refetch()}>Повторить проверку</button></p>
   if (access.data !== true) return null
   return <EmployeeMarkEditor key={`${actor.userId}:${clientId}`} clientId={clientId} actorId={actor.userId} />
 }

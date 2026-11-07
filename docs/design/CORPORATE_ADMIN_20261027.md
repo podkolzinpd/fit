@@ -2336,3 +2336,33 @@ passed, retries0/realAPIWSdeny. Просмотрены текущие light320 W
 Отвергнуто: обогнать active production или остановиться после первого этапа.
 Открыто: очередь/sourceCI/Android/второй выпуск/приёмка, pilotOFF.
 Дальше: закрыть оба опубликованных этапа и единственный closed-target grant/inspect.
+
+### Итерация 51 нового выпуска — 2026-11-07 — GPT / OpenAI
+
+Задача: исправить настоящее падение полного UI CI9a941667/42379501407.
+Расхождения: desktop visual-trainer проверка Client Detail получила кнопку
+«Повторить проверку» высотой43.2px вместо44; обе internal retries повторили
+ошибку. Причины: native browser harness не подключал optional personal store
+и отвечал503 вместо реального закрытого gate; error-кнопка вне section не
+получала требуемого min-height в прежней теме. Это собственная регрессия.
+Сделано: scoped класс error/retry с min-width/min-height44, без глобальных
+стилей/новой кнопки. В native-api-harness подключён настоящий CorporatePersonalStore
+к его изолированной PG17, как в production server; пустая pilot table сохраняет
+allowed=false. Hardcoded positive/negative ответ и расширение пилота не введены.
+Усилен существующий failure/retry browser case: legacy обе темы/оба движка,
+измеряется реальный target и выполняется retry. До fix4/4 получили red43.1875px.
+Проверка после fix:76/76unit, production build/types/startup/fonts2/2 и108/108
+corporate/admin/services/personal browser прошли, retries0/APIWSdeny. Отдельно
+именно упавший native desktop Client Detail с реальным API/новой собственной
+тестовой БД прошёл1/1 с прежними light/dark baseline/accessibility assertions.
+Ни snapshot, ни assertion, ни timeout не менялись; база fixture удаляет только
+собственную уникальную БД. Scope ESLint TS/node syntax harness/diff passed;
+первый явный ESLint JS вызов был отвергнут существующим ignore, не скрыт.
+EmployeeMark SHA256 4fc36525b640bc1c6ab64421f962bd8b472f631ebe6c2e1bc9620c6c8d97020c.
+Новый live acceptance harness независимо прошёл8/8 на локальном production
+предыдущей основы; это подготовка, не публикация. Будущая реальная приёмка
+уточнена до108web/108exactZIP/8public. Открыто: новый exact-head fullCI/Android,
+старший2029 ещё держит своё окно; остальные готовые старшие PR учитываются.
+Решение: сохранить исходный failure, после fix новыйhead/newCI; не rerun
+сломанный9a и не ослаблять проверки. Остальные флаги/native/данные прежние.
+Дальше: полный второй выпуск/приёмка, потом единственный test grant/inspect.
