@@ -94,3 +94,21 @@ it('does not invent experience details or retain them after a corrected category
   expect(() => mergeExtractedBrief({}, 'Был перерыв', { patch: { experienceText: 'Перерыв два месяца' }, clear: [], evidence: { experienceText: 'Был перерыв' }, clarification: null })).toThrow('brief_evidence_missing')
   expect(mergeExtractedBrief({ experience: 'returning', experienceText: 'Перерыв два месяца' }, 'Я новичок', { patch: { experience: 'beginner' }, clear: [], evidence: { experience: 'Я новичок' }, clarification: null }).brief).toEqual({ experience: 'beginner' })
 })
+
+
+describe('frequency alongside ISO calendar dates', () => {
+  it.each(['Два занятия в неделю, дата начала 2026-11-07', '2026-11-07: две тренировки в неделю', 'Два занятия с 2026-11-07 по 2026-11-14', 'Два занятия начиная с 2024-02-29'])('accepts a clear frequency with calendar dates: %s', (message) => {
+    expect(mergeExtractedBrief({}, message, { patch: { frequency: 2 }, clear: [], evidence: { frequency: message }, clarification: null }).brief.frequency).toBe(2)
+  })
+  it('preserves the ISO start date and its evidence when merging the frequency', () => {
+    const message = 'Два занятия в неделю, дата начала 2026-11-07'
+    expect(mergeExtractedBrief({}, message, { patch: { frequency: 2, startDate: '2026-11-07' }, clear: [], evidence: { frequency: 'Два занятия в неделю', startDate: '2026-11-07' }, clarification: null }).brief).toEqual({ frequency: 2, startDate: '2026-11-07' })
+  })
+  it.each(['2-3 тренировки, начало 2026-11-07', 'Две или три тренировки, начало 2026-11-07', 'Не два занятия, начало 2026-11-07', 'Два занятия, начало 2026-02-30', '2026-11-07'])('retains ambiguity and calendar validation: %s', (message) => {
+    expect(() => mergeExtractedBrief({}, message, { patch: { frequency: 2 }, clear: [], evidence: { frequency: message }, clarification: null })).toThrow('brief_frequency_ambiguous')
+  })
+  it('keeps an explicit correction alongside a calendar date', () => {
+    const message = 'Не три, а два занятия в неделю, начало 2026-11-07'
+    expect(mergeExtractedBrief({}, message, { patch: { frequency: 2 }, clear: [], evidence: { frequency: message }, clarification: null }).brief.frequency).toBe(2)
+  })
+})
