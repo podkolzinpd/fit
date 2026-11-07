@@ -457,3 +457,17 @@ jsdom Storage не подменяет унаследованный метод т
 runtime, но не заменяют новый полный exact-headCI. Все красные логи сохранены.
 Открыто: targeted обоих окружений, новыйP1sourceCI, очередь и три выпуска.
 Дальше: закрыть Node22/26 test portability и продолжить весь пакет.
+
+## Итерация 18 — 08.11.2026 — Codex / OpenAI
+
+Исправленный owner-spy прошёл14/14 в Node26, Node24 и отдельно LinuxNode22.23.3
+с реальной конфигурацией проекта. Первые неполные private copy не загружали
+Android policy config; после полного gitarchive точный набор прошёл без
+изменения тестов/config. После red3 старый собственныйCI42420870417 получил
+обычную отмену оставшихся jobs; чужие и healthy прогоны не трогались.
+
+На готовом совокупном P3 runtime прошли все3097frontendtests/coverage с2workers
+и1623APItests/416штатныхDBskips с2workers; прочиеcheck этапы, lint/types и
+финальнаяbuild прошли сегментами. Стандартные parallel timeout логи сохранены,
+полный npmcheck не назван one-shotgreen. Пороги/таймауты/CI unchanged.
+Дальше: новый полный CI P1, затем каждый фактическийmain и публикация.
