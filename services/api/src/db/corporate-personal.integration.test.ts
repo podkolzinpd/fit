@@ -51,9 +51,9 @@ describe.skipIf(!source)('corporate personal training on native PostgreSQL/RLS',
   const read=(who=coach,client=card)=>actor<{data:Mark}>(who,'select app_private.read_corporate_employee_mark($1) data',[client])
   const stats=(who=admin,trainer:string|null=null,cursor:Statistics['nextCursor']=null)=>actor<{data:Statistics}>(who,
     'select app_private.corporate_personal_statistics($1,$2,$3,$4,$5) data',[yesterday,tomorrow,trainer,cursor?.date??null,cursor?.id??null])
-  async function workout(status='done',format='with_trainer',date=today,completed=true){
+  async function workout(status='done',format='with_trainer',date=today,completed=true,author=coach){
     const id=randomUUID();await pool.query(`insert into public.workouts(id,client_id,trainer_id,created_by,workout_date,status,training_format,completed_at,started_at)
-      values($1,$2,$3,$3,$4,$5,$6,case when $5='done' then case when $7 then clock_timestamp() else clock_timestamp()-interval '1 day' end else null end,case when $5='in_progress' then clock_timestamp() else null end)`,[id,card,coach,date,status,format,completed]);return id
+      values($1,$2,$3,$8,$4,$5,$6,case when $5='done' then case when $7 then clock_timestamp() else clock_timestamp()-interval '1 day' end else null end,case when $5='in_progress' then clock_timestamp() else null end)`,[id,card,coach,date,status,format,completed,author]);return id
   }
   it('requires confirmed trainer AND the independent pilot, denies own grants and other people',async()=>{
     for(const who of [other,ordinary,athlete,admin]){
@@ -133,6 +133,16 @@ describe.skipIf(!source)('corporate personal training on native PostgreSQL/RLS',
     await pool.query('update app_private.corporate_personal_pilot_trainers set enabled=false where profile_id=$1',[coach])
     await workout();expect((await stats())[0]!.data.count).toBe(1)
     await expect(mark(coach,card,false,1)).rejects.toMatchObject({code:'PT403'})
+  })
+  it('counts a client-authored with-trainer workout for the current eligible trainer without transferring older facts',async()=>{
+    await pool.query('update public.clients set auth_user_id=$1 where id=$2',[athlete,card])
+    await pool.query('insert into public.client_trainer_relationships(client_id,trainer_id,connected_by)values($1,$2,$3)',[card,coach,athlete])
+    await mark();await workout('done','with_trainer',today,true,athlete)
+    expect((await stats())[0]!.data.count).toBe(1)
+    await pool.query("update public.client_trainer_relationships set status='disconnected',disconnected_at=clock_timestamp(),disconnected_by=$2 where client_id=$1",[card,athlete])
+    await pool.query('insert into public.client_trainer_relationships(client_id,trainer_id,connected_by)values($1,$2,$3)',[card,other,athlete])
+    expect((await stats(admin,coach))[0]!.data.count).toBe(1)
+    expect((await stats(admin,other))[0]!.data.count).toBe(0)
   })
   it('uses trainer calendar date and never derives access from service or invitation pilot',async()=>{
     await pool.query("update public.profiles set timezone='Pacific/Kiritimati' where id=$1",[coach])

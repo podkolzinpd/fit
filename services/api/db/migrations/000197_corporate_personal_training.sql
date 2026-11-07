@@ -39,6 +39,7 @@ create table app_private.corporate_employee_commands (
 create table app_private.corporate_personal_workouts (
   workout_id uuid primary key,
   trainer_id uuid references public.profiles(id) on delete set null,
+  source_author_id uuid references public.profiles(id) on delete set null,
   period_id uuid not null references app_private.corporate_employee_periods(id),
   captured_at timestamptz not null default clock_timestamp()
 );
@@ -134,11 +135,22 @@ end $$;
 
 create function app_private.capture_corporate_personal_workout() returns trigger
 language plpgsql security definer set search_path='' as $$
-declare trainer uuid; period uuid;
+declare trainer uuid; period uuid; candidates uuid[];
 begin
   if new.status<>'done' then return new; end if;
   if tg_op='UPDATE' then if old.status='done' then return new; end if; end if;
   trainer:=coalesce(new.created_by,new.trainer_id);
+  if not exists(select 1 from public.profiles where id=trainer and account_role='trainer') then
+    -- A client's own with-trainer record belongs to its one active coach at
+    -- first completion, not to the historical client partition owner.
+    if not exists(select 1 from public.clients c where c.id=new.client_id
+      and c.auth_user_id=new.created_by and c.archived_at is null) then return new; end if;
+    select array_agg(t.profile_id) into candidates from public.trainers t
+      where public.is_active_client_trainer_connection(new.client_id,t.profile_id)
+        and app_private.corporate_personal_trainer_allowed(t.profile_id);
+    if cardinality(candidates) is distinct from 1 then return new; end if;
+    trainer:=candidates[1];
+  end if;
   if not app_private.corporate_personal_trainer_allowed(trainer) then return new; end if;
   perform pg_catalog.pg_advisory_xact_lock(159,1);
   if not app_private.corporate_personal_trainer_allowed(trainer) then return new; end if;
@@ -148,8 +160,8 @@ begin
       and new.workout_date>=p.from_date
       and public.is_active_client_trainer_connection(new.client_id,trainer);
   if period is not null then
-    insert into app_private.corporate_personal_workouts(workout_id,trainer_id,period_id)
-      values(new.id,trainer,period) on conflict(workout_id) do nothing;
+    insert into app_private.corporate_personal_workouts(workout_id,trainer_id,source_author_id,period_id)
+      values(new.id,trainer,coalesce(new.created_by,new.trainer_id),period) on conflict(workout_id) do nothing;
   end if;
   return new;
 end $$;
@@ -163,7 +175,7 @@ create view app_private.corporate_personal_counted as
   join app_private.corporate_employee_periods p on p.id=f.period_id
   join public.workouts w on w.id=f.workout_id
   where w.status='done' and w.training_format='with_trainer' and w.deleted_at is null
-    and coalesce(w.created_by,w.trainer_id) is not distinct from f.trainer_id
+    and coalesce(w.created_by,w.trainer_id) is not distinct from f.source_author_id
     and w.workout_date>=p.from_date and (p.until_date is null or w.workout_date<=p.until_date);
 revoke all on app_private.corporate_personal_counted from public,fit_api;
 
