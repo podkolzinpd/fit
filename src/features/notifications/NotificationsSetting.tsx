@@ -100,14 +100,18 @@ export function NotificationsSetting({ userId, role = 'client', summary = false 
     if (native) void nativePermission.refetch()
   }
   const error = status.error ?? nativePermission.error
+  const trainerMessageCopy = !native && role === 'trainer' && working && status.data
+    ? status.data.chatMessageEnabled ? 'Новые сообщения включены' : 'Новые сообщения выключены'
+    : null
+  const stateClass = trainerMessageCopy && !status.data?.chatMessageEnabled ? '' : working ? 'working' : 'warning'
 
-  if (summary) return <span role="status">{native && role === 'trainer' ? 'Сообщения внутри Fit' : STATUS_COPY[state]}</span>
+  if (summary) return <span role="status">{native && role === 'trainer' ? 'Сообщения внутри Fit' : trainerMessageCopy ?? STATUS_COPY[state]}</span>
 
   if (native && role === 'trainer') return <p className="notification-channel-note"><strong>Новые сообщения</strong><span>Пока только внутри Fit.</span></p>
 
   return <>
     <div className="push-status-row">
-      <p className={`push-status-text ${working ? 'working' : 'warning'}`} aria-live="polite">{native && working ? status.data?.workoutReminderEnabled === false ? 'Напоминания выключены' : 'Напоминания настроены' : STATUS_COPY[state]}</p>
+      <p className={`push-status-text ${stateClass}`} aria-live="polite">{native && working ? status.data?.workoutReminderEnabled === false ? 'Напоминания выключены' : 'Напоминания настроены' : trainerMessageCopy ?? STATUS_COPY[state]}</p>
       {(state === 'needs-permission' || state === 'needs-connection') && <div className="push-status-actions"><button type="button" className="secondary" disabled={busy} aria-busy={enable.isPending} onClick={() => enable.mutate()}>{enable.isPending ? 'Подключаем…' : state === 'needs-connection' ? 'Восстановить' : 'Включить'}</button></div>}
       {state === 'denied' && <small>Разрешите уведомления для Fit в настройках телефона, затем вернитесь в приложение.</small>}
       {state === 'ios-not-installed' && <small>Добавьте Fit на экран «Домой», затем откройте приложение с его значка.</small>}

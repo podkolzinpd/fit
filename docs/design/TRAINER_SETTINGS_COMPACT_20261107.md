@@ -436,3 +436,16 @@ on/off/reload, обе плотности, failed-write/remount, один status 
 Очередь проверена: прямое поручение владельца в CPT задаёт2035следующим,
 без наложения release/readback. Пакет SET201–203 готовится независимо от окна.
 Дальше: SET202, SET203, конкретныеPR, CI и последовательный выпуск с приёмкой.
+
+## Итерация 14 — 08.11.2026 — Codex / OpenAI
+
+SET202 использует существующий chatMessageEnabled только для working browser
+тренера: summary и развёрнутая строка показывают «Новые сообщения включены»
+или «Новые сообщения выключены». Выключенная категория нейтральная. Native
+«Сообщения внутри Fit», client defaults, unknown/loading/error/denied/restore
+и transport/permissions/category handlers сохранены. Запросов изменения
+подписки при показе сводки нет. Новые2red подтверждены до runtime-правки;
+после неё28tests двух notification suites, types и eslint прошли. Обновлены
+ожидания только trainer working-copy; прежние проверки recovery не удалены.
+Открыто: полный check, браузер и exact-source CI после фактического parentmain.
+Дальше: подготовить SET203 и выпускать3PR последовательно, сохраняя очередь.
