@@ -2097,3 +2097,37 @@ afterAll10s; лимиты не менялись, общий локальный D
 Открыто: новый CI2028, выпуск/приёмка2027, затем собственные mainCI/API/web/OTA.
 UI второго этапа готовится в отдельном checkout, новые права пока OFF.
 Дальше: полный новый CI и штатный выпуск в своей очереди; PR2 после приёмкиPR1.
+
+### Итерация 43 нового выпуска — 2026-11-07 — GPT / OpenAI
+
+Задача: подготовить UI второго PR CPT107, пока серверный2028 проходит очередь.
+Расхождения: дополнительный ряд вкладок статистики вытолкнул прежние service
+счётчики за первый экран320px; существующий browser assertion это обнаружил.
+Сделано: независимый положительный server gate в своей активной карточке,
+существующий Switch; серверная дата/версия, pending и stable command retry после
+неизвестного ответа, explicit409 readback, раздельный ключ actor/client и поздний
+ack только своей карточке. Нет optimistic отметки, claimed date или самовыдачи.
+Admin personal statistics использует существующий period control, отдельный
+период/trainer/cursor query; zero отличается от503, ошибка продолжения сохраняет
+строки. Повторный ID при коррекции даты между страницами не дублируется.
+Решение: переключение услуг/персоналок в существующей шапке, без второго ряда
+навигации; старые услуги/default tab сохраняются. Новый corporate PUT bounded15s
+через прежний transport. Общая synthetic fixture default-OFF, не новый rollout.
+Отвергнуто: ослабить прежний viewport assertion, optimistic save, новый command
+после потери ack или вывод клиентских имён/ID в admin detail. Native version,
+прочие pilots/роли/офисы/финансы не менялись; production personal pilot пока OFF.
+Проверка: новые UI/repository15 и transport26 unit passed; duplicate-date test
+сначала воспроизвёл повтор строки и стал green. Первые20browser cases обеих
+движков прошли; утверждённые public webfonts2/2 проверены SHA. Расширенный старый
+browser прогон82pass/8fail сохранил red геометрии прежних счётчиков и timeout
+длинного нового сценария из4viewport; новые viewport cases разделены с теми же
+assertions/лимитом, исправление шапки ждёт итогового прогона. Предварительный
+полный frontend348files/3092tests/coverage83.75/78.84/82.99/88.42 прошёл; общий
+check встретил localhost EPERM, затем отсутствовавшие API dependencies в новом
+checkout. Зависимости установлены строго lockfile, полный check повторяется.
+Целевые74unit параллельно с тяжёлым check получили2прежних5s timeout ServicesPage;
+лимиты/assertions/retries не ослаблялись, нужен последовательный финальный QA.
+Открыто: окончательный root check и production-build104browser, visual/geometry;
+полный текущий sourceCI2028 и публикация/приёмка предшественника2027.
+Дальше: обычный выпуск2028, включение его фактического squash-main в UI checkout,
+окончательная проверка/PR2/выпуск; personal grant только после обоих принятий.
