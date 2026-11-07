@@ -72,6 +72,8 @@ describe.skipIf(!source)('corporate administration on real actor/RLS', () => {
     const filters={from:'2020-01-01',to:'2020-01-02',section:'people',pageSize:1,sort:'name',direction:'asc'}
     const explore=(patch:Record<string,unknown>={})=>actor<{result:{rows:Array<Record<string,unknown>>;total:number;summary:Record<string,number>;trend:unknown[]}}>(profile,'select app_private.private_analytics_explore($1::jsonb) result',[JSON.stringify({...filters,...patch})])
     const today=(await pool.query<{day:string}>("select (now() at time zone 'Europe/Moscow')::date::text as day")).rows[0]!.day
+    const futureDay=new Date(Date.parse(`${today}T12:00:00Z`)+60*86400000).toISOString().slice(0,10)
+    expect((await actor<{measured:boolean}>(profile,"select (app_private.private_analytics_explore($1::jsonb)->>'retentionMeasured')::boolean measured",[JSON.stringify({...filters,from:futureDay,to:futureDay})]))[0]?.measured).toBe(false)
     expect((await explore())[0]?.result.total).toBeGreaterThan(1)
     expect((await explore())[0]?.result.rows).toHaveLength(1)
     expect((await explore({page:2}))[0]?.result.rows[0]?.id).not.toEqual((await explore())[0]?.result.rows[0]?.id)
@@ -124,6 +126,12 @@ describe.skipIf(!source)('corporate administration on real actor/RLS', () => {
       const sorted=(await db.query<{result:{rows:Array<Record<string,unknown>>;trend:Array<{date:string;actions:number}>}}>('select app_private.private_analytics_explore($1::jsonb) result',[JSON.stringify({...filters,pageSize:50,sort:'actions',direction:'desc',group:'day'})])).rows[0]!.result
       expect(sorted.rows.slice(0,2).map(r=>r.actions)).toEqual([12,2])
       expect(sorted.trend).toEqual([expect.objectContaining({date:'2020-01-01',actions:2}),expect.objectContaining({date:'2020-01-02',actions:12})])
+      // Product-owner analytics does not inherit trainer diary consent rules.
+      const mealId=randomUUID()
+      await db.query(`insert into public.nutrition_entries(id,owner_id,day,meal,name,basis,grams,calories)
+        values($1,$2,current_date,'lunch','Synthetic meal','100g',150,200)`,[mealId,athlete])
+      const nutrition=(await db.query<{result:{rows:Array<Record<string,unknown>>}}>('select app_private.private_analytics_explore($1::jsonb) result',[JSON.stringify({...filters,from:today,to:today,section:'nutrition',person:athlete})])).rows[0]!.result
+      expect(nutrition.rows).toContainEqual(expect.objectContaining({id:mealId,calories:300}))
       await db.query('update public.clients set auth_user_id=$2 where id=$1',[card,athlete])
       await db.query("select set_config('request.jwt.claim.sub',$1,true)",[coach])
       await db.query('insert into public.client_trainer_relationships(client_id,trainer_id,connected_by) values($1,$2,$3)',[card,coach,athlete])

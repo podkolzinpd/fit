@@ -37,9 +37,15 @@ test('private analytics filters, sorts, drills down and adapts without page over
   // theme-specific token contrast is covered with the same synthetic data.
   for(const [width,theme] of [[1440,'light'],[390,'light'],[430,'dark']] as const){
     await page.setViewportSize({width,height:1000})
-    await page.evaluate(value=>{localStorage.setItem('fit.appTheme',value);window.dispatchEvent(new Event('fit-theme-change'))},theme)
+    await page.evaluate(value=>localStorage.setItem('fit.appTheme',value),theme)
+    await page.reload()
+    await expect(page.getByRole('table',{name:'Люди',exact:true})).toBeVisible()
+    await expect(page.locator('html')).toHaveClass(theme==='light'?/theme-light/:/^(?!.*theme-light).*$/)
+    await page.evaluate(()=>scrollTo(0,0))
     await expect(page.locator('.corporate-admin-shell')).toHaveClass(theme==='light'?/theme-light/:/ui-identity ym-hide-content $/)
     expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true)
+    const background=await page.locator('.corporate-admin-shell').evaluate(node=>getComputedStyle(node).backgroundColor)
+    expect(background).toBe(theme==='light'?'rgb(251, 250, 247)':'rgb(17, 18, 20)')
     await page.screenshot({path:info.outputPath(`analytics-${width}-${theme}.png`),fullPage:true})
   }
   await page.getByRole('button',{name:'Поступления',exact:true}).click()

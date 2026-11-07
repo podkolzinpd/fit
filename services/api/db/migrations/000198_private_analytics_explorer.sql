@@ -229,7 +229,7 @@ begin
     from buckets b
   )
   select jsonb_build_object(
-    'retentionMeasured',date_to-13 > (select (started_at at time zone 'Europe/Moscow')::date from app_private.analytics_observation_start),
+    'retentionMeasured',date_to <= (now() at time zone 'Europe/Moscow')::date and date_to-13 > (select (started_at at time zone 'Europe/Moscow')::date from app_private.analytics_observation_start),
     'computedAt',now(),'observationStartedAt',(select started_at from app_private.analytics_observation_start),
     'revision',(select md5(coalesce(string_agg(row::text,'' order by row->>'id'),'')) from searched),
     'total',(select count(*) from searched),'rows',coalesce((select jsonb_agg(row) from paged),'[]'::jsonb),
