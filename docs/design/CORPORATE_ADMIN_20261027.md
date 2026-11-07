@@ -2131,3 +2131,40 @@ checkout. Зависимости установлены строго lockfile, �
 полный текущий sourceCI2028 и публикация/приёмка предшественника2027.
 Дальше: обычный выпуск2028, включение его фактического squash-main в UI checkout,
 окончательная проверка/PR2/выпуск; personal grant только после обоих принятий.
+
+### Итерация 44 нового выпуска — 2026-11-07 — GPT / OpenAI
+
+Задача: завершить локальную приёмку UI перед интеграцией опубликованного PR1.
+Расхождения: single-run root check получил прежний5s timeout сжатия tenant bundle
+при1611 APIpass/413штатных skips. Полный API повторён с maxWorkers2, без изменения
+assertions/лимитов:1612pass/413skip. Это локальная нагрузка; причинный код теста
+не менялся, исходный неуспех не скрыт. Новая схема подтверждена полным clean CI.
+Сделано: переключатель вида статистики помещён в существующую шапку как slot;
+прежние heading/refresh/услуги/default tab сохраняются. Новые viewport cases
+разделены по размеру с теми же44px/overflow/hit-test/действиями; общий лимит30s
+не увеличен. Добавлен реальный переход услуги→персональные→услуги.
+Решение: область нажатия стандартного Switch — вся label58px, её фактическое
+нажатие вне28px input проверяет изменение и server ack. Геометрию контролируем
+по интерактивной области, не по декоративному треку. Отвергнуто: увеличивать
+общие тайм-ауты, менять старые baselines или ослаблять viewport assertion.
+Проверка версии5e233b71: root lint/types, frontend348files/3092tests,
+coverage83.75/78.86/82.99/88.42; infra464/calendar22/hosting196 и остальные root
+policy checks passed. API lint/types, полный1612pass/413skip и API build passed;
+целевые74unit прошли последовательно с maxWorkers2. Production build с verified
+fonts2/2 и startup guard прошёл. В нём104/104 Chromium+WebKit scenarios:
+корпоративная админка/прежние услуги/новые персоналки; обе темы320/390/430/1440,
+сохранение/replay/409/revoke/negative gate, pagination/error/zero/filter/навигация.
+Прежние service counters снова в viewport, соответствующие старые tests green.
+Реальные API/WS закрыты; синтетический сервер разрешает только явные fixtures.
+Снимки просмотрены, включая mark320dark WebKit,390dark Chromium, personal detail
+390light и1440light WebKit. Browser не объявляется физическим телефоном/OAuth.
+Docs budgets/links/archive и diff-check passed. Root check проверен по всем
+частям с честно сохранёнными первыми сбоями окружения/нагрузки из43/44.
+Серверный source c4cc: CI42365674070 полностью35/35success. Предшественник2027:
+mainCI42365428246 attempt2success, API42367892097/web42367892149/OTA42368413515
+success; собственный read-only dualhealth/ready/private401/DNS3/endpoints8
+подтвердил обе API версииbb2835cd. Его пользовательская приёмка ещё выполняется.
+Открыто: штатный merge2028 после фактического принятия предшественника;
+затем полный mainCI/официальные публикации и собственные реальные readbacks.
+Дальше: включить принятый PR1 squash-main в эту UI ветку, проверить итоговый diff,
+создать PR2 и выполнить полный выпуск; personal pilot всё ещё OFF.
