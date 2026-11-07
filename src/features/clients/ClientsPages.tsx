@@ -1,3 +1,4 @@
+import { CorporateEmployeeMark } from '../corporate-personal'
 import clientMoreIcon from '../../assets/client-profile/more.svg'
 import clientArrowIcon from '../../assets/client-profile/arrow.svg'
 import clientCalendarIcon from '../../assets/client-profile/calendar.svg'
@@ -551,6 +552,7 @@ export function ClientDetailPage() {
       <ClientDetailSourceState label="данные InBody" loading={progress.isLoading} error={progress.error} onRetry={() => void progress.refetch()} />
       {stats.data?.needsAttention && <p className="attention">Давно не тренировался</p>}
       </>}
+      {actor?.role === 'trainer' && !query.data.archivedAt && <CorporateEmployeeMark key={query.data.id} clientId={query.data.id} />}
       <div className="client-detail-actions">
         {actor?.role === 'trainer' && <ChatThreadsNotice loading={threads.isLoading} error={threads.error} onRetry={() => void threads.refetch()} />}
         {!fitLimePilot && actor?.role === 'trainer' && canOpenClientChat(query.data, thread) && <ChatStartButton clientId={clientId} trainerId={thread?.trainerId ?? actor.userId} conversationId={thread?.conversationId} className="secondary wide client-detail-message" />}

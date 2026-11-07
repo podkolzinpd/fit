@@ -244,3 +244,19 @@ override. Проверять пять preferences, account isolation, remount и
 Storage.prototype не обязательно перехватывает window.localStorage.setItem.
 Исходный red должен действительно вызвать отказ используемого объекта.
 [SET-STORAGE-01 и итерация12](design/TRAINER_SETTINGS_COMPACT_20261107.md#итерация-12--08112026--codex--openai).
+
+### CPT — Закрытый native gate и размер retry (07.11.2026)
+
+Новый закрытый API-модуль подключается также к native browser harness настоящим
+store, как в production: отсутствие optional store даёт503 и меняет прежние
+карточки вместо default-off. Error/retry controls проверяются в legacy/Lime,
+включая реальный44px target. [CPT, итерация51](design/CORPORATE_ADMIN_20261027.md).
+
+
+### CPT — Выбранный фильтр в пустом периоде (07.11.2026)
+
+Пустые metadata не должны превращать выбранный trainerId в визуальное «Все»:
+сохранять последний выбранный id/name и проверять фактический query после
+смены периода/сброса. Для selected quick periods проверять вычисленный контраст
+при hover и без него в обеих темах: общий hover может выиграть каскад.
+[Причины и red/green, итерация58](design/CORPORATE_ADMIN_20261027.md).
