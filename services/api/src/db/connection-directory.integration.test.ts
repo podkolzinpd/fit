@@ -4,7 +4,7 @@ import { runner } from 'node-pg-migrate'
 import { Pool } from 'pg'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
-interface TestResult { id: string; code: string; status: string; expectedRelationshipId: string | null; expectedRevision: string | null }
+interface TestResult { incoming: boolean; id: string; code: string; status: string; expectedRelationshipId: string | null; expectedRevision: string | null }
 const source = process.env.TEST_DATABASE_URL
 describe.skipIf(!source)('connection directory with real PostgreSQL and runtime role', () => {
   let admin: Pool, pool: Pool
@@ -31,6 +31,17 @@ describe.skipIf(!source)('connection directory with real PostgreSQL and runtime 
       const result = (await db.query<{ result: TestResult }>('select app_private.connection_directory($1,$2::jsonb) result', [action, JSON.stringify(data)])).rows[0]!.result
       await db.query('commit'); return result
     } catch (e) { await db.query('rollback'); throw e } finally { db.release() }
+  }
+  async function legacyActor(id: string, sql: string, params: unknown[] = []) {
+    const db = await pool.connect()
+    try {
+      await db.query('begin')
+      await db.query("select set_config('request.jwt.claim.sub',$1,true)", [id])
+      await db.query('set local role fit_api')
+      const result = await db.query<{ invitation_token: string }>(sql, params)
+      await db.query('commit')
+      return result.rows
+    } catch (error) { await db.query('rollback'); throw error } finally { db.release() }
   }
   async function fixture(withCard = true) {
     const athlete = randomUUID(), trainer = randomUUID(), outsider = randomUUID(), card = randomUUID()
@@ -83,6 +94,85 @@ describe.skipIf(!source)('connection directory with real PostgreSQL and runtime 
     await pool.query("insert into public.client_trainer_relationships(client_id,trainer_id,connected_by,status,disconnected_at,disconnected_by) values($1,$2,$3,'disconnected',now(),$3)", [f.card, f.outsider, f.athlete])
     await expect(actor(f.trainer, 'accept', { requestId: request.id })).rejects.toMatchObject({ message: 'connection_changed' })
     expect((await pool.query<{n:number}>("select count(*)::int n from public.client_trainer_relationships where client_id=$1 and status='active'", [f.card])).rows[0]!.n).toBe(0)
+  })
+  it('lets only the athlete explicitly refresh stale consent and keeps both sides informed', async () => {
+    const f = await fixture()
+    const request = await actor(f.athlete, 'send', { peerId: f.trainer, expectedRelationshipId: null, expectedRevision: null })
+    await pool.query("insert into public.client_trainer_relationships(client_id,trainer_id,connected_by,status,disconnected_at,disconnected_by) values($1,$2,$3,'disconnected',now(),$3)", [f.card, f.outsider, f.athlete])
+    expect((await actor(f.athlete, 'status', { requestId: request.id })).status).toBe('needs_confirmation')
+    expect((await actor(f.trainer, 'send', { peerId: f.athlete })).status).toBe('needs_confirmation')
+    await expect(actor(f.trainer, 'accept', { requestId: request.id })).rejects.toMatchObject({ message: 'connection_changed' })
+    const preview = await actor(f.athlete, 'preview', { peerId: f.trainer })
+    const renewed = await actor(f.athlete, 'send', { peerId: f.trainer, expectedRelationshipId: preview.expectedRelationshipId, expectedRevision: preview.expectedRevision })
+    expect(renewed).toMatchObject({ id: request.id, status: 'pending', incoming: false })
+    expect((await actor(f.trainer, 'status', { requestId: request.id })).status).toBe('pending')
+    await actor(f.trainer, 'accept', { requestId: request.id })
+    expect((await pool.query("select event from app_private.connection_audit where request_id=$1 and event='consent_renewed'", [request.id])).rowCount).toBe(1)
+    expect((await actor(f.athlete, 'list') as unknown as TestResult[]).find(r => r.id === request.id)?.status).toBe('accepted')
+  })
+  it('returns an incoming request on an opposite-direction send without silently accepting', async () => {
+    const f = await fixture()
+    const sent = await actor(f.athlete, 'send', { peerId: f.trainer, expectedRelationshipId: null, expectedRevision: null })
+    const opposite = await actor(f.trainer, 'send', { peerId: f.athlete })
+    expect(opposite).toMatchObject({ id: sent.id, status: 'pending', incoming: true })
+    expect((await pool.query("select id from public.client_trainer_relationships where client_id=$1 and status='active'", [f.card])).rowCount).toBe(0)
+  })
+  it('retains outcomes across reload and reports disconnection instead of a stale success', async () => {
+    const f = await fixture()
+    const body = { peerId: f.trainer, expectedRelationshipId: null, expectedRevision: null }
+    const declined = await actor(f.athlete, 'send', body)
+    await actor(f.trainer, 'decline', { requestId: declined.id })
+    const cancelled = await actor(f.athlete, 'send', body)
+    await actor(f.athlete, 'cancel', { requestId: cancelled.id })
+    const expired = await actor(f.athlete, 'send', body)
+    await pool.query("update app_private.connection_requests set expires_at=now()-interval '1 second' where id=$1", [expired.id])
+    const accepted = await actor(f.athlete, 'send', body)
+    await actor(f.trainer, 'accept', { requestId: accepted.id })
+    for (const participant of [f.athlete, f.trainer]) {
+      const rows = await actor(participant, 'list') as unknown as TestResult[]
+      expect(rows.find(r => r.id === declined.id)?.status).toBe('declined')
+      expect(rows.find(r => r.id === cancelled.id)?.status).toBe('cancelled')
+      expect(rows.find(r => r.id === expired.id)?.status).toBe('expired')
+      expect(rows.find(r => r.id === accepted.id)?.status).toBe('accepted')
+    }
+    expect(await actor(f.outsider, 'list')).toEqual([])
+    await pool.query("update public.client_trainer_relationships set status='disconnected',disconnected_at=now(),disconnected_by=$2 where client_id=$1 and status='active'", [f.card, f.athlete])
+    expect((await actor(f.trainer, 'status', { requestId: accepted.id })).status).toBe('disconnected')
+    expect((await actor(f.athlete, 'list') as unknown as TestResult[]).find(r => r.id === accepted.id)?.status).toBe('disconnected')
+    await expect(actor(f.trainer, 'accept', { requestId: accepted.id })).rejects.toMatchObject({ message: 'connection_changed' })
+    await pool.query("update app_private.connection_requests set decided_at=now()-interval '31 days',expires_at=now()-interval '32 days' where id=$1", [declined.id])
+    expect((await actor(f.athlete, 'list') as unknown as TestResult[]).find(r => r.id === declined.id)).toBeUndefined()
+  })
+  it('never hides pending requests behind the terminal history limit', async () => {
+    const f = await fixture()
+    const athletes = Array.from({ length: 52 }, () => randomUUID())
+    await pool.query("insert into public.profiles(id,account_role,first_name) select id,'client','Synthetic Applicant' from unnest($1::uuid[]) id", [athletes])
+    await pool.query("insert into app_private.connection_requests(trainer_id,athlete_id,initiated_by) select $1,id,id from unnest($2::uuid[]) id", [f.trainer, athletes])
+    await pool.query("insert into app_private.connection_requests(trainer_id,athlete_id,initiated_by,status,decided_at) select $1,$2,$2,'declined',now() from generate_series(1,60)", [f.trainer, f.athlete])
+    const requests = await actor(f.trainer, 'list') as unknown as TestResult[]
+    expect(requests.filter(r => r.status === 'pending')).toHaveLength(52)
+    expect(requests.filter(r => r.status === 'declined')).toHaveLength(50)
+    expect(requests.slice(0, 52).every(r => r.status === 'pending')).toBe(true)
+  })
+  it('completes the same pending request through a legacy invitation and never revives its old period', async () => {
+    const f = await fixture()
+    const request = await actor(f.athlete, 'send', { peerId: f.trainer, expectedRelationshipId: null, expectedRevision: null })
+    const [share] = await legacyActor(f.athlete, "select * from public.create_client_invitation_share($1,'trainer')", [f.card])
+    await legacyActor(f.trainer, 'select public.claim_client_invitation_link($1)', [share!.invitation_token])
+    expect((await actor(f.trainer, 'status', { requestId: request.id })).status).toBe('accepted')
+    expect((await actor(f.athlete, 'list') as unknown as TestResult[]).find(r => r.id === request.id)?.status).toBe('accepted')
+    expect((await pool.query("select event from app_private.connection_audit where request_id=$1 and event='accepted'", [request.id])).rowCount).toBe(1)
+    await pool.query("update public.client_trainer_relationships set status='disconnected',disconnected_at=now(),disconnected_by=$2 where client_id=$1 and status='active'", [f.card, f.athlete])
+    expect((await actor(f.athlete, 'status', { requestId: request.id })).status).toBe('disconnected')
+    await expect(actor(f.trainer, 'accept', { requestId: request.id })).rejects.toMatchObject({ message: 'connection_changed' })
+    const preview = await actor(f.athlete, 'preview', { peerId: f.trainer })
+    const next = await actor(f.athlete, 'send', { peerId: f.trainer, expectedRelationshipId: preview.expectedRelationshipId, expectedRevision: preview.expectedRevision })
+    expect(next.id).not.toBe(request.id)
+    await actor(f.trainer, 'accept', { requestId: next.id })
+    expect((await actor(f.athlete, 'status', { requestId: next.id })).status).toBe('accepted')
+    expect((await actor(f.athlete, 'status', { requestId: request.id })).status).toBe('disconnected')
+    await expect(actor(f.trainer, 'accept', { requestId: request.id })).rejects.toMatchObject({ message: 'connection_changed' })
+    expect((await pool.query("select event from app_private.connection_audit where request_id=$1 and event='accepted'", [next.id])).rowCount).toBe(1)
   })
   it('switches atomically with athlete consent and preserves existing workout facts', async () => {
     const f = await fixture(), workout = randomUUID()

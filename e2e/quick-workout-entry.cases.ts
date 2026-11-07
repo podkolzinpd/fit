@@ -28,7 +28,7 @@ async function scrollDayForBooking(viewport: Locator) {
 
 export function quickWorkoutEntryCases() {
   test.skip(process.env.FIT_QUICK_WORKOUT_ENTRY_ACCEPTANCE !== '1', 'Dedicated native quick-entry harness')
-  test('Lifecycle P1 inline client creation retains slot context', async ({ page }, info) => {
+  test('Lifecycle P1 connected athlete selection retains slot context without manual creation', async ({ page }, info) => {
     await page.clock.setFixedTime(new Date('2026-11-01T09:00:00Z'))
     const backend = await mockPilot(page, { profileId: 'c0ac0000-6010-4000-8000-000000000001', fitLime: true, workouts: [] })
     const writes: string[] = []
@@ -45,16 +45,15 @@ export function quickWorkoutEntryCases() {
     await picker.getByRole('textbox', { name: 'Поиск клиента' }).fill('Новая спортсменка')
     await expect(picker.getByText('Никого не нашли', { exact: true })).toBeVisible()
     await page.screenshot({ path: info.outputPath('lifecycle-p1-slot-picker.png') })
-    await picker.getByRole('button', { name: 'Клиент', exact: true }).click()
-    await expect(picker.getByRole('textbox', { name: 'Имя нового клиента' })).toHaveValue('Новая спортсменка')
-    await picker.getByRole('button', { name: 'К выбору', exact: true }).click()
-    await expect(picker.getByRole('textbox', { name: 'Поиск клиента' })).toHaveValue('Новая спортсменка')
-    await picker.getByRole('button', { name: 'Клиент', exact: true }).click()
-    await picker.getByRole('button', { name: 'Добавить и выбрать', exact: true }).click()
+    await expect(picker.getByRole('button', { name: 'Клиент', exact: true })).toHaveCount(0)
+    await expect(picker.getByRole('textbox', { name: 'Имя нового клиента' })).toHaveCount(0)
+    await picker.getByRole('textbox', { name: 'Поиск клиента' }).fill('')
+    await picker.locator(`.client-picker-item[data-client-id="${clientId}"]`).click()
+    await picker.getByRole('button', { name: 'Применить клиента', exact: true }).click()
     await expect(picker).toHaveCount(0)
     expect(writes).toHaveLength(0)
     expect(backend.getSaveAttempts()).toBe(0)
-    await expect(booking).toContainText('Новая спортсменка')
+    await expect(booking).toContainText('Алексей Смирнов')
     await expect(booking).toContainText('14:00')
     await page.screenshot({ path: info.outputPath('lifecycle-p1-slot.png') })
   })

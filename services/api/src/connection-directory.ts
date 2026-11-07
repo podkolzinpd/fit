@@ -6,7 +6,7 @@ import { YandexAppSessionDeniedError, YandexAppSessionInvalidError } from './db/
 import { PilotSessionInvalidError } from './db/yandex-pilot-transaction.js'
 
 const uuid = /^[a-f0-9]{8}-[a-f0-9]{4}-[1-5][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/i
-const actions = ['self', 'rotate', 'list', 'status', 'resolve', 'preview', 'send', 'accept', 'decline', 'cancel'] as const
+const actions = ['self', 'rotate', 'list', 'create_invitation', 'revoke_invitation', 'status', 'resolve', 'preview', 'send', 'accept', 'decline', 'cancel'] as const
 type Action = typeof actions[number]
 interface Command { action: Action; data: Record<string, unknown> }
 export function emailHash(value: string): string | undefined {
@@ -19,10 +19,11 @@ export function readDirectoryCommand(body: unknown): Command | undefined {
   const v = body as Record<string, unknown>
   if (!actions.includes(v.action as Action)) return undefined
   const action = v.action as Action
-  if (['self', 'rotate', 'list'].includes(action)) return { action, data: {} }
+  if (['self', 'rotate', 'list', 'create_invitation'].includes(action)) return { action, data: {} }
+  if (action === 'revoke_invitation') return typeof v.code === 'string' && /^[A-F0-9]{32}$/.test(v.code) ? { action, data: { code: v.code } } : undefined
   if (action === 'resolve') {
     if (typeof v.value !== 'string') return undefined
-    const value = v.kind === 'email' ? emailHash(v.value) : v.kind === 'code' && /^[A-F0-9]{16}$/.test(v.value.trim().toUpperCase()) ? v.value.trim().toUpperCase() : undefined
+    const value = v.kind === 'email' ? emailHash(v.value) : v.kind === 'code' && /^(?:[A-F0-9]{16}|[A-F0-9]{32})$/.test(v.value.trim().toUpperCase()) ? v.value.trim().toUpperCase() : undefined
     return value ? { action, data: { kind: v.kind, value } } : undefined
   }
   const key = ['preview', 'send'].includes(action) ? 'peerId' : 'requestId'
@@ -31,6 +32,10 @@ export function readDirectoryCommand(body: unknown): Command | undefined {
   if (action === 'send' || action === 'accept') {
     if (!(v.expectedRelationshipId === null || typeof v.expectedRelationshipId === 'string' && uuid.test(v.expectedRelationshipId))) return undefined
     if (!(v.expectedRevision === null || typeof v.expectedRevision === 'string' && /^\d{4}-\d{2}-\d{2}T/.test(v.expectedRevision) && Number.isFinite(Date.parse(v.expectedRevision)))) return undefined
+    if (v.invitationCode !== undefined) {
+      if (action !== 'send' || typeof v.invitationCode !== 'string' || !/^[A-F0-9]{32}$/.test(v.invitationCode)) return undefined
+      data.invitationCode = v.invitationCode
+    }
     data.expectedRelationshipId = v.expectedRelationshipId
     data.expectedRevision = v.expectedRevision
   }
@@ -66,6 +71,7 @@ export function registerConnectionDirectory(app: FastifyInstance, store?: Pick<C
       if (error instanceof YandexAppSessionInvalidError || error instanceof PilotSessionInvalidError) return reply.code(401).send({ error: 'unauthorized' })
       if (error instanceof YandexAppSessionDeniedError) return reply.code(403).send({ error: 'connection_forbidden' })
       const message = error instanceof Error ? error.message : ''
+      if (message === 'connection_invalid') return reply.code(400).send({ error: message })
       if (message === 'connection_forbidden') return reply.code(403).send({ error: message })
       if (message === 'connection_rate_limited') return reply.code(429).send({ error: message })
       if (['connection_changed', 'connection_offer_unavailable', 'connection_card_missing'].includes(message)) return reply.code(409).send({ error: message })

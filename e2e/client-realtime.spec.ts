@@ -1,13 +1,7 @@
-import { nativeSignIn, nativeRegister, closeNativeContext } from './native-local-fixture'
+import { nativeCreateConnectedAthlete, nativeSignIn, nativeRegister, closeNativeContext } from './native-local-fixture'
 import { expect, test, type Page } from './native-local-fixture'
 import { chooseWorkoutTime } from './workout-time-wheel'
 
-
-async function fillClientProfileDetails(page: Page) {
-  await page.getByLabel('Пол').selectOption('female')
-  await page.getByLabel('Возраст').fill('30')
-  await page.getByLabel('Рост, см').fill('170')
-}
 
 async function register(page: Page, values: { name: string; email: string; role?: 'client' }) {
   await page.goto('/auth')
@@ -88,42 +82,15 @@ test('client and trainer refresh shared progress and workouts when the app becom
     await register(trainer, { name: 'Realtime тренер', email: `realtime-trainer-${suffix}@fit.local` })
     await pollNative(trainer)
     await expect(trainer.getByRole('heading', { level: 1, name: 'Сегодня' })).toBeVisible()
-    await trainer.goto('/clients')
-    await trainer.getByRole('button', { name: /^(Добавить|Добавить спортсмена)$/ }).click()
-    await trainer.getByText('Новый спортсмен ещё не зарегистрирован?').click()
-    await trainer.getByRole('link', { name: 'Создать карточку вручную', exact: true }).click()
-    await trainer.getByLabel('Имя').fill('Realtime клиент')
-    await fillClientProfileDetails(trainer)
-    await trainer.getByLabel('Начальный вес, кг').fill('60')
-    await trainer.keyboard.press('Escape')
-    await Promise.all([
-      trainer.waitForURL(/\/clients\/[0-9a-f-]+$/),
-      trainer.getByRole('button', { name: 'Сохранить' }).click(),
-    ])
-    const clientId = trainer.url().match(/\/clients\/([0-9a-f-]+)$/)?.[1]
-    expect(clientId).toBeTruthy()
-    await trainer.getByRole('button', { name: 'Пригласить клиента' }).click()
-    const codeText = await trainer.getByText(/Код клиента:/).textContent()
-    const code = codeText?.match(/[A-F0-9]{12}/)?.[0]
-    expect(code).toBeTruthy()
-
-    await register(client, {
-      name: 'Realtime клиент',
-      email: `realtime-client-${suffix}@fit.local`,
-      role: 'client',
+    const { clientId } = await nativeCreateConnectedAthlete(trainer, {
+      name: 'Realtime клиент', key: `realtime-client-${suffix}@fit.local`,
+      profile: { gender: 'female', ageYears: 30, heightCm: 170, initialWeightKg: 60 },
     })
+    await register(client, { name: 'Realtime клиент', email: `realtime-client-${suffix}@fit.local`, role: 'client' })
     await pollNative(client)
-    await expect(client.getByRole('heading', { name: 'Тренируйтесь и следите за прогрессом' })).toBeVisible()
-    await client.goto('/join')
-    await client.getByLabel('Код приглашения').fill(code!)
-    await client.getByRole('button', { name: 'Присоединиться' }).click()
-    await client.getByRole('button', { name: 'Подключить тренера', exact: true }).click()
-    await pollNative(client)
-    await expect(client.getByRole('heading', { name: 'Тренер подключён' })).toBeVisible()
-    await client.getByRole('button', { name: 'Открыть кабинет' }).click()
     await expect(client).toHaveURL(/\/me$/)
-    await pollNative(trainer)
-    await expect(trainer.getByRole('button', { name: 'Пригласить клиента' })).toHaveCount(0, { timeout: 10_000 })
+    await trainer.goto(`/clients/${clientId}`)
+    await expect(trainer.getByRole('button', { name: 'Подключить аккаунт к этой карточке' })).toHaveCount(0)
 
     await trainer.goto(`/clients/${clientId}/goal`)
     await trainer.getByLabel('Цель').fill('Realtime цель')
@@ -189,6 +156,8 @@ test('client and trainer refresh shared progress and workouts when the app becom
     await expect(assignedWorkout).toBeVisible({ timeout: 10_000 })
     await assignedWorkout.click()
     await client.getByRole('button', { name: 'Начать тренировку' }).click()
+    await expect(client).toHaveURL(/\/live$/)
+    await expect(client.locator('.live-timer')).toBeVisible()
 
     // Обе стороны остаются на одном workout detail: старт и завершение должны
     // появиться у тренера через realtime, без reload или повторной навигации.

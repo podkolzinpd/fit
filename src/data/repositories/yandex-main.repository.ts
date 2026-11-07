@@ -201,6 +201,7 @@ const clientSchema = z.object({
   id: uuid,
   canArchive: z.boolean(),
   hasAccount: z.boolean(),
+  canCreateWorkout: z.boolean().optional(),
   fullName: z.string(),
   canonicalFullName: z.string(),
   gender: z.enum(['male', 'female']).nullable(),
@@ -451,11 +452,14 @@ const workoutTemplateResponseSchema = z.object({ template: workoutTemplateSchema
 type ResponseErrorFactory = (status: number, code?: string) => Error
 
 function errorForStatus(status: number, code?: string): RepositoryError {
+  if (code === 'athlete_registration_required') return new RepositoryError(code, 'Пригласите спортсмена. Он появится после регистрации и подтверждения.')
+  if (code === 'athlete_connection_required') return new RepositoryError(code, 'Сначала дождитесь подключения спортсмена. После этого можно записывать тренировки.')
   if (code === 'connection_rate_limited') return new RepositoryError(code, 'Слишком много попыток. Попробуйте через час.')
-  if (code === 'connection_card_missing') return new RepositoryError(code, 'Не найдена карточка спортсмена. Обратитесь в поддержку.')
+  if (code === 'connection_card_missing') return new RepositoryError(code, 'Не удалось найти аккаунт спортсмена. Обратитесь в поддержку.')
+  if (code === 'connection_invalid') return new RepositoryError(code, 'Не удалось проверить приглашение. Откройте ссылку заново.')
   if (code === 'connection_changed') return new RepositoryError(code, 'Подключение изменилось. Проверьте условия и подтвердите заново.')
   if (code === 'connection_offer_unavailable') return new RepositoryError(code, 'Приглашение больше не действует. Попросите тренера отправить новое.')
-  if (code === 'connection_forbidden') return new RepositoryError(code, 'Подключение может подтвердить только приглашённый спортсмен.')
+  if (code === 'connection_forbidden') return new RepositoryError(code, 'Этот запрос недоступен для вашего аккаунта. Проверьте, под каким аккаунтом вы вошли.')
   if (code === 'invitation_role_mismatch') return new RepositoryError(code, 'Приглашение предназначено другой роли. Войдите под подходящим аккаунтом.')
   if (code === 'invitation_connection_ended') return new RepositoryError(code, 'Это подключение уже завершено. Для повторного подключения нужно новое приглашение.')
   if (code === 'push_test_rate_limited') return new RepositoryError(code, 'Тест уже запрошен. Подождите минуту перед повторной отправкой.')
@@ -1729,13 +1733,15 @@ export function createYandexMainRepository(
       async remove(item) { await writeJson(queries, `/v1/workouts/${item.id}`, 'DELETE', { expectedVersion: item.version }, z.object({ workout: z.object({ version: z.number().int().positive() }) })); invalidate() },
     },
     connectionDirectory: (() => {
-      const person = z.object({ id: uuid, name: z.string(), role: z.enum(['trainer', 'client']), connected: z.boolean().nullable(),
+      const person = z.object({ invitationCode: z.string().optional(), id: uuid, name: z.string(), role: z.enum(['trainer', 'client']), connected: z.boolean().nullable(),
         expectedRelationshipId: uuid.nullable(), expectedRevision: z.string().nullable(), currentTrainer: z.object({ id: uuid, name: z.string() }).nullable() })
       const self = z.object({ code: z.string(), fitId: uuid, emailSearchReady: z.boolean() })
-      const decision = z.object({ id: uuid.optional(), status: z.string() })
+      const decision = z.object({ id: uuid.optional(), status: z.string(), incoming: z.boolean().optional() })
       const call = async <T,>(body: object, schema: z.ZodType<T>) =>
         (await writeJson(queries, '/v1/connection-directory', 'POST', body, z.object({ result: schema }))).result
       return {
+        createInvitation: () => call({ action: 'create_invitation' }, z.object({ id: uuid, code: z.string(), expiresAt: z.string() })),
+        revokeInvitation: (code: string) => call({ action: 'revoke_invitation', code }, decision),
         self: () => call({ action: 'self' }, self),
         rotate: () => call({ action: 'rotate' }, self),
         resolve: (kind: 'email' | 'code', value: string) => call({ action: 'resolve', kind, value }, person.nullable()),
@@ -1744,7 +1750,7 @@ export function createYandexMainRepository(
           name: z.string(), role: z.enum(['trainer', 'client']), expiresAt: z.string() }))),
         status: (requestId: string) => call({ action: 'status', requestId }, decision),
         send: async (p: import('../../shared/connection-directory').ConnectionPerson) => {
-          const result = await call({ action: 'send', peerId: p.id, expectedRelationshipId: p.expectedRelationshipId, expectedRevision: p.expectedRevision }, decision)
+          const result = await call({ action: 'send', peerId: p.id, invitationCode: p.invitationCode, expectedRelationshipId: p.expectedRelationshipId, expectedRevision: p.expectedRevision }, decision)
           invalidate(); return result
         },
         decide: async (action: 'accept' | 'decline' | 'cancel', requestId: string, p?: import('../../shared/connection-directory').ConnectionPerson) => {

@@ -5,7 +5,7 @@ import { mockTrainingSummaries } from './native-summary-fixture'
 import { mockProgressBundle } from './native-progress-fixture'
 import { fulfillTrainingData, trainingPageParams } from './native-workout-fixture'
 import { setFixture, exerciseFixture, workoutFixture } from './native-workout-fixture'
-import { nativeSignIn } from './native-local-fixture'
+import { nativeSignIn, nativeCreateConnectedAthlete } from './native-local-fixture'
 import { nativeRegister } from './native-local-fixture'
 import { mockNativeAiSession, nativeAiUrl } from './native-ai-fixture'
 import { expect, test } from './native-local-fixture'
@@ -2805,15 +2805,15 @@ test('trainer Client Detail keeps its visual baselines', async ({ page }, testIn
   await expectVisualBaseline(page, `trainer-client-detail-${profile}-dark-${process.platform}.png`, [], true, '#1d1e21')
 })
 
-test('trainer Client Create and Edit keep their visual baselines', async ({ page }, testInfo) => {
+test('trainer invitation replaces manual creation and Edit keeps its visual baseline', async ({ page }, testInfo) => {
   await signIn(page, 'trainer@fit.local', /\/today$/)
   const profile = testInfo.project.name === 'visual-trainer-1440' ? 'desktop' : 'mobile'
 
   await gotoStable(page, '/clients/new')
-  await expect(page.getByRole('heading', { name: 'Новый клиент' })).toBeVisible()
-  await expect(page.locator('.phone-frame')).toHaveClass(/trainer-client-form-identity/)
-  await expect(page.getByLabel('Начальный вес, кг')).toBeVisible()
-  await expectVisualBaseline(page, `trainer-client-create-${profile}-${process.platform}.png`, [], true)
+  await expect(page).toHaveURL(/\/connect$/)
+  await expect(page.getByRole('heading', { name: 'Добавить спортсмена' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Пригласить', exact: true })).toBeVisible()
+  await expect(page.getByLabel('Начальный вес, кг')).toHaveCount(0)
 
   await gotoStable(page, `/clients/${demoClientId}/edit`)
   await expect(page.getByRole('heading', { name: 'Редактировать клиента' })).toBeVisible()
@@ -2823,8 +2823,9 @@ test('trainer Client Create and Edit keep their visual baselines', async ({ page
   await gotoStable(page, '/profile/settings')
   await page.getByRole('switch', { name: 'Тёмная тема' }).check()
   await gotoStable(page, '/clients/new')
-  await expect(page.locator('.phone-frame')).toHaveClass(/trainer-client-form-identity/)
-  await expectVisualBaseline(page, `trainer-client-create-${profile}-dark-${process.platform}.png`, [], true, '#1d1e21')
+  await expect(page).toHaveURL(/\/connect$/)
+  await expect(page.getByRole('button', { name: 'Пригласить', exact: true })).toBeVisible()
+  await expect(page.getByLabel('Начальный вес, кг')).toHaveCount(0)
   await gotoStable(page, `/clients/${demoClientId}/edit`)
   await expectVisualBaseline(page, `trainer-client-edit-${profile}-dark-${process.platform}.png`, [], true, '#1d1e21')
 })
@@ -2838,15 +2839,8 @@ test('trainer Client Goal keeps its real create, stage and edit states in both t
 
   // Отдельный спортсмен на каждый browser-project не даёт параллельным
   // visual-проверкам делить одну active goal и менять состояние друг друга.
-  await gotoStable(page, '/clients/new')
-  await page.getByLabel('Имя', { exact: true }).fill(clientName)
-  await page.getByLabel('Пол').selectOption('female')
-  await page.getByLabel('Возраст').fill('29')
-  await page.getByLabel('Рост, см').fill('168')
-  await page.getByLabel('Начальный вес, кг').fill('63')
-  await page.getByRole('button', { name: 'Сохранить' }).click()
-  await expect(page).toHaveURL(/\/clients\/[0-9a-f-]+$/)
-  const clientId = page.url().split('/').pop()!
+  const { clientId } = await nativeCreateConnectedAthlete(page, { name: clientName,
+    profile: { gender: 'female', ageYears: 29, heightCm: 168, initialWeightKg: 63 } })
 
   await gotoStable(page, `/clients/${clientId}/goal`)
   await expect(page.locator('.phone-frame')).toHaveClass(/trainer-client-goal-identity/)
@@ -2896,7 +2890,9 @@ test('trainer Client Goal keeps its real create, stage and edit states in both t
   await expect(dialog).toBeVisible()
   await dialog.getByRole('button', { name: 'Архивировать' }).click()
   await expect(page).toHaveURL(new RegExp(`/clients/${clientId}$`))
-  await (await clientCardAction(page, 'Архивировать клиента')).click()
+  await (await clientCardAction(page, 'Отключиться от спортсмена')).click()
+  await page.getByRole('alertdialog').getByRole('button', { name: 'Отключиться', exact: true }).click()
+  await expect(page).toHaveURL(/\/clients$/)
   await gotoStable(page, '/profile/settings')
   await page.getByRole('switch', { name: 'Тёмная тема' }).uncheck()
 })

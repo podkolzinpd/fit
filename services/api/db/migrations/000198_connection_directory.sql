@@ -28,6 +28,8 @@ create table if not exists app_private.connection_requests (
   check(initiated_by in (trainer_id,athlete_id)),
   check(trainer_id<>athlete_id)
 );
+alter table app_private.connection_requests add column if not exists accepted_relationship_id uuid
+  references public.client_trainer_relationships(id) on delete set null;
 create unique index if not exists connection_request_pending_pair on app_private.connection_requests(trainer_id,athlete_id) where status='pending';
 create table if not exists app_private.connection_audit (
   id bigint generated always as identity primary key,
@@ -79,6 +81,51 @@ revoke all on function app_private.clear_connection_emails_on_unlink() from publ
 create or replace trigger clear_connection_emails_on_unlink after delete on app_private.auth_identities
   for each row execute function app_private.clear_connection_emails_on_unlink();
 
+-- Every existing connection command converges here, including card-bound invitations and chat.
+create or replace function app_private.complete_connection_requests()
+returns trigger language plpgsql security definer set search_path='' as $$
+declare
+  athlete uuid;
+  request_id uuid;
+begin
+  if new.status<>'active' then return new; end if;
+  select auth_user_id into athlete from public.clients where id=new.client_id;
+  if athlete is null then return new; end if;
+  for request_id in
+    update app_private.connection_requests set status='accepted',decided_at=now(),accepted_relationship_id=new.id
+      where trainer_id=new.trainer_id and athlete_id=athlete and status='pending' and expires_at>now()
+      returning id
+  loop
+    insert into app_private.connection_audit(actor_id,request_id,event)
+      values(coalesce(auth.uid(),new.connected_by),request_id,'accepted');
+  end loop;
+  return new;
+end $$;
+revoke all on function app_private.complete_connection_requests() from public,fit_api;
+create or replace trigger complete_connection_requests after insert or update of status on public.client_trainer_relationships
+  for each row execute function app_private.complete_connection_requests();
+
+-- Display state is derived from the current relationship, never from a stale success receipt.
+create or replace function app_private.connection_request_status(p_request app_private.connection_requests)
+returns text language sql stable security definer set search_path='' as $$
+  select case
+    when p_request.status='pending' and p_request.expires_at<=now()
+      or p_request.status='cancelled' and p_request.decided_at>=p_request.expires_at then 'expired'
+    when p_request.status='accepted' and active.id is null then 'disconnected'
+    when p_request.status='pending' and p_request.initiated_by=p_request.athlete_id
+      and (p_request.expected_relationship_id is distinct from current_relation.id
+        or p_request.expected_revision is distinct from history.revision) then 'needs_confirmation'
+    else p_request.status end
+  from (select 1) anchor
+  left join public.clients c on c.auth_user_id=p_request.athlete_id
+    and c.archived_at is null and c.merged_into_client_id is null
+  left join public.client_trainer_relationships current_relation on current_relation.client_id=c.id and current_relation.status='active'
+  left join public.client_trainer_relationships active on active.client_id=c.id and active.status='active' and active.trainer_id=p_request.trainer_id
+    and (p_request.accepted_relationship_id is null or active.id=p_request.accepted_relationship_id)
+  left join lateral (select max(r.updated_at) revision from public.client_trainer_relationships r where r.client_id=c.id) history on true;
+$$;
+revoke all on function app_private.connection_request_status(app_private.connection_requests) from public,fit_api;
+
 create or replace function app_private.connection_directory(p_action text,p_data jsonb default '{}')
 returns jsonb language plpgsql security definer set search_path='' as $$
 declare
@@ -121,17 +168,25 @@ begin
       on e.subject_sha256=i.provider_subject_sha256 where i.profile_id=actor and i.provider='yandex'));
   end if;
   if p_action='list' then
-    select coalesce(jsonb_agg(jsonb_build_object('id',r.id,'status',r.status,'incoming',r.initiated_by<>actor,
-      'peerId',p.id,'name',coalesce(nullif(concat_ws(' ',p.first_name,p.last_name),''),'Пользователь Fit'),
-      'role',p.account_role,'expiresAt',r.expires_at) order by r.created_at desc),'[]') into result
-      from app_private.connection_requests r join public.profiles p on p.id=case when actor=r.trainer_id then r.athlete_id else r.trainer_id end
-      where actor in (r.trainer_id,r.athlete_id) and r.status='pending' and r.expires_at>now();
+    select coalesce(jsonb_agg(jsonb_build_object('id',r.id,'status',app_private.connection_request_status(r),
+      'incoming',r.initiated_by<>actor,'peerId',p.id,
+      'name',coalesce(nullif(concat_ws(' ',p.first_name,p.last_name),''),'Пользователь Fit'),
+      'role',p.account_role,'expiresAt',r.expires_at)
+      order by (r.status='pending' and r.expires_at>now()) desc,coalesce(r.decided_at,r.created_at) desc),'[]') into result
+      from (select r.* from app_private.connection_requests r
+        where actor in (r.trainer_id,r.athlete_id) and r.status='pending' and r.expires_at>now()
+        union all
+        (select r.* from app_private.connection_requests r
+          where actor in (r.trainer_id,r.athlete_id) and not (r.status='pending' and r.expires_at>now())
+            and coalesce(r.decided_at,r.expires_at)>now()-interval '30 days'
+          order by coalesce(r.decided_at,r.expires_at) desc limit 50)) r
+      join public.profiles p on p.id=case when actor=r.trainer_id then r.athlete_id else r.trainer_id end;
     return result;
   end if;
   if p_action='status' then
     select * into req from app_private.connection_requests where id=(p_data->>'requestId')::uuid;
     if req.id is null or actor not in (req.trainer_id,req.athlete_id) then raise exception 'connection_forbidden' using errcode='PT403'; end if;
-    return jsonb_build_object('status',case when req.status='pending' and req.expires_at<=now() then 'expired' else req.status end);
+    return jsonb_build_object('status',app_private.connection_request_status(req),'incoming',req.initiated_by<>actor);
   end if;
   if p_action='resolve' then
     if p_data->>'kind'='email' then
@@ -186,17 +241,26 @@ begin
     update app_private.connection_requests set status='cancelled',decided_at=now()
       where trainer_id=trainer and athlete_id=athlete and status='pending' and expires_at<=now();
     select * into req from app_private.connection_requests where trainer_id=trainer and athlete_id=athlete and status='pending' for update;
-    if req.id is not null then return jsonb_build_object('id',req.id,'status',req.status); end if;
+    if req.id is not null then
+      -- Only a fresh, explicit athlete action can replace that athlete's stale consent.
+      if actor=athlete and req.initiated_by=actor
+        and (req.expected_relationship_id is distinct from active_id or req.expected_revision is distinct from revision) then
+        update app_private.connection_requests set expected_relationship_id=active_id,expected_revision=revision,
+          expires_at=now()+interval '7 days' where id=req.id returning * into req;
+        insert into app_private.connection_audit(actor_id,request_id,event) values(actor,req.id,'consent_renewed');
+      end if;
+      return jsonb_build_object('id',req.id,'status',app_private.connection_request_status(req),'incoming',req.initiated_by<>actor);
+    end if;
     insert into app_private.connection_requests(trainer_id,athlete_id,initiated_by,expected_relationship_id,expected_revision)
       values(trainer,athlete,actor,case when actor_role='client' then active_id else null end,
         case when actor_role='client' then revision else null end) returning * into req;
     insert into app_private.connection_audit(actor_id,request_id,event) values(actor,req.id,'requested');
-    return jsonb_build_object('id',req.id,'status',req.status);
+    return jsonb_build_object('id',req.id,'status',req.status,'incoming',false);
   end if;
   select * into req from app_private.connection_requests where id=req.id for update;
   if p_action='cancel' and actor<>req.initiated_by or p_action in ('accept','decline') and actor=req.initiated_by then raise exception 'connection_forbidden' using errcode='PT403'; end if;
   if p_action='accept' and req.status='accepted' then
-    if old_trainer=trainer then return jsonb_build_object('status','accepted'); end if;
+    if old_trainer=trainer and (req.accepted_relationship_id is null or req.accepted_relationship_id=active_id) then return jsonb_build_object('status','accepted'); end if;
     raise exception 'connection_changed' using errcode='PT409';
   end if;
   if req.status<>'pending' or req.expires_at<=now() then raise exception 'connection_offer_unavailable' using errcode='PT409'; end if;
@@ -217,9 +281,15 @@ begin
     perform app_private.connect_single_trainer(card,trainer);
     insert into public.client_trainers(client_id,trainer_id,alias) select card,trainer,full_name from public.clients where id=card on conflict do nothing;
   end if;
-  update app_private.connection_requests set status=case p_action when 'accept' then 'accepted' when 'decline' then 'declined' else 'cancelled' end,decided_at=now() where id=req.id returning * into req;
+  -- A relationship created above has already completed the request through the shared trigger.
+  select * into req from app_private.connection_requests where id=req.id;
+  if p_action='accept' and req.status='accepted' then return jsonb_build_object('status','accepted'); end if;
+  update app_private.connection_requests set status=case p_action when 'accept' then 'accepted' when 'decline' then 'declined' else 'cancelled' end,
+    accepted_relationship_id=case when p_action='accept' then
+      (select id from public.client_trainer_relationships where client_id=card and trainer_id=trainer and status='active') else accepted_relationship_id end,
+    decided_at=now() where id=req.id returning * into req;
   insert into app_private.connection_audit(actor_id,request_id,event) values(actor,req.id,req.status);
-  return jsonb_build_object('id',req.id,'status',req.status);
+  return jsonb_build_object('id',req.id,'status',req.status,'incoming',false);
 end $$;
 revoke all on function app_private.connection_directory(text,jsonb) from public;
 grant execute on function app_private.connection_directory(text,jsonb) to fit_api;

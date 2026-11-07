@@ -1,8 +1,8 @@
+import { isWorkoutClient } from './workout-client-eligibility'
 import { WorkoutTemplatePicker } from './WorkoutTemplatePicker'
 import { persistTemplateSource, type TemplatePlanContext } from './template-plan-context'
 import { appendWorkoutTemplateExercises } from '../../data/repositories/workout-template-rules'
 import type { WorkoutTemplate } from '../../shared/domain'
-import { useCreateWorkoutClient } from './use-create-workout-client'
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
@@ -77,7 +77,6 @@ function FitLimePlanForm({ date, returnTo, onClose, onBack, initialDraft }: {
   initialDraft: WorkoutFormDraft | null
 }) {
   const { actor } = useAuth()
-  const createClient = useCreateWorkoutClient()
   const reference = isCoachWorkoutRedesignEnabled(actor)
   const { clients: clientsRepository, workouts, workoutTemplates } = useDataBackend()
   const queryClient = useQueryClient()
@@ -105,7 +104,7 @@ function FitLimePlanForm({ date, returnTo, onClose, onBack, initialDraft }: {
   const submitting = useRef(false)
   const savedSuccessfully = useRef(false)
   const clients = useQuery({ queryKey: ['clients', false], queryFn: () => clientsRepository.list(false) })
-  const selectedClient = clients.data?.find((client) => client.id === clientId)
+  const selectedClient = clients.data?.find((client) => client.id === clientId && isWorkoutClient(client))
   const draft = {
     clientId, title, requestId, workoutDate: selectedDate, startTime: time.start,
     endTime: time.end, notes, stageId: saved?.stageId ?? '',
@@ -139,7 +138,7 @@ function FitLimePlanForm({ date, returnTo, onClose, onBack, initialDraft }: {
   function submit(event: FormEvent) {
     event.preventDefault()
     if (submitting.current || !isFitLimeEnabled(actor)) return
-    if (!clientId) { setError('Выберите клиента для тренировки'); setPickerOpen(true); return }
+    if (!selectedClient) { setError('Выберите клиента для тренировки'); setPickerOpen(true); return }
     if (time.end && !time.start) { setError('Укажите начало тренировки или уберите время окончания.'); return }
     const minutes = (value: string) => Number(value.slice(0, 2)) * 60 + Number(value.slice(3, 5))
     const duration = (minutes(time.end) - minutes(time.start) + 1440) % 1440
@@ -232,6 +231,6 @@ function FitLimePlanForm({ date, returnTo, onClose, onBack, initialDraft }: {
       {mutation.isPending && <p role="status">Сохраняем…</p>}
     </form>
     {templatePickerOpen && <WorkoutTemplatePicker templates={templates.data ?? []} loading={templates.isLoading || templates.isFetching} error={templates.error} onRetry={() => void templates.refetch()} onSelect={addTemplate} onClose={closeTemplatePicker} onCreate={() => openTemplateDestination()} onLibrary={() => openTemplateDestination(true)} />}
-    {pickerOpen && <ClientPicker userId={actor?.userId} clients={clients.data ?? []} selectedId={clientId} onChange={(id) => { setClientId(id); setError(null) }} loading={clients.isLoading} error={clients.error} onRetry={() => void clients.refetch()} onCreate={createClient} reference={reference} autoFocusSearch={false} initialOpen hideTrigger onDismiss={() => setPickerOpen(false)} />}
+    {pickerOpen && <ClientPicker userId={actor?.userId} clients={clients.data?.filter(isWorkoutClient) ?? []} selectedId={clientId} onChange={(id) => { setClientId(id); setError(null) }} loading={clients.isLoading} error={clients.error} onRetry={() => void clients.refetch()} reference={reference} autoFocusSearch={false} initialOpen hideTrigger onDismiss={() => setPickerOpen(false)} />}
   </dialog>
 }

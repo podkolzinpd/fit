@@ -2072,7 +2072,7 @@ test('client plan requires the current profile and preserves dictated drafts acr
   await page.reload()
   await expect(page.getByRole('heading', { name: 'Не удалось загрузить данные' })).toBeVisible()
   backend.setClientsFailure(false)
-  await page.getByRole('button', { name: 'Повторить', exact: true }).first().click()
+  await page.locator('.state-panel').filter({ has: page.getByRole('heading', { name: 'Не удалось загрузить данные' }) }).getByRole('button', { name: 'Повторить', exact: true }).click()
   await expect(save).toBeEnabled()
   // The form is now mounted. A failed background profile refresh must not
   // fall back to the obsolete card embedded in this restored draft.
@@ -2093,7 +2093,7 @@ test('client plan requires the current profile and preserves dictated drafts acr
   await expect(save).toBeDisabled()
   await page.screenshot({ path: info.outputPath('profile-refresh-error.png'), fullPage: true })
   backend.setClientsFailure(false)
-  await page.getByRole('button', { name: 'Повторить', exact: true }).first().click()
+  await page.getByRole('alert').filter({ hasText: 'Не удалось открыть профиль спортсмена.' }).getByRole('button', { name: 'Повторить', exact: true }).click()
   await expect(save).toBeEnabled()
   await save.click()
   await expect.poll(() => backend.getSaveAttempts()).toBe(1)

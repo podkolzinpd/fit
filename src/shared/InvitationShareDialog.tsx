@@ -15,16 +15,25 @@ export function InvitationShareDialog({
   share,
   source,
   message,
+  description,
+  invitationUrl,
+  returnFocusRef,
   onClose,
   onRevoke,
 }: {
-  share: InvitationShare
+  share: Pick<InvitationShare, 'code' | 'expiresAt' | 'targetRole'> & { token?: string }
   source: InvitationLinkSource
   message: string
+  description?: string
+  invitationUrl?: string
+  returnFocusRef?: { readonly current: HTMLElement | null }
   onClose: () => void
   onRevoke: () => Promise<void>
 }) {
   const closeRef = useRef<HTMLButtonElement>(null)
+  const dialogRef = useRef<HTMLElement>(null)
+  const onCloseRef = useRef(onClose)
+  useEffect(() => { onCloseRef.current = onClose }, [onClose])
   const [copyState, setCopyState] = useState<ActionState>('idle')
   const [codeCopyState, setCodeCopyState] = useState<ActionState>('idle')
   const [shareState, setShareState] = useState<ActionState>('idle')
@@ -33,15 +42,29 @@ export function InvitationShareDialog({
   const [qrError, setQrError] = useState(false)
   const [revokeState, setRevokeState] = useState<ActionState>('idle')
   const [confirm, confirmDialog] = useConfirm()
-  const url = invitationShareUrl(share.token, source)
+  const url = invitationUrl ?? invitationShareUrl(share.token ?? '', source)
   const canUseSystemShare = 'share' in navigator && typeof navigator.share === 'function'
 
   useEffect(() => {
+    const trigger = returnFocusRef?.current ?? (document.activeElement instanceof HTMLElement ? document.activeElement : null)
     closeRef.current?.focus()
-    const onKey = (event: KeyboardEvent) => { if (event.key === 'Escape') onClose() }
+    const onKey = (event: KeyboardEvent) => {
+      const dialog = dialogRef.current
+      if (!dialog || !dialog.contains(document.activeElement) || event.defaultPrevented) return
+      if (event.key === 'Escape') { event.preventDefault(); onCloseRef.current(); return }
+      if (event.key !== 'Tab') return
+      const targets = [...dialog.querySelectorAll<HTMLElement>('button:not(:disabled), a[href], input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [tabindex]:not([tabindex="-1"])')]
+        .filter(element => element.getClientRects().length > 0)
+      const first = targets[0], last = targets[targets.length - 1]
+      if (event.shiftKey && document.activeElement === first && last) { event.preventDefault(); last.focus() }
+      else if (!event.shiftKey && document.activeElement === last && first) { event.preventDefault(); first.focus() }
+    }
     document.addEventListener('keydown', onKey)
-    return () => document.removeEventListener('keydown', onKey)
-  }, [onClose])
+    return () => {
+      document.removeEventListener('keydown', onKey)
+      if (trigger?.isConnected) trigger.focus()
+    }
+  }, [returnFocusRef])
 
   useEffect(() => {
     if (!showQr || qrDataUrl !== null || qrError) return
@@ -137,12 +160,13 @@ export function InvitationShareDialog({
     <div className="modal-overlay invitation-share-overlay" role="presentation" onPointerDown={(event) => {
       if (event.target === event.currentTarget) onClose()
     }}>
-      <section className="invitation-share-dialog" role="dialog" aria-modal="true" aria-labelledby="invitation-share-title">
+      <section ref={dialogRef} className="invitation-share-dialog" role="dialog" aria-modal="true" aria-labelledby="invitation-share-title">
         <header>
           <div><p className="eyebrow">ПРИГЛАШЕНИЕ</p><h2 id="invitation-share-title">Ссылка готова</h2></div>
           <button ref={closeRef} type="button" className="icon-button" aria-label="Закрыть" onClick={onClose}><CloseIcon /></button>
         </header>
         <p className="invitation-share-message">{message}</p>
+        {description && <p className="invitation-share-description">{description}</p>}
         <p className="muted invitation-share-expiry">Действует до {expiresAt}</p>
 
         <div className="invitation-share-actions">

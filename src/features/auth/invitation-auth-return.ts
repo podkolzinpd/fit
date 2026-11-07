@@ -21,7 +21,7 @@ export function invitationAuthReturnPath(value: unknown): string | null {
   if (value.startsWith('/connect?')) {
     const params = new URLSearchParams(value.slice('/connect?'.length))
     const code = params.get('code')
-    return [...params.keys()].length === 1 && code && /^[A-F0-9]{16}$/.test(code) ? `/connect?code=${code}` : null
+    return [...params.keys()].length === 1 && code && /^(?:[A-F0-9]{16}|[A-F0-9]{32})$/.test(code) ? `/connect?code=${code}` : null
   }
   if (value === '/invite' || value === '/corporate-invite') return value
   if (!value.startsWith('/join?') || value.includes('#')) return null

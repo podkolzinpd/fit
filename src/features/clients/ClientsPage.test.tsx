@@ -7,7 +7,7 @@ import type { ChatThread, Client } from '../../shared/domain'
 import { ArchivedClientsPage, ClientsPage } from './ClientsListPage'
 import { ConnectionPage } from '../auth/ConnectionPage'
 
-const backend = vi.hoisted(() => ({ list: vi.fn(), setArchived: vi.fn(), listThreads: vi.fn(), open: vi.fn(), listFinanceOverview: vi.fn(), createInvite: vi.fn(), revoke: vi.fn() }))
+const backend = vi.hoisted(() => ({ list: vi.fn(), setArchived: vi.fn(), listThreads: vi.fn(), open: vi.fn(), listFinanceOverview: vi.fn(), createInvite: vi.fn(), createRegistrationInvite: vi.fn(), revoke: vi.fn() }))
 const navigation = vi.hoisted(() => ({ unified: false }))
 vi.mock('../../app/coach-workout-redesign', async importOriginal => ({
   ...await importOriginal<typeof import('../../app/coach-workout-redesign')>(),
@@ -18,7 +18,7 @@ vi.mock('../../app/trainer-schedule-v2', async importOriginal => ({
   isTrainerScheduleV2Enabled: () => navigation.unified,
 }))
 vi.mock('../../app/data-backend-context', () => ({
-  useDataBackend: () => ({ connectionDirectory: { list: () => Promise.resolve([]) }, source: 'yandex', clients: { list: backend.list, setArchived: backend.setArchived }, chat: { listThreads: backend.listThreads, open: backend.open }, trainerFinance: { listOverview: backend.listFinanceOverview }, invitations: { createShareForNewClient: backend.createInvite, revoke: backend.revoke } }),
+  useDataBackend: () => ({ connectionDirectory: { list: () => Promise.resolve([]), createInvitation: backend.createRegistrationInvite, revokeInvitation: backend.revoke }, source: 'yandex', clients: { list: backend.list, setArchived: backend.setArchived }, chat: { listThreads: backend.listThreads, open: backend.open }, trainerFinance: { listOverview: backend.listFinanceOverview }, invitations: { createShareForNewClient: backend.createInvite, revoke: backend.revoke } }),
 }))
 vi.mock('../../app/auth-context', () => ({ useAuth: () => ({ actor: { role: 'trainer', userId: 'trainer-1' } }) }))
 
@@ -89,6 +89,8 @@ beforeEach(() => {
   navigation.unified = false
   Object.assign(HTMLElement.prototype, { hasPointerCapture: () => false, setPointerCapture: () => undefined, releasePointerCapture: () => undefined })
   backend.list.mockReset()
+  backend.createInvite.mockReset()
+  backend.createRegistrationInvite.mockReset().mockResolvedValue({ id: 'invite-1', code: 'ABCD1234ABCD1234ABCD1234ABCD1234', expiresAt: '2026-11-08T12:00:00Z' })
   backend.setArchived.mockReset()
   backend.listThreads.mockReset().mockResolvedValue([])
   backend.open.mockReset().mockResolvedValue('conversation-new')
@@ -350,19 +352,21 @@ describe('ClientsPage search', () => {
     expect(screen.getByText(/· до 08\.10/)).toBeVisible()
   })
 
-  it('opens scanning directly and preserves manual creation and new-user invitations', async () => {
+  it('opens account search and offers explicit scanning and registration-first invitations', async () => {
     const user = userEvent.setup()
     renderPage([])
     await user.click(await screen.findByRole('button', { name: 'Добавить спортсмена' }))
     expect(document.querySelector('.state-panel-mark')).toBeNull()
     expect(screen.queryByRole('button', { name: 'Добавить' })).not.toBeInTheDocument()
+    expect(await screen.findByLabelText('Почта или Fit-код')).toBeInTheDocument()
+    expect(screen.queryByLabelText('Камера для QR-кода')).not.toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Сканировать QR' }))
     expect(await screen.findByLabelText('Камера для QR-кода')).toBeInTheDocument()
-    await user.click(screen.getByText('Новый спортсмен ещё не зарегистрирован?'))
-    const manual = screen.getByRole('link', { name: 'Создать карточку вручную' })
-    expect(manual).toHaveAttribute('href', '/clients/new')
-    await user.click(screen.getByRole('button', { name: 'Пригласить нового спортсмена' }))
-    expect(await screen.findByRole('dialog', { name: 'Кого пригласить?' })).toBeVisible()
-    expect(screen.getByLabelText('Имя спортсмена')).toBeVisible()
+    expect(screen.queryByRole('link', { name: 'Создать карточку вручную' })).not.toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Пригласить' }))
+    expect(await screen.findByRole('dialog', { name: 'Ссылка готова' })).toBeVisible()
+    expect(screen.queryByLabelText('Имя спортсмена')).not.toBeInTheDocument()
+    expect(backend.createInvite).not.toHaveBeenCalled()
   })
 
   it('filters by name and clears the query from the field itself', async () => {
@@ -408,22 +412,16 @@ describe('ClientsPage search', () => {
     expect(backend.listFinanceOverview).toHaveBeenCalledTimes(1)
   })
 
-  it('keeps the generated invitation open when creating the first card replaces the empty state', async () => {
+  it('keeps the generated invitation open without adding an unregistered card to the empty list', async () => {
     const user = userEvent.setup()
-    backend.createInvite.mockReset().mockImplementation(() => {
-      backend.list.mockResolvedValue([client('created', 'Новый спортсмен')])
-      return Promise.resolve({ clientId: 'created', share: { id: 'invite-1', clientId: 'created', targetRole: 'client',
-        code: 'ABC123DEF456', token: `ABC123DEF456.${'a'.repeat(64)}`, expiresAt: '2026-11-08T12:00:00Z' } })
-    })
     renderPage([])
     await user.click(await screen.findByRole('button', { name: 'Добавить спортсмена' }))
-    await user.click(screen.getByText('Новый спортсмен ещё не зарегистрирован?'))
-    await user.click(screen.getByRole('button', { name: 'Пригласить нового спортсмена' }))
-    await user.type(screen.getByLabelText('Имя спортсмена'), 'Новый спортсмен')
-    await user.click(screen.getByRole('button', { name: 'Создать приглашение' }))
+    await user.click(screen.getByRole('button', { name: 'Пригласить' }))
     expect(screen.getByRole('heading', { name: 'Добавить спортсмена' })).toBeVisible()
     expect(await screen.findByRole('dialog', { name: 'Ссылка готова' })).toBeVisible()
-    expect(backend.createInvite).toHaveBeenCalledExactlyOnceWith('Новый спортсмен', expect.stringMatching(/^[a-f0-9-]{36}$/))
+    expect(backend.createRegistrationInvite).toHaveBeenCalledExactlyOnceWith()
+    expect(backend.createInvite).not.toHaveBeenCalled()
+    expect(await backend.list()).toEqual([])
     await user.click(screen.getByRole('button', { name: 'Закрыть' }))
     expect(screen.getByRole('heading', { name: 'Добавить спортсмена' })).toBeVisible()
   })

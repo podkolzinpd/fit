@@ -1826,6 +1826,9 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
     try {
       return send(await work())
     } catch (error) {
+      if (error instanceof Error && ['athlete_registration_required', 'athlete_connection_required'].includes(error.message)) {
+        return reply.code(409).send({ error: error.message })
+      }
       if (error instanceof PilotSessionInvalidError
         || error instanceof YandexAppSessionInvalidError) {
         return reply.code(401).send({ error: 'unauthorized' })
