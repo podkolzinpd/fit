@@ -1,17 +1,23 @@
 # User-approved temporary audit branch only; never merge or configure production.
-name: FIT model-only synthetic audit
+name: FIT temporary real-generator audit
 on:
   workflow_dispatch:
     inputs:
+      mode:
+        description: Bounded model-only call or isolated hosted ISO cycle
+        required: true
+        default: model
+        type: choice
+        options: [model, cycle]
       request_base64:
         description: Base64 JSON containing only synthetic model input
-        required: true
+        required: false
         type: string
 permissions:
   contents: read
 jobs:
   model:
-    if: startsWith(github.ref, 'refs/heads/audit/trainer-real-generator-')
+    if: inputs.mode != 'cycle' && startsWith(github.ref, 'refs/heads/audit/trainer-real-generator-')
     runs-on: [self-hosted, cloudru-stage]
     timeout-minutes: 3
     concurrency:
@@ -46,3 +52,78 @@ jobs:
           path: ${{ runner.temp }}/trainer-model-result.json
           retention-days: 1
           if-no-files-found: error
+
+  cycle:
+    if: inputs.mode == 'cycle' && github.ref == 'refs/heads/audit/trainer-real-generator-20261107'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      actions: write
+    services:
+      postgres:
+        image: postgres:17-bookworm
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d postgres"
+          --health-interval 5s --health-timeout 5s --health-retries 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install isolated audit dependencies
+        run: |
+          npm ci
+          npm ci --prefix services/api --ignore-scripts
+          npm run build --prefix services/api
+          npx playwright install --with-deps chromium
+      - name: Prepare test-only role and transport
+        env:
+          PGPASSWORD: postgres
+        run: |
+          psql -h 127.0.0.1 -p 5432 -U postgres -d postgres -v ON_ERROR_STOP=1 -c "create role fit_api login password 'fit-api-test-only' nosuperuser nobypassrls"
+          ln -s "$GITHUB_WORKSPACE" .audit/iso/source
+          cp .audit/iso/model-adapter.js services/api/dist/assistant-orchestrator/program/model.js
+          git rev-parse HEAD > .audit/iso/checked-out-sha.txt
+      - name: Real ISO program trainer client trainer cycle
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 .audit/iso/run-program-audit.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: trainer-iso-cycle-${{ github.run_id }}
+          include-hidden-files: true
+          retention-days: 1
+          if-no-files-found: error
+          path: |
+            .audit/iso/checked-out-sha.txt
+            .audit/iso/owned-database.json
+            .audit/iso/cleanup-readback.json
+            .audit/iso/lifecycle.jsonl
+            .audit/iso/browser-events.jsonl
+            .audit/iso/program-result.json
+            .audit/iso/program-playwright.json
+            .audit/iso/program-artifacts/
+            .audit/iso/model-rpc-events.jsonl
+            .audit/iso/model-runs/
+            .audit/iso/artifact-delivery.jsonl
+            .audit/iso/rpc-errors.jsonl
+            .audit/iso/rpc-oversize.json
+            .audit/iso/first-turn.json
+            .audit/iso/first-response.json
+            .audit/iso/generation-response.json
+            .audit/iso/playwright-stdout.log
+            .audit/iso/playwright-stderr.log
+            .audit/iso/api-stderr.log
+            .audit/iso/frontend.log
