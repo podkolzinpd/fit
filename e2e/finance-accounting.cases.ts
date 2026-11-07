@@ -174,6 +174,7 @@ export function financeAccountingCases() {
     await page.route('**/v1/finance/overview*',route=>{const month=new URL(route.request().url()).searchParams.get('month')!;const november=month==='2026-11';return route.fulfill({json:{overview:{month,receivedCents:november?10001:20002,completedSessions:november?2:0,dueCents:0,attentionCount:0,clients:[...Array.from({length:10},(_,i)=>({...client,clientId:`70000000-0000-4000-9000-${String(i).padStart(12,'0')}`,fullName:`Алексей — тестовый спортсмен ${i}`,receivedCents:0,completedSessions:0})),{...client,receivedCents:november?10001:20002,completedSessions:november?2:0}]}}})})
     await page.goto('/finance?month=2026-11&metric=money&q=Алексей')
     const row=page.locator(`.finance-monthly-client[href^="/clients/${clientId}/finance"]`)
+    const athleteColor = await row.locator('.finance-monthly-dot').evaluate(node => getComputedStyle(node).backgroundColor)
     await row.scrollIntoViewIfNeeded()
     // Native focus may reveal the link before navigation. Restore the actual
     // leaving position, captured at click, rather than pre-focus geometry.
@@ -183,6 +184,7 @@ export function financeAccountingCases() {
     expect(scroll).toBeGreaterThan(0)
     const total=page.locator('[data-finance-monthly-total]')
     await expect(total).toContainText(/100,01/)
+    expect(await page.locator('.finance-monthly circle[stroke]').first().evaluate(node => getComputedStyle(node).stroke)).toBe(athleteColor)
     await expect(page.locator('.finance-monthly-switch')).toHaveCount(0)
     await expect(page.locator('#finance-payments-panel .finance-payment')).toHaveCount(1)
     await expect(page.locator('.finance-monthly')).not.toContainText('%')
@@ -256,6 +258,16 @@ export function financeAccountingCases() {
     await expect(page.locator('.finance-monthly-name small')).toHaveCount(0)
     await expect(page.locator('.finance-monthly')).not.toContainText('%')
     await expect(page.locator('.finance-monthly-client')).toHaveCount(6)
+    const firstDot = page.locator('.finance-monthly-client').first().locator('.finance-monthly-dot')
+    const firstColor = await firstDot.evaluate(node => getComputedStyle(node).backgroundColor)
+    const chartColors = () => page.locator('.finance-monthly circle[stroke]').evaluateAll(nodes => nodes.map(node => getComputedStyle(node).stroke))
+    const moneyColors = await chartColors()
+    expect(new Set(moneyColors).size).toBe(moneyColors.length)
+    for (const circle of await page.locator('.finance-monthly circle[stroke]').all()) {
+      const name = (await circle.locator('title').textContent())!.split(':')[0]!
+      const row = page.locator('.finance-monthly-client').filter({ has: page.locator('.finance-monthly-name strong').filter({ hasText: name }) })
+      if (await row.count()) expect(await row.locator('.finance-monthly-dot').evaluate(node => getComputedStyle(node).backgroundColor)).toBe(await circle.evaluate(node => getComputedStyle(node).stroke))
+    }
     await page.getByRole('button',{name:'Требуют внимания сейчас: 1'}).click()
     await expect(page.locator('.finance-monthly-client')).toHaveCount(1)
     await expect(total).toContainText(/2\s800,28/)
@@ -287,10 +299,14 @@ export function financeAccountingCases() {
     }
     await changeFinanceMetric(page, 'Тренировки')
     await expect(total).toHaveText('28')
+    expect(await chartColors()).toEqual(moneyColors)
+    expect(await firstDot.evaluate(node => getComputedStyle(node).backgroundColor)).toBe(firstColor)
     await expect(page.locator('.finance-monthly-value').first()).toHaveText('1')
     const search=await openFinanceSearch(page)
     await search.fill('Александра')
     await expect(page.locator('.finance-monthly-client')).toHaveCount(1)
+    expect(await firstDot.evaluate(node => getComputedStyle(node).backgroundColor)).toBe(firstColor)
+    expect(await chartColors()).toEqual(moneyColors)
     await expect(total).toHaveText('28')
     await expect(page.locator('.finance-monthly-client')).toHaveAttribute('href',`/clients/${clientId}/finance?month=2026-11&metric=sessions`)
     await clearFinanceSearch(page)

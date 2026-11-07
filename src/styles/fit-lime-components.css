@@ -11,6 +11,18 @@ html.fit-lime-document,
   --lime-accent-muted: color-mix(in srgb, var(--lime-accent, var(--fit-brand-accent)) 16%, #000);
   --lime-pink: #ba60ea;
   --lime-yellow: #f8b021;
+  /* Approved compact-finance data categories; action/state colors stay intact. */
+  --lime-chart-1: var(--lime-accent);
+  --lime-chart-2: var(--lime-pink);
+  --lime-chart-3: var(--lime-yellow);
+  --lime-chart-4: #57c9e8;
+  --lime-chart-5: #fa839b;
+  --lime-chart-6: #78d5ac;
+  --lime-chart-7: #9c9ff5;
+  --lime-chart-8: #ebc190;
+  --lime-chart-9: #7aa9f5;
+  --lime-chart-10: #e8a5db;
+  --lime-chart-others: var(--lime-surface-high);
   --lime-text: #ffffff;
   --lime-text-secondary: rgba(255, 255, 255, .6);
   --lime-text-tertiary: rgba(255, 255, 255, .6);

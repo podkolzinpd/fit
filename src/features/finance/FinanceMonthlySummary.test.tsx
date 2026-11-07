@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import type { TrainerFinanceOverview, TrainerFinanceOverviewClient } from '../../data/contracts/trainer-finance'
 import { FinanceMonthlySummary } from './FinanceMonthlySummary'
-import { financeChartSegments, financeClientColor, financeMoney } from './finance-monthly'
+import { financeChartSegments, financeClientColor, financeClientColors, financeMoney } from './finance-monthly'
 
 const client = (id: string, receivedCents: number, completedSessions: number): TrainerFinanceOverviewClient => ({
   clientId: id, fullName: `Спортсмен ${id}`, archivedAt: null, receivedCents, completedSessions,
@@ -61,6 +61,33 @@ describe('monthly finance readout', () => {
     expect(screen.getByText(/Остальные:/, { selector: 'p' })).toBeVisible()
     expect(financeChartSegments([client('zero',0,0)],'money')).toEqual([])
     expect(financeClientColor('a')).toBe(financeClientColor('a'))
+  })
+  it('resolves category collisions for both charts and keeps personal and row colors consistent', () => {
+    const ids: string[] = []
+    for (let index = 0; ids.length < 32; index++) {
+      const id = `collision-${index}`
+      if (financeClientColor(id) === financeClientColor('collision-0')) ids.push(id)
+    }
+    // Thirty-two athletes with the same preferred slot and opposite leaders
+    // exercise collisions beyond the palette, not just neighboring UUIDs.
+    const clients = ids.map((id, index) => client(id, index + 1, ids.length - index))
+    const colors = financeClientColors(clients)
+    expect(financeClientColors([...clients].reverse())).toEqual(colors)
+    for (const metric of ['money', 'sessions'] as const) {
+      const segments = financeChartSegments(clients, metric)
+      expect(new Set(segments.map(segment => segment.color)).size).toBe(segments.length)
+      expect(segments.at(-1)?.color).toBe('var(--lime-chart-others)')
+      expect(segments.reduce((sum, segment) => sum + segment.value, 0)).toBe(528)
+      for (const segment of segments.filter(segment => segment.id !== 'others')) {
+        expect(segment.color).toBe(financeClientColor(segment.id, colors))
+        const { container, unmount } = render(<FinanceMonthlySummary data={{...data, clients, receivedCents:528, completedSessions:528}} metric={metric} clientId={segment.id} onMetricChange={vi.fn()} />)
+        expect(container.querySelector('circle[stroke]')).toHaveAttribute('stroke', segment.color)
+        unmount()
+      }
+    }
+    const five = clients.slice(0, 5)
+    expect(new Set(financeChartSegments(five, 'money').map(segment => segment.color)).size).toBe(5)
+    expect(financeClientColors([]).size).toBe(0)
   })
   it.each(['money','sessions'] as const)('shows a personal %s contribution with the same overall denominator', metric => {
     const { container } = render(<FinanceMonthlySummary data={data} metric={metric} clientId="b" onMetricChange={vi.fn()} />)
