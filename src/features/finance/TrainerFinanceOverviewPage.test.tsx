@@ -176,6 +176,7 @@ it('keeps monthly totals independent of search and displays only one value next 
   expect(container.querySelector('.finance-monthly-name')?.textContent).toBe('Анна')
   expect(container.querySelector('.finance-monthly-name small')).toBeNull()
   expect(container.querySelector('.finance-overview-list')?.textContent).not.toContain('%')
+  await user.click(screen.getByRole('button',{name:'Открыть поиск клиента'}))
   await user.type(screen.getByRole('searchbox',{name:'Поиск клиента'}),'Анна')
   expect(container.querySelectorAll('.finance-monthly-client')).toHaveLength(1)
   expect(screen.getByRole('region',{name:'Итоги за месяц'})).toHaveTextContent(/300,03/)
