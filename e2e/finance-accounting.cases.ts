@@ -106,6 +106,75 @@ async function uncertainCreateFixture(page: Page, kind: 'payment' | 'package', f
 }
 
 export function financeAccountingCases() {
+  test('Finance monthly athlete details retain period, source attendance and return context', { tag: ['@lime-finance'] }, async ({ page }, info) => {
+    const ledger=await accountingFixture(page)
+    ledger.payments=[{id:workoutId,packageId:newWorkoutId,amountCents:10001,receivedOn:'2026-11-02',source:'manual',comment:'Месячная оплата',voidedAt:null,voidReason:null,version:1,createdAt:stamp,updatedAt:stamp},
+      {id:newWorkoutId,packageId:newWorkoutId,amountCents:20002,receivedOn:'2026-10-02',source:'manual',comment:null,voidedAt:null,voidReason:null,version:1,createdAt:stamp,updatedAt:stamp}]
+    ledger.attendedWorkouts=[{workoutId,workoutDate:'2026-11-02',title:null},{workoutId:newWorkoutId,workoutDate:'2026-11-03',title:'Проведение без списания'}]
+    ledger.sessions[0]!.workoutDate='2026-11-02'
+    const client={clientId,fullName:'Алексей Смирнов',archivedAt:null,activeClient:true,completedSessions:2,
+      receivedCents:10001,dueCents:0,nearestPaymentDueOn:null,unpaidPackageCount:0,activePackageCount:1,
+      upcomingPackageCount:0,sessionsRemaining:9,overdue:false,lowSessions:false,unassignedSessions:0,needsAttention:false}
+    await page.route('**/v1/finance/overview*',route=>{const month=new URL(route.request().url()).searchParams.get('month')!;const november=month==='2026-11';return route.fulfill({json:{overview:{month,receivedCents:november?10001:20002,completedSessions:november?2:0,dueCents:0,attentionCount:0,clients:[{...client,receivedCents:november?10001:20002,completedSessions:november?2:0}]}}})})
+    await page.goto('/finance?month=2026-11&metric=money&q=Алексей')
+    const row=page.locator('.finance-monthly-client')
+    await row.scrollIntoViewIfNeeded()
+    // Native focus may reveal the link before navigation. Restore the actual
+    // leaving position, captured at click, rather than pre-focus geometry.
+    await row.evaluate(node=>node.addEventListener('click',()=>sessionStorage.setItem('fit.finance-leave-scroll.fixture',String(node.closest('.content')!.scrollTop)),{once:true}))
+    await row.click()
+    const scroll=await page.evaluate(()=>Number(sessionStorage.getItem('fit.finance-leave-scroll.fixture')))
+    expect(scroll).toBeGreaterThan(0)
+    const total=page.locator('[data-finance-monthly-total]')
+    await expect(total).toContainText(/100,01/)
+    await expect(page.locator('.finance-monthly-switch')).toHaveCount(0)
+    await expect(page.locator('#finance-payments-panel .finance-payment')).toHaveCount(1)
+    await expect(page.locator('.finance-monthly')).not.toContainText('%')
+    await page.getByRole('tab',{name:'Занятия: 2'}).click()
+    await expect(total).toHaveText('2')
+    await expect(page.locator('.finance-session')).toHaveCount(2)
+    await expect(page.getByText('Проведение без списания')).toBeVisible()
+    await page.getByText('Проведение без списания').scrollIntoViewIfNeeded()
+    await page.screenshot({path:info.outputPath('monthly-athlete-sessions.png'),fullPage:true})
+    await page.getByRole('tab',{name:'Оплаты: 1'}).click()
+    await page.getByRole('button',{name:'Вся история',exact:true}).click()
+    await expect(page.locator('#finance-payments-panel .finance-payment')).toHaveCount(2)
+    await expect(total).toContainText(/100,01/)
+    await page.getByRole('button',{name:'За месяц',exact:true}).click()
+    await page.getByRole('button',{name:'Предыдущий месяц'}).click()
+    await expect(total).toContainText(/200,02/)
+    await expect(page.locator('#finance-payments-panel .finance-payment')).toHaveCount(1)
+    await page.locator('.page-back').click()
+    await expect(page).toHaveURL(/finance\?month=2026-11&metric=money&q=/)
+    await expect(page.getByRole('searchbox',{name:'Поиск клиента'})).toHaveValue('Алексей')
+    await expect.poll(async()=>Math.abs(await page.locator('.content').evaluate(node=>node.scrollTop)-scroll)).toBeLessThanOrEqual(2)
+    // Navigation is checked at one physical viewport; resizing is a separate visual axis.
+    await row.click()
+    await expect(page.locator('.trainer-finance-page')).toBeVisible()
+    await expect(total).toContainText(/100,01/)
+    for(const width of [320,390,430,1440]){
+      await page.setViewportSize({width,height:844})
+      expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true)
+      await page.locator('.trainer-finance-page .finance-monthly').scrollIntoViewIfNeeded()
+      await page.screenshot({path:info.outputPath(`monthly-athlete-${width}.png`),fullPage:true})
+    }
+    await page.setViewportSize({width:320,height:844})
+    await page.getByRole('button',{name:'Добавить',exact:true}).click()
+    const paymentForm=page.locator('.finance-form')
+    await expect(paymentForm.getByRole('heading',{name:'Добавить оплату'})).toBeVisible()
+    await formGeometry(paymentForm)
+    await paymentForm.getByLabel('Комментарий').fill('Месячная карточка — проверка формы')
+    await paymentForm.getByLabel('Комментарий').focus()
+    await page.setViewportSize({width:320,height:400})
+    const save=paymentForm.getByRole('button',{name:'Сохранить',exact:true})
+    await save.scrollIntoViewIfNeeded()
+    expect(await save.evaluate(node=>{const r=node.getBoundingClientRect();return document.elementFromPoint(r.x+r.width/2,r.y+r.height/2)?.closest('button')===node})).toBe(true)
+    await page.screenshot({path:info.outputPath('monthly-payment-keyboard.png'),fullPage:true})
+    await page.setViewportSize({width:320,height:844})
+    await paymentForm.getByRole('button',{name:'Отмена',exact:true}).click()
+    await expect(page.locator('#finance-payments-panel .finance-payment')).toHaveCount(1)
+    await expect(total).toContainText(/100,01/)
+  })
   test('Finance monthly totals switch without percentages or athlete sublines', { tag: ['@lime-finance'] }, async ({ page }, info) => {
     await accountingFixture(page)
     const clients = Array.from({length:7},(_,index) => ({

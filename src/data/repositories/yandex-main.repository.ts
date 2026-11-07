@@ -151,6 +151,7 @@ const trainerFinanceBundleSchema = z.object({
   packages: z.array(trainerFinancePackageSchema),
   payments: z.array(trainerFinancePaymentSchema),
   sessions: z.array(trainerFinanceSessionSchema),
+  attendedWorkouts: z.array(z.object({ workoutId: uuid, workoutDate: z.iso.date(), title: z.string().nullable() })).optional(),
 })
 const trainerFinanceOverviewSchema = z.object({
   month: z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/),
