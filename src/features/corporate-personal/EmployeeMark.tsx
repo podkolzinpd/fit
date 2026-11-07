@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '../../app/auth-context'
-import { CorporatePersonalError, corporatePersonalRepository as repository, type EmployeeCommand } from '../../data/repositories/corporate-personal.repository'
+import { CorporatePersonalError, corporatePersonalRepository as repository, type EmployeeCommand, type EmployeeMark } from '../../data/repositories/corporate-personal.repository'
 import { AsyncView, Switch } from '../../shared/ui'
 import { formatLocalDateShort, localDate } from '../../shared/local-date'
 import './personal.css'
@@ -21,7 +21,12 @@ function EmployeeMarkEditor({clientId,actorId}:{clientId:string;actorId:string})
   const [hasPending, setHasPending] = useState(false)
   const query = useQuery({queryKey:key,queryFn:()=>repository.mark(clientId),staleTime:0,retry:false})
   const save = useMutation({mutationFn:(command:EmployeeCommand)=>repository.save(clientId,command),retry:false,
-    onSuccess:value=>{pending.current=null;setHasPending(false);cache.setQueryData(key,value)}})
+    onSuccess:async value=>{
+      await cache.cancelQueries({queryKey:key,exact:true})
+      const current=cache.getQueryData<EmployeeMark>(key)
+      if (current && current.version>value.version) throw new CorporatePersonalError(409,'Отметка уже изменилась. Загрузите сохранённую версию.')
+      pending.current=null;setHasPending(false);cache.setQueryData(key,value)
+    }})
   const change = (marked:boolean) => {
     if (!query.data || pending.current) return
     const command = {marked,version:query.data.version,commandId:crypto.randomUUID()}

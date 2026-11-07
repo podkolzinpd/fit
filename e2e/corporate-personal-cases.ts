@@ -45,7 +45,7 @@ async function setup(page: Page, options: { allowed?: boolean; role?: 'trainer'|
     if(lost){lost=false;return route.abort('connectionreset')}
     return route.fulfill({json:mark})
   })
-  return {writes,ranges,get mark(){return mark},get markReads(){return markReads},get gateReads(){return gateReads}}
+  return {writes,ranges,get mark(){return mark},replaceMark(value:EmployeeMark){mark=value},get markReads(){return markReads},get gateReads(){return gateReads}}
 }
 export function registerCorporatePersonalCases() {
   test.beforeEach(()=>{unexpected=[]})
@@ -66,6 +66,18 @@ export function registerCorporatePersonalCases() {
     const f=await setup(page,{lost:true});await page.goto(nativeAiUrl(card));await page.getByRole('switch').click()
     await page.getByRole('button',{name:'Повторить сохранение'}).click();await expect(page.getByRole('switch')).toBeChecked()
     expect(f.writes).toHaveLength(2);expect(f.writes[0]).toEqual(f.writes[1]);expect(f.mark.version).toBe(1)
+  })
+  test('a replayed old acknowledgement cannot replace a newer mark read from the server',async({page})=>{
+    const f=await setup(page,{lost:true});await page.goto(nativeAiUrl(card));await page.getByRole('switch').click()
+    await expect(page.getByRole('button',{name:'Повторить сохранение'})).toBeVisible()
+    f.replaceMark({marked:false,version:2,fromDate:null})
+    const refreshed=page.waitForResponse(r=>r.request().method()==='GET'&&new URL(r.url()).pathname.endsWith(`/corporate-personal/clients/${clientId}`))
+    await page.evaluate(()=>window.dispatchEvent(new Event('visibilitychange')));await (await refreshed).finished()
+    await page.getByRole('button',{name:'Повторить сохранение'}).click()
+    await expect(page.getByRole('alert')).toContainText('Отметка уже изменилась')
+    await expect(page.getByRole('switch')).not.toBeChecked();await expect(page.getByRole('button',{name:'Повторить сохранение'})).toHaveCount(0)
+    await page.getByRole('button',{name:'Загрузить сохранённую версию'}).click();await expect(page.getByRole('switch')).toBeEnabled()
+    expect(f.writes).toHaveLength(2);expect(f.writes[0]).toEqual(f.writes[1]);expect(f.mark.version).toBe(2)
   })
   test('conflict readback never silently overwrites another saved mark',async({page})=>{
     const f=await setup(page,{conflict:true});await page.goto(nativeAiUrl(card));await page.getByRole('switch').click()
