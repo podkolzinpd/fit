@@ -10,7 +10,7 @@ const contentTypes = {
   '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg',
   '.webp': 'image/webp', '.gif': 'image/gif', '.ico': 'image/x-icon', '.woff2': 'font/woff2',
   '.woff': 'font/woff', '.ttf': 'font/ttf', '.mp4': 'video/mp4', '.wav': 'audio/wav',
-  '.txt': 'text/plain; charset=utf-8', '.wasm': 'application/wasm', '.mp3': 'audio/mpeg',
+  '.xml': 'application/xml; charset=utf-8', '.txt': 'text/plain; charset=utf-8', '.wasm': 'application/wasm', '.mp3': 'audio/mpeg',
 }
 
 export function frontendFileMetadata(key) {
