@@ -589,7 +589,7 @@ test('Figma workout Coach Live density setting persists for the second pilot onl
   const pilot = 'c0ac0000-6010-4000-8000-000000000002'
   await page.clock.setFixedTime(new Date('2026-10-08T09:01:00Z'))
   const backend = await mockPilot(page, { profileId: pilot, fitLime: true, workouts: [restTimerWorkout()], unseenCoachmarks: ['live-timer-2026-09', 'coach-live-finish-top-2026-10', 'coach-live-set-swipe-2026-10-16'] })
-  await page.goto('/profile/settings')
+  await page.goto('/profile/settings?section=training')
   const group = page.getByRole('radiogroup', { name: 'Вид Live-тренировки', exact: true })
   const animation = page.getByRole('switch', { name: 'Анимация упражнения', exact: true })
   await expect(animation).not.toBeChecked()
@@ -629,7 +629,7 @@ test('Figma workout Coach Live density setting persists for the second pilot onl
   await expect.poll(() => backend.getWorkouts()[0]!.exercises[0]!.sets[0]!.confirmedAt).not.toBeNull()
   const deadline = await page.evaluate(id => sessionStorage.getItem(`fit:live-rest-until:${id}`), workoutId)
   expect(deadline).not.toBeNull()
-  await page.goto('/profile/settings')
+  await page.goto('/profile/settings?section=training')
   await group.getByRole('radio', { name: 'Оригинальный', exact: true }).click()
   await page.goto(`/workouts/${workoutId}/live`)
   await expect(page.locator('.coach-live-density-original')).toBeVisible()
@@ -693,7 +693,7 @@ for (const role of ['trainer', 'client'] as const) test(`Figma workout Coach Liv
   const id = role === 'trainer' ? 'c0ac0000-6010-4000-8000-000000000003' : 'c0ac0000-6010-4000-8000-000000000001'
   await page.addInitScript(id => localStorage.setItem(`fit.coachLiveDensity.${id}`, 'compact'), id)
   await mockPilot(page, { role, profileId: id, fitLime: true, clientLime: role === 'client', workouts: [restTimerWorkout()] })
-  await page.goto('/profile/settings')
+  await page.goto('/profile/settings?section=training')
   await expect(page.getByRole('radiogroup', { name: 'Вид Live-тренировки', exact: true })).toHaveCount(0)
   if (role === 'trainer') await expect(page.getByRole('switch', { name: 'Анимация упражнения', exact: true })).toBeChecked()
   await page.goto(`/workouts/${workoutId}/live`)
@@ -3449,8 +3449,12 @@ for (const profileId of [trainerId, '10000000-0000-4000-8000-000000000010']) {
       }
       await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(path.endsWith('/subscription/status') ? { subscribed: true } : { status: { subscribed: true, preferences: { workout_reminder: false, workout_scheduled: true, chat_message: false } } }) })
     })
-    await page.goto(clientRole ? '/me/settings' : '/profile/settings')
-    if (!clientRole) await expect(page.getByText('Fit открыт как приложение', { exact: true })).toBeVisible()
+    await page.goto(clientRole ? '/me/settings' : '/profile/settings?section=notifications')
+    if (!clientRole) {
+      await page.goto('/profile/settings?section=install')
+      await expect(page.getByText('Fit открыт как приложение', { exact: true })).toBeVisible()
+      await page.goto('/profile/settings?section=notifications')
+    }
     await expect(page.getByRole('button', { name: 'Как установить Fit' })).toHaveCount(0)
     await expect(page.getByText('Уведомления настроены', { exact: true })).toBeVisible()
     await expect(page.getByRole('button', { name: 'Включить', exact: true })).toHaveCount(0)
@@ -3515,7 +3519,7 @@ test('Lime notification settings show safe diagnostics when browser push initial
     json: { status: { subscribed: false, preferences: { workout_reminder: true, workout_scheduled: true, chat_message: true } } },
   }))
 
-  await page.goto('/profile/settings')
+  await page.goto('/profile/settings?section=notifications')
   await page.getByRole('button', { name: 'Включить', exact: true }).click()
   await expect(page.getByRole('alert').filter({ hasText: 'Не удалось подключить уведомления' })).toBeVisible()
   await expect(page.getByText(/Код для поддержки: FIT-/)).toBeVisible()
@@ -4447,7 +4451,7 @@ test('trainer switches day-grid density from schedule and profile settings', { t
 
   await page.reload()
   await expect(page.locator('.schedule-density-compact')).toBeVisible()
-  await page.goto('/profile/settings')
+  await page.goto('/profile/settings?section=schedule')
   const densityGroup = page.getByRole('radiogroup', { name: 'Плотность временной сетки' })
   await expect(densityGroup.getByRole('radio', { name: 'Компактная' })).toHaveAttribute('aria-checked', 'true')
   await densityGroup.getByRole('radio', { name: 'Обычная' }).click()
@@ -5032,9 +5036,13 @@ for (const [account, profileId] of [
     await page.getByRole('link', { name: 'Настройки профиля' }).click()
     await expect(page).toHaveURL(/\/profile\/settings$/)
     await expect(page.locator('.phone-frame')).toHaveClass(/fit-lime-shell/)
-    await expect(page.getByText('Lime пока доступна только на экранах тренера из пилота.')).toBeVisible()
-    await expect(page.getByRole('switch', { name: 'Тёмная тема остальных экранов' })).toBeVisible()
     await expect(page.getByRole('button', { name: 'Выйти' })).toBeVisible()
+    if (account === 'first') await page.screenshot({ path: testInfo.outputPath('trainer-settings-overview.png'), fullPage: true })
+    await page.getByRole('link', { name: /^Оформление/ }).click()
+    await expect(page.getByText('Экраны Lime сохраняют тёмное оформление.')).toBeVisible()
+    await expect(page.getByRole('switch', { name: 'Тёмная тема остальных экранов' })).toBeVisible()
+    if (account === 'first') await page.screenshot({ path: testInfo.outputPath('trainer-settings-appearance.png'), fullPage: true })
+    await page.getByRole('button', { name: 'Назад', exact: true }).click()
     await page.getByRole('button', { name: 'Назад' }).click()
     await expect(page).toHaveURL(/\/profile$/)
     await page.goto('/profile/trainer')

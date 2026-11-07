@@ -13,6 +13,13 @@ describe('Fit Lime installation state', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Как установить Fit' }))
     expect(screen.getByRole('button', { name: 'Закрыть' })).toBeVisible()
   })
+  it('opens the trainer instruction directly and closes back through its existing action', () => {
+    const onClose = vi.fn()
+    render(<FitLimeInstallSetting initiallyExpanded onClose={onClose} />)
+    expect(screen.queryByRole('button', { name: 'Как установить Fit' })).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Закрыть' }))
+    expect(onClose).toHaveBeenCalledOnce()
+  })
   it('has no install invitation for a native app', () => {
     native.mockReturnValue(true)
     render(<FitLimeInstallSetting />)
