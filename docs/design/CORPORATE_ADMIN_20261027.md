@@ -2200,3 +2200,479 @@ Docs/diff/migration guards и целевые неизменённые personal A
 приёмка; новый2028 CI, затем обычный squash/mainCI/официальный выпуск/readbacks.
 Дальше: после приёмки PR1 включить его опубликованный squash-main в UI ветку,
 финальный diff/CI/PR2 и выпуск, затем один закрытый personal grant/inspect.
+
+### Итерация 46 нового выпуска — 2026-11-07 — GPT / OpenAI
+
+Задача: проверить late-response защиту CPT107 внутри одной карточки, а не только
+при переходе к другому клиенту. Расхождение: старый idempotent PUT receipt v1
+заменял уже прочитанную v2 той же карточки. Новый unit получил red; серверный
+CAS/данные не переписывались, ошибалась отображаемая локальная версия.
+Сделано: перед принятием ack отменяется старое чтение; receipt ниже уже известной
+версии переводит сохранение в существующий explicit409/readback. Новая версия
+остаётся в cache/UI. Старый GET, завершившийся после нового save ack, тоже не
+понижает состояние. Подтверждены оба направления гонки и прежний другой клиент.
+Решение: использовать прежний конфликт/перечитывание без optimistic overwrite,
+новых API полей или дополнительной кнопки. Stable command/replay сохраняется.
+Отвергнуто: принять старую квитанцию за текущее состояние или ослабить CAS.
+Проверка runtime EmployeeMarkSHA256
+168b6525095a068ea6b0ed0ca723a5dccde4a10bc8997acf8186731a84af2738:
+новые UI/repository17 + transport26, целевые76unit, root frontend348files/3094tests
+passed; coverage83.75/78.86/82.97/88.42, lint/types и production build/startup/
+fonts2/2 passed. На этом build104/104 прежних corporate/admin/service/personal
+browser scenarios прошли; дополнительно2/2 Chromium/WebKit воспроизводят replay
+v1 после server read v2 и успешное явное восстановление,106 различных сценариев.
+Первый synthetic visibilitychange был направлен document и не дошёл до window
+listener используемой библиотеки; исправлен только trigger, лимит30s/assertions
+не менялись. Browser реальную сеть API/WS не использовал. CSS/разметка/темы прежние.
+Сама серверная схема/оператор первого PR не менялись. Actualmain98d2a090 включён
+в обе ветки обычными merges; docs-конфликты UI разрешены только проверенным
+полным prefix канонического журнала и сохранением обеих строк CURRENT_STATE.
+Открыто: новый2028 exact-head CI2b04/42370815672 и принятие2026, затем собственный
+mainCI/официальный выпуск/реальные readbacks. После принятия фактический squash
+PR1/main ещё должен быть интегрирован в UI перед PR2; текущий merge исходной
+ветки не подменяет этот гейт. Personal pilot остаётся OFF, физический телефон
+и настоящий OAuth не заявляются проверенными.
+Дальше: полный согласованный выпуск обоих PR и только потом закрытый grant/inspect.
+
+### Итерация 47 нового выпуска — 2026-11-07 — GPT / OpenAI
+
+Задача: штатно выпустить первый серверный PR2028 в своём подтверждённом окне.
+Расхождения: нет. Предшественник2026 официально снял hold после prepare42374482004
+→ protected plan42374580440, проверенной закрытой квитанции и штатного retirement
+собственных ключей. Незавершённый клиентский identity-вопрос не выдаётся за repair;
+эта операция закрыта, customer writes не выполнялись. Исходящей переписки не было.
+Сделано: повторно проверены API checkout/root/ветка/пустой dirty, actualmain98,
+его ancestor в source2b04,35/35 текущих checks и отсутствие активных/queued
+публикаций. Normal squash --match-head-commit2b04 выполнил GitHub PR2028 в
+mainc5c65706eb7e53a16490535da71d1cd52f6a94ef в13:08:32UTC. Admin/bypass/force/
+deletebranch не применялись; ветка source сохранена. Контракт197/пилоты прежние.
+Проверка: exact2b04CI42370815672 SUCCESS35jobs. Его API1612pass/416conditional
+skips (новые3DB cases предшественника сохранены); отдельный чистый PostgreSQL17
+job выполнил suites, включая personal12/12, основную группу343pass/1штатный skip
+и остальные restore/private/push проверки. Исторические local412/413skips не
+подменяют текущие. Собственный predecessor readback98:213/213file size+SHA,
+обе API98/ready/private401/DNS3/8checks, RSA/provenance/official ZIP match,
+ABI8922d2e9/native9; web/OTA по213files безопасно извлечены без изменения.
+Решение: merge не объявляется доставкой. Начат обязательный full mainCI42375593130
+дляc5; buildAPI42375593001 success является только сборкой. Официальные API/web/
+signedOTA должны пройти после mainCI, затем собственная фактическая приёмка.
+Отвергнуто: ручной дубль workflow, включение pilot до двух принятых выпусков или
+замена настоящего squash-main равенством tree. UI18bb прошёл локальные76unit,
+frontend3094 и106browser из46, но c5 ещё НЕ интегрирован: ждём его публикацию.
+Открыто: mainCI/публикация/приёмка первого этапа, затем actualmain merge в UI,
+второй PR и полный выпуск, единственный closedtesttarget personal grant/inspect.
+Дальше: довести оба этапа до фактического результата; не завершать после PR1.
+
+### Итерация 48 нового выпуска — 2026-11-07 — GPT / OpenAI
+
+Задача: фактически принять опубликованный серверный PR2028 перед UI второго PR.
+Расхождения: нет. Сделано: full mainCI42375593130 SUCCESS на squash-main
+c5c65706eb7e53a16490535da71d1cd52f6a94ef; официальные API42377082176,
+web42377082142 и signedOTA42377590483 SUCCESS именно этого source.
+Проверка: публичные213/213 файлов сайта совпали размером/SHA с manifest; обе
+API release=c5, health/ready200, private401, DNS3/TLS прошли. Четыре новых
+personal/admin endpoints без авторизации возвращают401 на обоих origin.
+Подписи manifest/ZIP и provenance подтверждены, официальный OTA artifact
+побайтно совпал с опубликованным ZIP:15153424байт, SHA256
+64291efd3bb9f0d6324a10f2e41f78600563aeec0c2fd9177838ca1548baa221.
+ABI8922d2e9/nativeBuild9/version1.1.4 сохранены. Все213 web и213 ZIP файлов
+безопасно извлечены без rebuild/изменений. На точных web68/68 и signedZIP68/68
+browser scenarios прошли без retries; прямо на опубликованном сайте4/4
+Chromium/WebKit. Во всех UI проверках реальные API/WS/внешняя сеть закрыты,
+данные synthetic; реальный OAuth/физический телефон не заявляются.
+Отдельный штатный inspect42378792754 SUCCESS наc5 подтвердил uniqueTrainer=true,
+enabled=false, eligible=true, otherEnabledTrainers=0. Eligible означает прежний
+подтверждённый trainer, не включённый pilot. Отметки/workout/customer data не
+создавались, grant не выполнялся. Квитанции локально fit674-personal-release-pr1-c5c65706.
+Решение: PR1 принят, operational hold2028 СНЯТ; текущих собственных production
+операций нет. Исходящей переписки не было. Отвергнуто: объявлять весь пакет
+завершённым или включать personal до второго принятого выпуска.
+Открыто: реальный squash-mainc5 ещё нужно обычным merge включить в UIc491,
+сохранить чужие изменения, получить текущиеCI/Android и пройти очередь нового
+PR2. Дальше: UI выпуск с той же фактической приёмкой, затем единственный
+closed-target grant и отдельный committed inspect. Остальные пилоты прежние.
+
+### Итерация 49 нового выпуска — 2026-11-07 — GPT / OpenAI
+
+Задача: подготовить UI PR2 от реально опубликованного и принятого PR1/main.
+Расхождения: исходная ветка2b04 не заменяет ancestry squashc5. Сделано: обычный
+merge3f8057e4 включил c5c65706eb7e53a16490535da71d1cd52f6a94ef в UI.
+Конфликты только docs: доказан полный prefix45 в journal48, все записи46–48
+сохранены; CURRENT_STATE отличается только своей одной строкой, чужие не менялись.
+Проверка: c5 ancestorHEAD; diff runtime src/e2e/API/scripts/workflows/package/lock
+от проверенного18bb пустой, EmployeeMarkSHA168b6525095a068ea6b0ed0ca723a5dccde4a10bc8997acf8186731a84af2738
+прежний. Повторены76/76 целевых unit на опубликованной основе, docs budgets/
+links/archive и diff-check passed. Full frontend3094/348, coverage и production
+106browser из46 применимы к тем же executable blobs, не выдаются за новоеCI.
+Решение: UI PR получает собственные полныеCI и Android текущегоhead. Runtime
+новых миграций/секретов/native version не добавляет. Готовый новый PR может
+проверяться параллельно, выпуск следует фактической очереди готовых старших
+PR2029/2031/2032/2033; draft2030/2034 не являются автоматическим hold. При
+изменении main интеграция повторяется обычным merge с проверками новогоhead.
+Отвергнуто: rebase/force, обгон активных публикаций, выдача sourceCI PR1 за CI UI.
+Открыто: source/main CI, очередь, официальный второй выпуск и фактическая
+приёмка106web/106exactZIP/8public с realAPI/WS deny; pilotOFF до завершения.
+Дальше: второй PR, полный выпуск, затем один прежний test target grant/inspect.
+
+### Итерация 50 нового выпуска — 2026-11-07 — GPT / OpenAI
+
+Задача: сохранить свежий main старшего2029, пока он проходит свой выпуск.
+Расхождения: нет. Сделано: PR2 создан как2035 от опубликованногоc5; старший2029
+обычно слит6434a207b87e1c5a1fd66c610bc4f7b48e9831cc и взял production окно.
+Обычный merge178c4034 включил его изменения без конфликтов. Свежие правила
+main не изменились; журнал финансов/его8файлов сохранены, личный runtime18bb
+не менялся. Собственный sourceCI f8e637d4 становится историческим после push
+нового head; проверки не отменяются вручную/не дублируются.
+Проверка на178c4034: lint, production build/tsc/startup/fonts2/2, целевые76unit
+и полный106/106 corporate/admin/services/personal browser Chromium/WebKit
+passed, retries0/realAPIWSdeny. Просмотрены текущие light320 WebKit statistics
+и dark390 Chromium employee mark; кнопки/перенос/дата/темы доступны. Прежний
+полный frontend3094/coverage относится к18bb до чужих finance изменений;
+текущий полный frontend на новой основе проверяет новыйCI, счёт не выдуман.
+Решение: ждём полный currentheadCI/Android2035 параллельно старшему mainCI;
+свой merge лишь после фактической приёмки2029 и остальных готовых старших.
+Входящая просьба финансов не стала разрешением на исходящий ответ; сообщений
+не отправлялось, готовностьPR1 отражена штатно в его опубликованной квитанции.
+Отвергнуто: обогнать active production или остановиться после первого этапа.
+Открыто: очередь/sourceCI/Android/второй выпуск/приёмка, pilotOFF.
+Дальше: закрыть оба опубликованных этапа и единственный closed-target grant/inspect.
+
+### Итерация 51 нового выпуска — 2026-11-07 — GPT / OpenAI
+
+Задача: исправить настоящее падение полного UI CI9a941667/42379501407.
+Расхождения: desktop visual-trainer проверка Client Detail получила кнопку
+«Повторить проверку» высотой43.2px вместо44; обе internal retries повторили
+ошибку. Причины: native browser harness не подключал optional personal store
+и отвечал503 вместо реального закрытого gate; error-кнопка вне section не
+получала требуемого min-height в прежней теме. Это собственная регрессия.
+Сделано: scoped класс error/retry с min-width/min-height44, без глобальных
+стилей/новой кнопки. В native-api-harness подключён настоящий CorporatePersonalStore
+к его изолированной PG17, как в production server; пустая pilot table сохраняет
+allowed=false. Hardcoded positive/negative ответ и расширение пилота не введены.
+Усилен существующий failure/retry browser case: legacy обе темы/оба движка,
+измеряется реальный target и выполняется retry. До fix4/4 получили red43.1875px.
+Проверка после fix:76/76unit, production build/types/startup/fonts2/2 и108/108
+corporate/admin/services/personal browser прошли, retries0/APIWSdeny. Отдельно
+именно упавший native desktop Client Detail с реальным API/новой собственной
+тестовой БД прошёл1/1 с прежними light/dark baseline/accessibility assertions.
+Ни snapshot, ни assertion, ни timeout не менялись; база fixture удаляет только
+собственную уникальную БД. Scope ESLint TS/node syntax harness/diff passed;
+первый явный ESLint JS вызов был отвергнут существующим ignore, не скрыт.
+EmployeeMark SHA256 4fc36525b640bc1c6ab64421f962bd8b472f631ebe6c2e1bc9620c6c8d97020c.
+Новый live acceptance harness независимо прошёл8/8 на локальном production
+предыдущей основы; это подготовка, не публикация. Будущая реальная приёмка
+уточнена до108web/108exactZIP/8public. Открыто: новый exact-head fullCI/Android,
+старший2029 ещё держит своё окно; остальные готовые старшие PR учитываются.
+Решение: сохранить исходный failure, после fix новыйhead/newCI; не rerun
+сломанный9a и не ослаблять проверки. Остальные флаги/native/данные прежние.
+Дальше: полный второй выпуск/приёмка, потом единственный test grant/inspect.
+
+### Итерация 52 нового выпуска — 2026-11-07 — GPT / OpenAI
+
+Задача: подготовить совместимость с новым main, сохранив зелёную квитанцию fix.
+Расхождения: нет. Remote UIe267a1fd31558227c406bf8d433c1eb2fa1154c9 прошёл
+полный CI42381669790 SUCCESS35/35 attempt1 и Android42381669673 SUCCESS.
+Именно исправленный desktop visual job128435529950 SUCCESS. Frontend348/3094,
+coverage83.62/78.76/82.76/88.28; API1612pass/416conditional skips; чистый PG17
+personal12/12, основная группа343pass/1штатный skip и остальные restore/private/
+push suites прошли. Прежний9a run после нового head завершён стандартной отменой
+только собственного устаревшего CI; известный failed job/log из51 сохранён,
+force/чужие CI не использовались. Исторический failed не объявляется зелёным.
+Предшественник2029/6434 принят владельцем: API42383752906/web42383752920/
+OTA42385889868 SUCCESS,213/213files,42web+42signedZIP retries0, dualAPI/RSA/ABI
+8922d2e9/native9; его hold снят. Следующий готовый старший2031 обычно слит
+a6caeb67c0c9356e7cccdbfcc3378c13f1ab990d, mainCI42388049910 ещё идёт;
+buildAPI42388049963 SUCCESS — только сборка. Его публикация/приёмка не заявлены.
+Сделано локально: обычный merge0287957a включил a6, сохранив четыре чужих файла
+P03. Конфликт REGRESSION разрешён проверенным общим prefix6434 + полным чужим
+P03 + полным собственным CPT уроком с отдельным заголовком. Frontend src/e2e/
+scripts/workflows/package/lock побайтно прежние относительно зелёногоe267.
+Проверка подготовленного0287957a: APItype/build passed,45/45 совместных
+corporate-personal+program brief unit; исходный native desktop Client Detail
+с настоящим локальным API и новой уникальной PG17 БД1/1 passed. Native/frontend
+версии не менялись, чужой код/утверждения тестов сохранены.
+Решение: подготовленная интеграция пока LOCAL, remotePR остаётся зелёнымe267;
+это не CI новой основы и не разрешение своего production merge. Перед финальным
+push включается фактический main своей готовой очереди, затем новый полный CI/
+Android. Не повторяем speculative sourceCI после каждого старшего выпуска.
+Дополнена будущая приёмка private API до8 запросов:4route/method вида×2origin,
+401+no-store; на опубликованном6434 GET/PUT отметки без сессии с искусственным
+ID реально дали401/no-store на обоихorigin, customer writes отсутствуют. Четыре
+пробы в48 — два чтения×дваorigin, не четыре разных route вида. История сохранена.
+Открыто: приёмка2031, готовые старшие2030/2032/2033 и итоговый свежий sourceCI;
+второй выпуск108web/108signedZIP/8public, затем единственный test grant/inspect.
+Дальше: полный разрешённый выпуск обоих этапов; personal pilot остаётся OFF.
+
+### Итерация 53 нового выпуска — 2026-11-07 — GPT / OpenAI
+
+Задача: получить готовность UI по фактическому текущему main параллельно
+старшему выпуску, без самостоятельной блокировки для неготовых пакетов.
+Расхождения: нет. После52 e267 fullCI уже завершён, собственных активных CI
+нет. Подготовленный a6 — настоящий main, не гипотетическая будущая основа;
+повторно подтверждён GitHub перед push. API45/type/build и native baseline1
+на0287957a passed; frontend/e2e/native/lock byte-diff отe267 пустой.
+Решение: отправить накопленную проверенную интеграцию028+66 с журналом52–53
+одним обычным push и получить новый exact-head полныйCI/Android параллельно
+mainCI2031. Это не второй production hold: merge2035 только после фактической
+приёмки предшественника, готовых старших/готового приоритета ФИТ14 и fresh main.
+Если main реально изменится раньше окна, обычная интеграция и CI повторяются;
+неготовые будущие пакеты не становятся бессрочной бронью.
+Отвергнуто: оставлять свой PR заведомо behind до завершения всех неготовых
+пакетов или считать зелёныйe267 проверкой новой серверной основы.
+Проверка: чистый свой checkout/root/ветка, actualmaina6 и его ancestry вHEAD,
+docs budgets/links/archive и diff-check. CI новогоhead пока не заявлен.
+Открыто: mainCI/публикация/приёмка2031, новая sourceCI/Android2035 и реальная
+готовая очередь, затем штатный выпуск/108+108+8/closed-target grant+inspect.
+Дальше: довести оба принятых выпуска и включить учёт только прежнему тестовому.
+
+### Итерация 54 нового выпуска — 2026-11-07 — GPT / OpenAI
+
+Задача: сохранить выделенный календарный выпуск2030 и получить готовность
+на новом actualmain. Расхождения: нет. UI4d9cf4623cdb1fcdf2291b9b5cdccfbad727f6a1
+прошёл полный CI42389487818 SUCCESS35/35 attempt1 и Android42389487807 SUCCESS.
+Фактические joblogs: API1623pass/416conditional skips, frontend348/3094,
+coverage83.62/78.76/82.74/88.28. Прежний e267/1612 — историческая основа;
+числа не переносятся на новую версию по предположению. PostgreSQL job SUCCESS.
+Старший2031/a6 выпущен: mainCI42388049910 и официальные API42393051831,
+web42393051718, OTA42393691362 SUCCESS. Затем выделенный2030 слит c454506b
+4e11455aeb9fc53ed6c243e7817a38b1; его mainCI42396734450, API42399794901,
+web42399792675, OTA42400926063 SUCCESS. Это официальные гейты, фактический
+public/native receipt владельца2030 на момент подготовки ещё ожидается.
+Сделано: обычный merge34635f6b включил c454 без конфликтов; все три чужих файла
+сохранены. Правила входа/индекс/CURRENT_STATE не менялись. Чужой CSS ограничен
+:has(.coach-fortnight-view), переносит trailing space внутрь scrollport;
+персональные JS/права/API/пилоты/native/lock прежние.
+Проверка: первый параллельный unit-прогон получил74pass и2 прежних5s timeout
+ServicesPage; на машине измерен load28.78, семантический сбой не установлен.
+Полный тот же76/76 с maxWorkers1 прошёл, без изменения assertions/лимитов.
+Production build/types/fonts2/2/startup passed;108/108 browser Chromium/WebKit
+с workers1/retries0/globalrealAPIWSdeny прошли на объединённом build.
+Дополнительно до merge приватная visual QA error-state12/12:legacy обе темы
+320/390/1440,44px/реальный retry; снимки dark320 WebKit/light1440 Chromium
+просмотрены, ошибок/overflow нет. Эти12 не подменяют выпускные108 сценариев.
+Решение: новая actualmain основа получает собственные полныеCI/Android.
+Окно2035 не занято; сначала фактическая приёмка2030, затем действующий
+приоритет готовых ФИТ14/общая очередь. Входящая просьба ФИТ19 подтвердить
+статус не стала разрешением исходящей переписки; ответ не отправлялся.
+Отвергнуто: выдать35/35 старого4d9 за проверку календарной основы, обогнать
+выделенный2030, ослабить timeout или менять чужие workflow/пилоты.
+Открыто: exact-head CI/Android новой версии, actualready очередь, полный
+mainCI/официальный второй выпуск/108web+108signedZIP+8public/8private probes,
+затем один closed-test personal grant и отдельный committed inspect.
+Дальше: завершить оба принятых выпуска, personal pilot пока OFF.
+
+### Итерация 55 нового выпуска — 2026-11-07 — GPT / OpenAI
+
+Задача: согласовать конкретное безопасное окно2035, продолжая проверки.
+Расхождения: нет. Владелец прямо разрешил ограниченную status/queue переписку
+текущего двух-PR CPT пакета с существующими ФИТ19/ФИТ14 до его завершения.
+Это новое разрешение, старые конкретные согласования не переиспользовались.
+Сделано: переданы реальные квитанции2028 и2035/current92cc отc454, локальные
+76/108, AndroidSUCCESS, currentCI42403107984 pending, pilotOFF/без своегоhold.
+ФИТ19 и ФИТ14 подтвердили конкретную последовательность: принятый2030 →
+весь уже реализованный пакет2032→2033→2036 → реальные готовые старшие2034/2035
+→2037. Внутрь трёх выпусков ФИТ14 свой main merge не вставляем. Новый будущий
+этап в приоритет не добавляется; перед своим merge сверяется реальный2034/его
+держатель, готовность и actualmain. Даны краткие ACK обоим координаторам.
+Проверка:2030 PR receipt перечитан —213/213size+SHA, dualAPI/DNS/TLS/auth8,
+RSA/ZIPchecksum, public6/6 и signedZIP6/6 оба движка/retries0; hold снят.
+Current92cc Android42403107965 SUCCESS, CI42403107984 healthy/в очереди.
+Ни чужой CI, ни production данные/пилоты этой координацией не изменялись.
+Решение: healthy92cc спокойно завершается; по фактическим main ФИТ14 локально
+сохраняем историю и проверяем совместимость. Когда существует фактический
+финальный main2036, итоговый свежий head2035 получает полный CI/Android
+параллельно последнему mainCI, свой merge только после его public/native
+приёмки и освобождения окна. Это ограниченная бронь трёх конкретных PR,
+а не ожидание неизвестной будущей разработки.
+Эта документационная квитанция пока LOCAL, отдельный push не отменяет
+healthy92cc. Она войдёт в следующий необходимый merge/push свежей основы.
+Отвергнуто: отвечать без прямого разрешения, расширять его на другие чаты/
+задачи, начать параллельную публикацию или выдать старыйCI за новыйhead.
+Открыто: фактические три выпуска ФИТ14 и realready2034, затем полный2035
+выпуск/приёмка и один закрытый personal grant+отдельный inspect.
+Дальше: довести оба принятых CPT этапа, сохранность всех прежних флагов/native.
+
+### Итерация 56 нового выпуска — 2026-11-07 — GPT / OpenAI
+
+Задача: локально сохранить первый фактический main ФИТ14 без вмешательства
+в согласованный пакет2032→2033→2036 и healthyCI2035. Расхождения: нет.
+Сделано: ordinary merge70e15aa6 включил f6fb3944492f16ab1c390d06597df3845dfe7756
+(PR2032). Все29 чужих файлов и обе истории сохранены без конфликтов, включая
+SET101–111 в ACTIVE_CONTRACTS, отдельный план настроек и принятые trainer
+feedback baselines. Прочитан весь новый план/границы; API/миграции/ключи/defaults/
+rollout/native этим первым PR не менялись. Свой CPT код не переписывался.
+Вход в прежний RPE теперь явно открывает раздел «Тренировки» на том же
+/profile/settings?section=training; входящий corporate-admin precondition
+сохранён вместе с прежним assertion наличия switch, без ослабления приёмки.
+Проверка объединённого70e15aa6:80/80 целевых unit (прежние76 + ProfilePage4),
+production build/types/fonts2/2/startup passed;108/108 corporate/admin/services/
+personal Chromium/WebKit, workers1/retries0/realAPIWSdeny passed. Количество
+browser cases после первого ФИТ14 осталось108, не предполагается неизменным
+для следующих двух этапов. Corporate permissions/personal pilot/native прежние.
+Решение: это LOCAL prep, не новый sourceCI и не собственный production hold.
+Remote92cc/CI42403107984 здоров,25заданий уже прошли; Android42403107965SUCCESS,
+ничего не отменялось. MainCI2032/42406798064 ещё идёт, официальная публикация
+и приёмка первого ФИТ14 не объявляются состоявшимися по одному merge.
+Отвергнуто: вернуть старую плоскую навигацию/RPE precondition, выбросить
+принятые foreign snapshots или отменить healthyCI ради docs-only push.
+Открыто: три согласованных фактических выпуска ФИТ14 и граница2034/2035;
+итоговый актуальный sourceCI/Android2035, свой полный mainCI/official/readbacks
+и единственный test personal grant/отдельный committed inspect.
+Дальше: сохранять следующие реальные main локально и готовить финальный
+source gate к освобождению конкретного пакета; оба CPT этапа довести до приёмки.
+
+### Итерация 57 нового выпуска — 2026-11-07 — GPT / OpenAI
+
+Задача: зафиксировать полностью зелёную отправленную версию2035, не выдавая
+её за проверку более нового main. Расхождения: нет. Remote source
+92ccdc493e7ab3f01d2930f38f64683f08f9075a (c454 ancestor) завершил
+CI42403107984 SUCCESS35/35 attempt1, Android42403107965 SUCCESS. Здоровые
+проверки не отменялись и не повторялись вручную. Фактические joblogs:
+API1623pass/416conditional skips, frontend348/3094 и coverage83.62/78.76/
+82.76/88.28; PostgreSQL и все browser matrices SUCCESS. Логи сохранены
+fit674-personal-92cc-api.log / fit674-personal-92cc-app.log.
+Сделано: квитанция отправленной версии сохраняется отдельно от LOCAL70e15aa6/
+74c6b377, уже включающих первый новый mainf6 и80unit/108browser из56.
+Решение: source92 — проверенный baseline, не разрешение merge на actualmainf6.
+Приоритетный пакет2032→2033→2036 доводится владельцем последовательно;
+свой итоговый свежий source получит новый полный CI/Android к его завершению.
+Документационные55–57 и локальные ordinary merges войдут в этот необходимый
+push вместе, без отдельного обхода required-гейтов/нового runtime PR.
+Проверка: immutable source/run/attempt прочитаны непосредственно в GitHub;
+свои root/branch/dirty/main сверяются перед следующими интеграциями. Пилоты/
+роли/native/workouts/production данные не изменялись.
+Отвергнуто: считать35/35 старого92 проверкойf6, прервать чужое окно или
+объявить весь CPT пакет завершённым до второй публикации/grant/inspect.
+Открыто: оставшиеся фактические ФИТ14 main/публикации/приёмка, реальная
+готовность2034, итоговый свежий source/mainCI2035 и official/public/native
+приёмка, один закрытый personal grant и отдельный committed inspect.
+Дальше: продолжить согласованный полный выпуск обоих CPT этапов.
+
+### Итерация 58 нового выпуска — 2026-11-07 — GPT / OpenAI
+
+Задача: устранить два воспроизведённых дефекта собственной новой статистики
+до итогового source gate. Расхождения: пустой период возвращает trainers=[],
+select терял выбранный option и показывал «Все тренеры», хотя query сохранял
+trainerId. Unit RED подтвердил потерю выбранного id. Сделано: компонент хранит
+последнее выбранное имя/id, при смене периода сохраняет актуальное серверное
+имя; отсутствие metadata не меняет фильтр. Явный сброс по-прежнему удаляет
+trainerId. Новый unit проверяет также переименование; новый browser case
+в обоих движках выбирает действительно пустой период и затем сбрасывает фильтр.
+Второй дефект измерен после завершения transitions: active:hover имел
+fg251/250/247 наbg229/226/220, а без hover — наbg36/36/38. Общий hover выигрывал
+каскад. Scoped personal CSS сохраняет принятую активную палитру; shared services
+и общие styles не менялись. В существующие theme/width cases добавлено реальное
+измерение контраста>=4.5 при hover и после выхода указателя, без новых длинных cases.
+Проверка:81/81 целевых unit, scoped ESLint, production types/build/fonts2/2/
+startup passed. До CSS исправления полный набор110/110 прошёл (новые2 вместо108);
+после CSS42/42 personal Chromium/WebKit, обе темы320/390/430/1440, retries0,
+realAPI/WSdeny passed. Итоговый полный110 после интеграции следующего main впереди.
+Первый test-run private contrast probe не нашёл библиотеку, затем был неверный
+локальный порт; исправлено только private harness. При повторе общего110 была
+ошибочно собрана версия без synthetic app-session flags: первые3 baseline
+упёрлись в вход; собственный запуск остановлен, лог сохранён. Повторная сборка
+с явными synthetic flags и42/42 прошла. Это не product regression/не ослабление
+assertions. Отдельная compile ошибка getByRole exact option устранена удалением
+неподдерживаемого свойства; точное строковое имя не изменено. Все первые логи
+сохранены приватно fit674-personal-empty-trainer-* / fit674-personal-period-contrast/.
+Решение: только исправления CPT UI; API/SQL/права/пилоты/данные/native прежние.
+Отвергнуто: молча сбросить trainer filter, глобальный перекрас услуг или принять
+старый92 CI за проверки этих изменений. Открыто: actualmainb8 второго ФИТ14 уже
+слит, его mainCI42411259430 SUCCESS34+normal skip; публикация/приёмка и финальный
+2036 ещё не закрыты. Дальше: ordinary mergeb8, полный актуальный локальный набор,
+потом final2036/реальный2034 holder, свежий source/mainCI и фактическая приёмка2035;
+после обоих CPT выпусков один закрытый test grant и отдельный committed inspect.
+
+### Итерация 59 нового выпуска — 2026-11-08 — GPT / OpenAI
+
+Задача: сохранить actualmain второго ФИТ14 и проверить совместный интерфейс.
+Расхождения: нет; разрешённая ограниченная координация ФИТ19 ещё раз подтвердила
+границу2032→2033→2036→активный2034→2035→2037, без будущих неоткрытых этапов.
+PR2034 non-draft; его PR содержит отдельное разрешение владельца «выкатывай».
+Чужие PR/CI/ветки не менялись. Сделано: обычный merge4e612c24 сохраняет
+b8a36ad31dae18953ec8975b5b3e7745083ff5c1 и все8 входящих файлов/план, параметры/
+контраст off и существующие native/visual assertions. Свой fixee8892a9 из58
+сохранён. Entry rules AGENTS/FIT_WORKFLOW совпадают с новым main побайтно.
+Проверка4e612c24: полный ESLint без warnings, docs budgets/links/archive passed;
+полный frontend coverage348files/3096tests passed,83.57/78.69/82.71/88.21.
+Целевые55 + transport26 =81unit passed. Production types/build/fonts2/2/startup
+и полный corporate/admin/services/personal110/110 Chromium/WebKit,workers1/
+retries0/realAPIWSdeny passed. Скриншоты actual empty selected trainer/light
+и statistics320dark/WebKit просмотрены; выбранный период читаем, filter явный.
+Migration197/API personal/operator workflow+script совпадают с принятой PR1
+версией2b04; android/ios/package/lock совпадают с actualmainb8. Пилоты/права/
+офисы/данные/финансы/native version не изменялись. Все логи приватно
+fit674-personal-ui-b8-{unit,transport,build,browser,lint,coverage}.log.
+Решение: это локальная интеграция, remote92 остаётся прежней зелёной базой;
+итоговый отправленный head получит полный собственный CI/Android на последнем
+actualmain перед2035. Отвергнуто: обгонять конкретный приоритетный пакет,
+считать локальный build публикацией или чужой CI своим source gate.
+Открыто: ФИТ14 финальный2036 и2034; затем собственные source/main gates,
+официальная публикация/все файлы/API110web+110ZIP+8live и один закрытый test
+personal grant с отдельным committed inspect. Физический телефон не проверен.
+Дальше: подготовить следующий фактический main локально, завершить оба CPT выпуска.
+
+### Итерация 60 нового выпуска — 2026-11-08 — GPT / OpenAI
+
+Задача: сохранить последний фактический main конкретного приоритетного пакета
+настроек. Расхождения: нет. PR2036 слит вadbef9feb3e139d5e52d349a301039f5f9fd20da;
+его source4e30/CI42411608632 SUCCESS35/35, новый mainCI42414208163 ещё идёт.
+Владелец ФИТ14 подтвердил удержание окна до итоговой actual public/ZIP приёмки.
+Сделано: ordinary merge1caa2b46 сохранил все21 входящих файла, новые формы/
+FormData snapshot, install observer/summary уведомлений, focus/back, все6 новых
+feedback baselines. Единственный конфликт — append-only REGRESSION_LESSONS:
+сравнены stage1/2/3 с общим префиксом, полностью сохранены оба дополнения и обе
+CPT причины. Все20 остальных foreign files побайтно равны actualmainadbe.
+AGENTS/FIT_WORKFLOW/CURRENT/ACTIVE incoming не менялись. Своё личное/CPT
+дополнение не выдавало новых общих прав/пилотов; native/API197/operator прежние.
+Проверка: первый расширенный111unit дал109pass и2 старых ServicesPage timeout5s
+на measured host load29.81. Исходник этих услуг побайтно прежний, прогон остановил
+pipeline до build/browser. Лог сохранён. Без изменений кода/assertions/лимитов
+два теста отдельно прошли1.55s, затем полный повтор14files/111tests passed19.72s.
+Production types/build/fonts2/2/startup и полный110/110 corporate/admin/services/
+personal Chromium/WebKit,workers1/retries0/realAPIWSdeny passed. Логи
+fit674-personal-ui-adbe-{unit,isolated,unit-repeat,build,browser}.log.
+Уточнение58: первые два private contrast probe имели module/port configuration
+ошибки, видимые в tool transcript; отдельные logfiles этих двух запусков не
+сохранены, probe.log содержит успешный замер. Сохранение первых файлов в58
+относится к unit/typecheck и остановленному auth-disabled browser run, не ко всем
+промежуточным tool выводам. Ни один неуспех не засчитан production приёмкой.
+Решение: локальная совместимость актуального main подготовлена; следующий
+старший2034 ещё получает своё реальное окно, затем2035 и2037. Remote92/старыйCI
+не покрывают новые localmerges/fix. Отвергнуто: дублировать активные чужие
+workflows, обходить очередь или повторять публикацию принятого2028.
+Открыто:2036 mainCI/release/acceptance/hold release; actual2034main и его приёмка;
+итоговый свой fullsourceCI+Android, normalmatchhead/mainCI/official/allbytes/
+110web+110ZIP+8live и отдельные закрытые personal grant/committed inspect.
+Дальше: сохранить следующий реальный main и довести оба CPT этапа до результата.
+
+### Итерация 61 нового выпуска — 2026-11-08 — GPT / OpenAI
+
+Задача: подготовить итоговый source2035 на фактическом последнем main очереди.
+Расхождения: нет. ФИТ14 освободил окно после полной приёмки всех3PR; итоговая
+квитанция [PR2036](https://github.com/podkolzinpd/fit/pull/2036), mainadbe,
+mainCI/API/web/signedOTA успешны,213files и actualpublic2/2+signedZIP2/2 приняты.
+Активный2034 с отдельным разрешением владельца прошёл новый exact62fc CI35/35
+и слит вddf365910ce0ca43c4dd7632639836c50d94ed51. Его mainCI42417023480/
+Android42417023398/публикация/приёмка остаются отдельными гейтами своего окна.
+Сделано: ordinary merge27ae3a93 сохранил все6 входящих файлов MC4.3, обе истории
+и foreign CURRENT строку. CSS guards отделяют только modernLive paint; общие
+геометрия/поведение модалок и остальные экраны сохраняются. Все5 non-CURRENT
+foreign files и native/package/lock побайтно равны actualmainddf3. Собственный
+CPT runtime fixee889 сохранён, API197/operator/права/пилоты/данные прежние.
+Проверка27ae3a93:111/111 unit (14files), production types/build/fonts2/2/startup,
+110/110 corporate/admin/services/personal Chromium/WebKit,workers1/retries0/
+realAPIWSdeny passed. Логи fit674-personal-ui-ddf3-{unit,build,browser}.log.
+Свежий origin/main ancestor проверен; root/branch clean, remote2035 всё ещё92cc,
+auto-mergeOFF. Итоговые локальные55–61/все actualmain merges/свой filter+contrast
+идут одним необходимым обычным push, без отмены здорового CI или отдельного
+runtime PR. Новый fullsourceCI+Android именно нового отправленного head
+обязателен; старые92/4d9/e267 успехи не переносятся на него.
+Решение: полный source gate допускается параллельно mainCI/публикации2034;
+свой mainmerge только после его фактической приёмки и освобождения окна.
+Отвергнуто: пропустить проверку свежего head, обгонять2034, manual production
+SQL/SSH/admin/bypass/force/deletebranch или включить personal всем тренерам.
+Открыто: итоговый ownCI/Android, owner2034acceptance/hold release, normal squash
+match-head/mainCI/officialAPIwebOTA/все файлы/8negativeAPI/110web+110ZIP+8live;
+после обоих CPT этапов один закрытый test personal grant и отдельный committed
+inspect. Физический телефон не проверен. Дальше: пройти эти гейты до завершения.
