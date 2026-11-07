@@ -160,6 +160,35 @@ describe.skipIf(source === undefined)('owner-approved canonical client restorati
     g.expected.clientId = randomUUID()
     await expect(privatePlan(g)).rejects.toThrow('expected_identity')
   })
+  it('identity rejection privately inspects exact invitations and scoped session metadata without selecting a same-name claimant', async () => {
+    const f = await privateFixture(), current = randomUUID(), candidate = randomUUID(), unrelated = randomUUID()
+    await owner.query('delete from app_private.auth_identities where profile_id=$1', [f.athleteId])
+    await owner.query("insert into public.profiles(id,first_name,account_role) values($1,'Synthetic current','client')", [current])
+    await owner.query("insert into app_private.auth_identities(provider,provider_subject_sha256,profile_id,identity_origin) values('yandex',$1,$2,'native')", [createHash('sha256').update(current).digest('hex'), current])
+    await owner.query("insert into app_private.yandex_app_sessions(token_sha256,profile_id,expires_at) values($1,$2,now()+interval '1 day')", [createHash('sha256').update('synthetic session '+current).digest('hex'), current])
+    await owner.query("insert into public.clients(id,trainer_id,full_name) values($1,$2,' Synthetic   canonical '),($3,$2,'Different unrelated person')", [candidate, f.trainerId, unrelated])
+    const invitation = async (card: string, trainer: string, claimant: string, age: string) => {
+      await owner.query(`insert into public.client_invitations(client_id,created_by,target_role,code_hash,expires_at,claimed_by,claimed_at,created_at)
+        values($1,$2,'client',$3,now()+interval '1 day',$4,now(),now()-$5::interval)`, [card, trainer, createHash('sha256').update(randomUUID()).digest('hex'), claimant, age])
+    }
+    await invitation(f.old, f.trainerId, f.athleteId, '30 days')
+    await invitation(candidate, f.trainerId, current, '1 day')
+    await invitation(candidate, f.other, current, '1 day')
+    await invitation(unrelated, f.trainerId, current, '1 day')
+    const failure = await privatePlan(f).then(() => { throw Error('identity must reject') }, (error: unknown) => error)
+    expect(failure).toMatchObject({ message: 'client_restore_expected_identity', privateDiagnostic: { identityEvidence: {
+      actorSelected: false, sameNameIsNotIdentityProof: true, importedCounts: { workouts: 21, exercises: 1, sets: 1 },
+    } } })
+    const evidence = (failure as { privateDiagnostic: { identityEvidence: { invitations: { client_id: string; exact_import_card: boolean }[]; profiles: { id: string; active_sessions: number }[] } } }).privateDiagnostic.identityEvidence
+    expect(evidence.invitations).toHaveLength(2)
+    expect(evidence.invitations).toEqual(expect.arrayContaining([
+      expect.objectContaining({ client_id: f.old, exact_import_card: true }),
+      expect.objectContaining({ client_id: candidate, exact_import_card: false }),
+    ]))
+    expect(evidence.profiles.find(p => p.id === current)).toMatchObject({ active_sessions: 1 })
+    expect(JSON.stringify(evidence)).not.toMatch(/token_sha256|provider_subject_sha256|code_hash|Synthetic|Private synthetic/)
+    expect((await owner.query("select count(*)::int n from public.client_trainer_relationships where client_id=$1 and status='active'", [f.card])).rows).toEqual([{ n: 0 }])
+  })
   it('private history refuses another same-name live card linked to this trainer', async () => {
     const f = await privateFixture()
     await owner.query("insert into public.clients(id,trainer_id,full_name) values($1,$2,'Synthetic canonical')", [randomUUID(), f.trainerId])

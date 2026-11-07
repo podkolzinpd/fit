@@ -122,6 +122,34 @@ function publicState(state,pair){
    foundations:state.foundations.map(m=>({name:m.name,appliedAt:time(m.run_on)}))}
 }
 
+// Diagnostic evidence only: a same-name invitation is never an actor selection.
+// This runs inside the existing owner-gated READ ONLY plan transaction. Tokens,
+// provider subjects, invitation codes and contact fields are deliberately absent.
+async function readIdentityEvidence(client,pair,state,expected){
+ const invitations=bounded((await client.query(`select i.id,i.client_id,i.created_by,i.target_role,
+   i.claimed_by,i.claimed_at,i.revoked_at,i.created_at,i.expires_at,
+   c.auth_user_id,c.archived_at,c.merged_into_client_id,
+   i.client_id=any($1::uuid[]) exact_import_card
+   from public.client_invitations i join public.clients c on c.id=i.client_id
+   join public.clients selected on selected.id=$2
+   where i.created_by=$3 and i.target_role='client' and
+     (i.client_id=any($1::uuid[]) or
+       (i.created_at>=now()-interval '14 days' and
+        lower(regexp_replace(btrim(c.full_name),'[[:space:]]+',' ','g'))=
+        lower(regexp_replace(btrim(selected.full_name),'[[:space:]]+',' ','g'))))
+   order by i.created_at desc,i.id limit 21`,[[state.card.id,state.source.id],expected.clientId,pair.trainerId])).rows,20)
+ const ids=[...new Set([pair.athleteId,...invitations.flatMap(i=>[i.claimed_by,i.auth_user_id]).filter(Boolean)])]
+ requireState(ids.length<=41,'identity_evidence_scope')
+ const profiles=bounded((await client.query(`select p.id,p.account_role,
+   (select count(*)::int from app_private.auth_identities i where i.profile_id=p.id and i.provider='yandex') yandex_identities,
+   (select count(*)::int from app_private.yandex_app_sessions s where s.profile_id=p.id and s.revoked_at is null and s.expires_at>now()) active_sessions,
+   (select max(s.created_at) from app_private.yandex_app_sessions s where s.profile_id=p.id) latest_session_created_at,
+   (select max(s.expires_at) from app_private.yandex_app_sessions s where s.profile_id=p.id and s.revoked_at is null) latest_unrevoked_session_expires_at
+   from public.profiles p where p.id=any($1::uuid[]) order by p.id`,[ids])).rows,41)
+ return {invitations,profiles,importedCounts:await importedCounts(client,expected),actorSelected:false,
+   sameNameIsNotIdentityProof:true}
+}
+
 export async function planClientRestore(client,pair,expectedHistory=null){
  if(expectedHistory)readExpectedRestoreHistory(expectedHistory)
  let privateDiagnostic
@@ -129,7 +157,11 @@ export async function planClientRestore(client,pair,expectedHistory=null){
  try{
    await ownerGate(client)
    const state=await readRestoreState(client,pair,Boolean(expectedHistory))
-   if(expectedHistory)privateDiagnostic={pair,state,expectedHistory}
+   if(expectedHistory){
+     privateDiagnostic={pair,state,expectedHistory}
+     if(state.card.id===expectedHistory.clientId&&state.profiles.some(p=>p.identities!==1))
+       privateDiagnostic.identityEvidence=await readIdentityEvidence(client,pair,state,expectedHistory)
+   }
    if(expectedHistory)await checkExpectedRestoreHistory(client,state,pair,expectedHistory)
    requireState(!state.periods.some(p=>p.status==='active'),'already_connected')
    requireState(state.periods.some(p=>p.trainer_id===pair.trainerId&&p.status==='disconnected'),'no_previous_period')
