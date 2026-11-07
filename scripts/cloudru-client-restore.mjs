@@ -195,6 +195,36 @@ async function readIdentityEvidence(client,pair,state,expected,currentProfileEvi
 
 // Two claimed cards do not fit the existing single-card writer. Inventory both
 // sides before choosing a recovery; this branch can never create an apply plan.
+async function readRecoveryProfileReferences(client,ids){
+ const quote=name=>{requireState(/^[a-z_][a-z0-9_]*$/u.test(name),'evidence_catalog');return '"'+name+'"'}
+ const tables=bounded((await client.query(`select n.nspname schema,c.relname name,
+   array_agg(distinct a.attname::text order by a.attname::text) columns,
+   exists(select 1 from pg_attribute x where x.attrelid=c.oid and x.attname='client_id' and not x.attisdropped) has_client,
+   exists(select 1 from pg_attribute x where x.attrelid=c.oid and x.attname in('owner_id','user_id','client_user_id','profile_id','auth_user_id') and not x.attisdropped) private_owner
+   from pg_class c join pg_namespace n on n.oid=c.relnamespace
+   join pg_attribute a on a.attrelid=c.oid and a.atttypid='uuid'::regtype and not a.attisdropped and a.attnum>0
+   where n.nspname in('public','app_private') and c.relkind='r' and c.relname not in('profiles','clients')
+   and (a.attname in('owner_id','user_id','profile_id','auth_user_id','client_user_id') or exists(
+     select 1 from pg_constraint fk where fk.contype='f' and fk.conrelid=c.oid
+       and fk.confrelid in('public.profiles'::regclass,'public.trainers'::regclass) and a.attnum=any(fk.conkey)))
+   group by n.nspname,c.relname,c.oid order by n.nspname,c.relname limit 101`)).rows,100)
+ const result=[]
+ for(const t of tables){
+   requireState(Array.isArray(t.columns)&&t.columns.length>0&&t.columns.length<=20,'evidence_catalog')
+   const table=quote(t.schema)+'.'+quote(t.name)
+   const predicate=t.columns.map(c=>`r.${quote(c)}=any($1::uuid[])`).join(' or ')
+   const legacy=t.columns.map(c=>`r.${quote(c)}=$2::uuid`).join(' or ')
+   const stats=(await client.query(`select count(*)::int count,count(*) filter(where ${legacy})::int legacy,
+     coalesce(sum(octet_length(to_jsonb(r)::text)),0)::bigint bytes from ${table} r where ${predicate}`,[ids,ids[0]])).rows[0]
+   requireState(stats&&stats.count<=50000&&Number(stats.bytes)<=20*1024*1024,'evidence_scope')
+   const hash=(await client.query(`select encode(sha256(convert_to(coalesce(string_agg(j,E'\n' order by j),''),'UTF8')),'hex') digest
+     from (select to_jsonb(r)::text j from ${table} r where ${predicate}) s`,[ids])).rows[0].digest
+   result.push({schema:t.schema,table:t.name,columns:t.columns,hasClient:t.has_client,privateOwner:t.private_owner,
+     count:stats.count,legacy:stats.legacy,digest:hash})
+ }
+ return result
+}
+
 async function readConfirmedCardEvidence(client,pair,expected,proof){
  const invitation=(await client.query(`select i.id,i.client_id,i.created_by,i.claimed_by,i.claimed_at,
    i.revoked_at,i.target_role,c.auth_user_id,c.archived_at,c.merged_into_client_id
@@ -259,7 +289,11 @@ async function readConfirmedCardEvidence(client,pair,expected,proof){
    encode(sha256(convert_to(to_jsonb(c)::text,'UTF8')),'hex') digest
    from public.chat_conversations c where client_id=any($1::uuid[]) or client_user_id=any($2::uuid[])
    order by id limit 101`,[cardIds,[pair.athleteId,currentId]])).rows,100)
- return {proof,invitation,currentId,profiles,cards,sources,periods,memberships,groups,cardData,authorship,chats,
+ const invitationOperations=bounded((await client.query(`select actor_id,operation_id,client_id,invitation_id,created_at
+   from app_private.new_client_invitation_operations where actor_id=$1 and client_id=any($2::uuid[])
+   order by created_at,operation_id limit 21`,[pair.trainerId,cardIds])).rows,20)
+ const profileReferences=await readRecoveryProfileReferences(client,[pair.athleteId,currentId])
+ return {proof,invitation,currentId,profiles,cards,sources,periods,memberships,groups,cardData,authorship,chats,invitationOperations,profileReferences,
    importedCounts:await importedCounts(client,expected),writePlanReady:false}
 }
 

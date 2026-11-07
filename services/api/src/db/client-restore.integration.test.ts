@@ -308,6 +308,25 @@ describe.skipIf(source === undefined)('owner-approved canonical client restorati
     await expect(apply(e.privateDiagnostic as unknown as RestorePlan)).rejects.toThrow('client_restore_plan')
   })
 
+  it('inventories old private ownership references before choosing a two-card recovery', async () => {
+    const f = await confirmedFixture()
+    await owner.query('create table public.synthetic_recovery_private_notes(id uuid primary key, owner_id uuid references public.profiles(id), body text not null)')
+    try {
+      await owner.query("insert into public.synthetic_recovery_private_notes values($1,$2,'Private synthetic content never leaves PostgreSQL')", [randomUUID(), f.athleteId])
+      await owner.query(`insert into app_private.new_client_invitation_operations(actor_id,operation_id,full_name,client_id,invitation_id,invitation_code,invitation_token,expires_at)
+        values($1,$2,'Synthetic private name',$3,$4,$5,'synthetic-private-invitation-token',now()+interval '1 day')`, [f.trainerId, randomUUID(), f.currentCard, f.proof.invitationId, f.code])
+      const e = await confirmedDiagnosis(f)
+      expect(e.message).toBe('client_restore_confirmed_cards_review_required')
+      expect(e.privateDiagnostic).toMatchObject({ confirmedCardEvidence: { profileReferences: expect.any(Array) as unknown } })
+      const refs = (e.privateDiagnostic as unknown as { confirmedCardEvidence: { profileReferences: { table: string; privateOwner: boolean; legacy: number }[] } }).confirmedCardEvidence.profileReferences
+      expect(refs.find(r => r.table === 'synthetic_recovery_private_notes')).toMatchObject({ privateOwner: true, legacy: 1 })
+      expect(e.privateDiagnostic).toMatchObject({ confirmedCardEvidence: { invitationOperations: [{ actor_id: f.trainerId, client_id: f.currentCard, invitation_id: f.proof.invitationId }] } })
+      expect(JSON.stringify(e.privateDiagnostic)).not.toContain('Private synthetic content')
+      expect(JSON.stringify(e.privateDiagnostic)).not.toMatch(/Synthetic private name|synthetic-private-invitation-token|invitation_token|invitation_code/)
+      await expect(apply(e.privateDiagnostic as unknown as RestorePlan)).rejects.toThrow('client_restore_plan')
+    } finally { await owner.query('drop table public.synthetic_recovery_private_notes') }
+  })
+
   it('records both cards finance/history and distinguishes a real unlink from a broken normal trainer read', async () => {
     const f = await confirmedFixture()
     await owner.query("insert into public.trainer_finance_packages(trainer_id,client_id,title,sessions_total,price_cents,starts_on) values($1,$2,'Current private finance',5,10000,current_date)", [f.trainerId, f.currentCard])
