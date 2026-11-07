@@ -2718,3 +2718,43 @@ CURRENT_STATE получает только краткий указатель. �
 обаAPI/source/health/ready/8negative/DNS/TLS, actualpublic/extractedweb/signedZIP
 UI; затем один закрытый test personal grant и отдельный committed inspect.
 Физический телефон не проверен. Дальше: завершить эти гейты и освободить окно.
+
+### Итерация 63 нового выпуска — 2026-11-08 — GPT / OpenAI
+
+Задача: фактически принять второй CPT выпуск до единственного test grant.
+Расхождения: нет. Actualmainaa4be2a33ec8cff53de84653ca0e0a63ff5dc2c6 завершил
+полный mainCI42420666603 SUCCESS34+1штатный migration-safety pushskip, attempt1;
+Android42420666552 SUCCESS. Все35 jobs/точный SHA проверены из GitHub JSON.
+Официальные автоматические API42423317764/web42423317795/signedAPK+OTA42423692544
+SUCCESS именноaa4; дубликатов/чужих публикаций не запускала, main всё ещёaa4.
+Фактическая приёмка: официальный cloudru-release manifest213/213 public files
+совпал по size/SHA. Оба API показываютaa4, release/health/ready/auth проверены,
+DNS3/TLS passed;8 дополнительных personal отрицательных GET/PUT probes на двух
+origin дали401/no-store. Запросы без credentials/с synthetic ids не создавали
+клиентских данных. Signed feed/ZIP/RSA/source/provenance/expiry/appId/ABI и
+точное совпадение публичных байтов с официальным artifact подтверждены.
+Native1.1.4/code9 и ABI8922d2e9fc2c9a092d10f7b6066acdc46edf0fbe7ee7a15159e02a44e7126cf9
+прежние. ZIP15158838B, SHA256
+cc97dde613404a446029632b0cdd91788c778a676b708b80b792a61dd7ebe99b.
+Точные213web/213ZIPфайлов безопасно извлечены без пересборки/правки artifact.
+На них110/110web и110/110signedZIP корпоративных/admin/services/personal
+сценариев Chromium/WebKit passed; actualpublic8/8 (4negative+4positive) passed.
+Вездеworkers1/retries0, realAPI/WS/external deny до navigation, данные synthetic;
+штатныеAPI gateway aliases включаютhealth/ready. Mark/date/unmark/role guards,
+privacy/count/detail, pagination/retry/lateack, emptytrainerselection, contrast,
+оба оформления320/390/430/1440 и прежние услуги/офисы/профили проверены.
+Actualweb screenshots dark320/WebKit иlight1440/Chromium, actualZIP selected
+empty/WebKit иdark320/Chromium просмотрены. Старые source WebKit retries из62
+не засчитываются как delivery retries0; здесь все228case attempts успешны с0повторов.
+Квитанции/логи/manifest/signedZIP/extraction и acceptance-summary.json приватно
+fit674-personal-release-pr2-aa4be2a3; source/runtime branches не сдвигались.
+Решение: оба runtime этапа2028/2035 опубликованы и фактически приняты; отдельный
+закрытый personal grant прежнему test trainer теперь допускается по поручению.
+Ещё не выполнялся: свежийmainaa4 и отсутствие active operator проверены; scope
+personal-pilot использует существующий services закрытый target, не admin grant.
+Отвергнуто: включить всем, менять прочие пилоты/офисы/права/native/историю или
+считать mock-отметки реальными клиентскими тренировками. Физический телефон/
+реальный OAuth не проверялись; реальные тренировки для QA не создавались.
+Открыто: один grant и отдельный committed inspect того же test target;
+после этого окончательная квитанция/сообщение владельцу и hold released очереди.
+Дальше: выполнить только этот закрытый оператор и проверить сохранённый результат.
