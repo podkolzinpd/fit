@@ -22,7 +22,7 @@ html.fit-lime-document,
   --lime-chart-8: #ebc190;
   --lime-chart-9: #7aa9f5;
   --lime-chart-10: #e8a5db;
-  --lime-chart-others: var(--lime-surface-high);
+  --lime-chart-others: var(--lime-text-secondary);
   --lime-text: #ffffff;
   --lime-text-secondary: rgba(255, 255, 255, .6);
   --lime-text-tertiary: rgba(255, 255, 255, .6);
