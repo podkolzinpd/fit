@@ -1764,3 +1764,19 @@ Chromium/WebKit passed, retries0. PNG320/390/430/1440 и native sheet320
 API/деньги/Mono/версии мутаций прежние. Открыто: свежая parent/main интеграция,
 source/mainCI и официальный выпуск после полной приёмки FIN701. Физических
 телефонов нет. Дальше — последовательная публикация без расширения scope.
+
+
+FIN-38 — 2026-11-07 — Codex / OpenAI. Интеграция FIN702 с1215aeaa:
+обычный merge, сохранены MC4.2 и обе ветви истории FIN34/35/37. Собственный
+конфликт cross-route разрешён в пользу нового меню месяца и sheet-фильтра;
+URL/selected/scroll assertions сохранены. Types/scoped lint после merge passed.
+Новый narrow/short-viewport поиск320×400: input не перекрыт nav,
+действия доступны; Chromium/WebKit2/2 passed. Это эмуляция, не клавиатура iPhone.
+Source CI FIN70142362140958: app и финансовые/визуальные lanes passed,
+Yandex-auth4/4 включает старый WebKit Live transition reduced-false single-group
+original:2 scroll samples вместо >2, internal retry passed, 293passed/1flaky.
+Такой же дефект до FIN701 документирован в #2023/#2022. Live CSS и этот test
+побайтно равны принятому main2ef; новый CSS scoped .finance-*. Причина потери
+кадров не установлена, исходный failure сохранён. Запущен один failed-jobs
+повтор unchanged1215aeaa; assertions/retries/timeouts/CI прежние. Открыто:
+результат этого повтора, приёмка первого выпуска и последующие2PR по очереди.
