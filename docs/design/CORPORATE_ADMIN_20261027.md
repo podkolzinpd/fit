@@ -2611,3 +2611,37 @@ actualmain перед2035. Отвергнуто: обгонять конкрет
 официальная публикация/все файлы/API110web+110ZIP+8live и один закрытый test
 personal grant с отдельным committed inspect. Физический телефон не проверен.
 Дальше: подготовить следующий фактический main локально, завершить оба CPT выпуска.
+
+### Итерация 60 нового выпуска — 2026-11-08 — GPT / OpenAI
+
+Задача: сохранить последний фактический main конкретного приоритетного пакета
+настроек. Расхождения: нет. PR2036 слит вadbef9feb3e139d5e52d349a301039f5f9fd20da;
+его source4e30/CI42411608632 SUCCESS35/35, новый mainCI42414208163 ещё идёт.
+Владелец ФИТ14 подтвердил удержание окна до итоговой actual public/ZIP приёмки.
+Сделано: ordinary merge1caa2b46 сохранил все21 входящих файла, новые формы/
+FormData snapshot, install observer/summary уведомлений, focus/back, все6 новых
+feedback baselines. Единственный конфликт — append-only REGRESSION_LESSONS:
+сравнены stage1/2/3 с общим префиксом, полностью сохранены оба дополнения и обе
+CPT причины. Все20 остальных foreign files побайтно равны actualmainadbe.
+AGENTS/FIT_WORKFLOW/CURRENT/ACTIVE incoming не менялись. Своё личное/CPT
+дополнение не выдавало новых общих прав/пилотов; native/API197/operator прежние.
+Проверка: первый расширенный111unit дал109pass и2 старых ServicesPage timeout5s
+на measured host load29.81. Исходник этих услуг побайтно прежний, прогон остановил
+pipeline до build/browser. Лог сохранён. Без изменений кода/assertions/лимитов
+два теста отдельно прошли1.55s, затем полный повтор14files/111tests passed19.72s.
+Production types/build/fonts2/2/startup и полный110/110 corporate/admin/services/
+personal Chromium/WebKit,workers1/retries0/realAPIWSdeny passed. Логи
+fit674-personal-ui-adbe-{unit,isolated,unit-repeat,build,browser}.log.
+Уточнение58: первые два private contrast probe имели module/port configuration
+ошибки, видимые в tool transcript; отдельные logfiles этих двух запусков не
+сохранены, probe.log содержит успешный замер. Сохранение первых файлов в58
+относится к unit/typecheck и остановленному auth-disabled browser run, не ко всем
+промежуточным tool выводам. Ни один неуспех не засчитан production приёмкой.
+Решение: локальная совместимость актуального main подготовлена; следующий
+старший2034 ещё получает своё реальное окно, затем2035 и2037. Remote92/старыйCI
+не покрывают новые localmerges/fix. Отвергнуто: дублировать активные чужие
+workflows, обходить очередь или повторять публикацию принятого2028.
+Открыто:2036 mainCI/release/acceptance/hold release; actual2034main и его приёмка;
+итоговый свой fullsourceCI+Android, normalmatchhead/mainCI/official/allbytes/
+110web+110ZIP+8live и отдельные закрытые personal grant/committed inspect.
+Дальше: сохранить следующий реальный main и довести оба CPT этапа до результата.
