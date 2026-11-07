@@ -63,6 +63,37 @@ describe('SettingsSection', () => {
     expect(await screen.findByRole('status')).toHaveTextContent('Сохранено')
   })
 
+  it('keeps entered account values after an error and clears stale errors on cancel', async () => {
+    const user = userEvent.setup()
+    updateProfile.mockRejectedValueOnce(new Error('Не удалось сохранить'))
+    render(<AccountSettingsCard />, { wrapper: wrapper() })
+    await user.click(screen.getByRole('button', { name: 'Изменить данные' }))
+    await user.clear(screen.getByLabelText('Имя'))
+    await user.type(screen.getByLabelText('Имя'), 'Мария')
+    await user.click(screen.getByRole('button', { name: 'Сохранить' }))
+    expect(await screen.findByText('Не удалось сохранить')).toBeVisible()
+    expect(screen.getByLabelText('Имя')).toHaveValue('Мария')
+    await user.click(screen.getByRole('button', { name: 'Отмена' }))
+    await user.click(screen.getByRole('button', { name: 'Изменить данные' }))
+    expect(screen.getByLabelText('Имя')).toHaveValue('Анна')
+    expect(screen.queryByText('Не удалось сохранить')).not.toBeInTheDocument()
+  })
+
+  it('does not accept a second edit or submit while the saved account values are pending', async () => {
+    let finish: (() => void) | undefined
+    updateProfile.mockImplementationOnce(() => new Promise<void>(resolve => { finish = resolve }))
+    const user = userEvent.setup()
+    render(<AccountSettingsCard />, { wrapper: wrapper() })
+    await user.click(screen.getByRole('button', { name: 'Изменить данные' }))
+    await user.click(screen.getByRole('button', { name: 'Сохранить' }))
+    expect(screen.getByLabelText('Имя')).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Сохранить' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Отмена' })).toBeDisabled()
+    expect(updateProfile).toHaveBeenCalledOnce()
+    finish!()
+    await waitFor(() => expect(refresh).toHaveBeenCalledOnce())
+  })
+
   it('shows account data without an edit action for a client and nothing without a session', () => {
     useAuth.mockReturnValue({
       actor: { kind: 'client', role: 'client', userId: 'client-1', email: null, firstName: null, lastName: null, timezone: 'Europe/Paris', clientId: 'client-1', trainerId: 'trainer-1', fullName: 'Тест Клиент' },

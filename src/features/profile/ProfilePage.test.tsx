@@ -15,9 +15,10 @@ vi.mock('../../app/auth-context', () => ({ useAuth: () => useAuth() }))
 vi.mock('../progress/BodyMapAppearanceSetting', () => ({ BodyMapAppearanceSetting: () => null }))
 
 const notificationsStatus = vi.hoisted(() => vi.fn())
+const installed = vi.hoisted(() => vi.fn(() => false))
 
 vi.mock('../notifications/push-subscription', () => ({ isPushSupported: () => true, getCurrentPushSubscription: () => Promise.resolve(null) }))
-vi.mock('../install', () => ({ detectInstallPlatform: () => 'other', isAppInstalled: () => false }))
+vi.mock('../install', () => ({ detectInstallPlatform: () => 'other', isAppInstalled: () => false, useAppInstalled: () => installed() }))
 
 function wrapper(section?: string) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
@@ -30,6 +31,7 @@ describe('TrainerProfileSettingsPage', () => {
   beforeEach(() => {
     setWorkoutTimeWheel(false)
     useAuth.mockReset()
+    installed.mockReturnValue(false)
     notificationsStatus.mockReset()
     useAuth.mockReturnValue({ actor: { role: 'trainer', userId: 'trainer-user-1', email: 'trainer@test.com' } })
     notificationsStatus.mockResolvedValue({ state: 'needs-permission', workoutReminderEnabled: true, workoutScheduledEnabled: true, chatMessageEnabled: true })
@@ -56,6 +58,15 @@ describe('TrainerProfileSettingsPage', () => {
     await user.click(screen.getByRole('link', { name: /^Тренировки/ }))
     expect(screen.getByRole('switch', { name: 'Ввод времени колёсиком' })).toBeChecked()
     expect(screen.queryByRole('link', { name: 'Политика конфиденциальности' })).not.toBeInTheDocument()
+  })
+
+  it('removes only the installation invitation when the app is already installed', () => {
+    const view = render(<TrainerProfileSettingsPage />, { wrapper: wrapper() })
+    expect(screen.getByRole('link', { name: /^Установить Fit/ })).toBeVisible()
+    installed.mockReturnValue(true)
+    view.rerender(<TrainerProfileSettingsPage />)
+    expect(screen.queryByRole('link', { name: /^Установить Fit/ })).not.toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /^Уведомления/ })).toBeVisible()
   })
 
   it('does not keep archive visibility in settings', () => {

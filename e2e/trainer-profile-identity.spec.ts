@@ -34,6 +34,11 @@ test('trainer profile keeps the questionnaire compact and settings usable on a s
   await expect(page.getByRole('link', { name: /^Тренировки/ })).toBeVisible()
   await expect(page.getByRole('link', { name: /^Оформление/ })).toBeVisible()
   await page.getByRole('link', { name: /^Тренировки/ }).click()
+  await page.getByRole('button', { name: 'Назад', exact: true }).click()
+  await page.goBack()
+  await expect(page).toHaveURL(/\/profile$/)
+  await page.getByRole('link', { name: 'Настройки профиля' }).click()
+  await page.getByRole('link', { name: /^Тренировки/ }).click()
 
   const liveAnimation = page.getByRole('switch', { name: 'Анимация упражнения', exact: true })
   await expect(liveAnimation).toBeChecked()

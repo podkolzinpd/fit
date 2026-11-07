@@ -116,3 +116,28 @@ border/фон и thumb/track contrast>=3, target>=44, on→off/reload без и�
 Все прежние assertions сохранены, дополнительных длинных browser cases нет.
 Снимок off просмотрен. Dev-warning об Onest symlink прежний, физический телефон
 не проверен. CI/fullcheck и выпуск P2 впереди; P1 CI42376659060 ожидает runner.
+
+## Итерация 4 — 07.11.2026 — Codex / OpenAI
+
+P3 сохраняет прежний NotificationsSetting, добавляя только opt-in read-only
+summary для обзора; default-render спортсмена и транспорт/категории прежние.
+Установка использует вынесенную прежнюю подписку на browser/standalone/focus;
+нового хранилища нет. Trainer install открывает существующую инструкцию сразу,
+installed/native не получают повторный CTA. Help/feedback — существующая форма
+и ссылки. Заявка удаления/cancel и signOut не менялись и не получили лишних
+подтверждений. Ошибка аккаунта сохраняет ввод, cancel очищает stale error;
+pending блокирует повтор и изменение ещё не сохранённых значений.
+
+Назад/закрыть используют известный внутренний parent из route state, а прямой
+URL — безопасный фиксированный parent с replace. Внешние URL не принимаются.
+Закрытый раздел не добавляется обратно в history; browser-back это проверяет.
+Scoped scroll reset настроек не спорит с уже сфокусированным полем feedback:
+это узкая защита клавиатуры, остальные маршруты/клиентский focus прежние.
+
+Проверка: targeted7files122tests passed, typecheck/lint/docs и native browser3/3
+прошли до финального уточнения history, которое перепроверяется далее.
+Новые короткие component-guards: summary без мутаций/ложного success, условная
+установка, direct-install close, account error/cancel и pending без дублей.
+Клиентские defaults покрываются прежними тестами тех же компонентов.
+Проверки CI и публичного source/ZIP, финальный browser после history ещё гейты.
+P1/2032 и P2/2033 открыты, публикации нашего пакета пока не было.
