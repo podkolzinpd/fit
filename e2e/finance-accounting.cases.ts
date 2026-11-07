@@ -583,6 +583,7 @@ export function financeAccountingCases() {
     await chooseReceiptClient(page, '')
     await expect(page.locator('.finance-form')).toHaveCount(0)
     await chooseReceiptClient(page, clientId)
+    await expect(history.locator('.finance-payment')).toHaveCount(1)
     await history.getByRole('button', { name: /Действия с оплатой/ }).click()
     await page.getByRole('menuitem', { name: 'Изменить' }).click()
     await page.getByLabel('Сумма, ₽').fill('5000')

@@ -42,8 +42,9 @@ export function FinanceFilterSheet<Value extends string>({ label, value, options
       // Close while the dialog is still connected, before native removal can
       // schedule a second focus restoration to its obsolete trigger.
       dialog?.close()
-      // WebKit pointer taps need not focus the trigger. The payment-client
-      // query also remounts it, so resolve the surviving trigger after commit.
+      // WebKit pointer taps need not focus the trigger. Restore focus after
+      // the dialog leaves the native top layer; client filtering keeps the
+      // toolbar mounted, while navigation may remove its previous trigger.
       requestAnimationFrame(() => {
         if (window.location.pathname !== pathname) return
         const target = trigger?.isConnected ? trigger : document.querySelector<HTMLElement>('.finance-overview-page .finance-list-toolbar [aria-haspopup="dialog"]')
