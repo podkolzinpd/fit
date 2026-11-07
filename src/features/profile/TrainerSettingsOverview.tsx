@@ -39,7 +39,7 @@ export function TrainerSettingsOverview({ actor }: { actor: SessionActor }) {
       <TrainerSettingsLink section="training" summary={isCoachLiveDensityEnabled(actor) ? `${density === 'compact' ? 'Компактный' : 'Оригинальный'} Live` : 'Параметры тренировки'} icon={<ExerciseIcon />} />
       <TrainerSettingsLink section="schedule" summary={`${grid === 'compact' ? 'Компактная' : 'Обычная'} сетка`} icon={<ScheduleIcon />} />
       <TrainerSettingsLink section="notifications" summary="Сообщения и подключение" icon={<BellIcon />} />
-      <TrainerSettingsLink section="appearance" summary={theme === 'dark' ? 'Тёмная тема и карта тела' : 'Светлая тема и карта тела'} icon={<SettingsIcon />} />
+      <TrainerSettingsLink section="appearance" summary={theme === 'dark' ? 'Тёмная тема остальных экранов' : 'Светлая тема остальных экранов'} icon={<SettingsIcon />} />
     </div></SettingsSection>
     <SettingsSection title="Рабочие инструменты"><div className="menu trainer-settings-menu">
       <Link to="/exercises">Управление упражнениями<ChevronRightIcon /></Link>

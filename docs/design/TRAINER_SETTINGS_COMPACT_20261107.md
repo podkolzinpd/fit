@@ -118,3 +118,18 @@ Mesa и bundled preview. Это генерация изображений, не 
 существующий полный native journey остаётся обязательным на новом exact-head.
 Клиентские снимки/допуски/tests и runtime не меняются.
 Дальше: сверка новых снимков с CI, exact-head CI и сериализованный выпуск.
+
+## Итерация 3 — 07.11.2026 — Codex / OpenAI
+
+P2 реализуется зависимо от actual P1/1e7418e7 в отдельном worktree. Прежние
+handlers/ключи/defaults не менялись; параметры разделены на Live и ввод/поля.
+«Отдых в плане» уточняет подпись, RPE/анимация/колёсико и обе плотности прежние.
+Старый текст про пилот заменён фактической областью темы. Off имеет заметные
+контур и бегунок, label не скрывается и не тускнеет; CSS только trainer settings.
+Main summary прямо называет тему остальных экранов, не вводит в заблуждение о Lime.
+Проверка: targeted5files12passed, typecheck/lint/docs passed; native Chromium/
+WebKit3/3passed. В существующий iPhone case добавлены уникальные проверки
+border/фон и thumb/track contrast>=3, target>=44, on→off/reload без исчезновения.
+Все прежние assertions сохранены, дополнительных длинных browser cases нет.
+Снимок off просмотрен. Dev-warning об Onest symlink прежний, физический телефон
+не проверен. CI/fullcheck и выпуск P2 впереди; P1 CI42376659060 ожидает runner.
