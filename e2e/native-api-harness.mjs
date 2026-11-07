@@ -12,7 +12,7 @@ const { Pool } = requireApi('pg')
 const ownerUrl = new URL(process.env.FIT_E2E_POSTGRES_URL ?? 'postgresql://postgres:postgres@127.0.0.1:55432/postgres')
 // 55474 is the isolated Fit674 local cluster; host and database guards still apply.
 if (!['127.0.0.1', 'localhost', '[::1]'].includes(ownerUrl.hostname)
-  || !['5432', '55432', '55474'].includes(ownerUrl.port)
+  || !['5432', '55432', '55439', '55474'].includes(ownerUrl.port)
   || !['/postgres', '/fit_actor_test'].includes(ownerUrl.pathname)) throw new Error('native_fixture_requires_local_postgres')
 const databaseName = `fit_frontend_e2e_${process.pid}_${randomUUID().replaceAll('-', '').slice(0, 12)}`
 if (!/^fit_frontend_e2e_[0-9]+_[a-f0-9]{12}$/.test(databaseName)) throw new Error('invalid_fixture_database')
@@ -94,6 +94,7 @@ try {
   runtime = new PgDatabasePool({ connectionString: runtimeUrl.href, max: 1 }, 'api')
   const { buildApp } = await nativeModule('app')
   const services = [
+    ['connectionDirectory', 'connection-directory', 'ConnectionDirectoryStore'],
     ['pilotClientsReader', 'pilot-clients-reader', 'DatabasePilotClientsReader'],
     ['pilotProfileReader', 'pilot-profile-reader', 'DatabasePilotProfileReader'],
     ['pilotConnectionsReader', 'pilot-connections-reader', 'DatabasePilotConnectionsReader'],
@@ -178,6 +179,12 @@ try {
       await owner.query("insert into app_private.profile_rollout_assignments(profile_id,target_backend,access_mode,enabled) values($1,'yandex','read_write',true)",[id])
       await owner.query("insert into public.user_legal_acceptances(user_id,terms_version,privacy_version,source) values($1,$2,$3,'existing_user')",[id,terms,privacy])
       profiles.set(value.key,id)
+    }
+    // Synthetic provider observations, confined to the isolated test database.
+    if (/^[a-z0-9._+-]+@example\.test$/.test(value.key)) {
+      const subject = sha(`fixture-discovery:${id}`)
+      await owner.query("insert into app_private.auth_identities(provider,provider_subject_sha256,profile_id,identity_origin) values('yandex',$1,$2,'native') on conflict do nothing", [subject,id])
+      await owner.query('select app_private.observe_connection_emails($1,$2)', [subject,[sha(value.key)]])
     }
     const token = createHash('sha256').update(`${databaseName}:${resetId}:${id}:${++sessionSequence}`).digest('base64url')
     await owner.query("insert into app_private.yandex_app_sessions(token_sha256,profile_id,expires_at) values($1,$2,now()+interval '1 day') on conflict(token_sha256) do nothing",[sha(token),id])

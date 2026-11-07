@@ -5,6 +5,7 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { ChatThread, Client } from '../../shared/domain'
 import { ArchivedClientsPage, ClientsPage } from './ClientsListPage'
+import { ConnectionPage } from '../auth/ConnectionPage'
 
 const backend = vi.hoisted(() => ({ list: vi.fn(), setArchived: vi.fn(), listThreads: vi.fn(), open: vi.fn(), listFinanceOverview: vi.fn(), createInvite: vi.fn(), revoke: vi.fn() }))
 const navigation = vi.hoisted(() => ({ unified: false }))
@@ -17,7 +18,7 @@ vi.mock('../../app/trainer-schedule-v2', async importOriginal => ({
   isTrainerScheduleV2Enabled: () => navigation.unified,
 }))
 vi.mock('../../app/data-backend-context', () => ({
-  useDataBackend: () => ({ source: 'yandex', clients: { list: backend.list, setArchived: backend.setArchived }, chat: { listThreads: backend.listThreads, open: backend.open }, trainerFinance: { listOverview: backend.listFinanceOverview }, invitations: { createShareForNewClient: backend.createInvite, revoke: backend.revoke } }),
+  useDataBackend: () => ({ connectionDirectory: { list: () => Promise.resolve([]) }, source: 'yandex', clients: { list: backend.list, setArchived: backend.setArchived }, chat: { listThreads: backend.listThreads, open: backend.open }, trainerFinance: { listOverview: backend.listFinanceOverview }, invitations: { createShareForNewClient: backend.createInvite, revoke: backend.revoke } }),
 }))
 vi.mock('../../app/auth-context', () => ({ useAuth: () => ({ actor: { role: 'trainer', userId: 'trainer-1' } }) }))
 
@@ -76,6 +77,7 @@ function renderPage(clients: Client[] | undefined, initialEntry = '/clients') {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   return render(<MemoryRouter initialEntries={[initialEntry]}><QueryClientProvider client={queryClient}><Routes>
     <Route path="/clients" element={<ClientsPage />} />
+    <Route path="/connect" element={<ConnectionPage />} />
     <Route path="/clients/archive" element={<ArchivedClientsPage />} />
     <Route path="/clients/:clientId" element={<p>Профиль открыт</p>} />
     <Route path="/finance" element={<p>Финансы открыты</p>} />
@@ -348,15 +350,17 @@ describe('ClientsPage search', () => {
     expect(screen.getByText(/· до 08\.10/)).toBeVisible()
   })
 
-  it('offers one add action without a decorative plus and keeps both existing creation paths', async () => {
+  it('opens scanning directly and preserves manual creation and new-user invitations', async () => {
     const user = userEvent.setup()
     renderPage([])
-    await user.click(await screen.findByRole('button', { name: 'Добавить клиента' }))
+    await user.click(await screen.findByRole('button', { name: 'Добавить спортсмена' }))
     expect(document.querySelector('.state-panel-mark')).toBeNull()
     expect(screen.queryByRole('button', { name: 'Добавить' })).not.toBeInTheDocument()
-    const manual = screen.getByRole('link', { name: 'Создать карточку' })
+    expect(await screen.findByLabelText('Камера для QR-кода')).toBeInTheDocument()
+    await user.click(screen.getByText('Новый спортсмен ещё не зарегистрирован?'))
+    const manual = screen.getByRole('link', { name: 'Создать карточку вручную' })
     expect(manual).toHaveAttribute('href', '/clients/new')
-    await user.click(screen.getByRole('button', { name: 'Пригласить по ссылке' }))
+    await user.click(screen.getByRole('button', { name: 'Пригласить нового спортсмена' }))
     expect(await screen.findByRole('dialog', { name: 'Кого пригласить?' })).toBeVisible()
     expect(screen.getByLabelText('Имя спортсмена')).toBeVisible()
   })
@@ -412,14 +416,16 @@ describe('ClientsPage search', () => {
         code: 'ABC123DEF456', token: `ABC123DEF456.${'a'.repeat(64)}`, expiresAt: '2026-11-08T12:00:00Z' } })
     })
     renderPage([])
-    await user.click(await screen.findByRole('button', { name: 'Добавить клиента' }))
-    await user.click(screen.getByRole('button', { name: 'Пригласить по ссылке' }))
+    await user.click(await screen.findByRole('button', { name: 'Добавить спортсмена' }))
+    await user.click(screen.getByText('Новый спортсмен ещё не зарегистрирован?'))
+    await user.click(screen.getByRole('button', { name: 'Пригласить нового спортсмена' }))
     await user.type(screen.getByLabelText('Имя спортсмена'), 'Новый спортсмен')
     await user.click(screen.getByRole('button', { name: 'Создать приглашение' }))
-    expect(await screen.findByText('Новый спортсмен', { selector: '.client-card-copy strong' })).toBeVisible()
+    expect(screen.getByRole('heading', { name: 'Добавить спортсмена' })).toBeVisible()
     expect(await screen.findByRole('dialog', { name: 'Ссылка готова' })).toBeVisible()
     expect(backend.createInvite).toHaveBeenCalledExactlyOnceWith('Новый спортсмен', expect.stringMatching(/^[a-f0-9-]{36}$/))
-    expect(screen.getByRole('button', { name: 'Добавить' })).toBeVisible()
+    await user.click(screen.getByRole('button', { name: 'Закрыть' }))
+    expect(screen.getByRole('heading', { name: 'Добавить спортсмена' })).toBeVisible()
   })
 })
 

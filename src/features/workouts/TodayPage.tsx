@@ -1,3 +1,4 @@
+import { ConnectionRequests } from '../auth/ConnectionPage'
 import { isQuickWorkoutEntryEnabled } from '../../app/quick-workout-entry'
 import type { ReactNode } from 'react'
 import { exerciseCountText } from '../../shared/exercise-count'
@@ -930,7 +931,7 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
         hideActiveNextAction
         showFirstRunConnection={actor?.kind === 'client' && actor.trainerId === actor.userId}
         wearable={actor && isWearablesPilotEnabled(actor.userId) ? <WearableHealthCard /> : undefined}
-        trainerDiscovery={mine.data ? <TrainerDiscoveryHomeCard clientId={mine.data.id} /> : undefined}
+        trainerDiscovery={<><ConnectionRequests />{mine.data && <TrainerDiscoveryHomeCard clientId={mine.data.id} />}</>}
         presetPrompt={<PresetWorkoutPicker onSelect={handlePresetSelected} />}
       />{voicePhase === 'idle' && !clientVoiceEntryActive && !requestedClientDraft && !voiceRefinement && !parsing && !parseError && !pickerOpen && <NutritionSummary />}</> : <>
       {!clientMode && trainerHasNoClients && !textComposerOpen && <TrainerFirstRun creating={firstClientCreating} error={firstClientError} onCreate={createFirstClient} />}

@@ -1,3 +1,4 @@
+import { registerConnectionDirectory, type ConnectionDirectoryStore } from './connection-directory.js'
 import { registerCorporatePersonalRoutes, type CorporatePersonalService } from './corporate-personal.js'
 import { ClientProfilePhotoError, readClientPhotoUpload, type PilotClientPhotos } from './client-profile-photo.js'
 import { registerTrainerConnectionConfirmationRoutes, type TrainerConnectionConfirmationService } from './trainer-connection-confirmation.js'
@@ -211,6 +212,7 @@ interface BuildAppOptions {
   nutritionAutoActivator?: import('./nutrition-pilot.js').NutritionAutoActivator
   nutritionDiary?: NutritionDiary
   allowedOrigins?: readonly string[]
+  connectionDirectory?: Pick<ConnectionDirectoryStore, 'execute'>
   trainerConnectionConfirmation?: TrainerConnectionConfirmationService
   databasePool?: DatabasePool
   identityProvider?: YandexIdentityProvider
@@ -279,6 +281,7 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
         : crypto.randomUUID()
     },
   })
+  registerConnectionDirectory(app, options.connectionDirectory)
   registerTrainerConnectionConfirmationRoutes(app, options.trainerConnectionConfirmation)
   registerCorporateAdminRoutes(app, options.corporateAdmin)
   registerPrivateAnalyticsRoutes(app, options.privateAnalytics)

@@ -1,3 +1,4 @@
+import { ConnectionDirectoryStore, ConnectionEmailObserver } from './connection-directory.js'
 import { CorporatePersonalStore } from './corporate-personal.js'
 import { DatabasePilotClientPhotos } from './client-profile-photo.js'
 import { TrainerConnectionConfirmationStore } from './trainer-connection-confirmation.js'
@@ -95,7 +96,7 @@ const identityProvider =
   process.env.YANDEX_OAUTH_CLIENT_ID === undefined
     ? undefined
     : new YandexIdentityClient({
-      ...(databasePool === undefined ? {} : { corporateAdminObserver: new DatabaseCorporateAdminLoginObserver(databasePool) }),
+      ...(databasePool === undefined ? {} : { connectionEmailObserver: new ConnectionEmailObserver(databasePool), corporateAdminObserver: new DatabaseCorporateAdminLoginObserver(databasePool) }),
       ...(databasePool === undefined ? {} : { privateAnalyticsObserver: new DatabasePrivateAnalyticsLoginObserver(databasePool) }),
         expectedClientId: process.env.YANDEX_OAUTH_CLIENT_ID,
       })
@@ -278,7 +279,7 @@ const app = buildApp(
     ...(pilotClientsReader === undefined ? {} : { pilotClientsReader }),
     ...(pilotConnectionsReader === undefined ? {} : { pilotConnectionsReader }),
     ...(pilotConnectionsWriter === undefined ? {} : { pilotConnectionsWriter }),
-    ...(databasePool === undefined ? {} : { trainerConnectionConfirmation: new TrainerConnectionConfirmationStore(databasePool) }),
+    ...(databasePool === undefined ? {} : { trainerConnectionConfirmation: new TrainerConnectionConfirmationStore(databasePool), connectionDirectory: new ConnectionDirectoryStore(databasePool) }),
     ...(pilotInvitationLinks === undefined ? {} : { pilotInvitationLinks }),
     ...(pilotLegal === undefined ? {} : { pilotLegal }),
     ...(pilotDomainWriter === undefined ? {} : { pilotDomainWriter }),

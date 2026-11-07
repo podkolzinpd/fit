@@ -70,8 +70,9 @@ async function saveCompactClientPlan(page: Page) {
 test('trainer invitation name stays inside the visible iPhone viewport above the keyboard', async ({ page }) => {
   await loginAsTrainer(page)
   await page.goto('/clients')
-  await page.getByRole('button', { name: /^(Добавить|Добавить клиента)$/ }).click()
-  await page.getByRole('button', { name: 'Пригласить по ссылке' }).click()
+  await page.getByRole('button', { name: /^(Добавить|Добавить спортсмена)$/ }).click()
+  await page.getByText('Новый спортсмен ещё не зарегистрирован?').click()
+  await page.getByRole('button', { name: 'Пригласить нового спортсмена' }).click()
   await page.getByLabel('Имя спортсмена').focus()
   await page.evaluate(() => {
     document.documentElement.style.setProperty('--app-visible-height', '420px')
@@ -672,8 +673,9 @@ test('iPhone: тренер назначает интервалы, спортсм
     await register(trainer, 'Интервальный тренер', `interval-trainer-${suffix}@fit.local`)
     await expect(trainer.getByRole('heading', { name: 'Сегодня' })).toBeVisible()
     await trainer.goto('/clients')
-    await trainer.getByRole('button', { name: /^(Добавить|Добавить клиента)$/ }).click()
-    await trainer.getByRole('dialog', { name: 'Добавить клиента' }).getByRole('link', { name: 'Создать карточку', exact: true }).click()
+    await trainer.getByRole('button', { name: /^(Добавить|Добавить спортсмена)$/ }).click()
+    await trainer.getByText('Новый спортсмен ещё не зарегистрирован?').click()
+    await trainer.getByRole('link', { name: 'Создать карточку вручную', exact: true }).click()
     await trainer.getByLabel('Имя').fill('Интервальный спортсмен')
     await trainer.getByLabel('Пол').selectOption('female')
     await trainer.getByLabel('Возраст').fill('30')

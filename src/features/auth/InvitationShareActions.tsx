@@ -122,7 +122,7 @@ export function InviteAthleteButton({ className, label = 'Пригласить �
 
   const host = document.querySelector('.phone-frame') ?? document.body
   return <>
-    {controlledOpen === undefined && <button ref={openerRef} type="button" className={className} aria-label="Пригласить спортсмена" onClick={() => setOpen(true)}>{label}</button>}
+    {controlledOpen === undefined && <button ref={openerRef} type="button" className={className} aria-label={label} onClick={() => setOpen(true)}>{label}</button>}
     {open && invitation.data === undefined && createPortal(<div className="modal-overlay invitation-name-overlay" role="presentation" onPointerDown={(event) => {
       if (event.target === event.currentTarget) close()
     }}>

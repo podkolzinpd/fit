@@ -1,3 +1,4 @@
+import { ConnectionPage } from '../features/auth/ConnectionPage'
 import { CorporateServicesPage, CorporateServiceRecordPage } from '../features/corporate-services'
 import { CorporateInvitationPage, CorporateAdminPage } from '../features/corporate-admin'
 import { PrivateAnalyticsPage } from '../features/private-analytics/PrivateAnalyticsPage'
@@ -109,6 +110,7 @@ const router = createBrowserRouter([
     { element: <AppLayout />, children: [
     { index: true, element: <Home /> },
     { path: '/join', element: <JoinPage /> },
+    { path: '/connect', element: <ConnectionPage /> },
     { path: '/chat', element: <ChatListPage /> },
     { path: '/chat/:conversationId', element: <ChatConversationPage /> },
     { element: <ClientOnly />, children: [

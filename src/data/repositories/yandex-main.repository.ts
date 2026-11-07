@@ -451,6 +451,8 @@ const workoutTemplateResponseSchema = z.object({ template: workoutTemplateSchema
 type ResponseErrorFactory = (status: number, code?: string) => Error
 
 function errorForStatus(status: number, code?: string): RepositoryError {
+  if (code === 'connection_rate_limited') return new RepositoryError(code, 'Слишком много попыток. Попробуйте через час.')
+  if (code === 'connection_card_missing') return new RepositoryError(code, 'Не найдена карточка спортсмена. Обратитесь в поддержку.')
   if (code === 'connection_changed') return new RepositoryError(code, 'Подключение изменилось. Проверьте условия и подтвердите заново.')
   if (code === 'connection_offer_unavailable') return new RepositoryError(code, 'Приглашение больше не действует. Попросите тренера отправить новое.')
   if (code === 'connection_forbidden') return new RepositoryError(code, 'Подключение может подтвердить только приглашённый спортсмен.')
@@ -1726,6 +1728,31 @@ export function createYandexMainRepository(
       },
       async remove(item) { await writeJson(queries, `/v1/workouts/${item.id}`, 'DELETE', { expectedVersion: item.version }, z.object({ workout: z.object({ version: z.number().int().positive() }) })); invalidate() },
     },
+    connectionDirectory: (() => {
+      const person = z.object({ id: uuid, name: z.string(), role: z.enum(['trainer', 'client']), connected: z.boolean().nullable(),
+        expectedRelationshipId: uuid.nullable(), expectedRevision: z.string().nullable(), currentTrainer: z.object({ id: uuid, name: z.string() }).nullable() })
+      const self = z.object({ code: z.string(), fitId: uuid, emailSearchReady: z.boolean() })
+      const decision = z.object({ id: uuid.optional(), status: z.string() })
+      const call = async <T,>(body: object, schema: z.ZodType<T>) =>
+        (await writeJson(queries, '/v1/connection-directory', 'POST', body, z.object({ result: schema }))).result
+      return {
+        self: () => call({ action: 'self' }, self),
+        rotate: () => call({ action: 'rotate' }, self),
+        resolve: (kind: 'email' | 'code', value: string) => call({ action: 'resolve', kind, value }, person.nullable()),
+        preview: (peerId: string) => call({ action: 'preview', peerId }, person.nullable()),
+        list: () => call({ action: 'list' }, z.array(z.object({ id: uuid, status: z.string(), incoming: z.boolean(), peerId: uuid,
+          name: z.string(), role: z.enum(['trainer', 'client']), expiresAt: z.string() }))),
+        status: (requestId: string) => call({ action: 'status', requestId }, decision),
+        send: async (p: import('../../shared/connection-directory').ConnectionPerson) => {
+          const result = await call({ action: 'send', peerId: p.id, expectedRelationshipId: p.expectedRelationshipId, expectedRevision: p.expectedRevision }, decision)
+          invalidate(); return result
+        },
+        decide: async (action: 'accept' | 'decline' | 'cancel', requestId: string, p?: import('../../shared/connection-directory').ConnectionPerson) => {
+          const result = await call({ action, requestId, expectedRelationshipId: p?.expectedRelationshipId ?? null, expectedRevision: p?.expectedRevision ?? null }, decision)
+          invalidate(); return result
+        },
+      }
+    })(),
     trainerConnections: {
       async preview(offer) {
         const trainer = z.object({ id: uuid, name: z.string() })

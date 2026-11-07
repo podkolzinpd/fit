@@ -29,8 +29,9 @@ test('trainer invites a new athlete by protected link without entering a code', 
   await expect(page).toHaveURL(/\/(today|clients)$/)
 
   await page.goto('/clients')
-  await page.getByRole('button', { name: /^(Добавить|Добавить клиента)$/ }).click()
-  await page.getByRole('button', { name: 'Пригласить по ссылке' }).click()
+  await page.getByRole('button', { name: /^(Добавить|Добавить спортсмена)$/ }).click()
+  await page.getByText('Новый спортсмен ещё не зарегистрирован?').click()
+  await page.getByRole('button', { name: 'Пригласить нового спортсмена' }).click()
   await page.getByLabel('Имя спортсмена').fill(athleteName)
   await page.getByRole('button', { name: 'Создать приглашение' }).click()
   await expect(page.getByRole('dialog', { name: 'Ссылка готова' })).toBeVisible()

@@ -37,6 +37,7 @@ describe('Fit Lime route boundary', () => {
     ['/exercises', '', true],
     ['/chat/thread-1', '', true],
     ['/join', '', true],
+    ['/connect', '', true],
     ['/today', '?view=compose', true],
     ['/today', '?view=review', true],
     ['/today', '?view=save', true],

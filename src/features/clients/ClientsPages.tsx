@@ -1,3 +1,4 @@
+import { ConnectionRequests } from '../auth/ConnectionPage'
 import clientMoreIcon from '../../assets/client-profile/more.svg'
 import clientArrowIcon from '../../assets/client-profile/arrow.svg'
 import clientCalendarIcon from '../../assets/client-profile/calendar.svg'
@@ -81,6 +82,8 @@ export function MyClientPage() {
   useClientRealtime(query.data?.id)
   if (query.data) return <TodayPage clientMode />
   return <Page title="Кабинет" className="client-home-page">
+    <ConnectionRequests />
+    <Link className="button secondary" to="/connect">Добавить тренера</Link>
     <AsyncView loading={query.isLoading} error={query.error} onRetry={() => void query.refetch()}>
       <ClientFirstRunIntro actions={<section className="client-home-self-training primary">
         <section className="quick-start-workout"><div className="quick-start-copy"><h2>Начать тренировку</h2><p>Тренировка начнётся сразу. Упражнения добавите по ходу.</p></div><button type="button" className="quick-start-button" disabled={beginFirstLive.isPending} onClick={() => beginFirstLive.mutate()}>{beginFirstLive.isPending ? 'Начинаем…' : 'Начать тренировку'}</button>{beginFirstLive.error && <p role="alert">Не удалось начать тренировку. Повторите попытку.</p>}</section>
