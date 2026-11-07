@@ -1838,3 +1838,15 @@ FIN-47 — 2026-11-07 — Codex / OpenAI. При комбинированной 
 устаревший комментарий о remount, логика компонентов прежняя. Дальше — targeted
 production/dev этого случая, новый sourceCI FIN702 и повтор комбинированной
 приёмки FIN703. Сайт FIN701 принят, очередь2026→2028→2029 сохраняется.
+
+
+FIN-49 — 2026-11-07 — Codex / OpenAI. На увеличенном актуальном снимке
+monthly-search-short-viewport найден второй прямоугольный focus outline
+внутри скруглённого поля: общий Lime input:focus-visible перекрывает старое
+clients-search input outline:none. В пределах finance-compact-page внешнее
+поле теперь владеет единым2px Lime outline (внутри контура), input отключает
+только свой дублирующий outline. Фокус/клавиатура/кнопка закрытия сохранены,
+Mono и общий компонент поиска клиентов не меняются. Existing monthly case
+теперь проверяет focused input, отсутствие внутреннего outline и видимый
+2px solid accent снаружи. Далее targeted browser/build и снимок; не выпускать
+до результатов и обновления exact-head CI после старшего2028.

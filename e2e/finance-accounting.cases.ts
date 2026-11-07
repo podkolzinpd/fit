@@ -310,6 +310,13 @@ export function financeAccountingCases() {
     await page.setViewportSize({width:320,height:400})
     await search.focus()
     await search.scrollIntoViewIfNeeded()
+    expect(await search.evaluate(node => {
+      const field = node.closest('.finance-overview-search')!
+      const style = getComputedStyle(field)
+      return document.activeElement === node && getComputedStyle(node).outlineStyle === 'none'
+        && style.outlineStyle === 'solid' && parseFloat(style.outlineWidth) >= 2
+        && style.outlineColor === style.borderColor
+    })).toBe(true)
     expect(await search.evaluate(node => { const r = node.getBoundingClientRect(); return document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2) === node })).toBe(true)
     await page.screenshot({path:info.outputPath('monthly-search-short-viewport.png'),fullPage:true})
     await page.setViewportSize({width:390,height:844})
