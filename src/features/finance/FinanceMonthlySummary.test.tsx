@@ -85,6 +85,8 @@ describe('monthly finance readout', () => {
         unmount()
       }
     }
+    const disjoint = ids.slice(0, 10).map((id, index) => client(id, index < 5 ? 1 : 0, index < 5 ? 0 : 1))
+    expect(new Set(financeClientColors(disjoint).values()).size).toBe(10)
     const five = clients.slice(0, 5)
     expect(new Set(financeChartSegments(five, 'money').map(segment => segment.color)).size).toBe(5)
     expect(financeClientColors([]).size).toBe(0)

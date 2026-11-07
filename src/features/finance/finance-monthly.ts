@@ -30,8 +30,8 @@ function rankedClients(clients: TrainerFinanceOverviewClient[], metric: FinanceM
 }
 
 /** Allocate from the complete month, never the searched/filtered rows. Reserve
- * distinct slots for the union of both charts' visible athletes (at most eight
- * when a tail exists). Thus switching metric cannot change an athlete's color.
+ * distinct slots for the union of both charts' visible athletes (at most ten;
+ * each metric shows five athletes, or four plus a grouped tail). Thus switching metric cannot change an athlete's color.
  * Remaining rows share a balanced palette once all category colors are used. */
 export function financeClientColors(clients: TrainerFinanceOverviewClient[]): ReadonlyMap<string, string> {
   const visible = new Set<string>()
