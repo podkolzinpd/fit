@@ -1851,3 +1851,22 @@ Mono и общий компонент поиска клиентов не мен�
 2px solid accent снаружи. FIN702 и FIN703 targeted browser2/2+2/2
 Chromium/WebKit и обе production build/startup passed; новый снимок поиска
 просмотрен, прямоугольного дубля нет. Нужен exact-head CI после старшего2028.
+
+
+FIN-50 — 2026-11-07 — Codex / OpenAI. FIN702 sourceCI42372474649/b20:
+app/app-tests и все finance/visual/прочие UI lanes SUCCESS; auth4 дал тот же
+прежний Live flaky client-workout-reference.spec.ts:4470 (2samples вместо>2),
+internal retry passed,293passed/1flaky. Запрет flaky сохранён, общий CI FAILURE.
+Diff Live/workouts/shared/app/styles.css/CI к parent98d2a090 пуст; исходный
+журнал сохранён. Старый b20 не rerun: появился обязательный новый parent.
+Protected READONLY предшественника2026 завершён, ключи закрыты и hold снят
+по сообщению владельцу2028;2028 слит обычным squash вc5c65706eb7e53a16490535da71d1cd52f6a94ef.
+Обычный merge этого main в FIN702 сохранил все13 upstream файлов; свои
+finance/CSS/e2e файлы побайтно прежние. Новый compact focus по FIN49 уже
+проверен2/2+2/2 обоих движков и production builds. Прочитаны новые active/current
+и CPT101–108: отдельный default-off test trainer personal pilot без финансов;
+API/схема197 принадлежит старшему2028, мы её не изменяем и pilot не включаем.
+Нужен новый полный exact-head sourceCI, затем после фактической приёмки2028
+обычный merge/mainCI/API/web/OTA/public/ZIP приёмка FIN702. FIN703 остаётся
+локальной третьей частью; ФИТ14 начал подготовку3PR настроек, пока без PR,
+его ранее согласованный приоритет учитывается по реально готовой очереди.
