@@ -41,3 +41,5 @@
 @media(max-width:700px) { .corporate-admin-tabs { flex-wrap:wrap; } .corporate-admin-toolbar { flex-wrap:wrap; } }
 
 .corporate-invitation-share > p { margin:0; }
+
+.corporate-admin-shell .corporate-statistics-actions { display:flex; gap:8px; flex-wrap:wrap; }
