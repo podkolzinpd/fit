@@ -14,10 +14,10 @@ on:
         default: primary
         options: [primary, additional, third, fourth, fifth, sixth]
       scope:
-        description: Administrator capability or the independent invitation/services test pilots
+        description: Administrator capability or the independent invitation/services/personal test pilots
         type: choice
         default: administrator
-        options: [administrator, invitation-pilot, services-pilot]
+        options: [administrator, invitation-pilot, services-pilot, personal-pilot]
 permissions:
   contents: read
 concurrency:
@@ -69,6 +69,7 @@ jobs:
             administrator) ;;
             invitation-pilot) CORPORATE_ADMIN_LOGIN_SHA256=$PILOT_TRAINER_LOGIN_SHA256 ;;
             services-pilot) CORPORATE_ADMIN_LOGIN_SHA256=$SERVICES_TRAINER_LOGIN_SHA256 ;;
+            personal-pilot) CORPORATE_ADMIN_LOGIN_SHA256=$SERVICES_TRAINER_LOGIN_SHA256 ;;
             *) exit 1 ;;
           esac
           [[ "$CORPORATE_ADMIN_LOGIN_SHA256" =~ ^[a-f0-9]{64}$ ]]
