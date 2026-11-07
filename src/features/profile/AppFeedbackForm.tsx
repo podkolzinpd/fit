@@ -41,7 +41,7 @@ export function AppFeedbackForm({ onClose, compact = false }: { onClose: () => v
   </section>
 
   return <form className="app-feedback-card" aria-labelledby="app-feedback-title" onSubmit={onSubmit}>
-    <div className="app-feedback-head">
+    <div className={compact ? 'app-feedback-head app-feedback-head-compact' : 'app-feedback-head'}>
       <div>{!compact && <p className="eyebrow">ОБРАТНАЯ СВЯЗЬ</p>}<h2 id="app-feedback-title">{compact ? 'Напишите нам' : 'Напишите команде Fit'}</h2></div>
       <button type="button" className="link" onClick={onClose}>Закрыть</button>
     </div>
