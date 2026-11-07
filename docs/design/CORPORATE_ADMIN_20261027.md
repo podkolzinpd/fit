@@ -2291,3 +2291,25 @@ enabled=false, eligible=true, otherEnabledTrainers=0. Eligible означает 
 сохранить чужие изменения, получить текущиеCI/Android и пройти очередь нового
 PR2. Дальше: UI выпуск с той же фактической приёмкой, затем единственный
 closed-target grant и отдельный committed inspect. Остальные пилоты прежние.
+
+### Итерация 49 нового выпуска — 2026-11-07 — GPT / OpenAI
+
+Задача: подготовить UI PR2 от реально опубликованного и принятого PR1/main.
+Расхождения: исходная ветка2b04 не заменяет ancestry squashc5. Сделано: обычный
+merge3f8057e4 включил c5c65706eb7e53a16490535da71d1cd52f6a94ef в UI.
+Конфликты только docs: доказан полный prefix45 в journal48, все записи46–48
+сохранены; CURRENT_STATE отличается только своей одной строкой, чужие не менялись.
+Проверка: c5 ancestorHEAD; diff runtime src/e2e/API/scripts/workflows/package/lock
+от проверенного18bb пустой, EmployeeMarkSHA168b6525095a068ea6b0ed0ca723a5dccde4a10bc8997acf8186731a84af2738
+прежний. Повторены76/76 целевых unit на опубликованной основе, docs budgets/
+links/archive и diff-check passed. Full frontend3094/348, coverage и production
+106browser из46 применимы к тем же executable blobs, не выдаются за новоеCI.
+Решение: UI PR получает собственные полныеCI и Android текущегоhead. Runtime
+новых миграций/секретов/native version не добавляет. Готовый новый PR может
+проверяться параллельно, выпуск следует фактической очереди готовых старших
+PR2029/2031/2032/2033; draft2030/2034 не являются автоматическим hold. При
+изменении main интеграция повторяется обычным merge с проверками новогоhead.
+Отвергнуто: rebase/force, обгон активных публикаций, выдача sourceCI PR1 за CI UI.
+Открыто: source/main CI, очередь, официальный второй выпуск и фактическая
+приёмка106web/106exactZIP/8public с realAPI/WS deny; pilotOFF до завершения.
+Дальше: второй PR, полный выпуск, затем один прежний test target grant/inspect.
