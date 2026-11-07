@@ -32,7 +32,32 @@ try {
     where r.trainer_id=any($1::uuid[]) and c.auth_user_id=any($2::uuid[])
     order by r.connected_at limit 51`, [trainers.map(p=>p.id),clients.map(p=>p.id)])).rows
   if (rows.length > 50) throw Error('too_many_matches')
-  console.log(JSON.stringify({event:'link_name_candidates',readOnly:true,athleteCandidates:clients.length,trainerCandidates:trainers.length,matchedRelationships:rows,identityVerified:false}))
+  const cards = (await db.query(`with recursive scope as (
+    select id,merged_into_client_id,array[id] path from public.clients
+    where auth_user_id=any($1::uuid[]) or lower(full_name) ~ '(руфин|rufin)'
+    union all select c.id,c.merged_into_client_id,s.path||c.id from scope s join public.clients c
+      on c.id=s.merged_into_client_id or c.merged_into_client_id=s.id
+      where not c.id=any(s.path) and cardinality(s.path)<12
+    ) select distinct c.id,c.auth_user_id,c.trainer_id,c.archived_at,c.merged_into_client_id,c.created_at
+      from public.clients c join scope s on s.id=c.id limit 51`, [clients.map(p=>p.id)])).rows
+  if(cards.length > 50) throw Error('too_many_cards')
+  const labels = new Map(cards.map((c,i)=>[c.id,`card${i+1}`]))
+  const history = (await db.query(`select r.client_id,r.status,r.connected_at,r.disconnected_at,
+      r.disconnected_by=r.trainer_id disconnected_by_trainer,r.source_invitation_id is not null has_source_invitation,
+      (select count(*)::int from app_private.trainer_connection_receipts x where x.relationship_id=r.id) receipts,
+      lower(coalesce(p.first_name,'')||' '||coalesce(p.last_name,'')) ~ '(георги|georg|adamov|адамов)' trainer_name_match
+    from public.client_trainer_relationships r join public.profiles p on p.id=r.trainer_id
+    where r.client_id=any($1::uuid[]) order by r.connected_at limit 101`, [cards.map(c=>c.id)])).rows
+  const invites = (await db.query(`select client_id,created_at,claimed_at,revoked_at,expires_at,target_role,
+    claimed_by=any($2::uuid[]) claimed_by_candidate from public.client_invitations
+    where client_id=any($1::uuid[]) order by created_at limit 101`, [cards.map(c=>c.id),clients.map(p=>p.id)])).rows
+  const workouts = (await db.query(`select client_id,status,deleted_at is not null deleted,count(*)::int count
+    from public.workouts where client_id=any($1::uuid[]) group by client_id,status,deleted_at is not null limit 101`, [cards.map(c=>c.id)])).rows
+  if ([history,invites,workouts].some(x=>x.length>100)) throw Error('too_many_events')
+  const keyed = x=>x.map(({client_id,...rest})=>({card:labels.get(client_id),...rest}))
+  console.log(JSON.stringify({event:'link_name_candidates',readOnly:true,athleteCandidates:clients.length,trainerCandidates:trainers.length,matchedRelationships:rows,
+    cards:cards.map(c=>({card:labels.get(c.id),ownedByCandidate:clients.some(p=>p.id===c.auth_user_id),archived:!!c.archived_at,mergedInto:labels.get(c.merged_into_client_id)??null,createdAt:c.created_at})),
+    history:keyed(history),invitations:keyed(invites),workouts:keyed(workouts),identityVerified:false}))
   await db.query('commit')
 } catch { await db.query('rollback'); console.error('link_name_diagnosis_failed'); process.exitCode=1 }
 finally { await db.end() }
