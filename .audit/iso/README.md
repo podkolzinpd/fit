@@ -1,8 +1,9 @@
 # Temporary ISO real-generator audit
 
 Audit branch only. Never merge or deploy. Product changes are exactly the two
-ISO brief source/test files copied from local fix checkout. `source` is a runtime
-symlink to this checked-out repository, created only on an ephemeral hosted runner.
+ISO brief source/test files copied from local fix checkout. The audit bundle is copied outside the checkout into RUNNER_TEMP/trainer-iso.
+There `source` is a runtime symlink to this checked-out repository; keeping it
+outside Vite root avoids a recursive watcher loop.
 API dist model boundary is replaced there by `model-adapter.js`; it dispatches
 real model-only runs of this same workflow/ref. No model response replay.
 

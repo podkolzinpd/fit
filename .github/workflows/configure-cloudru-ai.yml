@@ -92,13 +92,14 @@ jobs:
           PGPASSWORD: postgres
         run: |
           psql -h 127.0.0.1 -p 5432 -U postgres -d postgres -v ON_ERROR_STOP=1 -c "create role fit_api login password 'fit-api-test-only' nosuperuser nobypassrls"
-          ln -s "$GITHUB_WORKSPACE" .audit/iso/source
-          cp .audit/iso/model-adapter.js services/api/dist/assistant-orchestrator/program/model.js
-          git rev-parse HEAD > .audit/iso/checked-out-sha.txt
+          cp -R .audit/iso "$RUNNER_TEMP/trainer-iso"
+          ln -s "$GITHUB_WORKSPACE" "$RUNNER_TEMP/trainer-iso/source"
+          cp "$RUNNER_TEMP/trainer-iso/model-adapter.js" services/api/dist/assistant-orchestrator/program/model.js
+          git rev-parse HEAD > "$RUNNER_TEMP/trainer-iso/checked-out-sha.txt"
       - name: Real ISO program trainer client trainer cycle
         env:
           GH_TOKEN: ${{ github.token }}
-        run: python3 .audit/iso/run-program-audit.py
+        run: python3 "$RUNNER_TEMP/trainer-iso/run-program-audit.py"
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -107,23 +108,23 @@ jobs:
           retention-days: 1
           if-no-files-found: error
           path: |
-            .audit/iso/checked-out-sha.txt
-            .audit/iso/owned-database.json
-            .audit/iso/cleanup-readback.json
-            .audit/iso/lifecycle.jsonl
-            .audit/iso/browser-events.jsonl
-            .audit/iso/program-result.json
-            .audit/iso/program-playwright.json
-            .audit/iso/program-artifacts/
-            .audit/iso/model-rpc-events.jsonl
-            .audit/iso/model-runs/
-            .audit/iso/artifact-delivery.jsonl
-            .audit/iso/rpc-errors.jsonl
-            .audit/iso/rpc-oversize.json
-            .audit/iso/first-turn.json
-            .audit/iso/first-response.json
-            .audit/iso/generation-response.json
-            .audit/iso/playwright-stdout.log
-            .audit/iso/playwright-stderr.log
-            .audit/iso/api-stderr.log
-            .audit/iso/frontend.log
+            ${{ runner.temp }}/trainer-iso/checked-out-sha.txt
+            ${{ runner.temp }}/trainer-iso/owned-database.json
+            ${{ runner.temp }}/trainer-iso/cleanup-readback.json
+            ${{ runner.temp }}/trainer-iso/lifecycle.jsonl
+            ${{ runner.temp }}/trainer-iso/browser-events.jsonl
+            ${{ runner.temp }}/trainer-iso/program-result.json
+            ${{ runner.temp }}/trainer-iso/program-playwright.json
+            ${{ runner.temp }}/trainer-iso/program-artifacts/
+            ${{ runner.temp }}/trainer-iso/model-rpc-events.jsonl
+            ${{ runner.temp }}/trainer-iso/model-runs/
+            ${{ runner.temp }}/trainer-iso/artifact-delivery.jsonl
+            ${{ runner.temp }}/trainer-iso/rpc-errors.jsonl
+            ${{ runner.temp }}/trainer-iso/rpc-oversize.json
+            ${{ runner.temp }}/trainer-iso/first-turn.json
+            ${{ runner.temp }}/trainer-iso/first-response.json
+            ${{ runner.temp }}/trainer-iso/generation-response.json
+            ${{ runner.temp }}/trainer-iso/playwright-stdout.log
+            ${{ runner.temp }}/trainer-iso/playwright-stderr.log
+            ${{ runner.temp }}/trainer-iso/api-stderr.log
+            ${{ runner.temp }}/trainer-iso/frontend.log
