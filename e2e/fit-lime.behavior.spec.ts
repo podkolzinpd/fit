@@ -1741,7 +1741,7 @@ test('Fit Lime trainer profile has addressed load retry and non-pilot control', 
   await mockPilot(page)
   await page.reload()
   await expect(page.locator('.fit-lime-shell')).toHaveCount(0)
-  await page.goto('/profile/settings')
+  await page.goto('/profile/settings?section=appearance')
   await expect(page.locator('.fit-lime-shell')).toHaveCount(0)
   await expect(page.getByRole('switch', { name: 'Тёмная тема', exact: true })).toBeVisible()
 })
