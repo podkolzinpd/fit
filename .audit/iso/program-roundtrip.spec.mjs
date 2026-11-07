@@ -10,7 +10,7 @@ async function signIn(context,key,role){
  for(const path of ['/v1/auth/yandex/session','/v1/profile']){
   let ready=false;
   for(let attempt=1;attempt<=3&&!ready;attempt++){
-   const started=Date.now();try{const rr=await fetch(api+path,{headers:{'x-fit-session':session.token},signal:AbortSignal.timeout(30000)});record('native_auth_readiness',{role,path,attempt,status:rr.status(),durationMs:Date.now()-started});expect(rr.ok).toBeTruthy();await rr.json();ready=true}catch(error){record('native_auth_readiness_error',{role,path,attempt,category:error.name,durationMs:Date.now()-started});if(attempt===3)throw error}
+   const started=Date.now();try{const rr=await fetch(api+path,{headers:{'x-fit-session':session.token},signal:AbortSignal.timeout(30000)});record('native_auth_readiness',{role,path,attempt,status:rr.status,durationMs:Date.now()-started});expect(rr.ok).toBeTruthy();await rr.json();ready=true}catch(error){record('native_auth_readiness_error',{role,path,attempt,category:error.name,durationMs:Date.now()-started});if(attempt===3)throw error}
   }
  }
  await context.addInitScript(s=>localStorage.setItem('fit.yandexAppSession.v1',JSON.stringify({token:s.token,expiresAt:s.expiresAt})),session);
