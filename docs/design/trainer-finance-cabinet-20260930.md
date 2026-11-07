@@ -1900,3 +1900,32 @@ passed. Финальная production build/browser проверяется от�
 не меняется. Открыто: новый exact-head sourceCI, приёмка FIN701 и старшего2028,
 затем FIN702/703. API/web FIN701 штатно SUCCESS; OTA42368413515 начался,
 public/verifiedZIP приёмка ещё впереди. Физического телефона нет.
+
+
+FIN-45 — 2026-11-07 — Codex / OpenAI. FIN701/PR2027 ВЫПУЩЕН И ПРИНЯТ:
+source1215aeaa CI42362140958 SUCCESS35/35 attempt2 (ранее описанный Live flaky);
+обычный squash mainbb2835cd04d48bd366d6421b3106f8689665db04.
+MainCI42365428246 SUCCESS attempt2: app/e2e/app-tests green,34success и1штатный
+migration-safety skip для неизменённой схемы. ExerciseImage failure attempt1
+сохранён и не объявляется исправленным. Штатные API42367892097/web42367892149/
+OTA42368413515 SUCCESS. API applied0; никаких денежных/дата-починок.
+Official artifact13571999826, cloudru-frontend-bb2835cd: все213publicfiles size+
+SHA256 совпали; API exact release/health/ready200, protected401 иDNS/TLS passed.
+Synthetic public42/42 Chromium/WebKit и verified signed ZIP42/42 passed,
+retries0; public6.4min/ZIP1.5min. PNG320/390/430/1440 просмотрены.
+OTA ABI8922d2e9fc2c9a092d10f7b6066acdc46edf0fbe7ee7a15159e02a44e7126cf9,
+bundle652cae73674b6d57ecdf56bc26706dc2122c2ce8576219361f87a8a64d13d803,
+15153425bytes; manifest/archive signatures/source/hash verified. ZIP server остановлен.
+Gh download официального35.8MB JSON шёл медленно, но завершился0. Дополнительный
+прямой API-read timeout55s с7.2MB partial не использовался как доказательство;
+принята ведомость исходного официального artifact, verifyRelease passed.
+Fresh public browser показывает действующий общий recovery-notice над страницей;
+он сохранён как отдельная глобальная механика, не удалён ради компактного макета.
+Первый PR меняет только hero/month/current-row; перенос toolbar и цвета ещё FIN702/703.
+FIN702 final d038e6a3: production40/40 после focus fix, dev12/12 workers1/2,
+targeted21/types/lint/build passed. Новый sourceCI42369140075 идёт; старый
+42365639106 — failure, не rerun. FIN703 включила этот fix обычным merge3b116a38.
+Очередь:2026 возобновлён (active/newhead3ac1833), далее2028, наш2029,2030;
+до FIN703 проверим актуальную очередь заново. Собственный hold FIN701 снят.
+Физические iPhone/PWA/Android не проверены. Mono/layout и деньги прежние.
+Дальше — принятие старших2026/2028, свежая основа и выпуск FIN702; затем FIN703.
