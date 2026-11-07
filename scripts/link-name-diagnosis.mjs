@@ -53,11 +53,22 @@ try {
     where client_id=any($1::uuid[]) order by created_at limit 101`, [cards.map(c=>c.id),clients.map(p=>p.id)])).rows
   const workouts = (await db.query(`select client_id,status,deleted_at is not null deleted,count(*)::int count
     from public.workouts where client_id=any($1::uuid[]) group by client_id,status,deleted_at is not null limit 101`, [cards.map(c=>c.id)])).rows
+  const targets = JSON.parse(process.env.FIT_ACCOUNT_LINK_AUDIT_TARGETS || '{}').emailHashes
+  if (!Array.isArray(targets) || targets.length !== 2 || targets.some(x=>!/^[a-f0-9]{64}$/.test(x))) throw Error('invalid_targets')
+  const feedback = (await db.query(`select distinct array_position($1::text[],encode(sha256(convert_to(lower(email.address[1]),'UTF8')),'hex')) target,
+      f.account_role, f.user_id=any($2::uuid[]) athlete_candidate,
+      f.user_id in (select trainer_id from public.client_trainer_relationships where client_id=any($3::uuid[])) candidate_trainer
+    from public.app_feedback f cross join lateral regexp_matches(f.message,'[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}','g') email(address)
+    where encode(sha256(convert_to(lower(email.address[1]),'UTF8')),'hex')=any($1::text[]) limit 21`,[targets,clients.map(p=>p.id),cards.map(c=>c.id)])).rows
+  const merges = (await db.query(`select source_client_id,target_client_id,status,created_at,completed_at,
+     dependency_counts_before,dependency_counts_after from public.client_merge_operations
+     where source_client_id=any($1::uuid[]) or target_client_id=any($1::uuid[]) limit 101`,[cards.map(c=>c.id)])).rows
   if ([history,invites,workouts].some(x=>x.length>100)) throw Error('too_many_events')
   const keyed = x=>x.map(({client_id,...rest})=>({card:labels.get(client_id),...rest}))
   console.log(JSON.stringify({event:'link_name_candidates',readOnly:true,athleteCandidates:clients.length,trainerCandidates:trainers.length,matchedRelationships:rows,
     cards:cards.map(c=>({card:labels.get(c.id),ownedByCandidate:clients.some(p=>p.id===c.auth_user_id),archived:!!c.archived_at,mergedInto:labels.get(c.merged_into_client_id)??null,createdAt:c.created_at})),
-    history:keyed(history),invitations:keyed(invites),workouts:keyed(workouts),identityVerified:false}))
+    history:keyed(history),invitations:keyed(invites),workouts:keyed(workouts),feedback,
+    merges:merges.map(({source_client_id,target_client_id,...rest})=>({source:labels.get(source_client_id)??'outside',target:labels.get(target_client_id)??'outside',...rest})),identityVerified:false}))
   await db.query('commit')
 } catch { await db.query('rollback'); console.error('link_name_diagnosis_failed'); process.exitCode=1 }
 finally { await db.end() }
