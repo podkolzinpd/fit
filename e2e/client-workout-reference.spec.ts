@@ -4,6 +4,7 @@ import { expect, test, type Page } from '@playwright/test'
 import { ownProfileCases } from './client-own-profile.cases'
 import { limeLiveCardShellCases } from './lime-live-card-shell.cases'
 import { limeLiveSetSkinCases } from './lime-live-set-skin.cases'
+import { limeLiveDurationSkinCases } from './lime-live-duration-skin.cases'
 import { limeLiveTimerSkinCases } from './lime-live-timer-skin.cases'
 import { revealLiveSet, beginClientGesture, coachGestureWorkout, restTimerWorkout, holdClientLiveCard, mockClientStreamingVoice, mockPilot, mockPublicTrainer, publicTrainerDraft, publicTrainerId, newWorkoutId, workoutId, conversationId, messageId, clientId } from './fit-lime-fixtures'
 
@@ -14,6 +15,7 @@ ownProfileCases()
 limeLiveCardShellCases()
 limeLiveSetSkinCases()
 limeLiveTimerSkinCases()
+limeLiveDurationSkinCases()
 
 const pilotId = 'c11e0000-6010-4000-8000-000000000001'
 
