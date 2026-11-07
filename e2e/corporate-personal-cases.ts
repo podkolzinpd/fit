@@ -6,7 +6,7 @@ import type { EmployeeCommand, EmployeeMark } from '../src/data/repositories/cor
 const card = `/clients/${clientId}`, admin = '/admin?tab=statistics&kind=personal'
 const otherTrainer = '20000000-0000-4000-8000-000000000001'
 let unexpected: string[] = []
-async function setup(page: Page, options: { allowed?: boolean; role?: 'trainer'|'client'; lost?: boolean; conflict?: boolean; denied?: boolean; failGate?: boolean; failStats?: boolean; failPage?: boolean; empty?: boolean; legacy?: boolean } = {}) {
+async function setup(page: Page, options: { allowed?: boolean; role?: 'trainer'|'client'; lost?: boolean; conflict?: boolean; denied?: boolean; failGate?: boolean; failStats?: boolean; failPage?: boolean; empty?: boolean; legacy?: boolean; emptyTrainerRange?: boolean } = {}) {
   const origin = new URL(nativeAiUrl('/')).origin
   await page.route('**/*', route => {
     const req=route.request(),url=new URL(req.url())
@@ -32,9 +32,10 @@ async function setup(page: Page, options: { allowed?: boolean; role?: 'trainer'|
       ranges.push(url.searchParams)
       if(failStats){failStats=false;return route.fulfill({status:503,json:{error:'unavailable'}})}
       if(failPage && url.searchParams.has('cursorId')){failPage=false;return route.fulfill({status:503,json:{error:'unavailable'}})}
-      const date='2026-11-07',last=url.searchParams.has('cursorId'),filtered=url.searchParams.has('trainerId'),empty=options.empty
+      const date=options.emptyTrainerRange?'2026-11-06':'2026-11-07',last=url.searchParams.has('cursorId'),filtered=url.searchParams.has('trainerId')
+      const empty=options.empty || options.emptyTrainerRange && !(url.searchParams.get('from')!<=date && date<url.searchParams.get('until')!)
       const id=last?otherTrainer:clientId
-      return route.fulfill({json:{count:empty?0:filtered?1:2,trainers:[{id:trainerId,name:'Тестовый тренер',count:1},{id:otherTrainer,name:'Второй тренер',count:1}],records:empty?[]:[{id,date,trainerId:filtered?otherTrainer:trainerId,trainerName:filtered?'Второй тренер':'Тестовый тренер',status:'done'}],nextCursor:!empty&&!last&&!filtered?{date,id}:null}})
+      return route.fulfill({json:{count:empty?0:filtered?1:2,trainers:empty&&options.emptyTrainerRange?[]:[{id:trainerId,name:'Тестовый тренер',count:1},{id:otherTrainer,name:'Второй тренер',count:1}],records:empty?[]:[{id,date,trainerId:filtered?otherTrainer:trainerId,trainerName:filtered?'Второй тренер':'Тестовый тренер',status:'done'}],nextCursor:!empty&&!last&&!filtered?{date,id}:null}})
     }
     if(route.request().method()==='GET'){markReads++;return route.fulfill({json:mark})}
     const command=route.request().postDataJSON() as EmployeeCommand;writes.push(command)
@@ -46,6 +47,19 @@ async function setup(page: Page, options: { allowed?: boolean; role?: 'trainer'|
     return route.fulfill({json:mark})
   })
   return {writes,ranges,get mark(){return mark},replaceMark(value:EmployeeMark){mark=value},get markReads(){return markReads},get gateReads(){return gateReads}}
+}
+async function expectReadableSelectedPeriod(page:Page) {
+  const active=page.locator('.corporate-personal-statistics .corporate-service-quick-periods [aria-pressed="true"]')
+  const contrast=()=>active.evaluate(el=>{
+    const luminance=(color:string)=>{
+      const channels=color.match(/[\d.]+/g)!.slice(0,3).map(Number).map(value=>{const n=value/255;return n<=0.04045?n/12.92:((n+0.055)/1.055)**2.4})
+      return channels[0]!*0.2126+channels[1]!*0.7152+channels[2]!*0.0722
+    }
+    const style=getComputedStyle(el),fg=luminance(style.color),bg=luminance(style.backgroundColor)
+    return (Math.max(fg,bg)+0.05)/(Math.min(fg,bg)+0.05)
+  })
+  await active.hover();await expect.poll(contrast).toBeGreaterThanOrEqual(4.5)
+  await page.mouse.move(0,0);await expect.poll(contrast).toBeGreaterThanOrEqual(4.5)
 }
 export function registerCorporatePersonalCases() {
   test.beforeEach(()=>{unexpected=[]})
@@ -119,6 +133,20 @@ export function registerCorporatePersonalCases() {
     await setup(page,{failStats:true,empty:true});await page.goto(nativeAiUrl(admin));await expect(page.getByLabel('Проведено персональных тренировок')).toHaveCount(0)
     await page.getByRole('button',{name:'Повторить',exact:true}).click();await expect(page.getByText('За этот период тренировок нет')).toBeVisible();await expect(page.getByLabel('Проведено персональных тренировок')).toContainText('0')
   })
+  test('selected trainer stays explicit when the chosen period has no trainer metadata',async({page},info)=>{
+    const f=await setup(page,{emptyTrainerRange:true});await page.clock.install({time:new Date('2026-11-07T10:00:00Z')})
+    await page.goto(nativeAiUrl(admin));await page.getByText('Период и тренер',{exact:true}).click()
+    const select=page.getByRole('combobox',{name:'Тренер персональных тренировок'})
+    await select.selectOption(otherTrainer);await expect(select).toHaveValue(otherTrainer)
+    await page.getByRole('button',{name:'Сегодня',exact:true}).click()
+    await expect(page.getByText('За этот период тренировок нет',{exact:true})).toBeVisible()
+    await expect(select).toHaveValue(otherTrainer);await expect(select.locator('option:checked')).toHaveText('Второй тренер')
+    expect(f.ranges.at(-1)?.get('trainerId')).toBe(otherTrainer)
+    await expectReadableSelectedPeriod(page)
+    await page.screenshot({path:info.outputPath('personal-empty-selected-trainer.png'),fullPage:true,animations:'disabled'})
+    await select.selectOption('');await expect(select.locator('option:checked')).toHaveText('Все тренеры')
+    await expect.poll(()=>f.ranges.at(-1)?.has('trainerId')).toBe(false)
+  })
   for(const theme of ['dark','light'])for(const width of [320,390,430,1440])test(`personal ${theme} mark and statistics at ${width}`,async({page},info)=>{
     await setup(page);await page.addInitScript(value=>localStorage.setItem('fit.appTheme',value),theme)
       await page.setViewportSize({width,height:width>700?1000:844});await page.goto(nativeAiUrl(card))
@@ -131,6 +159,7 @@ export function registerCorporatePersonalCases() {
       expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true)
       await page.screenshot({path:info.outputPath(`personal-mark-${theme}-${width}.png`),fullPage:true,animations:'disabled'})
       await page.goto(nativeAiUrl(admin));await expect(page.getByLabel('Проведено персональных тренировок')).toBeVisible()
+      await expectReadableSelectedPeriod(page)
       const summary=page.getByText('Период и тренер',{exact:true});expect((await summary.boundingBox())!.height).toBeGreaterThanOrEqual(44);await summary.click()
       expect((await page.getByRole('combobox',{name:'Тренер персональных тренировок'}).boundingBox())!.height).toBeGreaterThanOrEqual(44)
       expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true)

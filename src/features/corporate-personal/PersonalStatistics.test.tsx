@@ -1,7 +1,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { beforeEach, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { CorporatePersonalStatistics } from './PersonalStatistics'
 const api=vi.hoisted(()=>({statistics:vi.fn()}))
 vi.mock('../../app/auth-context',()=>({useAuth:()=>({actor:{userId:'admin-test',role:'client',timezone:'Europe/Moscow'}})}))
@@ -11,6 +11,7 @@ const row={id,date:'2026-11-07',trainerId:id,trainerName:'Тестовый тр�
 const data={count:1,trainers:[{id,name:'Тестовый тренер',count:1}],records:[row],nextCursor:null}
 function setup(){return render(<QueryClientProvider client={new QueryClient({defaultOptions:{queries:{retry:false}}})}><CorporatePersonalStatistics/></QueryClientProvider>)}
 beforeEach(()=>{vi.resetAllMocks();api.statistics.mockResolvedValue(data)})
+afterEach(()=>{vi.useRealTimers()})
 it('shows conducted total and detail without an office filter or client data',async()=>{
   setup();expect(await screen.findByLabelText('Проведено персональных тренировок')).toHaveTextContent('1')
   expect(screen.getByLabelText('Учтённые персональные тренировки')).toHaveTextContent('Тестовый тренер')
@@ -46,4 +47,21 @@ it('does not repeat a workout if its corrected date crosses the cursor between p
   const user=userEvent.setup();setup();await user.click(await screen.findByRole('button',{name:'Показать ещё'}))
   await waitFor(()=>expect(api.statistics).toHaveBeenCalledTimes(2))
   await waitFor(()=>expect(screen.getByLabelText('Учтённые персональные тренировки').children).toHaveLength(2))
+})
+
+it('keeps the selected trainer visible when the new period has no trainer rows',async()=>{
+  vi.useFakeTimers({toFake:['Date']});vi.setSystemTime(new Date('2026-11-07T10:00:00Z'))
+  const previous={...data,records:[{...row,date:'2026-11-06'}]},empty={count:0,trainers:[],records:[],nextCursor:null}
+  const renamed={...previous,trainers:[{id,name:'Обновлённый тренер',count:1}],records:[{...previous.records[0],trainerName:'Обновлённый тренер'}]}
+  api.statistics.mockResolvedValue(empty).mockResolvedValueOnce(previous).mockResolvedValueOnce(renamed)
+  const user=userEvent.setup();setup();await screen.findByLabelText('Проведено персональных тренировок')
+  await user.click(screen.getByText('Период и тренер'))
+  const select=screen.getByRole('combobox',{name:'Тренер персональных тренировок'})
+  await user.selectOptions(select,id);await waitFor(()=>expect(select).toHaveDisplayValue('Обновлённый тренер'))
+  await user.click(screen.getByRole('button',{name:'Сегодня'}));await screen.findByText('За этот период тренировок нет')
+  expect(select).toHaveValue(id)
+  expect(select).toHaveDisplayValue('Обновлённый тренер')
+  expect(api.statistics).toHaveBeenLastCalledWith({from:'2026-11-07',until:'2026-11-08'},id,undefined)
+  await user.selectOptions(select,'');await waitFor(()=>expect(api.statistics).toHaveBeenLastCalledWith(expect.anything(),'',undefined))
+  expect(select).toHaveDisplayValue('Все тренеры')
 })
