@@ -2963,3 +2963,64 @@ harness отдельно завершён SIGTERM:exit0, remaining0. Обе БД
 infra458/458, hosting196/196, calendar22/22, media2/2, iOS permissions passed.
 Первичный сбой ExerciseImage сохранён в evidence как нестабильность первого
 прогона, тест и продукт ради него не менялись. Все финальные команды exit0.
+
+
+## Итерация P03 — 07.11.2026 — Codex / OpenAI
+
+Задача: исправить ошибочную неоднозначность частоты рядом с ISO-датой;
+повторить real-generation cycle без замены даты словами, только test environment.
+База: main2ef2f649; отдельная локальная ветка fix/program-iso-date-20261107.
+Расхождения: нет. Production, CI/main и прочие ветки не меняются.
+
+Сделано: explicitFrequency исключает из своего локального normalized текста
+только самостоятельные валидные ISO calendar dates, используя isCalendarDate.
+Исходное сообщение, evidence и startDate остаются неизменными. Невалидные
+даты не маскируются; реальные отрицания/диапазоны частоты всё ещё требуют
+уточнения. Добавлено11регрессионных случаев: разные позиции/две даты/високосная
+дата/одновременная записьstartDate/ambiguity/negation/correction/date-only.
+
+Решение: узкое исключение дат в частотном guard, без изменения extraction
+prompt/model/schema. Отвергнуто: удалять все диапазоны, нормализовать исходное
+сообщение с потерей цитат или продолжать обход датой словами.
+
+Проверка: baseline6новыхcasesfailed/35passed; послефиксаbrief41/41.
+Полный APIcheck (lint/types/test/build):1619passed,401integration skipped.
+Rootlint/typecheck/build и workflowdocs passed. Широкий frontendcoverage:
+3074passed/1failed — неизменённый performance-test поиска1537ms против1500ms.
+Отдельный файл поиска после снятия нагрузки passed без изменения порога.
+Полный frontendнабор зелёным не объявляется. RealISOcycle и cleanup — ниже.
+
+Открыто: реальные model-output quality наблюдения прежнего аудита вне scope;
+production не меняется. Успешные прошлые synthetic/natural-date cycles не
+подменяют новую ISOприёмку. Статус и evidence дополняются по её завершении.
+Дальше: сохранить real-cycle результат и локальный commit, без выпуска.
+
+
+### Приёмка P03 без обхода даты — 07.11.2026
+
+Из-за отказа локальной Podman VM аудит перенесён в изолированный Ubuntu24.04
+Actions runner с disposable PostgreSQL17. Временная audit-ветка разрешена
+владельцем ранее, main/production не менялись.
+[Run42372578509](https://github.com/podkolzinpd/fit/actions/runs/42372578509):
+2/2Playwright tests passed,212,0с,0failed/skipped/flaky. Первый тест:
+исходный запрос сISO2026-11-07 → real router/extraction → штатное «1неделя»
+(дату не меняли) → real generation/quality →2назначения07/10ноября →
+клиент выполнил14/14подходов → тренер прочёл те же workout/set IDs и все
+fact/confirmedAt, включая изменённые повторы9/10. Второй независимый тест:
+reload/history вернул подтверждение того же programId/conversationId.
+Ни один исходный semantic assertion не удалён ради зелёного результата.
+
+Realmodel:6свежих вызовов yandexgpt/latest,18101токен поusage; synthetic/replay
+ответов нет. Сервис генерации использован на месте через ранее разрешённый
+bounded model-only workflow; app persistence только в hosted test PG.
+Собственная hosted БД удалена:remaining0, servicecontainer остановлен.
+Подготовительные ошибки driver/окружения сохранены отдельно и не засчитаны.
+
+Остаток тестовой среды: отдельный локальный container
+fit-trainer-iso-audit-20261107 и его последняяownDB
+fit_frontend_e2e_41826_717adad28159 ещё ожидают очистки, потому общая локальная
+PodmanVM недоступна. Перезапуск общейVM не разрешался и не выполнялся.
+Они содержат только синтетические fixture-данные, не production.
+Отчёт: локальный reports/trainer-audit-20261106-2329.md; доказательства
+trainer-program-iso-recheck-20261107-evidence/hosted-final/.
+Дальше: локальный commit исправления; PR/merge/production вне текущего поручения.
