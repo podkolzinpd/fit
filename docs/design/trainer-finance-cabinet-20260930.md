@@ -1786,6 +1786,31 @@ source/mainCI и официальный выпуск после полной п�
 телефонов нет. Дальше — последовательная публикация без расширения scope.
 
 
+FIN-38 — 2026-11-07 — Codex / OpenAI. Интеграция FIN702 с1215aeaa:
+обычный merge, сохранены MC4.2 и обе ветви истории FIN34/35/37. Собственный
+конфликт cross-route разрешён в пользу нового меню месяца и sheet-фильтра;
+URL/selected/scroll assertions сохранены. Types/scoped lint после merge passed.
+Новый narrow/short-viewport поиск320×400: input не перекрыт nav,
+действия доступны; Chromium/WebKit2/2 passed. Это эмуляция, не клавиатура iPhone.
+Source CI FIN70142362140958: app и финансовые/визуальные lanes passed,
+Yandex-auth4/4 включает старый WebKit Live transition reduced-false single-group
+original:2 scroll samples вместо >2, internal retry passed, 293passed/1flaky.
+Такой же дефект до FIN701 документирован в #2023/#2022. Live CSS и этот test
+побайтно равны принятому main2ef; новый CSS scoped .finance-*. Причина потери
+кадров не установлена, исходный failure сохранён. Запущен один failed-jobs
+повтор unchanged1215aeaa; assertions/retries/timeouts/CI прежние. Открыто:
+результат этого повтора, приёмка первого выпуска и последующие2PR по очереди.
+
+
+FIN-39 — 2026-11-07 — Codex / OpenAI. FIN702 дополнена проверка реального
+monthly-enabled контура оплат внутри существующего Lime layout-case:
+синтетические поступления15000₽, распределение клиентов, общий summary один,
+повтор global receipt-total отсутствует; native client-фильтр и server pages
+сохраняются. Chromium/WebKit2/2 passed, receipt320 PNG просмотрен. Mono
+fixtures остаются прежними. Это закрывает положительную ветвь новогоAPI;
+отрицательная старая ветвь без monthly полей остаётся в остальных случаях.
+Новых e2e-case/матриц нет. Открыто: выпуск FIN701/702/703 по очереди послеCI.
+
 FIN-40 — 2026-11-07 — Codex / OpenAI. FIN703 локально: lint/types/build/startup
 passed. Полный frontend345files/3077tests с maxWorkers2 passed,
 coverage83.60/78.73/82.76/88.28. Первоначальный параллельный full run имел
