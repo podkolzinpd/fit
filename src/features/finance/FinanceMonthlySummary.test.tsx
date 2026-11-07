@@ -15,6 +15,20 @@ const data: TrainerFinanceOverview = { month: '2026-11', receivedCents: 30003, c
   dueCents: 0, attentionCount: 0, clients: [client('a',10001,1),client('b',20002,2)] }
 
 describe('monthly finance readout', () => {
+  it('uses the compact metric menu without dropping totals or changing personal composition', async () => {
+    const change = vi.fn()
+    const { container, rerender } = render(<FinanceMonthlySummary data={data} metric="money" onMetricChange={change} compact />)
+    expect(container.querySelector('.finance-monthly-compact')).not.toBeNull()
+    expect(container.querySelector('.finance-monthly-companion')).toBeNull()
+    expect(container.querySelector('[data-finance-monthly-total]')?.textContent).toBe(financeMoney(30003))
+    expect(screen.getByText('3 тренировки')).toBeVisible()
+    await userEvent.click(screen.getByRole('button', { name: 'Показатель итогов: Поступления' }))
+    await userEvent.click(screen.getByRole('menuitem', { name: /^Тренировки$/ }))
+    expect(change).toHaveBeenLastCalledWith('sessions')
+    rerender(<FinanceMonthlySummary data={data} metric="money" onMetricChange={change} clientId="b" compact />)
+    expect(container.querySelector('.finance-monthly-compact')).toBeNull()
+    expect(container.querySelector('.finance-monthly-center')).not.toBeNull()
+  })
   it('keeps exact cents, companion total and local metric control without percentages', async () => {
     const change = vi.fn()
     const { container } = render(<FinanceMonthlySummary data={data} metric="money" onMetricChange={change} />)
