@@ -24,6 +24,14 @@ describe('quiz updates', () => {
   it.each(['Не три, а два занятия в неделю', 'Две тренировки', '2'])('accepts an unambiguous frequency or correction: %s', (message) => {
     expect(mergeExtractedBrief({}, message, { patch: { frequency: 2 }, clear: [], evidence: { frequency: message }, clarification: null }).brief.frequency).toBe(2)
   })
+  it.each(['Два занятия в неделю, мне 31 год', 'Мне 31 год, две тренировки в неделю', 'Два занятия в неделю, МНЕ 31 год'])('does not treat an age as a negated frequency: %s', (message) => {
+    expect(mergeExtractedBrief({}, message, { patch: { frequency: 2 }, clear: [], evidence: { frequency: message }, clarification: null }).brief.frequency).toBe(2)
+  })
+  it.each(['Мне 31 год, не два занятия в неделю', 'Мне не три, а два занятия в неделю'])('keeps negation and correction distinct from an age: %s', (message) => {
+    const extract = () => mergeExtractedBrief({}, message, { patch: { frequency: 2 }, clear: [], evidence: { frequency: message }, clarification: null })
+    if (message.includes('а два')) expect(extract().brief.frequency).toBe(2)
+    else expect(extract).toThrow('brief_frequency_ambiguous')
+  })
   it('requires details of other activity and invalidates them on a new description', () => {
     expect(missingBriefFields({ otherActivity: 'Бегаю' })).toContain('otherActivities')
     expect(missingBriefFields({ otherActivity: 'Нет' })).not.toContain('otherActivities')
