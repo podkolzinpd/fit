@@ -39,6 +39,15 @@ export function readExpectedRestoreHistory(value){
  return value
 }
 
+export function readCurrentProfileEvidence(value,now=Date.now()){
+ requireState(value&&Object.keys(value).sort().join(',')==='messageSha256,since'
+   &&typeof value.messageSha256==='string'&&/^[a-f0-9]{64}$/u.test(value.messageSha256)
+   &&typeof value.since==='string'&&Number.isFinite(Date.parse(value.since))
+   &&new Date(value.since).toISOString()===value.since
+   &&Date.parse(value.since)<=now&&Date.parse(value.since)>=now-7*86400000,'current_profile_evidence')
+ return value
+}
+
 async function importedCounts(client,expected){
  return (await client.query(`select
    (select count(*)::int from public.workouts where id=any($1::uuid[]) and client_id=$2 and status='done' and deleted_at is null) workouts,
@@ -122,14 +131,66 @@ function publicState(state,pair){
    foundations:state.foundations.map(m=>({name:m.name,appliedAt:time(m.run_on)}))}
 }
 
-export async function planClientRestore(client,pair,expectedHistory=null){
+// Diagnostic evidence only: a same-name invitation is never an actor selection.
+// This runs inside the existing owner-gated READ ONLY plan transaction. Tokens,
+// provider subjects, invitation codes and contact fields are deliberately absent.
+async function readIdentityEvidence(client,pair,state,expected,currentProfileEvidence){
+ const feedback=currentProfileEvidence?bounded((await client.query(`select id,user_id,account_role,created_at
+   from public.app_feedback where created_at>=$2::timestamptz
+   and encode(sha256(convert_to(btrim(message),'UTF8')),'hex')=$1
+   order by created_at,id limit 4`,[currentProfileEvidence.messageSha256,currentProfileEvidence.since])).rows,3):[]
+ const exactCards=[state.card.id,...(state.sources??[state.source]).filter(Boolean).map(c=>c.id)]
+ const invitations=bounded((await client.query(`select i.id,i.client_id,i.created_by,i.target_role,
+   i.claimed_by,i.claimed_at,i.revoked_at,i.created_at,i.expires_at,
+   c.auth_user_id,c.archived_at,c.merged_into_client_id,
+   i.client_id=any($1::uuid[]) exact_import_card
+   from public.client_invitations i join public.clients c on c.id=i.client_id
+   join public.clients selected on selected.id=$2
+   where i.created_by=$3 and i.target_role='client' and
+     (i.client_id=any($1::uuid[]) or
+       (i.created_at>=now()-interval '14 days' and
+        lower(regexp_replace(btrim(c.full_name),'[[:space:]]+',' ','g'))=
+        lower(regexp_replace(btrim(selected.full_name),'[[:space:]]+',' ','g'))))
+   order by i.created_at desc,i.id limit 21`,[exactCards,expected.clientId,pair.trainerId])).rows,20)
+ const ids=[...new Set([pair.trainerId,pair.athleteId,state.card.auth_user_id,...invitations.flatMap(i=>[i.claimed_by,i.auth_user_id]),...feedback.map(f=>f.user_id)].filter(Boolean))]
+ requireState(ids.length<=46,'identity_evidence_scope')
+ const profiles=bounded((await client.query(`select p.id,p.account_role,
+   (select count(*)::int from app_private.auth_identities i where i.profile_id=p.id and i.provider='yandex') yandex_identities,
+   (select count(*)::int from app_private.yandex_app_sessions s where s.profile_id=p.id and s.revoked_at is null and s.expires_at>now()) active_sessions,
+   (select max(s.created_at) from app_private.yandex_app_sessions s where s.profile_id=p.id) latest_session_created_at,
+   (select max(s.expires_at) from app_private.yandex_app_sessions s where s.profile_id=p.id and s.revoked_at is null) latest_unrevoked_session_expires_at
+   from public.profiles p where p.id=any($1::uuid[]) order by p.id`,[ids])).rows,46)
+ return {invitations,profiles,feedback,importedCounts:await importedCounts(client,expected),actorSelected:false,
+   sameNameIsNotIdentityProof:true}
+}
+
+export async function planClientRestore(client,pair,expectedHistory=null,currentProfileEvidence=null){
  if(expectedHistory)readExpectedRestoreHistory(expectedHistory)
+ if(currentProfileEvidence){readCurrentProfileEvidence(currentProfileEvidence);readExpectedRestoreHistory(expectedHistory)}
  let privateDiagnostic
  await client.query('begin transaction isolation level repeatable read read only')
  try{
    await ownerGate(client)
+   if(currentProfileEvidence){
+     // Resolve the immutable imported card directly. Requiring its old owner
+     // first would hide a legitimate intervening ownership change from diagnosis.
+     const cards=bounded((await client.query(`select id,auth_user_id,trainer_id,archived_at,merged_into_client_id,version
+       from public.clients where id=$1 limit 2`,[expectedHistory.clientId])).rows,1)
+     requireState(cards.length===1,'identity_evidence_card')
+     const sources=bounded((await client.query(`select id,auth_user_id,trainer_id,archived_at,merged_into_client_id,version
+       from public.clients where merged_into_client_id=$1 and trainer_id=$2 order by id limit 21`,[cards[0].id,pair.trainerId])).rows,20)
+     const state={card:cards[0],sources}
+     privateDiagnostic={pair,state,expectedHistory}
+     privateDiagnostic.identityEvidence=await readIdentityEvidence(client,pair,state,expectedHistory,currentProfileEvidence)
+     // This branch always rolls back READ ONLY and cannot create an apply plan.
+     requireState(false,'identity_evidence_review_required')
+   }
    const state=await readRestoreState(client,pair,Boolean(expectedHistory))
-   if(expectedHistory)privateDiagnostic={pair,state,expectedHistory}
+   if(expectedHistory){
+     privateDiagnostic={pair,state,expectedHistory}
+     if(state.card.id===expectedHistory.clientId&&state.profiles.some(p=>p.identities!==1))
+       privateDiagnostic.identityEvidence=await readIdentityEvidence(client,pair,state,expectedHistory,currentProfileEvidence)
+   }
    if(expectedHistory)await checkExpectedRestoreHistory(client,state,pair,expectedHistory)
    requireState(!state.periods.some(p=>p.status==='active'),'already_connected')
    requireState(state.periods.some(p=>p.trainer_id===pair.trainerId&&p.status==='disconnected'),'no_previous_period')

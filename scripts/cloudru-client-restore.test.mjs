@@ -5,7 +5,7 @@ import {readFileSync,mkdtempSync,writeFileSync,rmSync} from 'node:fs'
 import {tmpdir} from 'node:os'
 import {join} from 'node:path'
 import {spawnSync} from 'node:child_process'
-import {readRestoreTarget,planClientRestore,applyClientRestore,verifyClientRestore,privateRestoreTechnicalResult} from './cloudru-client-restore.mjs'
+import {readRestoreTarget,readCurrentProfileEvidence,planClientRestore,applyClientRestore,verifyClientRestore,privateRestoreTechnicalResult} from './cloudru-client-restore.mjs'
 import {readPrivateRestoreInput,executePrivateRestoreInput,clientRestoreInputDigest,validatePrivateRestoreCapability,privateRestoreInputParts} from './cloudru-client-restore-private.mjs'
 import {assertUnreceivedUploadFiles,assertUnreceivedCloudruObjects} from './cloudru-journal-upload.mjs'
 
@@ -166,6 +166,26 @@ test('private restore input is signed by the operator and bound to one preparati
    assert.throws(()=>readPrivateRestoreInput(parts({...value,...change}),'123-1',operatorKeys.publicKey),/private_signature/)
  const foreign=generateKeyPairSync('rsa',{modulusLength:3072,publicKeyEncoding:{type:'spki',format:'pem'},privateKeyEncoding:{type:'pkcs8',format:'pem'}})
  assert.throws(()=>readPrivateRestoreInput(signed,'123-1',foreign.publicKey),/private_signature/)
+})
+
+test('optional current-profile evidence is bounded and signed with the entire private input',()=>{
+ const evidence={messageSha256:'a'.repeat(64),since:new Date(Date.now()-60000).toISOString()}
+ const signed=privateRestoreInputParts({...privatePayload,currentProfileEvidence:evidence},'123-1',operatorKeys.privateKey)
+ assert.deepEqual(readPrivateRestoreInput(signed,'123-1',operatorKeys.publicKey).currentProfileEvidence,evidence)
+ const value=JSON.parse(Buffer.from(signed.join(''),'base64').toString())
+ for(const currentProfileEvidence of [{...evidence,messageSha256:'b'.repeat(64)},{...evidence,since:new Date(Date.now()-120000).toISOString()}])
+  assert.throws(()=>readPrivateRestoreInput(parts({...value,currentProfileEvidence}),'123-1',operatorKeys.publicKey),/private_signature/)
+ delete value.currentProfileEvidence
+ assert.throws(()=>readPrivateRestoreInput(parts(value),'123-1',operatorKeys.publicKey),/private_signature/)
+})
+test('malformed, future or stale current-profile proof fails before database access',async()=>{
+ const valid={messageSha256:'a'.repeat(64),since:new Date().toISOString()}
+ for(const value of [{}, {...valid,id:'unexpected'}, {...valid,messageSha256:'raw message'},
+  {...valid,since:'2026'}, {...valid,since:new Date(Date.now()+86400000).toISOString()},
+  {...valid,since:new Date(Date.now()-8*86400000).toISOString()}]){
+  assert.throws(()=>readCurrentProfileEvidence(value),/current_profile_evidence/)
+  await assert.rejects(planClientRestore({query:async()=>assert.fail('no database for invalid evidence')},{},privateExpected,value),/current_profile_evidence/)
+ }
 })
 
 test('private Actions results allow only technical flags, never customer fields or counts',()=>{
