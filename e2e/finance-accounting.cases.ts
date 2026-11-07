@@ -127,9 +127,9 @@ export function financeAccountingCases() {
     const client={clientId,fullName:'Алексей Смирнов',archivedAt:null,activeClient:true,completedSessions:2,
       receivedCents:10001,dueCents:0,nearestPaymentDueOn:null,unpaidPackageCount:0,activePackageCount:1,
       upcomingPackageCount:0,sessionsRemaining:9,overdue:false,lowSessions:false,unassignedSessions:0,needsAttention:false}
-    await page.route('**/v1/finance/overview*',route=>{const month=new URL(route.request().url()).searchParams.get('month')!;const november=month==='2026-11';return route.fulfill({json:{overview:{month,receivedCents:november?10001:20002,completedSessions:november?2:0,dueCents:0,attentionCount:0,clients:[{...client,receivedCents:november?10001:20002,completedSessions:november?2:0}]}}})})
+    await page.route('**/v1/finance/overview*',route=>{const month=new URL(route.request().url()).searchParams.get('month')!;const november=month==='2026-11';return route.fulfill({json:{overview:{month,receivedCents:november?10001:20002,completedSessions:november?2:0,dueCents:0,attentionCount:0,clients:[...Array.from({length:10},(_,i)=>({...client,clientId:`70000000-0000-4000-9000-${String(i).padStart(12,'0')}`,fullName:`Алексей — тестовый спортсмен ${i}`,receivedCents:0,completedSessions:0})),{...client,receivedCents:november?10001:20002,completedSessions:november?2:0}]}}})})
     await page.goto('/finance?month=2026-11&metric=money&q=Алексей')
-    const row=page.locator('.finance-monthly-client')
+    const row=page.locator(`.finance-monthly-client[href^="/clients/${clientId}/finance"]`)
     await row.scrollIntoViewIfNeeded()
     // Native focus may reveal the link before navigation. Restore the actual
     // leaving position, captured at click, rather than pre-focus geometry.
@@ -402,7 +402,7 @@ export function financeAccountingCases() {
     await page.goto('/finance')
     await expect(page.locator('.finance-overview-client')).toContainText(/К оплате 11\s000,01/)
     await expect(page.locator('.finance-overview-client')).toContainText(/Из них просрочено 1\s000,01/)
-    await expect(page.getByText('Месяц поступлений', { exact: true })).toBeVisible()
+    await expect(page.locator('.page-header').getByRole('button', { name: /^Месяц финансов:/ })).toBeVisible()
     for (const width of [320, 390, 430, 1440]) {
       await page.setViewportSize({ width, height: 844 })
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)

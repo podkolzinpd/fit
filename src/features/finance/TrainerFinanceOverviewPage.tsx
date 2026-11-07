@@ -194,7 +194,7 @@ export function TrainerFinanceOverviewView({ month, data, lime = false, metric: 
           <SearchIcon aria-hidden="true" /><input type="search" aria-label="Поиск клиента" placeholder="Поиск по имени" autoComplete="off" value={search} onChange={event => setSearch(event.target.value)} />
           {search !== '' && <button type="button" className="clients-search-clear" aria-label="Очистить поиск" onClick={() => setSearch('')}><CloseIcon /></button>}
         </div>}
-        <div className="finance-filter-row" role="group" aria-label="Фильтр клиентов">{(monthly ? [...FILTERS, ATTENTION_FILTER] : FILTERS).map((item) => <button key={item.id} type="button" className={filter === item.id ? 'is-active' : ''} aria-pressed={filter === item.id} onClick={() => setFilter(item.id)}>{item.label}</button>)}</div>
+        <div className="finance-filter-row" role="group" aria-label="Фильтр клиентов">{(monthly && filter === 'attention' ? [...FILTERS, ATTENTION_FILTER] : FILTERS).map((item) => <button key={item.id} type="button" className={filter === item.id ? 'is-active' : ''} aria-pressed={filter === item.id} onClick={() => setFilter(item.id)}>{item.label}</button>)}</div>
         <div className="finance-overview-list">{monthly ? clients.map(client => <Link key={client.clientId}
           className="card finance-overview-client finance-monthly-client"
           to={`/clients/${client.clientId}/finance?month=${month.slice(0,7)}&metric=${metric}`} state={{ financeBackTo: returnTo }}>

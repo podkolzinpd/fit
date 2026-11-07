@@ -17,6 +17,9 @@ export function FinanceMonthlySummary({ data, metric, onMetricChange, clientId, 
   const value = client ? financeMetricValue(client, metric) : clientId ? 0 : total
   const received = client ? client.receivedCents : clientId ? 0 : data.receivedCents
   const sessions = client ? client.completedSessions : clientId ? 0 : data.completedSessions
+  const sessionCount = sessions ?? 0
+  const sessionWord = sessionCount % 10 === 1 && sessionCount % 100 !== 11 ? 'тренировка'
+    : sessionCount % 10 >= 2 && sessionCount % 10 <= 4 && !(sessionCount % 100 >= 12 && sessionCount % 100 <= 14) ? 'тренировки' : 'тренировок'
   const formatted = (amount: number) => metric === 'money' ? financeMoney(amount) : String(amount)
   const totalText = formatted(value)
   const totalFontSize = Math.max(16, Math.min(28, 364 / totalText.length))
@@ -45,7 +48,7 @@ export function FinanceMonthlySummary({ data, metric, onMetricChange, clientId, 
           trigger={<span>{metric === 'money' ? 'Поступления' : 'Тренировки'}<ChevronDownIcon /></span>}
           items={[{ label: 'Поступления', onClick: () => onMetricChange('money') }, { label: 'Тренировки', onClick: () => onMetricChange('sessions') }]} />
         <strong data-finance-monthly-total style={{ fontSize: Math.max(16, Math.min(32, 360 / totalText.length)) }}>{totalText}</strong>
-        <span className="finance-monthly-compact-companion">{metric === 'money' ? `Проведено тренировок: ${sessions}` : `Получено ${financeMoney(received)}`}</span>
+        <span className="finance-monthly-compact-companion">{metric === 'money' ? `${sessionCount} ${sessionWord}` : `Получено ${financeMoney(received)}`}</span>
         {segments.some(item => item.id === 'others') && <small>Остальные: {formatted(segments.find(item => item.id === 'others')!.value)}</small>}
       </div>
     </div>
