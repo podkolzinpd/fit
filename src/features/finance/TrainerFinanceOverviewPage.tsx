@@ -10,12 +10,14 @@ import { useAuth } from '../../app/auth-context'
 import { useDataBackend } from '../../app/data-backend-context'
 import type { TrainerFinanceOverview, TrainerFinanceOverviewClient } from '../../data/contracts/trainer-finance'
 import { addMonths, formatLocalDateShort, formatMonth, localDate, todayInTimeZone, type LocalDate } from '../../shared/local-date'
-import { BackIcon, ChevronRightIcon, CloseIcon, SearchIcon } from '../../shared/icons'
-import { AsyncView, Page } from '../../shared/ui'
+import { BackIcon, ChevronDownIcon, ChevronRightIcon, CloseIcon, SearchIcon } from '../../shared/icons'
+import { AsyncView, OverflowMenu, Page } from '../../shared/ui'
 
 import { TrainerFinancePayments } from './TrainerFinancePayments'
+import './finance-compact.css'
 
-type FinanceFilter = 'all' | 'due' | 'overdue' | 'low' | 'missing' | 'unassigned' | 'archived'
+type FinanceFilter = 'all' | 'due' | 'overdue' | 'low' | 'missing' | 'unassigned' | 'archived' | 'attention'
+const ATTENTION_FILTER = { id: 'attention' as const, label: 'Требуют внимания' }
 
 const FILTERS: Array<{ id: FinanceFilter; label: string }> = [
   { id: 'all', label: 'Все' },
@@ -52,6 +54,7 @@ export function trainerFinanceClientLabel(client: TrainerFinanceOverviewClient):
 function matchesFilter(client: TrainerFinanceOverviewClient, filter: FinanceFilter) {
   const active = client.archivedAt === null && client.activeClient !== false
   if (filter === 'due') return client.dueCents > 0
+  if (filter === 'attention') return client.needsAttention
   if (filter === 'overdue') return client.overdue
   if (filter === 'unassigned') return client.unassignedSessions > 0
   if (filter === 'archived') return !active
@@ -80,7 +83,7 @@ export function TrainerFinanceOverviewPage() {
   const monthParam = params.get('month')
   const month = selectedMonth(monthParam, todayInTimeZone(actor?.timezone))
   const metric: FinanceMetric = params.get('metric') === 'sessions' ? 'sessions' : 'money'
-  const filter = FILTERS.find((item) => item.id === params.get('filter'))?.id ?? 'all'
+  const filter = isFitLimeEnabled(actor) && params.get('filter') === 'attention' ? 'attention' : FILTERS.find((item) => item.id === params.get('filter'))?.id ?? 'all'
   const search = params.get('q') ?? ''
   const paymentsView = params.get('view') === 'payments'
   const paymentClient = params.get('client') ?? undefined
@@ -161,30 +164,37 @@ export function TrainerFinanceOverviewView({ month, data, lime = false, metric: 
     return (data?.clients ?? []).filter(client => matchesFilter(client, filter)
       && (!name || client.fullName.toLocaleLowerCase('ru').includes(name)))
   }, [filter, search, data?.clients])
-  return <Page title="Финансы" back={back} swipeBack className="finance-overview-page">
+  return <Page title="Финансы" back={back} swipeBack className={`finance-overview-page${lime ? ' finance-compact-page' : ''}`}
+    action={lime ? <div className="finance-compact-period"><OverflowMenu label={`Месяц финансов: ${formatMonth(month)}`}
+      trigger={<span>{formatMonth(month)}<ChevronDownIcon /></span>}
+      items={[{ label: 'Предыдущий месяц', onClick: onPreviousMonth }, { label: 'Следующий месяц', onClick: onNextMonth }]} /></div> : undefined}>
     {navigation}
-    <div className="finance-period-block">
+    {!lime && <div className="finance-period-block">
       <span>{monthly ? 'Месяц' : 'Месяц поступлений'}</span>
       <div className="finance-month-switcher" aria-label="Месяц финансов">
       <button type="button" aria-label="Предыдущий месяц" onClick={onPreviousMonth}><BackIcon /></button>
       <strong>{formatMonth(month)}</strong>
       <button type="button" aria-label="Следующий месяц" onClick={onNextMonth}><ChevronRightIcon /></button>
       </div>
-    </div>
+    </div>}
     {paymentHistory ?? <AsyncView loading={loading} error={error} onRetry={onRetry}>
       {data && <>
-        {monthly && <FinanceMonthlySummary data={data} metric={metric} onMetricChange={onMetricChange ?? setLocalMetric} />}
-        <section className={`finance-overview-summary${monthly ? ' finance-monthly-current-summary' : ''}`} aria-label="Финансовая сводка">
-          {!monthly && <p><span>Получено за месяц</span><strong>{money(data.receivedCents)}</strong></p>}
+        {monthly && <FinanceMonthlySummary data={data} metric={metric} onMetricChange={onMetricChange ?? setLocalMetric} compact />}
+        {monthly ? <section className="finance-compact-current" aria-label="Финансовая сводка">
+          <span>Сейчас</span>
+          <button type="button" onClick={() => setFilter('due')}>К оплате <strong>{financeMoney(data.dueCents)}</strong></button>
+          <button type="button" aria-label={`Требуют внимания сейчас: ${data.attentionCount}`} onClick={() => setFilter('attention')}>Внимание <strong>{data.attentionCount}</strong></button>
+        </section> : <section className="finance-overview-summary" aria-label="Финансовая сводка">
+          <p><span>Получено за месяц</span><strong>{money(data.receivedCents)}</strong></p>
           <p><span>К оплате сейчас</span><strong>{money(data.dueCents)}</strong></p>
           <p><span>Требуют внимания сейчас</span><strong>{data.attentionCount}</strong></p>
-        </section>
+        </section>}
         {monthly && <h2 className="finance-monthly-heading">По спортсменам</h2>}
         {(data.clients.length > 0 || search) && <div className="clients-search finance-overview-search">
           <SearchIcon aria-hidden="true" /><input type="search" aria-label="Поиск клиента" placeholder="Поиск по имени" autoComplete="off" value={search} onChange={event => setSearch(event.target.value)} />
           {search !== '' && <button type="button" className="clients-search-clear" aria-label="Очистить поиск" onClick={() => setSearch('')}><CloseIcon /></button>}
         </div>}
-        <div className="finance-filter-row" role="group" aria-label="Фильтр клиентов">{FILTERS.map((item) => <button key={item.id} type="button" className={filter === item.id ? 'is-active' : ''} aria-pressed={filter === item.id} onClick={() => setFilter(item.id)}>{item.label}</button>)}</div>
+        <div className="finance-filter-row" role="group" aria-label="Фильтр клиентов">{(monthly && filter === 'attention' ? [...FILTERS, ATTENTION_FILTER] : FILTERS).map((item) => <button key={item.id} type="button" className={filter === item.id ? 'is-active' : ''} aria-pressed={filter === item.id} onClick={() => setFilter(item.id)}>{item.label}</button>)}</div>
         <div className="finance-overview-list">{monthly ? clients.map(client => <Link key={client.clientId}
           className="card finance-overview-client finance-monthly-client"
           to={`/clients/${client.clientId}/finance?month=${month.slice(0,7)}&metric=${metric}`} state={{ financeBackTo: returnTo }}>
