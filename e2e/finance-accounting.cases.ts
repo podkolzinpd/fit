@@ -640,7 +640,7 @@ export function financeAccountingCases() {
   for (const [fitLime, theme] of [[false, 'light'], [false, 'dark'], [true, 'light']] as const) {
     test(`Finance receipt layout ${fitLime ? 'Lime' : 'Mono'} ${theme}`, { tag: ['@lime-finance'] }, async ({ page }, info) => {
       await page.addInitScript(value => localStorage.setItem('fit.appTheme', value), theme)
-      await receiptFixture(page, fitLime, 50, fitLime)
+      const { receipts } = await receiptFixture(page, fitLime, 50, fitLime)
       await page.goto('/finance?month=2026-11&view=payments')
       const history = page.getByRole('region', { name: 'История оплат' })
       await expect(history.locator('.finance-payment')).toHaveCount(50)
@@ -688,6 +688,41 @@ export function financeAccountingCases() {
       await form.getByLabel('Комментарий').focus()
       await form.getByRole('button', { name: 'Сохранить', exact: true }).scrollIntoViewIfNeeded()
       await expect(form.getByRole('button', { name: 'Сохранить', exact: true })).toBeInViewport()
+      if (fitLime) {
+        // A failed overview refresh retains cached monthly data. The independent
+        // receipt history must still expose its fresh total without a duplicate.
+        let overviewFails = true
+        let writes = 0
+        await page.route('**/v1/finance/overview*', route => overviewFails
+          ? route.fulfill({ status: 503, json: { error: 'temporarily_unavailable' } }) : route.fallback())
+        await page.route(`**/v1/finance/payments/${clientId}`, route => {
+          const draft = route.request().postDataJSON() as TrainerFinancePaymentUpdate
+          expect(draft).toMatchObject({ amountCents: 500000, expectedVersion: 1 })
+          writes++
+          Object.assign(receipts[0]!, draft, { version: 2 })
+          return route.fulfill({ json: { payment: receipts[0] } })
+        })
+        await page.setViewportSize({ width: 320, height: 844 })
+        await form.getByLabel('Сумма, ₽').fill('5000')
+        await form.getByRole('button', { name: 'Сохранить', exact: true }).click()
+        await expect(form).toHaveCount(0)
+        await expect(page.getByText('Не удалось загрузить данные', { exact: true })).toBeVisible()
+        await expect(history.locator('.finance-receipts-total')).toContainText(/14\s000/)
+        expect(writes).toBe(1)
+        for (const width of [320, 1440]) {
+          await page.setViewportSize({ width, height: 844 })
+          await page.locator('.content').evaluate(node => { node.scrollTop = 0 })
+          await history.locator('.finance-receipts-total').scrollIntoViewIfNeeded()
+          await expect(history.locator('.finance-receipts-total')).toBeInViewport()
+          expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+          await page.screenshot({ path: info.outputPath(`receipt-total-overview-error-${width}.png`), fullPage: true })
+        }
+        overviewFails = false
+        await page.getByRole('button', { name: 'Повторить', exact: true }).click()
+        await expect(page.locator('.finance-monthly [data-finance-monthly-total]')).toContainText(/14\s000/)
+        await expect(history.locator('.finance-receipts-total')).toHaveCount(0)
+        expect(writes).toBe(1)
+      }
     })
   }
 

@@ -2032,3 +2032,30 @@ ancestor собственного HEAD; итог merge имеет НУЛЕВОЙ
 FIN703 tree. Поэтому все upstream и свои изменения сохранены. Diff кmain
 теперь7файлов: palette/map/summary/tests и журнал, без API/SQL/Mono/toolbar
 изменений. Третий PR пока не открыт; ждёт опубликованного/принятого FIN702.
+
+
+FIN-53 — 2026-11-07 — Codex / OpenAI. Дополнительная проверка error-state
+выявила UI-дефект дедупликации FIN702: после successful payment update overview
+refresh получает503, React Query сохраняет прежние monthly data, AsyncView
+скрывает summary при error, но summaryShown смотрел только на наличие данных.
+Из-за этого независимый свежий receipt grand-total тоже был скрыт. Ни потеря
+оплаты, ни ошибка расчёта/DB не обнаружены: исчезал только видимый общий итог.
+Воспроизведено ДО fix: обоим движкам не найден ожидаемый total14000 после
+единственного synthetic update6000→5000 (до него15000;52payments/2pages).
+Сохранены red log/traces. Минимальный fix в пределах третьего FIN703 PR:
+summaryShown означает действительно показанную summary — не loading/error.
+История/её сумма используют прежний fallback; при успешном retry общий monthly
+total снова единственный. Действующие20cases не сокращены/не размножены:
+расширен только Lime layout-case с сохранением всех viewport/form/pagination
+assertions; Mono ветви прежние. Explicit PUT/version1 и writes==1 до/после
+retry проверяют отсутствие повторной оплаты. Backend/SQL/цены/CAS прежние.
+Это необходимая UI-поправка внутри согласованных3PR, не четвёртый пакет.
+Проверка: red2/2 с отсутствующим итогом, затем green2/2 Chromium/WebKit,
+32/32 finance component unit, build/types/startup/scopedlint passed. Полный
+финансовый production browser40/40 passed, retries0,2.5min. После уточнения
+положения снимка отдельный неизменённый business-case2/2 прошёл: ordinary
+scroll показывает fallback total, он доступен и не даёт horizontal overflow
+на320/1440. Обе картинки просмотрены; общий штатный StatePanel не переделан.
+В нём видна прежняя provider copy «Yandex Cloud» — это общая смежная подпись,
+не меняем платформенный error mapper ради компактного финансового пакета.
+Открыто: exact-head CI/публикация третьего этапа; FIN702 mainCI пока в работе.

@@ -120,7 +120,7 @@ export function TrainerFinanceOverviewPage() {
       <button type="button" className={!paymentsView ? 'is-active' : ''} aria-pressed={!paymentsView} onClick={() => changePaymentParam('view', '')}>Клиенты</button>
       <button type="button" className={paymentsView ? 'is-active' : ''} aria-pressed={paymentsView} onClick={() => changePaymentParam('view', 'payments')}>Оплаты</button>
     </div>
-  const summaryShown = lime && query.data?.completedSessions !== undefined && query.data.clients.every(client => client.completedSessions !== undefined)
+  const summaryShown = lime && !query.isLoading && !query.error && query.data?.completedSessions !== undefined && query.data.clients.every(client => client.completedSessions !== undefined)
   return <TrainerFinanceOverviewView month={month} lime={lime} metric={metric} onMetricChange={value => changePaymentParam('metric', value)}
     navigation={navigation}
     paymentHistory={paymentsView ? <TrainerFinancePayments key={lime ? monthValue : `${monthValue}:${paymentClient ?? ''}`} month={monthValue} clientId={paymentClient}
