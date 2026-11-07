@@ -83,7 +83,7 @@ export function MyClientPage() {
   if (query.data) return <TodayPage clientMode />
   return <Page title="Кабинет" className="client-home-page">
     <ConnectionRequests />
-    <Link className="button secondary" to="/connect">Добавить тренера</Link>
+    <Link className="button secondary connection-entry" to="/connect">Добавить тренера</Link>
     <AsyncView loading={query.isLoading} error={query.error} onRetry={() => void query.refetch()}>
       <ClientFirstRunIntro actions={<section className="client-home-self-training primary">
         <section className="quick-start-workout"><div className="quick-start-copy"><h2>Начать тренировку</h2><p>Тренировка начнётся сразу. Упражнения добавите по ходу.</p></div><button type="button" className="quick-start-button" disabled={beginFirstLive.isPending} onClick={() => beginFirstLive.mutate()}>{beginFirstLive.isPending ? 'Начинаем…' : 'Начать тренировку'}</button>{beginFirstLive.error && <p role="alert">Не удалось начать тренировку. Повторите попытку.</p>}</section>

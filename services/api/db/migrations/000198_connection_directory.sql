@@ -1,19 +1,20 @@
 -- Up Migration
 
+-- Reapplication after a rollback preserves connection records and restores routines.
 -- login_sha256 follows the retained discovery-binding contract; it hashes an exact provider email.
-create table app_private.connection_email_bindings (
+create table if not exists app_private.connection_email_bindings (
   subject_sha256 text not null check(subject_sha256 ~ '^[a-f0-9]{64}$'),
   login_sha256 text not null check(login_sha256 ~ '^[a-f0-9]{64}$'),
   observed_at timestamptz not null default now(),
   primary key(subject_sha256,login_sha256)
 );
-create index connection_email_lookup on app_private.connection_email_bindings(login_sha256);
-create table app_private.connection_locators (
+create index if not exists connection_email_lookup on app_private.connection_email_bindings(login_sha256);
+create table if not exists app_private.connection_locators (
   profile_id uuid primary key references public.profiles(id) on delete cascade,
   code text not null unique default upper(substr(replace(gen_random_uuid()::text,'-',''),1,16)),
   updated_at timestamptz not null default now()
 );
-create table app_private.connection_requests (
+create table if not exists app_private.connection_requests (
   id uuid primary key default gen_random_uuid(),
   trainer_id uuid not null references public.trainers(profile_id) on delete cascade,
   athlete_id uuid not null references public.profiles(id) on delete cascade,
@@ -27,15 +28,15 @@ create table app_private.connection_requests (
   check(initiated_by in (trainer_id,athlete_id)),
   check(trainer_id<>athlete_id)
 );
-create unique index connection_request_pending_pair on app_private.connection_requests(trainer_id,athlete_id) where status='pending';
-create table app_private.connection_audit (
+create unique index if not exists connection_request_pending_pair on app_private.connection_requests(trainer_id,athlete_id) where status='pending';
+create table if not exists app_private.connection_audit (
   id bigint generated always as identity primary key,
   actor_id uuid not null references public.profiles(id) on delete cascade,
   request_id uuid references app_private.connection_requests(id) on delete cascade,
   event text not null,
   created_at timestamptz not null default now()
 );
-create table app_private.connection_limits (
+create table if not exists app_private.connection_limits (
   actor_id uuid not null references public.profiles(id) on delete cascade,
   window_start timestamptz not null,
   attempts integer not null,
@@ -51,7 +52,7 @@ revoke all on app_private.connection_email_bindings,app_private.connection_locat
 
 -- Only the server's verified OAuth provider observer calls this function.
 -- A mailbox is a discovery hint and is never an authorization credential.
-create function app_private.observe_connection_emails(p_subject text,p_hashes text[])
+create or replace function app_private.observe_connection_emails(p_subject text,p_hashes text[])
 returns void language plpgsql security definer set search_path='' as $$
 begin
   if p_subject !~ '^[a-f0-9]{64}$' or p_hashes is null or cardinality(p_hashes)>10
@@ -68,17 +69,17 @@ end $$;
 revoke all on function app_private.observe_connection_emails(text,text[]) from public;
 grant execute on function app_private.observe_connection_emails(text,text[]) to fit_api;
 
-create function app_private.clear_connection_emails_on_unlink()
+create or replace function app_private.clear_connection_emails_on_unlink()
 returns trigger language plpgsql security definer set search_path='' as $$
 begin
   delete from app_private.connection_email_bindings where subject_sha256=old.provider_subject_sha256;
   return old;
 end $$;
 revoke all on function app_private.clear_connection_emails_on_unlink() from public,fit_api;
-create trigger clear_connection_emails_on_unlink after delete on app_private.auth_identities
+create or replace trigger clear_connection_emails_on_unlink after delete on app_private.auth_identities
   for each row execute function app_private.clear_connection_emails_on_unlink();
 
-create function app_private.connection_directory(p_action text,p_data jsonb default '{}')
+create or replace function app_private.connection_directory(p_action text,p_data jsonb default '{}')
 returns jsonb language plpgsql security definer set search_path='' as $$
 declare
   actor uuid:=auth.uid();
