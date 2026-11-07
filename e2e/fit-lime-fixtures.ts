@@ -329,6 +329,8 @@ export async function mockPilot(page: Page, options: { role?: 'trainer' | 'clien
           preferences: { scheduleDensity },
         },
       }
+    } else if (url.pathname === '/v1/corporate-personal/access') {
+      body = { allowed: false }
     } else if (url.pathname === '/v1/profile' && route.request().method() === 'PUT') {
       const draft = route.request().postDataJSON() as { scheduleDensity?: 'comfortable' | 'compact' }
       if (draft.scheduleDensity) scheduleDensity = draft.scheduleDensity

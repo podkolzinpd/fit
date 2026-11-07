@@ -1,3 +1,4 @@
+import { CorporatePersonalStatistics } from '../corporate-personal'
 import { CorporateServiceStatistics } from '../corporate-services'
 import { CorporateInvitations } from './Invitations'
 import { useLayoutEffect, useRef, useState } from 'react'
@@ -41,6 +42,7 @@ function AdminWorkspace() {
   const { actor } = useAuth()
   const [params, setParams] = useSearchParams()
   const statisticsTab = params.get('tab') === 'statistics'
+  const personalTab = params.get('kind') === 'personal'
   const officesTab = params.get('tab') === 'offices'
   const invitationsTab = params.get('tab') === 'invitations'
   const query = useQuery({ queryKey: ['corporate-admin-bundle', actor?.userId], queryFn: () => repository.bundle(), retry: false })
@@ -51,7 +53,9 @@ function AdminWorkspace() {
       <button type="button" className="secondary" aria-current={invitationsTab ? 'page' : undefined} onClick={() => setParams({ tab: 'invitations' })}>Приглашения</button>
       <button type="button" className="secondary" aria-current={statisticsTab ? 'page' : undefined} onClick={() => setParams({ tab: 'statistics' })}>Статистика</button>
     </nav>
-    {statisticsTab ? <CorporateServiceStatistics /> : <AsyncView loading={query.isPending} error={query.error} onRetry={() => void query.refetch()}>
+    {statisticsTab ? personalTab
+      ? <CorporatePersonalStatistics switchView={<button className="secondary" type="button" onClick={() => setParams({tab:'statistics'})}>Услуги</button>} />
+      : <CorporateServiceStatistics switchView={<button className="secondary" type="button" onClick={() => setParams({tab:'statistics',kind:'personal'})}>Персональные</button>} /> : <AsyncView loading={query.isPending} error={query.error} onRetry={() => void query.refetch()}>
       {query.data && (officesTab ? <Offices key="offices" data={query.data} /> : invitationsTab ? <CorporateInvitations key="invitations" data={query.data} initialCreate={params.get('create') === '1'} /> : <Trainers key="trainers" data={query.data} onInvite={() => setParams({ tab: 'invitations', create: '1' })} />)}
     </AsyncView>}
   </>

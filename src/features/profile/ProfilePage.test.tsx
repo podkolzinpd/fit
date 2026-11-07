@@ -98,7 +98,7 @@ describe('TrainerProfileSettingsPage', () => {
   it('keeps an unsaved RPE choice on section return and removes the notice after recovery', async () => {
     const user = userEvent.setup()
     render(<TrainerProfileSettingsPage />, { wrapper: wrapper('training') })
-    const blocked = vi.spyOn(window.localStorage, 'setItem').mockImplementation(() => { throw new Error('quota') })
+    const blocked = vi.spyOn(Object.hasOwn(window.localStorage, 'setItem') ? window.localStorage : Object.getPrototypeOf(window.localStorage) as Storage, 'setItem').mockImplementation(() => { throw new Error('quota') })
     await user.click(screen.getByRole('switch', { name: 'Показывать RPE' }))
     expect(screen.getByRole('switch', { name: 'Показывать RPE' })).toBeChecked()
     expect(screen.getAllByText(/Не удалось сохранить на устройстве/)).toHaveLength(1)

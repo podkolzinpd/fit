@@ -19,7 +19,7 @@ describe('existing preferences when device writes fail', () => {
   })
 
   function rejectWrites() {
-    return vi.spyOn(window.localStorage, 'setItem').mockImplementation(() => {
+    return vi.spyOn(Object.hasOwn(window.localStorage, 'setItem') ? window.localStorage : Object.getPrototypeOf(window.localStorage) as Storage, 'setItem').mockImplementation(() => {
       throw new DOMException('Synthetic storage quota', 'QuotaExceededError')
     })
   }

@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react'
 import { useState } from 'react'
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import { useAuth } from '../../app/auth-context'
@@ -10,14 +11,14 @@ import { rangeSearch } from './service-navigation'
 import './services.css'
 
 const labels = { tour: 'Экскурсии', consultation: 'Консультации', instruction: 'Инструктажи', intro: 'Вводные тренировки' }
-export function CorporateServiceStatistics() {
+export function CorporateServiceStatistics({ switchView }: {switchView?:ReactNode} = {}) {
   const { actor } = useAuth()
   const [{ range, revision }, setPeriod] = useState(() => ({ range: servicePeriod(actor!.timezone, 'month'), revision: 0 }))
   const applyRange = (range: ServiceRange) => setPeriod(previous => ({ range, revision: previous.revision + 1 }))
   const [trainer, setTrainer] = useState(''), [office, setOffice] = useState('')
   const query = useQuery({ queryKey: ['corporate-service-statistics', actor!.userId, range, trainer, office], queryFn: () => repository.statistics(range, trainer, office), retry: false, staleTime: 0, placeholderData: keepPreviousData })
   const zone = query.data?.timeZone ?? actor!.timezone
-  return <section className="corporate-admin-workspace corporate-service-statistics ym-hide-content"><div className="corporate-service-heading"><h2>Статистика услуг</h2><button className="secondary" type="button" disabled={query.isFetching} onClick={() => void query.refetch()}>Обновить</button></div>
+  return <section className="corporate-admin-workspace corporate-service-statistics ym-hide-content"><div className="corporate-service-heading"><h2>Статистика услуг</h2><div className="corporate-statistics-actions">{switchView}<button className="secondary" type="button" disabled={query.isFetching} onClick={() => void query.refetch()}>Обновить</button></div></div>
     <p className="corporate-service-note">Источник — записи тренеров об услугах сотрудникам Яндекса. Отменённые услуги исключены.</p>
     <ServiceQuickPeriods range={range} zone={zone} onChange={applyRange} />
     <p className="corporate-service-note" aria-label="Учтённый период">Период: {formatLocalDateShort(localDate(range.from))} — {formatLocalDateShort(addDays(localDate(range.until), -1))} · {zone}</p>
