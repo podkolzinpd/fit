@@ -1780,3 +1780,13 @@ original:2 scroll samples вместо >2, internal retry passed, 293passed/1fla
 кадров не установлена, исходный failure сохранён. Запущен один failed-jobs
 повтор unchanged1215aeaa; assertions/retries/timeouts/CI прежние. Открыто:
 результат этого повтора, приёмка первого выпуска и последующие2PR по очереди.
+
+
+FIN-39 — 2026-11-07 — Codex / OpenAI. FIN702 дополнена проверка реального
+monthly-enabled контура оплат внутри существующего Lime layout-case:
+синтетические поступления15000₽, распределение клиентов, общий summary один,
+повтор global receipt-total отсутствует; native client-фильтр и server pages
+сохраняются. Chromium/WebKit2/2 passed, receipt320 PNG просмотрен. Mono
+fixtures остаются прежними. Это закрывает положительную ветвь новогоAPI;
+отрицательная старая ветвь без monthly полей остаётся в остальных случаях.
+Новых e2e-case/матриц нет. Открыто: выпуск FIN701/702/703 по очереди послеCI.
