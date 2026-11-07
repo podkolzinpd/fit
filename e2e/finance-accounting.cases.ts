@@ -645,7 +645,7 @@ export function financeAccountingCases() {
         totalCents: 0, clients: [{ id: clientId, name: 'Алексей Смирнов' }], payments: [] } } })
     })
     await page.goto(`/finance?view=payments&month=2026-10&client=${clientId}`)
-    await expect(page.getByRole('status', { name: 'Загрузка' })).toBeVisible()
+    await expect(page.getByRole('region', { name: 'История оплат' }).getByRole('status', { name: 'Загрузка' })).toBeVisible()
     await page.screenshot({ path: info.outputPath('receipts-loading.png'), fullPage: true })
     release()
     await expect(page.getByRole('button', { name: 'Повторить', exact: true })).toBeVisible()
@@ -674,7 +674,7 @@ export function financeAccountingCases() {
     } } }))
     await page.goto('/clients')
     await expect(page.locator('.clients-finance-entry')).toHaveCount(0)
-    await expect(await openFinanceSearch(page)).toBeVisible()
+    await expect(page.getByRole('searchbox', { name: 'Поиск клиента' })).toBeVisible()
     await page.getByRole('button', { name: 'Понятно', exact: true }).click()
     for (const width of [320, 430, 1440]) {
       await page.setViewportSize({ width, height: 844 })
@@ -701,7 +701,7 @@ export function financeAccountingCases() {
     }
     await chooseFinanceFilter(page, 'Все')
     await expect(rows).toContainText('Алексей')
-    await search.fill('алексей')
+    await (await openFinanceSearch(page)).fill('алексей')
     await expect(page).toHaveURL(/q=/)
     await expect(rows).toContainText('Алексей')
     const returnUrl = page.url()

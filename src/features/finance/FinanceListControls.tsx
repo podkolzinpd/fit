@@ -34,13 +34,18 @@ export function FinanceFilterSheet<Value extends string>({ label, value, options
 }) {
   const ref = useRef<HTMLDialogElement>(null)
   useEffect(() => {
-    const previous = document.activeElement instanceof HTMLElement ? document.activeElement : null
+    const trigger = document.querySelector<HTMLElement>('.finance-overview-page .finance-list-toolbar [aria-haspopup="dialog"]')
     const pathname = window.location.pathname
-    ref.current?.showModal()
+    const dialog = ref.current
+    dialog?.showModal()
     return () => {
-      if (previous?.isConnected) previous.focus({ preventScroll: true })
-      else requestAnimationFrame(() => {
-        if (window.location.pathname === pathname) document.querySelector<HTMLElement>('.finance-overview-page .finance-list-toolbar [aria-haspopup="dialog"]')?.focus({ preventScroll: true })
+      dialog?.close()
+      // WebKit pointer taps need not focus the trigger. The payment-client
+      // query also remounts it, so resolve the surviving trigger after commit.
+      requestAnimationFrame(() => {
+        if (window.location.pathname !== pathname) return
+        const target = trigger?.isConnected ? trigger : document.querySelector<HTMLElement>('.finance-overview-page .finance-list-toolbar [aria-haspopup="dialog"]')
+        target?.focus({ preventScroll: true })
       })
     }
   }, [])
