@@ -420,3 +420,19 @@ Typecheck, адресный eslint и docs прошли. Рабочие runtimew
 и показ нескольких предупреждений на каждом переключателе. Открыто: полный
 check/build, browser и exact-head CI; PR/слияния/production ещё не выполнены.
 Дальше: проверить P1 и открыть PR, продолжая весь согласованный пакет.
+
+## Итерация 13 — 08.11.2026 — Codex / OpenAI
+
+SET201 runtime9b3280b9 прошёл полный npm run check:347frontendfiles3092tests,
+1623APItests,416условныхDBskips, lint/types/coverage/build и обязательные
+policy/hosting проверки. В приватной сборке Chromium/WebKit прошли6/6 сценариев:
+on/off/reload, обе плотности, failed-write/remount, один status и recovery
+персональных и device-полей. Ошибочный первый fixture задавал1pilotID вместо
+требуемой пары и не открывал режимы; после исправления только fixture прошёл
+полный прогон с прежними assertions/timeouts. Боевые флаги не изменены.
+
+Документация не меняет runtime; новый exact-head CI обязателен после включения
+актуального main. SourcePR и production этого пакета ещё не запускались.
+Очередь проверена: прямое поручение владельца в CPT задаёт2035следующим,
+без наложения release/readback. Пакет SET201–203 готовится независимо от окна.
+Дальше: SET202, SET203, конкретныеPR, CI и последовательный выпуск с приёмкой.
