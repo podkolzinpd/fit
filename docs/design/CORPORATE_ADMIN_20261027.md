@@ -2097,3 +2097,106 @@ afterAll10s; лимиты не менялись, общий локальный D
 Открыто: новый CI2028, выпуск/приёмка2027, затем собственные mainCI/API/web/OTA.
 UI второго этапа готовится в отдельном checkout, новые права пока OFF.
 Дальше: полный новый CI и штатный выпуск в своей очереди; PR2 после приёмкиPR1.
+
+### Итерация 43 нового выпуска — 2026-11-07 — GPT / OpenAI
+
+Задача: подготовить UI второго PR CPT107, пока серверный2028 проходит очередь.
+Расхождения: дополнительный ряд вкладок статистики вытолкнул прежние service
+счётчики за первый экран320px; существующий browser assertion это обнаружил.
+Сделано: независимый положительный server gate в своей активной карточке,
+существующий Switch; серверная дата/версия, pending и stable command retry после
+неизвестного ответа, explicit409 readback, раздельный ключ actor/client и поздний
+ack только своей карточке. Нет optimistic отметки, claimed date или самовыдачи.
+Admin personal statistics использует существующий period control, отдельный
+период/trainer/cursor query; zero отличается от503, ошибка продолжения сохраняет
+строки. Повторный ID при коррекции даты между страницами не дублируется.
+Решение: переключение услуг/персоналок в существующей шапке, без второго ряда
+навигации; старые услуги/default tab сохраняются. Новый corporate PUT bounded15s
+через прежний transport. Общая synthetic fixture default-OFF, не новый rollout.
+Отвергнуто: ослабить прежний viewport assertion, optimistic save, новый command
+после потери ack или вывод клиентских имён/ID в admin detail. Native version,
+прочие pilots/роли/офисы/финансы не менялись; production personal pilot пока OFF.
+Проверка: новые UI/repository15 и transport26 unit passed; duplicate-date test
+сначала воспроизвёл повтор строки и стал green. Первые20browser cases обеих
+движков прошли; утверждённые public webfonts2/2 проверены SHA. Расширенный старый
+browser прогон82pass/8fail сохранил red геометрии прежних счётчиков и timeout
+длинного нового сценария из4viewport; новые viewport cases разделены с теми же
+assertions/лимитом, исправление шапки ждёт итогового прогона. Предварительный
+полный frontend348files/3092tests/coverage83.75/78.84/82.99/88.42 прошёл; общий
+check встретил localhost EPERM, затем отсутствовавшие API dependencies в новом
+checkout. Зависимости установлены строго lockfile, полный check повторяется.
+Целевые74unit параллельно с тяжёлым check получили2прежних5s timeout ServicesPage;
+лимиты/assertions/retries не ослаблялись, нужен последовательный финальный QA.
+Открыто: окончательный root check и production-build104browser, visual/geometry;
+полный текущий sourceCI2028 и публикация/приёмка предшественника2027.
+Дальше: обычный выпуск2028, включение его фактического squash-main в UI checkout,
+окончательная проверка/PR2/выпуск; personal grant только после обоих принятий.
+
+### Итерация 44 нового выпуска — 2026-11-07 — GPT / OpenAI
+
+Задача: завершить локальную приёмку UI перед интеграцией опубликованного PR1.
+Расхождения: single-run root check получил прежний5s timeout сжатия tenant bundle
+при1611 APIpass/413штатных skips. Полный API повторён с maxWorkers2, без изменения
+assertions/лимитов:1612pass/413skip. Это локальная нагрузка; причинный код теста
+не менялся, исходный неуспех не скрыт. Новая схема подтверждена полным clean CI.
+Сделано: переключатель вида статистики помещён в существующую шапку как slot;
+прежние heading/refresh/услуги/default tab сохраняются. Новые viewport cases
+разделены по размеру с теми же44px/overflow/hit-test/действиями; общий лимит30s
+не увеличен. Добавлен реальный переход услуги→персональные→услуги.
+Решение: область нажатия стандартного Switch — вся label58px, её фактическое
+нажатие вне28px input проверяет изменение и server ack. Геометрию контролируем
+по интерактивной области, не по декоративному треку. Отвергнуто: увеличивать
+общие тайм-ауты, менять старые baselines или ослаблять viewport assertion.
+Проверка версии5e233b71: root lint/types, frontend348files/3092tests,
+coverage83.75/78.86/82.99/88.42; infra464/calendar22/hosting196 и остальные root
+policy checks passed. API lint/types, полный1612pass/413skip и API build passed;
+целевые74unit прошли последовательно с maxWorkers2. Production build с verified
+fonts2/2 и startup guard прошёл. В нём104/104 Chromium+WebKit scenarios:
+корпоративная админка/прежние услуги/новые персоналки; обе темы320/390/430/1440,
+сохранение/replay/409/revoke/negative gate, pagination/error/zero/filter/навигация.
+Прежние service counters снова в viewport, соответствующие старые tests green.
+Реальные API/WS закрыты; синтетический сервер разрешает только явные fixtures.
+Снимки просмотрены, включая mark320dark WebKit,390dark Chromium, personal detail
+390light и1440light WebKit. Browser не объявляется физическим телефоном/OAuth.
+Docs budgets/links/archive и diff-check passed. Root check проверен по всем
+частям с честно сохранёнными первыми сбоями окружения/нагрузки из43/44.
+Серверный source c4cc: CI42365674070 полностью35/35success. Предшественник2027:
+mainCI42365428246 attempt2success, API42367892097/web42367892149/OTA42368413515
+success; собственный read-only dualhealth/ready/private401/DNS3/endpoints8
+подтвердил обе API версииbb2835cd. Его пользовательская приёмка ещё выполняется.
+Открыто: штатный merge2028 после фактического принятия предшественника;
+затем полный mainCI/официальные публикации и собственные реальные readbacks.
+Дальше: включить принятый PR1 squash-main в эту UI ветку, проверить итоговый diff,
+создать PR2 и выполнить полный выпуск; personal pilot всё ещё OFF.
+
+### Итерация 45 нового выпуска — 2026-11-07 — GPT / OpenAI
+
+Задача: сохранить реальную общую очередь перед серверным выпуском2028.
+Расхождения: после принятия2027 старший2026 вернулся из draft, прошёл35/35 и
+слит обычным squash в98d2a090. Прежний green2028/c4cc наbb остаётся историческим
+результатом, не финальным гейтом обновлённой основы.
+Сделано: ordinary merge фактического main98d2a090 в собственную API ветку;
+все12 чужих файлов restore/skill/docs сохранены. Прочитаны новые workflow/active
+контракты; migrations/app/UI/пилоты старшим PR не менялись. Собственные канонические
+квитанции43/44 включены побайтно с проверкой полного прежнего prefix; второй
+журнал/переписывание истории не создавались. UI код остаётся отдельной веткой.
+Решение: sourceCI обновлённого API head идёт независимо параллельно mainCI и
+публикации2026; собственный merge только после его фактической приёмки/закрытия
+private read-only операции. Далее очередь2028→finance2029/2030; место UI PR2
+сверяется по факту. Исходящих сообщений координаторам не было.
+Отвергнуто: обогнать старший активный PR, force/admin/bypass или повторять c4ccCI
+вместо проверки новой основы. Схема197 и собственный runtime не менялись.
+Проверка: c4ccCI42365674070 fully35/35;2027 принят владельцем42web+42signedZIP,
+независимо подтверждены213/213public size+SHA, обе RSA/official artifact match,
+ABI8922d2e9/native9, dualAPIbb/DNS3/8checks. Подготовлен безопасный static
+acceptance harness: exact web/ZIP по213files без rebuild, глобальный deny реальных
+API/WS/внешней сети и API alias только в synthetic fetch fixture. Первое неверное
+сопоставление production /api prefix не засчитано; исправленный harness прошёл
+2/2web+2/2exactOTA Chromium/WebKit smoke. Product bundles не изменялись.
+Docs/diff/migration guards и целевые неизменённые personal API/operator повторяются
+на новой основе; итоговый новый sourceCI обязателен. Текущий2026 production ещё
+не принят; личные отметки/допуск/data в production по-прежнему не менялись.
+Открыто:2026 mainCI/официальные публикации/операционное закрытие и фактическая
+приёмка; новый2028 CI, затем обычный squash/mainCI/официальный выпуск/readbacks.
+Дальше: после приёмки PR1 включить его опубликованный squash-main в UI ветку,
+финальный diff/CI/PR2 и выпуск, затем один закрытый personal grant/inspect.
