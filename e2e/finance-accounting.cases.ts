@@ -16,6 +16,50 @@ async function changeFinanceMetric(page: Page, label: 'Поступления' |
   await page.getByRole('button', { name: /^Показатель итогов:/ }).click()
   await page.getByRole('menuitem', { name: label, exact: true }).click()
 }
+async function openFinanceSearch(page: Page) {
+  const search = page.getByRole('searchbox', { name: 'Поиск клиента' })
+  if (!await search.isVisible()) await page.getByRole('button', { name: 'Открыть поиск клиента' }).click()
+  return search
+}
+async function clearFinanceSearch(page: Page) {
+  const close = page.getByRole('button', { name: 'Закрыть поиск', exact: true })
+  if (await close.count()) await close.click()
+  else await page.getByRole('button', { name: 'Очистить поиск', exact: true }).click()
+}
+async function chooseFinanceFilter(page: Page, label: string) {
+  const direct = page.getByRole('button', { name: label, exact: true })
+  if (await direct.count()) return direct.click()
+  await page.getByRole('button', { name: /^Фильтровать/ }).click()
+  await page.getByRole('dialog', { name: 'Фильтр клиентов', exact: true }).getByRole('radio', { name: label, exact: true }).click()
+}
+async function chooseReceiptClient(page: Page, id: string) {
+  const select = page.getByLabel('Клиент оплат')
+  if (await select.count()) return select.selectOption(id)
+  await page.getByRole('button', { name: /^Фильтровать/ }).click()
+  await page.getByRole('dialog', { name: 'Фильтр оплат по клиенту' }).locator(`input[value="${id}"]`).click()
+  await expect(page.getByRole('button', { name: /^Фильтровать/ })).toBeFocused()
+}
+async function receiptFilterGeometry(page: Page) {
+  const select = page.getByLabel('Клиент оплат')
+  if (await select.count()) {
+    expect((await select.boundingBox())!.height).toBeGreaterThanOrEqual(44)
+    expect(await select.evaluate(node => getComputedStyle(node).fontSize)).toBe('16px')
+    return
+  }
+  await page.getByRole('button', { name: /^Фильтровать/ }).click()
+  const sheet = page.getByRole('dialog', { name: 'Фильтр оплат по клиенту' })
+  expect(await sheet.evaluate(node => { const r = node.getBoundingClientRect(); return r.left >= 8 && r.right <= innerWidth - 8 && r.top >= 8 && r.bottom <= innerHeight - 7 && node.scrollWidth <= node.clientWidth })).toBe(true)
+  expect(await sheet.locator('fieldset label').evaluateAll(nodes => nodes.every(node => { const r = node.getBoundingClientRect(); return r.height >= 44 && r.width >= 44 && parseFloat(getComputedStyle(node).fontSize) >= 14 }))).toBe(true)
+  await sheet.getByRole('button', { name: 'Закрыть фильтры' }).click()
+}
+async function expectReceiptClient(page: Page, id: string) {
+  const select = page.getByLabel('Клиент оплат')
+  if (await select.count()) await expect(select).toHaveValue(id)
+  else {
+    expect(new URL(page.url()).searchParams.get('client')).toBe(id)
+    await expect(page.getByRole('button', { name: 'Сбросить фильтр оплат' })).toBeVisible()
+  }
+}
 async function accountingFixture(page: Page, fitLime = true, workouts?: MockWorkout[]) {
   await page.clock.setFixedTime(new Date('2026-11-03T09:00:00Z'))
   await mockPilot(page, { profileId: coach, fitLime, ...(workouts ? { workouts } : {}) })
@@ -215,11 +259,12 @@ export function financeAccountingCases() {
     await page.getByRole('button',{name:'Требуют внимания сейчас: 1'}).click()
     await expect(page.locator('.finance-monthly-client')).toHaveCount(1)
     await expect(total).toContainText(/2\s800,28/)
-    await page.getByRole('button',{name:'Все',exact:true}).click()
+    await chooseFinanceFilter(page, 'Все')
     for(const width of [320,390,430,1440]){
       await page.setViewportSize({width,height:844})
       expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true)
       expect(await page.locator('.finance-monthly-name').evaluateAll(nodes=>nodes.every(node=>getComputedStyle(node).fontFamily.includes('YS Geo')))).toBe(true)
+      expect(await page.locator('.finance-overview-list').evaluate(node => node.getBoundingClientRect().top - node.closest('main')!.getBoundingClientRect().top)).toBeLessThanOrEqual(390)
       expect(await page.locator('.finance-monthly-card').evaluate(node=>{
         const ring=node.querySelector('.finance-monthly-ring')!.getBoundingClientRect()
         const figures=node.querySelector('.finance-monthly-figures')!.getBoundingClientRect()
@@ -243,13 +288,13 @@ export function financeAccountingCases() {
     await changeFinanceMetric(page, 'Тренировки')
     await expect(total).toHaveText('28')
     await expect(page.locator('.finance-monthly-value').first()).toHaveText('1')
-    const search=page.getByRole('searchbox',{name:'Поиск клиента'})
+    const search=await openFinanceSearch(page)
     await search.fill('Александра')
     await expect(page.locator('.finance-monthly-client')).toHaveCount(1)
     await expect(total).toHaveText('28')
     await expect(page.locator('.finance-monthly-client')).toHaveAttribute('href',`/clients/${clientId}/finance?month=2026-11&metric=sessions`)
-    await page.getByRole('button',{name:'Очистить поиск'}).click()
-    await page.getByRole('button',{name:'Архив',exact:true}).click()
+    await clearFinanceSearch(page)
+    await chooseFinanceFilter(page, 'Архив')
     await expect(page.locator('.finance-monthly-client')).toHaveCount(1)
     await expect(page.locator('.finance-monthly-client')).toContainText('Спортсмен 6')
     await expect(total).toHaveText('28')
@@ -497,19 +542,17 @@ export function financeAccountingCases() {
     for (const width of [320, 430, 1440]) {
       await page.setViewportSize({ width, height: 844 })
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
-      const select = await page.getByLabel('Клиент оплат').boundingBox()
-      expect(select!.height).toBeGreaterThanOrEqual(44)
-      expect(await page.getByLabel('Клиент оплат').evaluate(node => getComputedStyle(node).fontSize)).toBe('16px')
+      await receiptFilterGeometry(page)
       await page.screenshot({ path: info.outputPath(`receipts-all-${width}.png`), fullPage: true })
     }
-    await page.getByLabel('Клиент оплат').selectOption(clientId)
+    await chooseReceiptClient(page, clientId)
     await expect(history.locator('.finance-payment')).toHaveCount(1)
     const returnUrl = page.url()
     await history.getByRole('link', { name }).click()
     await expect(page.locator('.page-title-group')).toContainText(name)
     await page.getByRole('button', { name: 'Назад', exact: true }).click()
     await expect(page).toHaveURL(returnUrl)
-    await expect(page.getByLabel('Клиент оплат')).toHaveValue(clientId)
+    await expectReceiptClient(page, clientId)
     await history.getByRole('button', { name: /Действия с оплатой/ }).click()
     await page.getByRole('menuitem', { name: 'Изменить' }).click()
     await page.getByLabel('Сумма, ₽').fill('5000')
@@ -521,7 +564,7 @@ export function financeAccountingCases() {
     await page.getByRole('button', { name: 'Сохранить', exact: true }).click()
     await expect(page.locator('.finance-form')).toHaveCount(0)
     await expect(history.locator('.finance-receipts-total')).toContainText(/5\s000/)
-    await page.getByLabel('Клиент оплат').selectOption('')
+    await chooseReceiptClient(page, '')
     await expect(history.locator('.finance-receipts-total')).toContainText(/9\s000/)
     await history.getByRole('button', { name: /Действия с оплатой Дарья/ }).click()
     await page.getByRole('menuitem', { name: 'Удалить' }).click()
@@ -550,7 +593,7 @@ export function financeAccountingCases() {
       for (const width of [320, 430, 1440]) {
         await page.setViewportSize({ width, height: 844 })
         expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
-        expect((await page.getByLabel('Клиент оплат').boundingBox())!.height).toBeGreaterThanOrEqual(44)
+        await receiptFilterGeometry(page)
         await page.screenshot({ path: info.outputPath(`receipt-ledger-${width}.png`), fullPage: true })
       }
       const pagination = page.getByLabel('Страницы оплат')
@@ -612,7 +655,7 @@ export function financeAccountingCases() {
     }
     await page.getByRole('button', { name: 'Повторить', exact: true }).click()
     await expect(page.getByText('Оплат за этот месяц нет.')).toBeVisible()
-    await expect(page.getByLabel('Клиент оплат')).toHaveValue(clientId)
+    await expectReceiptClient(page, clientId)
     await expect(page.getByText('Октябрь 2026')).toBeVisible()
   })
 
@@ -631,7 +674,7 @@ export function financeAccountingCases() {
     } } }))
     await page.goto('/clients')
     await expect(page.locator('.clients-finance-entry')).toHaveCount(0)
-    await expect(page.getByRole('searchbox', { name: 'Поиск клиента' })).toBeVisible()
+    await expect(await openFinanceSearch(page)).toBeVisible()
     await page.getByRole('button', { name: 'Понятно', exact: true }).click()
     for (const width of [320, 430, 1440]) {
       await page.setViewportSize({ width, height: 844 })
@@ -642,12 +685,12 @@ export function financeAccountingCases() {
     const rows = page.locator('.finance-overview-client')
     await expect(rows).toHaveCount(1)
     await expect(rows).toContainText('Алексей')
-    const search = page.getByRole('searchbox', { name: 'Поиск клиента' })
+    const search = await openFinanceSearch(page)
     await search.fill('никого')
     await expect(page.getByText('Ничего не найдено.')).toBeVisible()
     await page.screenshot({ path: info.outputPath('finance-empty-search.png'), fullPage: true })
-    await page.getByRole('button', { name: 'Очистить поиск' }).click()
-    await page.getByRole('button', { name: 'Архив', exact: true }).click()
+    await clearFinanceSearch(page)
+    await chooseFinanceFilter(page, 'Архив')
     await expect(rows).toHaveCount(1)
     await expect(rows).toContainText('Дарья Иванова')
     await expect(rows).toContainText('В архиве')
@@ -656,7 +699,7 @@ export function financeAccountingCases() {
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
       await page.screenshot({ path: info.outputPath(`finance-archive-${width}.png`), fullPage: true })
     }
-    await page.getByRole('button', { name: 'Все', exact: true }).click()
+    await chooseFinanceFilter(page, 'Все')
     await expect(rows).toContainText('Алексей')
     await search.fill('алексей')
     await expect(page).toHaveURL(/q=/)
