@@ -57,6 +57,13 @@ export function TrainerFinancePayments({ month, clientId, offset, returnTo, onCl
       if (editor?.id === receipt.id) setEditor(null)
     },
   })
+  const chooseClient = (id: string) => {
+    if (save.isPending || remove.isPending) return
+    setEditor(null)
+    save.reset()
+    remove.reset()
+    onClientChange(id)
+  }
   const data = history.data
   const formatMoney = compact ? financeMoney : money
   const clientOptions = [{ id: '', label: 'Все клиенты' },
@@ -67,9 +74,9 @@ export function TrainerFinancePayments({ month, clientId, offset, returnTo, onCl
     {confirmation}
     {compact && <>
       <FinanceListToolbar navigation={navigation} onFilter={() => setFiltersOpen(true)} filterOpen={filtersOpen} filtered={Boolean(clientId)} disabled={save.isPending || remove.isPending} />
-      {clientId && <div className="finance-active-filter"><button type="button" disabled={save.isPending || remove.isPending} aria-label="Сбросить фильтр оплат" onClick={() => { setEditor(null); onClientChange('') }}>{selectedName}<CloseIcon /></button></div>}
+      {clientId && <div className="finance-active-filter"><button type="button" disabled={save.isPending || remove.isPending} aria-label="Сбросить фильтр оплат" onClick={() => chooseClient('')}>{selectedName}<CloseIcon /></button></div>}
       {filtersOpen && <FinanceFilterSheet label="Фильтр оплат по клиенту" value={clientId ?? ''} options={clientOptions}
-        onChange={id => { setEditor(null); onClientChange(id) }} onClose={() => setFiltersOpen(false)} />}
+        onChange={chooseClient} onClose={() => setFiltersOpen(false)} />}
     </>}
     {editor && <div ref={editorRef}><PaymentForm lime={isFitLimeEnabled(actor)} key={editor.id} current={editor} packageId={editor.packageId}
       today={editor.receivedOn} saving={save.isPending} error={save.error}

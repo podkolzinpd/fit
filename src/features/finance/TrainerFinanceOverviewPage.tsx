@@ -123,7 +123,7 @@ export function TrainerFinanceOverviewPage() {
   const summaryShown = lime && query.data?.completedSessions !== undefined && query.data.clients.every(client => client.completedSessions !== undefined)
   return <TrainerFinanceOverviewView month={month} lime={lime} metric={metric} onMetricChange={value => changePaymentParam('metric', value)}
     navigation={navigation}
-    paymentHistory={paymentsView ? <TrainerFinancePayments key={`${monthValue}:${paymentClient ?? ''}`} month={monthValue} clientId={paymentClient}
+    paymentHistory={paymentsView ? <TrainerFinancePayments key={lime ? monthValue : `${monthValue}:${paymentClient ?? ''}`} month={monthValue} clientId={paymentClient}
       compact={lime} summaryShown={summaryShown} navigation={lime ? navigation : undefined}
       offset={offset} returnTo={`${location.pathname}${location.search}`}
       onClientChange={value => changePaymentParam('client', value)}

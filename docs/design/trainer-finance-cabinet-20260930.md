@@ -1806,3 +1806,22 @@ FIN702 включила bb2835cd обычным merge. Проверено рав
 относятся к той же tree. Source второго PR запускается на новой ancestor-main
 основе; его публикация только после принятия FIN701 и старшего2028.
 Открыто: mainCI/официальная публикация/приёмка FIN701, далее FIN702/703.
+
+
+FIN-44 — 2026-11-07 — Codex / OpenAI. FIN702 sourceCI42365639106 выявил
+в Chromiumvisual1/4 повторяемую потерю фокуса при выборе клиента:3attempts
+на inactive trigger, остальные155case этой части passed. CI не rerun.
+В режиме dev/StrictMode локальный исходный сценарий воспроизвёл тот же сбой
+WebKit1failed/Chromium1passed; предыдущий production preview40/40 не заменяет
+эту проверку. Причина: clientId входил в key всего журнала и пересоздавал
+саму кнопку возвращения. Lime теперь сохраняет экземпляр журнала в пределах
+месяца; queryKey поclientId прежний. Mono сохраняет прежний month:client key.
+Выбор/сброс client-filter очищает editor/errors только в Lime и запрещён при
+pending. Сами update/void/versions/invalidation не изменены. Расширен тот же
+receipt-case: draft1234 сбрасывается при смене фильтра, до финального Save
+финансовых команд нет; исходный update по-прежнему ожидает5000/version1.
+Dev повтор6/6 Chromium/WebKit, retries0, passed. Targeted21/types/scopedlint
+passed. Финальная production build/browser проверяется отдельно, UI-геометрия
+не меняется. Открыто: новый exact-head sourceCI, приёмка FIN701 и старшего2028,
+затем FIN702/703. API/web FIN701 штатно SUCCESS; OTA42368413515 начался,
+public/verifiedZIP приёмка ещё впереди. Физического телефона нет.
