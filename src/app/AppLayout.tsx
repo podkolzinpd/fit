@@ -126,7 +126,12 @@ export function AppLayout() {
       : pathname === '/clients/archive' ? 'fit.clientsArchiveListScroll' : null
     if (clientsScrollKey && window.sessionStorage?.getItem(clientsScrollKey)) return
     if (retainedScrollKey) return
-    const frame = window.requestAnimationFrame(() => contentRef.current?.scrollTo(0, 0))
+    const frame = window.requestAnimationFrame(() => {
+      // Feedback can focus its field as the settings section mounts. Do not
+      // fight the browser's keyboard reveal with a later scroll-to-top.
+      if (trainerSettingsSection && document.activeElement?.matches('input, textarea, select, [contenteditable="true"]')) return
+      contentRef.current?.scrollTo(0, 0)
+    })
     return () => window.cancelAnimationFrame(frame)
   }, [pathname, routeStep, retainedScrollKey, trainerSettingsSection])
 
