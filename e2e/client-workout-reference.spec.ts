@@ -1,3 +1,4 @@
+import { limeLiveConfirmSkinCases } from './lime-live-confirm-skin.cases'
 import { writeFile } from 'node:fs/promises'
 import { z } from 'zod'
 import { expect, test, type Page } from '@playwright/test'
@@ -16,6 +17,7 @@ limeLiveCardShellCases()
 limeLiveSetSkinCases()
 limeLiveTimerSkinCases()
 limeLiveDurationSkinCases()
+limeLiveConfirmSkinCases()
 
 const pilotId = 'c11e0000-6010-4000-8000-000000000001'
 

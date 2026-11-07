@@ -6953,3 +6953,119 @@ assertions/timeouts/retries и изменения baseline для сокрыти
 проверка с изолированным API не заменяет публикацию или телефон. Никаких push,
 PR, merge/deploy этим исполнителем; PR после готового результата оформляет
 основной агент. После MC4.3 остановиться с отчётом, следующие MC не начинать.
+
+
+### Локальный результат MC4.3 на свежем main — GPT-6.1-sol / OpenAI
+
+Изменение runtime ограничено src/styles.css и src/styles/workout-live-reference.css.
+Перенесён paint 12 семейств: 4 общих, 3 Live Identity, 5 UI Identity.
+Добавлены ровно 7 scoped rules / 16 declarations финального MC4.3.3, включая
+два нужных ранних свойства border и box-shadow. Девять доказанно мёртвых
+ранних copies из наивного переноса не возвращены. Финальные paint rules
+семантически идентичны проверенному c5fe5ea6; ни одного .finish-confirm или
+другого MC4.4/MC5 runtime изменения нет. Общие layout/backdrop-filter остаются,
+combined .ui-identity .sheet-overlay background сохранён. Сильные принятые
+Lime темы/danger/focus по-прежнему владеют своим видом. Шрифты, глобальные
+токены и прочие потребители не объявлены очищенными.
+
+Source proof: 25 714/25 714 старых declaration records сохранены после
+нормализации только 12 новых guards; порядок по каждому свойству неизменен.
+Shared UI SHA256 d312ac95b1c3d5f415806791de92dfddb0a2765c5ce96ec926d9321da703648a,
+WorkoutsPages SHA256 26c3f3b8724bfad2c313ee59fc5f795bed434b2f5e051776ca8aa792b341957a:
+оба файла побайтно равны исходному main 98d2a090. CI/флаги/DOM/handlers/данные
+не менялись. Проверки runtime-proof и независимый parent AST согласуются.
+
+QA helper использует реальные CSSRule refs и selector-only ablation. Original
+CSSStyleDeclaration не меняются даже при var()-shorthand; mixed-rule neutral
+clones содержат только прежние functional declarations и удаляются по refs.
+Временная anchor stylesheet применяется только внутри artificial probe;
+полный CSSOM, original cssText, inline value/priority/отсутствие атрибута,
+computed styles и геометрия строго восстанавливаются. Непустой capture,
+12 legacy classifier stems, отсутствие положительных modern owners в ablation
+и все четыре стороны рамки проверены. Classifier proof отдельно подтвердил
+12 exclusion normalizations и сохранность 5 положительных owner selectors.
+Нет ослабления assertions/timeouts/retries; маленькая syntax-ошибка временного
+standalone proof исправлена до запуска браузеров и не считается UI red/green.
+
+Новая production baseline на 98d2a090: 18 ожидаемых modern ownership red и
+4 legacy positive pass; все 22 JSON дошли до строгого round-trip, diagnostics 0.
+Первый candidate — 22/22, 22,6 с. После parent review добавлено промежуточное
+ожидание фокуса «Отмена» между Shift-Tab/Option-Shift-Tab и обратным Tab:
+no-op двух клавиш теперь не может дать ложный pass. Естественный initial
+confirm autofocus проверяется отдельно. После этого окончательный прогон —
+70/70 Chromium/WebKit, 2,2 мин, retry 0, skip 0, на финальном production build.
+Это новый exact-source результат; старые 52/40 из §§163/166 не приписываются ему.
+
+Состав 70: 22 ownership, 4 адресных non-Live controls, 44 существующих cases.
+Последние включают replacement до/после начала, cancel/error/retry и сохранность
+запроса; swipe set/delete/cancel и конфликт; atomic removal последнего пустого
+круга; trainer adjacent-superset merge/split; row/exercise swipe отдельно от
+редактирования и drag; planner isolation; measurement delete recovery;
+actual-duration correction обеих ролей; текущие V79 catalog/rest/RPE sheets.
+Сохранность фактов, таймера/отдыха, версий и cancel/retry проверяется исходными
+assertions этих сценариев. Никаких изменений тестируемых механик ради результата.
+
+Финальное сравнение: 22/22 computed properties/geometry/frame exact и 18/18 PNG
+byte-exact относительно новой baseline. Все 22 CSSOM/anchor round-trips точны,
+positive-owner selection 0, diagnostics 0. Клиентские light/dark, Original/
+Compact, narrow 375 и trainer desktop 1440 включены. Исполнитель просмотрел
+WebKit client light Original 390 и trainer dark Compact 430, parent дополнительно
+trainer dark Compact 375; замечаний к виду не найдено. Браузер не заменяет телефон.
+
+Четыре отдельных non-Live positive controls используют настоящий native
+WorkoutActualDuration в done detail: client light 390, trainer dark 1440,
+оба движка. В обеих современных Lime оболочках нет V79 descendant, поэтому
+три старых modal paint семьи обязаны остаться применимыми. Проверены естественный
+input autofocus, реальный Tab/Shift-Tab, ввод, Escape/cancel/reopen, focus return,
+raw scroll и сохранность фактов/version/duration без запросов записи.
+Baseline/candidate все captured data и 4/4 PNG exact, diagnostics 0. Это осознанный
+временный guard-contract: когда отдельно разрешённый MC5.1 переведёт именно
+этот consumer, его нужно заменить обоснованным owner proof или другим ещё
+legacy consumer, не просто ослабить ожидание трёх matches.
+
+QA mode limitation сохранён явно. Первый broad related запуск — 42/46,
+а не green: четыре старых Figma compact catalog/rest cases ожидали settled
+geometry, но запускались в V79 build. Untouched baseline повторил те же четыре
+failures. Actual DOM: create-floating находится в нижнем create-bar, не header.
+Raw измерение шло во время running coach-v79-dimmer-in 0.42s и открытия sheet;
+при viewport 320×430 plus.bottom был 590/641. После реального animation.finished
+plus.bottom=414 и тот же geometry predicate true. В baseline/candidate settled
+DOM/rect/styles exact в обоих движках; timeline currentTime не подменяет геометрию.
+Это не исправленный product bug и не новая регрессия MC4.3. Никаких product
+scroll/animation правок или изменений исходного assert не было.
+
+В соответствующем old-reference build (только тестовый V79=false) исходные
+4 baseline и 4 candidate cases passed; все 12 PNG exact. Временная instrumentation
+исходного spec записала только raw/settled geometry и полностью удалена:
+trainer-schedule-v2.visual.spec.ts побайтно равен main. Для финального V7970
+выбраны его действующие catalog/rest/RPE cases. Старый 42/46 не скрыт и не
+пересчитан как 46 green. Квалификация не переносится на другие независимые ошибки.
+
+Финальный production build/types/startup/fonts прошёл; dependencies reused
+только после byte-identical package-lock, два private WOFF2 проверены 2/2 и
+не коммитятся. Полный repository lint и policy guard 8/8 прошли последовательно
+после браузеров. Полный unit coverage — 345/345 файлов, 3 076/3 076 тестов, exit 0,
+332,19 с при maxWorkers=2. Statements 83,70%, branches 78,81%, functions
+82,97%, lines 88,38%; браузеры и coverage не исполнялись одновременно. Working-tree policy дал frontendRequired
+и browserRequired=true; source CI/Android после PR остаются отдельными gates.
+
+Артефакты: /tmp/fit-mc43-release-final-browser.log и -final-selection.log;
+/tmp/fit-mc43-release-baseline-results, -final-results, -final-comparison.json,
+-final-nonlive-comparison.json, -source-proof.json, -runtime-proof.json,
+-classifier-proof.json, -final-build.log, -lint.log, -policy.log, -coverage.log.
+История квалификации: -related-browser.log (42/46), -catalog-baseline-v79.log,
+-catalog-baseline-old.log, -catalog-candidate-old.log,
+-catalog-baseline-settlement-results, -catalog-candidate-settlement-results,
+-catalog-mode-comparison.json, -catalog-old-reference-comparison.json.
+Независимый parent review: /tmp/fit-mc43-root-source-proof.json и
+/tmp/fit-mc43-root-comparison.json. Это локальные подтверждения, не публикация.
+
+Во время проверок main обновился до c5c65706 (#2028): по независимой сверке
+основного агента только server/admin/docs, frontend byte-identical. По его
+указанию текущий коммит завершается на исходной базе 98d2a090; свежий main
+он включит обычным merge перед PR и выполнит exact-source CI. Исполнитель
+cleanup не переключал и не сливал чужие изменения. Физический iPhone/OAuth/
+native install не проверены. Новых app ошибок в проверенных состояниях не найдено;
+исходный public cold-load limitation #2023 сохранён в §178, здесь не проверялся.
+После готового коммита — сводка владельцу и отдельное разрешение MC-RELEASE-01.
+Никаких push/PR/merge/deploy, никакого перехода к следующему MC в этом поручении.
