@@ -1,4 +1,4 @@
-import { useEffect, useRef, type ReactNode } from 'react'
+import { useLayoutEffect, useRef, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { coachWorkoutReferenceAssets } from '../../shared/coach-workout-reference-assets'
 import { CloseIcon, SearchIcon } from '../../shared/icons'
@@ -33,12 +33,14 @@ export function FinanceFilterSheet<Value extends string>({ label, value, options
   onClose: () => void
 }) {
   const ref = useRef<HTMLDialogElement>(null)
-  useEffect(() => {
+  useLayoutEffect(() => {
     const trigger = document.querySelector<HTMLElement>('.finance-overview-page .finance-list-toolbar [aria-haspopup="dialog"]')
     const pathname = window.location.pathname
     const dialog = ref.current
     dialog?.showModal()
     return () => {
+      // Close while the dialog is still connected, before native removal can
+      // schedule a second focus restoration to its obsolete trigger.
       dialog?.close()
       // WebKit pointer taps need not focus the trigger. The payment-client
       // query also remounts it, so resolve the surviving trigger after commit.

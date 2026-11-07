@@ -274,6 +274,7 @@ export function financeAccountingCases() {
     await chooseFinanceFilter(page, 'Все')
     for(const width of [320,390,430,1440]){
       await page.setViewportSize({width,height:844})
+      await page.locator('.content').evaluate(node => { node.scrollTop = 0 })
       expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true)
       expect(await page.locator('.finance-monthly-name').evaluateAll(nodes=>nodes.every(node=>getComputedStyle(node).fontFamily.includes('YS Geo')))).toBe(true)
       expect(await page.locator('.finance-overview-list').evaluate(node => node.getBoundingClientRect().top - node.closest('main')!.getBoundingClientRect().top)).toBeLessThanOrEqual(390)
@@ -292,6 +293,15 @@ export function financeAccountingCases() {
         return !!first && !!last && Math.abs(first.y-last.y)<=1 && first.height>=44 && last.height>=44
       })).toBe(true)
       await page.screenshot({path:info.outputPath(`monthly-money-${width}.png`),fullPage:true})
+      const filterButton = page.getByRole('button', { name: /^Фильтровать/ })
+      await filterButton.click()
+      const filters = page.getByRole('dialog', { name: 'Фильтр клиентов', exact: true })
+      expect(await filters.evaluate(node => { const r = node.getBoundingClientRect(); return r.left >= 8 && r.right <= innerWidth - 8 && r.top >= 8 && r.bottom <= innerHeight - 7 && node.scrollWidth <= node.clientWidth })).toBe(true)
+      expect(await filters.locator('fieldset label').evaluateAll(nodes => nodes.every(node => node.getBoundingClientRect().height >= 44))).toBe(true)
+      await page.screenshot({path:info.outputPath(`monthly-filters-${width}.png`),fullPage:true})
+      await page.keyboard.press('Escape')
+      await expect(filters).toHaveCount(0)
+      await expect(filterButton).toBeFocused()
       const last = page.locator('.finance-monthly-client').last()
       await last.scrollIntoViewIfNeeded()
       expect(await last.evaluate(node=>{const r=node.getBoundingClientRect();return document.elementFromPoint(r.x+r.width/2,r.y+r.height/2)?.closest('a')===node})).toBe(true)
