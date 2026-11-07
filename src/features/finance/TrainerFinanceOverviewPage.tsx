@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
-import { useMemo, useState, type ReactNode } from 'react'
+import { useMemo, useRef, useState, type ReactNode } from 'react'
 import { Link, useLocation, useSearchParams } from 'react-router-dom'
 import { isFitLimeEnabled } from '../../app/fit-lime'
 import { FinanceMonthlySummary } from './FinanceMonthlySummary'
@@ -15,6 +15,7 @@ import { AsyncView, OverflowMenu, Page } from '../../shared/ui'
 
 import { TrainerFinancePayments } from './TrainerFinancePayments'
 import './finance-compact.css'
+import { FinanceFilterSheet, FinanceListToolbar } from './FinanceListControls'
 
 type FinanceFilter = 'all' | 'due' | 'overdue' | 'low' | 'missing' | 'unassigned' | 'archived' | 'attention'
 const ATTENTION_FILTER = { id: 'attention' as const, label: 'Требуют внимания' }
@@ -78,12 +79,13 @@ function selectedMonth(value: string | null, today: LocalDate): LocalDate {
 export function TrainerFinanceOverviewPage() {
   const { actor } = useAuth()
   const { trainerFinance } = useDataBackend()
+  const lime = isFitLimeEnabled(actor)
   const [params, setParams] = useSearchParams()
   const location = useLocation()
   const monthParam = params.get('month')
   const month = selectedMonth(monthParam, todayInTimeZone(actor?.timezone))
   const metric: FinanceMetric = params.get('metric') === 'sessions' ? 'sessions' : 'money'
-  const filter = isFitLimeEnabled(actor) && params.get('filter') === 'attention' ? 'attention' : FILTERS.find((item) => item.id === params.get('filter'))?.id ?? 'all'
+  const filter = lime && params.get('filter') === 'attention' ? 'attention' : FILTERS.find((item) => item.id === params.get('filter'))?.id ?? 'all'
   const search = params.get('q') ?? ''
   const paymentsView = params.get('view') === 'payments'
   const paymentClient = params.get('client') ?? undefined
@@ -100,9 +102,10 @@ export function TrainerFinanceOverviewPage() {
     if (value) next.set('q', value); else next.delete('q')
     setParams(next, { replace: true })
   }
-  const change = (nextMonth: LocalDate, nextFilter: FinanceFilter) => {
+  const change = (nextMonth: LocalDate, nextFilter: FinanceFilter, clientsView = false) => {
     const next = new URLSearchParams(params)
     next.set('month', nextMonth.slice(0, 7))
+    if (clientsView) next.delete('view')
     next.delete('offset')
     if (nextFilter === 'all') next.delete('filter'); else next.set('filter', nextFilter)
     setParams(next, { replace: true })
@@ -111,19 +114,22 @@ export function TrainerFinanceOverviewPage() {
   const query = useQuery({
     queryKey: ['trainer-finance-overview', monthValue],
     queryFn: () => trainerFinance.listOverview(monthValue),
-    enabled: !paymentsView,
+    enabled: !paymentsView || lime,
   })
-  return <TrainerFinanceOverviewView month={month} lime={isFitLimeEnabled(actor)} metric={metric} onMetricChange={value => changePaymentParam('metric', value)}
-    navigation={<div className="finance-tabs finance-overview-tabs" role="group" aria-label="Раздел финансов">
+  const navigation = <div className="finance-tabs finance-overview-tabs" role="group" aria-label="Раздел финансов">
       <button type="button" className={!paymentsView ? 'is-active' : ''} aria-pressed={!paymentsView} onClick={() => changePaymentParam('view', '')}>Клиенты</button>
       <button type="button" className={paymentsView ? 'is-active' : ''} aria-pressed={paymentsView} onClick={() => changePaymentParam('view', 'payments')}>Оплаты</button>
-    </div>}
-    paymentHistory={paymentsView ? <TrainerFinancePayments key={`${monthValue}:${paymentClient ?? ''}`} month={monthValue} clientId={paymentClient}
+    </div>
+  const summaryShown = lime && query.data?.completedSessions !== undefined && query.data.clients.every(client => client.completedSessions !== undefined)
+  return <TrainerFinanceOverviewView month={month} lime={lime} metric={metric} onMetricChange={value => changePaymentParam('metric', value)}
+    navigation={navigation}
+    paymentHistory={paymentsView ? <TrainerFinancePayments key={lime ? monthValue : `${monthValue}:${paymentClient ?? ''}`} month={monthValue} clientId={paymentClient}
+      compact={lime} summaryShown={summaryShown} navigation={lime ? navigation : undefined}
       offset={offset} returnTo={`${location.pathname}${location.search}`}
       onClientChange={value => changePaymentParam('client', value)}
       onOffsetChange={value => changePaymentParam('offset', value ? String(value) : '')} /> : undefined} data={query.data} loading={query.isLoading} error={query.error}
     search={search} onSearchChange={changeSearch}
-    filter={filter} onFilterChange={(value) => change(month, value)} returnTo={`${location.pathname}${location.search}`}
+    filter={filter} onFilterChange={(value) => change(month, value, true)} returnTo={`${location.pathname}${location.search}`}
     back={isCoachWorkoutRedesignEnabled(actor) ? readCoachCalendarRoute(actor?.userId) ?? '/today' : '/clients'}
     onPreviousMonth={() => change(addMonths(month, -1), filter)}
     onNextMonth={() => change(addMonths(month, 1), filter)}
@@ -155,32 +161,24 @@ export function TrainerFinanceOverviewView({ month, data, lime = false, metric: 
   const monthly = lime && data?.completedSessions !== undefined && data.clients.every(client => client.completedSessions !== undefined)
   const [localFilter, setLocalFilter] = useState<FinanceFilter>('all')
   const [localSearch, setLocalSearch] = useState('')
+  const [searchOpen, setSearchOpen] = useState(false)
+  const [filtersOpen, setFiltersOpen] = useState(false)
+  const searchRef = useRef<HTMLInputElement>(null)
   const filter = controlledFilter ?? localFilter
   const setFilter = onFilterChange ?? setLocalFilter
   const search = controlledSearch ?? localSearch
   const setSearch = onSearchChange ?? setLocalSearch
+  const showSearch = !lime || searchOpen || Boolean(search)
+  const closeSearch = () => { setSearch(''); setSearchOpen(false) }
+  const filterOptions = [...FILTERS, ATTENTION_FILTER]
   const clients = useMemo(() => {
     const name = search.trim().toLocaleLowerCase('ru')
     return (data?.clients ?? []).filter(client => matchesFilter(client, filter)
       && (!name || client.fullName.toLocaleLowerCase('ru').includes(name)))
   }, [filter, search, data?.clients])
-  return <Page title="Финансы" back={back} swipeBack className={`finance-overview-page${lime ? ' finance-compact-page' : ''}`}
-    action={lime ? <div className="finance-compact-period"><OverflowMenu label={`Месяц финансов: ${formatMonth(month)}`}
-      trigger={<span>{formatMonth(month)}<ChevronDownIcon /></span>}
-      items={[{ label: 'Предыдущий месяц', onClick: onPreviousMonth }, { label: 'Следующий месяц', onClick: onNextMonth }]} /></div> : undefined}>
-    {navigation}
-    {!lime && <div className="finance-period-block">
-      <span>{monthly ? 'Месяц' : 'Месяц поступлений'}</span>
-      <div className="finance-month-switcher" aria-label="Месяц финансов">
-      <button type="button" aria-label="Предыдущий месяц" onClick={onPreviousMonth}><BackIcon /></button>
-      <strong>{formatMonth(month)}</strong>
-      <button type="button" aria-label="Следующий месяц" onClick={onNextMonth}><ChevronRightIcon /></button>
-      </div>
-    </div>}
-    {paymentHistory ?? <AsyncView loading={loading} error={error} onRetry={onRetry}>
-      {data && <>
-        {monthly && <FinanceMonthlySummary data={data} metric={metric} onMetricChange={onMetricChange ?? setLocalMetric} compact />}
-        {monthly ? <section className="finance-compact-current" aria-label="Финансовая сводка">
+  const summary = data && <>
+    {monthly && <FinanceMonthlySummary data={data} metric={metric} onMetricChange={onMetricChange ?? setLocalMetric} compact />}
+    {monthly ? <section className="finance-compact-current" aria-label="Финансовая сводка">
           <span>Сейчас</span>
           <button type="button" onClick={() => setFilter('due')}>К оплате <strong>{financeMoney(data.dueCents)}</strong></button>
           <button type="button" aria-label={`Требуют внимания сейчас: ${data.attentionCount}`} onClick={() => setFilter('attention')}>Внимание <strong>{data.attentionCount}</strong></button>
@@ -189,12 +187,34 @@ export function TrainerFinanceOverviewView({ month, data, lime = false, metric: 
           <p><span>К оплате сейчас</span><strong>{money(data.dueCents)}</strong></p>
           <p><span>Требуют внимания сейчас</span><strong>{data.attentionCount}</strong></p>
         </section>}
-        {monthly && <h2 className="finance-monthly-heading">По спортсменам</h2>}
-        {(data.clients.length > 0 || search) && <div className="clients-search finance-overview-search">
-          <SearchIcon aria-hidden="true" /><input type="search" aria-label="Поиск клиента" placeholder="Поиск по имени" autoComplete="off" value={search} onChange={event => setSearch(event.target.value)} />
-          {search !== '' && <button type="button" className="clients-search-clear" aria-label="Очистить поиск" onClick={() => setSearch('')}><CloseIcon /></button>}
+  </>
+  return <Page title="Финансы" back={back} swipeBack className={`finance-overview-page${lime ? ' finance-compact-page' : ''}`}
+    action={lime ? <div className="finance-compact-period"><OverflowMenu label={`Месяц финансов: ${formatMonth(month)}`}
+      trigger={<span>{formatMonth(month)}<ChevronDownIcon /></span>}
+      items={[{ label: 'Предыдущий месяц', onClick: onPreviousMonth }, { label: 'Следующий месяц', onClick: onNextMonth }]} /></div> : undefined}>
+    {!lime && navigation}
+    {!lime && <div className="finance-period-block">
+      <span>{monthly ? 'Месяц' : 'Месяц поступлений'}</span>
+      <div className="finance-month-switcher" aria-label="Месяц финансов">
+      <button type="button" aria-label="Предыдущий месяц" onClick={onPreviousMonth}><BackIcon /></button>
+      <strong>{formatMonth(month)}</strong>
+      <button type="button" aria-label="Следующий месяц" onClick={onNextMonth}><ChevronRightIcon /></button>
+      </div>
+    </div>}
+    {paymentHistory ? <>{lime && <AsyncView loading={loading} error={error} onRetry={onRetry}>{monthly ? summary : null}</AsyncView>}{paymentHistory}</> : <AsyncView loading={loading} error={error} onRetry={onRetry}>
+      {data && <>
+        {summary}
+        {lime && <FinanceListToolbar navigation={navigation} onSearch={() => {
+          if (showSearch) closeSearch()
+          else { setSearchOpen(true); requestAnimationFrame(() => searchRef.current?.focus()) }
+        }} searchOpen={showSearch} onFilter={() => { searchRef.current?.blur(); setFiltersOpen(true) }} filterOpen={filtersOpen} filtered={filter !== 'all'} />}
+        {lime && filter !== 'all' && <div className="finance-active-filter"><button type="button" aria-label={`Сбросить фильтр: ${filterOptions.find(item => item.id === filter)?.label}`} onClick={() => setFilter('all')}>{filterOptions.find(item => item.id === filter)?.label}<CloseIcon /></button></div>}
+        {lime && filtersOpen && <FinanceFilterSheet label="Фильтр клиентов" value={filter} options={filterOptions} onChange={setFilter} onClose={() => setFiltersOpen(false)} />}
+        {(lime ? showSearch : data.clients.length > 0 || search) && <div className="clients-search finance-overview-search">
+          <SearchIcon aria-hidden="true" /><input ref={searchRef} type="search" aria-label="Поиск клиента" placeholder="Поиск по имени" autoComplete="off" value={search} onChange={event => setSearch(event.target.value)} />
+          {lime ? <button type="button" className="clients-search-clear" aria-label="Закрыть поиск" onClick={closeSearch}><CloseIcon /></button> : search !== '' && <button type="button" className="clients-search-clear" aria-label="Очистить поиск" onClick={() => setSearch('')}><CloseIcon /></button>}
         </div>}
-        <div className="finance-filter-row" role="group" aria-label="Фильтр клиентов">{(monthly && filter === 'attention' ? [...FILTERS, ATTENTION_FILTER] : FILTERS).map((item) => <button key={item.id} type="button" className={filter === item.id ? 'is-active' : ''} aria-pressed={filter === item.id} onClick={() => setFilter(item.id)}>{item.label}</button>)}</div>
+        {!lime && <div className="finance-filter-row" role="group" aria-label="Фильтр клиентов">{FILTERS.map((item) => <button key={item.id} type="button" className={filter === item.id ? 'is-active' : ''} aria-pressed={filter === item.id} onClick={() => setFilter(item.id)}>{item.label}</button>)}</div>}
         <div className="finance-overview-list">{monthly ? clients.map(client => <Link key={client.clientId}
           className="card finance-overview-client finance-monthly-client"
           to={`/clients/${client.clientId}/finance?month=${month.slice(0,7)}&metric=${metric}`} state={{ financeBackTo: returnTo }}>

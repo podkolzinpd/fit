@@ -1095,6 +1095,8 @@ test('profile Cancel resets unsaved edits', async ({ page }) => {
   await expect(page.getByLabel('Имя', { exact: true })).toHaveValue(original)
   await page.getByRole('button', { name: 'Отмена' }).click()
 
+  await page.getByRole('button', { name: 'Назад', exact: true }).click()
+  await page.getByRole('link', { name: /^Оформление/ }).click()
   const darkTheme = page.getByRole('switch', { name: 'Тёмная тема' })
   await expect(darkTheme).not.toBeChecked()
   await darkTheme.check()

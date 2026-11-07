@@ -5,7 +5,7 @@ import { chooseWorkoutTime, expectWorkoutTime } from './workout-time-wheel'
 
 async function logoutFromProfile(page: import('@playwright/test').Page) {
   const pathname = new URL(page.url()).pathname
-  if (pathname === '/profile') await page.goto('/profile/settings')
+  if (pathname === '/profile' || pathname === '/profile/settings') await page.goto('/profile/settings')
   if (pathname === '/me/profile') await page.goto('/me/settings')
   const logout = page.getByRole('button', { name: 'Выйти' })
   await expect(logout).toBeVisible()

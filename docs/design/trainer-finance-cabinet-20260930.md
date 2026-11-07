@@ -1711,6 +1711,25 @@ picker; для scroll добавлены10 matching клиентов с нуле
 заменён на строго привязанный regex, утверждения сохранены. CI ещё обязателен.
 Дальше — source PR/CI, принятие старших2023/2026 и последовательный выпуск.
 
+FIN-34 — FIN702 подготовка от source161cfa8f/PR2027: вкладки с точными
+названиями «Клиенты / Оплаты» у списка, поиск клиентов раскрывается по44px
+кнопке; непустой q восстанавливает видимый поиск при возврате без autofocus.
+Активный фильтр отдельным снимаемым условием. Выбор фильтра — существующий
+native-dialog sheet-паттерн с сохранением фокуса/безопасной высотой; исходная
+иконка фильтра из approved coachWorkoutReferenceAssets. Токены scoped Lime.
+Сводка месяца сохраняется над обоими разделами: existing overview read
+в Lime включён и на «Оплатах», запрос/ошибка журнала остаются независимыми.
+Повтор глобального итога скрывается только при доступной месячной сводке;
+итог выбранного клиента в журнале сохраняется. При старом API без monthly
+полей журнал сохраняет прежнюю собственную сумму. Mono запросы/DOM прежние.
+Не добавляем локальный поиск по текущим50оплатам: это давало бы ложную
+полноту. В журнале прежний серверный client-фильтр и страницы; поиск по имени
+остаётся в клиентском списке. Фильтр журнала переносится в панель. В ссылку
+клиента Lime-журнала передаётся месяц; financeBackTo сохраняет весь контекст.
+Операции изменения/удаления, версии/инвалидации и pending guards прежние.
+Локальные types и targeted25 пока прошли; browser/CI ещё не проверены.
+
+
 
 FIN-35 — 2026-11-07 — Codex / OpenAI. FIN701: source CI42355768817
 подтвердил32job и нашёл устаревший caller месяца в общем сценарии переходов
@@ -1725,3 +1744,129 @@ harness; это не считалось проверкой, исправлено
 Открыто: новый exact-head source CI, принятие старших публикаций и официальный
 выпуск; Mono/личный UI/финансовые расчёты не менялись. Дальше — FIN702/703
 локально, публикация строго в согласованном порядке.
+
+FIN-37 — 2026-11-07 — Codex / OpenAI. FIN702 локальная приёмка:
+frontend345files/3076tests passed, coverage83.58/78.71/82.74/88.28;
+full lint/types/build/startup passed. Browser40/40 + общий cross-route2/2
+Chromium/WebKit passed, retries0. PNG320/390/430/1440 и native sheet320
+просмотрены: круг/сумма, короткая строка, toolbar у списка, длинные имена,
+оригинальная иконка, YS Geo. Первый клиент <=390px от начала main.
+Снимки перед resize теперь явно возвращают scroll0, чтобы показывать шапку;
+самостоятельные nonzero scroll/return проверки сохранены.
+Первый browser35/40: два obsolete caller поиска (включая неверно заменённый
+поиск на /clients), strict status с двумя независимыми query, и реальная
+потеря фокуса WebKit. Исправлены только callers/region scope; assertions те же.
+Второй39/40 подтвердил focus race при смене серверного client query и remount.
+Диагностика focus events: WebKit tap не фокусирует кнопку. Native dialog
+закрывается в layout cleanup до удаления DOM; затем фокус surviving trigger.
+Проверка этой гонки6/6 (repeat-each3, retries0), затем полный40/40 passed.
+Фильтры:4ширины, target>=44, viewportbounds, Escape и возврат фокуса.
+API/деньги/Mono/версии мутаций прежние. Открыто: свежая parent/main интеграция,
+source/mainCI и официальный выпуск после полной приёмки FIN701. Физических
+телефонов нет. Дальше — последовательная публикация без расширения scope.
+
+
+FIN-38 — 2026-11-07 — Codex / OpenAI. Интеграция FIN702 с1215aeaa:
+обычный merge, сохранены MC4.2 и обе ветви истории FIN34/35/37. Собственный
+конфликт cross-route разрешён в пользу нового меню месяца и sheet-фильтра;
+URL/selected/scroll assertions сохранены. Types/scoped lint после merge passed.
+Новый narrow/short-viewport поиск320×400: input не перекрыт nav,
+действия доступны; Chromium/WebKit2/2 passed. Это эмуляция, не клавиатура iPhone.
+Source CI FIN70142362140958: app и финансовые/визуальные lanes passed,
+Yandex-auth4/4 включает старый WebKit Live transition reduced-false single-group
+original:2 scroll samples вместо >2, internal retry passed, 293passed/1flaky.
+Такой же дефект до FIN701 документирован в #2023/#2022. Live CSS и этот test
+побайтно равны принятому main2ef; новый CSS scoped .finance-*. Причина потери
+кадров не установлена, исходный failure сохранён. Запущен один failed-jobs
+повтор unchanged1215aeaa; assertions/retries/timeouts/CI прежние. Открыто:
+результат этого повтора, приёмка первого выпуска и последующие2PR по очереди.
+
+
+FIN-39 — 2026-11-07 — Codex / OpenAI. FIN702 дополнена проверка реального
+monthly-enabled контура оплат внутри существующего Lime layout-case:
+синтетические поступления15000₽, распределение клиентов, общий summary один,
+повтор global receipt-total отсутствует; native client-фильтр и server pages
+сохраняются. Chromium/WebKit2/2 passed, receipt320 PNG просмотрен. Mono
+fixtures остаются прежними. Это закрывает положительную ветвь новогоAPI;
+отрицательная старая ветвь без monthly полей остаётся в остальных случаях.
+Новых e2e-case/матриц нет. Открыто: выпуск FIN701/702/703 по очереди послеCI.
+
+
+FIN-42 — 2026-11-07 — Codex / OpenAI. FIN701 source1215aeaa:
+CI42362140958 attempt2 SUCCESS35/35; исходный flaky из attempt1 сохранён.
+Обычный squash PR2027 дал mainbb2835cd, mainCI42365428246 идёт.
+Предыдущий2023 принят с известным uncached-network ограничением в его PR;
+2026 владелец остановил в draft без hold; новый2028 моложе2027, но старше
+нашего второго PR и сохранит очередь. Владелец2028 уведомлён об окне.
+FIN702 включила bb2835cd обычным merge. Проверено равенство tree bb2835cd
+и source1215aeaa: конфликты вызваны squash ancestry, не новыми чужими правками.
+Собственные FIN702 варианты сохранены; diff всей tree относительно63fd0840
+пустой. Все ранее проверенные продуктовые файлы и MC4.2 побайтно прежние.
+Локальный итоговый40/40, narrow2/cross-route2/monthly-payment2 и design выше
+относятся к той же tree. Source второго PR запускается на новой ancestor-main
+основе; его публикация только после принятия FIN701 и старшего2028.
+Открыто: mainCI/официальная публикация/приёмка FIN701, далее FIN702/703.
+
+
+FIN-44 — 2026-11-07 — Codex / OpenAI. FIN702 sourceCI42365639106 выявил
+в Chromiumvisual1/4 повторяемую потерю фокуса при выборе клиента:3attempts
+на inactive trigger, остальные155case этой части passed. CI не rerun.
+В режиме dev/StrictMode локальный исходный сценарий воспроизвёл тот же сбой
+WebKit1failed/Chromium1passed; предыдущий production preview40/40 не заменяет
+эту проверку. Причина: clientId входил в key всего журнала и пересоздавал
+саму кнопку возвращения. Lime теперь сохраняет экземпляр журнала в пределах
+месяца; queryKey поclientId прежний. Mono сохраняет прежний month:client key.
+Выбор/сброс client-filter очищает editor/errors только в Lime и запрещён при
+pending. Сами update/void/versions/invalidation не изменены. Расширен тот же
+receipt-case: draft1234 сбрасывается при смене фильтра, до финального Save
+финансовых команд нет; исходный update по-прежнему ожидает5000/version1.
+Dev повтор6/6 Chromium/WebKit, retries0, passed. Targeted21/types/scopedlint
+passed. Финальная production build/browser проверяется отдельно, UI-геометрия
+не меняется. Открыто: новый exact-head sourceCI, приёмка FIN701 и старшего2028,
+затем FIN702/703. API/web FIN701 штатно SUCCESS; OTA42368413515 начался,
+public/verifiedZIP приёмка ещё впереди. Физического телефона нет.
+
+
+FIN-47 — 2026-11-07 — Codex / OpenAI. При комбинированной приёмке FIN703:
+39/40 прошли, оставшийся Chromium receipt-case остановился на strict locator
+с двумя actions после повторного выбора клиента. Focus assertion прошла;
+последующий snapshot уже содержит ровно одну оплату. Это отсутствие ожидания
+фильтрованного ответа в новом draft-discard шаге FIN44, не повтор focus defect.
+После второго choose-client добавлено исходное семантическое ожидание1payment
+до открытия единственного editor. Не добавлен first()/sleep/timeout/retry;
+уникальность и проверка без лишней команды оплаты усилены. Исправлен только
+устаревший комментарий о remount, логика компонентов прежняя. Дальше — targeted
+production/dev этого случая, новый sourceCI FIN702 и повтор комбинированной
+приёмки FIN703. Сайт FIN701 принят, очередь2026→2028→2029 сохраняется.
+
+
+FIN-49 — 2026-11-07 — Codex / OpenAI. На увеличенном актуальном снимке
+monthly-search-short-viewport найден второй прямоугольный focus outline
+внутри скруглённого поля: общий Lime input:focus-visible перекрывает старое
+clients-search input outline:none. В пределах finance-compact-page внешнее
+поле теперь владеет единым2px Lime outline (внутри контура), input отключает
+только свой дублирующий outline. Фокус/клавиатура/кнопка закрытия сохранены,
+Mono и общий компонент поиска клиентов не меняются. Existing monthly case
+теперь проверяет focused input, отсутствие внутреннего outline и видимый
+2px solid accent снаружи. FIN702 и FIN703 targeted browser2/2+2/2
+Chromium/WebKit и обе production build/startup passed; новый снимок поиска
+просмотрен, прямоугольного дубля нет. Нужен exact-head CI после старшего2028.
+
+
+FIN-50 — 2026-11-07 — Codex / OpenAI. FIN702 sourceCI42372474649/b20:
+app/app-tests и все finance/visual/прочие UI lanes SUCCESS; auth4 дал тот же
+прежний Live flaky client-workout-reference.spec.ts:4470 (2samples вместо>2),
+internal retry passed,293passed/1flaky. Запрет flaky сохранён, общий CI FAILURE.
+Diff Live/workouts/shared/app/styles.css/CI к parent98d2a090 пуст; исходный
+журнал сохранён. Старый b20 не rerun: появился обязательный новый parent.
+Protected READONLY предшественника2026 завершён, ключи закрыты и hold снят
+по сообщению владельцу2028;2028 слит обычным squash вc5c65706eb7e53a16490535da71d1cd52f6a94ef.
+Обычный merge этого main в FIN702 сохранил все13 upstream файлов; свои
+finance/CSS/e2e файлы побайтно прежние. Новый compact focus по FIN49 уже
+проверен2/2+2/2 обоих движков и production builds. Прочитаны новые active/current
+и CPT101–108: отдельный default-off test trainer personal pilot без финансов;
+API/схема197 принадлежит старшему2028, мы её не изменяем и pilot не включаем.
+Нужен новый полный exact-head sourceCI, затем после фактической приёмки2028
+обычный merge/mainCI/API/web/OTA/public/ZIP приёмка FIN702. FIN703 остаётся
+локальной третьей частью; ФИТ14 начал подготовку3PR настроек, пока без PR,
+его ранее согласованный приоритет учитывается по реально готовой очереди.
