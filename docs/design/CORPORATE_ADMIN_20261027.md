@@ -2645,3 +2645,34 @@ workflows, обходить очередь или повторять публи�
 итоговый свой fullsourceCI+Android, normalmatchhead/mainCI/official/allbytes/
 110web+110ZIP+8live и отдельные закрытые personal grant/committed inspect.
 Дальше: сохранить следующий реальный main и довести оба CPT этапа до результата.
+
+### Итерация 61 нового выпуска — 2026-11-08 — GPT / OpenAI
+
+Задача: подготовить итоговый source2035 на фактическом последнем main очереди.
+Расхождения: нет. ФИТ14 освободил окно после полной приёмки всех3PR; итоговая
+квитанция [PR2036](https://github.com/podkolzinpd/fit/pull/2036), mainadbe,
+mainCI/API/web/signedOTA успешны,213files и actualpublic2/2+signedZIP2/2 приняты.
+Активный2034 с отдельным разрешением владельца прошёл новый exact62fc CI35/35
+и слит вddf365910ce0ca43c4dd7632639836c50d94ed51. Его mainCI42417023480/
+Android42417023398/публикация/приёмка остаются отдельными гейтами своего окна.
+Сделано: ordinary merge27ae3a93 сохранил все6 входящих файлов MC4.3, обе истории
+и foreign CURRENT строку. CSS guards отделяют только modernLive paint; общие
+геометрия/поведение модалок и остальные экраны сохраняются. Все5 non-CURRENT
+foreign files и native/package/lock побайтно равны actualmainddf3. Собственный
+CPT runtime fixee889 сохранён, API197/operator/права/пилоты/данные прежние.
+Проверка27ae3a93:111/111 unit (14files), production types/build/fonts2/2/startup,
+110/110 corporate/admin/services/personal Chromium/WebKit,workers1/retries0/
+realAPIWSdeny passed. Логи fit674-personal-ui-ddf3-{unit,build,browser}.log.
+Свежий origin/main ancestor проверен; root/branch clean, remote2035 всё ещё92cc,
+auto-mergeOFF. Итоговые локальные55–61/все actualmain merges/свой filter+contrast
+идут одним необходимым обычным push, без отмены здорового CI или отдельного
+runtime PR. Новый fullsourceCI+Android именно нового отправленного head
+обязателен; старые92/4d9/e267 успехи не переносятся на него.
+Решение: полный source gate допускается параллельно mainCI/публикации2034;
+свой mainmerge только после его фактической приёмки и освобождения окна.
+Отвергнуто: пропустить проверку свежего head, обгонять2034, manual production
+SQL/SSH/admin/bypass/force/deletebranch или включить personal всем тренерам.
+Открыто: итоговый ownCI/Android, owner2034acceptance/hold release, normal squash
+match-head/mainCI/officialAPIwebOTA/все файлы/8negativeAPI/110web+110ZIP+8live;
+после обоих CPT этапов один закрытый test personal grant и отдельный committed
+inspect. Физический телефон не проверен. Дальше: пройти эти гейты до завершения.
