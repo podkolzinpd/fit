@@ -32,8 +32,6 @@ test('native program creation assignment client execution trainer results',async
  try{
  const trainer=await signIn(trainerContext,'trainer','trainer');const client=await signIn(clientContext,'client','client')
  const t=trainer.page,c=client.page
- const hint=c.locator('.coachmark-bubble').getByRole('button',{name:'Понятно',exact:true}).first();
- await c.addLocatorHandler(hint,async()=>{await hint.click();record('client_coachmark_dismissed',{method:'visible UI Понятно button'})});
  const clientOnboarding=c.getByRole('button',{name:'Понятно',exact:true});await expect(clientOnboarding).toBeVisible({timeout:60000});await clientOnboarding.click()
  const before=(await read(trainer.session,'/v1/training-data?clientId=11111111-1111-4111-8111-111111111111')).workouts
  expect(before).toHaveLength(0)
@@ -87,6 +85,8 @@ test('native program creation assignment client execution trainer results',async
  expect(clientPlans.map(w=>w.id).sort()).toEqual(planned.map(w=>w.id).sort())
  record('assigned_persisted',{workoutIds:planned.map(w=>w.id),dates:planned.map(w=>w.workoutDate),workouts:2,setsPerWorkout:planned.map(w=>w.exercises.flatMap(e=>e.sets).length),actorReadback:'trainer+client'})
  await t.screenshot({path:info.outputPath('03-program-assigned.png'),fullPage:true})
+ const hint=c.locator('.coachmark-bubble').getByRole('button',{name:'Понятно',exact:true}).first();
+ await c.addLocatorHandler(hint,async()=>{await hint.click();record('client_coachmark_dismissed',{method:'visible UI Понятно button'})});
  for(const [index,w] of planned.entries()){
   await c.goto('/workouts/'+w.id)
   await expect(c.getByRole('button',{name:/^(Начать тренировку|Начать сегодня)$/})).toBeVisible()

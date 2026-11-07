@@ -128,3 +128,28 @@ jobs:
             ${{ runner.temp }}/trainer-iso/playwright-stderr.log
             ${{ runner.temp }}/trainer-iso/api-stderr.log
             ${{ runner.temp }}/trainer-iso/frontend.log
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: trainer-iso-summary-${{ github.run_id }}
+          include-hidden-files: true
+          retention-days: 1
+          if-no-files-found: warn
+          path: |
+            ${{ runner.temp }}/trainer-iso/checked-out-sha.txt
+            ${{ runner.temp }}/trainer-iso/owned-database.json
+            ${{ runner.temp }}/trainer-iso/cleanup-readback.json
+            ${{ runner.temp }}/trainer-iso/lifecycle.jsonl
+            ${{ runner.temp }}/trainer-iso/browser-events.jsonl
+            ${{ runner.temp }}/trainer-iso/program-result.json
+            ${{ runner.temp }}/trainer-iso/program-playwright.json
+            ${{ runner.temp }}/trainer-iso/model-rpc-events.jsonl
+            ${{ runner.temp }}/trainer-iso/model-runs/
+            ${{ runner.temp }}/trainer-iso/artifact-delivery.jsonl
+            ${{ runner.temp }}/trainer-iso/rpc-errors.jsonl
+            ${{ runner.temp }}/trainer-iso/first-turn.json
+            ${{ runner.temp }}/trainer-iso/first-response.json
+            ${{ runner.temp }}/trainer-iso/generation-response.json
+            ${{ runner.temp }}/trainer-iso/api-stderr.log
+            ${{ runner.temp }}/trainer-iso/frontend.log
