@@ -62,7 +62,8 @@ export function TrainerProfileSettingsPage() {
       <div className="profile-settings"><NotificationsSetting userId={actor.userId} role="trainer" /></div>
     </SettingsSection>}
 
-    {section === 'training' && <SettingsSection title="Тренировки">
+    {section === 'training' && <>
+    <SettingsSection title="Live-тренировка">
       <div className="profile-settings">
         {isCoachLiveDensityEnabled(actor) && <div className="schedule-density-setting coach-live-density-setting">
           <div><strong>Вид Live-тренировки</strong><span>Выбор сохраняется для вашей учётки на этом устройстве.</span></div>
@@ -77,18 +78,23 @@ export function TrainerProfileSettingsPage() {
           </div>
         </div>}
         <Switch label="Анимация упражнения" checked={showLiveExerciseAnimation} onChange={(checked) => setLiveExerciseAnimation(actor.userId, checked)} />
+      </div>
+    </SettingsSection>
+    <SettingsSection title="Ввод и поля">
+      <div className="profile-settings">
         <Switch label="Ввод времени колёсиком" checked={useTimeWheel} onChange={setWorkoutTimeWheel} />
-        <Switch label="Показывать отдых" checked={showExerciseRest} onChange={(checked) => setExercisePlanRestDisplay(actor.userId, checked)} />
+        <Switch label="Отдых в плане" checked={showExerciseRest} onChange={(checked) => setExercisePlanRestDisplay(actor.userId, checked)} />
         <Switch label="Показывать RPE" checked={showRpe} onChange={(checked) => setRpeDisplay(actor.userId, checked)} />
       </div>
-    </SettingsSection>}
+    </SettingsSection>
+    </>}
 
     {section === 'schedule' && <SettingsSection title="Расписание">
       <ScheduleDensitySetting />
     </SettingsSection>}
 
     {section === 'appearance' && <SettingsSection title="Оформление">
-      {fitLimeSettings && <p className="fit-lime-profile-theme-note">Lime пока доступна только на экранах тренера из пилота. Выбор темы ниже сохраняется для остальных экранов.</p>}
+      {fitLimeSettings && <p className="fit-lime-profile-theme-note">Экраны Lime сохраняют тёмное оформление. Выбор темы применяется к остальным экранам.</p>}
       <div className="profile-settings"><Switch label={fitLimeSettings ? 'Тёмная тема остальных экранов' : 'Тёмная тема'} checked={theme === 'dark'} onChange={(dark) => setAppTheme(dark ? 'dark' : 'light')} /></div>
       <BodyMapAppearanceSetting viewerUserId={actor.userId} role={actor.role} gender={null} />
     </SettingsSection>}
