@@ -1848,5 +1848,6 @@ clients-search input outline:none. В пределах finance-compact-page вн
 только свой дублирующий outline. Фокус/клавиатура/кнопка закрытия сохранены,
 Mono и общий компонент поиска клиентов не меняются. Existing monthly case
 теперь проверяет focused input, отсутствие внутреннего outline и видимый
-2px solid accent снаружи. Далее targeted browser/build и снимок; не выпускать
-до результатов и обновления exact-head CI после старшего2028.
+2px solid accent снаружи. FIN702 и FIN703 targeted browser2/2+2/2
+Chromium/WebKit и обе production build/startup passed; новый снимок поиска
+просмотрен, прямоугольного дубля нет. Нужен exact-head CI после старшего2028.
