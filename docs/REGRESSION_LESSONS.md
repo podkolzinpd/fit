@@ -232,3 +232,15 @@ DOM-form в отложенную mutation для последующего чте
 до блокировки, сохраняя прежнюю команду. Проверка: offline→submit→disabled→online,
 сервер получает исходно введённое. Red/green и границы —
 [настройки, итерация7](design/TRAINER_SETTINGS_COMPACT_20261107.md#итерация-7--07112026--codex--openai).
+
+## RL-PREFERENCE-FAILED-WRITE-20261108
+
+Событие изменения не сохраняет выбор, если getter сразу перечитывает старое
+localStorage после неудачного setItem. Для существующих личных/device ключей
+failed-write значение остаётся в памяти сеанса, интерфейс честно сообщает о
+невозможности persistence; успешная запись и внешний storage event снимают
+override. Проверять пять preferences, account isolation, remount и recovery.
+В Node26 test setup может предоставить Storage-совместимый объект: spy на
+Storage.prototype не обязательно перехватывает window.localStorage.setItem.
+Исходный red должен действительно вызвать отказ используемого объекта.
+[SET-STORAGE-01 и итерация12](design/TRAINER_SETTINGS_COMPACT_20261107.md#итерация-12--08112026--codex--openai).

@@ -3,7 +3,7 @@ import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import type { ReactNode } from 'react'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { SUPPORT_TELEGRAM_URL } from '../../shared/support'
 import { getWorkoutTimeWheel, setWorkoutTimeWheel } from '../../app/workout-time-input'
 import { TrainerProfileSettingsPage } from './ProfilePage'
@@ -28,6 +28,10 @@ function wrapper(section?: string) {
 }
 
 describe('TrainerProfileSettingsPage', () => {
+  afterEach(() => {
+    vi.restoreAllMocks()
+    window.dispatchEvent(new StorageEvent('storage', { key: null }))
+  })
   beforeEach(() => {
     setWorkoutTimeWheel(false)
     useAuth.mockReset()
@@ -89,6 +93,24 @@ describe('TrainerProfileSettingsPage', () => {
     expect(getWorkoutTimeWheel()).toBe(false)
     expect(screen.getByRole('switch', { name: 'Отдых в плане' })).toBeVisible()
     expect(screen.getAllByRole('switch')).toHaveLength(4)
+  })
+
+  it('keeps an unsaved RPE choice on section return and removes the notice after recovery', async () => {
+    const user = userEvent.setup()
+    render(<TrainerProfileSettingsPage />, { wrapper: wrapper('training') })
+    const blocked = vi.spyOn(window.localStorage, 'setItem').mockImplementation(() => { throw new Error('quota') })
+    await user.click(screen.getByRole('switch', { name: 'Показывать RPE' }))
+    expect(screen.getByRole('switch', { name: 'Показывать RPE' })).toBeChecked()
+    expect(screen.getAllByText(/Не удалось сохранить на устройстве/)).toHaveLength(1)
+    await user.click(screen.getByRole('button', { name: 'Назад' }))
+    expect(screen.queryByText(/Не удалось сохранить на устройстве/)).not.toBeInTheDocument()
+    await user.click(screen.getByRole('link', { name: /^Тренировки/ }))
+    expect(screen.getByRole('switch', { name: 'Показывать RPE' })).toBeChecked()
+    expect(screen.getByText(/Не удалось сохранить на устройстве/)).toBeVisible()
+    blocked.mockRestore()
+    await user.click(screen.getByRole('switch', { name: 'Показывать RPE' }))
+    expect(screen.getByRole('switch', { name: 'Показывать RPE' })).not.toBeChecked()
+    expect(screen.queryByText(/Не удалось сохранить на устройстве/)).not.toBeInTheDocument()
   })
 })
 
