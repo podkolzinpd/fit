@@ -38,7 +38,7 @@ test('trainer profile controls and feedback fit the iOS shell', async ({ page },
   const row = wheel.locator('..')
   const control = row.locator('.switch-control')
   await expect(control).toBeVisible()
-  const contrast = await row.evaluate(element => {
+  const readContrast = () => row.evaluate(element => {
     const color = (value: string) => value.match(/[\d.]+/g)!.slice(0, 3).map(Number)
     const luminance = (value: string) => color(value).map(component => {
       const n = component / 255
@@ -53,6 +53,9 @@ test('trainer profile controls and feedback fit the iOS shell', async ({ page },
     const surface = getComputedStyle(element.closest('.profile-settings')!).backgroundColor
     return { border: ratio(style.borderTopColor, surface), thumb: ratio(getComputedStyle(track, '::after').backgroundColor, style.backgroundColor), height: element.getBoundingClientRect().height }
   })
+  // Measure the selected state after the existing thumb-color transition, not an intermediate frame.
+  await expect.poll(async () => (await readContrast()).thumb).toBeGreaterThanOrEqual(3)
+  const contrast = await readContrast()
   expect(contrast.border).toBeGreaterThanOrEqual(3)
   expect(contrast.thumb).toBeGreaterThanOrEqual(3)
   expect(contrast.height).toBeGreaterThanOrEqual(44)
