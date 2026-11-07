@@ -41,7 +41,7 @@ test('trainer profile keeps the questionnaire compact and settings usable on a s
   await expect(liveAnimation).not.toBeChecked()
   await liveAnimation.check()
 
-  const rest = page.getByRole('switch', { name: 'Показывать отдых', exact: true })
+  const rest = page.getByRole('switch', { name: 'Отдых в плане', exact: true })
   const restBefore = await rest.isChecked()
   await rest.setChecked(!restBefore)
   await expect(rest).toBeChecked({ checked: !restBefore })

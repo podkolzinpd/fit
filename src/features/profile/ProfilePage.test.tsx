@@ -72,6 +72,12 @@ describe('TrainerProfileSettingsPage', () => {
     await user.click(wheel)
     expect(wheel).toBeChecked()
     expect(getWorkoutTimeWheel()).toBe(true)
+    await user.click(wheel)
+    expect(wheel).not.toBeChecked()
+    expect(wheel).toBeVisible()
+    expect(getWorkoutTimeWheel()).toBe(false)
+    expect(screen.getByRole('switch', { name: 'Отдых в плане' })).toBeVisible()
+    expect(screen.getAllByRole('switch')).toHaveLength(4)
   })
 })
 

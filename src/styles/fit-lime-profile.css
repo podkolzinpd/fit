@@ -118,3 +118,22 @@
 .fit-lime-shell .trainer-compact-settings :is(.trainer-settings-link-copy small, .trainer-settings-link-icon, .trainer-settings-link > svg) { color:var(--lime-text-secondary) }
 .trainer-compact-settings .settings-section > h2 { font-size:13px; line-height:1.4; font-weight:500; color:var(--muted) }
 .fit-lime-shell.trainer-profile-identity .trainer-compact-settings .settings-section > h2 { font-size:13px; color:var(--lime-text-secondary) }
+
+/* Off is an available, readable choice, not a missing or disabled setting. */
+.trainer-profile-identity .trainer-compact-settings .switch-row { min-height:64px; padding:12px 14px; gap:14px }
+.trainer-profile-identity .trainer-compact-settings .switch-label { font-size:16px; font-weight:400; color:var(--fg) }
+.trainer-profile-identity .trainer-compact-settings .switch-control { width:48px; height:28px; border-color:var(--secondary-label-fg); background:var(--surface-sunken); opacity:1 }
+.trainer-profile-identity .trainer-compact-settings .switch-control::after { background:var(--fg); opacity:1 }
+.trainer-profile-identity .trainer-compact-settings .switch-input:checked + .switch-control { background:var(--primary-fill); border-color:var(--primary-fill) }
+.trainer-profile-identity .trainer-compact-settings .switch-input:checked + .switch-control::after { background:var(--on-accent) }
+.fit-lime-shell.trainer-profile-identity .trainer-compact-settings .switch-label { color:var(--lime-text) }
+.fit-lime-shell.trainer-profile-identity .trainer-compact-settings .switch-control { border-color:var(--lime-text-secondary); background:var(--lime-surface-raised) }
+.fit-lime-shell.trainer-profile-identity .trainer-compact-settings .switch-control::after { background:var(--lime-text) }
+.fit-lime-shell.trainer-profile-identity .trainer-compact-settings .switch-input:checked + .switch-control { background:var(--lime-accent); border-color:var(--lime-accent) }
+.fit-lime-shell.trainer-profile-identity .trainer-compact-settings .switch-input:checked + .switch-control::after { background:var(--lime-text-on-accent) }
+.trainer-profile-identity .trainer-compact-settings .switch-input:disabled + .switch-control { border-style:dashed }
+.trainer-compact-settings .coach-live-density-setting { padding:14px; border:0; border-radius:0; background:transparent }
+.trainer-compact-settings .schedule-density-setting > div:first-child strong { font-size:16px; font-weight:400 }
+.trainer-compact-settings .schedule-density-options button { font-size:13px }
+.trainer-compact-settings .body-map-appearance-setting { padding:14px }
+.trainer-compact-settings .body-map-appearance-setting > div:first-child strong { font-size:16px; font-weight:400 }
