@@ -2262,3 +2262,32 @@ frontend3094 и106browser из46, но c5 ещё НЕ интегрирован: 
 Открыто: mainCI/публикация/приёмка первого этапа, затем actualmain merge в UI,
 второй PR и полный выпуск, единственный closedtesttarget personal grant/inspect.
 Дальше: довести оба этапа до фактического результата; не завершать после PR1.
+
+### Итерация 48 нового выпуска — 2026-11-07 — GPT / OpenAI
+
+Задача: фактически принять опубликованный серверный PR2028 перед UI второго PR.
+Расхождения: нет. Сделано: full mainCI42375593130 SUCCESS на squash-main
+c5c65706eb7e53a16490535da71d1cd52f6a94ef; официальные API42377082176,
+web42377082142 и signedOTA42377590483 SUCCESS именно этого source.
+Проверка: публичные213/213 файлов сайта совпали размером/SHA с manifest; обе
+API release=c5, health/ready200, private401, DNS3/TLS прошли. Четыре новых
+personal/admin endpoints без авторизации возвращают401 на обоих origin.
+Подписи manifest/ZIP и provenance подтверждены, официальный OTA artifact
+побайтно совпал с опубликованным ZIP:15153424байт, SHA256
+64291efd3bb9f0d6324a10f2e41f78600563aeec0c2fd9177838ca1548baa221.
+ABI8922d2e9/nativeBuild9/version1.1.4 сохранены. Все213 web и213 ZIP файлов
+безопасно извлечены без rebuild/изменений. На точных web68/68 и signedZIP68/68
+browser scenarios прошли без retries; прямо на опубликованном сайте4/4
+Chromium/WebKit. Во всех UI проверках реальные API/WS/внешняя сеть закрыты,
+данные synthetic; реальный OAuth/физический телефон не заявляются.
+Отдельный штатный inspect42378792754 SUCCESS наc5 подтвердил uniqueTrainer=true,
+enabled=false, eligible=true, otherEnabledTrainers=0. Eligible означает прежний
+подтверждённый trainer, не включённый pilot. Отметки/workout/customer data не
+создавались, grant не выполнялся. Квитанции локально fit674-personal-release-pr1-c5c65706.
+Решение: PR1 принят, operational hold2028 СНЯТ; текущих собственных production
+операций нет. Исходящей переписки не было. Отвергнуто: объявлять весь пакет
+завершённым или включать personal до второго принятого выпуска.
+Открыто: реальный squash-mainc5 ещё нужно обычным merge включить в UIc491,
+сохранить чужие изменения, получить текущиеCI/Android и пройти очередь нового
+PR2. Дальше: UI выпуск с той же фактической приёмкой, затем единственный
+closed-target grant и отдельный committed inspect. Остальные пилоты прежние.
