@@ -101,3 +101,20 @@ CI обязателен, targeted component/typecheck/docs повторяютс�
 Таблица PR исправлена под существующий формат ID, только пункты P1; оставшиеся
 пункты отдельно в плане, не фиктивно приняты. Окно после actual2028/очереди ещё
 согласовывается. P2 начат отдельной зависимой веткой без изменения P1 worktree.
+
+## Дополнение к итерации 2 — 07.11.2026 — Codex / OpenAI
+
+В main появился6434a207/PR2029; ordinary merge e072c241 сохранил его финансы.
+Полный CI42377660255 на7cacc93b прошёл все независимые backend/component/
+Lime/WebKit проверки; блокеры — trainer feedback baseline в двух мобильных
+профилях и два старых precondition перехода account→logout/appearance.
+Оба перехода исправлены без удаления assertions. Cancel-case прошёл локально;
+повтор auth-case после холодного dev-loading прошёл1/1 за17,4с; таймауты прежние.
+
+Снимки trainer feedback обновляются только для light/dark на390/430/1440.
+Linux-render использует тот же Playwright1.61.1 и реальные компоненты с synthetic
+API; после отличий локального graphics/ESM запуска применён software renderer
+Mesa и bundled preview. Это генерация изображений, не подмена native CI:
+существующий полный native journey остаётся обязательным на новом exact-head.
+Клиентские снимки/допуски/tests и runtime не меняются.
+Дальше: сверка новых снимков с CI, exact-head CI и сериализованный выпуск.
