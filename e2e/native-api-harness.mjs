@@ -43,14 +43,23 @@ const nativeModule = name => import(new URL(`dist/${name}.js`, apiDirectory))
 async function stop() {
   if (stopping) return
   stopping = true
-  await app?.close()
-  await runtime?.end()
-  await owner?.end()
-  if (created) {
-    await admin.query('select pg_terminate_backend(pid) from pg_stat_activity where datname=$1 and pid<>pg_backend_pid()', [databaseName])
-    await admin.query(`drop database "${databaseName}"`)
+  const errors = []
+  // buildApp owns the runtime pool once constructed; do not close it twice.
+  // Attempt owned-database cleanup even if an earlier shutdown step fails.
+  const steps = [
+    () => app ? app.close() : runtime?.end(),
+    () => owner?.end(),
+    async () => {
+      if (!created) return
+      await admin.query('select pg_terminate_backend(pid) from pg_stat_activity where datname=$1 and pid<>pg_backend_pid()', [databaseName])
+      await admin.query(`drop database "${databaseName}"`)
+    },
+    () => admin.end(),
+  ]
+  for (const step of steps) {
+    try { await step() } catch (error) { errors.push(error) }
   }
-  await admin.end()
+  if (errors.length) throw new AggregateError(errors, 'native_fixture_cleanup_failed')
 }
 process.once('SIGTERM', () => { void stop().then(() => process.exit(0)) })
 process.once('SIGINT', () => { void stop().then(() => process.exit(0)) })
