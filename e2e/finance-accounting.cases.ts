@@ -591,6 +591,14 @@ export function financeAccountingCases() {
     await page.getByRole('button', { name: 'Назад', exact: true }).click()
     await expect(page).toHaveURL(returnUrl)
     await expectReceiptClient(page, clientId)
+    // A client filter keeps its trigger mounted but must discard the previous
+    // client's unsaved editor; no payment is submitted by changing a filter.
+    await history.getByRole('button', { name: /Действия с оплатой/ }).click()
+    await page.getByRole('menuitem', { name: 'Изменить' }).click()
+    await page.getByLabel('Сумма, ₽').fill('1234')
+    await chooseReceiptClient(page, '')
+    await expect(page.locator('.finance-form')).toHaveCount(0)
+    await chooseReceiptClient(page, clientId)
     await history.getByRole('button', { name: /Действия с оплатой/ }).click()
     await page.getByRole('menuitem', { name: 'Изменить' }).click()
     await page.getByLabel('Сумма, ₽').fill('5000')
