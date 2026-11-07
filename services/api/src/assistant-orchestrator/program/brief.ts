@@ -142,8 +142,8 @@ function explicitFrequency(text: string): number | undefined {
   const token = '(?:[0-9]+|один|одно|одну|два|две|три|четыре|пять|шесть|семь)'
   let normalized = normalize(text)
   // A clear correction keeps the new value, including an omitted unit on the old value.
-  normalized = normalized.replace(new RegExp(`не\\s+${token}(?:\\s+(?:раза?|занятия?|тренировки?))?\\s*,?\\s*а\\s+(${token})`, 'gu'), '$1')
-  if (new RegExp(`(?:не\\s+${token}|${token}\\s*(?:или|[-–—])\\s*${token})`, 'u').test(normalized)) return undefined
+  normalized = normalized.replace(new RegExp(`(?<![\\p{L}0-9])не\\s+${token}(?:\\s+(?:раза?|занятия?|тренировки?))?\\s*,?\\s*а\\s+(${token})`, 'gu'), '$1')
+  if (new RegExp(`(?:(?<![\\p{L}0-9])не\\s+${token}|${token}\\s*(?:или|[-–—])\\s*${token})`, 'u').test(normalized)) return undefined
   const matches = [...normalized.matchAll(new RegExp(`(?<![\\p{L}0-9])(${token})\\s*(?:раз(?:а)?|заняти[еяй]|трениров(?:ка|ки|ок))(?!\\p{L})`, 'gu'))]
   const values = matches.map((match) => numbers[match[1]!] ?? Number(match[1]))
   if (!values.length && new RegExp(`^${token}[.!]?$`, 'u').test(normalized)) values.push(numbers[normalized.replace(/[.!]$/, '')] ?? Number(normalized.replace(/[.!]$/, '')))
