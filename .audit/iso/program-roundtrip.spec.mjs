@@ -32,6 +32,8 @@ test('native program creation assignment client execution trainer results',async
  try{
  const trainer=await signIn(trainerContext,'trainer','trainer');const client=await signIn(clientContext,'client','client')
  const t=trainer.page,c=client.page
+ const hint=c.locator('.coachmark-bubble').getByRole('button',{name:'Понятно',exact:true}).first();
+ await c.addLocatorHandler(hint,async()=>{await hint.click();record('client_coachmark_dismissed',{method:'visible UI Понятно button'})});
  const clientOnboarding=c.getByRole('button',{name:'Понятно',exact:true});await expect(clientOnboarding).toBeVisible({timeout:60000});await clientOnboarding.click()
  const before=(await read(trainer.session,'/v1/training-data?clientId=11111111-1111-4111-8111-111111111111')).workouts
  expect(before).toHaveLength(0)
@@ -95,7 +97,7 @@ test('native program creation assignment client execution trainer results',async
   if(await reps.isVisible()){await reps.fill(String(9+index));await reps.press('Tab')}
   const total=w.exercises.flatMap(e=>e.sets).length;for(let set=0;set<total;set++){
    const confirm=c.locator('.live-set:not(.confirmed) .live-set-check:visible:not(:disabled)').first()
-   await expect(confirm).toBeVisible();await confirm.click()
+   await expect(confirm).toBeVisible();await confirm.evaluate(el=>el.scrollIntoView({block:'center',inline:'nearest'}));await confirm.click()
    await expect.poll(async()=>{const data=await read(client.session,'/v1/training-data?workoutId='+w.id);return data.workouts[0].exercises.flatMap(e=>e.sets).filter(s=>s.confirmedAt).length}).toBe(set+1)
   }
   await c.screenshot({path:info.outputPath(`04-client-workout-${index+1}-confirmed.png`),fullPage:true})
