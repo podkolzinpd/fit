@@ -83,3 +83,21 @@ AppLayout для section данного маршрута и адресные п�
 Проверка: первые component89/89, рабочий typecheck/lint и browser впереди.
 Открыто: фактический CI/production не выполнены, P2/P3 ещё не начаты.
 Дальше: P1 локальная/браузерная проверка, PR/CI, затем очередь и полный пакет.
+
+## Итерация 2 — 07.11.2026 — Codex / OpenAI
+
+P1/PR2032 опубликован, merge/release ещё не выполнены. На source14df34db полный
+check exit0: frontend345files/3077tests, coverage83.64%/78.76%, API1608passed
+и404standardDBskip; lint/typecheck/policies/build/startup пройдены. Component89/89,
+native browser3/3 и LimeWebKit2/2 прошли; снимок рабочего обзора просмотрен.
+Local dev warning об Onest связан с symlink allowlist, production build имеет
+проверенные YS Geo2/2. Это не proof физического телефона или опубликованного UI.
+
+Incoming actualmainc5c65706/#2028 объединяется обычным merge, его API/миграция197/
+workflow/история сохраняются. Единственный конфликт — два append в индексе:
+оставлены SET101–111 и CPT-PERSONAL-20261107. Client Profile/Live/UI не менялись.
+Исходный green14df не переносится автоматически на новый head: новый exact-head
+CI обязателен, targeted component/typecheck/docs повторяются после integration.
+Таблица PR исправлена под существующий формат ID, только пункты P1; оставшиеся
+пункты отдельно в плане, не фиктивно приняты. Окно после actual2028/очереди ещё
+согласовывается. P2 начат отдельной зависимой веткой без изменения P1 worktree.
