@@ -71,8 +71,10 @@ test('native program creation assignment client execution trainer results',async
  await expect(t.getByText('Программа добавлена в расписание: 2 тренировок.',{exact:true})).toBeVisible()
  await t.reload();
  const savedReceipt=t.getByText('Программа добавлена в расписание: 2 тренировок.',{exact:true});
+ const history=t.getByRole('button',{name:/^История /});
+ await expect(savedReceipt.or(history)).toBeVisible();
  if(!await savedReceipt.isVisible()){
-  await t.getByRole('button',{name:/^История /}).click();
+  await history.click();
   const savedConversation=t.locator('#assistant-session-history button');await expect(savedConversation).toHaveCount(1);await savedConversation.click();
  }
  await expect(savedReceipt).toBeVisible();record('saved_conversation_restored',{programId:draft.programId,method:'reload then existing conversation via history'})
