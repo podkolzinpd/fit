@@ -208,3 +208,23 @@ main совпадает с уже проверенным parent, а diff сле�
 green не переносится на новый source. После всех трёх слияний обязательны
 полный CI фактического итоговогоmain и официальный API/web/OTA выпуск/readback.
 Это не обход required checks; squash не является требованием AGENTS.
+
+## Итерация 7 — 07.11.2026 — Codex / OpenAI
+
+Дополнительная проверка SET108 выявила собственный дефект P3 до публикации:
+mutation получала DOM-form, а pending отключал поля. При network pause
+mutationFn запускалась после возврата сети и FormData уже исключала disabled
+поля: имя/фамилия становилисьnull, timezone возвращался к старому.
+Дефект воспроизведён новым тестом: offline→submit→pending→online, получен
+ожидаемый red с потерей введённых значений. Теперь FormData создаётся синхронно
+в submit до блокировки; mutation, API, правила пустых значений, сеть/очередь
+и права прежние. Нового механизма offline/persistence не добавлено.
+Green:5 целевых файлов39tests, typecheck/lint; локальные red/green сохранены.
+Снимки не изменились, новый exact-head CI перед слиянием обязателен.
+
+Уточнение технического порядка из итерации6: равенство дерева не заменяет
+фактическую freshness-проверку после parent merge. Перед финальным CI следующей
+ветки проверяется ancestor actualmain; при BEHIND/integration всегда ordinary
+merge main и полный CI нового head. Admin/alternate API для обхода не используются
+([сохранённая причина](../REGRESSION_LESSONS.md)).
+Полный source/main CI и production ещё гейты; разрешённые три PR продолжаются.

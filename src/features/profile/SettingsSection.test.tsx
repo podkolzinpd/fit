@@ -1,8 +1,8 @@
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { render, screen, waitFor } from '@testing-library/react'
+import { onlineManager, QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { act, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import type { ReactNode } from 'react'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { SessionActor, TrainerActor } from '../../shared/domain'
 import { AccountSettingsCard, SettingsSection } from './SettingsSection'
 
@@ -30,6 +30,7 @@ function wrapper() {
 }
 
 describe('SettingsSection', () => {
+  afterEach(() => { onlineManager.setOnline(true) })
   beforeEach(() => {
     refresh.mockReset().mockResolvedValue(undefined)
     updateProfile.mockReset().mockResolvedValue(undefined)
@@ -91,6 +92,23 @@ describe('SettingsSection', () => {
     expect(screen.getByRole('button', { name: 'Отмена' })).toBeDisabled()
     expect(updateProfile).toHaveBeenCalledOnce()
     finish!()
+    await waitFor(() => expect(refresh).toHaveBeenCalledOnce())
+  })
+
+  it('retains the submitted account values while an offline mutation is paused', async () => {
+    const user = userEvent.setup()
+    render(<AccountSettingsCard />, { wrapper: wrapper() })
+    await user.click(screen.getByRole('button', { name: 'Изменить данные' }))
+    await user.clear(screen.getByLabelText('Имя'))
+    await user.type(screen.getByLabelText('Имя'), 'Мария')
+    await user.clear(screen.getByLabelText('Часовой пояс'))
+    await user.type(screen.getByLabelText('Часовой пояс'), 'Europe/Paris')
+    act(() => { onlineManager.setOnline(false) })
+    await user.click(screen.getByRole('button', { name: 'Сохранить' }))
+    expect(screen.getByLabelText('Имя')).toBeDisabled()
+    expect(updateProfile).not.toHaveBeenCalled()
+    act(() => { onlineManager.setOnline(true) })
+    await waitFor(() => expect(updateProfile).toHaveBeenCalledWith({ firstName: 'Мария', lastName: 'Иванова', timezone: 'Europe/Paris' }))
     await waitFor(() => expect(refresh).toHaveBeenCalledOnce())
   })
 

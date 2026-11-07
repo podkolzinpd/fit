@@ -17,9 +17,8 @@ export function AccountSettingsCard() {
   const [saved, setSaved] = useState(false)
   const formRef = useRef<HTMLFormElement>(null)
   const update = useMutation({
-    mutationFn: async (form: HTMLFormElement) => {
+    mutationFn: async (data: FormData) => {
       if (!actor || actor.kind !== 'trainer') throw new Error('Изменение данных недоступно')
-      const data = new FormData(form)
       await updateProfile({
         firstName: String(data.get('firstName') || '') || null,
         lastName: String(data.get('lastName') || '') || null,
@@ -38,7 +37,7 @@ export function AccountSettingsCard() {
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     setSaved(false)
-    update.mutate(event.currentTarget)
+    update.mutate(new FormData(event.currentTarget))
   }
   function cancel() {
     update.reset()

@@ -213,3 +213,12 @@ running/pending layout transitions. Отмена ручным фокусом д�
 геометрию первого/последнего элемента до внутренних краёв строки, равенство
 ширин и снимки320/390/430/1440, а не только наличие кнопок или scrollWidth.
 Причина, red/green и границы — [финансы, FIN-26](design/trainer-finance-cabinet-20260930.md#fin601603--месячные-итоги--06112026--codex--openai).
+
+## RL-ASYNC-FORM-SNAPSHOT-20261107
+
+Поля, заблокированные pending-состоянием, не входят в FormData. Не передавать
+DOM-form в отложенную mutation для последующего чтения: при offline pause
+значения будут потеряны к моменту выполнения. Снимать FormData/значения в submit
+до блокировки, сохраняя прежнюю команду. Проверка: offline→submit→disabled→online,
+сервер получает исходно введённое. Red/green и границы —
+[настройки, итерация7](design/TRAINER_SETTINGS_COMPACT_20261107.md#итерация-7--07112026--codex--openai).
