@@ -116,3 +116,39 @@ test('service pilot is independent, requires current corporate eligibility and k
  assert.deepEqual(await manageCorporateServicePilot(inspector,'inspect',hash),{status:'inspected',uniqueTrainer:true,enabled:false,eligible:false})
  assert.equal(reads[0],'begin read only');assert.equal(reads.some(sql=>/^(insert|update)/.test(sql)),false)
 })
+
+test('personal pilot uses the same closed test target and never modifies service/invitation/admin assignments',async()=>{
+ const {manageCorporatePersonalPilot}=await import('./manage-corporate-admin-access.mjs')
+ for(const eligible of [true,false]){
+  const calls=[]
+  const client={async query(sql,args){calls.push({sql,args});if(sql.includes('select count(*)'))return{rows:[{n:0}]};if(sql.includes('select p.id'))return{rows:[{id:'private-trainer'}]};if(sql.includes(' eligible'))return{rows:[{eligible}]};if(sql.startsWith('select enabled'))return{rows:[{enabled:true}]};return{rows:[]}}}
+  if(!eligible){await assert.rejects(manageCorporatePersonalPilot(client,'grant',hash),/ineligible/);assert.equal(calls.some(c=>c.sql.startsWith('insert')),false);assert.equal(calls.at(-1).sql,'rollback');continue}
+  assert.deepEqual(await manageCorporatePersonalPilot(client,'grant',hash),{status:'applied',uniqueTrainer:true,enabled:true,eligible:true,otherEnabledTrainers:0})
+  assert.ok(calls.find(c=>c.sql.startsWith('insert into app_private.corporate_personal_pilot_trainers')))
+  assert.equal(calls.some(c=>/^(update|insert into) (public\.|app_private\.corporate_admin|app_private\.corporate_invitation)/.test(c.sql)),false)
+  assert.equal(calls.at(-1).sql,'commit')
+ }
+ for(const rows of [[],[{id:'one'},{id:'two'}]]){
+  const calls=[];const client={async query(sql){calls.push(sql);return{rows:sql.includes('select p.id')?rows:[]}}}
+  await assert.rejects(manageCorporatePersonalPilot(client,'grant',hash),/target_unresolved/)
+  assert.equal(calls.some(sql=>sql.startsWith('insert')),false);assert.equal(calls.at(-1),'rollback')
+ }
+ const reads=[];const inspector={async query(sql){reads.push(sql);if(sql.includes('select count(*)'))return{rows:[{n:0}]};if(sql.includes('select p.id'))return{rows:[{id:'private-trainer'}]};if(sql.includes(' eligible'))return{rows:[{eligible:false}]};return{rows:[]}}}
+ assert.deepEqual(await manageCorporatePersonalPilot(inspector,'inspect',hash),{status:'inspected',uniqueTrainer:true,enabled:false,eligible:false,otherEnabledTrainers:0})
+ assert.equal(reads[0],'begin read only');assert.equal(reads.some(sql=>/^(insert|update)/.test(sql)),false)
+})
+
+test('personal scope preserves every old scope and uses only the existing closed services target',()=>{
+ const workflow=readFileSync(new URL('../.github/workflows/manage-corporate-admin.yml',import.meta.url),'utf8')
+ assert.ok(workflow.includes('options: [administrator, invitation-pilot, services-pilot, personal-pilot]'))
+ assert.ok(workflow.includes('personal-pilot) CORPORATE_ADMIN_LOGIN_SHA256=$SERVICES_TRAINER_LOGIN_SHA256 ;;'))
+ assert.ok(workflow.includes('services-pilot) CORPORATE_ADMIN_LOGIN_SHA256=$SERVICES_TRAINER_LOGIN_SHA256 ;;'))
+})
+
+test('personal pilot fails closed before a grant when another trainer is enabled',async()=>{
+ const {manageCorporatePersonalPilot}=await import('./manage-corporate-admin-access.mjs')
+ const calls=[];const client={async query(sql){calls.push(sql);if(sql.includes('select p.id'))return{rows:[{id:'private-target'}]};if(sql.includes('select count(*)'))return{rows:[{n:1}]};return{rows:[]}}}
+ await assert.rejects(manageCorporatePersonalPilot(client,'grant',hash),/exclusive_target_conflict/)
+ assert.equal(calls.some(sql=>/^(insert|update)/.test(sql)),false)
+ assert.equal(calls.at(-1),'rollback')
+})
