@@ -140,7 +140,10 @@ function normalize(text: string): string { return text.toLocaleLowerCase('ru').r
 function explicitFrequency(text: string): number | undefined {
   const numbers: Record<string, number> = { один: 1, одно: 1, одну: 1, два: 2, две: 2, три: 3, четыре: 4, пять: 5, шесть: 6, семь: 7 }
   const token = '(?:[0-9]+|один|одно|одну|два|две|три|четыре|пять|шесть|семь)'
-  let normalized = normalize(text)
+  // Valid ISO calendar dates are not frequency ranges; leave the original
+  // message intact for evidence and start-date validation in mergeExtractedBrief.
+  let normalized = normalize(text).replace(/(?<![\p{L}0-9-])\d{4}-\d{2}-\d{2}(?![\p{L}0-9-])/gu,
+    (date) => isCalendarDate(date) ? ' ' : date)
   // A clear correction keeps the new value, including an omitted unit on the old value.
   normalized = normalized.replace(new RegExp(`(?<![\\p{L}0-9])не\\s+${token}(?:\\s+(?:раза?|занятия?|тренировки?))?\\s*,?\\s*а\\s+(${token})`, 'gu'), '$1')
   if (new RegExp(`(?:(?<![\\p{L}0-9])не\\s+${token}|${token}\\s*(?:или|[-–—])\\s*${token})`, 'u').test(normalized)) return undefined
