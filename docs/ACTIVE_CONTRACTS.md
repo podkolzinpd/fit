@@ -198,3 +198,8 @@ actor, включая закономерно скрытые записи. Policy
 передаётся только через подписанный encrypted Cloud.ru input; оба actor
 проверяются отдельно, вся прежняя mixed history и финансы сохраняются.
 [Границы и проверки](design/ATHLETE_PROGRAM_HISTORY_IMPORT_20261103.md#итерация-21--06112026--codex--openai).
+
+07.11 — CPT-PERSONAL-20261107: [CPT101–108](design/CORPORATE_ADMIN_20261027.md#персональные-тренировки-cpt101108--2026-11-07),2PR.
+Только test trainer: отметка своей карточки с текущей даты; done+with_trainer,
+без backfill/офиса/Staff/финансов; историческое основание не зависит от текущих
+галочек, исправления workout пересчитываются. Services/invitation pilots прежние.
