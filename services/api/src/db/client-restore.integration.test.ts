@@ -204,6 +204,23 @@ describe.skipIf(source === undefined)('owner-approved canonical client restorati
     expect(JSON.stringify(found)).not.toMatch(/Synthetic|synthetic-private|token_sha256|provider_subject_sha256|messageSha256/)
     expect((await owner.query("select count(*)::int n from public.client_trainer_relationships where client_id=$1 and status='active'", [f.card])).rows).toEqual([{ n: 0 }])
   })
+  it('read-only discovery sees the exact imported card after ownership changes without assuming or changing the current actor', async () => {
+    const f = await privateFixture(), current = randomUUID()
+    await owner.query("insert into public.profiles(id,first_name,account_role) values($1,'Synthetic changed owner','client')", [current])
+    await owner.query("insert into app_private.auth_identities(provider,provider_subject_sha256,profile_id,identity_origin) values('yandex',$1,$2,'native')", [createHash('sha256').update(current).digest('hex'), current])
+    await owner.query('update public.clients set auth_user_id=$2 where id=$1', [f.card, current])
+    await expect(privatePlan(f)).rejects.toThrow('canonical')
+    const evidence = { messageSha256: createHash('sha256').update(randomUUID()).digest('hex'), since: new Date(Date.now()-60000).toISOString() }
+    const failure = await privatePlan(f, evidence).then(() => { throw Error('discovery must reject apply planning') }, (error: unknown) => error)
+    expect(failure).toMatchObject({ message: 'client_restore_identity_evidence_review_required', privateDiagnostic: {
+      state: { card: { id: f.card, auth_user_id: current } },
+      identityEvidence: { feedback: [], actorSelected: false, importedCounts: { workouts: 21, exercises: 1, sets: 1 } },
+    } })
+    const evidenceProfiles = (failure as { privateDiagnostic: { identityEvidence: { profiles: { id: string; account_role: string; yandex_identities: number }[] } } }).privateDiagnostic.identityEvidence.profiles
+    expect(evidenceProfiles.find(p => p.id === current)).toEqual(expect.objectContaining({ id: current, account_role: 'client', yandex_identities: 1 }))
+    expect((await owner.query('select auth_user_id from public.clients where id=$1', [f.card])).rows).toEqual([{ auth_user_id: current }])
+    expect((await owner.query("select count(*)::int n from public.client_trainer_relationships where client_id=$1 and status='active'", [f.card])).rows).toEqual([{ n: 0 }])
+  })
   it('private history refuses another same-name live card linked to this trainer', async () => {
     const f = await privateFixture()
     await owner.query("insert into public.clients(id,trainer_id,full_name) values($1,$2,'Synthetic canonical')", [randomUUID(), f.trainerId])
