@@ -30,9 +30,10 @@ test('trainer profile keeps the questionnaire compact and settings usable on a s
   await page.getByRole('link', { name: 'Настройки профиля' }).click()
   await expect(page).toHaveURL(/\/profile\/settings$/)
   await expect(page.getByRole('heading', { name: 'Настройки' })).toBeVisible()
-  await expect(page.getByRole('heading', { name: 'Уведомления' })).toBeVisible()
-  await expect(page.getByRole('heading', { name: 'Тренировки' })).toBeVisible()
-  await expect(page.getByRole('heading', { name: 'Оформление' })).toBeVisible()
+  await expect(page.getByRole('link', { name: /^Уведомления/ })).toBeVisible()
+  await expect(page.getByRole('link', { name: /^Тренировки/ })).toBeVisible()
+  await expect(page.getByRole('link', { name: /^Оформление/ })).toBeVisible()
+  await page.getByRole('link', { name: /^Тренировки/ }).click()
 
   const liveAnimation = page.getByRole('switch', { name: 'Анимация упражнения', exact: true })
   await expect(liveAnimation).toBeChecked()
@@ -52,10 +53,14 @@ test('trainer profile keeps the questionnaire compact and settings usable on a s
   await expect(rpe).toBeChecked({ checked: !rpeBefore })
   await rpe.setChecked(rpeBefore)
 
+  await page.getByRole('button', { name: 'Назад', exact: true }).click()
+  await page.getByRole('link', { name: /^Оформление/ }).click()
   const list = page.getByRole('radio', { name: 'Список' })
   await list.click()
   await expect(list).toHaveAttribute('aria-checked', 'true')
 
+  await page.getByRole('button', { name: 'Назад', exact: true }).click()
+  await page.getByRole('link', { name: /^Данные аккаунта/ }).click()
   await page.getByRole('button', { name: 'Изменить данные' }).click()
   const name = page.getByLabel('Имя', { exact: true })
   const savedName = await name.inputValue()
@@ -66,6 +71,8 @@ test('trainer profile keeps the questionnaire compact and settings usable on a s
   await expect(page.getByLabel('Имя', { exact: true })).toHaveValue(savedName)
   await page.getByRole('button', { name: 'Отмена' }).click()
 
+  await page.getByRole('button', { name: 'Назад', exact: true }).click()
+  await page.getByRole('link', { name: 'Помощь и документы' }).click()
   await page.getByRole('button', { name: 'Fit на экране «Домой»' }).click()
   await expect(page.getByRole('heading', { name: 'Установите Fit на Android' })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Установить на Android' }).or(page.getByText('Откройте эту страницу в Chrome.'))).toBeVisible()
@@ -82,6 +89,8 @@ test('trainer profile keeps the questionnaire compact and settings usable on a s
   await expect(feedback).toHaveCount(0)
 
   await page.getByRole('button', { name: 'Назад' }).click()
+  await expect(page).toHaveURL(/\/profile\/settings$/)
+  await page.getByRole('button', { name: 'Назад', exact: true }).click()
   await expect(page).toHaveURL(/\/profile$/)
   await expect(page.getByRole('region', { name: 'Анкета тренера' })).toBeVisible()
 

@@ -98,3 +98,23 @@
   .fit-lime-shell.trainer-profile-identity .trainer-profile-edit-card { padding: 18px }
   .fit-lime-shell.trainer-profile-identity .trainer-profile-form-grid { grid-template-columns: 1fr }
 }
+
+/* Compact trainer settings preserve the existing route and preference owners. */
+.trainer-compact-settings .trainer-settings-menu { overflow:hidden; margin:0; border:1px solid var(--border); border-radius:22px; background:var(--surface-raised) }
+.trainer-compact-settings .trainer-settings-link { display:flex; align-items:center; gap:12px; min-height:64px; padding:12px 14px; color:var(--fg); text-decoration:none }
+.trainer-compact-settings .trainer-settings-menu > :is(a, button) + :is(a, button) { border-top:1px solid var(--border) }
+.trainer-compact-settings .trainer-settings-link-copy { display:grid; gap:3px; flex:1; min-width:0 }
+.trainer-compact-settings .trainer-settings-link-copy strong { font-size:16px; line-height:1.35; font-weight:500 }
+.trainer-compact-settings .trainer-settings-link-copy small { color:var(--muted); font-size:12px; line-height:1.4 }
+.trainer-compact-settings .trainer-settings-link-icon { display:flex; color:var(--muted) }
+.trainer-compact-settings .trainer-settings-link svg { width:20px; height:20px; flex-shrink:0 }
+.trainer-compact-settings .trainer-settings-link > svg { width:18px; height:18px; color:var(--muted) }
+.trainer-compact-settings .trainer-settings-menu.menu > a { min-height:56px; padding:12px 14px; justify-content:space-between; border-bottom:0 }
+.trainer-compact-settings .trainer-settings-menu.menu > a svg { width:18px; height:18px; color:var(--muted) }
+.trainer-compact-settings .trainer-settings-link:focus-visible { outline:2px solid var(--fg); outline-offset:-3px }
+.fit-lime-shell .trainer-compact-settings .trainer-settings-menu { background:var(--lime-surface); border-color:var(--lime-divider) }
+.fit-lime-shell .trainer-compact-settings .trainer-settings-link { color:var(--lime-text) }
+.fit-lime-shell .trainer-compact-settings .trainer-settings-menu > :is(a, button) + :is(a, button) { border-color:var(--lime-divider) }
+.fit-lime-shell .trainer-compact-settings :is(.trainer-settings-link-copy small, .trainer-settings-link-icon, .trainer-settings-link > svg) { color:var(--lime-text-secondary) }
+.trainer-compact-settings .settings-section > h2 { font-size:13px; line-height:1.4; font-weight:500; color:var(--muted) }
+.fit-lime-shell.trainer-profile-identity .trainer-compact-settings .settings-section > h2 { font-size:13px; color:var(--lime-text-secondary) }
