@@ -19,10 +19,10 @@ const notificationsStatus = vi.hoisted(() => vi.fn())
 vi.mock('../notifications/push-subscription', () => ({ isPushSupported: () => true, getCurrentPushSubscription: () => Promise.resolve(null) }))
 vi.mock('../install', () => ({ detectInstallPlatform: () => 'other', isAppInstalled: () => false }))
 
-function wrapper() {
+function wrapper(section?: string) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   return ({ children }: { children: ReactNode }) => (
-    <QueryClientProvider client={queryClient}><MemoryRouter>{children}</MemoryRouter></QueryClientProvider>
+    <QueryClientProvider client={queryClient}><MemoryRouter initialEntries={[section ? `/profile/settings?section=${section}` : '/profile/settings']}>{children}</MemoryRouter></QueryClientProvider>
   )
 }
 
@@ -36,10 +36,26 @@ describe('TrainerProfileSettingsPage', () => {
   })
 
   it('links to the Telegram support channel next to the feedback form entry', async () => {
-    render(<TrainerProfileSettingsPage />, { wrapper: wrapper() })
+    render(<TrainerProfileSettingsPage />, { wrapper: wrapper('help') })
     await waitFor(() => expect(screen.getByRole('link', { name: 'Поддержка в Telegram' })).toHaveAttribute('href', SUPPORT_TELEGRAM_URL))
     expect(screen.getByRole('link', { name: 'Поддержка в Telegram' })).toHaveAttribute('target', '_blank')
     expect(screen.getByRole('link', { name: 'Поддержка в Telegram' })).toHaveAttribute('rel', 'noopener noreferrer')
+  })
+
+  it('opens one settings section, preserves the preference and returns to the overview', async () => {
+    const user = userEvent.setup()
+    render(<TrainerProfileSettingsPage />, { wrapper: wrapper() })
+    expect(screen.queryByRole('switch')).not.toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Управление упражнениями' })).toHaveAttribute('href', '/exercises')
+    await user.click(screen.getByRole('link', { name: /^Тренировки/ }))
+    const wheel = screen.getByRole('switch', { name: 'Ввод времени колёсиком' })
+    await user.click(wheel)
+    await user.click(screen.getByRole('button', { name: 'Назад' }))
+    expect(screen.getByRole('heading', { name: 'Настройки' })).toBeVisible()
+    expect(screen.queryByRole('switch')).not.toBeInTheDocument()
+    await user.click(screen.getByRole('link', { name: /^Тренировки/ }))
+    expect(screen.getByRole('switch', { name: 'Ввод времени колёсиком' })).toBeChecked()
+    expect(screen.queryByRole('link', { name: 'Политика конфиденциальности' })).not.toBeInTheDocument()
   })
 
   it('does not keep archive visibility in settings', () => {
@@ -50,12 +66,18 @@ describe('TrainerProfileSettingsPage', () => {
 
   it('offers the optional wheel in trainer workout settings', async () => {
     const user = userEvent.setup()
-    render(<TrainerProfileSettingsPage />, { wrapper: wrapper() })
+    render(<TrainerProfileSettingsPage />, { wrapper: wrapper('training') })
     const wheel = screen.getByRole('switch', { name: 'Ввод времени колёсиком' })
     expect(wheel).not.toBeChecked()
     await user.click(wheel)
     expect(wheel).toBeChecked()
     expect(getWorkoutTimeWheel()).toBe(true)
+    await user.click(wheel)
+    expect(wheel).not.toBeChecked()
+    expect(wheel).toBeVisible()
+    expect(getWorkoutTimeWheel()).toBe(false)
+    expect(screen.getByRole('switch', { name: 'Отдых в плане' })).toBeVisible()
+    expect(screen.getAllByRole('switch')).toHaveLength(4)
   })
 })
 

@@ -1,7 +1,6 @@
 import { CorporateServiceEntry } from '../corporate-services'
-import { CorporateAdminEntry } from '../corporate-admin'
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../../app/auth-context'
 import { isCoachLiveDensityEnabled } from '../../app/coach-workout-redesign'
 import { setCoachLiveDensity, useCoachLiveDensity } from '../../app/coach-live-density'
@@ -15,7 +14,6 @@ import { SettingsIcon } from '../../shared/icons'
 import { LEGAL_PATHS } from '../../shared/legal'
 import { SUPPORT_TELEGRAM_URL } from '../../shared/support'
 import { Coachmark, Page, Switch } from '../../shared/ui'
-import { LogoutButton } from '../auth'
 import { AppInstallPanel } from '../install'
 import { FitLimeInstallSetting } from '../install/FitLimeInstallSetting'
 import { NotificationsSetting } from '../notifications'
@@ -24,6 +22,7 @@ import { AppFeedbackForm } from './AppFeedbackForm'
 import { AccountSettingsCard, SettingsSection } from './SettingsSection'
 import { TrainerProfessionalProfileSection } from './TrainerProfileEditorPage'
 import { ScheduleDensitySetting } from './ScheduleDensitySetting'
+import { TRAINER_SETTINGS_SECTIONS, TrainerSettingsOverview, trainerSettingsSection } from './TrainerSettingsOverview'
 
 export function ProfilePage() {
   const { actor } = useAuth()
@@ -41,6 +40,8 @@ export function ProfilePage() {
 }
 
 export function TrainerProfileSettingsPage() {
+  const [params] = useSearchParams()
+  const section = trainerSettingsSection(params.get('section'))
   const { actor } = useAuth()
   const theme = useAppTheme()
   const showRpe = useRpeDisplay(actor?.userId)
@@ -54,13 +55,15 @@ export function TrainerProfileSettingsPage() {
 
   if (!actor || actor.role !== 'trainer') return null
 
-  return <Page title="Настройки" back="/profile" swipeBack className="profile-page profile-settings-page settings-page">
-    {fitLimeSettings && <SettingsSection title="Приложение"><FitLimeInstallSetting /></SettingsSection>}
-    <SettingsSection title="Уведомления">
+  return <Page title={section ? TRAINER_SETTINGS_SECTIONS[section] : 'Настройки'} back={section ? '/profile/settings' : '/profile'} swipeBack className="profile-page profile-settings-page settings-page trainer-compact-settings">
+    {!section && <TrainerSettingsOverview actor={actor} />}
+    {section === 'install' && <SettingsSection title="Приложение">{fitLimeSettings ? <FitLimeInstallSetting /> : <AppInstallPanel onClose={() => setInstallOpen(false)} />}</SettingsSection>}
+    {section === 'notifications' && <SettingsSection title="Уведомления">
       <div className="profile-settings"><NotificationsSetting userId={actor.userId} role="trainer" /></div>
-    </SettingsSection>
+    </SettingsSection>}
 
-    <SettingsSection title="Тренировки">
+    {section === 'training' && <>
+    <SettingsSection title="Live-тренировка">
       <div className="profile-settings">
         {isCoachLiveDensityEnabled(actor) && <div className="schedule-density-setting coach-live-density-setting">
           <div><strong>Вид Live-тренировки</strong><span>Выбор сохраняется для вашей учётки на этом устройстве.</span></div>
@@ -75,40 +78,42 @@ export function TrainerProfileSettingsPage() {
           </div>
         </div>}
         <Switch label="Анимация упражнения" checked={showLiveExerciseAnimation} onChange={(checked) => setLiveExerciseAnimation(actor.userId, checked)} />
+      </div>
+    </SettingsSection>
+    <SettingsSection title="Ввод и поля">
+      <div className="profile-settings">
         <Switch label="Ввод времени колёсиком" checked={useTimeWheel} onChange={setWorkoutTimeWheel} />
-        <Switch label="Показывать отдых" checked={showExerciseRest} onChange={(checked) => setExercisePlanRestDisplay(actor.userId, checked)} />
+        <Switch label="Отдых в плане" checked={showExerciseRest} onChange={(checked) => setExercisePlanRestDisplay(actor.userId, checked)} />
         <Switch label="Показывать RPE" checked={showRpe} onChange={(checked) => setRpeDisplay(actor.userId, checked)} />
       </div>
     </SettingsSection>
+    </>}
 
-    <SettingsSection title="Расписание">
+    {section === 'schedule' && <SettingsSection title="Расписание">
       <ScheduleDensitySetting />
-    </SettingsSection>
+    </SettingsSection>}
 
-    <SettingsSection title="Оформление">
-      {fitLimeSettings && <p className="fit-lime-profile-theme-note">Lime пока доступна только на экранах тренера из пилота. Выбор темы ниже сохраняется для остальных экранов.</p>}
+    {section === 'appearance' && <SettingsSection title="Оформление">
+      {fitLimeSettings && <p className="fit-lime-profile-theme-note">Экраны Lime сохраняют тёмное оформление. Выбор темы применяется к остальным экранам.</p>}
       <div className="profile-settings"><Switch label={fitLimeSettings ? 'Тёмная тема остальных экранов' : 'Тёмная тема'} checked={theme === 'dark'} onChange={(dark) => setAppTheme(dark ? 'dark' : 'light')} /></div>
       <BodyMapAppearanceSetting viewerUserId={actor.userId} role={actor.role} gender={null} />
-    </SettingsSection>
+    </SettingsSection>}
 
-    <SettingsSection title="Рабочие инструменты">
-      <div className="menu"><Link to="/exercises">Управление упражнениями</Link><Link to="/join">Ввести код приглашения</Link></div>
-    </SettingsSection>
-
-    <SettingsSection title="Аккаунт и помощь">
+    {section === 'account' && <SettingsSection title="Данные аккаунта">
       <AccountSettingsCard />
-      <CorporateAdminEntry />
+      <div className="menu"><Link to={LEGAL_PATHS.deleteAccount}>Удаление аккаунта</Link></div>
+    </SettingsSection>}
+
+    {section === 'help' && <SettingsSection title="Помощь и документы">
       <div className="menu">
-        {!fitLimeSettings && <button type="button" aria-expanded={installOpen} onClick={() => setInstallOpen((value) => !value)}>Fit на экране «Домой»</button>}
+        <button type="button" aria-expanded={installOpen} onClick={() => setInstallOpen((value) => !value)}>Fit на экране «Домой»</button>
         <button type="button" aria-expanded={feedbackOpen} onClick={() => setFeedbackOpen((value) => !value)}>Предложение или проблема</button>
         <a href={SUPPORT_TELEGRAM_URL} target="_blank" rel="noopener noreferrer">Поддержка в Telegram</a>
         <Link to={LEGAL_PATHS.terms}>Условия использования</Link>
         <Link to={LEGAL_PATHS.privacy}>Политика конфиденциальности</Link>
-        <Link to={LEGAL_PATHS.deleteAccount}>Удаление аккаунта</Link>
       </div>
       {installOpen && <AppInstallPanel onClose={() => setInstallOpen(false)} />}
       {feedbackOpen && <AppFeedbackForm onClose={() => setFeedbackOpen(false)} />}
-      <LogoutButton />
-    </SettingsSection>
+    </SettingsSection>}
   </Page>
 }

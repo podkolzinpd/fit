@@ -1085,6 +1085,7 @@ test('profile Cancel resets unsaved edits', async ({ page }) => {
   // Настройки профиля открываются отдельным экраном из шестерёнки анкеты.
   await page.goto('/profile/settings')
   await expect(page.getByRole('heading', { name: 'Настройки' })).toBeVisible()
+  await page.getByRole('link', { name: /^Данные аккаунта/ }).click()
   await page.getByRole('button', { name: 'Изменить данные' }).click()
   const firstName = page.getByLabel('Имя', { exact: true })
   const original = await firstName.inputValue()
@@ -1094,6 +1095,8 @@ test('profile Cancel resets unsaved edits', async ({ page }) => {
   await expect(page.getByLabel('Имя', { exact: true })).toHaveValue(original)
   await page.getByRole('button', { name: 'Отмена' }).click()
 
+  await page.getByRole('button', { name: 'Назад', exact: true }).click()
+  await page.getByRole('link', { name: /^Оформление/ }).click()
   const darkTheme = page.getByRole('switch', { name: 'Тёмная тема' })
   await expect(darkTheme).not.toBeChecked()
   await darkTheme.check()
