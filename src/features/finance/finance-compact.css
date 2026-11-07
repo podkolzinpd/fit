@@ -51,6 +51,9 @@
 }
 
 /* FIN702: list navigation and its existing controls share one row. */
+/* The enclosing search field owns the visible focus indicator. */
+.phone-frame.fit-lime-shell .finance-compact-page .finance-overview-search:focus-within { outline: 2px solid var(--lime-accent); outline-offset: -2px; }
+.phone-frame.fit-lime-shell .finance-compact-page .finance-overview-search input:focus-visible { outline: none; }
 .phone-frame.fit-lime-shell .finance-list-toolbar { display: flex; align-items: center; gap: 6px; margin: 8px 0 10px; }
 .phone-frame.fit-lime-shell .finance-list-toolbar .finance-overview-tabs { flex: 1; min-width: 0; margin: 0; padding: 2px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .phone-frame.fit-lime-shell .finance-list-toolbar .finance-overview-tabs button { min-height: 44px; padding: 0 6px; }
