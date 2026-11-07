@@ -11374,7 +11374,7 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
     })
     it('nutrition: migration down/up restores RLS and least-privilege grants without changing committed test data', async () => {
       if (ownerPool === undefined) throw new Error('Database pool not ready')
-      const [analyticsUp, analyticsDown] = (await readFile(new URL('../../db/migrations/000198_private_analytics_explorer.sql', import.meta.url), 'utf8')).split('-- Down Migration')
+      const [analyticsUp, analyticsDown] = (await readFile(new URL('../../db/migrations/000199_private_analytics_explorer.sql', import.meta.url), 'utf8')).split('-- Down Migration')
       if (analyticsUp === undefined || analyticsDown === undefined) throw new Error('analytics migration sections missing')
       const migrationUrl = new URL('../../db/migrations/000142_nutrition_diary.sql', import.meta.url)
       const [up, down] = (await readFile(migrationUrl, 'utf8')).split('-- Down Migration')
