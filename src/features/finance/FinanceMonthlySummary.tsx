@@ -1,7 +1,7 @@
 import type { TrainerFinanceOverview } from '../../data/contracts/trainer-finance'
 import { ChevronDownIcon } from '../../shared/icons'
 import { OverflowMenu } from '../../shared/ui'
-import { financeChartSegments, financeClientColor, financeMetricValue, financeMoney, type FinanceMetric } from './finance-monthly'
+import { financeChartSegments, financeClientColor, financeClientColors, financeMetricValue, financeMoney, type FinanceMetric } from './finance-monthly'
 import './finance-monthly.css'
 
 export function FinanceMonthlySummary({ data, metric, onMetricChange, clientId, showMetricSwitch = true, compact = false }: {
@@ -24,8 +24,8 @@ export function FinanceMonthlySummary({ data, metric, onMetricChange, clientId, 
   const totalText = formatted(value)
   const totalFontSize = Math.max(16, Math.min(28, 364 / totalText.length))
   const segments = clientId ? [
-    { id: clientId, label: client?.fullName ?? 'Спортсмен', value, color: financeClientColor(clientId) },
-    { id: 'others', label: 'Остальные спортсмены', value: Math.max(0, total - value), color: 'var(--lime-surface-high)' },
+    { id: clientId, label: client?.fullName ?? 'Спортсмен', value, color: financeClientColor(clientId, financeClientColors(data.clients)) },
+    { id: 'others', label: 'Остальные спортсмены', value: Math.max(0, total - value), color: 'var(--lime-chart-others)' },
   ].filter(item => item.value > 0) : financeChartSegments(data.clients, metric)
   const circumference = 2 * Math.PI * 94
   const ring = <svg viewBox="0 0 220 220" role="img" aria-label={`${metric === 'money' ? 'Поступления' : 'Проведено'}: ${formatted(value)}`}>
