@@ -1,0 +1,30 @@
+.corporate-duty-workspace { display:grid; gap:24px; min-width:0; }
+.corporate-duty-current { display:grid; gap:12px; padding:20px; border:1px solid var(--border); border-radius:var(--radius-md); background:var(--surface); min-width:0; }
+.corporate-duty-current p { margin:0; overflow-wrap:anywhere; }
+.corporate-duty-note { color:var(--muted); font-size:14px; line-height:1.5; }
+.corporate-duty-workspace select, .corporate-duty-editor input, .corporate-duty-editor select, .corporate-duty-editor textarea { box-sizing:border-box; width:100%; min-width:0; min-height:48px; padding:10px 12px; font-size:16px; }
+.corporate-duty-workspace button, .corporate-duty-workspace summary { min-height:44px; }
+.corporate-duty-workspace [role=alert] { overflow-wrap:anywhere; }
+.corporate-duty-workspace [role=alert] button+button { margin:8px 0 0 8px; }
+.corporate-duty-totals { margin:0; display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; }
+.corporate-duty-totals > div { padding:16px; border:1px solid var(--border); border-radius:var(--radius-md); background:var(--surface); }
+.corporate-duty-totals dt { font-size:14px; color:var(--muted); }
+.corporate-duty-totals dd { margin:8px 0 0; font-size:24px; overflow-wrap:anywhere; }
+.corporate-duty-editor { display:grid; gap:16px; padding:16px; background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-md); }
+.corporate-duty-editor fieldset { display:grid; gap:16px; min-width:0; border:0; padding:0; margin:0; }
+.corporate-duty-editor .actions { display:flex; gap:8px; flex-wrap:wrap; }
+.corporate-duty-statistics .corporate-service-quick-periods [aria-pressed=true], .corporate-duty-statistics .corporate-service-quick-periods [aria-pressed=true]:hover { color:var(--bg); background:var(--text); }
+.corporate-duty-audit { padding-left:20px; overflow-wrap:anywhere; }
+.corporate-duty-audit li { padding:12px 0; }
+.corporate-duty-audit p { margin:6px 0 0; }
+.corporate-duty-views { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:20px; }
+.corporate-duty-views [aria-pressed=true] { outline:2px solid var(--text); outline-offset:-2px; }
+@media(max-width:500px) { .corporate-duty-totals { grid-template-columns:1fr; } .corporate-duty-current { padding:16px; } }
+
+.corporate-duty-editor { scroll-margin-top:24px; }
+
+.corporate-duty-date { display:grid; gap:8px; min-width:0; }
+.corporate-duty-date > span { color:var(--muted); }
+.corporate-duty-date .schedule-v2-calendar { display:flex; align-items:center; gap:8px; justify-content:flex-start; min-height:48px; height:auto; padding:12px; width:100%; border-radius:var(--radius-md); }
+.corporate-duty-date .schedule-v2-calendar > svg { width:24px; height:24px; flex:0 0 24px; }
+.corporate-duty-date .schedule-v2-calendar > span { white-space:normal; text-align:left; }

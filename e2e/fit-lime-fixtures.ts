@@ -329,6 +329,8 @@ export async function mockPilot(page: Page, options: { role?: 'trainer' | 'clien
           preferences: { scheduleDensity },
         },
       }
+    } else if (url.pathname === '/v1/corporate-duties/access') {
+      body = { allowed: false, hasHistory: false, active: null, offices: [] }
     } else if (url.pathname === '/v1/corporate-personal/access') {
       body = { allowed: false }
     } else if (url.pathname === '/v1/profile' && route.request().method() === 'PUT') {

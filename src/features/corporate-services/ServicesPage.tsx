@@ -1,3 +1,4 @@
+import { CorporateDutiesWorkspace, hasDutyAccess, useDutyAccess } from '../corporate-duties/DutiesWorkspace'
 import { useEffect, useLayoutEffect, useRef, useState, type PropsWithChildren } from 'react'
 import { useForm, useWatch } from 'react-hook-form'
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
@@ -20,10 +21,11 @@ function useServiceAccess() {
 }
 export function CorporateServiceEntry() {
   const { actor } = useAuth()
-  const access = useServiceAccess()
+  const access = useServiceAccess(), duty = useDutyAccess()
   if (actor?.role !== 'trainer') return null
-  if (access.isError) return <div className="menu corporate-service-entry" role="status"><p>Не удалось обновить доступные разделы.</p><button className="secondary" type="button" disabled={access.isFetching} aria-busy={access.isFetching} onClick={() => void access.refetch()}>Повторить проверку</button></div>
-  return access.data === true ? <div className="menu corporate-service-entry"><Link to={root}>Работа в Яндексе</Link></div> : null
+  if (access.data === true || hasDutyAccess(duty.data)) return <div className="menu corporate-service-entry"><Link to={root}>Работа в Яндексе</Link></div>
+  if (access.isError || duty.isError) return <div className="menu corporate-service-entry" role="status"><p>Не удалось обновить доступные разделы.</p><button className="secondary" type="button" disabled={access.isFetching || duty.isFetching} onClick={() => { void access.refetch(); void duty.refetch() }}>Повторить проверку</button></div>
+  return null
 }
 function ServiceGate({ children }: PropsWithChildren) {
   const { actor } = useAuth()
@@ -34,7 +36,22 @@ function ServiceGate({ children }: PropsWithChildren) {
   </AsyncView>
 }
 export function CorporateServicesPage() {
-  return <Page title="Работа в Яндексе" back="/profile" swipeBack className="corporate-services-page ym-hide-content"><ServiceGate><ServicesWorkspace /></ServiceGate></Page>
+  return <Page title="Работа в Яндексе" back="/profile" swipeBack className="corporate-services-page ym-hide-content"><WorkSections /></Page>
+}
+function WorkSections() {
+  const {actor}=useAuth()
+  const services=useServiceAccess(),duty=useDutyAccess()
+  const [params,setParams]=useSearchParams()
+  if(actor?.role!=='trainer')return <StatePanel tone="info" title="Нет доступа" description="Раздел доступен назначенным тренерам с отдельным допуском."/>
+  const canDuty=hasDutyAccess(duty.data),canServices=services.data===true
+  const showDuty=params.get('kind')==='duties'||!canServices&&canDuty
+  const error=showDuty?duty.error:services.error
+  return <AsyncView loading={services.isPending||duty.isPending} error={error} onRetry={()=>{void services.refetch();void duty.refetch()}}>
+    {canServices||canDuty?<>
+      {canServices&&canDuty&&<nav className="corporate-duty-views" aria-label="Виды работы в Яндексе"><button type="button" className="secondary" aria-pressed={!showDuty} onClick={()=>setParams({})}>Услуги</button><button type="button" className="secondary" aria-pressed={showDuty} onClick={()=>setParams({kind:'duties'})}>Дежурства</button></nav>}
+      {showDuty?duty.data&&canDuty?<CorporateDutiesWorkspace key={actor.userId} access={duty.data}/>:<StatePanel tone="info" title="Дежурства недоступны" description="Нужен отдельный допуск к дежурствам."/>:canServices&&<ServicesWorkspace/>}
+    </>:<StatePanel tone="info" title="Нет доступа" description="Раздел доступен назначенным тренерам с отдельным допуском."/>}
+  </AsyncView>
 }
 function ServicesWorkspace() {
   const { actor } = useAuth()

@@ -36,7 +36,7 @@ describe('Yandex main query timeout', () => {
     expect(calls[0]?.[1]?.body).toBe(JSON.stringify(payload))
   })
 
-  it.each(['/v1/corporate-services', '/v1/corporate-services/record/void', '/v1/corporate-personal/clients/test-client'])('bounds corporate command %s without retrying its operation', async path => {
+  it.each(['/v1/corporate-services', '/v1/corporate-services/record/void', '/v1/corporate-personal/clients/test-client', '/v1/corporate-duties'])('bounds corporate command %s without retrying its operation', async path => {
     vi.useFakeTimers()
     const fetchMock = vi.spyOn(globalThis, 'fetch').mockImplementation((input, init) => {
       if (String(input).endsWith('/health')) return Promise.resolve(new Response('{}', { headers: { 'x-fit-request-id': 'corporate-health' } }))
