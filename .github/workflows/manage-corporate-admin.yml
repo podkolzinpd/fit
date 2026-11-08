@@ -14,10 +14,20 @@ on:
         default: primary
         options: [primary, additional, third, fourth, fifth, sixth]
       scope:
-        description: Administrator capability or the independent invitation/services/personal test pilots
+        description: Administrator capability or the independent invitation/services/personal/duty test pilots
         type: choice
         default: administrator
-        options: [administrator, invitation-pilot, services-pilot, personal-pilot]
+        options: [administrator, invitation-pilot, services-pilot, personal-pilot, duty-pilot, duty-office-zone]
+      time_zone:
+        description: Explicit IANA office timezone; only duty-office-zone grant uses it
+        type: string
+        required: false
+        default: ''
+      office_name:
+        description: Exact assigned office name; omit only for a unique active office
+        type: string
+        required: false
+        default: ''
 permissions:
   contents: read
 concurrency:
@@ -45,6 +55,8 @@ jobs:
           SIXTH_ADMIN_LOGIN_SHA256: ${{ secrets.FIT_CORPORATE_ADMIN_SIXTH_LOGIN_SHA256 }}
           ADMIN_ACCOUNT: ${{ inputs.account }}
           CORPORATE_ADMIN_SCOPE: ${{ inputs.scope }}
+          CORPORATE_DUTY_TIME_ZONE: ${{ inputs.time_zone }}
+          CORPORATE_DUTY_OFFICE_NAME: ${{ inputs.office_name }}
           PILOT_TRAINER_LOGIN_SHA256: ${{ secrets.FIT_CORPORATE_INVITATION_PILOT_LOGIN_SHA256 }}
           SERVICES_TRAINER_LOGIN_SHA256: ${{ secrets.FIT_CORPORATE_SERVICES_PILOT_LOGIN_SHA256 }}
           CORPORATE_ADMIN_ACTION: ${{ inputs.action }}
@@ -70,10 +82,15 @@ jobs:
             invitation-pilot) CORPORATE_ADMIN_LOGIN_SHA256=$PILOT_TRAINER_LOGIN_SHA256 ;;
             services-pilot) CORPORATE_ADMIN_LOGIN_SHA256=$SERVICES_TRAINER_LOGIN_SHA256 ;;
             personal-pilot) CORPORATE_ADMIN_LOGIN_SHA256=$SERVICES_TRAINER_LOGIN_SHA256 ;;
+            duty-pilot) CORPORATE_ADMIN_LOGIN_SHA256=$SERVICES_TRAINER_LOGIN_SHA256 ;;
+            duty-office-zone) CORPORATE_ADMIN_LOGIN_SHA256=$SERVICES_TRAINER_LOGIN_SHA256 ;;
             *) exit 1 ;;
           esac
           [[ "$CORPORATE_ADMIN_LOGIN_SHA256" =~ ^[a-f0-9]{64}$ ]]
           case "$CORPORATE_ADMIN_ACTION" in inspect|grant|revoke) ;; *) exit 1 ;; esac
+          [[ "$CORPORATE_DUTY_TIME_ZONE" =~ ^[A-Za-z0-9_+/-]{0,100}$ ]]
+          test "${#CORPORATE_DUTY_OFFICE_NAME}" -le 160
+          [[ ! "$CORPORATE_DUTY_OFFICE_NAME" =~ [[:cntrl:]] ]]
           release=$(cat /opt/fit/RUNNING_SHA)
           test "$release" = "$(git rev-parse HEAD)"
           jq -e '.MIGRATION_DATABASE_HOST == "10.70.10.67" and .MIGRATION_DATABASE_PORT == "5432" and
@@ -89,6 +106,7 @@ jobs:
             <<<"$CLOUDRU_DATABASE_CONFIG_JSON" | sudo tee "$owner" >/dev/null
           printf 'MIGRATION_DATABASE_SSL_MODE=require\nGITHUB_REF=refs/heads/main\nGITHUB_REPOSITORY=podkolzinpd/fit\n' | sudo tee -a "$owner" >/dev/null
           printf 'CORPORATE_ADMIN_ACTION=%s\nCORPORATE_ADMIN_LOGIN_SHA256=%s\nCORPORATE_ADMIN_ACCESS_SLOT=%s\nCORPORATE_ADMIN_SCOPE=%s\n' "$CORPORATE_ADMIN_ACTION" "$CORPORATE_ADMIN_LOGIN_SHA256" "$CORPORATE_ADMIN_ACCESS_SLOT" "$CORPORATE_ADMIN_SCOPE" | sudo tee -a "$owner" >/dev/null
+          printf 'CORPORATE_DUTY_TIME_ZONE=%s\nCORPORATE_DUTY_OFFICE_NAME=%s\n' "$CORPORATE_DUTY_TIME_ZONE" "$CORPORATE_DUTY_OFFICE_NAME" | sudo tee -a "$owner" >/dev/null
           sudo podman run --rm --read-only --memory=128m --cpus=0.5 --timeout=25 --cap-drop=ALL \
             --security-opt=no-new-privileges --env-file "$owner" --user "$(id -u):$(id -g)" \
             -v "$PWD/scripts/manage-corporate-admin-access.mjs:/operation.mjs:ro" \
