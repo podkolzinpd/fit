@@ -60,6 +60,11 @@ export function readConfirmedRestoreInvitation(value,now=Date.now()){
  return value
 }
 
+export function readConfirmedCardRepairMode(value){
+ requireState(value==='merge_confirmed_cards','card_repair_mode')
+ return value
+}
+
 export function readImportedAccessAudit(value){
  requireState(Array.isArray(value)&&value.length===17,'imported_audit_scope')
  for(const item of value){
@@ -416,17 +421,241 @@ export async function readConfirmedRestoreVisibility(runtime,diagnostic){
  }catch(error){await runtime.query('rollback');throw error}
 }
 
-export async function planClientRestore(client,pair,expectedHistory=null,currentProfileEvidence=null,confirmedInvitation=null,importedAccessAudit=null){
+const mergeMoving=new Set(['public.workouts','public.workout_exercises','public.workout_sets',
+ 'public.trainer_finance_packages','public.trainer_finance_payments','public.trainer_finance_sessions',
+ 'public.trainer_finance_events','app_private.quick_start_operations'])
+const mergeTraining=new Set(['workouts','workout_exercises','workout_sets'])
+const mergeFinance=new Set(['trainer_finance_packages','trainer_finance_payments','trainer_finance_sessions'])
+const catalogQuote=name=>{requireState(/^[a-z_][a-z0-9_]*$/u.test(name),'merge_catalog');return '"'+name+'"'}
+const sqlDigest=value=>`encode(sha256(convert_to((${value})::text,'UTF8')),'hex')`
+
+// A card merge is deliberately not a profile merge. Private profile history,
+// identities, conversations, memberships and periods remain byte-identical.
+async function readCardMergeState(client,pair,sourceId,targetId,predecessorId){
+ const ids=[sourceId,targetId,predecessorId]
+ const cards=(await client.query(`select id,auth_user_id,trainer_id,archived_at,merged_into_client_id,version::int version,
+   profile_photo,${sqlDigest("to_jsonb(c)-array['archived_at','merged_into_client_id','version','updated_at','profile_photo']")} stable,
+   ${sqlDigest('to_jsonb(c)')} digest from public.clients c where id=any($1::uuid[]) order by id`,[ids])).rows
+ requireState(cards.length===3,'merge_cards')
+ const currentId=cards.find(c=>c.id===targetId).auth_user_id
+ const catalog=bounded((await client.query(`select n.nspname schema,c.relname name from pg_class c
+   join pg_namespace n on n.oid=c.relnamespace join pg_attribute a on a.attrelid=c.oid
+   where n.nspname in('public','app_private') and c.relkind='r' and a.attname='client_id'
+   and a.atttypid='uuid'::regtype and not a.attisdropped order by n.nspname,c.relname limit 101`)).rows,100)
+ const tables=[]
+ for(const t of catalog){
+   const table=catalogQuote(t.schema)+'.'+catalogQuote(t.name),moving=mergeMoving.has(t.schema+'.'+t.name)
+   const stats=(await client.query(`select count(*)::int count,coalesce(sum(octet_length(to_jsonb(r)::text)),0)::bigint bytes
+     from ${table} r where client_id=any($1::uuid[])`,[ids])).rows[0]
+   requireState(stats.count<=50000&&Number(stats.bytes)<=20*1024*1024,'merge_scope')
+   if(moving){
+     const removed=mergeTraining.has(t.name)?['client_id','trainer_id','updated_at']:
+       mergeFinance.has(t.name)?['client_id','updated_at']:['client_id']
+     const key=t.name==='quick_start_operations'?"jsonb_build_array(r.actor_id,r.operation_id)::text":"r.id::text"
+     const rows=(await client.query(`select ${key} key,client_id,
+       ${mergeTraining.has(t.name)||t.name.startsWith('trainer_finance_')?'trainer_id,':''}
+       ${sqlDigest('to_jsonb(r)')} digest,${sqlDigest('to_jsonb(r)-$2::text[]')} stable
+       from ${table} r where client_id=any($1::uuid[]) order by ${key}`,[ids,removed])).rows
+     tables.push({...t,moving,rows})
+   }else{
+     const rows=(await client.query(`select client_id,count(*)::int count,
+       ${sqlDigest("coalesce(string_agg(to_jsonb(r)::text,E'\\n' order by to_jsonb(r)::text),'')")} digest
+       from ${table} r where client_id=any($1::uuid[]) group by client_id order by client_id`,[ids])).rows
+     tables.push({...t,moving,rows})
+   }
+ }
+ // Tables already conserved row-by-row above may legitimately change namespace.
+ const profileReferences=(await readRecoveryProfileReferences(client,[pair.athleteId,currentId]))
+   .filter(t=>!mergeMoving.has(t.schema+'.'+t.table))
+ const profiles=(await client.query(`select id,${sqlDigest('to_jsonb(p)')} digest
+   from public.profiles p where id=any($1::uuid[]) order by id`,[[pair.trainerId,pair.athleteId,currentId]])).rows
+ const identities=(await client.query(`select profile_id,provider,identity_origin,
+   ${sqlDigest('to_jsonb(i)')} digest from app_private.auth_identities i
+   where profile_id=any($1::uuid[]) order by profile_id,provider,identity_origin`,[[pair.trainerId,pair.athleteId,currentId]])).rows
+ const merges=bounded((await client.query(`select id,source_client_id,target_client_id,invitation_id,actor_id,status,
+   ${sqlDigest('to_jsonb(m)')} digest from public.client_merge_operations m
+   where source_client_id=any($1::uuid[]) or target_client_id=any($1::uuid[]) order by id limit 21`,[ids])).rows,20)
+ const triggers=[]
+ for(const [schema,name,columns] of [['public','clients',['archived_at','merged_into_client_id','version']],
+   ...[...mergeMoving].map(t=>{const [s,n]=t.split('.');return [s,n,mergeTraining.has(n)?['client_id','trainer_id']:['client_id']]})]){
+   const rows=(await client.query(`select t.tgname name,p.proname function,n.nspname schema,
+     ${sqlDigest('pg_get_triggerdef(t.oid)||pg_get_functiondef(p.oid)')} digest
+     from pg_trigger t join pg_proc p on p.oid=t.tgfoid join pg_namespace n on n.oid=p.pronamespace
+     where t.tgrelid=$1::regclass and not t.tgisinternal and (t.tgtype::int&16)<>0
+     and (t.tgattr=''::int2vector or exists(select 1 from pg_attribute a
+       where a.attrelid=t.tgrelid and a.attnum=any(t.tgattr) and a.attname=any($2::text[])))
+     order by t.tgname`,[schema+'.'+name,columns])).rows
+   requireState(rows.every(t=>['set_updated_at','prevent_workout_client_reassignment',
+     'guard_fit_lime_fixture_identity','preserve_merged_client_photo','record_trainer_finance_event'].includes(t.function)),
+     'merge_unsupported_trigger')
+   triggers.push({schema,name,rows})
+ }
+ return {cards,tables,profileReferences,profiles,identities,merges,triggers}
+}
+
+async function planConfirmedCardMerge(client,pair,expected,proof){
+ const evidence=await readConfirmedCardEvidence(client,pair,expected,proof)
+ const source=evidence.cards.find(c=>c.id===expected.clientId),target=evidence.cards.find(c=>c.id===evidence.invitation.client_id)
+ requireState(source.trainer_id===pair.athleteId&&target.trainer_id===pair.trainerId,'merge_namespace')
+ requireState(evidence.sources.length===1&&evidence.sources[0].merged_into_client_id===source.id
+   &&evidence.sources[0].archived_at&&evidence.sources[0].auth_user_id===null
+   &&evidence.sources[0].trainer_id===pair.trainerId,'merge_predecessor')
+ requireState(evidence.authorship.legacy_workouts===0,'merge_legacy_authorship')
+ requireState(evidence.periods.every(p=>p.trainer_id===pair.trainerId)
+   &&evidence.periods.filter(p=>p.status==='active').length===1
+   &&evidence.periods.some(p=>p.client_id===target.id&&p.status==='active')
+   &&evidence.memberships.every(m=>m.trainer_id===pair.trainerId)
+   &&evidence.memberships.some(m=>m.client_id===target.id),'merge_existing_connection')
+ const invalid=(await client.query(`select
+   exists(select 1 from public.workouts where client_id=$1 and created_by is null) null_author,
+   exists(select 1 from public.workout_exercises where client_id=$1 and
+     (exercise_source='custom' or custom_exercise_id is not null)) custom_catalog,
+   exists(select 1 from public.workouts where client_id=$2) target_workouts,
+   exists(select 1 from public.workout_exercises where client_id=$2) target_exercises,
+   exists(select 1 from public.workout_sets where client_id=$2) target_sets`,[source.id,target.id])).rows[0]
+ requireState(invalid&&Object.values(invalid).every(v=>v===false),'merge_history_conflict')
+ const state=await readCardMergeState(client,pair,source.id,target.id,evidence.sources[0].id)
+ requireState(state.merges.some(m=>m.source_client_id===evidence.sources[0].id&&m.target_client_id===source.id
+   &&m.status==='completed'&&m.actor_id===pair.athleteId),'merge_prior_receipt')
+ const preserved=new Set(['public.client_invitations','public.client_trainers','public.client_trainer_relationships','public.chat_conversations'])
+ for(const t of state.tables)if(!t.moving&&!preserved.has(t.schema+'.'+t.name))
+   requireState(!t.rows.some(r=>r.client_id===source.id&&r.count>0),'merge_unsupported_source_data')
+ for(const t of state.tables)if(t.name.startsWith('trainer_finance_'))requireState(t.rows.every(r=>r.trainer_id===pair.trainerId),'merge_finance_owner')
+ const periodId=evidence.periods.find(p=>p.client_id===target.id&&p.status==='active').id
+ const plan={schema:3,ticket:'YAFIT-701',repairMode:'merge_confirmed_cards',createdAt:Date.now(),pair,
+   periodId,mergeId:randomUUID(),currentId:evidence.currentId,sourceId:source.id,targetId:target.id,
+   predecessorId:evidence.sources[0].id,expectedHistory:expected,confirmedInvitation:proof,state,fingerprint:fingerprint(state)}
+ plan.expectedBinding=mergePlanBinding(plan)
+ requireState(Buffer.byteLength(JSON.stringify(plan),'utf8')<1800000,'merge_plan_scope')
+ return {...plan,report:{event:'client_restore_plan',readOnly:true,existingCardsOnly:true}}
+}
+const mergePlanBinding=p=>fingerprint({schema:p.schema,repairMode:p.repairMode,pair:p.pair,periodId:p.periodId,
+ mergeId:p.mergeId,currentId:p.currentId,sourceId:p.sourceId,targetId:p.targetId,predecessorId:p.predecessorId,
+ expectedHistory:p.expectedHistory,confirmedInvitation:p.confirmedInvitation,fingerprint:p.fingerprint,createdAt:p.createdAt})
+export function validateCardMergePlan(plan){
+ requireState(plan?.schema===3&&plan.ticket==='YAFIT-701'&&plan.repairMode==='merge_confirmed_cards'
+   &&['periodId','mergeId','currentId','sourceId','targetId','predecessorId'].every(k=>uuid.test(plan[k]??''))
+   &&uuid.test(plan.pair?.trainerId??'')&&uuid.test(plan.pair?.athleteId??'')
+   &&new Set([plan.sourceId,plan.targetId,plan.predecessorId]).size===3
+   &&plan.sourceId===plan.expectedHistory?.clientId&&fingerprint(plan.state)===plan.fingerprint
+   &&mergePlanBinding(plan)===plan.expectedBinding,'merge_plan')
+ readExpectedRestoreHistory(plan.expectedHistory)
+}
+
+async function checkCardMergeAfter(client,plan){
+ validateCardMergePlan(plan)
+ const before=plan.state,after=await readCardMergeState(client,plan.pair,plan.sourceId,plan.targetId,plan.predecessorId)
+ for(const key of ['profiles','identities','profileReferences','triggers'])
+   requireState(fingerprint(before[key])===fingerprint(after[key]),'merge_protected_state_changed')
+ for(const old of before.cards){
+   const card=after.cards.find(c=>c.id===old.id)
+   requireState(card&&card.stable===old.stable&&card.auth_user_id===old.auth_user_id&&card.trainer_id===old.trainer_id,'merge_card_changed')
+   if(old.id===plan.targetId){
+     const photo=old.profile_photo??(before.cards.find(c=>c.id===plan.sourceId).profile_photo
+       ?{...before.cards.find(c=>c.id===plan.sourceId).profile_photo,version:1}:null)
+     requireState(!card.archived_at&&!card.merged_into_client_id&&card.version===old.version
+       &&fingerprint(card.profile_photo)===fingerprint(photo),'merge_target_changed')
+     if(!photo||old.profile_photo)requireState(card.digest===old.digest,'merge_target_changed')
+   }else requireState(card.archived_at&&card.merged_into_client_id===plan.targetId
+     &&card.version===old.version+1&&fingerprint(card.profile_photo)===fingerprint(old.profile_photo)
+     &&(old.id!==plan.predecessorId||new Date(card.archived_at).toISOString()===new Date(old.archived_at).toISOString()),'merge_source_changed')
+ }
+ const financialRows=[]
+ for(const t of before.tables){
+   const a=after.tables.find(x=>x.schema===t.schema&&x.name===t.name)
+   requireState(a&&a.moving===t.moving,'merge_catalog_changed')
+   if(!t.moving){requireState(fingerprint(t)===fingerprint(a),'merge_protected_card_data');continue}
+   const oldKeys=new Set(t.rows.map(r=>r.key))
+   for(const r of t.rows){
+     const found=a.rows.find(x=>x.key===r.key)
+     requireState(found,'merge_row_missing')
+     if(r.client_id===plan.sourceId){
+       requireState(found.client_id===plan.targetId&&r.stable===found.stable
+         &&(!mergeTraining.has(t.name)||found.trainer_id===plan.pair.trainerId),'merge_row_changed')
+       if(mergeFinance.has(t.name))financialRows.push({table:t.name,before:r,after:found})
+     }else requireState(fingerprint(r)===fingerprint(found),'merge_existing_target_changed')
+   }
+   const extra=a.rows.filter(r=>!oldKeys.has(r.key))
+   if(t.name!=='trainer_finance_events')requireState(extra.length===0,'merge_unexpected_rows')
+ }
+ requireState(after.tables.length===before.tables.length,'merge_catalog_changed')
+ // Finance update triggers append only audit metadata. Existing balances,
+ // package/payment/session IDs and every monetary field are conserved above.
+ const oldEvents=before.tables.find(t=>t.name==='trainer_finance_events').rows.map(r=>r.key)
+ const events=(await client.query(`select id::text key,entity_type,entity_id::text,trainer_id,client_id,actor_id,event_type,
+   ${sqlDigest('previous_data')} previous,${sqlDigest('current_data')} current
+   from public.trainer_finance_events where client_id=any($1::uuid[]) and not id=any($2::bigint[]) order by id`,
+   [[plan.sourceId,plan.targetId,plan.predecessorId],oldEvents])).rows
+ requireState(events.length===financialRows.length&&financialRows.every(r=>events.filter(e=>e.entity_type===
+   ({trainer_finance_packages:'package',trainer_finance_payments:'payment',trainer_finance_sessions:'session'})[r.table]
+   &&e.entity_id===r.before.key&&e.previous===r.before.digest&&e.current===r.after.digest
+   &&e.trainer_id===plan.pair.trainerId&&e.client_id===plan.targetId&&e.actor_id===plan.pair.trainerId
+   &&e.event_type==='updated').length===1),'merge_finance_audit_changed')
+ requireState(before.merges.every(m=>after.merges.some(a=>fingerprint(m)===fingerprint(a)))
+   &&after.merges.length===before.merges.length+1,'merge_receipts_changed')
+ const receipt=after.merges.find(m=>m.id===plan.mergeId)
+ requireState(receipt?.status==='completed'&&receipt.source_client_id===plan.sourceId&&receipt.target_client_id===plan.targetId
+   &&receipt.actor_id===plan.pair.trainerId&&receipt.invitation_id===plan.confirmedInvitation.invitationId,'merge_receipt')
+ requireState(countsMatch(await importedCounts(client,{...plan.expectedHistory,clientId:plan.targetId}),plan.expectedHistory),'merge_imported_history')
+ return after
+}
+
+async function applyConfirmedCardMerge(client,plan,{backupVerified=false}={}){
+ validateCardMergePlan(plan)
+ requireState(Number.isSafeInteger(plan.createdAt)&&Date.now()>=plan.createdAt&&Date.now()-plan.createdAt<=3600000,'merge_plan_expired')
+ requireState(backupVerified,'backup_required')
+ await client.query('begin transaction isolation level serializable read write')
+ try{
+   await ownerGate(client,true)
+   for(const id of [plan.pair.athleteId,plan.currentId].sort())
+     await client.query("select pg_advisory_xact_lock(hashtextextended('fit-client-claim:'||$1::text,0))",[id])
+   await client.query('select id from public.clients where id=any($1::uuid[]) order by id for update',[[plan.sourceId,plan.targetId,plan.predecessorId]])
+   const replay=(await client.query('select id from public.client_merge_operations where id=$1',[plan.mergeId])).rows.length===1
+   if(replay){await checkCardMergeAfter(client,plan);await client.query('commit');return {event:'client_restore_applied',replayed:true,historyUnchanged:true}}
+   const fresh=await planConfirmedCardMerge(client,plan.pair,plan.expectedHistory,plan.confirmedInvitation)
+   requireState(fresh.currentId===plan.currentId&&fresh.periodId===plan.periodId&&fresh.fingerprint===plan.fingerprint,'merge_state_changed')
+   await client.query("select set_config('request.jwt.claim.sub',$1,true)",[plan.pair.trainerId])
+   await client.query(`insert into public.client_merge_operations(id,source_client_id,target_client_id,invitation_id,actor_id,dependency_counts_before)
+     values($1,$2,$3,$4,$5,jsonb_build_object('source',app_private.client_dependency_counts($2),'target',app_private.client_dependency_counts($3)))`,
+     [plan.mergeId,plan.sourceId,plan.targetId,plan.confirmedInvitation.invitationId,plan.pair.trainerId])
+   await client.query('set constraints all deferred')
+   await client.query(`update public.clients set archived_at=now(),merged_into_client_id=$2,version=version+1 where id=$1`,[plan.sourceId,plan.targetId])
+   await client.query(`update public.clients set merged_into_client_id=$2,version=version+1 where id=$1`,[plan.predecessorId,plan.targetId])
+   // Remap pre-existing finance audit namespaces before triggers append new ones.
+   for(const table of ['trainer_finance_events','trainer_finance_payments','trainer_finance_sessions','trainer_finance_packages'])
+     await client.query(`update public.${catalogQuote(table)} set client_id=$2 where client_id=$1`,[plan.sourceId,plan.targetId])
+   await client.query('update app_private.quick_start_operations set client_id=$2 where client_id=$1',[plan.sourceId,plan.targetId])
+   for(const table of ['workout_sets','workout_exercises','workouts'])await client.query(`update public.${catalogQuote(table)}
+     set client_id=$2,trainer_id=$3 where client_id=$1`,[plan.sourceId,plan.targetId,plan.pair.trainerId])
+   await client.query(`update public.client_merge_operations set status='completed',completed_at=now(),dependency_counts_after=
+     jsonb_build_object('source',app_private.client_dependency_counts($2),'target',app_private.client_dependency_counts($3)) where id=$1`,
+     [plan.mergeId,plan.sourceId,plan.targetId])
+   await checkCardMergeAfter(client,plan)
+   await client.query('set constraints all immediate')
+   await client.query('commit')
+   return {event:'client_restore_applied',replayed:false,historyUnchanged:true}
+ }catch(error){await client.query('rollback');throw error}
+}
+
+export async function verifyConfirmedCardMergeOwner(owner,plan){
+ await owner.query('begin transaction isolation level repeatable read read only')
+ try{await ownerGate(owner);await checkCardMergeAfter(owner,plan);await owner.query('commit');return {historyUnchanged:true}}
+ catch(error){await owner.query('rollback');throw error}
+}
+
+export async function planClientRestore(client,pair,expectedHistory=null,currentProfileEvidence=null,confirmedInvitation=null,importedAccessAudit=null,repairMode=null){
  if(expectedHistory)readExpectedRestoreHistory(expectedHistory)
  if(currentProfileEvidence){readCurrentProfileEvidence(currentProfileEvidence);readExpectedRestoreHistory(expectedHistory)}
  if(confirmedInvitation){readConfirmedRestoreInvitation(confirmedInvitation);readExpectedRestoreHistory(expectedHistory)
    requireState(!currentProfileEvidence,'conflicting_evidence')}
  if(importedAccessAudit){readImportedAccessAudit(importedAccessAudit);readExpectedRestoreHistory(expectedHistory)
    requireState(!currentProfileEvidence,'conflicting_evidence')}
+ if(repairMode){readConfirmedCardRepairMode(repairMode);requireState(confirmedInvitation&&!currentProfileEvidence&&!importedAccessAudit,'conflicting_evidence')}
  let privateDiagnostic
  await client.query('begin transaction isolation level repeatable read read only')
  try{
    await ownerGate(client)
+   if(repairMode){const plan=await planConfirmedCardMerge(client,pair,expectedHistory,confirmedInvitation);await client.query('commit');return plan}
    if(importedAccessAudit){
      privateDiagnostic={pair,expectedHistory,importedAccessAudit:await readImportedAccessState(client,pair.trainerId,importedAccessAudit)}
      if(confirmedInvitation)privateDiagnostic.confirmedCardEvidence=await readConfirmedCardEvidence(client,pair,expectedHistory,confirmedInvitation)
@@ -473,6 +702,7 @@ export async function planClientRestore(client,pair,expectedHistory=null,current
 }
 
 export async function applyClientRestore(client,plan,{backupVerified=false}={}){
+ if(plan?.schema===3)return applyConfirmedCardMerge(client,plan,{backupVerified})
  requireState(plan?.schema===1&&plan.ticket==='YAFIT-701'&&uuid.test(plan.periodId)
    &&uuid.test(plan.pair?.trainerId)&&uuid.test(plan.pair?.athleteId)
    &&Number.isSafeInteger(plan.createdAt)&&Date.now()-plan.createdAt>=0
@@ -533,6 +763,7 @@ export async function applyClientRestore(client,plan,{backupVerified=false}={}){
 }
 
 export async function verifyClientRestore(runtime,plan){
+ if(plan?.schema===3)return verifyCardMergeRuntime(runtime,plan)
  await runtime.query('begin transaction isolation level repeatable read read only')
  try{
    const role=(await runtime.query(`select current_user username,current_setting('transaction_read_only') readonly,
@@ -570,6 +801,39 @@ export async function verifyClientRestore(runtime,plan){
  }catch(error){await runtime.query('rollback');throw error}
 }
 
+async function verifyCardMergeRuntime(runtime,plan){
+ validateCardMergePlan(plan)
+ const expected={...plan.expectedHistory,clientId:plan.targetId}
+ await runtime.query('begin transaction isolation level repeatable read read only')
+ try{
+   const role=(await runtime.query(`select current_user username,current_setting('transaction_read_only') readonly,
+     rolsuper,rolbypassrls from pg_roles where rolname=current_user`)).rows[0]
+   requireState(role?.username==='fit_api'&&role.readonly==='on'&&!role.rolsuper&&!role.rolbypassrls,'runtime_role')
+   await runtime.query("set local statement_timeout='10s'")
+   await runtime.query("set local lock_timeout='2s'")
+   for(const actor of [plan.pair.trainerId,plan.currentId]){
+     await runtime.query("select set_config('request.jwt.claim.sub',$1,true)",[actor])
+     const card=(await runtime.query(`select auth_user_id,trainer_id,archived_at,merged_into_client_id
+       from public.clients where id=$1`,[plan.targetId])).rows
+     requireState(card.length===1&&card[0].auth_user_id===plan.currentId&&card[0].trainer_id===plan.pair.trainerId
+       &&!card[0].archived_at&&!card[0].merged_into_client_id,'merge_runtime_card')
+     const links=(await runtime.query(`select trainer_id from public.list_accessible_client_trainers() where client_id=$1`,[plan.targetId])).rows
+     requireState(links.length===1&&links[0].trainer_id===plan.pair.trainerId,'merge_runtime_trainer')
+     const period=(await runtime.query(`select id from public.client_trainer_relationships where id=$1
+       and client_id=$2 and trainer_id=$3 and status='active'`,[plan.periodId,plan.targetId,plan.pair.trainerId])).rows
+     requireState(period.length===1,'merge_runtime_period')
+     requireState(countsMatch(await importedCounts(runtime,expected),expected),'merge_runtime_history')
+     if(actor===plan.pair.trainerId){
+       const views=(await runtime.query('select id from public.list_client_overviews(false) where id=$1',[plan.targetId])).rows
+       requireState(views.length===1,'merge_runtime_overview')
+     }
+   }
+   await runtime.query('commit')
+   return {event:'client_restore_verified',readOnly:true,restoredPeriodActive:true,canonicalMembership:true,
+     trainerCanReadCanonical:true,athleteCanReadCanonical:true,athleteCanReadTrainer:true,bothCanReadImported:true}
+ }catch(error){await runtime.query('rollback');throw error}
+}
+
 async function main(){
  requireState(process.env.GITHUB_REF==='refs/heads/main'&&process.env.GITHUB_REPOSITORY==='podkolzinpd/fit','environment')
  const phase=process.env.RESTORE_PHASE,planPath='/repair/plan.json'
@@ -588,6 +852,14 @@ async function main(){
      await writeFile(planPath,JSON.stringify(plan),{flag:'wx',mode:0o600});console.log(JSON.stringify(plan.report))
    }else{
      const plan=JSON.parse(await readFile(planPath,'utf8'))
+     if(phase==='verify'&&plan.schema===3){
+       const ownerConfig=buildDatabaseConnectionConfig('MIGRATION_DATABASE')
+       requireState(ownerConfig.host==='10.70.10.67'&&ownerConfig.port===5432&&ownerConfig.database==='fit'
+         &&ownerConfig.user==='fit_owner'&&process.env.MIGRATION_DATABASE_SSL_MODE==='require','environment')
+       const owner=new Client({...ownerConfig,connectionTimeoutMillis:5000,query_timeout:15000})
+       await owner.connect()
+       try{await verifyConfirmedCardMergeOwner(owner,plan)}finally{await owner.end()}
+     }
      const result=phase==='apply'?await applyClientRestore(client,plan,{backupVerified:process.env.RESTORE_BACKUP_VERIFIED==='true'}):await verifyClientRestore(client,plan)
      await writeFile(`/repair/${phase}-${process.env.GITHUB_RUN_ID}-${process.env.GITHUB_RUN_ATTEMPT}.json`,JSON.stringify({at:new Date().toISOString(),operator:process.env.GITHUB_ACTOR,result}),{flag:'wx',mode:0o600})
      // Private Cloud.ru input keeps customer counts/results in the protected
