@@ -240,10 +240,11 @@ localStorage после неудачного setItem. Для существую�
 failed-write значение остаётся в памяти сеанса, интерфейс честно сообщает о
 невозможности persistence; успешная запись и внешний storage event снимают
 override. Проверять пять preferences, account isolation, remount и recovery.
-В Node26 test setup может предоставить Storage-совместимый объект: spy на
-Storage.prototype не обязательно перехватывает window.localStorage.setItem.
-Исходный red должен действительно вызвать отказ используемого объекта.
-[SET-STORAGE-01 и итерация12](design/TRAINER_SETTINGS_COMPACT_20261107.md#итерация-12--08112026--codex--openai).
+Node26 setup может дать plain Storage-shim с собственным setItem, Node22 —
+jsdom Storage с методом в прототипе. Spy ставится на фактического владельца
+метода (own shim либо его прототип), а не безусловно на instance/Storage.prototype.
+Исходный red должен действительно вызвать отказ записи; проверять Node22/26.
+[SET-STORAGE-01 и итерации12/17–18](design/TRAINER_SETTINGS_COMPACT_20261107.md#итерация-17--08112026--codex--openai).
 
 ### CPT — Закрытый native gate и размер retry (07.11.2026)
 
