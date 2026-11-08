@@ -296,3 +296,6 @@ readback после promotion. История: TRAINER_LANDING_20261107, ите�
 и повтор. До завершения пагинации не утверждать, что совпадений нет.
 При `isFetchNextPageError` повторять fetchNextPage; при ошибке обновления
 готового списка — refetch, иначе без nextOffset команда не читает сервер.
+Для нового календаря использовать допущенного synthetic coach и проверять
+`.coach-calendar-navigation`: локальный rollout `all` скрывает несовпадение
+fixture с CI `pilot`, а `/today?week=…` у старого actor остаётся экраном дня.

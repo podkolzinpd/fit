@@ -7,14 +7,19 @@ const pageId = (index: number) => `10000000-0000-4000-8000-${String(8000 + index
 async function prepare(page: Page) {
   await page.clock.install({ time: new Date('2026-11-08T09:00:00Z') })
   await page.route('**/v1/**', route => route.abort())
+  // Use the same admitted synthetic coach in CI and local pilot mode.
+  const profileId = 'c0ac0000-6010-4000-8000-000000000001'
   const source = coachGestureWorkout(false, 1)
   source.workoutDate = '2026-11-08'
-  await mockPilot(page, { fitLime: true, workouts: [source] })
+  source.trainerId = profileId
+  source.createdBy = profileId
+  await mockPilot(page, { profileId, fitLime: true, workouts: [source] })
   const response = page.waitForResponse(response => response.url().includes('/v1/training-data?')
     && new URL(response.url()).searchParams.get('scope') === 'workouts')
   await page.goto('/today?week=2026-11-02&range=2w')
   const payload = await (await response).json() as Payload
   await expect(page.locator('.skeleton-stack')).toHaveCount(0)
+  await expect(page.locator('.coach-calendar-navigation')).toBeVisible()
   return payload
 }
 async function listReads(page: Page, handler: (offset: number) => Promise<Payload>) {
