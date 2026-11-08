@@ -1745,6 +1745,26 @@ harness; это не считалось проверкой, исправлено
 выпуск; Mono/личный UI/финансовые расчёты не менялись. Дальше — FIN702/703
 локально, публикация строго в согласованном порядке.
 
+
+FIN-36 — 2026-11-07 — Codex / OpenAI. FIN703: расширенные категории графика
+реализуются в общей Lime token-table, без feature-local hex, второго шрифта
+или перекраски действий/состояний. Это approved-adaptation по прямому запросу
+владельца различать больше спортсменов, а не восстановленный SVG цвет.
+10 категорий включают существующие accent/pink/yellow и дополнительные
+cyan/rose/mint/lavender/sand/blue/soft-pink; «Остальные» — отдельный нейтральный.
+Полный месячный roster определяет одну карту, общую кругу/строкам/личной
+карточке. Приоритет — объединение видимых лидеров ОБОИХ показателей; иначе
+hash modulo снова даёт совпадения у произвольных UUID. При хвосте максимум8
+лидеров, до5 без хвоста. Остальные распределяются равномерно по категориям.
+Порядок API, поиск и фильтр не меняют карту; выбор метрики не перекрашивает.
+Смена состава/значений нового месячного snapshot может пересчитать разрешение
+коллизий: не обещаем сохранение закреплённых цветов навсегда без отдельной
+модели. Новые storage/API/registry отвергнуты как лишняя архитектура.
+Unit fixture32 спортсмена с одной предпочтительной категорией и противоположными
+лидерами денег/занятий проверяет коллизии, общий знаменатель528 и personal
+match; reversed input и5-клиентский контур проверены. Targeted27 passed,
+types passed; браузер/дизайн и полный CI ещё впереди. Mono не получает график.
+
 FIN-37 — 2026-11-07 — Codex / OpenAI. FIN702 локальная приёмка:
 frontend345files/3076tests passed, coverage83.58/78.71/82.74/88.28;
 full lint/types/build/startup passed. Browser40/40 + общий cross-route2/2
@@ -1791,6 +1811,43 @@ fixtures остаются прежними. Это закрывает полож
 отрицательная старая ветвь без monthly полей остаётся в остальных случаях.
 Новых e2e-case/матриц нет. Открыто: выпуск FIN701/702/703 по очереди послеCI.
 
+FIN-40 — 2026-11-07 — Codex / OpenAI. FIN703 локально: lint/types/build/startup
+passed. Полный frontend345files/3077tests с maxWorkers2 passed,
+coverage83.60/78.73/82.76/88.28. Первоначальный параллельный full run имел
+2ошибки ExercisePicker: timeout5000ms и следующий поиск null; отдельно68/68
+passed без изменения кода/таймаутов, затем полный ограниченный pool прошёл.
+Причина нагрузки полностью не установлена; каталог не объявляется исправленным.
+Browser39/40: WebKit read-error остался loading при ожидании retry5000ms.
+Trace: первый mock50365ms, следующий запрос ещё pending; Chromium этот же case
+passed. Отдельный unchanged сценарий2/2 passed; таймауты/retries прежние.
+Диагностические логи сохранены; новые standalone прогоны получают отдельный
+outputDir, чтобы Playwright не очищал изображения полного набора.
+PNG320/390/430/1440 с новой палитрой просмотрены: видимые лидеры различимы,
+нет повторяющихся белых секторов, круг/строки/personal colors согласованы.
+Уточнение к FIN36: максимум лидеров объединения10 (5денег +5занятий с разными
+нулевыми значениями),9 при хвосте только одного показателя,8 при двух хвостах.
+Алгоритм с10категориями это уже поддерживал; добавлен disjoint10 fixture,
+Summary11/11 passed. Фильтры/поиск/переключение не перекрашивают карту.
+Открыто: итоговая интеграция test-only FIN702, browser и source/main CI,
+три последовательных официальных выпуска с публичной/verifiedZIP приёмкой.
+Физические устройства не проверены, Mono и финансовая логика прежние.
+
+
+FIN-41 — 2026-11-07 — Codex / OpenAI. Финальная локальная интеграция FIN703:
+сохранены все проверки FIN702 (monthly-enabled receipts, short search) и FIN703
+(различимость/стабильность/personal match). Полный итоговый40/40 Chromium/WebKit
+passed, retries0; FIN702 на его отдельной финальной сборке также40/40 passed.
+Артефакты этих прогонов разделены по final-results; исходные ошибочные логи
+не перезаписаны. Ранее просмотренные320/390/430/1440 относятся к той же
+продуктовой композиции/палитре, после них менялись только проверки/журнал.
+Scope по точным SHA для обоих частей требует frontend/browser; проверены
+scope-policy21 и partition/inventory8, число e2e-case не увеличено, уникальные
+утверждения/таймауты сохранены. Это ещё не source/main CI или публикация.
+Дальше: завершить CI FIN701, обычное слияние; принять штатную API/web/OTA
+публикацию по точному main и синтетические public/verifiedZIP сценарии;
+затем таким же порядком FIN702 и FIN703. Mono очистка отдельно, реальные
+финансы не менялись, физических телефонов нет.
+
 
 FIN-42 — 2026-11-07 — Codex / OpenAI. FIN701 source1215aeaa:
 CI42362140958 attempt2 SUCCESS35/35; исходный flaky из attempt1 сохранён.
@@ -1807,6 +1864,24 @@ FIN702 включила bb2835cd обычным merge. Проверено рав
 основе; его публикация только после принятия FIN701 и старшего2028.
 Открыто: mainCI/официальная публикация/приёмка FIN701, далее FIN702/703.
 
+
+FIN-43 — 2026-11-07 — Codex / OpenAI. Mainbb2835cd CI42365428246:
+app-tests attempt1:3075pass/1failure в неизменённом ExerciseImage.test.tsx:516,
+manual recovery, после playing осталась кнопка play. Финансовые unit пройдены.
+Изолированный неизменённый ExerciseImage33/33 passed; diff от принятого2ef
+в exercises/app/shared пустой. Исходный лог сохранён. Возможная гонка с reset
+passive-effect требует отдельного воспроизведения; причина пока не доказана,
+изображения этим финансовым PR не исправляются и тест не ослабляется.
+Прочие браузерные jobs ещё завершаются; один failed-jobs повтор текущего main
+допустим только после окончания run, без нового head/конфигурации.
+Два наблюдателя gh watch прервались read TCP 'cannot assign requested address';
+это не результаты CI, статусы повторно прочитаны с GitHub. Main watch восстановлен.
+Новая palette дополнительно проверена:10различных opaque категорий, min4.92:1
+на фактическом Lime card, от actual brand accent#D1FD2D, не эскизного цвета.
+Нейтральный tail имеет прежний surface-high и текстовую сумму; эта проверка
+контраста относится к категориям, не ко всем парам приложения.
+Открыто: зелёный main/официальная доставка/приёмка FIN701, далее активный2028,
+FIN702/#2029 и FIN703. Ни реальных денежных операций, ни Mono cleanup нет.
 
 FIN-44 — 2026-11-07 — Codex / OpenAI. FIN702 sourceCI42365639106 выявил
 в Chromiumvisual1/4 повторяемую потерю фокуса при выборе клиента:3attempts
@@ -1827,6 +1902,47 @@ passed. Финальная production build/browser проверяется от�
 public/verifiedZIP приёмка ещё впереди. Физического телефона нет.
 
 
+FIN-45 — 2026-11-07 — Codex / OpenAI. FIN701/PR2027 ВЫПУЩЕН И ПРИНЯТ:
+source1215aeaa CI42362140958 SUCCESS35/35 attempt2 (ранее описанный Live flaky);
+обычный squash mainbb2835cd04d48bd366d6421b3106f8689665db04.
+MainCI42365428246 SUCCESS attempt2: app/e2e/app-tests green,34success и1штатный
+migration-safety skip для неизменённой схемы. ExerciseImage failure attempt1
+сохранён и не объявляется исправленным. Штатные API42367892097/web42367892149/
+OTA42368413515 SUCCESS. API applied0; никаких денежных/дата-починок.
+Official artifact13571999826, cloudru-frontend-bb2835cd: все213publicfiles size+
+SHA256 совпали; API exact release/health/ready200, protected401 иDNS/TLS passed.
+Synthetic public42/42 Chromium/WebKit и verified signed ZIP42/42 passed,
+retries0; public6.4min/ZIP1.5min. PNG320/390/430/1440 просмотрены.
+OTA ABI8922d2e9fc2c9a092d10f7b6066acdc46edf0fbe7ee7a15159e02a44e7126cf9,
+bundle652cae73674b6d57ecdf56bc26706dc2122c2ce8576219361f87a8a64d13d803,
+15153425bytes; manifest/archive signatures/source/hash verified. ZIP server остановлен.
+Gh download официального35.8MB JSON шёл медленно, но завершился0. Дополнительный
+прямой API-read timeout55s с7.2MB partial не использовался как доказательство;
+принята ведомость исходного официального artifact, verifyRelease passed.
+Fresh public browser показывает действующий общий recovery-notice над страницей;
+он сохранён как отдельная глобальная механика, не удалён ради компактного макета.
+Первый PR меняет только hero/month/current-row; перенос toolbar и цвета ещё FIN702/703.
+FIN702 final d038e6a3: production40/40 после focus fix, dev12/12 workers1/2,
+targeted21/types/lint/build passed. Новый sourceCI42369140075 идёт; старый
+42365639106 — failure, не rerun. FIN703 включила этот fix обычным merge3b116a38.
+Очередь:2026 возобновлён (active/newhead3ac1833), далее2028, наш2029,2030;
+до FIN703 проверим актуальную очередь заново. Собственный hold FIN701 снят.
+Физические iPhone/PWA/Android не проверены. Mono/layout и деньги прежние.
+Дальше — принятие старших2026/2028, свежая основа и выпуск FIN702; затем FIN703.
+
+
+FIN-46 — 2026-11-07 — Codex / OpenAI. FIN703 после focus-parent:
+targeted32/types(build)/scopedlint/build passed. В дизайн-проверке уточнён
+нейтральный сектор: прежний surface-high был одновременно цветом пустого
+трека и положительных «Остальных», отчего состояния визуально сливались.
+Chart-only --lime-chart-others теперь ссылается на существующий Lime text-secondary,
+не меняя сам text-secondary, track или Mono. На треке stroke сalpha0.6 даёт
+контраст>3:1 с пустым треком; точный composite расчёт сохранён в QA evidence.
+Десять athlete категорий, пропорции/суммы/группировка/личный denominator прежние.
+Новая цена/процент/строка не добавлены, размеры/шрифт прежние. Дальше — final
+build/browser и снимки этой небольшой palette-правки, ожидание старших выпусков;
+до отдельного третьего PR публикации палитры нет.
+
 FIN-47 — 2026-11-07 — Codex / OpenAI. При комбинированной приёмке FIN703:
 39/40 прошли, оставшийся Chromium receipt-case остановился на strict locator
 с двумя actions после повторного выбора клиента. Focus assertion прошла;
@@ -1839,6 +1955,20 @@ FIN-47 — 2026-11-07 — Codex / OpenAI. При комбинированной 
 production/dev этого случая, новый sourceCI FIN702 и повтор комбинированной
 приёмки FIN703. Сайт FIN701 принят, очередь2026→2028→2029 сохраняется.
 
+
+FIN-48 — 2026-11-07 — Codex / OpenAI. FIN702 включила main98d2a090
+(#2026) обычным merge c8d9cf81; новые инструкции прочитаны, их account-recovery
+маршрут к текущей UI-задаче не применяется. FIN47 targeted dev2/2 и
+production2/2 passed; sourceCI42371243533 нового head ожидает runner.
+FIN703 включила этот parent обычным merge67e85289 с сохранением FIN45–47.
+Полный combined production browser40/40 Chromium/WebKit, retries0,2.1min
+прошёл; текущие PNG320/390/430/1440 просмотрены. Ring96/112px, card<=190px,
+list start<=390px; имена/точные суммы/различимость others/toolbar/safe-area
+не перекрываются, поиск и фильтры раскрываются. Контраст нейтрального others
+к треку5.18:1, категорий к карточке не ниже4.92:1. Это локальная приёмка,
+не публикация; физического телефона нет. FIN701 уже принят, продолжаем ждать
+приёмку2026 и2028 перед2029,2030 учитывается перед будущим FIN703.
+Личная memory-note не записана: journal full; каноническая запись сохранена здесь.
 
 FIN-49 — 2026-11-07 — Codex / OpenAI. На увеличенном актуальном снимке
 monthly-search-short-viewport найден второй прямоугольный focus outline
@@ -1870,3 +2000,170 @@ API/схема197 принадлежит старшему2028, мы её не и
 обычный merge/mainCI/API/web/OTA/public/ZIP приёмка FIN702. FIN703 остаётся
 локальной третьей частью; ФИТ14 начал подготовку3PR настроек, пока без PR,
 его ранее согласованный приоритет учитывается по реально готовой очереди.
+
+
+FIN-51 — 2026-11-07 — Codex / OpenAI. FIN702 exactc8ff661c1a31988b1fd27c43f9386d63b5d9c7b1
+полностью прошёл sourceCI42375696448 SUCCESS35/35 attempt1. Никаких rerun этого
+head/assertion/timeouts/CI изменений; предыдущий b20 Live flaky сохранён.
+Готовность передана владельцу2028, своего release hold нет. Его mainCI
+42375593130 SUCCESS35completed (migration-safety штатно skip), API42377082176
+и web42377082142 SUCCESS; OTA42377590483/приёмка на последнем чтении ещё в работе.
+ФИТ14 открыл2032, текущий CI ещё не завершён; согласованный приоритет касается
+готового зелёного PR, будущий пакет не замораживает очередь. При освобождении
+окна сверить актуальные main/2032: если C5 остаётся main и2032 не готов, выпускать
+наш2029 обычным merge, mainCI и полной фактической приёмкой. При новой основе
+обновить ветку и exact-head CI. FIN703 уже включает sourcec8ff обычным merge,
+собственный product palette/локальные40+targeted2 результаты прежние; PR ещё нет.
+
+
+FIN-52 — 2026-11-07 — Codex / OpenAI. FIN702/#2029 слит штатным squash
+в main6434a207b87e1c5a1fd66c610bc4f7b48e9831cc после фактического принятия2028:
+213/213public,68web+68signedZIP, обеAPI и штатный readback/pilotOFF подтверждены
+владельцем. Перед merge: freshC5, sourcec8ff35/35success, CLEAN/MERGEABLE,
+нет active workflow_dispatch;2032 ФИТ14 ещёBLOCKED12done/12running/12queued,
+поэтому неготовый приоритетный пакет не заморозил готовую очередь.
+Hold ФИТ19 объявлен обоим активным координаторам до принятия2029; ФИТ13 не пинговали.
+Полное дерево6434 равно sourcec8ff; mainCI42379068116 запущен и обязателен.
+Public/ZIP harness подготовлен из exact6434 (исходные20finance+1lifecycle на
+каждый движок, реальные немокированные API закрыты); пока не исполнялся,
+публикация/приёмка впереди. FIN703 включила actual6434 обычным merge d9ee5314:
+конфликты3файлов разрешены только после доказательства6434tree==c8ff иc8ff
+ancestor собственного HEAD; итог merge имеет НУЛЕВОЙ file delta к прежнему
+FIN703 tree. Поэтому все upstream и свои изменения сохранены. Diff кmain
+теперь7файлов: palette/map/summary/tests и журнал, без API/SQL/Mono/toolbar
+изменений. Третий PR пока не открыт; ждёт опубликованного/принятого FIN702.
+
+
+FIN-53 — 2026-11-07 — Codex / OpenAI. Дополнительная проверка error-state
+выявила UI-дефект дедупликации FIN702: после successful payment update overview
+refresh получает503, React Query сохраняет прежние monthly data, AsyncView
+скрывает summary при error, но summaryShown смотрел только на наличие данных.
+Из-за этого независимый свежий receipt grand-total тоже был скрыт. Ни потеря
+оплаты, ни ошибка расчёта/DB не обнаружены: исчезал только видимый общий итог.
+Воспроизведено ДО fix: обоим движкам не найден ожидаемый total14000 после
+единственного synthetic update6000→5000 (до него15000;52payments/2pages).
+Сохранены red log/traces. Минимальный fix в пределах третьего FIN703 PR:
+summaryShown означает действительно показанную summary — не loading/error.
+История/её сумма используют прежний fallback; при успешном retry общий monthly
+total снова единственный. Действующие20cases не сокращены/не размножены:
+расширен только Lime layout-case с сохранением всех viewport/form/pagination
+assertions; Mono ветви прежние. Explicit PUT/version1 и writes==1 до/после
+retry проверяют отсутствие повторной оплаты. Backend/SQL/цены/CAS прежние.
+Это необходимая UI-поправка внутри согласованных3PR, не четвёртый пакет.
+Проверка: red2/2 с отсутствующим итогом, затем green2/2 Chromium/WebKit,
+32/32 finance component unit, build/types/startup/scopedlint passed. Полный
+финансовый production browser40/40 passed, retries0,2.5min. После уточнения
+положения снимка отдельный неизменённый business-case2/2 прошёл: ordinary
+scroll показывает fallback total, он доступен и не даёт horizontal overflow
+на320/1440. Обе картинки просмотрены; общий штатный StatePanel не переделан.
+В нём видна прежняя provider copy «Yandex Cloud» — это общая смежная подпись,
+не меняем платформенный error mapper ради компактного финансового пакета.
+Открыто: exact-head CI/публикация третьего этапа; FIN702 mainCI пока в работе.
+
+
+FIN-54 — 2026-11-07 — Codex / OpenAI. FIN703 подготовлена как отдельный
+review/CI PR от уже слитого actual6434, пока FIN702 проходит mainCI и выпуск.
+Это та же параллельная подготовка, как FIN702 до принятия FIN701; последовательные
+гейты слияния/публикации не меняются: FIN703 нельзя сливать до фактического
+принятия FIN702 и своей реальной очереди. Новый PR не занимает второго окна,
+auto-merge не включается. Цель — проверить полностью готовый7-file diff заранее,
+не заканчивать работу на ожидании и не создавать отдельный четвёртый PR для
+найденного UI edge из FIN53. Последние normal PNG320/390/430/1440 просмотрены
+после fallback-fix, identity/геометрия/палитра не изменились. Error PNG320/1440
+тоже просмотрены. Source/mainCI и official/public/ZIP гейты FIN703 ещё впереди.
+
+
+FIN-55 — 2026-11-07 — Codex / OpenAI. FIN702/#2029 ВЫПУЩЕН И ПРИНЯТ.
+Main6434a207b87e1c5a1fd66c610bc4f7b48e9831cc tree==sourcec8ff, sourceCI
+42375696448 SUCCESS35/35 attempt1; mainCI42379068116 SUCCESS attempt1:
+34success+1штатный migration-safety skip. Публикации API42383752906,
+web42383752920, OTA42385889868 SUCCESS; API applied0 подтверждён логом.
+Official artifact13579720223 (cloudru-frontend-6434), JSON35848819bytes.
+Все213publicfiles size+SHA совпали; exactAPI revision/health/ready/защищённый
+доступ проверены. Synthetic public42/42 Chromium/WebKit, retries0,4.6min;
+verified signedZIP42/42, retries0,1.6min. Public PNG320/390/430/1440 иfilter320,
+ZIP390 просмотрены. Общий recovery-notice сохранён, palette ещё FIN703.
+OTA обе подписи/source/hash/ABI8922d2e9/native9 проверены, sequence1794065177520,
+bundle7ffd6c5a260e14c32e23fc8dccd638020379782f27b7cf902d901097dcc03dc2,15155197bytes.
+Archive безопасно распакован:220entries/26852746bytes, без traversal/duplicates/
+symlinks, bounded<200MB. Свой сервер56923/session1754 остановлен0.
+Грабли подготовки: у OTA отчёта нет public-proof поля passed. Первый локальный
+assert остановил extraction, затем сервер отказал без index; никакого serving
+не произошло. Использованы реальные manifestSignatureVerified/archiveSignatureVerified
+и exactcommit/ABI/size, криптопроверки не ослаблялись. Оба42-case прогона green.
+Также звезда gh run watch означает pending/running, не доказывает исполнение:
+очередь release-job уточняли по structured jobs.status. Raw не скрыт.
+Реальные финансовые записи не менялись, физические устройства не проверены.
+FIN702 hold СНЯТ; свежаяmain6434, active workflow_dispatch нет. Квитанция в
+PR2029 body, ФИТ14/статистика уведомлены; ФИТ13 не пинговали. Готовый приоритет
+ФИТ14 сохранён,2032 покаBLOCKED19done/6running/11queued. Обычные старшие
+2030/2031/2032/2033/2034/2035/2036 перед нашим2037, если реально активны;
+2038 новее нашего. Не останавливаться на здоровом CI/очереди, цель — все3приняты.
+FIN703/#2037 remote0cb24421 sourceCI42381053037 активен. Эта квитанция пока
+локальная на его ветке, чтобы не перезапускать здоровый CI из-за документа;
+включится в следующий обязательный refresh от нового фактического main.
+
+
+FIN-56 — 2026-11-07 — Codex / OpenAI. FIN703 source0cb24421 завершил
+полный CI42381053037 SUCCESS35/35, без повторов. Пока ожидали общую очередь,
+#2031 вошёл в actual main a6caeb67c0c9356e7cccdbfcc3378c13f1ab990d. Его mainCI
+42388049910 ещё активен; официальную публикацию/приёмку не подменяем sourceCI.
+Прочитана новая P03 regression lesson о standalone valid ISO dates;
+AGENTS/FIT_WORKFLOW/CURRENT_STATE/ACTIVE_CONTRACTS не изменены. Обычный merge
+b18e8dfd внёс все4upstreamfiles без конфликтов; diff собственных finance/UI/
+e2e файлов к9cbc8629 нулевой. Включена локальная квитанция FIN55. Новый source
+head требует нового полного CI, старый green сохраняется как историческое
+доказательство, не заменяет fresh-parent gate. Чужие активные PR не сливаем;
+не обходим здоровые queued/running checks, готовый приоритет ФИТ14 сохранён.
+ФИТ13 не пинговали. Физические устройства по-прежнему вне проверки.
+
+
+FIN-57 — 2026-11-08 — Codex / OpenAI. FIN703 d3052430 завершил полный
+sourceCI42388762625 SUCCESS35/35 attempt1. Наблюдатель упал из-за network
+read «can't assign requested address», а не теста; фактический success
+перечитан через structured run/jobs. Ничего не перезапускали. Исходный
+FIN7030cb также35/35green. После этого приняты #2030/c454 (213files,обаAPI,
+public6+signedZIP6) и весь приоритетный пакет ФИТ14 #2032→#2033→#2036/adbef9fe:
+mainCI42414208163, API42415987399,web42415987464,OTA42416175259 SUCCESS;
+213files,обаAPI,public2+signedZIP2, подписи/source/ABI/срок подтверждены
+владельцем и перечитаны в PR2036. Первая native-проба ФИТ14 имела ошибочный
+health fixture origin; исправлен только стенд, исходный red сохранён.
+Новый actualmain #2034/ddf36591 уже слит, его публикация/приёмка ещё впереди.
+Включён ЛОКАЛЬНО обычным merge 76dd03a3 без конфликтов: все45upstreamfiles
+сохранены, свои finance/UI/e2e файлы побайтно равны d305. Diff кactualmain
+остаётся7собственных files. Прочитаны новые SET-contract, CURRENT_STATE и
+RL-ASYNC-FORM-SNAPSHOT; общие styles проверены: входящие paint guards только
+modernLive, финансовые токены не затронуты. ФИТ19 Mono не переделывает.
+Remote2037 покаd305; этот merge/квитанция не пушатся отдельно ради промежуточного
+CI. Следующий финальный source включает actualmain после2035, новый полныйCI
+обязателен. Слияние2037 — только после принятия2034→2035/освобождения окна.
+Реальные деньги не менялись; физические устройства не проверены.
+
+
+FIN-58 — 2026-11-08 — Codex / OpenAI. Финальная подготовка FIN703 от actual
+main aa4be2a33ec8cff53de84653ca0e0a63ff5dc2c6 (#2035). Обычный merge a3befd22
+сохранил все 22 входящих файла без конфликтов. Собственные finance/UI/e2e
+файлы побайтно равны проверенному d305; diff к main — прежние 7 файлов.
+Прочитаны CURRENT_STATE и обе новые CPT regression lessons: настоящий native
+store, 44px retry, выбранный фильтр при пустых metadata и hover contrast.
+Собственных API/SQL/ролей/флагов/денежных изменений нет; входящие CPT и MC4.3
+сохранены, общую очистку Mono ФИТ19 не выполняет.
+После ddf: build/types/startup, 31 unit в трёх финансовых файлах и все 40
+production browser сценариев Chromium/WebKit прошли без retries за 2.3min;
+PNG 320/390/430/1440, filter320 и error-total320 просмотрены. После нового
+CPT merge проверки выполнены снова из-за новых ClientsPages/queries/fixtures:
+scoped lint, build/types/fonts/startup, те же 31 unit и 40/40 browser passed,
+retries 0, 2.1min. Последние PNG всех четырёх ширин просмотрены. Компактная
+геометрия, разница цветов, точные суммы, прежние Mono controls и отсутствие
+процентов/числа тренировок под именем сохранены.
+Обновление очереди: владелец CPT прямо поставил 2035 следующим; владелец MC4
+перечитал решение и отложил отдельную публикацию 2034, не отменяя чужие CI.
+Его код уже входит в aa4 и проходит общий полный CI. Передача проверена:
+официальная публикация ddf не стартовала. Квитанция перечитана в PR2035.
+Source CPT 2149: CI42417605327 SUCCESS 35/35 attempt1; mainCI42420666603,
+официальные API/web/OTA, public/native и закрытый pilot inspect ещё впереди.
+Наш 2037 сливается только после его фактической приёмки и hold released.
+Review/sourceCI готовятся параллельно по FIN54; нужен новый полный exact-head
+CI этого объединения, старые green ему не приписываются. До публикации FIN703
+обязательны свой mainCI, official releases, все public bytes, public42 и
+verified signedZIP42 с просмотром снимков. Физический телефон не проверен.

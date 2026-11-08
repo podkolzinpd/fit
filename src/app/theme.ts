@@ -1,4 +1,5 @@
 import { useSyncExternalStore } from 'react'
+import { readPreferenceStorage, writePreferenceStorage } from './preference-storage'
 
 export type AppTheme = 'light' | 'dark'
 
@@ -42,11 +43,7 @@ export function themeVariantClass(variant: ThemeVariant): string {
 
 export function getAppTheme(): AppTheme {
   if (typeof window === 'undefined') return APP_THEME
-  try {
-    return resolveThemePreference(window.localStorage.getItem(THEME_STORAGE_KEY))
-  } catch {
-    return APP_THEME
-  }
+  return resolveThemePreference(readPreferenceStorage(THEME_STORAGE_KEY))
 }
 
 export function applyThemeVariant(variant: ThemeVariant) {
@@ -72,12 +69,7 @@ export function applyMonochromeThemeColor(theme: AppTheme) {
 }
 
 export function setAppTheme(theme: AppTheme) {
-  try {
-    window.localStorage.setItem(THEME_STORAGE_KEY, theme)
-  } catch {
-    // Тема всё равно применяется на текущую сессию, даже если хранилище
-    // браузера недоступно (например, в приватном WKWebView-контексте).
-  }
+  writePreferenceStorage(THEME_STORAGE_KEY, theme)
   applyThemeVariant(resolveThemeVariant(theme))
   window.dispatchEvent(new Event(THEME_CHANGE_EVENT))
 }

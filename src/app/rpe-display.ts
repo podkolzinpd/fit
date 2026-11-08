@@ -1,34 +1,27 @@
 import { useCallback, useSyncExternalStore } from 'react'
+import { readPreferenceStorage, writePreferenceStorage } from './preference-storage'
 
 const RPE_DISPLAY_STORAGE_PREFIX = 'fit.rpeDisplay.'
 const RPE_DISPLAY_CHANGE_EVENT = 'fit-rpe-display-change'
 
-function storageKey(userId: string | undefined) {
+export function rpeDisplayStorageKey(userId: string | undefined) {
   return userId ? `${RPE_DISPLAY_STORAGE_PREFIX}${userId}` : undefined
 }
 
 /** RPE — дополнительное поле: по умолчанию не занимает место в формах. */
 export function getRpeDisplay(userId: string | undefined): boolean {
-  const key = storageKey(userId)
+  const key = rpeDisplayStorageKey(userId)
   if (typeof window === 'undefined' || !key) return false
-  try {
-    return window.localStorage.getItem(key) === 'true'
-  } catch {
-    return false
-  }
+  return readPreferenceStorage(key) === 'true'
 }
 
 export function setRpeDisplay(userId: string, visible: boolean) {
-  try {
-    window.localStorage.setItem(`${RPE_DISPLAY_STORAGE_PREFIX}${userId}`, String(visible))
-  } catch {
-    // В текущей вкладке настройка всё равно обновится через событие.
-  }
+  writePreferenceStorage(`${RPE_DISPLAY_STORAGE_PREFIX}${userId}`, String(visible))
   window.dispatchEvent(new Event(RPE_DISPLAY_CHANGE_EVENT))
 }
 
 export function useRpeDisplay(userId: string | undefined) {
-  const key = storageKey(userId)
+  const key = rpeDisplayStorageKey(userId)
   const subscribe = useCallback((onStoreChange: () => void) => {
     if (typeof window === 'undefined') return () => undefined
     const onStorage = (event: StorageEvent) => {

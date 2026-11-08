@@ -233,6 +233,19 @@ DOM-form в отложенную mutation для последующего чте
 сервер получает исходно введённое. Red/green и границы —
 [настройки, итерация7](design/TRAINER_SETTINGS_COMPACT_20261107.md#итерация-7--07112026--codex--openai).
 
+## RL-PREFERENCE-FAILED-WRITE-20261108
+
+Событие изменения не сохраняет выбор, если getter сразу перечитывает старое
+localStorage после неудачного setItem. Для существующих личных/device ключей
+failed-write значение остаётся в памяти сеанса, интерфейс честно сообщает о
+невозможности persistence; успешная запись и внешний storage event снимают
+override. Проверять пять preferences, account isolation, remount и recovery.
+Node26 setup может дать plain Storage-shim с собственным setItem, Node22 —
+jsdom Storage с методом в прототипе. Spy ставится на фактического владельца
+метода (own shim либо его прототип), а не безусловно на instance/Storage.prototype.
+Исходный red должен действительно вызвать отказ записи; проверять Node22/26.
+[SET-STORAGE-01 и итерации12/17–18](design/TRAINER_SETTINGS_COMPACT_20261107.md#итерация-17--08112026--codex--openai).
+
 ### CPT — Закрытый native gate и размер retry (07.11.2026)
 
 Новый закрытый API-модуль подключается также к native browser harness настоящим
