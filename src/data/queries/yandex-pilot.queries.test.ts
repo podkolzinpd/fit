@@ -20,6 +20,37 @@ afterEach(() => {
 })
 
 describe('yandexPilotQueries', () => {
+  it('bounds a stalled training-data request and allows a fresh retry', async () => {
+    vi.useFakeTimers()
+    let signal: AbortSignal | undefined
+    const fetchMock = vi.fn<typeof fetch>().mockImplementationOnce((_input, init) => {
+      signal = init?.signal ?? undefined
+      return new Promise((_resolve, reject) => signal?.addEventListener('abort', () => reject(new DOMException('Aborted', 'AbortError'))))
+    }).mockResolvedValueOnce(new Response('{"workouts":[]}', { status: 200 }))
+    vi.stubGlobal('fetch', fetchMock)
+    const outcome = yandexPilotQueries.listTrainingData('https://stage.example.test', 's'.repeat(43), 'read_write')
+      .then(() => 'resolved', () => 'rejected')
+    await vi.advanceTimersByTimeAsync(14_999)
+    expect(Boolean(signal?.aborted)).toBe(false)
+    await vi.advanceTimersByTimeAsync(1)
+    expect(Boolean(signal?.aborted)).toBe(true)
+    expect(await outcome).toBe('rejected')
+    await expect((await yandexPilotQueries.listTrainingData('https://stage.example.test', 's'.repeat(43), 'read_write')).json()).resolves.toEqual({ workouts: [] })
+  })
+
+  it('keeps the same training-data deadline while the JSON body is stalled', async () => {
+    vi.useFakeTimers()
+    let stream!: ReadableStreamDefaultController<Uint8Array>
+    const body = new ReadableStream<Uint8Array>({ start(controller) { stream = controller; controller.enqueue(new TextEncoder().encode('{')) } })
+    vi.stubGlobal('fetch', vi.fn<typeof fetch>().mockResolvedValue(new Response(body, { status: 200 })))
+    const outcome = yandexPilotQueries.listTrainingData('https://stage.example.test', 's'.repeat(43), 'read_write')
+      .then(() => 'resolved', () => 'rejected')
+    try {
+      await vi.advanceTimersByTimeAsync(15_000)
+      expect(await outcome).toBe('rejected')
+    } finally { stream.close() }
+  })
+
   it('exchanges Yandex OAuth codes for app sessions and links accounts explicitly', async () => {
     const fetchMock = vi.fn<typeof fetch>()
       .mockResolvedValue(new Response('{}', {
@@ -188,6 +219,7 @@ describe('yandexPilotQueries', () => {
       {
         cache: 'no-store',
         headers: { 'x-fit-pilot-session': 's'.repeat(43), 'x-fit-request-id': REQUEST_ID },
+        signal: expect.any(AbortSignal) as AbortSignal,
       },
     )
 
@@ -200,6 +232,7 @@ describe('yandexPilotQueries', () => {
       {
         cache: 'no-store',
         headers: { 'x-fit-session': 's'.repeat(43), 'x-fit-request-id': REQUEST_ID },
+        signal: expect.any(AbortSignal) as AbortSignal,
       },
     )
 

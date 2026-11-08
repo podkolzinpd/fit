@@ -255,10 +255,33 @@ function useTrainerScheduleModel(forceDayView = false, hourHeight = HOUR_HEIGHT)
   }
   function shiftOverview(direction: -1 | 1) { showOverview(addDays(weekStart, direction * overviewDayCount)) }
 
-  const query = useQuery({
-    queryKey: ['workouts', 'schedule-overview', isListView ? 'all' : weekStart, isListView ? 'all' : periodEnd],
-    queryFn: () => workoutsRepository.list(isListView ? undefined : weekStart, isListView ? undefined : periodEnd),
+  const calendarQuery = useQuery({
+    queryKey: ['workouts', 'schedule-overview', weekStart, periodEnd],
+    queryFn: () => workoutsRepository.list(weekStart, periodEnd),
+    enabled: !isListView,
   })
+  const listQuery = useInfiniteQuery({
+    queryKey: ['workouts', 'schedule-list'],
+    initialPageParam: 0,
+    queryFn: ({ pageParam }) => workoutsRepository.listPage(undefined, undefined, undefined, pageParam, 100),
+    getNextPageParam: (page) => page.nextOffset,
+    enabled: isListView,
+    retry: false,
+  })
+  const { hasNextPage, isFetching, isError, fetchNextPage } = listQuery
+  useEffect(() => {
+    if (isListView && hasNextPage && !isFetching && !isError) void fetchNextPage()
+  }, [isListView, hasNextPage, isFetching, isError, fetchNextPage])
+  // Keep received pages visible when a later request fails. Retrying that page
+  // must not refetch or erase the earlier ones.
+  const query = isListView ? {
+    ...listQuery,
+    data: listQuery.data?.pages.flatMap((page) => page.items),
+    error: listQuery.data ? null : listQuery.error,
+  } : calendarQuery
+  const listIncomplete = isListView && Boolean(hasNextPage)
+  const listError = isListView && listQuery.data ? listQuery.error : null
+  const retryListPage = () => { void fetchNextPage() }
   const scheduleItems = lime ? trainerScheduleWorkouts(query.data ?? [], actor?.userId, independentPreference.enabled) : query.data ?? []
   const items = filterScheduleWorkouts(scheduleItems, clientFilter, statusFilter)
   const itemsByDay = new Map<LocalDate, Workout[]>()
@@ -327,6 +350,7 @@ function useTrainerScheduleModel(forceDayView = false, hourHeight = HOUR_HEIGHT)
     overviewDayCount, periodEnd, overviewDays, today, scrollRef, openDay,
     showOverview, shiftOverview, query, itemsByDay, dayItems, totalCount,
     timed, untimed, independent, independentPreference, todayDisabled, isListView, clientFilter, statusFilter, filteredItems: items,
+    listIncomplete, listError, retryListPage,
   }
 }
 
@@ -775,6 +799,7 @@ function TrainerScheduleV2({ forceDayView = false }: { forceDayView?: boolean })
     overviewDays, today, scrollRef, openDay, showOverview, shiftOverview,
     query, itemsByDay, timed, untimed, todayDisabled,
     isListView, clientFilter, statusFilter, filteredItems, independent, independentPreference,
+    listIncomplete, listError, retryListPage,
   } = useTrainerScheduleModel(forceDayView, hourHeight)
   const compactCalendar = isFitLimeEnabled(actor) && isCoachWorkoutRedesignEnabled(actor)
   const isFortnightComparison = compactCalendar && isTwoWeekView && !isDayView && !isListView
@@ -1047,7 +1072,11 @@ function TrainerScheduleV2({ forceDayView = false }: { forceDayView?: boolean })
     </div>)}</>)}
     {densityPreference.status === 'error' && <p className="schedule-v2-density-error" role="alert">Не удалось сохранить плотность сетки. <button type="button" onClick={densityPreference.retry}>Повторить</button></p>}
     <AsyncView loading={query.isLoading} error={query.error} onRetry={() => void query.refetch()}>
-      {isListView ? <FitLimeScheduleList workouts={filteredItems} today={today} returnTo={returnTo} onOpenDay={openDay} /> : !isDayView ? <>
+      {isListView ? <>
+        <FitLimeScheduleList workouts={filteredItems} incomplete={listIncomplete} today={today} returnTo={returnTo} onOpenDay={openDay} />
+        {listError ? <><InlineRequestError error={listError} message="Не удалось загрузить остальные тренировки." /><button type="button" className="link" onClick={retryListPage}>Повторить</button></>
+          : listIncomplete && <p className="state" role="status">Загружаем остальные тренировки…</p>}
+      </> : !isDayView ? <>
         {!compactCalendar && <div className="schedule-v2-range-toggle" role="group" aria-label="Период расписания">
           <button type="button" aria-pressed={!isTwoWeekView} onClick={() => showOverview(weekStart, 'week')}>Неделя</button>
           <button type="button" aria-pressed={isTwoWeekView} onClick={() => showOverview(weekStart, '2w')}>2 недели</button>
