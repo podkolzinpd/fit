@@ -2,8 +2,8 @@ import { createHash, randomUUID } from 'node:crypto'
 import { fileURLToPath } from 'node:url'
 import { runner } from 'node-pg-migrate'
 import { Pool } from 'pg'
-import { afterAll, beforeAll, describe, expect, it } from 'vitest'
-import { readRestoreTarget, planClientRestore, applyClientRestore, verifyClientRestore, readConfirmedRestoreVisibility, readImportedAccessVisibility, type ImportedAccessAuditTarget, type RestorePlan } from '../../../../scripts/cloudru-client-restore.mjs'
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
+import { readRestoreTarget, planClientRestore, applyClientRestore, verifyClientRestore, readConfirmedRestoreVisibility, readImportedAccessVisibility, verifyConfirmedCardMergeOwner, type ImportedAccessAuditTarget, type RestorePlan } from '../../../../scripts/cloudru-client-restore.mjs'
 
 const source = process.env.TEST_DATABASE_URL
 const database = `fit_client_restore_${process.pid}_${randomUUID().replaceAll('-', '').slice(0, 8)}`
@@ -274,9 +274,137 @@ describe.skipIf(source === undefined)('owner-approved canonical client restorati
       await c.query('commit')
     } finally { c.release() }
     const claimed = (await owner.query<{ claimed_at: Date }>('select claimed_at from public.client_invitations where id=$1', [invitationId])).rows[0]!
+    const clockAhead=claimed.claimed_at.getTime()-Date.now()
+    if(clockAhead>0&&clockAhead<1000)await new Promise(resolve=>setTimeout(resolve,clockAhead+2))
     const proof = { invitationId, claimedAt: claimed.claimed_at.toISOString(), ownerConfirmedAt: new Date().toISOString() }
     return { ...f, current, currentCard, code, proof }
   }
+
+  async function mergeFixture() {
+    const f = await confirmedFixture()
+    await owner.query(`insert into public.client_merge_operations(source_client_id,target_client_id,actor_id,status,completed_at)
+      values($1,$2,$3,'completed',now())`, [f.old,f.card,f.athleteId])
+    await owner.query("insert into public.trainer_finance_packages(trainer_id,client_id,title,sessions_total,price_cents,starts_on) values($1,$2,'Existing current balance',8,42000,current_date),($1,$3,'Archived balance stays',4,21000,current_date)", [f.trainerId,f.currentCard,f.old])
+    return f
+  }
+  async function mergePlan(f: Awaited<ReturnType<typeof confirmedFixture>>) {
+    const c=await owner.connect()
+    try {return await planClientRestore(c,{trainerId:f.trainerId,athleteId:f.athleteId},f.expected,null,f.proof,null,'merge_confirmed_cards')}
+    finally {c.release()}
+  }
+  async function verifyMergeOwner(p: RestorePlan) {
+    const c=await owner.connect()
+    try {return await verifyConfirmedCardMergeOwner(c,p)}finally {c.release()}
+  }
+  it('merges only proven card content into the current native card with conserved finance and both actual actors', async () => {
+    const f=await mergeFixture(), p=await mergePlan(f)
+    await expect(apply(p,false)).rejects.toThrow('backup_required')
+    await expect(verify(p)).rejects.toThrow('merge_runtime_history')
+    const connections=(await owner.query('select to_jsonb(r) row from public.client_trainer_relationships r where client_id=any($1::uuid[]) order by id',[[f.card,f.currentCard,f.old]])).rows
+    expect(await apply(p)).toMatchObject({replayed:false,historyUnchanged:true})
+    expect(await verifyMergeOwner(p)).toMatchObject({historyUnchanged:true})
+    expect(await verify(p)).toMatchObject({bothCanReadImported:true,athleteCanReadTrainer:true})
+    expect(await apply(p)).toMatchObject({replayed:true})
+    expect((await owner.query('select to_jsonb(r) row from public.client_trainer_relationships r where client_id=any($1::uuid[]) order by id',[[f.card,f.currentCard,f.old]])).rows).toEqual(connections)
+    expect((await owner.query('select id,auth_user_id,merged_into_client_id from public.clients where id=any($1::uuid[]) order by id',[[f.card,f.currentCard,f.old]])).rows).toEqual(expect.arrayContaining([
+      expect.objectContaining({id:f.currentCard,auth_user_id:f.current,merged_into_client_id:null}),
+      expect.objectContaining({id:f.card,auth_user_id:f.athleteId,merged_into_client_id:f.currentCard}),
+      expect.objectContaining({id:f.old,auth_user_id:null,merged_into_client_id:f.currentCard})]))
+  })
+
+  it('rejects changed finance, missing proof, stale plans and changed target state before any write', async () => {
+    const f=await mergeFixture(), p=await mergePlan(f)
+    const clock=vi.spyOn(Date,'now').mockReturnValue(Number(p.createdAt)+3600001)
+    try {await expect(apply(p)).rejects.toThrow('merge_plan_expired')}finally {clock.mockRestore()}
+    const changed=structuredClone(p);changed.targetId=randomUUID()
+    await expect(apply(changed)).rejects.toThrow('merge_plan')
+    await owner.query("update public.trainer_finance_packages set price_cents=price_cents+1 where client_id=$1",[f.currentCard])
+    await expect(apply(p)).rejects.toThrow('merge_state_changed')
+    expect((await owner.query('select merged_into_client_id from public.clients where id=$1',[f.card])).rows[0]).toEqual({merged_into_client_id:null})
+    await owner.query('update public.client_invitations set claimed_by=null,claimed_at=null,revoked_at=now() where id=$1',[f.proof.invitationId])
+    await expect(mergePlan(f)).rejects.toThrow('confirmed_invitation_binding')
+  })
+  it('keeps unknown profile-private data, messages, auth and existing connections unchanged', async () => {
+    const f=await mergeFixture()
+    await owner.query('create table public.synthetic_merge_private(id uuid primary key,owner_id uuid references public.profiles(id),body text not null)')
+    try {
+      await owner.query("insert into public.synthetic_merge_private values($1,$2,'Private old data'),($3,$4,'Private current data')",[randomUUID(),f.athleteId,randomUUID(),f.current])
+      const before=(await owner.query('select * from public.synthetic_merge_private order by id')).rows
+      const p=await mergePlan(f);await apply(p);await verifyMergeOwner(p);await verify(p)
+      expect((await owner.query('select * from public.synthetic_merge_private order by id')).rows).toEqual(before)
+      await owner.query("update public.synthetic_merge_private set body='Changed legitimate private data' where owner_id=$1",[f.current])
+      await expect(verifyMergeOwner(p)).rejects.toThrow('merge_protected_state_changed')
+    } finally {await owner.query('drop table public.synthetic_merge_private')}
+  })
+  it('rejects target history, ambiguous authorship, unsupported source data and foreign finance ownership', async () => {
+    const f=await mergeFixture()
+    await owner.query('update public.workouts set created_by=null where id=$1',[f.expected.workoutIds[0]])
+    await expect(mergePlan(f)).rejects.toThrow('merge_history_conflict')
+    const g=await mergeFixture()
+    await owner.query('create table public.synthetic_merge_client(id uuid primary key,client_id uuid references public.clients(id),body text)')
+    try {
+      await owner.query("insert into public.synthetic_merge_client values($1,$2,'Preserve unsupported')",[randomUUID(),g.card])
+      await expect(mergePlan(g)).rejects.toThrow('merge_unsupported_source_data')
+    } finally {await owner.query('drop table public.synthetic_merge_client')}
+    const h=await mergeFixture()
+    await owner.query("insert into public.trainer_finance_packages(trainer_id,client_id,title,sessions_total,price_cents,starts_on) values($1,$2,'Foreign owner',3,21000,current_date)",[h.other,h.currentCard])
+    await expect(mergePlan(h)).rejects.toThrow('merge_finance_owner')
+    const k=await mergeFixture()
+    await owner.query("insert into public.workouts(client_id,trainer_id,created_by,workout_date,status) values($1,$2,$2,current_date,'planned')",[k.currentCard,k.trainerId])
+    await expect(mergePlan(k)).rejects.toThrow('merge_history_conflict')
+  })
+  it('rolls back the entire card/history/financial merge on a late error and verifies before replay', async () => {
+    const f=await mergeFixture(),p=await mergePlan(f),c=await owner.connect()
+    try {
+      await expect(applyClientRestore({query:(sql:string,values?:unknown[])=>{
+        if(sql.startsWith("update public.client_merge_operations set status='completed'"))return Promise.reject(Error('synthetic merge late failure'))
+        return c.query(sql,values)
+      }},p,{backupVerified:true})).rejects.toThrow('synthetic merge late failure')
+    }finally{c.release()}
+    expect((await owner.query('select merged_into_client_id from public.clients where id=$1',[f.card])).rows[0]).toEqual({merged_into_client_id:null})
+    await apply(p);await verifyMergeOwner(p);await verify(p)
+    await owner.query("update public.workouts set notes='Legitimate subsequent edit' where id=$1",[f.expected.workoutIds[0]])
+    await expect(apply(p)).rejects.toThrow('merge_row_changed')
+    await expect(verifyMergeOwner(p)).rejects.toThrow('merge_row_changed')
+  })
+  it('preserves native photos and quick-start receipts without altering workout facts', async () => {
+    const f=await mergeFixture()
+    const photo={path:f.card+'/'+'a'.repeat(64)+'.jpg',sha256:'a'.repeat(64),sizeBytes:512,version:4}
+    await owner.query('update public.clients set profile_photo=$2::jsonb where id=$1',[f.card,JSON.stringify(photo)])
+    const operation=randomUUID()
+    await owner.query('insert into app_private.quick_start_operations(actor_id,operation_id,client_id,workout_id) values($1,$2,$3,$4)',[f.trainerId,operation,f.card,f.expected.workoutIds[0]])
+    const p=await mergePlan(f);await apply(p);await verifyMergeOwner(p);await verify(p)
+    expect((await owner.query<{profile_photo:unknown}>('select profile_photo from public.clients where id=$1',[f.currentCard])).rows[0]?.profile_photo).toEqual({...photo,version:1})
+    expect((await owner.query('select client_id,workout_id from app_private.quick_start_operations where actor_id=$1 and operation_id=$2',[f.trainerId,operation])).rows[0]).toEqual({client_id:f.currentCard,workout_id:f.expected.workoutIds[0]})
+    const g=await mergeFixture(),currentPhoto={...photo,path:g.currentCard+'/'+'b'.repeat(64)+'.jpg',sha256:'b'.repeat(64)}
+    await owner.query('update public.clients set profile_photo=$2::jsonb where id=$1',[g.card,JSON.stringify(photo)])
+    await owner.query('update public.clients set profile_photo=$2::jsonb where id=$1',[g.currentCard,JSON.stringify(currentPhoto)])
+    const q=await mergePlan(g);await apply(q);await verifyMergeOwner(q)
+    expect((await owner.query<{profile_photo:unknown}>('select profile_photo from public.clients where id=$1',[g.currentCard])).rows[0]?.profile_photo).toEqual(currentPhoto)
+  })
+
+  it('conserves charged sessions and payments across the existing financial owner/workout namespace split', async () => {
+    const f=await mergeFixture()
+    const pkg=(await owner.query<{id:string}>('select id from public.trainer_finance_packages where client_id=$1',[f.card])).rows[0]!.id
+    await owner.query("insert into public.trainer_finance_payments(package_id,trainer_id,client_id,amount_cents,received_on,comment) values($1,$2,$3,23000,current_date,'Keep payment and owner')",[pkg,f.trainerId,f.card])
+    await owner.query("insert into public.trainer_finance_sessions(package_id,workout_id,trainer_id,client_id,disposition,source,comment) values($1,$2,$3,$4,'charged','manual','Keep charged allocation')",[pkg,f.expected.workoutIds[0],f.trainerId,f.card])
+    const rows=(await owner.query('select id,package_id,workout_id,trainer_id,disposition,source,comment from public.trainer_finance_sessions where client_id=$1 order by id',[f.card])).rows
+    const p=await mergePlan(f);await apply(p);await verifyMergeOwner(p);await verify(p)
+    expect((await owner.query('select id,package_id,workout_id,trainer_id,disposition,source,comment from public.trainer_finance_sessions where client_id=$1 order by id',[f.currentCard])).rows).toEqual(rows)
+    expect((await owner.query<{amount:string}>('select amount_cents::text amount from public.trainer_finance_payments where client_id=$1',[f.currentCard])).rows).toEqual([{amount:'23000'}])
+  })
+  it('independently resolves an unknown COMMIT outcome instead of applying the merge twice', async () => {
+    const f=await mergeFixture(),p=await mergePlan(f),c=await owner.connect()
+    try {
+      await expect(applyClientRestore({query:async(sql:string,values?:unknown[])=>{
+        const result=await c.query(sql,values)
+        if(sql==='commit')throw Error('synthetic transport lost after COMMIT')
+        return result
+      }},p,{backupVerified:true})).rejects.toThrow('synthetic transport lost after COMMIT')
+    }finally{c.release()}
+    await verifyMergeOwner(p);expect(await verify(p)).toMatchObject({bothCanReadImported:true})
+    expect((await owner.query<{n:number}>('select count(*)::int n from public.client_merge_operations where id=$1',[p.mergeId])).rows[0]?.n).toBe(1)
+  })
 
   async function confirmedDiagnosis(f: Awaited<ReturnType<typeof confirmedFixture>>, proof = f.proof) {
     const c = await owner.connect()

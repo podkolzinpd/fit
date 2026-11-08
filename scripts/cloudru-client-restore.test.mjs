@@ -234,3 +234,19 @@ test('all seventeen import scopes are bounded, distinct and signed; the audit ca
   await assert.rejects(planClientRestore({query:async()=>assert.fail('invalid scope must not query')},{},privateExpected,null,null,bad),/imported_audit_scope/)
  }
 })
+
+
+test('confirmed card repair is separately signed and cannot piggyback on a read-only audit',()=>{
+ const now=new Date().toISOString(),proof={invitationId:randomUUID(),claimedAt:now,ownerConfirmedAt:now}
+ const value={...privatePayload,confirmedInvitation:proof,repairMode:'merge_confirmed_cards'}
+ const signed=privateRestoreInputParts(value,'123-1',operatorKeys.privateKey)
+ assert.equal(readPrivateRestoreInput(signed,'123-1',operatorKeys.publicKey).repairMode,'merge_confirmed_cards')
+ const parsed=JSON.parse(Buffer.from(signed.join(''),'base64').toString('utf8'))
+ delete parsed.repairMode
+ assert.throws(()=>readPrivateRestoreInput(parts(parsed),'123-1',operatorKeys.publicKey),/private_signature/)
+ const readonly=privateRestoreInputParts({...privatePayload,confirmedInvitation:proof},'123-1',operatorKeys.privateKey)
+ const injected=JSON.parse(Buffer.from(readonly.join(''),'base64').toString('utf8'));injected.repairMode='merge_confirmed_cards'
+ assert.throws(()=>readPrivateRestoreInput(parts(injected),'123-1',operatorKeys.publicKey),/private_signature/)
+ assert.throws(()=>privateRestoreInputParts({...privatePayload,repairMode:'merge_confirmed_cards'},'123-1',operatorKeys.privateKey),/conflicting_evidence/)
+ assert.throws(()=>privateRestoreInputParts({...value,repairMode:'anything'},'123-1',operatorKeys.privateKey),/card_repair_mode/)
+})
