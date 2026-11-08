@@ -3094,3 +3094,40 @@ UIc622 сохраняет прежние18файлов. Фактически о�
 и фактических officialартефактах. Новых исходящих сообщений нет.
 Окно2050 OFF после этой приёмки; DUTpilot остаётся OFF. Дальше PR2, полный
 выпуск/приёмка, затем ровно один закрытый dutygrant и отдельный committedinspect.
+
+
+### Итерация 75 нового выпуска — 2026-11-08 — GPT / OpenAI
+
+Задача/границы: второй разрешённый PR дежурств2054, прежний закрытый test target;
+исходящие сообщения по текущему пакету запрещены, их не отправляли. Расхождений
+с DUT101–109 нет. UI/SQL/operator/native и независимые пилоты не расширялись.
+
+Точный source79ea7073 прошёл полный CI42502411002:35/35 SUCCESS attempt1,
+Android42502411015 assemble SUCCESS attempt1; стандартный PR auth-smoke skipped
+не выдан за проверку телефона/OAuth. Реальная native PG17 группа включает12/12
+DUT, весь DB job SUCCESS. Frontend354/3143, coverage83.65/78.61/82.89/88.37.
+Восстановленный localroot lint/types/coverage/ios/media/infra/calendar/hosting/API
+и build PASS; API1627pass/441standardconditionalSkip, skips не подменяют PG CI.
+Собранная syntheticproduction версия:154/154, admin30/services38/personal42/
+duties44, Chromium+WebKit, retries0/skips0/flaky0. Визуально проверены duty editor
+WebKit dark320 и Chromium legacy-light1440: общая дата dd.MM.yyyy/24ч, читаемость
+и отсутствие overflow. Старые devnavigation сбои итерации74 сохранены; goto,
+assertions, role guards и timeouts ради green не менялись.
+
+Readonly официальные операторы42503779467/42504267011 подтвердили единственного
+прежнего target и один назначенный активный московский офис без заданной зоны;
+duty enabled=false/eligible=false/other0. Readonly services42504570699 и
+personal42504794119 подтвердили enabled/eligible=true, personal other0.
+Zone/grant и реальные клиентские записи не выполнялись. После обеих приёмок
+требуются явная Europe/Moscow для этого единственного офиса, один закрытый duty
+scope grant и отдельный committed inspect; остальные флаги сохраняются фактически.
+
+Actualmain сменился наc6e4642e/PR2055:9файлов landing приняты обычным merge,
+побайтно сохранены, собственные src/e2e/API/operator/workflows/native прежние79ea.
+Это интеграция Git для исходных проверок, не объявление main2055 опубликованным.
+Здоровые гейты79ea не повторяем: после нового общего head обязателен новый полный
+CI/Android. Старшие2051 с новым head0e444b22 и2053fdcc остаются активны в очереди;
+их готовность/окна и фактические публикации сверяем перед своим merge. Прежний
+приоритет персональных тренировок не наследуется. Дальше: окончательный head,
+очередь/штатный squash match-head, mainCI/official API/web/signedOTA и фактическая
+приёмка154web+154signedZIP+publicUI с realAPI/WS deny. DUT109 ещё открыт.
