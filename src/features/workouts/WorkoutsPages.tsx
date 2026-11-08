@@ -281,7 +281,10 @@ function useTrainerScheduleModel(forceDayView = false, hourHeight = HOUR_HEIGHT)
   } : calendarQuery
   const listIncomplete = isListView && Boolean(hasNextPage)
   const listError = isListView && listQuery.data ? listQuery.error : null
-  const retryListPage = () => { void fetchNextPage() }
+  const retryListPage = () => {
+    if (listQuery.isFetchNextPageError) void fetchNextPage()
+    else void listQuery.refetch()
+  }
   const scheduleItems = lime ? trainerScheduleWorkouts(query.data ?? [], actor?.userId, independentPreference.enabled) : query.data ?? []
   const items = filterScheduleWorkouts(scheduleItems, clientFilter, statusFilter)
   const itemsByDay = new Map<LocalDate, Workout[]>()
@@ -1074,7 +1077,7 @@ function TrainerScheduleV2({ forceDayView = false }: { forceDayView?: boolean })
     <AsyncView loading={query.isLoading} error={query.error} onRetry={() => void query.refetch()}>
       {isListView ? <>
         <FitLimeScheduleList workouts={filteredItems} incomplete={listIncomplete} today={today} returnTo={returnTo} onOpenDay={openDay} />
-        {listError ? <><InlineRequestError error={listError} message="Не удалось загрузить остальные тренировки." /><button type="button" className="link" onClick={retryListPage}>Повторить</button></>
+        {listError ? <><InlineRequestError error={listError} message="Не удалось загрузить тренировки." /><button type="button" className="link" onClick={retryListPage}>Повторить</button></>
           : listIncomplete && <p className="state" role="status">Загружаем остальные тренировки…</p>}
       </> : !isDayView ? <>
         {!compactCalendar && <div className="schedule-v2-range-toggle" role="group" aria-label="Период расписания">

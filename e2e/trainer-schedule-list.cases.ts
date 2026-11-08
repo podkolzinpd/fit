@@ -105,11 +105,34 @@ export function trainerScheduleListCases() {
     await expect(rows(page)).toHaveCount(100)
     await expect.poll(() => reads.offsets).toEqual([0, 100])
     await page.clock.fastForward(15_000)
-    await expect(page.getByText('Не удалось загрузить остальные тренировки.', { exact: true })).toBeVisible()
+    await expect(page.getByText('Не удалось загрузить тренировки.', { exact: true })).toBeVisible()
     await expect(rows(page)).toHaveCount(100)
     await page.getByRole('button', { name: 'Повторить', exact: true }).click()
     await expect(rows(page)).toHaveCount(101)
     expect(reads.offsets).toEqual([0, 100, 100])
+  })
+
+  test('failed refresh keeps the cached list and retry refreshes it', async ({ page }) => {
+    const payload = await prepare(page)
+    let attempts = 0
+    await listReads(page, () => {
+      attempts++
+      if (attempts === 2) return new Promise<Payload>(() => {})
+      return Promise.resolve(attempts === 1 ? payload : { ...payload, totalWorkouts: 2,
+        workouts: [...payload.workouts, { ...payload.workouts[0], id: pageId(300) }] })
+    })
+    await openList(page)
+    await expect(rows(page)).toHaveCount(1)
+    await page.getByRole('button', { name: 'Неделя', exact: true }).click()
+    await page.clock.fastForward(20_001)
+    await openList(page)
+    await expect.poll(() => attempts).toBe(2)
+    await expect(rows(page)).toHaveCount(1)
+    await page.clock.fastForward(15_000)
+    await expect(page.locator('.request-error-inline')).toBeVisible()
+    await page.getByRole('button', { name: 'Повторить', exact: true }).click()
+    await expect(rows(page)).toHaveCount(2)
+    expect(attempts).toBe(3)
   })
 
   test('empty list finishes without another page or a permanent loader', async ({ page }) => {
