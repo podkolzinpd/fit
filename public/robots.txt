@@ -1,0 +1,8 @@
+User-agent: *
+Allow: /for-trainers/
+Disallow: /auth
+Disallow: /me
+Disallow: /today
+Disallow: /workouts
+Disallow: /api/
+Sitemap: https://fit-training.ru/sitemap.xml
