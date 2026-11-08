@@ -45,6 +45,7 @@
 .workout-editor-reference .workout-exercise-editor { gap: 2px }
 .workout-editor-reference .workout-gesture-list { gap: 2px }
 .workout-editor-reference .workout-swipe { border-radius: 32px }
+.workout-editor-reference .workout-set-swipe { border-radius: 16px }
 .phone-frame.fit-lime-shell:is(.coach-workout-reference, .client-workout-reference) .workout-editor-reference :is(.planned-exercise, .exercise-block) { padding: 16px; border: 0; border-radius: 32px; background: var(--workout-editor-card, #252529); box-shadow: none; overflow: hidden }
 .workout-editor-reference .compact-editor-exercise-head { display: grid; grid-template-columns: 44px minmax(0, 1fr) 44px; gap: 8px; align-items: center; margin-bottom: 16px }
 .phone-frame.fit-lime-shell:is(.coach-workout-reference, .client-workout-reference) .workout-editor-reference .compact-editor-exercise-toggle { padding: 8px 0; text-align: center; gap: 16px }
