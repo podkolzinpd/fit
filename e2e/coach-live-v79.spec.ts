@@ -685,7 +685,13 @@ test('v79 sheets keep real catalogue filters creation and single add', async ({ 
   await expect(picker).toHaveCount(0)
   await page.locator('.live-add-exercise').click()
   await picker.getByLabel('Поиск упражнения').fill('планка')
-  await picker.getByRole('button', { name: 'Добавить: Планка', exact: true }).click()
+  const multiple = process.env.FIT_QUICK_WORKOUT_ENTRY_ACCEPTANCE === '1'
+  await picker.getByRole('button', { name: multiple ? 'Выбрать: Планка' : 'Добавить: Планка', exact: true }).click()
+  if (multiple) {
+    await expect(picker).toBeVisible()
+    expect(backend.getWorkouts()[0]!.exercises).toHaveLength(3)
+    await picker.getByRole('button', { name: 'Добавить (1)', exact: true }).click()
+  }
   await expect.poll(() => backend.getWorkouts()[0]!.exercises.length).toBe(4)
   await expect(picker).toHaveCount(0)
 })
