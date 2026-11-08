@@ -792,3 +792,24 @@ Notification runtime/tests и остальные клиентские/landing ф
 mainCI/публикации предшественника. Ранний e6CI не финальная приёмка; штатная
 concurrency GitHub может supersede его при новом push, ручной отмены нет.
 Наш merge ждёт всех gates и опубликованной приёмки предыдущего выпуска.
+
+## Итерация 34 — 08.11.2026 — Codex / OpenAI
+
+Предварительный P3b1/CI42447981920 выявил собственную ошибку тестового diff:
+в общем trainer-schedule-v2.visual.spec.ts клиентский сценарий catalog/support
+также был переименован на trainer «Напишите нам». Клиентский runtime оставался
+с прежним «Напишите команде Fit», поэтому все четыре Client Lime theme/width
+случая корректно упали; это не screenshot mismatch и не поломка клиента.
+
+Восстановлен ровно исходный client form locator. Этот файл теперь побайтно
+равен parent575, включая прежние permission/retry assertions SET202. Три
+оставшихся изменённых e2e-файла проверены по role/context: только trainer
+profile/feedback. Runtime P3 и все шесть эталонов прежние; client default
+unit guard не изменён. Полный исходный client catalog/support сценарий прошёл
+8/8 Chromium/WebKit, light/dark390/430, retries0,36.2s. Локальный devharness
+имеет прежнее Vite fontallowlist предупреждение; это не production-приёмка.
+
+CI red/log сохранён, assertions и допуски не ослаблялись. Причина — замена
+одинаковой подписи по имени файла без проверки actor каждого изменённого
+сценария. Scope diff исправлен до выпуска. Финальный P3fullCI по-прежнему
+запускается после normalmerge фактического M2, не старого b1head.

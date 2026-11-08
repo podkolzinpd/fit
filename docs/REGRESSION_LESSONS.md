@@ -278,3 +278,9 @@ Location должен быть относительным: абсолютный 
 передать наружу http и loopback-port. Проверять весь Location, не только pathname.
 Проверка: prepare-cloudru-frontend tests, реальный Nginx integration и публичный
 readback после promotion. История: TRAINER_LANDING_20261107, итерации9–10.
+
+## RL-ROLE-SCOPED-TEST-TEXT-20261108
+
+Имя trainer-*.spec не доказывает роль всех тестов внутри. При trainer-only
+переименовании читать actor/route каждого изменённого locator; клиентские
+ветки общего файла сохраняют default. [Разбор и8/8 guard](design/TRAINER_SETTINGS_COMPACT_20261107.md#итерация-34--08112026--codex--openai).
