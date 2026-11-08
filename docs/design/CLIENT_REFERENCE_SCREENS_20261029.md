@@ -7931,3 +7931,39 @@ sampling сохраняется для последующей публичной
 readback2051; отдельное правило разрешения его выпуска MC-RELEASE-01 остаётся.
 Следующий шаг текущего этапа: очередь/итоговый main, exact-source зелёный CI,
 обычное слияние и штатная публикация с public/API/signedOTA/UI readback.
+
+## 185. MC4.4 — публичная база4db и source CI параллельно очереди, 08.11.2026
+
+Итерация — 08.11.2026 — GPT-6 / OpenAI. Выпуск2049 принят исполнителем:
+mainCI/Android/API/web/signedOTA и32 public/ZIP UI проверки успешны.
+Root независимо скачала официальный web artifact42476767866 и проверила
+238/238 публичных файлов по размеру/SHA256, commit4db409fc. На настоящем JS/CSS
+сайта строгие62 MC4.4 проверки дали ожидаемую baseline:52 red прежнего
+skin/placement,10 существующих/legacy-positive green, skip/retry0.
+Это доказательство старого состояния, не зелёная приёмка2051. Evidence:
+/tmp/fit-mc44-parent4db-public-files.json,
+/tmp/fit-mc44-public-baseline-4db-receipt.json и -adapted-report.json/results.
+
+Первый запуск временного public harness ошибочно сравнивал /api/v1 pathname
+с fixture /v1, получал локальный mock404/session error; остановлен130, исходные
+логи/trace сохранены, не объявлен продуктовым сбоем входа. Исправлен только
+временный synthetic handler URL: убрать /api непосредственно перед /v1.
+Настоящие API по-прежнему полностью блокируются и подменяются named fixtures;
+реальных пользователей/записей/телеметрии/WS/SW нет. Пять source case/probe
+файлов после нормализации импортов побайтно прежние, assertions не менялись.
+Путь подготовки /tmp/fit-mc44-prepare-public-qa.py и отдельная source-proof JSON
+честно отмечают fixtureGatewayPathAdapter, а не imports-only.
+
+Очередь вновь обновила main: принят2052/4ce011bd, отдельный trainer landing
+и inherited env официального Terraform mirror. Обычная интеграция дала8d048877;
+src/e2e/package/lock/playwright относительно проверенного7a9 побайтно прежние.
+AST4ce снова25715/6guards/2paint+8placement, net scope10files прежний.
+55/55 inherited CI/helper tests прошли; чужие workflows не редактировались.
+Main2052 publication/2050 остаются активными,2039/2040 проверяются перед merge.
+
+Уточнение технического выбора184 по прежнему прецеденту MC4.3: не ждать полной
+остановки постоянно меняющейся очереди перед первым source push. Текущий
+одобренный MC4.4 с4ce отправляется и проходит свой полный CI параллельно.
+Порядок merge/publication, приоритетФИТ14 и MC-RELEASE-01 не меняются. Если main
+изменится, включить его обычным merge и проверять новый exact head; старый green
+не присваивается новой версии. Проверки/таймауты/подписи/скоупы не ослабляются.
