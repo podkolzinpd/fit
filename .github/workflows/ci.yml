@@ -43,6 +43,7 @@ jobs:
       - run: npm run infra:policy:test
       - run: npm run frontend:hosting:test
       - run: node --test scripts/prepare-fit-lime-fonts.test.mjs
+      - run: node --test scripts/prepare-official-ci-tools.test.mjs
 
   app-quality:
     needs: e2e-scope
@@ -67,6 +68,8 @@ jobs:
     needs: e2e-scope
     if: needs.e2e-scope.outputs.frontend_required == 'true'
     runs-on: ubuntu-24.04
+    env:
+      TF_CLI_CONFIG_FILE: ${{ github.workspace }}/infra/yandex/terraform.rc.example
     permissions:
       contents: read
     steps:
@@ -75,7 +78,11 @@ jobs:
         with:
           terraform_version: 1.9.8
       - run: terraform fmt -check -recursive infra/yandex-frontend
-      - run: terraform -chdir=infra/yandex-frontend init -backend=false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: node scripts/prepare-official-ci-tools.mjs terraform "$RUNNER_TEMP/fit-ci-providers"
+      - run: terraform -chdir=infra/yandex-frontend init -backend=false -plugin-dir="$RUNNER_TEMP/fit-ci-providers"
       - run: terraform -chdir=infra/yandex-frontend validate
       - run: terraform -chdir=infra/yandex-frontend test
 
