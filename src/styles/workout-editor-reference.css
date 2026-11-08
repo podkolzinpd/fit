@@ -84,6 +84,10 @@
 .phone-frame.fit-lime-shell:is(.coach-workout-reference, .client-workout-reference) .workout-editor-reference .set-add-row > button { min-height: 48px; border: 0; background: transparent; font-size: 14px; font-weight: 400 }
 .workout-editor-reference .set-add-row .add-action-label svg { color: var(--lime-accent) }
 .workout-editor-reference .exercise-comment-options { margin-top: 8px }
+.workout-editor-reference .exercise-comment { resize: none; overflow-wrap: anywhere }
+.workout-editor-reference .exercise-plan-rest-field { margin: 0 0 8px; padding: 0; border: 0; background: transparent }
+.live-identity textarea.exercise-comment { resize: none; overflow-wrap: anywhere }
+.workout-detail-page .exercise-comment-note { white-space: pre-wrap; overflow-wrap: anywhere }
 .phone-frame.fit-lime-shell:is(.coach-workout-reference, .client-workout-reference) .workout-editor-reference .exercise-comment-options > summary { font-size: 14px; font-weight: 400; color: var(--lime-text-secondary) }
 .phone-frame.fit-lime-shell:is(.coach-workout-reference, .client-workout-reference) .workout-editor-reference .block-options > summary { color: var(--lime-accent-ink) }
 .workout-editor-reference .workout-editor-footer { display: flex; justify-content: flex-end; padding-inline: 16px; margin: 8px 0 }

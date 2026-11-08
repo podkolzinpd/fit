@@ -77,6 +77,7 @@ import { CLIENT_LIME_WORKOUT_EXAMPLE } from './WorkoutComposer'
 import { QuickWorkoutEntry } from './QuickWorkoutEntry'
 import { WorkoutExerciseEditor } from './WorkoutExerciseEditor'
 import { RPE_OPTIONS } from '../../shared/rpe'
+import { AutoSizeTextarea } from '../../shared/AutoSizeTextarea'
 import type { RunningFormat } from '../../shared/running-formats'
 import type { ParsedWorkoutExercise } from './quick-workout-entry'
 import { createLiveSetCoordinator } from './live-set-coordinator'
@@ -4253,7 +4254,7 @@ export function LiveWorkoutPage() {
         setOpenClientNotes(previous => { if (previous.has(compactKey) === open) return previous; const next = new Set(previous); if (open) next.add(compactKey); else next.delete(compactKey); return next })
       } } : {})}>
       <summary>{clientLime ? 'Моя заметка' : clientMode ? 'Заметка' : 'Заметка тренера'}{preview ? <span className="live-note-preview">{preview}</span> : null}</summary>
-      <textarea className="exercise-comment" aria-label={`Заметка: ${displayName}`} placeholder="Заметка к упражнению…" maxLength={5000} rows={2} disabled={rootMutationPending}
+      <AutoSizeTextarea className="exercise-comment" aria-label={`Заметка: ${displayName}`} placeholder="Заметка к упражнению…" maxLength={5000} rows={2} disabled={rootMutationPending}
         {...(coachReference ? { value: note, onChange: (event: ChangeEvent<HTMLTextAreaElement>) => captureLiveNote(exercise.id, event.currentTarget.value), onFocus: () => setFocusedNote(exercise.id) } : { defaultValue: note })}
         onBlur={(event) => { const edited = !coachReference || editedNotes.current.delete(exercise.id); if (coachReference) setFocusedNote(null); const next = event.target.value.trim(); if (edited && next !== (coachReference ? serverNote.trim() : serverNote)) commentLive.mutate({ exerciseId: exercise.id, comment: next }) }} />
     </details>
