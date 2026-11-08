@@ -48,6 +48,35 @@ export function readCurrentProfileEvidence(value,now=Date.now()){
  return value
 }
 
+// The operator signs this only after the owner confirms this exact, already
+// authenticated invitation. Neither a name nor an arbitrary profile ID resolves it.
+export function readConfirmedRestoreInvitation(value,now=Date.now()){
+ requireState(value&&Object.keys(value).sort().join(',')==='claimedAt,invitationId,ownerConfirmedAt'
+   &&uuid.test(value.invitationId??'')
+   &&['claimedAt','ownerConfirmedAt'].every(k=>typeof value[k]==='string'
+     &&Number.isFinite(Date.parse(value[k]))&&new Date(value[k]).toISOString()===value[k]
+     &&Date.parse(value[k])<=now&&Date.parse(value[k])>=now-7*86400000)
+   &&Date.parse(value.claimedAt)<=Date.parse(value.ownerConfirmedAt),'confirmed_invitation')
+ return value
+}
+
+export function readImportedAccessAudit(value){
+ requireState(Array.isArray(value)&&value.length===17,'imported_audit_scope')
+ for(const item of value){
+   requireState(item&&Object.keys(item).sort().join(',')==='code,expectedHistory,journalKind,profileId'
+     &&/^F(?:0[1-9]|1[0-7])$/u.test(item.code)&&(item.profileId===null||uuid.test(item.profileId??''))
+     &&['athlete','trainer_self'].includes(item.journalKind),'imported_audit_scope')
+   readExpectedRestoreHistory(item.expectedHistory)
+ }
+ const unique=select=>new Set(value.map(select)).size===17
+ const workouts=value.flatMap(v=>v.expectedHistory.workoutIds)
+ const profiles=value.map(v=>v.profileId).filter(Boolean)
+ requireState(unique(v=>v.code)&&new Set(profiles).size===profiles.length&&unique(v=>v.expectedHistory.clientId)
+   &&value.filter(v=>v.journalKind==='trainer_self').length===1
+   &&workouts.length<=1000&&new Set(workouts).size===workouts.length,'imported_audit_scope')
+ return value
+}
+
 async function importedCounts(client,expected){
  return (await client.query(`select
    (select count(*)::int from public.workouts where id=any($1::uuid[]) and client_id=$2 and status='done' and deleted_at is null) workouts,
@@ -164,13 +193,250 @@ async function readIdentityEvidence(client,pair,state,expected,currentProfileEvi
    sameNameIsNotIdentityProof:true}
 }
 
-export async function planClientRestore(client,pair,expectedHistory=null,currentProfileEvidence=null){
+// Two claimed cards do not fit the existing single-card writer. Inventory both
+// sides before choosing a recovery; this branch can never create an apply plan.
+async function readRecoveryProfileReferences(client,ids){
+ const quote=name=>{requireState(/^[a-z_][a-z0-9_]*$/u.test(name),'evidence_catalog');return '"'+name+'"'}
+ const tables=bounded((await client.query(`select n.nspname schema,c.relname name,
+   array_agg(distinct a.attname::text order by a.attname::text) columns,
+   exists(select 1 from pg_attribute x where x.attrelid=c.oid and x.attname='client_id' and not x.attisdropped) has_client,
+   exists(select 1 from pg_attribute x where x.attrelid=c.oid and x.attname in('owner_id','user_id','client_user_id','profile_id','auth_user_id') and not x.attisdropped) private_owner
+   from pg_class c join pg_namespace n on n.oid=c.relnamespace
+   join pg_attribute a on a.attrelid=c.oid and a.atttypid='uuid'::regtype and not a.attisdropped and a.attnum>0
+   where n.nspname in('public','app_private') and c.relkind='r' and c.relname not in('profiles','clients')
+   and (a.attname in('owner_id','user_id','profile_id','auth_user_id','client_user_id') or exists(
+     select 1 from pg_constraint fk where fk.contype='f' and fk.conrelid=c.oid
+       and fk.confrelid in('public.profiles'::regclass,'public.trainers'::regclass) and a.attnum=any(fk.conkey)))
+   group by n.nspname,c.relname,c.oid order by n.nspname,c.relname limit 101`)).rows,100)
+ const result=[]
+ for(const t of tables){
+   requireState(Array.isArray(t.columns)&&t.columns.length>0&&t.columns.length<=20,'evidence_catalog')
+   const table=quote(t.schema)+'.'+quote(t.name)
+   const predicate=t.columns.map(c=>`r.${quote(c)}=any($1::uuid[])`).join(' or ')
+   const legacy=t.columns.map(c=>`r.${quote(c)}=$2::uuid`).join(' or ')
+   const stats=(await client.query(`select count(*)::int count,count(*) filter(where ${legacy})::int legacy,
+     coalesce(sum(octet_length(to_jsonb(r)::text)),0)::bigint bytes from ${table} r where ${predicate}`,[ids,ids[0]])).rows[0]
+   requireState(stats&&stats.count<=50000&&Number(stats.bytes)<=20*1024*1024,'evidence_scope')
+   const hash=(await client.query(`select encode(sha256(convert_to(coalesce(string_agg(j,E'\n' order by j),''),'UTF8')),'hex') digest
+     from (select to_jsonb(r)::text j from ${table} r where ${predicate}) s`,[ids])).rows[0].digest
+   result.push({schema:t.schema,table:t.name,columns:t.columns,hasClient:t.has_client,privateOwner:t.private_owner,
+     count:stats.count,legacy:stats.legacy,digest:hash})
+ }
+ return result
+}
+
+async function readConfirmedCardEvidence(client,pair,expected,proof){
+ const invitation=(await client.query(`select i.id,i.client_id,i.created_by,i.claimed_by,i.claimed_at,
+   i.revoked_at,i.target_role,c.auth_user_id,c.archived_at,c.merged_into_client_id
+   from public.client_invitations i join public.clients c on c.id=i.client_id where i.id=$1`,[proof.invitationId])).rows[0]
+ requireState(invitation&&invitation.created_by===pair.trainerId&&invitation.target_role==='client'
+   &&invitation.claimed_by&&![pair.athleteId,pair.trainerId].includes(invitation.claimed_by)
+   &&new Date(invitation.claimed_at).toISOString()===proof.claimedAt
+   &&!invitation.revoked_at&&invitation.auth_user_id===invitation.claimed_by
+   &&!invitation.archived_at&&!invitation.merged_into_client_id,'confirmed_invitation_binding')
+ const currentId=invitation.claimed_by
+ const profiles=bounded((await client.query(`select p.id,p.account_role,
+   (select count(*)::int from app_private.auth_identities i where i.profile_id=p.id and i.provider='yandex') identities,
+   (select count(*)::int from app_private.auth_identities i where i.profile_id=p.id and i.provider='yandex' and i.identity_origin='native') native_identities,
+   (select count(*)::int from app_private.yandex_app_sessions s where s.profile_id=p.id and s.revoked_at is null and s.expires_at>now()) active_sessions
+   from public.profiles p where id=any($1::uuid[]) order by id`,[[pair.trainerId,pair.athleteId,currentId]])).rows,3)
+ requireState(profiles.length===3
+   &&profiles.some(p=>p.id===pair.trainerId&&p.account_role==='trainer'&&p.identities===1)
+   &&profiles.some(p=>p.id===pair.athleteId&&p.account_role==='client'&&p.identities===0&&p.active_sessions===0)
+   &&profiles.some(p=>p.id===currentId&&p.account_role==='client'&&p.identities===1&&p.native_identities===1),'confirmed_profile_proof')
+ const cards=bounded((await client.query(`select id,auth_user_id,trainer_id,archived_at,merged_into_client_id,version,created_at,updated_at,
+   encode(sha256(convert_to(to_jsonb(c)::text,'UTF8')),'hex') digest
+   from public.clients c where auth_user_id=any($1::uuid[]) and merged_into_client_id is null order by id limit 4`,[[pair.athleteId,currentId]])).rows,3)
+ requireState(cards.length===2&&cards.every(c=>!c.archived_at)
+   &&cards.some(c=>c.id===expected.clientId&&c.auth_user_id===pair.athleteId)
+   &&cards.some(c=>c.id===invitation.client_id&&c.auth_user_id===currentId),'confirmed_cards')
+ requireState(countsMatch(await importedCounts(client,expected),expected),'imported_history_changed')
+ const ids=cards.map(c=>c.id)
+ const sources=bounded((await client.query(`select id,auth_user_id,trainer_id,archived_at,merged_into_client_id,version
+   from public.clients where merged_into_client_id=any($1::uuid[]) order by id limit 21`,[ids])).rows,20)
+ const cardIds=[...ids,...sources.map(c=>c.id)]
+ const periods=bounded((await client.query(`select id,client_id,trainer_id,status,connected_at,disconnected_at,
+   connected_by,disconnected_by,source_invitation_id,created_at,updated_at
+   from public.client_trainer_relationships where client_id=any($1::uuid[]) order by connected_at,id limit 101`,[cardIds])).rows,100)
+ const memberships=bounded((await client.query(`select client_id,trainer_id,version,
+   encode(sha256(convert_to(to_jsonb(m)::text,'UTF8')),'hex') digest
+   from public.client_trainers m where client_id=any($1::uuid[]) order by client_id,trainer_id limit 101`,[cardIds])).rows,100)
+ const groups=(await client.query(`select client_id,status,deleted_at is not null deleted,count(*)::int count
+   from public.workouts where client_id=any($1::uuid[]) group by client_id,status,deleted_at is not null
+   order by client_id,status,deleted`,[cardIds])).rows
+ // Catalog identifiers are trusted only after validation. Bounded counts/bytes
+ // precede aggregation; raw customer rows never leave PostgreSQL.
+ const quote=name=>{requireState(/^[a-z_][a-z0-9_]*$/u.test(name),'evidence_catalog');return '"'+name+'"'}
+ const tables=bounded((await client.query(`select n.nspname schema,c.relname name from pg_class c
+   join pg_namespace n on n.oid=c.relnamespace join pg_attribute a on a.attrelid=c.oid
+   where n.nspname in('public','app_private') and c.relkind='r' and a.attname='client_id'
+   and a.atttypid='uuid'::regtype and not a.attisdropped order by n.nspname,c.relname limit 101`)).rows,100)
+ const cardData=[]
+ for(const t of tables){
+   const table=quote(t.schema)+'.'+quote(t.name)
+   const stats=(await client.query(`select count(*)::int count,
+     coalesce(sum(octet_length(to_jsonb(r)::text)),0)::bigint bytes from ${table} r where client_id=any($1::uuid[])`,[cardIds])).rows[0]
+   requireState(stats&&stats.count<=50000&&Number(stats.bytes)<=20*1024*1024,'evidence_scope')
+   const rows=(await client.query(`select client_id,count(*)::int count,
+     encode(sha256(convert_to(coalesce(string_agg(to_jsonb(r)::text,E'\n' order by to_jsonb(r)::text),''),'UTF8')),'hex') digest
+     from ${table} r where client_id=any($1::uuid[]) group by client_id order by client_id`,[cardIds])).rows
+   cardData.push({schema:t.schema,table:t.name,rows})
+ }
+ const authorship=(await client.query(`select
+   (select count(*)::int from public.workouts where created_by=$1) legacy_workouts,
+   (select count(*)::int from public.chat_messages where sender_id=$1) legacy_messages`,[pair.athleteId])).rows[0]
+ const chats=bounded((await client.query(`select id,client_id,client_user_id,trainer_id,
+   encode(sha256(convert_to(to_jsonb(c)::text,'UTF8')),'hex') digest
+   from public.chat_conversations c where client_id=any($1::uuid[]) or client_user_id=any($2::uuid[])
+   order by id limit 101`,[cardIds,[pair.athleteId,currentId]])).rows,100)
+ const invitationOperations=bounded((await client.query(`select actor_id,operation_id,client_id,invitation_id,created_at
+   from app_private.new_client_invitation_operations where actor_id=$1 and client_id=any($2::uuid[])
+   order by created_at,operation_id limit 21`,[pair.trainerId,cardIds])).rows,20)
+ const profileReferences=await readRecoveryProfileReferences(client,[pair.athleteId,currentId])
+ return {proof,invitation,currentId,profiles,cards,sources,periods,memberships,groups,cardData,authorship,chats,invitationOperations,profileReferences,
+   importedCounts:await importedCounts(client,expected),writePlanReady:false}
+}
+
+async function readImportedAccessState(client,trainerId,scope){
+ const results=[]
+ for(const item of scope){
+   const chain=[];let id=item.expectedHistory.clientId,issue=null
+   while(id){
+     if(chain.length>=4||chain.some(c=>c.id===id)){issue='invalid_merge_chain';break}
+     const card=(await client.query(`select id,auth_user_id,trainer_id,archived_at,merged_into_client_id,version,created_at
+       from public.clients where id=$1`,[id])).rows[0]
+     if(!card){issue='missing_card';break}
+     chain.push(card);id=card.merged_into_client_id
+   }
+   if(issue){results.push({code:item.code,expectedHistory:item.expectedHistory,chain,issue,
+     importedHistoryMatches:false,actorSelected:false,writePlanReady:false});continue}
+   const card=chain.at(-1)
+   const sources=bounded((await client.query(`select id,auth_user_id,trainer_id,archived_at,merged_into_client_id
+     from public.clients where merged_into_client_id=$1 order by id limit 21`,[card.id])).rows,20)
+   const ids=[...new Set([...chain.map(c=>c.id),...sources.map(c=>c.id)])]
+   const pair={trainerId,athleteId:item.profileId}
+   const identityEvidence=await readIdentityEvidence(client,pair,{card,sources},item.expectedHistory,null)
+   const periods=bounded((await client.query(`select id,client_id,trainer_id,status,connected_at,disconnected_at,
+     connected_by,disconnected_by,source_invitation_id from public.client_trainer_relationships
+     where client_id=any($1::uuid[]) order by connected_at,id limit 101`,[ids])).rows,100)
+   const memberships=bounded((await client.query(`select client_id,trainer_id from public.client_trainers
+     where client_id=any($1::uuid[]) order by client_id,trainer_id limit 101`,[ids])).rows,100)
+   const owner=identityEvidence.profiles.find(p=>p.id===card.auth_user_id)??null
+   const expectedAtCanonical={...item.expectedHistory,clientId:card.id}
+   const counts=await importedCounts(client,expectedAtCanonical)
+   results.push({code:item.code,originalProfileId:item.profileId,expectedHistory:item.expectedHistory,
+     chain,sources,card,owner,periods,memberships,identityEvidence,importedAtCanonical:counts,
+     importedHistoryMatches:countsMatch(counts,item.expectedHistory),
+     nativeOwnerPresent:owner?.yandex_identities===1,
+     trainerOwnJournal:item.journalKind==='trainer_self',cardUnclaimed:card.auth_user_id===null,
+     trainerSelfNamespaceMatches:item.journalKind!=='trainer_self'||(card.trainer_id===trainerId&&[null,trainerId].includes(card.auth_user_id)),
+     sameNameInvitationsAreNotIdentityProof:true,actorSelected:false,writePlanReady:false})
+ }
+ return results
+}
+
+export async function readImportedAccessVisibility(runtime,diagnostic){
+ const {pair,importedAccessAudit:audits}=diagnostic
+ requireState(Array.isArray(audits)&&audits.length===17&&audits.every(x=>x.writePlanReady===false),'imported_audit_scope')
+ await runtime.query('begin transaction isolation level repeatable read read only')
+ try{
+   const role=(await runtime.query(`select current_user username,current_setting('transaction_read_only') readonly,
+     rolsuper,rolbypassrls from pg_roles where rolname=current_user`)).rows[0]
+   requireState(role?.username==='fit_api'&&role.readonly==='on'&&!role.rolsuper&&!role.rolbypassrls,'runtime_role')
+   await runtime.query("set local statement_timeout='10s'")
+   await runtime.query("set local lock_timeout='2s'")
+   // The trainer app fetches these lists once. Do the same for the bounded
+   // scope instead of recomputing the full overview for every imported card.
+   const ids=audits.filter(a=>a.card).map(a=>a.card.id)
+   await runtime.query("select set_config('request.jwt.claim.sub',$1,true)",[pair.trainerId])
+   const trainerCards=(await runtime.query(`select id,auth_user_id,archived_at,merged_into_client_id
+     from public.clients where id=any($1::uuid[])`,[ids])).rows
+   const trainerLinks=(await runtime.query(`select client_id,trainer_id from public.list_accessible_client_trainers()
+     where client_id=any($1::uuid[]) order by client_id,trainer_id`,[ids])).rows
+   const trainerOverviews=(await runtime.query(`select id,done_count,has_account from public.list_client_overviews(false)
+     where id=any($1::uuid[]) order by id`,[ids])).rows
+   const result=[],trainerViews=new Map()
+   for(const audit of audits){
+     if(!audit.card)continue
+     const expected={...audit.expectedHistory,clientId:audit.card.id}
+     const counts=await importedCounts(runtime,expected)
+     trainerViews.set(audit.code,{canonical:trainerCards.filter(c=>c.id===audit.card.id),
+       trainers:trainerLinks.filter(c=>c.client_id===audit.card.id),overviews:trainerOverviews.filter(c=>c.id===audit.card.id),
+       importedCounts:counts,allImportedReadable:countsMatch(counts,expected)})
+   }
+   for(const audit of audits){
+     if(!audit.card){result.push({code:audit.code,issue:audit.issue,resolved:false,writePlanReady:false});continue}
+     const expected={...audit.expectedHistory,clientId:audit.card.id},actors={trainer:trainerViews.get(audit.code)}
+     const actor=audit.card.auth_user_id
+     if(!actor)actors.recordedOwner={missing:true}
+     else if(actor===pair.trainerId)actors.recordedOwner=trainerViews.get(audit.code)
+     else{
+       await runtime.query("select set_config('request.jwt.claim.sub',$1,true)",[actor])
+       // The athlete app resolves its own canonical card, not the trainer's
+       // complete client-overview list. Preserve that distinction in the audit.
+       const canonical=(await runtime.query(`select id,auth_user_id,archived_at,merged_into_client_id
+         from public.clients where id=$1 and auth_user_id=$2`,[audit.card.id,actor])).rows
+       const trainers=(await runtime.query(`select client_id,trainer_id from public.list_accessible_client_trainers()
+         where client_id=$1 order by trainer_id`,[audit.card.id])).rows
+       const counts=await importedCounts(runtime,expected)
+       actors.recordedOwner={canonical,trainers,importedCounts:counts,allImportedReadable:countsMatch(counts,expected)}
+     }
+     result.push({code:audit.code,actors,recordedOwnerHasNativeIdentity:audit.nativeOwnerPresent,
+       recordedOwnerIsNotIndependentlyConfirmedCurrentLogin:!audit.nativeOwnerPresent&&!audit.cardUnclaimed&&!audit.trainerOwnJournal,
+       trainerOwnJournal:audit.trainerOwnJournal,cardUnclaimed:audit.cardUnclaimed,
+       currentAccountRelevant:!audit.trainerOwnJournal&&!audit.cardUnclaimed,writePlanReady:false})
+   }
+   await runtime.query('commit');return result
+ }catch(error){await runtime.query('rollback');throw error}
+}
+
+export async function readConfirmedRestoreVisibility(runtime,diagnostic){
+ const {pair,expectedHistory:expected,confirmedCardEvidence:evidence}=diagnostic
+ requireState(evidence?.writePlanReady===false&&uuid.test(evidence.currentId),'confirmed_diagnostic')
+ const cardIds=evidence.cards.map(c=>c.id)
+ await runtime.query('begin transaction isolation level repeatable read read only')
+ try{
+   const role=(await runtime.query(`select current_user username,current_setting('transaction_read_only') readonly,
+     rolsuper,rolbypassrls from pg_roles where rolname=current_user`)).rows[0]
+   requireState(role?.username==='fit_api'&&role.readonly==='on'&&!role.rolsuper&&!role.rolbypassrls,'runtime_role')
+   await runtime.query("set local statement_timeout='10s'")
+   await runtime.query("set local lock_timeout='2s'")
+   const result={}
+   for(const [label,actor] of [['athlete',evidence.currentId],['trainer',pair.trainerId]]){
+     await runtime.query("select set_config('request.jwt.claim.sub',$1,true)",[actor])
+     const ownCards=(await runtime.query(`select id from public.clients where auth_user_id=$1
+       and merged_into_client_id is null order by id limit 3`,[actor])).rows
+     const trainers=(await runtime.query(`select client_id,trainer_id from public.list_accessible_client_trainers()
+       where client_id=any($1::uuid[]) order by client_id,trainer_id`,[cardIds])).rows
+     const overviews=(await runtime.query(`select id,done_count,has_account from public.list_client_overviews(false)
+       where id=any($1::uuid[]) order by id`,[cardIds])).rows
+     result[label]={ownCards,trainers,overviews,importedCounts:await importedCounts(runtime,expected)}
+   }
+   await runtime.query('commit');return result
+ }catch(error){await runtime.query('rollback');throw error}
+}
+
+export async function planClientRestore(client,pair,expectedHistory=null,currentProfileEvidence=null,confirmedInvitation=null,importedAccessAudit=null){
  if(expectedHistory)readExpectedRestoreHistory(expectedHistory)
  if(currentProfileEvidence){readCurrentProfileEvidence(currentProfileEvidence);readExpectedRestoreHistory(expectedHistory)}
+ if(confirmedInvitation){readConfirmedRestoreInvitation(confirmedInvitation);readExpectedRestoreHistory(expectedHistory)
+   requireState(!currentProfileEvidence,'conflicting_evidence')}
+ if(importedAccessAudit){readImportedAccessAudit(importedAccessAudit);readExpectedRestoreHistory(expectedHistory)
+   requireState(!currentProfileEvidence,'conflicting_evidence')}
  let privateDiagnostic
  await client.query('begin transaction isolation level repeatable read read only')
  try{
    await ownerGate(client)
+   if(importedAccessAudit){
+     privateDiagnostic={pair,expectedHistory,importedAccessAudit:await readImportedAccessState(client,pair.trainerId,importedAccessAudit)}
+     if(confirmedInvitation)privateDiagnostic.confirmedCardEvidence=await readConfirmedCardEvidence(client,pair,expectedHistory,confirmedInvitation)
+     requireState(false,'imported_access_audit_complete')
+   }
+   if(confirmedInvitation){
+     privateDiagnostic={pair,expectedHistory,confirmedCardEvidence:
+       await readConfirmedCardEvidence(client,pair,expectedHistory,confirmedInvitation)}
+     requireState(false,'confirmed_cards_review_required')
+   }
    if(currentProfileEvidence){
      // Resolve the immutable imported card directly. Requiring its old owner
      // first would hide a legitimate intervening ownership change from diagnosis.
