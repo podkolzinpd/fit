@@ -554,3 +554,37 @@ symlink вне allowlist; это не production-приёмка и не осно
 прежний single-add. Chromium/WebKit2/2 PASS. Производственный негативный контроль
 с корректным /api mock воспроизвёл старую кнопку «Добавить:» вместо «Выбрать:»;
 неизвестных бизнес-запросов не было. Финальные CI/выпуск/проверки — в PR2049.
+
+
+### Итерация 08.11.2026 — GPT / OpenAI — разрешённое снятие CI-блокировки
+
+После main cde47521/PR2048 ветка обновлена доa207d632; frontend/src/e2e/public
+и пакеты побайтно прежние относительно проверенного95bf55a1. Exact95 CI35jobs
+и Android прошли. На a207 Android дважды остановился до сборки: официальный
+browser-download Gradle8.14.3-all вернул504. CI frontend-infrastructure также
+остановился до validate на authentication checksums yandex-provider0.215.0
+с GitHub504; app лишь отразил этот отказ. Другие app/API/DB/browser проверки
+сохранились. Официальный GitHub status общего инцидента не показал.
+
+Владелец отдельно разрешил дополнить тот же PR2049 технической правкой загрузки
+Gradle и Terraform через официальный GitHub API с проверкой SHA256. Нового PR,
+обновления версий, сторонних зеркал, сокращения тестов и изменения их таймаутов нет.
+Оба полных upstream архива независимо скачаны по API и проверены: Gradle224584249
+байт/ed1a8d68…11d7c; provider30461414байт/214ac0a0…9d25. Полные SHA256 закреплены
+в helper и совпадают с upstream checksum/digest. Все загрузки проверяются до
+распаковки/исполнения; JSON/206/обрыв/неверные SHA/размер и испорченный кэш блокируют CI.
+
+Gradle ZIP подготавливается в штатном wrapper cache, ключ MD5/base36 подтверждён
+исходником Gradle8.14.3 PathAssembler. Это имя каталога, не проверка целостности:
+целостность — SHA256. Wrapper properties/JAR, .ok-маркеры и прежние команды
+Gradle не изменены. Terraform получает тот же provider0.215.0/linux_amd64 в
+временном filesystem plugin-dir CI, затем прежние init/validate/test. Production
+Terraform/state не трогаются. Все Android build consumers используют тот же helper.
+
+Проверка:68/68 helper+CI+OTA tests PASS, явный lint helper PASS. Настоящий Linux
+Terraform/Gradle и exact-head CI ещё обязательны: локальная проверка контейнером
+не состоялась (pull image EOF); исходный host не имеет Java/Terraform. Это не
+считается успешной native-проверкой и не заменяет CI. UI-кандидат16/16, keyboard4/4,
+frontend3117/3117 и PostgreSQL history8/8 относятся к неизменённому UI.
+Дальше: полноценные Terraform/Android проверки нового head, штатный CI, очередь
+и public+signed-ZIP приёмка. Никаких исправлений клиента/механик вне согласованного.
