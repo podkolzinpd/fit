@@ -431,13 +431,14 @@ const sqlDigest=value=>`encode(sha256(convert_to((${value})::text,'UTF8')),'hex'
 
 // A card merge is deliberately not a profile merge. Private profile history,
 // identities, conversations, memberships and periods remain byte-identical.
-async function readCardMergeState(client,pair,sourceId,targetId,predecessorId){
+async function readCardMergeState(client,pair,sourceId,targetId,predecessorId,confirmedCurrentId){
  const ids=[sourceId,targetId,predecessorId]
  const cards=(await client.query(`select id,auth_user_id,trainer_id,archived_at,merged_into_client_id,version::int version,
    profile_photo,${sqlDigest("to_jsonb(c)-array['archived_at','merged_into_client_id','version','updated_at','profile_photo']")} stable,
    ${sqlDigest('to_jsonb(c)')} digest from public.clients c where id=any($1::uuid[]) order by id`,[ids])).rows
  requireState(cards.length===3,'merge_cards')
  const currentId=cards.find(c=>c.id===targetId).auth_user_id
+ requireState(currentId===confirmedCurrentId,'merge_native_owner_changed')
  const catalog=bounded((await client.query(`select n.nspname schema,c.relname name from pg_class c
    join pg_namespace n on n.oid=c.relnamespace join pg_attribute a on a.attrelid=c.oid
    where n.nspname in('public','app_private') and c.relkind='r' and a.attname='client_id'
@@ -476,7 +477,7 @@ async function readCardMergeState(client,pair,sourceId,targetId,predecessorId){
    ${sqlDigest('to_jsonb(m)')} digest from public.client_merge_operations m
    where source_client_id=any($1::uuid[]) or target_client_id=any($1::uuid[]) order by id limit 21`,[ids])).rows,20)
  const triggers=[]
- for(const [schema,name,columns] of [['public','clients',['archived_at','merged_into_client_id','version']],
+ for(const [schema,name,columns] of [['public','clients',['archived_at','merged_into_client_id','version','profile_photo']],
    ...[...mergeMoving].map(t=>{const [s,n]=t.split('.');return [s,n,mergeTraining.has(n)?['client_id','trainer_id']:['client_id']]})]){
    const rows=(await client.query(`select t.tgname name,p.proname function,n.nspname schema,
      ${sqlDigest('pg_get_triggerdef(t.oid)||pg_get_functiondef(p.oid)')} digest
@@ -514,7 +515,7 @@ async function planConfirmedCardMerge(client,pair,expected,proof){
    exists(select 1 from public.workout_exercises where client_id=$2) target_exercises,
    exists(select 1 from public.workout_sets where client_id=$2) target_sets`,[source.id,target.id])).rows[0]
  requireState(invalid&&Object.values(invalid).every(v=>v===false),'merge_history_conflict')
- const state=await readCardMergeState(client,pair,source.id,target.id,evidence.sources[0].id)
+ const state=await readCardMergeState(client,pair,source.id,target.id,evidence.sources[0].id,evidence.currentId)
  requireState(state.merges.some(m=>m.source_client_id===evidence.sources[0].id&&m.target_client_id===source.id
    &&m.status==='completed'&&m.actor_id===pair.athleteId),'merge_prior_receipt')
  const preserved=new Set(['public.client_invitations','public.client_trainers','public.client_trainer_relationships','public.chat_conversations'])
@@ -544,7 +545,7 @@ export function validateCardMergePlan(plan){
 
 async function checkCardMergeAfter(client,plan){
  validateCardMergePlan(plan)
- const before=plan.state,after=await readCardMergeState(client,plan.pair,plan.sourceId,plan.targetId,plan.predecessorId)
+ const before=plan.state,after=await readCardMergeState(client,plan.pair,plan.sourceId,plan.targetId,plan.predecessorId,plan.currentId)
  for(const key of ['profiles','identities','profileReferences','triggers'])
    requireState(fingerprint(before[key])===fingerprint(after[key]),'merge_protected_state_changed')
  for(const old of before.cards){

@@ -383,6 +383,29 @@ describe.skipIf(source === undefined)('owner-approved canonical client restorati
     expect((await owner.query<{profile_photo:unknown}>('select profile_photo from public.clients where id=$1',[g.currentCard])).rows[0]?.profile_photo).toEqual(currentPhoto)
   })
 
+  it('conserves charged sessions and payments across the existing financial owner/workout namespace split', async () => {
+    const f=await mergeFixture()
+    const pkg=(await owner.query<{id:string}>('select id from public.trainer_finance_packages where client_id=$1',[f.card])).rows[0]!.id
+    await owner.query("insert into public.trainer_finance_payments(package_id,trainer_id,client_id,amount_cents,received_on,comment) values($1,$2,$3,23000,current_date,'Keep payment and owner')",[pkg,f.trainerId,f.card])
+    await owner.query("insert into public.trainer_finance_sessions(package_id,workout_id,trainer_id,client_id,disposition,source,comment) values($1,$2,$3,$4,'charged','manual','Keep charged allocation')",[pkg,f.expected.workoutIds[0],f.trainerId,f.card])
+    const rows=(await owner.query('select id,package_id,workout_id,trainer_id,disposition,source,comment from public.trainer_finance_sessions where client_id=$1 order by id',[f.card])).rows
+    const p=await mergePlan(f);await apply(p);await verifyMergeOwner(p);await verify(p)
+    expect((await owner.query('select id,package_id,workout_id,trainer_id,disposition,source,comment from public.trainer_finance_sessions where client_id=$1 order by id',[f.currentCard])).rows).toEqual(rows)
+    expect((await owner.query<{amount:string}>('select amount_cents::text amount from public.trainer_finance_payments where client_id=$1',[f.currentCard])).rows).toEqual([{amount:'23000'}])
+  })
+  it('independently resolves an unknown COMMIT outcome instead of applying the merge twice', async () => {
+    const f=await mergeFixture(),p=await mergePlan(f),c=await owner.connect()
+    try {
+      await expect(applyClientRestore({query:async(sql:string,values?:unknown[])=>{
+        const result=await c.query(sql,values)
+        if(sql==='commit')throw Error('synthetic transport lost after COMMIT')
+        return result
+      }},p,{backupVerified:true})).rejects.toThrow('synthetic transport lost after COMMIT')
+    }finally{c.release()}
+    await verifyMergeOwner(p);expect(await verify(p)).toMatchObject({bothCanReadImported:true})
+    expect((await owner.query<{n:number}>('select count(*)::int n from public.client_merge_operations where id=$1',[p.mergeId])).rows[0]?.n).toBe(1)
+  })
+
   async function confirmedDiagnosis(f: Awaited<ReturnType<typeof confirmedFixture>>, proof = f.proof) {
     const c = await owner.connect()
     try {

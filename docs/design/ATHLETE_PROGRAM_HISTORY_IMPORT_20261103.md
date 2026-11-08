@@ -1541,3 +1541,14 @@ Root lint/types/build и canonical validator завершаются перед �
 Дальше: выпустить минимальный writer, выполнить свежий закрытый план/backup,
 однократный apply/verify/cleanup, затем17-receipt readonly matrix без старого
 пред-merge подтверждения.
+
+Уточнение перед выпуском: добавлены два реальных PG сценария — charged
+session/payment при раздельном финансовом owner и workout namespace, а также
+потеря ответа строго после COMMIT с независимым verify без повторной записи.
+PG28/28 PASS. Инвентаризация firing triggers учитывает фото target; при смене
+его auth owner snapshot останавливается до чтения profile-private данных
+другого пользователя. Node20/20 и API lint/types повторно PASS. Это новая
+проверяемая runtime/test delta, а не повтор старого CI без изменений.
+Текущая основа9d32013e независимо принята: mainCI42454514434,
+API42455946744/web42455946852/OTA42456104785 SUCCESS;
+237/237 файлов,8 probes,DNS3, exact APIs и signed OTA подтверждены.
