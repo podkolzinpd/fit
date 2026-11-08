@@ -15,8 +15,10 @@ async function fixture(t) {
   t.after(() => rm(root, { recursive: true, force: true }))
   const source = join(root, 'source')
   await mkdir(join(source, 'assets'), { recursive: true })
+  await mkdir(join(source, 'for-trainers'))
   for (const [key, bytes] of Object.entries({
     'index.html': '<!doctype html><html>local fixture</html>',
+    'for-trainers/index.html': '<!doctype html><html>trainer landing</html>',
     'asset-recovery.js': '// reload recovery', 'sw.js': '// sw', 'site.webmanifest': '{}',
     'assets/app-12345678.js': '// compiled fixture', 'assets/app-12345678.css': 'body {}',
     'assets/engine-12345678.wasm': '\0asm',
@@ -85,6 +87,8 @@ test('candidate binds only loopback and retains SPA, stale JS recovery, MIME and
   assert.match(candidate, /location = \/assets\/engine-12345678.wasm[\s\S]*?application\/wasm/)
   assert.match(candidate, /public, max-age=31536000, immutable/)
   assert.match(candidate, /location = \/sw.js[\s\S]*?no-cache/)
+  assert.ok(candidate.includes('location = /for-trainers { absolute_redirect off; return 308 /for-trainers/; }'))
+  assert.ok(candidate.includes('location = /for-trainers/ { rewrite ^ /for-trainers/index.html last; }'))
   assert.match(candidate, /rewrite \^ \/asset-recovery.js last/)
   assert.match(candidate, /location \/ \{ try_files \$uri \/index.html; \}/)
   assert.match(candidate, /location ~ \^\/\(assets\|fonts\|media\)\/ \{ return 404; \}/)
@@ -115,10 +119,16 @@ test('HTTP verification exercises real bytes, routes, MIME/cache and missing ass
   const { bundle } = await fixture(t)
   const requested = []
   let invalidMetadata = false
+  let internalRedirect = false
   const server = createServer((request, response) => {
     requested.push(request.url)
+    if (request.url === '/for-trainers') {
+      response.writeHead(308, { Location: internalRedirect ? 'http://fit-training.ru:18081/for-trainers/' : '/for-trainers/' }).end()
+      return
+    }
     const key = request.url.slice(1)
     const file = bundle.files.find((entry) => entry.key === key)
+      ?? (key === 'for-trainers/' ? bundle.files.find((entry) => entry.key === 'for-trainers/index.html') : undefined)
       ?? (key === 'assets/missing-cloudru-probe.js' ? bundle.files.find((entry) => entry.key === 'asset-recovery.js') : undefined)
       ?? (!key.includes('.') ? bundle.files.find((entry) => entry.key === 'index.html') : undefined)
     if (!file) { response.writeHead(404).end(); return }
@@ -133,7 +143,12 @@ test('HTTP verification exercises real bytes, routes, MIME/cache and missing ass
   assert.ok(requested.includes('/auth/yandex/callback'))
   assert.ok(requested.includes('/assets/engine-12345678.wasm'))
   assert.ok(requested.includes('/fonts/missing.woff2'))
+  assert.ok(requested.includes('/for-trainers/'))
+  assert.ok(requested.includes('/for-trainers'))
   await assert.rejects(verifyCloudruHttp(bundle, 'https://production.example.test/'), /loopback HTTP/)
+  internalRedirect = true
+  await assert.rejects(verifyCloudruHttp(bundle, 'http://127.0.0.1:' + server.address().port + '/'), /canonical redirect/)
+  internalRedirect = false
   invalidMetadata = true
   await assert.rejects(verifyCloudruHttp(bundle, 'http://127.0.0.1:' + server.address().port + '/'), /metadata mismatch/)
 })

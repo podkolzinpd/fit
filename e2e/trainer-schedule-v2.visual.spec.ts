@@ -3456,7 +3456,7 @@ for (const profileId of [trainerId, '10000000-0000-4000-8000-000000000010']) {
       await page.goto('/profile/settings?section=notifications')
     }
     await expect(page.getByRole('button', { name: 'Как установить Fit' })).toHaveCount(0)
-    await expect(page.getByText('Уведомления настроены', { exact: true })).toBeVisible()
+    await expect(page.getByText(clientRole ? 'Уведомления настроены' : 'Новые сообщения выключены', { exact: true })).toBeVisible()
     await expect(page.getByRole('button', { name: 'Включить', exact: true })).toHaveCount(0)
     if (clientRole) await expect(page.getByRole('switch', { name: 'Напоминания о тренировках' })).not.toBeChecked()
     else await expect(page.getByRole('switch', { name: 'Напоминания о тренировках' })).toHaveCount(0)
@@ -3476,7 +3476,7 @@ for (const profileId of [trainerId, '10000000-0000-4000-8000-000000000010']) {
     expect((await retry.boundingBox())!.height).toBeGreaterThanOrEqual(44)
     fail = false
     await retry.click()
-    await expect(page.getByText('Уведомления настроены', { exact: true })).toBeVisible()
+    await expect(page.getByText(clientRole ? 'Уведомления настроены' : 'Новые сообщения выключены', { exact: true })).toBeVisible()
     await expect(page.getByRole('switch', { name: 'Новые сообщения' })).toBeEnabled()
     await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
     // Geometry only: client 390/430 in both themes; trainer Lime is dark-only.

@@ -261,3 +261,26 @@ store, как в production: отсутствие optional store даёт503 и 
 смены периода/сброса. Для selected quick periods проверять вычисленный контраст
 при hover и без него в обеих темах: общий hover может выиграть каскад.
 [Причины и red/green, итерация58](design/CORPORATE_ADMIN_20261027.md).
+
+## RL-QUEUE-ACTIVE-BEHIND-20261108
+
+Behind или исторический green сами по себе не доказывают остановку active PR.
+Отличать согласованный слот/ожидание принятой основы от действительно
+остановившейся задачи; готовность и текущий hold проверять по конкретной
+очереди, не назначать себе приоритет временем CI. Новых согласований выпуска
+это не добавляет. [Разбор](design/TRAINER_SETTINGS_COMPACT_20261107.md#итерация-22--08112026--codex--openai).
+
+## Публичные вложенные страницы за reverse proxy — 08.11.2026
+
+Python-preview не подтверждает Nginx-маршруты каталогов. Для manifest с вложенным
+index.html проверять exact /directory/, совпадение bytes и redirect с /directory.
+Location должен быть относительным: абсолютный redirect внутреннего Nginx может
+передать наружу http и loopback-port. Проверять весь Location, не только pathname.
+Проверка: prepare-cloudru-frontend tests, реальный Nginx integration и публичный
+readback после promotion. История: TRAINER_LANDING_20261107, итерации9–10.
+
+## RL-ROLE-SCOPED-TEST-TEXT-20261108
+
+Имя trainer-*.spec не доказывает роль всех тестов внутри. При trainer-only
+переименовании читать actor/route каждого изменённого locator; клиентские
+ветки общего файла сохраняют default. [Разбор и8/8 guard](design/TRAINER_SETTINGS_COMPACT_20261107.md#итерация-34--08112026--codex--openai).
