@@ -7400,3 +7400,258 @@ a0cc0ce4b24c81e74e13ac4d3d16015b3e43261e. Полный tree после этог�
 проверенному a7f27b55 (dc0eaf2ecf7282b65c9eecdbffeb9fb04e6e4ea9); runtime,
 тесты и конфиги не изменились, повтор локального UI без новой причины не нужен.
 Source CI 69d16c8e также не подменяет будущий точный head с итоговым adbef9fe.
+
+
+### MC4.3 / #2034 — разрешённое слияние, main CI ещё впереди
+
+Итерация — 08.11.2026 — GPT-6.1-sol / OpenAI. Серверный merge 69d16c8e
+независимо квалифицирован root через GitHub: committer web-flow, подпись
+verified/valid, parents 11849349 и b8a36ad3; конкретный инициатор UI/API не
+приписывается. /tmp/fit-mc43-root-parallel-merge-proof.json подтверждает
+одинаковые полные trees a7f27b55 и a0cc0ce4. Обычный push сохранил эту историю;
+force и удаление чужого кода не использовались.
+
+Точный source 62fc1b9152ca392e79e989b823f4f918ea93d90f получил SUCCESS
+CI 42415085409, 35/35 заданий, attempt 1; Android 42415085385 SUCCESS.
+Все четыре native auth timing-артефакта прочитаны: новые 26/26 passed, retry 0,
+22 Live + 4 non-Live, по 13 Chromium и WebKit. Сводка сохранена в
+/tmp/fit-mc43-ci62fc-confirm-summary.json. Предыдущий CI серверного 69d был
+автоматически cancelled после synchronize; не объявлен failure или green 62fc.
+Root отдельно приняла comparison 26/26 + 22 PNG и четыре реальных dark/light
+preference controls: /tmp/fit-mc43-root-final-theme-proof.json.
+
+Read-only финальная квитанция ФИТ14 и actual body #2036 подтверждают закрытие
+всей приоритетной серии на adbef9fe. Их дополнительный OTA offline red оказался
+private fixture health origin; исправлена только тестовая настройка, выполнены
+public/signed ZIP проверки. Подробности сохранены в их собственном body,
+в этой задаче их продукт/тесты не менялись. Очередь и fresh main проверены;
+повторное разрешение владельца не запрашивалось.
+
+Body #2034 прошёл validator exit 0 в отдельном шаге и повторно check=True до
+edit. Обычный squash с --match-head-commit точного 62fc выполнен 07.11 в
+21:41:04 UTC. Итоговый main ddf365910ce0ca43c4dd7632639836c50d94ed51;
+его полный tree побайтно равен source 62fc. Main CI 42417023480 и Android
+42417023398 начаты. Auto-merge/admin/force не применялись. Это ещё не
+подтверждённая публикация: нужны main CI, официальные API/web/OTA и readback.
+Этот checkpoint только локальный и не запускает CI ради документации.
+Следующие MC не начаты; телефон/OAuth/native install не проверены.
+
+
+### MC4.3 — main CI: исходный duration focus flaky сохранён
+
+Итерация — 08.11.2026 — GPT-6.1-sol / OpenAI. Main CI 42417023480 attempt 1
+имеет красный auth-1/4 (job 128537296754): старый MC4.2 case client-light-
+original-sheet-true-390 в Chromium. Итог задания — 301 passed / 1 flaky;
+встроенный retry прошёл, но fail-on-flaky-tests правильно даёт exit 1.
+Единственная разница before/after: первый rest-time-wheel outline-color
+rgb(41,53,23)→rgb(61,97,12), outline-offset 1px→3px; геометрия равна,
+matches=[]/inherited=0 и diagnostics=0. В retry before уже имеет итоговый
+цвет/offset, differences=[]. /tmp/fit-mc43-main-auth1-attempt1.log и
+/tmp/fit-mc43-main-auth1-attempt1-diagnostics содержат исходный red и retry.
+
+Root независимо подтвердила: duration helper и focus owners не менялись,
+при matches=[] ни один применимый legacy selector не снимался. Общая
+reduced-motion duration .01ms при default transition-property:all и
+промежуточный цвет поддерживают гипотезу focus paint settlement, но точный
+first transition trace отсутствует; причинный корень не объявляется доказанным
+или исправленным. Один локальный запуск того же неизменённого case прошёл
+1/1 за 4,6 секунды, retry 0, diagnostics 0; это не замена main CI.
+/tmp/fit-mc43-main-duration-diagnostic.log и -results сохранены отдельно.
+
+Остальные задания attempt 1 ещё выполняются. После завершения — один целевой
+rerun только failed job на неизменённом main; если снова red, новый разбор,
+без серии повторов до green. Продукт, helper, assertions, таймауты, retries и
+CI не меняются. Публикация остаётся закрыта до зелёного полного main CI;
+Android main 42417023398 SUCCESS не заменяет этот гейт. Дополнительный
+post-release duration web/ZIP контроль root будет отдельным доказательством.
+
+
+### MC4.3 — новый прямой порядок: выпуск через следующий #2035
+
+Итерация — 08.11.2026 — GPT-6.1-sol / OpenAI. Root прочитала сам userMessage
+01a1b807-6c91-7752-98ef-eb4e6f2ca4ae в чате статистики тренеров: «напиши всем,
+что идете дальше по порядку, если какой-то PR стоит, то его обходим / ты
+следующий выкатываешься». Подтверждён новый порядок: #2035 следующим. Из relay
+не выводится разрешение нам отправлять сообщения в другие чаты; исходящих нет.
+
+Main CI 42417023480 attempt 1 завершён FAILURE, 35 заданий: красные только
+старый duration flaky auth-1/4 и зависимый агрегатор e2e, остальные завершены.
+Целевой retry не запускался и теперь отложен по новому порядку; активные задания
+не отменялись, публикация/dispatch #2034 не запускались. Первый red и passing
+built-in retry сохранены. Независимое ревью —
+/tmp/fit-mc43-root-main-flaky-review.json; это не объявление исправления.
+
+Собственный #2035 ведёт его исполнитель, мы не меняем его Git/PR/CI/флаги или
+данные. Read-only source 2149ec20f9565419f2c6563ad7f7dd9b1f5e3a68 содержит
+слитый ddf36591 как предка. Два CSS MC4.3, shared UI/WorkoutsPages, confirm
+helper/import, duration helper, native build и OTA contract побайтно равны
+проверенному 62fc. /tmp/fit-mc43-cpt2149-preservation-proof.json сохраняет
+полный список. Его точные source CI 42417605327 и Android 42417605275
+проверяются отдельно; это ещё не опубликованная MC4.3.
+
+После actual release более позднего SHA нужна новая сверка ancestry и
+protected hashes, полных публичных assets/API/OTA signatures, 26 confirm
+случаев web/verified ZIP и отдельного 2-case duration контроля обоих движков
+root. Только после этого MC4.3 может считаться опубликованной через новый main.
+Старый красный main CI ddf не переименовывается в зелёный; новый источник
+обязан пройти свои полные source/main гейты и официальный выпуск. Следующие
+MC не начаты, отдельные продуктовые настройки #2035 нами не выполняются.
+
+
+### MC4.3 — опубликована через #2035 / aa4be2a3, автоматическая приёмка завершена
+
+Итерация — 08.11.2026 — GPT-6.1-sol / OpenAI. Разрешённая MC4.3 слита своим
+#2034 в ddf36591; по следующему прямому порядку владельца отдельный retry и
+публикация этого старого main не запускались. Код доставлен штатным следующим
+[PR #2035](https://github.com/podkolzinpd/fit/pull/2035), слитым 07.11 в
+22:27:03 UTC. Фактический опубликованный источник —
+`aa4be2a33ec8cff53de84653ca0e0a63ff5dc2c6`. Его предок ddf36591 и полное равенство tree проверенному
+source 2149ec20 подтверждены. Все девять защищённых файлов (два CSS, shared UI,
+WorkoutsPages, confirm helper/import, duration helper, native build/OTA contract)
+побайтно равны принятому 62fc. Локальный merge чужого функционального этапа
+для этой приёмки не делался; чужие Git/PR/CI/данные/гранты нами не менялись.
+Proof: /tmp/fit-mc43-cpt-aa4be2a3-preservation-proof.json.
+
+Границы результата прежние: только 12 старых paint-семейств useConfirm в modern
+Live клиента и тренера, 7 scoped rules / 16 declarations. Девять доказанно
+мёртвых промежуточных деклараций не возвращены. DOM/Promise/handlers,
+нейтральные layout-правила, факты, таймеры, ввод, клавиатура, темы/плотности,
+rollout и чужие действующие механики этим этапом не менялись. Нужные общие
+токены, включая mono-on-primary, остаются долгом MC8, не удалены по имени.
+MC4.4 и остальные поздние локальные runtime-этапы не включались.
+
+| Гейт | Точная квитанция |
+| --- | --- |
+| Наш source 62fc | CI 42415085409 SUCCESS, 35 заданий, attempt 1; Android 42415085385 SUCCESS; новые 26/26 retry 0 |
+| Source следующего 2149ec20 | CI 42417605327 SUCCESS, 35 заданий, attempt 1; Android 42417605275 SUCCESS |
+| Фактический main aa4be2a3 | [CI 42420666603](https://github.com/podkolzinpd/fit/actions/runs/42420666603) SUCCESS, attempt 1: 34 SUCCESS + 1 штатный migration skip, все 35 завершены; Android 42420666552 SUCCESS |
+| Официальные публикации aa4 | [API 42423317764](https://github.com/podkolzinpd/fit/actions/runs/42423317764), [web 42423317795](https://github.com/podkolzinpd/fit/actions/runs/42423317795), [подписанный OTA 42423692544](https://github.com/podkolzinpd/fit/actions/runs/42423692544) — SUCCESS |
+
+Все четыре native auth timing-артефакта именно main aa4 прочитаны: confirm
+26/26 и старые duration 22/22 passed, retry 0, Chromium/WebKit. Сводка:
+/tmp/fit-mc43-aa4-main-new-cases-proof.json. Исторический main ddf с одним
+focus flaky остаётся красным в истории: 301 passed / 1 flaky, две outline
+props, geometry/ownership/diagnostics неизменны; built-in retry прошёл, отдельный
+rerun не запускался. Его точный корень не объявляется доказанным/исправленным.
+Ни продукт, ни helper/assertions/таймауты/CI не менялись ради green.
+
+Фактический readback 07.11: web/API в 23:07 UTC, OTA в 23:12 UTC. Все 213/213 публичных файлов
+совпадают с официальным manifest по status/size/SHA256; оба API releaseId exact
+aa4, health/ready 200, закрытые GET 401, DNS/TLS passed. Root независимо
+повторила эти проверки. Артефакт frontend:
+/tmp/fit-mc43-aa4be2a3-web-artifact/cloudru-release.json; отчёты
+/tmp/fit-mc43-public-files.json, /tmp/fit-mc43-public-api.json и отдельные
+/tmp/fit-mc43-root-public-files.json, /tmp/fit-mc43-root-public-api.json.
+
+OTA manifest/archive signatures, checksum, source/provenance, ABI/build,
+валидность срока и публичный readback прошли два независимых контроля.
+ABI `8922d2e9fc2c9a092d10f7b6066acdc46edf0fbe7ee7a15159e02a44e7126cf9`, nativeBuild 9,
+sequence 1794093064906, ZIP SHA256
+`cc97dde613404a446029632b0cdd91788c778a676b708b80b792a61dd7ebe99b`. Официальный artifact:
+/tmp/fit-mc43-aa4be2a3-ota-artifact; квитанция
+/tmp/fit-mc43-public-ota-receipt.json. Проверенный ZIP безопасно извлечён в
+/tmp/fit-live-mc43-ota-ui-aa4be2a3: 213 файлов, без unsafe paths/symlinks.
+Это просмотр подписанного web bundle, не установка на физический Android.
+
+Actual web: 26/26 confirm passed за 34,4 секунды; verified signed ZIP: 26/26
+за 28,7 секунды, оба запуска retries 0. В каждом runtime 26/26 computed styles,
+geometry/frame и 22/22 полных PNG byte-exact принятой public baseline 6434;
+между actual web и OTA тоже 26/26 + 22/22 exact, diagnostics 0. Root независимо
+прочитала все comparison reports. Артефакты:
+/tmp/fit-mc43-public-aa4.log, /tmp/fit-mc43-public-aa4-results,
+/tmp/fit-mc43-public-aa4-comparison.json; /tmp/fit-mc43-ota-aa4.log,
+/tmp/fit-mc43-ota-aa4-results, /tmp/fit-mc43-ota-aa4-comparison.json;
+/tmp/fit-mc43-web-ota-aa4-comparison.json. Применялись синтетические API,
+SW isolation, строгий запрет реальных API/WS; web origin /api и native
+https://api.fit-training.ru различались явно, реальные данные не затрагивались.
+
+Root отдельно проверила именно прежний упавший duration case в обоих движках:
+actual web 2/2 (4,7 секунды), signed ZIP 2/2 (3,9 секунды), retry 0,
+matches/inherited/differences/diagnostics 0. Финальная независимая квитанция —
+/tmp/fit-mc43-root-final-delivery-receipt.json. Реальные public WebKit кадры
+client light Original 390 и trainer dark Compact 375 просмотрены обеими
+сторонами; дополнительно просмотрены OTA client light Compact 390 и trainer
+Original desktop 1440. Новых отличий/обрезки/потери видимого фокуса в этих
+состояниях не обнаружено.
+
+Первые OTA UI попытки не стартовали из-за отсутствовавшего временного
+/tmp/fit-live-ota-spa.py: --list был непустым, webServer завершился ENOENT.
+Это QA startup, не product red/green. Исходные логи сохранены в
+/tmp/fit-mc43-ota-aa4-startup-missing-helper.log и
+/tmp/fit-mc43-root-ota-duration-startup-failure.log. Созданы только owned
+loopback SPA helpers на отдельных 5497/5498; исходные tests/assertions/timeouts
+и bundle не менялись. После этого выполнены указанные полные 26 и 2 случая.
+
+Статус MC4.3: опубликована и автоматически проверена через #2035/aa4be2a3;
+пользовательская проверка ещё впереди. Физический iPhone/Android, настоящий
+OAuth и native install не проверены; WebKit/ZIP их не заменяют. Прежний
+cold-load риск #2023 не объявлен исправленным, хотя нынешние actual web
+26/26 прошли без повторов. Известная квалификация старого Figma catalog
+opening animation и общий токен/шрифтовой долг сохранены в прежней истории.
+
+Дальше владелец проверяет у клиента и тренера подтверждение/явную отмену
+удаления подхода и упражнения, замену начатого и разделение суперсета:
+факты/таймер/отдых сохраняются, обе клиентские темы и Original/Compact прежние.
+После его приёмки — только отдельно разрешённый следующий этап. Сейчас
+следующие MC не начаты. Эта приёмка не объявляет глобальное окно #2035
+свободным: его grant/inspect и общую очередь ведёт исполнитель #2035.
+Итоговый checkpoint сохраняется локально docs-only без push/нового PR/CI;
+единственный stable pointer остаётся worktrees/design-cleanup-current.
+
+
+## 180. MC4.4 — принятый план завершения Live обеих ролей, 08.11.2026
+
+Итерация — 08.11.2026 — GPT-6.1-sol / OpenAI. Владелец сообщил о MC4.3:
+«Проверил, всё ок» и разрешил локально выполнить MC4.4 для спортсмена и тренера,
+сохранить все механики и перед выкаткой показать изменения, проверки и ошибки.
+Публикация — только после его нового отдельного разрешения. MC4.3 теперь
+принята пользователем; тип устройства/OAuth из этого сообщения не выводится.
+Недостающая собственная docs-история финальной квитанции 5147c05a сохранена
+выше без повторного копирования уже имеющихся в main записей и без MC5 runtime.
+
+Своя новая ветка feat/design-cleanup-mc44-release-20261108 и worktree
+worktrees/design-cleanup-mc44-release-20261108 созданы от свежего main
+43bad62bd260d044311ba67fd30c07ac73775fe9. Точка входа и прежняя ветка MC4.3
+не заняты повторно, чужие изменения сохранены. Main уже содержит последние
+настройки/уведомления/каталог/verification; они не откатываются. Прочитаны
+актуальные AGENTS/FIT_WORKFLOW/CURRENT_STATE/ACTIVE_CONTRACTS и правила scope.
+Старые локальные §§164/167/168 — исходный материал, не приёмка свежего main.
+
+| Участок | Разрешённая граница и способ проверки |
+| --- | --- |
+| MC4.4-A, спортсмен | Четыре visual-семейства finish-confirm: общий p и Live Identity p/tertiary/primary. Сначала новый runtime matches/ablation, перенос только нужного paint с сохранением сильных Lime owners. Margin/text-align/gap/actions и DOM остаются общими. Partial/cardio/timer-review, обе темы и плотности, 390/430 и узкий375 |
+| MC4.4-B, тренер | Native WorkoutAttendanceSheet live exit: доказать применимость generic workout-decision-sheet paint и полную перекрытость, если она сохранилась; не копировать мёртвый paint. Backdrop, width/scroll/form/focus, radio/finance/pending/error/retry и учёт прежние. Positive legacy control — существующий duration consumer; off attendance только negative |
+| MC4.4-C, отдельная квалификация | MC-FIND-REVIEW-CLIP-01: заново получить настоящий red bounds/hit-grid при swipe.scrollTop=0 на текущем main. Только если подтверждён тот же старый absolute-placement, применить ранее согласованную static/flex адаптацию существующего v79 wrapper. Не менять overflow:hidden, fold/таймер/review/обработчики и тексты; до включения передать root red/green доказательство |
+
+Сохраняются текущий текст «Не подтверждено подходов: N», прежняя inherited
+primary/danger роль cardio «Внести время», отдельный timer-review accent и
+самостоятельные тренерские механики. Не вводятся новые цвета/действия/подписи,
+темы или продуктовые решения. Ввод/выделение/клавиатура/галочка undo,
+drag/swipe/fold, факт/confirmedAt/timerConfirmed, rest/minus/pause/reload,
+будущая дата/empty delete и финансы проверяются существующими целевыми cases.
+Непустая визуальная матрица получает состояния через изолированные fixtures;
+функциональные сценарии не размножаются по всем декоративным осям.
+
+QA: реальные CSSRule refs, selector-only ablation и точные neutral clones для
+mixed rules; original style declarations не переприсваивать. До/после строгий
+полный CSSOM round-trip, все четыре стороны границ, outline/offset, геометрия,
+focus/scroll/anchor и диагностика console/pageerror/network. Положительные
+Lime owner filters не превращаются в legacy classifier. Keyboard calibration
+отделена от natural autofocus/return. Font/finite animation settlement
+дожидаются по фактическому состоянию; assertions/retries/timeouts не ослабляются.
+
+Проверка пакета последовательно: новый baseline production build и captures,
+минимальные CSS изменения, ownership и точное сравнение до/после (кроме явно
+доказанной намеренной placement-коррекции), текущие существующие Live/attendance
+механики обеих ролей/движков, targeted unit/lint/policy/build/docs/diff. Перед
+дорогими проверками — фактический e2e-scope всего diff. Полный coverage без
+новой причины не повторяется, будущий exact-source CI остаётся обязательным.
+Реальные API/WS/данные блокируются; synthetic browser не называется телефоном.
+
+Открыто: живые matches/cascade и clipping ещё не проверены на43bad62b;
+старые green результаты не подменяют их. Физический телефон/OAuth/native
+install не проверены. Новый push/PR/merge/deploy запрещены до согласования
+с root и отдельного разрешения выпуска владельцем; auto-merge не включается.
+Не начинать MC5 или остальные последующие runtime-этапы. Память journal full,
+повторных записей/очистки нет. Дальше — baseline трёх связанных участков и
+соразмерная локальная реализация с проверяемыми коммитами/снимками.
