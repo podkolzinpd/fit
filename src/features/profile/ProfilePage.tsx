@@ -112,7 +112,7 @@ export function TrainerProfileSettingsPage() {
       <div className="menu"><Link to={LEGAL_PATHS.deleteAccount}>Удаление аккаунта</Link></div>
     </SettingsSection>}
 
-    {section === 'feedback' && <AppFeedbackForm onClose={leaveSection} />}
+    {section === 'feedback' && <AppFeedbackForm compact onClose={leaveSection} />}
     {section === 'help' && <SettingsSection title="Связь и документы">
       <div className="menu">
         <button type="button" onClick={() => navigate('/profile/settings?section=install&from=help', { state: { trainerSettingsParent: '/profile/settings?section=help' } })}>Fit на экране «Домой»</button>

@@ -84,7 +84,7 @@ test('trainer profile keeps the questionnaire compact and settings usable on a s
   await page.getByRole('button', { name: 'Закрыть' }).click()
 
   await page.getByRole('button', { name: 'Предложение или проблема' }).click()
-  const feedback = page.getByRole('form', { name: 'Напишите команде Fit' })
+  const feedback = page.getByRole('form', { name: 'Напишите нам' })
   await expect(feedback).toBeVisible()
   await feedback.getByRole('button', { name: 'Проблема' }).click()
   await expect(feedback.getByLabel('Сообщение')).toHaveAttribute('placeholder', 'Что произошло и чего вы ожидали?')
