@@ -1562,3 +1562,57 @@ API42455946744/web42455946852/OTA42456104785 SUCCESS;
 до их завершения собственный main merge/операции с данными закрыты.
 Постоянный проверенный маршрут дополнен schema3 веткой, чтобы будущий случай
 двух занятых карточек не направлялся вслепую в single-card/profile writer.
+
+
+## Итерация31 — 08.11.2026 — Codex / OpenAI
+
+Задача: после восстановления пары и проверки остальных журналов владелец
+попросил выяснить точные причины двух замечаний. Это диагностика только на
+чтение; новые карточки/учётки, повторный импорт и изменение записей не разрешены.
+Клиентские имена, IDs, даты/результаты и fingerprints остаются в private контексте.
+
+Уточнение итерации30: PR2048 штатно опубликован вcde47521. SourceCI42461264700
+SUCCESS35/35; mainCI42464001626 и API42465750513/web42465750518/OTA42466289135
+SUCCESS. Независимая приёмка238/238 public files,8 probes,DNS3, exact API,
+signed ZIP/ABI завершена. Уже запущенный schedule backup42467113182 на том же
+main прошёл реальные DB backup/disposable restore/normal cleanup; дубля не было.
+Закрытые plan42467721107/apply42467859749/verify42467947257 завершились штатно:
+один apply, отдельные owner READ ONLY conservation и BOTH fit_api reads.
+После cleanup выполнен readonly audit42468123621; ожидаемая закрытая ветка
+imported_access_audit_complete не создаёт apply-план. Временные keys/capability
+удалены; окно2048 OFF. Клиентские выводы этой проверки здесь не публикуются.
+
+Расхождения: прежний reader сравнивал counts и доступ, но не возвращал статус,
+soft-delete и последнего автора изменения исходных workout IDs. Проверка только
+native identity также не объясняет retained pilot sessions/rollout. Пустая
+история sessions не доказывает отсутствие прошлых входов: cleanup удаляет строки.
+Готовый private local↔Cloud.ru транспорт подходит, новый сервис/доступ не нужен.
+
+Сделано: в существующем signed input добавлен optional auditDetailCodes —
+ровно1–2 уникальных кода уже проверенных17 receipt scopes. Селекторы связаны с
+подписью всего запроса, не принимают произвольные profile/card IDs, не совмещаются
+с writer/confirmed invitation/evidence. Только для выбранных scopes читаются
+метаданные exact imported workout IDs и ограниченный trace записанного владельца:
+identity origin, rollout, агрегаты native/pilot sessions и card merge receipts.
+Notes, результаты подходов, контакты, provider subjects и токены не выбираются.
+Отдельный fit_api read возвращает readable IDs тех же исходных тренировок;
+soft-delete, смена статуса, перемещение и отсутствие записи различаются.
+Все новые поля остаются в закрытом Cloud.ru ответе; Actions получает прежние
+технические flags. Workflow и transitive imports прежние; writers не менялись.
+
+Решения: причина расхождения устанавливается по существующим полям записи,
+не по counts/имени; native/pilot trace не выбирает новую личность автоматически.
+Отвергнуто: повторный импорт, восстановление статусов по догадке, создание
+учётки, перенос роли/identity, arbitrary SQL и клиентские параметры в GitHub.
+Проверка: реальные PG17.11/C/UTF8 28/28 с soft-deleted и cancelled исходными
+записями, actual fit_api видимостью, retained pilot session, отсутствием tokens
+и отказом apply; Node21/21 — подпись/подмена/максимум2/чужие codes/конфликты.
+Первый Podman прогон упёрся в timeouts неизменённых merge cases; тот же набор
+прошёл на собственном native PG без изменения таймаутов/assertions. Чужие
+кластеры и installed binaries не менялись. Root/API lint/types/build/startup,
+infra471+speech7, Node21 и canonical validator PASS.
+Открыто: штатные PR/очередь/exact-head CI/main/release, затем один закрытый
+read-only запрос по двум выбранным scopes и cleanup. Подготовка кода не является
+доказанной причиной клиентского случая. Data write gates остаются закрыты.
+Дальше: получить приватные фактические статусы/trace, сверить с квитанциями
+импорта и действующим app-кодом; сообщить только доказанную причину и ограничения.

@@ -99,3 +99,14 @@ catalog/NULL authorship/неизвестные зависимости, target hi
 Unknown COMMIT сначала проверяется independent owner + BOTH fit_api verify;
 прежний импорт и old READ не повторяются. После pair repair и cleanup —
 отдельный17-receipt readonly audit без пред-merge confirmedInvitation.
+
+## Уточнение причин после receipt-аудита
+
+Count mismatch не доказывает потерю строки: статус/deleted_at и фактическая
+видимость проверяются отдельно. Optional signed auditDetailCodes ограничен
+ровно1–2 существующими кодами исходного17-receipt scope, несовместим с writer
+и не принимает произвольные IDs. Метаданные exact imported workouts и bounded
+identity/rollout/native+pilot session trace доступны только в закрытом ответе.
+Notes, метрики подходов, контакты и токены не читаются. Отсутствие retained
+sessions не доказывает, что человек никогда не входил: cleanup удаляет историю.
+Наличие pilot session не выбирает другую native identity и не меняет binding.

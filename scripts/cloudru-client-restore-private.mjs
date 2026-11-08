@@ -3,7 +3,7 @@ import {createRequire} from 'node:module'
 import {writeFileSync} from 'node:fs'
 import {pathToFileURL} from 'node:url'
 import {prepareCloudruUpload,loadCloudruUpload,cleanupCloudruUpload,cleanupUnreceivedCloudruUpload,sealUpload,journalSession,journalObject,validateUploadCapability,safeJournalUploadFailure} from './cloudru-journal-upload.mjs'
-import {readRestoreTarget,readExpectedRestoreHistory,readCurrentProfileEvidence,readConfirmedRestoreInvitation,readConfirmedCardRepairMode,readConfirmedRestoreVisibility,readImportedAccessAudit,readImportedAccessVisibility,planClientRestore} from './cloudru-client-restore.mjs'
+import {readRestoreTarget,readExpectedRestoreHistory,readCurrentProfileEvidence,readConfirmedRestoreInvitation,readConfirmedCardRepairMode,readConfirmedRestoreVisibility,readImportedAccessAudit,readAuditDetailCodes,readImportedAccessVisibility,planClientRestore} from './cloudru-client-restore.mjs'
 
 // Public protocol identifiers; these are NEVER derived from a customer.
 export const clientRestoreInputDigest=createHash('sha256').update('fit-private-client-restore-input-v1').digest('hex')
@@ -18,9 +18,9 @@ export function validatePrivateRestoreCapability(cap,session,now=Date.now()){
    &&url.searchParams.get('X-Amz-SignedHeaders')==='host'&&/^[a-f0-9]{64}$/u.test(url.searchParams.get('X-Amz-Signature')??''),'private_reply_capability')
  return cap
 }
-const signingBody=(session,pair,expected,evidence,confirmed,audit,mode)=>JSON.stringify(['fit-private-client-restore-input-v1',session,pair.trainerId,pair.athleteId,
+const signingBody=(session,pair,expected,evidence,confirmed,audit,mode,details)=>JSON.stringify(['fit-private-client-restore-input-v1',session,pair.trainerId,pair.athleteId,
  expected.clientId,expected.workoutIds,expected.workouts,expected.exercises,expected.sets,...(evidence?[evidence]:[]),
- ...(confirmed?[{confirmedInvitation:confirmed}]:[]),...(audit?[{importedAccessAudit:audit}]:[]),...(mode?[{repairMode:mode}]:[])])
+ ...(confirmed?[{confirmedInvitation:confirmed}]:[]),...(audit?[{importedAccessAudit:audit}]:[]),...(mode?[{repairMode:mode}]:[]),...(details?[{auditDetailCodes:details}]:[])])
 export function privateRestoreInputParts(value,session,operatorPrivatePem){
  journalSession(session)
  const pair=readRestoreTarget(JSON.stringify(value.target)),expected=readExpectedRestoreHistory(value.expectedHistory)
@@ -28,11 +28,13 @@ export function privateRestoreInputParts(value,session,operatorPrivatePem){
  const confirmed=value.confirmedInvitation===undefined?null:readConfirmedRestoreInvitation(value.confirmedInvitation)
  const audit=value.importedAccessAudit===undefined?null:readImportedAccessAudit(value.importedAccessAudit)
  const mode=value.repairMode===undefined?null:readConfirmedCardRepairMode(value.repairMode)
+ const details=value.auditDetailCodes===undefined?null:readAuditDetailCodes(value.auditDetailCodes,audit)
+ need(!details||(audit&&!mode&&!confirmed&&!evidence),'conflicting_evidence')
  need(!mode||(confirmed&&!evidence&&!audit),'conflicting_evidence')
  need(!(evidence&&(confirmed||audit)),'conflicting_evidence')
- const signature=sign('sha256',Buffer.from(signingBody(session,pair,expected,evidence,confirmed,audit,mode)),{key:operatorPrivatePem,padding:constants.RSA_PKCS1_PSS_PADDING,saltLength:32}).toString('base64')
+ const signature=sign('sha256',Buffer.from(signingBody(session,pair,expected,evidence,confirmed,audit,mode,details)),{key:operatorPrivatePem,padding:constants.RSA_PKCS1_PSS_PADDING,saltLength:32}).toString('base64')
  const encoded=Buffer.from(JSON.stringify({version:1,session,target:value.target,expectedHistory:expected,signature,
-   ...(evidence?{currentProfileEvidence:evidence}:{}),...(confirmed?{confirmedInvitation:confirmed}:{}),...(audit?{importedAccessAudit:audit}:{}),...(mode?{repairMode:mode}:{})})).toString('base64')
+   ...(evidence?{currentProfileEvidence:evidence}:{}),...(confirmed?{confirmedInvitation:confirmed}:{}),...(audit?{importedAccessAudit:audit}:{}),...(mode?{repairMode:mode}:{}),...(details?{auditDetailCodes:details}:{})})).toString('base64')
  const at=Math.ceil(encoded.length/2);return [encoded.slice(0,at),encoded.slice(at)]
 }
 export function readPrivateRestoreInput(parts,session,operatorPublicPem){
@@ -45,6 +47,7 @@ export function readPrivateRestoreInput(parts,session,operatorPublicPem){
    'confirmedInvitation,expectedHistory,session,signature,target,version',
    'confirmedInvitation,expectedHistory,repairMode,session,signature,target,version',
    'expectedHistory,importedAccessAudit,session,signature,target,version',
+   'auditDetailCodes,expectedHistory,importedAccessAudit,session,signature,target,version',
    'confirmedInvitation,expectedHistory,importedAccessAudit,session,signature,target,version'].includes(keys)&&value.version===1
    &&value.session===journalSession(session),'private_input')
  const pair=readRestoreTarget(JSON.stringify(value.target)),expectedHistory=readExpectedRestoreHistory(value.expectedHistory)
@@ -52,11 +55,13 @@ export function readPrivateRestoreInput(parts,session,operatorPublicPem){
  const confirmed=value.confirmedInvitation===undefined?null:readConfirmedRestoreInvitation(value.confirmedInvitation)
  const audit=value.importedAccessAudit===undefined?null:readImportedAccessAudit(value.importedAccessAudit)
  const mode=value.repairMode===undefined?null:readConfirmedCardRepairMode(value.repairMode)
+ const details=value.auditDetailCodes===undefined?null:readAuditDetailCodes(value.auditDetailCodes,audit)
+ need(!details||(audit&&!mode&&!confirmed&&!evidence),'conflicting_evidence')
  need(!mode||(confirmed&&!evidence&&!audit),'conflicting_evidence')
  need(typeof value.signature==='string'&&value.signature.length<=1500&&/^[A-Za-z0-9+/]+={0,2}$/u.test(value.signature),'private_signature')
- need(verify('sha256',Buffer.from(signingBody(session,pair,expectedHistory,evidence,confirmed,audit,mode)),
+ need(verify('sha256',Buffer.from(signingBody(session,pair,expectedHistory,evidence,confirmed,audit,mode,details)),
    {key:operatorPublicPem,padding:constants.RSA_PKCS1_PSS_PADDING,saltLength:32},Buffer.from(value.signature,'base64')),'private_signature')
- return {pair,expectedHistory,...(evidence?{currentProfileEvidence:evidence}:{}),...(confirmed?{confirmedInvitation:confirmed}:{}),...(audit?{importedAccessAudit:audit}:{}),...(mode?{repairMode:mode}:{})}
+ return {pair,expectedHistory,...(evidence?{currentProfileEvidence:evidence}:{}),...(confirmed?{confirmedInvitation:confirmed}:{}),...(audit?{importedAccessAudit:audit}:{}),...(mode?{repairMode:mode}:{}),...(details?{auditDetailCodes:details}:{})}
 }
 export async function executePrivateRestoreInput({phase,session,operatorPublicPem,store,createOwner,createRuntime,savePlan,operator}){
  journalSession(session)
@@ -72,7 +77,7 @@ export async function executePrivateRestoreInput({phase,session,operatorPublicPe
   const input=readPrivateRestoreInput(io.parts,session,io.publicPem)
   owner=await createOwner()
   let plan
-  try{plan=await planClientRestore(owner,input.pair,input.expectedHistory,input.currentProfileEvidence,input.confirmedInvitation,input.importedAccessAudit,input.repairMode)}
+  try{plan=await planClientRestore(owner,input.pair,input.expectedHistory,input.currentProfileEvidence,input.confirmedInvitation,input.importedAccessAudit,input.repairMode,input.auditDetailCodes)}
   catch(error){
    if(error?.privateDiagnostic?.confirmedCardEvidence||error?.privateDiagnostic?.importedAccessAudit){
     need(typeof createRuntime==='function','runtime_reader_required')
