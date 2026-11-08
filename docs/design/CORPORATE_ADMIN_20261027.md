@@ -3131,3 +3131,43 @@ CI/Android. Старшие2051 с новым head0e444b22 и2053fdcc остаю�
 приоритет персональных тренировок не наследуется. Дальше: окончательный head,
 очередь/штатный squash match-head, mainCI/official API/web/signedOTA и фактическая
 приёмка154web+154signedZIP+publicUI с realAPI/WS deny. DUT109 ещё открыт.
+
+
+### Итерация 76 нового выпуска — 2026-11-08 — Codex / OpenAI
+
+Задача: довести PR2/2054 до штатного выпуска DUT109, не расширяя пилот.
+Sourcea5a89b6c после нормальной интеграции landing mainc6 прошёл Android42506237745
+SUCCESS attempt1 и полный CI42506237855 SUCCESS35/35 attempt2.
+Первая попытка:33PASS, старый WebKit client Live group-group/compact case записал
+2 scroll positions при ожидании>2; встроенный retry прошёл, fail-on-flaky оставил
+red. Полный исходный log/diagnostics сохранены. Retry trace:83samples/3positions,
+maxGap106, один smooth call; точная причина первого сэмплирования не доказана.
+Собственный src/e2e побайтно равен fullgreen79ea. Заранее ограниченный контроль
+того же неизменённого case на compileda5:3/3PASS, retries0/flaky0/skip0;
+кадры95/97/93, разные позиции10/13/13, maxGap31/44/50. После завершения всех
+первичных jobs выполнен один адресный полный auth4 repeat/job128821792435:
+302PASS без flaky; зависимый e2e aggregate зелёный,33здоровых jobs не повторялись.
+Продукт, assertions/timeouts/guards/CI не менялись; случайных повторов не было.
+Это проверка source, не объявление duty UI опубликованным.
+
+Предшествующий main2055/c6 теперь принят фактически: CI42506001744 SUCCESS
+attempt2, Android42506001761 SUCCESS, officialAPI42510503683/web42510503491/
+signedOTA42511033672 SUCCESS. Независимый readback243/243files size/SHA,
+обаAPI release/health/ready/auth/DNS/TLS и22unauthenticated probes401/no-store PASS.
+Подписанный actual ZIP15959539байт, SHA256
+859c65c7a05c29327f17a2053401d10822cb80c40356e65dc6f40f5b758e36b1;
+manifest/archive signatures, officialartifact match, source/ABI/native9 PASS.
+Опубликованный baseline UI8/8 в Chromium/WebKit и обеих темах, realAPI/WS deny,
+retries0; это не приёмка ещё отсутствующего duty UI. Чужие CI/публикации не
+перезапускались. Физические устройства и реальный OAuth не проверены.
+
+Уточнена фактическая очередь: активная приоритетная серия ФИТ14/2056–2059,
+затем2051 и2053;2051 сообщает36green checks,2053явно ждёт его принятого выпуска.
+Взаимного ожидания2051↔2053 нет:2051 ждёт приоритетный пакет. Старые конкретные
+разрешения приоритета этой задачей не наследуются; исходящих сообщений нет.
+Собственное операционное окно2054 OFF, duty OFF, zone/grant не выполнялись.
+Дальше: единожды объединить окончательный принятый main после этих выпусков,
+проверить exactfinal source CI/Android, затем normal squash match-head,
+mainCI/official API/web/signedOTA и фактические154web+154signedZIP+publicUI.
+Эта квитанция сохраняется локальным docs-коммитом до необходимой интеграции;
+проверкиa5 не присваиваются новому docs/combined head и не дублируются ради записи.
