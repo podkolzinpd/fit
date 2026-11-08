@@ -146,8 +146,9 @@ jobs:
         if: inputs.make_apk == true
         run: |
           node scripts/generate-android-ota-native-fixtures.mjs
+          node scripts/prepare-official-ci-tools.mjs gradle
           cd android
-          ./gradlew testDebugUnitTest assembleRelease
+          ./gradlew --init-script "$RUNNER_TEMP/fit-ci-kotlin.init.gradle" testDebugUnitTest assembleRelease
       - name: Sign APK with original Fit certificate
         if: inputs.make_apk == true
         env:
