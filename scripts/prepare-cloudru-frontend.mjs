@@ -36,7 +36,7 @@ function staticLocations(bundle) {
   const directories = bundle.files.filter((file) => file.key.endsWith('/index.html'))
     .map((file) => {
       const directory = file.key.slice(0, -'/index.html'.length)
-      return `    location = /${directory} { return 308 /${directory}/; }
+      return `    location = /${directory} { absolute_redirect off; return 308 /${directory}/; }
     location = /${directory}/ { rewrite ^ /${file.key} last; }`
     }).join('\n')
   return files + '\n' + directories + `

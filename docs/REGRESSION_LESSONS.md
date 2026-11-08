@@ -261,3 +261,12 @@ store, как в production: отсутствие optional store даёт503 и 
 смены периода/сброса. Для selected quick periods проверять вычисленный контраст
 при hover и без него в обеих темах: общий hover может выиграть каскад.
 [Причины и red/green, итерация58](design/CORPORATE_ADMIN_20261027.md).
+
+## Публичные вложенные страницы за reverse proxy — 08.11.2026
+
+Python-preview не подтверждает Nginx-маршруты каталогов. Для manifest с вложенным
+index.html проверять exact /directory/, совпадение bytes и redirect с /directory.
+Location должен быть относительным: абсолютный redirect внутреннего Nginx может
+передать наружу http и loopback-port. Проверять весь Location, не только pathname.
+Проверка: prepare-cloudru-frontend tests, реальный Nginx integration и публичный
+readback после promotion. История: TRAINER_LANDING_20261107, итерации9–10.
