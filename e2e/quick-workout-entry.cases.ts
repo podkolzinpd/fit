@@ -372,6 +372,7 @@ export function quickWorkoutEntryCases() {
   }
 
   test('quick-entry trainer batch retry preserves acknowledged selection and confirmed facts', async ({ page }) => {
+    await page.clock.setFixedTime(new Date('2026-10-08T09:01:00Z'))
     const profileId = 'c0ac0000-6010-4000-8000-000000000001'
     const original = { ...restTimerWorkout(), createdBy: profileId, trainerId: profileId }
     original.exercises[0]!.sets[0]!.confirmedAt = '2026-10-08T09:00:00Z'
@@ -384,7 +385,7 @@ export function quickWorkoutEntryCases() {
       return route.fallback()
     })
     await page.goto(`/workouts/${workoutId}/live`)
-    await page.getByRole('button', { name: 'Ещё упражнение', exact: true }).click()
+    await page.getByRole('button', { name: /^(Упражнение|Ещё упражнение)$/ }).click()
     const picker = page.getByRole('dialog', { name: 'Добавить упражнение', exact: true })
     for (const name of ['Жим гантелей сидя', 'Планка', 'Присед со штангой']) {
       await picker.getByLabel('Поиск упражнения').fill(name)
