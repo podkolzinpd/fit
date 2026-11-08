@@ -30,8 +30,10 @@ test('real isolated Nginx preserves hosting contracts and validates non-root can
   const source = join(root, 'source')
   await mkdir(join(source, 'assets'), { recursive: true })
   await mkdir(join(source, 'fonts'))
+  await mkdir(join(source, 'for-trainers'))
   for (const [key, bytes] of Object.entries({
     'index.html': '<!doctype html><html>local integration fixture</html>',
+    'for-trainers/index.html': '<!doctype html><html>trainer landing integration fixture</html>',
     'asset-recovery.js': '// stale asset recovery', 'sw.js': '// service worker', 'site.webmanifest': '{}',
     'assets/app-12345678.js': '// fixture', 'assets/theme-12345678.css': 'body {}',
     'assets/engine-12345678.wasm': '\0asm', 'fonts/fixture.woff2': 'wOF2 synthetic test font',
