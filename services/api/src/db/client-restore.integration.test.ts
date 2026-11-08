@@ -509,7 +509,10 @@ describe.skipIf(source === undefined)('owner-approved canonical client restorati
       scope.push({ code: `F${String(i).padStart(2, '0')}`, profileId: i === 5 ? null : profileId, journalKind: i === 17 ? 'trainer_self' : 'athlete', expectedHistory: { clientId: card, workoutIds: [workout], workouts: 1, exercises: 1, sets: 1 } })
     }
     const c = await owner.connect()
-    let failure: { message: string; privateDiagnostic: { importedAccessAudit: { code: string; nativeOwnerPresent: boolean; importedHistoryMatches: boolean; actorSelected: boolean; writePlanReady: boolean }[] } }
+    let failure: { message: string; privateDiagnostic: { importedAccessAudit: { code: string; nativeOwnerPresent: boolean; importedHistoryMatches: boolean; actorSelected: boolean; writePlanReady: boolean;
+      workoutDetails?: {id:string;reason:string;status?:string;updated_by?:string}[];
+      identityTrace?: {actorSelected:boolean;absentSessionIsNotProofOfNoPriorLogin:boolean;pilotSessions:{retained:number;active:number};appSessions:{retained:number;active:number};rollout:{target_backend:string;access_mode:string}}
+    }[] } }
     try {
       failure = await planClientRestore(c, { trainerId: f.trainerId, athleteId: f.athleteId }, f.expected, null, f.proof, scope)
         .then(() => { throw Error('audit must not produce an apply plan') }, (error: unknown) => error) as typeof failure
@@ -546,6 +549,45 @@ describe.skipIf(source === undefined)('owner-approved canonical client restorati
       expect((await readImportedAccessVisibility(verifier, failure.privateDiagnostic)).find(v => v.code === 'F06'))
         .toMatchObject({ issue: 'missing_card', resolved: false, writePlanReady: false })
     } finally { verifier.release() }
+    // Reconcile a hidden imported result separately from a visible changed status.
+    const hidden=scope[4]!,changed=scope[5]!,legacy=scope[3]!
+    await owner.query('update public.workouts set deleted_at=now(),updated_by=$2,version=version+1 where id=$1',[hidden.expectedHistory.workoutIds[0],f.trainerId])
+    await owner.query("update public.workouts set status='cancelled',completed_at=null,updated_by=$2,version=version+1 where id=$1",[changed.expectedHistory.workoutIds[0],f.trainerId])
+    const pilotHash=createHash('sha256').update('private synthetic retained pilot '+randomUUID()).digest('hex')
+    await owner.query("insert into app_private.profile_rollout_assignments(profile_id,target_backend,access_mode,enabled) values($1,'yandex','read_only',true)",[legacy.profileId])
+    await owner.query("insert into app_private.yandex_pilot_sessions(token_sha256,profile_id,expires_at) values($1,$2,now()+interval '30 minutes')",[pilotHash,legacy.profileId])
+    const detailReader=await owner.connect()
+    try {
+      failure=await planClientRestore(detailReader,{trainerId:f.trainerId,athleteId:f.athleteId},f.expected,null,null,scope,null,['F05','F04'])
+        .then(()=>{throw Error('cause audit cannot produce a write plan')},(error:unknown)=>error) as typeof failure
+    }finally{detailReader.release()}
+    expect(failure.message).toBe('client_restore_imported_access_audit_complete')
+    expect(failure.privateDiagnostic.importedAccessAudit.find(v=>v.code===hidden.code)?.workoutDetails)
+      .toEqual([expect.objectContaining({id:hidden.expectedHistory.workoutIds[0],reason:'soft_deleted',status:'done',updated_by:f.trainerId})])
+    expect(failure.privateDiagnostic.importedAccessAudit.find(v=>v.code===legacy.code)?.identityTrace).toMatchObject({
+      actorSelected:false,absentSessionIsNotProofOfNoPriorLogin:true,appSessions:{retained:0,active:0},
+      pilotSessions:{retained:1,active:1},rollout:{target_backend:'yandex',access_mode:'read_only'}})
+    expect(JSON.stringify(failure.privateDiagnostic)).not.toContain(pilotHash)
+    expect(JSON.stringify(failure.privateDiagnostic)).not.toMatch(/Synthetic|token_sha256|provider_subject_sha256|code_hash/)
+    const detailRuntime=await runtime.connect()
+    try {
+      const view=await readImportedAccessVisibility(detailRuntime,failure.privateDiagnostic)
+      expect(view.find(v=>v.code===hidden.code)).toMatchObject({actors:{trainer:{readableImportedIds:[],allImportedReadable:false}}})
+    }finally{detailRuntime.release()}
+    await expect(apply(failure.privateDiagnostic as unknown as RestorePlan)).rejects.toThrow('client_restore_plan')
+    const statusReader=await owner.connect()
+    try {
+      failure=await planClientRestore(statusReader,{trainerId:f.trainerId,athleteId:f.athleteId},f.expected,null,null,scope,null,['F06'])
+        .then(()=>{throw Error('status audit cannot produce a write plan')},(error:unknown)=>error) as typeof failure
+    }finally{statusReader.release()}
+    expect(failure.privateDiagnostic.importedAccessAudit.find(v=>v.code===changed.code)?.workoutDetails)
+      .toEqual([expect.objectContaining({id:changed.expectedHistory.workoutIds[0],reason:'status_changed',status:'cancelled',updated_by:f.trainerId})])
+    expect(failure.privateDiagnostic.importedAccessAudit.filter(v=>v.code!==changed.code).every(v=>v.workoutDetails===undefined&&v.identityTrace===undefined)).toBe(true)
+    const statusRuntime=await runtime.connect()
+    try {
+      const view=await readImportedAccessVisibility(statusRuntime,failure.privateDiagnostic)
+      expect(view.find(v=>v.code===changed.code)).toMatchObject({actors:{trainer:{readableImportedIds:changed.expectedHistory.workoutIds,allImportedReadable:false}}})
+    }finally{statusRuntime.release()}
   }, 30000)
 
 })
