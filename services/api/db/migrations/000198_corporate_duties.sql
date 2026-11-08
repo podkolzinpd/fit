@@ -235,7 +235,7 @@ language plpgsql stable security definer set search_path='' as $$
 begin
  if not app_private.is_corporate_admin() then raise exception 'corporate_forbidden' using errcode='PT403'; end if;
  if not exists(select 1 from app_private.corporate_duties where id=p_id) then raise exception 'corporate_not_found' using errcode='PT404'; end if;
- return jsonb_build_object('records',coalesce((select jsonb_agg(to_jsonb(a)||jsonb_build_object('actorName',coalesce(nullif(btrim(concat_ws(' ',p.first_name,p.last_name)),''),'Учётная запись недоступна')) order by a.id desc)
+ return jsonb_build_object('current',(select app_private.corporate_duty_payload(d) from app_private.corporate_duties d where d.id=p_id),'records',coalesce((select jsonb_agg(to_jsonb(a)||jsonb_build_object('actorName',coalesce(nullif(btrim(concat_ws(' ',p.first_name,p.last_name)),''),'Учётная запись недоступна')) order by a.id desc)
    from (select id,actor_id,occurred_at,action,reason,before_data,after_data from app_private.corporate_duty_audit
      where duty_id=p_id and (p_before is null or id<p_before) order by id desc limit 50) a left join public.profiles p on p.id=a.actor_id),'[]'::jsonb));
 end $$;
