@@ -1,6 +1,23 @@
 (() => {
   'use strict';
   const root=document.documentElement;
+  const athlete=new URLSearchParams(location.search).get('audience')==='athlete';
+  document.body.classList.toggle('audience-athlete',athlete);
+  document.querySelectorAll('[data-audience]').forEach(link=>{
+    if(link.dataset.audience===(athlete?'athlete':'trainer'))link.setAttribute('aria-current','page');
+    else link.removeAttribute('aria-current');
+  });
+  if(athlete){
+    document.querySelector('.copy-stack').replaceChildren(document.querySelector('#athlete-copy').content.cloneNode(true));
+    document.querySelector('.screen-window').replaceChildren(document.querySelector('#athlete-screens').content.cloneNode(true));
+    document.querySelector('.chapters [data-step="0"] span').textContent='Сегодня';
+    document.querySelector('.chapters [data-step="3"] span').textContent='Техника';
+    document.querySelector('.closing .kicker').textContent='ФИТ для спортсмена';
+    document.title='ФИТ — тренировки самостоятельно или с тренером';
+    document.querySelectorAll('[data-placement="trainer-page"]').forEach(a=>a.dataset.placement='athlete-page');
+    document.querySelector('footer a').href='?audience=athlete&motion=off#top';
+  }
+
   const story=document.querySelector('.story'), scene=document.querySelector('.scene');
   const grid=document.querySelector('.scene-grid'), zone=document.querySelector('.product-zone');
   const closing=document.querySelector('.closing'), chapters=document.querySelector('.chapters');
@@ -10,14 +27,14 @@
   const videos=[...document.querySelectorAll('video')];
   const mediaButton=document.querySelector('.play-media');
   const reduced=matchMedia('(prefers-reduced-motion: reduce)');
-  const stages=['schedule','plan','live','live','result'];
+  const stages=athlete?['schedule','plan','live','technique','result']:['schedule','plan','live','live','result'];
   const clamp=(v,min=0,max=1)=>Math.max(min,Math.min(max,v));
   const smooth=v=>{v=clamp(v);return v*v*(3-2*v);};
   const staticMode=()=>reduced.matches || new URLSearchParams(location.search).get('motion')==='off';
   const END=5.25;
   let frame=0,travel=0,layoutWidth=0,head=0,active=0,inView=true,compactLayout=false;
   let copyHeights=[];
-  let lastTick=performance.now(),elapsed=11*60+58,clockRunning=false,lastMedia='';
+  let lastTick=performance.now(),elapsed=athlete?15*60+45:11*60+58,clockRunning=false,lastMedia='';
   const minutes=document.querySelector('.clock-minutes'),seconds=document.querySelector('.clock-seconds');
   function tick(now=performance.now()) {
     if(clockRunning)elapsed+=(now-lastTick)/1000;
@@ -74,13 +91,13 @@
     show(chapters,outro,active!==5);show(closing,intro,active===5);
     // Hold the enlarged Live screen all the way through its exit to Result.
     const compact=root.classList.contains('compact');
-    const focus=smooth((p-2.4)/.85), scale=1+focus*(compact?0:.22);
+    const focus=athlete?0:smooth((p-2.4)/.85), scale=1+focus*(compact?0:.22);
     const width=document.querySelector('.screen-window').clientWidth;
     root.style.setProperty('--live',String(weights[2]+weights[3]));
     root.style.setProperty('--live-scale',String(scale));
-    root.style.setProperty('--result-pan',String((compact?80+360*smooth((p-4.1)/.65):70)*width/390));
-    root.style.setProperty('--schedule-pan',`${compact?-225*width/390:0}px`);
-    root.style.setProperty('--plan-pan',`${compact?-(80+320*smooth((p-1.08)/.65))*width/390:0}px`);
+    root.style.setProperty('--result-pan',String(athlete?0:(compact?80+360*smooth((p-4.1)/.65):70)*width/390));
+    root.style.setProperty('--schedule-pan',`${compact&&!athlete?-225*width/390:0}px`);
+    root.style.setProperty('--plan-pan',`${compact?-(athlete?150*smooth((p-1.08)/.65):80+320*smooth((p-1.08)/.65))*width/390:0}px`);
     root.style.setProperty('--live-offset',`${-focus*(440+(compact?230*smooth((p-3.3)/.45):0))*scale*width/390}px`);
     buttons.forEach((button,i)=>{
       if(i===active)button.setAttribute('aria-current','step');else button.removeAttribute('aria-current');
