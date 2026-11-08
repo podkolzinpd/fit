@@ -4,7 +4,7 @@ import { mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { test } from 'node:test'
-import { downloadVerifiedAsset, gradleCacheZip, gradleKotlinCacheJar, kotlinCompiler, officialTools, prepareOfficialCiTool } from './prepare-official-ci-tools.mjs'
+import { downloadVerifiedAsset, gradleCacheZip, gradleKotlinInit, kotlinCompiler, kotlinCompilerPom, officialTools, prepareOfficialCiTool } from './prepare-official-ci-tools.mjs'
 
 const bytes = Buffer.from('verified synthetic archive')
 const spec = { url: 'https://api.github.com/repos/synthetic/tool/releases/assets/1', size: bytes.length, sha256: createHash('sha256').update(bytes).digest('hex') }
@@ -54,8 +54,7 @@ test('does not overwrite a corrupted existing cache or hide the checksum error',
   assert.deepEqual(await readFile(path), corrupt)
 }))
 
-test('uses the byte-identical official Kotlin artifact in the normal Gradle content store', () => workspace(async root => {
-  assert.equal(gradleKotlinCacheJar('/cache'), '/cache/caches/modules-2/files-2.1/org.jetbrains.kotlin/kotlin-compiler-embeddable/2.0.21/79346ed53db48b18312a472602eb5c057070c54d/kotlin-compiler-embeddable-2.0.21.jar')
+test('uses byte-identical official Kotlin artifacts and retains transitive metadata', () => workspace(async root => {
   assert.equal(kotlinCompiler.sha256, '9fa8cdd1de0dccffe154c997d423ec6b5f53cd6d9177e3a77a9b0de03fb1bc81')
   assert.equal(kotlinCompiler.url, 'https://api.github.com/repos/JetBrains/kotlin/releases/assets/587823233?download=complete')
   const mavenUrl = 'https://repo.maven.apache.org/maven2/synthetic/tool.jar'
@@ -65,8 +64,16 @@ test('uses the byte-identical official Kotlin artifact in the normal Gradle cont
     return new Response(bytes)
   })
   const source = await readFile(new URL('./prepare-official-ci-tools.mjs', import.meta.url), 'utf8')
-  assert.doesNotMatch(source, /--offline|init\.gradle|mavenLocal|writeFile\([^\n]*\.bin/)
-  assert.match(source, /await downloadVerifiedAsset\(kotlinCompiler, gradleKotlinCacheJar\(gradleHome\), fetchAsset\)/)
+  assert.doesNotMatch(source, /--offline|mavenLocal|writeFile\([^\n]*\.bin|init\.d/)
+  assert.equal(kotlinCompilerPom.sha256, 'bd4656a46ec418252e5bc5e1c20eb2029fb2a8e0e3cc94eeddfac7e87c8cd5b6')
+  assert.match(source, /await downloadVerifiedAsset\(kotlinCompilerPom,/)
+  const init = gradleKotlinInit(join(root, "space ' quote"))
+  assert.match(init, /space%20%27%20quote/)
+  assert.match(init, /metadataSources \{ mavenPom\(\) \}/)
+  assert.match(init, /filter \{ includeModule\('org.jetbrains.kotlin', 'kotlin-compiler-embeddable'\) \}/)
+  assert.match(init, /project.buildscript.repositories/)
+  assert.match(init, /project.repositories/)
+  assert.doesNotMatch(init, /artifact\(\)|includeGroup|repositories.clear|force|substitut|offline|credentials/)
 }))
 
 test('matches Gradle8.14.3 PathAssembler without fabricating wrapper success markers', async () => {
@@ -85,9 +92,9 @@ test('retains immutable official versions and verifies both CI and release consu
   assert.equal(officialTools.terraform.sha256, '214ac0a04a4f31ee0e3eb04ab1db9213c3ecaee9d4ebfd3d05b57399081c9d25')
   const android = await readFile(new URL('../.github/workflows/android-build.yml', import.meta.url), 'utf8')
   assert.equal([...android.matchAll(/prepare-official-ci-tools.mjs gradle/g)].length, 2)
-  assert.match(android, /prepare-official-ci-tools.mjs gradle\n\s+- run: \.\/gradlew testDebugUnitTest assembleDebug/)
+  assert.match(android, /prepare-official-ci-tools.mjs gradle\n\s+- run: \.\/gradlew --init-script "\$RUNNER_TEMP\/fit-ci-kotlin.init.gradle" testDebugUnitTest assembleDebug/)
   const release = await readFile(new URL('../.github/workflows/release-android-ota.yml', import.meta.url), 'utf8')
-  assert.match(release, /prepare-official-ci-tools.mjs gradle\n\s+cd android\n\s+\.\/gradlew testDebugUnitTest assembleRelease/)
+  assert.match(release, /prepare-official-ci-tools.mjs gradle\n\s+cd android\n\s+\.\/gradlew --init-script "\$RUNNER_TEMP\/fit-ci-kotlin.init.gradle" testDebugUnitTest assembleRelease/)
   const ci = await readFile(new URL('../.github/workflows/ci.yml', import.meta.url), 'utf8')
   assert.match(ci, /node --test scripts\/prepare-official-ci-tools.test.mjs/)
   assert.match(ci, /init -backend=false -plugin-dir="\$RUNNER_TEMP\/fit-ci-providers"/)

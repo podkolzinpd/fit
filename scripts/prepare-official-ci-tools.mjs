@@ -1,9 +1,9 @@
 import { createHash, randomUUID } from 'node:crypto'
 import { createReadStream } from 'node:fs'
-import { chmod, mkdir, open, readFile, rename, rm, stat } from 'node:fs/promises'
+import { chmod, mkdir, open, readFile, rename, rm, stat, writeFile } from 'node:fs/promises'
 import { homedir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
-import { fileURLToPath } from 'node:url'
+import { fileURLToPath, pathToFileURL } from 'node:url'
 import { spawnSync } from 'node:child_process'
 
 // Exact upstream release assets, independently checked against their SHA256SUMS.
@@ -15,7 +15,7 @@ export const officialTools = Object.freeze({
 
 // This existing Capacitor dependency is byte-identical in Maven Central and the
 // official Kotlin release. The release asset publishes this SHA256; Maven's
-// published SHA1 identifies its normal Gradle cache directory only.
+// published SHA1 was independently checked against those complete bytes.
 export const kotlinCompiler = Object.freeze({
   url: 'https://api.github.com/repos/JetBrains/kotlin/releases/assets/587823233?download=complete',
   size: 58272093,
@@ -23,8 +23,32 @@ export const kotlinCompiler = Object.freeze({
   sha1: '79346ed53db48b18312a472602eb5c057070c54d',
 })
 
-export function gradleKotlinCacheJar(gradleHome) {
-  return join(gradleHome, 'caches/modules-2/files-2.1/org.jetbrains.kotlin/kotlin-compiler-embeddable/2.0.21', kotlinCompiler.sha1, 'kotlin-compiler-embeddable-2.0.21.jar')
+export const kotlinCompilerPom = Object.freeze({
+  url: 'https://repo.maven.apache.org/maven2/org/jetbrains/kotlin/kotlin-compiler-embeddable/2.0.21/kotlin-compiler-embeddable-2.0.21.pom',
+  size: 2666,
+  sha256: 'bd4656a46ec418252e5bc5e1c20eb2029fb2a8e0e3cc94eeddfac7e87c8cd5b6',
+})
+
+export function gradleKotlinInit(repository) {
+  // Exclusive content affects this one existing module only. Its original POM
+  // retains every transitive dependency; all other resolution stays unchanged.
+  const uri = pathToFileURL(resolve(repository)).href.replaceAll("'", "%27")
+  return `def verifiedCompilerRepository = { repositories ->
+    repositories.exclusiveContent {
+        forRepository {
+            repositories.maven {
+                url = java.net.URI.create('${uri}')
+                metadataSources { mavenPom() }
+            }
+        }
+        filter { includeModule('org.jetbrains.kotlin', 'kotlin-compiler-embeddable') }
+    }
+}
+gradle.beforeProject { project ->
+    verifiedCompilerRepository(project.buildscript.repositories)
+    verifiedCompilerRepository(project.repositories)
+}
+`
 }
 
 async function verifyFile(path, spec) {
@@ -78,13 +102,16 @@ export function gradleCacheZip(properties, gradleHome) {
   return join(gradleHome, 'wrapper/dists/gradle-8.14.3-all', key, 'gradle-8.14.3-all.zip')
 }
 
-export async function prepareOfficialCiTool(mode, { root = process.cwd(), gradleHome = process.env.GRADLE_USER_HOME || join(homedir(), '.gradle'), pluginRoot, fetchAsset = fetch } = {}) {
+export async function prepareOfficialCiTool(mode, { root = process.cwd(), gradleHome = process.env.GRADLE_USER_HOME || join(homedir(), '.gradle'), temporaryRoot = process.env.RUNNER_TEMP, pluginRoot, fetchAsset = fetch } = {}) {
   if (mode === 'gradle') {
+    if (!temporaryRoot) throw new Error('Gradle CI preparation requires a temporary runner directory')
     const properties = await readFile(join(root, 'android/gradle/wrapper/gradle-wrapper.properties'), 'utf8')
     const archive = await downloadVerifiedAsset(officialTools.gradle, gradleCacheZip(properties, gradleHome), fetchAsset)
-    // Gradle's GroupedAndNamedUniqueFileStore uses SHA1 as the directory name.
-    // Do not create metadata or success markers, or change repository resolution.
-    await downloadVerifiedAsset(kotlinCompiler, gradleKotlinCacheJar(gradleHome), fetchAsset)
+    const repository = join(temporaryRoot, 'fit-ci-kotlin-maven')
+    const module = join(repository, 'org/jetbrains/kotlin/kotlin-compiler-embeddable/2.0.21/kotlin-compiler-embeddable-2.0.21')
+    await downloadVerifiedAsset(kotlinCompiler, `${module}.jar`, fetchAsset)
+    await downloadVerifiedAsset(kotlinCompilerPom, `${module}.pom`, fetchAsset)
+    await writeFile(join(temporaryRoot, 'fit-ci-kotlin.init.gradle'), gradleKotlinInit(repository), { mode: 0o600 })
     return archive
   }
   if (mode !== 'terraform' || !pluginRoot) throw new Error('Expected gradle or terraform with a temporary plugin directory')

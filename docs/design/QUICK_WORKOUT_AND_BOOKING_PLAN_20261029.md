@@ -624,3 +624,29 @@ sha256:9fa8cdd1de0dccffe154c997d423ec6b5f53cd6d9177e3a77a9b0de03fb1bc81.
 оговорка об отсутствии upstream SHA256 относится к Maven endpoint; официальный
 GitHub release digest найден и подтверждён. Кэш, версия и команды неизменны.
 Следующий полный CI и Android обязательны; предыдущие отказы не скрываются.
+
+
+### Итерация 08.11.2026 — GPT / OpenAI — проверенный локальный источник Kotlin
+
+Расхождение: API GET/JAR checksum прошли на3210b5e4, но Gradle даже при наличии
+файла потребовал HEAD прежнего Maven URL; этот HEAD перенаправлен на GitHub504.
+Обычный file-store не устраняет metadata-запрос. Предыдущий подход заменён
+временным CI Maven-каталогом строго одного модуля compiler-embeddable2.0.21.
+
+Сделано: оригинальные JAR из official GitHub API и POM из Maven Central
+скачиваются с закреплёнными SHA256/размерами. POM2666байт/bd4656a4…8cd5b6
+проверен также по upstream SHA19512dbadfdeffb95bbfc1456caac2118d8def75d.
+Инициализирующий скрипт передаётся явно существующим Gradle-командам; exclusive
+filter касается только этого модуля в buildscript/project repositories.
+POM сохранён целиком: транзитивные зависимости не теряются. Все остальные
+repositories/версии/проверки прежние, metadata/cache/success не подделываются.
+Вне временной папки CI новые init.d/global-настройки не создаются.
+
+Проверка: настоящий Gradle8.14.3 на временном официальном Java21 успешно
+разрешил compiler в buildscript и project configurations, сохранил8артефактов
+и проверил stdlib2.0.21/trove4j; BUILD SUCCESSFUL37s. Первый локальный вызов
+не дошёл до проекта из-за относительного init path; повтор с абсолютным прошёл.
+Java распакована только в output задачи, системная установка не менялась.
+69/69 helper+CI+OTA tests и lint PASS. Полная Android-компиляция и CI следующего
+head ещё обязательны. Production не выпущен. Дальше: exact CI/Android, merge,
+main CI и независимая проверка public/signed ZIP.
