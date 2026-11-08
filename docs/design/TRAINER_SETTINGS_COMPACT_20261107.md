@@ -541,3 +541,22 @@ VITE_CLIENT_LIME_ENABLED=true, что в CI; retries0. Первый локаль
 с выключенным harness был4skip, второй без clientLime env показал другой
 clientэкран и2/4red — эти логи не выданы за приёмку. Включение точного
 fixturecohort исправило окружение, код приложения/clientтесты не менялись.
+
+## Итерация 24 — 08.11.2026 — Codex / OpenAI
+
+SET201/PR2042 выпущен на main4a8d140a и принят: mainCI42430948979,
+API42433374094, web42433374153, signedOTA42433667561 — SUCCESS. Проверены
+213/213 public files по size/SHA, оба APIreleaseId=4a, ready200/auth401,
+OTA source/ABI/expiry/RSA/checksum. Actualpublic6/6 и actualsignedZIP6/6
+Chromium/WebKit, retries0, без бизнес-записей; ширины320/430 и выключенные
+переключатели проверены, representative screenshots просмотрены. Физический
+телефон не проверен. Итоговый readback хранится в единственной квитанции PR2042.
+
+Наш singleton hold освобождён; active2038 уведомлён. Его normal squash
+01f2558129bd6f4c61360aefd54a51dc3847a296 включён в P2 без конфликтов. Все
+8 чужих файлов сохранены, diff к actualmain содержит только SET202/журнал.
+Runtime SET202 не менялся; sourceCI33ba ещё выполняется и не выдаётся за
+проверку нового parent. До окончательной готовности окна2038/2040/2041
+повторные промежуточные CI не плодятся; финальный actualmain/head проверяется
+полностью перед merge. P3 остаётся локально готовым, а не опубликованным.
+Дальше: завершить оставшиеся два PR и их штатную опубликованную приёмку.
