@@ -1,11 +1,11 @@
 import {test} from 'node:test'
-import {generateKeyPairSync} from 'node:crypto'
+import {generateKeyPairSync,randomUUID} from 'node:crypto'
 import assert from 'node:assert/strict'
 import {readFileSync,mkdtempSync,writeFileSync,rmSync} from 'node:fs'
 import {tmpdir} from 'node:os'
 import {join} from 'node:path'
 import {spawnSync} from 'node:child_process'
-import {readRestoreTarget,readCurrentProfileEvidence,planClientRestore,applyClientRestore,verifyClientRestore,privateRestoreTechnicalResult} from './cloudru-client-restore.mjs'
+import {readRestoreTarget,readCurrentProfileEvidence,readConfirmedRestoreInvitation,readConfirmedRestoreVisibility,readImportedAccessAudit,planClientRestore,applyClientRestore,verifyClientRestore,privateRestoreTechnicalResult} from './cloudru-client-restore.mjs'
 import {readPrivateRestoreInput,executePrivateRestoreInput,clientRestoreInputDigest,validatePrivateRestoreCapability,privateRestoreInputParts} from './cloudru-client-restore-private.mjs'
 import {assertUnreceivedUploadFiles,assertUnreceivedCloudruObjects} from './cloudru-journal-upload.mjs'
 
@@ -191,4 +191,62 @@ test('malformed, future or stale current-profile proof fails before database acc
 test('private Actions results allow only technical flags, never customer fields or counts',()=>{
  const result=privateRestoreTechnicalResult({event:'client_restore_verified',bothCanReadImported:true,done:100,trainerId:'synthetic-private-id',clientEmail:'synthetic@example.test',plan:{private:'fixture'},unexpectedCustomerField:'hidden'})
  assert.deepEqual(result,{event:'client_restore_verified',bothCanReadImported:true})
+})
+
+test('an owner-confirmed invitation is session-signed and cannot substitute a different claimant or claim time',()=>{
+ const proof={invitationId:'77777777-7777-4777-8777-777777777777',claimedAt:new Date(Date.now()-120000).toISOString(),ownerConfirmedAt:new Date(Date.now()-60000).toISOString()}
+ const signed=privateRestoreInputParts({...privatePayload,confirmedInvitation:proof},'123-1',operatorKeys.privateKey)
+ assert.deepEqual(readPrivateRestoreInput(signed,'123-1',operatorKeys.publicKey).confirmedInvitation,proof)
+ const value=JSON.parse(Buffer.from(signed.join(''),'base64').toString())
+ for(const change of [{invitationId:'88888888-8888-4888-8888-888888888888'},{claimedAt:new Date(Date.now()-180000).toISOString()},{ownerConfirmedAt:new Date(Date.now()-30000).toISOString()}])
+  assert.throws(()=>readPrivateRestoreInput(parts({...value,confirmedInvitation:{...proof,...change}}),'123-1',operatorKeys.publicKey),/private_signature/)
+ delete value.confirmedInvitation
+ assert.throws(()=>readPrivateRestoreInput(parts(value),'123-1',operatorKeys.publicKey),/private_signature/)
+ assert.throws(()=>privateRestoreInputParts({...privatePayload,confirmedInvitation:proof,currentProfileEvidence:{messageSha256:'a'.repeat(64),since:new Date().toISOString()}},'123-1',operatorKeys.privateKey),/conflicting_evidence/)
+})
+
+test('invalid owner confirmation never reads the database and runtime evidence never uses owner privileges',async()=>{
+ const proof={invitationId:'77777777-7777-4777-8777-777777777777',claimedAt:new Date(Date.now()-120000).toISOString(),ownerConfirmedAt:new Date(Date.now()-60000).toISOString()}
+ for(const value of [{}, {...proof,profileId:privateTarget.athleteProfileId},{...proof,claimedAt:new Date(Date.now()+60000).toISOString()},
+  {...proof,ownerConfirmedAt:new Date(Date.now()-180000).toISOString()}, {...proof,claimedAt:new Date(Date.now()-8*86400000).toISOString()}]){
+  assert.throws(()=>readConfirmedRestoreInvitation(value),/confirmed_invitation/)
+  await assert.rejects(planClientRestore({query:async()=>assert.fail('invalid proof must not query')},{},privateExpected,null,value),/confirmed_invitation/)
+ }
+ for(const row of [{username:'fit_owner',readonly:'on'},{username:'fit_api',readonly:'on',rolsuper:false,rolbypassrls:true}]){
+  const calls=[]
+  await assert.rejects(readConfirmedRestoreVisibility({query:async sql=>{calls.push(sql);return{rows:[row]}}},
+   {confirmedCardEvidence:{writePlanReady:false,currentId:privateTarget.athleteProfileId,cards:[]}}),/runtime_role/)
+  assert.equal(calls.at(-1),'rollback');assert.equal(calls.some(sql=>sql.includes('public.')),false)
+ }
+})
+
+test('all seventeen import scopes are bounded, distinct and signed; the audit cannot request writes',async()=>{
+ const scope=Array.from({length:17},(_,i)=>({code:'F'+String(i+1).padStart(2,'0'),profileId:randomUUID(),journalKind:i===16?'trainer_self':'athlete',
+  expectedHistory:{clientId:randomUUID(),workoutIds:[randomUUID()],workouts:1,exercises:1,sets:1}}))
+ const signed=privateRestoreInputParts({...privatePayload,importedAccessAudit:scope},'123-1',operatorKeys.privateKey)
+ assert.deepEqual(readPrivateRestoreInput(signed,'123-1',operatorKeys.publicKey).importedAccessAudit,scope)
+ const value=JSON.parse(Buffer.from(signed.join(''),'base64').toString())
+ value.importedAccessAudit[0].profileId=randomUUID()
+ assert.throws(()=>readPrivateRestoreInput(parts(value),'123-1',operatorKeys.publicKey),/private_signature/)
+ assert.equal(readImportedAccessAudit(scope.map((v,i)=>i===0?{...v,profileId:null}:v)).length,17)
+ for(const bad of [scope.slice(1),[...scope,scope[0]],scope.map(v=>({...v,code:'F01'})),scope.map(v=>({...v,profileId:scope[0].profileId})),scope.map(v=>({...v,extra:'write'}))]){
+  assert.throws(()=>readImportedAccessAudit(bad),/imported_audit_scope/)
+  await assert.rejects(planClientRestore({query:async()=>assert.fail('invalid scope must not query')},{},privateExpected,null,null,bad),/imported_audit_scope/)
+ }
+})
+
+
+test('confirmed card repair is separately signed and cannot piggyback on a read-only audit',()=>{
+ const now=new Date().toISOString(),proof={invitationId:randomUUID(),claimedAt:now,ownerConfirmedAt:now}
+ const value={...privatePayload,confirmedInvitation:proof,repairMode:'merge_confirmed_cards'}
+ const signed=privateRestoreInputParts(value,'123-1',operatorKeys.privateKey)
+ assert.equal(readPrivateRestoreInput(signed,'123-1',operatorKeys.publicKey).repairMode,'merge_confirmed_cards')
+ const parsed=JSON.parse(Buffer.from(signed.join(''),'base64').toString('utf8'))
+ delete parsed.repairMode
+ assert.throws(()=>readPrivateRestoreInput(parts(parsed),'123-1',operatorKeys.publicKey),/private_signature/)
+ const readonly=privateRestoreInputParts({...privatePayload,confirmedInvitation:proof},'123-1',operatorKeys.privateKey)
+ const injected=JSON.parse(Buffer.from(readonly.join(''),'base64').toString('utf8'));injected.repairMode='merge_confirmed_cards'
+ assert.throws(()=>readPrivateRestoreInput(parts(injected),'123-1',operatorKeys.publicKey),/private_signature/)
+ assert.throws(()=>privateRestoreInputParts({...privatePayload,repairMode:'merge_confirmed_cards'},'123-1',operatorKeys.privateKey),/conflicting_evidence/)
+ assert.throws(()=>privateRestoreInputParts({...value,repairMode:'anything'},'123-1',operatorKeys.privateKey),/card_repair_mode/)
 })

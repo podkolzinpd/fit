@@ -71,6 +71,6 @@ test('trainer profile controls and feedback fit the iOS shell', async ({ page },
   await expect(page.getByText(/На экран „Домой“/)).toBeVisible()
   await page.getByRole('button', { name: 'Закрыть' }).click()
   await page.getByRole('button', { name: 'Предложение или проблема' }).click()
-  await expect(page.getByRole('form', { name: 'Напишите команде Fit' })).toBeVisible()
+  await expect(page.getByRole('form', { name: 'Напишите нам' })).toBeVisible()
   await expect(page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).resolves.toBe(true)
 })

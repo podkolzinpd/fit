@@ -4,7 +4,7 @@ import { useDataBackend } from '../../app/data-backend-context'
 import { trackGoal } from '../../shared/yandex-metrika'
 import { SaveStatus } from '../../shared/ui'
 
-export function AppFeedbackForm({ onClose }: { onClose: () => void }) {
+export function AppFeedbackForm({ onClose, compact = false }: { onClose: () => void; compact?: boolean }) {
   const { appFeedback: appFeedbackRepository } = useDataBackend()
   const [kind, setKind] = useState<AppFeedbackKind>('suggestion')
   const [message, setMessage] = useState('')
@@ -41,8 +41,8 @@ export function AppFeedbackForm({ onClose }: { onClose: () => void }) {
   </section>
 
   return <form className="app-feedback-card" aria-labelledby="app-feedback-title" onSubmit={onSubmit}>
-    <div className="app-feedback-head">
-      <div><p className="eyebrow">ОБРАТНАЯ СВЯЗЬ</p><h2 id="app-feedback-title">Напишите команде Fit</h2></div>
+    <div className={compact ? 'app-feedback-head app-feedback-head-compact' : 'app-feedback-head'}>
+      <div>{!compact && <p className="eyebrow">ОБРАТНАЯ СВЯЗЬ</p>}<h2 id="app-feedback-title">{compact ? 'Напишите нам' : 'Напишите команде Fit'}</h2></div>
       <button type="button" className="link" onClick={onClose}>Закрыть</button>
     </div>
     <div className="app-feedback-kinds" role="group" aria-label="Тип сообщения">

@@ -50,6 +50,16 @@ export async function verifyCloudruHttp(bundle, base) {
     }
   }
   for (const file of bundle.files) await expect(`/${file.key}`, file)
+  for (const file of bundle.files.filter((entry) => entry.key.endsWith('/index.html'))) {
+    const directory = '/' + file.key.slice(0, -'/index.html'.length)
+    await expect(directory + '/', file)
+    const redirect = await fetch(new URL(directory, url), {
+      redirect: 'manual', signal: AbortSignal.timeout(5_000),
+    })
+    if (redirect.status !== 308 || redirect.headers.get('location') !== directory + '/') {
+      throw new Error('Static directory canonical redirect mismatch')
+    }
+  }
   for (const path of ['/', '/auth', '/auth/yandex/callback', '/me', '/today']) {
     await expect(path, fileFor('index.html'))
   }
