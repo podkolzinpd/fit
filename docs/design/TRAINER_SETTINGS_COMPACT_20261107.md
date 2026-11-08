@@ -524,3 +524,20 @@ Runtime SET202 не изменился. Финальный exact-sourceCI P2 о�
 
 Дальше: sourceCI P2 параллельно проверкам/выпуску P1; mainP2 только после
 P1фактической приёмки и подтверждённой очереди. Потом оставшийсяSET203.
+
+## Итерация 23 — 08.11.2026 — Codex / OpenAI
+
+P2sourceCI42431478928 выявил устаревшее ожидание в существующем Lime
+notification permission/reconnect сценарии: trainer с chat_message=false
+теперь показывает согласованное «Новые сообщения выключены», а тест всё
+ещё искал «Уведомления настроены». Исправлены два точных ожидания до/после
+retry только для trainer; клиентское ожидание и все проверки разрешения,
+категорий, test-send, failed refresh, disabled switch и recovery сохранены.
+Runtime не изменён, таймауты/asserts не ослаблены. Красный лог сохранён.
+Дальше: targeted Chromium/WebKit и новый exact-headCI, без обхода очереди.
+
+Результат адресной проверки:4/4 (trainer/client × Chromium/WebKit) с тем же
+VITE_CLIENT_LIME_ENABLED=true, что в CI; retries0. Первый локальный запуск
+с выключенным harness был4skip, второй без clientLime env показал другой
+clientэкран и2/4red — эти логи не выданы за приёмку. Включение точного
+fixturecohort исправило окружение, код приложения/clientтесты не менялись.
