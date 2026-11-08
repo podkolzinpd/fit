@@ -41,7 +41,7 @@ export function gradleKotlinInit(repository) {
                 metadataSources { mavenPom() }
             }
         }
-        filter { includeModule('org.jetbrains.kotlin', 'kotlin-compiler-embeddable') }
+        filter { includeVersion('org.jetbrains.kotlin', 'kotlin-compiler-embeddable', '2.0.21') }
     }
 }
 gradle.beforeProject { project ->

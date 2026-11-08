@@ -70,10 +70,10 @@ test('uses byte-identical official Kotlin artifacts and retains transitive metad
   const init = gradleKotlinInit(join(root, "space ' quote"))
   assert.match(init, /space%20%27%20quote/)
   assert.match(init, /metadataSources \{ mavenPom\(\) \}/)
-  assert.match(init, /filter \{ includeModule\('org.jetbrains.kotlin', 'kotlin-compiler-embeddable'\) \}/)
+  assert.match(init, /filter \{ includeVersion\('org.jetbrains.kotlin', 'kotlin-compiler-embeddable', '2.0.21'\) \}/)
   assert.match(init, /project.buildscript.repositories/)
   assert.match(init, /project.repositories/)
-  assert.doesNotMatch(init, /artifact\(\)|includeGroup|repositories.clear|force|substitut|offline|credentials/)
+  assert.doesNotMatch(init, /artifact\(\)|includeModule|includeGroup|repositories.clear|force|substitut|offline|credentials/)
 }))
 
 test('matches Gradle8.14.3 PathAssembler without fabricating wrapper success markers', async () => {
