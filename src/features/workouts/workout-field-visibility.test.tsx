@@ -5,6 +5,17 @@ import { keepWorkoutFieldVisible, useWorkoutFieldVisibility } from './workout-fi
 
 afterEach(() => { document.body.replaceChildren(); vi.restoreAllMocks(); vi.unstubAllGlobals() })
 
+it('keeps the edited plan field below its actual sticky header', () => {
+  document.body.innerHTML = '<div class="content"><main class="coach-reference-form"><header class="page-header" style="position:sticky"></header><input></main></div>'
+  const content = document.querySelector<HTMLElement>('.content')!, input = document.querySelector('input')!, header = document.querySelector('header')!
+  vi.stubGlobal('visualViewport', { height: 400, offsetTop: 0 })
+  geometry(content, input, 65)
+  vi.spyOn(header, 'getBoundingClientRect').mockReturnValue(new DOMRect(0, 0, 390, 60))
+  content.scrollTop = 100
+  keepWorkoutFieldVisible(input)
+  expect(content.scrollTop).toBe(89)
+})
+
 it('does not counter-scroll a retained field while the native keyboard expands the viewport', () => {
   let pending: FrameRequestCallback = () => undefined
   vi.stubGlobal('requestAnimationFrame', vi.fn((callback: FrameRequestCallback) => { pending = callback; return 1 }))

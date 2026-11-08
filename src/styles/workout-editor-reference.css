@@ -14,7 +14,13 @@
 .workout-editor-reference .coach-plan-save:disabled svg { filter: none; opacity: .6 }
 .workout-editor-reference .workout-form { gap: 2px }
 .workout-editor-reference .coach-plan-form-controls { display: grid; gap: 2px; min-width: 0; margin: 0; padding: 0; border: 0 }
-.workout-editor-reference .coach-plan-saving { margin: 8px 18px; font-size: 14px; color: var(--lime-text-secondary) }
+.phone-frame.fit-lime-shell.coach-workout-reference .coach-reference-form.workout-editor-reference { padding-top: 0 }
+.phone-frame.fit-lime-shell.coach-workout-reference .coach-reference-form > .page-header { position: sticky; top: 0; z-index: 12; margin: 0 -2px 24px; padding: 16px 16px 0; background: var(--workout-editor-bg, #000) }
+.coach-reference-form > .page-header .coach-plan-save-error { grid-column: 1 / -1; margin: 0; padding: 8px 0; color: var(--danger); font-size: 14px; line-height: 20px; overflow-wrap: anywhere }
+.coach-reference-form .coach-plan-save-progress { display: block; width: 18px; height: 18px; border: 2px solid currentColor; border-top-color: transparent; border-radius: 50%; animation: coach-plan-save-spin .8s linear infinite }
+.phone-frame.fit-lime-shell.coach-workout-reference .coach-reference-form .coach-plan-save[aria-busy='true'] { display: grid; place-items: center; background: var(--lime-accent); color: var(--lime-text-on-accent); opacity: 1 }
+@keyframes coach-plan-save-spin { to { transform: rotate(360deg) } }
+@media (prefers-reduced-motion: reduce) { .coach-reference-form .coach-plan-save-progress { animation: none } }
 .phone-frame.fit-lime-shell:is(.coach-workout-reference, .client-workout-reference) .workout-editor-reference .workout-form-section { min-width: 0; padding: 0; border: 0; border-radius: 0; background: transparent; box-shadow: none; gap: 0 }
 .phone-frame.fit-lime-shell:is(.coach-workout-reference, .client-workout-reference) .workout-editor-reference .workout-form-section:first-child { padding: 0 0 24px; border: 0; background: transparent; gap: 12px }
 .workout-editor-reference .coach-plan-details { display: grid; gap: 2px; padding: 0 14px }

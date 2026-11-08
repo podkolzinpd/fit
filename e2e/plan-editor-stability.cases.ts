@@ -2,6 +2,87 @@ import { expect, test } from '@playwright/test'
 import { coachGestureWorkout, mockPilot, workoutId } from './fit-lime-fixtures'
 
 export function planEditorStabilityCases() {
+  test('one sticky plan header saves from the bottom and preserves input on failure', async ({ page }, info) => {
+    const actor = 'c0ac0000-6010-4000-8000-000000000001'
+    await page.clock.setFixedTime(new Date('2026-11-08T09:00:00Z'))
+    const source = coachGestureWorkout(false, 6)
+    source.status = 'planned'; source.startedAt = null; source.createdBy = actor; source.workoutDate = '2026-11-08'
+    const backend = await mockPilot(page, { role: 'trainer', profileId: actor, fitLime: true, workouts: [source] })
+    let release: (() => void) | undefined
+    let attempts = 0
+    const writes: Array<{ exercises: Array<{ sets: Array<{ weightKg: number }> }> }> = []
+    await page.route(`**/v1/workouts/${workoutId}`, async route => {
+      if (route.request().method() !== 'PUT') return route.fallback()
+      attempts += 1
+      const draft = route.request().postDataJSON() as typeof writes[number]
+      writes.push(draft)
+      if (attempts === 1) {
+        await new Promise<void>(resolve => { release = resolve })
+        return route.fulfill({ status: 503, json: { error: 'unavailable' } })
+      }
+      backend.getWorkouts()[0]!.exercises.at(-1)!.sets[0]!.weightKg = draft.exercises.at(-1)!.sets[0]!.weightKg
+      backend.getWorkouts()[0]!.version += 1
+      await route.fulfill({ json: { workout: { id: workoutId } } })
+    })
+    await page.goto('/today?date=2026-11-08')
+    const timeline = page.locator('.schedule-v2-timeline')
+    await expect(timeline).toBeVisible()
+    const calendarTop = await timeline.evaluate(node => node.getBoundingClientRect().top)
+    await page.locator(`a[href="/workouts/${workoutId}"]`).first().click()
+    await page.getByRole('link', { name: 'Изменить план', exact: true }).click()
+    const save = page.getByRole('button', { name: 'Сохранить план', exact: true })
+    const header = page.locator('.coach-reference-form > .page-header')
+    await expect(save).toBeVisible()
+    const initial = await save.boundingBox()
+    const last = page.locator('.planned-exercise').last().getByLabel('Вес, подход 1', { exact: true })
+    await last.fill('37.5')
+    await page.locator('.content').evaluate(node => { node.scrollTop = node.scrollHeight })
+    await expect(header).toHaveCSS('position', 'sticky')
+    const bottom = await save.boundingBox()
+    expect(Math.abs(bottom!.y - initial!.y)).toBeLessThanOrEqual(1)
+    expect(await save.evaluate(node => { const r = node.getBoundingClientRect(); return node.contains(document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2)) })).toBe(true)
+    await expect(page.locator('.workout-action-row')).toHaveCount(0)
+    const viewport = page.viewportSize()!
+    for (const width of [320, 430]) {
+      await page.setViewportSize({ width, height: viewport.height })
+      await page.locator('.content').evaluate(node => { node.scrollTop = node.scrollHeight })
+      const geometry = await save.evaluate(node => { const r = node.getBoundingClientRect(); return { width: r.width, height: r.height, inside: r.left >= 0 && r.right <= innerWidth, hit: node.contains(document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2)) } })
+      expect(geometry).toEqual({ width: 44, height: 44, inside: true, hit: true })
+    }
+    await page.setViewportSize(viewport)
+    await page.locator('.content').evaluate(node => { node.scrollTop = node.scrollHeight })
+    await page.screenshot({ path: info.outputPath('plan-sticky-header-at-bottom.png') })
+    const setFields = page.locator('.planned-exercise').last().locator('.planned-set-input')
+    const fieldGeometry = () => setFields.evaluateAll(fields => fields.map(field => { const r = field.getBoundingClientRect(); return { x: r.x, width: r.width } }))
+    const beforeSave = await fieldGeometry()
+    await save.tap()
+    await expect(save).toHaveAttribute('aria-busy', 'true')
+    await expect(save.locator('.coach-plan-save-progress')).toBeVisible()
+    await expect(save).toBeDisabled()
+    expect(await fieldGeometry()).toEqual(beforeSave)
+    await page.screenshot({ path: info.outputPath('plan-sticky-save-pending.png') })
+    await page.touchscreen.tap(bottom!.x + bottom!.width / 2, bottom!.y + bottom!.height / 2)
+    expect(attempts).toBe(1)
+    await expect.poll(() => Boolean(release)).toBe(true)
+    release!()
+    await expect(header.getByRole('alert')).toBeVisible()
+    await expect(last).toHaveValue('37.5')
+    await expect(save).toBeEnabled()
+    await page.screenshot({ path: info.outputPath('plan-sticky-save-error.png') })
+    await save.tap()
+    await expect(page).toHaveURL(/\/today\?date=2026-11-08$/)
+    await expect(page.locator('.fit-lime-plan-saved')).toBeVisible()
+    await expect(page.locator('.fit-lime-plan-saved')).toHaveCSS('position', 'fixed')
+    expect(await timeline.evaluate(node => node.getBoundingClientRect().top)).toBe(calendarTop)
+    expect(writes).toHaveLength(2)
+    expect(writes[1]!.exercises.at(-1)!.sets[0]!.weightKg).toBe(37.5)
+    await page.screenshot({ path: info.outputPath('calendar-save-receipt-no-layout-shift.png') })
+    await page.locator(`a[href="/workouts/${workoutId}"]`).first().click()
+    await page.goBack()
+    await expect(timeline).toBeVisible()
+    await expect(page.locator('.fit-lime-plan-saved')).toHaveCount(0)
+  })
+
   test('exercise notes remain readable through plan copy and athlete history and Live', async ({ page }, info) => {
     const actor = 'c0ac0000-6010-4000-8000-000000000001'
     const athlete = 'c11e0000-6010-4000-8000-000000000001'

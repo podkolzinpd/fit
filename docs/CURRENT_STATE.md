@@ -36,7 +36,7 @@ SRV/ADM/CPT приняты, personal test ON. DUT:2PR в работе, duty OFF;
 
 ## Точка продолжения
 [UX:4PR, проверки](design/WORKOUT_LIFECYCLE_UX_AUDIT_20261101.md).
-YAFIT-696: стабильная клавиатура и упражнения первыми — всем тренерам.
+YAFIT-696: E801–E808 — RPE, клавиатура, заметки, одна sticky-шапка;4PR в выпуске.
 [План и журнал](design/COACH_EXERCISE_FIRST_AND_KEYBOARD_20261030.md); текущие CI,
 слияния и опубликованная версия — [в задаче](https://st.yandex-team.ru/YAFIT-696).
 Общая клавиатура обеим ролям; клиентский дизайн и механика сохраняются.

@@ -6,7 +6,9 @@ export function keepWorkoutFieldVisible(target: HTMLElement): void {
   if (!target.isConnected || !(content instanceof HTMLElement) || content.clientHeight <= 0) return
   const bounds = content.getBoundingClientRect()
   const viewport = window.visualViewport
-  const top = Math.max(bounds.top, viewport?.offsetTop ?? 0) + 16
+  const header = target.closest('.coach-reference-form')?.querySelector<HTMLElement>(':scope > .page-header')
+  const headerBottom = header && getComputedStyle(header).position === 'sticky' ? header.getBoundingClientRect().bottom : 0
+  const top = Math.max(bounds.top, viewport?.offsetTop ?? 0, headerBottom) + 16
   const bottom = Math.min(bounds.bottom, viewport ? viewport.offsetTop + viewport.height : innerHeight) - 16
   if (bottom <= top) return
   const field = target.getBoundingClientRect()
