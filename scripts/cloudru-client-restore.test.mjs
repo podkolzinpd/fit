@@ -250,3 +250,22 @@ test('confirmed card repair is separately signed and cannot piggyback on a read-
  assert.throws(()=>privateRestoreInputParts({...privatePayload,repairMode:'merge_confirmed_cards'},'123-1',operatorKeys.privateKey),/conflicting_evidence/)
  assert.throws(()=>privateRestoreInputParts({...value,repairMode:'anything'},'123-1',operatorKeys.privateKey),/card_repair_mode/)
 })
+
+
+test('cause details are separately signed and limited to two existing receipt scopes',async()=>{
+ const scope=Array.from({length:17},(_,i)=>({code:'F'+String(i+1).padStart(2,'0'),profileId:randomUUID(),journalKind:i===16?'trainer_self':'athlete',
+  expectedHistory:{clientId:randomUUID(),workoutIds:[randomUUID()],workouts:1,exercises:1,sets:1}}))
+ const payload={...privatePayload,importedAccessAudit:scope,auditDetailCodes:['F01','F02']}
+ const signed=privateRestoreInputParts(payload,'123-1',operatorKeys.privateKey)
+ assert.deepEqual(readPrivateRestoreInput(signed,'123-1',operatorKeys.publicKey).auditDetailCodes,['F01','F02'])
+ const value=JSON.parse(Buffer.from(signed.join(''),'base64').toString())
+ for(const auditDetailCodes of [['F01'],['F01','F03']])assert.throws(()=>readPrivateRestoreInput(parts({...value,auditDetailCodes}),'123-1',operatorKeys.publicKey),/private_signature/)
+ delete value.auditDetailCodes
+ assert.throws(()=>readPrivateRestoreInput(parts(value),'123-1',operatorKeys.publicKey),/private_signature/)
+ for(const auditDetailCodes of [[],['F01','F01'],['F01','F02','F03'],['F18'],['raw-profile'],[1]]){
+  assert.throws(()=>privateRestoreInputParts({...payload,auditDetailCodes},'123-1',operatorKeys.privateKey),/audit_details_scope/)
+  await assert.rejects(planClientRestore({query:async()=>assert.fail('bad detail scope must not query')},{},privateExpected,null,null,scope,null,auditDetailCodes),/audit_details_scope/)
+ }
+ const now=new Date().toISOString()
+ assert.throws(()=>privateRestoreInputParts({...payload,confirmedInvitation:{invitationId:randomUUID(),claimedAt:now,ownerConfirmedAt:now}},'123-1',operatorKeys.privateKey),/conflicting_evidence/)
+})
