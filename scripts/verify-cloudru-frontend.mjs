@@ -56,7 +56,7 @@ export async function verifyCloudruHttp(bundle, base) {
     const redirect = await fetch(new URL(directory, url), {
       redirect: 'manual', signal: AbortSignal.timeout(5_000),
     })
-    if (redirect.status !== 308 || new URL(redirect.headers.get('location') ?? '', url).pathname !== directory + '/') {
+    if (redirect.status !== 308 || redirect.headers.get('location') !== directory + '/') {
       throw new Error('Static directory canonical redirect mismatch')
     }
   }

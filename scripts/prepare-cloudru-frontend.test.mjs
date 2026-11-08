@@ -87,7 +87,7 @@ test('candidate binds only loopback and retains SPA, stale JS recovery, MIME and
   assert.match(candidate, /location = \/assets\/engine-12345678.wasm[\s\S]*?application\/wasm/)
   assert.match(candidate, /public, max-age=31536000, immutable/)
   assert.match(candidate, /location = \/sw.js[\s\S]*?no-cache/)
-  assert.ok(candidate.includes('location = /for-trainers { return 308 /for-trainers/; }'))
+  assert.ok(candidate.includes('location = /for-trainers { absolute_redirect off; return 308 /for-trainers/; }'))
   assert.ok(candidate.includes('location = /for-trainers/ { rewrite ^ /for-trainers/index.html last; }'))
   assert.match(candidate, /rewrite \^ \/asset-recovery.js last/)
   assert.match(candidate, /location \/ \{ try_files \$uri \/index.html; \}/)
@@ -119,10 +119,11 @@ test('HTTP verification exercises real bytes, routes, MIME/cache and missing ass
   const { bundle } = await fixture(t)
   const requested = []
   let invalidMetadata = false
+  let internalRedirect = false
   const server = createServer((request, response) => {
     requested.push(request.url)
     if (request.url === '/for-trainers') {
-      response.writeHead(308, { Location: '/for-trainers/' }).end()
+      response.writeHead(308, { Location: internalRedirect ? 'http://fit-training.ru:18081/for-trainers/' : '/for-trainers/' }).end()
       return
     }
     const key = request.url.slice(1)
@@ -145,6 +146,9 @@ test('HTTP verification exercises real bytes, routes, MIME/cache and missing ass
   assert.ok(requested.includes('/for-trainers/'))
   assert.ok(requested.includes('/for-trainers'))
   await assert.rejects(verifyCloudruHttp(bundle, 'https://production.example.test/'), /loopback HTTP/)
+  internalRedirect = true
+  await assert.rejects(verifyCloudruHttp(bundle, 'http://127.0.0.1:' + server.address().port + '/'), /canonical redirect/)
+  internalRedirect = false
   invalidMetadata = true
   await assert.rejects(verifyCloudruHttp(bundle, 'http://127.0.0.1:' + server.address().port + '/'), /metadata mismatch/)
 })
