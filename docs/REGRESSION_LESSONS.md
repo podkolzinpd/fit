@@ -269,3 +269,12 @@ Behind или исторический green сами по себе не док�
 остановившейся задачи; готовность и текущий hold проверять по конкретной
 очереди, не назначать себе приоритет временем CI. Новых согласований выпуска
 это не добавляет. [Разбор](design/TRAINER_SETTINGS_COMPACT_20261107.md#итерация-22--08112026--codex--openai).
+
+## Публичные вложенные страницы за reverse proxy — 08.11.2026
+
+Python-preview не подтверждает Nginx-маршруты каталогов. Для manifest с вложенным
+index.html проверять exact /directory/, совпадение bytes и redirect с /directory.
+Location должен быть относительным: абсолютный redirect внутреннего Nginx может
+передать наружу http и loopback-port. Проверять весь Location, не только pathname.
+Проверка: prepare-cloudru-frontend tests, реальный Nginx integration и публичный
+readback после promotion. История: TRAINER_LANDING_20261107, итерации9–10.
