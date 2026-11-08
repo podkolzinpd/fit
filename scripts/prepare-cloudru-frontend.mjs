@@ -26,12 +26,20 @@ export async function materializeCloudruFrontend(bundle, directory, expectedComm
 }
 
 function staticLocations(bundle) {
-  return bundle.files.map((file) => `    location = /${file.key} {
+  const files = bundle.files.map((file) => `    location = /${file.key} {
         default_type "${file.contentType}";
         add_header Cache-Control "${file.cacheControl}" always;
         add_header X-Content-Type-Options nosniff always;
         try_files $uri =404;
-    }`).join('\n') + `
+    }`).join('\n')
+  // Nested static entrypoints must not fall through to the application's SPA.
+  const directories = bundle.files.filter((file) => file.key.endsWith('/index.html'))
+    .map((file) => {
+      const directory = file.key.slice(0, -'/index.html'.length)
+      return `    location = /${directory} { return 308 /${directory}/; }
+    location = /${directory}/ { rewrite ^ /${file.key} last; }`
+    }).join('\n')
+  return files + '\n' + directories + `
     location ~ ^/assets/.*\\.js$ {
         rewrite ^ /asset-recovery.js last;
     }
