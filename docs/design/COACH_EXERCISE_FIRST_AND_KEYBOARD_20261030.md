@@ -493,6 +493,14 @@ Chromium/WebKit без retries: closing phases/offset/scroll, Next/27.5/RPE,
 Открыто: итог lint/build, обязательный CI/Android, PR4 и опубликованный выпуск.
 Дальше: PR3, затем одна закреплённая шапка и обратная связь сохранения.
 
+Уточнение итерации12: CI general-WebKit выявил ошибку окружения нового
+consumer-теста: в Mono он ожидал Lime-only details. Runtime не меняется;
+один сценарий теперь явно проверяет действующий контракт каждой lane:
+VITE_CLIENT_LIME_ENABLED=true — read-only «От тренера», иначе legacy cue.
+Роль/текст/раздельная личная заметка сохраняют прежние assertions. Локально
+Mono2/2 и Lime2/2 Chromium/WebKit; gates/таймауты/retries не ослаблены.
+Повтор полного CI выполняется для новой головы, прежнее падение сохранено.
+
 
 ## Итерация13 — 08.11.2026 — Codex / OpenAI
 
