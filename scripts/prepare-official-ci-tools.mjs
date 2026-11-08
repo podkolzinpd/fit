@@ -13,6 +13,20 @@ export const officialTools = Object.freeze({
   terraform: { url: 'https://api.github.com/repos/yandex-cloud/terraform-provider-yandex/releases/assets/471147237?download=complete', size: 30461414, sha256: '214ac0a04a4f31ee0e3eb04ab1db9213c3ecaee9d4ebfd3d05b57399081c9d25' },
 })
 
+// This existing Capacitor dependency is fetched directly from Maven Central.
+// Upstream publishes SHA1 (the Gradle cache identity); SHA256 was independently
+// computed from the complete official artifact after verifying that SHA1.
+export const kotlinCompiler = Object.freeze({
+  url: 'https://repo.maven.apache.org/maven2/org/jetbrains/kotlin/kotlin-compiler-embeddable/2.0.21/kotlin-compiler-embeddable-2.0.21.jar',
+  size: 58272093,
+  sha256: '9fa8cdd1de0dccffe154c997d423ec6b5f53cd6d9177e3a77a9b0de03fb1bc81',
+  sha1: '79346ed53db48b18312a472602eb5c057070c54d',
+})
+
+export function gradleKotlinCacheJar(gradleHome) {
+  return join(gradleHome, 'caches/modules-2/files-2.1/org.jetbrains.kotlin/kotlin-compiler-embeddable/2.0.21', kotlinCompiler.sha1, 'kotlin-compiler-embeddable-2.0.21.jar')
+}
+
 async function verifyFile(path, spec) {
   if ((await stat(path)).size !== spec.size) throw new Error('Official tool size mismatch')
   const hash = createHash('sha256')
@@ -28,7 +42,7 @@ export async function downloadVerifiedAsset(spec, destination, fetchAsset = fetc
   let file
   try {
     const response = await fetchAsset(spec.url, {
-      headers: { Accept: 'application/octet-stream', 'X-GitHub-Api-Version': '2022-11-28' },
+      headers: { Accept: 'application/octet-stream', ...(new URL(spec.url).hostname === 'api.github.com' ? { 'X-GitHub-Api-Version': '2022-11-28' } : {}) },
       signal: AbortSignal.timeout(120_000),
     })
     if (response.status !== 200 || !response.body) throw new Error(`Official tool download failed: HTTP ${response.status}`)
@@ -67,7 +81,11 @@ export function gradleCacheZip(properties, gradleHome) {
 export async function prepareOfficialCiTool(mode, { root = process.cwd(), gradleHome = process.env.GRADLE_USER_HOME || join(homedir(), '.gradle'), pluginRoot, fetchAsset = fetch } = {}) {
   if (mode === 'gradle') {
     const properties = await readFile(join(root, 'android/gradle/wrapper/gradle-wrapper.properties'), 'utf8')
-    return downloadVerifiedAsset(officialTools.gradle, gradleCacheZip(properties, gradleHome), fetchAsset)
+    const archive = await downloadVerifiedAsset(officialTools.gradle, gradleCacheZip(properties, gradleHome), fetchAsset)
+    // Gradle's GroupedAndNamedUniqueFileStore uses SHA1 as the directory name.
+    // Do not create metadata or success markers, or change repository resolution.
+    await downloadVerifiedAsset(kotlinCompiler, gradleKotlinCacheJar(gradleHome), fetchAsset)
+    return archive
   }
   if (mode !== 'terraform' || !pluginRoot) throw new Error('Expected gradle or terraform with a temporary plugin directory')
   if (process.platform !== 'linux' || process.arch !== 'x64') throw new Error('Terraform CI provider requires linux/amd64')
