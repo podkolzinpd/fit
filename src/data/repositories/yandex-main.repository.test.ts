@@ -1690,6 +1690,7 @@ function installContractFetch() {
     const url = new URL(typeof input === 'string' || input instanceof URL ? String(input) : input.url)
     const method = init?.method ?? 'GET'
     const path = url.pathname
+    if (method === 'GET' && path === '/health') return jsonResponse({ status: 'ok' })
     if (method === 'GET' && path.endsWith('/active-workout')) return jsonResponse({ workout: {
       id: plannedWorkoutId, workoutDate: '2026-08-21', status: 'in_progress',
     } })
