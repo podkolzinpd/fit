@@ -7650,8 +7650,141 @@ Lime owner filters не превращаются в legacy classifier. Keyboard 
 
 Открыто: живые matches/cascade и clipping ещё не проверены на43bad62b;
 старые green результаты не подменяют их. Физический телефон/OAuth/native
-install не проверены. Новый push/PR/merge/deploy запрещены до согласования
-с root и отдельного разрешения выпуска владельцем; auto-merge не включается.
+install не проверены. Push/открытие PR допустимы после технического root ревью как подготовка
+результата; merge/deploy — только после нового отдельного разрешения владельца.
+Auto-merge не включается.
 Не начинать MC5 или остальные последующие runtime-этапы. Память journal full,
 повторных записей/очистки нет. Дальше — baseline трёх связанных участков и
 соразмерная локальная реализация с проверяемыми коммитами/снимками.
+
+
+## 181. MC4.4 — локальная проверка завершения Live, 08.11.2026
+
+Итерация — 08.11.2026 — GPT-6.1-sol / OpenAI. Выполнен только разрешённый
+MC4.4 из §180: клиентский inline finish-confirm/timer-review и тренерский
+native WorkoutAttendanceSheet live exit. MC4.3 принята владельцем. Новый
+merge/deploy не разрешён; PR и source CI готовит root после технического ревью.
+MC5 и следующие runtime-этапы не начаты. База проверок — main
+43bad62bd260d044311ba67fd30c07ac73775fe9, своя ветка и worktree из §180.
+
+### Доказанные потребители и минимальный runtime
+
+Четыре старых finish visual-семейства исключены только для modern client
+Live с fit-client-lime + workout-live-reference + client-live-v79. Общие
+margin/text-align и действия остаются. Новая абляция показала: реально нужны
+только font-size:14px у p и color:var(--fg) у tertiary. Добавлены две слабые
+Lime copies, всего две декларации. Прежние strong owners уже сохраняют
+primary/danger у cardio «Внести время» и accent у timer-review; их не копировали.
+В отличие от старой локальной заготовки не возвращены мёртвые p color/weight
+и primary copies. Текущий текст «Не подтверждено подходов: N» сохранён.
+
+У native attendance старое generic workout-decision-sheet семейство совпадало
+с одним modern элементом, но абляция меняла ноль свойств/геометрию/backdrop
+во всех 16 modern samples. В существующий Live guard добавлен только
+workout-live-exit-sheet, без копирования перекрытого paint. Native backdrop
+rgba(0,0,0,.7), width/scroll/form/focus/radio и сильные accepted Lime owners
+сохранены. Два off attendance — negative controls; четыре существующих
+legacy duration cases обеих ролей — отдельный положительный контроль generic
+семейства. Общие root controls, disabled/focus/fonts остаются долгом MC7/MC8,
+не объявляются независимыми от старой основы.
+
+MC-FIND-REVIEW-CLIP-01 заново воспроизведена на 43bad: во всех десяти modern
+samples кнопка таймера выходила из карточки на 22 px, попадала только в 3 из
+9 hit-test точек и перекрывала следующий блок на 20 px при scrollTop=0.
+Два legacy controls имели 9/9 hits и overlap=0. Parent прочитала baseline и
+отдельно одобрила включение прежней узкой static/flex адаптации. Четыре
+absolute-placement свойства исключены только из прямого v79 wrapper; принятая
+static/flex строка добавлена в client-workout-reference.css. Overflow:hidden,
+DOM, fold/review, действия и анимационные механики прежние. Карточка намеренно
+стала выше на 44 px; новый дизайн/подписи/дополнительный отступ не добавлялись.
+
+Исходные WorkoutsPages.tsx, WorkoutAttendanceSheet.tsx, shared/ui.tsx,
+package/lock и playwright config побайтно равны базе. Runtime затронут только
+в src/styles.css, src/styles/workout-live-reference.css и
+src/styles/client-workout-reference.css. Четыре новых QA helper файла
+подключены обычным импортом в client-workout-reference.spec.ts; CI не менялся.
+Новые проверки ловят ownership/восстановление CSSOM и реальную обрезку кнопки,
+а не дублируют бизнес-тесты.
+
+### Исходная база и результат
+
+58-case baseline на неизменённом product CSS: 52 ожидаемых red и 6 pass,
+неожиданных ошибок нет. Это 26 modern finish ownership red, 16 modern
+attendance ownership red и 10 modern clipping red; controls — два legacy
+finish, два off attendance и два legacy layout. Во всех 46 ownership cases
+строго прошли полный CSSOM и focus/scroll/anchor round-trip. Diagnostics 0.
+Baseline production build/types/fonts/startup прошёл.
+
+После минимального CSS candidate: 58/58 passed, 43.7 s, retry 0, skip 0.
+Finish: 28/28 computed styles, геометрия и фон кадра exact; 18/26 PNG exact.
+Ровно восемь изменённых PNG — timer-review с намеренно исправленной кнопкой;
+это не pixel-identical миграция всего кадра. Attendance: 18/18 styles,
+геометрия, backdrop и PNG exact. Layout: все 30 modern folded/expanded/refolded
+состояний имеют 9/9 hits, scrollTop=0, overlap=0; рост карточки ровно 44 px.
+Оба legacy layout controls без изменения высоты. Реальный tap центра сохраняет
+facts/confirmedAt, снимает только ожидаемый timerConfirmed и сохраняет rest,
+pausedAt и pausedSeconds до и после reload. Normal/reduced motion проверены
+по computed .32 s/.00001 s и завершению конечных анимаций.
+
+В QA original CSSRule.style не переприсваивается: selector-only ablation
+по настоящим CSSRule refs, точные neutral clones смешанных правил, полное
+восстановление CSSOM и состояния. Положительные modern owner filters не входят
+в legacy classifier. Временный overflow-anchor:none относится только к
+искусственной абляции; исходные inline values/priority/style отсутствие и
+натуральные действия восстанавливаются строго. Keyboard calibration не
+выдаётся за исправление natural autofocus. Assertions/timeouts/retries прежние.
+
+Независимые root receipts: /tmp/fit-mc44-root-baseline-review.json,
+/tmp/fit-mc44-root-source-proof.json и
+/tmp/fit-mc44-root-candidate-comparison.json. AST подтверждает 25 715 исходных
+legacy declaration records без изменений после нормализации шести guards,
+все existing Lime declarations прежние; добавлены только 2 paint и 8 placement
+properties. Визуально просмотрены actual WebKit client light Original390
+folded timer-review, client light Compact390 cardio и trainer dark accounting;
+root дополнительно посмотрела trainer Compact375 empty delete. Обрезки кнопки
+больше нет, focus видим, вид соседних действий сохранён.
+
+Логи и captures: /tmp/fit-mc44-release-baseline-build.log,
+/tmp/fit-mc44-release-baseline.log, /tmp/fit-mc44-release-baseline-results,
+/tmp/fit-mc44-release-baseline-summary.json,
+/tmp/fit-mc44-release-candidate-build.log,
+/tmp/fit-mc44-release-candidate.log и
+/tmp/fit-mc44-release-candidate-results. Scoped helper lint, полный repository
+lint и policy scripts/fit-lime-split.test.mjs (8/8) прошли; targeted unit
+WorkoutAttendanceSheet/live-phase/rest-timer-storage — 31/31 (3 files).
+Полный coverage не повторялся без новой причины; exact-source CI ещё гейт.
+
+Свежий fetch перед финализацией: main cde47521652a6f933c72e65489cf4c6fcebf5a26
+(#2048). Это ops/server/history restore, frontend/shared/CSS не затронуты;
+AGENTS/FIT_WORKFLOW/ENGINEERING прежние. ACTIVE_CONTRACTS добавляет независимый
+AH-CONFIRMED-CARDS-03. Эти изменения не откатываются: обычную интеграцию свежего
+main и exact-source CI выполнит root перед PR/приёмкой версии. Локальные
+результаты выше относятся к 43bad + MC4.4, а не автоматически к новому head.
+
+Связанные existing browser-механики выполнила root на том же candidate dist:
+52 уникальных сценария в Chromium/WebKit, retry 0, flaky 0, unexpected 0.
+Первый пакет дал 30 pass и 18 skip: отсутствовал штатный
+FIT_YANDEX_E2E_REQUIRED=true для attendance lane. Только эти 18 неисполненных
+attendance и четыре существующих swipe cases запущены с правильным temp env:
+22/22 pass за 20.6 s, без skip. Первые 30 успешных не повторялись. Это не
+«48/48 одним прогоном». Исходный startup EPERM localhost сохранён отдельно;
+он возник до тестов и не считается product red. Assertions/timeouts/product
+не менялись.
+
+Пакет включает ввод/редактирование подтверждённых фактов, отмену drag,
+раздельные swipe/drag/editing, keyboard Next, cardio warning/focus, timer-review,
+pause/resume/reload, rest mode, unconfirm/reconfirm/fold, populated/empty Live,
+«Не состоялась», удаление пустой записи, 503/reload/retry/pending и защиту от
+повторных команд. Все четыре legacy duration-positive реально исполнены.
+Будущая дата, финансовые loading/error/retry и передача точного package ID
+дополнительно покрыты существующими AttendanceSheet unit. Receipt:
+/tmp/fit-mc44-root-mechanics-receipt.json; исходные logs/report/selection/results
+имеют префикс /tmp/fit-mc44-root-mechanics, followup paths указаны в receipt.
+
+Ограничения: физические iPhone/Android, настоящий OAuth и native install не
+проверены. Тренерский Live остаётся фактически тёмным; client light/dark и
+Original/Compact, ширины 375/390/430 и trainer desktop 1440 проверены браузером.
+Новых необъяснённых product ошибок в ownership/layout пакете нет; известные
+старые cold-load/focus settlement квалификации не объявлены исправленными.
+Публикации ещё не было. После технического root review — один MC4.4 PR и CI,
+затем владельцу конкретная сводка и отдельное разрешение на выпуск.
