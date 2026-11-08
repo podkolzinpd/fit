@@ -52,6 +52,32 @@ afterEach(() => {
 })
 
 describe('AppViewportProvider', () => {
+  it('follows every closing keyboard frame instead of expanding at the opening threshold', () => {
+    vi.useFakeTimers()
+    const mobileViewport = installMobileViewport()
+    render(<AppViewportProvider><Probe /></AppViewportProvider>)
+    act(() => screen.getByRole('textbox').focus())
+    mobileViewport.viewport.height = 420
+    mobileViewport.viewport.offsetTop = 220
+    act(() => mobileViewport.emit('resize'))
+    act(() => screen.getByRole('button').focus())
+    mobileViewport.scrollTo.mockClear()
+    for (const [height, offset] of [[700, 100], [760, 55], [815, 15], [840, 0], [844, 8]]) {
+      mobileViewport.viewport.height = height!
+      mobileViewport.viewport.offsetTop = offset!
+      act(() => mobileViewport.emit('resize'))
+      expect(screen.getByText('keyboard')).toBeInTheDocument()
+      expect(document.documentElement.style.getPropertyValue('--app-visible-height')).toBe(`${height}px`)
+      expect(document.documentElement.style.getPropertyValue('--app-viewport-offset-top')).toBe(`${offset}px`)
+      expect(mobileViewport.scrollTo).not.toHaveBeenCalled()
+    }
+    mobileViewport.viewport.height = 844
+    mobileViewport.viewport.offsetTop = 0
+    act(() => mobileViewport.emit('resize'))
+    expect(screen.getByText('full')).toBeInTheDocument()
+    expect(document.documentElement.style.getPropertyValue('--app-visible-height')).toBe('844px')
+  })
+
   it.each([false, true])('restores the same screen scroll but respects a new route (%s)', (navigate) => {
     const mobileViewport = installMobileViewport()
     function Content() {

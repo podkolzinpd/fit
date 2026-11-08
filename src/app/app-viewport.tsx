@@ -9,13 +9,16 @@ function isKeyboardInput(element: Element | null): element is HTMLElement {
   return !['button', 'checkbox', 'color', 'file', 'hidden', 'image', 'radio', 'range', 'reset', 'submit'].includes(element.type)
 }
 
-export function appViewportMetrics(innerHeight: number, visualHeight: number, stableHeight = innerHeight) {
+export function appViewportMetrics(innerHeight: number, visualHeight: number, stableHeight = innerHeight, closing?: { wasOpen: boolean; offsetTop: number }) {
   const visibleHeight = Math.round(visualHeight)
   const layoutHeight = Math.round(Math.max(stableHeight, innerHeight, visualHeight))
   return {
     height: layoutHeight,
     visibleHeight,
-    keyboardOpen: layoutHeight - visibleHeight > KEYBOARD_THRESHOLD,
+    // The opening threshold must not end an already closing keyboard halfway
+    // through its animation. Preserve the measured height/pan until it settles.
+    keyboardOpen: layoutHeight - visibleHeight > KEYBOARD_THRESHOLD
+      || Boolean(closing?.wasOpen && (Math.round(innerHeight) - visibleHeight > 2 || closing.offsetTop > 2)),
   }
 }
 
@@ -80,7 +83,7 @@ export function AppViewportProvider({ children }: PropsWithChildren) {
       // the layout viewport is still full-sized; otherwise a button moves
       // between pointerdown and click. Only recover WebKit's stale geometry
       // when both reported heights remained collapsed after the gesture.
-      const metrics = appViewportMetrics(window.innerHeight, viewport?.height ?? window.innerHeight, stableHeightRef.current)
+      const metrics = appViewportMetrics(window.innerHeight, viewport?.height ?? window.innerHeight, stableHeightRef.current, { wasOpen: root.classList.contains('app-keyboard-open'), offsetTop: viewport?.offsetTop ?? 0 })
       if (metrics.keyboardOpen && window.innerHeight >= stableHeightRef.current - KEYBOARD_THRESHOLD) return
       rememberClosingScroll(false)
       setKeyboardOpen(false)
@@ -109,7 +112,7 @@ export function AppViewportProvider({ children }: PropsWithChildren) {
       }
 
       const visualHeight = viewport?.height ?? window.innerHeight
-      const metrics = appViewportMetrics(window.innerHeight, visualHeight, stableHeightRef.current)
+      const metrics = appViewportMetrics(window.innerHeight, visualHeight, stableHeightRef.current, { wasOpen: root.classList.contains('app-keyboard-open'), offsetTop: viewport?.offsetTop ?? 0 })
       const activeInput = isKeyboardInput(document.activeElement)
       const nextKeyboardOpen = metrics.keyboardOpen && (activeInput || (viewport?.scale ?? 1) === 1)
 
