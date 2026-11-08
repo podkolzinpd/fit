@@ -18,7 +18,7 @@ export function readConfirmedRestoreInvitation(value: unknown, now?: number): Co
 export function readConfirmedRestoreVisibility(client: RestoreConnection, diagnostic: unknown): Promise<Record<string, unknown>>
 export function readImportedAccessAudit(value: unknown): ImportedAccessAuditTarget[]
 export function readImportedAccessVisibility(client: RestoreConnection, diagnostic: unknown): Promise<Record<string, unknown>[]>
-export function planClientRestore(client: RestoreConnection, pair: RestorePair, expectedHistory?: ExpectedRestoreHistory | null, currentProfileEvidence?: CurrentProfileEvidence | null, confirmedInvitation?: ConfirmedRestoreInvitation | null, importedAccessAudit?: ImportedAccessAuditTarget[] | null, repairMode?: 'merge_confirmed_cards' | null): Promise<RestorePlan>
+export function planClientRestore(client: RestoreConnection, pair: RestorePair, expectedHistory?: ExpectedRestoreHistory | null, currentProfileEvidence?: CurrentProfileEvidence | null, confirmedInvitation?: ConfirmedRestoreInvitation | null, importedAccessAudit?: ImportedAccessAuditTarget[] | null, repairMode?: 'merge_confirmed_cards' | null, auditDetailCodes?: string[] | null): Promise<RestorePlan>
 export function applyClientRestore(client: RestoreConnection, plan: RestorePlan, options?: { backupVerified: boolean }): Promise<Record<string, unknown>>
 export function verifyClientRestore(client: RestoreConnection, plan: RestorePlan): Promise<Record<string, unknown>>
 export function privateRestoreTechnicalResult(result: Record<string, unknown>): Record<string, unknown>
@@ -26,3 +26,4 @@ export function privateRestoreTechnicalResult(result: Record<string, unknown>): 
 export function readConfirmedCardRepairMode(value: unknown): 'merge_confirmed_cards'
 export function verifyConfirmedCardMergeOwner(client: RestoreConnection, plan: RestorePlan): Promise<Record<string, unknown>>
 export function validateCardMergePlan(plan: RestorePlan): void
+export function readAuditDetailCodes(value: unknown, scope: ImportedAccessAuditTarget[] | null): string[]
