@@ -1440,7 +1440,7 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .workout-detail-primary-actions > .wide { width:100%; min-height:var(--control-height-primary); margin:0 }
 .workout-detail-primary-actions > .coachmark-anchor, .workout-detail-primary-actions > .coachmark-anchor > .wide { width:100% }
 .workout-decision-sheet { width:min(100%, 440px); max-height:min(88dvh, 680px); overflow-y:auto; display:grid; gap:var(--space-4); padding:var(--space-5) var(--card-padding) calc(var(--space-5) + env(safe-area-inset-bottom)) }
-.workout-decision-sheet:where(:not(.fit-lime-shell.workout-live-reference:has(.coach-live-v79,.client-live-v79) :is(.live-rest-sheet,.workout-duration-sheet))) { border:1px solid var(--border); border-bottom:0; border-radius:28px 28px 0 0; background:var(--surface-elevated); box-shadow:none }
+.workout-decision-sheet:where(:not(.fit-lime-shell.workout-live-reference:has(.coach-live-v79,.client-live-v79) :is(.live-rest-sheet,.workout-duration-sheet,.workout-live-exit-sheet))) { border:1px solid var(--border); border-bottom:0; border-radius:28px 28px 0 0; background:var(--surface-elevated); box-shadow:none }
 .workout-decision-sheet .picker-header { align-items:flex-start }
 .workout-decision-sheet .picker-header .eyebrow { margin:0 0 var(--space-1); font-size:var(--type-caption-size) }
 .workout-decision-sheet .picker-header h2 { margin:0; font-size:var(--type-title-size); line-height:var(--leading-tight) }
@@ -1958,7 +1958,8 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .live-bottom-bar .wide { margin: 0 }
 /* Inline-подтверждение частичного завершения (вместо нативного confirm). */
 .finish-confirm { display: flex; flex-direction: column; gap: 10px }
-.finish-confirm p { margin: 0; font-size: 14px; color: var(--fg); text-align: center }
+.finish-confirm p { margin: 0; text-align: center }
+.finish-confirm p:where(:not(.fit-client-lime.workout-live-reference:has(.client-live-v79) .finish-confirm p)) { font-size: 14px; color: var(--fg) }
 .finish-confirm .actions { margin: 0 }
 
 /* In-app confirm-диалог (useConfirm) — замена window.confirm. По центру, на
@@ -3852,9 +3853,9 @@ button.workout-duration-trigger:disabled { cursor:default; opacity:1 }
 .live-identity .live-sync-state button { min-height:44px; padding:8px 10px; border-color:var(--border); border-radius:10px; background:var(--surface-raised); color:var(--fg); font-size:12px; font-weight:500; box-shadow:none }
 .live-session-shell:has(.live-sync-state) .content-immersive { padding-bottom:calc(176px + env(safe-area-inset-bottom)) }
 .live-identity .finish-confirm { gap:10px }
-.live-identity .finish-confirm p { color:var(--fg); font-size:14px; font-weight:400 }
-.live-identity .finish-confirm .workout-cta[data-variant='tertiary'] { color:var(--fg) }
-.live-identity .finish-confirm .workout-cta[data-variant='primary'] { border-color:var(--danger); background:var(--danger); color:var(--mono-on-primary) }
+.live-identity .finish-confirm p:where(:not(.fit-client-lime.workout-live-reference:has(.client-live-v79) .finish-confirm p)) { color:var(--fg); font-size:14px; font-weight:400 }
+.live-identity .finish-confirm .workout-cta[data-variant='tertiary']:where(:not(.fit-client-lime.workout-live-reference:has(.client-live-v79) .finish-confirm .workout-cta[data-variant='tertiary'])) { color:var(--fg) }
+.live-identity .finish-confirm .workout-cta[data-variant='primary']:where(:not(.fit-client-lime.workout-live-reference:has(.client-live-v79) .finish-confirm .workout-cta[data-variant='primary'])) { border-color:var(--danger); background:var(--danger); color:var(--mono-on-primary) }
 .live-identity .modal-overlay { backdrop-filter:none }
 .live-identity .modal-overlay:where(:not(.fit-lime-shell.workout-live-reference:has(.coach-live-v79,.client-live-v79) .modal-overlay)) { background:color-mix(in srgb, var(--bg) 76%, transparent) }
 .live-identity .modal-dialog { padding:20px }
@@ -7365,7 +7366,8 @@ details[open] > .progress-details-toggle svg { transform:rotate(180deg); }
 /* Засчитанное таймером ждёт подтверждения на карточке упражнения. */
 .live-timer-pending { position:relative }
 .live-timer-pending > .workout-exercise-compact { padding-right:124px }
-.live-timer-confirm { position:absolute; top:50%; right:0; min-height:44px; padding:0 12px; border:1px solid var(--warning-border); border-radius:10px; background:var(--warning-surface); color:var(--warning-fg); box-shadow:none; font-size:13px; font-weight:600; transform:translateY(-50%) }
+.live-timer-confirm { min-height:44px; padding:0 12px; border:1px solid var(--warning-border); border-radius:10px; background:var(--warning-surface); color:var(--warning-fg); box-shadow:none; font-size:13px; font-weight:600 }
+.live-timer-confirm:where(:not(.phone-frame.fit-client-lime.client-workout-reference.live-identity .client-live-v79 .client-live-card > .live-timer-pending > .live-timer-confirm)) { position:absolute; top:50%; right:0; transform:translateY(-50%) }
 .live-set-check.done.timer { color:var(--warning-fg) }
 .live-set-check.done.timer svg { width:18px; height:18px }
 /* Пауза всей тренировки (YAFIT-627): часы — кнопка, на паузе жёлтые с надписью «Пауза». */

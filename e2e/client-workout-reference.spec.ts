@@ -1,3 +1,6 @@
+import { limeLiveFinishSkinCases } from './lime-live-finish-skin.cases'
+import { limeLiveAttendanceSkinCases } from './lime-live-attendance-skin.cases'
+import { limeLiveTimerReviewLayoutCases } from './lime-live-timer-review-layout.cases'
 import { limeLiveConfirmSkinCases } from './lime-live-confirm-skin.cases'
 import { writeFile } from 'node:fs/promises'
 import { z } from 'zod'
@@ -18,6 +21,9 @@ limeLiveSetSkinCases()
 limeLiveTimerSkinCases()
 limeLiveDurationSkinCases()
 limeLiveConfirmSkinCases()
+limeLiveFinishSkinCases()
+limeLiveAttendanceSkinCases()
+limeLiveTimerReviewLayoutCases()
 
 const pilotId = 'c11e0000-6010-4000-8000-000000000001'
 
