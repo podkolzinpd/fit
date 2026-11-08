@@ -8019,3 +8019,76 @@ Old A.finished→B возвращается при running B; новый ждё�
 infinite не выключается. Это имитация scheduler/DOM API, не actual browser и не
 объяснение исторических CI2. Layoutcase/assert0 побайтно HEAD. Квитанция:
 /tmp/fit-mc44-helper-algorithm-report.json. Полный source CI остаётся гейтом.
+
+Дополнение186 — проверенная версия0e444b22870331861437387df550ffb5c003e1c3:
+единый технический запуск дал62/62 browser за40.7s и2/2 controlled actual-browser
+proof за7.6s, без retries/skips/flaky. Реальная legacy карточка использовалась
+для цепочки конечных A→B в обоих движках: old возвращается с running B, new
+дожидается natural finished B. Это доказывает дефект one-batch алгоритма, но
+не идентичность исторических двух CI-анимаций. Полный новый CI42504502459 и
+Android42504502497 запущены на0e; этот локальный docs-receipt не меняет source.
+
+Восстановленный actual-public baseline:52 ожидаемых ownership/placement red,
+10positive green,0skips/retries/flaky. Сравнение с новым local62:50/50 before
+styles/rects/backdrop exact; finish18/26PNG exact,8намеренных timer-review;
+attendance16/18PNG exact,2Chromium raster differences сохранены. Readonly audit:
+430filled — h1/native radio,1440accounting — h1/radio/2optionSPANglyphs; surfaces/
+controls/geometry/state/diagnostics прежние, исходники attendance/font400/500
+побайтно main9ba. Причина pixel-sampling не установлена, полного PNG-green нет.
+Доказанного product regression нет; raw report и RGBdiff не маскировались:
+/tmp/fit-mc44-baseline9ba-local-comparison.json,
+/tmp/fit-mc44-attendance-raster-review.json. Final public/verifiedZIP сверка ещё гейт.
+
+
+Дополнение186 — совместимость с принятым main2055/c6e4642e. Девять файлов
+изменения изолированы public/for-trainers и журналом лендинга; src/e2e/package/
+lock/playwright/.github побайтно прежние относительно source0e444b22. Локальный
+обычный merge f90aa6e3 сохраняет оба изменения, AST на c6 снова25715 без потерь,
+2paint+8placement. Внешний CI0e остаётся доказательством только0e, не f90/main.
+Уточнение технического выбора185: независимый принятый static landing не требует
+дублировать полный source push только ради ancestry. Перед обычным squash
+обязательны свежая очередь, завершение чужого release-window, review diff main
+и зелёный exact-source CI; после слияния — полный CI/Android фактического combined
+main до штатной публикации и readback. Требование branch protection не обходится:
+если normal merge потребует обновления source, включить main и проверить новый
+head. При изменении protected runtime этот узкий выбор неприменим. Admin/force/
+auto-merge/ослабление CI не используются. Локальный f90 пока не отправлен;
+source CI0e выполняется, публикации2051 ещё нет.
+
+
+Дополнение186 — CI42504502459 на0e завершён red из-за одного существующего
+unit ExerciseImage/manual file retry: после playing оставалась play-кнопка,
+33-й файл tests33/32pass, всего3116/3117. Это другой сбой относительно b7 paint;
+исходники component/test/vitalMedia/setup побайтно mainc6. Локальная адресная
+проверка33/33 прошла; её exit1 вызван global coverage thresholds при focused
+запуске, не тестом. Затем полный npm run test:coverage дал350/350files,
+3117/3117tests, global83.69stmt/78.78branch/82.94func/88.34lines, exit0 за71.6s.
+Историческая CI причина не установлена; возможный effect/event ordering не
+выдаётся за доказанную product bug. Разрешённый владельцем одноразовый rerun
+только failed jobs той же0e версии выполняется без изменений продукта/тестов/
+порогов/assertions. Повторный red требует нового разбора, не rerun-until-green.
+Полный исходный red log сохранён /tmp/fit-mc44-release-run/source-failed-42504502459.log.
+
+Readonly design_cleanup дополнительно сверила8 относящихся к видео файлов между
+mainc6/source0e/localHEAD: exact. Один targeted observational harness с исходными
+assertions прошёл: reset-effect attempt3 предшествовал playing на0.179ms.
+Историческую причину это не устанавливает; lifecycle ordering остаётся гипотезой.
+Отчёт /tmp/fit-mc44-exercise-image-diagnostic/audit.json, tracked edits агента нет.
+Все браузерные CI jobs source0e прошли с первой попытки, включая прежний flaky
+native3/4; исходный run имеет33success/2fail (app-tests и его app aggregate).
+Одноразовый --failed attempt2 запущен, исходный red сохранён; новый outcome ожидается.
+
+
+Дополнение186 — source0e CI42504502459 attempt2 завершён success:35/35 jobs;
+Android42504502497 success с первой попытки. Первый coverage red остаётся в
+истории, его причина unknown; rerun не объявляется исправлением видеокомпонента.
+Перед gate18:10UTC свежая очередь:2039/2040 неизменные heads с07.11/10:29,
+все runs завершены красными, новых активных runs нет; активный ФИТ14 выпустил
+2056/2057/2058 с текущими CI и готовит четвёртый. Их принятый приоритет сохраняется.
+Mainc6/2055 CI42506001744 failure, Android success, три публикации skipped.
+Соседний CPT read-only snapshot подтверждает, что автор2055 разбирает две auth
+browser failures; не дублируем расследование и не ставим release-gate. Выпуск2051
+разрешён, но ещё не слит/опубликован: ждём завершения текущего release-window и
+активных приоритетных PR, затем свежая интеграция/допустимые exact-head проверки.
+Если новые приоритетные изменения затронут runtime, узкое исключение static
+landing выше неприменимо: нужен новый source с полной проверкой после интеграции.
