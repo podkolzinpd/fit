@@ -3,7 +3,7 @@ import { useMemo, useRef, useState, type ReactNode } from 'react'
 import { Link, useLocation, useSearchParams } from 'react-router-dom'
 import { isFitLimeEnabled } from '../../app/fit-lime'
 import { FinanceMonthlySummary } from './FinanceMonthlySummary'
-import { financeClientColor, financeMetricValue, financeMoney, type FinanceMetric } from './finance-monthly'
+import { financeClientColor, financeClientColors, financeMetricValue, financeMoney, type FinanceMetric } from './finance-monthly'
 import { isCoachWorkoutRedesignEnabled } from '../../app/coach-workout-redesign'
 import { readCoachCalendarRoute } from '../../app/coach-calendar-navigation'
 import { useAuth } from '../../app/auth-context'
@@ -120,7 +120,7 @@ export function TrainerFinanceOverviewPage() {
       <button type="button" className={!paymentsView ? 'is-active' : ''} aria-pressed={!paymentsView} onClick={() => changePaymentParam('view', '')}>Клиенты</button>
       <button type="button" className={paymentsView ? 'is-active' : ''} aria-pressed={paymentsView} onClick={() => changePaymentParam('view', 'payments')}>Оплаты</button>
     </div>
-  const summaryShown = lime && query.data?.completedSessions !== undefined && query.data.clients.every(client => client.completedSessions !== undefined)
+  const summaryShown = lime && !query.isLoading && !query.error && query.data?.completedSessions !== undefined && query.data.clients.every(client => client.completedSessions !== undefined)
   return <TrainerFinanceOverviewView month={month} lime={lime} metric={metric} onMetricChange={value => changePaymentParam('metric', value)}
     navigation={navigation}
     paymentHistory={paymentsView ? <TrainerFinancePayments key={lime ? monthValue : `${monthValue}:${paymentClient ?? ''}`} month={monthValue} clientId={paymentClient}
@@ -176,6 +176,7 @@ export function TrainerFinanceOverviewView({ month, data, lime = false, metric: 
     return (data?.clients ?? []).filter(client => matchesFilter(client, filter)
       && (!name || client.fullName.toLocaleLowerCase('ru').includes(name)))
   }, [filter, search, data?.clients])
+  const colors = useMemo(() => financeClientColors(data?.clients ?? []), [data?.clients])
   const summary = data && <>
     {monthly && <FinanceMonthlySummary data={data} metric={metric} onMetricChange={onMetricChange ?? setLocalMetric} compact />}
     {monthly ? <section className="finance-compact-current" aria-label="Финансовая сводка">
@@ -218,7 +219,7 @@ export function TrainerFinanceOverviewView({ month, data, lime = false, metric: 
         <div className="finance-overview-list">{monthly ? clients.map(client => <Link key={client.clientId}
           className="card finance-overview-client finance-monthly-client"
           to={`/clients/${client.clientId}/finance?month=${month.slice(0,7)}&metric=${metric}`} state={{ financeBackTo: returnTo }}>
-          <i className="finance-monthly-dot" style={{ background: financeClientColor(client.clientId) }} aria-hidden="true" />
+          <i className="finance-monthly-dot" style={{ background: financeClientColor(client.clientId, colors) }} aria-hidden="true" />
           <span className="finance-monthly-name"><strong>{client.fullName}</strong>{client.archivedAt ? <small>В архиве</small> : client.activeClient === false ? <small>Связь завершена</small> : null}</span>
           <strong className="finance-monthly-value">{metric === 'money' ? financeMoney(client.receivedCents) : financeMetricValue(client, metric)}</strong>
           <ChevronRightIcon />

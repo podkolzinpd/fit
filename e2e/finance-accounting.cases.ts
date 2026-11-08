@@ -180,6 +180,7 @@ export function financeAccountingCases() {
     await page.route('**/v1/finance/overview*',route=>{const month=new URL(route.request().url()).searchParams.get('month')!;const november=month==='2026-11';return route.fulfill({json:{overview:{month,receivedCents:november?10001:20002,completedSessions:november?2:0,dueCents:0,attentionCount:0,clients:[...Array.from({length:10},(_,i)=>({...client,clientId:`70000000-0000-4000-9000-${String(i).padStart(12,'0')}`,fullName:`Алексей — тестовый спортсмен ${i}`,receivedCents:0,completedSessions:0})),{...client,receivedCents:november?10001:20002,completedSessions:november?2:0}]}}})})
     await page.goto('/finance?month=2026-11&metric=money&q=Алексей')
     const row=page.locator(`.finance-monthly-client[href^="/clients/${clientId}/finance"]`)
+    const athleteColor = await row.locator('.finance-monthly-dot').evaluate(node => getComputedStyle(node).backgroundColor)
     await row.scrollIntoViewIfNeeded()
     // Native focus may reveal the link before navigation. Restore the actual
     // leaving position, captured at click, rather than pre-focus geometry.
@@ -189,6 +190,7 @@ export function financeAccountingCases() {
     expect(scroll).toBeGreaterThan(0)
     const total=page.locator('[data-finance-monthly-total]')
     await expect(total).toContainText(/100,01/)
+    expect(await page.locator('.finance-monthly circle[stroke]').first().evaluate(node => getComputedStyle(node).stroke)).toBe(athleteColor)
     await expect(page.locator('.finance-monthly-switch')).toHaveCount(0)
     await expect(page.locator('#finance-payments-panel .finance-payment')).toHaveCount(1)
     await expect(page.locator('.finance-monthly')).not.toContainText('%')
@@ -262,6 +264,16 @@ export function financeAccountingCases() {
     await expect(page.locator('.finance-monthly-name small')).toHaveCount(0)
     await expect(page.locator('.finance-monthly')).not.toContainText('%')
     await expect(page.locator('.finance-monthly-client')).toHaveCount(6)
+    const firstDot = page.locator('.finance-monthly-client').first().locator('.finance-monthly-dot')
+    const firstColor = await firstDot.evaluate(node => getComputedStyle(node).backgroundColor)
+    const chartColors = () => page.locator('.finance-monthly circle[stroke]').evaluateAll(nodes => nodes.map(node => getComputedStyle(node).stroke))
+    const moneyColors = await chartColors()
+    expect(new Set(moneyColors).size).toBe(moneyColors.length)
+    for (const circle of await page.locator('.finance-monthly circle[stroke]').all()) {
+      const name = (await circle.locator('title').textContent())!.split(':')[0]!
+      const row = page.locator('.finance-monthly-client').filter({ has: page.locator('.finance-monthly-name strong').filter({ hasText: name }) })
+      if (await row.count()) expect(await row.locator('.finance-monthly-dot').evaluate(node => getComputedStyle(node).backgroundColor)).toBe(await circle.evaluate(node => getComputedStyle(node).stroke))
+    }
     await page.getByRole('button',{name:'Требуют внимания сейчас: 1'}).click()
     await expect(page.locator('.finance-monthly-client')).toHaveCount(1)
     await expect(total).toContainText(/2\s800,28/)
@@ -303,10 +315,14 @@ export function financeAccountingCases() {
     }
     await changeFinanceMetric(page, 'Тренировки')
     await expect(total).toHaveText('28')
+    expect(await chartColors()).toEqual(moneyColors)
+    expect(await firstDot.evaluate(node => getComputedStyle(node).backgroundColor)).toBe(firstColor)
     await expect(page.locator('.finance-monthly-value').first()).toHaveText('1')
     const search=await openFinanceSearch(page)
     await search.fill('Александра')
     await expect(page.locator('.finance-monthly-client')).toHaveCount(1)
+    expect(await firstDot.evaluate(node => getComputedStyle(node).backgroundColor)).toBe(firstColor)
+    expect(await chartColors()).toEqual(moneyColors)
     await page.setViewportSize({width:320,height:400})
     await search.focus()
     await search.scrollIntoViewIfNeeded()
@@ -624,7 +640,7 @@ export function financeAccountingCases() {
   for (const [fitLime, theme] of [[false, 'light'], [false, 'dark'], [true, 'light']] as const) {
     test(`Finance receipt layout ${fitLime ? 'Lime' : 'Mono'} ${theme}`, { tag: ['@lime-finance'] }, async ({ page }, info) => {
       await page.addInitScript(value => localStorage.setItem('fit.appTheme', value), theme)
-      await receiptFixture(page, fitLime, 50, fitLime)
+      const { receipts } = await receiptFixture(page, fitLime, 50, fitLime)
       await page.goto('/finance?month=2026-11&view=payments')
       const history = page.getByRole('region', { name: 'История оплат' })
       await expect(history.locator('.finance-payment')).toHaveCount(50)
@@ -672,6 +688,41 @@ export function financeAccountingCases() {
       await form.getByLabel('Комментарий').focus()
       await form.getByRole('button', { name: 'Сохранить', exact: true }).scrollIntoViewIfNeeded()
       await expect(form.getByRole('button', { name: 'Сохранить', exact: true })).toBeInViewport()
+      if (fitLime) {
+        // A failed overview refresh retains cached monthly data. The independent
+        // receipt history must still expose its fresh total without a duplicate.
+        let overviewFails = true
+        let writes = 0
+        await page.route('**/v1/finance/overview*', route => overviewFails
+          ? route.fulfill({ status: 503, json: { error: 'temporarily_unavailable' } }) : route.fallback())
+        await page.route(`**/v1/finance/payments/${clientId}`, route => {
+          const draft = route.request().postDataJSON() as TrainerFinancePaymentUpdate
+          expect(draft).toMatchObject({ amountCents: 500000, expectedVersion: 1 })
+          writes++
+          Object.assign(receipts[0]!, draft, { version: 2 })
+          return route.fulfill({ json: { payment: receipts[0] } })
+        })
+        await page.setViewportSize({ width: 320, height: 844 })
+        await form.getByLabel('Сумма, ₽').fill('5000')
+        await form.getByRole('button', { name: 'Сохранить', exact: true }).click()
+        await expect(form).toHaveCount(0)
+        await expect(page.getByText('Не удалось загрузить данные', { exact: true })).toBeVisible()
+        await expect(history.locator('.finance-receipts-total')).toContainText(/14\s000/)
+        expect(writes).toBe(1)
+        for (const width of [320, 1440]) {
+          await page.setViewportSize({ width, height: 844 })
+          await page.locator('.content').evaluate(node => { node.scrollTop = 0 })
+          await history.locator('.finance-receipts-total').scrollIntoViewIfNeeded()
+          await expect(history.locator('.finance-receipts-total')).toBeInViewport()
+          expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+          await page.screenshot({ path: info.outputPath(`receipt-total-overview-error-${width}.png`), fullPage: true })
+        }
+        overviewFails = false
+        await page.getByRole('button', { name: 'Повторить', exact: true }).click()
+        await expect(page.locator('.finance-monthly [data-finance-monthly-total]')).toContainText(/14\s000/)
+        await expect(history.locator('.finance-receipts-total')).toHaveCount(0)
+        expect(writes).toBe(1)
+      }
     })
   }
 
