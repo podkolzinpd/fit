@@ -7876,3 +7876,58 @@ SHA/health/публичных байтов/подписей и UI обеих р�
 за приёмку до readback. После публикации — конкретные действия проверки для
 спортсмена и тренера; физический телефон не подменяется WebKit/verifiedZIP.
 Этот authorization checkpoint локальный, без sourcepush только ради записи.
+
+## 184. MC4.4 — интеграция принятого PR2049 и повтор механик, 08.11.2026
+
+Итерация — 08.11.2026 — GPT-6 / OpenAI. Исходные failed jobs2051 повторены
+на b475: attempt3 вновь остановился на внешних HTTP504 Terraform/Gradle,
+не на продуктовых assertions. Слепые дальнейшие повторы старого source прекращены.
+Предшествующий2049 прошёл35/35 CI и настоящий Android/306 Gradle tasks;
+обычно слит в main4db409fce3a9d6525abb5ea4f3a14c5826e0b246. Его main CI,
+Android и публикация остаются отдельными гейтами, не подменены PR-проверками.
+
+Root обычным merge получила7a9e5e7bfeb71e5eb263ad9d606aca167e256803,
+сохранив локальные828e/c1dd и все изменения main. ASTproof относительно4db:
+25715 исходных legacy declaration records прежние,6 guards/2 paint+8 placement;
+10 net files, защищённые обработчики/package/lock/playwright побайтно main.
+Proof: /tmp/fit-mc44-root-source-proof-4db409fc.json. Официальный transport
+инструментов из2049 отдельно прочитан на4116b35a: pinned official assets и
+оригинальные MavenPOM, точные три версии без dependency substitution; APK/OTA
+versions/ABI прежние. Terraform использует проверенный SHA256-pinned бинарник,
+это иной маршрут доверия, а не прежняя live-registry/GPG-загрузка.
+
+На совмещённом candidate полный build/startup, ESLint, docs/diff и31 unit
+успешны. Browser110/110 без retries/skips/flaky:58 новых MC4.4 и52 существующих
+mechanics, включая4 действительных legacy-positive duration controls.
+Квитанция /tmp/fit-mc44-4db-browser-receipt.json; исходные отчёты/логи сохранены.
+Проверены ввод/клавиатура/отмена и возврат галочки/сворачивание/drag/swipes,
+pause/rest/reload и завершение обеих ролей без потери фактов/команд.
+
+Ownership captures: finish28 styles/26PNG иattendance18 styles/18PNG exact,
+duration4 styles exact. Timer hit9/9, overlap0, card-scroll0 во всех состояниях;
+29/32 layoutPNG exact. Три full-frame capture normal-motion375 отличаются
+положением content/видимостью fixed layers. Raw comparison exit1 сохранён,
+не объявлен полным pixel-green. Адресная пассивная проверка с прежним полным
+entry дала2/2 pass и6/6 PNG exact без product/assertion/helper изменений.
+Capture центрирует card до ожидания finite fold paint; исходный110 не писал
+pre-center height/contentTop, поэтому историческая причина этих трёх снимков
+не доказана. Late-JS-scroll не объявляется найденной причиной. Защищённые
+15 файлов и затронутые Live handlers прежние; catalog-only parent diff у
+clientLime=true/picker-closed samples эквивалентен. Evidence:
+/tmp/fit-mc44-4db-comparison.json,
+/tmp/fit-mc44-4db-scroll-analysis.json,
+/tmp/fit-mc44-4db-source-and-sampling-review.json. Ограничение полноэкранного
+sampling сохраняется для последующей публичной приёмки; функциональные110
+и геометрия кнопки от него не объявляются непроверенными.
+
+Уточнение183:2040 возобновил работу новым28473392 и полным CI, поэтому при
+этой сверке не считался зависшим.2049/FIT14 сохраняет приоритет,2050 активен
+и обновился от4db. Очередь повторно сверяется перед нашим merge. Sourcepush
+ради квитанций не выполнялся; remote2051 ещё b475. Чужие проверки не повторялись,
+исходящие сообщения в соседние чаты не отправлялись. Реальных данных/rollout нет.
+
+Новое прямое поручение владельца: после фактической публикации2051 перейти к
+следующей части. Оно разрешает продолжить подготовку следующего этапа после
+readback2051; отдельное правило разрешения его выпуска MC-RELEASE-01 остаётся.
+Следующий шаг текущего этапа: очередь/итоговый main, exact-source зелёный CI,
+обычное слияние и штатная публикация с public/API/signedOTA/UI readback.
