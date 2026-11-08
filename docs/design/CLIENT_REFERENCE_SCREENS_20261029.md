@@ -7788,3 +7788,60 @@ Original/Compact, ширины 375/390/430 и trainer desktop 1440 провер�
 старые cold-load/focus settlement квалификации не объявлены исправленными.
 Публикации ещё не было. После технического root review — один MC4.4 PR и CI,
 затем владельцу конкретная сводка и отдельное разрешение на выпуск.
+
+
+## 182. MC4.4 — PR2051, итог подготовки и внешние CI-блокеры, 08.11.2026
+
+Итерация — 08.11.2026 — GPT-6 / OpenAI. Root приняла результат181 и сохранила
+версию реализации20090680. Обычный merge актуального main cde47521 дал source
+b4751b1114f7fa8af9f522ba207ad07fb07afd9b, без конфликтов. Frontend/e2e,
+package/lock/playwright между проверенной реализацией и merge побайтно прежние;
+независимый AST повторён относительно cde, результат прежний25715/6guards/2paint+8placement.
+Proof: /tmp/fit-mc44-root-source-proof-cde.json. Чужие изменения main сохранены,
+ни одного дополнительного UI-прогона без новой причины не запускалось.
+
+Создан ровно один [черновой PR2051](https://github.com/podkolzinpd/fit/pull/2051),
+base main, head b4751b11. Точный финальный body из owned
+/tmp/fit-mc44-root-pr-body.md валидирован до записи и подтверждён чтением:
+SHA256834719ae1c502dc2ea6d3c23c94dee030130016f1fed89ea0cde68b21a7baa83.
+Receipt /tmp/fit-mc44-root-pr-final-readback.json: OPEN/isDraft=true,
+autoMergeRequest=null. Слияния/публикации/нового rollout/реальных данных нет.
+
+Точный sourceCI42465125879 завершился:35заданий,33SUCCESS и2FAILURE.
+Все браузерные части, repository/app quality, общие tests, API и database
+успешны. Четыре небольших timing artifacts прочитаны root: новые58/58 MC4.4
+passed, retry0 (finish28,attendance18,layout12), обе browser-платформы;
+всего в четырёх native timing файлах1263 attempts. Proof:
+/tmp/fit-mc44-root-ci-new-cases-proof.json и /tmp/fit-mc44-ci-native-timings.
+
+Незакрытый CI-гейт — frontend-infrastructure: первый запуск128683385521
+остановился при получении криптографической подписи неизменённого
+provider yandex-cloud/yandex0.215.0, GitHub вернулHTTP504. Quality/tests=success,
+infrastructure=failure подтверждены логом dependent app128688089804.
+После сохранения первого красного результата выполнен единственный failed-job
+повтор: успешные33задания не повторялись. Attempt2 снова далHTTP504 при получении
+authentication checksums provider (job128691901591); dependent app128692800086
+также красный. Это не зелёный общий CI. Exact результаты обоих attempts:
+/tmp/fit-mc44-ci-attempt1-result.json, /tmp/fit-mc44-ci-attempt2-result.json;
+логи /tmp/fit-mc44-frontend-infrastructure-failed.log,
+/tmp/fit-mc44-frontend-infrastructure-attempt2-failed.log,
+/tmp/fit-mc44-app-aggregate-failed.log.
+
+Android42465125849 также не принят: attempt1/job128682739734 — HTTP504 при
+загрузке неизменённого Gradle8.14.3; единственный повтор attempt2/job128684280628 —
+read timeout того же download. Gradle tests/assemble не исполнялись, хотя
+предшествующие web sync и native fixture generation прошли. Исходные failures
+сохранены в /tmp/fit-mc44-android-failed.log,
+/tmp/fit-mc44-android-attempt2-failed.log и двух root qualification JSON.
+Ни provider/wrapper URL, ни workflows, подписи, assertions, retries/таймауты
+продуктовых тестов или иные gates не ослаблялись. Дальнейших слепых reruns нет.
+
+Новых ошибок в реализации MC4.4 по выполненным checks не обнаружено.
+Локальные58+52уникальных browser и31unit, pixel/style/geometry сравнения и
+исходные квалификации181 сохраняются; physical devices/OAuth/native install
+не проверены. Подготовка к просмотру завершена, готовность выпуска не заявлена:
+сначала восстановить прохождение двух внешних download-гейтов на точном source,
+затем новое отдельное разрешение владельца MC-RELEASE-01, общая очередь и
+штатная публикация с readback. Новые MC не начинаются. Этот итог сохраняется
+локальным docs-only коммитом без push и повторного CI ради квитанции;
+проверяемый удалённый head PR остаётся b4751b11.
