@@ -3057,3 +3057,40 @@ head, приёмка публикации2052 и свежая очередь/mai
 Дальше: один source push с новымmain, обязательные source/main/release gates;
 PR2 и закрытый duty grant остаются после соответствующих фактических приёмок.
 Исходящих сообщений и production изменений DUT нет.
+
+
+### Итерация 74 нового выпуска — 2026-11-08 — GPT / OpenAI
+
+PR1/2050 штатно squash-слит в9baefb1705e9a07c66d6d759e28826410ea0133f; дерево
+побайтно равно проверенному06. Source CI42478613874 SUCCESS35/35 attempt2
+(только infrastructure503 и зависимый aggregate после полного official archive
+size/SHA readback), Android42478613883 SUCCESS attempt1. MainCI42483049380 и
+mainAndroid42483049462 SUCCESS. Официальные API42484929263/web42484929397/
+signedOTA42485380983 SUCCESS. Фактически238/238публичных файлов совпали по
+size/SHA; реальный ZIP15787843bytes совпал с official artifact, обеRSAподписи,
+source9ba/ABI8922d2e9/native1.1.4code9/expiry проверены. ОбаAPIrelease/health/ready/
+DNS/TLS/auth passed,22/22неавторизованных no-store probes отклонены.
+
+Actual extracted web110/110 и signedZIP110/110, public8/8 Chromium/WebKit,
+retries0/skips0/flaky0, реальныеAPI/WS заблокированы. Светлаяформа1440 и тёмная
+статистика320 просмотрены. Первый восстановленный public fixture имел6/8
+ошибок: HTTPsyntheticAPI блокировался WebKit mixedcontent, а светлый Lime
+не соответствовал существующему themecontract. Исправлен только HTTPSmock и
+legacy-light/Lime-dark fixture по тому же принятому контракту DUTvisual;
+assertions/timeouts/production не менялись, весь следующий8/8 чистый.
+
+После смены среды прежние/private/tmp checkouts/logs исчезли. Gitкоммиты06 и
+c622 сохранились; созданы новые собственные worktrees/ветки без reset/prune/force
+и без правки чужого dirty checkout. Утраченные логи не выдаются за доступные;
+фактическая приёмка выше воспроизведена, новые evidence сохранены устойчиво
+в отдельном приватном каталоге вне trackedsource. Это не второй журнал.
+
+UIc622 сохраняет прежние18файлов. Фактически опубликованный9ba теперь включён
+обычным merge перед вторым PR; API/SQL/operator/types побайтно равны9ba.
+Прежние localdev full154 дважды имели разные WebKit goto30s доHTTP; дробление
+по семействам не устранило devnavigation, все44DUT каждый раз проходили.
+Не ослабляем navigation/guards: следующий UIнабор проверяется на полной
+собранной syntheticproduction версии, затем mandatoryexact-headCI/Android
+и фактических officialартефактах. Новых исходящих сообщений нет.
+Окно2050 OFF после этой приёмки; DUTpilot остаётся OFF. Дальше PR2, полный
+выпуск/приёмка, затем ровно один закрытый dutygrant и отдельный committedinspect.
