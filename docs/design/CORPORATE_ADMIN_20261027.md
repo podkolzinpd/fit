@@ -2676,3 +2676,125 @@ SQL/SSH/admin/bypass/force/deletebranch или включить personal все�
 match-head/mainCI/officialAPIwebOTA/все файлы/8negativeAPI/110web+110ZIP+8live;
 после обоих CPT этапов один закрытый test personal grant и отдельный committed
 inspect. Физический телефон не проверен. Дальше: пройти эти гейты до завершения.
+
+### Итерация 62 нового выпуска — 2026-11-08 — GPT / OpenAI
+
+Задача: выпустить2035 следующим по новому прямому указанию владельца.
+Новое решение: «напиши всем, что идете дальше по порядку, если какой-то PR
+стоит, то его обходим; ты следующий выкатываешься». Это явно заменяет только
+прежнее ожидание отдельной приёмки застрявшего2034 в55–61; полные собственные
+source/main гейты, сохранность уже слитого кода и отсутствие наложений остаются.
+Разрешено сообщить всем активным участникам очереди; фактически уведомлены
+ФИТ14/16/18/19 и активный аудитор. Все5 send tool responses SUCCESS. ФИТ16
+прочитал точное поручение и отложил свой отдельный main retry/publication;
+ФИТ19 подтвердил ожидание2035. Новые будущие пакеты окно не резервируют.
+Расхождения: нет. Main2034/ddf уже содержит его код, отката/переписывания нет.
+Сделано: проверенный source2149ec20f9565419f2c6563ad7f7dd9b1f5e3a68 завершил
+CI42417605327 SUCCESS35/35 attempt1 и Android42417605275 SUCCESS. Фактически:
+frontend348files/3102tests, coverage83.6/78.7/82.79/88.24; API1623passed/
+416standardconditional skips, PostgreSQL17 personal12 внутри343pass+1standard
+skip, actor15/restore/private/push успешны. Source WebKit лог сохраняет2 старых
+mobile-shell cases658/2141, прошедших штатные builtin retries: один browser
+process crash с libEGL/libsoup trace и один missing-control assertion. Это не
+retries0; CI workflow/таймауты/assertions не менялись, manual rerun не было.
+Полный raw log fit674-personal-2149-webkit.log сохранён наряду с app/api/db.
+Проверка до merge: свежий origin/main=ddf ancestor2149, root/branch clean,
+PR CLEAN/auto-mergeOFF, all35CI+Android exacthead, allow_squash=true и
+DeleteBranchOnMerge=false, inprogress/queued официальных API/web/OTA нет.
+Слила штатным squash --match-head-commit2149 безadmin/force/deletebranch;
+actualmain aa4be2a33ec8cff53de84653ca0e0a63ff5dc2c6, mergedAt07.11T22:27:03Z.
+Полное дерево main побайтно равно проверенному2149. Чужие CI вручную не
+менялись; старый main2034 завершилсяfailure, его официальные runs штатноskip.
+Новые собственные mainCI42420666603 и Android42420666552 запущены автоматически;
+повторных dispatch нет. Публикация/приёмка2035 ещё не состоялись, grant не делала.
+Решение: pinned source2149 остаётся неизменным; последующие квитанции пишутся
+в тот же канонический путь отдельной docs-only receipt ветки от actualmainaa4,
+без третьего runtime PR/повторного выпуска/сдвига checked feature head.
+CURRENT_STATE получает только краткий указатель. Отвергнуто: считать merge
+доставкой, убрать уже слитый2034, скрыть source retries, обойти ownmainCI или
+включить pilot до фактической приёмки обоих этапов. Локальные111unit/110browser
+и будущие фактические110web+110ZIP+8live сохраняютretries0/realAPIWSdeny.
+Открыто: полный mainCI/официальные API/web/signedOTA, manifest каждыйsize/SHA,
+обаAPI/source/health/ready/8negative/DNS/TLS, actualpublic/extractedweb/signedZIP
+UI; затем один закрытый test personal grant и отдельный committed inspect.
+Физический телефон не проверен. Дальше: завершить эти гейты и освободить окно.
+
+### Итерация 63 нового выпуска — 2026-11-08 — GPT / OpenAI
+
+Задача: фактически принять второй CPT выпуск до единственного test grant.
+Расхождения: нет. Actualmainaa4be2a33ec8cff53de84653ca0e0a63ff5dc2c6 завершил
+полный mainCI42420666603 SUCCESS34+1штатный migration-safety pushskip, attempt1;
+Android42420666552 SUCCESS. Все35 jobs/точный SHA проверены из GitHub JSON.
+Официальные автоматические API42423317764/web42423317795/signedAPK+OTA42423692544
+SUCCESS именноaa4; дубликатов/чужих публикаций не запускала, main всё ещёaa4.
+Фактическая приёмка: официальный cloudru-release manifest213/213 public files
+совпал по size/SHA. Оба API показываютaa4, release/health/ready/auth проверены,
+DNS3/TLS passed;8 дополнительных personal отрицательных GET/PUT probes на двух
+origin дали401/no-store. Запросы без credentials/с synthetic ids не создавали
+клиентских данных. Signed feed/ZIP/RSA/source/provenance/expiry/appId/ABI и
+точное совпадение публичных байтов с официальным artifact подтверждены.
+Native1.1.4/code9 и ABI8922d2e9fc2c9a092d10f7b6066acdc46edf0fbe7ee7a15159e02a44e7126cf9
+прежние. ZIP15158838B, SHA256
+cc97dde613404a446029632b0cdd91788c778a676b708b80b792a61dd7ebe99b.
+Точные213web/213ZIPфайлов безопасно извлечены без пересборки/правки artifact.
+На них110/110web и110/110signedZIP корпоративных/admin/services/personal
+сценариев Chromium/WebKit passed; actualpublic8/8 (4negative+4positive) passed.
+Вездеworkers1/retries0, realAPI/WS/external deny до navigation, данные synthetic;
+штатныеAPI gateway aliases включаютhealth/ready. Mark/date/unmark/role guards,
+privacy/count/detail, pagination/retry/lateack, emptytrainerselection, contrast,
+оба оформления320/390/430/1440 и прежние услуги/офисы/профили проверены.
+Actualweb screenshots dark320/WebKit иlight1440/Chromium, actualZIP selected
+empty/WebKit иdark320/Chromium просмотрены. Старые source WebKit retries из62
+не засчитываются как delivery retries0; здесь все228case attempts успешны с0повторов.
+Квитанции/логи/manifest/signedZIP/extraction и acceptance-summary.json приватно
+fit674-personal-release-pr2-aa4be2a3; source/runtime branches не сдвигались.
+Решение: оба runtime этапа2028/2035 опубликованы и фактически приняты; отдельный
+закрытый personal grant прежнему test trainer теперь допускается по поручению.
+Ещё не выполнялся: свежийmainaa4 и отсутствие active operator проверены; scope
+personal-pilot использует существующий services закрытый target, не admin grant.
+Отвергнуто: включить всем, менять прочие пилоты/офисы/права/native/историю или
+считать mock-отметки реальными клиентскими тренировками. Физический телефон/
+реальный OAuth не проверялись; реальные тренировки для QA не создавались.
+Открыто: один grant и отдельный committed inspect того же test target;
+после этого окончательная квитанция/сообщение владельцу и hold released очереди.
+Дальше: выполнить только этот закрытый оператор и проверить сохранённый результат.
+
+### Итерация 64 нового выпуска — 2026-11-08 — GPT / OpenAI
+
+Задача: завершить оба принятых CPT этапа единственным закрытым тестовым включением.
+Расхождения: нет. Только после фактической приёмки63 выполнен ровно один
+штатный grant42425086969 наmainaa4be2a33ec8cff53de84653ca0e0a63ff5dc2c6,
+action=grant/account=primary/scope=personal-pilot. Workflow использует прежний
+закрытый services test target, а не администраторский grant. SUCCESS, результат
+status=applied, uniqueTrainer=true, enabled=true, eligible=true,
+otherEnabledTrainers=0. Без ручного productionSQL/SSH, admin/bypass/force и без
+изменения secrets/прочих назначений. Оператор пишет только personal-pilot scope.
+Затем отдельный новый запуск42425466062 action=inspect того же scope/target
+на том жеcommittedmain завершилсяSUCCESS: status=inspected,
+uniqueTrainer=true, enabled=true, eligible=true, otherEnabledTrainers=0.
+Это новый readback после commit grant, не повтор того же ответа. Других
+включённых personal тренеров нет; is_yandex/role подтверждены, прежний test target
+сохранён. Остальные независимые услуги/invitation/admin flags/офисы/права и native
+не менялись; реальные клиентские отметки/тренировки/финансовые записи дляQA
+не создавались. Старая история не заполнялась и не пересчитывалась.
+Техническое уточнение: первый private postgrant parser ожидал строкуgranted;
+committed оператор по контракту возвращаетapplied (scripts/manage-corporate-admin-access.mjs:143).
+Assertion остановился до dispatch inspect. Исправлена только private проверка
+точного статуса; grant не повторялся, source/runtime/tests не изменялись.
+Квитанции: personal-grant/inspect-result.json и rawmaskedlogs вместе с полной
+acceptance-summary.json в приватном каталоге63; никаких идентификаторов клиента/
+тренера, login hashes или контактов в GitHub не добавлено.
+Итог: backend2028 и UI2035 фактически опубликованы/приняты, закрытый personal
+pilot включён только прежнему тестовому тренеру и подтверждён отдельным
+committed inspect. Source2149 и runtimeaa4 неизменны; postrelease docs-only
+receipt содержит только канонический журнал/CURRENT, третьего runtime PR нет.
+Физический телефон/реальный OAuth не проверены; actualweb110+signedZIP110+
+public8 Chromium/WebKit прошлиretries0 с realAPI/WSdeny, ABI1.1.4/code9 прежний.
+Решение: production hold2035 освобождается после публикации этих квитанций;
+все5 участников очереди получают фактические source/гейты/grant+inspect и
+прямое правило владельца «готовые PR по порядку, застрявшие пропускаем».
+Открыто: обязательных работ CPT101–108 в этих двух PR нет. Реальные рабочие
+отметки делает сам тестовый тренер в активных карточках; считаются следующие
+проведённые with_trainer, self исключены, backfill нет. Дежурства/редактирование
+анкеты админом и расширение пилота — следующие отдельные согласования.
+Дальше: сообщить владельцу итог; текущий двухэтапный выпуск завершён.
