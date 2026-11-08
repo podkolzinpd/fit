@@ -7400,3 +7400,735 @@ a0cc0ce4b24c81e74e13ac4d3d16015b3e43261e. Полный tree после этог�
 проверенному a7f27b55 (dc0eaf2ecf7282b65c9eecdbffeb9fb04e6e4ea9); runtime,
 тесты и конфиги не изменились, повтор локального UI без новой причины не нужен.
 Source CI 69d16c8e также не подменяет будущий точный head с итоговым adbef9fe.
+
+
+### MC4.3 / #2034 — разрешённое слияние, main CI ещё впереди
+
+Итерация — 08.11.2026 — GPT-6.1-sol / OpenAI. Серверный merge 69d16c8e
+независимо квалифицирован root через GitHub: committer web-flow, подпись
+verified/valid, parents 11849349 и b8a36ad3; конкретный инициатор UI/API не
+приписывается. /tmp/fit-mc43-root-parallel-merge-proof.json подтверждает
+одинаковые полные trees a7f27b55 и a0cc0ce4. Обычный push сохранил эту историю;
+force и удаление чужого кода не использовались.
+
+Точный source 62fc1b9152ca392e79e989b823f4f918ea93d90f получил SUCCESS
+CI 42415085409, 35/35 заданий, attempt 1; Android 42415085385 SUCCESS.
+Все четыре native auth timing-артефакта прочитаны: новые 26/26 passed, retry 0,
+22 Live + 4 non-Live, по 13 Chromium и WebKit. Сводка сохранена в
+/tmp/fit-mc43-ci62fc-confirm-summary.json. Предыдущий CI серверного 69d был
+автоматически cancelled после synchronize; не объявлен failure или green 62fc.
+Root отдельно приняла comparison 26/26 + 22 PNG и четыре реальных dark/light
+preference controls: /tmp/fit-mc43-root-final-theme-proof.json.
+
+Read-only финальная квитанция ФИТ14 и actual body #2036 подтверждают закрытие
+всей приоритетной серии на adbef9fe. Их дополнительный OTA offline red оказался
+private fixture health origin; исправлена только тестовая настройка, выполнены
+public/signed ZIP проверки. Подробности сохранены в их собственном body,
+в этой задаче их продукт/тесты не менялись. Очередь и fresh main проверены;
+повторное разрешение владельца не запрашивалось.
+
+Body #2034 прошёл validator exit 0 в отдельном шаге и повторно check=True до
+edit. Обычный squash с --match-head-commit точного 62fc выполнен 07.11 в
+21:41:04 UTC. Итоговый main ddf365910ce0ca43c4dd7632639836c50d94ed51;
+его полный tree побайтно равен source 62fc. Main CI 42417023480 и Android
+42417023398 начаты. Auto-merge/admin/force не применялись. Это ещё не
+подтверждённая публикация: нужны main CI, официальные API/web/OTA и readback.
+Этот checkpoint только локальный и не запускает CI ради документации.
+Следующие MC не начаты; телефон/OAuth/native install не проверены.
+
+
+### MC4.3 — main CI: исходный duration focus flaky сохранён
+
+Итерация — 08.11.2026 — GPT-6.1-sol / OpenAI. Main CI 42417023480 attempt 1
+имеет красный auth-1/4 (job 128537296754): старый MC4.2 case client-light-
+original-sheet-true-390 в Chromium. Итог задания — 301 passed / 1 flaky;
+встроенный retry прошёл, но fail-on-flaky-tests правильно даёт exit 1.
+Единственная разница before/after: первый rest-time-wheel outline-color
+rgb(41,53,23)→rgb(61,97,12), outline-offset 1px→3px; геометрия равна,
+matches=[]/inherited=0 и diagnostics=0. В retry before уже имеет итоговый
+цвет/offset, differences=[]. /tmp/fit-mc43-main-auth1-attempt1.log и
+/tmp/fit-mc43-main-auth1-attempt1-diagnostics содержат исходный red и retry.
+
+Root независимо подтвердила: duration helper и focus owners не менялись,
+при matches=[] ни один применимый legacy selector не снимался. Общая
+reduced-motion duration .01ms при default transition-property:all и
+промежуточный цвет поддерживают гипотезу focus paint settlement, но точный
+first transition trace отсутствует; причинный корень не объявляется доказанным
+или исправленным. Один локальный запуск того же неизменённого case прошёл
+1/1 за 4,6 секунды, retry 0, diagnostics 0; это не замена main CI.
+/tmp/fit-mc43-main-duration-diagnostic.log и -results сохранены отдельно.
+
+Остальные задания attempt 1 ещё выполняются. После завершения — один целевой
+rerun только failed job на неизменённом main; если снова red, новый разбор,
+без серии повторов до green. Продукт, helper, assertions, таймауты, retries и
+CI не меняются. Публикация остаётся закрыта до зелёного полного main CI;
+Android main 42417023398 SUCCESS не заменяет этот гейт. Дополнительный
+post-release duration web/ZIP контроль root будет отдельным доказательством.
+
+
+### MC4.3 — новый прямой порядок: выпуск через следующий #2035
+
+Итерация — 08.11.2026 — GPT-6.1-sol / OpenAI. Root прочитала сам userMessage
+01a1b807-6c91-7752-98ef-eb4e6f2ca4ae в чате статистики тренеров: «напиши всем,
+что идете дальше по порядку, если какой-то PR стоит, то его обходим / ты
+следующий выкатываешься». Подтверждён новый порядок: #2035 следующим. Из relay
+не выводится разрешение нам отправлять сообщения в другие чаты; исходящих нет.
+
+Main CI 42417023480 attempt 1 завершён FAILURE, 35 заданий: красные только
+старый duration flaky auth-1/4 и зависимый агрегатор e2e, остальные завершены.
+Целевой retry не запускался и теперь отложен по новому порядку; активные задания
+не отменялись, публикация/dispatch #2034 не запускались. Первый red и passing
+built-in retry сохранены. Независимое ревью —
+/tmp/fit-mc43-root-main-flaky-review.json; это не объявление исправления.
+
+Собственный #2035 ведёт его исполнитель, мы не меняем его Git/PR/CI/флаги или
+данные. Read-only source 2149ec20f9565419f2c6563ad7f7dd9b1f5e3a68 содержит
+слитый ddf36591 как предка. Два CSS MC4.3, shared UI/WorkoutsPages, confirm
+helper/import, duration helper, native build и OTA contract побайтно равны
+проверенному 62fc. /tmp/fit-mc43-cpt2149-preservation-proof.json сохраняет
+полный список. Его точные source CI 42417605327 и Android 42417605275
+проверяются отдельно; это ещё не опубликованная MC4.3.
+
+После actual release более позднего SHA нужна новая сверка ancestry и
+protected hashes, полных публичных assets/API/OTA signatures, 26 confirm
+случаев web/verified ZIP и отдельного 2-case duration контроля обоих движков
+root. Только после этого MC4.3 может считаться опубликованной через новый main.
+Старый красный main CI ddf не переименовывается в зелёный; новый источник
+обязан пройти свои полные source/main гейты и официальный выпуск. Следующие
+MC не начаты, отдельные продуктовые настройки #2035 нами не выполняются.
+
+
+### MC4.3 — опубликована через #2035 / aa4be2a3, автоматическая приёмка завершена
+
+Итерация — 08.11.2026 — GPT-6.1-sol / OpenAI. Разрешённая MC4.3 слита своим
+#2034 в ddf36591; по следующему прямому порядку владельца отдельный retry и
+публикация этого старого main не запускались. Код доставлен штатным следующим
+[PR #2035](https://github.com/podkolzinpd/fit/pull/2035), слитым 07.11 в
+22:27:03 UTC. Фактический опубликованный источник —
+`aa4be2a33ec8cff53de84653ca0e0a63ff5dc2c6`. Его предок ddf36591 и полное равенство tree проверенному
+source 2149ec20 подтверждены. Все девять защищённых файлов (два CSS, shared UI,
+WorkoutsPages, confirm helper/import, duration helper, native build/OTA contract)
+побайтно равны принятому 62fc. Локальный merge чужого функционального этапа
+для этой приёмки не делался; чужие Git/PR/CI/данные/гранты нами не менялись.
+Proof: /tmp/fit-mc43-cpt-aa4be2a3-preservation-proof.json.
+
+Границы результата прежние: только 12 старых paint-семейств useConfirm в modern
+Live клиента и тренера, 7 scoped rules / 16 declarations. Девять доказанно
+мёртвых промежуточных деклараций не возвращены. DOM/Promise/handlers,
+нейтральные layout-правила, факты, таймеры, ввод, клавиатура, темы/плотности,
+rollout и чужие действующие механики этим этапом не менялись. Нужные общие
+токены, включая mono-on-primary, остаются долгом MC8, не удалены по имени.
+MC4.4 и остальные поздние локальные runtime-этапы не включались.
+
+| Гейт | Точная квитанция |
+| --- | --- |
+| Наш source 62fc | CI 42415085409 SUCCESS, 35 заданий, attempt 1; Android 42415085385 SUCCESS; новые 26/26 retry 0 |
+| Source следующего 2149ec20 | CI 42417605327 SUCCESS, 35 заданий, attempt 1; Android 42417605275 SUCCESS |
+| Фактический main aa4be2a3 | [CI 42420666603](https://github.com/podkolzinpd/fit/actions/runs/42420666603) SUCCESS, attempt 1: 34 SUCCESS + 1 штатный migration skip, все 35 завершены; Android 42420666552 SUCCESS |
+| Официальные публикации aa4 | [API 42423317764](https://github.com/podkolzinpd/fit/actions/runs/42423317764), [web 42423317795](https://github.com/podkolzinpd/fit/actions/runs/42423317795), [подписанный OTA 42423692544](https://github.com/podkolzinpd/fit/actions/runs/42423692544) — SUCCESS |
+
+Все четыре native auth timing-артефакта именно main aa4 прочитаны: confirm
+26/26 и старые duration 22/22 passed, retry 0, Chromium/WebKit. Сводка:
+/tmp/fit-mc43-aa4-main-new-cases-proof.json. Исторический main ddf с одним
+focus flaky остаётся красным в истории: 301 passed / 1 flaky, две outline
+props, geometry/ownership/diagnostics неизменны; built-in retry прошёл, отдельный
+rerun не запускался. Его точный корень не объявляется доказанным/исправленным.
+Ни продукт, ни helper/assertions/таймауты/CI не менялись ради green.
+
+Фактический readback 07.11: web/API в 23:07 UTC, OTA в 23:12 UTC. Все 213/213 публичных файлов
+совпадают с официальным manifest по status/size/SHA256; оба API releaseId exact
+aa4, health/ready 200, закрытые GET 401, DNS/TLS passed. Root независимо
+повторила эти проверки. Артефакт frontend:
+/tmp/fit-mc43-aa4be2a3-web-artifact/cloudru-release.json; отчёты
+/tmp/fit-mc43-public-files.json, /tmp/fit-mc43-public-api.json и отдельные
+/tmp/fit-mc43-root-public-files.json, /tmp/fit-mc43-root-public-api.json.
+
+OTA manifest/archive signatures, checksum, source/provenance, ABI/build,
+валидность срока и публичный readback прошли два независимых контроля.
+ABI `8922d2e9fc2c9a092d10f7b6066acdc46edf0fbe7ee7a15159e02a44e7126cf9`, nativeBuild 9,
+sequence 1794093064906, ZIP SHA256
+`cc97dde613404a446029632b0cdd91788c778a676b708b80b792a61dd7ebe99b`. Официальный artifact:
+/tmp/fit-mc43-aa4be2a3-ota-artifact; квитанция
+/tmp/fit-mc43-public-ota-receipt.json. Проверенный ZIP безопасно извлечён в
+/tmp/fit-live-mc43-ota-ui-aa4be2a3: 213 файлов, без unsafe paths/symlinks.
+Это просмотр подписанного web bundle, не установка на физический Android.
+
+Actual web: 26/26 confirm passed за 34,4 секунды; verified signed ZIP: 26/26
+за 28,7 секунды, оба запуска retries 0. В каждом runtime 26/26 computed styles,
+geometry/frame и 22/22 полных PNG byte-exact принятой public baseline 6434;
+между actual web и OTA тоже 26/26 + 22/22 exact, diagnostics 0. Root независимо
+прочитала все comparison reports. Артефакты:
+/tmp/fit-mc43-public-aa4.log, /tmp/fit-mc43-public-aa4-results,
+/tmp/fit-mc43-public-aa4-comparison.json; /tmp/fit-mc43-ota-aa4.log,
+/tmp/fit-mc43-ota-aa4-results, /tmp/fit-mc43-ota-aa4-comparison.json;
+/tmp/fit-mc43-web-ota-aa4-comparison.json. Применялись синтетические API,
+SW isolation, строгий запрет реальных API/WS; web origin /api и native
+https://api.fit-training.ru различались явно, реальные данные не затрагивались.
+
+Root отдельно проверила именно прежний упавший duration case в обоих движках:
+actual web 2/2 (4,7 секунды), signed ZIP 2/2 (3,9 секунды), retry 0,
+matches/inherited/differences/diagnostics 0. Финальная независимая квитанция —
+/tmp/fit-mc43-root-final-delivery-receipt.json. Реальные public WebKit кадры
+client light Original 390 и trainer dark Compact 375 просмотрены обеими
+сторонами; дополнительно просмотрены OTA client light Compact 390 и trainer
+Original desktop 1440. Новых отличий/обрезки/потери видимого фокуса в этих
+состояниях не обнаружено.
+
+Первые OTA UI попытки не стартовали из-за отсутствовавшего временного
+/tmp/fit-live-ota-spa.py: --list был непустым, webServer завершился ENOENT.
+Это QA startup, не product red/green. Исходные логи сохранены в
+/tmp/fit-mc43-ota-aa4-startup-missing-helper.log и
+/tmp/fit-mc43-root-ota-duration-startup-failure.log. Созданы только owned
+loopback SPA helpers на отдельных 5497/5498; исходные tests/assertions/timeouts
+и bundle не менялись. После этого выполнены указанные полные 26 и 2 случая.
+
+Статус MC4.3: опубликована и автоматически проверена через #2035/aa4be2a3;
+пользовательская проверка ещё впереди. Физический iPhone/Android, настоящий
+OAuth и native install не проверены; WebKit/ZIP их не заменяют. Прежний
+cold-load риск #2023 не объявлен исправленным, хотя нынешние actual web
+26/26 прошли без повторов. Известная квалификация старого Figma catalog
+opening animation и общий токен/шрифтовой долг сохранены в прежней истории.
+
+Дальше владелец проверяет у клиента и тренера подтверждение/явную отмену
+удаления подхода и упражнения, замену начатого и разделение суперсета:
+факты/таймер/отдых сохраняются, обе клиентские темы и Original/Compact прежние.
+После его приёмки — только отдельно разрешённый следующий этап. Сейчас
+следующие MC не начаты. Эта приёмка не объявляет глобальное окно #2035
+свободным: его grant/inspect и общую очередь ведёт исполнитель #2035.
+Итоговый checkpoint сохраняется локально docs-only без push/нового PR/CI;
+единственный stable pointer остаётся worktrees/design-cleanup-current.
+
+
+## 180. MC4.4 — принятый план завершения Live обеих ролей, 08.11.2026
+
+Итерация — 08.11.2026 — GPT-6.1-sol / OpenAI. Владелец сообщил о MC4.3:
+«Проверил, всё ок» и разрешил локально выполнить MC4.4 для спортсмена и тренера,
+сохранить все механики и перед выкаткой показать изменения, проверки и ошибки.
+Публикация — только после его нового отдельного разрешения. MC4.3 теперь
+принята пользователем; тип устройства/OAuth из этого сообщения не выводится.
+Недостающая собственная docs-история финальной квитанции 5147c05a сохранена
+выше без повторного копирования уже имеющихся в main записей и без MC5 runtime.
+
+Своя новая ветка feat/design-cleanup-mc44-release-20261108 и worktree
+worktrees/design-cleanup-mc44-release-20261108 созданы от свежего main
+43bad62bd260d044311ba67fd30c07ac73775fe9. Точка входа и прежняя ветка MC4.3
+не заняты повторно, чужие изменения сохранены. Main уже содержит последние
+настройки/уведомления/каталог/verification; они не откатываются. Прочитаны
+актуальные AGENTS/FIT_WORKFLOW/CURRENT_STATE/ACTIVE_CONTRACTS и правила scope.
+Старые локальные §§164/167/168 — исходный материал, не приёмка свежего main.
+
+| Участок | Разрешённая граница и способ проверки |
+| --- | --- |
+| MC4.4-A, спортсмен | Четыре visual-семейства finish-confirm: общий p и Live Identity p/tertiary/primary. Сначала новый runtime matches/ablation, перенос только нужного paint с сохранением сильных Lime owners. Margin/text-align/gap/actions и DOM остаются общими. Partial/cardio/timer-review, обе темы и плотности, 390/430 и узкий375 |
+| MC4.4-B, тренер | Native WorkoutAttendanceSheet live exit: доказать применимость generic workout-decision-sheet paint и полную перекрытость, если она сохранилась; не копировать мёртвый paint. Backdrop, width/scroll/form/focus, radio/finance/pending/error/retry и учёт прежние. Positive legacy control — существующий duration consumer; off attendance только negative |
+| MC4.4-C, отдельная квалификация | MC-FIND-REVIEW-CLIP-01: заново получить настоящий red bounds/hit-grid при swipe.scrollTop=0 на текущем main. Только если подтверждён тот же старый absolute-placement, применить ранее согласованную static/flex адаптацию существующего v79 wrapper. Не менять overflow:hidden, fold/таймер/review/обработчики и тексты; до включения передать root red/green доказательство |
+
+Сохраняются текущий текст «Не подтверждено подходов: N», прежняя inherited
+primary/danger роль cardio «Внести время», отдельный timer-review accent и
+самостоятельные тренерские механики. Не вводятся новые цвета/действия/подписи,
+темы или продуктовые решения. Ввод/выделение/клавиатура/галочка undo,
+drag/swipe/fold, факт/confirmedAt/timerConfirmed, rest/minus/pause/reload,
+будущая дата/empty delete и финансы проверяются существующими целевыми cases.
+Непустая визуальная матрица получает состояния через изолированные fixtures;
+функциональные сценарии не размножаются по всем декоративным осям.
+
+QA: реальные CSSRule refs, selector-only ablation и точные neutral clones для
+mixed rules; original style declarations не переприсваивать. До/после строгий
+полный CSSOM round-trip, все четыре стороны границ, outline/offset, геометрия,
+focus/scroll/anchor и диагностика console/pageerror/network. Положительные
+Lime owner filters не превращаются в legacy classifier. Keyboard calibration
+отделена от natural autofocus/return. Font/finite animation settlement
+дожидаются по фактическому состоянию; assertions/retries/timeouts не ослабляются.
+
+Проверка пакета последовательно: новый baseline production build и captures,
+минимальные CSS изменения, ownership и точное сравнение до/после (кроме явно
+доказанной намеренной placement-коррекции), текущие существующие Live/attendance
+механики обеих ролей/движков, targeted unit/lint/policy/build/docs/diff. Перед
+дорогими проверками — фактический e2e-scope всего diff. Полный coverage без
+новой причины не повторяется, будущий exact-source CI остаётся обязательным.
+Реальные API/WS/данные блокируются; synthetic browser не называется телефоном.
+
+Открыто: живые matches/cascade и clipping ещё не проверены на43bad62b;
+старые green результаты не подменяют их. Физический телефон/OAuth/native
+install не проверены. Push/открытие PR допустимы после технического root ревью как подготовка
+результата; merge/deploy — только после нового отдельного разрешения владельца.
+Auto-merge не включается.
+Не начинать MC5 или остальные последующие runtime-этапы. Память journal full,
+повторных записей/очистки нет. Дальше — baseline трёх связанных участков и
+соразмерная локальная реализация с проверяемыми коммитами/снимками.
+
+
+## 181. MC4.4 — локальная проверка завершения Live, 08.11.2026
+
+Итерация — 08.11.2026 — GPT-6.1-sol / OpenAI. Выполнен только разрешённый
+MC4.4 из §180: клиентский inline finish-confirm/timer-review и тренерский
+native WorkoutAttendanceSheet live exit. MC4.3 принята владельцем. Новый
+merge/deploy не разрешён; PR и source CI готовит root после технического ревью.
+MC5 и следующие runtime-этапы не начаты. База проверок — main
+43bad62bd260d044311ba67fd30c07ac73775fe9, своя ветка и worktree из §180.
+
+### Доказанные потребители и минимальный runtime
+
+Четыре старых finish visual-семейства исключены только для modern client
+Live с fit-client-lime + workout-live-reference + client-live-v79. Общие
+margin/text-align и действия остаются. Новая абляция показала: реально нужны
+только font-size:14px у p и color:var(--fg) у tertiary. Добавлены две слабые
+Lime copies, всего две декларации. Прежние strong owners уже сохраняют
+primary/danger у cardio «Внести время» и accent у timer-review; их не копировали.
+В отличие от старой локальной заготовки не возвращены мёртвые p color/weight
+и primary copies. Текущий текст «Не подтверждено подходов: N» сохранён.
+
+У native attendance старое generic workout-decision-sheet семейство совпадало
+с одним modern элементом, но абляция меняла ноль свойств/геометрию/backdrop
+во всех 16 modern samples. В существующий Live guard добавлен только
+workout-live-exit-sheet, без копирования перекрытого paint. Native backdrop
+rgba(0,0,0,.7), width/scroll/form/focus/radio и сильные accepted Lime owners
+сохранены. Два off attendance — negative controls; четыре существующих
+legacy duration cases обеих ролей — отдельный положительный контроль generic
+семейства. Общие root controls, disabled/focus/fonts остаются долгом MC7/MC8,
+не объявляются независимыми от старой основы.
+
+MC-FIND-REVIEW-CLIP-01 заново воспроизведена на 43bad: во всех десяти modern
+samples кнопка таймера выходила из карточки на 22 px, попадала только в 3 из
+9 hit-test точек и перекрывала следующий блок на 20 px при scrollTop=0.
+Два legacy controls имели 9/9 hits и overlap=0. Parent прочитала baseline и
+отдельно одобрила включение прежней узкой static/flex адаптации. Четыре
+absolute-placement свойства исключены только из прямого v79 wrapper; принятая
+static/flex строка добавлена в client-workout-reference.css. Overflow:hidden,
+DOM, fold/review, действия и анимационные механики прежние. Карточка намеренно
+стала выше на 44 px; новый дизайн/подписи/дополнительный отступ не добавлялись.
+
+Исходные WorkoutsPages.tsx, WorkoutAttendanceSheet.tsx, shared/ui.tsx,
+package/lock и playwright config побайтно равны базе. Runtime затронут только
+в src/styles.css, src/styles/workout-live-reference.css и
+src/styles/client-workout-reference.css. Четыре новых QA helper файла
+подключены обычным импортом в client-workout-reference.spec.ts; CI не менялся.
+Новые проверки ловят ownership/восстановление CSSOM и реальную обрезку кнопки,
+а не дублируют бизнес-тесты.
+
+### Исходная база и результат
+
+58-case baseline на неизменённом product CSS: 52 ожидаемых red и 6 pass,
+неожиданных ошибок нет. Это 26 modern finish ownership red, 16 modern
+attendance ownership red и 10 modern clipping red; controls — два legacy
+finish, два off attendance и два legacy layout. Во всех 46 ownership cases
+строго прошли полный CSSOM и focus/scroll/anchor round-trip. Diagnostics 0.
+Baseline production build/types/fonts/startup прошёл.
+
+После минимального CSS candidate: 58/58 passed, 43.7 s, retry 0, skip 0.
+Finish: 28/28 computed styles, геометрия и фон кадра exact; 18/26 PNG exact.
+Ровно восемь изменённых PNG — timer-review с намеренно исправленной кнопкой;
+это не pixel-identical миграция всего кадра. Attendance: 18/18 styles,
+геометрия, backdrop и PNG exact. Layout: все 30 modern folded/expanded/refolded
+состояний имеют 9/9 hits, scrollTop=0, overlap=0; рост карточки ровно 44 px.
+Оба legacy layout controls без изменения высоты. Реальный tap центра сохраняет
+facts/confirmedAt, снимает только ожидаемый timerConfirmed и сохраняет rest,
+pausedAt и pausedSeconds до и после reload. Normal/reduced motion проверены
+по computed .32 s/.00001 s и завершению конечных анимаций.
+
+В QA original CSSRule.style не переприсваивается: selector-only ablation
+по настоящим CSSRule refs, точные neutral clones смешанных правил, полное
+восстановление CSSOM и состояния. Положительные modern owner filters не входят
+в legacy classifier. Временный overflow-anchor:none относится только к
+искусственной абляции; исходные inline values/priority/style отсутствие и
+натуральные действия восстанавливаются строго. Keyboard calibration не
+выдаётся за исправление natural autofocus. Assertions/timeouts/retries прежние.
+
+Независимые root receipts: /tmp/fit-mc44-root-baseline-review.json,
+/tmp/fit-mc44-root-source-proof.json и
+/tmp/fit-mc44-root-candidate-comparison.json. AST подтверждает 25 715 исходных
+legacy declaration records без изменений после нормализации шести guards,
+все existing Lime declarations прежние; добавлены только 2 paint и 8 placement
+properties. Визуально просмотрены actual WebKit client light Original390
+folded timer-review, client light Compact390 cardio и trainer dark accounting;
+root дополнительно посмотрела trainer Compact375 empty delete. Обрезки кнопки
+больше нет, focus видим, вид соседних действий сохранён.
+
+Логи и captures: /tmp/fit-mc44-release-baseline-build.log,
+/tmp/fit-mc44-release-baseline.log, /tmp/fit-mc44-release-baseline-results,
+/tmp/fit-mc44-release-baseline-summary.json,
+/tmp/fit-mc44-release-candidate-build.log,
+/tmp/fit-mc44-release-candidate.log и
+/tmp/fit-mc44-release-candidate-results. Scoped helper lint, полный repository
+lint и policy scripts/fit-lime-split.test.mjs (8/8) прошли; targeted unit
+WorkoutAttendanceSheet/live-phase/rest-timer-storage — 31/31 (3 files).
+Полный coverage не повторялся без новой причины; exact-source CI ещё гейт.
+
+Свежий fetch перед финализацией: main cde47521652a6f933c72e65489cf4c6fcebf5a26
+(#2048). Это ops/server/history restore, frontend/shared/CSS не затронуты;
+AGENTS/FIT_WORKFLOW/ENGINEERING прежние. ACTIVE_CONTRACTS добавляет независимый
+AH-CONFIRMED-CARDS-03. Эти изменения не откатываются: обычную интеграцию свежего
+main и exact-source CI выполнит root перед PR/приёмкой версии. Локальные
+результаты выше относятся к 43bad + MC4.4, а не автоматически к новому head.
+
+Связанные existing browser-механики выполнила root на том же candidate dist:
+52 уникальных сценария в Chromium/WebKit, retry 0, flaky 0, unexpected 0.
+Первый пакет дал 30 pass и 18 skip: отсутствовал штатный
+FIT_YANDEX_E2E_REQUIRED=true для attendance lane. Только эти 18 неисполненных
+attendance и четыре существующих swipe cases запущены с правильным temp env:
+22/22 pass за 20.6 s, без skip. Первые 30 успешных не повторялись. Это не
+«48/48 одним прогоном». Исходный startup EPERM localhost сохранён отдельно;
+он возник до тестов и не считается product red. Assertions/timeouts/product
+не менялись.
+
+Пакет включает ввод/редактирование подтверждённых фактов, отмену drag,
+раздельные swipe/drag/editing, keyboard Next, cardio warning/focus, timer-review,
+pause/resume/reload, rest mode, unconfirm/reconfirm/fold, populated/empty Live,
+«Не состоялась», удаление пустой записи, 503/reload/retry/pending и защиту от
+повторных команд. Все четыре legacy duration-positive реально исполнены.
+Будущая дата, финансовые loading/error/retry и передача точного package ID
+дополнительно покрыты существующими AttendanceSheet unit. Receipt:
+/tmp/fit-mc44-root-mechanics-receipt.json; исходные logs/report/selection/results
+имеют префикс /tmp/fit-mc44-root-mechanics, followup paths указаны в receipt.
+
+Ограничения: физические iPhone/Android, настоящий OAuth и native install не
+проверены. Тренерский Live остаётся фактически тёмным; client light/dark и
+Original/Compact, ширины 375/390/430 и trainer desktop 1440 проверены браузером.
+Новых необъяснённых product ошибок в ownership/layout пакете нет; известные
+старые cold-load/focus settlement квалификации не объявлены исправленными.
+Публикации ещё не было. После технического root review — один MC4.4 PR и CI,
+затем владельцу конкретная сводка и отдельное разрешение на выпуск.
+
+
+## 182. MC4.4 — PR2051, итог подготовки и внешние CI-блокеры, 08.11.2026
+
+Итерация — 08.11.2026 — GPT-6 / OpenAI. Root приняла результат181 и сохранила
+версию реализации20090680. Обычный merge актуального main cde47521 дал source
+b4751b1114f7fa8af9f522ba207ad07fb07afd9b, без конфликтов. Frontend/e2e,
+package/lock/playwright между проверенной реализацией и merge побайтно прежние;
+независимый AST повторён относительно cde, результат прежний25715/6guards/2paint+8placement.
+Proof: /tmp/fit-mc44-root-source-proof-cde.json. Чужие изменения main сохранены,
+ни одного дополнительного UI-прогона без новой причины не запускалось.
+
+Создан ровно один [черновой PR2051](https://github.com/podkolzinpd/fit/pull/2051),
+base main, head b4751b11. Точный финальный body из owned
+/tmp/fit-mc44-root-pr-body.md валидирован до записи и подтверждён чтением:
+SHA256834719ae1c502dc2ea6d3c23c94dee030130016f1fed89ea0cde68b21a7baa83.
+Receipt /tmp/fit-mc44-root-pr-final-readback.json: OPEN/isDraft=true,
+autoMergeRequest=null. Слияния/публикации/нового rollout/реальных данных нет.
+
+Точный sourceCI42465125879 завершился:35заданий,33SUCCESS и2FAILURE.
+Все браузерные части, repository/app quality, общие tests, API и database
+успешны. Четыре небольших timing artifacts прочитаны root: новые58/58 MC4.4
+passed, retry0 (finish28,attendance18,layout12), обе browser-платформы;
+всего в четырёх native timing файлах1263 attempts. Proof:
+/tmp/fit-mc44-root-ci-new-cases-proof.json и /tmp/fit-mc44-ci-native-timings.
+
+Незакрытый CI-гейт — frontend-infrastructure: первый запуск128683385521
+остановился при получении криптографической подписи неизменённого
+provider yandex-cloud/yandex0.215.0, GitHub вернулHTTP504. Quality/tests=success,
+infrastructure=failure подтверждены логом dependent app128688089804.
+После сохранения первого красного результата выполнен единственный failed-job
+повтор: успешные33задания не повторялись. Attempt2 снова далHTTP504 при получении
+authentication checksums provider (job128691901591); dependent app128692800086
+также красный. Это не зелёный общий CI. Exact результаты обоих attempts:
+/tmp/fit-mc44-ci-attempt1-result.json, /tmp/fit-mc44-ci-attempt2-result.json;
+логи /tmp/fit-mc44-frontend-infrastructure-failed.log,
+/tmp/fit-mc44-frontend-infrastructure-attempt2-failed.log,
+/tmp/fit-mc44-app-aggregate-failed.log.
+
+Android42465125849 также не принят: attempt1/job128682739734 — HTTP504 при
+загрузке неизменённого Gradle8.14.3; единственный повтор attempt2/job128684280628 —
+read timeout того же download. Gradle tests/assemble не исполнялись, хотя
+предшествующие web sync и native fixture generation прошли. Исходные failures
+сохранены в /tmp/fit-mc44-android-failed.log,
+/tmp/fit-mc44-android-attempt2-failed.log и двух root qualification JSON.
+Ни provider/wrapper URL, ни workflows, подписи, assertions, retries/таймауты
+продуктовых тестов или иные gates не ослаблялись. Дальнейших слепых reruns нет.
+
+Новых ошибок в реализации MC4.4 по выполненным checks не обнаружено.
+Локальные58+52уникальных browser и31unit, pixel/style/geometry сравнения и
+исходные квалификации181 сохраняются; physical devices/OAuth/native install
+не проверены. Подготовка к просмотру завершена, готовность выпуска не заявлена:
+сначала восстановить прохождение двух внешних download-гейтов на точном source,
+затем новое отдельное разрешение владельца MC-RELEASE-01, общая очередь и
+штатная публикация с readback. Новые MC не начинаются. Этот итог сохраняется
+локальным docs-only коммитом без push и повторного CI ради квитанции;
+проверяемый удалённый head PR остаётся b4751b11.
+
+
+## 183. MC4.4 — разрешён выпуск2051, 08.11.2026
+
+Владелец прямо разрешил: «Разрешаю выпуск PR #2051. Повтори упавшие проверки и,
+когда всё будет зелёным, выкатывай в общей очереди. Все механики сохрани и
+напиши, что мне проверить после публикации». MC-RELEASE-01 выполнен именно
+для2051; повторного запроса разрешения не требуется. Следующие MC не разрешены.
+
+Текущий remote source b4751b11 и main cde47521 сверены чтением, tracked рабочая
+копия чистая, только служебный node_modules. Локальная828e — docs-only receipt,
+не отправлялась ради журнала. На разрешённом неизменённом b475 повторены только
+failed jobs CI42465125879 и Android42465125849 (attempt3);35/35 success не
+объявляется до реального результата. Подписи/версии/проверки/таймауты/охват не
+ослабляются, production-конфиги и реальные пользовательские данные не меняются.
+
+Очередь проверена по GitHub и read-only compact snapshots. ФИТ14 активно ведёт
+2049 и имеет прежний приоритет; CPT активно ведёт2050. Их не обходить из-за
+queued/failed проверок: работа продолжается.2039/2040 имеют неизменённые старые
+head и не имеют активных CI, активность перед своим merge проверяется повторно;
+одного возраста PR для решения недостаточно. Исходящих сообщений в соседние
+чаты в этом выпуске не разрешали, поэтому они не отправляются. Новые статусы
+не подменяют фактическую приёмку/освобождение release-окна предшественника.
+
+Маршрут после зелёного source и действующей очереди: fresh main/сохранность
+механик; только нормальное слияние exact-head2051, новый полный mainCI; штатные
+Cloud.ru API/web и совместимый подписанный OTA, затем независимый readback
+SHA/health/публичных байтов/подписей и UI обеих ролей. Deployment не выдаётся
+за приёмку до readback. После публикации — конкретные действия проверки для
+спортсмена и тренера; физический телефон не подменяется WebKit/verifiedZIP.
+Этот authorization checkpoint локальный, без sourcepush только ради записи.
+
+## 184. MC4.4 — интеграция принятого PR2049 и повтор механик, 08.11.2026
+
+Итерация — 08.11.2026 — GPT-6 / OpenAI. Исходные failed jobs2051 повторены
+на b475: attempt3 вновь остановился на внешних HTTP504 Terraform/Gradle,
+не на продуктовых assertions. Слепые дальнейшие повторы старого source прекращены.
+Предшествующий2049 прошёл35/35 CI и настоящий Android/306 Gradle tasks;
+обычно слит в main4db409fce3a9d6525abb5ea4f3a14c5826e0b246. Его main CI,
+Android и публикация остаются отдельными гейтами, не подменены PR-проверками.
+
+Root обычным merge получила7a9e5e7bfeb71e5eb263ad9d606aca167e256803,
+сохранив локальные828e/c1dd и все изменения main. ASTproof относительно4db:
+25715 исходных legacy declaration records прежние,6 guards/2 paint+8 placement;
+10 net files, защищённые обработчики/package/lock/playwright побайтно main.
+Proof: /tmp/fit-mc44-root-source-proof-4db409fc.json. Официальный transport
+инструментов из2049 отдельно прочитан на4116b35a: pinned official assets и
+оригинальные MavenPOM, точные три версии без dependency substitution; APK/OTA
+versions/ABI прежние. Terraform использует проверенный SHA256-pinned бинарник,
+это иной маршрут доверия, а не прежняя live-registry/GPG-загрузка.
+
+На совмещённом candidate полный build/startup, ESLint, docs/diff и31 unit
+успешны. Browser110/110 без retries/skips/flaky:58 новых MC4.4 и52 существующих
+mechanics, включая4 действительных legacy-positive duration controls.
+Квитанция /tmp/fit-mc44-4db-browser-receipt.json; исходные отчёты/логи сохранены.
+Проверены ввод/клавиатура/отмена и возврат галочки/сворачивание/drag/swipes,
+pause/rest/reload и завершение обеих ролей без потери фактов/команд.
+
+Ownership captures: finish28 styles/26PNG иattendance18 styles/18PNG exact,
+duration4 styles exact. Timer hit9/9, overlap0, card-scroll0 во всех состояниях;
+29/32 layoutPNG exact. Три full-frame capture normal-motion375 отличаются
+положением content/видимостью fixed layers. Raw comparison exit1 сохранён,
+не объявлен полным pixel-green. Адресная пассивная проверка с прежним полным
+entry дала2/2 pass и6/6 PNG exact без product/assertion/helper изменений.
+Capture центрирует card до ожидания finite fold paint; исходный110 не писал
+pre-center height/contentTop, поэтому историческая причина этих трёх снимков
+не доказана. Late-JS-scroll не объявляется найденной причиной. Защищённые
+15 файлов и затронутые Live handlers прежние; catalog-only parent diff у
+clientLime=true/picker-closed samples эквивалентен. Evidence:
+/tmp/fit-mc44-4db-comparison.json,
+/tmp/fit-mc44-4db-scroll-analysis.json,
+/tmp/fit-mc44-4db-source-and-sampling-review.json. Ограничение полноэкранного
+sampling сохраняется для последующей публичной приёмки; функциональные110
+и геометрия кнопки от него не объявляются непроверенными.
+
+Уточнение183:2040 возобновил работу новым28473392 и полным CI, поэтому при
+этой сверке не считался зависшим.2049/FIT14 сохраняет приоритет,2050 активен
+и обновился от4db. Очередь повторно сверяется перед нашим merge. Sourcepush
+ради квитанций не выполнялся; remote2051 ещё b475. Чужие проверки не повторялись,
+исходящие сообщения в соседние чаты не отправлялись. Реальных данных/rollout нет.
+
+Новое прямое поручение владельца: после фактической публикации2051 перейти к
+следующей части. Оно разрешает продолжить подготовку следующего этапа после
+readback2051; отдельное правило разрешения его выпуска MC-RELEASE-01 остаётся.
+Следующий шаг текущего этапа: очередь/итоговый main, exact-source зелёный CI,
+обычное слияние и штатная публикация с public/API/signedOTA/UI readback.
+
+## 185. MC4.4 — публичная база4db и source CI параллельно очереди, 08.11.2026
+
+Итерация — 08.11.2026 — GPT-6 / OpenAI. Выпуск2049 принят исполнителем:
+mainCI/Android/API/web/signedOTA и32 public/ZIP UI проверки успешны.
+Root независимо скачала официальный web artifact42476767866 и проверила
+238/238 публичных файлов по размеру/SHA256, commit4db409fc. На настоящем JS/CSS
+сайта строгие62 MC4.4 проверки дали ожидаемую baseline:52 red прежнего
+skin/placement,10 существующих/legacy-positive green, skip/retry0.
+Это доказательство старого состояния, не зелёная приёмка2051. Evidence:
+/tmp/fit-mc44-parent4db-public-files.json,
+/tmp/fit-mc44-public-baseline-4db-receipt.json и -adapted-report.json/results.
+
+Первый запуск временного public harness ошибочно сравнивал /api/v1 pathname
+с fixture /v1, получал локальный mock404/session error; остановлен130, исходные
+логи/trace сохранены, не объявлен продуктовым сбоем входа. Исправлен только
+временный synthetic handler URL: убрать /api непосредственно перед /v1.
+Настоящие API по-прежнему полностью блокируются и подменяются named fixtures;
+реальных пользователей/записей/телеметрии/WS/SW нет. Пять source case/probe
+файлов после нормализации импортов побайтно прежние, assertions не менялись.
+Путь подготовки /tmp/fit-mc44-prepare-public-qa.py и отдельная source-proof JSON
+честно отмечают fixtureGatewayPathAdapter, а не imports-only.
+
+Очередь вновь обновила main: принят2052/4ce011bd, отдельный trainer landing
+и inherited env официального Terraform mirror. Обычная интеграция дала8d048877;
+src/e2e/package/lock/playwright относительно проверенного7a9 побайтно прежние.
+AST4ce снова25715/6guards/2paint+8placement, net scope10files прежний.
+55/55 inherited CI/helper tests прошли; чужие workflows не редактировались.
+Main2052 publication/2050 остаются активными,2039/2040 проверяются перед merge.
+
+Уточнение технического выбора184 по прежнему прецеденту MC4.3: не ждать полной
+остановки постоянно меняющейся очереди перед первым source push. Текущий
+одобренный MC4.4 с4ce отправляется и проходит свой полный CI параллельно.
+Порядок merge/publication, приоритетФИТ14 и MC-RELEASE-01 не меняются. Если main
+изменится, включить его обычным merge и проверять новый exact head; старый green
+не присваивается новой версии. Проверки/таймауты/подписи/скоупы не ослабляются.
+
+
+## 186. MC4.4 — нестабильное ожидание paint и восстановление проверки, 08.11.2026
+
+Итерация — 08.11.2026 — GPT-6 / OpenAI. На source b7dcbe49 Android42478656198
+успешен с первой попытки; CI42478655933 красный: native-auth3/4 поймал
+activeAnimations=2 вместо0 в legacy WebKit390 layout sample. Встроенный retry
+этого case прошёл, но fail-on-flaky оставил весь CI красным. Это не58 clean pass:
+57 случаев прошли сразу, один со второй попытки. Guards/assert0 не ослабляются.
+Исторические targets двух анимаций не установлены: первый trace отсутствует;
+retry trace и одинаковые geometry/hits/PNG не доказывают историческую причину.
+
+Старый settleCompletionPaint однократно снимал список конечных анимаций и мог
+вернуться после появления следующей. Исправлен только этот QA helper: естественное
+ожидание finite running/pending, повторный поиск и два тихих кадра, общий предел5s.
+CSS/DOM/handlers/retries/assertions/test timeouts не менялись; infinite-анимации
+не выключаются. Проверка activeAnimations=0 в layout остаётся прежней.
+
+Принятый2050 обычным merge включён в77bc978e; база main9baefb17. AST-проверка
+заново дала25715 исходных legacy records без потерь и только2paint+8placement.
+Защищённые Live/Attendance/components/feature-flags/package/lock/playwright прежние.
+Полный build/types/startup/fonts и31 unit прошли; lint helper/diff/docs прошли.
+Новый полный source CI обязателен, прежний b7 red новой версии не присваивается.
+
+После восстановления сессии прежние /tmp артефакты отсутствуют; сохранённые
+исторические записи выше не выдаются за повторно прочитанные файлы. Временные
+configs/readback/harness восстановлены из текущих case-файлов. Первый локальный
+запуск остановлен ограничением доступа к test server; следующий не дошёл до
+кейсов из-за лишнего collection других specs с env assertions. Временный config
+уточнён до client-workout-reference.spec.ts, продукт/проверки не ослаблялись.
+Первый новый public baseline остановлен130: stub аналитики не учитывал query
+в точном URL. Исправлен только временный loader match; настоящие API/аналитика/
+WS/SW по-прежнему изолированы. Этот setup fail не объявляется ошибкой продукта.
+
+Владелец дважды указал на лишние запросы разрешений. Причина текущего эпизода:
+root заранее ставила require_escalated даже для обычных чтений, затем запросила
+его отдельно для browser server после EPERM. Разрешение на сам2051 уже есть;
+технический выбор/очередь/проверки не передаются владельцу. Сначала обычный
+доступ; системные запросы допустимы только при реальном ограничении среды,
+не повторное согласование задачи. Повторные независимые запросы не размножать.
+
+Открыто: новый helper пока требует проверки и нового exact-source CI; публикации
+2051 ещё нет. Дальше — проверка, обычный выпуск в очереди, фактический
+API/web/signedOTA/UI readback. После этого подготовка следующего узкого MC5.1
+из сохранённой169; его выпуск остаётся по отдельному MC-RELEASE-01.
+
+Дополнение186: actual TS helper проверен отдельным временным Node/vm smoke:5/5.
+Old A.finished→B возвращается при running B; новый ждёт natural finished B и
+два тихих кадра; pending учитывается, незавершающийся finite отклонён через5001ms,
+infinite не выключается. Это имитация scheduler/DOM API, не actual browser и не
+объяснение исторических CI2. Layoutcase/assert0 побайтно HEAD. Квитанция:
+/tmp/fit-mc44-helper-algorithm-report.json. Полный source CI остаётся гейтом.
+
+Дополнение186 — проверенная версия0e444b22870331861437387df550ffb5c003e1c3:
+единый технический запуск дал62/62 browser за40.7s и2/2 controlled actual-browser
+proof за7.6s, без retries/skips/flaky. Реальная legacy карточка использовалась
+для цепочки конечных A→B в обоих движках: old возвращается с running B, new
+дожидается natural finished B. Это доказывает дефект one-batch алгоритма, но
+не идентичность исторических двух CI-анимаций. Полный новый CI42504502459 и
+Android42504502497 запущены на0e; этот локальный docs-receipt не меняет source.
+
+Восстановленный actual-public baseline:52 ожидаемых ownership/placement red,
+10positive green,0skips/retries/flaky. Сравнение с новым local62:50/50 before
+styles/rects/backdrop exact; finish18/26PNG exact,8намеренных timer-review;
+attendance16/18PNG exact,2Chromium raster differences сохранены. Readonly audit:
+430filled — h1/native radio,1440accounting — h1/radio/2optionSPANglyphs; surfaces/
+controls/geometry/state/diagnostics прежние, исходники attendance/font400/500
+побайтно main9ba. Причина pixel-sampling не установлена, полного PNG-green нет.
+Доказанного product regression нет; raw report и RGBdiff не маскировались:
+/tmp/fit-mc44-baseline9ba-local-comparison.json,
+/tmp/fit-mc44-attendance-raster-review.json. Final public/verifiedZIP сверка ещё гейт.
+
+
+Дополнение186 — совместимость с принятым main2055/c6e4642e. Девять файлов
+изменения изолированы public/for-trainers и журналом лендинга; src/e2e/package/
+lock/playwright/.github побайтно прежние относительно source0e444b22. Локальный
+обычный merge f90aa6e3 сохраняет оба изменения, AST на c6 снова25715 без потерь,
+2paint+8placement. Внешний CI0e остаётся доказательством только0e, не f90/main.
+Уточнение технического выбора185: независимый принятый static landing не требует
+дублировать полный source push только ради ancestry. Перед обычным squash
+обязательны свежая очередь, завершение чужого release-window, review diff main
+и зелёный exact-source CI; после слияния — полный CI/Android фактического combined
+main до штатной публикации и readback. Требование branch protection не обходится:
+если normal merge потребует обновления source, включить main и проверить новый
+head. При изменении protected runtime этот узкий выбор неприменим. Admin/force/
+auto-merge/ослабление CI не используются. Локальный f90 пока не отправлен;
+source CI0e выполняется, публикации2051 ещё нет.
+
+
+Дополнение186 — CI42504502459 на0e завершён red из-за одного существующего
+unit ExerciseImage/manual file retry: после playing оставалась play-кнопка,
+33-й файл tests33/32pass, всего3116/3117. Это другой сбой относительно b7 paint;
+исходники component/test/vitalMedia/setup побайтно mainc6. Локальная адресная
+проверка33/33 прошла; её exit1 вызван global coverage thresholds при focused
+запуске, не тестом. Затем полный npm run test:coverage дал350/350files,
+3117/3117tests, global83.69stmt/78.78branch/82.94func/88.34lines, exit0 за71.6s.
+Историческая CI причина не установлена; возможный effect/event ordering не
+выдаётся за доказанную product bug. Разрешённый владельцем одноразовый rerun
+только failed jobs той же0e версии выполняется без изменений продукта/тестов/
+порогов/assertions. Повторный red требует нового разбора, не rerun-until-green.
+Полный исходный red log сохранён /tmp/fit-mc44-release-run/source-failed-42504502459.log.
+
+Readonly design_cleanup дополнительно сверила8 относящихся к видео файлов между
+mainc6/source0e/localHEAD: exact. Один targeted observational harness с исходными
+assertions прошёл: reset-effect attempt3 предшествовал playing на0.179ms.
+Историческую причину это не устанавливает; lifecycle ordering остаётся гипотезой.
+Отчёт /tmp/fit-mc44-exercise-image-diagnostic/audit.json, tracked edits агента нет.
+Все браузерные CI jobs source0e прошли с первой попытки, включая прежний flaky
+native3/4; исходный run имеет33success/2fail (app-tests и его app aggregate).
+Одноразовый --failed attempt2 запущен, исходный red сохранён; новый outcome ожидается.
+
+
+Дополнение186 — source0e CI42504502459 attempt2 завершён success:35/35 jobs;
+Android42504502497 success с первой попытки. Первый coverage red остаётся в
+истории, его причина unknown; rerun не объявляется исправлением видеокомпонента.
+Перед gate18:10UTC свежая очередь:2039/2040 неизменные heads с07.11/10:29,
+все runs завершены красными, новых активных runs нет; активный ФИТ14 выпустил
+2056/2057/2058 с текущими CI и готовит четвёртый. Их принятый приоритет сохраняется.
+Mainc6/2055 CI42506001744 failure, Android success, три публикации skipped.
+Соседний CPT read-only snapshot подтверждает, что автор2055 разбирает две auth
+browser failures; не дублируем расследование и не ставим release-gate. Выпуск2051
+разрешён, но ещё не слит/опубликован: ждём завершения текущего release-window и
+активных приоритетных PR, затем свежая интеграция/допустимые exact-head проверки.
+Если новые приоритетные изменения затронут runtime, узкое исключение static
+landing выше неприменимо: нужен новый source с полной проверкой после интеграции.
+
+
+Readonly preflight следующего MC5.1 на c6e4642e: checkpoint d3985c77/§169 всё ещё
+соответствует15/15 исходных families (7duration+3modal+5route buttons),5weak rules/
+8decl, declarations exact aa90c2c6. WorkoutActualDuration/validation/tests/type
+CSS прежние; доступны14existing browser/14unit. Карта /tmp/fit-mc51-current-map.json.
+Переносить старый classifier вслепую нельзя: его strip всех :where теряет positive
+owners. Существующий MC4.3 NonLive control ожидает3legacy modal matches именно у
+этого consumer: при MC5.1 сохранить настоящие legacy-positive/owner-proof и
+адаптировать проверку к новой ownership, не удалять/ослаблять assertion. MC513
+error-остаток отдельно; глобальные шрифты/MC7–8 вне scope. Это предварительное
+чтение, не реализация/приёмка/выпуск MC5.1; после2051 заново сверить actual main.
+
+
+Очередь186, уточнение после публикации c6/2055: exact-main CI/Android/API/web/
+OTA завершены success, первоначальные red/skipped выше сохранены как история.
+Независимый parent readback root не повторялся; наше2051 ещё не опубликовано.
+Активный пакет ФИТ14 теперь2056–2059; read-only snapshot владельца подтверждает,
+что он знает об ожидании нашего2051 и выпускает свой пакет первым. Встречного
+ожидания нет, исходящих сообщений не было. Green source0e не перезапускается
+только из-за ожидания; после принятого пакета требуется fresh интеграция/runtime
+проверка. Разрешение на2051 сохраняется, новых решений от владельца не требуется.
+
+
+Обновление очереди186 — последнее прямое указание владельца: «так выкатывай,
+ты первый в списке». Для текущего разрешённого2051 ожидание пакета ФИТ14 отменено;
+выходим первым. Свежие remote receipts: mainc6 принят/CI/Android/API/web/OTA success,
+source0e CI35/35+Android success,2039/2040 прежние heads без активных jobs.
+Новых исходящих сообщений/вопросов нет. Local runtime/e2e/config exact0e,
+локальный HEAD включает c6; обычное слияние без admin/force, затем обязательны
+actual combined-main CI/Android/publication и API/web/signedOTA/UI readback.
+Эта локальная квитанция не меняет проверенный remote source0e.
+
+
+Обычный merge2051 отклонён branch protection: remote source0e отстаёт от basec6.
+Ready установлен, слияния не было; admin/auto не использованы. Локальная
+нормальная интеграция c6 уже есть; src/e2e/package/lock/playwright/.github
+побайтно0e. Отправляется этот exact новый head с локальными docs receipts;
+обязателен новый полный CI/Android. Старые35/35 относятся только0e, не новому SHA.
+Выпуск2051 первым остаётся разрешён, повторный вопрос владельцу не требуется.
