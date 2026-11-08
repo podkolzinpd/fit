@@ -68,6 +68,8 @@ jobs:
     needs: e2e-scope
     if: needs.e2e-scope.outputs.frontend_required == 'true'
     runs-on: ubuntu-24.04
+    env:
+      TF_CLI_CONFIG_FILE: ${{ github.workspace }}/infra/yandex/terraform.rc.example
     permissions:
       contents: read
     steps:
