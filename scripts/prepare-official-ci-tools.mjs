@@ -13,11 +13,11 @@ export const officialTools = Object.freeze({
   terraform: { url: 'https://api.github.com/repos/yandex-cloud/terraform-provider-yandex/releases/assets/471147237?download=complete', size: 30461414, sha256: '214ac0a04a4f31ee0e3eb04ab1db9213c3ecaee9d4ebfd3d05b57399081c9d25' },
 })
 
-// This existing Capacitor dependency is fetched directly from Maven Central.
-// Upstream publishes SHA1 (the Gradle cache identity); SHA256 was independently
-// computed from the complete official artifact after verifying that SHA1.
+// This existing Capacitor dependency is byte-identical in Maven Central and the
+// official Kotlin release. The release asset publishes this SHA256; Maven's
+// published SHA1 identifies its normal Gradle cache directory only.
 export const kotlinCompiler = Object.freeze({
-  url: 'https://repo.maven.apache.org/maven2/org/jetbrains/kotlin/kotlin-compiler-embeddable/2.0.21/kotlin-compiler-embeddable-2.0.21.jar',
+  url: 'https://api.github.com/repos/JetBrains/kotlin/releases/assets/587823233?download=complete',
   size: 58272093,
   sha256: '9fa8cdd1de0dccffe154c997d423ec6b5f53cd6d9177e3a77a9b0de03fb1bc81',
   sha1: '79346ed53db48b18312a472602eb5c057070c54d',

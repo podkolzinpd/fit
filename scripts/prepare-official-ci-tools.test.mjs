@@ -54,12 +54,13 @@ test('does not overwrite a corrupted existing cache or hide the checksum error',
   assert.deepEqual(await readFile(path), corrupt)
 }))
 
-test('uses the official Maven artifact in the normal Gradle content store without GitHub headers', () => workspace(async root => {
+test('uses the byte-identical official Kotlin artifact in the normal Gradle content store', () => workspace(async root => {
   assert.equal(gradleKotlinCacheJar('/cache'), '/cache/caches/modules-2/files-2.1/org.jetbrains.kotlin/kotlin-compiler-embeddable/2.0.21/79346ed53db48b18312a472602eb5c057070c54d/kotlin-compiler-embeddable-2.0.21.jar')
   assert.equal(kotlinCompiler.sha256, '9fa8cdd1de0dccffe154c997d423ec6b5f53cd6d9177e3a77a9b0de03fb1bc81')
-  assert.equal(new URL(kotlinCompiler.url).hostname, 'repo.maven.apache.org')
-  await downloadVerifiedAsset({ ...spec, url: kotlinCompiler.url }, join(root, 'compiler.jar'), async (url, options) => {
-    assert.equal(url, kotlinCompiler.url)
+  assert.equal(kotlinCompiler.url, 'https://api.github.com/repos/JetBrains/kotlin/releases/assets/587823233?download=complete')
+  const mavenUrl = 'https://repo.maven.apache.org/maven2/synthetic/tool.jar'
+  await downloadVerifiedAsset({ ...spec, url: mavenUrl }, join(root, 'compiler.jar'), async (url, options) => {
+    assert.equal(url, mavenUrl)
     assert.deepEqual(options.headers, { Accept: 'application/octet-stream' })
     return new Response(bytes)
   })
