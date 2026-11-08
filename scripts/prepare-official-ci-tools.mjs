@@ -31,6 +31,10 @@ export const kotlinCompilerPom = Object.freeze({
 
 export const kotlinCompilerArtifacts = Object.freeze([
   { version: '2.0.21', jar: kotlinCompiler, pom: kotlinCompilerPom },
+  { version: '2.2.20',
+    jar: { url: 'https://api.github.com/repos/JetBrains/kotlin/releases/assets/587886256?download=complete', size: 56907103, sha256: '1c6c3f810bfe6a41abcbc34b3a2ef639f1e3f4aeed3a953a4b0974eea4f41889' },
+    pom: { url: 'https://repo.maven.apache.org/maven2/org/jetbrains/kotlin/kotlin-compiler-embeddable/2.2.20/kotlin-compiler-embeddable-2.2.20.pom', size: 2451, sha256: '05ff025f7fb0932fb11fa1e1ccaef528f76027d956680f8835d438542762e20a' },
+  },
   { version: '2.4.10',
     jar: { url: 'https://api.github.com/repos/JetBrains/kotlin/releases/assets/583808361?download=complete', size: 60352373, sha256: '9309638a2ee03e6bde9ef4b7444055a94b84ab906563675d71ff9aecb64da913' },
     pom: { url: 'https://repo.maven.apache.org/maven2/org/jetbrains/kotlin/kotlin-compiler-embeddable/2.4.10/kotlin-compiler-embeddable-2.4.10.pom', size: 2647, sha256: 'c3adb4f66fbfaa843c019b402d2c7e5f0880d32956bd8dd84022946177251102' },

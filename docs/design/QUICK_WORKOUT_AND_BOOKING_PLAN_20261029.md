@@ -676,3 +676,15 @@ POM2647байт/c3adb4f6…251102, полный original SHA1 сверён. Об
 69/69 helper/CI/OTA+lint PASS; loopback test требует разрешённый listener,
 ограничение среды не объявлялось ошибкой приложения. Следующий полныйCI/
 Android обязателен; прошлые failed builds не маскируются.
+
+
+На569b78dd прежний504 появился и у2.2.20 (ранее task компилировался):
+ошибка именно GET official browser redirect, не exclusive filter. Теперь все
+три существующие версии получают verified API JAR+original POM:2.0.21/2.2.20/
+2.4.10, без обновлений и широких includeModule. Для2.2.20 asset587886256,
+56907103байта/SHA2561c6c3f81…f41889; POM2451байт/05ff025f…62e20a, SHA1
+сверён с upstream. Полный API GET совпал. Все три original artifacts и
+metadata реально разрешены Gradle (SUCCESS4s),69/69 helper/CI/OTA+lint PASS.
+Предыдущие незавершённые CI остаются историей; текущему SHA вновь требуются
+полныйCI и настоящая Android-сборка. Неизменённая UI-функциональность не
+выдаётся за production: до приёмки задача остаётся открытой.
