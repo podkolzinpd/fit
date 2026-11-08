@@ -278,3 +278,14 @@
 :where(.fit-lime-shell.workout-live-reference:has(.coach-live-v79,.client-live-v79)) .live-rest-trigger.phase-prep { border-color:var(--accent-strong); background:var(--accent-surface); color:var(--fg) }
 :where(.fit-lime-shell.workout-live-reference:has(.coach-live-v79,.client-live-v79)) .live-rest-trigger.phase-work { border-color:color-mix(in srgb, var(--success-fg) 45%, var(--border)); background:color-mix(in srgb, var(--success-fg) 14%, var(--surface-raised)); color:var(--success-fg) }
 .workout-live-reference:where(.fit-lime-shell:has(.coach-live-v79,.client-live-v79)) .live-pinned { padding-bottom: 10px; margin-bottom: 12px; }
+
+
+/* MC4.3: shared confirmation paint only in modern Live. Existing stronger
+   Lime owners and shared geometry stay; nine redundant old copies are omitted. */
+:where(.fit-lime-shell.workout-live-reference:has(.coach-live-v79,.client-live-v79)) .modal-dialog { border: 1px solid var(--border) }
+:where(.fit-lime-shell.workout-live-reference:has(.coach-live-v79,.client-live-v79)) .modal-dialog .actions .danger { box-shadow:none }
+:where(.fit-lime-shell.workout-live-reference:has(.coach-live-v79,.client-live-v79)) .modal-overlay { background:color-mix(in srgb, var(--bg) 76%, transparent) }
+:where(.fit-lime-shell.workout-live-reference:has(.coach-live-v79,.client-live-v79)) .modal-dialog { border-color:var(--border); border-radius:18px; background:var(--surface-elevated); box-shadow:none }
+:where(.fit-lime-shell.workout-live-reference:has(.coach-live-v79,.client-live-v79)) .modal-message { color:var(--fg); font-size:14px; font-weight:400 }
+:where(.fit-lime-shell.workout-live-reference:has(.coach-live-v79,.client-live-v79)) .modal-dialog .actions button { border-radius:14px; font-size:14px; font-weight:500 }
+:where(.fit-lime-shell.workout-live-reference:has(.coach-live-v79,.client-live-v79)) .modal-dialog .actions .danger { border-color:var(--danger); background:var(--surface-elevated); color:var(--danger) }

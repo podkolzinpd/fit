@@ -8,7 +8,7 @@ for (const role of ['trainer', 'client'] as const) {
     await page.goto('/auth')
     await nativeSignIn(page, `${role}@fit.local`)
     await expect(page).toHaveURL(role === 'client' ? /\/me$/ : /\/(today|clients)$/)
-    const profile = role === 'client' ? '/me/settings' : '/profile/settings'
+    const profile = role === 'client' ? '/me/settings' : '/profile/settings?section=appearance'
     for (const dark of [false, true]) {
       const draftUrl = `/workouts/new?date=2026-09-${dark ? '17' : '16'}`
       await page.goto(profile)

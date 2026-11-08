@@ -65,7 +65,7 @@ export function workoutCopyNamesCases() {
             while (await hints.count())
                 await hints.first().click();
             for (const dark of [false, true]) {
-                await page.goto(role === 'client' ? '/me/settings' : '/profile/settings');
+                await page.goto(role === 'client' ? '/me/settings' : '/profile/settings?section=appearance');
                 await page.getByRole('switch', { name: 'Тёмная тема' }).setChecked(dark);
                 await page.goto(`/workouts/${sourceId}`);
                 await expect(page.getByText(oldName, { exact: true })).toHaveCount(2);

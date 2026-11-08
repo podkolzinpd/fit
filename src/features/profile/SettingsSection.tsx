@@ -17,9 +17,8 @@ export function AccountSettingsCard() {
   const [saved, setSaved] = useState(false)
   const formRef = useRef<HTMLFormElement>(null)
   const update = useMutation({
-    mutationFn: async (form: HTMLFormElement) => {
+    mutationFn: async (data: FormData) => {
       if (!actor || actor.kind !== 'trainer') throw new Error('Изменение данных недоступно')
-      const data = new FormData(form)
       await updateProfile({
         firstName: String(data.get('firstName') || '') || null,
         lastName: String(data.get('lastName') || '') || null,
@@ -38,9 +37,10 @@ export function AccountSettingsCard() {
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     setSaved(false)
-    update.mutate(event.currentTarget)
+    update.mutate(new FormData(event.currentTarget))
   }
   function cancel() {
+    update.reset()
     formRef.current?.reset()
     setSaved(false)
     setEditing(false)
@@ -53,14 +53,14 @@ export function AccountSettingsCard() {
         {actor.email && <span>{actor.email}</span>}
         <span>{actor.timezone}</span>
       </div>
-      {actor.kind === 'trainer' && !editing && <button type="button" className="link" onClick={() => setEditing(true)}>Изменить данные</button>}
+      {actor.kind === 'trainer' && !editing && <button type="button" className="link" onClick={() => { update.reset(); setSaved(false); setEditing(true) }}>Изменить данные</button>}
     </div>
     {actor.kind === 'trainer' && editing && <form ref={formRef} className="stack account-settings-form" onSubmit={submit}>
-      <Field label="Имя"><input name="firstName" defaultValue={actor.firstName ?? ''} /></Field>
-      <Field label="Фамилия"><input name="lastName" defaultValue={actor.lastName ?? ''} /></Field>
-      <Field label="Часовой пояс"><input name="timezone" defaultValue={actor.timezone} /></Field>
+      <Field label="Имя"><input disabled={update.isPending} name="firstName" defaultValue={actor.firstName ?? ''} /></Field>
+      <Field label="Фамилия"><input disabled={update.isPending} name="lastName" defaultValue={actor.lastName ?? ''} /></Field>
+      <Field label="Часовой пояс"><input disabled={update.isPending} name="timezone" defaultValue={actor.timezone} /></Field>
       <SaveStatus status={update.isPending ? 'saving' : update.error ? 'error' : 'idle'} error={update.error?.message} />
-      <div className="actions"><button type="button" className="secondary" onClick={cancel}>Отмена</button><button className="primary" disabled={update.isPending}>Сохранить</button></div>
+      <div className="actions"><button type="button" className="secondary" disabled={update.isPending} onClick={cancel}>Отмена</button><button className="primary" disabled={update.isPending}>Сохранить</button></div>
     </form>}
     {saved && <SaveStatus status="saved" />}
   </div>
