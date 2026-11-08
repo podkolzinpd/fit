@@ -8092,3 +8092,15 @@ browser failures; не дублируем расследование и не с�
 активных приоритетных PR, затем свежая интеграция/допустимые exact-head проверки.
 Если новые приоритетные изменения затронут runtime, узкое исключение static
 landing выше неприменимо: нужен новый source с полной проверкой после интеграции.
+
+
+Readonly preflight следующего MC5.1 на c6e4642e: checkpoint d3985c77/§169 всё ещё
+соответствует15/15 исходных families (7duration+3modal+5route buttons),5weak rules/
+8decl, declarations exact aa90c2c6. WorkoutActualDuration/validation/tests/type
+CSS прежние; доступны14existing browser/14unit. Карта /tmp/fit-mc51-current-map.json.
+Переносить старый classifier вслепую нельзя: его strip всех :where теряет positive
+owners. Существующий MC4.3 NonLive control ожидает3legacy modal matches именно у
+этого consumer: при MC5.1 сохранить настоящие legacy-positive/owner-proof и
+адаптировать проверку к новой ownership, не удалять/ослаблять assertion. MC513
+error-остаток отдельно; глобальные шрифты/MC7–8 вне scope. Это предварительное
+чтение, не реализация/приёмка/выпуск MC5.1; после2051 заново сверить actual main.
