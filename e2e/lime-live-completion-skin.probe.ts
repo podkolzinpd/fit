@@ -3,11 +3,33 @@ import { expect, type Page } from '@playwright/test'
 // Flush the actual focus/font/finite-animation state; never freeze product CSS.
 export async function settleCompletionPaint(page: Page, selector: string) {
   await page.evaluate(async selector => {
-    await document.fonts.ready
-    for (const node of document.querySelectorAll(selector)) { getComputedStyle(node).getPropertyValue('outline-offset'); node.getBoundingClientRect() }
-    await new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve())))
-    await Promise.all(document.getAnimations().filter(animation => animation.playState === 'running' && Number.isFinite(animation.effect?.getTiming().iterations)).map(animation => animation.finished.catch(() => undefined)))
-    await new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve())))
+    const deadline = performance.now() + 5000
+    const bounded = async <T>(work: Promise<T>): Promise<T> => {
+      let timer: ReturnType<typeof setTimeout> | undefined
+      try {
+        return await Promise.race([work, new Promise<never>((_, reject) => {
+          timer = setTimeout(() => reject(new Error('Completion paint did not settle within 5000 ms')), Math.max(0, deadline - performance.now()))
+        })])
+      } finally { clearTimeout(timer) }
+    }
+    await bounded(document.fonts.ready)
+    let quietFrames = 0
+    while (quietFrames < 2) {
+      await bounded(new Promise<void>(resolve => requestAnimationFrame(() => resolve())))
+      for (const node of document.querySelectorAll(selector)) { getComputedStyle(node).getPropertyValue('outline-offset'); node.getBoundingClientRect() }
+      const active = document.getAnimations().filter(animation =>
+        (animation.playState === 'running' || animation.pending) &&
+        Number.isFinite(animation.effect?.getTiming().iterations) &&
+        Number.isFinite(animation.effect?.getComputedTiming().endTime)
+      )
+      if (active.length) {
+        quietFrames = 0
+        // A finished/cancelled animation can start another one; rescan next frame.
+        await bounded(Promise.all(active.map(animation => animation.finished.catch(error => {
+          if (!(error instanceof DOMException && error.name === 'AbortError')) throw error
+        }))))
+      } else quietFrames++
+    }
   }, selector)
 }
 
