@@ -223,3 +223,64 @@ Regex неоднозначности частоты принимал `2026-11-07
 исходный текст/evidence сохраняются. Обязательные регрессии: frequency рядом
 с датой и сохранениеstartDate; настоящий2–3/или/отрицание рядом с датой должны
 по-прежнему отклоняться. [Итерация P03](design/COACH_WORKFLOW_AUDIT_20261031.md).
+
+## RL-ASYNC-FORM-SNAPSHOT-20261107
+
+Поля, заблокированные pending-состоянием, не входят в FormData. Не передавать
+DOM-form в отложенную mutation для последующего чтения: при offline pause
+значения будут потеряны к моменту выполнения. Снимать FormData/значения в submit
+до блокировки, сохраняя прежнюю команду. Проверка: offline→submit→disabled→online,
+сервер получает исходно введённое. Red/green и границы —
+[настройки, итерация7](design/TRAINER_SETTINGS_COMPACT_20261107.md#итерация-7--07112026--codex--openai).
+
+## RL-PREFERENCE-FAILED-WRITE-20261108
+
+Событие изменения не сохраняет выбор, если getter сразу перечитывает старое
+localStorage после неудачного setItem. Для существующих личных/device ключей
+failed-write значение остаётся в памяти сеанса, интерфейс честно сообщает о
+невозможности persistence; успешная запись и внешний storage event снимают
+override. Проверять пять preferences, account isolation, remount и recovery.
+Node26 setup может дать plain Storage-shim с собственным setItem, Node22 —
+jsdom Storage с методом в прототипе. Spy ставится на фактического владельца
+метода (own shim либо его прототип), а не безусловно на instance/Storage.prototype.
+Исходный red должен действительно вызвать отказ записи; проверять Node22/26.
+[SET-STORAGE-01 и итерации12/17–18](design/TRAINER_SETTINGS_COMPACT_20261107.md#итерация-17--08112026--codex--openai).
+
+### CPT — Закрытый native gate и размер retry (07.11.2026)
+
+Новый закрытый API-модуль подключается также к native browser harness настоящим
+store, как в production: отсутствие optional store даёт503 и меняет прежние
+карточки вместо default-off. Error/retry controls проверяются в legacy/Lime,
+включая реальный44px target. [CPT, итерация51](design/CORPORATE_ADMIN_20261027.md).
+
+
+### CPT — Выбранный фильтр в пустом периоде (07.11.2026)
+
+Пустые metadata не должны превращать выбранный trainerId в визуальное «Все»:
+сохранять последний выбранный id/name и проверять фактический query после
+смены периода/сброса. Для selected quick periods проверять вычисленный контраст
+при hover и без него в обеих темах: общий hover может выиграть каскад.
+[Причины и red/green, итерация58](design/CORPORATE_ADMIN_20261027.md).
+
+## RL-QUEUE-ACTIVE-BEHIND-20261108
+
+Behind или исторический green сами по себе не доказывают остановку active PR.
+Отличать согласованный слот/ожидание принятой основы от действительно
+остановившейся задачи; готовность и текущий hold проверять по конкретной
+очереди, не назначать себе приоритет временем CI. Новых согласований выпуска
+это не добавляет. [Разбор](design/TRAINER_SETTINGS_COMPACT_20261107.md#итерация-22--08112026--codex--openai).
+
+## Публичные вложенные страницы за reverse proxy — 08.11.2026
+
+Python-preview не подтверждает Nginx-маршруты каталогов. Для manifest с вложенным
+index.html проверять exact /directory/, совпадение bytes и redirect с /directory.
+Location должен быть относительным: абсолютный redirect внутреннего Nginx может
+передать наружу http и loopback-port. Проверять весь Location, не только pathname.
+Проверка: prepare-cloudru-frontend tests, реальный Nginx integration и публичный
+readback после promotion. История: TRAINER_LANDING_20261107, итерации9–10.
+
+## RL-ROLE-SCOPED-TEST-TEXT-20261108
+
+Имя trainer-*.spec не доказывает роль всех тестов внутри. При trainer-only
+переименовании читать actor/route каждого изменённого locator; клиентские
+ветки общего файла сохраняют default. [Разбор и8/8 guard](design/TRAINER_SETTINGS_COMPACT_20261107.md#итерация-34--08112026--codex--openai).

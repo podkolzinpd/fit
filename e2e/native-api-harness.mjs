@@ -116,6 +116,8 @@ try {
     ['pilotAppFeedbackWriter', 'pilot-app-feedback-writer', 'DatabasePilotAppFeedbackWriter'],
     ['pilotPushNotifications', 'pilot-push-notifications', 'DatabasePilotPushNotifications'],
     ['pilotChat', 'pilot-chat', 'DatabasePilotChat'],
+    ['corporateDuties', 'corporate-duties', 'CorporateDutiesStore'],
+    ['corporatePersonal', 'corporate-personal', 'CorporatePersonalStore'],
   ]
   const options = { databasePool: runtime, logger: false, allowedOrigins: [new URL(process.env.FIT_E2E_FRONTEND_URL ?? 'http://127.0.0.1:5173').origin], yandexOnlyAuthEnabled: true }
   for (const [key, module, name] of services) {

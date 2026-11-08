@@ -1,0 +1,169 @@
+import { expect, test, type Page } from '@playwright/test'
+import { mockPilot, trainerId, clientId } from './fit-lime-fixtures'
+import { nativeAiUrl } from './native-ai-fixture'
+import type { EmployeeCommand, EmployeeMark } from '../src/data/repositories/corporate-personal.repository'
+
+const card = `/clients/${clientId}`, admin = '/admin?tab=statistics&kind=personal'
+const otherTrainer = '20000000-0000-4000-8000-000000000001'
+let unexpected: string[] = []
+async function setup(page: Page, options: { allowed?: boolean; role?: 'trainer'|'client'; lost?: boolean; conflict?: boolean; denied?: boolean; failGate?: boolean; failStats?: boolean; failPage?: boolean; empty?: boolean; legacy?: boolean; emptyTrainerRange?: boolean } = {}) {
+  const origin = new URL(nativeAiUrl('/')).origin
+  await page.route('**/*', route => {
+    const req=route.request(),url=new URL(req.url())
+    if (url.origin===origin && ['GET','HEAD'].includes(req.method()) && !/^\/(?:api|v1)\//.test(url.pathname)) return route.fallback()
+    unexpected.push(`${req.method()} ${url.pathname}`);return route.abort('blockedbyclient')
+  })
+  await mockPilot(page,{role:options.role??'trainer',fitLime:!options.legacy,pilot:!options.legacy,workouts:[]})
+  await page.routeWebSocket('**/*',socket=>socket.close())
+  await page.route('**/v1/admin/access',route=>route.fulfill({json:{allowed:true}}))
+  await page.route('**/v1/admin/bundle',route=>route.fulfill({json:{offices:[],trainers:[]}}))
+  await page.route(/\/v1\/admin\/corporate-services(?:\?|$)/,route=>route.fulfill({json:{counts:{tour:0,consultation:0,instruction:0,intro:0},timeZone:'Europe/Moscow',offices:[],trainers:[]}}))
+  let mark:EmployeeMark={marked:false,version:0,fromDate:null},lost=options.lost,conflict=options.conflict,failGate=options.failGate,failStats=options.failStats,failPage=options.failPage
+  const commands=new Map<string,EmployeeMark>(),writes:EmployeeCommand[]=[],ranges:URLSearchParams[]=[]
+  let markReads=0,gateReads=0
+  await page.route(/\/v1\/(?:admin\/)?corporate-personal(?:\/|\?|$)/,async route=>{
+    const url=new URL(route.request().url()),path=url.pathname
+    if (path.endsWith('/access')) {
+      gateReads++
+      if(failGate){failGate=false;return route.fulfill({status:503,json:{error:'unavailable'}})}
+      return route.fulfill({json:{allowed:options.allowed!==false}})
+    }
+    if(path==='/v1/admin/corporate-personal') {
+      ranges.push(url.searchParams)
+      if(failStats){failStats=false;return route.fulfill({status:503,json:{error:'unavailable'}})}
+      if(failPage && url.searchParams.has('cursorId')){failPage=false;return route.fulfill({status:503,json:{error:'unavailable'}})}
+      const date=options.emptyTrainerRange?'2026-11-06':'2026-11-07',last=url.searchParams.has('cursorId'),filtered=url.searchParams.has('trainerId')
+      const empty=options.empty || options.emptyTrainerRange && !(url.searchParams.get('from')!<=date && date<url.searchParams.get('until')!)
+      const id=last?otherTrainer:clientId
+      return route.fulfill({json:{count:empty?0:filtered?1:2,trainers:empty&&options.emptyTrainerRange?[]:[{id:trainerId,name:'Тестовый тренер',count:1},{id:otherTrainer,name:'Второй тренер',count:1}],records:empty?[]:[{id,date,trainerId:filtered?otherTrainer:trainerId,trainerName:filtered?'Второй тренер':'Тестовый тренер',status:'done'}],nextCursor:!empty&&!last&&!filtered?{date,id}:null}})
+    }
+    if(route.request().method()==='GET'){markReads++;return route.fulfill({json:mark})}
+    const command=route.request().postDataJSON() as EmployeeCommand;writes.push(command)
+    if(options.denied)return route.fulfill({status:403,json:{error:'forbidden'}})
+    if(commands.has(command.commandId))return route.fulfill({json:commands.get(command.commandId)})
+    if(conflict){conflict=false;mark={marked:true,version:1,fromDate:'2026-11-07'};return route.fulfill({status:409,json:{error:'conflict'}})}
+    mark={marked:command.marked,version:command.version+1,fromDate:command.marked?'2026-11-07':null};commands.set(command.commandId,mark)
+    if(lost){lost=false;return route.abort('connectionreset')}
+    return route.fulfill({json:mark})
+  })
+  return {writes,ranges,get mark(){return mark},replaceMark(value:EmployeeMark){mark=value},get markReads(){return markReads},get gateReads(){return gateReads}}
+}
+async function expectReadableSelectedPeriod(page:Page) {
+  const active=page.locator('.corporate-personal-statistics .corporate-service-quick-periods [aria-pressed="true"]')
+  const contrast=()=>active.evaluate(el=>{
+    const luminance=(color:string)=>{
+      const channels=color.match(/[\d.]+/g)!.slice(0,3).map(Number).map(value=>{const n=value/255;return n<=0.04045?n/12.92:((n+0.055)/1.055)**2.4})
+      return channels[0]!*0.2126+channels[1]!*0.7152+channels[2]!*0.0722
+    }
+    const style=getComputedStyle(el),fg=luminance(style.color),bg=luminance(style.backgroundColor)
+    return (Math.max(fg,bg)+0.05)/(Math.min(fg,bg)+0.05)
+  })
+  await active.hover();await expect.poll(contrast).toBeGreaterThanOrEqual(4.5)
+  await page.mouse.move(0,0);await expect.poll(contrast).toBeGreaterThanOrEqual(4.5)
+}
+export function registerCorporatePersonalCases() {
+  test.beforeEach(()=>{unexpected=[]})
+  test.afterEach(()=>{expect(unexpected,'Real APIs are blocked; application calls must be mocked').toEqual([])})
+  test('mark uses a confirmed gate and only server date; unmark preserves ordinary client actions',async({page})=>{
+    const f=await setup(page);await page.goto(nativeAiUrl(card))
+    const toggle=page.getByRole('switch',{name:'Сотрудник Яндекса'})
+    await expect(toggle).not.toBeChecked();await toggle.click();await expect(toggle).toBeChecked()
+    await expect(page.locator('.corporate-employee-mark')).toContainText('07.11')
+    expect(f.writes).toHaveLength(1);expect(Object.keys(f.writes[0]!).sort()).toEqual(['commandId','marked','version'])
+    await toggle.click();await expect(toggle).not.toBeChecked();expect(f.mark.version).toBe(2)
+    await expect(page.getByRole('heading',{name:'Алексей Смирнов',exact:true})).toBeVisible()
+  })
+  test('business permission is independent of the trainer visual pilot',async({page})=>{
+    await setup(page,{legacy:true});await page.goto(nativeAiUrl(card));const toggle=page.getByRole('switch',{name:'Сотрудник Яндекса'});await toggle.click();await expect(page.locator('.corporate-employee-mark')).toContainText('07.11');await expect(toggle).toBeChecked()
+  })
+  test('lost acknowledgement retries the same command and a conflict requires saved version',async({page})=>{
+    const f=await setup(page,{lost:true});await page.goto(nativeAiUrl(card));await page.getByRole('switch').click()
+    await page.getByRole('button',{name:'Повторить сохранение'}).click();await expect(page.getByRole('switch')).toBeChecked()
+    expect(f.writes).toHaveLength(2);expect(f.writes[0]).toEqual(f.writes[1]);expect(f.mark.version).toBe(1)
+  })
+  test('a replayed old acknowledgement cannot replace a newer mark read from the server',async({page})=>{
+    const f=await setup(page,{lost:true});await page.goto(nativeAiUrl(card));await page.getByRole('switch').click()
+    await expect(page.getByRole('button',{name:'Повторить сохранение'})).toBeVisible()
+    f.replaceMark({marked:false,version:2,fromDate:null})
+    const refreshed=page.waitForResponse(r=>r.request().method()==='GET'&&new URL(r.url()).pathname.endsWith(`/corporate-personal/clients/${clientId}`))
+    await page.evaluate(()=>window.dispatchEvent(new Event('visibilitychange')));await (await refreshed).finished()
+    await page.getByRole('button',{name:'Повторить сохранение'}).click()
+    await expect(page.getByRole('alert')).toContainText('Отметка уже изменилась')
+    await expect(page.getByRole('switch')).not.toBeChecked();await expect(page.getByRole('button',{name:'Повторить сохранение'})).toHaveCount(0)
+    await page.getByRole('button',{name:'Загрузить сохранённую версию'}).click();await expect(page.getByRole('switch')).toBeEnabled()
+    expect(f.writes).toHaveLength(2);expect(f.writes[0]).toEqual(f.writes[1]);expect(f.mark.version).toBe(2)
+  })
+  test('conflict readback never silently overwrites another saved mark',async({page})=>{
+    const f=await setup(page,{conflict:true});await page.goto(nativeAiUrl(card));await page.getByRole('switch').click()
+    await expect(page.getByRole('switch')).toBeDisabled();await expect(page.getByRole('button',{name:'Повторить сохранение'})).toHaveCount(0)
+    await page.getByRole('button',{name:'Загрузить сохранённую версию'}).click();await expect(page.getByRole('switch')).toBeChecked();expect(f.writes).toHaveLength(1)
+  })
+  test('revoked permission retains saved state without automatic resend',async({page})=>{
+    const f=await setup(page,{denied:true});await page.goto(nativeAiUrl(card));await page.getByRole('switch').click()
+    await expect(page.getByRole('alert')).toContainText('Доступ');await expect(page.getByRole('switch')).not.toBeChecked()
+    await expect(page.getByRole('button',{name:'Повторить сохранение'})).toHaveCount(0);expect(f.writes).toHaveLength(1)
+  })
+  test('gate OFF hides the mark and never reads client corporate data',async({page})=>{
+    const f=await setup(page,{allowed:false});await page.goto(nativeAiUrl(card));await expect(page.getByRole('heading',{name:'Алексей Смирнов',exact:true})).toBeVisible()
+    await expect.poll(()=>f.gateReads).toBeGreaterThan(0);await expect(page.getByRole('switch',{name:'Сотрудник Яндекса'})).toHaveCount(0);expect(f.markReads).toBe(0)
+  })
+  for(const theme of ['dark','light'])test(`failed gate is recoverable with a full retry target in legacy ${theme}`,async({page})=>{
+    await setup(page,{failGate:true,legacy:true});await page.addInitScript(value=>localStorage.setItem('fit.appTheme',value),theme)
+    await page.setViewportSize({width:1440,height:1000});await page.goto(nativeAiUrl(card));await expect(page.getByRole('switch')).toHaveCount(0)
+    const retry=page.getByRole('button',{name:'Повторить проверку'});await expect(retry).toBeVisible()
+    const box=await retry.boundingBox();expect(box!.height).toBeGreaterThanOrEqual(44);expect(box!.width).toBeGreaterThanOrEqual(44)
+    await retry.click();await expect(page.getByRole('switch')).not.toBeChecked()
+  })
+  test('admin can switch between existing services and personal statistics from the current page',async({page})=>{
+    await setup(page);await page.goto(nativeAiUrl('/admin'));await page.getByRole('button',{name:'Статистика',exact:true}).click()
+    await expect(page.getByRole('heading',{name:'Статистика услуг',exact:true})).toBeVisible();await page.getByRole('button',{name:'Персональные',exact:true}).click()
+    await expect(page.getByRole('heading',{name:'Персональные тренировки',exact:true})).toBeVisible();expect(new URL(page.url()).searchParams.get('kind')).toBe('personal')
+    await page.getByRole('button',{name:'Услуги',exact:true}).click();await expect(page.getByRole('heading',{name:'Статистика услуг',exact:true})).toBeVisible();await expect(page.locator('.corporate-service-counts dd')).toHaveText(['0','0','0','0'])
+  })
+  test('admin pagination retains previous rows on failure, then trainer filter resets cursor',async({page})=>{
+    const f=await setup(page,{failPage:true});await page.goto(nativeAiUrl(admin));const rows=page.getByLabel('Учтённые персональные тренировки').locator('li')
+    await expect(rows).toHaveCount(1);await page.getByRole('button',{name:'Показать ещё'}).click();await expect(page.getByRole('alert')).toContainText('Уже загруженные записи сохранены');await expect(rows).toHaveCount(1)
+    await page.getByRole('button',{name:'Повторить загрузку'}).click();await expect(rows).toHaveCount(2)
+    expect(f.ranges[1]?.toString()).toBe(f.ranges[2]?.toString())
+    await page.getByText('Период и тренер',{exact:true}).click();await page.getByRole('combobox',{name:'Тренер персональных тренировок'}).selectOption(otherTrainer)
+    await expect(rows).toHaveCount(1);await expect(rows).toContainText('Второй тренер');expect(f.ranges.at(-1)?.has('cursorId')).toBe(false)
+    expect(f.ranges.every(r=>!r.has('officeId'))).toBe(true)
+  })
+  test('admin unavailable is distinct from empty and a successful retry returns zero',async({page})=>{
+    await setup(page,{failStats:true,empty:true});await page.goto(nativeAiUrl(admin));await expect(page.getByLabel('Проведено персональных тренировок')).toHaveCount(0)
+    await page.getByRole('button',{name:'Повторить',exact:true}).click();await expect(page.getByText('За этот период тренировок нет')).toBeVisible();await expect(page.getByLabel('Проведено персональных тренировок')).toContainText('0')
+  })
+  test('selected trainer stays explicit when the chosen period has no trainer metadata',async({page},info)=>{
+    const f=await setup(page,{emptyTrainerRange:true});await page.clock.install({time:new Date('2026-11-07T10:00:00Z')})
+    await page.goto(nativeAiUrl(admin));await page.getByText('Период и тренер',{exact:true}).click()
+    const select=page.getByRole('combobox',{name:'Тренер персональных тренировок'})
+    await select.selectOption(otherTrainer);await expect(select).toHaveValue(otherTrainer)
+    await page.getByRole('button',{name:'Сегодня',exact:true}).click()
+    await expect(page.getByText('За этот период тренировок нет',{exact:true})).toBeVisible()
+    await expect(select).toHaveValue(otherTrainer);await expect(select.locator('option:checked')).toHaveText('Второй тренер')
+    expect(f.ranges.at(-1)?.get('trainerId')).toBe(otherTrainer)
+    await expectReadableSelectedPeriod(page)
+    await page.screenshot({path:info.outputPath('personal-empty-selected-trainer.png'),fullPage:true,animations:'disabled'})
+    await select.selectOption('');await expect(select.locator('option:checked')).toHaveText('Все тренеры')
+    await expect.poll(()=>f.ranges.at(-1)?.has('trainerId')).toBe(false)
+  })
+  for(const theme of ['dark','light'])for(const width of [320,390,430,1440])test(`personal ${theme} mark and statistics at ${width}`,async({page},info)=>{
+    await setup(page);await page.addInitScript(value=>localStorage.setItem('fit.appTheme',value),theme)
+      await page.setViewportSize({width,height:width>700?1000:844});await page.goto(nativeAiUrl(card))
+      const toggle=page.getByRole('switch',{name:'Сотрудник Яндекса'});await expect(toggle).toBeVisible()
+      const hit=page.locator('.corporate-employee-mark .switch-row')
+      expect((await hit.boundingBox())!.height).toBeGreaterThanOrEqual(44)
+      await hit.scrollIntoViewIfNeeded();expect(await hit.evaluate(el=>{const b=el.getBoundingClientRect();return el.contains(document.elementFromPoint(b.x+b.width/2,b.y+b.height/2))})).toBe(true)
+      const wasChecked=await toggle.isChecked();await hit.click({position:{x:20,y:25}});await expect(toggle).toBeChecked({checked:!wasChecked})
+      await expect(page.locator('.corporate-employee-mark')).toContainText(wasChecked?'Старые занятия не добавятся':'07.11')
+      expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true)
+      await page.screenshot({path:info.outputPath(`personal-mark-${theme}-${width}.png`),fullPage:true,animations:'disabled'})
+      await page.goto(nativeAiUrl(admin));await expect(page.getByLabel('Проведено персональных тренировок')).toBeVisible()
+      await expectReadableSelectedPeriod(page)
+      const summary=page.getByText('Период и тренер',{exact:true});expect((await summary.boundingBox())!.height).toBeGreaterThanOrEqual(44);await summary.click()
+      expect((await page.getByRole('combobox',{name:'Тренер персональных тренировок'}).boundingBox())!.height).toBeGreaterThanOrEqual(44)
+      expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true)
+      await page.screenshot({path:info.outputPath(`personal-statistics-${theme}-${width}.png`),fullPage:true,animations:'disabled'})
+      await page.getByLabel('Учтённые персональные тренировки').scrollIntoViewIfNeeded();await page.screenshot({path:info.outputPath(`personal-details-${theme}-${width}.png`),fullPage:true,animations:'disabled'})
+  })
+}

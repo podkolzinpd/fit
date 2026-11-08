@@ -3092,6 +3092,7 @@ export function LiveWorkoutPage() {
   const [reordering, setReordering] = useState(false)
   // Упражнение, которое заменяем через пикер; null — режим добавления.
   const [replaceExerciseId, setReplaceExerciseId] = useState<string | null>(null)
+  const multipleLiveSelection = !replaceExerciseId && (clientLime || isQuickWorkoutEntryEnabled(actor))
   // Подтверждённые подходы, временно разблокированные для правки (по карандашику).
   const [editingSets, setEditingSets] = useState<Set<string>>(() => new Set())
   // Выбранный подход определяет подсветку и адресные действия меню.
@@ -5131,7 +5132,7 @@ export function LiveWorkoutPage() {
       </div>}
     </>}</AsyncView>
     {liveAttendanceAction && canConfirmAttendance && query.data && <WorkoutAttendanceSheet workout={query.data} action={liveAttendanceAction} onChangeDate={() => { setLiveAttendanceAction(null); navigate(`/workouts/${workoutId}`, { state: { returnTo: `/workouts/${workoutId}/live`, adjustAttendanceDate: true } }) }} onClose={() => { setLiveAttendanceAction(null); if (trainerLiveExit) window.requestAnimationFrame(() => liveFinishTriggerRef.current?.focus({ preventScroll: true })) }} beforeSave={async () => { await prepareLiveCompletion(); return workoutsRepository.get(workoutId) }} onDelete={trainerLiveExit ? () => cancelEmpty.mutateAsync() : undefined} onCompleted={async action => { setLiveAttendanceAction(null); await onLiveEnded(action === 'complete') }} />}
-    {canManageLiveStructure && pickerOpen && <ExercisePicker quickEntry={isQuickWorkoutEntryEnabled(actor)} coachLiveV79={coachV79} clientLiveV79={clientReference} clientLime={isClientLimeEnabled(actor)} reference={coachReference} referenceAppearance={visualReference} catalog={catalog} clientRecent={clientRecentExercises} techniqueActionLabel={replaceExerciseId ? 'Заменить упражнение' : 'Добавить упражнение'} onPick={pickLiveExercise} onPickMany={pickLiveExercises} multiple={clientLime && !replaceExerciseId} showEmptySelection={clientLime && !replaceExerciseId} keepSelectionWhileAdding={clientLime && !replaceExerciseId} selectionDraft={clientLime && !replaceExerciseId ? livePickerSelection : undefined} onSelectionDraftChange={clientLime && !replaceExerciseId ? setLivePickerSelection : undefined} onClose={closePicker} />}
+    {canManageLiveStructure && pickerOpen && <ExercisePicker quickEntry={isQuickWorkoutEntryEnabled(actor)} coachLiveV79={coachV79} clientLiveV79={clientReference} clientLime={isClientLimeEnabled(actor)} reference={coachReference} referenceAppearance={visualReference} catalog={catalog} clientRecent={clientRecentExercises} techniqueActionLabel={replaceExerciseId ? 'Заменить упражнение' : 'Добавить упражнение'} onPick={pickLiveExercise} onPickMany={pickLiveExercises} multiple={multipleLiveSelection} showEmptySelection={multipleLiveSelection} keepSelectionWhileAdding={multipleLiveSelection} selectionDraft={multipleLiveSelection ? livePickerSelection : undefined} onSelectionDraftChange={multipleLiveSelection ? setLivePickerSelection : undefined} onClose={closePicker} />}
     {techniqueExercise && <ExerciseTechniqueSheet exercise={techniqueExercise} onClose={() => setTechniqueExercise(null)} />}
     {confirmDialog}
   </Page>

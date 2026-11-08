@@ -5,7 +5,7 @@ import { chooseWorkoutTime, expectWorkoutTime } from './workout-time-wheel'
 
 async function logoutFromProfile(page: import('@playwright/test').Page) {
   const pathname = new URL(page.url()).pathname
-  if (pathname === '/profile') await page.goto('/profile/settings')
+  if (pathname === '/profile' || pathname === '/profile/settings') await page.goto('/profile/settings')
   if (pathname === '/me/profile') await page.goto('/me/settings')
   const logout = page.getByRole('button', { name: 'Выйти' })
   await expect(logout).toBeVisible()
@@ -55,7 +55,7 @@ test('native trainer edits a profile and retains it after signing in again', asy
   await expect(page.getByRole('heading', { level: 1, name: 'Сегодня' })).toBeVisible()
   await page.goto('/me/profile')
   await expect(page).toHaveURL(/\/today$/)
-  await page.goto('/profile/settings')
+  await page.goto('/profile/settings?section=account')
   await page.getByRole('button', { name: 'Изменить данные' }).click()
   await expect(page.getByLabel('Имя', { exact: true })).toHaveValue('Тест')
   await page.getByLabel('Имя', { exact: true }).fill('Тест Обновлённый')
@@ -68,7 +68,7 @@ test('native trainer edits a profile and retains it after signing in again', asy
   if (await introduction.isVisible()) await introduction.click()
   await logoutFromProfile(page)
   await nativeSignIn(page, email)
-  await page.goto('/profile/settings')
+  await page.goto('/profile/settings?section=account')
   await page.getByRole('button', { name: 'Изменить данные' }).click()
   await expect(page.getByLabel('Имя', { exact: true })).toHaveValue('Тест Обновлённый')
 })

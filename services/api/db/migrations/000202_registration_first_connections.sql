@@ -92,7 +92,7 @@ begin
   -- Quick completion must take the client lock before the workout lock, just
   -- like start and legacy account merges. The row trigger remains a final guard.
   -- Finishing an existing live session retains its previous history semantics.
-  if exists(select 1 from public.workouts where id=p_workout_id and status='planned') then
+  if exists(select 1 from public.workouts where id=p_workout_id and status='planned' and trainer_id=auth.uid()) then
     perform app_private.require_registered_coaching_client((select client_id from public.workouts where id=p_workout_id));
   end if;
   return query select * from app_private.finish_live_workout_before_registration(

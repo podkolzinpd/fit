@@ -1,4 +1,5 @@
 import { registerConnectionDirectory, type ConnectionDirectoryStore } from './connection-directory.js'
+import { registerCorporateDutyRoutes, type CorporateDutiesService } from './corporate-duties.js'
 import { registerCorporatePersonalRoutes, type CorporatePersonalService } from './corporate-personal.js'
 import { ClientProfilePhotoError, readClientPhotoUpload, type PilotClientPhotos } from './client-profile-photo.js'
 import { registerTrainerConnectionConfirmationRoutes, type TrainerConnectionConfirmationService } from './trainer-connection-confirmation.js'
@@ -205,6 +206,7 @@ function readCompatibleYandexActorSession(
 
 interface BuildAppOptions {
   corporateInvitations?: CorporateInvitationsService
+  corporateDuties?: CorporateDutiesService
   corporatePersonal?: CorporatePersonalService
   corporateServices?: CorporateServicesService
   corporateAdmin?: CorporateAdminService
@@ -288,6 +290,7 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
   registerCorporateInvitationRoutes(app, options.corporateInvitations)
   registerCorporateServiceRoutes(app, options.corporateServices)
   registerCorporatePersonalRoutes(app, options.corporatePersonal)
+  registerCorporateDutyRoutes(app, options.corporateDuties)
   const allowedOrigins = new Set(options.allowedOrigins ?? [])
   const publicChatMessage = async (message: ChatMessage) => {
     if (!message.image) return { ...message, image: null }

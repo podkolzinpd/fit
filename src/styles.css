@@ -1020,6 +1020,7 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .schedule-density-error .link { min-height:44px; padding-inline:var(--space-2); color:var(--danger) }
 .app-feedback-card { display: grid; gap: var(--space-4); margin: 0 0 var(--space-4); padding: var(--card-padding); border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--surface-raised); box-shadow:none}
 .app-feedback-head { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-3) }
+.app-feedback-head-compact { align-items: center }
 .app-feedback-head .eyebrow, .app-feedback-sent .eyebrow { margin: 0 0 var(--space-1) }
 .app-feedback-head h2, .app-feedback-sent h2 { margin: 0; font-size: var(--type-section-size); line-height: var(--leading-snug) }
 .app-feedback-head .link { min-height: 40px; flex: 0 0 auto; padding: var(--space-2) 0 }
@@ -1439,7 +1440,7 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .workout-detail-primary-actions > .wide { width:100%; min-height:var(--control-height-primary); margin:0 }
 .workout-detail-primary-actions > .coachmark-anchor, .workout-detail-primary-actions > .coachmark-anchor > .wide { width:100% }
 .workout-decision-sheet { width:min(100%, 440px); max-height:min(88dvh, 680px); overflow-y:auto; display:grid; gap:var(--space-4); padding:var(--space-5) var(--card-padding) calc(var(--space-5) + env(safe-area-inset-bottom)) }
-.workout-decision-sheet:where(:not(.fit-lime-shell.workout-live-reference:has(.coach-live-v79,.client-live-v79) :is(.live-rest-sheet,.workout-duration-sheet))) { border:1px solid var(--border); border-bottom:0; border-radius:28px 28px 0 0; background:var(--surface-elevated); box-shadow:none }
+.workout-decision-sheet:where(:not(.fit-lime-shell.workout-live-reference:has(.coach-live-v79,.client-live-v79) :is(.live-rest-sheet,.workout-duration-sheet,.workout-live-exit-sheet))) { border:1px solid var(--border); border-bottom:0; border-radius:28px 28px 0 0; background:var(--surface-elevated); box-shadow:none }
 .workout-decision-sheet .picker-header { align-items:flex-start }
 .workout-decision-sheet .picker-header .eyebrow { margin:0 0 var(--space-1); font-size:var(--type-caption-size) }
 .workout-decision-sheet .picker-header h2 { margin:0; font-size:var(--type-title-size); line-height:var(--leading-tight) }
@@ -1957,14 +1958,18 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .live-bottom-bar .wide { margin: 0 }
 /* Inline-подтверждение частичного завершения (вместо нативного confirm). */
 .finish-confirm { display: flex; flex-direction: column; gap: 10px }
-.finish-confirm p { margin: 0; font-size: 14px; color: var(--fg); text-align: center }
+.finish-confirm p { margin: 0; text-align: center }
+.finish-confirm p:where(:not(.fit-client-lime.workout-live-reference:has(.client-live-v79) .finish-confirm p)) { font-size: 14px; color: var(--fg) }
 .finish-confirm .actions { margin: 0 }
 
 /* In-app confirm-диалог (useConfirm) — замена window.confirm. По центру, на
    дизайн-токенах (работает и в светлой теме). destructive-действие — .danger. */
-.modal-overlay { position: fixed; z-index: 40; inset: 0; display: flex; align-items: center; justify-content: center; padding: 24px; background: var(--overlay); backdrop-filter:none}
-.modal-dialog { width: min(100%, 360px); display: flex; flex-direction: column; gap: 18px; padding: 22px 20px; border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--surface-elevated); box-shadow:none}
-.modal-message { margin: 0; font-size: 15px; line-height: 1.4; color: var(--fg); text-align: center }
+.modal-overlay { position: fixed; z-index: 40; inset: 0; display: flex; align-items: center; justify-content: center; padding: 24px; backdrop-filter:none }
+.modal-overlay:where(:not(.fit-lime-shell.workout-live-reference:has(.coach-live-v79,.client-live-v79) .modal-overlay)) { background: var(--overlay) }
+.modal-dialog { width: min(100%, 360px); display: flex; flex-direction: column; gap: 18px; padding: 22px 20px }
+.modal-dialog:where(:not(.fit-lime-shell.workout-live-reference:has(.coach-live-v79,.client-live-v79) .modal-dialog)) { border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--surface-elevated); box-shadow:none }
+.modal-message { margin: 0; line-height: 1.4; text-align: center }
+.modal-message:where(:not(.fit-lime-shell.workout-live-reference:has(.coach-live-v79,.client-live-v79) .modal-message)) { font-size: 15px; color: var(--fg) }
 .modal-dialog .actions { margin: 0 }
 .workout-actual-duration { display:flex; align-items:center; justify-content:space-between; gap:16px }
 .workout-actual-duration > div { display:grid; gap:4px; min-width:0 }
@@ -1981,7 +1986,7 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .modal-dialog .actions > * { flex: 1 }
 /* destructive-кнопка в диалоге: красная заливка (не только текст), чтобы
    опасное действие читалось как основное-опасное. */
-.modal-dialog .actions .danger { border-color: var(--danger); background: var(--danger); color: var(--mono-on-primary); box-shadow:none}
+.modal-dialog .actions .danger:where(:not(.fit-lime-shell.workout-live-reference:has(.coach-live-v79,.client-live-v79) .modal-dialog .actions .danger)) { border-color: var(--danger); background: var(--danger); color: var(--mono-on-primary); box-shadow:none }
 
 /* Статус-бейдж: за секунду понять положение в тренировке. */
 .status-badge { padding: 3px 9px; border-radius: 99px; font-size: 11px; font-weight: 700; white-space: nowrap; letter-spacing: .02em }
@@ -3166,19 +3171,17 @@ button.workout-duration-trigger:disabled { cursor:default; opacity:1 }
 /* Общие async/overlay primitives production identity. */
 .ui-identity .skeleton-block { border-radius:10px; background:var(--surface-sunken); animation:none }
 .ui-identity .sheet-overlay,
-.ui-identity .modal-overlay { background:color-mix(in srgb, var(--bg) 76%, transparent); backdrop-filter:none}
-.ui-identity .modal-dialog {
-  gap:16px;
-  padding:20px;
-  border-color:var(--border);
-  border-radius:18px;
-  background:var(--surface-elevated);
-  box-shadow:none;
-}
-.ui-identity .modal-message { color:var(--fg); font-size:14px; font-weight:400; line-height:1.45 }
+.ui-identity .modal-overlay { backdrop-filter:none }
+.ui-identity .sheet-overlay,
+.ui-identity .modal-overlay:where(:not(.fit-lime-shell.workout-live-reference:has(.coach-live-v79,.client-live-v79) .modal-overlay)) { background:color-mix(in srgb, var(--bg) 76%, transparent) }
+.ui-identity .modal-dialog { gap:16px; padding:20px }
+.ui-identity .modal-dialog:where(:not(.fit-lime-shell.workout-live-reference:has(.coach-live-v79,.client-live-v79) .modal-dialog)) { border-color:var(--border); border-radius:18px; background:var(--surface-elevated); box-shadow:none }
+.ui-identity .modal-message { line-height:1.45 }
+.ui-identity .modal-message:where(:not(.fit-lime-shell.workout-live-reference:has(.coach-live-v79,.client-live-v79) .modal-message)) { color:var(--fg); font-size:14px; font-weight:400 }
 .ui-identity .modal-dialog .actions { gap:8px }
-.ui-identity .modal-dialog .actions button { min-height:48px; border-radius:14px; font-size:14px; font-weight:500 }
-.ui-identity .modal-dialog .actions .danger { border-color:var(--danger); background:var(--surface-elevated); color:var(--danger) }
+.ui-identity .modal-dialog .actions button { min-height:48px }
+.ui-identity .modal-dialog .actions button:where(:not(.fit-lime-shell.workout-live-reference:has(.coach-live-v79,.client-live-v79) .modal-dialog .actions button)) { border-radius:14px; font-size:14px; font-weight:500 }
+.ui-identity .modal-dialog .actions .danger:where(:not(.fit-lime-shell.workout-live-reference:has(.coach-live-v79,.client-live-v79) .modal-dialog .actions .danger)) { border-color:var(--danger); background:var(--surface-elevated); color:var(--danger) }
 .ui-identity button:disabled,
 .ui-identity .button[aria-disabled='true'] { opacity:1; border-color:var(--border); background:var(--surface-sunken); color:var(--secondary-label-fg); cursor:not-allowed }
 .contest-winner-dialog { width:min(100%, 380px) }
@@ -3850,12 +3853,14 @@ button.workout-duration-trigger:disabled { cursor:default; opacity:1 }
 .live-identity .live-sync-state button { min-height:44px; padding:8px 10px; border-color:var(--border); border-radius:10px; background:var(--surface-raised); color:var(--fg); font-size:12px; font-weight:500; box-shadow:none }
 .live-session-shell:has(.live-sync-state) .content-immersive { padding-bottom:calc(176px + env(safe-area-inset-bottom)) }
 .live-identity .finish-confirm { gap:10px }
-.live-identity .finish-confirm p { color:var(--fg); font-size:14px; font-weight:400 }
-.live-identity .finish-confirm .workout-cta[data-variant='tertiary'] { color:var(--fg) }
-.live-identity .finish-confirm .workout-cta[data-variant='primary'] { border-color:var(--danger); background:var(--danger); color:var(--mono-on-primary) }
-.live-identity .modal-overlay { background:color-mix(in srgb, var(--bg) 76%, transparent); backdrop-filter:none}
-.live-identity .modal-dialog { padding:20px; border-color:var(--border); border-radius:18px; background:var(--surface-elevated); box-shadow:none}
-.live-identity .modal-message { color:var(--fg); font-size:14px; font-weight:400 }
+.live-identity .finish-confirm p:where(:not(.fit-client-lime.workout-live-reference:has(.client-live-v79) .finish-confirm p)) { color:var(--fg); font-size:14px; font-weight:400 }
+.live-identity .finish-confirm .workout-cta[data-variant='tertiary']:where(:not(.fit-client-lime.workout-live-reference:has(.client-live-v79) .finish-confirm .workout-cta[data-variant='tertiary'])) { color:var(--fg) }
+.live-identity .finish-confirm .workout-cta[data-variant='primary']:where(:not(.fit-client-lime.workout-live-reference:has(.client-live-v79) .finish-confirm .workout-cta[data-variant='primary'])) { border-color:var(--danger); background:var(--danger); color:var(--mono-on-primary) }
+.live-identity .modal-overlay { backdrop-filter:none }
+.live-identity .modal-overlay:where(:not(.fit-lime-shell.workout-live-reference:has(.coach-live-v79,.client-live-v79) .modal-overlay)) { background:color-mix(in srgb, var(--bg) 76%, transparent) }
+.live-identity .modal-dialog { padding:20px }
+.live-identity .modal-dialog:where(:not(.fit-lime-shell.workout-live-reference:has(.coach-live-v79,.client-live-v79) .modal-dialog)) { border-color:var(--border); border-radius:18px; background:var(--surface-elevated); box-shadow:none }
+.live-identity .modal-message:where(:not(.fit-lime-shell.workout-live-reference:has(.coach-live-v79,.client-live-v79) .modal-message)) { color:var(--fg); font-size:14px; font-weight:400 }
 
 @media (max-width:375px) {
   .live-identity .live-workout-page { padding-inline:14px }
@@ -7361,7 +7366,8 @@ details[open] > .progress-details-toggle svg { transform:rotate(180deg); }
 /* Засчитанное таймером ждёт подтверждения на карточке упражнения. */
 .live-timer-pending { position:relative }
 .live-timer-pending > .workout-exercise-compact { padding-right:124px }
-.live-timer-confirm { position:absolute; top:50%; right:0; min-height:44px; padding:0 12px; border:1px solid var(--warning-border); border-radius:10px; background:var(--warning-surface); color:var(--warning-fg); box-shadow:none; font-size:13px; font-weight:600; transform:translateY(-50%) }
+.live-timer-confirm { min-height:44px; padding:0 12px; border:1px solid var(--warning-border); border-radius:10px; background:var(--warning-surface); color:var(--warning-fg); box-shadow:none; font-size:13px; font-weight:600 }
+.live-timer-confirm:where(:not(.phone-frame.fit-client-lime.client-workout-reference.live-identity .client-live-v79 .client-live-card > .live-timer-pending > .live-timer-confirm)) { position:absolute; top:50%; right:0; transform:translateY(-50%) }
 .live-set-check.done.timer { color:var(--warning-fg) }
 .live-set-check.done.timer svg { width:18px; height:18px }
 /* Пауза всей тренировки (YAFIT-627): часы — кнопка, на паузе жёлтые с надписью «Пауза». */

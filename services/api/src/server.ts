@@ -1,4 +1,5 @@
 import { ConnectionDirectoryStore, ConnectionEmailObserver } from './connection-directory.js'
+import { CorporateDutiesStore } from './corporate-duties.js'
 import { CorporatePersonalStore } from './corporate-personal.js'
 import { DatabasePilotClientPhotos } from './client-profile-photo.js'
 import { TrainerConnectionConfirmationStore } from './trainer-connection-confirmation.js'
@@ -308,7 +309,7 @@ const app = buildApp(
     ...(pilotTrainerProfiles === undefined ? {} : { pilotTrainerProfiles }),
     ...(pilotTrainerDiscovery === undefined ? {} : { pilotTrainerDiscovery }),
     ...(pilotFavoriteWorkouts === undefined ? {} : { pilotFavoriteWorkouts }),
-    ...(databasePool === undefined ? {} : { corporateAdmin: new CorporateAdminStore(databasePool, yandexMediaStorage), corporateInvitations: new CorporateInvitationsStore(databasePool), corporateServices: new CorporateServicesStore(databasePool), corporatePersonal: new CorporatePersonalStore(databasePool) }),
+    ...(databasePool === undefined ? {} : { corporateAdmin: new CorporateAdminStore(databasePool, yandexMediaStorage), corporateInvitations: new CorporateInvitationsStore(databasePool), corporateServices: new CorporateServicesStore(databasePool), corporatePersonal: new CorporatePersonalStore(databasePool), corporateDuties: new CorporateDutiesStore(databasePool) }),
     ...(databasePool === undefined ? {} : { privateAnalytics: new PrivateAnalyticsStore(databasePool) }),
     ...(pilotTrainerFinance === undefined ? {} : { pilotTrainerFinance }),
     ...(pilotWorkoutsWriter === undefined ? {} : { pilotWorkoutsWriter }),

@@ -24,7 +24,7 @@
 | Финансы тренера / ФИТ19 | [FIN301–305, пять PR](design/trainer-finance-cabinet-20260930.md#утверждённые-исправления-финансов--03112026--фит19) | Реальный расход и даты, непривязанный учёт без выдуманной цены, единые суммы/архив/поступления; Lime и проверка всех изменённых состояний |
 | Ачивки | [progress states](design/ACHIEVEMENT_PROGRESS_STATES_20261004.md), [regularity](design/ACHIEVEMENT_REGULARITY_COPY_20261005.md) | Принятые изображения/условия; перед правкой сверить последующие решения и текущий каталог |
 | Корпоративные тренеры | [кабинет](design/CORPORATE_ADMIN_20261027.md), [анкеты/офисы](design/TRAINER_PROFILES_OFFICES_20261029.md) | Права отдельно от роли; фото из публикации; статус/офисы утверждает администратор; клуб отдельно |
-| Точечное восстановление доступа спортсмена | [Постоянный маршрут](../.agents/skills/fit-account-recovery/SKILL.md), [AH-STABLE-NATIVE-02](design/ACCOUNT_HISTORY_RECOVERY_20261022.md#итерация-8--05112026--codex--openai) | Только подтверждённая пара: нынешний login/userId прежние; guarded карточка и один проверенный чат без старого авторства; unknown private history блокирует запись, не общий merge; production-проверка ещё гейт |
+| Точечное восстановление доступа спортсмена | [Постоянный маршрут](../.agents/skills/fit-account-recovery/SKILL.md), [AH-STABLE-NATIVE-02](design/ACCOUNT_HISTORY_RECOVERY_20261022.md#итерация-8--05112026--codex--openai), [AH-CONFIRMED-CARDS-03](design/ATHLETE_PROGRAM_HISTORY_IMPORT_20261103.md#итерация30--08112026--codex--openai) | Native identity прежняя; отдельный подписанный two-card repair сохраняет действующую связь и private профильные данные; guard/backup/оба runtime actors обязательны; production ещё гейт |
 | Фоновые push | [BG-ROOT-22023-01 / BG2–BG3](design/AUTH_BACKGROUND_DIAGNOSTICS_20261024.md#bg-root-22023-01-05112026--codex--openai-причина-доказана) | Сначала held/fresh-only guard, затем исправление producer; история только по проверенному fingerprint без replay. Старый integer RPC, preferences, multi-device, lease/retry и текущие механики сохраняются |
 | Backend/публикация | [playbook](YANDEX_CUTOVER_PLAYBOOK.md), [engineering](ENGINEERING_RULES.md), OPERATIONS.md в корне | Cloud.ru, ownership/RLS, forward migrations, отсутствие dual-write |
 | Перенос недельных журналов | [PHI101–105](design/ATHLETE_PROGRAM_HISTORY_IMPORT_20261103.md) | 16спортсменов+собственный журнал тренера; даты/финансы/связи сохраняются; PHI-LEGACY-ROUTE-RESUME-01: журналы/readbacks только local↔Cloud.ru; прежний Actions маршрут с разрешёнными hashed target/evidence и packet checksum |
@@ -199,7 +199,21 @@ actor, включая закономерно скрытые записи. Policy
 проверяются отдельно, вся прежняя mixed history и финансы сохраняются.
 [Границы и проверки](design/ATHLETE_PROGRAM_HISTORY_IMPORT_20261103.md#итерация-21--06112026--codex--openai).
 
+07.11 — [SET101–111, компактные настройки тренера](design/TRAINER_SETTINGS_COMPACT_20261107.md):
+три PR разрешены к самостоятельному выпуску; обзор и разделы на прежнем маршруте,
+off-switches видимы, ключи/значения/defaults/механики и клиентские экраны сохраняются.
+
+08.11 — SET201–203: [принятые исправления настроек и SET-STORAGE-01](design/TRAINER_SETTINGS_COMPACT_20261107.md#исправления-после-аудита--08112026-три-pr).
+Три новых PR: применение failed-write выбора в сеансе без обещания persistence,
+точная сводка сообщений и компактная обратная связь тренера. Ключи/defaults,
+account/device scopes, оба Live и клиентское оформление/механики сохраняются.
+
 07.11 — CPT-PERSONAL-20261107: [CPT101–108](design/CORPORATE_ADMIN_20261027.md#персональные-тренировки-cpt101108--2026-11-07),2PR.
 Только test trainer: отметка своей карточки с текущей даты; done+with_trainer,
 без backfill/офиса/Staff/финансов; историческое основание не зависит от текущих
 галочек, исправления workout пересчитываются. Services/invitation pilots прежние.
+
+08.11 — [DUT101–109, два PR дежурств](design/CORPORATE_ADMIN_20261027.md#дежурства-dut101109--2026-11-08):
+серверный старт/стоп, одна активная смена, зона офиса, дни/часы и audit-only
+исправления администратора. Только прежний тестовый тренер после обоих выпусков;
+независимый duty pilot, персональные/услуги/права/офисы/данные/native сохраняются.

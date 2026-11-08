@@ -1736,7 +1736,7 @@ test('Fit Lime trainer profile has addressed load retry and non-pilot control', 
   await mockPilot(page)
   await page.reload()
   await expect(page.locator('.fit-lime-shell')).toHaveCount(0)
-  await page.goto('/profile/settings')
+  await page.goto('/profile/settings?section=appearance')
   await expect(page.locator('.fit-lime-shell')).toHaveCount(0)
   await expect(page.getByRole('switch', { name: 'Тёмная тема', exact: true })).toBeVisible()
 })
@@ -1855,7 +1855,7 @@ test('today keeps workout entry usable while clients fail and recover', { tag: [
   await expect(clientError).toBeVisible()
   recovered = true
   await clientError.getByRole('button', { name: 'Повторить' }).click()
-  await expect(page.getByRole('link', { name: 'Добавить первого клиента' })).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Подключить первого спортсмена' })).toBeVisible()
 })
 
 test('new workout keeps the selected calendar day and returns to its two-week context', async ({ page }) => {

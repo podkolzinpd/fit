@@ -10,6 +10,7 @@ Private targets, IDs, контакты и ключи сюда не копиру�
 | Общий список клиентов тренера | Тот же workflow; `readRosterTargets` → `inspectRosterOwners` и `rosterOwnerQuery` | Каждое имя ровно в одной карточке, один полный trainer+Yandex owner; дополнительные клиенты допустимы, partial/duplicate не complete |
 | Уже известная ссылка/ID обращения, профиля или карточки | `.github/workflows/inspect-account-history.yml`; `scripts/cloudru-account-history-audit.mjs`: `resolveHistoryEvidence`, `readHistoryVisibility` | Точный тип ссылки/ID, для обращения — совпавший marker; одна client identity, фактический автор обращения, отдельное RLS чтение |
 | Подтверждённая пара и каноническая карточка | `.github/workflows/restore-client-history.yml`; `scripts/cloudru-client-restore.mjs`: `planClientRestore`, `applyClientRestore`, `verifyClientRestore` | Только нужный active period/membership; история/финансы прежние; trainer и current athlete читают точные сохранённые тренировки |
+| Подтверждённое native приглашение указывает на вторую занятую карточку, исходный import receipt и завершённый predecessor merge доказаны | Тот же `restore-client-history.yml` и отдельно подписанный `repairMode: merge_confirmed_cards` → schema3 план; AH-CONFIRMED-CARDS-03 | Содержание исторической карточки объединено в существующую нынешнюю; действующий период/membership, native identity, private профильная история и чаты прежние; exact financial conservation и оба fit_api reads |
 | Доказано, что история осталась у другого исторического профиля той же личности | `.github/workflows/restore-athlete-access.yml`; `scripts/cloudru-athlete-access-restore.mjs` | Сначала полный план обеих сторон: private refs, self-authored workouts, карточки/чаты/финансы; существующая native identity/userId сохраняются. Это не общий merge аккаунтов |
 | Запрещены клиентские значения в GitHub | Private параметры существующего `restore-client-history.yml`, `cloudru-client-restore-private.mjs`, `cloudru-journal-upload.mjs` | GitHub получает только control metadata/operator PUBLIC key и до-ввода encrypted capability; клиентские параметры и закрытый ответ только local↔Cloud.ru. Проверить, поддерживает ли actual main нужную операцию |
 
@@ -82,3 +83,30 @@ Private targets, IDs, контакты и ключи сюда не копиру�
 существующий точный оператор/guard, и конкретное несовпадение. Не называй
 подготовленную ветку найденной учёткой. Не запускай новый сервис или PR,
 пока не доказано, что готовые операции действительно не покрывают этот случай.
+
+## Две занятые карточки: не повторять single-card writer
+
+`confirmedInvitation` без repairMode — только закрытый диагностический preflight;
+его завершение не разрешает apply. При двух карточках сначала полное bounded
+чтение обеих сторон и private refs. Если подходит AH-CONFIRMED-CARDS-03,
+используется существующий отдельно подписанный schema3 режим. Это объединение
+содержимого карточек с сохранением нынешнего native входа, а не общий merge
+профилей. Исторический root может быть self namespace спортсмена; финансовый
+trainer owner от него отделён текущей схемой и не меняется. Source custom
+catalog/NULL authorship/неизвестные зависимости, target history, чужой период
+или financial owner закрывают запись. Не ослаблять guards ради нового случая.
+Нынешние membership/period сохраняются; новые аккаунты/карточки не создаются.
+Unknown COMMIT сначала проверяется independent owner + BOTH fit_api verify;
+прежний импорт и old READ не повторяются. После pair repair и cleanup —
+отдельный17-receipt readonly audit без пред-merge confirmedInvitation.
+
+## Уточнение причин после receipt-аудита
+
+Count mismatch не доказывает потерю строки: статус/deleted_at и фактическая
+видимость проверяются отдельно. Optional signed auditDetailCodes ограничен
+ровно1–2 существующими кодами исходного17-receipt scope, несовместим с writer
+и не принимает произвольные IDs. Метаданные exact imported workouts и bounded
+identity/rollout/native+pilot session trace доступны только в закрытом ответе.
+Notes, метрики подходов, контакты и токены не читаются. Отсутствие retained
+sessions не доказывает, что человек никогда не входил: cleanup удаляет историю.
+Наличие pilot session не выбирает другую native identity и не меняет binding.

@@ -774,7 +774,7 @@ test('iPhone: новое имя профиля сохраняется после
   await nativeRegister(page, { key: `profile-name-${testInfo.workerIndex}-${Date.now()}@fit.local`, firstName: 'Профиль', role: 'trainer' })
   await expect(page.getByRole('heading', { level: 1, name: 'Сегодня' })).toBeVisible()
 
-  await page.goto('/profile/settings')
+  await page.goto('/profile/settings?section=account')
   await page.getByRole('button', { name: 'Изменить данные' }).click()
   await page.getByLabel('Имя', { exact: true }).fill('Новое имя')
   await page.getByLabel('Часовой пояс').fill('Europe/Berlin')

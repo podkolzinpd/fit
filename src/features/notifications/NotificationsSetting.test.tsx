@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { render, screen } from '@testing-library/react'
+import { act, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import type { ReactNode } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -55,6 +55,56 @@ function primeDefaults() {
 }
 
 describe('NotificationsSetting', () => {
+  it('reports the trainer category instead of promising notifications for an opted-out device', async () => {
+    primeDefaults()
+    vi.stubGlobal('Notification', { permission: 'granted' })
+    const saved = { state: 'working', workoutReminderEnabled: true, workoutScheduledEnabled: true, chatMessageEnabled: false }
+    repository.status.mockResolvedValue(saved)
+    const cache = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    render(<QueryClientProvider client={cache}><NotificationsSetting userId={USER_ID} role="trainer" summary /></QueryClientProvider>)
+    expect(await screen.findByText('Новые сообщения выключены')).toBeVisible()
+    repository.status.mockResolvedValue({ ...saved, chatMessageEnabled: true })
+    await act(() => cache.invalidateQueries({ queryKey: ['push-notifications-status', USER_ID] }))
+    expect(await screen.findByText('Новые сообщения включены')).toBeVisible()
+    expect(repository.enable).not.toHaveBeenCalled()
+    expect(repository.setCategoryEnabled).not.toHaveBeenCalled()
+    expect(repository.sendTestPush).not.toHaveBeenCalled()
+  })
+
+  it('does not replace a trainer connection error with a cached category label', async () => {
+    primeDefaults()
+    vi.stubGlobal('Notification', { permission: 'granted' })
+    const cache = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    cache.setQueryData(['push-notifications-status', USER_ID], { state: 'working', workoutReminderEnabled: true, workoutScheduledEnabled: true, chatMessageEnabled: false })
+    repository.status.mockRejectedValue(new Error('offline'))
+    render(<QueryClientProvider client={cache}><NotificationsSetting userId={USER_ID} role="trainer" summary /></QueryClientProvider>)
+    expect(await screen.findByText('Не удалось проверить подключение')).toBeVisible()
+    expect(screen.queryByText('Новые сообщения выключены')).not.toBeInTheDocument()
+  })
+
+  it('uses the same truthful trainer category text beside its existing switch', async () => {
+    primeDefaults()
+    vi.stubGlobal('Notification', { permission: 'granted' })
+    repository.status.mockResolvedValue({ state: 'working', workoutReminderEnabled: true, workoutScheduledEnabled: true, chatMessageEnabled: false })
+    render(<NotificationsSetting userId={USER_ID} role="trainer" />, { wrapper: wrapper() })
+    expect(await screen.findByText('Новые сообщения выключены')).toBeVisible()
+    expect(screen.getByRole('switch', { name: 'Новые сообщения' })).not.toBeChecked()
+  })
+
+  it('uses the existing connection read for the trainer overview without rendering or changing preferences', async () => {
+    primeDefaults()
+    vi.stubGlobal('Notification', { permission: 'granted' })
+    repository.status.mockRejectedValue(new Error('offline'))
+    render(<NotificationsSetting userId={USER_ID} role="trainer" summary />, { wrapper: wrapper() })
+    expect(await screen.findByText('Не удалось проверить подключение')).toBeVisible()
+    expect(screen.queryByRole('switch')).not.toBeInTheDocument()
+    expect(screen.queryByRole('button')).not.toBeInTheDocument()
+    expect(screen.queryByText('Уведомления настроены')).not.toBeInTheDocument()
+    expect(repository.enable).not.toHaveBeenCalled()
+    expect(repository.setCategoryEnabled).not.toHaveBeenCalled()
+    expect(repository.sendTestPush).not.toHaveBeenCalled()
+  })
+
   it('keeps saved opt-outs visible and disabled when a refresh fails', async () => {
     primeDefaults()
     repository.status.mockRejectedValue(new Error('offline'))
@@ -106,7 +156,7 @@ describe('NotificationsSetting', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('Проверьте интернет')
     expect(screen.queryByText('Нужно разрешение')).not.toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Повторить' }))
-    expect(await screen.findByText('Уведомления настроены')).toBeVisible()
+    expect(await screen.findByText('Новые сообщения включены')).toBeVisible()
     expect(repository.enable).not.toHaveBeenCalled()
   })
 
@@ -140,7 +190,7 @@ describe('NotificationsSetting', () => {
     await screen.findByText('Уведомления запрещены в настройках телефона')
     vi.stubGlobal('Notification', { permission: 'granted' })
     window.dispatchEvent(new Event('focus'))
-    expect(await screen.findByText('Уведомления настроены')).toBeVisible()
+    expect(await screen.findByText('Новые сообщения включены')).toBeVisible()
   })
 
   it('shows that notifications are unavailable when the device has no supported channel', () => {
