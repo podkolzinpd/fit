@@ -29,9 +29,17 @@ export const kotlinCompilerPom = Object.freeze({
   sha256: 'bd4656a46ec418252e5bc5e1c20eb2029fb2a8e0e3cc94eeddfac7e87c8cd5b6',
 })
 
+export const kotlinCompilerArtifacts = Object.freeze([
+  { version: '2.0.21', jar: kotlinCompiler, pom: kotlinCompilerPom },
+  { version: '2.4.10',
+    jar: { url: 'https://api.github.com/repos/JetBrains/kotlin/releases/assets/583808361?download=complete', size: 60352373, sha256: '9309638a2ee03e6bde9ef4b7444055a94b84ab906563675d71ff9aecb64da913' },
+    pom: { url: 'https://repo.maven.apache.org/maven2/org/jetbrains/kotlin/kotlin-compiler-embeddable/2.4.10/kotlin-compiler-embeddable-2.4.10.pom', size: 2647, sha256: 'c3adb4f66fbfaa843c019b402d2c7e5f0880d32956bd8dd84022946177251102' },
+  },
+])
+
 export function gradleKotlinInit(repository) {
-  // Exclusive content affects this one existing module only. Its original POM
-  // retains every transitive dependency; all other resolution stays unchanged.
+  // Exact existing versions only: other compiler versions retain their sources.
+  // Original POMs retain every transitive dependency.
   const uri = pathToFileURL(resolve(repository)).href.replaceAll("'", "%27")
   return `def verifiedCompilerRepository = { repositories ->
     repositories.exclusiveContent {
@@ -41,7 +49,9 @@ export function gradleKotlinInit(repository) {
                 metadataSources { mavenPom() }
             }
         }
-        filter { includeVersion('org.jetbrains.kotlin', 'kotlin-compiler-embeddable', '2.0.21') }
+        filter {
+${kotlinCompilerArtifacts.map(({ version }) => `            includeVersion('org.jetbrains.kotlin', 'kotlin-compiler-embeddable', '${version}')`).join('\n')}
+        }
     }
 }
 gradle.beforeProject { project ->
@@ -108,9 +118,11 @@ export async function prepareOfficialCiTool(mode, { root = process.cwd(), gradle
     const properties = await readFile(join(root, 'android/gradle/wrapper/gradle-wrapper.properties'), 'utf8')
     const archive = await downloadVerifiedAsset(officialTools.gradle, gradleCacheZip(properties, gradleHome), fetchAsset)
     const repository = join(temporaryRoot, 'fit-ci-kotlin-maven')
-    const module = join(repository, 'org/jetbrains/kotlin/kotlin-compiler-embeddable/2.0.21/kotlin-compiler-embeddable-2.0.21')
-    await downloadVerifiedAsset(kotlinCompiler, `${module}.jar`, fetchAsset)
-    await downloadVerifiedAsset(kotlinCompilerPom, `${module}.pom`, fetchAsset)
+    for (const { version, jar, pom } of kotlinCompilerArtifacts) {
+      const module = join(repository, `org/jetbrains/kotlin/kotlin-compiler-embeddable/${version}/kotlin-compiler-embeddable-${version}`)
+      await downloadVerifiedAsset(jar, `${module}.jar`, fetchAsset)
+      await downloadVerifiedAsset(pom, `${module}.pom`, fetchAsset)
+    }
     await writeFile(join(temporaryRoot, 'fit-ci-kotlin.init.gradle'), gradleKotlinInit(repository), { mode: 0o600 })
     return archive
   }

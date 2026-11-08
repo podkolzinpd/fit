@@ -4,7 +4,7 @@ import { mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { test } from 'node:test'
-import { downloadVerifiedAsset, gradleCacheZip, gradleKotlinInit, kotlinCompiler, kotlinCompilerPom, officialTools, prepareOfficialCiTool } from './prepare-official-ci-tools.mjs'
+import { downloadVerifiedAsset, gradleCacheZip, gradleKotlinInit, kotlinCompiler, kotlinCompilerArtifacts, kotlinCompilerPom, officialTools, prepareOfficialCiTool } from './prepare-official-ci-tools.mjs'
 
 const bytes = Buffer.from('verified synthetic archive')
 const spec = { url: 'https://api.github.com/repos/synthetic/tool/releases/assets/1', size: bytes.length, sha256: createHash('sha256').update(bytes).digest('hex') }
@@ -66,11 +66,16 @@ test('uses byte-identical official Kotlin artifacts and retains transitive metad
   const source = await readFile(new URL('./prepare-official-ci-tools.mjs', import.meta.url), 'utf8')
   assert.doesNotMatch(source, /--offline|mavenLocal|writeFile\([^\n]*\.bin|init\.d/)
   assert.equal(kotlinCompilerPom.sha256, 'bd4656a46ec418252e5bc5e1c20eb2029fb2a8e0e3cc94eeddfac7e87c8cd5b6')
-  assert.match(source, /await downloadVerifiedAsset\(kotlinCompilerPom,/)
+  assert.match(source, /await downloadVerifiedAsset\(pom,/)
+  assert.deepEqual(kotlinCompilerArtifacts.map(artifact => artifact.version), ['2.0.21', '2.4.10'])
+  assert.equal(kotlinCompilerArtifacts[1].jar.sha256, '9309638a2ee03e6bde9ef4b7444055a94b84ab906563675d71ff9aecb64da913')
+  assert.equal(kotlinCompilerArtifacts[1].pom.sha256, 'c3adb4f66fbfaa843c019b402d2c7e5f0880d32956bd8dd84022946177251102')
   const init = gradleKotlinInit(join(root, "space ' quote"))
   assert.match(init, /space%20%27%20quote/)
   assert.match(init, /metadataSources \{ mavenPom\(\) \}/)
-  assert.match(init, /filter \{ includeVersion\('org.jetbrains.kotlin', 'kotlin-compiler-embeddable', '2.0.21'\) \}/)
+  for (const { version } of kotlinCompilerArtifacts) assert.ok(init.includes(`includeVersion('org.jetbrains.kotlin', 'kotlin-compiler-embeddable', '${version}')`))
+  assert.equal([...init.matchAll(/includeVersion\(/g)].length, 2)
+  assert.doesNotMatch(init, /2\.2\.20/)
   assert.match(init, /project.buildscript.repositories/)
   assert.match(init, /project.repositories/)
   assert.doesNotMatch(init, /artifact\(\)|includeModule|includeGroup|repositories.clear|force|substitut|offline|credentials/)

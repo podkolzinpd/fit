@@ -661,3 +661,18 @@ main CI и независимая проверка public/signed ZIP.
 BUILD SUCCESSFUL4s. Новый69/69 helper/CI/OTA+lint PASS. Эта дополнительная
 проверка предотвращает повторное расширение фильтра на весь модуль.
 Предыдущая Android-сборка не считается успешной; новая обязательна.
+
+
+Следующий фактический Androidc618 успешно скомпилировал camera/live-update/
+notifications, затем прежний health-plugin встретил504 на compiler2.4.10.
+Это вторая существующая версия с подтверждённым отказом транспорта. Сверены
+все4Kotlin-плагина: camera/live-update2.2.20, notifications2.0.21, health2.4.10;
+версии исходников/lock не меняются. Подготовка расширена на точную2.4.10:
+original release asset583808361/60352373байта, SHA2569309638a…4da913;
+POM2647байт/c3adb4f6…251102, полный original SHA1 сверён. Обе полные загрузки
+прошли размер/SHA256. Exclusive includeVersion теперь только2.0.21/2.4.10,
+2.2.20 не перехватывается. Реальный Gradle одновременно разрешил все три
+версии и исходные transitive dependencies: BUILD SUCCESSFUL6s.
+69/69 helper/CI/OTA+lint PASS; loopback test требует разрешённый listener,
+ограничение среды не объявлялось ошибкой приложения. Следующий полныйCI/
+Android обязателен; прошлые failed builds не маскируются.
