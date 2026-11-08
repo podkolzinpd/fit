@@ -218,7 +218,7 @@ test('trainer reviews verified signals separately from the client copy', async (
     await page.goto('/auth');
     await nativeSignIn(page, 'trainer@fit.local');
     await expect(page).toHaveURL(/\/today$/);
-    await page.goto('/profile/settings');
+    await page.goto('/profile/settings?section=appearance');
     await expect(page.getByRole('radiogroup', { name: 'Вид фигуры' })).toBeVisible();
     await expect(page.getByRole('radio', { name: 'Фигура' })).toBeChecked();
     await page.getByRole('radio', { name: 'Список' }).click();

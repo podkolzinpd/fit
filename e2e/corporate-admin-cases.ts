@@ -9,6 +9,7 @@ test('existing trainer settings baseline stays available', async ({ page }) => {
   await mockNativeAiSession(page, 'trainer')
   await page.goto(nativeAiUrl('/profile/settings'))
   await expect(page.getByRole('heading', { name: 'Настройки', exact: true })).toBeVisible()
+  await page.getByRole('link', { name: /^Тренировки/ }).click()
   await expect(page.getByRole('switch', { name: 'Показывать RPE' })).toBeVisible()
   await page.screenshot({ path: '/private/tmp/fit-admin-settings-before.png', fullPage: true })
 })

@@ -36,6 +36,7 @@ export function AppLayout() {
   const calendarDestination = useCoachCalendarDestination(actor?.userId, unifiedCoachCalendar, pathname, search)
   const financeDestination = useCoachFinanceDestination(actor?.userId, unifiedCoachCalendar, pathname, search)
   const calendarParams = new URLSearchParams(search)
+  const trainerSettingsSection = pathname === '/profile/settings' ? calendarParams.get('section') : null
   const retainedOverview = pathname === '/today' && trainerScheduleV2Route && !calendarParams.has('date')
     && (calendarParams.has('week') || calendarParams.get('mode') === 'list')
   const serviceHistory = actor?.role === 'trainer' && pathname === servicesRoot
@@ -125,9 +126,14 @@ export function AppLayout() {
       : pathname === '/clients/archive' ? 'fit.clientsArchiveListScroll' : null
     if (clientsScrollKey && window.sessionStorage?.getItem(clientsScrollKey)) return
     if (retainedScrollKey) return
-    const frame = window.requestAnimationFrame(() => contentRef.current?.scrollTo(0, 0))
+    const frame = window.requestAnimationFrame(() => {
+      // Feedback can focus its field as the settings section mounts. Do not
+      // fight the browser's keyboard reveal with a later scroll-to-top.
+      if (trainerSettingsSection && document.activeElement?.matches('input, textarea, select, [contenteditable="true"]')) return
+      contentRef.current?.scrollTo(0, 0)
+    })
     return () => window.cancelAnimationFrame(frame)
-  }, [pathname, routeStep, retainedScrollKey])
+  }, [pathname, routeStep, retainedScrollKey, trainerSettingsSection])
 
   // Создание, проверка, редактирование и live — один сфокусированный путь
   // тренировки. Нижняя навигация возвращается на списках и после выхода из

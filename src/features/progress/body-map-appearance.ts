@@ -1,4 +1,5 @@
 import { useCallback, useSyncExternalStore } from 'react'
+import { readPreferenceStorage, writePreferenceStorage } from '../../app/preference-storage'
 import type { AccountRole, Gender } from '../../shared/domain'
 import type { BodyFigureVariant } from './body-progress-geometry'
 
@@ -9,7 +10,7 @@ export type BodyMapDisplayMode = 'real' | 'list'
 const STORAGE_PREFIX = 'fit.bodyMapDisplay.v2.'
 const CHANGE_EVENT = 'fit-body-map-display-change'
 
-function storageKey(
+export function bodyMapDisplayStorageKey(
   viewerUserId: string | undefined,
   role: AccountRole | undefined,
   clientId: string | undefined,
@@ -42,15 +43,11 @@ export function getBodyMapDisplayMode(
   gender: Gender | null,
 ): BodyMapDisplayMode {
   const fallback = defaultBodyMapDisplayMode(gender, role)
-  const key = storageKey(viewerUserId, role, clientId)
+  const key = bodyMapDisplayStorageKey(viewerUserId, role, clientId)
   if (typeof window === 'undefined' || !key) return fallback
-  try {
-    const stored = window.localStorage.getItem(key)
-    if (isDisplayMode(stored)) return stored === 'real' && !gender ? fallback : stored
-    return fallback
-  } catch {
-    return fallback
-  }
+  const stored = readPreferenceStorage(key)
+  if (isDisplayMode(stored)) return stored === 'real' && !gender ? fallback : stored
+  return fallback
 }
 
 export function setBodyMapDisplayMode(
@@ -59,11 +56,7 @@ export function setBodyMapDisplayMode(
   clientId: string | undefined,
   mode: BodyMapDisplayMode,
 ) {
-  try {
-    window.localStorage.setItem(storageKey(viewerUserId, role, clientId)!, mode)
-  } catch {
-    // В текущей вкладке выбор всё равно обновится через событие.
-  }
+  writePreferenceStorage(bodyMapDisplayStorageKey(viewerUserId, role, clientId)!, mode)
   window.dispatchEvent(new Event(CHANGE_EVENT))
 }
 
@@ -73,7 +66,7 @@ export function useBodyMapDisplayMode(
   clientId: string | undefined,
   gender: Gender | null,
 ) {
-  const key = storageKey(viewerUserId, role, clientId)
+  const key = bodyMapDisplayStorageKey(viewerUserId, role, clientId)
   const subscribe = useCallback((onStoreChange: () => void) => {
     if (typeof window === 'undefined') return () => undefined
     const onStorage = (event: StorageEvent) => {
