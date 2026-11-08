@@ -64,3 +64,15 @@ html:not(.motion) .demo-clock{display:none}
 /* Short displays show a readable viewport into the same app screen. */
 .motion.compact .phone{padding:0;border:1px solid #4b5140;border-radius:20px;background:#000;box-shadow:0 12px 40px #0008}
 .motion.compact .phone-rim{padding:0;border-radius:20px}.motion.compact .screen-window{height:var(--window-h);aspect-ratio:auto;border-radius:19px}
+
+/* Shared audience navigation; the product remains the visual focus. */
+.audiences{display:flex;gap:4px;align-items:center;border-left:1px solid #41443c;padding-left:20px}
+.audiences a{font-size:12px;min-height:44px;padding:12px 14px;display:flex;align-items:center;border-radius:24px;color:#a3a6a1}
+.audiences a[aria-current]{background:#d1fd2d15;color:var(--lime)}
+.audience-athlete .live-content{clip-path:none}
+.audience-athlete .demo-clock{top:calc(34 / 390 * 100cqw);height:calc(64 / 390 * 100cqw);font-size:calc(50 / 390 * 100cqw);background:#0b0e02;box-shadow:0 0 10px 5px #0b0e02}
+@media(max-width:760px){
+ .site-header{gap:8px;padding-inline:12px}.site-header img{width:48px}.audiences{gap:0;padding-left:8px}
+ .audiences a{font-size:11px;padding-inline:10px}.open{font-size:10px;padding-inline:10px}.open span{margin-left:4px}
+}
+@media(max-width:359px){.site-header{gap:5px;padding-inline:8px}.site-header img{width:40px}.audiences{padding-left:4px}.audiences a{padding-inline:7px;font-size:10px}.open{padding-inline:8px}.open span{display:none}}
