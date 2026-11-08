@@ -75,3 +75,12 @@ test('separate Terraform root is disabled and private, without DNS or IAM change
   assert.match(configuration, /force_destroy = false/)
   assert.doesNotMatch(configuration, /resource "yandex_(dns|iam|resourcemanager)|backend "s3"|website\s*{|read\s*= true/)
 })
+
+test('packages XML sitemap with revalidation and correct MIME', async (t) => {
+  const root = await fixture(t)
+  await writeFile(join(root, 'sitemap.xml'), '<urlset/>')
+  const manifest = await prepareFrontend(root, sha, [])
+  const sitemap = manifest.files.find((file) => file.key === 'sitemap.xml')
+  assert.equal(sitemap.contentType, 'application/xml; charset=utf-8')
+  assert.equal(sitemap.cacheControl, 'no-cache')
+})
