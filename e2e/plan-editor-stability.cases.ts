@@ -53,8 +53,14 @@ export function planEditorStabilityCases() {
     live.exercises[0]!.clientNote = source.exercises[0]!.clientNote
     await mockPilot(page, { role: 'client', profileId: athlete, fitLime: true, clientLime: true, workouts: [live] })
     await page.goto(`/workouts/${workoutId}/live`)
-    await page.locator('.live-trainer-note summary').click()
-    await expect(page.locator('.live-trainer-note p')).toHaveText(writes[0]!)
+    // The generic browser lane retains Mono; the dedicated Lime lane enables
+    // its existing read-only fold. Verify each lane's actual contract.
+    if (process.env.VITE_CLIENT_LIME_ENABLED === 'true') {
+      await page.locator('.live-trainer-note summary').click()
+      await expect(page.locator('.live-trainer-note p')).toHaveText(writes[0]!)
+    } else {
+      await expect(page.locator('.live-trainer-cue')).toHaveText(`Тренер: ${writes[0]!}`)
+    }
     await page.locator('.live-exercise-note summary').click()
     await expect(page.locator('.live-exercise-note textarea')).toHaveValue('Личная заметка спортсмена')
     expect(writes).toHaveLength(1)
