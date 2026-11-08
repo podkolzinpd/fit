@@ -201,7 +201,7 @@ begin
  with selected as (select d.* from app_private.corporate_duties d
    where (p_trainer is null or trainer_id=p_trainer) and (p_office is null or office_id=p_office)
      and d.started_at<(p_until::timestamp at time zone d.time_zone)
-     and (d.ended_at is null or d.ended_at>(p_from::timestamp at time zone d.time_zone))),
+     and coalesce(d.ended_at,statement_timestamp())>(p_from::timestamp at time zone d.time_zone)),
  segments as (select d.id,d.trainer_id,d.office_id,local_date::date local_day,
    extract(epoch from least(d.ended_at,((local_date::date+1)::timestamp at time zone d.time_zone))-
      greatest(d.started_at,(local_date::date::timestamp at time zone d.time_zone))) seconds

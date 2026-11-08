@@ -119,6 +119,11 @@ describe.skipIf(!source)('corporate duties native PostgreSQL17/RLS',()=>{
   expect(await stats()).toMatchObject({seconds:7200,days:2,completed:2})
   expect(await stats(admin,'2026-11-01','2026-12-01',coach)).toMatchObject({seconds:3600,days:1,completed:1})
  })
+ it('never projects a currently open duty into a future report period',async()=>{
+  await cmd()
+  const dates=(await pool.query<{from:string;until:string}>("select ((clock_timestamp() at time zone 'Europe/Moscow')::date+1)::text \"from\",((clock_timestamp() at time zone 'Europe/Moscow')::date+2)::text until")).rows[0]!
+  expect(await stats(admin,dates.from,dates.until)).toMatchObject({seconds:0,days:0,completed:0,open:0,records:[]})
+ })
  it('paginates detail while totals stay complete and rejects destructive rollback of history',async()=>{
   for(let n=0;n<51;n++){const start=new Date(Date.UTC(2026,10,1,0,n)).toISOString(),end=new Date(Date.UTC(2026,10,1,0,n,30)).toISOString();await interval(start,end)}
   const a=await stats();expect(a.records).toHaveLength(50);expect(a).toMatchObject({seconds:1530,days:1,completed:51});expect(a.nextCursor).not.toBeNull()
