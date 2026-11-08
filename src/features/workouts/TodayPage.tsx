@@ -16,7 +16,7 @@ import type { ExerciseSnapshot, Workout, WorkoutDraft, WorkoutSetDraft, WorkoutT
 import { formatLocalDate, localDate, todayInTimeZone } from '../../shared/local-date'
 import { isValidRpe } from '../../shared/rpe'
 import type { RunningFormat } from '../../shared/running-formats'
-import { trackGoal } from '../../shared/yandex-metrika'
+import { trackAcquisitionGoal, trackGoal } from '../../shared/yandex-metrika'
 import { Coachmark, InlineRequestError, OverflowMenu, Page, useConfirm } from '../../shared/ui'
 import { ExercisePicker, ExerciseThumbnail, findCatalogExercise, recentExercisesForClient, useExerciseCatalog } from '../exercises'
 import { ClientPicker, type ClientPickerSelection } from '../clients'
@@ -407,6 +407,7 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
         ? { id: selectedClient.id, fullName: selectedClient.fullName }
         : undefined
       trackGoal(mode === 'planned' ? 'today_plan_saved' : 'today_workout_saved')
+      if (mode === 'completed' && actor) trackAcquisitionGoal('workout_result_saved', actor.role)
       trackGoal('today_review_confirmed')
       setDraftLoadedKey(null)
       removeTodayDraft(draftKey)

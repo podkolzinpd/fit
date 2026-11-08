@@ -314,12 +314,37 @@
             m[i].l=1*new Date();
             for (var j = 0; j < document.scripts.length; j++) {if (document.scripts[j].src === r) { return; }}
             k=e.createElement(t),a=e.getElementsByTagName(t)[0],k.async=1,k.src=r,a.parentNode.insertBefore(k,a)
-        })(window, document,'script','https://mc.yandex.ru/metrika/tag.js?id=111074543', 'ym');
+        })(window, document,'script','https://mc.yandex.ru/metrika/tag.js?id=114123380', 'ym');
 
         // Переходный период: 111074543 хранит историю, 113121193 — новый счётчик
-        // fit-training.ru. Список должен совпадать с COUNTER_IDS в yandex-metrika.ts.
+        // fit-training.ru. These two existing configurations remain unchanged.
         [111074543, 113121193].forEach(function (id) {
           ym(id, 'init', {ssr:true, webvisor:true, clickmap:true, ecommerce:"dataLayer", referrer: fitMetrikaSafeUrl(document.referrer), url: fitMetrikaSafeUrl(location.href), accurateTrackBounce:true, trackLinks:true});
+        });
+
+        // The owner's counter independently covers the public landing and app.
+        // Session replay, click maps and automatic link tracking stay disabled.
+        function fitAcquisitionSafeUrl(rawUrl) {
+          if (!rawUrl) return '';
+          try {
+            var url = new URL(rawUrl, window.location.origin);
+            var search = new URLSearchParams();
+            ['utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term'].forEach(function (key) {
+              var value = url.searchParams.get(key);
+              if (value) search.set(key, value);
+            });
+            url.search = search.toString();
+            url.hash = '';
+            return url.toString();
+          } catch (_) {
+            return window.location.origin + '/';
+          }
+        }
+        ym(114123380, 'init', {
+          ssr: true, webvisor: false, clickmap: false, trackLinks: false,
+          accurateTrackBounce: true,
+          referrer: fitAcquisitionSafeUrl(document.referrer),
+          url: fitAcquisitionSafeUrl(location.href)
         });
       }
     </script>

@@ -3,7 +3,7 @@ import { resolve } from 'node:path'
 import { runInNewContext } from 'node:vm'
 import { matchRoutes } from 'react-router-dom'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { COUNTER_IDS, sanitizeMetrikaUrl, trackAuthenticatedOpen, trackGoal, trackPageView } from './yandex-metrika'
+import { ACQUISITION_COUNTER_ID, COUNTER_IDS, sanitizeAcquisitionUrl, sanitizeMetrikaUrl, trackAcquisitionGoal, trackAuthenticatedOpen, trackGoal, trackPageView } from './yandex-metrika'
 
 afterEach(() => {
   delete window.ym
@@ -12,9 +12,17 @@ afterEach(() => {
 describe('Metrika counters', () => {
   it('initializes exactly the counters that receive events', () => {
     const html = readFileSync(resolve(process.cwd(), 'index.html'), 'utf8')
-    const initList = html.match(/\[([\d,\s]+)\]\.forEach\(function \(id\) \{\s*ym\(id, 'init'/)?.[1] ?? ''
-
-    expect(initList.split(',').map((id) => Number(id.trim()))).toEqual([...COUNTER_IDS])
+    const script = html.match(/<!-- Yandex\.Metrika counter -->\s*<script[^>]*>([\s\S]*?)<\/script>/)?.[1]
+    const ym = vi.fn<(id: number, action: string, ...args: unknown[]) => void>()
+    const location = new URL('https://fit-training.ru/auth/yandex/callback?code=private-code&state=private-state&utm_source=club#private-fragment')
+    const document = { scripts: [], referrer: 'https://oauth.yandex.ru/authorize?code=private-code', createElement: () => ({}), getElementsByTagName: () => [{ parentNode: { insertBefore: vi.fn() } }] }
+    runInNewContext(script!, { window: { location, ym }, document, location, ym, URL, URLSearchParams })
+    expect(ym.mock.calls.map(([id]) => id)).toEqual([...COUNTER_IDS])
+    expect(ym).toHaveBeenCalledWith(ACQUISITION_COUNTER_ID, 'init', expect.objectContaining({
+      webvisor: false, clickmap: false, trackLinks: false,
+      url: 'https://fit-training.ru/auth/yandex/callback?utm_source=club',
+      referrer: 'https://oauth.yandex.ru/authorize',
+    }))
     expect(html).toContain('id="fit-invitation-link-bootstrap"')
     expect(html).toContain("referrerPolicy.content = 'no-referrer'")
     expect(html).toContain('url: fitMetrikaSafeUrl(location.href)')
@@ -58,7 +66,7 @@ describe('private corporate invitation entry', () => {
       } else {
         expect(insertBefore).toHaveBeenCalledOnce()
         expect(ym).toHaveBeenCalledTimes(COUNTER_IDS.length)
-        for (const id of COUNTER_IDS) expect(ym).toHaveBeenCalledWith(id, 'init', expect.objectContaining({ url: 'https://fit-training.ru/today', webvisor: true }))
+        for (const id of COUNTER_IDS) expect(ym).toHaveBeenCalledWith(id, 'init', expect.objectContaining({ url: 'https://fit-training.ru/today', webvisor: id !== ACQUISITION_COUNTER_ID }))
       }
     }
   })
@@ -74,6 +82,7 @@ describe('trackPageView', () => {
     expect(ym.mock.calls).toEqual([
       [111074543, 'hit', '/today?view=compose'],
       [113121193, 'hit', '/today?view=compose'],
+      [114123380, 'hit', '/today'],
     ])
   })
 
@@ -82,6 +91,11 @@ describe('trackPageView', () => {
     expect(sanitizeMetrikaUrl(`/invite?token=${token}&source=yandex`)).toBe('/invite')
     expect(sanitizeMetrikaUrl(`/invite#token=${token}&source=yandex`)).toBe('/invite')
     expect(sanitizeMetrikaUrl(`/corporate-invite#token=${token}`)).toBe('/corporate-invite')
+  })
+
+  it('retains campaign attribution but excludes arbitrary query and hash data in the new counter', () => {
+    expect(sanitizeAcquisitionUrl('/auth/yandex/callback?code=private&state=secret&token=secret&utm_campaign=launch#token=secret')).toBe('/auth/yandex/callback?utm_campaign=launch')
+    expect(sanitizeAcquisitionUrl('https://fit-training.ru/invite?token=secret&source=yandex')).toBe('https://fit-training.ru/invite')
   })
 })
 
@@ -95,11 +109,39 @@ describe('trackGoal', () => {
     expect(ym.mock.calls).toEqual([
       [111074543, 'reachGoal', 'today_opened'],
       [113121193, 'reachGoal', 'today_opened'],
+      [114123380, 'reachGoal', 'today_opened'],
     ])
   })
 
   it('does nothing when Metrika is unavailable', () => {
     expect(() => trackGoal('today_opened')).not.toThrow()
+  })
+
+  it('keeps the new counter and the app working when an old counter throws', () => {
+    const ym = vi.fn((id: number) => { if (id === 111074543) throw new Error('blocked') })
+    window.ym = ym
+    expect(() => trackGoal('today_opened')).not.toThrow()
+    expect(ym).toHaveBeenLastCalledWith(ACQUISITION_COUNTER_ID, 'reachGoal', 'today_opened')
+    expect(() => trackPageView('/today')).not.toThrow()
+    expect(ym).toHaveBeenLastCalledWith(ACQUISITION_COUNTER_ID, 'hit', '/today')
+  })
+})
+
+describe('acquisition success events', () => {
+  it.each(['trainer', 'client'] as const)('sends only the success event and %s role to the new counter', (role) => {
+    const ym = vi.fn()
+    window.ym = ym
+    trackAcquisitionGoal('registration_completed', role)
+    trackAcquisitionGoal('workout_result_saved', role)
+    expect(ym.mock.calls).toEqual([
+      [ACQUISITION_COUNTER_ID, 'reachGoal', 'registration_completed', { role }],
+      [ACQUISITION_COUNTER_ID, 'reachGoal', 'workout_result_saved', { role }],
+    ])
+  })
+
+  it('never interrupts a successful user action when analytics fails', () => {
+    window.ym = vi.fn(() => { throw new Error('blocked') })
+    expect(() => trackAcquisitionGoal('registration_completed', 'client')).not.toThrow()
   })
 })
 
@@ -115,6 +157,8 @@ describe('trackAuthenticatedOpen', () => {
       [111074543, 'reachGoal', 'authenticated_open', { role }],
       [113121193, 'setUserID', `${role}-user-id`],
       [113121193, 'reachGoal', 'authenticated_open', { role }],
+      [114123380, 'setUserID', `${role}-user-id`],
+      [114123380, 'reachGoal', 'authenticated_open', { role }],
     ])
   })
 

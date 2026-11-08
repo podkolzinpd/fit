@@ -30,6 +30,7 @@ import { AsyncView, RequestDiagnosticDetails, StatePanel } from '../../shared/ui
 import type { AccountRole } from '../../shared/domain'
 import { LEGAL_PATHS, PRIVACY_VERSION, TERMS_VERSION } from '../../shared/legal'
 import { systemTimeZone } from '../../shared/local-date'
+import { trackAcquisitionGoal } from '../../shared/yandex-metrika'
 import {
   clearPendingYandexNativeRegistration,
   clearPendingYandexAuthorization,
@@ -217,6 +218,7 @@ function YandexNativeRegistrationCallbackPage() {
         if (cancelled) return
         clearPendingYandexNativeRegistration()
         establish(result)
+        trackAcquisitionGoal('registration_completed', result.profile.accountRole)
         navigate('/auth/yandex/session', { replace: true })
       } catch (caught) {
         if (!cancelled) {
@@ -349,6 +351,7 @@ function YandexAppSessionCallbackPage() {
 
   async function completeSetup(
     request: () => Promise<YandexAppSession>,
+    registration = false,
   ): Promise<void> {
     if (handoff === null) return
     setSetupBusy(true)
@@ -356,6 +359,7 @@ function YandexAppSessionCallbackPage() {
     try {
       const result = await request()
       establish(result)
+      if (registration) trackAcquisitionGoal('registration_completed', result.profile.accountRole)
       navigate('/auth/yandex/session', { replace: true })
     } catch (caught) {
       if (caught instanceof YandexAuthHandoffRefreshRequiredError) {
@@ -380,7 +384,7 @@ function YandexAppSessionCallbackPage() {
       timezone: systemTimeZone(),
       termsVersion: TERMS_VERSION,
       privacyVersion: PRIVACY_VERSION,
-    }))
+    }), true)
   }
 
   if (config === null) return <Navigate to="/auth" replace />
