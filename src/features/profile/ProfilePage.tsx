@@ -3,11 +3,11 @@ import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-do
 import { useAuth } from '../../app/auth-context'
 import { isCoachLiveDensityEnabled } from '../../app/coach-workout-redesign'
 import { setCoachLiveDensity, useCoachLiveDensity } from '../../app/coach-live-density'
-import { setExercisePlanRestDisplay, useExercisePlanRestDisplay } from '../../app/exercise-plan-display'
-import { setLiveExerciseAnimation, useLiveExerciseAnimation } from '../../app/live-exercise-animation'
-import { setRpeDisplay, useRpeDisplay } from '../../app/rpe-display'
+import { exercisePlanRestStorageKey, setExercisePlanRestDisplay, useExercisePlanRestDisplay } from '../../app/exercise-plan-display'
+import { liveExerciseAnimationStorageKey, setLiveExerciseAnimation, useLiveExerciseAnimation } from '../../app/live-exercise-animation'
+import { rpeDisplayStorageKey, setRpeDisplay, useRpeDisplay } from '../../app/rpe-display'
 import { setWorkoutTimeWheel, useWorkoutTimeWheel } from '../../app/workout-time-input'
-import { setAppTheme, useAppTheme } from '../../app/theme'
+import { setAppTheme, THEME_STORAGE_KEY, useAppTheme } from '../../app/theme'
 import { isFitLimeShellRoute } from '../../app/fit-lime'
 import { SettingsIcon } from '../../shared/icons'
 import { LEGAL_PATHS } from '../../shared/legal'
@@ -16,11 +16,13 @@ import { Coachmark, Page, Switch } from '../../shared/ui'
 import { FitLimeInstallSetting } from '../install/FitLimeInstallSetting'
 import { NotificationsSetting } from '../notifications'
 import { BodyMapAppearanceSetting } from '../progress/BodyMapAppearanceSetting'
+import { bodyMapDisplayStorageKey } from '../progress'
 import { AppFeedbackForm } from './AppFeedbackForm'
 import { AccountSettingsCard, SettingsSection } from './SettingsSection'
 import { TrainerProfessionalProfileSection } from './TrainerProfileEditorPage'
 import { ScheduleDensitySetting } from './ScheduleDensitySetting'
 import { TRAINER_SETTINGS_SECTIONS, TrainerSettingsOverview, trainerSettingsSection } from './TrainerSettingsOverview'
+import { PreferenceStorageNotice } from './PreferenceStorageNotice'
 
 export function ProfilePage() {
   const { actor } = useAuth()
@@ -91,6 +93,7 @@ export function TrainerProfileSettingsPage() {
         <Switch label="Показывать RPE" checked={showRpe} onChange={(checked) => setRpeDisplay(actor.userId, checked)} />
       </div>
     </SettingsSection>
+    <PreferenceStorageNotice keys={[liveExerciseAnimationStorageKey(actor.userId), exercisePlanRestStorageKey(actor.userId), rpeDisplayStorageKey(actor.userId)]} />
     </>}
 
     {section === 'schedule' && <SettingsSection title="Расписание">
@@ -101,6 +104,7 @@ export function TrainerProfileSettingsPage() {
       {fitLimeSettings && <p className="fit-lime-profile-theme-note">Экраны Lime сохраняют тёмное оформление. Выбор темы применяется к остальным экранам.</p>}
       <div className="profile-settings"><Switch label={fitLimeSettings ? 'Тёмная тема остальных экранов' : 'Тёмная тема'} checked={theme === 'dark'} onChange={(dark) => setAppTheme(dark ? 'dark' : 'light')} /></div>
       <BodyMapAppearanceSetting viewerUserId={actor.userId} role={actor.role} gender={null} />
+      <PreferenceStorageNotice keys={[THEME_STORAGE_KEY, bodyMapDisplayStorageKey(actor.userId, actor.role, undefined)]} />
     </SettingsSection>}
 
     {section === 'account' && <SettingsSection title="Данные аккаунта">
