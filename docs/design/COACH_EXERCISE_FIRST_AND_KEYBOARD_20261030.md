@@ -536,3 +536,12 @@ padding перенесён в прежний внешний отступ, шап
 Повтор10browser Chromium/WebKit: sticky/pending/retry, template-source unsaved
 в320/390/430/1440px и text/voice/manual save→filtered calendar→Open —10/10 PASS.
 Receipt unit3/3, включая закрытие без потери состояния календаря.
+
+Дополнение итерации13: финальный npm run check прошёл:352 frontend files,
+3126 tests; API1627unit (DB cases штатно требуют native CI PostgreSQL).
+Финальная целевая матрица30/30 без retries/skips после исправления геометрии.
+Компактное fixed-сообщение сохраняет «Открыть», закрывается прежним действием
+через крестик44px; снимок проверяется до выпуска. Параллельный landing2055
+из actual mainc6e4642e принят обычным merge во все4ветки, чужой код не отменён.
+Исторический полный CI PR1/0115ba0c прошёл; current-head CI после интеграции
+main обязателен и не подменяется предыдущим зелёным результатом.

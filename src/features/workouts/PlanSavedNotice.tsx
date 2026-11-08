@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { CloseIcon } from '../../shared/icons'
 
 /** Consume only the save receipt, preserving the calendar's other route state. */
 export function PlanSavedNotice() {
@@ -25,6 +26,6 @@ export function PlanSavedNotice() {
   return notice ? <section className="fit-lime-plan-saved" role="status">
     <span>План сохранён</span>
     <Link to={`/workouts/${notice}`} state={{ returnTo: `${location.pathname}${location.search}` }}>Открыть</Link>
-    <button type="button" className="link" aria-label="Скрыть подтверждение" onClick={() => setNotice(null)}>Закрыть</button>
+    <button type="button" className="link" aria-label="Скрыть подтверждение" onClick={() => setNotice(null)}><CloseIcon /></button>
   </section> : null
 }
