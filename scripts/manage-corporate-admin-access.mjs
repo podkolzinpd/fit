@@ -39,7 +39,11 @@ if(process.argv[1] && import.meta.url===pathToFileURL(process.argv[1]).href) {
     pool=new Pool({...config,max:1,connectionTimeoutMillis:5000})
     const client=await pool.connect()
     try {
-      const result=process.env.CORPORATE_ADMIN_SCOPE==='personal-pilot'
+      const result=process.env.CORPORATE_ADMIN_SCOPE==='duty-office-zone'
+        ?await manageCorporateDutyOfficeZone(client,process.env.CORPORATE_ADMIN_ACTION,process.env.CORPORATE_ADMIN_LOGIN_SHA256,process.env.CORPORATE_DUTY_TIME_ZONE,process.env.CORPORATE_DUTY_OFFICE_NAME)
+        :process.env.CORPORATE_ADMIN_SCOPE==='duty-pilot'
+        ?await manageCorporateDutyPilot(client,process.env.CORPORATE_ADMIN_ACTION,process.env.CORPORATE_ADMIN_LOGIN_SHA256)
+        :process.env.CORPORATE_ADMIN_SCOPE==='personal-pilot'
         ?await manageCorporatePersonalPilot(client,process.env.CORPORATE_ADMIN_ACTION,process.env.CORPORATE_ADMIN_LOGIN_SHA256)
         :process.env.CORPORATE_ADMIN_SCOPE==='invitation-pilot'
         ?await manageCorporateInvitationPilot(client,process.env.CORPORATE_ADMIN_ACTION,process.env.CORPORATE_ADMIN_LOGIN_SHA256)
@@ -141,5 +145,84 @@ export async function manageCorporatePersonalPilot(client, action, loginHash) {
     if(action==='grant'&&!enabled||action==='revoke'&&enabled)throw Error('personal_pilot_readback_failed')
     await client.query('commit')
     return{status:action==='inspect'?'inspected':'applied',uniqueTrainer:true,enabled,eligible,otherEnabledTrainers}
+  }catch(error){await client.query('rollback');throw error}
+}
+
+export async function manageCorporateDutyPilot(client, action, loginHash) {
+  if (!['inspect','grant','revoke'].includes(action) || !/^[a-f0-9]{64}$/.test(loginHash)) throw Error('duty_pilot_target_invalid')
+  await client.query(action==='inspect'?'begin read only':'begin')
+  try {
+    await client.query("set local statement_timeout='5s'")
+    await client.query("set local lock_timeout='2s'")
+    if(action!=='inspect')await client.query('select pg_advisory_xact_lock(159,1)')
+    const matches=await client.query(`select p.id from public.profiles p join public.trainers t on t.profile_id=p.id
+      where p.account_role='trainer' and p.id in (
+        select profile_id from app_private.fit_lime_pilot_allowlist where login_sha256=$1
+        union select profile_id from app_private.trainer_schedule_v2_allowlist where login_sha256=$1
+        union select profile_id from app_private.nutrition_native_bindings where login_sha256=$1
+      ) and exists(select 1 from app_private.auth_identities i where i.provider='yandex' and i.profile_id=p.id) limit 2`,[loginHash])
+    if(matches.rows.length!==1)throw Error('duty_pilot_target_unresolved')
+    const id=matches.rows[0].id
+    const others=await client.query('select count(*)::int n from app_private.corporate_duty_pilot_trainers where enabled and profile_id<>$1',[id])
+    const otherEnabledTrainers=others.rows[0]?.n
+    if(!Number.isInteger(otherEnabledTrainers)||otherEnabledTrainers<0)throw Error('duty_pilot_readback_failed')
+    if(action==='grant'&&otherEnabledTrainers!==0)throw Error('duty_pilot_exclusive_target_conflict')
+    const eligibility=await client.query(`select exists(select 1 from public.corporate_trainers t
+      where t.trainer_id=$1 and t.is_yandex and exists(select 1 from public.corporate_trainer_offices b
+        join public.corporate_offices o on o.id=b.office_id and not o.archived
+        join app_private.corporate_office_time_zones z on z.office_id=o.id where b.trainer_id=t.trainer_id)) eligible`,[id])
+    const eligible=eligibility.rows[0]?.eligible===true
+    if(action==='grant'&&!eligible)throw Error('duty_pilot_target_ineligible')
+    if(action==='grant')await client.query(`insert into app_private.corporate_duty_pilot_trainers(profile_id,enabled) values($1,true)
+      on conflict(profile_id) do update set enabled=true`,[id])
+    if(action==='revoke')await client.query('update app_private.corporate_duty_pilot_trainers set enabled=false where profile_id=$1',[id])
+    const result=await client.query('select enabled from app_private.corporate_duty_pilot_trainers where profile_id=$1',[id])
+    const enabled=result.rows[0]?.enabled===true
+    if(action==='grant'&&!enabled||action==='revoke'&&enabled)throw Error('duty_pilot_readback_failed')
+    await client.query('commit')
+    return{status:action==='inspect'?'inspected':'applied',uniqueTrainer:true,enabled,eligible,otherEnabledTrainers}
+  }catch(error){await client.query('rollback');throw error}
+}
+
+// This operator can only initialise a timezone of an explicitly selected office
+// of the old closed test trainer. Existing zones are never overwritten here.
+export async function manageCorporateDutyOfficeZone(client,action,loginHash,timeZone='',officeName='') {
+  if(!['inspect','grant'].includes(action)||!/^[a-f0-9]{64}$/.test(loginHash)
+    ||typeof timeZone!=='string'||!/^[A-Za-z0-9_+/-]{0,100}$/.test(timeZone)
+    ||typeof officeName!=='string'||officeName.length>160||/[\x00-\x1f\x7f]/.test(officeName))throw Error('duty_office_target_invalid')
+  await client.query(action==='inspect'?'begin read only':'begin')
+  try{
+    await client.query("set local statement_timeout='5s'")
+    await client.query("set local lock_timeout='2s'")
+    if(action!=='inspect')await client.query('select pg_advisory_xact_lock(159,1)')
+    const matches=await client.query(`select p.id from public.profiles p join public.trainers t on t.profile_id=p.id
+      where p.account_role='trainer' and p.id in (
+        select profile_id from app_private.fit_lime_pilot_allowlist where login_sha256=$1
+        union select profile_id from app_private.trainer_schedule_v2_allowlist where login_sha256=$1
+        union select profile_id from app_private.nutrition_native_bindings where login_sha256=$1
+      ) and exists(select 1 from app_private.auth_identities i where i.provider='yandex' and i.profile_id=p.id) limit 2`,[loginHash])
+    if(matches.rows.length!==1)throw Error('duty_office_target_unresolved')
+    const offices=await client.query(`select o.id,o.city,o.name,z.time_zone,coalesce(z.version,0)::int version
+      from public.corporate_trainer_offices b join public.corporate_offices o on o.id=b.office_id and not o.archived
+      join public.corporate_trainers t on t.trainer_id=b.trainer_id and t.is_yandex
+      left join app_private.corporate_office_time_zones z on z.office_id=o.id
+      where b.trainer_id=$1 and ($2='' or o.name=$2) order by o.city,o.name,o.id`,[matches.rows[0].id,officeName])
+    if(action==='grant'){
+      if(offices.rows.length!==1)throw Error('duty_office_selection_required')
+      const office=offices.rows[0]
+      const valid=await client.query('select exists(select 1 from pg_catalog.pg_timezone_names where name=$1) valid',[timeZone])
+      if(!valid.rows[0]?.valid)throw Error('duty_office_timezone_invalid')
+      if(office.time_zone && office.time_zone!==timeZone)throw Error('duty_office_existing_zone_conflict')
+      if(!office.time_zone){
+        await client.query('insert into app_private.corporate_office_time_zones(office_id,time_zone,version) values($1,$2,1)',[office.id,timeZone])
+        await client.query(`insert into app_private.corporate_admin_audit(actor_id,entity_kind,entity_id,before_data,after_data)
+          values(null,'office',$1,null,jsonb_build_object('timeZone',$2::text,'version',1,'operator','closed-duty-office-zone'))`,[office.id,timeZone])
+      }
+      const readback=await client.query('select time_zone from app_private.corporate_office_time_zones where office_id=$1',[office.id])
+      if(readback.rows[0]?.time_zone!==timeZone)throw Error('duty_office_readback_failed')
+    }
+    await client.query('commit')
+    return {status:action==='inspect'?'inspected':'applied',uniqueTrainer:true,
+      offices:offices.rows.map(o=>({city:o.city,name:o.name,timeZone:action==='grant'?timeZone:o.time_zone??null,version:action==='grant'&&!o.time_zone?1:o.version}))}
   }catch(error){await client.query('rollback');throw error}
 }
