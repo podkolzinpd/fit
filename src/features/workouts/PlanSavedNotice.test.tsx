@@ -7,7 +7,7 @@ afterEach(() => vi.useRealTimers())
 
 function Calendar() {
   const location = useLocation(), navigate = useNavigate()
-  return <><PlanSavedNotice /><pre>{JSON.stringify(location.state)}</pre><p>{location.search}</p><button onClick={() => void navigate('/other')}>Открыть</button></>
+  return <><PlanSavedNotice /><pre>{JSON.stringify(location.state)}</pre><p>{location.search}</p><button onClick={() => void navigate(-1)}>Предыдущий день</button><button onClick={() => void navigate('/today?date=2026-11-09')}>Другой день</button><button onClick={() => void navigate('/other')}>Открыть</button></>
 }
 function Other() {
   const navigate = useNavigate()
@@ -19,7 +19,7 @@ function mount() {
   </Routes></MemoryRouter>)
 }
 
-it('consumes only the receipt and removes its feedback without changing calendar context', () => {
+it('consumes only the receipt and keeps its actions available without changing calendar context', () => {
   vi.useFakeTimers()
   act(() => { mount() })
   expect(screen.getByRole('status')).toHaveTextContent('План сохранён')
@@ -28,8 +28,9 @@ it('consumes only the receipt and removes its feedback without changing calendar
   expect(screen.getByRole('status')).toBeVisible()
   expect(screen.getByRole('status').parentElement?.querySelector('pre')).toHaveTextContent('{"retainedContext":"keep"}')
   expect(screen.getByText('?date=2026-11-08')).toBeInTheDocument()
-  act(() => vi.advanceTimersByTime(3000))
-  expect(screen.queryByRole('status')).not.toBeInTheDocument()
+  act(() => vi.advanceTimersByTime(10000))
+  expect(screen.getByRole('status')).toBeVisible()
+  expect(screen.getByRole('link', { name: 'Открыть' })).toBeVisible()
 })
 
 it('does not replay the receipt when returning to the same calendar history entry', () => {
@@ -45,4 +46,13 @@ it('keeps the existing dismissal action without clearing calendar context', () =
   fireEvent.click(screen.getByRole('button', { name: 'Скрыть подтверждение' }))
   expect(screen.queryByRole('status')).not.toBeInTheDocument()
   expect(screen.getByText('?date=2026-11-08')).toBeInTheDocument()
+})
+
+it('dismisses the receipt on a calendar context change and does not replay it on back', () => {
+  act(() => { mount() })
+  fireEvent.click(screen.getByRole('button', { name: 'Другой день' }))
+  expect(screen.queryByRole('status')).not.toBeInTheDocument()
+  fireEvent.click(screen.getByRole('button', { name: 'Предыдущий день' }))
+  expect(screen.getByText('?date=2026-11-08')).toBeInTheDocument()
+  expect(screen.queryByRole('status')).not.toBeInTheDocument()
 })

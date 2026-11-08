@@ -9,23 +9,22 @@ export function PlanSavedNotice() {
   const state = location.state as Record<string, unknown> | null
   const id = state?.savedPlanId
   const consumed = useRef<unknown>(undefined)
-  const [notice, setNotice] = useState<string | null>(null)
+  const route = `${location.pathname}${location.search}`
+  const [notice, setNotice] = useState<{ id: string; route: string } | null>(null)
+  useEffect(() => {
+    setNotice(previous => previous?.route === route ? previous : null)
+  }, [route])
   useEffect(() => {
     if (typeof id !== 'string' || !/^[0-9a-f-]{36}$/i.test(id) || consumed.current === id) return
     consumed.current = id
-    setNotice(id)
+    setNotice({ id, route })
     const remaining = { ...state }
     delete remaining.savedPlanId
     navigate(`${location.pathname}${location.search}`, { replace: true, state: Object.keys(remaining).length ? remaining : null })
-  }, [id, state, location.pathname, location.search, navigate])
-  useEffect(() => {
-    if (!notice) return
-    const timer = window.setTimeout(() => setNotice(null), 3000)
-    return () => window.clearTimeout(timer)
-  }, [notice])
-  return notice ? <section className="fit-lime-plan-saved" role="status">
+  }, [id, state, location.pathname, location.search, navigate, route])
+  return notice?.route === route ? <section className="fit-lime-plan-saved" role="status">
     <span>План сохранён</span>
-    <Link to={`/workouts/${notice}`} state={{ returnTo: `${location.pathname}${location.search}` }}>Открыть</Link>
+    <Link to={`/workouts/${notice.id}`} state={{ returnTo: `${location.pathname}${location.search}` }}>Открыть</Link>
     <button type="button" className="link" aria-label="Скрыть подтверждение" onClick={() => setNotice(null)}><CloseIcon /></button>
   </section> : null
 }
