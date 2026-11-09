@@ -8493,3 +8493,65 @@ Chromium/WebKit; existing PNG cases и duration обеих ролей. Сбор�
 
 Дальше: реализация→проверки→PR без merge→сводка владельцу. Слияние/публикация
 после его разрешения; следующий этап только после принятия текущего.
+
+
+## 197. MC5.1.2 — реализация и локальная приёмка, 09.11.2026
+
+Итерация197 — 2026-11-09 — GPT-6 / OpenAI, агент design_cleanup.
+Расхождений с принятым196 нет. Проверенный product/QA commit ca01f705
+(родитель — plan dcf5526a, origin/main bd2b8452). Выпуск не разрешён.
+
+Сделано MC512-01: runtime diff только src/styles.css и
+src/styles/fit-lime-workout-completion.css. Из19 проверенных семейств17 реально
+применимы: добавлены18 узких исключений старого оформления и10 Lime-правил
+с17 недостающими declarations. Сильные принятые Lime-поверхности не копируются.
+Структура, размеры, overflow, сетка, min-height и line-height остались общими;
+сохранили specificity через положительный :where owner. Шрифт400/500 принятого
+Lime не заменяется старым600. Root/global font aliases и fallback не удаляются.
+PostCSS proof25715/25715 selector/property/value/important records exact после
+снятия только нового exact guard; это не утверждение о полном byte-order CSS.
+
+QA: новый e2e/lime-completion-share-skin.cases.ts зарегистрирован существующим
+client-workout-reference.spec.ts. Точный whitelist из3 известных отрицательных
+guards сохраняет identity положительных owner и неизвестных filters. Проверены
+все4 border sides/margins, исходные CSSRule/style objects, neutral layout clones,
+полный CSSOM/focus/scroll/overflow-anchor roundtrip. В duration helper добавлен
+только1 exact share guard, алгоритм/старые assertions не менялись.
+
+Fresh baseline нынешнего source:8 ожидаемых modern-ownership red и2 настоящих
+off positive pass,10 JSON и46 measured states сохранены. Candidate:40/40
+browser,39.44s,0skip/retry/flaky/unexpected:10shareownership +12durationowners
+обеих ролей +14 existingduration behavior +4existingPNG. Chromium/WebKit,
+client light390/dark430, desktop1440, emptylight375 иoffdark390. Собственные
+внешние запросы/отправка изолированы синтетическими fixtures.
+
+Before→after:46/46 computed styles/geometry/backdrop/frame/focus-scroll-anchor
+exact;36/36 UI PNG byte-exact;10/10 natural open→close→reopen/rawfocus paths
+иshare payloads exact,10/10 browser diagnostics пусты. Natural focus записан
+до отдельной калибровки keyboard focus; новый autofocus/trap не заявляются.
+Проверены выбор3 сюжетов/disabledempty, pending close+submit/overlay protection,
+ошибка иявныйretry. Unit покрывает штатные fallback/cancel.12 реальных canvas
+PNG1080×1350 прошли existing dimension/font/layout checks; побайтное сравнение
+canvas с исторической веткой не заявляется. Вручную просмотрены WebKit light375
+empty иdark430error: clipping/overlap не обнаружены, серыйerror прежний.
+
+Сборка/types/startup/fonts2/2 strict SHA passed; полный lint passed;4unitfiles
+34/34 report/share/celebration/insights/duration passed; docs checker passed.
+Первый fonts0/2 build не использовался какbaseline: восстановлены только
+2 verified licensedfonts из принятого локального signedZIP, Git их игнорирует.
+Agent previewEPERM/прерванное permission-wait выполнили0cases и не засчитаны.
+Фактический baseline иcandidate выполнены root с разрешённым локальным
+preview; безопасные обходные изменения продукта/CI не вводились.
+
+Артефакты: /tmp/fit-mc512-current-baseline.json,
+/tmp/fit-mc512-current-candidate.json, /tmp/fit-mc512-current-comparison.json,
+/tmp/fit-mc512-final-review.json, /tmp/fit-mc512-source-proof-current.json;
+*-results содержат rawJSON/PNG. Snapshot current source/font build записан
+в /tmp/fit-mc512-baseline-build-receipt.json.
+
+Открыто: прежний серый validation/share error — отдельный MC5.1.3. Реальные
+системная отправка/clipboard, физический телефон/native install/OAuth не
+проверялись и не выдаются за проверенные. Данные/DOM/handlers/API/пилоты/Live
+и ввод/keyboard/swipe/drag/timer не менялись. Тренер не получает client-only
+share sheet; его done/duration проверены. CI нового PR ещё требуется.
+Дальше: PR иего CI→сводка владельцу→только его разрешение на выпуск.
