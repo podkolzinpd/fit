@@ -52,3 +52,13 @@ it('handles a one-member legacy group and returns nothing after completion', () 
   expect(nextLiveTarget([a, b, c], 'c', true)?.set.id).toBe('a-0')
   expect(nextLiveTarget([a, b, c], 'b')?.set.id).toBe('a-0')
 })
+
+it('continues a chosen later round before wrapping to unfinished earlier rounds', () => {
+  const earlier = exercise('earlier', 0), a = exercise('a', 1, 'g'), b = exercise('b', 2, 'g')
+  done(a, 1)
+  expect(nextLiveTarget([earlier, a, b], 'g', true, 1)?.set.id).toBe('b-1')
+  done(b, 1)
+  expect(nextLiveTarget([earlier, a, b], 'g', true, 1)?.set.id).toBe('a-0')
+  done(a, 0); done(b, 0)
+  expect(nextLiveTarget([earlier, a, b], 'g', true, 1)?.set.id).toBe('earlier-0')
+})

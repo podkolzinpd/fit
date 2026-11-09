@@ -4839,7 +4839,7 @@ for (const density of ['original', 'compact'] as const) test(`Coach confirms exe
     localStorage.setItem(`fit.coachLiveDensity.${id}`, density)
   }, { id, density })
   await page.addInitScript(() => {
-    const connect = AudioNode.prototype.connect
+    const connect = Object.getOwnPropertyDescriptor(AudioNode.prototype, 'connect')!.value as typeof AudioNode.prototype.connect
     const sinks = new WeakMap<BaseAudioContext, GainNode>()
     AudioNode.prototype.connect = function (this: AudioNode, target: AudioNode | AudioParam, output?: number, input?: number) {
       if (target instanceof AudioDestinationNode) {
@@ -4848,10 +4848,10 @@ for (const density of ['original', 'compact'] as const) test(`Coach confirms exe
           sink = this.context.createGain(); sink.gain.value = 0
           Reflect.apply(connect, sink, [target, 0, 0]); sinks.set(this.context, sink)
         }
-        return Reflect.apply(connect, this, [sink, output ?? 0, input ?? 0])
+        return Reflect.apply(connect, this, [sink, output ?? 0, input ?? 0]) as AudioNode
       }
-      return target instanceof AudioNode ? Reflect.apply(connect, this, [target, output ?? 0, input ?? 0])
-        : Reflect.apply(connect, this, [target, output ?? 0])
+      return (target instanceof AudioNode ? Reflect.apply(connect, this, [target, output ?? 0, input ?? 0])
+        : Reflect.apply(connect, this, [target, output ?? 0])) as AudioNode
     } as typeof AudioNode.prototype.connect
   })
   const source = coachGestureWorkout(false, 3)
@@ -4873,4 +4873,48 @@ for (const density of ['original', 'compact'] as const) test(`Coach confirms exe
   }
   await expect(bodies.nth(0)).not.toHaveAttribute('inert', '')
   expect(backend.getWorkouts()[0]!.exercises[0]!.sets.every(set => !set.confirmedAt)).toBe(true)
+})
+
+for (const density of ['original', 'compact'] as const) test(`Coach confirms later superset round ${density}`, async ({ page }) => {
+  const id = 'c0ac0000-6010-4000-8000-000000000001'
+  await page.addInitScript(({ id, density }) => {
+    localStorage.setItem(`fit.liveExerciseAnimation.${id}`, 'false')
+    localStorage.setItem(`fit.coachLiveDensity.${id}`, density)
+  }, { id, density })
+  await page.addInitScript(() => {
+    const connect = Object.getOwnPropertyDescriptor(AudioNode.prototype, 'connect')!.value as typeof AudioNode.prototype.connect
+    const sinks = new WeakMap<BaseAudioContext, GainNode>()
+    AudioNode.prototype.connect = function (this: AudioNode, target: AudioNode | AudioParam, output?: number, input?: number) {
+      if (target instanceof AudioDestinationNode) {
+        let sink = sinks.get(this.context)
+        if (!sink) {
+          sink = this.context.createGain(); sink.gain.value = 0
+          Reflect.apply(connect, sink, [target, 0, 0]); sinks.set(this.context, sink)
+        }
+        return Reflect.apply(connect, this, [sink, output ?? 0, input ?? 0]) as AudioNode
+      }
+      return (target instanceof AudioNode ? Reflect.apply(connect, this, [target, output ?? 0, input ?? 0])
+        : Reflect.apply(connect, this, [target, output ?? 0])) as AudioNode
+    } as typeof AudioNode.prototype.connect
+  })
+  await page.clock.setFixedTime(new Date('2026-11-04T09:00:00Z'))
+  const source = coachGestureWorkout(true, 4)
+  source.exercises = [source.exercises[2]!, source.exercises[0]!, source.exercises[1]!, source.exercises[3]!]
+  source.exercises.forEach((exercise, index) => { exercise.position = index })
+  const backend = await mockPilot(page, { role: 'trainer', profileId: id, clientLime: true, fitLime: true, workouts: [source] })
+  await page.goto(`/workouts/${workoutId}/live`)
+  const group = page.locator('.exercise-block.live')
+  await group.locator('.coach-v79-circuit-heading').click()
+  await group.locator('.circuit-round').nth(1).locator('.circuit-round-toggle').click()
+  const body = (exercise: number, round: number) => page.locator(`[data-live-card-key="round:${source.exercises[exercise + 1]!.sets[round]!.id}"] > .coach-v79-card-body`)
+  for (const round of [1, 0]) for (const exercise of [0, 1]) {
+    const set = source.exercises[exercise + 1]!.sets[round]!
+    await expect(body(exercise, round)).not.toHaveAttribute('inert', '')
+    await expect(group.locator('[data-live-card-key] > .coach-v79-card-body:not([inert])')).toHaveCount(1)
+    await page.locator(`[data-live-set-id="${set.id}"]`).getByRole('button', { name: 'Готово, отдых', exact: true }).click()
+    await expect.poll(() => backend.getWorkouts()[0]!.exercises.find(item => item.id === source.exercises[exercise + 1]!.id)!.sets[round]!.confirmedAt).not.toBeNull()
+  }
+  await expect(group.locator(':scope > .coach-v79-circuit-body')).toHaveAttribute('inert', '')
+  await expect(page.locator('.live-session-progress-copy')).toContainText(source.exercises[3]!.name)
+  expect(backend.getWorkouts()[0]!.exercises.find(item => item.id === source.exercises[0]!.id)!.sets.every(set => !set.confirmedAt)).toBe(true)
 })
