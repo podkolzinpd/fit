@@ -8785,3 +8785,65 @@ Physical/OAuth/systemshareневыдаютсязапроверенныебрау
 CIinitialrejection198 остаютсясохранены, ихисправлениеэтимнеобещаем.
 Дальше: реализация→локальнаяприёмка/PR/CI→сводкавладельцу; невыпускатьбез
 егопоследующегоразрешения.
+
+
+## 204. MC5.1.3 — текущая реализация и локальная приёмка, 09.11.2026
+
+Итерация204 — 2026-11-09 — GPT-6 / OpenAI, агент design_cleanup.
+Product/QA commit3d0c6fe4, база main49c81395, план203/b2e56361.
+Runtime2CSS/3zero-specificitycolor-exclusions,0новыхтокенов/значений/DOM.
+Подавлены только muted durationerror p/вложенныеp иclientsharestatus.error
+внутри/снаружиокна; colorowner — existing.error/var(--danger). Шрифты14/400,
+геометрия, прочиепараграфы/status/facts/date/off прежние. СтатическийPostCSS:
+25715/25715global и123/123completion selector/property/value/importantrecords
+exact послеснятиялишь3новыхguards, это неclaim byte-orderвсехCSS.
+React/input/save/reload/версии/данные/Live/native/API/пакеты/CI/behaviorfile
+byte-exact текущемуmain; избудущихэтаповничего неперенесено.
+
+QA сохранилаexactguardwhitelists/positiveowner/4borders/margins/fullCSSOM и
+style-object/focus/scroll/anchor roundtrip. Existingduration/sharecases получили
+semanticfacts иfinalsame-theme dangerassert ПОСЛЕ полногоlifecycle/JSON. Share
+проверяетerrorвнутри, realclose→errorснаружи→reopen/reselect/retry, прежние
+2syntheticsharecalls/PNGfilename. Новыйnetworkvisual —clientlight390/trainerdark390
+×2engine; businessbehaviorнетронут, splitpolicy8/8passed. Strict intentional
+diagnostics: ровно1connectionrefused и1HTTP409 толькодляduration; другие
+404/requestfailed/consoleerror неигнорятся.
+
+Freshbaseline26:20ожидаемыхsemanticred+6realoffpass,0skip/retry/flaky. Все20
+red именно actualmuted против existingdanger, неfixture/locator/networkfailure.
+Nativeouter.error ужеdanger, дочерниеpсерые; captures/JSONсохраненыпослевсех
+реальныхдействий. ЕдинственныйновыйlocatorуточнёнДОфактическогобазовогопрогона:
+послеsavearia-labelменяется, finalfocusсмотритstableexistingbutton; исходный
+accessiblelabel по-прежнемустрогопроверяется. Нетbypassassertions.
+
+Candidate44/44,51.196s,44attempts/0retry/skip/flaky/unexpected:12durationowners
++10share+4networkvisual+14existingdurationbehavior+4existingPNG. Все90probe
+states и40semanticcaptures сохраняютgeometry/всеnoncolorproperties/backdrop/
+focus/scroll/anchor; из56errornodes ровно40меняютcolor/currentColor→danger,
+8off-muted и8networkouterdanger unchanged.46/78PNG byte-exact,32ожидаемоменяют
+толькоerrorpaint; off6cases/22states/18PNG полностьюпрежние. Payload26/26 и
+diagnostics26/26 exact; networkversions1/1/2, черновик50/сервер45послеconflict/
+явныйretry→50 сохранены. Все90CSSOM/state roundtrips true.
+
+Квалификация: исходныйstrictcomparator сохраняетexit1/report. Триlogicalbbox
+flags —по9pixels левогоглифовыноса «д» вовторойстроке «до», примерно1devicepx
+левееpbox; samefont/rect/background истарый/новыйRGB допускают одинаковую
+glyphcoverage с8bitrounding, отдельныйinkproof просмотрен. bbox/пороги не
+расширялись иперепрогонарадиgreenнет. Ещё3initialScroll.height различаютсядо
+первогоexplicitfonts/settle (2off иmodernclientdark); initialy/clientHeight
+иfinalwholeScroll exact, причинараннихзначенийнеустановлена,какlimit202.
+Полныйrawcomparison невыдаётсязаgreen, нормализации/удаленияданныхнет.
+
+Build/types/startup/strictfonts2passed, full lintpassed, existing5unitfiles
+40/40passed, splitpolicy8/8passed, docscheckpassed. ScreenshotыWebKitlight
+validation/network, trainerdarknetwork иdarkoutsideshare просмотрены: ожидаемый
+danger, кнопки/фокус/текстсохранены. Старая171QApolicyошибка неповторена.
+
+Артефакты /tmp/fit-mc513-{baseline,candidate}.json и*-results,
+/tmp/fit-mc513-comparison.json, /tmp/fit-mc513-final-review.json,
+/tmp/fit-mc513-ink-overhang-review.json, /tmp/fit-mc513-source-proof-current.json,
+/tmp/fit-mc513-baseline-data-review.json, build/lint/policylogs.
+CI новогоPR ещёнепроверен; физическиетелефоны/nativeinstall/OAuth/реальная
+systemshare не проверялись. SourceCIinitialrejection198 иrawheightlimit202
+необъявляютсяисправленными. Дальше PR/егоCI→сводкавладельцу. Разрешения
+merge/deployMC513нет, MC-RELEASE-01 сохраняется.
