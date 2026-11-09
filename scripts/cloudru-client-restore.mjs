@@ -540,7 +540,9 @@ async function readCardMergeState(client,pair,sourceId,targetId,predecessorId,co
        where a.attrelid=t.tgrelid and a.attnum=any(t.tgattr) and a.attname=any($2::text[])))
      order by t.tgname`,[schema+'.'+name,columns])).rows
    requireState(rows.every(t=>['set_updated_at','prevent_workout_client_reassignment',
-     'guard_fit_lime_fixture_identity','preserve_merged_client_photo','record_trainer_finance_event'].includes(t.function)),
+     'guard_fit_lime_fixture_identity','preserve_merged_client_photo','record_trainer_finance_event'].includes(t.function)
+     || (t.schema==='app_private' && t.name==='analytics_action' && t.function==='record_analytics_action'
+       && ['workouts','workout_exercises','workout_sets','trainer_finance_packages','trainer_finance_payments'].includes(name))),
      'merge_unsupported_trigger')
    triggers.push({schema,name,rows})
  }
