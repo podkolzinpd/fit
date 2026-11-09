@@ -135,6 +135,92 @@ test('background audit is explicit manual readonly and precedes queue health exi
 
 const read = name => readFileSync(new URL(`../${name}`, import.meta.url), 'utf8')
 
+async function manualCardAudit() {
+  const workflow = read('.github/workflows/inspect-cloudru-operations.yml')
+  const source = workflow.match(/\n          (export async function inspectUnregisteredAccess[\s\S]*?)\n          \/\/ Runtime entry:/)?.[1]
+  assert.ok(source, 'actual workflow audit must be testable')
+  return (await import(`data:text/javascript;base64,${Buffer.from(source.replace(/^          /gm, '')).toString('base64')}`)).inspectUnregisteredAccess
+}
+
+test('manual card audit checks actual runtime visibility and emits only counts', async () => {
+  const audit = await manualCardAudit()
+  const statements = []
+  const client = { query: async sql => {
+    statements.push(sql)
+    if (sql.includes('transaction_read_only')) return { rows: [{ name: 'fit_owner', readonly: 'on' }] }
+    if (sql.includes('pg_roles')) return { rows: [{ name: 'fit_api', rolsuper: false, rolbypassrls: false }] }
+    if (sql.includes('count(*)::int cards')) return { rows: [{ cards: 4, active: 2, archived: 1, merged: 1, old_active: 1 }] }
+    if (sql.includes('array_agg')) return { rows: [{ trainer_id: 'private-owner', account_role: 'trainer', ids: ['private-old', 'private-new'], old_ids: ['private-old'] }] }
+    if (sql.includes('list_client_overviews')) return { rows: [{ id: 'private-old', can_create: true }] }
+    if (sql.includes('count(*)::int n')) return { rows: [{ n: 3 }] }
+    return { rows: [] }
+  } }
+  const result = await audit(client)
+  assert.equal(result.active, 2)
+  assert.equal(result.visible, 1)
+  assert.equal(result.oldVisible, 1)
+  assert.equal(result.oldCanCreateWorkout, 1)
+  assert.equal(result.ownersWithMissingCards, 1)
+  assert.equal(result.oldOwnersWithMissingCards, 0)
+  assert.equal(result.workouts, result.visibleWorkouts)
+  assert.doesNotMatch(JSON.stringify(result), /private-/)
+  assert.match(statements[0], /repeatable read read only/)
+  assert.equal(statements.at(-1), 'commit')
+  assert.doesNotMatch(statements.join('\n'), /\b(?:insert|update|delete|grant|alter|quick_start_live_workout|start_live_workout)\b/i)
+})
+
+test('manual card audit rejects privileged runtime and non-readonly sessions', async () => {
+  const audit = await manualCardAudit()
+  for (const mode of ['wrong-owner', 'write-session', 'privileged-runtime', 'incomplete']) {
+    const statements = []
+    const client = { query: async sql => {
+      statements.push(sql)
+      if (sql.includes('transaction_read_only')) return { rows: [{ name: mode === 'wrong-owner' ? 'postgres' : 'fit_owner', readonly: mode === 'write-session' ? 'off' : 'on' }] }
+      if (sql.includes('pg_roles')) return { rows: [{ name: 'fit_api', rolsuper: mode === 'privileged-runtime', rolbypassrls: false }] }
+      if (sql.includes('count(*)::int cards')) return { rows: [{ cards: 2, active: 2, archived: 0, merged: 0, old_active: 1 }] }
+      if (sql.includes('array_agg')) return { rows: [{ trainer_id: 'private-owner', account_role: 'trainer', ids: ['private-old'], old_ids: ['private-old'] }] }
+      if (sql.includes('list_client_overviews')) return { rows: [] }
+      if (sql.includes('count(*)::int n')) return { rows: [{ n: 0 }] }
+      return { rows: [] }
+    } }
+    await assert.rejects(audit(client), /manual_audit_(?:readonly_required|runtime_role_invalid|incomplete)/)
+    assert.equal(statements.at(-1), 'rollback')
+  }
+})
+
+test('manual card audit is opt-in and its workflow shell parses', () => {
+  const workflow = read('.github/workflows/inspect-cloudru-operations.yml')
+  assert.match(workflow, /unregistered_clients_audit:\n[\s\S]*?default: false/)
+  assert.match(workflow, /github.event_name == 'workflow_dispatch' && inputs.unregistered_clients_audit/)
+  assert.match(workflow, /if test "\$UNREGISTERED_CLIENTS_AUDIT" = true/)
+  const step = workflow.split('- name: Inspect only private queue aggregates')[1].split('- name:')[0]
+  const shell = step.split('run: |')[1].split('\n').map(line => line.startsWith('          ') ? line.slice(10) : line).join('\n')
+  const parsed = spawnSync('bash', ['-n'], { input: shell, encoding: 'utf8' })
+  assert.equal(parsed.status, 0, parsed.stderr)
+})
+
+test('manual card audit shares a validated snapshot with a separate runtime connection', async () => {
+  const audit = await manualCardAudit()
+  for (const valid of [true, false]) {
+    const runtimeStatements = []
+    const owner = { query: async sql => {
+      if (sql.includes('transaction_read_only')) return { rows: [{ name: 'fit_owner', readonly: 'on' }] }
+      if (sql.includes('pg_export_snapshot')) return { rows: [{ snapshot: valid ? '00000003-0000001B-1' : "private';bad" }] }
+      if (sql.includes('count(*)::int cards')) return { rows: [{ cards: 0, active: 0, archived: 0, merged: 0, old_active: 0 }] }
+      return { rows: [] }
+    } }
+    const runtime = { query: async sql => { runtimeStatements.push(sql); return { rows: [] } } }
+    if (!valid) await assert.rejects(audit(owner, runtime), /manual_audit_snapshot_invalid/)
+    else {
+      assert.equal((await audit(owner, runtime)).active, 0)
+      assert.equal(runtimeStatements[0], 'begin transaction isolation level repeatable read read only')
+      assert.equal(runtimeStatements[1], "set transaction snapshot '00000003-0000001B-1'")
+      assert.equal(runtimeStatements.at(-1), 'commit')
+    }
+    assert.doesNotMatch(runtimeStatements.join('\n'), /private|set local role/)
+  }
+})
+
 test('push recovery is a manual typed exact-main operation, never a sender or arbitrary SQL route', () => {
   const workflow = read('.github/workflows/recover-cloudru-fresh-push.yml')
   assert.match(workflow, /on:\n  workflow_dispatch:/)
