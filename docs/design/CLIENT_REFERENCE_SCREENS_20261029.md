@@ -8288,3 +8288,30 @@ descendant с собственным merge в ancestry. Новые CI/config/fla
 что отдельно подтверждается settled comparison. На интегрированном7622f151:
 25714/25714 legacy records,15guards/5rules8decl,12 protected files exact.
 Квитанция /tmp/fit-mc51-source762-proof.json; runtime diff от main только2 CSS.
+
+## 191. MC5.1 — проверка интегрированной версии перед CI, 09.11.2026
+
+Combined source0bb7b8a6 после включения7622f151: build/types/startup/fonts,
+lint и14/14 unit прошли. Полный114 browser:113passed/1failed/0skip/retry.
+Единственный red — прежний MC44 client-light-compact timer-review Chromium:
+второй settle после ablation setup остановлен deadline5000ms. Конкретный await
+(fonts/RAF/finished) и target неизвестны: в первом запуске trace не записывался;
+имеются screenshot/error-context. MC44 helper/cases/Live CSS/package побайтно ef,
+MC5.1 guards не меняют matching на Live. Связь с новым viewport не доказана.
+
+Один адресный diagnostic с исходным full entry/case/assertions и trace:on дал
+1passed/0skip/retry за4.1s. Никаких override getAnimations/RAF/evaluate,
+дополнительных awaited barriers, изменения CSS/timeout/assertions не было;
+только passive events и afterEach native snapshot. Первый diagnostic setup
+выбрал0cases из-за якорей full-title grep; исправлен только временный выбор,
+--list подтвердил1case до выполнения. Это не второй product/test red.
+Результат адресного запуска не устанавливает историческую причину первого
+deadline и не выдаётся за его исправление; исходный113/1 сохраняется.
+
+Все114 сценариев выполнены на combined source:113 с первой попытки и один
+отдельно с trace; не заявляется114 first-pass. Повторять успешные113/14unit/
+build/lint без новой причины не нужно. Перед merge обязателен полный новый
+GitHub CI/Android отправленного head, с прежними fail-on-flaky/assertions.
+Квитанции: /tmp/fit-mc51-release/source-1-114.json, target-trace.json и
+target-trace-results/; /tmp/fit-mc51-finish-settlement-review.json.
+Следующий шаг: обычный PR, собственный CI, свежая общая очередь, публикация.
