@@ -1,5 +1,5 @@
 import { clientCardAction } from './fit-lime-fixtures'
-import { nativeSignIn, nativeRegister } from './native-local-fixture'
+import { nativeCreateConnectedAthlete, nativeSignIn, nativeRegister } from './native-local-fixture'
 import { expect, test } from './native-local-fixture'
 import { randomUUID } from 'node:crypto'
 
@@ -23,15 +23,9 @@ test('global rollout gives a new trainer the Client Goal identity', async ({ pag
 
 test('trainer Client Goal keeps create and date validation under monochrome preview', async ({ page }) => {
   await signInPreviewTrainer(page)
-  await page.goto('/clients/new')
-  await page.getByLabel('Имя', { exact: true }).fill(`Цель ${randomUUID().slice(0, 8)}`)
-  await page.getByLabel('Пол').selectOption('female')
-  await page.getByLabel('Возраст').fill('31')
-  await page.getByLabel('Рост, см').fill('170')
-  await page.getByLabel('Начальный вес, кг').fill('65')
-  await page.getByRole('button', { name: 'Сохранить' }).click()
-  await expect(page).toHaveURL(/\/clients\/[0-9a-f-]+$/)
-  const clientId = page.url().split('/').pop()!
+  const { clientId } = await nativeCreateConnectedAthlete(page, {
+    name: `Цель ${randomUUID().slice(0, 8)}`, profile: { gender: 'female', ageYears: 31, heightCm: 170, initialWeightKg: 65 },
+  })
 
   await page.goto(`/clients/${clientId}/goal`)
   await expect(page.locator('.phone-frame')).toHaveClass(/trainer-client-goal-identity/)
@@ -69,5 +63,7 @@ test('trainer Client Goal keeps create and date validation under monochrome prev
   await page.getByRole('button', { name: 'Архивировать цель' }).click()
   await page.getByRole('alertdialog').getByRole('button', { name: 'Архивировать' }).click()
   await expect(page).toHaveURL(new RegExp(`/clients/${clientId}$`))
-  await (await clientCardAction(page, 'Архивировать клиента')).click()
+  await (await clientCardAction(page, 'Отключиться от спортсмена')).click()
+  await page.getByRole('alertdialog').getByRole('button', { name: 'Отключиться', exact: true }).click()
+  await expect(page).toHaveURL(/\/clients$/)
 })

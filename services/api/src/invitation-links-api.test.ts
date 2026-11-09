@@ -65,6 +65,15 @@ describe('invitation link API', () => {
     expect(response.statusCode).toBe(status)
     expect(response.json()).toEqual({ error: failure })
   })
+  it('returns an actionable registration requirement for old new-client callers', async () => {
+    const invitationLinks = links({ createForNewClient: vi.fn().mockRejectedValue(new Error('athlete_registration_required')) })
+    const app = buildApp({ pilotInvitationLinks: invitationLinks, logger: false })
+    apps.push(app)
+    const response = await app.inject({ method: 'POST', url: '/v1/invitation-links/new-client',
+      headers: { 'x-fit-session': sessionToken }, payload: { fullName: 'Спортсмен', operationId } })
+    expect(response.statusCode).toBe(409)
+    expect(response.json()).toEqual({ error: 'athlete_registration_required' })
+  })
   it('previews a bearer link without an account session', async () => {
     const invitationLinks = links()
     const app = buildApp({ pilotInvitationLinks: invitationLinks, logger: false })

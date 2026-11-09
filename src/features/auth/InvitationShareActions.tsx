@@ -1,14 +1,10 @@
+import { useRef } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { useRef, useState, type FormEvent, type KeyboardEvent } from 'react'
-import { createPortal } from 'react-dom'
 
 import { useAuth } from '../../app/auth-context'
-import { isFitLimeEnabled } from '../../app/fit-lime'
-import { isTrainerScheduleV2Enabled } from '../../app/trainer-schedule-v2'
 import { useDataBackend } from '../../app/data-backend-context'
 import type { InvitationShare } from '../../shared/domain'
-import { CloseIcon } from '../../shared/icons'
-import { invitationShareText } from '../../shared/invitation-share'
+import { invitationShareText, connectionShareUrl } from '../../shared/invitation-share'
 import { InvitationShareDialog } from '../../shared/InvitationShareDialog'
 import { trackGoal } from '../../shared/yandex-metrika'
 
@@ -21,12 +17,15 @@ export function InvitationShareButton({
   targetRole,
   label,
   className,
+  cardName,
 }: {
   clientId: string
   targetRole: 'client' | 'trainer'
   label: string
   className?: string
+  cardName?: string
 }) {
+  const triggerRef = useRef<HTMLButtonElement>(null)
   const { actor } = useAuth()
   const backend = useDataBackend()
   const queryClient = useQueryClient()
@@ -48,100 +47,39 @@ export function InvitationShareButton({
   }
 
   return <>
-    <button type="button" className={className} disabled={invitation.isPending} aria-busy={invitation.isPending} onClick={() => invitation.mutate()}>{invitation.isPending ? 'Создаём ссылку…' : label}</button>
+    <button ref={triggerRef} type="button" className={className} disabled={invitation.isPending} aria-busy={invitation.isPending} onClick={() => invitation.mutate()}>{invitation.isPending ? 'Создаём ссылку…' : label}</button>
     {invitation.error && <p className="error invitation-launch-error" role="alert">{invitation.error.message}</p>}
     {invitation.data && <InvitationShareDialog
+      returnFocusRef={triggerRef}
       share={invitation.data}
       source={backend.source}
       message={invitationShareText(inviterName(actor?.firstName), targetRole)}
+      description={cardName ? `Отправьте приглашение спортсмену «${cardName}». После принятия он увидит ранее записанные тренировки.` : undefined}
       onClose={() => invitation.reset()}
       onRevoke={() => revoke(invitation.data)}
     />}
   </>
 }
 
-export function InviteAthleteButton({ className, label = 'Пригласить спортсмена', open: controlledOpen, onOpenChange }: {
-  className?: string; label?: string; open?: boolean; onOpenChange?: (open: boolean) => void
-}) {
+export function InviteAthleteButton({ className, label = 'Пригласить' }: { className?: string; label?: string }) {
+  const triggerRef = useRef<HTMLButtonElement>(null)
   const { actor } = useAuth()
-  const fitLimePilot = isFitLimeEnabled(actor) && isTrainerScheduleV2Enabled(actor)
-  const backend = useDataBackend()
-  const queryClient = useQueryClient()
-  const [internalOpen, setInternalOpen] = useState(false)
-  const open = controlledOpen ?? internalOpen
-  const setOpen = (value: boolean) => { setInternalOpen(value); onOpenChange?.(value) }
-  const openerRef = useRef<HTMLButtonElement>(null)
-  const nameDialogRef = useRef<HTMLElement>(null)
-  const [fullName, setFullName] = useState('')
-  const [operationId, setOperationId] = useState(() => crypto.randomUUID())
-  const invitation = useMutation({
-    mutationFn: () => backend.invitations.createShareForNewClient(fullName.trim(), operationId),
-    onSuccess: async () => {
-      trackGoal('invitation_created')
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ['clients'] }),
-        queryClient.invalidateQueries({ queryKey: ['client-invitations'] }),
-      ])
-    },
-    onError: () => trackGoal('invitation_create_error'),
-  })
-
-  function close(): void {
-    setOpen(false)
-    setFullName('')
-    setOperationId(crypto.randomUUID())
-    invitation.reset()
-    if (fitLimePilot) window.requestAnimationFrame(() => openerRef.current?.focus())
-  }
-
-  function onNameDialogKeyDown(event: KeyboardEvent<HTMLElement>): void {
-    if (!fitLimePilot) return
-    if (event.key === 'Escape') { event.preventDefault(); close(); return }
-    if (event.key !== 'Tab') return
-    const controls = nameDialogRef.current?.querySelectorAll<HTMLElement>('button:not([disabled]), input:not([disabled])')
-    if (!controls?.length) return
-    const current = Array.from(controls).indexOf(document.activeElement as HTMLElement)
-    const next = event.shiftKey
-      ? (current < 0 ? controls.length - 1 : (current - 1 + controls.length) % controls.length)
-      : (current + 1) % controls.length
-    event.preventDefault()
-    controls[next]?.focus()
-  }
-
-  function submit(event: FormEvent<HTMLFormElement>): void {
-    event.preventDefault()
-    if (fullName.trim().length < 2) return
-    invitation.mutate()
-  }
-
-  async function revoke(): Promise<void> {
-    if (!invitation.data) return
-    await backend.invitations.revoke(invitation.data.share.id)
-    await queryClient.invalidateQueries({ queryKey: ['client-invitations', invitation.data.clientId] })
-  }
-
-  const host = document.querySelector('.phone-frame') ?? document.body
+  const { connectionDirectory: repository } = useDataBackend()
+  const invitation = useMutation({ mutationFn: () => {
+    if (!repository) throw new Error('Приглашения недоступны. Повторите вход.')
+    return repository.createInvitation()
+  } })
   return <>
-    {controlledOpen === undefined && <button ref={openerRef} type="button" className={className} aria-label="Пригласить спортсмена" onClick={() => setOpen(true)}>{label}</button>}
-    {open && invitation.data === undefined && createPortal(<div className="modal-overlay invitation-name-overlay" role="presentation" onPointerDown={(event) => {
-      if (event.target === event.currentTarget) close()
-    }}>
-      <section ref={nameDialogRef} className="invitation-name-dialog" role="dialog" aria-modal="true" aria-labelledby="invitation-name-title" onKeyDown={onNameDialogKeyDown}>
-        <header><div><p className="eyebrow">НОВЫЙ СПОРТСМЕН</p><h2 id="invitation-name-title">Кого пригласить?</h2></div><button type="button" className="icon-button" aria-label="Закрыть" onClick={close}><CloseIcon /></button></header>
-        <p className="muted">Имя появится в списке клиентов. Остальные данные спортсмен заполнит позже.</p>
-        <form className="stack" onSubmit={submit}>
-          <label>Имя спортсмена<input autoFocus value={fullName} minLength={2} maxLength={120} required onChange={(event) => setFullName(event.target.value)} /></label>
-          {invitation.error && <p className="error" role="alert">{invitation.error.message}</p>}
-          <button className="primary" disabled={invitation.isPending} aria-busy={invitation.isPending}>{invitation.isPending ? 'Создаём ссылку…' : 'Создать приглашение'}</button>
-        </form>
-      </section>
-    </div>, host)}
+    <button ref={triggerRef} type="button" className={className} disabled={invitation.isPending} onClick={() => invitation.mutate()}>{invitation.isPending ? 'Готовим приглашение…' : label}</button>
+    {invitation.error && <p className="error" role="alert">{invitation.error.message}</p>}
     {invitation.data && <InvitationShareDialog
-      share={invitation.data.share}
-      source={backend.source}
-      message={invitationShareText(inviterName(actor?.firstName), 'client')}
-      onClose={close}
-      onRevoke={revoke}
+      returnFocusRef={triggerRef}
+      share={{ code: invitation.data.code, expiresAt: invitation.data.expiresAt, targetRole: 'client' }}
+      source="yandex" invitationUrl={connectionShareUrl(invitation.data.code)}
+      message={`${inviterName(actor?.firstName)} приглашает вас тренироваться вместе в Fit.`}
+      description="Отправьте ссылку спортсмену. Ему останется войти или зарегистрироваться и принять приглашение."
+      onClose={() => invitation.reset()}
+      onRevoke={async () => { await repository!.revokeInvitation(invitation.data!.code) }}
     />}
   </>
 }

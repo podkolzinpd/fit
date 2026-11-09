@@ -8,7 +8,7 @@ export function isClientLimeShellRoute(actor: SessionActor | null | undefined, p
   if (!isClientLimeEnabled(actor)) return false
   return ['/me', '/me/edit', '/me/workouts', '/me/progress', '/me/achievements',
     '/me/goal', '/me/finance', '/me/nutrition', '/me/profile', '/me/settings', '/me/trainers',
-    '/chat', '/assistant', '/join', '/workouts/new'].includes(pathname)
+    '/chat', '/assistant', '/join', '/connect', '/workouts/new'].includes(pathname)
     || /^\/chat\/[^/]+$/.test(pathname)
     || /^\/me\/workouts\/favorites\/[^/]+\/edit$/.test(pathname)
     || /^\/workouts\/[^/]+(?:\/(?:edit|live|history\/[^/]+))?$/.test(pathname)
