@@ -665,3 +665,25 @@ privacy-тесте. Заменено точным соответствием т�
 repository-quality нашёл unsafe any только в новом mock insertBefore; добавлен
 точный тип src:string без изменения runtime/проверок. Целевой lint, typecheck
 и Metrika/auth24/24 после уточнения прошли. ПолныйCI нового head обязателен.
+
+Checkpoint22: head02185d86, PR2076. CI42670852824/attempt1: исполненные
+jobs passed,8обязательных abandoned; app/e2e закономерно failed. Полный
+attempt2 запущен без изменения кода/CI. На09.11,19:41UTC33jobs completed,
+один visual-client-390 shard2/2 выполняется47m44s; failures в последнем
+снимке нет, агрегатор e2e ещё не завершён. Logs API404 до окончания, UI
+в этом браузере не авторизован к логам; credentials не переносились.
+Более ранний2075 по последнему штатному снимку OPEN, headef7ba298.
+Один bounded watcher завершился по лимиту45min. Новых расписаний нет.
+Публикация НЕ выполнена. Для продолжения нужен полный current-head CI и
+разрешение очереди по GitHub; затем обновить от main и пройти обычный выпуск,
+HTTPS readback и настоящий PageView всех3счётчиков. Checkpoint/CI snapshots
+сохранены в outputs/fit-metrika-parallel-20261109 зеркала проекта.
+
+Продолжение22: владелец подтвердил, что предыдущий PR доехал, и поручил выпуск.
+2075 merged70b6c616; main совмещён без конфликтов в3a71f1e2. Наши runtime
+файлы не менялись. Причина долгого visual390/2 во втором CI подтверждена
+check-run annotation: hosted runner lost communication with the server;
+job завершён failure при незавершённом шаге и без доступного log. Это отказ
+runner, не подтверждённое падение screenshot assertion. Проверки/CI не ослаблены.
+После обновления main обязательны build и полныйCI нового head. Очередь2075
+разрешена; более новые2077/2078 не получают старшинство над нашим2076.
