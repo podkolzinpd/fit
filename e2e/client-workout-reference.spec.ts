@@ -468,7 +468,7 @@ for (const density of ['original', 'compact']) test(`client Live strength rows k
 
 // Force both race windows: a slow confirmation and a queued focus frame.
 // Strength/time exercise different native inputs; two engines cover touch focus.
-for (const role of ['client', 'trainer'] as const) for (const metric of ['weight', 'seconds'] as const) for (const phase of ['response', 'frame'] as const) test(`${role} manual focus wins confirmation ${metric} ${phase}`, async ({ page }, info) => {
+for (const role of ['client', 'trainer'] as const) for (const metric of ['weight', 'seconds'] as const) for (const phase of ['response', 'frame'] as const) test(`${role} manual focus wins confirmation ${role === 'trainer' && metric === 'seconds' ? 'distance' : metric} ${phase}`, async ({ page }, info) => {
   const source = restTimerWorkout()
   source.startedAt = new Date(Date.now() - 120000).toISOString()
   const exercise = source.exercises[0]!, target = exercise.sets[0]!, sibling = exercise.sets[1]!
@@ -484,7 +484,7 @@ for (const role of ['client', 'trainer'] as const) for (const metric of ['weight
   await page.goto(`/workouts/${workoutId}/live`)
   const row = page.locator(`form[data-live-set-id="${target.id}"]`)
   const next = page.locator(`form[data-live-set-id="${sibling.id}"]`)
-  const label = metric === 'weight' ? 'Фактический вес' : 'Фактическое время: секунды'
+  const label = metric === 'weight' ? 'Фактический вес' : role === 'trainer' ? 'Фактическая дистанция' : 'Фактическое время: секунды'
   const field = row.getByRole('textbox', { name: label, exact: true })
   await field.fill('35')
   await row.getByRole('button', { name: 'Готово, отдых', exact: true }).click()
@@ -528,8 +528,8 @@ for (const role of ['client', 'trainer'] as const) for (const metric of ['weight
   await field.blur()
   await expect.poll(() => {
     const fact = backend.getWorkouts()[0]!.exercises[0]!.sets[0]!.fact
-    return metric === 'weight' ? fact.weightKg : fact.durationSec
-  }).toBe(metric === 'weight' ? 37.5 : 105)
+    return metric === 'weight' ? fact.weightKg : role === 'trainer' ? fact.distanceKm : fact.durationSec
+  }).toBe(metric === 'weight' ? 37.5 : role === 'trainer' ? 45 : 105)
   expect(backend.getWorkouts()[0]!.exercises[0]!.sets[1]!.fact).toEqual(sibling.fact)
   expect(backend.getWorkouts()[0]!.exercises[0]!.sets[0]!.confirmedAt).toBe(stamp)
   expect(await page.evaluate(id => sessionStorage.getItem(`fit:live-rest-until:${id}`), workoutId)).toBe(deadline)
@@ -1193,6 +1193,7 @@ test('client keyboard date confirmation applies the edited draft on first tap', 
 })
 
 test.beforeEach(async ({ page }) => {
+  if (process.env.FIT_SILENT_ACCEPTANCE === '1') await silenceLiveAudio(page)
   // Only app GETs may reach the local server; every API write is fixture-bound.
   await page.route('**/*', route => {
     const url = new URL(route.request().url())
