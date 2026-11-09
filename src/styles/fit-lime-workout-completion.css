@@ -105,3 +105,36 @@
 @media (max-width: 480px) {
   .fit-lime-shell.workout-detail-history-identity .page { padding-inline: 16px }
 }
+
+/* MC5.1.2: client completion-share paint. The zero-specificity root filter
+   keeps each original selector weight; shared layout and export stay. */
+.workout-detail-history-identity:where(.fit-client-lime) .workout-share-sheet {
+  border: 1px solid var(--border); border-bottom: 0;
+}
+.workout-detail-history-identity:where(.fit-client-lime) .workout-share-sheet h2 {
+  font-size: 24px; letter-spacing: -.018em;
+}
+.workout-detail-history-identity:where(.fit-client-lime) .workout-share-sheet .icon-button {
+  border-radius: 14px; color: var(--secondary-label-fg);
+}
+.workout-detail-history-identity:where(.fit-client-lime) .workout-share-sheet-intro {
+  color: var(--secondary-label-fg); font-size: 14px;
+}
+.workout-detail-history-identity:where(.fit-client-lime) .workout-share-options > button:disabled {
+  opacity: .52;
+}
+.workout-detail-history-identity:where(.fit-client-lime) .workout-share-options strong {
+  font-size: 16px;
+}
+.workout-detail-history-identity:where(.fit-client-lime) .workout-share-options small {
+  color: var(--secondary-label-fg); font-size: 12px;
+}
+.workout-detail-history-identity:where(.fit-client-lime) .workout-share-options b {
+  color: var(--secondary-label-fg); font-size: 12px; font-variant-numeric: tabular-nums;
+}
+.workout-detail-history-identity:where(.fit-client-lime) .workout-share-options > button.is-selected b {
+  color: var(--success-fg);
+}
+.workout-detail-history-identity:where(.fit-client-lime) button:where(.workout-share-overlay button) {
+  font-size: 14px;
+}
