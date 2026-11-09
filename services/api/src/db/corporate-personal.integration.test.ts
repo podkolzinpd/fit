@@ -104,8 +104,6 @@ describe.skipIf(!source)('corporate personal training on native PostgreSQL/RLS',
     expect(JSON.stringify(data)).not.toMatch(/Private synthetic|clientId|client_id|price|exercise|payment/)
   })
   it('captures the real planned-to-done transition once and recalculates format/date/deletion',async()=>{
-    await pool.query('update public.clients set auth_user_id=$1 where id=$2',[athlete,card])
-    await pool.query('insert into public.client_trainer_relationships(client_id,trainer_id,connected_by) values($1,$2,$3)',[card,coach,athlete])
     await mark();const id=await workout('planned','with_trainer',today,false)
     const operation=randomUUID(),version=(await pool.query<{version:string}>('select version from public.workouts where id=$1',[id])).rows[0]!.version
     const finish=()=>actor(coach,"select * from public.finish_live_workout($1,$2,$3,true,'unassigned',null)",[id,version,operation])

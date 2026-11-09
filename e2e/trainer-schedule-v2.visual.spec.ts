@@ -48,12 +48,11 @@ test('Compact clients keep search, initials and one add flow in trainer Lime', {
   await page.locator('.clients-search-empty').getByRole('button', { name: 'Очистить поиск' }).click()
   await expect(card).toHaveCount(1)
   await page.getByRole('button', { name: 'Добавить', exact: true }).click()
-  await expect(page.getByRole('heading', { name: 'Добавить спортсмена', exact: true })).toBeVisible()
-  expect((await page.getByRole('button', { name: 'Назад' }).locator('svg').boundingBox())!.width).toBe(24)
-  await expect(page.getByRole('button', { name: 'Мой QR', exact: true })).toBeVisible()
-  await expect(page.getByRole('link', { name: 'Создать карточку вручную' })).toHaveCount(0)
+  const dialog = page.getByRole('dialog', { name: 'Добавить клиента', exact: true })
+  expect((await dialog.getByRole('button', { name: 'Закрыть' }).locator('svg').boundingBox())!.width).toBe(24)
+  await expect(dialog.getByRole('link', { name: 'Создать карточку' })).toHaveAttribute('href', '/clients/new')
   await page.screenshot({ path: info.outputPath(`clients-add-${theme}.png`) })
-  await page.getByRole('button', { name: 'Назад' }).click()
+  await dialog.getByRole('button', { name: 'Закрыть' }).click()
   await expect(page.getByRole('button', { name: 'Добавить', exact: true })).toBeFocused()
   await page.screenshot({ path: info.outputPath(`clients-compact-${theme}.png`) })
   const title = card.locator('.client-card-copy strong')
@@ -4263,8 +4262,7 @@ for (const route of [
   `/chat/${conversationId}`,
   '/clients',
   `/clients/${clientId}`,
-  '/connect',
-  `/clients/${clientId}/edit`,
+  '/clients/new',
   `/clients/${clientId}/goal`,
   `/progress/${clientId}`,
   `/clients/${clientId}/workouts`,
@@ -4858,53 +4856,45 @@ for (const [account, profileId] of [
   ['first', trainerId],
   ['second', '10000000-0000-4000-8000-000000000010'],
 ] as const) {
-  test(`${account} Fit Lime athlete registration entry replaces manual creation with safe return`, { tag: ["@lime-clients"] }, async ({ page }, testInfo) => {
+  test(`${account} Fit Lime client creation keeps validation, save and safe return`, { tag: ["@lime-clients"] }, async ({ page }, testInfo) => {
     await mockPilot(page, { profileId, fitLime: true })
-    const writes: string[] = []
-    page.on('request', request => { if (request.method() === 'POST') writes.push(new URL(request.url()).pathname) })
     await page.goto('/clients/new')
-    await expect(page).toHaveURL(/\/connect$/)
     await expect(page.locator('.phone-frame')).toHaveClass(/fit-lime-shell/)
-    await expect(page.getByRole('heading', { name: 'Добавить спортсмена' })).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Новый клиент' })).toBeVisible()
     await expect(page.getByRole('button', { name: 'Назад' })).toBeVisible()
-    await expect(page.getByLabel('Имя', { exact: true })).toHaveCount(0)
-    await expect(page.getByRole('button', { name: 'Сохранить', exact: true })).toHaveCount(0)
-    await expect(page.getByRole('button', { name: 'Мой QR', exact: true })).toBeVisible()
+    await expect(page.locator('.client-form-section')).toHaveCSS('background-color', 'rgb(26, 26, 28)')
     if (account === 'first') {
-      const screenshotPath = testInfo.outputPath('fit-lime-client-registration.png')
+      const screenshotPath = testInfo.outputPath('fit-lime-client-create.png')
       await page.screenshot({ path: screenshotPath, fullPage: true })
-      await testInfo.attach('fit-lime-client-registration', { path: screenshotPath, contentType: 'image/png' })
+      await testInfo.attach('fit-lime-client-create', { path: screenshotPath, contentType: 'image/png' })
     }
-    await page.getByRole('button', { name: 'Назад' }).click()
+    await page.getByRole('button', { name: 'Отмена' }).click()
     await expect(page).toHaveURL(/\/clients$/)
-    expect(writes).not.toContain('/v1/clients')
+    await page.goto('/clients/new')
+    await page.getByLabel('Имя', { exact: true }).fill('Мария Тестовая')
+    await page.getByLabel('Пол').selectOption('female')
+    await page.getByLabel('Возраст').fill('28')
+    await page.getByLabel('Рост, см').fill('168')
+    await page.getByRole('button', { name: 'Сохранить' }).click()
+    await expect(page).toHaveURL(/\/clients\/10000000-0000-4000-8000-000000000030$/)
+    await expect(page.getByRole('heading', { name: 'Мария Тестовая' })).toBeVisible()
   })
 }
 
-test('Fit Lime invitation dialog issues a registration link and keeps keyboard focus', { tag: ["@lime-clients"] }, async ({ page }, testInfo) => {
-  await mockPilot(page, { fitLime: true, clientHasAccount: false })
-  const code = 'A'.repeat(12)
-  let issued = 0, manualWrites = 0
-  page.on('request', request => { if (request.method() === 'POST' && new URL(request.url()).pathname === '/v1/clients') manualWrites++ })
-  await page.route('**/v1/invitation-links', async route => {
-    issued++
-    return route.fulfill({ json: { invitation: { id: newWorkoutId, clientId, targetRole: 'client', code, token: `${code}.${'a'.repeat(64)}`, expiresAt: '2099-09-24T12:00:00Z' } } })
-  })
-  await page.goto(`/clients/${clientId}`)
-  const invite = page.getByRole('button', { name: 'Пригласить', exact: true })
+test('Fit Lime invitation dialog keeps the existing invite entry and close', { tag: ["@lime-clients"] }, async ({ page }, testInfo) => {
+  await mockPilot(page, { fitLime: true })
+  await page.goto('/clients')
+  const invite = page.getByRole('button', { name: 'Добавить', exact: true })
   await invite.click()
-  const dialog = page.getByRole('dialog', { name: 'Ссылка готова' })
+  await page.getByRole('button', { name: 'Пригласить по ссылке' }).click()
+  const dialog = page.getByRole('dialog', { name: 'Кого пригласить?' })
   await expect(dialog).toBeVisible()
   await expect(dialog).toHaveCSS('background-color', 'rgb(37, 37, 41)')
-  await expect(dialog.getByLabel('Имя спортсмена')).toHaveCount(0)
-  await expect(dialog).toContainText('После принятия он увидит ранее записанные тренировки')
+  await expect(dialog.getByLabel('Имя спортсмена')).toBeFocused()
+  await page.keyboard.press('Shift+Tab')
   await expect(dialog.getByRole('button', { name: 'Закрыть' })).toBeFocused()
   await page.keyboard.press('Shift+Tab')
-  await expect(dialog.getByRole('button', { name: 'Отменить приглашение' })).toBeFocused()
-  await page.keyboard.press('Tab')
-  await expect(dialog.getByRole('button', { name: 'Закрыть' })).toBeFocused()
-  expect(issued).toBe(1)
-  expect(manualWrites).toBe(0)
+  await expect(dialog.getByRole('button', { name: 'Создать приглашение' })).toBeFocused()
   const screenshotPath = testInfo.outputPath('fit-lime-invite-dialog.png')
   await page.screenshot({ path: screenshotPath, fullPage: true })
   await testInfo.attach('fit-lime-invite-dialog', { path: screenshotPath, contentType: 'image/png' })

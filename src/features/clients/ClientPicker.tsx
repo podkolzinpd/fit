@@ -155,7 +155,7 @@ export function ClientPicker({ userId, clients, selectedId, onChange, label = '�
             {recent.length > 0 && <><p className="picker-section-label">Недавние</p>{recent.map((client) => item(client, 'recent'))}</>}
             {recent.length > 0 && list.length > 0 && <p className="picker-section-label">Все клиенты</p>}
             {list.map((client, index) => reference ? <div key={client.id}>{(index === 0 || client.fullName.trim()[0]?.toLocaleUpperCase('ru') !== list[index - 1]?.fullName.trim()[0]?.toLocaleUpperCase('ru')) && <p className="picker-section-label">{client.fullName.trim()[0]?.toLocaleUpperCase('ru')}</p>}{item(client, 'all')}</div> : item(client, 'all'))}
-            {!filtered.length && <div className="state"><strong>{clients.length ? 'Никого не нашли' : 'Клиентов пока нет'}</strong><p>{clients.length ? onCreate ? 'Измените запрос или создайте нового клиента.' : 'Измените запрос. Для нового спортсмена сначала подключите его аккаунт.' : onCreate ? 'Создайте первую карточку, чтобы назначить тренировку.' : 'Подключите аккаунт спортсмена, чтобы назначить тренировку.'}</p></div>}
+            {!filtered.length && <div className="state"><strong>{clients.length ? 'Никого не нашли' : 'Клиентов пока нет'}</strong><p>{clients.length ? 'Измените запрос или создайте нового клиента.' : 'Создайте первую карточку, чтобы назначить тренировку.'}</p></div>}
           </div>}
         </>}
       </section>

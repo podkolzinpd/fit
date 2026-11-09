@@ -61,7 +61,6 @@ describe.skipIf(source===undefined)('bounded weekly-program writes and closed-re
       persistProof:(receipt:Record<string,unknown>)=>{proof=structuredClone(receipt)},readProof:()=>proof,
       markVerified:(status:'complete'|'not_present'|'no_commit')=>{verified.push(status)},preparedReceiptCapability:()=>Promise.resolve()}
     async function card(fullName=name,trainerId=coach,athleteId:string|null=null) {
-      if(athleteId===null){athleteId=randomUUID();await owner.query("insert into public.profiles(id,account_role) values($1,'client')",[athleteId])}
       const id=randomUUID();await owner.query('insert into public.clients(id,trainer_id,full_name,auth_user_id) values($1,$2,$3,$4)',[id,trainerId,fullName,athleteId])
       await owner.query('insert into public.client_trainers(client_id,trainer_id) values($1,$2)',[id,coach])
       if(athleteId)await owner.query('insert into public.client_trainer_relationships(client_id,trainer_id,connected_by) values($1,$2,$3)',[id,coach,athleteId])
@@ -94,12 +93,12 @@ describe.skipIf(source===undefined)('bounded weekly-program writes and closed-re
     expect((await f.owner.query('select to_jsonb(c) value from public.clients c where id=$1',[id])).rows).toEqual(currentBefore)
     if(old)expect((await f.owner.query('select to_jsonb(c) value from public.clients c where id=$1',[old])).rows).toEqual(archivedBefore)
   })
-  it('uses the registered connected card, writes all source rows and verifies the committed graph',async()=>{
-    const f=await fixture();await f.card();await f.card('Unrelated fixture')
-    expect(await runProgramImport(f.options)).toMatchObject({status:'ready',selectionBound:true,willCreateCard:false})
-    expect(await runProgramImport({...f.options,mode:'apply'})).toMatchObject({status:'imported',workouts:3,createdCard:false,contentVerified:true})
+  it('creates one new card, writes all source rows and verifies the committed graph',async()=>{
+    const f=await fixture();await f.card('Unrelated fixture')
+    expect(await runProgramImport(f.options)).toMatchObject({status:'ready',selectionBound:true,willCreateCard:true})
+    expect(await runProgramImport({...f.options,mode:'apply'})).toMatchObject({status:'imported',workouts:3,createdCard:true,contentVerified:true})
     expect(await f.count('clients')).toBe(2);expect(await f.count('workouts')).toBe(3)
-    expect(f.proof).toMatchObject({programCode:'F01',packetSha256:f.options.approvedSha256,createdCard:false})
+    expect(f.proof).toMatchObject({programCode:'F01',packetSha256:f.options.approvedSha256,createdCard:true,financeAttendanceVersion:1})
     expect(f.verified).toEqual(['complete'])
     expect(f.receipts.map(r=>r.state)).toEqual(['readback','prepared','committed','readback'])
     await expect(runProgramImport({...f.options,mode:'apply'})).rejects.toThrow('verify_required')
@@ -168,13 +167,13 @@ describe.skipIf(source===undefined)('bounded weekly-program writes and closed-re
     for(const id of [f.coach,f.other])expect(JSON.stringify(f.receipts)).not.toContain(id)
     expect(f.started).toBe(false);expect(f.proof).toBeNull();expect(await f.count('workouts')).toBe(0)
   })
-  it('refuses a trainer-only pseudo-athlete import without creating an account or history',async()=>{
+  it('keeps own workouts self without changing trainer role or creating an authentication account',async()=>{
     const f=await fixture('self')
     const before=(await f.owner.query('select id,account_role from public.profiles order by id')).rows
-    await runProgramImport(f.options)
-    await expect(runProgramImport({...f.options,mode:'apply'})).rejects.toThrow('journal_import_failed_rolled_back')
+    await runProgramImport(f.options);expect(await runProgramImport({...f.options,mode:'apply'})).toMatchObject({createdCard:true,contentVerified:true})
     expect((await f.owner.query('select id,account_role from public.profiles order by id')).rows).toEqual(before)
-    expect(await f.count('clients')).toBe(0);expect(await f.count('workouts')).toBe(0)
+    expect((await f.owner.query<{training_format:string}>('select training_format from public.workouts where created_by=$1',[f.coach])).rows.map(w=>w.training_format)).toEqual(['self','self','self'])
+    expect((await f.owner.query<{n:number}>('select count(*)::int n from app_private.auth_identities where profile_id=$1',[f.coach])).rows[0]?.n).toBe(1)
   })
   it('preserves a linked existing card, old records and finances; different same-day history is retained',async()=>{
     const f=await fixture(),athlete=randomUUID()
@@ -209,7 +208,7 @@ describe.skipIf(source===undefined)('bounded weekly-program writes and closed-re
     expect(await runProgramImport({...f.options,mode:'verify'})).toMatchObject({status:'no_commit',readOnly:true,workouts:0})
   })
   it('verifies an unknown committed outcome using the prepared proof and refuses a second apply',async()=>{
-    const f=await fixture();await f.card();await runProgramImport(f.options)
+    const f=await fixture();await runProgramImport(f.options)
     await expect(runProgramImport({...f.options,mode:'apply',persistReceipt:async(state,receipt)=>{
       await f.options.persistReceipt(state,receipt);if(state==='committed')throw Error('synthetic lost receipt reply')
     }})).rejects.toThrow('outcome_requires_readback')
@@ -219,7 +218,7 @@ describe.skipIf(source===undefined)('bounded weekly-program writes and closed-re
     expect(f.verified).toEqual(['complete']);expect(await f.count('clients')).toBe(1)
   })
   it('verifies a pre-attendance receipt without backfilling historical sessions',async()=>{
-    const f=await fixture();await f.card();await runProgramImport(f.options)
+    const f=await fixture();await runProgramImport(f.options)
     await expect(runProgramImport({...f.options,mode:'apply',persistReceipt:async(state,receipt)=>{
       await f.options.persistReceipt(state,receipt);if(state==='committed')throw Error('synthetic lost receipt reply')
     }})).rejects.toThrow('outcome_requires_readback')
@@ -231,7 +230,7 @@ describe.skipIf(source===undefined)('bounded weekly-program writes and closed-re
     expect(await f.count('workouts')).toBe(3);expect(f.verified).toEqual(['complete'])
   })
   it('retains a later manual attendance decision and rejects changed finance during readback',async()=>{
-    const f=await fixture();await f.card();await runProgramImport(f.options)
+    const f=await fixture();await runProgramImport(f.options)
     await expect(runProgramImport({...f.options,mode:'apply',persistReceipt:async(state,receipt)=>{
       await f.options.persistReceipt(state,receipt);if(state==='committed')throw Error('synthetic lost receipt reply')
     }})).rejects.toThrow('outcome_requires_readback')
@@ -245,12 +244,12 @@ describe.skipIf(source===undefined)('bounded weekly-program writes and closed-re
     await f.runtime.query('commit')
     const rows=async()=>(await f.owner.query<{value:unknown}>('select to_jsonb(s) value from public.trainer_finance_sessions s where trainer_id=$1 order by id',[f.coach])).rows
     const before=await rows()
-    await expect(runProgramImport({...f.options,mode:'verify'})).rejects.toThrow('unexpected_finance_change')
+    await expect(runProgramImport({...f.options,mode:'verify'})).rejects.toThrow('finance_changed')
     expect(await rows()).toEqual(before);expect(await f.count('workouts')).toBe(3)
     expect(f.verified).toEqual([]);expect(f.receipts.at(-1)?.state).toBe('prepared')
   })
   it('keeps a prepared proof after rollback and reconciles absence without retrying a write',async()=>{
-    const f=await fixture();await f.card();await runProgramImport(f.options)
+    const f=await fixture();await runProgramImport(f.options)
     await expect(runProgramImport({...f.options,mode:'apply',persistReceipt:async(state,receipt)=>{
       if(state==='prepared')throw Error('synthetic object store unavailable');await f.options.persistReceipt(state,receipt)
     }})).rejects.toThrow('failed_rolled_back')
@@ -267,15 +266,15 @@ describe.skipIf(source===undefined)('bounded weekly-program writes and closed-re
     expect((await f.owner.query<{goal:string}>('select goal from public.clients where id=$1',[id])).rows[0]?.goal).toBe('Changed after inspection')
   })
   it('rejects a lossy writer before commit and does not hide source facts',async()=>{
-    const f=await fixture();await f.card();await runProgramImport(f.options)
+    const f=await fixture();await runProgramImport(f.options)
     await expect(runProgramImport({...f.options,mode:'apply',saveCompleted:async(...args:Parameters<typeof saveCompletedWorkout>)=>{
       const [client,draft,version]=args
       return saveCompletedWorkout(client,{...draft,exercises:draft.exercises.map(e=>({...e,trainerComment:'Dropped source'}))},version)
     }})).rejects.toThrow('content_readback_failed')
-    expect(await f.count('workouts')).toBe(0);expect(await f.count('clients')).toBe(1)
+    expect(await f.count('workouts')).toBe(0);expect(await f.count('clients')).toBe(0)
   })
   it('refuses a proof from another packet and detects edits after an uncertain commit',async()=>{
-    const f=await fixture();await f.card();await runProgramImport(f.options)
+    const f=await fixture();await runProgramImport(f.options)
     await expect(runProgramImport({...f.options,mode:'apply',persistReceipt:async(state,receipt)=>{
       await f.options.persistReceipt(state,receipt);if(state==='committed')throw Error('synthetic interrupted reply')
     }})).rejects.toThrow('outcome_requires_readback')

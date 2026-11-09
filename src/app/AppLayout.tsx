@@ -81,7 +81,7 @@ export function AppLayout() {
   const monochromeTrainerProgress = Boolean(actor?.role === 'trainer' && /^\/progress\/[^/]+$/.test(pathname))
   const monochromeExerciseCatalog = Boolean(actor?.role === 'trainer' && pathname === '/exercises')
   const monochromeTrainerProfile = Boolean(actor?.role === 'trainer' && (pathname === '/profile' || pathname === '/profile/settings' || pathname === '/profile/trainer' || /^\/profile\/yandex-services(?:\/[^/]+)?$/.test(pathname)))
-  const monochromeAuthJoin = pathname === '/join' || pathname === '/connect'
+  const monochromeAuthJoin = pathname === '/join'
   const monochromeAssistant = pathname === '/assistant'
   const themeVariant = resolveThemeVariant(theme)
   const routeStep = todayStep

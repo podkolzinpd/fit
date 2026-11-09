@@ -3,7 +3,6 @@ import type { QueryResultRow } from 'pg'
 
 import {
   assistantCapabilitiesReply,
-  createClientTurn,
   completeAssistantSmallTalk,
   assistantSmallTalkFallback,
   isAssistantCapabilityQuestion,
@@ -318,10 +317,7 @@ export class DatabasePilotAssistantTurnRunner implements PilotAssistantTurnRunne
     const navigation = actor.assistant_feature_links
       ? assistantNavigationTurn(command.message, actor.account_role, clients)
       : undefined
-    const connection = actor.account_role === 'trainer' ? createClientTurn(command.message, routedActive) : undefined
-    if (connection !== undefined) {
-      response = connection
-    } else if (navigation !== undefined) {
+    if (navigation !== undefined) {
       response = navigation
     } else if (isAssistantCapabilityQuestion(command.message)) {
       response = {
