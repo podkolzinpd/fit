@@ -9126,3 +9126,55 @@ fixed-moscow}.log; before20skip — только диагностический 
 предыдущегоcandidate. Rawcomparison сноваexit1: толькоpartial375initialheight
 Cr2130→1814,Wk2113→2118; finalheight2113 везде. Причина ранних замеров остаётся
 не доказана; данные не нормализуются. Публикация ещё не выполнена.
+
+
+## 214. MC5.1.4 — PR2077 опубликован и проверен
+
+Итерация214 — 2026-11-10 — OpenAI. Выпуск выполнен по разрешению владельца
+из212, после временного gate и проверки очереди черезGitHub. Ранних открытых
+PR/активных предыдущих публикаций передmerge не было. Чужие чаты/PR не менялись.
+PR2077 merged09.11 22:18:10UTC, commit8c51ce43c2f7c16e7cdc606305dfd9ced7cf7216.
+Проверенный source2a2ae096: CI42706236857 35success, Android42706236753 success,
+attempt1. Исправлению предшествовал сохранённый красныйdatabase42703171962;
+его34остальныхjobpassed. Причина и fixturefix описаны213, assertions сохранены.
+
+Main8c51: CI42710643203 34passed+1expectedmigration-skip, Android42710643622
+success, attempt1. API42713832238, web42713832234, OTA42714325717 success.
+Проверена фактическая публикация всех трёх плоскостей именно8c51, без выдачи
+merge за доставку.244/244webfiles HTTP200/size/SHA256 match официальномуartifact;
+APIhealth/readiness/auth401/TLS/provenance passed. OTAподписи/manifest/archive
+и publicreadback passed,15983191bytes,checksum8238b1d91211aa7a0b5e8ddbc37a299
+686269483a8f2c99d3e4ac9905ea97a3d,nativeBuild9,прежнийABI8922d2e9…,
+sequence1794264525741. APK/native/флаги/данные не изменялись этой задачей.
+
+Опубликованныйweb:42сразуpassed,2trainercontrol остановились на ожидании
+старого attendance-dialog. Причина — локальная сборка с pilotcohort оставляла
+синтетического defaulttrainer в прежнемLive, а productioncoachreference включён.
+Actualsnapshot/code показывают действующий unified «Завершение тренировки».
+Только временный publicQA adapter переведён на это окно + checkedradio +submit;
+все result/facts/personalrecords/nonconsumer assertions сохранены. Эти2/2passed
+в обоих движках. Итого покрыты44uniquewebcases, не утверждается первичный44/44.
+Успешные42 не повторялись. В будущем QA текущей trainercohort должен явно
+проверять publishedunifiedflow; старый nonconsumer остаётся отдельнымконтролем.
+
+Проверенный signedZIP:44/44Chromium/WebKit,0skip/fail/flaky,retries0. При
+возобновлении локальный orchestrationscript остановился на отсутствующей env
+до стартаZIPUI; исправлен setup, архив повторно не извлекался, первыйUIпрогон
+прошёл. Данные/порог/assertions не менялись. ВсеAPIсинтетические и page-scoped,
+вproduction ничего не записывалось. Просмотрены реальныеWebKitclientlight и
+trainerdark последействующегоLivefinish. Финальныйfingerprint22:57:27UTC
+HTML/API/OTA совпал с исходным: приёмка относится к одной опубликованной версии.
+
+Артефакты /tmp/fit-mc514-release/final-acceptance.json иcurrent-acceptance:
+web44.json(42+2stopped),web-trainer2.json,web44-combined.json,ota44.json,
+web/api/ota-readback иfinal-fingerprint. Локальная приёмка86browser+31unit,
+исходные63unit и обе DBtimezone21+21 сохранены в211–213. Ранние2height samples
+по-прежнему квалификация, не доказанный исправленный баг; settled14PNG и
+geometry совпали. Физическийтелефон/nativeinstall/реальныеOAuth/systemshare
+не проверены. Новых ошибок в завершённых пользовательских сценариях не найдено.
+
+Владельцу: у спортсмена завершить полную/частичную тренировку, проверить верх
+результата/дату/показатели, длительность cancel/save и поделиться; у тренера
+завершить черезединоеокно, проверить карточкурезультата ивозвраткклиенту.
+Обе темы. До его подтверждения MC5.1.5 не начинаем. Квитанция локальная,
+без повторногоpush/CI после публикации; публичная сводка вPR2077.
