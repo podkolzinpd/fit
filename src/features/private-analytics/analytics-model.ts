@@ -55,3 +55,23 @@ export function csv(rows:AnalyticsRow[],columns:string[]) {
   const cell=(v:unknown)=>{let text=String(v??'');if(/^[\s]*[=+@-]/.test(text))text="'"+text;return '"'+text.replaceAll('"','""')+'"'}
   return '\ufeff'+[columns.map(c=>cell(labels[c]??c)).join(';'),...rows.map(row=>columns.map(c=>cell(typeof row[c]==='number'?row[c]:display(row[c],c))).join(';'))].join('\r\n')
 }
+
+export type AnalyticsCard = { key:string; label:string; value:number|undefined; section:string; note:string; patch?:Partial<AnalyticsFilters> }
+export function sectionCards(filters:AnalyticsFilters,data:AnalyticsResult):AnalyticsCard[] {
+  const metric=(key:string,label:string,note='За выбранный период',patch?:Partial<AnalyticsFilters>):AnalyticsCard=>({key,label,value:data.summary[key],section:filters.section,note,patch})
+  const records=(label:string,note='По условиям таблицы, включая поиск'):AnalyticsCard=>({key:'total',label,value:data.total,section:filters.section,note})
+  switch(filters.section){
+    case 'people':return [metric('accounts','Аккаунтов в выбранной группе','Вся выбранная группа',{search:''}),metric('new','Новых аккаунтов за период','Из выбранной группы',{cohort:'new'}),metric('active','Совершали действия за период','Хотя бы одно собственное действие',{cohort:'active'})]
+    case 'activities':return [records('Найдено действий'),metric('active','Авторов действий','Уникальные люди за период, без поиска по таблице')]
+    case 'workouts':return [metric('workouts','Проведённых тренировок','Статус «Проведена» за период',{status:'done'}),records('Тренировок по условиям таблицы')]
+    case 'nutrition':return [metric('nutritionUsers','Авторов дневника питания'),metric('nutritionDays','Дней ведения дневника','Сумма дней по людям за период'),{...metric('nutritionViews','Тренеров, смотревших питание','Подтверждённые просмотры за период',{feature:'nutrition_views',role:'trainer'}),section:'activities'}]
+    case 'payments':return [metric('received','Поступления за период, ₽','По дате оплаты, без отмен и входящих остатков'),metric('opening','Входящие остатки, ₽','Отдельно от поступлений'),records('Найдено платежей')]
+    case 'packages':return [metric('due','Долг сейчас, ₽','Текущий снимок выбранной группы'),metric('overdue','Просроченный долг сейчас, ₽','Входит в общий долг'),records('Найдено абонементов','Текущий снимок, включая поиск')]
+    case 'exercises':return [records('Упражнений в рейтинге','Различные упражнения за период, включая поиск')]
+    case 'exercise_detail':return [records('Записей выбранного упражнения')]
+    case 'sets':return [records('Подходов в выбранных тренировках')]
+    case 'feedback':return [records('Сообщений обратной связи')]
+    case 'features':return [metric('active','Людей с действиями','Уникальные авторы по измеряемым функциям'),{key:'actions',label:'Действий по функциям',value:data.features.reduce((sum,row)=>sum+Number(row.actions??0),0),section:'activities',note:'Сумма событий, не сумма уникальных людей'}]
+    default:return []
+  }
+}

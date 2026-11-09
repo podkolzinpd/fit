@@ -61,3 +61,16 @@ it('uses one explicit people cohort across summary navigation and feature sectio
   await userEvent.click(screen.getByRole('button',{name:'Питание'}))
   await waitFor(()=>expect(write).toHaveBeenLastCalledWith(expect.anything(),expect.anything(),expect.objectContaining({section:'nutrition',cohort:'accounts'})))
 })
+
+it('shows section-specific metrics without repeating people cards or unrelated charts',async()=>{
+  write.mockImplementation(()=>Promise.resolve(Response.json({...result,summary:{...result.summary,nutritionDays:4,nutritionViews:1,opening:200,due:800,overdue:300}})))
+  show();await screen.findByRole('table',{name:'Люди'})
+  const cards=()=>within(screen.getByRole('region',{name:'Показатели раздела'}))
+  expect(cards().getByText('Аккаунтов в выбранной группе')).toBeVisible()
+  for(const [tab,metric] of [['Питание','Авторов дневника питания'],['Поступления','Поступления за период, ₽'],['Абонементы и долги','Долг сейчас, ₽'],['Топ упражнений','Упражнений в рейтинге'],['Обратная связь','Сообщений обратной связи']]){
+    await userEvent.click(screen.getByRole('button',{name:tab}))
+    await waitFor(()=>expect(cards().getByText(metric!)).toBeVisible())
+    expect(cards().queryByText('Аккаунтов в выбранной группе')).not.toBeInTheDocument()
+    expect(screen.queryByRole('region',{name:'Динамика'})).not.toBeInTheDocument()
+  }
+})
