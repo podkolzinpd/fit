@@ -56,7 +56,7 @@ export function createYandexMainQueries(
       if (method === 'POST' && path === '/v1/exercise-media/sign-batch') {
         return fetchWithTimeout(request, endpoint(apiBaseUrl, path), init, YANDEX_MAIN_READ_TIMEOUT_MS, 'Exercise media URL request timed out')
       }
-      if (/^\/v1\/corporate-(?:services|personal)(?:\/|$)/.test(path)) return fetchWithTimeout(request, endpoint(apiBaseUrl, path), init, 15_000, 'Ответ не получен. Повторите попытку.')
+      if (/^\/v1\/corporate-(?:services|personal|duties)(?:\/|$)/.test(path)) return fetchWithTimeout(request, endpoint(apiBaseUrl, path), init, 15_000, 'Ответ не получен. Повторите попытку.')
       if (path === '/v1/connection-directory') return fetchWithTimeout(request, endpoint(apiBaseUrl, path), init, 15_000, 'Не удалось получить ответ. Повторите попытку.')
       if (/^\/v1\/trainer-connections\/(preview|confirm)$/.test(path)) return fetchWithTimeout(request, endpoint(apiBaseUrl, path), init, 15_000, 'Trainer connection request timed out')
       if (/^\/v1\/admin\//.test(path)) return fetchWithTimeout(request, endpoint(apiBaseUrl, path), init, 15_000, 'Admin request timed out')

@@ -11,6 +11,7 @@ import { CorporateServiceError, type CorporateService } from '../../data/reposit
 const api = vi.hoisted(() => ({ access: vi.fn(), list: vi.fn(), record: vi.fn(), save: vi.fn(), void: vi.fn(), audit: vi.fn(), statistics: vi.fn() }))
 const session = vi.hoisted(() => ({ role: 'trainer' }))
 vi.mock('../../app/auth-context', () => ({ useAuth: () => ({ actor: { userId: '10000000-0000-4000-8000-000000000001', role: session.role, timezone: 'Europe/Moscow' } }) }))
+vi.mock('../../data/repositories/corporate-duties.repository',()=>({corporateDutiesRepository:{access:()=>Promise.resolve({allowed:false,hasHistory:false,active:null,offices:[]})}}))
 vi.mock('../../data/repositories/corporate-services.repository', async original => ({ ...await original<typeof import('../../data/repositories/corporate-services.repository')>(), corporateServicesRepository: api }))
 const id = '20000000-0000-4000-8000-000000000001', office = { id, city: 'Москва', name: 'Тестовый' }
 const row: CorporateService = { id, kind: 'tour', officeId: id, city: office.city, officeName: office.name, occurredAt: '2026-01-01T09:15:36Z', version: 1, voidedAt: null, createdAt: '2026-01-01T09:16:00Z', updatedAt: '2026-01-01T09:16:00Z' }

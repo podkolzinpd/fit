@@ -3057,3 +3057,270 @@ head, приёмка публикации2052 и свежая очередь/mai
 Дальше: один source push с новымmain, обязательные source/main/release gates;
 PR2 и закрытый duty grant остаются после соответствующих фактических приёмок.
 Исходящих сообщений и production изменений DUT нет.
+
+
+### Итерация 74 нового выпуска — 2026-11-08 — GPT / OpenAI
+
+PR1/2050 штатно squash-слит в9baefb1705e9a07c66d6d759e28826410ea0133f; дерево
+побайтно равно проверенному06. Source CI42478613874 SUCCESS35/35 attempt2
+(только infrastructure503 и зависимый aggregate после полного official archive
+size/SHA readback), Android42478613883 SUCCESS attempt1. MainCI42483049380 и
+mainAndroid42483049462 SUCCESS. Официальные API42484929263/web42484929397/
+signedOTA42485380983 SUCCESS. Фактически238/238публичных файлов совпали по
+size/SHA; реальный ZIP15787843bytes совпал с official artifact, обеRSAподписи,
+source9ba/ABI8922d2e9/native1.1.4code9/expiry проверены. ОбаAPIrelease/health/ready/
+DNS/TLS/auth passed,22/22неавторизованных no-store probes отклонены.
+
+Actual extracted web110/110 и signedZIP110/110, public8/8 Chromium/WebKit,
+retries0/skips0/flaky0, реальныеAPI/WS заблокированы. Светлаяформа1440 и тёмная
+статистика320 просмотрены. Первый восстановленный public fixture имел6/8
+ошибок: HTTPsyntheticAPI блокировался WebKit mixedcontent, а светлый Lime
+не соответствовал существующему themecontract. Исправлен только HTTPSmock и
+legacy-light/Lime-dark fixture по тому же принятому контракту DUTvisual;
+assertions/timeouts/production не менялись, весь следующий8/8 чистый.
+
+После смены среды прежние/private/tmp checkouts/logs исчезли. Gitкоммиты06 и
+c622 сохранились; созданы новые собственные worktrees/ветки без reset/prune/force
+и без правки чужого dirty checkout. Утраченные логи не выдаются за доступные;
+фактическая приёмка выше воспроизведена, новые evidence сохранены устойчиво
+в отдельном приватном каталоге вне trackedsource. Это не второй журнал.
+
+UIc622 сохраняет прежние18файлов. Фактически опубликованный9ba теперь включён
+обычным merge перед вторым PR; API/SQL/operator/types побайтно равны9ba.
+Прежние localdev full154 дважды имели разные WebKit goto30s доHTTP; дробление
+по семействам не устранило devnavigation, все44DUT каждый раз проходили.
+Не ослабляем navigation/guards: следующий UIнабор проверяется на полной
+собранной syntheticproduction версии, затем mandatoryexact-headCI/Android
+и фактических officialартефактах. Новых исходящих сообщений нет.
+Окно2050 OFF после этой приёмки; DUTpilot остаётся OFF. Дальше PR2, полный
+выпуск/приёмка, затем ровно один закрытый dutygrant и отдельный committedinspect.
+
+
+### Итерация 75 нового выпуска — 2026-11-08 — GPT / OpenAI
+
+Задача/границы: второй разрешённый PR дежурств2054, прежний закрытый test target;
+исходящие сообщения по текущему пакету запрещены, их не отправляли. Расхождений
+с DUT101–109 нет. UI/SQL/operator/native и независимые пилоты не расширялись.
+
+Точный source79ea7073 прошёл полный CI42502411002:35/35 SUCCESS attempt1,
+Android42502411015 assemble SUCCESS attempt1; стандартный PR auth-smoke skipped
+не выдан за проверку телефона/OAuth. Реальная native PG17 группа включает12/12
+DUT, весь DB job SUCCESS. Frontend354/3143, coverage83.65/78.61/82.89/88.37.
+Восстановленный localroot lint/types/coverage/ios/media/infra/calendar/hosting/API
+и build PASS; API1627pass/441standardconditionalSkip, skips не подменяют PG CI.
+Собранная syntheticproduction версия:154/154, admin30/services38/personal42/
+duties44, Chromium+WebKit, retries0/skips0/flaky0. Визуально проверены duty editor
+WebKit dark320 и Chromium legacy-light1440: общая дата dd.MM.yyyy/24ч, читаемость
+и отсутствие overflow. Старые devnavigation сбои итерации74 сохранены; goto,
+assertions, role guards и timeouts ради green не менялись.
+
+Readonly официальные операторы42503779467/42504267011 подтвердили единственного
+прежнего target и один назначенный активный московский офис без заданной зоны;
+duty enabled=false/eligible=false/other0. Readonly services42504570699 и
+personal42504794119 подтвердили enabled/eligible=true, personal other0.
+Zone/grant и реальные клиентские записи не выполнялись. После обеих приёмок
+требуются явная Europe/Moscow для этого единственного офиса, один закрытый duty
+scope grant и отдельный committed inspect; остальные флаги сохраняются фактически.
+
+Actualmain сменился наc6e4642e/PR2055:9файлов landing приняты обычным merge,
+побайтно сохранены, собственные src/e2e/API/operator/workflows/native прежние79ea.
+Это интеграция Git для исходных проверок, не объявление main2055 опубликованным.
+Здоровые гейты79ea не повторяем: после нового общего head обязателен новый полный
+CI/Android. Старшие2051 с новым head0e444b22 и2053fdcc остаются активны в очереди;
+их готовность/окна и фактические публикации сверяем перед своим merge. Прежний
+приоритет персональных тренировок не наследуется. Дальше: окончательный head,
+очередь/штатный squash match-head, mainCI/official API/web/signedOTA и фактическая
+приёмка154web+154signedZIP+publicUI с realAPI/WS deny. DUT109 ещё открыт.
+
+
+### Итерация 76 нового выпуска — 2026-11-08 — Codex / OpenAI
+
+Задача: довести PR2/2054 до штатного выпуска DUT109, не расширяя пилот.
+Sourcea5a89b6c после нормальной интеграции landing mainc6 прошёл Android42506237745
+SUCCESS attempt1 и полный CI42506237855 SUCCESS35/35 attempt2.
+Первая попытка:33PASS, старый WebKit client Live group-group/compact case записал
+2 scroll positions при ожидании>2; встроенный retry прошёл, fail-on-flaky оставил
+red. Полный исходный log/diagnostics сохранены. Retry trace:83samples/3positions,
+maxGap106, один smooth call; точная причина первого сэмплирования не доказана.
+Собственный src/e2e побайтно равен fullgreen79ea. Заранее ограниченный контроль
+того же неизменённого case на compileda5:3/3PASS, retries0/flaky0/skip0;
+кадры95/97/93, разные позиции10/13/13, maxGap31/44/50. После завершения всех
+первичных jobs выполнен один адресный полный auth4 repeat/job128821792435:
+302PASS без flaky; зависимый e2e aggregate зелёный,33здоровых jobs не повторялись.
+Продукт, assertions/timeouts/guards/CI не менялись; случайных повторов не было.
+Это проверка source, не объявление duty UI опубликованным.
+
+Предшествующий main2055/c6 теперь принят фактически: CI42506001744 SUCCESS
+attempt2, Android42506001761 SUCCESS, officialAPI42510503683/web42510503491/
+signedOTA42511033672 SUCCESS. Независимый readback243/243files size/SHA,
+обаAPI release/health/ready/auth/DNS/TLS и22unauthenticated probes401/no-store PASS.
+Подписанный actual ZIP15959539байт, SHA256
+859c65c7a05c29327f17a2053401d10822cb80c40356e65dc6f40f5b758e36b1;
+manifest/archive signatures, officialartifact match, source/ABI/native9 PASS.
+Опубликованный baseline UI8/8 в Chromium/WebKit и обеих темах, realAPI/WS deny,
+retries0; это не приёмка ещё отсутствующего duty UI. Чужие CI/публикации не
+перезапускались. Физические устройства и реальный OAuth не проверены.
+
+Уточнена фактическая очередь: активная приоритетная серия ФИТ14/2056–2059,
+затем2051 и2053;2051 сообщает36green checks,2053явно ждёт его принятого выпуска.
+Взаимного ожидания2051↔2053 нет:2051 ждёт приоритетный пакет. Старые конкретные
+разрешения приоритета этой задачей не наследуются; исходящих сообщений нет.
+Собственное операционное окно2054 OFF, duty OFF, zone/grant не выполнялись.
+Дальше: единожды объединить окончательный принятый main после этих выпусков,
+проверить exactfinal source CI/Android, затем normal squash match-head,
+mainCI/official API/web/signedOTA и фактические154web+154signedZIP+publicUI.
+Эта квитанция сохраняется локальным docs-коммитом до необходимой интеграции;
+проверкиa5 не присваиваются новому docs/combined head и не дублируются ради записи.
+
+
+### Итерация 77 нового выпуска — 2026-11-08 — Codex / OpenAI
+
+Задача: по прямому продолжению владельца проверить очередь, обновить2054,
+выпустить с обязательными гейтами и включить DUT только прежнему test trainer
+после фактической приёмки обоих этапов. Новый scope/пилот не добавляется.
+Расхождений с DUT101–109 нет. Старые конкретные приоритеты не наследуются.
+
+Уточнение к истории76: актуальное постоянное правило Антона разрешает проверять
+очередь только в GitHub, без чтения/ожидания/сообщений других чатов и агентов.
+Более ранний активный PR идёт первым, обход — только по подтверждённому stalled
+состоянию согласно правилам репозитория. Модель/scope и обязательные проверки
+сохранены. Новых расписаний и координационных сообщений нет.
+
+По GitHub:2051 штатно слит в54c873a6, его mainCI42518200394 ещё выполняется;
+Android42518200392 SUCCESS. Это Git основа для проверок, её публикация пока
+не объявляется принятой; последний собственный полный readback основы — c6.
+Старший2053da1c8072 активен с незавершённым CI;2039/2040 имеют прежние heads и
+падающие гейты, их обход не разрешается по одному возрасту и перепроверяется.
+
+Собственный localdocs6a33af9f с журналом76 сохранён. Обычным merge включён
+actual Gitmain54 без конфликтов: все10 файлов предшественника, его CSS Live,
+сценарии и732строки журнала сохранены побайтно. DUT runtime, API/SQL/operator,
+sharedtypes/native/workflows/packages побайтно прежниеa5. Старые green35/35+
+Android относятся толькоa5, новому объединённому head их не присваиваем.
+Дальше — обновлённые localcheck/154browser и exact-head CI/Android; после
+принятого merge2053 включить новый actualmain и пройти положенные новые гейты.
+Слияние2054 — только после свежей очереди/main и незанятого окна, обычным
+squash match-head. Затем mainCI/official API/web/signedOTA, фактические bytes/
+SHA/обаAPI/UI и единственный закрытый DUTgrant с отдельным committedinspect.
+Операционное окно2054 OFF; дежурства OFF, zone/grant не выполнялись.
+
+
+### Итерация 78 нового выпуска — 2026-11-08 — Codex / OpenAI
+
+Проверка объединённого source83164e6a после actualGitmain54: полный локальный
+расширенный граф PASS. Frontend354files/3143tests, coverage83.63/78.60/82.85/88.36;
+API139files/1627PASS/441standardconditionalSkip (это не замена реальной PG CI).
+Lint/types, ios/media/infra/calendar/hosting/API build и compiledfrontend PASS.
+На той же собранной версии154/154 browser:admin30/services38/personal42/duties44,
+Chromium/WebKit, retries0/skips0/flaky0, прежние assertions/timeouts/guards.
+Просмотрены реальные duty editor снимки WebKit dark320 и Chromium light1440:
+общая дата dd.MM.yyyy/24ч, читаемость и отсутствие overflow сохранены.
+Новые evidence отделены от прошлых запусков в приватном source83164e6a каталоге.
+
+Штатный push8316 запустил CI42519434963 и Android42519434828; их успех ещё не
+заявлен. Один ограниченный наблюдатель проверяет только свои два run раз в90с
+и необходимый2053 в GitHub не чаще300с; чаты/агенты не читаются и не опрашиваются.
+Последнее разрешённое уточнение Антона: одинаковые уже прочитанные инструкции
+не загружаются повторно; изменения проверяются точным diff/нужным разделом.
+Scope/модель/проверки не меняются. Более ранний2053 активен; merge2054 закрыт до
+фактической очереди и итоговых гейтов. Персональные/услуги/данные/native прежние,
+duty OFF, zone/grant не выполнялись. Эта локальная docs-квитанция не отправляется
+отдельным push ради повторения здоровых/активных CI; входит в следующую необходимую
+интеграцию main. Гейты8316 не присваиваются новому docs/combined head.
+Дальше: фактический результат currentheadCI/Android и разрешающая очередь в
+GitHub, затем необходимая интеграция нового main/проверки/штатный выпуск/приёмка
+DUT109 обоих этапов и только после неё единственный закрытый test trainer grant.
+
+
+### Итерация 79 нового выпуска — 2026-11-09 — Codex / OpenAI
+
+Задача: проверить готовность2054 и продолжить разрешённый выпуск при выполненных
+гейтах, затем приёмка сайта/Android и только прежний test trainer. GitHub показал:
+CI42519434963/8316 ещё выполняется без ошибок, Android42519434828 SUCCESS;
+2053 штатно слит в4aac9286, его mainCI42523648616 ещё в очереди. Свежий API/web/
+OTA readback этого main ещё не объявлен успешным; чужие публикации не дублируются.
+
+Обычным merge включён actualGitmain4aa. Все8файлов предшественника сохранены
+побайтно, локальная квитанция78/14243fee и история сохранены. Frontend src/e2e,
+DUT runtime/operator, native/workflows/packages побайтно равны8316; успешные
+354/3143 и154/154 местных UI проверок не повторяются без изменившейся поверхности.
+Затронутая новая часть проверена отдельно:21/21 Node closed-restore tests,
+frontend/API typecheck и root lint PASS. Новая PG проверка предшественника
+остаётся частью обязательного реального DB job следующего exact-head CI.
+Все независимые флаги, роли, офисы, данные и native1.1.4/code9 прежние.
+
+Ранние2039/2040 остаются на тех же heads и красных завершённых гейтах без active
+CI, что в прошлых снимках; перед своим merge их фактическая готовность и признаки
+застревания перепроверяются в GitHub, не только по возрасту. Межчатовых проверок
+и сообщений нет. Текущий здоровый CI8316 не прерываем: новый объединённый head
+подготовлен локально, push/новый обязательный CI+Android после завершения старого
+run. Наблюдение — один ограниченный процесс своего CI с внутренним ожиданием.
+Старые гейты8316 не присваиваются объединённому head. После них — свежие queue/
+main/публикации, обычный squash match-head2054, mainCI и официальные API/web/
+signedOTA с полной фактической приёмкой DUT109. Дежурства OFF, zone/grant нет.
+
+
+### Итерация 80 нового выпуска — 2026-11-09 — Codex / OpenAI
+
+По прямому поручению Антона проверен GitHub: CI42519434963 source83164e6a
+завершился SUCCESS attempt1, все35 jobs; Android42519434828 SUCCESS attempt1.
+Старый здоровый прогон не прерывался. Более ранних открытых PR перед2054 нет;
+очередь проверена только в GitHub, без чатов, сообщений и субагентов.
+
+Actualmain ef3768e7 включён обычным merge811f9464 с сохранением истории и всех
+предшествующих изменений. Два пересечения разрешены аддитивно: общий mock
+содержит и закрытый DUTaccess, и connection-directory; общий transport сохраняет
+15s timeout DUT и новый timeout подключения. Diff против main содержит только
+собственные DUTUI/проверки/квитанции. Чужие подключения, аналитика и native
+сохраняются. Из-за изменившихся frontend/API/e2e повторяется расширенный local
+check и154 compiled browser; новый exact-head CI+Android обязательны.
+
+На момент этой квитанции local check выполняется; его результат и новый CI
+не объявлены успешными. Main ef официально имеет SUCCESS CI42553564750,
+Android42553564746, API42556807570, web42556807602, OTA42557049312; независимый
+bytes/signatures/dualAPI readback проверяется отдельно. Дальше — фактические
+local/exact-head gates, свежая GitHubqueue/main и незанятые публикации, обычный
+squash match-head, mainCI/official API/web/signedOTA и полная DUT109 приёмка.
+Только после обеих приёмок закрытый старый test trainer: свежий inspect,
+единственный assignedofficezone при необходимости, dutygrant и отдельный
+committedinspect. Все остальные пилоты/доступы/данные/native прежние.
+Дежурства OFF; merge2054, публикация, zone/grant ещё не выполнялись.
+
+
+### Итерация 81 нового выпуска — 2026-11-09 — Codex / OpenAI
+
+Sourceaa4c6b70: Android42557599576 SUCCESS1; fullCI42557599606 завершён red,
+33healthy jobs SUCCESS, auth4/128966806193 и зависимыйaggregate red. В auth4
+309PASS/4standardconditionalSkip/3flaky, strict fail-on-flaky сохранён.
+Два display-name mono/lime сбоя подтверждены trace: новый main добавил
+ConnectionRequests в профиль, а отдельная старая fixture возвращала503 на
+POST connection-directory; после успешного /connections retry оставалась
+именно независимая ошибка списка запросов. Добавлена только строгая fixture
+{action:list}->{result:[]}; все проверки ошибок/имени/chat/reload прежние.
+Отдельный client confirmed swipe dark/original430 однажды не открыл rowrail
+после отмены и завершился timeout; встроенный retry PASS. Первые кадры не
+сохранены, точная причина не объявлена найденной. Неизменённый свайп и оба
+исправленных authсценария отдельно проверены по3раза:9/9PASS, retries0,
+skips0/flaky0. Полный run не переобъявлялся зелёным и не перезапускался наугад.
+
+Предыдущий объединённый runtimeaa4c локально PASS:357/3162 frontend,
+coverage83.27/78.38/82.26/88.14; API1633PASS/469conditionalSkip;154/154
+compiledbrowser (30admin38services42personal44duties), обеengines/themes,
+retries0skip0flaky0, формыWebKitdark320/Chromiumlight1440 визуально приняты.
+Actual опубликованный ef3768e7:243files size/SHA,обаAPI/22probes,
+подписанный настоящий OTA/artifact/source/ABI/native9,publicbaseline8/8 PASS.
+Первый publicbaseline запуск без HTTPSsynthetic env был остановлен guards;
+trace доказал blocked synthetic session/health; исправленная команда8/8PASS,
+реальные API/WS не разрешались и продукт не менялся.
+
+За время разбора actualmain сталea5883dc/2059. Обычный merge сохранил все19
+файлов предшественника без конфликтов. Обновились globalviewport/редактор,
+поэтому новый frontend lint/types/coverage/build и154browser выполняются
+снова; API/scripts/native/workflows/packages побайтно прежниеaa4c, их местные
+успешные проверки сохраняются без бессмысленного повторения. Полный exact-
+headCI/Android нового объединённого head обязателен, реальная PG вCI.
+Сбой чтения GitHub завершил старый единственный observer; последующее чтение
+сохранило terminalfailure. Новых расписаний/чужихчатов/исходящих сообщений нет.
+Merge2054/publication/zone/grant не выполнялись; duty OFF. После всех гейтов
+свежая GitHubqueue/main/quietpubs, обычный squash match-head, mainCI/official
+APIwebsignedOTA/полнаяDUT109приёмка и только старый closedtest rollout.
