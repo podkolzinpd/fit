@@ -11,6 +11,7 @@ import { replaceExercise } from '../../data/repositories/workout-rules'
 import type { ExerciseSnapshot, WorkoutExerciseDraft, WorkoutTemplateDraft } from '../../shared/domain'
 import { formatLocalDate } from '../../shared/local-date'
 import { AddIcon, CopyIcon, ScheduleIcon } from '../../shared/icons'
+import { filterWorkoutTemplates, WorkoutTemplateSearch, WorkoutTemplateSearchEmpty } from '../../shared/workout-template-search'
 import { AsyncView, EmptyState, Field, InlineRequestError, OverflowMenu, Page, StatePanel, useConfirm } from '../../shared/ui'
 import { ExercisePicker, useExerciseCatalog } from '../exercises'
 import { LoadMoreButton, safeWorkoutReturnTo, readWorkoutFormDraft, type WorkoutNavigationState, readTemplatePlanContext, returnToTemplatePlan, applyCreatedTemplate, templateReturnSteps, type TemplatePlanContext, QuickWorkoutEntry, WorkoutCta, WorkoutExerciseEditor, WorkoutHeader, workoutDisplayTitle, workoutExerciseBrief, type ParsedWorkoutExercise } from '../workouts'
@@ -49,6 +50,14 @@ export function WorkoutTemplatesPage() {
 function WorkoutTemplates() {
   const { actor } = useAuth()
   const location = useLocation()
+  const [searchParams, setSearchParams] = useSearchParams()
+  const search = searchParams.get('q') ?? ''
+  function updateSearch(value: string) {
+    const next = new URLSearchParams(searchParams)
+    if (value) next.set('q', value)
+    else next.delete('q')
+    setSearchParams(next, { replace: true, state: location.state as unknown })
+  }
   const context = readTemplatePlanContext((location.state as { templatePlanContext?: unknown } | null)?.templatePlanContext, actor!.userId)
   const [returnError, setReturnError] = useState<string | null>(null)
   const calendarBack = isCoachWorkoutRedesignEnabled(actor) ? readCoachCalendarRoute(actor?.userId) ?? '/today' : '/schedule'
@@ -60,6 +69,7 @@ function WorkoutTemplates() {
   const [confirm, confirmDialog] = useConfirm()
   const pendingCopies = useRef(new Map<string, WorkoutTemplateDraft>())
   const query = useQuery({ queryKey: ['workout-templates'], queryFn: () => workoutTemplates.list(), staleTime: 0, refetchOnMount: 'always' })
+  const visible = filterWorkoutTemplates(query.data ?? [], search)
   const duplicate = useMutation({
     mutationFn: (template: NonNullable<typeof query.data>[number]) => {
       const key = `${template.id}:${template.version}`
@@ -82,11 +92,12 @@ function WorkoutTemplates() {
       { label: 'Из тренировки клиента', onClick: () => navigate('/schedule/templates/from-workout', { state: context ? { templatePlanContext: context } : undefined }) },
     ]} /></div>}>
     <AsyncView loading={query.isLoading || Boolean(context && query.isFetching)} error={query.error} onRetry={() => void query.refetch()}>
-      {query.data?.length ? <div className="template-list">{query.data.map((template) => <article className="template-card" key={template.id}>
+      {Boolean(query.data?.length || search) && <WorkoutTemplateSearch value={search} onChange={updateSearch} />}
+      {query.data?.length ? visible.length ? <div className="template-list">{visible.map((template) => <article className="template-card" key={template.id}>
         <div className="template-card-head">
           <div><h2>{template.name}</h2><p>{templateMeta(template.exercises)}</p></div>
           <OverflowMenu label={`Действия с шаблоном ${template.name}`} items={[
-            { label: 'Редактировать', onClick: () => navigate(`/schedule/templates/${template.id}/edit`, { state: context ? { templateLibraryReturn: { context, index: (window.history.state as { idx?: number } | null)?.idx } } : undefined }) },
+            { label: 'Редактировать', onClick: () => navigate(`/schedule/templates/${template.id}/edit`, { state: { templateLibrarySearch: search, ...(context ? { templateLibraryReturn: { context, index: (window.history.state as { idx?: number } | null)?.idx } } : {}) } }) },
             { label: 'Создать копию', disabled: duplicate.isPending, onClick: () => duplicate.mutate(template) },
             { label: 'Удалить', danger: true, disabled: archive.isPending, onClick: () => { void confirm({ message: `Удалить шаблон «${template.name}»? Уже назначенные тренировки не изменятся.`, confirmLabel: 'Удалить', danger: true }).then((ok) => ok && archive.mutate(template)) } },
           ]} />
@@ -94,7 +105,7 @@ function WorkoutTemplates() {
         <p className="template-exercise-preview">{template.exercises.slice(0, 3).map((exercise) => exercise.name).join(' · ')}{template.exercises.length > 3 ? ` · ещё ${template.exercises.length - 3}` : ''}</p>
         <div className="template-card-footer"><span>Обновлён {new Intl.DateTimeFormat('ru-RU', { day: 'numeric', month: 'short' }).format(new Date(template.updatedAt))}</span>
           {context ? <button type="button" className="secondary" onClick={() => { try { applyCreatedTemplate(context, template); returnToTemplatePlan(context, navigate) } catch (error) { setReturnError(error instanceof Error ? error.message : 'Не удалось добавить шаблон') } }}>Добавить в план</button> : <Link className="button secondary" to={`/workouts/new?${new URLSearchParams({ template: template.id, ...(assignmentDate ? { date: assignmentDate } : {}) })}`} state={{ returnTo: calendarBack }}><ScheduleIcon />Назначить</Link>}</div>
-      </article>)}</div> : <EmptyState title="Создайте первый шаблон" description="Соберите тренировку с нуля или сохраните готовый план клиента."
+      </article>)}</div> : <WorkoutTemplateSearchEmpty /> : <EmptyState title="Создайте первый шаблон" description="Соберите тренировку с нуля или сохраните готовый план клиента."
         action={<div className="template-empty-actions"><Link className="button primary" to="/schedule/templates/new/editor" state={context ? { templatePlanContext: context } : undefined}>Создать с нуля</Link><Link className="button secondary" to="/schedule/templates/from-workout" state={context ? { templatePlanContext: context } : undefined}><CopyIcon />Из тренировки</Link></div>} />}
       {returnError && <p role="alert" className="error">{returnError}</p>}
       {(duplicate.error || archive.error) && <InlineRequestError error={(duplicate.error ?? archive.error)!} />}
@@ -147,15 +158,17 @@ export function WorkoutTemplateEditorPage() {
   const libraryOrigin = (location.state as { templateLibraryReturn?: { context?: unknown; index?: number } } | null)?.templateLibraryReturn
   const libraryContext = actor ? readTemplatePlanContext(libraryOrigin?.context, actor.userId) : undefined
   const libraryReturn = libraryContext ? { context: libraryContext, index: libraryOrigin?.index } : undefined
+  const librarySearchValue = (location.state as { templateLibrarySearch?: unknown } | null)?.templateLibrarySearch
+  const librarySearch = typeof librarySearchValue === 'string' ? librarySearchValue : ''
   const origin = location.state as { templateWorkoutReturnTo?: unknown; templateWorkoutReturnState?: WorkoutNavigationState; templateWorkoutReturnHistoryIndex?: number } | null
   const returnTo = safeWorkoutReturnTo(origin?.templateWorkoutReturnTo)
   const workoutReturn = sourceWorkoutId && returnTo?.split('?')[0] === `/workouts/${sourceWorkoutId}` ? { to: returnTo, state: origin?.templateWorkoutReturnState, index: origin?.templateWorkoutReturnHistoryIndex } : undefined
   if (!actor || actor.role !== 'trainer') return null
   const draftKey = workoutTemplateDraftKey(actor.userId, templateId, sourceWorkoutId) + (context ? `.plan:${context.draftKey}` : '')
-  return <WorkoutTemplateEditor key={draftKey} templateId={templateId} sourceWorkoutId={sourceWorkoutId} draftKey={draftKey} context={context} libraryReturn={libraryReturn} workoutReturn={workoutReturn} />
+  return <WorkoutTemplateEditor key={draftKey} templateId={templateId} sourceWorkoutId={sourceWorkoutId} draftKey={draftKey} context={context} libraryReturn={libraryReturn} librarySearch={librarySearch} workoutReturn={workoutReturn} />
 }
 
-function WorkoutTemplateEditor({ templateId, sourceWorkoutId, draftKey, context, workoutReturn, libraryReturn }: { templateId?: string; sourceWorkoutId: string; draftKey: string; context?: TemplatePlanContext; libraryReturn?: { context: TemplatePlanContext; index?: number }; workoutReturn?: { to: string; state?: WorkoutNavigationState; index?: number } }) {
+function WorkoutTemplateEditor({ templateId, sourceWorkoutId, draftKey, context, workoutReturn, libraryReturn, librarySearch }: { templateId?: string; sourceWorkoutId: string; draftKey: string; context?: TemplatePlanContext; libraryReturn?: { context: TemplatePlanContext; index?: number }; librarySearch: string; workoutReturn?: { to: string; state?: WorkoutNavigationState; index?: number } }) {
   const { actor } = useAuth()
   const { exercises: exercisesRepository, workoutTemplates, workouts } = useDataBackend()
   const navigate = useNavigate()
@@ -221,7 +234,7 @@ function WorkoutTemplateEditor({ templateId, sourceWorkoutId, draftKey, context,
     if (context) { returnToTemplatePlan(context, navigate, replace); return }
     const steps = templateReturnSteps(workoutReturn?.index ?? libraryReturn?.index)
     if (steps) navigate(-steps)
-    else navigate(workoutReturn?.to ?? '/schedule/templates', { replace, state: workoutReturn?.state ?? (libraryReturn ? { templatePlanContext: libraryReturn.context } : undefined) })
+    else navigate(workoutReturn?.to ?? `/schedule/templates${librarySearch ? `?${new URLSearchParams({ q: librarySearch })}` : ''}`, { replace, state: workoutReturn?.state ?? (libraryReturn ? { templatePlanContext: libraryReturn.context } : undefined) })
   }
   function closePicker() { setPickerOpen(false); setPickerSearch(''); setReplaceIndex(null) }
   const [confirmLeave, confirmLeaveDialog] = useConfirm()
