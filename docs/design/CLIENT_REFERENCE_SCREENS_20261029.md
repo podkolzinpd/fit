@@ -8555,3 +8555,46 @@ preview; безопасные обходные изменения продукт
 и ввод/keyboard/swipe/drag/timer не менялись. Тренер не получает client-only
 share sheet; его done/duration проверены. CI нового PR ещё требуется.
 Дальше: PR иего CI→сводка владельцу→только его разрешение на выпуск.
+
+
+## 198. MC5.1.2 / PR2069 — диагностика нестабильного CI, 09.11.2026
+
+PR2069 создан draft, remote source f6bb73b5 (runtime/QA ca01f705), без merge
+или публикации. CI42610799441 иAndroid42610799478 attempt1; Androidsuccess,
+общий CI ещё выполняется. Обнаружен failed job129138570602/yandex-auth2/4:
+единственный flaky case coach-live-v79.spec.ts:458 clockhandoffcompact,
+mobileChromium, initial30010ms наlocator.blur, retry1passed3266ms. Другой
+original caseId прошёл с первого раза2168ms.317pass/4skip вjob не заменяют
+--fail-on-flaky-tests: его rejection сохранён, green этого job не заявляем.
+
+Фактический error-context содержит не скрытое поле, а StatePanel «Не удалось
+загрузить данные / Не удалось загрузить тренировки. Повторите попытку».
+AsyncView при query.error заменяет children, поэтому формы/поля отсутствуют.
+Такой текст создаёт caught rejection listTrainingData, не HTTP !ok ветка.
+Начальной trace нет; passing retrytrace не доказывает причину initial. Точный
+transport error/abort/status неизвестен. Clock pauseAt продвигает минуту;
+15s training-data deadline/globalsetTimeout и650ms autosave — только возможные
+точки для будущей диагностики, не установленная причина. CPU/внешняя сеть
+причиной не объявлялись.
+
+Сверка11 protected test/fixture/DOM/input/autosave/AsyncView/AppLayout/repository/
+transport files: byte-exact origin/mainbd2b8452→sourcef6bb73b5. MC512 guards
+ограничены client share/detail: Live не имеет detail-history class, trainer
+не fit-client-lime; общий sheet background вне share сохраняется. Свёрнутая
+форма остаётся mounted, stable input key прежний. Product/QA/таймауты/assertions/
+CI не менялись ради прохождения.
+
+Отдельный точный clockcompact на том же productiondist локально прошёл1/1,
+3716ms, retries0/skips0, traceon. Первоначальный диагностический запуск пропустил
+1case из-за отсутствующего FIT_COACH_LIVE_V79_ACCEPTANCE; он исключён из приёмки.
+После явного обязательного флага выполнен настоящий сценарий, сам тест не менялся.
+Это невоспроизведённый initial, а не исправление причины.
+
+Доказательства: /tmp/fit-mc512-ci/auth-failed-job.log,
+/tmp/fit-mc512-ci/auth-failure-artifacts,
+/tmp/fit-mc512-clock-handoff-ci-review.json,
+/tmp/fit-mc512-clock-targeted-enabled.json и*-results. Один bounded observer
+следит только за sourceCI/Android этого PR с90s pause. Дальше дождаться финала,
+разобрать возможные остальные failures и повторить только failedjobs без
+изменения source/сохранения слабого green. Перед выпуском сообщить владельцу
+результат и этот квалифицированный flaky; отдельного разрешения выпуска нет.
