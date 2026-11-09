@@ -173,7 +173,7 @@ select
   summary.trainer_id
 from public.client_training_summaries summary
 where summary.client_id = '11111111-1111-4111-8111-111111111111'
-on conflict (client_id, period_start, period_end) do nothing;
+on conflict (client_id, period_start, period_end) where merge_superseded_at is null do nothing;
 
 -- Local demo identities represent already configured fixtures. Keep them past
 -- the legal gate so product and visual tests continue from their target pages.

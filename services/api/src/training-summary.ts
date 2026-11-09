@@ -161,7 +161,7 @@ export class DatabasePilotTrainingSummaries implements PilotTrainingSummaries {
               'generated_at', summary.generated_at, 'published_at', summary.published_at
             ) result
             from public.client_published_training_summaries summary
-            where summary.client_id = $1
+            where to_jsonb(summary)->>'merge_superseded_at' is null and summary.client_id = $1
             order by summary.period_end desc, summary.published_at desc
           `, [clientId])
         : await client.query<JsonRow>(`
@@ -174,11 +174,11 @@ export class DatabasePilotTrainingSummaries implements PilotTrainingSummaries {
               'generated_at', summary.generated_at, 'version', summary.version,
               'published', exists (
                 select 1 from public.client_published_training_summaries published
-                where published.source_summary_id = summary.id
+                where to_jsonb(published)->>'merge_superseded_at' is null and published.source_summary_id = summary.id
               )
             ) result
             from public.client_training_summaries summary
-            where summary.client_id = $1
+            where to_jsonb(summary)->>'merge_superseded_at' is null and summary.client_id = $1
             order by summary.period_end desc, summary.generated_at desc
           `, [clientId])
       return rows.map((row) => row.result)
@@ -707,7 +707,7 @@ export class DatabasePilotTrainingSummaries implements PilotTrainingSummaries {
             'generated_at', summary.generated_at, 'published_at', summary.published_at
           ) result
           from public.client_published_training_summaries summary
-          where summary.client_id = $1 and summary.period_start = $2 and summary.period_end = $3
+          where to_jsonb(summary)->>'merge_superseded_at' is null and summary.client_id = $1 and summary.period_start = $2 and summary.period_end = $3
         `, [request.clientId, request.periodStart, request.periodEnd])
       : await client.query<SummaryRow>(`
           select summary.input_fingerprint, jsonb_build_object(
@@ -719,7 +719,7 @@ export class DatabasePilotTrainingSummaries implements PilotTrainingSummaries {
             'generated_at', summary.generated_at, 'version', summary.version
           ) result
           from public.client_training_summaries summary
-          where summary.client_id = $1 and summary.period_start = $2
+          where to_jsonb(summary)->>'merge_superseded_at' is null and summary.client_id = $1 and summary.period_start = $2
             and summary.period_end = $3 and summary.prompt_version = $4
         `, [request.clientId, request.periodStart, request.periodEnd, PROMPT_VERSION])
     return rows[0]?.input_fingerprint === inputFingerprint ? rows[0].result : undefined

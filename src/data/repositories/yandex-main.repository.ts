@@ -458,6 +458,7 @@ function errorForStatus(status: number, code?: string): RepositoryError {
   if (code === 'connection_card_missing') return new RepositoryError(code, 'Не удалось найти аккаунт спортсмена. Обратитесь в поддержку.')
   if (code === 'connection_invalid') return new RepositoryError(code, 'Не удалось проверить приглашение. Откройте ссылку заново.')
   if (code === 'connection_changed') return new RepositoryError(code, 'Подключение изменилось. Проверьте условия и подтвердите заново.')
+  if (code === 'merge_choices_required') return new RepositoryError(code, 'Выберите, какие данные взять за основу для каждого расхождения.')
   if (code === 'connection_offer_unavailable') return new RepositoryError(code, 'Приглашение больше не действует. Попросите тренера отправить новое.')
   if (code === 'connection_forbidden') return new RepositoryError(code, 'Этот запрос недоступен для вашего аккаунта. Проверьте, под каким аккаунтом вы вошли.')
   if (code === 'invitation_role_mismatch') return new RepositoryError(code, 'Приглашение предназначено другой роли. Войдите под подходящим аккаунтом.')
@@ -1771,6 +1772,7 @@ export function createYandexMainRepository(
         const trainer = z.object({ id: uuid, name: z.string() })
         return (await writeJson(queries, '/v1/trainer-connections/preview', 'POST', offer, z.object({ preview: z.object({
           clientId: uuid, currentRelationshipId: uuid.nullable(), currentTrainer: trainer.nullable(), trainer, offerVersion: z.string(),
+          mergeVersion: z.string().optional(), mergeConflicts: z.array(z.object({ key: z.string(), label: z.string(), account: z.unknown(), card: z.unknown() })).optional(),
         }) }))).preview
       },
       async confirm(draft) {

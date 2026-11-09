@@ -14,6 +14,17 @@ function fixture() {
   return { app, service }
 }
 describe('athlete connection confirmation API', () => {
+  it('validates and forwards per-field merge choices without choosing a source', async () => {
+    const { app, service } = fixture()
+    const headers = { 'x-fit-session': 's'.repeat(43) }
+    const payload = { ...draft, mergeVersion: 'a'.repeat(64), mergeChoices: { 'profile:height_cm': 'card' } }
+    expect((await app.inject({ method: 'POST', url: '/v1/trainer-connections/confirm', headers, payload })).statusCode).toBe(200)
+    expect(service.confirm).toHaveBeenLastCalledWith(expect.anything(), payload)
+    for (const invalid of [{ mergeChoices: [] }, { mergeChoices: { x: 'automatic' } }, { mergeVersion: 'stale' }]) {
+      expect((await app.inject({ method: 'POST', url: '/v1/trainer-connections/confirm', headers, payload: { ...payload, ...invalid } })).statusCode).toBe(400)
+    }
+    expect(service.confirm).toHaveBeenCalledOnce()
+  })
   it('requires a read-write session and a complete confirmation before using the store', async () => {
     const { app, service } = fixture()
     for (const [headers, payload, status] of [

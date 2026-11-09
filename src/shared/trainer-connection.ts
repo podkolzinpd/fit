@@ -8,6 +8,14 @@ export interface TrainerConnectionPreview {
   currentTrainer: { id: string; name: string } | null
   trainer: { id: string; name: string }
   offerVersion: string
+  mergeVersion?: string
+  mergeConflicts?: ClientMergeConflict[]
+}
+export interface ClientMergeConflict {
+  key: string
+  label: string
+  account: unknown
+  card: unknown
 }
 export interface TrainerConnectionConfirmation extends TrainerConnectionOffer {
   shareHistory?: boolean
@@ -15,6 +23,8 @@ export interface TrainerConnectionConfirmation extends TrainerConnectionOffer {
   expectedRelationshipId: string | null
   offerVersion: string
   operationId: string
+  mergeVersion?: string
+  mergeChoices?: Record<string, 'account' | 'card'>
 }
 export interface TrainerConnectionsRepository {
   preview(offer: TrainerConnectionOffer): Promise<TrainerConnectionPreview>

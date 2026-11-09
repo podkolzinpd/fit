@@ -425,6 +425,140 @@ describe.skipIf(source === undefined)('one active trainer through every connecti
     expect(await actor(f.outsider, 'select id from public.workouts where client_id=$1', [card])).toEqual([])
   })
 
+  it.each(['account','card'] as const)('resolves each explicit %s merge choice atomically and preserves both workout facts', async side => {
+    const f=await fixture(), manual=randomUUID(), ownProgress=randomUUID(), cardProgress=randomUUID()
+    const ownGoal=randomUUID(),cardGoal=randomUUID(),ownLive=randomUUID(),cardLive=randomUUID()
+    await pool.query("insert into public.clients(id,trainer_id,full_name,height_cm,gender) values($1,$2,'Synthetic own card',180,'male')",[manual,f.first])
+    await pool.query('update public.clients set height_cm=170 where id=$1',[f.card])
+    await pool.query('update public.clients set profile_photo=jsonb_build_object(\'path\',id::text||\'/\'||$2||\'.jpg\',\'sha256\',$2,\'sizeBytes\',2,\'version\',1) where id=$1',[manual,'a'.repeat(64)])
+    await pool.query('update public.clients set profile_photo=jsonb_build_object(\'path\',id::text||\'/\'||$2||\'.jpg\',\'sha256\',$2,\'sizeBytes\',2,\'version\',1) where id=$1',[f.card,'b'.repeat(64)])
+    await pool.query('insert into public.client_trainers(client_id,trainer_id) values($1,$2)',[manual,f.first])
+    for(const [id,card,trainer,weight,chest] of [[ownProgress,f.card,f.athlete,70,null],[cardProgress,manual,f.first,72,100]] as const) {
+      await pool.query("insert into public.client_progress(id,client_id,trainer_id,created_by,recorded_on,weight_kg,chest_cm) values($1,$2,$3,$3,'2026-11-09',$4,$5)",[id,card,trainer,weight,chest])
+    }
+    for(const [id,card,trainer,title] of [[ownGoal,f.card,f.athlete,'Own goal'],[cardGoal,manual,f.first,'Coach goal']] as const) {
+      await pool.query('insert into public.client_goals(id,client_id,trainer_id,created_by,title) values($1,$2,$3,$3,$4)',[id,card,trainer,title])
+    }
+    for(const [id,card,trainer] of [[ownLive,f.card,f.athlete],[cardLive,manual,f.first]] as const) {
+      await pool.query("insert into public.workouts(id,client_id,trainer_id,created_by,workout_date,status,started_at) values($1,$2,$3,$3,current_date,'in_progress',now())",[id,card,trainer])
+    }
+    const exercise=randomUUID()
+    await pool.query("insert into public.workout_exercises(id,workout_id,client_id,trainer_id,position,exercise_source,exercise_ref,exercise_name,muscle_group,input_kind) values($1,$2,$3,$4,0,'system','synthetic','Synthetic exercise','legs','strength')",[exercise,cardLive,manual,f.first])
+    await pool.query('insert into public.workout_sets(workout_exercise_id,client_id,trainer_id,position,fact_weight_kg,fact_reps,confirmed_at) values($1,$2,$3,0,35,12,now())',[exercise,manual,f.first])
+    const facts=(await pool.query('select fact_weight_kg,fact_reps,confirmed_at from public.workout_sets where workout_exercise_id=$1',[exercise])).rows
+    const [share]=await actor<{invitation_token:string}>(f.first,"select * from public.create_client_invitation_share($1,'client')",[manual])
+    const [row]=await actor<{preview:{mergeVersion:string;mergeConflicts:{key:string}[];offerVersion:string}}>(f.athlete,
+      "select app_private.preview_trainer_connection('link',$1) preview",[share!.invitation_token])
+    const preview=row!.preview,operation=randomUUID()
+    expect(preview.mergeConflicts.map(c=>c.key)).toEqual(expect.arrayContaining(['profile:height_cm',`progress:${cardProgress}:weight_kg`,`goal:${cardGoal}`,`workout:${cardLive}`]))
+    const choices=Object.fromEntries(preview.mergeConflicts.map(c=>[c.key,side]))
+    const sql="select app_private.confirm_trainer_connection('link',$1,null,$2,$3,false,false,$4,$5::jsonb) id"
+    const args=[share!.invitation_token,preview.offerVersion,operation,preview.mergeVersion,JSON.stringify(choices)]
+    await expect(actor(f.athlete,sql,[...args.slice(0,4),'{}'])).rejects.toMatchObject({message:'merge_choices_required'})
+    expect((await pool.query('select archived_at from public.clients where id=$1',[manual])).rows).toEqual([{archived_at:null}])
+    expect(await actor(f.athlete,sql,args)).toEqual([{id:f.card}])
+    expect(await actor(f.athlete,sql,args)).toEqual([{id:f.card}])
+    expect((await pool.query('select height_cm,gender from public.clients where id=$1',[f.card])).rows).toEqual([{height_cm:side==='card'?'180.00':'170.00',gender:'male'}])
+    expect((await pool.query('select profile_photo->>\'sha256\' sha from public.clients where id=$1',[f.card])).rows).toEqual([{sha:(side==='card'?'a':'b').repeat(64)}])
+    expect((await pool.query('select weight_kg,chest_cm from public.client_progress where id=$1',[ownProgress])).rows).toEqual([{weight_kg:side==='card'?'72.00':'70.00',chest_cm:'100.00'}])
+    expect((await pool.query('select id from public.client_goals where client_id=$1 and status=\'active\'',[f.card])).rows).toEqual([{id:side==='card'?cardGoal:ownGoal}])
+    expect((await pool.query('select id from public.workouts where client_id=$1 and status=\'in_progress\'',[f.card])).rows).toEqual([{id:side==='card'?cardLive:ownLive}])
+    expect((await pool.query('select count(*)::int n from public.workouts where client_id=$1',[f.card])).rows).toEqual([{n:2}])
+    expect((await pool.query('select count(*)::int n from app_private.merge_suspended_workouts where workout_id=$1',[side==='card'?ownLive:cardLive])).rows).toEqual([{n:1}])
+    expect((await pool.query('select count(*)::int n from public.client_progress where client_id=$1',[f.card])).rows).toEqual([{n:2}])
+    expect((await pool.query('select fact_weight_kg,fact_reps,confirmed_at from public.workout_sets where workout_exercise_id=$1',[exercise])).rows).toEqual(facts)
+    await expect(actor(f.first,'select * from app_private.client_merge_choices')).rejects.toMatchObject({code:'42501'})
+    await expect(actor(f.athlete,sql,[...args.slice(0,4),'{}'])).rejects.toMatchObject({message:'connection_changed'})
+    await pool.query("update public.workouts set status='done',completed_at=now() where id=$1",[side==='card'?cardLive:ownLive])
+    const suspended=side==='card'?ownLive:cardLive
+    const [version]=(await pool.query<{version:string}>('select version from public.workouts where id=$1',[suspended])).rows
+    await actor(f.athlete,'select * from public.start_live_workout($1,$2,$3)',[suspended,version!.version,randomUUID()])
+    expect((await pool.query('select w.started_at=s.started_at restored,s.resumed_at is not null resumed from public.workouts w join app_private.merge_suspended_workouts s on s.workout_id=w.id where w.id=$1',[suspended])).rows).toEqual([{restored:true,resumed:true}])
+  })
+
+  it('replays a first registration attachment without a merge receipt or another card', async () => {
+    const f=await fixture(),athlete=randomUUID(),manual=randomUUID()
+    await pool.query("insert into public.profiles(id,first_name,account_role) values($1,'First account','client')",[athlete])
+    await pool.query("insert into public.clients(id,trainer_id,full_name) values($1,$2,'First account')",[manual,f.first])
+    await pool.query('insert into public.client_trainers(client_id,trainer_id) values($1,$2)',[manual,f.first])
+    const [share]=await actor<{invitation_token:string}>(f.first,"select * from public.create_client_invitation_share($1,'client')",[manual])
+    const [row]=await actor<{preview:{offerVersion:string;mergeConflicts?:unknown[]}}>(athlete,"select app_private.preview_trainer_connection('link',$1) preview",[share!.invitation_token])
+    expect(row!.preview.mergeConflicts).toBeUndefined()
+    const sql="select app_private.confirm_trainer_connection('link',$1,null,$2,$3,false,false,null,'{}') id"
+    const args=[share!.invitation_token,row!.preview.offerVersion,randomUUID()]
+    expect(await actor(athlete,sql,args)).toEqual([{id:manual}])
+    expect(await actor(athlete,sql,args)).toEqual([{id:manual}])
+    expect((await pool.query('select id from public.clients where auth_user_id=$1',[athlete])).rows).toEqual([{id:manual}])
+  })
+
+  it('requires a fresh comparison when conflicting values change and leaves both cards untouched', async () => {
+    const f=await fixture(), manual=randomUUID()
+    await pool.query("insert into public.clients(id,trainer_id,full_name,height_cm) values($1,$2,'Synthetic own card',180)",[manual,f.first])
+    await pool.query('update public.clients set height_cm=170 where id=$1',[f.card])
+    await pool.query('insert into public.client_trainers(client_id,trainer_id) values($1,$2)',[manual,f.first])
+    const [share]=await actor<{invitation_token:string}>(f.first,"select * from public.create_client_invitation_share($1,'client')",[manual])
+    const [row]=await actor<{preview:{mergeVersion:string;offerVersion:string}}>(f.athlete,"select app_private.preview_trainer_connection('link',$1) preview",[share!.invitation_token])
+    await pool.query('update public.clients set height_cm=185 where id=$1',[manual])
+    await expect(actor(f.athlete,"select app_private.confirm_trainer_connection('link',$1,null,$2,$3,false,false,$4,$5::jsonb)",
+      [share!.invitation_token,row!.preview.offerVersion,randomUUID(),row!.preview.mergeVersion,JSON.stringify({'profile:height_cm':'card'})])).rejects.toMatchObject({message:'connection_changed'})
+    expect((await pool.query('select archived_at,auth_user_id from public.clients where id=$1',[manual])).rows).toEqual([{archived_at:null,auth_user_id:null}])
+    expect((await pool.query('select count(*)::int n from app_private.client_merge_choices where actor_id=$1',[f.athlete])).rows).toEqual([{n:0}])
+  })
+
+  it('merges matching metrics, compares differing units and values, and retains custom goal criteria', async () => {
+    const f=await fixture(),manual=randomUUID(),ownProgress=randomUUID(),cardProgress=randomUUID()
+    await pool.query("insert into public.clients(id,trainer_id,full_name) values($1,$2,'Synthetic own card')",[manual,f.first])
+    await pool.query('insert into public.client_trainers(client_id,trainer_id) values($1,$2)',[manual,f.first])
+    const sleepOwn=randomUUID(),sleepCard=randomUUID(),distanceOwn=randomUUID(),distanceCard=randomUUID(),goal=randomUUID()
+    for(const [id,card,trainer,name,unit] of [[sleepOwn,f.card,f.athlete,'Сон','ч'],[sleepCard,manual,f.first,'Сон','ч'],
+      [distanceOwn,f.card,f.athlete,'Дистанция','км'],[distanceCard,manual,f.first,'Дистанция','мили']] as const) {
+      await pool.query('insert into public.client_custom_metrics(id,client_id,trainer_id,created_by,name,unit) values($1,$2,$3,$3,$4,$5)',[id,card,trainer,name,unit])
+    }
+    for(const [id,card,trainer] of [[ownProgress,f.card,f.athlete],[cardProgress,manual,f.first]] as const) {
+      await pool.query("insert into public.client_progress(id,client_id,trainer_id,created_by,recorded_on) values($1,$2,$3,$3,'2026-11-09')",[id,card,trainer])
+    }
+    for(const [progress,card,trainer,metric,value] of [[ownProgress,f.card,f.athlete,sleepOwn,7],[cardProgress,manual,f.first,sleepCard,8],
+      [ownProgress,f.card,f.athlete,distanceOwn,5],[cardProgress,manual,f.first,distanceCard,3]] as const) {
+      await pool.query('insert into public.client_progress_custom(progress_id,client_id,trainer_id,metric_id,value) values($1,$2,$3,$4,$5)',[progress,card,trainer,metric,value])
+    }
+    await pool.query("insert into public.client_goals(id,client_id,trainer_id,created_by,title) values($1,$2,$3,$3,'Сон')",[goal,manual,f.first])
+    await pool.query("insert into public.goal_criteria(goal_id,client_id,trainer_id,created_by,metric,operation,unit,custom_metric_id,custom_metric_name) values($1,$2,$3,$3,'custom','track_only','ч',$4,'Сон')",[goal,manual,f.first,sleepCard])
+    const [share]=await actor<{invitation_token:string}>(f.first,"select * from public.create_client_invitation_share($1,'client')",[manual])
+    const [row]=await actor<{preview:{mergeVersion:string;mergeConflicts:{key:string}[];offerVersion:string}}>(f.athlete,"select app_private.preview_trainer_connection('link',$1) preview",[share!.invitation_token])
+    expect(row!.preview.mergeConflicts).toHaveLength(2)
+    expect(row!.preview.mergeConflicts.map(c=>c.key)).toContain(`metric:${distanceCard}`)
+    await actor(f.athlete,"select app_private.confirm_trainer_connection('link',$1,null,$2,$3,false,false,$4,$5::jsonb)",
+      [share!.invitation_token,row!.preview.offerVersion,randomUUID(),row!.preview.mergeVersion,JSON.stringify(Object.fromEntries(row!.preview.mergeConflicts.map(c=>[c.key,'card'])))])
+    expect((await pool.query('select value from public.client_progress_custom where progress_id=$1 and metric_id=$2',[ownProgress,sleepOwn])).rows).toEqual([{value:'8.000'}])
+    expect((await pool.query('select count(*)::int n from public.client_progress_custom where client_id=$1',[f.card])).rows).toEqual([{n:4}])
+    expect((await pool.query('select client_id,custom_metric_id from public.goal_criteria where goal_id=$1',[goal])).rows).toEqual([{client_id:f.card,custom_metric_id:sleepOwn}])
+    expect((await pool.query('select id from public.client_custom_metrics where client_id=$1 and name=\'Дистанция\' and archived_at is null',[f.card])).rows).toEqual([{id:distanceCard}])
+  })
+
+  it('keeps both conflicting reports while current report writers continue to update only the selected base', async () => {
+    const f=await fixture(),manual=randomUUID()
+    await pool.query("insert into public.clients(id,trainer_id,full_name) values($1,$2,'Synthetic own card')",[manual,f.first])
+    await pool.query('insert into public.client_trainers(client_id,trainer_id) values($1,$2)',[manual,f.first])
+    const save=(who:string,card:string,title:string)=>actor<{result:{id:string}}>(who,`select public.save_generated_training_summary(
+      $1,'2026-11-01','2026-11-08',$2,$3::jsonb,$4::jsonb,'{}','synthetic-model','test-merge',$2,'{}',null,now()) result`,
+      [card,title,JSON.stringify({headline:title,progress:[],consistency:'',attention:[]}),
+        JSON.stringify({headline:title,achievements:[],consistency:'',encouragement:'',goalAlignment:'',nextSteps:[]})])
+    await save(f.athlete,f.card,'Account report')
+    const [cardReport]=await save(f.first,manual,'Card report')
+    const clientSummary={headline:'Published card report',achievements:[],consistency:'',encouragement:'',goalAlignment:'',nextSteps:[]}
+    await actor(f.first,'select * from public.publish_training_summary($1,$2::jsonb,1)',[cardReport!.result.id,JSON.stringify(clientSummary)])
+    const [share]=await actor<{invitation_token:string}>(f.first,"select * from public.create_client_invitation_share($1,'client')",[manual])
+    const [row]=await actor<{preview:{mergeVersion:string;mergeConflicts:{key:string}[];offerVersion:string}}>(f.athlete,"select app_private.preview_trainer_connection('link',$1) preview",[share!.invitation_token])
+    expect(row!.preview.mergeConflicts).toHaveLength(2)
+    await actor(f.athlete,"select app_private.confirm_trainer_connection('link',$1,null,$2,$3,false,false,$4,$5::jsonb)",
+      [share!.invitation_token,row!.preview.offerVersion,randomUUID(),row!.preview.mergeVersion,JSON.stringify(Object.fromEntries(row!.preview.mergeConflicts.map(c=>[c.key,'card'])))])
+    expect((await pool.query('select count(*)::int n from public.client_training_summaries where client_id=$1',[f.card])).rows).toEqual([{n:2}])
+    expect((await pool.query('select count(*)::int n from public.client_published_training_summaries where client_id=$1',[f.card])).rows).toEqual([{n:2}])
+    await save(f.athlete,f.card,'Updated selected report')
+    expect((await pool.query('select client_summary->>\'headline\' title from public.client_training_summaries where client_id=$1 and merge_superseded_at is not null',[f.card])).rows).toEqual([{title:'Account report'}])
+    expect((await pool.query('select client_summary->>\'headline\' title from public.client_training_summaries where client_id=$1 and merge_superseded_at is null',[f.card])).rows).toEqual([{title:'Updated selected report'}])
+  })
+
   it.each(['code', 'link'] as const)('merges a trainer plan through %s without losing own history, amounts or authorship', async (entry) => {
     const f = await fixture(), sourceCard = randomUUID(), ownWorkout = randomUUID(), plan = randomUUID(), sourceDone = randomUUID(), packageId = randomUUID()
     await pool.query("insert into public.clients(id,trainer_id,full_name) values($1,$2,'Synthetic trainer card')", [sourceCard, f.first])
@@ -477,6 +611,8 @@ describe.skipIf(source === undefined)('one active trainer through every connecti
     const [invitation] = await actor(f.first, "select * from public.create_client_invitation_share($1,'client')", [sourceCard])
     if (!invitation) throw new Error('fixture_invitation_missing')
     const before = (await pool.query('select to_jsonb(c) snapshot from public.clients c where id=$1', [sourceCard])).rows
+    await expect(actor(f.athlete,'select app_private.preview_trainer_connection($1,$2)',[entry,entry==='code'?invitation.invitation_code:invitation.invitation_token]))
+      .rejects.toMatchObject({message:'connection_offer_unavailable'})
     await expect(actor(f.athlete, entry === 'code' ? 'select public.claim_client_invitation($1)' : 'select public.claim_client_invitation_link($1)',
       [entry === 'code' ? invitation.invitation_code : invitation.invitation_token]))
       .rejects.toMatchObject({ message: 'client_merge_relationship_conflict' })

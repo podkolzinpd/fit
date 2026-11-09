@@ -7,7 +7,7 @@ import { readTrainerDisplayNames } from './trainer-display-name.js'
 
 const uuid = /^[a-f0-9]{8}-[a-f0-9]{4}-[1-5][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/i
 interface Offer { source: 'link' | 'code' | 'chat'; locator: string }
-interface Confirmation extends Offer { shareHistory?: boolean; shareSoloHistory?: boolean; expectedRelationshipId: string | null; offerVersion: string; operationId: string }
+interface Confirmation extends Offer { shareHistory?: boolean; shareSoloHistory?: boolean; mergeVersion?: string; mergeChoices?: Record<string, 'account' | 'card'>; expectedRelationshipId: string | null; offerVersion: string; operationId: string }
 interface Preview {
   clientId: string; currentRelationshipId: string | null
   currentTrainer: { id: string; name: string } | null
@@ -31,7 +31,10 @@ function readConfirmation(body: unknown): Confirmation | null {
     || typeof v.operationId !== 'string' || !uuid.test(v.operationId)) return null
   if (v.shareHistory !== undefined && typeof v.shareHistory !== 'boolean') return null
   if (v.shareSoloHistory !== undefined && typeof v.shareSoloHistory !== 'boolean') return null
-  return { ...offer, ...(v.shareSoloHistory === undefined ? {} : { shareSoloHistory: v.shareSoloHistory }), ...(v.shareHistory === undefined ? {} : { shareHistory: v.shareHistory }), expectedRelationshipId: v.expectedRelationshipId, offerVersion: v.offerVersion, operationId: v.operationId }
+  if (v.mergeVersion !== undefined && (typeof v.mergeVersion !== 'string' || !/^[a-f0-9]{64}$/.test(v.mergeVersion))) return null
+  if (v.mergeChoices !== undefined && (typeof v.mergeChoices !== 'object' || v.mergeChoices === null || Array.isArray(v.mergeChoices)
+    || Object.keys(v.mergeChoices).length > 2048 || Object.entries(v.mergeChoices).some(([key, value]) => key.length > 180 || !['account', 'card'].includes(value as string)))) return null
+  return { ...offer, ...(v.mergeVersion === undefined ? {} : { mergeVersion: v.mergeVersion }), ...(v.mergeChoices === undefined ? {} : { mergeChoices: v.mergeChoices as NonNullable<Confirmation['mergeChoices']> }), ...(v.shareSoloHistory === undefined ? {} : { shareSoloHistory: v.shareSoloHistory }), ...(v.shareHistory === undefined ? {} : { shareHistory: v.shareHistory }), expectedRelationshipId: v.expectedRelationshipId, offerVersion: v.offerVersion, operationId: v.operationId }
 }
 export class TrainerConnectionConfirmationStore {
   constructor(private readonly pool: DatabasePool) {}
@@ -47,14 +50,14 @@ export class TrainerConnectionConfirmationStore {
   }
   confirm(session: YandexActorSession, draft: Confirmation): Promise<string> {
     return withYandexActorSession(this.pool, session, async client =>
-      (await client.query<{ client_id: string }>('select app_private.confirm_trainer_connection($1,$2,$3,$4,$5,$6,$7) client_id',
-        [draft.source, draft.locator, draft.expectedRelationshipId, draft.offerVersion, draft.operationId, draft.shareHistory ?? false, draft.shareSoloHistory ?? false]))[0]!.client_id)
+      (await client.query<{ client_id: string }>('select app_private.confirm_trainer_connection($1,$2,$3,$4,$5,$6,$7,$8,$9::jsonb) client_id',
+        [draft.source, draft.locator, draft.expectedRelationshipId, draft.offerVersion, draft.operationId, draft.shareHistory ?? false, draft.shareSoloHistory ?? false, draft.mergeVersion ?? null, JSON.stringify(draft.mergeChoices ?? {})]))[0]!.client_id)
   }
 }
 export type TrainerConnectionConfirmationService = Pick<TrainerConnectionConfirmationStore, 'preview' | 'confirm'>
 export function registerTrainerConnectionConfirmationRoutes(app: FastifyInstance, store?: TrainerConnectionConfirmationService) {
   for (const action of ['preview', 'confirm'] as const) {
-    app.post(`/v1/trainer-connections/${action}`, { bodyLimit: 4096 }, async (request, reply) => {
+    app.post(`/v1/trainer-connections/${action}`, { bodyLimit: 262144 }, async (request, reply) => {
       reply.header('cache-control', 'no-store')
       const session = readYandexActorSession(request.headers)
       if (!session) return reply.code(401).send({ error: 'unauthorized' })
@@ -71,7 +74,7 @@ export function registerTrainerConnectionConfirmationRoutes(app: FastifyInstance
         if (error instanceof YandexAppSessionDeniedError) return reply.code(403).send({ error: 'connection_forbidden' })
         const message = error instanceof Error ? error.message : ''
         if (message === 'connection_forbidden') return reply.code(403).send({ error: message })
-        if (message === 'connection_changed' || message === 'connection_offer_unavailable') return reply.code(409).send({ error: message })
+        if (message === 'connection_changed' || message === 'connection_offer_unavailable' || message === 'merge_choices_required') return reply.code(409).send({ error: message })
         if (/^client_merge_.*_conflict$/.test(message)) return reply.code(409).send({ error: 'client_merge_conflict' })
         // Never log request bodies, invitation secrets, or raw database errors.
         request.log.warn({ event: 'trainer_connection_confirmation_failed' }, 'Trainer connection confirmation failed')

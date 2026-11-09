@@ -1,0 +1,4 @@
+.client-merge-choice { min-width: 0; }
+.client-merge-choice label { min-height: 44px; cursor: pointer; }
+.client-merge-choice input[type="radio"] { appearance: auto; width: 20px; height: 20px; min-height: 0; margin: 0 8px 0 0; padding: 0; vertical-align: middle; accent-color: var(--lime-accent, var(--accent)); }
+.merge-conflict-value { white-space: pre-wrap; overflow-wrap: anywhere; }
