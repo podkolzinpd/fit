@@ -62,6 +62,7 @@ function transactionPool(handler: (text: string, values?: readonly unknown[]) =>
     if (text === 'begin' || text === 'commit' || text === 'rollback' || text.includes("set_config('request.jwt.claim.sub'")) {
       return Promise.resolve([])
     }
+    if (text === 'select auth.uid()::text actor_id') return Promise.resolve([{ actor_id: actorId }])
     if (text.includes('resolve_yandex_app_session')) return Promise.resolve([{ profile_id: actorId }])
     return Promise.resolve(handler(text, values))
   })

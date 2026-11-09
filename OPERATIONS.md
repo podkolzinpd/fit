@@ -2429,3 +2429,17 @@ serializable locks and unchanged protected state. A private expected-history pla
 preserves planned/cancelled/hidden old rows and all finance rows while verifying
 the imported graph under both actual fit_api/RLS actors. Only technical completion
 flags enter Actions logs. Existing successful legacy plans remain compatible.
+
+
+### TPA — управление профессиональной анкетой Яндекса (PR1, pilot OFF)
+
+Новый допуск — `app_private.corporate_profile_pilot_trainers`, независимо от
+services/personal/duty/invitation. Миграция000206 не добавляет назначений.
+Admin capability + подтверждённый `is_yandex` + этот pilot обязательны вместе.
+Пользовательский режим хранится отдельно в corporate_profile_management;
+ON блокирует только professional profile writes, включая старые HTTP paths.
+OFF не публикует ничего автоматически. В пилоте owner/admin команды требуют
+profile version, managementVersion и commandId. Вне пилота прежний owner API
+совместим. Выдача через SQL/SSH/произвольный target запрещена; закрытый оператор
+и UI относятся к PR2. До отдельного разрешения владельца merge/deploy/grant
+этого пакета не выполняются. [TPA101–109](docs/design/CORPORATE_ADMIN_20261027.md).

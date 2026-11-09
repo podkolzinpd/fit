@@ -650,7 +650,7 @@ describe('trainer professional profile', () => {
     const published = await app.inject({ method: 'POST', url: '/v1/trainer-profile/publish', headers })
     expect(saved.statusCode).toBe(200)
     expect(published.statusCode).toBe(200)
-    expect(saveDraft).toHaveBeenCalledWith({ accessMode: 'read_write', token: 'a'.repeat(43) }, draft)
+    expect(saveDraft).toHaveBeenCalledWith({ accessMode: 'read_write', token: 'a'.repeat(43) }, draft, {})
   })
 
   it('uploads, reorders and deletes private Yandex gallery photos', async () => {
@@ -686,10 +686,10 @@ describe('trainer professional profile', () => {
     expect(uploadPhoto.mock.calls[0]?.[2].image.bytes).toBeInstanceOf(Uint8Array)
     expect(uploadPhoto.mock.calls[0]?.[3]).toBe(true)
     expect(reorderPhotos).toHaveBeenCalledWith(
-      { accessMode: 'read_write', token: 'a'.repeat(43) }, [photoId],
+      { accessMode: 'read_write', token: 'a'.repeat(43) }, [photoId], {},
     )
     expect(deletePhoto).toHaveBeenCalledWith(
-      { accessMode: 'read_write', token: 'a'.repeat(43) }, photoId,
+      { accessMode: 'read_write', token: 'a'.repeat(43) }, photoId, {},
     )
   })
 
@@ -758,7 +758,7 @@ describe('trainer professional profile', () => {
     }
     const response = await app.inject({ method: 'PUT', url: '/v1/trainer-profile', headers, payload: selection })
     expect(response.statusCode).toBe(200)
-    expect(saveDraft).toHaveBeenCalledWith({ accessMode: 'read_write', token: 'a'.repeat(43) }, selection)
+    expect(saveDraft).toHaveBeenCalledWith({ accessMode: 'read_write', token: 'a'.repeat(43) }, selection, {})
   })
 
   it('still rejects a specialties payload past the raised limits', async () => {
@@ -882,7 +882,7 @@ describe('trainer professional profile', () => {
 
     expect(response.statusCode).toBe(200)
     expect(setCatalogListing).toHaveBeenCalledWith(
-      { accessMode: 'read_write', token: 'a'.repeat(43) }, true,
+      { accessMode: 'read_write', token: 'a'.repeat(43) }, true, {},
     )
   })
 })

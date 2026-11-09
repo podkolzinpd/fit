@@ -6,6 +6,7 @@ import type { MediaObjectStorage } from './object-storage-media.js'
 
 interface AdminTrainer {
   id: string; name: string; isYandex: boolean; officeIds: string[]; version: number
+  profileEditingAvailable?: boolean
   publicId?: string | null; publishedName?: string | null
   photoPath?: string | null; avatarDataUrl?: string | null
 }
@@ -64,7 +65,7 @@ export class CorporateAdminStore {
   }
   bundle(session: YandexActorSession) {
     return withYandexActorSession(this.pool, session, async client => {
-      const rows = await client.query<{ bundle: AdminBundle }>('select app_private.corporate_admin_bundle_with_identity() bundle')
+      const rows = await client.query<{ bundle: AdminBundle }>('select app_private.corporate_admin_bundle_with_profile_access() bundle')
       if (!rows[0]?.bundle) throw new Error('corporate_bundle_missing')
       return exposeAdminTrainerPhotos(rows[0].bundle, this.media)
     })

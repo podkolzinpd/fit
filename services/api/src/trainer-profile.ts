@@ -1,4 +1,4 @@
-import { randomUUID } from 'node:crypto'
+import { createHash, randomUUID } from 'node:crypto'
 import type { QueryResultRow } from 'pg'
 import type { DatabasePool, DatabaseClient } from './db/types.js'
 import type { MediaObjectStorage } from './object-storage-media.js'
@@ -107,7 +107,7 @@ interface TrainerCatalogRow extends QueryResultRow {
 }
 
 export class TrainerProfileError extends Error {
-  constructor(public readonly failure: 'forbidden' | 'not_found' | 'invalid' | 'limit_reached' | 'media_unavailable') {
+  constructor(public readonly failure: 'forbidden' | 'not_found' | 'invalid' | 'limit_reached' | 'media_unavailable' | 'conflict' | 'managed' | 'refresh_required') {
     super(failure)
     this.name = 'TrainerProfileError'
   }
@@ -122,6 +122,7 @@ export type TrainerProfessionalProfileResponse = {
   updatedAt: string
   version: number
   isBrandTrainer: boolean
+  profileManagement?: ProfileManagement
   yandexOffices?: Array<{ city: string; name: string }>
 }
 
@@ -153,8 +154,8 @@ function rowResponse(row: TrainerProfileRow, draft: TrainerProfileDraft, publish
     draft,
     published,
     listedInCatalog: row.listed_in_catalog,
-    publishedAt: row.published_at,
-    updatedAt: row.updated_at,
+    publishedAt: row.published_at === null ? null : new Date(row.published_at).toISOString(),
+    updatedAt: new Date(row.updated_at).toISOString(),
     version: Number(row.version),
     isBrandTrainer: row.is_brand_trainer,
   }
@@ -166,8 +167,8 @@ function publicResponse(row: PublicTrainerProfileRow, profile: TrainerProfileDra
     draft: profile,
     published: profile,
     listedInCatalog: row.listed_in_catalog,
-    publishedAt: row.published_at,
-    updatedAt: row.updated_at,
+    publishedAt: row.published_at === null ? null : new Date(row.published_at).toISOString(),
+    updatedAt: new Date(row.updated_at).toISOString(),
     version: Number(row.version),
     isBrandTrainer: row.is_brand_trainer,
     ...(row.yandex_offices?.length ? { yandexOffices: row.yandex_offices } : {}),
@@ -229,7 +230,13 @@ export function readTrainerProfileDraft(value: unknown): TrainerProfileDraft | u
           || Number(certificate.year) < 1950 || Number(certificate.year) > new Date().getFullYear()))
     })) return undefined
   return {
-    ...(value as Omit<TrainerProfileDraft, 'metroStationIds' | 'customLocations' | 'photos'>),
+    displayName: draft.displayName, bio: draft.bio,
+    specialties: specialties as string[], city: draft.city,
+    trainingModes: modes as Array<'online' | 'in_person'>,
+    experienceStartYear: year as number | null, education: draft.education,
+    formats: draft.formats, price: draft.price,
+    acceptingClients: draft.acceptingClients, avatarDataUrl: draft.avatarDataUrl,
+    certificates: (certificates as TrainerProfileCore['certificates']).map(item => ({ title: item.title, organization: item.organization, year: item.year })),
     metroStationIds: metroStationIds.map((item) => String(item)),
     customLocations: customLocations.map((item) => String(item)),
     // Signed URLs are response-only. saveDraft preserves trusted server metadata.
@@ -242,15 +249,24 @@ async function ensureTrainer(client: DatabaseClient) {
   if (rows[0] === undefined) throw new TrainerProfileError('forbidden')
 }
 
+export type ProfileManagement = { available: boolean; managedByAdmin: boolean; version: number }
+export type ProfileWriteContext = {
+  version?: number
+  managementVersion?: number
+  commandId?: string
+  // Assigned only by the server's administrative routes, never owner request bodies.
+  adminTarget?: string
+}
+
 export interface PilotTrainerProfiles {
   getOwn(session: YandexActorSessionInput): Promise<TrainerProfessionalProfileResponse | null>
-  saveDraft(session: YandexActorSessionInput, draft: TrainerProfileDraft): Promise<TrainerProfessionalProfileResponse>
-  uploadPhoto: (session: YandexActorSessionInput, draft: TrainerProfileDraft, upload: TrainerPhotoUpload, replaceLegacy: boolean) => Promise<TrainerProfessionalProfileResponse>
-  reorderPhotos: (session: YandexActorSessionInput, photoIds: string[]) => Promise<TrainerProfessionalProfileResponse>
-  deletePhoto: (session: YandexActorSessionInput, photoId: string) => Promise<TrainerProfessionalProfileResponse>
-  publish(session: YandexActorSessionInput): Promise<TrainerProfessionalProfileResponse>
-  unpublish(session: YandexActorSessionInput): Promise<TrainerProfessionalProfileResponse>
-  setCatalogListing(session: YandexActorSessionInput, listed: boolean): Promise<TrainerProfessionalProfileResponse>
+  saveDraft(session: YandexActorSessionInput, draft: TrainerProfileDraft, context?: ProfileWriteContext): Promise<TrainerProfessionalProfileResponse>
+  uploadPhoto: (session: YandexActorSessionInput, draft: TrainerProfileDraft, upload: TrainerPhotoUpload, replaceLegacy: boolean, context?: ProfileWriteContext) => Promise<TrainerProfessionalProfileResponse>
+  reorderPhotos: (session: YandexActorSessionInput, photoIds: string[], context?: ProfileWriteContext) => Promise<TrainerProfessionalProfileResponse>
+  deletePhoto: (session: YandexActorSessionInput, photoId: string, context?: ProfileWriteContext) => Promise<TrainerProfessionalProfileResponse>
+  publish(session: YandexActorSessionInput, context?: ProfileWriteContext): Promise<TrainerProfessionalProfileResponse>
+  unpublish(session: YandexActorSessionInput, context?: ProfileWriteContext): Promise<TrainerProfessionalProfileResponse>
+  setCatalogListing(session: YandexActorSessionInput, listed: boolean, context?: ProfileWriteContext): Promise<TrainerProfessionalProfileResponse>
   getPublic(publicId: string): Promise<TrainerProfessionalProfileResponse | null>
   listPublic(filters: TrainerCatalogFilters, page: TrainerCatalogPageOptions): Promise<TrainerCatalogPage>
 }
@@ -265,14 +281,55 @@ export class DatabasePilotTrainerProfiles implements PilotTrainerProfiles {
     return withYandexActorSession(this.pool, session, work)
   }
 
-  private async lockOrCreateDraft(client: DatabaseClient, draft: TrainerProfileDraft): Promise<{
+  private async withWrite<Result extends TrainerProfileRow | { row: TrainerProfileRow }>(
+    session: YandexActorSessionInput, context: ProfileWriteContext | undefined,
+    intent: Record<string, unknown>, work: (client: DatabaseClient, target: string) => Promise<Result>,
+  ): Promise<Result> {
+    return this.withSession(session, async client => {
+      const actor = (await client.query<{ actor_id: string }>('select auth.uid()::text actor_id'))[0]?.actor_id
+      if (!actor) throw new TrainerProfileError('forbidden')
+      const target = context?.adminTarget ?? actor
+      const guard = (await client.query<{ guard: { replay: boolean; result: Result } }>(
+        'select app_private.begin_corporate_profile_write($1,$2,$3,$4,$5,$6::jsonb) guard',
+        [target, context?.adminTarget !== undefined, context?.version ?? null,
+          context?.managementVersion ?? null, context?.commandId ?? null, JSON.stringify(intent)],
+      ))[0]?.guard
+      if (guard?.replay) return guard.result
+      const result = await work(client, target)
+      await client.query('select app_private.finish_corporate_profile_write($1,$2,$3::jsonb,$4::jsonb)',
+        [target, context?.commandId ?? null, JSON.stringify(intent), JSON.stringify(result)])
+      return result
+    })
+  }
+
+  async management(session: YandexActorSessionInput, target?: string): Promise<ProfileManagement> {
+    return this.withSession(session, async client => {
+      const rows = await client.query<{ management: ProfileManagement }>(
+        'select app_private.corporate_profile_management($1) management', [target ?? null])
+      if (!rows[0]) throw new TrainerProfileError('forbidden')
+      return rows[0].management
+    })
+  }
+
+  async getAdmin(session: YandexActorSessionInput, target: string) {
+    return this.withSession(session, async client => {
+      await client.query('select app_private.require_corporate_profile_admin($1)', [target])
+      const row = (await client.query<TrainerProfileRow>(
+        `select ${TRAINER_PROFILE_ROW_COLUMNS} from public.trainer_professional_profiles where trainer_id=$1`, [target]))[0]
+      const control = (await client.query<{ management: ProfileManagement }>(
+        'select app_private.corporate_profile_management($1) management', [target]))[0]!.management
+      return { profile: row ? await this.exposeRow(row) : null, management: control }
+    })
+  }
+
+  private async lockOrCreateDraft(client: DatabaseClient, draft: TrainerProfileDraft, target: string): Promise<{
     row: TrainerProfileRow
     created: boolean
   }> {
     const readLocked = () => client.query<TrainerProfileRow>(`
       select ${TRAINER_PROFILE_ROW_COLUMNS}
-      from public.trainer_professional_profiles where trainer_id = auth.uid() for update
-    `)
+      from public.trainer_professional_profiles where trainer_id = $1 for update
+    `, [target])
     const current = (await readLocked())[0]
     if (current) return { row: current, created: false }
 
@@ -281,10 +338,10 @@ export class DatabasePilotTrainerProfiles implements PilotTrainerProfiles {
     // reads the committed row under READ COMMITTED.
     const inserted = await client.query<TrainerProfileRow>(`
       insert into public.trainer_professional_profiles (trainer_id, draft_data)
-      values (auth.uid(), $1::jsonb)
+      values ($2, $1::jsonb)
       on conflict (trainer_id) do nothing
       returning ${TRAINER_PROFILE_ROW_COLUMNS}
-    `, [JSON.stringify(storedDraft(draft, []))])
+    `, [JSON.stringify(storedDraft(draft, [])), target])
     if (inserted[0]) return { row: inserted[0], created: true }
     const winner = (await readLocked())[0]
     if (!winner) throw new TrainerProfileError('not_found')
@@ -305,7 +362,7 @@ export class DatabasePilotTrainerProfiles implements PilotTrainerProfiles {
     return { ...withoutStoredPhotos(draft), photos }
   }
 
-  private async exposeRow(row: TrainerProfileRow): Promise<TrainerProfessionalProfileResponse> {
+  async exposeRow(row: TrainerProfileRow): Promise<TrainerProfessionalProfileResponse> {
     const [draft, published] = await Promise.all([
       this.exposeDraft(row.draft_data, true),
       row.published_data === null ? Promise.resolve(null) : this.exposeDraft(row.published_data, true),
@@ -327,21 +384,21 @@ export class DatabasePilotTrainerProfiles implements PilotTrainerProfiles {
       const rows = await client.query<TrainerProfileRow>('select * from public.trainer_professional_profiles where trainer_id = auth.uid()')
       return rows[0] ?? null
     })
-    return row === null ? null : this.exposeRow(row)
+    return row === null ? null : { ...await this.exposeRow(row), profileManagement: await this.management(session) }
   }
 
-  async saveDraft(session: YandexActorSessionInput, draft: TrainerProfileDraft) {
-    const row = await this.withSession(session, async (client) => {
-      await ensureTrainer(client)
-      const current = await this.lockOrCreateDraft(client, draft)
+  async saveDraft(session: YandexActorSessionInput, draft: TrainerProfileDraft, context?: ProfileWriteContext) {
+    const row = await this.withWrite(session, context, { action: 'save', draft }, async (client, target) => {
+      if (!context?.adminTarget) await ensureTrainer(client)
+      const current = await this.lockOrCreateDraft(client, draft, target)
       if (current.created) return current.row
       const photos = storedPhotos(current.row.draft_data)
       const nextDraft = storedDraft({ ...draft, avatarDataUrl: photos.length > 0 ? null : draft.avatarDataUrl }, photos)
       const rows = await client.query<TrainerProfileRow>(`
         update public.trainer_professional_profiles set draft_data = $1::jsonb,
-          version = version + 1 where trainer_id = auth.uid()
+          version = version + 1 where trainer_id = $2
         returning ${TRAINER_PROFILE_ROW_COLUMNS}
-      `, [JSON.stringify(nextDraft)])
+      `, [JSON.stringify(nextDraft), target])
       if (!rows[0]) throw new TrainerProfileError('not_found')
       return rows[0]
     })
@@ -353,16 +410,15 @@ export class DatabasePilotTrainerProfiles implements PilotTrainerProfiles {
     draft: TrainerProfileDraft,
     upload: TrainerPhotoUpload,
     replaceLegacy: boolean,
+    context?: ProfileWriteContext,
   ) {
     if (!this.media) throw new TrainerProfileError('media_unavailable')
     const actor = await this.withSession(session, async (client) => {
-      await ensureTrainer(client)
+      if (!context?.adminTarget) await ensureTrainer(client)
+      const target = context?.adminTarget
+      await client.query('select app_private.check_corporate_profile_write($1,$2)', [target ?? null, target !== undefined])
       const actorRows = await client.query<{ actor_id: string }>('select auth.uid()::text actor_id')
-      const rows = await client.query<TrainerProfileRow>(
-        'select * from public.trainer_professional_profiles where trainer_id = auth.uid()',
-      )
-      if (storedPhotos(rows[0]?.draft_data ?? null).length >= 3) throw new TrainerProfileError('limit_reached')
-      return actorRows[0]?.actor_id
+      return context?.adminTarget ?? actorRows[0]?.actor_id
     })
     if (!actor) throw new TrainerProfileError('forbidden')
     const id = randomUUID()
@@ -372,9 +428,9 @@ export class DatabasePilotTrainerProfiles implements PilotTrainerProfiles {
     try {
       await this.media.write('trainer-profile-media', path, upload.image.bytes, upload.image.mimeType, false)
       await this.media.write('trainer-profile-media', thumbnailPath, upload.thumbnail.bytes, upload.thumbnail.mimeType, false)
-      row = await this.withSession(session, async (client) => {
-        await ensureTrainer(client)
-        const current = await this.lockOrCreateDraft(client, draft)
+      row = await this.withWrite(session, context, { action: 'upload', draft, replaceLegacy, uploadHash: createHash('sha256').update(upload.image.bytes).update(upload.thumbnail.bytes).update(JSON.stringify([upload.image.width, upload.image.height, upload.image.sizeBytes, upload.thumbnail.width, upload.thumbnail.height, upload.thumbnail.sizeBytes])).digest('hex') }, async (client, target) => {
+        if (!context?.adminTarget) await ensureTrainer(client)
+        const current = await this.lockOrCreateDraft(client, draft, target)
         const photos = storedPhotos(current.row.draft_data)
         if (photos.length >= 3) throw new TrainerProfileError('limit_reached')
         const photo: StoredTrainerProfilePhoto = {
@@ -395,9 +451,9 @@ export class DatabasePilotTrainerProfiles implements PilotTrainerProfiles {
         }, [...photos, photo])
         const rows = await client.query<TrainerProfileRow>(`
           update public.trainer_professional_profiles set draft_data = $1::jsonb,
-            version = version + $2 where trainer_id = auth.uid()
+            version = version + $2 where trainer_id = $3
           returning ${TRAINER_PROFILE_ROW_COLUMNS}
-        `, [JSON.stringify(nextDraft), current.created ? 0 : 1])
+        `, [JSON.stringify(nextDraft), current.created ? 0 : 1, target])
         if (!rows[0]) throw new TrainerProfileError('not_found')
         return rows[0]
       })
@@ -410,16 +466,22 @@ export class DatabasePilotTrainerProfiles implements PilotTrainerProfiles {
       }])
       throw error
     }
+    if (!storedPhotos(row.draft_data).some(photo => photo.id === id)) {
+      await this.removePhotos([{ id, path, thumbnailPath, mimeType: 'image/jpeg',
+        width: upload.image.width, height: upload.image.height, sizeBytes: upload.image.sizeBytes,
+        thumbnailWidth: upload.thumbnail.width, thumbnailHeight: upload.thumbnail.height,
+        thumbnailSizeBytes: upload.thumbnail.sizeBytes }])
+    }
     // Signing is intentionally outside the rollback block: once PostgreSQL has
     // committed the metadata, a transient signing failure must not delete files
     // still referenced by the saved profile.
     return this.exposeRow(row)
   }
 
-  async reorderPhotos(session: YandexActorSessionInput, photoIds: string[]) {
-    const row = await this.withSession(session, async (client) => {
+  async reorderPhotos(session: YandexActorSessionInput, photoIds: string[], context?: ProfileWriteContext) {
+    const row = await this.withWrite(session, context, { action: 'reorder', photoIds }, async (client, target) => {
       const current = await client.query<TrainerProfileRow>(
-        'select * from public.trainer_professional_profiles where trainer_id = auth.uid() for update',
+        'select * from public.trainer_professional_profiles where trainer_id = $1 for update', [target],
       )
       const profile = current[0]
       if (!profile) throw new TrainerProfileError('not_found')
@@ -430,17 +492,17 @@ export class DatabasePilotTrainerProfiles implements PilotTrainerProfiles {
       const ordered = photoIds.map((id) => byId.get(id)!)
       const rows = await client.query<TrainerProfileRow>(`
         update public.trainer_professional_profiles set draft_data = $1::jsonb,
-          version = version + 1 where trainer_id = auth.uid() returning *
-      `, [JSON.stringify({ ...profile.draft_data, photos: ordered })])
+          version = version + 1 where trainer_id = $2 returning *
+      `, [JSON.stringify({ ...profile.draft_data, photos: ordered }), target])
       return rows[0]!
     })
     return this.exposeRow(row)
   }
 
-  async deletePhoto(session: YandexActorSessionInput, photoId: string) {
-    const result = await this.withSession(session, async (client) => {
+  async deletePhoto(session: YandexActorSessionInput, photoId: string, context?: ProfileWriteContext) {
+    const result = await this.withWrite(session, context, { action: 'delete', photoId }, async (client, target) => {
       const current = await client.query<TrainerProfileRow>(
-        'select * from public.trainer_professional_profiles where trainer_id = auth.uid() for update',
+        'select * from public.trainer_professional_profiles where trainer_id = $1 for update', [target],
       )
       const profile = current[0]
       if (!profile) throw new TrainerProfileError('not_found')
@@ -449,8 +511,8 @@ export class DatabasePilotTrainerProfiles implements PilotTrainerProfiles {
       if (!deleted) throw new TrainerProfileError('not_found')
       const rows = await client.query<TrainerProfileRow>(`
         update public.trainer_professional_profiles set draft_data = $1::jsonb,
-          version = version + 1 where trainer_id = auth.uid() returning *
-      `, [JSON.stringify({ ...profile.draft_data, photos: photos.filter((photo) => photo.id !== photoId) })])
+          version = version + 1 where trainer_id = $2 returning *
+      `, [JSON.stringify({ ...profile.draft_data, photos: photos.filter((photo) => photo.id !== photoId) }), target])
       const publishedPaths = new Set(storedPhotos(profile.published_data).flatMap((photo) => [photo.path, photo.thumbnailPath]))
       const removable = publishedPaths.has(deleted.path) || publishedPaths.has(deleted.thumbnailPath) ? [] : [deleted]
       return { row: rows[0]!, removable }
@@ -461,9 +523,9 @@ export class DatabasePilotTrainerProfiles implements PilotTrainerProfiles {
     return this.exposeRow(result.row)
   }
 
-  async publish(session: YandexActorSessionInput) {
-    const result = await this.withSession(session, async (client) => {
-      const current = await client.query<TrainerProfileRow>('select * from public.trainer_professional_profiles where trainer_id = auth.uid() for update')
+  async publish(session: YandexActorSessionInput, context?: ProfileWriteContext) {
+    const result = await this.withWrite(session, context, { action: 'publish' }, async (client, target) => {
+      const current = await client.query<TrainerProfileRow>('select * from public.trainer_professional_profiles where trainer_id = $1 for update', [target])
       const row = current[0]
       if (row === undefined) throw new TrainerProfileError('not_found')
       if (row.draft_data.displayName.trim().length < 2) throw new TrainerProfileError('invalid')
@@ -474,18 +536,18 @@ export class DatabasePilotTrainerProfiles implements PilotTrainerProfiles {
         update public.trainer_professional_profiles set published_data = draft_data,
           listed_in_catalog = case when published_data is null then true else listed_in_catalog end,
           published_at = now(), version = version + 1
-        where trainer_id = auth.uid() returning *
-      `)
+        where trainer_id = $1 returning *
+      `, [target])
       return { row: rows[0]!, orphaned }
     })
     await this.removePhotos(result.orphaned)
     return this.exposeRow(result.row)
   }
 
-  async unpublish(session: YandexActorSessionInput) {
-    const result = await this.withSession(session, async (client) => {
+  async unpublish(session: YandexActorSessionInput, context?: ProfileWriteContext) {
+    const result = await this.withWrite(session, context, { action: 'unpublish' }, async (client, target) => {
       const current = await client.query<TrainerProfileRow>(
-        'select * from public.trainer_professional_profiles where trainer_id = auth.uid() for update',
+        'select * from public.trainer_professional_profiles where trainer_id = $1 for update', [target],
       )
       const profile = current[0]
       if (!profile) throw new TrainerProfileError('not_found')
@@ -495,8 +557,8 @@ export class DatabasePilotTrainerProfiles implements PilotTrainerProfiles {
       const rows = await client.query<TrainerProfileRow>(`
         update public.trainer_professional_profiles set published_data = null,
           published_at = null, listed_in_catalog = false, version = version + 1
-        where trainer_id = auth.uid() returning *
-      `)
+        where trainer_id = $1 returning *
+      `, [target])
       if (rows[0] === undefined) throw new TrainerProfileError('not_found')
       return { row: rows[0], orphaned }
     })
@@ -504,15 +566,15 @@ export class DatabasePilotTrainerProfiles implements PilotTrainerProfiles {
     return this.exposeRow(result.row)
   }
 
-  async setCatalogListing(session: YandexActorSessionInput, listed: boolean) {
-    const row = await this.withSession(session, async (client) => {
+  async setCatalogListing(session: YandexActorSessionInput, listed: boolean, context?: ProfileWriteContext) {
+    const row = await this.withWrite(session, context, { action: 'catalog', listed }, async (client, target) => {
       const rows = await client.query<TrainerProfileRow>(`
         update public.trainer_professional_profiles
         set listed_in_catalog = $1, version = version + 1
-        where trainer_id = auth.uid()
+        where trainer_id = $2
           and (not $1 or published_data is not null)
         returning *
-      `, [listed])
+      `, [listed, target])
       if (rows[0] === undefined) throw new TrainerProfileError('invalid')
       return rows[0]
     })
