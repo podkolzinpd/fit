@@ -199,6 +199,28 @@ test('manual card audit is opt-in and its workflow shell parses', () => {
   assert.equal(parsed.status, 0, parsed.stderr)
 })
 
+test('manual card audit shares a validated snapshot with a separate runtime connection', async () => {
+  const audit = await manualCardAudit()
+  for (const valid of [true, false]) {
+    const runtimeStatements = []
+    const owner = { query: async sql => {
+      if (sql.includes('transaction_read_only')) return { rows: [{ name: 'fit_owner', readonly: 'on' }] }
+      if (sql.includes('pg_export_snapshot')) return { rows: [{ snapshot: valid ? '00000003-0000001B-1' : "private';bad" }] }
+      if (sql.includes('count(*)::int cards')) return { rows: [{ cards: 0, active: 0, archived: 0, merged: 0, old_active: 0 }] }
+      return { rows: [] }
+    } }
+    const runtime = { query: async sql => { runtimeStatements.push(sql); return { rows: [] } } }
+    if (!valid) await assert.rejects(audit(owner, runtime), /manual_audit_snapshot_invalid/)
+    else {
+      assert.equal((await audit(owner, runtime)).active, 0)
+      assert.equal(runtimeStatements[0], 'begin transaction isolation level repeatable read read only')
+      assert.equal(runtimeStatements[1], "set transaction snapshot '00000003-0000001B-1'")
+      assert.equal(runtimeStatements.at(-1), 'commit')
+    }
+    assert.doesNotMatch(runtimeStatements.join('\n'), /private|set local role/)
+  }
+})
+
 test('push recovery is a manual typed exact-main operation, never a sender or arbitrary SQL route', () => {
   const workflow = read('.github/workflows/recover-cloudru-fresh-push.yml')
   assert.match(workflow, /on:\n  workflow_dispatch:/)
