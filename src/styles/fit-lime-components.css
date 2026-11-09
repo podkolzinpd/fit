@@ -1,7 +1,8 @@
 /* Fit Lime is inert until an approved trainer route receives .fit-lime.
    Do not infer this class from email, browser storage or Schedule V2. */
 html.fit-lime-document,
-.phone-frame.fit-lime {
+.phone-frame.fit-lime,
+.private-analytics-shell.fit-lime {
   --lime-bg: #000000;
   --lime-surface: #1a1a1c;
   --lime-surface-raised: #252529;

@@ -52,7 +52,7 @@ export function PrivateAnalyticsPage() {
   const max=Math.max(1,...(data?.trend.map(t=>t[chartMetric])??[]))
   const extraColumns=data?.rows.flatMap(row=>Object.keys(row)).filter(key=>labels[key])??[]
   const availableColumns=[...new Set([...definition.columns,...extraColumns])]
-  return <main className={`corporate-admin-shell ui-identity ym-hide-content ${theme==='light'?'theme-light':''}`}><div className="page private-analytics">
+  return <main className={`corporate-admin-shell private-analytics-shell fit-lime fit-lime-shell ui-identity ym-hide-content ${theme==='light'?'theme-light':''}`}><div className="page private-analytics">
     <header className="private-analytics-header"><div><h1>Аналитика Fit</h1><p>Люди, действия и результаты · время Москвы</p></div><button type="button" onClick={()=>void query.refetch()} disabled={query.isFetching}>Обновить</button></header>
     <form className="private-analytics-filters" onSubmit={event=>{event.preventDefault();apply({...draft,page:1})}}>
       <label>С даты<input type="date" required value={draft.from} max={draft.to} onChange={e=>setDraft({...draft,from:e.target.value})}/></label>
