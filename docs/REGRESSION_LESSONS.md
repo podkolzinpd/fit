@@ -309,3 +309,14 @@ fixture с CI `pilot`, а `/today?week=…` у старого actor остаёт
 PageView каждого через официальный _ym_debug=2 после публикации.
 Вебвизор — только одному счётчику; настройки приватности нового сохраняются.
 [Причина, red/green, границы и выпуск](design/TRAINER_LANDING_20261107.md#итерация22--09112026--codex--openai--восстановить-параллельную-метрику).
+
+
+## CI fixtures: LocalDate и московский день аналитики — 10.11.2026
+
+В corporate-admin.integration.test.ts после21:00UTC fixture current_date
+отставала от фильтра Moscow на день: workoutrow отсутствовала, хотя runtime
+верно фильтровал LocalDate. При одном фильтре Moscow fixture workout/payment/
+nutrition/package должны явно получать этот день; timestamp-actions остаются
+по настоящему now(). Нельзя исправлять заменой всех фильтров наUTC или ослаблять
+assertions. ВоспроизведениеUTC→Moscow и обе sessiontimezone:21/21+21/21.
+[Причина и границы исправления](design/CLIENT_REFERENCE_SCREENS_20261029.md#213-mc514--блокер-ci-даты-синтетических-записей-аналитики).

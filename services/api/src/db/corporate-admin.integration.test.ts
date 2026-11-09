@@ -35,7 +35,8 @@ describe.skipIf(!source)('corporate administration on real actor/RLS', () => {
     await pool.query(`insert into public.profiles(id,first_name,account_role) values($1,'Synthetic admin','client'),($2,'Synthetic coach','trainer'),($3,'Synthetic athlete','client')`,[admin,coach,athlete])
     await pool.query('insert into public.trainers(profile_id) values($1)',[coach])
     await pool.query(`insert into public.clients(id,trainer_id,full_name) values($1,$2,'Synthetic client')`,[card,coach])
-    await pool.query(`insert into public.workouts(id,client_id,trainer_id,created_by,workout_date,status,completed_at,training_format) values($1,$2,$3,$3,current_date,'done',now(),'with_trainer')`,[workout,card,coach])
+    // Match the explorer's Moscow day even when the PostgreSQL session uses UTC.
+    await pool.query(`insert into public.workouts(id,client_id,trainer_id,created_by,workout_date,status,completed_at,training_format) values($1,$2,$3,$3,(now() at time zone 'Europe/Moscow')::date,'done',now(),'with_trainer')`,[workout,card,coach])
     financeBeforeAdmin = (await pool.query<{ row: Record<string, unknown> }>(
       'select to_jsonb(session) row from public.trainer_finance_sessions session order by session.id')).rows
     expect(financeBeforeAdmin).toHaveLength(1)
@@ -110,8 +111,8 @@ describe.skipIf(!source)('corporate administration on real actor/RLS', () => {
       const ranking=(await db.query<{result:{rows:Array<Record<string,unknown>>}}>('select app_private.private_analytics_explore($1::jsonb) result',[JSON.stringify({...filters,from:today,to:today,section:'exercises',role:'trainer'})])).rows[0]!.result
       expect(ranking.rows).toContainEqual(expect.objectContaining({workouts:1,users:1,sets:1}))
       const packageId=randomUUID(),paymentId=randomUUID()
-      await db.query(`insert into public.trainer_finance_packages(id,trainer_id,client_id,title,sessions_total,price_cents,starts_on,payment_due_on) values($1,$2,$3,'Synthetic package',10,100000,current_date,current_date-1)`,[packageId,coach,card])
-      await db.query(`insert into public.trainer_finance_payments(id,package_id,trainer_id,client_id,amount_cents,received_on) values($1,$2,$3,$4,20000,current_date)`,[paymentId,packageId,coach,card])
+      await db.query(`insert into public.trainer_finance_packages(id,trainer_id,client_id,title,sessions_total,price_cents,starts_on,payment_due_on) values($1,$2,$3,'Synthetic package',10,100000,$4::date,$4::date-1)`,[packageId,coach,card,today])
+      await db.query(`insert into public.trainer_finance_payments(id,package_id,trainer_id,client_id,amount_cents,received_on) values($1,$2,$3,$4,20000,$5::date)`,[paymentId,packageId,coach,card,today])
       const finance=(await db.query<{result:{rows:Array<Record<string,unknown>>;summary:Record<string,number>;total:number}}>('select app_private.private_analytics_explore($1::jsonb) result',[JSON.stringify({...filters,from:today,to:today,section:'payments'})])).rows[0]!.result
       expect(finance.summary).toMatchObject({received:200,due:800,overdue:800})
       expect(finance.rows[0]).toMatchObject({amount:200,id:paymentId})
@@ -139,7 +140,7 @@ describe.skipIf(!source)('corporate administration on real actor/RLS', () => {
       // Product-owner analytics does not inherit trainer diary consent rules.
       const mealId=randomUUID()
       await db.query(`insert into public.nutrition_entries(id,owner_id,day,meal,name,basis,grams,calories)
-        values($1,$2,current_date,'lunch','Synthetic meal','100g',150,200)`,[mealId,athlete])
+        values($1,$2,$3::date,'lunch','Synthetic meal','100g',150,200)`,[mealId,athlete,today])
       const nutrition=(await db.query<{result:{rows:Array<Record<string,unknown>>}}>('select app_private.private_analytics_explore($1::jsonb) result',[JSON.stringify({...filters,from:today,to:today,section:'nutrition',person:athlete})])).rows[0]!.result
       expect(nutrition.rows).toContainEqual(expect.objectContaining({id:mealId,calories:300}))
       await db.query('update public.clients set auth_user_id=$2 where id=$1',[card,athlete])
