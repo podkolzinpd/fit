@@ -53,7 +53,6 @@ import {
   claimClientInvitationLink,
   createClientInvitation,
   createNewClientInvitationShare,
-  createClientInvitationShare,
   leaveClientSpace,
   removeClientTrainer,
   revokeClientInvitation,
@@ -5616,14 +5615,10 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
 
       let sourceClientId: string | undefined
       try {
-        await expect(withActorTransaction(runtimePool,ACTOR_ID,client=>createNewClientInvitationShare(client,'Карточка от тренера',LINK_MERGE_OPERATION_ID)))
-          .rejects.toThrow('athlete_registration_required')
-        const legacy = await seedLegacyCard({fullName:'Карточка от тренера'})
-        const created = {clientId:legacy.id,share:await withActorTransaction(runtimePool,ACTOR_ID,client=>createClientInvitationShare(client,legacy.id,'client'))}
+        const created = await withActorTransaction(runtimePool,ACTOR_ID,client=>createNewClientInvitationShare(client,'Карточка от тренера',LINK_MERGE_OPERATION_ID))
         sourceClientId = created.clientId
 
-        await expect(withActorTransaction(runtimePool,ACTOR_ID,client=>createNewClientInvitationShare(client,'Карточка от тренера',LINK_MERGE_OPERATION_ID)))
-          .rejects.toThrow('athlete_registration_required')
+        await expect(withActorTransaction(runtimePool,ACTOR_ID,client=>createNewClientInvitationShare(client,'Карточка от тренера',LINK_MERGE_OPERATION_ID))).resolves.toEqual(created)
 
         const cardAndInvitation = await ownerPool.query<{
           card_count: string
@@ -5735,10 +5730,7 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
 
       let sourceClientId: string | undefined
       try {
-        await expect(withActorTransaction(runtimePool,ACTOR_ID,client=>createNewClientInvitationShare(client,'Новая карточка без потерь',LINK_CONFLICT_OPERATION_ID)))
-          .rejects.toThrow('athlete_registration_required')
-        const legacy = await seedLegacyCard({fullName:'Новая карточка без потерь'})
-        const created = {clientId:legacy.id,share:await withActorTransaction(runtimePool,ACTOR_ID,client=>createClientInvitationShare(client,legacy.id,'client'))}
+        const created = await withActorTransaction(runtimePool,ACTOR_ID,client=>createNewClientInvitationShare(client,'Новая карточка без потерь',LINK_CONFLICT_OPERATION_ID))
         sourceClientId = created.clientId
 
         await expect(withActorTransaction(
@@ -9954,9 +9946,7 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
         equipment: 'Сани',
         description: 'Толкайте сани с устойчивым корпусом.',
       }
-      await expect(withActorTransaction(runtimePool, ACTOR_ID, client => createClientCard(client, draft)))
-        .rejects.toThrow('athlete_registration_required')
-      const created = await seedLegacyCard(draft)
+      const created = await withActorTransaction(runtimePool, ACTOR_ID, client => createClientCard(client, draft))
       let exerciseId: string | undefined
 
       try {
@@ -10655,11 +10645,9 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
         content: 'Готов черновик клиента',
       })
 
-      await expect(withActorTransaction(runtimePool, ACTOR_ID, client =>
-        applyAssistantAction(client, ASSISTANT_ACTION_ID, { fullName: 'Клиент из Assistant' }, 1)))
-        .resolves.toMatchObject({status:'failed',version:1,errorCode:'assistant_action_failed'})
-      const historical = await seedLegacyCard({ fullName: 'Клиент из Assistant' })
-      await ownerPool.query("update public.assistant_actions set status='applied',version=2,result=jsonb_build_object('status','applied','clientId',$2::text),applied_at=now() where id=$1", [ASSISTANT_ACTION_ID,historical.id])
+      const applied = await withActorTransaction(runtimePool, ACTOR_ID, client =>
+        applyAssistantAction(client, ASSISTANT_ACTION_ID, { fullName: 'Клиент из Assistant' }, 1))
+      expect(applied).toMatchObject({status:'applied',version:2})
       const appliedAgain = await withActorTransaction(
         runtimePool,
         ACTOR_ID,

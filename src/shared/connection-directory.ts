@@ -1,4 +1,6 @@
 export interface ConnectionPerson {
+  shareHistory?: boolean
+  shareSoloHistory?: boolean
   invitationCode?: string
   id: string
   name: string
@@ -17,7 +19,10 @@ export interface ConnectionRequest {
   role: 'trainer' | 'client'
   expiresAt: string
 }
+export interface TrainerHistoryAccess { relationshipId: string; trainerId: string; enabled: boolean; soloEnabled: boolean }
 export interface ConnectionDirectory {
+  historyAccess?(): Promise<TrainerHistoryAccess | null>
+  setHistoryAccess?(relationshipId: string, shareHistory: boolean, shareSoloHistory?: boolean): Promise<TrainerHistoryAccess>
   createInvitation(): Promise<{ id: string; code: string; expiresAt: string }>
   revokeInvitation(code: string): Promise<{ status: string }>
   self(): Promise<{ code: string; fitId: string; emailSearchReady: boolean }>

@@ -15,6 +15,8 @@ const repository = vi.hoisted(() => ({
   revoke: vi.fn(),
 }))
 
+const directory = vi.hoisted(() => ({ historyAccess: vi.fn(), setHistoryAccess: vi.fn(), list: vi.fn() }))
+
 vi.mock('../../app/auth-context', () => ({
   useAuth: () => ({ actor: { userId: 'client-user', role: 'client', firstName: 'Антон' } }),
 }))
@@ -32,10 +34,38 @@ function renderConnections(finance?: ReactNode) {
 describe('ClientTrainerConnections safe disconnect', () => {
   beforeEach(() => {
     Object.values(repository).forEach((mock) => mock.mockReset())
+    directory.list.mockResolvedValue([])
+    directory.historyAccess.mockResolvedValue({ relationshipId: 'period-1', trainerId: 'trainer-1', enabled: false, soloEnabled: false })
+    directory.setHistoryAccess.mockReset()
     repository.list.mockResolvedValue([])
     repository.listTrainers.mockResolvedValue([connectedTrainer])
   })
 
+  it('saves and revokes history access only for the displayed relationship', async () => {
+    const user = userEvent.setup()
+    directory.setHistoryAccess.mockImplementation((_id: string, enabled: boolean) => {
+      const access = { relationshipId: 'period-1', trainerId: 'trainer-1', enabled, soloEnabled: false }
+      directory.historyAccess.mockResolvedValue(access)
+      return Promise.resolve(access)
+    })
+    renderConnections()
+    const control = await screen.findByRole('switch', { name: 'Вся история тренировок' })
+    expect(control).not.toBeChecked()
+    await user.click(control)
+    expect(await screen.findByText('Доступ к истории открыт')).toBeVisible()
+    expect(directory.setHistoryAccess).toHaveBeenCalledWith('period-1', true, false)
+    await user.click(control)
+    expect(await screen.findByText('Доступ к истории закрыт')).toBeVisible()
+    expect(directory.setHistoryAccess).toHaveBeenCalledWith('period-1', false, false)
+  })
+  it('keeps the persisted choice and offers recovery when saving fails', async () => {
+    directory.setHistoryAccess.mockRejectedValue(new Error('offline'))
+    renderConnections()
+    await userEvent.click(await screen.findByRole('switch', { name: 'Вся история тренировок' }))
+    expect(await screen.findByRole('alert')).toHaveTextContent('Не удалось обновить доступ к истории')
+    expect(screen.getByRole('switch', { name: 'Вся история тренировок' })).not.toBeChecked()
+    expect(screen.getByRole('button', { name: 'Повторить проверку' })).toBeVisible()
+  })
   it('uses the server public name and initials even when the account name is empty', async () => {
     repository.listTrainers.mockResolvedValue([{ ...connectedTrainer, firstName: null, lastName: null, displayName: 'Татьяна Александровна' }])
     renderConnections()
@@ -165,5 +195,5 @@ describe('ClientTrainerConnections safe disconnect', () => {
 
 vi.mock('../../app/data-backend-context', async () => {
   const { nativeBackend } = await import('../../test/native-backend')
-  return { useDataBackend: () => ({ ...nativeBackend, invitations: repository }) }
+  return { useDataBackend: () => ({ ...nativeBackend, invitations: repository, connectionDirectory: directory }) }
 })

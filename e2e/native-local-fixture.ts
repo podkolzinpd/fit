@@ -167,3 +167,17 @@ export async function nativeCreateConnectedAthlete(trainerPage: Page, values: {
   if (!trainerClients.clients.some(client => client.id === card.id && client.hasAccount && client.canCreateWorkout)) throw new Error('Confirmed athlete is not available to the trainer')
   return { clientId: card.id, athleteKey, athleteProfileId: identity.profileId, fullName: card.fullName }
 }
+
+/** Style gates only; data, authentication and mutations still use the real local API. */
+export async function nativeEnableLime(page: Page, role: 'trainer' | 'client'): Promise<void> {
+  await page.route('**/v1/auth/yandex/session', async route => {
+    if (route.request().method() !== 'GET') return route.fallback()
+    const response = await nativeRouteFetch(route)
+    const payload = await response.json() as { profile?: { experiments?: Record<string, boolean> } }
+    if (!payload.profile) return route.fulfill({ response })
+    await route.fulfill({ response, json: { ...payload, profile: { ...payload.profile,
+      experiments: { ...payload.profile.experiments, ...(role === 'trainer'
+        ? { trainerScheduleV2: true, fitLime: true } : { clientLime: true }) },
+    } } })
+  })
+}

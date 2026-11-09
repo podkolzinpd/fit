@@ -141,7 +141,7 @@ const router = createBrowserRouter([
       { path: '/today', element: <TrainerTodayPage /> },
       { path: '/clients', element: <ClientsPage /> },
       { path: '/clients/archive', element: <ArchivedClientsPage /> },
-      { path: '/clients/new', element: <Navigate to="/connect" replace /> },
+      { path: '/clients/new', element: <ClientFormPage /> },
       { element: <TrainerFinancePilotOnly />, children: [
         { path: '/finance', element: <TrainerFinanceOverviewPage /> },
       ] },

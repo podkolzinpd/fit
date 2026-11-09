@@ -548,6 +548,8 @@ export interface WorkoutFeedbackDraft {
 }
 
 export interface Workout {
+  /** Server capability; shared history is read-only. */
+  canCorrectDuration?: boolean
   id: UUID
   title?: string | null
   clientId: UUID

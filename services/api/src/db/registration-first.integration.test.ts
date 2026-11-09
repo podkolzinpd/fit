@@ -49,12 +49,76 @@ describe.skipIf(!source)('registration and consent before new coaching work', ()
     }
     throw Error('expected_database_lock_not_observed')
   }
-  it('rejects old trainer card creation and new-card invitations without partial rows', async () => {
+  it('restores trainer-owned manual cards and keeps new invitation creation available', async () => {
     const f = await fixture(false)
-    const count = (await pool.query<{ n: string }>('select count(*) n from public.clients where trainer_id=$1', [f.trainer])).rows[0]
-    await expect(actor(f.trainer, 'select * from public.create_client_card($1)', [{ fullName: 'Unknown Athlete' }])).rejects.toMatchObject({ message: 'athlete_registration_required' })
-    await expect(actor(f.trainer, 'select * from public.create_new_client_invitation_share($1,$2)', ['Unknown Athlete', randomUUID()])).rejects.toMatchObject({ message: 'athlete_registration_required' })
-    expect((await pool.query<{ n: string }>('select count(*) n from public.clients where trainer_id=$1', [f.trainer])).rows[0]).toEqual(count)
+    const [created] = await actor(f.trainer, 'select * from public.create_client_card($1)', [{ fullName: 'Unknown Athlete' }])
+    expect(created!.client_id).toBeTruthy()
+    expect(await actor(f.trainer, 'select public.can_create_client_workout($1) allowed', [created!.client_id])).toEqual([{ allowed: true }])
+    expect(await actor(f.trainer, 'select * from public.create_new_client_invitation_share($1,$2)', ['Unknown Athlete', randomUUID()])).toHaveLength(1)
+    for (const sql of ['select * from public.save_planned_workout($1,null)', 'select * from public.save_completed_workout($1,null)']) {
+      expect(await actor(f.trainer, sql, [planned(String(created!.client_id))])).toHaveLength(1)
+    }
+    expect(await actor(f.trainer, 'select * from public.quick_start_live_workout($1,$2)', [created!.client_id, randomUUID()])).toHaveLength(1)
+  })
+  it('never lets another trainer create workouts for an unclaimed manual card', async () => {
+    const f = await fixture(false), other = await fixture(false)
+    expect(await actor(other.trainer, 'select public.can_create_client_workout($1) allowed', [f.card])).toEqual([{ allowed: false }])
+    await expect(actor(other.trainer, 'select * from public.quick_start_live_workout($1,$2)', [f.card, randomUUID()])).rejects.toMatchObject({ message: 'athlete_connection_required' })
+  })
+  it('shares all earlier trainers’ workouts only with relationship-scoped athlete consent, read-only', async () => {
+    const f = await fixture(true, true), second = await fixture(false), third = await fixture(false)
+    const historical = randomUUID(), secondHistory = randomUUID()
+    await pool.query("insert into public.workouts(id,trainer_id,client_id,created_by,workout_date,status,completed_at) values($1,$2,$3,$2,'2026-01-01','done',now()),($4,$2,$3,$5,'2026-02-01','done',now())", [historical,f.trainer,f.card,secondHistory,third.trainer])
+    const directory = (who: string, action: string, data = {}) => actor(who, 'select app_private.connection_directory($1,$2) result', [action,data])
+    const [preview] = await directory(f.athlete,'preview',{peerId:second.trainer})
+    const consent = preview!.result as Record<string,unknown>
+    const [sent] = await directory(f.athlete,'send',{peerId:second.trainer,...consent,shareHistory:true})
+    const request = sent!.result as { id:string }
+    await directory(second.trainer,'accept',{requestId:request.id,expectedRelationshipId:null,expectedRevision:null,shareHistory:false})
+    expect(await actor(second.trainer,'select id from public.workouts where client_id=$1 order by workout_date',[f.card])).toEqual([{id:historical},{id:secondHistory}])
+    // A later import of an old workout is still part of the shared history.
+    const lateHistory = randomUUID()
+    await pool.query("insert into public.workouts(id,trainer_id,client_id,created_by,workout_date,status,completed_at) values($1,$2,$3,$4,'2025-01-01','done',now())",[lateHistory,f.trainer,f.card,third.trainer])
+    expect(await actor(second.trainer,'select id from public.workouts where id=$1',[lateHistory])).toEqual([{id:lateHistory}])
+    await expect(actor(second.trainer,'select public.set_workout_actual_duration($1,600,1)',[historical])).rejects.toMatchObject({message:'workout_forbidden'})
+    await expect(actor(second.trainer,'select * from public.save_completed_workout($1,1)',[{...planned(f.card),id:historical}])).rejects.toMatchObject({message:'workout_forbidden'})
+    const [access] = await directory(f.athlete,'history_access')
+    const current = access!.result as {relationshipId:string;enabled:boolean}
+    expect(current.enabled).toBe(true)
+    await expect(directory(second.trainer,'set_history_access',{relationshipId:current.relationshipId,shareHistory:true})).rejects.toMatchObject({message:'connection_forbidden'})
+    await directory(f.athlete,'set_history_access',{relationshipId:current.relationshipId,shareHistory:false})
+    expect(await actor(second.trainer,'select id from public.workouts where client_id=$1',[f.card])).toEqual([])
+    // A replay of the trainer's acceptance cannot restore revoked access.
+    await directory(second.trainer,'accept',{requestId:request.id,expectedRelationshipId:null,expectedRevision:null})
+    expect(await actor(second.trainer,'select id from public.workouts where client_id=$1',[f.card])).toEqual([])
+    await directory(f.athlete,'set_history_access',{relationshipId:current.relationshipId,shareHistory:true})
+    expect(await actor(second.trainer,'select id from public.workouts where client_id=$1',[f.card])).toHaveLength(3)
+    await actor(f.athlete,'select public.remove_client_trainer($1,$2)',[f.card,second.trainer])
+    expect(await actor(second.trainer,'select id from public.workouts where client_id=$1',[f.card])).toEqual([])
+    const [next] = await directory(f.athlete,'preview',{peerId:third.trainer})
+    const [nextRequest] = await directory(f.athlete,'send',{peerId:third.trainer,...next!.result as object,shareHistory:false})
+    await directory(third.trainer,'accept',{requestId:(nextRequest!.result as {id:string}).id,expectedRelationshipId:null,expectedRevision:null,shareHistory:true})
+    expect(await actor(third.trainer,'select id from public.workouts where client_id=$1 order by workout_date',[f.card])).toEqual([{id:lateHistory},{id:secondHistory}])
+    await expect(directory(f.athlete,'set_history_access',{relationshipId:current.relationshipId,shareHistory:true})).rejects.toMatchObject({message:'connection_changed'})
+    expect((await pool.query('select id from public.workouts where client_id=$1',[f.card])).rows).toHaveLength(3)
+  })
+  it('can share only independent history and revoke it without exposing previous coaches’ sessions', async () => {
+    const f = await fixture(true,true), next = await fixture(false)
+    const solo = randomUUID(), coached = randomUUID()
+    await pool.query("insert into public.workouts(id,trainer_id,client_id,created_by,workout_date,status,completed_at,training_format) values($1,$2,$3,$4,'2026-01-01','done',now(),'self'),($5,$2,$3,$2,'2026-01-02','done',now(),'with_trainer')",[solo,f.trainer,f.card,f.athlete,coached])
+    const directory = (who: string, action: string, data = {}) => actor(who,'select app_private.connection_directory($1,$2) result',[action,data])
+    const [preview] = await directory(f.athlete,'preview',{peerId:next.trainer})
+    const [sent] = await directory(f.athlete,'send',{peerId:next.trainer,...preview!.result as object,shareHistory:false,shareSoloHistory:true})
+    await directory(next.trainer,'accept',{requestId:(sent!.result as {id:string}).id,expectedRelationshipId:null,expectedRevision:null})
+    expect(await actor(next.trainer,'select id from public.workouts where client_id=$1',[f.card])).toEqual([{id:solo}])
+    const [access] = await directory(f.athlete,'history_access')
+    const permission = access!.result as {relationshipId:string;soloEnabled:boolean}
+    expect(permission.soloEnabled).toBe(true)
+    await directory(f.athlete,'set_history_access',{relationshipId:permission.relationshipId,shareHistory:false,shareSoloHistory:false})
+    expect(await actor(next.trainer,'select id from public.workouts where client_id=$1',[f.card])).toEqual([])
+    await directory(f.athlete,'set_history_access',{relationshipId:permission.relationshipId,shareHistory:true,shareSoloHistory:false})
+    expect(await actor(next.trainer,'select id from public.workouts where client_id=$1',[f.card])).toHaveLength(2)
+    expect(await actor(f.athlete,'select id from public.workouts where client_id=$1',[f.card])).toHaveLength(2)
   })
   it('allows the registered athlete to create their own card and workout', async () => {
     const f = await fixture(false)
@@ -62,7 +126,8 @@ describe.skipIf(!source)('registration and consent before new coaching work', ()
     expect(await actor(f.athlete, 'select public.can_create_client_workout($1) allowed', [created!.client_id])).toEqual([{ allowed: true }])
     expect(await actor(f.athlete, 'select * from public.save_planned_workout($1,null)', [planned(String(created!.client_id))])).toHaveLength(1)
   })
-  it.each([false, true])('rejects new plans, results and Live without an active connection (registered=%s)', async registered => {
+  it('rejects new plans, results and Live for a registered athlete without consent', async () => {
+    const registered = true
     const f = await fixture(registered)
     expect(await actor(f.trainer, 'select public.can_create_client_workout($1) allowed', [f.card])).toEqual([{ allowed: false }])
     for (const sql of ['select * from public.save_planned_workout($1,null)', 'select * from public.save_completed_workout($1,null)']) await expect(actor(f.trainer, sql, [planned(f.card)])).rejects.toMatchObject({ message: registered ? 'workout_forbidden' : 'athlete_connection_required' })

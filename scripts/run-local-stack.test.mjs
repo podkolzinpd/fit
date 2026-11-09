@@ -3,6 +3,7 @@ import { spawnSync } from 'node:child_process'
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { test } from 'node:test'
 
 const launcher = new URL('./run-local-stack.mjs', import.meta.url)
@@ -24,7 +25,7 @@ if (command === 'podman' && args[0] === 'inspect') console.log('true')
     for (const command of ['npm', 'podman', 'node']) {
       writeFileSync(join(directory, command), executable, { mode: 0o755 })
     }
-    const result = spawnSync(process.execPath, [launcher.pathname, '--verify'], {
+    const result = spawnSync(process.execPath, [fileURLToPath(launcher), '--verify'], {
       cwd: directory,
       encoding: 'utf8',
       env: { ...process.env, PATH: directory, FIT_LOCAL_CALLS: calls, FIT_LOCAL_FAIL: failure },

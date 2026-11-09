@@ -10,6 +10,8 @@ export interface TrainerConnectionPreview {
   offerVersion: string
 }
 export interface TrainerConnectionConfirmation extends TrainerConnectionOffer {
+  shareHistory?: boolean
+  shareSoloHistory?: boolean
   expectedRelationshipId: string | null
   offerVersion: string
   operationId: string

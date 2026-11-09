@@ -24,9 +24,11 @@ describe('shared athlete consent', () => {
     expect(await screen.findByText('Анна')).toBeInTheDocument()
     expect(screen.getByText('Иван')).toBeInTheDocument()
     expect(repository.confirm).not.toHaveBeenCalled()
+    expect(screen.getByRole('switch', { name: 'Вся история тренировок' })).not.toBeChecked()
+    await user.click(screen.getByRole('switch', { name: 'Вся история тренировок' }))
     await user.click(screen.getByRole('button', { name: 'Сменить тренера' }))
     await waitFor(() => expect(onSuccess).toHaveBeenCalledWith('athlete'))
-    expect(repository.confirm).toHaveBeenCalledWith(expect.objectContaining({ source: 'chat', locator: 'chat-1', expectedRelationshipId: 'old-period', offerVersion: 'offer-v1' }))
+    expect(repository.confirm).toHaveBeenCalledWith(expect.objectContaining({ source: 'chat', locator: 'chat-1', expectedRelationshipId: 'old-period', offerVersion: 'offer-v1', shareHistory: true }))
   })
   it('retains the operation on a lost response, but demands a new preview after a stale confirmation', async () => {
     const { repository, user } = fixture()

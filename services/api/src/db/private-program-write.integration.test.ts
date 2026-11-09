@@ -168,13 +168,13 @@ describe.skipIf(source===undefined)('bounded weekly-program writes and closed-re
     for(const id of [f.coach,f.other])expect(JSON.stringify(f.receipts)).not.toContain(id)
     expect(f.started).toBe(false);expect(f.proof).toBeNull();expect(await f.count('workouts')).toBe(0)
   })
-  it('refuses a trainer-only pseudo-athlete import without creating an account or history',async()=>{
+  it('keeps own workouts self without changing trainer role or creating an authentication account',async()=>{
     const f=await fixture('self')
     const before=(await f.owner.query('select id,account_role from public.profiles order by id')).rows
-    await runProgramImport(f.options)
-    await expect(runProgramImport({...f.options,mode:'apply'})).rejects.toThrow('journal_import_failed_rolled_back')
+    await runProgramImport(f.options);expect(await runProgramImport({...f.options,mode:'apply'})).toMatchObject({createdCard:true,contentVerified:true})
     expect((await f.owner.query('select id,account_role from public.profiles order by id')).rows).toEqual(before)
-    expect(await f.count('clients')).toBe(0);expect(await f.count('workouts')).toBe(0)
+    expect((await f.owner.query<{training_format:string}>('select training_format from public.workouts where created_by=$1',[f.coach])).rows.map(w=>w.training_format)).toEqual(['self','self','self'])
+    expect((await f.owner.query<{n:number}>('select count(*)::int n from app_private.auth_identities where profile_id=$1',[f.coach])).rows[0]?.n).toBe(1)
   })
   it('preserves a linked existing card, old records and finances; different same-day history is retained',async()=>{
     const f=await fixture(),athlete=randomUUID()

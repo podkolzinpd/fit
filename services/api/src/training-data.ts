@@ -43,6 +43,7 @@ interface WorkoutRow extends QueryResultRow {
   trainer_id: string
   client_id: string
   client_name: string
+  can_correct_duration: boolean
   created_by: string | null
   origin: 'manual' | 'ai'
   favorite_title: string | null
@@ -337,6 +338,10 @@ export async function readAccessibleTrainingData(
         workout.client_id,
         public.readable_workout_client_name(workout.id) as client_name,
         workout.created_by,
+        (case when workout.created_by=auth.uid() or workout.created_by is null and workout.trainer_id=auth.uid() then true
+          else exists(select 1 from public.clients duration_client where duration_client.id=workout.client_id
+            and (duration_client.auth_user_id=auth.uid() or workout.status in ('in_progress','done')
+              and duration_client.auth_user_id is not null and workout.created_by=duration_client.auth_user_id)) end) as can_correct_duration,
         workout.origin,
         workout.favorite_title,
         workout.prep_seconds,
@@ -532,6 +537,7 @@ export async function readAccessibleTrainingData(
         clientId: row.client_id,
         clientName: row.client_name,
         createdBy: row.created_by,
+        ...(row.can_correct_duration === false ? { canCorrectDuration: false } : {}),
         origin: row.origin,
         favoriteTitle: row.favorite_title,
         ...(row.prep_seconds === null || row.prep_seconds === undefined ? {} : { prepSeconds: row.prep_seconds }),

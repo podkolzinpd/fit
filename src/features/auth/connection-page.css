@@ -11,3 +11,5 @@
 .connection-page .page-back > svg { width:24px; height:24px }
 
 .button.connection-entry { min-height: 44px; }
+
+.connection-page .connection-manual-card { display:flex; align-items:center; justify-content:center; min-height:44px; text-align:center }

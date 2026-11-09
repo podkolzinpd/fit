@@ -32,6 +32,11 @@ describe('workout duration entry and correction', () => {
     expect(onChange).toHaveBeenCalledWith('50,5')
     expect(screen.getByText(/Необязательно/)).toBeVisible()
   })
+  it('shows shared history duration without an editing action', () => {
+    render(<WorkoutActualDuration workout={{ ...workout, actualDurationSec: 600 }} readOnly onSave={vi.fn()} onReload={vi.fn()} />)
+    expect(screen.getByText('10 мин')).toBeVisible()
+    expect(screen.queryByRole('button', { name: 'Изменить длительность' })).not.toBeInTheDocument()
+  })
   it('starts unknown, rejects invalid time and saves a seconds-only fact', async () => {
     const onSave = vi.fn().mockResolvedValue(undefined)
     render(<WorkoutActualDuration workout={workout} onSave={onSave} onReload={vi.fn()} />)

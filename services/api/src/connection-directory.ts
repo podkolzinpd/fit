@@ -6,7 +6,7 @@ import { YandexAppSessionDeniedError, YandexAppSessionInvalidError } from './db/
 import { PilotSessionInvalidError } from './db/yandex-pilot-transaction.js'
 
 const uuid = /^[a-f0-9]{8}-[a-f0-9]{4}-[1-5][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/i
-const actions = ['self', 'rotate', 'list', 'create_invitation', 'revoke_invitation', 'status', 'resolve', 'preview', 'send', 'accept', 'decline', 'cancel'] as const
+const actions = ['self', 'rotate', 'list', 'history_access', 'set_history_access', 'create_invitation', 'revoke_invitation', 'status', 'resolve', 'preview', 'send', 'accept', 'decline', 'cancel'] as const
 type Action = typeof actions[number]
 interface Command { action: Action; data: Record<string, unknown> }
 export function emailHash(value: string): string | undefined {
@@ -19,7 +19,9 @@ export function readDirectoryCommand(body: unknown): Command | undefined {
   const v = body as Record<string, unknown>
   if (!actions.includes(v.action as Action)) return undefined
   const action = v.action as Action
-  if (['self', 'rotate', 'list', 'create_invitation'].includes(action)) return { action, data: {} }
+  if (['self', 'rotate', 'list', 'history_access', 'create_invitation'].includes(action)) return { action, data: {} }
+  if (action === 'set_history_access') return typeof v.relationshipId === 'string' && uuid.test(v.relationshipId) && typeof v.shareHistory === 'boolean' && (v.shareSoloHistory === undefined || typeof v.shareSoloHistory === 'boolean')
+    ? { action, data: { relationshipId: v.relationshipId, shareHistory: v.shareHistory, ...(v.shareSoloHistory === undefined ? {} : { shareSoloHistory: v.shareSoloHistory }) } } : undefined
   if (action === 'revoke_invitation') return typeof v.code === 'string' && /^[A-F0-9]{32}$/.test(v.code) ? { action, data: { code: v.code } } : undefined
   if (action === 'resolve') {
     if (typeof v.value !== 'string') return undefined
@@ -36,6 +38,10 @@ export function readDirectoryCommand(body: unknown): Command | undefined {
       if (action !== 'send' || typeof v.invitationCode !== 'string' || !/^[A-F0-9]{32}$/.test(v.invitationCode)) return undefined
       data.invitationCode = v.invitationCode
     }
+    if (v.shareHistory !== undefined && typeof v.shareHistory !== 'boolean') return undefined
+    if (v.shareHistory !== undefined) data.shareHistory = v.shareHistory
+    if (v.shareSoloHistory !== undefined && typeof v.shareSoloHistory !== 'boolean') return undefined
+    if (v.shareSoloHistory !== undefined) data.shareSoloHistory = v.shareSoloHistory
     data.expectedRelationshipId = v.expectedRelationshipId
     data.expectedRevision = v.expectedRevision
   }

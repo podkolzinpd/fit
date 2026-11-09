@@ -20,8 +20,9 @@ export function WorkoutActualDurationField({ value, onChange, disabled = false }
 }
 
 /** Duration-only fact correction; never sends the exercise aggregate. */
-export function WorkoutActualDuration({ workout, onSave, onReload }: {
+export function WorkoutActualDuration({ workout, onSave, onReload, readOnly = false }: {
   workout: Workout
+  readOnly?: boolean
   onSave: (seconds: number | null, expectedVersion: number) => Promise<void>
   onReload: () => Promise<number>
 }) {
@@ -58,7 +59,7 @@ export function WorkoutActualDuration({ workout, onSave, onReload }: {
   return <>
     <div className="workout-actual-duration">
       <div><span>Длительность</span><strong>{hasDuration ? label : 'Не указана'}</strong></div>
-      <button ref={trigger} type="button" className="secondary" aria-label={hasDuration ? 'Изменить длительность' : 'Указать длительность'} onClick={open}>{hasDuration ? 'Изменить' : 'Указать длительность'}</button>
+      {!readOnly && <button ref={trigger} type="button" className="secondary" aria-label={hasDuration ? 'Изменить длительность' : 'Указать длительность'} onClick={open}>{hasDuration ? 'Изменить' : 'Указать длительность'}</button>}
     </div>
     {saved && <p className="workout-duration-saved" role="status">Длительность сохранена</p>}
     <dialog ref={dialog} className="modal-dialog workout-duration-dialog" aria-labelledby={titleId} onClose={() => trigger.current?.focus()}

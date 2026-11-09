@@ -50,7 +50,7 @@ describe('simple connection flow', () => {
     expect(await screen.findByText('Запрос отклонён')).toBeInTheDocument()
     await userEvent.click(screen.getByRole('button', { name: 'Подтвердить заново' }))
     await userEvent.click(await screen.findByRole('button', { name: 'Сменить тренера' }))
-    await waitFor(() => expect(repository.send).toHaveBeenCalledWith(person))
+    await waitFor(() => expect(repository.send).toHaveBeenCalledWith({ ...person, shareHistory: false, shareSoloHistory: false }))
     expect(repository.decide).not.toHaveBeenCalled()
   })
   it('shows that an opposite request needs my confirmation, not waiting for the other person', async () => {
@@ -65,14 +65,15 @@ describe('simple connection flow', () => {
     repository.send.mockRejectedValueOnce(new Error('Нет соединения')).mockResolvedValueOnce({ status: 'pending' })
     mount()
     expect(await screen.findByText(/Сейчас ваш тренер — Прежний тренер/)).toBeInTheDocument()
+    expect(screen.getByRole('switch', { name: 'Вся история тренировок' })).not.toBeChecked()
     await userEvent.click(screen.getByRole('button', { name: 'Сменить тренера' }))
     expect(await screen.findByText('Нет соединения')).toBeInTheDocument()
     expect(screen.queryByText(/Запрос отправлен/)).not.toBeInTheDocument()
-    expect(repository.send).toHaveBeenCalledWith(person)
+    expect(repository.send).toHaveBeenCalledWith({ ...person, shareHistory: false, shareSoloHistory: false })
     await userEvent.click(screen.getByRole('button', { name: 'Сменить тренера' }))
     expect(await screen.findByText('Запрос отправлен. Ждём подтверждения.')).toBeInTheDocument()
   })
-  it('accepts an incoming request in one click after checking the latest connection', async () => {
+  it('previews an incoming request and asks for history consent before connection', async () => {
     const consent = { ...person, currentTrainer: null }
     repository.preview.mockResolvedValue(consent)
     const request = { id: 'request', status: 'pending', incoming: true, peerId: 'trainer-id', name: 'Новый тренер', role: 'trainer', expiresAt: '2026-11-14' }
@@ -80,7 +81,10 @@ describe('simple connection flow', () => {
     repository.decide.mockResolvedValue({ status: 'accepted' })
     mount(<ConnectionRequests />)
     await userEvent.click(await screen.findByRole('button', { name: 'Принять' }))
-    await waitFor(() => expect(repository.decide).toHaveBeenCalledWith('accept', 'request', consent))
+    expect(repository.decide).not.toHaveBeenCalled()
+    expect(screen.getByRole('switch', { name: 'Вся история тренировок' })).not.toBeChecked()
+    await userEvent.click(await screen.findByRole('button', { name: 'Подключить тренера' }))
+    await waitFor(() => expect(repository.decide).toHaveBeenCalledWith('accept', 'request', { ...consent, shareHistory: false, shareSoloHistory: false }))
     expect(await screen.findByText('Подключение подтверждено')).toBeInTheDocument()
     await waitFor(() => expect(screen.queryByRole('button', { name: 'Принять' })).not.toBeInTheDocument())
   })

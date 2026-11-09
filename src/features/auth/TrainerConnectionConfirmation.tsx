@@ -1,3 +1,4 @@
+import { TrainerHistoryConsent } from '../../shared/TrainerHistoryConsent'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import type { TrainerConnectionOffer, TrainerConnectionsRepository } from '../../shared/trainer-connection'
@@ -13,6 +14,8 @@ export function TrainerConnectionConfirmation({ repository, offer, eager = false
   onSuccess: (clientId: string) => void | Promise<void>
 }) {
   const queryClient = useQueryClient()
+  const [shareSoloHistory, setShareSoloHistory] = useState(false)
+  const [shareHistory, setShareHistory] = useState(false)
   const [opened, setOpened] = useState(eager)
   const [operationId, setOperationId] = useState(() => crypto.randomUUID())
   const preview = useQuery({
@@ -28,7 +31,7 @@ export function TrainerConnectionConfirmation({ repository, offer, eager = false
     mutationFn: () => {
       if (!preview.data) throw new Error('Сначала проверьте приглашение.')
       return repository.confirm({ ...offer, expectedRelationshipId: preview.data.currentRelationshipId,
-        offerVersion: preview.data.offerVersion, operationId })
+        offerVersion: preview.data.offerVersion, operationId, shareHistory, shareSoloHistory })
     },
     onMutate: () => onPendingChange?.(true),
     onSettled: () => onPendingChange?.(false),
@@ -41,6 +44,7 @@ export function TrainerConnectionConfirmation({ repository, offer, eager = false
   const unavailable = confirm.error instanceof RepositoryError && confirm.error.code === 'connection_offer_unavailable'
   async function refresh() {
     confirm.reset()
+    setShareHistory(false); setShareSoloHistory(false)
     setOperationId(crypto.randomUUID())
     await preview.refetch()
   }
@@ -56,8 +60,9 @@ export function TrainerConnectionConfirmation({ repository, offer, eager = false
     <strong>{switching ? 'Сменить тренера?' : 'Подключить тренера?'}</strong>
     {switching && <p>Сейчас: <strong>{currentTrainer.name}</strong></p>}
     <p>{switching ? 'Новый тренер' : 'Ваш тренер'}: <strong>{trainer.name}</strong></p>
-    <p className="muted">Тренер получит доступ к вашим тренировкам и прогрессу и сможет назначать занятия.</p>
+    <p className="muted">Тренер сможет назначать занятия и видеть ваши совместные тренировки и прогресс.</p>
     {switching && <p className="muted">Прежний тренер потеряет текущий доступ. Ваш аккаунт, тренировки, замеры и цели сохранятся. История переписки и прежние записи останутся.</p>}
+    <TrainerHistoryConsent checked={shareHistory} soloChecked={shareSoloHistory} onSoloChange={setShareSoloHistory} disabled={confirm.isPending} onChange={setShareHistory} />
     {confirm.error && <p className="error" role="alert">{confirm.error.message}</p>}
     {changed ? <button type="button" className="secondary" onClick={() => void refresh()}>Проверить снова</button>
       : !unavailable && <button type="button" className="primary" aria-busy={confirm.isPending} disabled={confirm.isPending}

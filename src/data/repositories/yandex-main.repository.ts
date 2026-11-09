@@ -653,6 +653,7 @@ function workout(value: YandexPilotTrainingData['workouts'][number]): Workout {
     endTime: value.endTime,
     startedAt: value.startedAt,
     completedAt: value.completedAt,
+    canCorrectDuration: value.canCorrectDuration,
     actualDurationSec: value.actualDurationSec ?? null,
     activeCaloriesKcal: value.activeCaloriesKcal ?? null,
     calorieEstimateVersion: value.calorieEstimateVersion ?? null,
@@ -1736,10 +1737,16 @@ export function createYandexMainRepository(
       const person = z.object({ invitationCode: z.string().optional(), id: uuid, name: z.string(), role: z.enum(['trainer', 'client']), connected: z.boolean().nullable(),
         expectedRelationshipId: uuid.nullable(), expectedRevision: z.string().nullable(), currentTrainer: z.object({ id: uuid, name: z.string() }).nullable() })
       const self = z.object({ code: z.string(), fitId: uuid, emailSearchReady: z.boolean() })
+      const history = z.object({ relationshipId: uuid, trainerId: uuid, enabled: z.boolean(), soloEnabled: z.boolean() })
       const decision = z.object({ id: uuid.optional(), status: z.string(), incoming: z.boolean().optional() })
       const call = async <T,>(body: object, schema: z.ZodType<T>) =>
         (await writeJson(queries, '/v1/connection-directory', 'POST', body, z.object({ result: schema }))).result
       return {
+        historyAccess: () => call({ action: 'history_access' }, history.nullable()),
+        setHistoryAccess: async (relationshipId: string, shareHistory: boolean, shareSoloHistory?: boolean) => {
+          const result = await call({ action: 'set_history_access', relationshipId, shareHistory, shareSoloHistory }, history)
+          invalidate(); return result
+        },
         createInvitation: () => call({ action: 'create_invitation' }, z.object({ id: uuid, code: z.string(), expiresAt: z.string() })),
         revokeInvitation: (code: string) => call({ action: 'revoke_invitation', code }, decision),
         self: () => call({ action: 'self' }, self),
@@ -1750,11 +1757,11 @@ export function createYandexMainRepository(
           name: z.string(), role: z.enum(['trainer', 'client']), expiresAt: z.string() }))),
         status: (requestId: string) => call({ action: 'status', requestId }, decision),
         send: async (p: import('../../shared/connection-directory').ConnectionPerson) => {
-          const result = await call({ action: 'send', peerId: p.id, invitationCode: p.invitationCode, expectedRelationshipId: p.expectedRelationshipId, expectedRevision: p.expectedRevision }, decision)
+          const result = await call({ action: 'send', peerId: p.id, invitationCode: p.invitationCode, shareHistory: p.shareHistory, shareSoloHistory: p.shareSoloHistory, expectedRelationshipId: p.expectedRelationshipId, expectedRevision: p.expectedRevision }, decision)
           invalidate(); return result
         },
         decide: async (action: 'accept' | 'decline' | 'cancel', requestId: string, p?: import('../../shared/connection-directory').ConnectionPerson) => {
-          const result = await call({ action, requestId, expectedRelationshipId: p?.expectedRelationshipId ?? null, expectedRevision: p?.expectedRevision ?? null }, decision)
+          const result = await call({ action, requestId, shareHistory: p?.shareHistory, shareSoloHistory: p?.shareSoloHistory, expectedRelationshipId: p?.expectedRelationshipId ?? null, expectedRevision: p?.expectedRevision ?? null }, decision)
           invalidate(); return result
         },
       }

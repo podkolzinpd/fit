@@ -1,17 +1,35 @@
-import { nativeCreateConnectedAthlete, nativeSignIn, nativeRegister } from './native-local-fixture'
+import { nativeCreateConnectedAthlete, nativeSignIn, nativeRegister, nativeEnableLime } from './native-local-fixture'
 import { expect, test } from './native-local-fixture'
 import { randomUUID } from 'node:crypto'
 
-test('trainer manual creation route redirects to registration-first connection', async ({ page }) => {
+test('trainer creates a manual card and starts a workout without athlete registration', async ({ page }, info) => {
+  await nativeEnableLime(page, 'trainer')
   await page.goto('/auth')
-  await nativeRegister(page, { key: `client-form-flag-off-${randomUUID()}@fit.local`, firstName: 'Client form flag off', role: 'trainer' })
+  await nativeRegister(page, { key: `client-form-${randomUUID()}@fit.local`, firstName: 'Manual card trainer', role: 'trainer' })
   await expect(page).toHaveURL(/\/(today|clients)$/)
-
-  await page.goto('/clients/new')
-  await expect(page).toHaveURL(/\/connect$/)
-  await expect(page.getByRole('heading', { name: 'Добавить спортсмена' })).toBeVisible()
-  await expect(page.getByRole('button', { name: 'Пригласить', exact: true })).toBeVisible()
-  await expect(page.getByLabel('Имя')).toHaveCount(0)
+  await page.goto('/clients')
+  await page.getByRole('button', { name: /Добавить(?: спортсмена)?$/ }).click()
+  await expect(page.locator('.phone-frame')).toHaveClass(/fit-lime-shell/)
+  await page.screenshot({ path: info.outputPath('manual-card-entry-lime.png'), fullPage: true })
+  await page.getByRole('link', { name: 'Создать карточку без регистрации' }).click()
+  await expect(page).toHaveURL(/\/clients\/new$/)
+  await expect(page.getByRole('heading', { name: 'Новый клиент' })).toBeVisible()
+  await expect(page.locator('.phone-frame')).toHaveClass(/fit-lime-shell/)
+  await page.getByRole('button', { name: 'Сохранить', exact: true }).click()
+  await expect(page.getByText('Введите имя')).toBeVisible()
+  await page.locator('input[name=fullName]').fill('Спортсмен без регистрации')
+  await page.getByLabel('Пол').selectOption('male')
+  for (const theme of ['light', 'dark']) {
+    await page.evaluate(value => { localStorage.setItem('fit.appTheme', value); window.dispatchEvent(new Event('fit-theme-change')) }, theme)
+    await page.screenshot({ path: info.outputPath(`manual-card-form-${theme}.png`), fullPage: true })
+  }
+  await page.getByRole('button', { name: 'Сохранить', exact: true }).click()
+  await expect(page.getByRole('heading', { name: 'Спортсмен без регистрации' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Начать тренировку', exact: true })).toBeVisible()
+  await page.getByRole('button', { name: 'Начать тренировку', exact: true }).click()
+  await expect(page.getByRole('group', { name: 'Формат тренировки' })).toBeVisible()
+  await page.getByRole('button', { name: 'Начать тренировку', exact: true }).click()
+  await expect(page).toHaveURL(/\/workouts\/[^/]+\/live$/)
 })
 
 test('trainer connected-client edit keeps existing validation under monochrome preview', async ({ page }) => {

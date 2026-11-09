@@ -132,7 +132,11 @@ export function ClientFormPage() {
     await queryClient.invalidateQueries({ queryKey: ['client', clientId] })
     navigate(`/clients/${clientId}`)
   }} onCancel={cancel} />
-  return <Navigate to="/connect" replace />
+  if (clientId) return <Navigate to="/connect" replace />
+  return <ClientForm onSaved={async (id) => {
+    await queryClient.invalidateQueries({ queryKey: ['clients'] })
+    navigate(`/clients/${id}`)
+  }} onCancel={cancel} />
 }
 
 export function MyClientEditPage() {
@@ -242,13 +246,13 @@ function ClientForm({
       }
       return existing.id
     }
-    if (createMode !== 'self') throw new Error('Сначала подключите аккаунт спортсмена.')
     const input = { fullName: parsed.fullName, gender: parsed.gender as Gender,
       ageYears: parsed.ageYears ?? null,
       ageUpdatedAt: parsed.ageYears === undefined ? null : today,
       heightCm: parsed.heightCm ?? null,
       goal: parsed.goal, note: parsed.note, initialWeightKg: parsed.initialWeightKg,
       initialWeightRecordedOn: parsed.initialWeightKg === undefined ? undefined : today }
+    if (createMode === 'trainer') return clientsRepository.create(input)
     return athleteSportProfile.saveOwn({ clientId: null, expectedVersion: null, client: input,
       sport: { sports: selectedSports, bio: sportBio.trim() || null } })
   }, onSuccess: (id) => onSaved(id), onError: async (error) => {

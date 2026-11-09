@@ -7,7 +7,7 @@ import { readTrainerDisplayNames } from './trainer-display-name.js'
 
 const uuid = /^[a-f0-9]{8}-[a-f0-9]{4}-[1-5][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/i
 interface Offer { source: 'link' | 'code' | 'chat'; locator: string }
-interface Confirmation extends Offer { expectedRelationshipId: string | null; offerVersion: string; operationId: string }
+interface Confirmation extends Offer { shareHistory?: boolean; shareSoloHistory?: boolean; expectedRelationshipId: string | null; offerVersion: string; operationId: string }
 interface Preview {
   clientId: string; currentRelationshipId: string | null
   currentTrainer: { id: string; name: string } | null
@@ -29,7 +29,9 @@ function readConfirmation(body: unknown): Confirmation | null {
   if (!(v.expectedRelationshipId === null || typeof v.expectedRelationshipId === 'string' && uuid.test(v.expectedRelationshipId))
     || typeof v.offerVersion !== 'string' || !v.offerVersion || v.offerVersion.length > 100
     || typeof v.operationId !== 'string' || !uuid.test(v.operationId)) return null
-  return { ...offer, expectedRelationshipId: v.expectedRelationshipId, offerVersion: v.offerVersion, operationId: v.operationId }
+  if (v.shareHistory !== undefined && typeof v.shareHistory !== 'boolean') return null
+  if (v.shareSoloHistory !== undefined && typeof v.shareSoloHistory !== 'boolean') return null
+  return { ...offer, ...(v.shareSoloHistory === undefined ? {} : { shareSoloHistory: v.shareSoloHistory }), ...(v.shareHistory === undefined ? {} : { shareHistory: v.shareHistory }), expectedRelationshipId: v.expectedRelationshipId, offerVersion: v.offerVersion, operationId: v.operationId }
 }
 export class TrainerConnectionConfirmationStore {
   constructor(private readonly pool: DatabasePool) {}
@@ -45,8 +47,8 @@ export class TrainerConnectionConfirmationStore {
   }
   confirm(session: YandexActorSession, draft: Confirmation): Promise<string> {
     return withYandexActorSession(this.pool, session, async client =>
-      (await client.query<{ client_id: string }>('select app_private.confirm_trainer_connection($1,$2,$3,$4,$5) client_id',
-        [draft.source, draft.locator, draft.expectedRelationshipId, draft.offerVersion, draft.operationId]))[0]!.client_id)
+      (await client.query<{ client_id: string }>('select app_private.confirm_trainer_connection($1,$2,$3,$4,$5,$6,$7) client_id',
+        [draft.source, draft.locator, draft.expectedRelationshipId, draft.offerVersion, draft.operationId, draft.shareHistory ?? false, draft.shareSoloHistory ?? false]))[0]!.client_id)
   }
 }
 export type TrainerConnectionConfirmationService = Pick<TrainerConnectionConfirmationStore, 'preview' | 'confirm'>

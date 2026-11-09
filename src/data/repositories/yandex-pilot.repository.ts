@@ -202,6 +202,7 @@ const workoutSchema = z.object({
   clientQuestionResolvedAt: yandexDateTimeSchema.nullable(),
   startedAt: yandexDateTimeSchema.nullable(),
   completedAt: yandexDateTimeSchema.nullable(),
+  canCorrectDuration: z.boolean().optional(),
   actualDurationSec: z.number().int().min(1).max(43_200).nullable().optional(),
   activeCaloriesKcal: z.number().int().positive().nullable().optional(),
   calorieEstimateVersion: z.number().int().min(1).max(2).nullable().optional(),

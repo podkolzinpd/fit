@@ -57,11 +57,15 @@ describe('ClientFormPage', () => {
     realtime.subscribeToClientChanges.mockClear()
   })
 
-  it('redirects the old manual-creation address to account connection without creating a card', async () => {
+  it('creates a trainer card without an account through the existing form', async () => {
+    const user = userEvent.setup()
     renderPage('/clients/new')
-    expect(await screen.findByText('Подключение аккаунта')).toBeVisible()
-    expect(repository.create).not.toHaveBeenCalled()
-    expect(screen.queryByLabelText('Имя')).not.toBeInTheDocument()
+    await user.type(await screen.findByLabelText('Имя', { exact: true }), 'Новый спортсмен')
+    await user.selectOptions(screen.getByLabelText('Пол'), 'female')
+    await user.click(screen.getByRole('button', { name: 'Сохранить' }))
+    expect(await screen.findByText('Карточка сохранена')).toBeVisible()
+    expect(repository.create).toHaveBeenCalledWith(expect.objectContaining({ fullName: 'Новый спортсмен' }))
+    expect(repository.update).not.toHaveBeenCalled()
   })
 
   it('edits the canonical questionnaire without overwriting a trainer alias', async () => {

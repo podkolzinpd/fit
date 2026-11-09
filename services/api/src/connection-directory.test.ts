@@ -4,6 +4,13 @@ import { emailHash, readDirectoryCommand, registerConnectionDirectory } from './
 import { YandexIdentityClient } from './auth/yandex-identity.js'
 
 describe('connection discovery boundary', () => {
+  it('requires an exact relationship and an explicit boolean for history access', () => {
+    const relationshipId = '10000000-0000-4000-8000-000000000001'
+    expect(readDirectoryCommand({ action: 'history_access' })).toEqual({ action: 'history_access', data: {} })
+    expect(readDirectoryCommand({ action: 'set_history_access', relationshipId, shareHistory: false })?.data).toEqual({ relationshipId, shareHistory: false })
+    expect(readDirectoryCommand({ action: 'set_history_access', relationshipId, shareHistory: 'true' })).toBeUndefined()
+    expect(readDirectoryCommand({ action: 'set_history_access', relationshipId: 'invalid', shareHistory: true })).toBeUndefined()
+  })
   it('hashes exact normalized mailbox without guessing aliases or domains', () => {
     expect(emailHash(' Person@EXAMPLE.TEST ')).toBe(emailHash('person@example.test'))
     expect(emailHash('person.name@yandex.ru')).not.toBe(emailHash('person-name@yandex.ru'))

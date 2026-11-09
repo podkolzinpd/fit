@@ -287,6 +287,24 @@ describe.skipIf(source === undefined)('one active trainer through every connecti
     return { ...f,source,locator,preview,operation,params,sql }
   }
 
+  it.each(['chat','link','code'] as const)('shares earlier coach history only with explicit consent via %s and preserves revoke on replay', async source => {
+    const f = await replacementFixture(source)
+    const historyId=randomUUID()
+    await pool.query("insert into public.workouts(id,trainer_id,client_id,created_by,workout_date,status,completed_at) values($1,$2,$3,$4,'2026-01-01','done',now())",[historyId,f.athlete,f.card,f.first])
+    const sql = 'select app_private.confirm_trainer_connection($1,$2,$3,$4,$5,$6) id'
+    await actor(f.athlete,sql,[...f.params,true])
+    const [access] = await actor(f.athlete, "select app_private.connection_directory('history_access','{}') access")
+    const current = access!.access as {relationshipId:string;enabled:boolean}
+    expect(current.enabled).toBe(true)
+    const historical = (await pool.query('select id from public.workouts where client_id=$1 and created_by=$2',[f.card,f.first])).rows
+    expect(historical.length).toBeGreaterThan(0)
+    expect(await actor(f.second,'select id from public.workouts where client_id=$1 and created_by=$2',[f.card,f.first])).toEqual(historical)
+    await actor(f.athlete, "select app_private.connection_directory('set_history_access',$1)", [{relationshipId:current.relationshipId,shareHistory:false}])
+    await actor(f.athlete,sql,[...f.params,true])
+    expect(await actor(f.second,'select id from public.workouts where client_id=$1 and created_by=$2',[f.card,f.first])).toEqual([])
+    await expect(actor(f.athlete,sql,[...f.params,false])).rejects.toMatchObject({message:'connection_changed'})
+  })
+
   it.each(['chat','link','code'] as const)('atomically replaces through %s, preserves data and handles exact replay', async source => {
     const f = await replacementFixture(source)
     expect(await actor(f.first,'select public.can_access_client($1) allowed',[f.card])).toEqual([{allowed:true}])

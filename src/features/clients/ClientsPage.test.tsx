@@ -18,7 +18,7 @@ vi.mock('../../app/trainer-schedule-v2', async importOriginal => ({
   isTrainerScheduleV2Enabled: () => navigation.unified,
 }))
 vi.mock('../../app/data-backend-context', () => ({
-  useDataBackend: () => ({ connectionDirectory: { list: () => Promise.resolve([]), createInvitation: backend.createRegistrationInvite, revokeInvitation: backend.revoke }, source: 'yandex', clients: { list: backend.list, setArchived: backend.setArchived }, chat: { listThreads: backend.listThreads, open: backend.open }, trainerFinance: { listOverview: backend.listFinanceOverview }, invitations: { createShareForNewClient: backend.createInvite, revoke: backend.revoke } }),
+  useDataBackend: () => ({ connectionDirectory: { self: () => Promise.resolve({ code: 'ABCD1234ABCD1234', fitId: 'trainer-1', emailSearchReady: true }), list: () => Promise.resolve([]), createInvitation: backend.createRegistrationInvite, revokeInvitation: backend.revoke }, source: 'yandex', clients: { list: backend.list, setArchived: backend.setArchived }, chat: { listThreads: backend.listThreads, open: backend.open }, trainerFinance: { listOverview: backend.listFinanceOverview }, invitations: { createShareForNewClient: backend.createInvite, revoke: backend.revoke } }),
 }))
 vi.mock('../../app/auth-context', () => ({ useAuth: () => ({ actor: { role: 'trainer', userId: 'trainer-1' } }) }))
 
@@ -352,7 +352,7 @@ describe('ClientsPage search', () => {
     expect(screen.getByText(/· до 08\.10/)).toBeVisible()
   })
 
-  it('opens account search and offers explicit scanning and registration-first invitations', async () => {
+  it('opens account search, scanning and manual creation without the removed Invite button', async () => {
     const user = userEvent.setup()
     renderPage([])
     await user.click(await screen.findByRole('button', { name: 'Добавить спортсмена' }))
@@ -362,9 +362,8 @@ describe('ClientsPage search', () => {
     expect(screen.queryByLabelText('Камера для QR-кода')).not.toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Сканировать QR' }))
     expect(await screen.findByLabelText('Камера для QR-кода')).toBeInTheDocument()
-    expect(screen.queryByRole('link', { name: 'Создать карточку вручную' })).not.toBeInTheDocument()
-    await user.click(screen.getByRole('button', { name: 'Пригласить' }))
-    expect(await screen.findByRole('dialog', { name: 'Ссылка готова' })).toBeVisible()
+    expect(screen.getByRole('link', { name: 'Создать карточку без регистрации' })).toHaveAttribute('href', '/clients/new')
+    expect(screen.queryByRole('button', { name: 'Пригласить' })).not.toBeInTheDocument()
     expect(screen.queryByLabelText('Имя спортсмена')).not.toBeInTheDocument()
     expect(backend.createInvite).not.toHaveBeenCalled()
   })
@@ -412,20 +411,17 @@ describe('ClientsPage search', () => {
     expect(backend.listFinanceOverview).toHaveBeenCalledTimes(1)
   })
 
-  it('keeps the generated invitation open without adding an unregistered card to the empty list', async () => {
+  it('shares the personal link from My QR without creating a placeholder card', async () => {
     const user = userEvent.setup()
     renderPage([])
     await user.click(await screen.findByRole('button', { name: 'Добавить спортсмена' }))
-    await user.click(screen.getByRole('button', { name: 'Пригласить' }))
-    expect(screen.getByRole('heading', { name: 'Добавить спортсмена' })).toBeVisible()
-    expect(await screen.findByRole('dialog', { name: 'Ссылка готова' })).toBeVisible()
-    expect(backend.createRegistrationInvite).toHaveBeenCalledExactlyOnceWith()
+    await user.click(screen.getByRole('button', { name: 'Мой QR' }))
+    expect(await screen.findByRole('button', { name: 'Отправить ссылку' })).toBeVisible()
+    expect(screen.getByLabelText('Ссылка для подключения')).toHaveAttribute('value', expect.stringContaining('/connect?code='))
+    expect(backend.createRegistrationInvite).not.toHaveBeenCalled()
     expect(backend.createInvite).not.toHaveBeenCalled()
     expect(await backend.list()).toEqual([])
-    await user.click(screen.getByRole('button', { name: 'Закрыть' }))
-    expect(screen.getByRole('heading', { name: 'Добавить спортсмена' })).toBeVisible()
-  })
-})
+  })})
 
 describe('ClientsPage chat actions', () => {
   it('shows a failed history read and retries without hiding the client list', async () => {

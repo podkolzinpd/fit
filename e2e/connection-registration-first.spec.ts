@@ -1,4 +1,4 @@
-import { expect, test, nativeRequest, nativeRegister, nativeSignIn, type Page } from './native-local-fixture'
+import { expect, test, nativeRequest, nativeRegister, nativeSignIn, nativeEnableLime, type Page } from './native-local-fixture'
 
 type SavedWorkout = { id: string; clientId: string; trainerId: string; createdBy: string | null; status: string; actualDurationSec: number | null; exercises: unknown[] }
 async function readHistory(page: Page): Promise<SavedWorkout[]> {
@@ -7,20 +7,18 @@ async function readHistory(page: Page): Promise<SavedWorkout[]> {
   return (await response.json() as { workouts: SavedWorkout[] }).workouts
 }
 
-test('registration and invitation acceptance precede training; history survives reconnection', async ({ page, browser }, info) => {
+test('personal QR link survives registration and mutual consent; history survives reconnection', async ({ page, browser }, info) => {
   test.setTimeout(90_000)
   const athleteContext = await browser.newContext({ baseURL: String(info.project.use.baseURL), viewport: { width: 390, height: 844 } })
   try {
     await nativeSignIn(page, 'registration-trainer@example.test', 'trainer', 'Тренер История')
     await page.goto('/connect')
-    const created = page.waitForResponse(response => new URL(response.url()).pathname === '/v1/connection-directory' && (response.request().postDataJSON() as { action?: string }).action === 'create_invitation')
-    await page.getByRole('button', { name: 'Пригласить', exact: true }).click()
-    const invitation = await created
-    expect(invitation.ok()).toBe(true)
-    const { result: share } = await invitation.json() as { result: { code: string } }
-    expect(share.code).toMatch(/^[A-F0-9]{32}$/)
-    await expect(page.getByRole('dialog', { name: 'Ссылка готова' })).toBeVisible()
-    await expect(page.getByLabel('Имя спортсмена')).toHaveCount(0)
+    await expect(page.getByRole('button', { name: 'Пригласить', exact: true })).toHaveCount(0)
+    await page.getByRole('button', { name: 'Мой QR', exact: true }).click()
+    await expect(page.getByRole('button', { name: 'Отправить ссылку', exact: true })).toBeVisible()
+    const sharedLink = await page.getByLabel('Ссылка для подключения').inputValue()
+    const share = { code: new URL(sharedLink).searchParams.get('code')! }
+    expect(share.code).toMatch(/^[A-F0-9]{16}$/)
     const before = await nativeRequest(page, '/v1/clients')
     expect(before.ok).toBe(true)
     expect((await before.json() as { clients: unknown[] }).clients).toHaveLength(0)
@@ -33,7 +31,18 @@ test('registration and invitation acceptance precede training; history survives 
     await nativeRegister(athlete, { key: 'registration-athlete@example.test', firstName: 'Анна Спортсмен', role: 'client' })
     await expect(athlete).toHaveURL(new RegExp(`/connect\\?code=${share.code}$`))
     await expect(athlete.getByText('Тренер История', { exact: true })).toBeVisible()
-    await athlete.getByRole('button', { name: 'Принять приглашение', exact: true }).click()
+    await athlete.getByRole('button', { name: 'Добавить', exact: true }).click()
+    await expect(athlete.getByText('Запрос отправлен. Ждём подтверждения.')).toBeVisible()
+    const pending = await nativeRequest(page, '/v1/connection-directory', { method: 'POST', body: { action: 'list' } })
+    const requestId = (await pending.json() as { result: { id: string; status: string }[] }).result.find(item => item.status === 'pending')!.id
+    const acceptedStatus = athlete.waitForResponse(async response => {
+      if (new URL(response.url()).pathname !== '/v1/connection-directory' || response.request().method() !== 'POST') return false
+      const command = response.request().postDataJSON() as { action?: string }
+      return command.action === 'status' && (await response.json() as { result: { status: string } }).result.status === 'accepted'
+    })
+    expect((await nativeRequest(page, '/v1/connection-directory', { method: 'POST', body: { action: 'accept', requestId, expectedRelationshipId: null, expectedRevision: null } })).ok).toBe(true)
+    await athlete.bringToFront()
+    await acceptedStatus
     await expect(athlete.getByText('Вы подключены', { exact: true })).toBeVisible()
     await page.goto('/clients')
     await expect(page.locator('.client-card-copy strong', { hasText: 'Анна Спортсмен' })).toBeVisible()
@@ -76,6 +85,7 @@ test('registration and invitation acceptance precede training; history survives 
     await page.getByRole('button', { name: 'Добавить', exact: true }).click()
     await athlete.goto('/connect')
     await athlete.getByRole('button', { name: 'Принять', exact: true }).click()
+    await athlete.getByRole('button', { name: 'Подключить тренера', exact: true }).click()
     await expect(athlete.getByRole('region', { name: 'Запросы на подключение' }).getByText('Вы подключены', { exact: true })).toBeVisible()
     for (const viewer of [page, athlete]) {
       const history = (await readHistory(viewer)).filter(item => item.id === workoutId)
@@ -86,4 +96,69 @@ test('registration and invitation acceptance precede training; history survives 
     }
     await page.screenshot({ path: info.outputPath('simple-add.png'), fullPage: true })
   } finally { await athleteContext.close() }
+})
+
+test('athlete shares previous trainer history at connection and revokes it in My trainer', async ({ page, browser }, info) => {
+  test.setTimeout(90_000)
+  const context = await browser.newContext({ baseURL: String(info.project.use.baseURL), viewport: { width: 390, height: 844 } })
+  const nextContext = await browser.newContext({ baseURL: String(info.project.use.baseURL) })
+  const command = async (who: Page, action: string, data = {}) => {
+    const response = await nativeRequest(who, '/v1/connection-directory', { method: 'POST', body: { action, ...data } })
+    expect(response.ok).toBe(true)
+    return (await response.json() as { result: Record<string, unknown> }).result
+  }
+  try {
+    await nativeSignIn(page, 'history-first@example.test', 'trainer', 'Первый тренер')
+    const athlete = await context.newPage(), next = await nextContext.newPage()
+    await nativeEnableLime(athlete, 'client')
+    await nativeEnableLime(next, 'trainer')
+    await nativeSignIn(athlete, 'history-athlete@example.test', 'client', 'История спортсмена')
+    await nativeSignIn(next, 'history-next@example.test', 'trainer', 'Новый тренер')
+    const first = await command(page, 'self'), second = await command(next, 'self'), athleteSelf = await command(athlete, 'self')
+    const firstPreview = await command(athlete, 'preview', { peerId: first.fitId })
+    const request = await command(athlete, 'send', { peerId: first.fitId, ...firstPreview })
+    await command(page, 'accept', { requestId: request.id, expectedRelationshipId: null, expectedRevision: null })
+    const clients = await nativeRequest(page, '/v1/clients')
+    const clientId = (await clients.json() as { clients: { id: string }[] }).clients[0]!.id
+    const completed = await nativeRequest(page, '/v1/workouts/completed', { method: 'POST', body: {
+      clientId, workoutDate: '2026-01-05', actualDurationSec: 600, exercises: [],
+    } })
+    expect(completed.ok).toBe(true)
+    const workoutId = (await completed.json() as { workout: { id: string } }).workout.id
+    await athlete.goto(`/connect?code=${String(second.code)}`)
+    if (process.env.FIT_CLIENT_LIME_ACCEPTANCE === '1') await expect(athlete.locator('.phone-frame')).toHaveClass(/fit-client-lime/)
+    const choice = athlete.getByRole('switch', { name: 'Вся история тренировок' })
+    await expect(choice).not.toBeChecked()
+    for (const width of [390, 430]) {
+      await athlete.setViewportSize({ width, height: 932 })
+      await expect(athlete.locator('body')).toHaveJSProperty('scrollWidth', width)
+      for (const theme of ['light', 'dark']) {
+        await athlete.evaluate(({ value, userId }) => { localStorage.setItem('fit.appTheme', value); localStorage.setItem(`fit.clientLime.theme.${userId}`, value); window.dispatchEvent(new Event('fit-theme-change')); window.dispatchEvent(new Event('fit-client-lime-theme-change')) }, { value: theme, userId: String(athleteSelf.fitId) })
+        await athlete.screenshot({ path: info.outputPath(`history-consent-${width}-${theme}.png`), fullPage: true })
+      }
+      await athlete.evaluate(userId => { localStorage.setItem('fit.appTheme', 'light'); localStorage.setItem(`fit.clientLime.theme.${userId}`, 'light'); window.dispatchEvent(new Event('fit-theme-change')); window.dispatchEvent(new Event('fit-client-lime-theme-change')) }, String(athleteSelf.fitId))
+    }
+    await choice.check()
+    await athlete.getByRole('button', { name: 'Сменить тренера', exact: true }).click()
+    await expect(athlete.getByText('Запрос отправлен. Ждём подтверждения.')).toBeVisible()
+    const requests = await nativeRequest(next, '/v1/connection-directory', { method: 'POST', body: { action: 'list' } })
+    const incoming = (await requests.json() as { result: { id: string; status: string }[] }).result.find(item => item.status === 'pending')!
+    await command(next, 'accept', { requestId: incoming.id, expectedRelationshipId: null, expectedRevision: null })
+    const shared = (await readHistory(next)).find(item => item.id === workoutId)
+    expect(shared?.createdBy).toBe(first.fitId)
+    await next.goto(`/workouts/${workoutId}`)
+    await next.getByText('Сводка тренировки', { exact: true }).click()
+    await expect(next.getByText('10 мин', { exact: true })).toBeVisible()
+    await expect(next.getByRole('button', { name: 'Изменить длительность' })).toHaveCount(0)
+    await athlete.goto('/me/profile')
+    const access = athlete.getByRole('switch', { name: 'Вся история тренировок' })
+    await expect(access).toBeChecked()
+    await athlete.screenshot({ path: info.outputPath('history-access-profile.png'), fullPage: true })
+    await athlete.locator('[aria-label="Доступ тренера к истории"]').screenshot({ path: info.outputPath('history-access-controls.png') })
+    await access.click()
+    await expect(athlete.getByText('Доступ к истории закрыт', { exact: true })).toBeVisible()
+    expect((await readHistory(next)).find(item => item.id === workoutId)).toBeUndefined()
+    expect((await readHistory(page)).find(item => item.id === workoutId)?.createdBy).toBe(first.fitId)
+    expect((await readHistory(athlete)).find(item => item.id === workoutId)?.createdBy).toBe(first.fitId)
+  } finally { await context.close(); await nextContext.close() }
 })

@@ -890,7 +890,7 @@ function TrainerScheduleV2({ forceDayView = false }: { forceDayView?: boolean })
       resolve: target => {
         const id = target.closest<HTMLElement>('[data-workout-id]')?.dataset.workoutId
         const workout = timed.find(item => item.id === id)
-        return actor?.role === 'trainer' && workout && (!workout.createdBy || workout.createdBy === actor.userId) ? workout : null
+        return actor?.role === 'trainer' && workout && ((workout.createdBy ?? workout.trainerId ?? actor.userId) === actor.userId) ? workout : null
       },
       preview: setDragPreview,
       drop: (workout, slot) => setSlotMove({ workout, slot }),
@@ -2144,7 +2144,7 @@ export function WorkoutDetailPage() {
   // Duration now has its own control; size the remaining summary to real metrics.
   const factSummaryMetricCount = 2 + Number(Boolean(workout?.activeCaloriesKcal))
     + Number(!limeHistory && Boolean(workout?.activeCaloriesKcal ? workout.calorieEstimateBasis : workout?.calorieEstimateNotice))
-  const durationControl = done && workout ? <WorkoutActualDuration workout={workout}
+  const durationControl = done && workout ? <WorkoutActualDuration workout={workout} readOnly={workout.canCorrectDuration === false}
     onSave={async (seconds, expectedVersion) => {
       await workoutsRepository.setActualDuration({ ...workout, version: expectedVersion }, seconds)
       await invalidateWorkoutSurfaces()
@@ -2160,7 +2160,7 @@ export function WorkoutDetailPage() {
   const sets = workout?.exercises.flatMap((exercise) => exercise.sets) ?? []
   const completedSets = sets.filter((set) => set.confirmedAt).length
   const clientOwned = clientMode && workout?.createdBy === actor.userId
-  const trainerOwned = !clientMode && Boolean(workout && (!workout.createdBy || workout.createdBy === actor?.userId))
+  const trainerOwned = !clientMode && Boolean(workout && ((workout.createdBy ?? workout.trainerId ?? actor?.userId) === actor?.userId))
   const bookingHistoryAvailable = workout?.status === 'planned' && trainerOwned && isQuickWorkoutEntryEnabled(actor)
   const emptyBookingPlan = bookingHistoryAvailable && workout.exercises.length === 0
   const canManage = clientMode ? clientOwned : trainerOwned
@@ -4816,7 +4816,7 @@ export function LiveWorkoutPage() {
   }
   const exerciseCount = query.data?.exercises.length ?? 0
   const exerciseCountLabel = `${exerciseCount} ${exerciseCount % 100 >= 11 && exerciseCount % 100 <= 14 ? 'упражнений' : exerciseCount % 10 === 1 ? 'упражнение' : exerciseCount % 10 >= 2 && exerciseCount % 10 <= 4 ? 'упражнения' : 'упражнений'}`
-  const canConfirmAttendance = actor?.role === 'trainer' && Boolean(workoutsRepository.confirmAttendance && query.data && query.data.status === 'in_progress' && (!query.data.createdBy || query.data.createdBy === actor.userId))
+  const canConfirmAttendance = actor?.role === 'trainer' && Boolean(workoutsRepository.confirmAttendance && query.data && query.data.status === 'in_progress' && ((query.data.createdBy ?? query.data.trainerId ?? actor.userId) === actor.userId))
   const trainerLiveExit = coachReference && canConfirmAttendance
   const liveHeader = query.data && <WorkoutHeader eyebrow={visualReference ? exerciseCountLabel : 'LIVE'} title={visualReference ? query.data.title || workoutFocusTitle(muscleGroupLabels(query.data.exercises)) : query.data.clientName} state="current" showStatus={!visualReference && query.data.exercises.length > 0} className="live-session-header" action={canConfirmAttendance && !trainerLiveExit ? <OverflowMenu label="Действия с тренировкой" items={[{ label: 'Не состоялась', onClick: () => setLiveAttendanceAction('cancel') }]} /> : undefined} meta={<>{coachReference && <span className="coach-live-client">{query.data.clientName}</span>}<span>{workoutTrainingFormatLabel(query.data.trainingFormat ?? 'self')}</span>{!visualReference && query.data.title && <span>{query.data.title}</span>}{visualReference && exerciseCount > 0 && <span className="coach-live-exercise-markers" aria-label="Состояния упражнений">{query.data.exercises.map((exercise, index) => <span key={exercise.id} className={exercise.sets.length > 0 && exercise.sets.every((set) => set.confirmedAt) ? 'done' : exercise.id === activeLiveExercise?.id ? 'current' : ''} aria-label={`Упражнение ${index + 1}: ${exercise.sets.length > 0 && exercise.sets.every((set) => set.confirmedAt) ? 'выполнено' : exercise.id === activeLiveExercise?.id ? 'текущее' : 'ожидает'}`} />)}</span>}{sessionProgress.setCount > 0 ? <div className="live-session-progress">
     <span className="live-session-progress-copy"><span>{sessionProgress.complete ? 'Все упражнения выполнены' : activeLiveExercise ? `Сейчас: ${activeLiveExercise.name} · подход ${sessionProgress.activeSetNumber} из ${sessionProgress.activeExerciseSetCount}` : 'Выберите упражнение'}</span><strong>Готово {sessionProgress.completedSetCount} из {sessionProgress.setCount}</strong></span>

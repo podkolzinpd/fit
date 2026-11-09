@@ -1,3 +1,5 @@
+import { TrainerNutritionConsent } from '../nutrition'
+import { TrainerHistoryConsent } from '../../shared/TrainerHistoryConsent'
 import { ConnectionRequests } from '../auth/ConnectionPage'
 import { useState, type ReactNode } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
@@ -10,11 +12,18 @@ import { InvitationShareButton } from '../auth/InvitationShareActions'
 import { ChatStartButton } from '../chat'
 
 export function ClientTrainerConnections({ clientId, finance }: { clientId: string; finance?: ReactNode }) {
-  const { invitations: invitationsRepository } = useDataBackend()
+  const { invitations: invitationsRepository, connectionDirectory } = useDataBackend()
   const queryClient = useQueryClient()
   const trainers = useQuery({ queryKey: ['client-trainers', clientId], queryFn: () => invitationsRepository.listTrainers(clientId), refetchOnMount: 'always' })
   const invitations = useQuery({ queryKey: ['client-invitations', clientId], queryFn: () => invitationsRepository.list(clientId) })
   const revoke = useMutation({ mutationFn: (invitationId: string) => invitationsRepository.revoke(invitationId), onSuccess: async () => queryClient.invalidateQueries({ queryKey: ['client-invitations', clientId] }) })
+  const history = useQuery({ queryKey: ['trainer-history-access', clientId],
+    queryFn: () => connectionDirectory!.historyAccess!(), enabled: !!connectionDirectory?.historyAccess })
+  const historyChange = useMutation({
+    mutationFn: ({ enabled, soloEnabled }: { enabled: boolean; soloEnabled: boolean }) => connectionDirectory!.setHistoryAccess!(history.data!.relationshipId, enabled, soloEnabled),
+    onSuccess: async data => { queryClient.setQueryData(['trainer-history-access', clientId], data); await queryClient.invalidateQueries() },
+    onError: () => { void history.refetch() },
+  })
   const [disconnectMessage, setDisconnectMessage] = useState<string | null>(null)
   const disconnectTrainer = useMutation({
     mutationFn: (trainerId: string) => invitationsRepository.removeTrainer(clientId, trainerId),
@@ -52,6 +61,20 @@ export function ClientTrainerConnections({ clientId, finance }: { clientId: stri
         }]} /></div>
       </article>
     })}
+    {hasTrainers && connectionDirectory?.historyAccess && <div className="stack compact" aria-label="Доступ тренера к истории">
+      {history.isLoading && <p role="status">Проверяем доступ к истории…</p>}
+      {history.data && trainers.data?.length === 1 && history.data.trainerId === trainers.data[0]!.trainerId && <>
+        <TrainerHistoryConsent checked={history.data.enabled} soloChecked={history.data.soloEnabled}
+          disabled={historyChange.isPending || history.isFetching}
+          onChange={enabled => historyChange.mutate({ enabled, soloEnabled: history.data!.soloEnabled })}
+          onSoloChange={soloEnabled => historyChange.mutate({ enabled: history.data!.enabled, soloEnabled })} />
+        <TrainerNutritionConsent clientId={clientId} trainerId={history.data.trainerId} />
+        <p className="muted">Согласие действует только для текущего тренера. Его можно отозвать — сами тренировки сохранятся.</p>
+      </>}
+      {historyChange.isPending && <p role="status">Сохраняем доступ…</p>}
+      {historyChange.isSuccess && <p role="status">{historyChange.data.enabled ? 'Доступ к истории открыт' : 'Доступ к истории закрыт'}</p>}
+      {(history.error || historyChange.error) && <p className="error" role="alert">Не удалось обновить доступ к истории. <button className="link" onClick={() => { historyChange.reset(); void history.refetch() }}>Повторить проверку</button></p>}
+    </div>}
     {finance}
     <ConnectionRequests />
     <Link className="button primary connection-entry" to="/connect">Добавить тренера</Link>
