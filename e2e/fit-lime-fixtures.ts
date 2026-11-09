@@ -352,6 +352,8 @@ export async function mockPilot(page: Page, options: { role?: 'trainer' | 'clien
       body = { templates: [] }
     } else if (url.pathname === '/v1/legal/acceptance') {
       body = { applicable: true, accepted: true, acceptedAt: '2026-09-01T00:00:00.000Z' }
+    } else if (url.pathname === '/v1/trainer-profile/access') {
+      body = { available: false, managedByAdmin: false, version: 0 }
     } else if (url.pathname === '/v1/trainer-profile' && route.request().method() === 'GET') {
       if (failProfile) {
         await route.fulfill({ status: 503, contentType: 'application/json', body: '{"error":"unavailable"}' })

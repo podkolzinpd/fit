@@ -7486,3 +7486,7 @@ details[open] > .progress-details-toggle svg { transform:rotate(180deg); }
 .finance-receipts-pages > span { grid-column:1/-1; grid-row:1; color:var(--muted); font-size:12px; text-align:center; }
 
 .finance-receipts .finance-receipt-comment { display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+
+/* Managed professional profiles retain the existing card vocabulary. */
+.trainer-professional-editor .trainer-profile-management-notice { display:grid; grid-template-columns:minmax(0,1fr); gap:8px; }
+.trainer-professional-editor .trainer-profile-management-notice p { margin:0; }

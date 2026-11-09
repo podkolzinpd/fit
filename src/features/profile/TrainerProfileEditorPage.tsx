@@ -1,10 +1,11 @@
+import type { TrainerProfileEditorRepository } from '../../data/contracts/trainer-profiles'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useEffect, useMemo, useState, type ChangeEvent, type FormEvent } from 'react'
+import { useEffect, useMemo, useRef, useState, type ChangeEvent, type FormEvent } from 'react'
 import { Link, Navigate } from 'react-router-dom'
 import { useAuth } from '../../app/auth-context'
 import { useDataBackend } from '../../app/data-backend-context'
 import { forgetPublicTrainerProfile } from '../../data/repositories/public-trainer-profile.repository'
-import type { TrainerCertificate, TrainerProfileDraft, TrainerProfilePhotoUpload, TrainerTrainingMode } from '../../shared/domain'
+import type { TrainerCertificate, TrainerProfileDraft, TrainerProfilePhotoUpload, TrainerProfileWriteContext, TrainerProfessionalProfile, TrainerTrainingMode } from '../../shared/domain'
 import { copyText } from '../../shared/clipboard'
 import { ChevronDownIcon } from '../../shared/icons'
 import { fileFromImageDataUrl, prepareTrainerProfilePhoto } from '../../shared/profile-image'
@@ -14,7 +15,7 @@ import { AsyncView, Field, SaveStatus, Switch, useConfirm } from '../../shared/u
 import { MetroStationPicker } from './MetroStationPicker'
 import { TrainerProfileCard } from './TrainerProfileCard'
 
-const key = ['trainer-professional-profile'] as const
+const keyBase = ['trainer-professional-profile'] as const
 
 function profilePhotos(draft: TrainerProfileDraft) {
   return draft.photos ?? []
@@ -70,9 +71,23 @@ function profilesMatch(first: TrainerProfileDraft | null | undefined, second: Tr
     })
 }
 
-export function TrainerProfessionalProfileSection() {
+export function TrainerProfessionalProfileSection({ repositoryOverride, scope = 'own', displayName, adminMode = false, onSaved, onDirtyChange }: {
+  repositoryOverride?: TrainerProfileEditorRepository
+  scope?: string
+  displayName?: string
+  adminMode?: boolean
+  onSaved?: () => void
+  onDirtyChange?: (dirty: boolean) => void
+} = {}) {
   const { actor } = useAuth()
-  const { trainerProfiles } = useDataBackend()
+  const { trainerProfiles: ownProfiles } = useDataBackend()
+  const trainerProfiles = repositoryOverride ?? ownProfiles
+  const key = [...keyBase, actor?.userId, scope]
+  const management = useQuery({ queryKey: [...key, 'management'], queryFn: () => trainerProfiles.getManagement!(), enabled: Boolean(trainerProfiles.getManagement), retry: false, staleTime: 0 })
+  const managementLoading = Boolean(trainerProfiles.getManagement) && management.isPending
+  const readOnly = !adminMode && management.data?.managedByAdmin === true
+  const revision = useRef({ profile: 0, management: 0 })
+  const commandIds = useRef(new Map<string, string>())
   const queryClient = useQueryClient()
   const profile = useQuery({ queryKey: key, queryFn: () => trainerProfiles.getOwn() })
   const [draft, setDraft] = useState<TrainerProfileDraft | null>(null)
@@ -86,90 +101,151 @@ export function TrainerProfessionalProfileSection() {
   const [confirm, confirmDialog] = useConfirm()
 
   useEffect(() => {
-    if (profile.isLoading || draft !== null) return
-    const name = [actor?.firstName, actor?.lastName].filter(Boolean).join(' ')
+    if (profile.isLoading || managementLoading || profile.isError || management.isError || draft !== null) return
+    const name = displayName ?? [actor?.firstName, actor?.lastName].filter(Boolean).join(' ')
     const initial = profile.data?.draft ?? emptyTrainerProfileDraft(name)
+    revision.current = { profile: profile.data?.version ?? 0, management: management.data?.version ?? 0 }
     setDraft(initial)
-  }, [actor?.firstName, actor?.lastName, draft, profile.data, profile.isLoading])
+  }, [actor?.firstName, actor?.lastName, displayName, draft, profile.data, profile.isLoading, profile.isError, management.data, management.isError, managementLoading])
+
+  const dirty = editing && draft !== null && !profilesMatch(draft, profile.data?.draft)
+  useEffect(() => { onDirtyChange?.(dirty) }, [dirty, onDirtyChange])
+  useEffect(() => {
+    // A mode change cannot change the draft. Untouched forms can adopt its new
+    // version; dirty forms retain their old CAS token until an explicit reload.
+    if (!dirty && management.data && (profile.data?.version ?? 0) === revision.current.profile) {
+      revision.current.management = management.data.version
+    }
+  }, [dirty, management.data, profile.data?.version])
+  useEffect(() => {
+    if (!dirty) return
+    const warn = (event: BeforeUnloadEvent) => { event.preventDefault(); event.returnValue = '' }
+    window.addEventListener('beforeunload', warn)
+    return () => window.removeEventListener('beforeunload', warn)
+  }, [dirty])
+
+  function context(intent: unknown, version = revision.current.profile): TrainerProfileWriteContext | undefined {
+    if (!management.data?.available) return undefined
+    const signature = JSON.stringify([intent, version, revision.current.management])
+    let commandId = commandIds.current.get(signature)
+    if (!commandId) {
+      commandId = crypto.randomUUID()
+      if (commandIds.current.size >= 16) commandIds.current.clear()
+      commandIds.current.set(signature, commandId)
+    }
+    return { version, managementVersion: revision.current.management, commandId }
+  }
+  function remember(value: TrainerProfessionalProfile) {
+    onSaved?.()
+    revision.current = { profile: value.version, management: management.data?.version ?? 0 }
+  }
+  function failed(error: Error) {
+    setStatus('error'); setLocalError(error.message)
+    void profile.refetch()
+    if (trainerProfiles.getManagement) void management.refetch()
+  }
+  function saveDraft(value: TrainerProfileDraft) {
+    const metadata = context(['save', value])
+    return metadata ? trainerProfiles.saveDraft(value, metadata) : trainerProfiles.saveDraft(value)
+  }
+  async function reloadDraft() {
+    if (dirty && !await confirm({ message: 'Загрузить сохранённую анкету? Введённый в этой форме текст будет заменён.', confirmLabel: 'Загрузить' })) return
+    const [fresh, control] = await Promise.all([profile.refetch(), trainerProfiles.getManagement ? management.refetch() : Promise.resolve(null)])
+    if (fresh.error || control?.error) return
+    const name = displayName ?? [actor?.firstName, actor?.lastName].filter(Boolean).join(' ')
+    revision.current = { profile: fresh.data?.version ?? 0, management: control?.data?.version ?? 0 }
+    setDraft(fresh.data?.draft ?? emptyTrainerProfileDraft(name))
+    setLocalError(null); setPhotoError(null); setStatus('idle'); setEditing(false)
+  }
 
   const save = useMutation({
-    mutationFn: (value: TrainerProfileDraft) => trainerProfiles.saveDraft(value),
+    mutationFn: (value: TrainerProfileDraft) => saveDraft(value),
     onSuccess: (value) => {
+      remember(value)
       queryClient.setQueryData(key, value)
       setDraft(value.draft)
       setStatus('saved')
       setEditing(false)
     },
-    onError: () => setStatus('error'),
+    onError: failed,
   })
   const publish = useMutation({
     mutationFn: async (value: TrainerProfileDraft) => {
-      await trainerProfiles.saveDraft(value)
-      return trainerProfiles.publish()
+      const saved = await saveDraft(value)
+      const metadata = context(['publish'], saved.version)
+      return metadata ? trainerProfiles.publish(metadata) : trainerProfiles.publish()
     },
     onSuccess: (value) => {
+      remember(value)
       forgetPublicTrainerProfile(value.publicId)
       queryClient.setQueryData(key, value)
       setDraft(value.draft)
       setStatus('saved')
       setLocalError(null)
     },
-    onError: (error) => { setStatus('error'); setLocalError(error.message) },
+    onError: failed,
   })
   const unpublish = useMutation({
-    mutationFn: () => trainerProfiles.unpublish(),
+    mutationFn: () => { const metadata = context(['unpublish']); return metadata ? trainerProfiles.unpublish(metadata) : trainerProfiles.unpublish() },
     onSuccess: (value) => {
+      remember(value)
       forgetPublicTrainerProfile(value.publicId)
       queryClient.setQueryData(key, value)
       setStatus('saved')
       setLocalError(null)
     },
-    onError: (error) => { setStatus('error'); setLocalError(error.message) },
+    onError: failed,
   })
   const catalogListing = useMutation({
-    mutationFn: (listed: boolean) => trainerProfiles.setCatalogListing(listed),
-    onSuccess: (value) => { queryClient.setQueryData(key, value); setStatus('saved'); setLocalError(null) },
-    onError: (error) => { setStatus('error'); setLocalError(error.message) },
+    mutationFn: (listed: boolean) => { const metadata = context(['catalog', listed]); return metadata ? trainerProfiles.setCatalogListing(listed, metadata) : trainerProfiles.setCatalogListing(listed) },
+    onSuccess: (value) => {
+      remember(value); queryClient.setQueryData(key, value); setStatus('saved'); setLocalError(null) },
+    onError: failed,
   })
   const uploadPhoto = useMutation({
     mutationFn: ({ value, photo, replaceLegacy = false }: {
       value: TrainerProfileDraft
       photo: TrainerProfilePhotoUpload
       replaceLegacy?: boolean
-    }) => trainerProfiles.uploadPhoto(value, photo, replaceLegacy),
+    }) => { const metadata = context(['upload', value, photo, replaceLegacy]); return metadata ? trainerProfiles.uploadPhoto(value, photo, replaceLegacy, metadata) : trainerProfiles.uploadPhoto(value, photo, replaceLegacy) },
     onSuccess: (value) => {
+      remember(value)
       queryClient.setQueryData(key, value)
       setDraft(value.draft)
       setStatus('saved')
       setPhotoError(null)
     },
-    onError: (error) => setPhotoError(error.message),
+    onError: (error) => { setPhotoError(error.message); failed(error) },
   })
   const reorderPhotos = useMutation({
     mutationFn: async ({ value, photoIds }: { value: TrainerProfileDraft; photoIds: string[] }) => {
-      await trainerProfiles.saveDraft(value)
-      return trainerProfiles.reorderPhotos(photoIds)
+      const saved = await saveDraft(value)
+      const metadata = context(['reorder', photoIds], saved.version)
+      return metadata ? trainerProfiles.reorderPhotos(photoIds, metadata) : trainerProfiles.reorderPhotos(photoIds)
     },
     onSuccess: (value) => {
+      remember(value)
       queryClient.setQueryData(key, value)
       setDraft(value.draft)
       setStatus('saved')
       setLocalError(null)
     },
-    onError: (error) => { setStatus('error'); setLocalError(error.message) },
+    onError: failed,
   })
   const deletePhoto = useMutation({
     mutationFn: async ({ value, photoId }: { value: TrainerProfileDraft; photoId: string }) => {
-      await trainerProfiles.saveDraft(value)
-      return trainerProfiles.deletePhoto(photoId)
+      const saved = await saveDraft(value)
+      const metadata = context(['delete', photoId], saved.version)
+      return metadata ? trainerProfiles.deletePhoto(photoId, metadata) : trainerProfiles.deletePhoto(photoId)
     },
     onSuccess: (value) => {
+      remember(value)
       queryClient.setQueryData(key, value)
       setDraft(value.draft)
       setStatus('saved')
       setLocalError(null)
     },
-    onError: (error) => { setStatus('error'); setLocalError(error.message) },
+    onError: failed,
   })
 
   const publishedMatchesDraft = useMemo(
@@ -269,7 +345,7 @@ export function TrainerProfessionalProfileSection() {
     setCustomLocationText('')
   }
   function prepareDraft(): TrainerProfileDraft | null {
-    if (!draft) return null
+    if (!draft || readOnly) return null
     const result = trainerProfileDraftSchema.safeParse({
       ...draft,
       metroStationIds: [...new Set(draft.metroStationIds)],
@@ -286,8 +362,9 @@ export function TrainerProfessionalProfileSection() {
     if (value) save.mutate(value)
   }
   function cancelEditing() {
-    const name = [actor?.firstName, actor?.lastName].filter(Boolean).join(' ')
+    const name = displayName ?? [actor?.firstName, actor?.lastName].filter(Boolean).join(' ')
     const savedDraft = profile.data?.draft ?? emptyTrainerProfileDraft(name)
+    revision.current = { profile: profile.data?.version ?? 0, management: management.data?.version ?? 0 }
     setDraft(savedDraft)
     setCustomLocationText('')
     setStatus('idle')
@@ -295,11 +372,12 @@ export function TrainerProfessionalProfileSection() {
     setPhotoError(null)
     setEditing(false)
   }
-  function publishNow() {
+  async function publishNow() {
     const value = prepareDraft()
     if (!value) return
     const error = validatePublishableTrainerProfile(value)
     if (error) { setLocalError(error); return }
+    if (adminMode && !await confirm({ message: 'Опубликовать текущий черновик? Он заменит опубликованную анкету. Сравните версии перед подтверждением.', confirmLabel: 'Опубликовать' })) return
     publish.mutate(value)
   }
   async function copyLink() {
@@ -318,10 +396,9 @@ export function TrainerProfessionalProfileSection() {
   }
 
   const publicationControls = <>
-    <SaveStatus status={profileChangePending ? 'saving' : status} error={save.error?.message ?? publish.error?.message ?? unpublish.error?.message ?? catalogListing.error?.message ?? reorderPhotos.error?.message ?? deletePhoto.error?.message} />
+    <SaveStatus status={localError ? 'idle' : profileChangePending ? 'saving' : status} error={save.error?.message ?? publish.error?.message ?? unpublish.error?.message ?? catalogListing.error?.message ?? reorderPhotos.error?.message ?? deletePhoto.error?.message} />
     {showPublishAction && <div className="trainer-profile-publish-cta">
-      {localError && <p className="error" role="alert">{localError}</p>}
-      <button type="button" className="primary wide" onClick={publishNow} disabled={pending} aria-busy={publish.isPending}>
+      <button type="button" className="primary wide" onClick={() => void publishNow()} disabled={pending} aria-busy={publish.isPending}>
         {publish.isPending ? 'Публикуем…' : profile.data?.published ? 'Обновить анкету' : 'Опубликовать'}
       </button>
     </div>}
@@ -339,10 +416,16 @@ export function TrainerProfessionalProfileSection() {
     </button>}
   </>
 
-  return <section className="trainer-professional-editor trainer-professional-embedded ui-identity" aria-label="Анкета тренера">
+  return <section className="trainer-professional-editor trainer-professional-embedded ui-identity" aria-label="Анкета тренера" onErrorCapture={event => { if (event.target instanceof HTMLImageElement) setPhotoError('Фото недоступно. Загрузите анкету заново, чтобы обновить ссылку.') }}>
     {confirmDialog}
-    <AsyncView loading={profile.isLoading} error={profile.error} onRetry={() => void profile.refetch()}>
-      {draft && editing && <form className="trainer-profile-form trainer-profile-edit-card card" onSubmit={submit} aria-label="Редактирование анкеты тренера">
+    {photoError && !editing && <p role="alert" className="error">{photoError} <button type="button" className="secondary" onClick={() => void reloadDraft()}>Загрузить актуальную анкету</button></p>}
+    <AsyncView loading={profile.isLoading || managementLoading} error={profile.error ?? management.error} onRetry={() => { void profile.refetch(); if (trainerProfiles.getManagement) void management.refetch() }}>
+      {readOnly && <div className="card trainer-profile-management-notice" role="status"><strong>Анкетой управляет администратор</strong><p>Вы можете просматривать анкету. Изменения и публикацию выполняет администратор.</p></div>}
+      {localError && !photoError && <div className="card" role="alert"><p>{localError}</p><button type="button" className="secondary" onClick={() => void reloadDraft()}>Загрузить актуальную анкету</button></div>}
+      {readOnly && dirty && draft && <details className="card"><summary>Ваш несохранённый текст</summary><p>Он остался только в этой открытой форме и не опубликован.</p><TrainerProfileCard profile={draft} compact /></details>}
+      {readOnly && (profile.data?.draft ?? draft) && <TrainerProfileCard profile={(profile.data?.draft ?? draft)!} compact isBrandTrainer={profile.data?.isBrandTrainer ?? false} />}
+      {adminMode && profile.data?.published && !publishedMatchesDraft && <details className="card trainer-profile-version-preview"><summary>Сравнить с опубликованной анкетой</summary><TrainerProfileCard profile={profile.data.published} compact /><p>Выше — опубликованная версия. В редакторе — текущий черновик. Сохранение черновика само не меняет публикацию.</p></details>}
+      {draft && editing && !readOnly && <form className="trainer-profile-form trainer-profile-edit-card card" onSubmit={submit} aria-label="Редактирование анкеты тренера">
         <header className="trainer-profile-edit-head"><div><p className="eyebrow">АНКЕТА ТРЕНЕРА</p><h2>Редактирование</h2></div></header>
         <div className="trainer-photo-editor" aria-labelledby="trainer-photos-title">
           <div className="trainer-photo-editor-head"><div><strong id="trainer-photos-title">Фотографии</strong><span>{profilePhotos(draft).length || (draft.avatarDataUrl ? 1 : 0)}/3</span></div>
@@ -418,14 +501,13 @@ export function TrainerProfessionalProfileSection() {
             </div>
           </div>
         </details>
-        {localError && <p className="error" role="alert">{localError}</p>}
-        <SaveStatus status={profileChangePending ? 'saving' : status} error={save.error?.message ?? publish.error?.message ?? unpublish.error?.message ?? catalogListing.error?.message ?? reorderPhotos.error?.message ?? deletePhoto.error?.message} />
+          <SaveStatus status={localError ? 'idle' : profileChangePending ? 'saving' : status} error={save.error?.message ?? publish.error?.message ?? unpublish.error?.message ?? catalogListing.error?.message ?? reorderPhotos.error?.message ?? deletePhoto.error?.message} />
         <div className="trainer-profile-actions">
           <button type="button" className="secondary" onClick={cancelEditing} disabled={pending}>Отмена</button>
           <button type="submit" className="primary" disabled={pending} aria-busy={save.isPending}>{save.isPending ? 'Сохраняем…' : 'Сохранить'}</button>
         </div>
       </form>}
-      {draft && !editing && !hasProfileContent(draft) && <article className="trainer-card trainer-card-compact trainer-profile-empty">
+      {draft && !editing && !readOnly && !hasProfileContent(draft) && <article className="trainer-card trainer-card-compact trainer-profile-empty">
         <header className="trainer-card-head">
           <span className="trainer-card-avatar trainer-card-avatar-placeholder" aria-hidden="true">{draft.displayName.slice(0, 1).toUpperCase() || 'Ф'}</span>
           <div className="trainer-card-identity"><h2>{draft.displayName || 'Профиль тренера'}</h2><p>Анкета пока не заполнена</p></div>
@@ -434,7 +516,7 @@ export function TrainerProfessionalProfileSection() {
         <button type="button" className="secondary" onClick={() => setEditing(true)}>Заполнить анкету</button>
         {publicationControls}
       </article>}
-      {draft && !editing && hasProfileContent(draft) && <TrainerProfileCard
+      {draft && !editing && !readOnly && hasProfileContent(draft) && <TrainerProfileCard
         profile={draft}
         isBrandTrainer={profile.data?.isBrandTrainer ?? false}
         compact

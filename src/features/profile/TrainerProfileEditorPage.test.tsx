@@ -66,9 +66,9 @@ const publishedProfile: TrainerProfessionalProfile = {
   publishedAt: '2026-09-13T09:01:00.000Z',
 }
 
-function renderSection() {
+function renderSection(props: Parameters<typeof TrainerProfessionalProfileSection>[0] = {}) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })
-  return render(<MemoryRouter><QueryClientProvider client={client}><TrainerProfessionalProfileSection /></QueryClientProvider></MemoryRouter>)
+  return render(<MemoryRouter><QueryClientProvider client={client}><TrainerProfessionalProfileSection {...props} /></QueryClientProvider></MemoryRouter>)
 }
 
 describe('TrainerProfessionalProfileSection', () => {
@@ -346,4 +346,56 @@ describe('TrainerProfessionalProfileSection', () => {
     await waitFor(() => expect(repository.deletePhoto).toHaveBeenCalledWith(photos[1]!.id))
     expect(repository.saveDraft).toHaveBeenCalledWith(expect.objectContaining({ displayName: completeDraft.displayName }))
   })
+})
+
+
+describe('Yandex profile management', () => {
+ function managedRepository(managedByAdmin=false) {
+  return {...repository,getOwn:vi.fn().mockResolvedValue(publishedProfile),getManagement:vi.fn().mockResolvedValue({available:true,managedByAdmin,version:3}),saveDraft:vi.fn().mockResolvedValue({...publishedProfile,version:7}),publish:vi.fn().mockResolvedValue({...publishedProfile,version:8})}
+ }
+ it('makes the managed professional profile read-only, including publication and photographs',async()=>{
+  const repo=managedRepository(true);renderSection({repositoryOverride:repo})
+  expect(await screen.findByText('Анкетой управляет администратор')).toBeVisible()
+  expect(screen.queryByRole('button',{name:'Редактировать'})).not.toBeInTheDocument()
+  expect(screen.queryByRole('button',{name:'Снять с публикации'})).not.toBeInTheDocument()
+  expect(screen.queryByLabelText('Выбрать фото')).not.toBeInTheDocument()
+  expect(screen.getByRole('heading',{name:completeDraft.displayName})).toBeVisible()
+ })
+ it('uses the selected trainer name, never the administrator account name for a missing draft',async()=>{
+  const repo=managedRepository();repo.getOwn.mockResolvedValue(null)
+  renderSection({repositoryOverride:repo,displayName:'Выбранный тренер',scope:'admin:target',adminMode:true})
+  expect(await screen.findByRole('heading',{name:'Выбранный тренер'})).toBeVisible()
+  expect(screen.queryByRole('heading',{name:'Анна Иванова'})).not.toBeInTheDocument()
+ })
+ it('keeps admin editing available while the owner is locked and sends both loaded CAS versions',async()=>{
+  const repo=managedRepository(true),user=userEvent.setup();renderSection({repositoryOverride:repo,adminMode:true,scope:'admin:target'})
+  await user.click(await screen.findByRole('button',{name:'Редактировать'}))
+  await user.clear(screen.getByLabelText('О себе'));await user.type(screen.getByLabelText('О себе'),'Исправлено администратором')
+  await user.click(screen.getByRole('button',{name:'Сохранить'}))
+  await waitFor(()=>expect(repo.saveDraft).toHaveBeenCalledWith(expect.objectContaining({bio:'Исправлено администратором'}),expect.objectContaining({version:1,managementVersion:3})))
+ })
+ it('retains typed text and the original version on conflict; a retry reuses the exact command id',async()=>{
+  const repo=managedRepository(),user=userEvent.setup();repo.saveDraft.mockRejectedValue(Error('Данные изменились'))
+  renderSection({repositoryOverride:repo,adminMode:true,scope:'admin:conflict'})
+  await user.click(await screen.findByRole('button',{name:'Редактировать'}));await user.type(screen.getByLabelText('О себе'),' Мой текст')
+  await user.click(screen.getByRole('button',{name:'Сохранить'}));expect(await screen.findByRole('alert')).toHaveTextContent('Данные изменились')
+  expect(screen.getByLabelText('О себе')).toHaveValue(completeDraft.bio+' Мой текст')
+  const first=repo.saveDraft.mock.calls[0]!
+  await user.click(screen.getByRole('button',{name:'Сохранить'}));await waitFor(()=>expect(repo.saveDraft).toHaveBeenCalledTimes(2))
+  expect(repo.saveDraft.mock.calls[1]).toEqual(first)
+ })
+ it('publishes only after confirmation and chains the save result version into publication',async()=>{
+  const repo=managedRepository(),user=userEvent.setup();repo.getOwn.mockResolvedValue({...publishedProfile,draft:{...completeDraft,bio:'Новая версия'}})
+  renderSection({repositoryOverride:repo,adminMode:true,scope:'admin:publication'})
+  await user.click(await screen.findByRole('button',{name:'Обновить анкету'}))
+  expect(repo.publish).not.toHaveBeenCalled()
+  await user.click(screen.getByRole('button',{name:'Опубликовать'}))
+  await waitFor(()=>expect(repo.publish).toHaveBeenCalledWith(expect.objectContaining({version:7,managementVersion:3})))
+ })
+ it('fails closed when management access cannot be loaded, instead of exposing edit controls',async()=>{
+  const repo=managedRepository();repo.getManagement.mockRejectedValue(Error('Нет связи'))
+  renderSection({repositoryOverride:repo})
+  expect(await screen.findByText('Нет связи')).toBeVisible()
+  expect(screen.queryByRole('button',{name:'Редактировать'})).not.toBeInTheDocument()
+ })
 })

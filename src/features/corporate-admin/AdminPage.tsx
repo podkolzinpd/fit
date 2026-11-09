@@ -1,3 +1,4 @@
+import { AdminProfileEditor } from './ProfileEditor'
 import { CorporateDutyStatistics } from '../corporate-duties/DutyStatistics'
 import { CorporatePersonalStatistics } from '../corporate-personal'
 import { CorporateServiceStatistics } from '../corporate-services'
@@ -133,6 +134,7 @@ function OfficeForm({ office, onClose }: { office: CorporateOffice; onClose: () 
 }
 
 function Trainers({ data, onInvite }: { data: CorporateAdminBundle; onInvite: () => void }) {
+  const [profileTrainer,setProfileTrainer]=useState<CorporateTrainer|null>(null)
   const [search, setSearch] = useState('')
   const [officeId, setOfficeId] = useState('')
   const [selected, setSelected] = useState<CorporateTrainer | null>(null)
@@ -143,13 +145,15 @@ function Trainers({ data, onInvite }: { data: CorporateAdminBundle; onInvite: ()
       <Field label="Поиск тренера"><input type="search" placeholder="Имя или ссылка на анкету" value={search} onChange={e => setSearch(e.target.value)} /></Field>
       <Field label="Офис"><select value={officeId} onChange={e => setOfficeId(e.target.value)}><option value="">Все офисы</option>{data.offices.map(o => <option key={o.id} value={o.id}>{o.city} · {o.name}{o.archived ? ' · Архив' : ''}</option>)}</select></Field>
     </div>
+    {profileTrainer && <AdminProfileEditor key={profileTrainer.id} trainer={profileTrainer} onClose={()=>setProfileTrainer(null)} />}
     {selected && <TrainerForm key={selected.id} trainer={selected} offices={data.offices} onClose={() => setSelected(null)} />}
     {!rows.length ? <EmptyState title="Тренеры не найдены" description={data.trainers.length ? 'Измените поиск или фильтры.' : 'В кабинете пока нет тренеров Яндекса.'} /> : <ul className="corporate-admin-list">
       {rows.map(t => <li key={t.id}><div className="corporate-admin-person"><AdminTrainerPhoto key={t.photoUrl ?? t.id} trainer={t} /><div><strong>{t.name}</strong>
         {t.publishedName && t.publishedName !== t.name && <p>В анкете: {t.publishedName}</p>}
         <p>{t.isYandex ? 'Тренер Яндекса' : 'Без отметки'} · {t.officeIds.map(id => data.offices.find(o => o.id === id)).filter(o => o !== undefined).map(o => `${o.city}, ${o.name}${o.archived ? ' (архив)' : ''}`).join('; ') || 'Офисы не назначены'}</p>
         {t.publicId ? <Link to={`/trainers/${t.publicId}`} target="_blank" rel="noopener noreferrer">Открыть анкету</Link> : t.publicId === null ? <p>Анкета не опубликована</p> : null}</div></div>
-        <button type="button" className="secondary" aria-label={`Настроить тренера ${t.name}`} onClick={() => setSelected({ ...t })}>Настроить</button></li>)}
+        <div className="actions">{t.isYandex && t.profileEditingAvailable && <button type="button" className="secondary" disabled={profileTrainer!==null} aria-label={`Редактировать анкету ${t.name}`} onClick={()=>setProfileTrainer(t)}>Редактировать анкету</button>}
+        <button type="button" className="secondary" aria-label={`Настроить тренера ${t.name}`} onClick={() => setSelected({ ...t })}>Настроить</button></div></li>)}
     </ul>}
   </section>
 }

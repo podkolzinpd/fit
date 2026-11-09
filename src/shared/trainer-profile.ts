@@ -105,7 +105,12 @@ export const trainerProfileDraftSchema = z.object({
   certificates: z.preprocess(removeEmptyCertificates, z.array(certificateSchema).max(10)),
 })
 
+export const trainerProfileManagementSchema = z.object({
+  available: z.boolean(), managedByAdmin: z.boolean(), version: z.number().int().nonnegative(),
+})
+
 export const trainerProfessionalProfileSchema = z.object({
+  profileManagement: trainerProfileManagementSchema.optional(),
   yandexOffices: z.array(z.object({ city: z.string().min(1).max(100), name: z.string().min(1).max(160) })).max(100).optional(),
   publicId: z.uuid(),
   draft: trainerProfileDraftSchema,
