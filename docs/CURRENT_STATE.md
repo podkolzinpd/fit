@@ -32,7 +32,7 @@ P4/PR1882 опубликован наe5b5aa1d:213 файлов/health и public 
 P1–P4 завершены; итог — итерация26 канонического журнала и YAFIT-674.
 31.10 справочник заполнен:32 офиса добавлены,33/33 после reload; итерация27.
 02.11: [кабинет Яндекса](design/CORPORATE_ADMIN_20261027.md): PR1930/1937 опубликованы.
-SRV/ADM/CPT/DUT приняты; personal/DUT testON. TPA:PR2078 CI, PR2 готовится; старт выпуска через2ч после подготовки, по очереди; [журнал95](design/CORPORATE_ADMIN_20261027.md).
+SRV/ADM/CPT/DUT приняты; personal/DUT testON. TPA:2078/2079 подготовлены; старт≥10.11 01:33МСК, по очереди; новый pilotOFF; [журнал98](design/CORPORATE_ADMIN_20261027.md).
 
 ## Точка продолжения
 [UX:4PR, проверки](design/WORKOUT_LIFECYCLE_UX_AUDIT_20261101.md).
