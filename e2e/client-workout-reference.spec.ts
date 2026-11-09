@@ -468,7 +468,7 @@ for (const density of ['original', 'compact']) test(`client Live strength rows k
 
 // Force both race windows: a slow confirmation and a queued focus frame.
 // Strength/time exercise different native inputs; two engines cover touch focus.
-for (const metric of ['weight', 'seconds'] as const) for (const phase of ['response', 'frame'] as const) test(`client manual focus wins confirmation ${metric} ${phase}`, async ({ page }, info) => {
+for (const role of ['client', 'trainer'] as const) for (const metric of ['weight', 'seconds'] as const) for (const phase of ['response', 'frame'] as const) test(`${role} manual focus wins confirmation ${metric} ${phase}`, async ({ page }, info) => {
   const source = restTimerWorkout()
   source.startedAt = new Date(Date.now() - 120000).toISOString()
   const exercise = source.exercises[0]!, target = exercise.sets[0]!, sibling = exercise.sets[1]!
@@ -476,7 +476,8 @@ for (const metric of ['weight', 'seconds'] as const) for (const phase of ['respo
     Object.assign(exercise, { ref: 'rowing-machine', name: 'Гребной тренажёр', inputKind: 'distance' })
     exercise.sets.forEach(set => Object.assign(set, { weightKg: undefined, durationSec: 90, distanceKm: 1.02 }))
   }
-  const backend = await mockPilot(page, { role: 'client', profileId: pilotId, clientLime: true, workouts: [source] })
+  await silenceLiveAudio(page)
+  const backend = await mockPilot(page, { role, profileId: role === 'client' ? pilotId : 'c0ac0000-6010-4000-8000-000000000001', fitLime: true, clientLime: true, workouts: [source] })
   let release!: () => void
   const gate = new Promise<void>(resolve => { release = resolve })
   await page.route(`**/v1/workout-sets/${target.id}/confirm`, async route => { await gate; await route.fallback() })
@@ -4838,28 +4839,22 @@ for (const density of ['original', 'compact'] as const) test(`Coach confirms exe
     localStorage.setItem(`fit.liveExerciseAnimation.${id}`, 'false')
     localStorage.setItem(`fit.coachLiveDensity.${id}`, density)
   }, { id, density })
-  await page.addInitScript(() => {
-    const connect = Object.getOwnPropertyDescriptor(AudioNode.prototype, 'connect')!.value as typeof AudioNode.prototype.connect
-    const sinks = new WeakMap<BaseAudioContext, GainNode>()
-    AudioNode.prototype.connect = function (this: AudioNode, target: AudioNode | AudioParam, output?: number, input?: number) {
-      if (target instanceof AudioDestinationNode) {
-        let sink = sinks.get(this.context)
-        if (!sink) {
-          sink = this.context.createGain(); sink.gain.value = 0
-          Reflect.apply(connect, sink, [target, 0, 0]); sinks.set(this.context, sink)
-        }
-        return Reflect.apply(connect, this, [sink, output ?? 0, input ?? 0]) as AudioNode
-      }
-      return (target instanceof AudioNode ? Reflect.apply(connect, this, [target, output ?? 0, input ?? 0])
-        : Reflect.apply(connect, this, [target, output ?? 0])) as AudioNode
-    } as typeof AudioNode.prototype.connect
-  })
+  await silenceLiveAudio(page)
   const source = coachGestureWorkout(false, 3)
-  const backend = await mockPilot(page, { role: 'trainer', profileId: id, clientLime: true, fitLime: true, workouts: [source] })
+  const backend = await mockPilot(page, { role: 'trainer', profileId: id, clientLime: true, fitLime: true, workouts: [source], failFirstSetConfirm: true })
   await page.goto(`/workouts/${workoutId}/live`)
   const cards = page.locator('.live-exercise')
   const bodies = page.locator('.live-exercise > .coach-v79-card-body')
   await cards.nth(1).locator('button.coach-v79-card-toggle').click()
+  const first = source.exercises[1]!.sets[0]!
+  const failedResponse = page.waitForResponse(response => response.url().endsWith(`/workout-sets/${first.id}/confirm`) && response.status() >= 500)
+  const firstButton = page.locator(`[data-live-set-id="${first.id}"]`).getByRole('button', { name: 'Готово, отдых', exact: true })
+  await firstButton.click()
+  await failedResponse
+  await expect(firstButton).toBeEnabled()
+  await expect(bodies.nth(1)).not.toHaveAttribute('inert', '')
+  expect(backend.getWorkouts()[0]!.exercises[1]!.sets[0]!.confirmedAt).toBeNull()
+  await expect(page.locator(`[data-live-set-id="${first.id}"]`).getByLabel('Фактический вес', { exact: true })).toHaveValue(String(first.weightKg))
   for (const set of source.exercises[1]!.sets) {
     await page.locator(`[data-live-set-id="${set.id}"]`).getByRole('button', { name: 'Готово, отдых', exact: true }).click()
     await expect.poll(() => backend.getWorkouts()[0]!.exercises[1]!.sets.find(item => item.id === set.id)!.confirmedAt).not.toBeNull()
@@ -4875,12 +4870,7 @@ for (const density of ['original', 'compact'] as const) test(`Coach confirms exe
   expect(backend.getWorkouts()[0]!.exercises[0]!.sets.every(set => !set.confirmedAt)).toBe(true)
 })
 
-for (const density of ['original', 'compact'] as const) test(`Coach confirms later superset round ${density}`, async ({ page }) => {
-  const id = 'c0ac0000-6010-4000-8000-000000000001'
-  await page.addInitScript(({ id, density }) => {
-    localStorage.setItem(`fit.liveExerciseAnimation.${id}`, 'false')
-    localStorage.setItem(`fit.coachLiveDensity.${id}`, density)
-  }, { id, density })
+async function silenceLiveAudio(page: Page) {
   await page.addInitScript(() => {
     const connect = Object.getOwnPropertyDescriptor(AudioNode.prototype, 'connect')!.value as typeof AudioNode.prototype.connect
     const sinks = new WeakMap<BaseAudioContext, GainNode>()
@@ -4897,6 +4887,15 @@ for (const density of ['original', 'compact'] as const) test(`Coach confirms lat
         : Reflect.apply(connect, this, [target, output ?? 0])) as AudioNode
     } as typeof AudioNode.prototype.connect
   })
+}
+
+for (const density of ['original', 'compact'] as const) test(`Coach confirms later superset round ${density}`, async ({ page }) => {
+  const id = 'c0ac0000-6010-4000-8000-000000000001'
+  await page.addInitScript(({ id, density }) => {
+    localStorage.setItem(`fit.liveExerciseAnimation.${id}`, 'false')
+    localStorage.setItem(`fit.coachLiveDensity.${id}`, density)
+  }, { id, density })
+  await silenceLiveAudio(page)
   await page.clock.setFixedTime(new Date('2026-11-04T09:00:00Z'))
   const source = coachGestureWorkout(true, 4)
   source.exercises = [source.exercises[2]!, source.exercises[0]!, source.exercises[1]!, source.exercises[3]!]
