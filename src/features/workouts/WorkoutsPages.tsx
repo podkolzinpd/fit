@@ -1,3 +1,4 @@
+import { isWorkoutClient } from './workout-client-eligibility'
 import type { QuickWorkoutEntryDraft } from './quick-workout-draft'
 import { WorkoutTemplatePicker } from './WorkoutTemplatePicker'
 import { persistTemplateSource, type TemplatePlanContext } from './template-plan-context'
@@ -70,7 +71,7 @@ import {
 import { AsyncView, Coachmark, EmptyState, Field, InlineRequestError, OverflowMenu, Page, SaveStatus, StatePanel, useConfirm } from '../../shared/ui'
 import { getRequestDiagnostics } from '../../shared/request-diagnostics'
 import { ExerciseImage, ExercisePicker, ExerciseTechniqueSheet, ExerciseThumbnail, findCatalogExercise, hasExerciseAnimation, hasExerciseMedia, hasExerciseTechnique, recentExercisesForClient, useExerciseCatalog } from '../exercises'
-import { clientWorkoutAuthorLabel, ClientPicker, ClientWorkoutHistoryCalendar, useWorkoutHistoryCalendar, type ClientPickerSelection } from '../clients'
+import { clientWorkoutAuthorLabel, ClientPicker, ClientWorkoutHistoryCalendar, useWorkoutHistoryCalendar } from '../clients'
 import { hasWorkoutBackEntry, safeWorkoutReturnTo, useWorkoutBack, workoutListFallback, type WorkoutNavigationState } from './workout-navigation'
 import { VoiceNoteField } from '../voice-input'
 import { CLIENT_LIME_WORKOUT_EXAMPLE } from './WorkoutComposer'
@@ -130,7 +131,6 @@ import { WorkoutChoice, WorkoutCta, WorkoutExercise, WorkoutExerciseCompact, Wor
 import { liveSessionProgress } from './live-session-progress'
 import { calendarExerciseResult, chronicleExercisePreview, workoutDisplayTitle, workoutExerciseBrief } from './workout-chronicle'
 import { compactScheduleEventLabel, formatScheduleDateLabel, layoutScheduleTimelineEvents, mondayWeekStart, scheduleDurationMinutes, scheduleEventStatus, scheduleExerciseLine, scheduleFocusMinutes, scheduleHourLabelCollidesWithNow, scheduleLaneClientName, scheduleTimelineScrollTop } from './schedule-presentation'
-import { InvitationCodeCard } from '../../shared/invitation-code-card'
 import { trackGoal } from '../../shared/yandex-metrika'
 import { latestWorkoutFact } from '../../shared/workout-results'
 import { liveOperationWithTimeout } from './live-operation-timeout'
@@ -966,7 +966,7 @@ function TrainerScheduleV2({ forceDayView = false }: { forceDayView?: boolean })
     {draft && <Link className="schedule-v2-resume" to="/today?view=compose"><strong>Есть незавершённая тренировка</strong><span>Продолжить <ChevronRightIcon /></span></Link>}
     {homeClients.isLoading && <p className="schedule-v2-home-state" role="status">Загружаем клиентов…</p>}
     {homeClients.isError && <p className="schedule-v2-home-state" role="alert">Не удалось загрузить клиентов. <button type="button" onClick={() => void homeClients.refetch()}>Повторить</button></p>}
-    {!homeClients.isLoading && !homeClients.isError && homeClients.data?.length === 0 && <Link className="schedule-v2-first-client" to="/clients/new">Добавить первого клиента <ChevronRightIcon /></Link>}
+    {!homeClients.isLoading && !homeClients.isError && homeClients.data?.filter(isWorkoutClient).length === 0 && <Link className="schedule-v2-first-client" to="/connect">Подключить первого спортсмена <ChevronRightIcon /></Link>}
     {homeWorkouts.isLoading && <p className="schedule-v2-home-state" role="status">Загружаем тренировки…</p>}
     {homeWorkouts.isError && <p className="schedule-v2-home-state" role="alert">Не удалось загрузить тренировки. <button type="button" onClick={() => void homeWorkouts.refetch()}>Повторить</button></p>}
     {homeContext && <Link className="schedule-v2-next-workout" to={homeContext.workout.status === 'in_progress' ? `/workouts/${homeContext.workout.id}/live` : `/workouts/${homeContext.workout.id}`} state={{ returnTo }}><small>{homeContext.title}</small><strong>{homeContext.workout.clientName}</strong><span>{homeContext.workout.workoutDate === today ? homeContext.workout.startTime?.slice(0, 5) || 'Сегодня' : formatLocalDate(homeContext.workout.workoutDate)} <ChevronRightIcon /></span></Link>}
@@ -1291,7 +1291,7 @@ export function WorkoutChronicleCard({ workout, contextLabel, returnTo, historyL
 }
 
 export function ClientWorkoutsPage() {
-  const { workouts: workoutsRepository } = useDataBackend()
+  const { clients: clientsRepository, workouts: workoutsRepository } = useDataBackend()
   const { clientId = '' } = useParams()
   const { actor } = useAuth()
   const today = todayInTimeZone(actor?.timezone)
@@ -1299,6 +1299,8 @@ export function ClientWorkoutsPage() {
   const returnTo = `/clients/${clientId}/workouts${calendar.search}`
   const goBack = useWorkoutBack(`/clients/${clientId}`)
   useClientRealtime(clientId)
+  const client = useQuery({ queryKey: ['client', clientId], queryFn: () => clientsRepository.get(clientId) })
+  const canCreateWorkout = Boolean(client.data && isWorkoutClient(client.data))
   const upcoming = useQuery({
     queryKey: ['workouts', clientId, 'upcoming', today],
     queryFn: () => workoutsRepository.list(today, undefined, clientId),
@@ -1320,7 +1322,8 @@ export function ClientWorkoutsPage() {
   const calendarItems = splitClientWorkouts(calendarHistory.data ?? [], today).history
   const contextLabel = (workout: Workout) => workout.createdBy && workout.createdBy !== actor?.userId ? 'Создано клиентом' : null
   const hasWorkouts = upcomingItems.length > 0 || split.needsDecision.length > 0 || split.history.length > 0
-  return <Page className="trainer-client-workouts-page" title="Тренировки клиента" back={`/clients/${clientId}`} onBack={goBack} action={<div className="actions">{hasWorkouts && <Link className="button" to={`/workouts/new?client=${clientId}`} state={{ returnTo }}>Запланировать</Link>}{actor?.role === 'trainer' && <Link className="button secondary" to={`/workouts/new?client=${clientId}&mode=completed`} state={{ returnTo }}>Записать результат</Link>}</div>}><AsyncView loading={upcoming.isLoading || query.isLoading} error={upcoming.error ?? query.error} onRetry={() => { void upcoming.refetch(); void query.refetch() }}>
+  return <Page className="trainer-client-workouts-page" title="Тренировки клиента" back={`/clients/${clientId}`} onBack={goBack} action={<div className="actions">{hasWorkouts && canCreateWorkout && <Link className="button" to={`/workouts/new?client=${clientId}`} state={{ returnTo }}>Запланировать</Link>}{actor?.role === 'trainer' && canCreateWorkout && <Link className="button secondary" to={`/workouts/new?client=${clientId}&mode=completed`} state={{ returnTo }}>Записать результат</Link>}</div>}><AsyncView loading={upcoming.isLoading || query.isLoading} error={upcoming.error ?? query.error} onRetry={() => { void upcoming.refetch(); void query.refetch() }}>
+    {client.data && !canCreateWorkout && <p className="muted">Для новых тренировок <Link to="/connect">пригласите спортсмена</Link>. Прежняя история сохранена.</p>}
     {hasWorkouts || calendar.state.view === 'calendar' ? <div className="client-workouts-stack">
       {upcomingItems.length > 0 && <section className="client-workout-section">
         <div className="client-workout-section-head"><p className="eyebrow">БЛИЖАЙШЕЕ</p><h2>Предстоит</h2></div>
@@ -1352,8 +1355,8 @@ export function ClientWorkoutsPage() {
       </section>
     </div> : <EmptyState
       title="Тренировка для клиента"
-      description="Составьте план или сразу запишите готовый результат."
-      action={<Link className="button secondary" to={`/workouts/new?client=${clientId}`} state={{ returnTo }}>Запланировать тренировку</Link>}
+      description={canCreateWorkout ? "Составьте план или сразу запишите готовый результат." : "Тренировок пока нет."}
+      action={canCreateWorkout ? <Link className="button secondary" to={`/workouts/new?client=${clientId}`} state={{ returnTo }}>Запланировать тренировку</Link> : undefined}
     />}
   </AsyncView></Page>
 }
@@ -1644,11 +1647,7 @@ export function WorkoutFormPage() {
     void refreshCalendar
   } })
 
-  async function createQuickClient(fullName: string): Promise<ClientPickerSelection> {
-    const id = await clientsRepository.createQuick(fullName)
-    await queryClient.invalidateQueries({ queryKey: ['clients'] })
-    return { id, fullName }
-  }
+
 
   async function previousResults(selected: ExerciseSnapshot[]): Promise<Map<string, PreviousExerciseResult>> {
     if (!clientId) return new Map<string, PreviousExerciseResult>()
@@ -1752,6 +1751,7 @@ export function WorkoutFormPage() {
     const form = new FormData(event.currentTarget)
     const submitClientId = String(form.get('clientId'))
     if (!submitClientId) { setClientSelectionError('Выберите клиента для тренировки'); return }
+    if (!clientMode && !workoutId && !clients.data?.some(client => client.id === submitClientId && isWorkoutClient(client))) { setClientSelectionError('Сначала подключите аккаунт спортсмена и дождитесь его подтверждения.'); return }
     const date = entryDate
     const submittedStartTime = startTime
     const submittedEndTime = endTime
@@ -1788,7 +1788,7 @@ export function WorkoutFormPage() {
       notes: notes || undefined, stageId: stageId || null, exercises, version: safePlanInput && workoutId ? editSourceVersion.current : source.data?.version,
       favoriteTitle: initial?.favoriteTitle, trainingFormat: clientMode ? 'self' : trainingFormat ?? 'with_trainer' })
   }
-  const availableClients = clientMode ? (mine.data ? [mine.data] : []) : clients.data
+  const availableClients = clientMode ? (mine.data ? [mine.data] : []) : clients.data?.filter(client => workoutId || isWorkoutClient(client))
   const selectedClientName = availableClients?.find((client) => client.id === clientId)?.fullName
   const clientContextLocked = !clientMode && !workoutId && !(templateId && templateDraftChoice === 'resume') && Boolean(routeClientId || (copiedWorkout && source.data?.clientId))
   const editingDenied = Boolean(clientMode && workoutId && source.data && source.data.createdBy !== actor?.userId)
@@ -1864,7 +1864,7 @@ export function WorkoutFormPage() {
           ? <input type="hidden" name="clientId" value={mine.data?.id ?? ''} />
           : clientContextLocked
             ? <input type="hidden" name="clientId" value={clientId} />
-            : <ClientPicker userId={actor?.userId} clients={availableClients ?? []} selectedId={clientId} onChange={(id) => { setClientSelectionError(null); setSelectedClientId(id) }} selectionError={clientSelectionError} loading={clients.isLoading} error={clients.error} onRetry={() => void clients.refetch()} onCreate={createQuickClient} />}
+            : <ClientPicker userId={actor?.userId} clients={availableClients ?? []} selectedId={clientId} onChange={(id) => { setClientSelectionError(null); setSelectedClientId(id) }} selectionError={clientSelectionError} loading={clients.isLoading} error={clients.error} onRetry={() => void clients.refetch()} />}
         {!workoutId && !readyPlan && <div className="workout-record-mode" role="group" aria-label="Тип тренировки"><button type="button" className={!recordCompleted ? 'active' : ''} aria-pressed={!recordCompleted} onClick={() => setRecordCompleted(false)}>План</button><button type="button" className={recordCompleted ? 'active' : ''} aria-pressed={recordCompleted} onClick={() => setRecordCompleted(true)}>Завершённая</button></div>}
         <div className="workout-form-section-head"><p className="eyebrow">КОГДА</p></div>
         {clientLime ? <ClientWorkoutDateControl clientId={clientId} excludeWorkoutId={workoutId} value={entryDate} today={today} onChange={(next) => { setEntryDate(next); setFormTimeError(null) }} start={startTime} end={!readyPlan && showEndTime ? endTime : undefined} onTimeChange={(next) => { setStartTime(next.start); if (!readyPlan) setEndTime(next.end); setFormTimeError(null) }} disabled={mutation.isPending} /> : <div className="split workout-time-row"><Field label="Дата"><input name="date" type="date" value={entryDate} onChange={(event) => setEntryDate(localDate(event.target.value))} required /></Field><Field label="Начало"><input name="startTime" type="time" value={startTime} onChange={(event) => { setStartTime(event.target.value); (event.currentTarget.form?.elements.namedItem('endTime') as HTMLInputElement | null)?.setCustomValidity('') }} /></Field></div>}
@@ -1920,7 +1920,7 @@ export function WorkoutFormPage() {
       </CoachFormControls>
       {coachReference && mutation.isPending && <p role="status" className="coach-plan-saving">Сохраняем план…</p>}
     </form>}</AsyncView>
-    {coachReference && referenceClientPickerOpen && <ClientPicker reference initialOpen hideTrigger autoFocusSearch={false} userId={actor?.userId} clients={availableClients ?? []} selectedId={clientId} onChange={(id) => { setClientSelectionError(null); setSelectedClientId(id); setReferenceClientPickerOpen(false) }} onDismiss={() => setReferenceClientPickerOpen(false)} selectionError={clientSelectionError} loading={clients.isLoading} error={clients.error} onRetry={() => void clients.refetch()} onCreate={createQuickClient} />}
+    {coachReference && referenceClientPickerOpen && <ClientPicker reference initialOpen hideTrigger autoFocusSearch={false} userId={actor?.userId} clients={availableClients ?? []} selectedId={clientId} onChange={(id) => { setClientSelectionError(null); setSelectedClientId(id); setReferenceClientPickerOpen(false) }} onDismiss={() => setReferenceClientPickerOpen(false)} selectionError={clientSelectionError} loading={clients.isLoading} error={clients.error} onRetry={() => void clients.refetch()} />}
     {pickerOpen && <ExercisePicker quickEntry={isQuickWorkoutEntryEnabled(actor)} clientLime={isClientLimeEnabled(actor)} reference={!completedMode && isCoachWorkoutRedesignEnabled(actor)} referenceAppearance={(!completedMode && isCoachWorkoutRedesignEnabled(actor)) || clientReference} catalog={catalog} clientRecent={clientRecentExercises} initialSearch={pickerSearch} initialMode={parsedExerciseSelection.current ? 'all' : replaceIndex === null && exercises.length === 0 ? 'choose' : 'all'} techniqueActionLabel={parsedExerciseSelection.current ? 'Выбрать упражнение' : replaceIndex === null ? 'Добавить упражнение' : 'Заменить упражнение'} onPick={pickExercise} onPickMany={pickExercises} selectionDraft={replaceIndex === null && !parsedExerciseSelection.current ? pickerSelectionDraft : undefined} onSelectionDraftChange={replaceIndex === null && !parsedExerciseSelection.current ? setPickerSelectionDraft : undefined} multiple={replaceIndex === null && !parsedExerciseSelection.current} onClose={closePicker} />}
     {templatePickerOpen && <WorkoutTemplatePicker templates={templates.data ?? []} loading={templates.isLoading || templates.isFetching} error={templates.error} onRetry={() => void templates.refetch()} onSelect={addTemplate} onClose={closeTemplatePicker} onCreate={() => openTemplateDestination()} onLibrary={() => openTemplateDestination(true)} />}
     {techniqueExercise && <ExerciseTechniqueSheet exercise={techniqueExercise} onClose={() => setTechniqueExercise(null)} />}
@@ -1973,7 +1973,6 @@ export function WorkoutDetailPage() {
   const [attendanceAction, setAttendanceAction] = useState<'complete' | 'cancel' | null>(null)
   const [rescheduleDate, setRescheduleDate] = useState<LocalDate>(() => todayInTimeZone(actor?.timezone))
   const [rescheduleTime, setRescheduleTime] = useState('')
-  const [firstPlanInviteCode, setFirstPlanInviteCode] = useState<string | null>(null)
   const query = useQuery({ queryKey: ['workout', workoutId], queryFn: () => workoutsRepository.get(workoutId) })
   const clientMode = actor?.role === 'client'
   const justCompleted = query.data?.status === 'done' && navigationState?.justCompleted === true
@@ -2112,10 +2111,6 @@ export function WorkoutDetailPage() {
     await invalidateWorkoutSurfaces()
   } })
   const question = useMutation({ mutationFn: (value: string) => workoutsRepository.askQuestion(query.data!, value), onSuccess: invalidateWorkoutSurfaces })
-  const firstPlanInvite = useMutation({
-    mutationFn: () => invitationsRepository.create(query.data!.clientId, 'client'),
-    onSuccess: setFirstPlanInviteCode,
-  })
   const workout = query.data
   const done = workout?.status === 'done'
   const duration = workout ? workoutDurationLabel(workout.startedAt, workout.completedAt, workout.actualDurationSec) : null
@@ -2251,8 +2246,7 @@ export function WorkoutDetailPage() {
     <AsyncView loading={query.isLoading} error={query.error} onRetry={() => void query.refetch()}>{workout && <>
       {!clientMode && navigationState?.firstPlanClient && <section className="first-plan-success" aria-labelledby="first-plan-success-title">
         <div><p className="eyebrow">ГОТОВО</p><h2 id="first-plan-success-title">Тренировка запланирована</h2><p>Первый план для {navigationState.firstPlanClient.fullName} готов.</p></div>
-        {firstPlanInviteCode ? <InvitationCodeCard code={firstPlanInviteCode} label="Код приглашения" description="Отправьте код спортсмену — после подключения он сразу увидит план." /> : <button className="primary wide" disabled={firstPlanInvite.isPending} onClick={() => firstPlanInvite.mutate()}>{firstPlanInvite.isPending ? 'Создаём приглашение…' : 'Пригласить спортсмена'}</button>}
-        {firstPlanInvite.error && <p className="error" role="alert">{firstPlanInvite.error.message}</p>}
+        <p>Спортсмен увидит её в своём кабинете.</p>
         <Link className="button secondary wide" to="/today">Перейти на главную</Link>
       </section>}
       {clientCompletionReport && <WorkoutCompletionReport

@@ -103,7 +103,7 @@ test('real Playwright partitions preserve the 738-case union without duplicates 
   }
   for (const { project } of engines) {
     const full = collect(fitLimeArgs(project, 'full').args)
-    assert.equal(full.length, 741) // Parent740 plus FIN603; all previous cases remain.
+    assert.equal(full.length, 742) // Parent740 plus FIN603; all previous cases remain.
     for (const width of [375, 390, 430]) {
       assert.equal(full.filter(key => key.endsWith(`Client profile loads approved YS Geo at ${width}`)).length, 1)
     }
@@ -121,7 +121,7 @@ test('real Playwright partitions preserve the 738-case union without duplicates 
     for (const title of ['Finance accounting dates and uncertain manual retry preserve one operation', 'Finance session date editor retains its current charge and updates eligible services']) {
       assert.equal(full.filter(key => key.endsWith(title)).length, 1, title)
     }
-    for (const title of ['Compact clients keep search, initials and one add flow in trainer Lime', 'First-client invitation survives the empty-to-list transition', 'Lime coach calendar shows full recorded history and preserves return, list and source data', 'Lime athlete calendar retains its existing compact history preview']) {
+    for (const title of ['Compact clients keep search, initials and one add flow in trainer Lime', 'First invitation leaves the roster empty until the athlete accepts', 'Lime coach calendar shows full recorded history and preserves return, list and source data', 'Lime athlete calendar retains its existing compact history preview']) {
       assert.equal(full.filter(key => key.endsWith(title)).length, 1, title)
     }
     for (const theme of ['light', 'dark']) assert.equal(full.filter(key => key.endsWith(`Public invitation identity and controls ${theme}`)).length, 1)
@@ -162,7 +162,7 @@ test('real Playwright partitions preserve the 738-case union without duplicates 
     const scoped = collect(fitLimeArgs(project, 'scoped', 'critical,finance').args)
     const scopedParts = fitLimePartitions('scoped').flatMap(({ lane, shard }) =>
       collect(fitLimeArgs(project, 'scoped', 'critical,finance', lane, shard).args))
-    assert.equal(scoped.length, 156) // Parent155 plus FIN603; no existing case is omitted.
+    assert.equal(scoped.length, 157) // Parent155 plus FIN603; no existing case is omitted.
     assert.equal(new Set(scopedParts).size, scopedParts.length)
     assert.deepEqual(scopedParts.sort(), scoped.sort())
   }

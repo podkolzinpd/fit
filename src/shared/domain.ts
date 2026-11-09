@@ -192,6 +192,7 @@ export interface WorkoutAttendanceDraft {
 }
 
 export interface Client {
+  canCreateWorkout?: boolean
   id: UUID
   /** Only the root trainer may archive or restore this client. */
   canArchive?: boolean
