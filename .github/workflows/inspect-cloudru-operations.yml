@@ -38,6 +38,10 @@ on:
         description: Read-only push queue age/type aggregates and reminder timezone expression diagnostics; never sends or claims
         type: boolean
         default: false
+      unregistered_clients_audit:
+        description: Read-only counts of manual cards, actual trainer list visibility and workout access; no identities
+        type: boolean
+        default: false
       account_history:
         description: Read only the four owner-approved account history matches and visibility counts
         type: boolean
@@ -236,6 +240,7 @@ jobs:
         env:
           CLOUDRU_DATABASE_CONFIG_JSON: ${{ secrets.CLOUDRU_STAGE_DATABASE_CONFIG_JSON }}
           BACKGROUND_AUDIT: ${{ github.event_name == 'workflow_dispatch' && inputs.background_audit }}
+          UNREGISTERED_CLIENTS_AUDIT: ${{ github.event_name == 'workflow_dispatch' && inputs.unregistered_clients_audit }}
         run: |
           set -euo pipefail
           test "$GITHUB_REPOSITORY" = podkolzinpd/fit
@@ -262,6 +267,101 @@ jobs:
               --security-opt=no-new-privileges --env-file "$owner" \
               -v "$PWD/scripts/cloudru-background-audit.mjs:/inspection.mjs:ro" \
               "localhost/fit-api:$revision" node /inspection.mjs | tee -a "$GITHUB_STEP_SUMMARY"
+          fi
+          if test "$UNREGISTERED_CLIENTS_AUDIT" = true; then
+            jq -e '.DATABASE_HOST == "10.70.10.67" and .DATABASE_PORT == "5432" and
+              .DATABASE_NAME == "fit" and .DATABASE_USER == "fit_api" and .DATABASE_URL == null' \
+              <<<"$CLOUDRU_DATABASE_CONFIG_JSON" >/dev/null
+            jq -r 'to_entries[] | select(.key | test("^DATABASE_(HOST|PORT|NAME|USER|PASSWORD)$")) | "\(.key)=\(.value)"' \
+              <<<"$CLOUDRU_DATABASE_CONFIG_JSON" | sudo tee -a "$owner" >/dev/null
+            printf 'DATABASE_SSL_MODE=require\n' | sudo tee -a "$owner" >/dev/null
+            sudo podman run --rm -i --read-only --memory=256m --cpus=0.5 --timeout=120 --cap-drop=ALL \
+              --security-opt=no-new-privileges --env-file "$owner" \
+              "localhost/fit-api:$revision" node --input-type=module - <<'JS_UNREGISTERED' | tee -a "$GITHUB_STEP_SUMMARY"
+          export async function inspectUnregisteredAccess(client, runtime = client) {
+            const count = value => {
+              if (!Number.isSafeInteger(value) || value < 0) throw Error('manual_audit_count_invalid');
+              return value;
+            };
+            await client.query('begin transaction isolation level repeatable read read only');
+            try {
+              await client.query("set local statement_timeout='10s'");
+              await client.query("set local lock_timeout='2s'");
+              const gate = (await client.query("select current_user name,current_setting('transaction_read_only') readonly")).rows[0];
+              if (gate?.name !== 'fit_owner' || gate.readonly !== 'on') throw Error('manual_audit_readonly_required');
+              if (runtime !== client) {
+                const snapshot=(await client.query('select pg_export_snapshot() snapshot')).rows[0].snapshot;
+                if (!/^[0-9a-f]{8}-[0-9a-f]{8}-[0-9]+$/i.test(snapshot)) throw Error('manual_audit_snapshot_invalid');
+                await runtime.query('begin transaction isolation level repeatable read read only');
+                await runtime.query(`set transaction snapshot '${snapshot}'`);
+                await runtime.query("set local statement_timeout='10s'");
+                await runtime.query("set local lock_timeout='2s'");
+              }
+              const totals = (await client.query(`select count(*)::int cards,
+                count(*) filter(where c.archived_at is null and c.merged_into_client_id is null)::int active,
+                count(*) filter(where c.archived_at is not null)::int archived,
+                count(*) filter(where c.merged_into_client_id is not null)::int merged,
+                count(*) filter(where c.created_at<'2026-11-09T00:16:44Z' and c.archived_at is null and c.merged_into_client_id is null)::int old_active
+                from public.clients c where c.auth_user_id is null`)).rows[0];
+              const owners = (await client.query(`select c.trainer_id,p.account_role,
+                array_agg(c.id order by c.id) ids,
+                array_agg(c.id order by c.id) filter(where c.created_at<'2026-11-09T00:16:44Z') old_ids
+                from public.clients c join public.profiles p on p.id=c.trainer_id
+                where c.auth_user_id is null and c.archived_at is null and c.merged_into_client_id is null
+                group by c.trainer_id,p.account_role order by c.trainer_id limit 501`)).rows;
+              if (owners.length>500) throw Error('manual_audit_scope_exceeded');
+              const result = {event:'manual_client_access_readonly_audit',readOnly:true,productionMutated:false,
+                oldBoundary:'before_PR2039_merge',cards:count(totals.cards),active:count(totals.active),archived:count(totals.archived),
+                merged:count(totals.merged),oldActive:count(totals.old_active),owners:owners.length,
+                visible:0,oldVisible:0,canCreateWorkout:0,oldCanCreateWorkout:0,workouts:0,visibleWorkouts:0,ownersWithMissingCards:0,
+                oldOwnersWithMissingCards:0,ownersNotTrainer:0};
+              for (const owner of owners) {
+                if (!Array.isArray(owner.ids) || owner.ids.length>5000) throw Error('manual_audit_scope_exceeded');
+                const old = owner.old_ids ?? [];
+                const expected = count((await client.query('select count(*)::int n from public.workouts where client_id=any($1::uuid[]) and deleted_at is null',[owner.ids])).rows[0].n);
+                if (runtime === client) await client.query('set local role fit_api');
+                const role = (await runtime.query(`select current_user name,rolsuper,rolbypassrls from pg_roles where rolname=current_user`)).rows[0];
+                if (role?.name!=='fit_api' || role.rolsuper!==false || role.rolbypassrls!==false) throw Error('manual_audit_runtime_role_invalid');
+                await runtime.query("select set_config('request.jwt.claim.sub',$1,true)",[owner.trainer_id]);
+                const visible = (await runtime.query('select id,public.can_create_client_workout(id) can_create from public.list_client_overviews(false) where id=any($1::uuid[])',[owner.ids])).rows;
+                const ids = new Set(visible.map(row=>row.id));
+                const creatable = new Set(visible.filter(row=>row.can_create===true).map(row=>row.id));
+                result.visible+=ids.size; result.oldVisible+=old.filter(id=>ids.has(id)).length;
+                result.canCreateWorkout+=creatable.size; result.oldCanCreateWorkout+=old.filter(id=>creatable.has(id)).length;
+                result.ownersWithMissingCards+=Number(ids.size!==owner.ids.length);
+                result.oldOwnersWithMissingCards+=Number(old.some(id=>!ids.has(id)));
+                result.ownersNotTrainer+=Number(owner.account_role!=='trainer');
+                result.workouts+=expected;
+                result.visibleWorkouts+=count((await runtime.query('select count(*)::int n from public.workouts where client_id=any($1::uuid[]) and deleted_at is null',[owner.ids])).rows[0].n);
+                if (runtime === client) await client.query('reset role');
+              }
+              if (result.active!==owners.reduce((sum,owner)=>sum+owner.ids.length,0)) throw Error('manual_audit_incomplete');
+              if (runtime !== client) await runtime.query('commit');
+              await client.query('commit');
+              return result;
+            } catch (error) { if (runtime !== client) await runtime.query('rollback'); await client.query('rollback'); throw error; }
+          }
+          // Runtime entry: owner credentials stay inside the existing protected container.
+          const {buildDatabaseConnectionConfig}=await import('/app/dist/db/connection-config.js');
+          const config=buildDatabaseConnectionConfig('MIGRATION_DATABASE');
+          if(config?.host!=='10.70.10.67'||config.port!==5432||config.database!=='fit'||config.user!=='fit_owner'
+            ||process.env.MIGRATION_DATABASE_SSL_MODE!=='require') throw Error('manual_audit_environment_invalid');
+          const {createRequire}=await import('node:module');
+          const {Client}=createRequire('/app/package.json')('pg');
+          const runtimeConfig=buildDatabaseConnectionConfig('DATABASE');
+          if(runtimeConfig?.host!==config.host||runtimeConfig.port!==config.port||runtimeConfig.database!==config.database
+            ||runtimeConfig.user!=='fit_api'||process.env.DATABASE_SSL_MODE!=='require') throw Error('manual_audit_runtime_environment_invalid');
+          const runtime=new Client({...runtimeConfig,connectionTimeoutMillis:5000,query_timeout:15000});
+          const client=new Client({...config,connectionTimeoutMillis:5000,query_timeout:15000});
+          await Promise.all([client.connect(),runtime.connect()]);
+          try {console.log(JSON.stringify(await inspectUnregisteredAccess(client,runtime)));}
+          catch(error) {
+            console.log(JSON.stringify({event:'manual_client_access_readonly_audit_failed',
+              code:/^[A-Z0-9]{5}$/.test(error.code??'')?error.code:'unknown',
+              reason:/^manual_audit_[a-z_]+$/.test(error.message??'')?error.message:'query_failed'}));
+            process.exitCode=1;
+          } finally {await Promise.allSettled([client.end(),runtime.end()]);}
+          JS_UNREGISTERED
           fi
           sudo podman run --rm --read-only --memory=128m --cpus=0.5 --timeout=20 --cap-drop=ALL \
             --security-opt=no-new-privileges --env-file "$owner" \
