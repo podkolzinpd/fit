@@ -92,6 +92,8 @@ export function workoutTemplateReliabilityCases() {
     const picker = page.getByRole('dialog', { name: 'Добавить шаблон тренировки' })
     const pickerSearch = picker.getByRole('searchbox')
     await pickerSearch.fill('легкий')
+    await expect(pickerSearch).toHaveCSS('outline-style', 'none')
+    await expect(picker.locator('.workout-template-search')).toHaveCSS('outline-width', '2px')
     await expect(picker.locator('.workout-template-picker-item')).toHaveCount(1)
     await pickerSearch.fill('ничего')
     await expect(picker.getByRole('status')).toContainText('Ничего не найдено')

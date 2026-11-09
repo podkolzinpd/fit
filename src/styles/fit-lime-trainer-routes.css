@@ -5,7 +5,9 @@ html.fit-lime-document .workout-template-search {
   border-radius: 18px; background: var(--lime-surface-raised); color: var(--lime-text);
 }
 html.fit-lime-document .workout-template-search:focus-within { border-color: var(--lime-accent); }
+html.fit-lime-document .workout-template-search:has(input:focus-visible) { outline: 2px solid var(--lime-accent); outline-offset: 3px; }
 html.fit-lime-document .workout-template-search input { min-height: 44px; font-size: 16px; color: var(--lime-text); }
+html.fit-lime-document .workout-template-search input:focus-visible { outline: none; }
 html.fit-lime-document .workout-template-search input::placeholder,
 html.fit-lime-document .workout-template-search > svg { color: var(--lime-text-secondary); }
 html.fit-lime-document .workout-template-search .clients-search-clear { color: var(--lime-text); }
