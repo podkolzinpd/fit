@@ -10,7 +10,7 @@ test('trainer manual creation route redirects to registration-first connection',
   await page.goto('/clients/new')
   await expect(page).toHaveURL(/\/connect$/)
   await expect(page.getByRole('heading', { name: 'Добавить спортсмена' })).toBeVisible()
-  await expect(page.getByRole('button', { name: 'Пригласить', exact: true })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Мой QR', exact: true })).toBeVisible()
   await expect(page.getByLabel('Имя')).toHaveCount(0)
 })
 
