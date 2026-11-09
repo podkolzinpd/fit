@@ -1,3 +1,4 @@
+import { mockPilot, clientId as limeClientId } from './fit-lime-fixtures'
 import { nativeRouteFetch } from './native-local-fixture'
 import { mockTrainingSummaries } from './native-summary-fixture'
 import { mockProgressBundle } from './native-progress-fixture'
@@ -68,9 +69,12 @@ async function saveCompactClientPlan(page: Page) {
 }
 
 test('trainer invitation stays inside the reduced visible iPhone viewport', async ({ page }) => {
-  await loginAsTrainer(page)
-  await page.goto('/clients')
-  await page.getByRole('button', { name: /^(Добавить|Добавить спортсмена)$/ }).click()
+  await mockPilot(page, { fitLime: true, clientHasAccount: false })
+  await page.route('**/v1/invitation-links', route => route.fulfill({ json: { invitation: {
+    id: demoClientId, clientId: limeClientId, targetRole: 'client', code: 'A'.repeat(12),
+    token: `${'A'.repeat(12)}.${'a'.repeat(64)}`, expiresAt: '2099-01-01T00:00:00Z',
+  } } }))
+  await page.goto(`/clients/${limeClientId}`)
   await page.getByRole('button', { name: 'Пригласить', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Ссылка готова' })).toBeVisible()
   await expect(page.getByLabel('Имя спортсмена')).toHaveCount(0)

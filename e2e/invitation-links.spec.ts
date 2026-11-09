@@ -28,20 +28,16 @@ test('trainer invites a new athlete by protected link without entering a code', 
   await nativeRegister(page, { key: `link-trainer-${suffix}@fit.local`, firstName: trainerName, role: 'trainer' })
   await expect(page).toHaveURL(/\/(today|clients)$/)
 
-  await page.goto('/clients')
-  await page.getByRole('button', { name: /^(Добавить|Добавить спортсмена)$/ }).click()
-  await page.getByRole('button', { name: 'Пригласить', exact: true }).click()
-  await expect(page.getByLabel('Имя спортсмена')).toHaveCount(0)
-  await expect(page.getByRole('dialog', { name: 'Ссылка готова' })).toBeVisible()
-  await page.context().grantPermissions(['clipboard-read', 'clipboard-write'])
-  await page.getByRole('button', { name: 'Скопировать ссылку' }).click()
-  const invitationUrl = await page.evaluate(() => navigator.clipboard.readText())
-  expect(invitationUrl).toMatch(/\/connect\?code=[A-F0-9]{32}$/)
+  // Previously issued private invitation links remain valid after the entry is simplified.
+  const response = await nativeRequest(page, '/v1/connection-directory', { method: 'POST', body: { action: 'create_invitation' } })
+  expect(response.ok).toBe(true)
+  const { result } = await response.json() as { result: { code: string } }
+  const invitationUrl = new URL(`/connect?code=${result.code}`, String(testInfo.project.use.baseURL)).toString()
+  expect(result.code).toMatch(/^[A-F0-9]{32}$/)
   const beforeAcceptance = await nativeRequest(page, '/v1/clients')
   expect(beforeAcceptance.ok).toBe(true)
   expect((await beforeAcceptance.json() as { clients: unknown[] }).clients).toHaveLength(0)
 
-  await page.getByRole('button', { name: 'Закрыть' }).click()
   await page.goto('/profile/settings')
   await expect(page.getByRole('button', { name: 'Выйти', exact: true })).toBeVisible()
   await signOut(page)
