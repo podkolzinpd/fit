@@ -8671,3 +8671,64 @@ Public иverifiedZIP выборка26 подтверждена --list, брау�
 После фактической публикации: web/API/signedOTA readback, public26/ZIP26,
 86measuredstates/64PNG comparison без скрытияnotice и нормализации.
 Physical/OAuth/systemshare не считаются выполненными браузером.
+
+
+## 202. MC5.1.2 / PR2069 — фактическая публикация проверена, 09.11.2026
+
+Итерация202 — 2026-11-09 — GPT-6 / OpenAI, агент design_cleanup.
+Разрешённый2069 опубликован в1fa39f4a8eb581a0163626fb55dcb8ce364157a6:
+actualmain CI42617778608 success attempt1 (34success/1expectedmigration-skip),
+Android42617778609success. Вmain ранее нестабильная clock/test lane2/4 прошла
+без перезапускаworkflow. Исходный sourceCI flaky198 не объявляется исправленным.
+Штатные API42620977572, web42620977473 иAndroid/OTA42621297890 —success;
+ручные dispatch/старые релизы/новыефлаги не использовались.
+
+Фактическийreadback: все3плоскости exact1fa;243/243 публичных webfiles имеют
+200/верныйразмер/SHA256; DNS/pinnedIP/TLS/auth/ready/health/protectedGET401 passed.
+OTA directory/signature/publicbytes/provenance/ABI/nativeBuild9/sequence/expiry
+проверены принятым оператором; ZIP15978258bytes, sequence1794229525057.
+Final fingerprint после обоих UI прогона подтвердил прежний HTML иAPI/OTA1fa.
+Фактическиеmain/head/публичныеверсии не подменяются самим фактом merge.
+
+Новый same-production baseline получен ДО выкладки наbd2b8452: HTML before/after
+stable;26сценариев =18controlpass/8 ожидаемых modernshare ownershipred,0skip/
+retry/flaky; ошибками приложения или green26/26 это не считается. Сохранены
+26JSON/86states/64PNG, все8red только finallegacy-matchesassert.
+Ни notice, ни фон, ни sourceMath.random не нормализовались ради сравнения.
+
+Actualpublic UI26/26 за56.505s, verifiedZIP UI26/26 за49.473s, Chromium/WebKit,
+0retry/skip/flaky/fail:10share+12duration+4nonLive вкаждомокружении. Реальные
+networkAPI/WS/analytics/share/clipboard заблокированы; пользовательские действия
+обслужены синтетическимиfixture. Ни настоящих пользовательских writes, ни
+реальной внешней отправки не выполнялось. Введённыеpayload26/26совпали,
+browserdiagnostics26/26пусты. Просмотрены actualWebKit light375emptyshare,
+dark430errorshare иtrainer390invalidduration; новыхобрезаний не обнаружено.
+
+ОБЯЗАТЕЛЬНАЯ квалификация сравнения: prepub→web иweb→ZIP имеют86/86 settled
+computed/geometry/backdrop/frame/focus-scroll-anchor states exact и64/64wholepage
+PNG byte-exact. Все10 rawshare paths ивсе26finalScroll wholeobjects совпадают;
+initialscrollTop/clientHeight тоже26/26. Однакообаstrictcomparators сохранили
+exit1: ранний initialScroll.height отличается в6/5 native-duration/nonLive
+клиентских сценариях, втомчислереальныйoff. Онснимается ДО trigger.click идо
+первогоexplicit fonts.ready/settle. Причинаэтого раннего различия по сохранённым
+JSON не установлена, шрифтам/сети его не приписываем. Полноеравенство26rawpaths
+не заявляется; значениянеудалялись,baselineнепереписан,assertionsнеослаблены,
+повторныйпрогонрадиgreenнепроводился. Это ограничениепроверки сохранено открытым.
+
+Артефакты: /tmp/fit-mc512-release/current-acceptance/{web-readback,api-readback,
+ota-readback,web26,ota26,prepub-web-comparison,web-ota-comparison,
+comparison-qualification,final-fingerprint}.json; /tmp/fit-mc512-prepub-baseline-
+review.json и/tmp/fit-mc512-release/prepub26-results. Каноническийпрогресс
+закреплёнлокальнымGit; receiptsпослепроверенногоclosedremotehead не push
+ради нового CI. PRbodyполучает краткий фактическийстатус иограничения.
+
+Сохраняются прежние механики/роля/темы/плотности/флаги/данные: свойruntime
+только2CSS, UI source/handlers/API/native/package/CI byte-exact принятомуsource.
+Непроверенное: физические устройства/nativeinstall/реальныйOAuth/systemshare.
+Открыто: серыйerrorMC5.1.3, historicalcaught-rejection198, раннийheightвыше.
+
+Ручнаяприёмкавладельца после перезапуска: спортсмен сразу после завершения
+«Поделиться»→доступныеИтог/Достижение/Прогресс→закрыть/открыть; обеимролям
+done→длительность→изменить/сохранить/отмена, без скачковscroll; короткоLive
+вводвеса/явнаяотмена галочкой/таймер. Следующий MC5.1.3 только после принятия
+текущего этапа владельцем, прежнее правило MC-RELEASE-01 сохранено.
