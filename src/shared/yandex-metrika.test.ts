@@ -128,3 +128,8 @@ describe('trackAuthenticatedOpen', () => {
     expect(() => trackAuthenticatedOpen('user-id', 'trainer')).not.toThrow()
   })
 })
+
+
+it.each(['/private-analytics','/Private-Analytics/','/%70rivate-analytics'])('strips private analytics filters from telemetry: %s', path => {
+  expect(sanitizeMetrikaUrl(`${path}?person=synthetic-id&search=private#details`)).toBe('/private-analytics')
+})
