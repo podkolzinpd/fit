@@ -42,10 +42,12 @@ export function display(value: unknown, key=''):string {
 export function shiftDay(date:string, days:number) { return new Date(Date.parse(`${date}T12:00:00Z`)+days*86400000).toISOString().slice(0,10) }
 export function initialFilters(readUrl=true):AnalyticsFilters {
   const to=new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Moscow',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date())
-  const base:AnalyticsFilters={from:shiftDay(to,-29),to,section:'people',sort:'actions',direction:'desc',page:1,pageSize:50,group:'week',role:'',person:'',trainer:'',registration:'',feature:'',exercise:'',search:'',regularDays:2,cohort:'',status:'',entity:'',workout:''}
+  const base:AnalyticsFilters={from:shiftDay(to,-29),to,section:'people',sort:'actions',direction:'desc',page:1,pageSize:50,group:'week',role:'',person:'',trainer:'',registration:'',feature:'',exercise:'',search:'',regularDays:2,cohort:'active',status:'',entity:'',workout:''}
   const params=new URLSearchParams(readUrl?window.location.search:'')
   for(const key of ['from','to'] as const){const v=params.get(key);if(v && /^\d{4}-\d{2}-\d{2}$/.test(v) && Number.isFinite(Date.parse(v)) && new Date(v).toISOString().slice(0,10)===v)base[key]=v}
   if (base.from>base.to || Date.parse(base.to)-Date.parse(base.from)>1095*86400000) {base.from=shiftDay(to,-29);base.to=to}
+  const choices:Record<string,string[]>={cohort:['','accounts','active','new'],role:['','trainer','client','offline'],feature:['',...Object.keys(features)],registration:['','self','connected','trainer'],group:['day','week','month']}
+  for(const key of ['cohort','role','feature','registration','group'] as const){const value=params.get(key);if(value!==null&&choices[key]!.includes(value))base[key]=value}
   const section=params.get('section');if(section && sections[section]){base.section=section;base.sort=sections[section].sort}
   return base
 }

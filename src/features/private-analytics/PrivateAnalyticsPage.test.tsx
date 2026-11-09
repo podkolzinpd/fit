@@ -3,7 +3,7 @@ import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, expect, it, vi } from 'vitest'
 import { PrivateAnalyticsPage } from './PrivateAnalyticsPage'
-import { csv, type AnalyticsFilters } from './analytics-model'
+import { csv, initialFilters, type AnalyticsFilters } from './analytics-model'
 const write=vi.hoisted(()=>vi.fn())
 vi.mock('../../app/auth-context',()=>({useAuth:()=>({actor:{userId:'test'}})}))
 vi.mock('../../app/theme',()=>({useAppTheme:()=> 'light'}))
@@ -47,4 +47,17 @@ it('exports CSV with quoted multiline cells and formula protection',()=>{
   expect(output).toContain('"\'=HYPERLINK(""bad"")"')
   expect(output).toContain('"строка\nвторая"')
   expect(output).toContain('"12"')
+})
+
+it('uses one explicit people cohort across summary navigation and feature sections',async()=>{
+  write.mockResolvedValue(Response.json(result))
+  show();await screen.findByRole('table',{name:'Люди'})
+  expect(screen.getByRole('combobox',{name:'Кого анализируем'})).toHaveValue('active')
+  expect(screen.getByRole('complementary',{name:'Как читать выборку'})).toBeVisible()
+  await userEvent.selectOptions(screen.getByRole('combobox',{name:'Кого анализируем'}),'accounts')
+  await userEvent.click(screen.getByRole('button',{name:'Применить'}))
+  await waitFor(()=>expect(write).toHaveBeenLastCalledWith(expect.anything(),expect.anything(),expect.objectContaining({cohort:'accounts'})))
+  expect(initialFilters().cohort).toBe('accounts')
+  await userEvent.click(screen.getByRole('button',{name:'Питание'}))
+  await waitFor(()=>expect(write).toHaveBeenLastCalledWith(expect.anything(),expect.anything(),expect.objectContaining({section:'nutrition',cohort:'accounts'})))
 })

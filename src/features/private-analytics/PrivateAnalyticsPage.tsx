@@ -22,12 +22,12 @@ export function PrivateAnalyticsPage() {
     if(remember)setHistory(old=>[...old,filters])
     setFilters(next);setDraft(next);setExportError('')
     if(next.section!==filters.section)setColumns(sections[next.section]!.columns)
-    // Only date range and section belong in URLs: never names or identities.
-    const params=new URLSearchParams({from:next.from,to:next.to,section:next.section})
+    // Only non-identifying filters belong in URLs: never names or identities.
+    const params=new URLSearchParams({from:next.from,to:next.to,section:next.section,cohort:next.cohort,role:next.role,feature:next.feature,registration:next.registration,group:next.group})
     window.history.replaceState(null,'',`${window.location.pathname}?${params}`)
   }
   function navigate(section:string,extra:Partial<AnalyticsFilters>={},remember=false) {
-    apply({...filters,section,sort:sections[section]!.sort,direction:'desc',page:1,search:'',cohort:'',status:'',entity:'',workout:'',...extra},remember)
+    apply({...filters,section,sort:sections[section]!.sort,direction:'desc',page:1,search:'',status:'',entity:'',workout:'',...extra},remember)
   }
   function person(row:AnalyticsRow) {navigate('activities',{person:String(row.person_id),role:'',registration:''},true)}
   async function exportRows() {
@@ -58,6 +58,7 @@ export function PrivateAnalyticsPage() {
       <label>С даты<input type="date" required value={draft.from} max={draft.to} onChange={e=>setDraft({...draft,from:e.target.value})}/></label>
       <label>По дату<input type="date" required value={draft.to} min={draft.from} onChange={e=>setDraft({...draft,to:e.target.value})}/></label>
       <label>Роль<select value={draft.role} onChange={e=>setDraft({...draft,role:e.target.value})}><option value="">Все</option><option value="trainer">Тренеры</option><option value="client">Клиенты с аккаунтом</option><option value="offline">Карточки без входа</option></select></label>
+      <label>Кого анализируем<select value={draft.cohort} onChange={e=>setDraft({...draft,cohort:e.target.value})}><option value="active">Совершавшие действия за период</option><option value="accounts">Все аккаунты · независимо от активности</option><option value="new">Зарегистрированные за период</option><option value="">Аккаунты и карточки без входа</option></select></label>
       <label>Регистрация<select value={draft.registration} onChange={e=>setDraft({...draft,registration:e.target.value})}><option value="">Все</option><option value="self">Самостоятельно</option><option value="connected">Подключённый аккаунт</option><option value="trainer">Тренеры / карточки тренера</option></select></label>
       <label>Функция<select value={draft.feature} onChange={e=>setDraft({...draft,feature:e.target.value})}><option value="">Все</option>{Object.entries(features).map(([key,label])=><option key={key} value={key}>{label}</option>)}</select></label>
       <label>Группировка<select value={draft.group} onChange={e=>setDraft({...draft,group:e.target.value})}><option value="day">День</option><option value="week">Неделя</option><option value="month">Месяц</option></select></label>
@@ -71,16 +72,22 @@ export function PrivateAnalyticsPage() {
     {query.isPending && <p role="status">Загружаем аналитику…</p>}
     {query.error && <p role="alert">{query.error.message}</p>}
     {data && <>
-      <p className="private-analytics-freshness">Срез: {display(filters.from,'date')} — {display(filters.to,'date')}. Обновлено: {display(data.computedAt,'date')}. Поиск в таблице и её страница не меняют сводку.</p>
+      <p className="private-analytics-freshness">Срез: {display(filters.from,'date')} — {display(filters.to,'date')}. Обновлено: {display(data.computedAt,'date')}. Группа людей применяется к сводке, графику и всем разделам. Поиск и страницы ограничивают только таблицу.</p>
+      <aside className="private-analytics-panel" aria-label="Как читать выборку">
+        <h2>Кого показываем</h2>
+        <p>{filters.cohort==='active'?'Только аккаунты с собственными зафиксированными действиями за выбранные даты. Людей без таких действий в этой группе нет.':filters.cohort==='new'?'Аккаунты, зарегистрированные за выбранные даты. Среди них могут быть люди без действий.':filters.cohort==='accounts'?'Все аккаунты по выбранным условиям, включая людей без действий за период. Даты ограничивают действия, а не дату регистрации.':'Аккаунты и карточки клиентов без входа, включая людей без действий за период.'} {filters.feature?`Действия ограничены функцией «${features[filters.feature]??filters.feature}».`:''}</p>
+        <p>Действие — например, изменение тренировки, запись питания или сообщение. Вход и просмотр экрана не считаются. Если тренер ведёт тренировку клиента, действие относится к тренеру.</p>
+        <p>Учёт изменений начат {display(data.observationStartedAt,'date')}. До этой даты история неполная: отсутствие событий не доказывает, что человек не пользовался Fit.</p>
+      </aside>
       <div className="private-analytics-cards">
-        {([{key:'accounts',label:'Аккаунтов в выборке',section:'people'},{key:'new',label:'Новых аккаунтов за период',section:'people'},{key:'active',label:'Активных за период',section:'people'},{key:'workouts',label:'Проведённых тренировок',section:'workouts'},{key:'nutritionUsers',label:'Авторов дневника питания',section:'nutrition'},{key:'received',label:'Поступления тренеров, ₽',section:'payments'}]).map(card=><button key={card.key} onClick={()=>navigate(card.section,card.key==='accounts'?{cohort:'accounts'}:card.key==='new'?{cohort:'new'}:card.key==='active'?{cohort:'active'}:card.key==='workouts'?{status:'done'}:{},true)}><span>{card.label}</span><strong>{display(data.summary[card.key],card.key)}</strong><small>Открыть данные</small></button>)}
+        {([{key:'accounts',label:'Аккаунтов в выбранной группе',section:'people'},{key:'new',label:'Новых аккаунтов за период',section:'people'},{key:'active',label:'Совершали действия за период',section:'people'},{key:'workouts',label:'Проведённых тренировок',section:'workouts'},{key:'nutritionUsers',label:'Авторов дневника питания',section:'nutrition'},{key:'received',label:'Поступления тренеров, ₽',section:'payments'}]).map(card=><button key={card.key} onClick={()=>navigate(card.section,card.key==='accounts'?{cohort:filters.cohort}:card.key==='new'?{cohort:'new'}:card.key==='active'?{cohort:'active'}:card.key==='workouts'?{status:'done'}:{},true)}><span>{card.label}</span><strong>{display(data.summary[card.key],card.key)}</strong><small>{card.key==='accounts'?'Вся выбранная группа':card.key==='active'?'Хотя бы одно собственное действие за период':'За выбранный период'} · открыть список</small></button>)}
       </div>
-      <p>Предыдущий период той же длины: новых аккаунтов — {display(data.summary.previousNew)}, активных — {display(data.summary.previousActive)}, проведённых тренировок — {display(data.summary.previousWorkouts)}, поступления — {display(data.summary.previousReceived,'amount')} ₽.</p>
+      <p>Та же группа людей, предыдущий период той же длины: новых аккаунтов — {display(data.summary.previousNew)}, активных — {display(data.summary.previousActive)}, проведённых тренировок — {display(data.summary.previousWorkouts)}, поступления — {display(data.summary.previousReceived,'amount')} ₽.</p>
       <details className="private-analytics-definitions"><summary>Как считаются показатели и где неполная история</summary>
         <p>Новые — регистрации за период, независимо от активности. Активные — уникальные авторы подтверждённых действий, а не просто входов. Один человек может быть и новым, и активным. Карточки без входа ({display(data.summary.offline)}) не входят в число аккаунтов.</p>
         <p>На конец выбранного периода: за 1 день — {display(data.summary.active1)}, за 7 дней — {display(data.summary.active7)}, за 30 дней — {display(data.summary.active30)}. Регулярных за 7 дней — {display(data.summary.regular)}: минимум {filters.regularDays} разных активных дней. Это выбранный рабочий порог, не отраслевой бенчмарк; окна 7/30 дней могут выходить за начало выбранного периода.</p>
         <p>Полный учёт изменений поддерживаемых записей и успешных просмотров питания тренером начат {display(data.observationStartedAt,'date')}. Ранее доступны только сохранившиеся создания записей, запросы программ и сообщения. Это нижняя граница активности, не полная история посещений. Импортированные создания могут иметь историческую дату; для периода до начала наблюдения точное удержание не рассчитывается.</p>
-        <p>Возврат за две последние недели: {data.retentionMeasured?(data.summary.retentionBase?`${data.summary.retained} из ${data.summary.retentionBase} активных в предыдущие 7 дней вернулись в последние 7 дней`:'В предыдущие 7 дней нет активных людей для сравнения'):'пока не измерен — нужны две полные недели наблюдения'}. Это возврат активных людей, не удержание когорты регистраций.</p>
+        <p>Возврат за две последние недели: {['active','new'].includes(filters.cohort)?'для сравнения возвратов выберите «Все аккаунты», чтобы состав группы не зависел от действий в текущем периоде':data.retentionMeasured?(data.summary.retentionBase?`${data.summary.retained} из ${data.summary.retentionBase} активных в предыдущие 7 дней вернулись в последние 7 дней`:'В предыдущие 7 дней нет активных людей для сравнения'):'пока не измерен — нужны две полные недели наблюдения'}. Это возврат активных людей, не удержание когорты регистраций.</p>
         <p>Голосовой ввод, фактическое участие в видеозвонках, просмотры экранов и применение шаблонов пока не имеют подтверждённого отдельного измерения в этой аналитике. Отсутствие измерения не означает нулевое использование. Известные календарные тестовые данные исключены; полного реестра остальных тестовых аккаунтов нет.</p>
       </details>
       <section aria-label="Динамика" className="private-analytics-panel">
@@ -96,7 +103,7 @@ export function PrivateAnalyticsPage() {
       </aside>}
       <section aria-label={definition.label} className="private-analytics-panel">
         <h2>{definition.label}</h2><p>{definition.description}</p>
-        {filters.section==='people' && <label>Активность в таблице<select value={filters.cohort} onChange={e=>apply({...filters,cohort:e.target.value,page:1})}><option value="">Все</option><option value="accounts">Все аккаунты</option><option value="new">Новые аккаунты за период</option><option value="active">Активные за период</option></select></label>}
+
         {filters.section==='workouts' && <label>Статус тренировки<select value={filters.status} onChange={e=>apply({...filters,status:e.target.value,page:1})}><option value="">Все</option>{['planned','in_progress','done','cancelled'].map(value=><option key={value} value={value}>{display(value,'status')}</option>)}</select></label>}
         <div className="private-analytics-table-tools">
           <form onSubmit={e=>{e.preventDefault();apply({...filters,search:draft.search,page:1})}}><label>Поиск в таблице<input type="search" maxLength={120} value={draft.search} onChange={e=>setDraft({...draft,search:e.target.value})}/></label><button>Найти</button></form>
