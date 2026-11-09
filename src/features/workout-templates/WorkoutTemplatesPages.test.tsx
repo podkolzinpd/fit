@@ -45,6 +45,24 @@ beforeEach(() => {
   backend.workouts.get.mockResolvedValue({ ...template, notes: 'План', exercises: template.exercises.map((exercise) => ({ ...exercise, sets: exercise.sets.map((set) => ({ ...set, fact: { weightKg: 70 }, confirmedAt: '2026-10-07T00:00:00Z' })) })) })
   backend.workoutTemplates.save.mockResolvedValue(template.id)
 })
+describe('template search', () => {
+  it('filters names without writes and restores the query after an editor save', async () => {
+    backend.workoutTemplates.list.mockResolvedValue([template, { ...template, id: 'other', name: 'Плечи' }])
+    open('/schedule/templates?q=НоГ')
+    const search = await screen.findByRole('searchbox', { name: 'Поиск по названию шаблона' })
+    expect(search).toHaveValue('НоГ')
+    expect(screen.queryByRole('heading', { name: 'Плечи' })).not.toBeInTheDocument()
+    expect(backend.workoutTemplates.save).not.toHaveBeenCalled()
+    expect(backend.workoutTemplates.archive).not.toHaveBeenCalled()
+    fireEvent.click(screen.getByRole('button', { name: 'Действия с шаблоном Ноги' }))
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Редактировать' }))
+    await waitFor(() => expect(screen.getByLabelText('Название шаблона')).toHaveValue('Ноги'))
+    fireEvent.click(screen.getByRole('button', { name: 'Сохранить шаблон' }))
+    expect(await screen.findByRole('searchbox')).toHaveValue('НоГ')
+    expect(screen.queryByRole('heading', { name: 'Плечи' })).not.toBeInTheDocument()
+  })
+})
+
 describe('template save commands', () => {
   it('preserves a newer draft reopened while an unmounted save finishes', async () => {
     let complete: (value: string) => void = () => {}

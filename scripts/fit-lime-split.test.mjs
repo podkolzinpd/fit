@@ -87,7 +87,7 @@ test('finance/template visual matrices cannot grow back into full business chain
   assert.doesNotMatch(bodies.get('template'), /page\.clock|page\.reload|commands|\/health|rows\.size/)
 })
 
-test('real Playwright partitions preserve the 738-case union without duplicates in either engine', () => {
+test('real Playwright partitions preserve the 742-case union without duplicates in either engine', () => {
   const collect = (args) => {
     const result = spawnSync(process.execPath, [join(root, 'node_modules/playwright/cli.js'), ...args, '--list', '--reporter=json'],
       { cwd: root, encoding: 'utf8', timeout: 60000, env: { ...process.env, FIT_SCHEDULE_V2_VISUAL: '1' } })
@@ -103,7 +103,8 @@ test('real Playwright partitions preserve the 738-case union without duplicates 
   }
   for (const { project } of engines) {
     const full = collect(fitLimeArgs(project, 'full').args)
-    assert.equal(full.length, 741) // Parent740 plus FIN603; all previous cases remain.
+    assert.equal(full.length, 742) // Parent741 plus template search; all previous cases remain.
+    assert.equal(full.filter(key => key.endsWith('Template search preserves names, editor return and picker focus without extra writes')).length, 1)
     for (const width of [375, 390, 430]) {
       assert.equal(full.filter(key => key.endsWith(`Client profile loads approved YS Geo at ${width}`)).length, 1)
     }
