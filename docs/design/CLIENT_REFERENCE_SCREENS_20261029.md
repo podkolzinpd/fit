@@ -8598,3 +8598,36 @@ CI не менялись ради прохождения.
 разобрать возможные остальные failures и повторить только failedjobs без
 изменения source/сохранения слабого green. Перед выпуском сообщить владельцу
 результат и этот квалифицированный flaky; отдельного разрешения выпуска нет.
+
+
+## 199. MC5.1.2 / PR2069 — CI принят, выпуск ожидает владельца, 09.11.2026
+
+Итерация199 — 2026-11-09 — GPT-6 / OpenAI. Remote source PR2069
+f6bb73b5ecfdc9ed8f10424b8b33a91b6b1dcf59, product/QA ca01f705.
+CI42610799441 attempt2 завершён success:35/35 jobs,33 сохранены изattempt1,
+повторены только failed yandex-auth2/4 иего итоговый e2e gate. Source/тесты/
+таймауты/CI не менялись между попытками. Android42610799478 attempt1success:
+assemblepassed, auth-smoke expectedskipped и не считается проверенным.
+
+Нестабильный initial подробно сохранён198: data-load StatePanel убрал всюформу,
+неизвестный caught transport rejection; passing retry/отдельный trace1/1 не
+выдаются за исправление причины. Новый local exactcase3716ms сretries0/skips0
+добавляется к основным40/40, не заменяет их. Исходный диагностический1skip
+не засчитан. Никаких изменений source ради green не сделано.
+
+Итог MC512-01–04: внешнийвид46states/36PNG exact,10naturalpaths/payloads exact,
+legacy25715records сохранены, обе роли done/duration проверены, unit34/full lint/
+build/types/startup/strictfonts2 passed; CI35/35 success after failed-onlyrerun.
+Не изменены DOM/handlers/API/данные/флаги/Live/input/keyboard/swipe/timer.
+Open: прежний серый errorMC513; historical CI rejection root неизвестен;
+реальная системная отправка/clipboard/физическийтелефон/native/OAuth не проверены.
+
+Артефакты: /tmp/fit-mc512-ci/CI-jobs.json,
+/tmp/fit-mc512-ci/Android-debug-build-jobs.json,
+/tmp/fit-mc512-ci/failed-only-rerun.json,
+/tmp/fit-mc512-final-source-receipt.json и197–198. PRbody обновляется точными
+CIlinks/ограничениями. Записи198–199 — локальная Gitквитанция после проверенного
+remotehead; не push нового docshead ради повторного всего CI без новых причин.
+Выпуск не выполнен: PRdraft/OPEN, разрешения наmerge/deploy нет.
+Дальше: сводка владельцу→его разрешение→актуальная общая очередь/main ипроверки
+затронутого новогоhead→публикация/readback→его ручнаяприёмка доMC5.1.3.
