@@ -9099,3 +9099,30 @@ readback подготовлен44web+44verifiedZIP с изолированным
 install и реальная systemshare не проверены. Новых ошибок интеграции не найдено.
 Дальше: CI новогоhead → свежая очередь → merge после временного gate →
 mainCI/Android/web/API/OTA/readback. СледующийMC514 этап не объявлен выпущенным.
+
+
+## 213. MC5.1.4 — блокер CI: даты синтетических записей аналитики
+
+Итерация213 — 2026-11-10 — OpenAI. CI42703171962 на d5ae3f52: database
+упал в corporate-admin.integration.test.ts:80, ожидаемая workout row отсутствует.
+Причина воспроизведена локально на PostgreSQL17: session Etc/UTC date09.11,
+Moscow date10.11. Fixture использовала current_date, фильтр аналитики — Moscow.
+Рабочий SQL сохраняет workout_date/received_on/nutrition day как LocalDate,
+а действия считает по Moscow; неверно согласованы только тестовые входы.
+Исходный targetedtest воспроизвёл exactassertionfailure. Попытка фильтровать
+всё по current_date отвергнута: тогда корректные timestamp-actions выпадают.
+
+Исправлены только четыре seed-записи в существующем тесте: workout_date
+явно Moscow, даты package/payment/nutrition получают прежний todayMoscow.
+Assertions, роли/RLS, реальные расчёты, DBmigrations, API и CI неизменны.
+Это необходимый локальный testfixture fix для разрешённого выпуска,
+не исправление production-аналитики и не расширение дизайн-миграции.
+Полный файл21/21 проходит с sessionUTC и21/21 с sessionEurope/Moscow,
+0skip; APItypecheck/lint passed. Логи fit-mc514-db-{before,fixed-utc,
+fixed-moscow}.log; before20skip — только диагностический фильтр по одномуtest.
+Новыйhead должен пройти весьCI; старый красный не перезапускается безpatch.
+
+После интеграцииmain дополнительно14/14geometry и14/14PNG exact относительно
+предыдущегоcandidate. Rawcomparison сноваexit1: толькоpartial375initialheight
+Cr2130→1814,Wk2113→2118; finalheight2113 везде. Причина ранних замеров остаётся
+не доказана; данные не нормализуются. Публикация ещё не выполнена.
