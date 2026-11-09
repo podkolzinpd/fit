@@ -393,6 +393,18 @@ describe('workout exercise editor rules', () => {
     expect(screen.getByLabelText('Отдых между подходами, с')).toBeInTheDocument()
   })
 
+  it('keeps details hints only while their reference fields are folded', async () => {
+    const withDetails = [{ ...exercises[0]!, trainerComment: 'Полная заметка', restBetweenSetsSec: 120 }]
+    const user = userEvent.setup()
+    render(<WorkoutExerciseEditor referenceAppearance showRestByDefault collapseInitialExercises exercises={withDetails} onChange={vi.fn()} onOpenPicker={vi.fn()} onReplaceExercise={vi.fn()} />)
+    expect(screen.getByText('Отдых 120 с · Есть заметка')).toBeVisible()
+    await user.click(screen.getByRole('button', { name: /Присед/ }))
+    expect(screen.queryByText('Отдых 120 с · Есть заметка')).not.toBeInTheDocument()
+    expect(screen.getByLabelText('Комментарий к упражнению')).toHaveValue('Полная заметка')
+    await user.click(screen.getByRole('button', { name: /Присед/ }))
+    expect(screen.getByText('Отдых 120 с · Есть заметка')).toBeVisible()
+  })
+
   it('shows saved optional details as a compact hint', async () => {
     const user = userEvent.setup()
     const withDetails: WorkoutExerciseDraft[] = [{
@@ -443,6 +455,11 @@ describe('workout exercise editor rules', () => {
     const user = userEvent.setup()
     render(<RpeHarness />)
     const select = screen.getByLabelText(`${entryMode === 'plan' ? 'Целевой' : 'Фактический'} RPE, подход 1`)
+    // A native picker can emit input before it is dismissed and change follows.
+    // Editing the next field must not restore the previous controlled RPE.
+    fireEvent.input(select, { target: { value: '7.5' } })
+    fireEvent.change(screen.getByLabelText(`${entryMode === 'fact' ? 'Фактический вес' : 'Вес'}, подход 1`), { target: { value: '35' } })
+    expect(select).toHaveValue('7.5')
     await user.selectOptions(select, '5')
     expect(select).toHaveValue('5')
     await user.selectOptions(select, '5.5')
