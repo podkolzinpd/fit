@@ -3135,6 +3135,7 @@ export function LiveWorkoutPage() {
   // Активное упражнение относится только к текущему выполнению. Оно не меняет
   // position плана: пользователь может временно перейти к любому упражнению и
   // затем вернуться к частично выполненному.
+  const liveSelectionRevision = useRef(0)
   const [activeExerciseId, setActiveExerciseId] = useState<string | null>(null)
   useEffect(() => {
     if (!query.data) return
@@ -3514,8 +3515,9 @@ export function LiveWorkoutPage() {
         const seconds = beginSetRest(set, retry && restEndsAt !== null)
         if (seconds !== undefined) confirmationRestSeconds.current.set(set.id, seconds)
       }
+      return { selectionRevision: liveSelectionRevision.current }
     },
-    onSuccess: (version, { set, draft }) => {
+    onSuccess: (version, { set, draft }, context) => {
       setValidationErrorSetIds((current) => {
         if (!current.has(set.id)) return current
         const next = new Set(current); next.delete(set.id); return next
@@ -3535,12 +3537,17 @@ export function LiveWorkoutPage() {
         ? applyLiveSetConfirmation(workout, set.id, draft, version, new Date().toISOString()) : workout)
       if ((coachV79 || clientReference) && before) {
         const after = queryClient.getQueryData<Workout>(['workout', workoutId])
-        const next = after && nextLiveTarget(after.exercises, selectedLiveBlock?.blockId)
+        const followsConfirmedSingle = coachV79 && owner?.blockType === 'single'
+        const preserveSelection = coachV79 && context?.selectionRevision !== liveSelectionRevision.current
+        const next = after && nextLiveTarget(after.exercises,
+          followsConfirmedSingle ? owner.blockId : selectedLiveBlock?.blockId, followsConfirmedSingle)
         const changedCard = next && owner && (next.exercise.id !== owner.id
           || owner.blockType !== 'single' && next.set.position !== set.position)
-        nextExerciseAnchor.current = changedCard ? next.set.id : null
-        setActiveExerciseId(next?.exercise.id ?? null)
-        setLiveCardDisplay(null)
+        if (!preserveSelection) {
+          nextExerciseAnchor.current = changedCard ? next.set.id : null
+          setActiveExerciseId(next?.exercise.id ?? null)
+          setLiveCardDisplay(null)
+        }
         if (owner && owner.sets.every(item => item.id === set.id || item.confirmedAt)
           && manuallyReopenedExercises.current.delete(owner.id)) {
           setExpandedExercises(current => { const result = new Set(current); result.delete(owner.id); return result })
@@ -4332,6 +4339,7 @@ export function LiveWorkoutPage() {
   function setLiveCardExpanded(exercise: WorkoutExerciseModel, expanded: boolean, key = v79CardKey(exercise), closeScope = false) {
     const previous = liveCardOwner(openLiveCardKey())
     if (liveCardCollapseBlocked(exercise) || previous && liveCardCollapseBlocked(previous)) return
+    liveSelectionRevision.current += 1
     if (!expanded) {
       // The footer menu is inside the retained fold. Move its focus to the
       // visible header before making that body inert, without native scrolling.

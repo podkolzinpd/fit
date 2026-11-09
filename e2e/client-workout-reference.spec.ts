@@ -4831,3 +4831,46 @@ for (const entry of ['new', 'template', 'completed']) for (const theme of ['ligh
   await info.attach('legacy-skin-consumers', { body: JSON.stringify(probes), contentType: 'application/json' })
   expect(probes).toEqual(probes.map(probe => ({ state: probe.state, inherited: [] })))
 })
+
+for (const density of ['original', 'compact'] as const) test(`Coach confirms exercises out of order ${density}`, async ({ page }) => {
+  const id = 'c0ac0000-6010-4000-8000-000000000001'
+  await page.addInitScript(({ id, density }) => {
+    localStorage.setItem(`fit.liveExerciseAnimation.${id}`, 'false')
+    localStorage.setItem(`fit.coachLiveDensity.${id}`, density)
+  }, { id, density })
+  await page.addInitScript(() => {
+    const connect = AudioNode.prototype.connect
+    const sinks = new WeakMap<BaseAudioContext, GainNode>()
+    AudioNode.prototype.connect = function (this: AudioNode, target: AudioNode | AudioParam, output?: number, input?: number) {
+      if (target instanceof AudioDestinationNode) {
+        let sink = sinks.get(this.context)
+        if (!sink) {
+          sink = this.context.createGain(); sink.gain.value = 0
+          Reflect.apply(connect, sink, [target, 0, 0]); sinks.set(this.context, sink)
+        }
+        return Reflect.apply(connect, this, [sink, output ?? 0, input ?? 0])
+      }
+      return target instanceof AudioNode ? Reflect.apply(connect, this, [target, output ?? 0, input ?? 0])
+        : Reflect.apply(connect, this, [target, output ?? 0])
+    } as typeof AudioNode.prototype.connect
+  })
+  const source = coachGestureWorkout(false, 3)
+  const backend = await mockPilot(page, { role: 'trainer', profileId: id, clientLime: true, fitLime: true, workouts: [source] })
+  await page.goto(`/workouts/${workoutId}/live`)
+  const cards = page.locator('.live-exercise')
+  const bodies = page.locator('.live-exercise > .coach-v79-card-body')
+  await cards.nth(1).locator('button.coach-v79-card-toggle').click()
+  for (const set of source.exercises[1]!.sets) {
+    await page.locator(`[data-live-set-id="${set.id}"]`).getByRole('button', { name: 'Готово, отдых', exact: true }).click()
+    await expect.poll(() => backend.getWorkouts()[0]!.exercises[1]!.sets.find(item => item.id === set.id)!.confirmedAt).not.toBeNull()
+    if (set !== source.exercises[1]!.sets.at(-1)) await expect(bodies.nth(1)).not.toHaveAttribute('inert', '')
+  }
+  await expect(bodies.nth(0)).toHaveAttribute('inert', '')
+  await expect(bodies.nth(2)).not.toHaveAttribute('inert', '')
+  for (const set of source.exercises[2]!.sets) {
+    await page.locator(`[data-live-set-id="${set.id}"]`).getByRole('button', { name: 'Готово, отдых', exact: true }).click()
+    await expect.poll(() => backend.getWorkouts()[0]!.exercises[2]!.sets.find(item => item.id === set.id)!.confirmedAt).not.toBeNull()
+  }
+  await expect(bodies.nth(0)).not.toHaveAttribute('inert', '')
+  expect(backend.getWorkouts()[0]!.exercises[0]!.sets.every(set => !set.confirmedAt)).toBe(true)
+})
