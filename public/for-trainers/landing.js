@@ -1,21 +1,16 @@
 (() => {
   'use strict';
   const root=document.documentElement;
-  const athlete=new URLSearchParams(location.search).get('audience')==='athlete';
-  document.body.classList.toggle('audience-athlete',athlete);
-  document.querySelectorAll('[data-audience]').forEach(link=>{
-    if(link.dataset.audience===(athlete?'athlete':'trainer'))link.setAttribute('aria-current','page');
-    else link.removeAttribute('aria-current');
-  });
-  if(athlete){
-    document.querySelector('.copy-stack').replaceChildren(document.querySelector('#athlete-copy').content.cloneNode(true));
-    document.querySelector('.screen-window').replaceChildren(document.querySelector('#athlete-screens').content.cloneNode(true));
-    document.querySelector('.chapters [data-step="0"] span').textContent='Сегодня';
-    document.querySelector('.chapters [data-step="3"] span').textContent='Техника';
-    document.querySelector('.closing .kicker').textContent='ФИТ для спортсмена';
-    document.title='ФИТ — тренировки самостоятельно или с тренером';
-    document.querySelectorAll('[data-placement="trainer-page"]').forEach(a=>a.dataset.placement='athlete-page');
-    document.querySelector('footer a').href='?audience=athlete&motion=off#top';
+  const athlete=document.body.dataset.audience==='athlete';
+  const legacyAudience=new URLSearchParams(location.search).get('audience');
+  if((legacyAudience==='athlete'&&!athlete)||(legacyAudience==='trainer'&&athlete)){
+    // Keep shared links working while each audience has indexable static HTML.
+    const destination=new URL(legacyAudience==='athlete'?'/for-athletes/':'/for-trainers/',location.origin);
+    destination.search=location.search;
+    destination.searchParams.delete('audience');
+    destination.hash=location.hash;
+    location.replace(destination.href);
+    return;
   }
 
   const story=document.querySelector('.story'), scene=document.querySelector('.scene');

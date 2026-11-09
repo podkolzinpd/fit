@@ -1,11 +1,15 @@
 (() => {
   'use strict'
   const counterId = 114123380
-  const canonicalPath = '/for-trainers'
+  const canonicalPath = /^\/for-athletes(?:\/index\.html|\/)?$/.test(window.location.pathname)
+    ? '/for-athletes' : '/for-trainers'
   const production = window.location.protocol === 'https:'
     && window.location.hostname === 'fit-training.ru'
-    && /^\/for-trainers(?:\/index\.html|\/)?$/.test(window.location.pathname)
+    && /^\/for-(?:trainers|athletes)(?:\/index\.html|\/)?$/.test(window.location.pathname)
   if (!production) return
+  const legacyAudience = new URLSearchParams(window.location.search).get('audience')
+  if ((legacyAudience === 'athlete' && canonicalPath !== '/for-athletes')
+    || (legacyAudience === 'trainer' && canonicalPath !== '/for-trainers')) return
 
   // The landing owns its counter. Existing application counters are untouched.
   window.ym = window.ym || function () { (window.ym.a = window.ym.a || []).push(arguments) }
