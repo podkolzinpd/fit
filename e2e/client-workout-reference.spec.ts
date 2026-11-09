@@ -4839,7 +4839,7 @@ for (const density of ['original', 'compact'] as const) test(`Coach confirms exe
     localStorage.setItem(`fit.coachLiveDensity.${id}`, density)
   }, { id, density })
   await page.addInitScript(() => {
-    const connect = AudioNode.prototype.connect
+    const connect = Object.getOwnPropertyDescriptor(AudioNode.prototype, 'connect')!.value as typeof AudioNode.prototype.connect
     const sinks = new WeakMap<BaseAudioContext, GainNode>()
     AudioNode.prototype.connect = function (this: AudioNode, target: AudioNode | AudioParam, output?: number, input?: number) {
       if (target instanceof AudioDestinationNode) {
@@ -4848,10 +4848,10 @@ for (const density of ['original', 'compact'] as const) test(`Coach confirms exe
           sink = this.context.createGain(); sink.gain.value = 0
           Reflect.apply(connect, sink, [target, 0, 0]); sinks.set(this.context, sink)
         }
-        return Reflect.apply(connect, this, [sink, output ?? 0, input ?? 0])
+        return Reflect.apply(connect, this, [sink, output ?? 0, input ?? 0]) as AudioNode
       }
-      return target instanceof AudioNode ? Reflect.apply(connect, this, [target, output ?? 0, input ?? 0])
-        : Reflect.apply(connect, this, [target, output ?? 0])
+      return (target instanceof AudioNode ? Reflect.apply(connect, this, [target, output ?? 0, input ?? 0])
+        : Reflect.apply(connect, this, [target, output ?? 0])) as AudioNode
     } as typeof AudioNode.prototype.connect
   })
   const source = coachGestureWorkout(false, 3)
