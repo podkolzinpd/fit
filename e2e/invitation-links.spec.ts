@@ -1,4 +1,4 @@
-import { nativeRegister } from './native-local-fixture'
+import { nativeRegister, nativeRequest } from './native-local-fixture'
 import { expect, test, type Page } from './native-local-fixture'
 
 async function dismissVisibleCoachmarks(page: Page) {
@@ -29,15 +29,17 @@ test('trainer invites a new athlete by protected link without entering a code', 
   await expect(page).toHaveURL(/\/(today|clients)$/)
 
   await page.goto('/clients')
-  await page.getByRole('button', { name: /^(Добавить|Добавить клиента)$/ }).click()
-  await page.getByRole('button', { name: 'Пригласить по ссылке' }).click()
-  await page.getByLabel('Имя спортсмена').fill(athleteName)
-  await page.getByRole('button', { name: 'Создать приглашение' }).click()
+  await page.getByRole('button', { name: /^(Добавить|Добавить спортсмена)$/ }).click()
+  await page.getByRole('button', { name: 'Пригласить', exact: true }).click()
+  await expect(page.getByLabel('Имя спортсмена')).toHaveCount(0)
   await expect(page.getByRole('dialog', { name: 'Ссылка готова' })).toBeVisible()
   await page.context().grantPermissions(['clipboard-read', 'clipboard-write'])
   await page.getByRole('button', { name: 'Скопировать ссылку' }).click()
   const invitationUrl = await page.evaluate(() => navigator.clipboard.readText())
-  expect(invitationUrl).toMatch(/\/invite\?token=[A-F0-9]{12}\.[0-9a-f]{64}&source=yandex$/)
+  expect(invitationUrl).toMatch(/\/connect\?code=[A-F0-9]{32}$/)
+  const beforeAcceptance = await nativeRequest(page, '/v1/clients')
+  expect(beforeAcceptance.ok).toBe(true)
+  expect((await beforeAcceptance.json() as { clients: unknown[] }).clients).toHaveLength(0)
 
   await page.getByRole('button', { name: 'Закрыть' }).click()
   await page.goto('/profile/settings')
@@ -45,17 +47,15 @@ test('trainer invites a new athlete by protected link without entering a code', 
   await signOut(page)
   await page.goto(invitationUrl)
 
-  await expect(page.getByRole('heading', { name: 'Тренировки вместе с тренером' })).toBeVisible()
-  await expect(page.getByRole('region', { name: 'Отправитель приглашения' })).toContainText(trainerName)
+  await expect(page).toHaveURL(/\/auth(?:\?|$)/)
   await nativeRegister(page, { key: `link-athlete-${suffix}@fit.local`, firstName: athleteName, role: 'client' })
 
-  await expect(page).toHaveURL(/\/invite$/)
-  await page.getByRole('button', { name: 'Подключить тренера', exact: true }).click()
-  await expect(page.getByRole('heading', { name: 'Тренер подключён' })).toBeVisible()
-  await page.getByRole('button', { name: 'Открыть кабинет' }).click()
-  await expect(page).toHaveURL(/\/me$/)
-  await page.goto('/me/profile')
+  await expect(page).toHaveURL(/\/connect\?code=[A-F0-9]{32}$/)
   await expect(page.getByText(trainerName, { exact: true })).toBeVisible()
+  await page.getByRole('button', { name: 'Принять приглашение', exact: true }).click()
+  await expect(page.getByText('Вы подключены', { exact: true })).toBeVisible()
+  await page.goto('/me/profile')
+  await expect(page.locator('.client-trainer-connection-card').getByText(trainerName, { exact: true })).toBeVisible()
 })
 
 test('athlete invites a trainer by the same protected link shown in the QR code', async ({ page }, testInfo) => {

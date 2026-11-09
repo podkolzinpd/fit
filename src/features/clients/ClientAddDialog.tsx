@@ -5,7 +5,7 @@ import { CloseIcon } from '../../shared/icons'
 import './client-add.css'
 
 /** One entry point; the existing card and invitation commands keep ownership. */
-export function ClientAddDialog({ onClose, onInvite, onBeforeOpen }: {
+export function ClientAddDialog({ onClose, onBeforeOpen }: {
   onClose: () => void; onInvite: () => void; onBeforeOpen: () => void
 }) {
   const dialog = useRef<HTMLDialogElement>(null)
@@ -20,7 +20,6 @@ export function ClientAddDialog({ onClose, onInvite, onBeforeOpen }: {
         if (event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom) onClose()
       } }}>
       <header><h2 id="clients-add-title">Добавить клиента</h2><button type="button" className="icon-button" aria-label="Закрыть" onClick={onClose}><CloseIcon /></button></header>
-      <Link className="button primary" to="/clients/new" onClick={() => { onBeforeOpen(); onClose() }}>Создать карточку</Link>
-      <button type="button" className="secondary" onClick={() => { onBeforeOpen(); onInvite() }}>Пригласить по ссылке</button>
+      <Link className="button primary" to="/connect" onClick={() => { onBeforeOpen(); onClose() }}>Подключить спортсмена</Link>
     </dialog>, host)
 }

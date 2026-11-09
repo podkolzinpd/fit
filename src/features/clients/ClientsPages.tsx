@@ -1,3 +1,5 @@
+import { ConnectionRequests } from '../auth/ConnectionPage'
+import { isWorkoutClient } from '../workouts/workout-client-eligibility'
 import { CorporateEmployeeMark } from '../corporate-personal'
 import clientMoreIcon from '../../assets/client-profile/more.svg'
 import clientArrowIcon from '../../assets/client-profile/arrow.svg'
@@ -16,7 +18,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Controller, useForm, useWatch } from 'react-hook-form'
 import { useEffect, useRef, useState } from 'react'
-import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
+import { Navigate, Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { bmiLabel, splitClientWorkouts } from '../../data/repositories/workout-rules'
 import { ClientFirstRunIntro, PresetWorkoutPicker, TodayPage, WorkoutExercisesSummary, storeFirstWorkoutIntent, workoutCountLabel, type FirstWorkoutIntent } from '../workouts'
 import type { Client, Gender } from '../../shared/domain'
@@ -82,6 +84,8 @@ export function MyClientPage() {
   useClientRealtime(query.data?.id)
   if (query.data) return <TodayPage clientMode />
   return <Page title="Кабинет" className="client-home-page">
+    <ConnectionRequests />
+    <Link className="button secondary connection-entry" to="/connect">Добавить тренера</Link>
     <AsyncView loading={query.isLoading} error={query.error} onRetry={() => void query.refetch()}>
       <ClientFirstRunIntro actions={<section className="client-home-self-training primary">
         <section className="quick-start-workout"><div className="quick-start-copy"><h2>Начать тренировку</h2><p>Тренировка начнётся сразу. Упражнения добавите по ходу.</p></div><button type="button" className="quick-start-button" disabled={beginFirstLive.isPending} onClick={() => beginFirstLive.mutate()}>{beginFirstLive.isPending ? 'Начинаем…' : 'Начать тренировку'}</button>{beginFirstLive.error && <p role="alert">Не удалось начать тренировку. Повторите попытку.</p>}</section>
@@ -128,7 +132,7 @@ export function ClientFormPage() {
     await queryClient.invalidateQueries({ queryKey: ['client', clientId] })
     navigate(`/clients/${clientId}`)
   }} onCancel={cancel} />
-  return <ClientForm onSaved={async (id) => { await queryClient.invalidateQueries({ queryKey: ['clients'] }); navigate(`/clients/${id}`) }} onCancel={cancel} />
+  return <Navigate to="/connect" replace />
 }
 
 export function MyClientEditPage() {
@@ -238,16 +242,15 @@ function ClientForm({
       }
       return existing.id
     }
+    if (createMode !== 'self') throw new Error('Сначала подключите аккаунт спортсмена.')
     const input = { fullName: parsed.fullName, gender: parsed.gender as Gender,
       ageYears: parsed.ageYears ?? null,
       ageUpdatedAt: parsed.ageYears === undefined ? null : today,
       heightCm: parsed.heightCm ?? null,
       goal: parsed.goal, note: parsed.note, initialWeightKg: parsed.initialWeightKg,
       initialWeightRecordedOn: parsed.initialWeightKg === undefined ? undefined : today }
-    return createMode === 'self'
-      ? athleteSportProfile.saveOwn({ clientId: null, expectedVersion: null, client: input,
-        sport: { sports: selectedSports, bio: sportBio.trim() || null } })
-      : clientsRepository.create(input)
+    return athleteSportProfile.saveOwn({ clientId: null, expectedVersion: null, client: input,
+      sport: { sports: selectedSports, bio: sportBio.trim() || null } })
   }, onSuccess: (id) => onSaved(id), onError: async (error) => {
     if (!existing || !isRepositoryConflict(error)) return
     await Promise.all([
@@ -556,13 +559,14 @@ export function ClientDetailPage() {
       <div className="client-detail-actions">
         {actor?.role === 'trainer' && <ChatThreadsNotice loading={threads.isLoading} error={threads.error} onRetry={() => void threads.refetch()} />}
         {!fitLimePilot && actor?.role === 'trainer' && canOpenClientChat(query.data, thread) && <ChatStartButton clientId={clientId} trainerId={thread?.trainerId ?? actor.userId} conversationId={thread?.conversationId} className="secondary wide client-detail-message" />}
-        {actor?.role === 'trainer' && !query.data.archivedAt && <QuickStartWorkout role="trainer" clientId={clientId} workouts={workouts.data} loading={workouts.isLoading} error={workouts.error} onRetry={() => void workouts.refetch()} returnTo={`/clients/${clientId}`} compact />}
-        <Link className="client-detail-plan" to={`/workouts/new?client=${clientId}`}>
+        {actor?.role === 'trainer' && isWorkoutClient(query.data) && <QuickStartWorkout role="trainer" clientId={clientId} workouts={workouts.data} loading={workouts.isLoading} error={workouts.error} onRetry={() => void workouts.refetch()} returnTo={`/clients/${clientId}`} compact />}
+        {isWorkoutClient(query.data) && <Link className="client-detail-plan" to={`/workouts/new?client=${clientId}`}>
           {fitLimePilot ? <img src={clientScheduleIcon} width={16} height={16} alt="" /> : <ScheduleIcon />}
           <span>Запланировать тренировку</span>
           <ChevronRightIcon className="client-detail-chevron" />
-        </Link>
-        {fitLimePilot && !query.data.archivedAt && query.data.hasAccount === false && <InvitationShareButton clientId={clientId} targetRole="client" label="Пригласить в приложение" className="client-profile-invite" />}
+        </Link>}
+        {!isWorkoutClient(query.data) && <p className="muted">Для новых тренировок нужно подключить аккаунт спортсмена. Прежняя история сохранена.</p>}
+        {fitLimePilot && !query.data.archivedAt && query.data.hasAccount === false && <InvitationShareButton clientId={clientId} targetRole="client" label="Пригласить" cardName={query.data.fullName} className="client-profile-invite" />}
 
         {!fitLimePilot && <>
         <nav className="client-detail-routes" aria-label="Разделы спортсмена">
@@ -618,7 +622,7 @@ export function ClientDetailPage() {
       <div className="page-actions" id="client-profile-invitations">
         {manageInvitations && <button type="button" className="link" onClick={() => setManageInvitations(false)}>Скрыть приглашения</button>}
         {fitLimePilot && <ClientDetailSourceState label="приглашения и права доступа" loading={invitations.isLoading || trainers.isLoading} error={invitations.error ?? trainers.error} onRetry={() => { void invitations.refetch(); void trainers.refetch() }} />}
-        {!fitLimePilot && !query.data.archivedAt && query.data.hasAccount === false && <InvitationShareButton clientId={clientId} targetRole="client" label="Пригласить клиента" className="secondary wide" />}
+        {!fitLimePilot && !query.data.archivedAt && query.data.hasAccount === false && <InvitationShareButton clientId={clientId} targetRole="client" label="Пригласить" cardName={query.data.fullName} className="secondary wide" />}
         {(!fitLimePilot || manageInvitations) && invitations.data?.map((item) => <article className="card" key={item.id}><div><strong>Активное приглашение клиента</strong><p>Действует до {new Date(item.expiresAt).toLocaleDateString('ru-RU', { timeZone: normalizeTimeZone(actor?.timezone) })}</p></div><button className="link danger" disabled={revoke.isPending} aria-busy={revoke.isPending} onClick={async () => { if (await confirm({ message: 'Отозвать это приглашение? Ссылка, QR-код и код больше не будут работать.', confirmLabel: 'Отозвать', danger: true })) revoke.mutate(item.id) }}>{revoke.isPending ? 'Отзываем…' : 'Отозвать'}</button></article>)}
         {revoke.error && <p className="error">{revoke.error.message}</p>}
         {!fitLimePilot && currentMembership && query.data?.hasAccount && !query.data.archivedAt && <button className="danger secondary wide" disabled={leave.isPending} aria-busy={leave.isPending} onClick={async () => { if (await confirm({ message: 'Отключиться от спортсмена? Текущий доступ к тренировкам и прогрессу будет закрыт. История и авторство сохранятся.', confirmLabel: 'Отключиться', danger: true })) leave.mutate() }}>{leave.isPending ? 'Отключаемся…' : 'Отключиться от спортсмена'}</button>}
