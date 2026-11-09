@@ -114,3 +114,57 @@ test('snippet exclusions contain only the startup UI and preserve its establishe
   assert.ok(html.includes('<title>ФИТ — приложение для тренеров и спортсменов</title>'))
   assert.ok(html.includes('<meta name="description"'))
 })
+
+const appHtml = await readFile(new URL('../index.html', import.meta.url), 'utf8')
+const appMetrika = appHtml.split('<!-- Yandex.Metrika counter -->')[1].match(/<script[^>]*>(.*?)<\/script>/s)[1]
+
+function collectAppMetrika({ hostname='fit-training.ru', protocol='https:', pathname='/me', search='', existingScripts=[] } = {}) {
+  const scripts = existingScripts.map(src => ({ src }))
+  const inserted = []
+  const parentNode = { insertBefore: script => { scripts.push(script); inserted.push(script) } }
+  const anchor = { src: '', parentNode }
+  scripts.unshift(anchor)
+  const window = { location: { hostname, protocol, pathname, href: `${protocol}//${hostname}${pathname}${search}`, origin: `${protocol}//${hostname}` } }
+  Object.assign(window, {
+    window,
+    document: { scripts, referrer: 'https://example.org/?token=secret', createElement: () => ({}), getElementsByTagName: () => [anchor] },
+    URL, URLSearchParams,
+  })
+  runInNewContext(appMetrika, window)
+  return { scripts: inserted, calls: Array.from(window.ym?.a ?? [], args => Array.from(args)) }
+}
+
+test('every SSR application counter has its own matching loader, including the legacy counter', () => {
+  for (const options of [{}, { hostname:'localhost', protocol:'capacitor:' }]) {
+    const { scripts, calls } = collectAppMetrika(options)
+    const loaderIds = scripts.map(script => Number(new URL(script.src).searchParams.get('id'))).sort()
+    const initIds = calls.filter(call => call[1] === 'init').map(call => call[0]).sort()
+    assert.deepEqual(initIds, [111074543, 113121193, 114123380])
+    // An id-specific SSR tag ignores initialization of a different counter.
+    // Presence of all IDs in HTML alone does not prove that they collect data.
+    assert.deepEqual(loaderIds, initIds)
+    for (const call of calls) assert.equal(call[2].ssr, true)
+    const repeated = collectAppMetrika({ ...options, existingScripts:scripts.map(script => script.src) })
+    assert.equal(repeated.scripts.length, 0)
+  }
+})
+
+test('parallel app counters preserve privacy settings and excluded entry routes', () => {
+  const { calls } = collectAppMetrika({ pathname:'/invite', search:'?token=secret&source=private&utm_source=partner' })
+  const replay = calls.filter(call => call[2].webvisor).map(call => call[0])
+  assert.deepEqual(replay, [111074543])
+  const owner = calls.find(call => call[0] === 114123380)[2]
+  assert.equal(owner.clickmap, false)
+  assert.equal(owner.trackLinks, false)
+  assert.equal(owner.url, 'https://fit-training.ru/invite?utm_source=partner')
+  assert.equal(owner.referrer, 'https://example.org/')
+  for (const call of calls) assert.doesNotMatch(call[2].url, /secret|private/)
+  for (const options of [
+    { hostname:'localhost' }, { hostname:'preview.example.org' },
+    { pathname:'/corporate-invite' }, { pathname:'/CORPORATE-INVITE/' }, { pathname:'/%63orporate-invite//' },
+  ]) {
+    const result = collectAppMetrika(options)
+    assert.equal(result.scripts.length, 0)
+    assert.equal(result.calls.length, 0)
+  }
+})
