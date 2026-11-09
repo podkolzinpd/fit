@@ -421,7 +421,7 @@ export function TrainerProfessionalProfileSection({ repositoryOverride, scope = 
     {photoError && !editing && <p role="alert" className="error">{photoError} <button type="button" className="secondary" onClick={() => void reloadDraft()}>Загрузить актуальную анкету</button></p>}
     <AsyncView loading={profile.isLoading || managementLoading} error={profile.error ?? management.error} onRetry={() => { void profile.refetch(); if (trainerProfiles.getManagement) void management.refetch() }}>
       {readOnly && <div className="card trainer-profile-management-notice" role="status"><strong>Анкетой управляет администратор</strong><p>Вы можете просматривать анкету. Изменения и публикацию выполняет администратор.</p></div>}
-      {localError && !photoError && <div className="card" role="alert"><p>{localError}</p><button type="button" className="secondary" onClick={() => void reloadDraft()}>Загрузить актуальную анкету</button></div>}
+      {localError && !photoError && !editing && <div className="card" role="alert"><p>{localError}</p><button type="button" className="secondary" onClick={() => void reloadDraft()}>Загрузить актуальную анкету</button></div>}
       {readOnly && dirty && draft && <details className="card"><summary>Ваш несохранённый текст</summary><p>Он остался только в этой открытой форме и не опубликован.</p><TrainerProfileCard profile={draft} compact /></details>}
       {readOnly && (profile.data?.draft ?? draft) && <TrainerProfileCard profile={(profile.data?.draft ?? draft)!} compact isBrandTrainer={profile.data?.isBrandTrainer ?? false} />}
       {adminMode && profile.data?.published && !publishedMatchesDraft && <details className="card trainer-profile-version-preview"><summary>Сравнить с опубликованной анкетой</summary><TrainerProfileCard profile={profile.data.published} compact /><p>Выше — опубликованная версия. В редакторе — текущий черновик. Сохранение черновика само не меняет публикацию.</p></details>}
@@ -501,6 +501,7 @@ export function TrainerProfessionalProfileSection({ repositoryOverride, scope = 
             </div>
           </div>
         </details>
+        {localError && !photoError && <div role="alert" className="error"><p>{localError}</p><button type="button" className="secondary" onClick={() => void reloadDraft()}>Загрузить актуальную анкету</button></div>}
           <SaveStatus status={localError ? 'idle' : profileChangePending ? 'saving' : status} error={save.error?.message ?? publish.error?.message ?? unpublish.error?.message ?? catalogListing.error?.message ?? reorderPhotos.error?.message ?? deletePhoto.error?.message} />
         <div className="trainer-profile-actions">
           <button type="button" className="secondary" onClick={cancelEditing} disabled={pending}>Отмена</button>

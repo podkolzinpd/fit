@@ -17,6 +17,7 @@ test('native admin edits an existing draft and explicitly publishes the same sta
  await page.getByRole('button',{name:'Редактировать',exact:true}).click()
  await page.getByLabel('О себе').fill('Проверенное исправление администратора')
  await page.getByRole('button',{name:'Сохранить',exact:true}).click()
+ await page.locator('.trainer-professional-embedded > .trainer-card .trainer-card-disclosure > summary').first().click()
  await expect(page.getByText('Проверенное исправление администратора',{exact:true})).toBeVisible()
  await page.getByRole('button',{name:'Опубликовать',exact:true}).click()
  await page.getByRole('alertdialog').getByRole('button',{name:'Опубликовать',exact:true}).click()
