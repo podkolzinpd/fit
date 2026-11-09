@@ -8344,3 +8344,40 @@ exact; /tmp/fit-mc51-source746-proof.json. Web readback harness16 выбран -
 Перед merge требуются green нового head, свежая GitHub очередь и завершение
 активного main/release-window. Публикация пока не завершена. Разрешение владельца
 сохраняется, новых рутинных вопросов нет; итог actual release/readback ещё гейт.
+
+## 193. MC5.1 — свежий rollback main, локальная приёмка и закрытый PR, 09.11.2026
+
+CI42583914301 на2ebde1aa завершён cancelled; Android42583914293success.
+Лог app/e2e показывает failed aggregate из-за cancelled tests/lanes, отдельная
+ошибка product assertion не выявлена. Старый head не перезапускался вслепую.
+GitHub main обновлён принятым2066/c28700ba4f1cdbd6036a0dd90916740ad8f4af83,
+отменяющим2039/2063 и возвращающим unregistered workflows. Нормальный локальный
+merge включил принятый rollback; собственный diff от него по-прежнему2 CSS,
+3QA-файла и документы. Новая schema/revert migration принадлежит main2066,
+не добавляется нашим diff и отдельно не применяется.
+
+Удалённый2065 был обновлён Brainbuster11 обычным merge main в08:22:50UTC до
+e67b6f9bdf1ca716771e22ef1fbd3feb93647847 (parents2ebde1aa+c28700ba).
+Локальный обычный merge9d66f992 имеет ПОЛНОСТЬЮ такой же tree:
+4e5c323054223affafa4261c6dc88d8849c97f52; git diff exit0, собственные правки
+сохранены. Force/reset/перезаписи remote не использовались. Новый head объясняет
+устаревание прежнего run; автор конкретного cancellation не устанавливался.
+
+На этом текущем tree заново выполнена необходимая совместимость после изменения
+App/Lime/auth/fixtures: full build/types/startup/fonts, полный lint, unit14 и
+browser114 passed,0skip/fail/flaky/retry; browser75.8s. Исходный MC44 deadline
+не повторился, его историческая причина по-прежнему unknown. AST на c287:
+25715/25715 legacy records,15guards/5rules8decl,12 protected files exact.
+Артефакты /tmp/fit-mc51-release/rollback-c287-* и rollback-local-receipt.json;
+/tmp/fit-mc51-sourcec287-proof.json. Public fixture adapter обновлён из текущего
+main с прежними assertions и строгой изоляцией пользовательских API.
+
+Блокер публикации: GitHub2065 закрыт08:30:39UTC (11:30МСК) actorBrainbuster11,
+stateCLOSED, mergeCommit null, комментариев с причиной нет. Это новое действие
+после разрешения владельца190; его смысл относительно текущего выпуска неясен.
+Запрошено одно уточнение: отмена MC5.1 либо продолжение с переоткрытием2065.
+До ответа PR не переоткрывается, заменяющий PR не создаётся, публикации нет.
+Разрешённая независимая локальная подготовка завершена и сохраняется коммитом.
+CI фактического e67/после возможного reopen и production/readback остаются
+непроверенными; старый35green D22 им не присваивается. Следующий шаг зависит
+только от смысла закрытия; рутинных технических решений от владельца не требуется.
