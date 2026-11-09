@@ -32,7 +32,7 @@ P4/PR1882 опубликован наe5b5aa1d:213 файлов/health и public 
 P1–P4 завершены; итог — итерация26 канонического журнала и YAFIT-674.
 31.10 справочник заполнен:32 офиса добавлены,33/33 после reload; итерация27.
 02.11: [кабинет Яндекса](design/CORPORATE_ADMIN_20261027.md): PR1930/1937 опубликованы.
-SRV/ADM/CPT приняты, personal test ON. DUT:PR1/2050 принят; PR2/2054 обновлён main ef3768e7, новые проверки; duty OFF, журнал80.
+SRV/ADM/CPT приняты, personal test ON. DUT:PR1/2050 принят; PR2/2054 main ea5883dc, исправлена E2E fixture, новые гейты; duty OFF, журнал81.
 
 ## Точка продолжения
 [UX:4PR, проверки](design/WORKOUT_LIFECYCLE_UX_AUDIT_20261101.md).

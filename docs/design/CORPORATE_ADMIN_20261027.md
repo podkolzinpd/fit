@@ -3285,3 +3285,42 @@ squash match-head, mainCI/official API/web/signedOTA и полная DUT109 пр
 единственный assignedofficezone при необходимости, dutygrant и отдельный
 committedinspect. Все остальные пилоты/доступы/данные/native прежние.
 Дежурства OFF; merge2054, публикация, zone/grant ещё не выполнялись.
+
+
+### Итерация 81 нового выпуска — 2026-11-09 — Codex / OpenAI
+
+Sourceaa4c6b70: Android42557599576 SUCCESS1; fullCI42557599606 завершён red,
+33healthy jobs SUCCESS, auth4/128966806193 и зависимыйaggregate red. В auth4
+309PASS/4standardconditionalSkip/3flaky, strict fail-on-flaky сохранён.
+Два display-name mono/lime сбоя подтверждены trace: новый main добавил
+ConnectionRequests в профиль, а отдельная старая fixture возвращала503 на
+POST connection-directory; после успешного /connections retry оставалась
+именно независимая ошибка списка запросов. Добавлена только строгая fixture
+{action:list}->{result:[]}; все проверки ошибок/имени/chat/reload прежние.
+Отдельный client confirmed swipe dark/original430 однажды не открыл rowrail
+после отмены и завершился timeout; встроенный retry PASS. Первые кадры не
+сохранены, точная причина не объявлена найденной. Неизменённый свайп и оба
+исправленных authсценария отдельно проверены по3раза:9/9PASS, retries0,
+skips0/flaky0. Полный run не переобъявлялся зелёным и не перезапускался наугад.
+
+Предыдущий объединённый runtimeaa4c локально PASS:357/3162 frontend,
+coverage83.27/78.38/82.26/88.14; API1633PASS/469conditionalSkip;154/154
+compiledbrowser (30admin38services42personal44duties), обеengines/themes,
+retries0skip0flaky0, формыWebKitdark320/Chromiumlight1440 визуально приняты.
+Actual опубликованный ef3768e7:243files size/SHA,обаAPI/22probes,
+подписанный настоящий OTA/artifact/source/ABI/native9,publicbaseline8/8 PASS.
+Первый publicbaseline запуск без HTTPSsynthetic env был остановлен guards;
+trace доказал blocked synthetic session/health; исправленная команда8/8PASS,
+реальные API/WS не разрешались и продукт не менялся.
+
+За время разбора actualmain сталea5883dc/2059. Обычный merge сохранил все19
+файлов предшественника без конфликтов. Обновились globalviewport/редактор,
+поэтому новый frontend lint/types/coverage/build и154browser выполняются
+снова; API/scripts/native/workflows/packages побайтно прежниеaa4c, их местные
+успешные проверки сохраняются без бессмысленного повторения. Полный exact-
+headCI/Android нового объединённого head обязателен, реальная PG вCI.
+Сбой чтения GitHub завершил старый единственный observer; последующее чтение
+сохранило terminalfailure. Новых расписаний/чужихчатов/исходящих сообщений нет.
+Merge2054/publication/zone/grant не выполнялись; duty OFF. После всех гейтов
+свежая GitHubqueue/main/quietpubs, обычный squash match-head, mainCI/official
+APIwebsignedOTA/полнаяDUT109приёмка и только старый closedtest rollout.
