@@ -298,6 +298,7 @@
           if (!rawUrl) return '';
           try {
             var url = new URL(rawUrl, window.location.origin);
+            if (/^\/private-analytics\/*$/i.test(decodeURIComponent(url.pathname))) return url.origin + '/private-analytics';
             if (url.pathname === '/invite' || fitIsCorporateInvitationPath(url.pathname)) {
               url.searchParams.delete('token');
               url.searchParams.delete('source');

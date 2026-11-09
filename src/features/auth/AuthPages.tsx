@@ -150,7 +150,7 @@ export function AuthPage() {
       <section className="lime-auth-actions" aria-label="Авторизация через Yandex ID">
         <h1 className="lime-auth-title" aria-label="Добро пожаловать в ФИТ"><span>Добро пожаловать в</span><FitLogo /></h1>
         <p className="muted">Войдите, чтобы продолжить тренировки</p>
-        {(hasPendingInvitationLink() || returnTo?.startsWith('/invite') || returnTo?.startsWith('/join'))
+        {(hasPendingInvitationLink() || returnTo?.startsWith('/invite') || returnTo?.startsWith('/join') || returnTo?.startsWith('/connect'))
           && <p className="muted">Войдите, чтобы продолжить по приглашению.</p>}
         <button
           className="primary auth-yandex"
@@ -298,7 +298,7 @@ function YandexAppSessionCallbackPage() {
     retry: false,
   })
   const invitationRole = invitationPreview.data?.targetRole
-  const [role, setRole] = useState<AccountRole>('trainer')
+  const [role, setRole] = useState<AccountRole>(() => /^\/connect\?code=[A-F0-9]{32}$/.test(readInvitationAuthReturn() ?? '') ? 'client' : 'trainer')
   const sessionRequest = useRef<Promise<YandexAppSession> | null>(null)
 
   useEffect(() => {

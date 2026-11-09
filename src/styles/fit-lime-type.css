@@ -15,7 +15,8 @@
   font-display: swap;
 }
 html.fit-client-lime-document.ui-identity,
-.phone-frame.fit-lime-shell {
+.phone-frame.fit-lime-shell,
+.private-analytics-shell.fit-lime-shell {
   font-family: 'YS Geo', 'Onest Variable', sans-serif;
   font-synthesis: none;
 }

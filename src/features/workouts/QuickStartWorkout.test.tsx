@@ -135,10 +135,10 @@ describe('QuickStartWorkout', () => {
     expect(mocks.quickStart.mock.calls[0]?.[1]).toBe(mocks.quickStart.mock.calls[1]?.[1])
   })
 
-  it('allows a loaded empty client list to open inline creation', () => {
+  it('routes an empty client list to account connection', () => {
     view(<QuickStartWorkout role="trainer" clients={[]} workouts={[]} returnTo="/today" />)
     expect(screen.getByRole('button', { name: 'Начать тренировку' })).toBeEnabled()
-    expect(screen.getByRole('link', { name: 'добавьте клиента' })).toHaveAttribute('href', '/clients/new')
+    expect(screen.getByRole('link', { name: 'подключите спортсмена' })).toHaveAttribute('href', '/connect')
   })
 
   it('lists every accessible active session with its client name', () => {
@@ -151,17 +151,14 @@ describe('QuickStartWorkout', () => {
 })
 
 
-it('creates and selects a client without implicitly starting even in the immediate calendar entry', async () => {
+it('does not offer manual creation or unregistered clients in the immediate calendar entry', () => {
   mocks.quickStart.mockReset()
-  mocks.createClient.mockResolvedValue(client.id)
-  const user = userEvent.setup()
-  view(<QuickStartWorkout role="trainer" clients={[]} workouts={[]} returnTo="/today" initialPickerOpen />)
-  await user.click(screen.getByRole('button', { name: 'Клиент' }))
-  await user.type(screen.getByLabelText('Имя нового клиента'), 'Новая спортсменка')
-  await user.click(screen.getByRole('button', { name: 'Добавить и выбрать' }))
-  expect(await screen.findByText('Новая спортсменка')).toBeVisible()
-  expect(screen.getByRole('button', { name: 'Начать тренировку' })).toBeEnabled()
-  expect(mocks.createClient).toHaveBeenCalledWith('Новая спортсменка')
+  mocks.createClient.mockReset()
+  view(<QuickStartWorkout role="trainer" clients={[{ ...client, hasAccount: false }]} workouts={[]} returnTo="/today" initialPickerOpen />)
+  expect(screen.queryByRole('button', { name: 'Клиент' })).not.toBeInTheDocument()
+  expect(screen.queryByLabelText('Имя нового клиента')).not.toBeInTheDocument()
+  expect(screen.queryByText('Анна')).not.toBeInTheDocument()
+  expect(mocks.createClient).not.toHaveBeenCalled()
   expect(mocks.quickStart).not.toHaveBeenCalled()
 })
 

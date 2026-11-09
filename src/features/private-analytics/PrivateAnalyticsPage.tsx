@@ -1,94 +1,129 @@
 import { useQuery } from '@tanstack/react-query'
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { useAuth } from '../../app/auth-context'
 import { useAppTheme } from '../../app/theme'
-import { loadPrivateAnalytics, type AnalyticsRow as Row } from '../../data/repositories/private-analytics.repository'
+import { explorePrivateAnalytics } from '../../data/repositories/private-analytics.repository'
+import { csv, display, features, initialFilters, labels, sections, sectionCards, shiftDay, type AnalyticsFilters, type AnalyticsRow } from './analytics-model'
 import '../corporate-admin/corporate-admin.css'
 import './private-analytics.css'
 
-const sum = (rows: Row[], key: string) => rows.reduce((total, row) => total + (typeof row[key] === 'number' ? row[key] : 0), 0)
-const format = (value: unknown) => value === null || value === undefined ? '—' : typeof value === 'boolean' ? (value ? 'Да' : 'Нет') : String(value)
-
-function DataTable({ title, rows, columns }: { title: string; rows: Row[]; columns: string[] }) {
-  return <section><h2>{title}</h2><div className="private-analytics-table"><table><thead><tr>{columns.map(c => <th key={c}>{c}</th>)}</tr></thead>
-    <tbody>{rows.map((row, index) => <tr key={String(row.id ?? row.client_id ?? row.trainer_id ?? index)}>{columns.map(c => <td key={c}>{format(row[c])}</td>)}</tr>)}</tbody></table></div></section>
-}
-
-function Breakdown({ title, items }: { title: string; items: Array<{ label: string; value: number }> }) {
-  const max = Math.max(...items.map(item => item.value), 1)
-  const total = items.reduce((acc, item) => acc + item.value, 0)
-  return <section><h2>{title}</h2><div className="private-analytics-bars">{items.map(item => <div key={item.label}>
-    <span>{item.label}</span><div className="private-analytics-bar"><i style={{ width: `${item.value / max * 100}%` }} /></div><strong>{item.value} {total > 0 && <small>({Math.round(item.value / total * 100)}%)</small>}</strong>
-  </div>)}</div></section>
-}
-
-function RegistrationTrend({ title, rows }: { title: string; rows: Row[] }) {
-  const counts = new Map<string, number>()
-  for (const row of rows) {
-    if (typeof row.registered_at !== 'string') continue
-    const day = row.registered_at.slice(0, 10)
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(day) || !Number.isFinite(Date.parse(`${day}T00:00:00Z`))) continue
-    counts.set(day, (counts.get(day) ?? 0) + 1)
-  }
-  const keys = [...counts.keys()].sort()
-  const days: Array<[string, number]> = []
-  if (keys.length) {
-    const first = Date.parse(`${keys[0]}T00:00:00Z`), last = Date.parse(`${keys.at(-1)}T00:00:00Z`)
-    for (let time = first; time <= last; time += 86_400_000) {
-      const day = new Date(time).toISOString().slice(0, 10)
-      days.push([day, counts.get(day) ?? 0])
-    }
-  }
-  const max = Math.max(...days.map(([, count]) => count), 1)
-  const width = Math.max(320, days.length * 22)
-  return <section><h2>{title}</h2>{days.length ? <>
-    <div className="private-analytics-chart"><svg role="img" aria-label={`${title}: количество регистраций по дням`} viewBox={`0 0 ${width} 130`} style={{ minWidth: width }}>
-      {days.map(([day, count], index) => <rect key={day} x={index * 22 + 3} y={110 - count / max * 100} width="15" height={count / max * 100} fill="#83a900"><title>{day}: {count}</title></rect>)}
-      <line x1="0" x2={width} y1="110" y2="110" stroke="currentColor" />
-      <text x="0" y="125" fontSize="10" fill="currentColor">{days[0]?.[0]}</text>
-      {days.length > 1 && <text x={width} y="125" textAnchor="end" fontSize="10" fill="currentColor">{days.at(-1)?.[0]}</text>}
-    </svg></div>
-    <details><summary>Данные по дням</summary><div className="private-analytics-trend">{days.map(([day, count]) => <div key={day}><span>{day}</span><strong>{count}</strong></div>)}</div></details>
-  </> : <p>Регистраций нет.</p>}</section>
-}
-
 export function PrivateAnalyticsPage() {
-  const { actor } = useAuth()
-  const theme = useAppTheme()
-  const [registration, setRegistration] = useState('all')
-  const query = useQuery({ queryKey: ['private-analytics', actor?.userId], queryFn: loadPrivateAnalytics, enabled: Boolean(actor), retry: false, gcTime: 0, staleTime: 0 })
-  const data = query.data
-  const clients = data?.clients.filter(row => registration === 'all' || row.is_self_registered === (registration === 'self')) ?? []
-  return <main className={`corporate-admin-shell ui-identity ym-hide-content ${theme === 'light' ? 'theme-light' : ''}`}><div className="page private-analytics">
-    <header className="private-analytics-header"><h1>Аналитика Fit</h1><button type="button" onClick={() => void query.refetch()} disabled={query.isFetching}>Обновить</button></header>
-    {query.isPending && <p>Загружаем аналитику…</p>}
+  const { actor } = useAuth(), theme = useAppTheme()
+  const [filters,setFilters]=useState(initialFilters)
+  const [draft,setDraft]=useState(filters)
+  const [history,setHistory]=useState<AnalyticsFilters[]>([])
+  const [columns,setColumns]=useState<string[]>(sections[filters.section]!.columns)
+  const [chartMetric,setChartMetric]=useState<'users'|'registrations'|'actions'>('users')
+  const [exporting,setExporting]=useState(false),[exportError,setExportError]=useState('')
+  const query=useQuery({queryKey:['private-analytics-explore',actor?.userId,filters],queryFn:()=>explorePrivateAnalytics(filters),enabled:Boolean(actor),retry:false,gcTime:0,staleTime:0})
+  const data=query.error ? undefined : query.data
+  const definition=sections[filters.section]!
+  const tableSection=useRef<HTMLElement>(null)
+  const cards=data?sectionCards(filters,data):[]
+  const showActivityChart=['people','activities','features'].includes(filters.section)
+  const metric=filters.section!=='people'&&chartMetric==='registrations'?'users':chartMetric
+  function apply(next:AnalyticsFilters,remember=false) {
+    if(remember)setHistory(old=>[...old,filters])
+    setFilters(next);setDraft(next);setExportError('')
+    if(next.section!==filters.section)setColumns(sections[next.section]!.columns)
+    // Only non-identifying filters belong in URLs: never names or identities.
+    const params=new URLSearchParams({from:next.from,to:next.to,section:next.section,cohort:next.cohort,role:next.role,feature:next.feature,registration:next.registration,group:next.group})
+    window.history.replaceState(null,'',`${window.location.pathname}?${params}`)
+  }
+  function navigate(section:string,extra:Partial<AnalyticsFilters>={},remember=false) {
+    apply({...filters,section,sort:sections[section]!.sort,direction:'desc',page:1,search:'',status:'',entity:'',workout:'',...extra},remember)
+  }
+  function person(row:AnalyticsRow) {navigate('activities',{person:String(row.person_id),role:'',registration:''},true)}
+  async function exportRows() {
+    setExporting(true);setExportError('')
+    try {
+      const result:AnalyticsRow[]=[]
+      let total=0,revision=''
+      for(let page=1;;page++) {
+        const batch=await explorePrivateAnalytics({...filters,page,pageSize:500})
+        if(page===1){total=batch.total;revision=batch.revision}
+        if(batch.total!==total||batch.revision!==revision)throw new Error('Данные изменились во время выгрузки. Обновите страницу и повторите экспорт.')
+        result.push(...batch.rows)
+        if(result.length>=total)break
+        if(!batch.rows.length)throw new Error('Выгрузка прервалась. Повторите экспорт.')
+      }
+      if(new Set(result.map(r=>r.id)).size!==result.length)throw new Error('Данные изменились во время выгрузки. Повторите экспорт.')
+      const url=URL.createObjectURL(new Blob([csv(result,columns)],{type:'text/csv;charset=utf-8'}))
+      const link=document.createElement('a');link.href=url;link.download=`fit-${filters.section}-${filters.from}-${filters.to}.csv`;link.click();URL.revokeObjectURL(url)
+    } catch(error) {setExportError(error instanceof Error?error.message:'Не удалось выгрузить данные.');void query.refetch()}
+    finally {setExporting(false)}
+  }
+  const max=Math.max(1,...(data?.trend.map(t=>t[metric])??[]))
+  const extraColumns=data?.rows.flatMap(row=>Object.keys(row)).filter(key=>labels[key])??[]
+  const availableColumns=[...new Set([...definition.columns,...extraColumns])]
+  return <main className={`corporate-admin-shell private-analytics-shell fit-lime fit-lime-shell ui-identity ym-hide-content ${theme==='light'?'theme-light':''}`}><div className="page private-analytics">
+    <header className="private-analytics-header"><div><h1>Аналитика Fit</h1><p>Люди, действия и результаты · время Москвы</p></div><button type="button" onClick={()=>void query.refetch()} disabled={query.isFetching}>Обновить</button></header>
+    <form className="private-analytics-filters" onSubmit={event=>{event.preventDefault();apply({...draft,page:1})}}>
+      <label>С даты<input type="date" required value={draft.from} max={draft.to} onChange={e=>setDraft({...draft,from:e.target.value})}/></label>
+      <label>По дату<input type="date" required value={draft.to} min={draft.from} onChange={e=>setDraft({...draft,to:e.target.value})}/></label>
+      <label>Роль<select value={draft.role} onChange={e=>setDraft({...draft,role:e.target.value})}><option value="">Все</option><option value="trainer">Тренеры</option><option value="client">Клиенты с аккаунтом</option><option value="offline">Карточки без входа</option></select></label>
+      <label>Кого анализируем<select value={draft.cohort} onChange={e=>setDraft({...draft,cohort:e.target.value})}><option value="active">Совершавшие действия за период</option><option value="accounts">Все аккаунты · независимо от активности</option><option value="new">Зарегистрированные за период</option><option value="">Аккаунты и карточки без входа</option></select></label>
+      <label>Регистрация<select value={draft.registration} onChange={e=>setDraft({...draft,registration:e.target.value})}><option value="">Все</option><option value="self">Самостоятельно</option><option value="connected">Подключённый аккаунт</option><option value="trainer">Тренеры / карточки тренера</option></select></label>
+      <label>Функция<select value={draft.feature} onChange={e=>setDraft({...draft,feature:e.target.value})}><option value="">Все</option>{Object.entries(features).map(([key,label])=><option key={key} value={key}>{label}</option>)}</select></label>
+      <label>Группировка<select value={draft.group} onChange={e=>setDraft({...draft,group:e.target.value})}><option value="day">День</option><option value="week">Неделя</option><option value="month">Месяц</option></select></label>
+      <label>Регулярность, дней из 7<select value={draft.regularDays} onChange={e=>setDraft({...draft,regularDays:Number(e.target.value)})}>{[1,2,3,4,5,6,7].map(n=><option key={n}>{n}</option>)}</select></label>
+      <button type="submit" className="button primary" disabled={query.isFetching}>Применить</button>
+      <button type="button" onClick={()=>{setHistory([]);apply(initialFilters(false))}}>Сбросить</button>
+    </form>
+    <nav aria-label="Разделы аналитики" className="private-analytics-tabs">{Object.entries(sections).filter(([key])=>!['exercise_detail','sets'].includes(key)).map(([key,value])=><button key={key} type="button" aria-current={filters.section===key?'page':undefined} onClick={()=>navigate(key)}>{value.label}</button>)}</nav>
+    {history.length>0 && <button className="private-analytics-back" onClick={()=>{const previous=history.at(-1)!;setHistory(history.slice(0,-1));apply(previous)}}>Назад к предыдущему срезу</button>}
+    {(filters.person||filters.trainer||filters.feature) && <p className="private-analytics-selection">Выбран срез: {filters.person?`человек ${data?.rows[0]?.person??filters.person}`:''} {filters.trainer?'клиенты выбранного тренера':''} {features[filters.feature]??''} <button onClick={()=>apply({...filters,person:'',trainer:'',feature:'',page:1})}>Убрать ограничение</button></p>}
+    {query.isPending && <p role="status">Загружаем аналитику…</p>}
     {query.error && <p role="alert">{query.error.message}</p>}
-    {data && !query.error && <>
-      <p>Обновлено: {new Date(data.computedAt).toLocaleString('ru-RU')}</p>
-      <div className="private-analytics-cards">
-        <div><span>Тренеры</span><strong>{data.trainersTotal}</strong></div>
-        <div><span>Клиенты</span><strong>{clients.length}</strong></div>
-        <div><span>Клиенты у тренеров</span><strong>{sum(data.trainers, 'clients_total')}</strong></div>
-        <div><span>Тренировки у тренеров</span><strong>{sum(data.trainers, 'workouts_total')}</strong></div>
-      </div>
-      <section><h2>Тренеры</h2><div className="private-analytics-cards">{['new', 'active', 'not_active'].map(status => <div key={status}><span>{status === 'new' ? 'Новые' : status === 'active' ? 'Активные' : 'Неактивные'}</span><strong>{data.trainers.filter(row => row.trainer_status === status).length}</strong></div>)}</div></section>
-      <RegistrationTrend title="Регистрации тренеров по дням" rows={data.trainers} />
-      <Breakdown title="Клиенты тренеров в приложении" items={[{label:'Подключены', value:sum(data.trainers, 'clients_app_linked')}, {label:'Не подключены', value:sum(data.trainers, 'clients_total') - sum(data.trainers, 'clients_app_linked')}]} />
-      <Breakdown title="Клиенты тренеров: активные и архивные" items={[{label:'Активные', value:sum(data.trainers, 'clients_total') - sum(data.trainers, 'clients_archived')}, {label:'Архивные', value:sum(data.trainers, 'clients_archived')}]} />
-      <Breakdown title="Статус тренировок у тренеров" items={[{label:'Запланированы',value:sum(data.trainers,'workouts_planned')},{label:'В процессе',value:sum(data.trainers,'workouts_in_progress')},{label:'Проведены',value:sum(data.trainers,'workouts_done')}]} />
-      <div className="private-analytics-cards">
-        <div><span>Тренеры с зафиксированной активностью</span><strong>{data.trainers.filter(row => row.is_test_account === false && row.last_active_at != null).length}</strong></div>
-        <div><span>Проведённые тренировки этих тренеров</span><strong>{sum(data.trainers.filter(row => row.is_test_account === false && row.last_active_at != null), 'workouts_done')}</strong></div>
-      </div>
-      <DataTable title="Данные тренеров" rows={data.trainers} columns={['trainer_status', 'trainer_id', 'registered_at', 'last_active_at', 'last_sign_in_at', 'days_since_last_activity', 'clients_added_30d', 'clients_added_7d', 'clients_total', 'clients_app_linked', 'clients_archived', 'last_workout_at', 'workouts_done_7d_by_client', 'workouts_done_7d_by_trainer', 'workouts_total', 'workouts_planned', 'workouts_in_progress', 'workouts_done', 'workouts_cancelled_total', 'assistant_messages_total', 'last_assistant_message_at', 'clients_with_notes_total', 'last_client_notes_at', 'custom_exercises_total', 'last_custom_exercise_at', 'exercises_unique_used', 'goals_created_total', 'last_goal_activity_at', 'progress_entries_total', 'last_progress_entry_at', 'summaries_published_total', 'last_summary_published_at']} />
-      <section><h2>Клиенты</h2><label>Регистрация <select value={registration} onChange={event => setRegistration(event.target.value)}><option value="all">Все</option><option value="self">Самостоятельно</option><option value="trainer">Тренером</option></select></label></section>
-      <RegistrationTrend title="Регистрации клиентов по дням" rows={clients} />
-      <Breakdown title="Регистрация клиентов" items={[{label:'Самостоятельно',value:clients.filter(row => row.is_self_registered === true).length},{label:'Тренером',value:clients.filter(row => row.is_self_registered === false).length}]} />
-      <Breakdown title="Статус клиентов" items={[{label:'Новые',value:clients.filter(row => row.client_status === 'new').length},{label:'Активные',value:clients.filter(row => row.client_status === 'active').length},{label:'Неактивные',value:clients.filter(row => row.client_status === 'not_active').length}]} />
-      <div className="private-analytics-cards"><div><span>Тренировки клиентов</span><strong>{sum(clients, 'workouts_total')}</strong></div></div>
-      <Breakdown title="Статус тренировок клиентов" items={[{label:'Запланированы',value:sum(clients,'workouts_planned')},{label:'В процессе',value:sum(clients,'workouts_in_progress')},{label:'Проведены',value:sum(clients,'workouts_done')}]} />
-      <DataTable title="Данные клиентов" rows={clients} columns={['registered_at', 'last_sign_in_at', 'client_id', 'client_status', 'last_client_activity_at', 'days_since_last_activity', 'is_self_registered', 'is_test_account', 'workouts_total', 'workouts_done', 'workouts_in_progress', 'workouts_planned', 'questions_asked_total', 'last_question_asked_at', 'goals_created_total', 'last_goal_activity_at', 'custom_exercises_total', 'last_custom_exercise_at', 'connection_changes_total', 'last_connection_change_at']} />
-      <DataTable title="Обратная связь" rows={data.feedback} columns={['id', 'message', 'account_role', 'created_at', 'display_mode', 'email', 'kind', 'screen_path']} />
+    {data && <>
+      <p className="private-analytics-freshness">Срез: {display(filters.from,'date')} — {display(filters.to,'date')}. Обновлено: {display(data.computedAt,'date')}. Группа людей применяется к сводке, графику и всем разделам. Поиск и страницы ограничивают только таблицу.</p>
+      <aside className="private-analytics-panel" aria-label="Как читать выборку">
+        <h2>Кого показываем</h2>
+        <p>{filters.cohort==='active'?'Только аккаунты с собственными зафиксированными действиями за выбранные даты. Людей без таких действий в этой группе нет.':filters.cohort==='new'?'Аккаунты, зарегистрированные за выбранные даты. Среди них могут быть люди без действий.':filters.cohort==='accounts'?'Все аккаунты по выбранным условиям, включая людей без действий за период. Даты ограничивают действия, а не дату регистрации.':'Аккаунты и карточки клиентов без входа, включая людей без действий за период.'} {filters.feature?`Действия ограничены функцией «${features[filters.feature]??filters.feature}».`:''}</p>
+        <p>Действие — например, изменение тренировки, запись питания или сообщение. Вход и просмотр экрана не считаются. Если тренер ведёт тренировку клиента, действие относится к тренеру.</p>
+        <p>Учёт изменений начат {display(data.observationStartedAt,'date')}. До этой даты история неполная: отсутствие событий не доказывает, что человек не пользовался Fit.</p>
+      </aside>
+      <section aria-label="Показатели раздела" className="private-analytics-cards">
+        {cards.map(card=><button key={card.key} onClick={()=>{
+          if(card.section===filters.section&&!card.patch){tableSection.current?.scrollIntoView({behavior:'instant',block:'start'});return}
+          navigate(card.section,card.patch??{},true)
+        }}><span>{card.label}</span><strong>{display(card.value,card.key)}</strong><small>{card.note} · открыть данные</small></button>)}
+      </section>
+      {filters.section==='people'&&<p>Та же группа людей, предыдущий период: новых аккаунтов — {display(data.summary.previousNew)}, совершали действия — {display(data.summary.previousActive)}.</p>}
+      {filters.section==='workouts'&&<p>Предыдущий период той же длины: проведено тренировок — {display(data.summary.previousWorkouts)}.</p>}
+      {filters.section==='payments'&&<p>Предыдущий период той же длины: поступления — {display(data.summary.previousReceived,'amount')} ₽.</p>}
+      {filters.section==='people'&&<details className="private-analytics-definitions"><summary>Как считаются показатели и где неполная история</summary>
+        <p>Новые — регистрации за период, независимо от активности. Активные — уникальные авторы подтверждённых действий, а не просто входов. Один человек может быть и новым, и активным. Карточки без входа ({display(data.summary.offline)}) не входят в число аккаунтов.</p>
+        <p>На конец выбранного периода: за 1 день — {display(data.summary.active1)}, за 7 дней — {display(data.summary.active7)}, за 30 дней — {display(data.summary.active30)}. Регулярных за 7 дней — {display(data.summary.regular)}: минимум {filters.regularDays} разных активных дней. Это выбранный рабочий порог, не отраслевой бенчмарк; окна 7/30 дней могут выходить за начало выбранного периода.</p>
+        <p>Полный учёт изменений поддерживаемых записей и успешных просмотров питания тренером начат {display(data.observationStartedAt,'date')}. Ранее доступны только сохранившиеся создания записей, запросы программ и сообщения. Это нижняя граница активности, не полная история посещений. Импортированные создания могут иметь историческую дату; для периода до начала наблюдения точное удержание не рассчитывается.</p>
+        <p>Возврат за две последние недели: {['active','new'].includes(filters.cohort)?'для сравнения возвратов выберите «Все аккаунты», чтобы состав группы не зависел от действий в текущем периоде':data.retentionMeasured?(data.summary.retentionBase?`${data.summary.retained} из ${data.summary.retentionBase} активных в предыдущие 7 дней вернулись в последние 7 дней`:'В предыдущие 7 дней нет активных людей для сравнения'):'пока не измерен — нужны две полные недели наблюдения'}. Это возврат активных людей, не удержание когорты регистраций.</p>
+        <p>Голосовой ввод, фактическое участие в видеозвонках, просмотры экранов и применение шаблонов пока не имеют подтверждённого отдельного измерения в этой аналитике. Отсутствие измерения не означает нулевое использование. Известные календарные тестовые данные исключены; полного реестра остальных тестовых аккаунтов нет.</p>
+      </details>}
+      {showActivityChart&&<section aria-label="Динамика" className="private-analytics-panel">
+        <div className="private-analytics-header"><h2>Динамика</h2><label>Показатель<select value={metric} onChange={e=>setChartMetric(e.target.value as typeof chartMetric)}><option value="users">Активные люди</option>{filters.section==='people'&&<option value="registrations">Регистрации аккаунтов</option>}<option value="actions">Действия</option></select></label></div>
+        <p>Нажмите столбец, чтобы открыть этот период. Высота показывает количество от 0 до {display(max)}; точное число подписано.</p>
+        <div className="private-analytics-chart" aria-label="График по периодам"><div className="private-analytics-chart-columns">{data.trend.map(bucket=><button key={bucket.date} aria-label={`${bucket.date}: ${bucket[metric]}`} onClick={()=>{
+          const end=filters.group==='week'?shiftDay(bucket.date,6):filters.group==='month'?shiftDay(new Date(Date.UTC(Number(bucket.date.slice(0,4)),Number(bucket.date.slice(5,7)),1)).toISOString().slice(0,10),-1):bucket.date
+          navigate(metric==='registrations'?'people':'activities',{cohort:metric==='registrations'?'new':filters.cohort,from:bucket.date<filters.from?filters.from:bucket.date,to:end>filters.to?filters.to:end},true)
+        }}><strong>{display(bucket[metric])}</strong><span className="private-analytics-chart-track"><span style={{height:`${bucket[metric]/max*100}%`}}/></span><span>{display(bucket.date,'date')}</span></button>)}</div></div>
+      </section>}
+      {['nutrition','payments','packages','features'].includes(filters.section) && <aside className="private-analytics-context">
+        {filters.section==='nutrition'?<p>Дней ведения дневника (сумма по людям): <strong>{display(data.summary.nutritionDays)}</strong>. Тренеров с подтверждёнными просмотрами за период: <strong>{display(data.summary.nutritionViews)}</strong> <button onClick={()=>navigate('activities',{feature:'nutrition_views',role:'trainer'},true)}>Показать просмотры</button></p>:['payments','packages'].includes(filters.section)?<p>Поступления за период: <strong>{display(data.summary.received,'amount')} ₽</strong>. Входящие остатки отдельно: {display(data.summary.opening,'amount')} ₽. Долг сейчас: <strong>{display(data.summary.due,'amount')} ₽</strong>, из него просрочено: {display(data.summary.overdue,'amount')} ₽. Долг — текущий снимок, не значение на выбранную историческую дату.</p>:<p>Нулевые и неизмеряемые функции не смешиваются: <strong>не измеряются отдельно</strong> голосовой ввод, участие в видеозвонках и применение шаблонов. Доступность функции конкретному человеку не означает её использование.</p>}
+      </aside>}
+      <section ref={tableSection} aria-label={definition.label} className="private-analytics-panel">
+        <h2>{definition.label}</h2><p>{definition.description}</p>
+
+        {filters.section==='workouts' && <label>Статус тренировки<select value={filters.status} onChange={e=>apply({...filters,status:e.target.value,page:1})}><option value="">Все</option>{['planned','in_progress','done','cancelled'].map(value=><option key={value} value={value}>{display(value,'status')}</option>)}</select></label>}
+        <div className="private-analytics-table-tools">
+          <form onSubmit={e=>{e.preventDefault();apply({...filters,search:draft.search,page:1})}}><label>Поиск в таблице<input type="search" maxLength={120} value={draft.search} onChange={e=>setDraft({...draft,search:e.target.value})}/></label><button>Найти</button></form>
+          <details><summary>Столбцы</summary><div className="private-analytics-column-picker">{availableColumns.map(key=><label key={key}><input type="checkbox" checked={columns.includes(key)} disabled={columns.length===1&&columns.includes(key)} onChange={e=>setColumns(e.target.checked?[...columns,key]:columns.filter(c=>c!==key))}/>{labels[key]??key}</label>)}</div></details>
+          <button disabled={exporting||query.isFetching||data.total===0} onClick={()=>void exportRows()}>{exporting?'Выгружаем…':'Скачать CSV'}</button>
+        </div>
+        {exportError && <p role="alert">{exportError}</p>}
+        <p role="status">Найдено записей: {data.total}. {query.isFetching?'Обновляем…':''}</p>
+        {data.rows.length===0?<p>По выбранным условиям записей нет. Измените фильтры или период.</p>:<div className="private-analytics-table"><table><caption className="sr-only">{definition.label}</caption><thead><tr>{columns.map(key=><th key={key} scope="col" aria-sort={filters.sort===key?(filters.direction==='asc'?'ascending':'descending'):'none'}><button onClick={()=>apply({...filters,sort:key,direction:filters.sort===key&&filters.direction==='desc'?'asc':'desc',page:1})}>{labels[key]??key}{filters.sort===key?(filters.direction==='asc'?' ↑':' ↓'):''}</button></th>)}</tr></thead><tbody>{data.rows.map(row=><tr key={String(row.id)}>{columns.map(key=><td key={key}>{key==='person'&&row.person_id?<><button className="private-analytics-link" onClick={()=>person(row)}>{display(row[key],key)}</button>{row.role==='trainer'&&filters.section==='people'&&<button className="private-analytics-link" onClick={()=>navigate('people',{trainer:String(row.person_id),person:'',role:'client',registration:''},true)}>Клиенты с аккаунтом</button>}</>:key==='name'&&filters.section==='exercises'?<button className="private-analytics-link" onClick={()=>navigate('exercise_detail',{exercise:String(row.exercise_key)},true)}>{display(row[key],key)}</button>:key==='name'&&filters.section==='features'?<button className="private-analytics-link" onClick={()=>navigate('activities',{feature:String(row.feature)},true)}>{display(row[key],key)}</button>:key==='package_id'&&row.package_id?<button className="private-analytics-link" onClick={()=>navigate('packages',{entity:String(row.package_id)},true)}>{display(row[key],key)}</button>:(key==='workout_id'||key==='id'&&filters.section==='workouts')?<button className="private-analytics-link" onClick={()=>navigate('sets',{workout:String(row[key])},true)}>{display(row[key],key)}</button>:key==='source_id'&&['workouts','nutrition'].includes(String(row.feature))?<button className="private-analytics-link" onClick={()=>navigate(String(row.feature),{entity:String(row.source_id),feature:''},true)}>{display(row[key],key)}</button>:display(row[key],key)}</td>)}</tr>)}</tbody></table></div>}
+        <div className="private-analytics-pagination"><button disabled={filters.page<=1||query.isFetching} onClick={()=>apply({...filters,page:filters.page-1})}>Назад</button><span>Страница {filters.page} из {Math.max(1,Math.ceil(data.total/filters.pageSize))}</span><button disabled={filters.page*filters.pageSize>=data.total||query.isFetching} onClick={()=>apply({...filters,page:filters.page+1})}>Далее</button><label>Строк<select value={filters.pageSize} onChange={e=>apply({...filters,pageSize:Number(e.target.value),page:1})}>{[25,50,100].map(n=><option key={n}>{n}</option>)}</select></label></div>
+      </section>
     </>}
   </div></main>
 }
