@@ -8915,3 +8915,24 @@ lockfile, native и общие инструкции прежние. Собств
 Артефакты: /tmp/fit-mc513-integrated.json, -results, -build.log.
 Дальше: push одного итогового head, зелёный CI, обычный merge по данному
 разрешению, штатные публикации и30public+30signedZIP проверок.
+
+
+## 208. MC5.1.3 — исходный CI и слияние владельцем
+
+Итерация208 — 2026-11-09 — OpenAI. Итоговый source f191cbf4 получил
+CI42647043260 success attempt2,35/35; Android42647043116 success attempt1.
+Первый CI:3166unit passed/1failed (ExerciseImage.test.tsx516, повтор файла);
+assertion о скрытии play-button после playing. Компонент/тест/10связанных
+файлов совпадают с main и прежним зелёным deb87e4b. Штатный целевой тест
+без изменений прошёл1/1,32deselected; временный diagnostic дал правильный
+порядок reset→playing→rendertrue. Историческая причина падения не доказана;
+возможная гонка passive URL-reset не объявлена установленной. Один повтор
+только failed jobs прошёл. Тесты/код/таймауты/assertions не ослаблялись.
+Квитанции /tmp/fit-mc513-exerciseimage-ci-review.json и
+/tmp/fit-mc513-ci-integrated/{green-source,CI-jobs,Android-jobs}.json.
+
+Владелец сообщил «я выкатил». Readback GitHub подтвердил MERGED2073
+в16:24:57UTC, merge51758098278c8f5287ff863c12071efcb3d39628, mainтотже.
+Агент повторное слияние/dispatch не выполнял. Запущено только наблюдение
+штатных mainCI/API/web/OTA, затем проверка опубликованных assets.
+Слияние не выдаётся за подтверждённую публикацию; её приёмка ещё впереди.
