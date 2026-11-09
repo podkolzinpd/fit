@@ -3,7 +3,7 @@ import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, expect, it, vi } from 'vitest'
 import { PrivateAnalyticsPage } from './PrivateAnalyticsPage'
-import { csv, type AnalyticsFilters } from './analytics-model'
+import { csv, initialFilters, type AnalyticsFilters } from './analytics-model'
 const write=vi.hoisted(()=>vi.fn())
 vi.mock('../../app/auth-context',()=>({useAuth:()=>({actor:{userId:'test'}})}))
 vi.mock('../../app/theme',()=>({useAppTheme:()=> 'light'}))
@@ -47,4 +47,30 @@ it('exports CSV with quoted multiline cells and formula protection',()=>{
   expect(output).toContain('"\'=HYPERLINK(""bad"")"')
   expect(output).toContain('"строка\nвторая"')
   expect(output).toContain('"12"')
+})
+
+it('uses one explicit people cohort across summary navigation and feature sections',async()=>{
+  write.mockResolvedValue(Response.json(result))
+  show();await screen.findByRole('table',{name:'Люди'})
+  expect(screen.getByRole('combobox',{name:'Кого анализируем'})).toHaveValue('active')
+  expect(screen.getByRole('complementary',{name:'Как читать выборку'})).toBeVisible()
+  await userEvent.selectOptions(screen.getByRole('combobox',{name:'Кого анализируем'}),'accounts')
+  await userEvent.click(screen.getByRole('button',{name:'Применить'}))
+  await waitFor(()=>expect(write).toHaveBeenLastCalledWith(expect.anything(),expect.anything(),expect.objectContaining({cohort:'accounts'})))
+  expect(initialFilters().cohort).toBe('accounts')
+  await userEvent.click(screen.getByRole('button',{name:'Питание'}))
+  await waitFor(()=>expect(write).toHaveBeenLastCalledWith(expect.anything(),expect.anything(),expect.objectContaining({section:'nutrition',cohort:'accounts'})))
+})
+
+it('shows section-specific metrics without repeating people cards or unrelated charts',async()=>{
+  write.mockImplementation(()=>Promise.resolve(Response.json({...result,summary:{...result.summary,nutritionDays:4,nutritionViews:1,opening:200,due:800,overdue:300}})))
+  show();await screen.findByRole('table',{name:'Люди'})
+  const cards=()=>within(screen.getByRole('region',{name:'Показатели раздела'}))
+  expect(cards().getByText('Аккаунтов в выбранной группе')).toBeVisible()
+  for(const [tab,metric] of [['Питание','Авторов дневника питания'],['Поступления','Поступления за период, ₽'],['Абонементы и долги','Долг сейчас, ₽'],['Топ упражнений','Упражнений в рейтинге'],['Обратная связь','Сообщений обратной связи']]){
+    await userEvent.click(screen.getByRole('button',{name:tab}))
+    await waitFor(()=>expect(cards().getByText(metric!)).toBeVisible())
+    expect(cards().queryByText('Аккаунтов в выбранной группе')).not.toBeInTheDocument()
+    expect(screen.queryByRole('region',{name:'Динамика'})).not.toBeInTheDocument()
+  }
 })
