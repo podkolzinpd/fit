@@ -1,3 +1,4 @@
+import { assertActualDurationOwnership, probeActualDurationSkin } from './lime-actual-duration-skin.cases'
 import { test, expect } from '@playwright/test'
 import { writeFile } from 'node:fs/promises'
 import { mockPilot, restTimerWorkout, workoutId } from './fit-lime-fixtures'
@@ -210,8 +211,9 @@ export function limeLiveConfirmSkinCases() {
     expect(responses).toEqual([])
   })
 
-  // Native done-detail shares modal paint but has no modern Live descendant.
-  // One client theme and trainer desktop catch the :has boundary without a new matrix.
+  // MC5.1 moves this same native done-detail consumer to explicit duration owners.
+  // Keep the native no-write/keyboard path; real off duration cases retain the
+  // legacy-positive proof instead of weakening this consumer contract.
   for(const role of ['client','trainer'] as const)test('NonLive Lime confirm guard control '+role,async({page,browserName},info)=>{
     const id=role==='client'?'c11e0000-6010-4000-8000-000000000001':'c0ac0000-6010-4000-8000-000000000001'
     const errors:string[]=[],requests:string[]=[],responses:string[]=[],consoleErrors:string[]=[]
@@ -252,22 +254,16 @@ export function limeLiveConfirmSkinCases() {
       const properties=['display','position','color','background-color','font-family','font-size','font-weight','line-height','width','height','min-width','min-height','max-height','gap','grid-template-columns','padding-top','padding-right','padding-bottom','padding-left','margin-top','margin-bottom','border-top-width','border-top-color','border-top-style','border-right-width','border-right-color','border-right-style','border-bottom-width','border-bottom-color','border-bottom-style','border-left-width','border-left-color','border-left-style','border-radius','box-shadow','outline-color','outline-width','outline-style','outline-offset','overflow-x','overflow-y','scroll-snap-type','touch-action','animation-name','animation-duration','transition-property','transition-duration','stroke-width','filter','backdrop-filter','opacity','align-items','justify-content']
       return [root,...root.querySelectorAll('*')].map(node=>{const style=getComputedStyle(node),rect=node.getBoundingClientRect();return {tag:node.tagName,class:node.getAttribute('class')||'',style:Object.fromEntries(properties.map(property=>[property,style.getPropertyValue(property)])),rect:[rect.x,rect.y,rect.width,rect.height].map(value=>Math.round(value*100)/100)}})
     })
-    const matches=await page.evaluate(()=>{
-      const common=new Set(['.modal-dialog','.ui-identity .modal-dialog','.ui-identity .modal-dialog .actions button']),found=new Set<string>()
-      const strip=(selector:string)=>{while(selector.includes(':where(:not(')){const start=selector.indexOf(':where(:not(');let end=start+7,depth=1;while(depth){if(selector[end]==='(')depth++;if(selector[end]===')')depth--;end++}selector=selector.slice(0,start)+selector.slice(end)}return selector}
-      const branches=(text:string)=>{const out:string[]=[];let depth=0,start=0;for(let i=0;i<text.length;i++){if(text[i]==='('||text[i]==='[')depth++;if(text[i]===')'||text[i]===']')depth--;if(text[i]===','&&!depth){out.push(text.slice(start,i).trim());start=i+1}}out.push(text.slice(start).trim());return out}
-      const visit=(rules:CSSRuleList)=>{for(const rule of Array.from(rules)){if(rule instanceof CSSStyleRule&&Array.from(rule.style).some(property=>/^(color|background.*|border.*|box-shadow|font-(family|size|weight))$/.test(property))){for(const selector of branches(rule.selectorText)){const legacy=strip(selector);if(common.has(legacy)&&document.querySelector(selector))found.add(legacy)}}if('cssRules' in rule)visit((rule as CSSGroupingRule).cssRules)}}
-      for(const sheet of Array.from(document.styleSheets))visit(sheet.cssRules)
-      return [...found].sort()
-    })
-    expect(matches).toEqual(['.modal-dialog','.ui-identity .modal-dialog','.ui-identity .modal-dialog .actions button'])
+    const ownership=await probeActualDurationSkin(page)
+    const matches=ownership.matches
     const backdrop=await dialog.evaluate(node=>getComputedStyle(node,'::backdrop').backgroundColor)
     await page.screenshot({path:info.outputPath('confirm-nonlive-control.png'),animations:'disabled'})
     await page.keyboard.press('Escape');await expect(dialog).not.toBeVisible();await expect(trigger).toBeFocused()
     await trigger.click();await expect(input).toHaveValue('120');await dialog.getByRole('button',{name:'Отмена',exact:true}).click();await expect(dialog).not.toBeVisible();await expect(trigger).toBeFocused()
     const finalScroll=await rawScroll()
     expect(writes).toEqual([]);expect(JSON.stringify(backend.getWorkouts()[0]!.exercises)).toBe(facts);expect(backend.getWorkouts()[0]!.version).toBe(version);expect(backend.getWorkouts()[0]!.actualDurationSec).toBe(7200)
-    await writeFile(info.outputPath('confirm-nonlive-control.json'),JSON.stringify({role,before,backdrop,matches,initialScroll,finalScroll,writes,errors,requests,responses,consoleErrors},null,2))
+    await writeFile(info.outputPath('confirm-nonlive-control.json'),JSON.stringify({role,before,backdrop,matches,ownership,initialScroll,finalScroll,writes,errors,requests,responses,consoleErrors},null,2))
     expect(errors).toEqual([]);expect(requests).toEqual([]);expect(responses).toEqual([]);expect(consoleErrors).toEqual([])
+    assertActualDurationOwnership(ownership,true)
   })
 }
