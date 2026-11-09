@@ -660,3 +660,8 @@ iOS/media policy, infra/calendar и hosting205/205 пройдены. Первы�
 privacy-тесте. Заменено точным соответствием трёх loader трём событиям init;
 корпоративный запрет сохранён, Webvisor ровно111074543. Assertions усилены,
 не удалены. Целевые Metrika/auth24/24; полный coverage нового дерева выполняется.
+
+Итог локального coverage22:3168/3168, все пороги passed. В CI42669456488
+repository-quality нашёл unsafe any только в новом mock insertBefore; добавлен
+точный тип src:string без изменения runtime/проверок. Целевой lint, typecheck
+и Metrika/auth24/24 после уточнения прошли. ПолныйCI нового head обязателен.

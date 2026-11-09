@@ -52,7 +52,7 @@ describe('private corporate invitation entry', () => {
     const script = html.match(/<!-- Yandex\.Metrika counter -->\s*<script[^>]*>([\s\S]*?)<\/script>/)?.[1]
     expect(script).toBeTruthy()
     for (const path of ['/today', `/corporate-invite#token=${'a'.repeat(43)}`]) {
-      const ym = vi.fn(), insertBefore = vi.fn()
+      const ym = vi.fn(), insertBefore = vi.fn<(script: { src: string }) => void>()
       const location = new URL(path, 'https://fit-training.ru')
       const document = {
         scripts: [], referrer: '',
