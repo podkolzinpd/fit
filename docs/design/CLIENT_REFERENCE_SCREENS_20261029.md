@@ -8132,3 +8132,77 @@ Ready установлен, слияния не было; admin/auto не исп
 побайтно0e. Отправляется этот exact новый head с локальными docs receipts;
 обязателен новый полный CI/Android. Старые35/35 относятся только0e, не новому SHA.
 Выпуск2051 первым остаётся разрешён, повторный вопрос владельцу не требуется.
+
+## 187. MC4.4 — фактический выпуск2051 и приёмка актуальной версии, 09.11.2026
+
+Итерация — 09.11.2026 — GPT-6 / OpenAI. Задача: завершить разрешённый2051,
+сохранить механики обеих ролей и перейти к подготовке следующего узкого этапа.
+Source dc2176f4: CI42514864071 —35/35success, Android42514864082success.
+Обычный squash выполнен08.11 в20:04UTC: merge54c873a61c3a4f19d2299443d263a12abc1ee6af.
+Его CI42518200394/Android42518200392 успешны; API42522031057/web42522031055
+опубликованы. Admin/force/auto-merge и изменение CI не использовались.
+
+Расхождение: Android42523142940 сначала ожидал runner, затем source guard
+остановил его: связанный frontend-run содержит54, а main уже обновился после
+слияния2053. Failed step «Require current trusted main and full successful CI»;
+build/publish skipped. Ошибка не относится к CSS/таймеру и не исправляется
+повторной отправкой старой сборки. Старый run не перезапускался; новые версии
+не откатывались. Первое позднее сравнение public с манифестом54 закономерно
+не совпало с уже обновлёнными файлами — это не доказательство порчи assets.
+
+Выбранная проверенная актуальная версия всех трёх плоскостей:
+ef3768e7dcb0ccf3b98d90aee68caab15126e690, merge54 является её ancestor.
+Web42556807602 и signedOTA42557049312 success; CI42553564750 и
+Android42553564746 success. Сопоставлен публичный index с exact CI-артефактом,
+затем все243 файла web:200/размер/SHA256. DNS/pinned IP/TLS/auth/ready/health и
+protected GET401 проверены официальным verifier; оба health содержат ef.
+Подписи OTA manifest/archive, provenance, ABI/native build/sequence/expiry,
+публичные bytes и checksum проверены; используется архив именно ef.
+
+Actual public UI62/62 и verified ZIP UI62/62: Chromium/WebKit,0skip/flaky/retry.
+Запросы пользовательских API/WS/аналитики синтетические, production user writes
+не выполнялись. До/после web UI fingerprint index exact. Сравнение со старой
+публичной базой:50/50 computed/rect/backdrop/frame exact, неожиданных geometry/
+height differences0; исправленное размещение timer-confirm принято отдельно.
+PNG33/56 exact с baseline; web↔ZIP70/76 exact. Шесть оставшихся различий —
+Chromium attendance raster при одинаковых measured styles/rect/state; точная
+причина не установлена, pixel-perfect результат не заявляется. Выборочно
+осмотрены WebKit light compact partial,375px long-title timer-review expanded
+и Chromium trainer attendance web/ZIP: clipping/overlap не обнаружены.
+
+Квитанции: /tmp/fit-mc44-release-run/current-acceptance/;
+/tmp/fit-mc44-current-web-comparison.json и web-ota-comparison.json.
+Исторические red и отсутствие их доказанной причины сохранены в186.
+Открыто: физический iPhone/native install/real OAuth не проверены. Для ручной
+проверки: спортсмен — незаконченная тренировка→завершение→отмена; cardio без
+фактического времени; timer-review folded/expanded. Тренер — завершение→учёт→
+продолжить. Обе темы и Original/Compact сохраняются.
+Дальше: локальная подготовка MC5.1 по188; отдельного разрешения на её выпуск нет.
+
+## 188. MC5.1 — текущий узкий план длительности результата обеих ролей, 09.11.2026
+
+Продолжение принятой169 после фактической приёмки2051; подготовка разрешена
+указанием владельца «после того как выкатишь переходи к следующей части».
+База новой собственной ветки — фактически опубликованный ef3768e7 выше.
+Старый d3985c77 используется только как материал, не как готовая проверенная
+версия; поздние MC5.1.2–MC5.1.9 не входят. Область — WorkoutActualDuration
+в завершённой тренировке спортсмена/тренера, summary и native duration dialog.
+
+1. Сверить15 visual families и кандидаты5weak rules/8decl с ef и текущими
+   потребителями; сохранить существующие14browser/14unit сценариев и журналы.
+   Подготовить ownership harness до CSS и снять свежий baseline/ablation.
+2. Перенести только необходимые scoped guards/слабые declarations в действующую
+   fit-lime-workout-detail skin. Все legacy declarations/структура/обработчики
+   прежние. Никакой смены DOM, API, данных, маршрутов, валидации или текстов.
+3. Classifier удаляет только полные exact migration :where(:not(...)) из
+   явного whitelist, сохраняя положительные :where owners. MC43 native nonLive
+   expectation адаптируется к новому owner-proof с настоящим legacy-positive;
+   проверки механики не удаляются. Все MC44 guards/helper/58+4 cases сохраняются.
+4. Проверить темы/плотность/обе роли, computed/geometry, отмену/редактирование/
+   очистку, pending/error/conflict/retry, focus/keyboard/scroll, версии payload
+   и отсутствие лишних writes. Затем build/types/lint/целевые unit/browser и
+   регрессию MC43/MC44. Результаты, ограничения и ошибки предъявить до выпуска.
+
+Пока не входят: MC513 grey error, share/report, global fonts/Onest, MC7–MC8,
+изменение rollout/настроек и любые новые продуктовые контролы. Подготовка не
+разрешает публикацию: сохраняется MC-RELEASE-01 с отдельным разрешением владельца.
