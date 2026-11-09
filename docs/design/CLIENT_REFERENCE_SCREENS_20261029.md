@@ -8915,3 +8915,214 @@ lockfile, native и общие инструкции прежние. Собств
 Артефакты: /tmp/fit-mc513-integrated.json, -results, -build.log.
 Дальше: push одного итогового head, зелёный CI, обычный merge по данному
 разрешению, штатные публикации и30public+30signedZIP проверок.
+
+
+## 208. MC5.1.3 — исходный CI и слияние владельцем
+
+Итерация208 — 2026-11-09 — OpenAI. Итоговый source f191cbf4 получил
+CI42647043260 success attempt2,35/35; Android42647043116 success attempt1.
+Первый CI:3166unit passed/1failed (ExerciseImage.test.tsx516, повтор файла);
+assertion о скрытии play-button после playing. Компонент/тест/10связанных
+файлов совпадают с main и прежним зелёным deb87e4b. Штатный целевой тест
+без изменений прошёл1/1,32deselected; временный diagnostic дал правильный
+порядок reset→playing→rendertrue. Историческая причина падения не доказана;
+возможная гонка passive URL-reset не объявлена установленной. Один повтор
+только failed jobs прошёл. Тесты/код/таймауты/assertions не ослаблялись.
+Квитанции /tmp/fit-mc513-exerciseimage-ci-review.json и
+/tmp/fit-mc513-ci-integrated/{green-source,CI-jobs,Android-jobs}.json.
+
+Владелец сообщил «я выкатил». Readback GitHub подтвердил MERGED2073
+в16:24:57UTC, merge51758098278c8f5287ff863c12071efcb3d39628, mainтотже.
+Агент повторное слияние/dispatch не выполнял. Запущено только наблюдение
+штатных mainCI/API/web/OTA, затем проверка опубликованных assets.
+Слияние не выдаётся за подтверждённую публикацию; её приёмка ещё впереди.
+
+
+## 209. MC5.1.3 / PR2073 — публикация и публичная приёмка завершены
+
+Итерация209 — 2026-11-09 — OpenAI. После слияния владельцем штатные
+публикации source51758098278c8f5287ff863c12071efcb3d39628 завершены:
+API42659233546, web42659233541, подписанный OTA42660841426 — success.
+MainCI42654531436 success attempt1 (34passed/1expectedskip); Android42654531424
+success attempt1. Модульные тесты main прошли без повторения ошибки208.
+Агент не делал повторный merge/dispatch и не менял код при выпуске.
+
+Реальный readback: web/API/OTA exact51758098, Git ancestry и trusted main
+проверены. Все244manifest files доступны200 и совпали по размерам/SHA256.
+API DNS/TLS/health/ready/auth/protected401 passed. OTA подпись, provenance,
+ABI/nativeBuild9, sequence1794243918753, публичные bytes15982783 passed.
+ZIP извлечён с защитой путей/размеров/ссылок. Публичные данные не записывались.
+
+На настоящих assets сайта:30/30browser59.095s; на содержимом проверенного
+подписанного ZIP:30/30browser54.817s. Оба Chromium/WebKit, retries0,
+0skip/unexpected/flaky. Состав12duration+10share+4nonLive+4network/conflict.
+Assertions исходного MC513 сохранены; только точный /api/v1→/v1 adapter
+тестового транспорта. Проверены семантические error colors, payloads,
+черновик/версии/явный retry, сохранение/отмена, focus/scroll и off-controls.
+Просмотрены реальные WebKit screenshots light validation и trainer dark
+network: сообщения danger, компоновка и кнопки сохранены. Финальный публичный
+fingerprint17:13:25UTC совпал с начальным поHTML/API/OTA.
+
+Артефакты /tmp/fit-mc513-release/current-acceptance/{web-readback,api-readback,
+ota-readback,web30,ota30}.json и screenshots. /tmp/fit-mc513-release/status.json
+содержит current-publication-and-ui-complete. Миграция MC513 доставлена обеим
+ролям; весь монохром не объявляется удалённым. Предыдущие ограничения204
+аналитического baseline и неизвестная причина единичного CIпадения208
+сохраняются в истории. Физический телефон/nativeinstall/реальная systemshare
+не проверялись браузерами и остаются пользовательской приёмкой.
+
+Владельцу: обе роли→завершённая тренировка→длительность0 (красная ошибка),
+исправление/сохранение/отмена; спортсмен→Поделиться→вариант/закрытие/отмена
+и обычная отправка с телефона. Проверить обе темы и позицию при клавиатуре.
+До подтверждения владельцем MC5.1.4 не начинаем. Локальная Gitквитанция
+после выпуска не пушится новым исходным CI; публичный статус — вPR2073.
+
+
+## 210. MC5.1.4 — принятый план и текущая основа
+
+Итерация210 — 2026-11-09 — OpenAI. Владелец принял MC513/2073 («всё ок»),
+затем поручил зафиксировать и выполнить MC514. Перед выпуском нужна сводка
+сделанного/проверенного/ошибок; merge/deploy только после отдельного разрешения.
+MC-RELEASE-01 действует. Подготовлена собственная ветка
+feat/design-cleanup-mc514-20261109; main9a440c06 (#2074) интегрирован обычным
+mergeaf1d2303. Runtime/QA до работы совпадают с main. Конфликты только docs:
+канонический main — точный префикс своего журнала; CURRENT отличается только
+MCстрокой. Сохранены main и локальные release-квитанции208–209 целиком.
+
+MC514-01: доказать текущих потребителей и каскад верхнего отчёта результата:
+card/art/subtitle/h1/date/count/strong/facts/div/dt/dd. Его реальный потребитель
+— спортсмен после завершения; у тренера отдельный WorkoutCompletionCard.
+Историческая заготовка172 — источник, не приёмка новой основы.
+MC514-02: точечно исключить старое оформление только для нового клиентского
+report; перенести необходимые действующие значения в Lime с прежней
+специфичностью. Перекрытые сильными Lime правилами декларации не копировать.
+Геометрия, шрифты, цвета и вычисляемые результаты должны остаться прежними.
+Общие layout и действующие off/тренерские потребители сохраняются.
+Не переносить в этот PR highlight/missing/feedback, соседние формы илиMC7/8.
+
+MC514-03: сохранить расчёты/проценты/время, full/partial/empty, изображение
+и реальный SVGfallback, duration selection/focus/keyboard/scroll/save/cancel/
+clear/retry/conflict, share3варианта/PNG/cancel/pending и error-colorMC513.
+React/handlers/API/данные/версии/пилоты/native/CI/dependencies не менять.
+Все Live механики и новый trainer out-of-order2074 сохраняются: явная отмена
+галочкой, факт при редактировании, swipe/drag/fold, rest/timer,54/48.
+
+MC514-04: свежий baseline до CSS → candidate после. Chromium/WebKit, обе темы,
+375/390/430/1440, full/partial/empty/imagefallback и реальные off/тренерские
+контроли. Непустые captures, все4стороны border, computed style/geometry/PNG,
+CSSOM ablation/roundtrip, payload и focus/scroll. Старые42/42 не засчитываются
+новомуhead; актуальную матрицу подтвердить --list. Дополнительно применимые
+duration/share/error/PNG и обе-role Live проверки, включая2074. Визуальные
+assertions остаются вvisual lane, business не превращается в screenshot suite.
+Сборка/types/startup/fonts, lint, unit, split-policy, docs и CI новогоPR.
+
+Отвергнуто: перепроектирование тренерского результата, глобальное удаление
+общих правил/шрифтов, перенос исторической цепочки целиком, расширение пилотов,
+ослабление assertions/таймаутов ради green. Известные ограничения204/208
+не объявляются исправленными; новые находки отдельно записываются. Физическое
+устройство и systemshare не подменяются браузерной проверкой.
+Дальше: реализация и приёмка → reviewable PR/CI → сводка владельцу; без выпуска.
+
+
+## 211. MC5.1.4 — реализация и свежая локальная приёмка
+
+Итерация211 — 2026-11-09 — OpenAI. Product/QA b7f6c74d, base9a440c06.
+Потребитель подтверждён: клиентский justCompleted report; отдельный
+WorkoutCompletionCard тренера проверен через настоящее завершение Live.
+Runtime2CSS:11zero-specificity exclusions и9weakrules/13declarations.
+Card/h1 уже принадлежат сильному Lime, лишних копий нет; first-child border0,
+layout, typography500/date400 и все остальные consumers прежние.
+PostCSS proof25716/25716 declaration-branch records exact после удаления
+только11новыхguards, прежний Lime — byte-prefix.12protectedruntime/QA/config
+файлов byte-exact main, включая report/Card/WorkoutsPages/duration/share,
+текущие duration/share/probe/behavior/package/lock/playwright.
+
+QA: новыйvisual helper, существующийvisualentry;14cases=10modern+2off+2trainer.
+Исходный свежийbaseline14:10expectedownershipred/4positivepassed,15.200s.
+Всеred толькоfinalassert legacy matches, не фиктивная поломка fixture.
+Полные14JSON/14PNG собраны доassert. Реальные imageerrorSVGfallback200invalid,
+full/partial/empty,375/390/430/1440, обеclientтемы/pilot/default/off.
+Trainer nonconsumer прошёл finish→attendanceconfirm→card, facts unchanged,
+recordsGET1, report/card selectors отсутствуют. Тренерская карточка не заменена.
+
+Candidate58/58,53.424s:14new+12duration+10share+4errorvisual+14durationbehavior
++4PNGexport. Отдельно24/24existingLive29.559s: обе-role undo/latestinput/rest/
+reload, disclosure54/48, keyboardNext, compacttrustedtap/swipe/hold,
+confirmedswipe/cancel/delete/reload, pauseclock и coachout-of-order2074.
+Всё retries0,0skip/fail/flaky. Unit8files63passed; full lint, build/types/
+startup/fonts2, split-policy8, docs/diff passed. Первое пересечение build
+с ещё записываемымQA остановилось наtupletyping; доbaseline типы исправлены,
+tsc прошёл, assertions не менялись. Source actualscope frontend/browser=true.
+
+Сравнение:14/14computed geometry/styles/frame и14/14PNG byte-exact.
+12CSSOM/CSSStyleDeclaration/focus/scroll/anchor roundtrips true; positiveowners
+не удаляютсяprobe, whitelist только точныйguard, unknownnegativewhere сохранён.
+10modern legacy matches0/ablationdiff0;2off остаютсяреальнымиpositivecontrols.
+Всеpayloads/facts/rootclasses/diagnostics соответствуютbaseline.
+
+Квалификация: strictcomparator сохраняетexit1,12/14all-checks-exact. Только
+2partial375 initialScroll.height различаются: Chromium2113→2130,
+WebKit2118→2113. initialx/y0/client844 равны; finalwholeScroll2113 exact.
+Замер уже ПОСЛЕ fonts.ready, но ДО settleCompletionPaint. Причина неизвестна;
+её нельзя назвать доказанной гонкой шрифта или lazyCSS. Данные/порог не
+нормализованы, повторов радиgreen нет. Settled14screens иреальныефокус/ввод
+не показывают новых смещений. Ограничение остаётся видимым владельцу.
+
+Артефакты /tmp/fit-mc514-{baseline,candidate,live}-20261109.json и-results,
+/tmp/fit-mc514-comparison-20261109.json, source-proof-20261109.json,
+unit/lint/policy/build logs. Просмотрены actualWebKit lightfull,darkfallback
+иtrainercard. Физическийтелефон/nativeinstall/OAuth/systemshare не проверены.
+Дальше draftPR/новыйCI→сводка. Разрешенияmerge/deployMC514 нет.
+
+
+## 212. MC5.1.4 — отложенный выпуск разрешён, main интегрирован
+
+Итерация212 — 2026-11-10 — OpenAI. Пользователь разрешил начать выпуск
+через час, по общей очереди: не раньше09.11 21:27:16UTC. До этого момента
+merge/deploy не выполнялись. Прежний hold заменён этим конкретным разрешением;
+MC-RELEASE-01 для следующих этапов сохраняется. Чужие чаты не опрашиваются.
+GitHub:2075/2076 merged, публикации c52b6e61 завершены успешно;2078/2079 младше.
+Исходный head ed5119e5: CI42684096367 и Android42684096443 success, attempt1.
+Новый main c52b6e61 интегрирован обычным merge без конфликтов. Сохранены
+новая механика выбранного суперсета/круга2075 и восстановление Метрики2076.
+
+Проверка новой основы: build/types/startup/fonts2 passed;31unit в2изменённых
+областях passed. Chromium/WebKit86/86,0skip/fail/flaky,retries0: прежние82
+и4новых coach later superset round. Сборка и браузерные проверки повторены
+из-за изменения main/Live, прежний baseline не перезаписывался. Source proof
+25716records,11guards,9rules/13decl,12protectedfiles exact новойmain.
+Docs и diff passed. Локальные файлы fit-mc514-integrated-20261110*; public
+readback подготовлен44web+44verifiedZIP с изолированными synthetic API.
+
+Ограничения211 сохраняются:2ранних height samples различались, причина
+не доказана; settled14PNG/geometry были точны. Физический телефон, native
+install и реальная systemshare не проверены. Новых ошибок интеграции не найдено.
+Дальше: CI новогоhead → свежая очередь → merge после временного gate →
+mainCI/Android/web/API/OTA/readback. СледующийMC514 этап не объявлен выпущенным.
+
+
+## 213. MC5.1.4 — блокер CI: даты синтетических записей аналитики
+
+Итерация213 — 2026-11-10 — OpenAI. CI42703171962 на d5ae3f52: database
+упал в corporate-admin.integration.test.ts:80, ожидаемая workout row отсутствует.
+Причина воспроизведена локально на PostgreSQL17: session Etc/UTC date09.11,
+Moscow date10.11. Fixture использовала current_date, фильтр аналитики — Moscow.
+Рабочий SQL сохраняет workout_date/received_on/nutrition day как LocalDate,
+а действия считает по Moscow; неверно согласованы только тестовые входы.
+Исходный targetedtest воспроизвёл exactassertionfailure. Попытка фильтровать
+всё по current_date отвергнута: тогда корректные timestamp-actions выпадают.
+
+Исправлены только четыре seed-записи в существующем тесте: workout_date
+явно Moscow, даты package/payment/nutrition получают прежний todayMoscow.
+Assertions, роли/RLS, реальные расчёты, DBmigrations, API и CI неизменны.
+Это необходимый локальный testfixture fix для разрешённого выпуска,
+не исправление production-аналитики и не расширение дизайн-миграции.
+Полный файл21/21 проходит с sessionUTC и21/21 с sessionEurope/Moscow,
+0skip; APItypecheck/lint passed. Логи fit-mc514-db-{before,fixed-utc,
+fixed-moscow}.log; before20skip — только диагностический фильтр по одномуtest.
+Новыйhead должен пройти весьCI; старый красный не перезапускается безpatch.
+
+После интеграцииmain дополнительно14/14geometry и14/14PNG exact относительно
+предыдущегоcandidate. Rawcomparison сноваexit1: толькоpartial375initialheight
+Cr2130→1814,Wk2113→2118; finalheight2113 везде. Причина ранних замеров остаётся
+не доказана; данные не нормализуются. Публикация ещё не выполнена.

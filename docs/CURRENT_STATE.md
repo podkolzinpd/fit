@@ -8,7 +8,7 @@ YAFIT-701: [R101–R106, восстановление карточки у тре
 [план, сохранность и исправления flaky swipe/video](design/PRODUCTION_BROWSER_CI_SHARDS_20261102.md). CI нового head ещё гейт.
 TC101–107: [план/статус](design/TRAINER_CONNECTION_CONFIRMATION_20261102.md). В работе.
 [Supabase: native restore merged; pilot cleanup](design/SUPABASE_DECOMMISSION_PLAN_20261023.md).
-Live: [LC101–304,3PR](design/LIVE_SINGLE_ACTIVE_CARD_20261104.md); [выпуск](https://github.com/podkolzinpd/fit/pull/1972).
+Live: [LC101–304, LO101–204](design/LIVE_SINGLE_ACTIVE_CARD_20261104.md); выпуск/receipts — PR2074/2075.
 YAFIT-699: компактный список клиентов и гостевое приглашение,2PR. [План/проверки](design/COACH_CLIENTS_AND_INVITATION_20261031.md); [статус выпуска](https://st.yandex-team.ru/YAFIT-699).
 ФИТ20: [все статусы R104-S](design/COACH_RESCHEDULE_AND_DAY_GESTURES_20261031.md), [PR1923: CI](https://github.com/podkolzinpd/fit/pull/1923); [F201–208: CI/выпуск](design/COACH_WORKFLOW_AUDIT_20261031.md).
 YAFIT-698/WQ101–105: проведение и обновление очереди после сохранения. [План](design/COACH_QUICK_COMPLETION_20261031.md); [статус](https://st.yandex-team.ru/YAFIT-698).
@@ -16,7 +16,7 @@ YAFIT-700: [Статусы тренера](design/COACH_WORKOUT_STATUS_DISPLAY_2
 31.10 — YAFIT-697: время быстрого старта обеим ролям, проведение пустой записи
 и «Не состоялась» тренеру. [План, проверки и выпуск](design/COACH_ATTENDANCE_AND_START_TIME_20261031.md).
 PR1906–1908 опубликованы db96685e; итог в YAFIT-697.
-MC5.1.3/2073: local44/unit40, CI35/35/Android green. Выпуск разрешён; main2072 принят. [План](design/CLIENT_REFERENCE_SCREENS_20261029.md), §202–207.
+MC5.1.4/2077: выпуск разрешён по очереди после00:27МСК10.11; main c52b интегрирован,86browser/31unit passed. [План](design/CLIENT_REFERENCE_SCREENS_20261029.md), §210–212.
 30.10 — YAFIT-695 завершён: компактная история у тренера опубликована PR1892/cccecf35. [H101–H107, журнал и production-приёмка](https://st.yandex-team.ru/YAFIT-695).
 29.10 — YAFIT-673: полный список упражнений выбранного дня у тренера, записанные факты под названиями; обычный список/клиентский календарь прежние. План и статус выпуска: [каноническая запись](design/COACH_CALENDAR_FULL_EXERCISES_20261029.md). Локальные целевые/браузерные проверки пройдены, полный check/CI/production ещё гейты.
 Исходная база документа: main203f539d21fbc5cf79b1c930dc8467bbc8dc5c3b,28.10.2026; это не автоматически текущая production-сборка. Перед работой сверить main, нужный тикет и фактический выпуск.
