@@ -174,6 +174,7 @@ export class DatabaseNutritionDiary {
       const rows = await client.query<EntryRow>(`select ${columns} from public.nutrition_entries
         where owner_id = $1 and day = $2::date and deleted_at is null order by created_at, id`, [owner, day])
       const entries = rows.map(entry)
+      if (clientId !== undefined) await client.query('select app_private.record_nutrition_view($1::uuid)', [clientId])
       const latest = await client.query<{ day: string }>(`select day::text from public.nutrition_entries
         where owner_id = $1 and deleted_at is null order by day desc limit 1`, [owner])
       const sum = (key: keyof NutritionValues) => entries.some((item) => item.totals[key] === null) ? null

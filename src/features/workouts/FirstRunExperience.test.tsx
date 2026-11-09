@@ -1,6 +1,6 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
-import { describe, expect, it, vi } from 'vitest'
+import { describe, expect, it } from 'vitest'
 import { ClientFirstRunIntro, TrainerFirstPlanPrompt, TrainerFirstRun } from './FirstRunExperience'
 
 describe('first-run experience', () => {
@@ -12,14 +12,11 @@ describe('first-run experience', () => {
     expect(screen.getByRole('link', { name: 'Подключиться по приглашению' })).toHaveAttribute('href', '/join')
   })
 
-  it('creates the first trainer client from a single name field', async () => {
-    const onCreate = vi.fn().mockResolvedValue(undefined)
-    render(<TrainerFirstRun creating={false} error={null} onCreate={onCreate} />)
-    fireEvent.change(screen.getByLabelText('Имя клиента'), { target: { value: ' Антон ' } })
-    const create = screen.getByRole('button', { name: 'Добавить первого клиента' })
-    expect(create).toHaveClass('primary')
-    fireEvent.click(create)
-    await waitFor(() => expect(onCreate).toHaveBeenCalledWith('Антон'))
+  it('starts with account connection instead of creating a placeholder client', () => {
+    render(<MemoryRouter><TrainerFirstRun /></MemoryRouter>)
+    expect(screen.getByRole('link', { name: 'Подключить первого спортсмена' })).toHaveAttribute('href', '/connect')
+    expect(screen.queryByRole('textbox')).not.toBeInTheDocument()
+    expect(screen.getByText(/После его согласия/)).toBeVisible()
   })
 
   it('connects the first client to the next plan step', () => {

@@ -6,6 +6,7 @@ interface ClientRow extends QueryResultRow {
   id: string
   can_archive: boolean
   has_account: boolean
+  can_create_workout: boolean
   full_name: string
   canonical_full_name: string
   gender: 'male' | 'female' | null
@@ -30,6 +31,7 @@ export interface PilotClient {
   id: string
   canArchive: boolean
   hasAccount: boolean
+  canCreateWorkout: boolean
   fullName: string
   canonicalFullName: string
   gender: 'male' | 'female' | null
@@ -76,7 +78,7 @@ export async function readAccessibleClients(
   archived = false,
 ): Promise<PilotClientsResponse> {
   const rows = await client.query<ClientRow>(
-    'select * from public.list_client_overviews($1)',
+    'select overview.*, public.can_create_client_workout(overview.id) can_create_workout from public.list_client_overviews($1) overview',
     [archived],
   )
 
@@ -86,6 +88,7 @@ export async function readAccessibleClients(
       id: row.id,
       canArchive: row.can_archive,
       hasAccount: row.has_account,
+      canCreateWorkout: row.can_create_workout,
       fullName: row.full_name,
       canonicalFullName: row.canonical_full_name,
       gender: row.gender,

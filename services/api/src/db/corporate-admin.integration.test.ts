@@ -69,6 +69,92 @@ describe.skipIf(!source)('corporate administration on real actor/RLS', () => {
     expect(rows[0]?.bundle.trainers).toHaveLength(1)
     expect(Array.isArray(rows[0]?.bundle.clients)).toBe(true)
     expect(Array.isArray(rows[0]?.bundle.feedback)).toBe(true)
+    const filters={from:'2020-01-01',to:'2020-01-02',section:'people',pageSize:1,sort:'name',direction:'asc'}
+    const explore=(patch:Record<string,unknown>={})=>actor<{result:{rows:Array<Record<string,unknown>>;total:number;summary:Record<string,number>;trend:unknown[]}}>(profile,'select app_private.private_analytics_explore($1::jsonb) result',[JSON.stringify({...filters,...patch})])
+    const today=(await pool.query<{day:string}>("select (now() at time zone 'Europe/Moscow')::date::text as day")).rows[0]!.day
+    const futureDay=new Date(Date.parse(`${today}T12:00:00Z`)+60*86400000).toISOString().slice(0,10)
+    expect((await actor<{measured:boolean}>(profile,"select (app_private.private_analytics_explore($1::jsonb)->>'retentionMeasured')::boolean measured",[JSON.stringify({...filters,from:futureDay,to:futureDay})]))[0]?.measured).toBe(false)
+    expect((await explore())[0]?.result.total).toBeGreaterThan(1)
+    expect((await explore())[0]?.result.rows).toHaveLength(1)
+    expect((await explore({page:2}))[0]?.result.rows[0]?.id).not.toEqual((await explore())[0]?.result.rows[0]?.id)
+    expect((await explore({section:'workouts',from:today,to:today,status:'done'}))[0]?.result.rows[0]).toMatchObject({id:workout,status:'done',person:'Synthetic client'})
+    expect((await explore({section:'workouts',from:today,to:today,status:'cancelled'}))[0]?.result.total).toBe(0)
+    expect((await explore({section:'people',search:'no such synthetic name'}))[0]?.result.total).toBe(0)
+    await expect(actor(admin,'select app_private.private_analytics_explore($1::jsonb)',[JSON.stringify(filters)])).rejects.toMatchObject({code:'PT403'})
+    for(const table of ['analytics_actions','analytics_activity','analytics_people','analytics_records']) await expect(actor(profile,`select * from app_private.${table}`)).rejects.toMatchObject({code:'42501'})
+    await expect(explore({from:'2026-11-07',to:'2026-11-01'})).rejects.toMatchObject({code:'PT422'})
+    // Authoritative acting actor, not the trainer_id owner. Service timestamps
+    // alone do not add activity; writes roll back with their business transaction.
+    const db=await pool.connect()
+    try {
+      await db.query('begin')
+      await db.query("select set_config('request.jwt.claim.sub',$1,true)",[athlete])
+      await db.query('update public.workouts set notes=$2 where id=$1',[workout,'Synthetic change'])
+      const events=await db.query('select actor_id,feature from app_private.analytics_actions where entity_id=$1',[workout])
+      expect(events.rows).toEqual([{actor_id:athlete,feature:'workouts'}])
+      await db.query('update public.workouts set version=version+1 where id=$1',[workout])
+      expect((await db.query<{n:number}>('select count(*)::int n from app_private.analytics_actions where entity_id=$1',[workout])).rows[0]!.n).toBe(1)
+      await db.query("select set_config('request.jwt.claim.sub',$1,true)",[profile])
+      const active=await db.query<{result:{rows:Array<Record<string,unknown>>;summary:Record<string,number>;total:number}}>('select app_private.private_analytics_explore($1::jsonb) result',[JSON.stringify({...filters,from:today,to:today,section:'activities',pageSize:50})])
+      expect(active.rows[0]!.result.rows).toContainEqual(expect.objectContaining({person_id:athlete,feature:'workouts',action:'updated'}))
+      expect(active.rows[0]!.result.summary.active).toBe(1)
+      const exerciseId=randomUUID(),setId=randomUUID()
+      await db.query("select set_config('request.jwt.claim.sub',$1,true)",[athlete])
+      await db.query(`insert into public.workout_exercises(id,workout_id,trainer_id,client_id,position,exercise_source,exercise_ref,exercise_name,muscle_group,input_kind)
+        values($1,$2,$3,$4,0,'system','squat','Synthetic squat','legs','strength')`,[exerciseId,workout,coach,card])
+      await db.query(`insert into public.workout_sets(id,workout_exercise_id,trainer_id,client_id,position,plan_reps,fact_reps,confirmed_at)
+        values($1,$2,$3,$4,0,12,10,now())`,[setId,exerciseId,coach,card])
+      await db.query("select set_config('request.jwt.claim.sub',$1,true)",[profile])
+      const details=(await db.query<{result:{rows:Array<Record<string,unknown>>}}>('select app_private.private_analytics_explore($1::jsonb) result',[JSON.stringify({...filters,from:today,to:today,section:'sets',workout,person:coach})])).rows[0]!.result
+      expect(details.rows).toEqual([expect.objectContaining({id:setId,plan_reps:12,fact_reps:10,position:1})])
+      const ranking=(await db.query<{result:{rows:Array<Record<string,unknown>>}}>('select app_private.private_analytics_explore($1::jsonb) result',[JSON.stringify({...filters,from:today,to:today,section:'exercises',role:'trainer'})])).rows[0]!.result
+      expect(ranking.rows).toContainEqual(expect.objectContaining({workouts:1,users:1,sets:1}))
+      const packageId=randomUUID(),paymentId=randomUUID()
+      await db.query(`insert into public.trainer_finance_packages(id,trainer_id,client_id,title,sessions_total,price_cents,starts_on,payment_due_on) values($1,$2,$3,'Synthetic package',10,100000,current_date,current_date-1)`,[packageId,coach,card])
+      await db.query(`insert into public.trainer_finance_payments(id,package_id,trainer_id,client_id,amount_cents,received_on) values($1,$2,$3,$4,20000,current_date)`,[paymentId,packageId,coach,card])
+      const finance=(await db.query<{result:{rows:Array<Record<string,unknown>>;summary:Record<string,number>;total:number}}>('select app_private.private_analytics_explore($1::jsonb) result',[JSON.stringify({...filters,from:today,to:today,section:'payments'})])).rows[0]!.result
+      expect(finance.summary).toMatchObject({received:200,due:800,overdue:800})
+      expect(finance.rows[0]).toMatchObject({amount:200,id:paymentId})
+      const clientFinance=(await db.query<{result:{rows:Array<Record<string,unknown>>}}>('select app_private.private_analytics_explore($1::jsonb) result',[JSON.stringify({...filters,from:today,to:today,section:'payments',person:`card:${card}`})])).rows[0]!.result
+      expect(clientFinance.rows).toContainEqual(expect.objectContaining({id:paymentId,amount:200}))
+      await db.query("update public.trainer_finance_payments set voided_at=now(),void_reason='Synthetic void' where id=$1",[paymentId])
+      const voided=(await db.query<{result:{rows:Array<Record<string,unknown>>;summary:Record<string,number>;total:number}}>('select app_private.private_analytics_explore($1::jsonb) result',[JSON.stringify({...filters,from:today,to:today,section:'payments'})])).rows[0]!.result
+      expect(voided.summary).toMatchObject({received:0,due:1000,overdue:1000});expect(voided.total).toBe(0)
+      await db.query(`insert into app_private.analytics_actions(actor_id,feature,action,entity_id,occurred_at)
+        select $1::uuid,'goals','created','synthetic-'||n,'2020-01-01T21:15:00Z'::timestamptz from generate_series(1,12) n
+        union all select $2::uuid,'goals','created','synthetic-'||n,'2020-01-01T20:15:00Z'::timestamptz from generate_series(1,2) n`,[coach,athlete])
+      const sorted=(await db.query<{result:{rows:Array<Record<string,unknown>>;trend:Array<{date:string;actions:number}>}}>('select app_private.private_analytics_explore($1::jsonb) result',[JSON.stringify({...filters,pageSize:50,sort:'actions',direction:'desc',group:'day'})])).rows[0]!.result
+      expect(sorted.rows.slice(0,2).map(r=>r.actions)).toEqual([12,2])
+      const activeGroup=(await db.query<{result:{rows:Array<Record<string,unknown>>;summary:Record<string,number>;total:number}}>('select app_private.private_analytics_explore($1::jsonb) result',[JSON.stringify({...filters,pageSize:50,cohort:'active'})])).rows[0]!.result
+      expect(activeGroup.total).toBe(2)
+      expect(activeGroup.summary.accounts).toBe(2)
+      expect(activeGroup.summary.active).toBe(2)
+      expect(activeGroup.rows.every(row=>Number(row.actions)>0)).toBe(true)
+      const noActivity=(await db.query<{result:{rows:unknown[];summary:Record<string,number>;total:number}}>('select app_private.private_analytics_explore($1::jsonb) result',[JSON.stringify({...filters,pageSize:50,cohort:'active',feature:'nutrition'})])).rows[0]!.result
+      expect(noActivity.total).toBe(0)
+      expect(noActivity.summary.accounts).toBe(0)
+      expect(noActivity.summary.active).toBe(0)
+
+      expect(sorted.trend).toEqual([expect.objectContaining({date:'2020-01-01',actions:2}),expect.objectContaining({date:'2020-01-02',actions:12})])
+      // Product-owner analytics does not inherit trainer diary consent rules.
+      const mealId=randomUUID()
+      await db.query(`insert into public.nutrition_entries(id,owner_id,day,meal,name,basis,grams,calories)
+        values($1,$2,current_date,'lunch','Synthetic meal','100g',150,200)`,[mealId,athlete])
+      const nutrition=(await db.query<{result:{rows:Array<Record<string,unknown>>}}>('select app_private.private_analytics_explore($1::jsonb) result',[JSON.stringify({...filters,from:today,to:today,section:'nutrition',person:athlete})])).rows[0]!.result
+      expect(nutrition.rows).toContainEqual(expect.objectContaining({id:mealId,calories:300}))
+      await db.query('update public.clients set auth_user_id=$2 where id=$1',[card,athlete])
+      await db.query("select set_config('request.jwt.claim.sub',$1,true)",[coach])
+      await db.query('insert into public.client_trainer_relationships(client_id,trainer_id,connected_by) values($1,$2,$3)',[card,coach,athlete])
+      await db.query('savepoint denied_view')
+      await expect(db.query('select app_private.record_nutrition_view($1)',[card])).rejects.toMatchObject({code:'PT403'})
+      await db.query('rollback to savepoint denied_view')
+      await db.query(`insert into public.nutrition_consents(owner_id,client_id,trainer_id,connection_started_at,granted)
+        select $1,$2,$3,joined_at,true from public.list_accessible_client_trainers() where client_id=$2 and trainer_id=$3`,[athlete,card,coach])
+      await db.query('select app_private.record_nutrition_view($1)',[card])
+      await db.query('select app_private.record_nutrition_view($1)',[card])
+      expect((await db.query<{n:number}>("select count(*)::int n from app_private.analytics_actions where actor_id=$1 and feature='nutrition_views'",[coach])).rows[0]!.n).toBe(1)
+
+    } finally {await db.query('rollback');db.release()}
     const token = 'p'.repeat(43)
     await pool.query("insert into app_private.profile_rollout_assignments(profile_id,target_backend,access_mode,enabled) values($1,'yandex','read_write',true)", [profile])
     await pool.query("insert into app_private.yandex_app_sessions(token_sha256,profile_id,expires_at) values($1,$2,now()+interval '1 hour')", [createHash('sha256').update(token).digest('hex'), profile])

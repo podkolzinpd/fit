@@ -22,8 +22,20 @@ export function rpeFiveCases() {
         await route.fulfill({ json: { workout: { id: workoutId } } })
       })
       await page.goto(`/workouts/${workoutId}/edit`)
-      await page.getByLabel('Целевой RPE, подход 1', { exact: true }).selectOption('5')
+      const firstRpe = page.getByLabel('Целевой RPE, подход 1', { exact: true })
+      await firstRpe.scrollIntoViewIfNeeded()
+      if (role === 'trainer') await expect(firstRpe.locator('xpath=ancestor::div[contains(@class,"workout-set-swipe")]')).toHaveCSS('border-radius', '16px')
+      // A card-sized swipe radius used to clip the native field and its label.
+      // Checking the element's rectangle alone cannot detect this lost tap area.
+      expect(await firstRpe.evaluate(node => {
+        const rect = node.getBoundingClientRect()
+        return node.contains(document.elementFromPoint(rect.right - 6, rect.bottom - 6))
+      })).toBe(true)
+      await firstRpe.tap()
+      await expect(firstRpe).toBeFocused()
+      await firstRpe.selectOption('5')
       await page.getByLabel('Целевой RPE, подход 2', { exact: true }).selectOption('5.5')
+      await page.screenshot({ path: test.info().outputPath('rpe-plan-changed.png') })
       await page.getByRole('button', { name: 'Сохранить план', exact: true }).click()
       await expect.poll(() => commands.length).toBe(1)
       expect(commands[0]!.slice(0,2)).toEqual([5,5.5])

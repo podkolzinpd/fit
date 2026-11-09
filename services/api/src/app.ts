@@ -1,3 +1,4 @@
+import { registerConnectionDirectory, type ConnectionDirectoryStore } from './connection-directory.js'
 import { registerCorporateDutyRoutes, type CorporateDutiesService } from './corporate-duties.js'
 import { registerCorporatePersonalRoutes, type CorporatePersonalService } from './corporate-personal.js'
 import { ClientProfilePhotoError, readClientPhotoUpload, type PilotClientPhotos } from './client-profile-photo.js'
@@ -213,6 +214,7 @@ interface BuildAppOptions {
   nutritionAutoActivator?: import('./nutrition-pilot.js').NutritionAutoActivator
   nutritionDiary?: NutritionDiary
   allowedOrigins?: readonly string[]
+  connectionDirectory?: Pick<ConnectionDirectoryStore, 'execute'>
   trainerConnectionConfirmation?: TrainerConnectionConfirmationService
   databasePool?: DatabasePool
   identityProvider?: YandexIdentityProvider
@@ -281,6 +283,7 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
         : crypto.randomUUID()
     },
   })
+  registerConnectionDirectory(app, options.connectionDirectory)
   registerTrainerConnectionConfirmationRoutes(app, options.trainerConnectionConfirmation)
   registerCorporateAdminRoutes(app, options.corporateAdmin)
   registerPrivateAnalyticsRoutes(app, options.privateAnalytics)
@@ -1826,6 +1829,9 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
     try {
       return send(await work())
     } catch (error) {
+      if (error instanceof Error && ['athlete_registration_required', 'athlete_connection_required'].includes(error.message)) {
+        return reply.code(409).send({ error: error.message })
+      }
       if (error instanceof PilotSessionInvalidError
         || error instanceof YandexAppSessionInvalidError) {
         return reply.code(401).send({ error: 'unauthorized' })
