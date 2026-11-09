@@ -49,7 +49,7 @@ const trainerTargets: readonly NavigationTarget[] = [
   { label: 'Записать тренировку', path: '/today?view=compose', aliases: [/\b(?:надикт|продикт|голос\S*)\S*\s+тренировк\S*/iu, /\bтренировк\S*\s+голос\S*/iu, /\b(?:созда|добав|запис|запиш|внес|сохран|нача)\S*\s+(?:мне\s+)?(?:выполненн\S*\s+)?тренировк\S*/iu] },
   { label: 'Ввести тренировку текстом', path: '/today?view=compose&entry=text', aliases: [/\b(?:ввест|напис|набрат)\S*\s+тренировк\S*\s+текст\S*/iu, /\bтекстов\S*\s+ввод\S*\s+тренировк\S*/iu] },
   { label: 'Сегодня', path: '/today', aliases: [/\bсегодня\b/iu, /\bрабоч\S*\s+день\b/iu, /\bглавн\S*\s+(?:тренер\S*|экран\S*)/iu] },
-  { label: 'Добавить клиента', path: '/clients/new', aliases: [/\b(?:добав|созда)\S*\s+клиент\S*/iu] },
+  { label: 'Пригласить спортсмена', path: '/connect', aliases: [/\b(?:добав|созда|приглас|подключ)\S*\s+(?:нов\S*\s+)?(?:клиент|спортсмен)\S*/iu] },
   { label: 'Архив клиентов', path: '/clients/archive', aliases: [/\bархив\S*\s+клиент\S*/iu, /\bархивн\S*\s+клиент\S*/iu] },
   { label: 'Клиенты', path: '/clients', aliases: [/\bклиент\S*/iu] },
   { label: 'Расписание', path: '/schedule', aliases: [/\bрасписани\S*/iu, /\bкалендар\S*/iu] },
@@ -91,7 +91,7 @@ const clientCatalogPaths = [
 ] as const
 
 const trainerCatalogPaths = [
-  '/today', '/today?view=compose', '/today?view=compose&entry=text', '/clients', '/clients/new',
+  '/today', '/today?view=compose', '/today?view=compose&entry=text', '/clients', '/connect',
   '/clients/archive', '/schedule', '/schedule/templates', '/schedule/templates/new/editor',
   '/schedule/templates/from-workout', '/exercises', '/finance', '/profile', '/profile/trainer', '/profile/settings',
 ] as const

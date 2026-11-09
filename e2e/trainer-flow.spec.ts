@@ -1,4 +1,4 @@
-import { nativeRequest, nativeSignIn } from './native-local-fixture'
+import { nativeCreateConnectedAthlete, nativeRequest, nativeSignIn } from './native-local-fixture'
 import { mockNativeAiSession, nativeAiUrl } from './native-ai-fixture'
 import { expect, test, type Page } from './native-local-fixture'
 import { chooseWorkoutTime, expectWorkoutTime } from './workout-time-wheel'
@@ -9,10 +9,9 @@ async function mockWorkoutParser(page: Page, items: unknown[]) {
   })
 }
 
-async function fillNewClientProfile(page: Page) {
-  await page.getByLabel('Пол').selectOption('female')
-  await page.getByLabel('Возраст').fill('30')
-  await page.getByLabel('Рост, см').fill('170')
+async function openConnectedAthlete(page: Page, name: string, initialWeightKg: number) {
+  const athlete = await nativeCreateConnectedAthlete(page, { name, profile: { gender: 'female', ageYears: 30, heightCm: 170, initialWeightKg } })
+  await page.goto(`/clients/${athlete.clientId}`)
 }
 
 async function selectClient(page: Page, name: string, id?: string) {
@@ -105,11 +104,7 @@ test('live: пустой подход Берпи остаётся компакт
   }
 
   const clientName = `Быстрый Live ${testInfo.workerIndex}-${Date.now()}`
-  await page.goto('/clients/new')
-  await page.getByLabel('Имя').fill(clientName)
-  await fillNewClientProfile(page)
-  await page.getByLabel('Начальный вес, кг').fill('75')
-  await page.getByRole('button', { name: 'Сохранить' }).click()
+  await openConnectedAthlete(page, clientName, 75)
   await expect(page.getByRole('heading', { name: clientName })).toBeVisible()
 
   await page.getByRole('link', { name: /Запланировать тренировку/ }).click()
@@ -276,15 +271,11 @@ test('тренер объединяет распознанные упражне�
 async function createTrainerFlowClient(page: Page, name: string) {
   await page.goto('/auth')
   await nativeSignIn(page, 'trainer@fit.local')
-  const response = await nativeRequest(page, '/v1/clients', { method: 'POST', body: {
-    fullName: name, gender: 'female', ageYears: 30, heightCm: 170,
-    ageUpdatedAt: new Date().toISOString().slice(0, 10), goal: 'Стать сильнее', note: null,
-    initialWeightKg: 61.5, initialWeightRecordedOn: new Date().toISOString().slice(0, 10),
-  } })
-  expect(response.ok).toBe(true)
-  const result = await response.json() as { client: { id: string } }
-  expect(result.client.id).toMatch(/^[0-9a-f-]{36}$/)
-  return { clientId: result.client.id, clientUrl: new URL(`/clients/${result.client.id}`, page.url()).href }
+  const athlete = await nativeCreateConnectedAthlete(page, {
+    name, profile: { gender: 'female', ageYears: 30, heightCm: 170, initialWeightKg: 61.5, goal: 'Стать сильнее' },
+  })
+  expect(athlete.clientId).toMatch(/^[0-9a-f-]{36}$/)
+  return { clientId: athlete.clientId, clientUrl: new URL(`/clients/${athlete.clientId}`, page.url()).href }
 }
 
 async function createTrainerFlowPlan(page: Page, name: string) {
@@ -330,7 +321,7 @@ async function createTrainerFlowHistory(page: Page, name: string) {
   return fixture
 }
 
-test('trainer creates and edits a client, filters exercises and persists a workout plan', async ({ page }, testInfo) => {
+test('trainer connects and edits a client, filters exercises and persists a workout plan', async ({ page }, testInfo) => {
   const trainerAlias = `Анна ${testInfo.workerIndex}-${Date.now()}`
   // The fixture establishes the origin and opens /auth after seeding the session.
   // A separate unauthenticated load repeats the uncached Vite graph, not a user action.
@@ -338,17 +329,13 @@ test('trainer creates and edits a client, filters exercises and persists a worko
   await expect(page.getByRole('heading', { level: 1, name: 'Сегодня' })).toBeVisible()
   await page.getByRole('navigation', { name: 'Основная навигация' }).getByRole('link', { name: 'Клиенты', exact: true }).click()
 
-  await page.getByRole('button', { name: /^(Добавить|Добавить клиента)$/ }).click()
-  await page.getByRole('dialog', { name: 'Добавить клиента' }).getByRole('link', { name: 'Создать карточку', exact: true }).click()
-  await expect(page.getByRole('button', { name: 'Надиктовать заметку' })).toBeVisible()
-  await page.getByLabel('Имя').fill('Анна Тестова')
-  await expect(page.getByLabel('Возраст')).toHaveValue('')
-  await expect(page.getByLabel('Рост, см')).toHaveValue('')
-  await page.getByLabel('Пол').selectOption('female')
-  await page.getByLabel('Возраст').fill('30')
-  await page.getByLabel('Рост, см').fill('170')
-  await page.getByLabel('Начальный вес, кг').fill('61.5')
-  await page.getByLabel('Цель').fill('Стать сильнее')
+  const athlete = await nativeCreateConnectedAthlete(page, {
+    name: 'Анна Тестова', profile: { gender: 'female', ageYears: 30, heightCm: 170, initialWeightKg: 61.5, goal: 'Стать сильнее' },
+  })
+  await page.goto(`/clients/${athlete.clientId}/edit`)
+  await expect(page.locator('.client-form-section').first().getByRole('button', { name: 'Надиктовать заметку' })).toBeVisible()
+  await expect(page.getByLabel('Возраст')).toHaveValue('30')
+  await expect(page.getByLabel('Рост, см')).toHaveValue('170')
   const introduction = page.getByRole('button', { name: 'Понятно', exact: true })
   if (await introduction.isVisible()) await introduction.click()
   await page.getByRole('button', { name: 'Сохранить' }).click()
@@ -640,13 +627,7 @@ test('live: планка вводится в секундах, таймер за
   }
   await page.goto('/clients')
 
-  await page.getByRole('button', { name: /^(Добавить|Добавить клиента)$/ }).click()
-  await page.getByRole('dialog', { name: 'Добавить клиента' }).getByRole('link', { name: 'Создать карточку', exact: true }).click()
-  await expect(page.getByRole('button', { name: 'Надиктовать заметку' })).toBeVisible()
-  await page.getByLabel('Имя').fill('Планка Клиент')
-  await fillNewClientProfile(page)
-  await page.getByLabel('Начальный вес, кг').fill('75')
-  await page.getByRole('button', { name: 'Сохранить' }).click()
+  await openConnectedAthlete(page, 'Планка Клиент', 75)
   await expect(page.getByRole('heading', { name: 'Планка Клиент' })).toBeVisible()
 
   await page.getByRole('link', { name: /Запланировать/ }).click()
@@ -688,13 +669,7 @@ test('план: порядок упражнений меняется в отде
   await expect(page.getByRole('heading', { level: 1, name: 'Сегодня' })).toBeVisible()
   await page.goto('/clients')
 
-  await page.getByRole('button', { name: /^(Добавить|Добавить клиента)$/ }).click()
-  await page.getByRole('dialog', { name: 'Добавить клиента' }).getByRole('link', { name: 'Создать карточку', exact: true }).click()
-  await expect(page.getByRole('button', { name: 'Надиктовать заметку' })).toBeVisible()
-  await page.getByLabel('Имя').fill('Порядок Клиент')
-  await fillNewClientProfile(page)
-  await page.getByLabel('Начальный вес, кг').fill('80')
-  await page.getByRole('button', { name: 'Сохранить' }).click()
+  await openConnectedAthlete(page, 'Порядок Клиент', 80)
   await expect(page.getByRole('heading', { name: 'Порядок Клиент' })).toBeVisible()
 
   await page.getByRole('link', { name: /Запланировать/ }).click()
@@ -728,13 +703,7 @@ test('live: порядок упражнений меняется в отдель
   await expect(page.getByRole('heading', { level: 1, name: 'Сегодня' })).toBeVisible()
   await page.goto('/clients')
 
-  await page.getByRole('button', { name: /^(Добавить|Добавить клиента)$/ }).click()
-  await page.getByRole('dialog', { name: 'Добавить клиента' }).getByRole('link', { name: 'Создать карточку', exact: true }).click()
-  await expect(page.getByRole('button', { name: 'Надиктовать заметку' })).toBeVisible()
-  await page.getByLabel('Имя').fill('Live Порядок')
-  await fillNewClientProfile(page)
-  await page.getByLabel('Начальный вес, кг').fill('80')
-  await page.getByRole('button', { name: 'Сохранить' }).click()
+  await openConnectedAthlete(page, 'Live Порядок', 80)
   await expect(page.getByRole('heading', { name: 'Live Порядок' })).toBeVisible()
 
   await page.getByRole('link', { name: /Запланировать/ }).click()
@@ -826,13 +795,7 @@ test('замена упражнения: в форме плана и в live', a
   await expect(page.getByRole('heading', { level: 1, name: 'Сегодня' })).toBeVisible()
   await page.goto('/clients')
 
-  await page.getByRole('button', { name: /^(Добавить|Добавить клиента)$/ }).click()
-  await page.getByRole('dialog', { name: 'Добавить клиента' }).getByRole('link', { name: 'Создать карточку', exact: true }).click()
-  await expect(page.getByRole('button', { name: 'Надиктовать заметку' })).toBeVisible()
-  await page.getByLabel('Имя').fill('Замена Клиент')
-  await fillNewClientProfile(page)
-  await page.getByLabel('Начальный вес, кг').fill('80')
-  await page.getByRole('button', { name: 'Сохранить' }).click()
+  await openConnectedAthlete(page, 'Замена Клиент', 80)
   await expect(page.getByRole('heading', { name: 'Замена Клиент' })).toBeVisible()
 
   await page.getByRole('link', { name: /Запланировать/ }).click()
@@ -892,13 +855,7 @@ test('карточка упражнения: шапка с оборудован�
   await expect(page.getByRole('heading', { level: 1, name: 'Сегодня' })).toBeVisible()
   await page.goto('/clients')
 
-  await page.getByRole('button', { name: /^(Добавить|Добавить клиента)$/ }).click()
-  await page.getByRole('dialog', { name: 'Добавить клиента' }).getByRole('link', { name: 'Создать карточку', exact: true }).click()
-  await expect(page.getByRole('button', { name: 'Надиктовать заметку' })).toBeVisible()
-  await page.getByLabel('Имя').fill('Карточка Клиент')
-  await fillNewClientProfile(page)
-  await page.getByLabel('Начальный вес, кг').fill('80')
-  await page.getByRole('button', { name: 'Сохранить' }).click()
+  await openConnectedAthlete(page, 'Карточка Клиент', 80)
   await expect(page.getByRole('heading', { name: 'Карточка Клиент' })).toBeVisible()
 
   await page.getByRole('link', { name: /Запланировать/ }).click()
@@ -967,13 +924,7 @@ test('план: суперсет работает в Live без создани�
   await expect(page.getByRole('heading', { level: 1, name: 'Сегодня' })).toBeVisible()
   await page.goto('/clients')
 
-  await page.getByRole('button', { name: /^(Добавить|Добавить клиента)$/ }).click()
-  await page.getByRole('dialog', { name: 'Добавить клиента' }).getByRole('link', { name: 'Создать карточку', exact: true }).click()
-  await expect(page.getByRole('button', { name: 'Надиктовать заметку' })).toBeVisible()
-  await page.getByLabel('Имя').fill('Суперсет Клиент')
-  await fillNewClientProfile(page)
-  await page.getByLabel('Начальный вес, кг').fill('80')
-  await page.getByRole('button', { name: 'Сохранить' }).click()
+  await openConnectedAthlete(page, 'Суперсет Клиент', 80)
   await expect(page.getByRole('heading', { name: 'Суперсет Клиент' })).toBeVisible()
 
   await page.getByRole('link', { name: /Запланировать/ }).click()
@@ -1151,12 +1102,7 @@ test('расписание: тренировка без времени оста�
   await expect(page.getByRole('heading', { level: 1, name: 'Сегодня' })).toBeVisible()
   await page.goto('/clients')
 
-  await page.getByRole('button', { name: /^(Добавить|Добавить клиента)$/ }).click()
-  await page.getByRole('dialog', { name: 'Добавить клиента' }).getByRole('link', { name: 'Создать карточку', exact: true }).click()
-  await page.getByLabel('Имя').fill(clientName)
-  await fillNewClientProfile(page)
-  await page.getByLabel('Начальный вес, кг').fill('80')
-  await page.getByRole('button', { name: 'Сохранить' }).click()
+  await openConnectedAthlete(page, clientName, 80)
   await expect(page.getByRole('heading', { name: clientName })).toBeVisible()
 
   await page.goto('/schedule')
@@ -1198,13 +1144,7 @@ test('расписание: создание тренировки из расп�
   await expect(page.getByRole('heading', { level: 1, name: 'Сегодня' })).toBeVisible()
   await page.goto('/clients')
 
-  await page.getByRole('button', { name: /^(Добавить|Добавить клиента)$/ }).click()
-  await page.getByRole('dialog', { name: 'Добавить клиента' }).getByRole('link', { name: 'Создать карточку', exact: true }).click()
-  await expect(page.getByRole('button', { name: 'Надиктовать заметку' })).toBeVisible()
-  await page.getByLabel('Имя').fill(clientName)
-  await fillNewClientProfile(page)
-  await page.getByLabel('Начальный вес, кг').fill('80')
-  await page.getByRole('button', { name: 'Сохранить' }).click()
+  await openConnectedAthlete(page, clientName, 80)
   await expect(page.getByRole('heading', { name: clientName })).toBeVisible()
 
   // Идём в расписание и создаём тренировку прямо оттуда.
@@ -1251,12 +1191,7 @@ test('расписание: карточка события — время, им
   await expect(page.getByRole('heading', { level: 1, name: 'Сегодня' })).toBeVisible()
   await page.goto('/clients')
 
-  await page.getByRole('button', { name: /^(Добавить|Добавить клиента)$/ }).click()
-  await page.getByRole('dialog', { name: 'Добавить клиента' }).getByRole('link', { name: 'Создать карточку', exact: true }).click()
-  await page.getByLabel('Имя').fill(clientName)
-  await fillNewClientProfile(page)
-  await page.getByLabel('Начальный вес, кг').fill('80')
-  await page.getByRole('button', { name: 'Сохранить' }).click()
+  await openConnectedAthlete(page, clientName, 80)
   await expect(page.getByRole('heading', { name: clientName })).toBeVisible()
 
   await page.getByRole('link', { name: 'Расписание', exact: true }).click()
@@ -1301,13 +1236,7 @@ test('комментарий тренера к упражнению: план �
   await expect(page.getByRole('heading', { level: 1, name: 'Сегодня' })).toBeVisible()
   await page.goto('/clients')
 
-  await page.getByRole('button', { name: /^(Добавить|Добавить клиента)$/ }).click()
-  await page.getByRole('dialog', { name: 'Добавить клиента' }).getByRole('link', { name: 'Создать карточку', exact: true }).click()
-  await expect(page.getByRole('button', { name: 'Надиктовать заметку' })).toBeVisible()
-  await page.getByLabel('Имя').fill('Коммент Клиент')
-  await fillNewClientProfile(page)
-  await page.getByLabel('Начальный вес, кг').fill('80')
-  await page.getByRole('button', { name: 'Сохранить' }).click()
+  await openConnectedAthlete(page, 'Коммент Клиент', 80)
   await expect(page.getByRole('heading', { name: 'Коммент Клиент' })).toBeVisible()
   const commentClientUrl = page.url()
   const commentClientId = commentClientUrl.split('/').at(-1)!
@@ -1385,12 +1314,7 @@ test('live: удаление подхода и наследование факт
   await expect(page.getByRole('heading', { level: 1, name: 'Сегодня' })).toBeVisible()
   await page.goto('/clients')
 
-  await page.getByRole('button', { name: /^(Добавить|Добавить клиента)$/ }).click()
-  await page.getByRole('dialog', { name: 'Добавить клиента' }).getByRole('link', { name: 'Создать карточку', exact: true }).click()
-  await page.getByLabel('Имя').fill(clientName)
-  await fillNewClientProfile(page)
-  await page.getByLabel('Начальный вес, кг').fill('80')
-  await page.getByRole('button', { name: 'Сохранить' }).click()
+  await openConnectedAthlete(page, clientName, 80)
   await expect(page.getByRole('heading', { name: clientName })).toBeVisible()
   const clientId = page.url().split('/').at(-1)!
 
@@ -1498,12 +1422,7 @@ test('live: «Готово» без ввода факта — подход сч�
   await expect(page.getByRole('heading', { level: 1, name: 'Сегодня' })).toBeVisible()
   await page.goto('/clients')
 
-  await page.getByRole('button', { name: /^(Добавить|Добавить клиента)$/ }).click()
-  await page.getByRole('dialog', { name: 'Добавить клиента' }).getByRole('link', { name: 'Создать карточку', exact: true }).click()
-  await page.getByLabel('Имя').fill('Готово Клиент')
-  await fillNewClientProfile(page)
-  await page.getByLabel('Начальный вес, кг').fill('80')
-  await page.getByRole('button', { name: 'Сохранить' }).click()
+  await openConnectedAthlete(page, 'Готово Клиент', 80)
   await expect(page.getByRole('heading', { name: 'Готово Клиент' })).toBeVisible()
 
   await page.getByRole('link', { name: /Запланировать/ }).click()
