@@ -470,7 +470,7 @@ for (const density of ['original', 'compact']) test(`client Live strength rows k
 
 // Force both race windows: a slow confirmation and a queued focus frame.
 // Strength/time exercise different native inputs; two engines cover touch focus.
-for (const metric of ['weight', 'seconds'] as const) for (const phase of ['response', 'frame'] as const) test(`client manual focus wins confirmation ${metric} ${phase}`, async ({ page }, info) => {
+for (const role of ['client', 'trainer'] as const) for (const metric of ['weight', 'seconds'] as const) for (const phase of ['response', 'frame'] as const) test(`${role} manual focus wins confirmation ${role === 'trainer' && metric === 'seconds' ? 'distance' : metric} ${phase}`, async ({ page }, info) => {
   const source = restTimerWorkout()
   source.startedAt = new Date(Date.now() - 120000).toISOString()
   const exercise = source.exercises[0]!, target = exercise.sets[0]!, sibling = exercise.sets[1]!
@@ -478,14 +478,15 @@ for (const metric of ['weight', 'seconds'] as const) for (const phase of ['respo
     Object.assign(exercise, { ref: 'rowing-machine', name: 'Гребной тренажёр', inputKind: 'distance' })
     exercise.sets.forEach(set => Object.assign(set, { weightKg: undefined, durationSec: 90, distanceKm: 1.02 }))
   }
-  const backend = await mockPilot(page, { role: 'client', profileId: pilotId, clientLime: true, workouts: [source] })
+  await silenceLiveAudio(page)
+  const backend = await mockPilot(page, { role, profileId: role === 'client' ? pilotId : 'c0ac0000-6010-4000-8000-000000000001', fitLime: true, clientLime: true, workouts: [source] })
   let release!: () => void
   const gate = new Promise<void>(resolve => { release = resolve })
   await page.route(`**/v1/workout-sets/${target.id}/confirm`, async route => { await gate; await route.fallback() })
   await page.goto(`/workouts/${workoutId}/live`)
   const row = page.locator(`form[data-live-set-id="${target.id}"]`)
   const next = page.locator(`form[data-live-set-id="${sibling.id}"]`)
-  const label = metric === 'weight' ? 'Фактический вес' : 'Фактическое время: секунды'
+  const label = metric === 'weight' ? 'Фактический вес' : role === 'trainer' ? 'Фактическая дистанция' : 'Фактическое время: секунды'
   const field = row.getByRole('textbox', { name: label, exact: true })
   await field.fill('35')
   await row.getByRole('button', { name: 'Готово, отдых', exact: true }).click()
@@ -529,8 +530,8 @@ for (const metric of ['weight', 'seconds'] as const) for (const phase of ['respo
   await field.blur()
   await expect.poll(() => {
     const fact = backend.getWorkouts()[0]!.exercises[0]!.sets[0]!.fact
-    return metric === 'weight' ? fact.weightKg : fact.durationSec
-  }).toBe(metric === 'weight' ? 37.5 : 105)
+    return metric === 'weight' ? fact.weightKg : role === 'trainer' ? fact.distanceKm : fact.durationSec
+  }).toBe(metric === 'weight' ? 37.5 : role === 'trainer' ? 45 : 105)
   expect(backend.getWorkouts()[0]!.exercises[0]!.sets[1]!.fact).toEqual(sibling.fact)
   expect(backend.getWorkouts()[0]!.exercises[0]!.sets[0]!.confirmedAt).toBe(stamp)
   expect(await page.evaluate(id => sessionStorage.getItem(`fit:live-rest-until:${id}`), workoutId)).toBe(deadline)
@@ -1194,6 +1195,7 @@ test('client keyboard date confirmation applies the edited draft on first tap', 
 })
 
 test.beforeEach(async ({ page }) => {
+  if (process.env.FIT_SILENT_ACCEPTANCE === '1') await silenceLiveAudio(page)
   // Only app GETs may reach the local server; every API write is fixture-bound.
   await page.route('**/*', route => {
     const url = new URL(route.request().url())
@@ -4833,3 +4835,59 @@ for (const entry of ['new', 'template', 'completed']) for (const theme of ['ligh
   await info.attach('legacy-skin-consumers', { body: JSON.stringify(probes), contentType: 'application/json' })
   expect(probes).toEqual(probes.map(probe => ({ state: probe.state, inherited: [] })))
 })
+
+for (const density of ['original', 'compact'] as const) test(`Coach confirms exercises out of order ${density}`, async ({ page }) => {
+  const id = 'c0ac0000-6010-4000-8000-000000000001'
+  await page.addInitScript(({ id, density }) => {
+    localStorage.setItem(`fit.liveExerciseAnimation.${id}`, 'false')
+    localStorage.setItem(`fit.coachLiveDensity.${id}`, density)
+  }, { id, density })
+  await silenceLiveAudio(page)
+  const source = coachGestureWorkout(false, 3)
+  const backend = await mockPilot(page, { role: 'trainer', profileId: id, clientLime: true, fitLime: true, workouts: [source], failFirstSetConfirm: true })
+  await page.goto(`/workouts/${workoutId}/live`)
+  const cards = page.locator('.live-exercise')
+  const bodies = page.locator('.live-exercise > .coach-v79-card-body')
+  await cards.nth(1).locator('button.coach-v79-card-toggle').click()
+  const first = source.exercises[1]!.sets[0]!
+  const failedResponse = page.waitForResponse(response => response.url().endsWith(`/workout-sets/${first.id}/confirm`) && response.status() >= 500)
+  const firstButton = page.locator(`[data-live-set-id="${first.id}"]`).getByRole('button', { name: 'Готово, отдых', exact: true })
+  await firstButton.click()
+  await failedResponse
+  await expect(firstButton).toBeEnabled()
+  await expect(bodies.nth(1)).not.toHaveAttribute('inert', '')
+  expect(backend.getWorkouts()[0]!.exercises[1]!.sets[0]!.confirmedAt).toBeNull()
+  await expect(page.locator(`[data-live-set-id="${first.id}"]`).getByLabel('Фактический вес', { exact: true })).toHaveValue(String(first.weightKg))
+  for (const set of source.exercises[1]!.sets) {
+    await page.locator(`[data-live-set-id="${set.id}"]`).getByRole('button', { name: 'Готово, отдых', exact: true }).click()
+    await expect.poll(() => backend.getWorkouts()[0]!.exercises[1]!.sets.find(item => item.id === set.id)!.confirmedAt).not.toBeNull()
+    if (set !== source.exercises[1]!.sets.at(-1)) await expect(bodies.nth(1)).not.toHaveAttribute('inert', '')
+  }
+  await expect(bodies.nth(0)).toHaveAttribute('inert', '')
+  await expect(bodies.nth(2)).not.toHaveAttribute('inert', '')
+  for (const set of source.exercises[2]!.sets) {
+    await page.locator(`[data-live-set-id="${set.id}"]`).getByRole('button', { name: 'Готово, отдых', exact: true }).click()
+    await expect.poll(() => backend.getWorkouts()[0]!.exercises[2]!.sets.find(item => item.id === set.id)!.confirmedAt).not.toBeNull()
+  }
+  await expect(bodies.nth(0)).not.toHaveAttribute('inert', '')
+  expect(backend.getWorkouts()[0]!.exercises[0]!.sets.every(set => !set.confirmedAt)).toBe(true)
+})
+
+async function silenceLiveAudio(page: Page) {
+  await page.addInitScript(() => {
+    const connect = Object.getOwnPropertyDescriptor(AudioNode.prototype, 'connect')!.value as typeof AudioNode.prototype.connect
+    const sinks = new WeakMap<BaseAudioContext, GainNode>()
+    AudioNode.prototype.connect = function (this: AudioNode, target: AudioNode | AudioParam, output?: number, input?: number) {
+      if (target instanceof AudioDestinationNode) {
+        let sink = sinks.get(this.context)
+        if (!sink) {
+          sink = this.context.createGain(); sink.gain.value = 0
+          Reflect.apply(connect, sink, [target, 0, 0]); sinks.set(this.context, sink)
+        }
+        return Reflect.apply(connect, this, [sink, output ?? 0, input ?? 0]) as AudioNode
+      }
+      return (target instanceof AudioNode ? Reflect.apply(connect, this, [target, output ?? 0, input ?? 0])
+        : Reflect.apply(connect, this, [target, output ?? 0])) as AudioNode
+    } as typeof AudioNode.prototype.connect
+  })
+}
