@@ -5,6 +5,45 @@ import { keepWorkoutFieldVisible, useWorkoutFieldVisibility } from './workout-fi
 
 afterEach(() => { document.body.replaceChildren(); vi.restoreAllMocks(); vi.unstubAllGlobals() })
 
+it('keeps the edited plan field below its actual sticky header', () => {
+  document.body.innerHTML = '<div class="content"><main class="coach-reference-form"><header class="page-header" style="position:sticky"></header><input></main></div>'
+  const content = document.querySelector<HTMLElement>('.content')!, input = document.querySelector('input')!, header = document.querySelector('header')!
+  vi.stubGlobal('visualViewport', { height: 400, offsetTop: 0 })
+  geometry(content, input, 65)
+  vi.spyOn(header, 'getBoundingClientRect').mockReturnValue(new DOMRect(0, 0, 390, 60))
+  content.scrollTop = 100
+  keepWorkoutFieldVisible(input)
+  expect(content.scrollTop).toBe(89)
+})
+
+it('does not counter-scroll a retained field while the native keyboard expands the viewport', () => {
+  let pending: FrameRequestCallback = () => undefined
+  vi.stubGlobal('requestAnimationFrame', vi.fn((callback: FrameRequestCallback) => { pending = callback; return 1 }))
+  vi.stubGlobal('cancelAnimationFrame', vi.fn())
+  const viewport = Object.assign(new EventTarget(), { height: 400, offsetTop: 120 })
+  vi.stubGlobal('visualViewport', viewport)
+  function Editor() {
+    useWorkoutFieldVisibility(true, '.answer input')
+    return <div className="content"><form className="answer"><input /><input /></form></div>
+  }
+  render(<Editor />)
+  const content = document.querySelector<HTMLElement>('.content')!, inputs = document.querySelectorAll('input')
+  const rect = geometry(content, inputs[0]!, 200)
+  geometry(content, inputs[1]!, 600)
+  content.scrollTop = 100
+  act(() => inputs[0]!.focus())
+  act(() => pending(0))
+  viewport.height = 500; viewport.offsetTop = 60
+  rect.mockReturnValue(new DOMRect(0, 40, 100, 48))
+  act(() => viewport.dispatchEvent(new Event('resize')))
+  act(() => pending(0))
+  expect(content.scrollTop).toBe(100)
+  // A new focus still owns the next explicit visibility correction.
+  act(() => inputs[1]!.focus())
+  act(() => pending(0))
+  expect(content.scrollTop).toBeGreaterThan(100)
+})
+
 function geometry(content: HTMLElement, field: HTMLElement, top: number, height = 48) {
   Object.defineProperty(content, 'clientHeight', { configurable: true, value: 400 })
   vi.spyOn(content, 'getBoundingClientRect').mockReturnValue(new DOMRect(0, 0, 390, 400))
