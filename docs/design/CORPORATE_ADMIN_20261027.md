@@ -3258,3 +3258,30 @@ run. Наблюдение — один ограниченный процесс �
 Старые гейты8316 не присваиваются объединённому head. После них — свежие queue/
 main/публикации, обычный squash match-head2054, mainCI и официальные API/web/
 signedOTA с полной фактической приёмкой DUT109. Дежурства OFF, zone/grant нет.
+
+
+### Итерация 80 нового выпуска — 2026-11-09 — Codex / OpenAI
+
+По прямому поручению Антона проверен GitHub: CI42519434963 source83164e6a
+завершился SUCCESS attempt1, все35 jobs; Android42519434828 SUCCESS attempt1.
+Старый здоровый прогон не прерывался. Более ранних открытых PR перед2054 нет;
+очередь проверена только в GitHub, без чатов, сообщений и субагентов.
+
+Actualmain ef3768e7 включён обычным merge811f9464 с сохранением истории и всех
+предшествующих изменений. Два пересечения разрешены аддитивно: общий mock
+содержит и закрытый DUTaccess, и connection-directory; общий transport сохраняет
+15s timeout DUT и новый timeout подключения. Diff против main содержит только
+собственные DUTUI/проверки/квитанции. Чужие подключения, аналитика и native
+сохраняются. Из-за изменившихся frontend/API/e2e повторяется расширенный local
+check и154 compiled browser; новый exact-head CI+Android обязательны.
+
+На момент этой квитанции local check выполняется; его результат и новый CI
+не объявлены успешными. Main ef официально имеет SUCCESS CI42553564750,
+Android42553564746, API42556807570, web42556807602, OTA42557049312; независимый
+bytes/signatures/dualAPI readback проверяется отдельно. Дальше — фактические
+local/exact-head gates, свежая GitHubqueue/main и незанятые публикации, обычный
+squash match-head, mainCI/official API/web/signedOTA и полная DUT109 приёмка.
+Только после обеих приёмок закрытый старый test trainer: свежий inspect,
+единственный assignedofficezone при необходимости, dutygrant и отдельный
+committedinspect. Все остальные пилоты/доступы/данные/native прежние.
+Дежурства OFF; merge2054, публикация, zone/grant ещё не выполнялись.
