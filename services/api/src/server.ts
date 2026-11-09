@@ -1,3 +1,4 @@
+import { CorporateProfilesStore } from './corporate-profile.js'
 import { CorporateDutiesStore } from './corporate-duties.js'
 import { CorporatePersonalStore } from './corporate-personal.js'
 import { DatabasePilotClientPhotos } from './client-profile-photo.js'
@@ -308,7 +309,7 @@ const app = buildApp(
     ...(pilotTrainerProfiles === undefined ? {} : { pilotTrainerProfiles }),
     ...(pilotTrainerDiscovery === undefined ? {} : { pilotTrainerDiscovery }),
     ...(pilotFavoriteWorkouts === undefined ? {} : { pilotFavoriteWorkouts }),
-    ...(databasePool === undefined ? {} : { corporateAdmin: new CorporateAdminStore(databasePool, yandexMediaStorage), corporateInvitations: new CorporateInvitationsStore(databasePool), corporateServices: new CorporateServicesStore(databasePool), corporatePersonal: new CorporatePersonalStore(databasePool), corporateDuties: new CorporateDutiesStore(databasePool) }),
+    ...(databasePool === undefined ? {} : { corporateProfiles: new CorporateProfilesStore(databasePool, new DatabasePilotTrainerProfiles(databasePool, yandexMediaStorage)), corporateAdmin: new CorporateAdminStore(databasePool, yandexMediaStorage), corporateInvitations: new CorporateInvitationsStore(databasePool), corporateServices: new CorporateServicesStore(databasePool), corporatePersonal: new CorporatePersonalStore(databasePool), corporateDuties: new CorporateDutiesStore(databasePool) }),
     ...(databasePool === undefined ? {} : { privateAnalytics: new PrivateAnalyticsStore(databasePool) }),
     ...(pilotTrainerFinance === undefined ? {} : { pilotTrainerFinance }),
     ...(pilotWorkoutsWriter === undefined ? {} : { pilotWorkoutsWriter }),

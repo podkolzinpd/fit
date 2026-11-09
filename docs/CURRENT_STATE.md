@@ -32,7 +32,7 @@ P4/PR1882 опубликован наe5b5aa1d:213 файлов/health и public 
 P1–P4 завершены; итог — итерация26 канонического журнала и YAFIT-674.
 31.10 справочник заполнен:32 офиса добавлены,33/33 после reload; итерация27.
 02.11: [кабинет Яндекса](design/CORPORATE_ADMIN_20261027.md): PR1930/1937 опубликованы.
-SRV/ADM/CPT приняты, personal test ON. DUT:2050/2054 опубликованы и приняты наc287; duty OFF до актуальногоmain. По поручению Антона исправляется auth E2E blocker main; журнал89.
+SRV/ADM/CPT/DUT приняты; personal/DUT testON. TPA101–109:2PR в работе, выпуск после разрешения Антона; [план/журнал93](design/CORPORATE_ADMIN_20261027.md).
 
 ## Точка продолжения
 [UX:4PR, проверки](design/WORKOUT_LIFECYCLE_UX_AUDIT_20261101.md).

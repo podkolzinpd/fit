@@ -1,3 +1,4 @@
+import { readProfileWriteContext, registerCorporateProfileRoutes, type CorporateProfilesStore } from './corporate-profile.js'
 import { registerCorporateDutyRoutes, type CorporateDutiesService } from './corporate-duties.js'
 import { registerCorporatePersonalRoutes, type CorporatePersonalService } from './corporate-personal.js'
 import { ClientProfilePhotoError, readClientPhotoUpload, type PilotClientPhotos } from './client-profile-photo.js'
@@ -208,6 +209,7 @@ interface BuildAppOptions {
   corporateDuties?: CorporateDutiesService
   corporatePersonal?: CorporatePersonalService
   corporateServices?: CorporateServicesService
+  corporateProfiles?: CorporateProfilesStore
   corporateAdmin?: CorporateAdminService
   privateAnalytics?: PrivateAnalyticsService
   nutritionAutoActivator?: import('./nutrition-pilot.js').NutritionAutoActivator
@@ -283,6 +285,7 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
   })
   registerTrainerConnectionConfirmationRoutes(app, options.trainerConnectionConfirmation)
   registerCorporateAdminRoutes(app, options.corporateAdmin)
+  registerCorporateProfileRoutes(app, options.corporateProfiles)
   registerPrivateAnalyticsRoutes(app, options.privateAnalytics)
   registerCorporateInvitationRoutes(app, options.corporateInvitations)
   registerCorporateServiceRoutes(app, options.corporateServices)
@@ -931,17 +934,20 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
 
   app.put('/v1/trainer-profile', async (request, reply) => {
     const session = readYandexActorSession(request.headers)
+    const profileContext = readProfileWriteContext(request.body)
     const draft = readTrainerProfileDraft(request.body)
     if (session === undefined) return reply.code(401).send({ error: 'unauthorized' })
     if (session.accessMode !== 'read_write') return reply.code(403).send({ error: 'read_write_session_required' })
     if (draft === undefined) return reply.code(400).send({ error: 'invalid_request' })
+    if (profileContext === null) return reply.code(400).send({ error: 'invalid_request' })
     if (options.pilotTrainerProfiles === undefined) return reply.code(503).send({ error: 'service_unavailable' })
-    return sendPilotCommand(reply, () => options.pilotTrainerProfiles!.saveDraft(session, draft),
+    return sendPilotCommand(reply, () => options.pilotTrainerProfiles!.saveDraft(session, draft, profileContext),
       (profile) => reply.header('cache-control', 'no-store').send(profile))
   })
 
   app.post('/v1/trainer-profile/photos', { bodyLimit: 3 * 1024 * 1024 }, async (request, reply) => {
     const session = readYandexActorSession(request.headers)
+    const profileContext = readProfileWriteContext(request.body)
     const body = request.body as { draft?: unknown; photo?: unknown; replaceLegacy?: unknown } | null
     const draft = readTrainerProfileDraft(body?.draft)
     const photo = readTrainerPhotoUpload(body?.photo)
@@ -951,14 +957,16 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
       || (body?.replaceLegacy !== undefined && typeof body.replaceLegacy !== 'boolean')) {
       return reply.code(400).send({ error: 'invalid_request' })
     }
+    if (profileContext === null) return reply.code(400).send({ error: 'invalid_request' })
     if (options.pilotTrainerProfiles === undefined) return reply.code(503).send({ error: 'service_unavailable' })
     return sendPilotCommand(reply,
-      () => options.pilotTrainerProfiles!.uploadPhoto(session, draft, photo, body?.replaceLegacy === true),
+      () => options.pilotTrainerProfiles!.uploadPhoto(session, draft, photo, body?.replaceLegacy === true, profileContext),
       (profile) => reply.header('cache-control', 'no-store').code(201).send(profile))
   })
 
   app.patch('/v1/trainer-profile/photos/order', async (request, reply) => {
     const session = readYandexActorSession(request.headers)
+    const profileContext = readProfileWriteContext(request.body)
     const body = request.body as { photoIds?: unknown } | null
     const photoIds = Array.isArray(body?.photoIds) && body.photoIds.length <= 3
       && body.photoIds.every((id) => typeof id === 'string' && uuidPattern.test(id))
@@ -966,42 +974,50 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
     if (session === undefined) return reply.code(401).send({ error: 'unauthorized' })
     if (session.accessMode !== 'read_write') return reply.code(403).send({ error: 'read_write_session_required' })
     if (photoIds === undefined) return reply.code(400).send({ error: 'invalid_request' })
+    if (profileContext === null) return reply.code(400).send({ error: 'invalid_request' })
     if (options.pilotTrainerProfiles === undefined) return reply.code(503).send({ error: 'service_unavailable' })
-    return sendPilotCommand(reply, () => options.pilotTrainerProfiles!.reorderPhotos(session, photoIds),
+    return sendPilotCommand(reply, () => options.pilotTrainerProfiles!.reorderPhotos(session, photoIds, profileContext),
       (profile) => reply.header('cache-control', 'no-store').send(profile))
   })
 
   app.delete('/v1/trainer-profile/photos/:photoId', async (request, reply) => {
     const session = readYandexActorSession(request.headers)
+    const profileContext = readProfileWriteContext(request.body)
     const { photoId } = request.params as { photoId?: unknown }
     if (session === undefined) return reply.code(401).send({ error: 'unauthorized' })
     if (session.accessMode !== 'read_write') return reply.code(403).send({ error: 'read_write_session_required' })
     if (typeof photoId !== 'string' || !uuidPattern.test(photoId)) return reply.code(400).send({ error: 'invalid_request' })
+    if (profileContext === null) return reply.code(400).send({ error: 'invalid_request' })
     if (options.pilotTrainerProfiles === undefined) return reply.code(503).send({ error: 'service_unavailable' })
-    return sendPilotCommand(reply, () => options.pilotTrainerProfiles!.deletePhoto(session, photoId),
+    return sendPilotCommand(reply, () => options.pilotTrainerProfiles!.deletePhoto(session, photoId, profileContext),
       (profile) => reply.header('cache-control', 'no-store').send(profile))
   })
 
   app.post('/v1/trainer-profile/publish', async (request, reply) => {
     const session = readYandexActorSession(request.headers)
+    const profileContext = readProfileWriteContext(request.body)
     if (session === undefined) return reply.code(401).send({ error: 'unauthorized' })
     if (session.accessMode !== 'read_write') return reply.code(403).send({ error: 'read_write_session_required' })
+    if (profileContext === null) return reply.code(400).send({ error: 'invalid_request' })
     if (options.pilotTrainerProfiles === undefined) return reply.code(503).send({ error: 'service_unavailable' })
-    return sendPilotCommand(reply, () => options.pilotTrainerProfiles!.publish(session),
+    return sendPilotCommand(reply, () => options.pilotTrainerProfiles!.publish(session, profileContext),
       (profile) => reply.header('cache-control', 'no-store').send(profile))
   })
 
   app.post('/v1/trainer-profile/unpublish', async (request, reply) => {
     const session = readYandexActorSession(request.headers)
+    const profileContext = readProfileWriteContext(request.body)
     if (session === undefined) return reply.code(401).send({ error: 'unauthorized' })
     if (session.accessMode !== 'read_write') return reply.code(403).send({ error: 'read_write_session_required' })
+    if (profileContext === null) return reply.code(400).send({ error: 'invalid_request' })
     if (options.pilotTrainerProfiles === undefined) return reply.code(503).send({ error: 'service_unavailable' })
-    return sendPilotCommand(reply, () => options.pilotTrainerProfiles!.unpublish(session),
+    return sendPilotCommand(reply, () => options.pilotTrainerProfiles!.unpublish(session, profileContext),
       (profile) => reply.header('cache-control', 'no-store').send(profile))
   })
 
   app.post('/v1/trainer-profile/catalog', async (request, reply) => {
     const session = readYandexActorSession(request.headers)
+    const profileContext = readProfileWriteContext(request.body)
     const body = request.body
     if (session === undefined) return reply.code(401).send({ error: 'unauthorized' })
     if (session.accessMode !== 'read_write') return reply.code(403).send({ error: 'read_write_session_required' })
@@ -1009,8 +1025,9 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
       return reply.code(400).send({ error: 'invalid_request' })
     }
     const listed = body.listed
+    if (profileContext === null) return reply.code(400).send({ error: 'invalid_request' })
     if (options.pilotTrainerProfiles === undefined) return reply.code(503).send({ error: 'service_unavailable' })
-    return sendPilotCommand(reply, () => options.pilotTrainerProfiles!.setCatalogListing(session, listed),
+    return sendPilotCommand(reply, () => options.pilotTrainerProfiles!.setCatalogListing(session, listed, profileContext),
       (profile) => reply.header('cache-control', 'no-store').send(profile))
   })
 
@@ -1843,6 +1860,10 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
             ? 'action_not_allowed'
             : 'invalid_feedback' })
       }
+      const profileFailure = error instanceof Error ? error as Error & { code?: string } : undefined
+      if (profileFailure?.message === 'trainer_profile_managed') return reply.code(403).send({ error: 'trainer_profile_managed' })
+      if (profileFailure?.message === 'trainer_profile_refresh_required') return reply.code(409).send({ error: 'trainer_profile_refresh_required' })
+      if (profileFailure?.message === 'corporate_profile_conflict') return reply.code(409).send({ error: 'version_conflict' })
       if (error instanceof TrainerProfileError) {
         if (error.failure === 'forbidden') return reply.code(403).send({ error: 'action_not_allowed' })
         if (error.failure === 'not_found') return reply.code(404).send({ error: 'resource_not_found' })

@@ -144,6 +144,8 @@ try {
   options.chatMediaStore = new YandexChatMediaStore(storage)
   const { DatabasePilotTrainerProfiles } = await nativeModule('trainer-profile')
   options.pilotTrainerProfiles = new DatabasePilotTrainerProfiles(runtime, storage)
+  const { CorporateProfilesStore } = await import('../services/api/dist/corporate-profile.js')
+  options.corporateProfiles = new CorporateProfilesStore(runtime, options.pilotTrainerProfiles)
   const { DatabasePilotCustomExercisePhotos } = await nativeModule('custom-exercise-photo')
   options.pilotCustomExercisePhotos = new DatabasePilotCustomExercisePhotos(runtime, storage)
   const { DatabasePilotTrainingSummaries } = await nativeModule('training-summary')

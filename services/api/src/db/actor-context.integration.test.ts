@@ -567,15 +567,14 @@ function synchronizeFirstProfileReads(pool: DatabasePool, participants: number):
       const connection = await pool.connect()
       return {
         query: async <Row extends QueryResultRow = QueryResultRow>(text: string, values?: readonly unknown[]) => {
-          const rows = await connection.query<Row>(text, values)
-          if (text.includes('from public.trainer_professional_profiles')
-            && text.includes('for update') && arrivals < participants) {
-            expect(rows).toHaveLength(0)
+          // Synchronize request arrival before the shared corporate lock. Waiting
+          // after SELECT FOR UPDATE would itself deadlock the serialized writers.
+          if (text.includes('begin_corporate_profile_write') && arrivals < participants) {
             arrivals += 1
             if (arrivals === participants) releaseBarrier()
             await barrier
           }
-          return rows
+          return connection.query<Row>(text, values)
         },
         release: () => connection.release(),
       }
