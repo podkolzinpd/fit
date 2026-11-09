@@ -843,6 +843,12 @@ for (const lime of [false, true]) {
         published: { ...publicTrainerDraft, displayName, acceptingClients: false }, listedInCatalog: false,
         publishedAt: '2026-10-29T09:00:00Z', updatedAt: '2026-10-29T09:00:00Z', version: 1, isBrandTrainer: false,
       } })
+      // The profile now also loads independent connection requests. Keep this
+      // fixture healthy while the scenario exercises /connections retry below.
+      if (path === '/v1/connection-directory') {
+        expect(route.request().postDataJSON()).toEqual({ action: 'list' })
+        return route.fulfill({ json: { result: [] } })
+      }
       if (path === '/v1/connections') {
         connectionsReads += 1
         if (failConnections) return route.fulfill({ status: 403, json: { error: 'forbidden' } })
