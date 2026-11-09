@@ -8315,3 +8315,32 @@ GitHub CI/Android отправленного head, с прежними fail-on-f
 Квитанции: /tmp/fit-mc51-release/source-1-114.json, target-trace.json и
 target-trace-results/; /tmp/fit-mc51-finish-settlement-review.json.
 Следующий шаг: обычный PR, собственный CI, свежая общая очередь, публикация.
+
+## 192. MC5.1 / PR2065 — первый CI green и принятая очередь, 09.11.2026
+
+PR2065 отправлен на d22c110d. CI42579231391:35/35success с первой попытки,
+Android42579231529success. Прежний MC44 deadline в strict CI не повторился;
+историческая причина всё ещё unknown, helper/assertions/timeouts не менялись.
+Уточнённая source762 сверка:40/40 settled states,28/28PNG,16/16 payload/writes,
+initial/final scrollTop и final scroll objects exact. Полные raw scroll13/16
+exact: отличаются лишь3 ранних initial scrollHeight; нормализаций нет.
+
+GitHub очередь после source-green:2061 merged в746f2cc6;2064 CLOSED без merge
+(closedAt09.11 07:51UTC, mergeCommit null). Это исправляет ошибочную краткую
+реплику в чате «2061 и2064 слиты»:2064 не входит в main и в наш код.
+2065 теперь старший открытый PR; более поздний2066 активен и не обойдён.
+Никаких чужих PR/проверок/чатов не меняли и не мониторили через переписку.
+
+Нормальный merge включил main746f2cc6312e7a068f2b36fbfaf2a5237afe6ab0.
+Его9 файлов добавляют только согласованную Метрику/её события и соответствующие
+проверки/журнал. Duration component/validation, viewport/AutoSizeTextarea, все
+Lime CSS, MC43–44 cases/helper/fixtures/package/config прежние. Local114 и unit14
+не дублируются: область проверенной UI механики не изменена; полный новый
+source CI/Android обязателен для нового head и новой общей основы.
+AST на746:25714/25714 legacy records,15guards/5rules8decl,12 protected files
+exact; /tmp/fit-mc51-source746-proof.json. Web readback harness16 выбран --list;
+все API/WS/аналитика synthetic, loader match сохраняет query/id нового счётчика.
+
+Перед merge требуются green нового head, свежая GitHub очередь и завершение
+активного main/release-window. Публикация пока не завершена. Разрешение владельца
+сохраняется, новых рутинных вопросов нет; итог actual release/readback ещё гейт.
