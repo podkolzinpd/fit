@@ -1,3 +1,4 @@
+import { limeDurationErrorPaintCases } from './lime-duration-error-paint.cases'
 import { limeCompletionShareSkinCases } from './lime-completion-share-skin.cases'
 import { limeActualDurationSkinCases } from './lime-actual-duration-skin.cases'
 import { limeLiveFinishSkinCases } from './lime-live-finish-skin.cases'
@@ -28,6 +29,7 @@ limeLiveAttendanceSkinCases()
 limeLiveTimerReviewLayoutCases()
 limeActualDurationSkinCases()
 limeCompletionShareSkinCases()
+limeDurationErrorPaintCases()
 
 const pilotId = 'c11e0000-6010-4000-8000-000000000001'
 

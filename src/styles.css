@@ -4693,7 +4693,8 @@ button.workout-duration-trigger:disabled { cursor:default; opacity:1 }
 .workout-detail-history-identity .workout-completion-share-actions { display:grid; gap:8px }
 .workout-detail-history-identity .workout-completion-share { min-height:48px; gap:8px }
 .workout-detail-history-identity .workout-completion-share svg { width:19px; height:19px }
-.workout-detail-history-identity .workout-completion-share-status { margin:-4px 0 0; color:var(--secondary-label-fg); font-size:12px; font-weight:500; line-height:1.4 }
+.workout-detail-history-identity .workout-completion-share-status { margin:-4px 0 0; font-size:12px; font-weight:500; line-height:1.4 }
+.workout-detail-history-identity .workout-completion-share-status:where(:not(.fit-client-lime .workout-completion-share-status.error)) { color:var(--secondary-label-fg) }
 .workout-detail-history-identity .workout-share-overlay { z-index:45 }
 .workout-detail-history-identity .workout-share-overlay:where(:not(.fit-client-lime .workout-share-overlay, .fit-client-lime .workout-share-overlay *)) { background:color-mix(in srgb, var(--bg) 74%, transparent) }
 .workout-detail-history-identity .workout-share-sheet { width:min(100%,430px); max-height:calc(100dvh - max(28px, env(safe-area-inset-top))); display:grid; gap:16px; overflow:auto; padding:20px 20px calc(20px + env(safe-area-inset-bottom)) }
@@ -4797,7 +4798,9 @@ button.workout-duration-trigger:disabled { cursor:default; opacity:1 }
 .workout-detail-history-identity .workout-review h2,
 .workout-detail-history-identity .workout-feedback-fieldset legend { color:var(--fg); font-size:16px; font-weight:600 }
 .workout-detail-history-identity .workout-review p,
-.workout-detail-history-identity .workout-review-text { color:var(--secondary-label-fg); font-size:14px; font-weight:400 }
+.workout-detail-history-identity .workout-review-text { font-size:14px; font-weight:400 }
+.workout-detail-history-identity .workout-review p:where(:not(.fit-lime-shell .workout-duration-dialog .error, .fit-lime-shell .workout-duration-dialog .error *)),
+.workout-detail-history-identity .workout-review-text { color:var(--secondary-label-fg) }
 .workout-detail-history-identity .workout-review-head .secondary { min-height:44px }
 .workout-detail-history-identity .workout-feedback { gap:16px }
 .workout-detail-history-identity .workout-feedback .workout-review-head h2 { margin:0; font-size:18px }
