@@ -46,3 +46,18 @@
 .private-analytics-table th button,.private-analytics-table td button { font-size:inherit; padding:4px 0; }
 .private-analytics-table td .private-analytics-link { max-width:240px; }
 .private-analytics-panel > label { max-width:320px; }
+
+/* Desktop analytics uses the shared Lime tokens without a phone-frame layout. */
+.private-analytics-shell .private-analytics { width:min(1440px,100%); }
+.private-analytics-shell .private-analytics-header h1 { font-size:32px; letter-spacing:-.02em; }
+.private-analytics-shell .private-analytics h2 { font-size:24px; font-weight:500; }
+.private-analytics-shell .private-analytics :is(.private-analytics-filters,.private-analytics-panel) { border-radius:var(--lime-radius-card); }
+.private-analytics-shell .private-analytics :is(input,select) { border-radius:16px; background:var(--lime-surface-raised); }
+.private-analytics-shell .private-analytics-tabs button { border-radius:999px; }
+.private-analytics-shell .private-analytics-tabs button[aria-current] { background:var(--lime-accent); color:var(--lime-text-on-accent); border-color:var(--lime-accent); }
+.private-analytics-shell .private-analytics-cards > button { border-radius:var(--lime-radius-card); }
+.private-analytics-shell .private-analytics-cards strong { font-family:'REM',sans-serif; font-weight:700; }
+.private-analytics-shell .private-analytics-chart-track > span { background:var(--lime-chart-1); opacity:1; border-radius:8px 8px 0 0; }
+.private-analytics-shell .private-analytics-table { border-radius:16px; }
+.private-analytics-shell .private-analytics-table th { background:var(--lime-surface-raised); }
+.private-analytics-shell .private-analytics-table th[aria-sort] { color:var(--lime-accent-ink); }

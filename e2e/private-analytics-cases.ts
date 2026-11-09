@@ -35,17 +35,20 @@ test('private analytics filters, sorts, drills down and adapts without page over
   await page.getByRole('button',{name:'Найти',exact:true}).click()
   // Dense tables and controls are checked at desktop and two touch widths;
   // theme-specific token contrast is covered with the same synthetic data.
-  for(const [width,theme] of [[1440,'light'],[390,'light'],[430,'dark']] as const){
+  for(const [width,theme] of [[1440,'light'],[1440,'dark'],[390,'light'],[430,'dark']] as const){
     await page.setViewportSize({width,height:1000})
     await page.evaluate(value=>localStorage.setItem('fit.appTheme',value),theme)
     await page.reload()
     await expect(page.getByRole('table',{name:'Люди',exact:true})).toBeVisible()
     await expect(page.locator('html')).toHaveClass(theme==='light'?/theme-light/:/^(?!.*theme-light).*$/)
     await page.evaluate(()=>scrollTo(0,0))
-    await expect(page.locator('.corporate-admin-shell')).toHaveClass(theme==='light'?/theme-light/:/ui-identity ym-hide-content $/)
+    await expect(page.locator('.corporate-admin-shell')).toHaveClass(theme==='light'?/theme-light/:/fit-lime-shell ui-identity ym-hide-content $/)
     expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true)
     const background=await page.locator('.corporate-admin-shell').evaluate(node=>getComputedStyle(node).backgroundColor)
-    expect(background).toBe(theme==='light'?'rgb(251, 250, 247)':'rgb(17, 18, 20)')
+    expect(background).toBe(theme==='light'?'rgb(246, 247, 242)':'rgb(0, 0, 0)')
+    await expect(page.locator('.private-analytics-shell')).toHaveClass(/fit-lime/ )
+    await expect(page.getByRole('button',{name:'Применить',exact:true})).toHaveCSS('background-color','rgb(209, 253, 45)')
+    await expect(page.locator('.private-analytics-shell')).toHaveCSS('font-family', /YS Geo/)
     await page.screenshot({path:info.outputPath(`analytics-${width}-${theme}.png`),fullPage:true})
   }
   await page.getByRole('button',{name:'Поступления',exact:true}).click()

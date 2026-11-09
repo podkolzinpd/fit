@@ -1,7 +1,8 @@
 /* Client extension of the approved Fit Lime identity. AppLayout assigns
    this scope after the independent single-account gate. Trainer is unchanged. */
 html.fit-client-lime-document,
-.phone-frame.fit-lime.fit-client-lime {
+.phone-frame.fit-lime.fit-client-lime,
+.private-analytics-shell.fit-lime {
   --lime-text-secondary: #b8b8bd;
   --lime-text-tertiary: #b8b8bd;
   --lime-accent-ink: var(--lime-accent);
@@ -11,7 +12,8 @@ html.fit-client-lime-document,
   --lime-overlay: rgba(0, 0, 0, .76);
 }
 html.fit-client-lime-document.theme-light,
-.phone-frame.fit-lime.fit-client-lime.theme-light {
+.phone-frame.fit-lime.fit-client-lime.theme-light,
+.private-analytics-shell.fit-lime.theme-light {
   --lime-bg: #f6f7f2;
   --lime-surface: #ffffff;
   --lime-surface-raised: #eef0e8;
@@ -28,7 +30,8 @@ html.fit-client-lime-document.theme-light,
   color-scheme: light;
 }
 html.fit-client-lime-document,
-.phone-frame.fit-lime.fit-client-lime {
+.phone-frame.fit-lime.fit-client-lime,
+.private-analytics-shell.fit-lime {
   --accent-label: var(--lime-accent-ink);
   --accent-strong: var(--lime-accent-ink);
   --accent-focus: var(--lime-accent-ink);
