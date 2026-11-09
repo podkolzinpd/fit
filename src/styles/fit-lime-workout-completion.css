@@ -48,7 +48,7 @@
 }
 .fit-lime-shell.workout-detail-history-identity .workout-completion-report-facts dt,
 .fit-lime-shell.workout-detail-history-identity .workout-completion-report-date,
-.fit-lime-shell.workout-detail-history-identity .workout-completion-share-status {
+.fit-lime-shell.workout-detail-history-identity .workout-completion-share-status:where(:not(.fit-client-lime .workout-completion-share-status.error)) {
   color: var(--lime-text-secondary);
 }
 .fit-lime-shell.workout-detail-history-identity .workout-completion-progress {

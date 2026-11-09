@@ -1,3 +1,4 @@
+import {captureLimeErrorSemantics,expectLimeErrorSemantics} from './lime-error-semantics'
 import {test,expect,type Page} from '@playwright/test'
 import {writeFile} from 'node:fs/promises'
 import {mockPilot,restTimerWorkout,workoutId,clientId} from './fit-lime-fixtures'
@@ -228,6 +229,19 @@ export function limeCompletionShareSkinCases(){
     // Wait for the enabled submit and its actual SVG to agree before CSSOM QA.
     await expect.poll(()=>submit.evaluate(node=>Array.from(node.querySelectorAll('svg,svg *')).every(child=>getComputedStyle(child).color===getComputedStyle(node).color))).toBe(true)
     states.push(await probe('error'))
+    const errorSemantics=await captureLimeErrorSemantics(dialog.getByRole('alert'))
+    await close.click()
+    await expect(dialog).not.toBeVisible()
+    const outsideError=page.getByRole('alert').filter({hasText:'Не удалось поделиться'})
+    await expect(outsideError).toBeVisible()
+    await page.mouse.move(0,0)
+    await settleCompletionPaint(page,'.workout-completion-share-status.error')
+    const outsideErrorSemantics=await captureLimeErrorSemantics(outsideError)
+    await page.screenshot({path:info.outputPath('completion-share-outside-error.png'),animations:'disabled'})
+    await trigger.click()
+    await expect(dialog).toBeVisible()
+    await expect(dialog.getByRole('alert')).toHaveCount(0)
+    if(!sample.empty)await progress.click()
     await submit.click()
     await expect(dialog).not.toBeVisible()
     await expect(page.getByRole('status').filter({hasText:'Карточка передана'})).toBeVisible()
@@ -235,8 +249,9 @@ export function limeCompletionShareSkinCases(){
     const share=await page.evaluate(()=>({calls:(window as ShareWindow).shareCalls,files:(window as ShareWindow).shareFiles}))
     expect(share.calls).toBe(2)
     expect(share.files).toEqual(Array(2).fill('fit-workout-'+(sample.empty?'summary':'progress')+'.png'))
-    await writeFile(info.outputPath('completion-share-skin.json'),JSON.stringify({sample,naturalFocus,naturalPath:{before:rawBefore,opened:rawOpened,closed:rawClosed},states,share,errors,requests,responses,consoleErrors},null,2))
+    await writeFile(info.outputPath('completion-share-skin.json'),JSON.stringify({sample,errorSemantics,outsideErrorSemantics,naturalFocus,naturalPath:{before:rawBefore,opened:rawOpened,closed:rawClosed},states,share,errors,requests,responses,consoleErrors},null,2))
     expect(errors).toEqual([]);expect(requests).toEqual([]);expect(responses).toEqual([]);expect(consoleErrors).toEqual([])
+    if(sample.lime){expectLimeErrorSemantics(errorSemantics);expectLimeErrorSemantics(outsideErrorSemantics)}
     for(const state of states){
       assertCompletionShareOwnership(state,sample.lime)
     }

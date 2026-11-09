@@ -1,3 +1,4 @@
+import {captureLimeErrorSemantics,expectLimeErrorSemantics} from './lime-error-semantics'
 import { test, expect, type Page } from '@playwright/test'
 import { writeFile } from 'node:fs/promises'
 import { mockPilot, restTimerWorkout, workoutId, clientId, trainerId } from './fit-lime-fixtures'
@@ -181,6 +182,7 @@ export function limeActualDurationSkinCases() {
     await page.evaluate(()=>document.fonts.ready)
     const probe=async(state:string)=>({state,...await probeActualDurationSkin(page,state==='pending'?undefined:info.outputPath('actual-duration-'+state+'.png'))})
     const invalid=await probe('invalid')
+    const invalidSemantics=await captureLimeErrorSemantics(dialog.getByRole('alert'))
     const commands:unknown[]=[]
     let release=()=>{}
     const gate=new Promise<void>(resolve=>{release=resolve})
@@ -212,8 +214,9 @@ export function limeActualDurationSkinCases() {
     const finalScroll=await rawScroll()
     const saved=await probe('saved')
     expect(JSON.stringify(backend.getWorkouts()[0]!.exercises)).toBe(facts)
-    await writeFile(info.outputPath('actual-duration-skin.json'),JSON.stringify({sample,states:[invalid,pending,saved],initialScroll,finalScroll,commands,errors,requests,responses,consoleErrors},null,2))
+    await writeFile(info.outputPath('actual-duration-skin.json'),JSON.stringify({sample,invalidSemantics,states:[invalid,pending,saved],initialScroll,finalScroll,commands,errors,requests,responses,consoleErrors},null,2))
     expect(errors).toEqual([]);expect(requests).toEqual([]);expect(responses).toEqual([]);expect(consoleErrors).toEqual([])
+    if(sample.lime)expectLimeErrorSemantics(invalidSemantics)
     for(const state of [invalid,pending,saved]) {
       assertActualDurationOwnership(state,sample.lime)
     }
