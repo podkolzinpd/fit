@@ -9073,3 +9073,29 @@ WebKit2118→2113. initialx/y0/client844 равны; finalwholeScroll2113 exact.
 unit/lint/policy/build logs. Просмотрены actualWebKit lightfull,darkfallback
 иtrainercard. Физическийтелефон/nativeinstall/OAuth/systemshare не проверены.
 Дальше draftPR/новыйCI→сводка. Разрешенияmerge/deployMC514 нет.
+
+
+## 212. MC5.1.4 — отложенный выпуск разрешён, main интегрирован
+
+Итерация212 — 2026-11-10 — OpenAI. Пользователь разрешил начать выпуск
+через час, по общей очереди: не раньше09.11 21:27:16UTC. До этого момента
+merge/deploy не выполнялись. Прежний hold заменён этим конкретным разрешением;
+MC-RELEASE-01 для следующих этапов сохраняется. Чужие чаты не опрашиваются.
+GitHub:2075/2076 merged, публикации c52b6e61 завершены успешно;2078/2079 младше.
+Исходный head ed5119e5: CI42684096367 и Android42684096443 success, attempt1.
+Новый main c52b6e61 интегрирован обычным merge без конфликтов. Сохранены
+новая механика выбранного суперсета/круга2075 и восстановление Метрики2076.
+
+Проверка новой основы: build/types/startup/fonts2 passed;31unit в2изменённых
+областях passed. Chromium/WebKit86/86,0skip/fail/flaky,retries0: прежние82
+и4новых coach later superset round. Сборка и браузерные проверки повторены
+из-за изменения main/Live, прежний baseline не перезаписывался. Source proof
+25716records,11guards,9rules/13decl,12protectedfiles exact новойmain.
+Docs и diff passed. Локальные файлы fit-mc514-integrated-20261110*; public
+readback подготовлен44web+44verifiedZIP с изолированными synthetic API.
+
+Ограничения211 сохраняются:2ранних height samples различались, причина
+не доказана; settled14PNG/geometry были точны. Физический телефон, native
+install и реальная systemshare не проверены. Новых ошибок интеграции не найдено.
+Дальше: CI новогоhead → свежая очередь → merge после временного gate →
+mainCI/Android/web/API/OTA/readback. СледующийMC514 этап не объявлен выпущенным.
