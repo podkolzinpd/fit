@@ -594,3 +594,10 @@ startup-shell iPhone/WebKit12/12. API1628passed/441conditional-skipped. CUA:1280
 отдельно8/8. Повтор полного coverage с maxWorkers4 выполняется, таймауты и
 assertions не менялись. Гейты policy/hosting/полныйCI/публикация ещё открыты.
 Визуальные квитанции: outputs/fit-landing-search-20261109 в зеркале проекта.
+
+Завершение локальных проверок21: полный coverage с maxWorkers4 —3166/3166
+и все пороги passed. iOS/media/infra/calendar policy и hosting203/203 passed.
+PR2071/head6c07f625: CI42625236137 все35 jobs success. Перед merge main
+обновился до49c81395(поиск шаблонов). Ветка совмещена без конфликта; собственные
+SEO/runtime файлы не изменились. Новый build и полныйCI нового head обязательны.
+Очередь GitHub:2071 раньше активных2072/2073; другие чаты не читались.

@@ -34,6 +34,86 @@ async function setup(page: Page) {
 const oldDraft = { title: 'Прежний облегчённый план', clientId: otherClientId, workoutDate: '2026-11-03', startTime: '18:00', endTime: '19:00', notes: 'Старая заметка', stageId: '', recordCompleted: false, exercises, trainingFormat: 'self', prepSeconds: 30, executionMode: 'manual', requestId: '10000000-0000-4000-8000-000000000083', sourceVersion: 1 }
 
 export function workoutTemplateReliabilityCases() {
+  test('Template search preserves names, editor return and picker focus without extra writes', { tag: ['@lime-templates'] }, async ({ page }, info) => {
+    const commands = await setup(page)
+    const light = { ...original, id: otherClientId, name: 'Лёгкий корпус' }
+    const templates = [original, light, { ...original, id: workoutId, name: 'Спина' }]
+    await page.route('**/v1/workout-templates', route => route.fulfill({ json: { templates } }))
+    const snapshot = JSON.stringify(templates)
+    const workoutWrites: string[] = []
+    page.on('request', request => {
+      if (request.method() !== 'GET' && /\/v1\/workouts(?:\/|$)/.test(new URL(request.url()).pathname)) workoutWrites.push(request.url())
+    })
+    await page.goto('/schedule/templates')
+    const search = page.getByRole('searchbox', { name: 'Поиск по названию шаблона' })
+    await search.fill(' КОРПУС ')
+    await expect(page.locator('.template-card')).toHaveCount(2)
+    await search.fill('ЛЕГКИЙ')
+    await expect(page.locator('.template-card')).toHaveCount(1)
+    await expect(page.locator('.template-card h2')).toHaveText('Лёгкий корпус')
+    await search.fill('нет такого шаблона')
+    await expect(page.getByRole('status')).toContainText('Ничего не найдено')
+    await expect(page.getByText('Создайте первый шаблон')).toHaveCount(0)
+    await page.getByRole('button', { name: 'Очистить поиск' }).click()
+    await expect(search).toBeFocused()
+    await expect(page.locator('.template-card')).toHaveCount(3)
+    await search.fill('   ')
+    await expect(page.locator('.template-card')).toHaveCount(3)
+    await search.fill('КОРПУС')
+    // Input and clear button geometry depends on the narrow viewport.
+    for (const width of [320, 390, 1440]) {
+      await page.setViewportSize({ width, height: 900 })
+      const geometry = await page.locator('.workout-template-search').evaluate(node => ({
+        overflow: node.scrollWidth > node.clientWidth,
+        fieldHeight: node.querySelector('input')!.getBoundingClientRect().height,
+        clearHeight: node.querySelector('button')!.getBoundingClientRect().height,
+        fontSize: getComputedStyle(node.querySelector('input')!).fontSize,
+        background: getComputedStyle(node).backgroundColor,
+      }))
+      expect(geometry).toMatchObject({ overflow: false, fontSize: '16px', background: 'rgb(37, 37, 41)' })
+      expect(geometry.fieldHeight).toBeGreaterThanOrEqual(44)
+      expect(geometry.clearHeight).toBeGreaterThanOrEqual(44)
+    }
+    await page.setViewportSize({ width: 390, height: 844 })
+    await search.blur()
+    await page.screenshot({ path: info.outputPath('template-search-lime.png'), fullPage: true })
+    expect(commands).toHaveLength(0)
+    expect(workoutWrites).toHaveLength(0)
+    await page.getByRole('button', { name: 'Действия с шаблоном Корпус', exact: true }).click()
+    await page.getByRole('menuitem', { name: 'Редактировать', exact: true }).click()
+    await expect(page.getByLabel('Название шаблона')).toHaveValue('Корпус')
+    await page.getByRole('button', { name: 'Сохранить шаблон', exact: true }).click()
+    await expect(page.getByRole('searchbox')).toHaveValue('КОРПУС')
+    await expect(page.locator('.template-card')).toHaveCount(2)
+    expect(commands).toHaveLength(1)
+    expect(commands[0]!.draft.exercises).toEqual(original.exercises)
+    await page.goto(`/workouts/new?client=${clientId}&date=2026-11-09`)
+    await page.getByRole('button', { name: 'Добавить шаблон', exact: true }).click()
+    const picker = page.getByRole('dialog', { name: 'Добавить шаблон тренировки' })
+    const pickerSearch = picker.getByRole('searchbox')
+    await pickerSearch.fill('легкий')
+    await expect(pickerSearch).toHaveCSS('outline-style', 'none')
+    await expect(picker.locator('.workout-template-search')).toHaveCSS('outline-width', '2px')
+    await expect(picker.locator('.workout-template-picker-item')).toHaveCount(1)
+    await pickerSearch.fill('ничего')
+    await expect(picker.getByRole('status')).toContainText('Ничего не найдено')
+    await picker.getByRole('button', { name: 'Очистить поиск' }).click()
+    await expect(pickerSearch).toBeFocused()
+    await pickerSearch.press('Shift+Tab')
+    await expect(picker.getByRole('button', { name: 'Закрыть' })).toBeFocused()
+    await picker.getByRole('button', { name: 'Закрыть' }).press('Shift+Tab')
+    await expect(picker.locator('.workout-template-picker-item').last()).toBeFocused()
+    await picker.locator('.workout-template-picker-item').last().press('Tab')
+    await expect(picker.getByRole('button', { name: 'Закрыть' })).toBeFocused()
+    await pickerSearch.fill('легкий')
+    await page.screenshot({ path: info.outputPath('template-picker-search-lime.png'), fullPage: true })
+    await picker.getByRole('button', { name: /Лёгкий корпус/ }).click()
+    await expect(picker).toHaveCount(0)
+    await expect(page.getByRole('textbox', { name: 'Название тренировки', exact: true })).toHaveValue('Лёгкий корпус')
+    expect(workoutWrites).toHaveLength(0)
+    expect(JSON.stringify(templates)).toBe(snapshot)
+  })
+
   test('Template reliability edit save reopen uses current fields and version', { tag: ['@lime-templates'] }, async ({ page }, info) => {
     const commands = await setup(page)
     await page.goto('/schedule/templates')

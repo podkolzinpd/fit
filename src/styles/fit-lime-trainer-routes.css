@@ -1,5 +1,18 @@
 /* Undrawn trainer surfaces retain composition and behavior. Shared Figma
    roles are adapted here; achievement artwork and client themes are excluded. */
+html.fit-lime-document .workout-template-search {
+  min-height: 52px; margin-bottom: 12px; border-color: var(--lime-divider);
+  border-radius: 18px; background: var(--lime-surface-raised); color: var(--lime-text);
+}
+html.fit-lime-document .workout-template-search:focus-within { border-color: var(--lime-accent); }
+html.fit-lime-document .workout-template-search:has(input:focus-visible) { outline: 2px solid var(--lime-accent); outline-offset: 3px; }
+html.fit-lime-document .workout-template-search input { min-height: 44px; font-size: 16px; color: var(--lime-text); }
+html.fit-lime-document .workout-template-search input:focus-visible { outline: none; }
+html.fit-lime-document .workout-template-search input::placeholder,
+html.fit-lime-document .workout-template-search > svg { color: var(--lime-text-secondary); }
+html.fit-lime-document .workout-template-search .clients-search-clear { color: var(--lime-text); }
+.workout-template-search-empty { padding: 24px 12px; text-align: center; }
+.workout-template-search-empty p { margin: 0 0 8px; }
 .phone-frame.fit-lime-shell :is(.template-card, .template-source-workout, .finance-package, .finance-card, .finance-panel, .finance-overview-client, .finance-overview-kpi) {
   border-color: var(--lime-divider); border-radius: var(--lime-radius-card); background: var(--lime-surface); color: var(--lime-text); box-shadow: none;
 }
