@@ -8555,3 +8555,363 @@ preview; безопасные обходные изменения продукт
 и ввод/keyboard/swipe/drag/timer не менялись. Тренер не получает client-only
 share sheet; его done/duration проверены. CI нового PR ещё требуется.
 Дальше: PR иего CI→сводка владельцу→только его разрешение на выпуск.
+
+
+## 198. MC5.1.2 / PR2069 — диагностика нестабильного CI, 09.11.2026
+
+PR2069 создан draft, remote source f6bb73b5 (runtime/QA ca01f705), без merge
+или публикации. CI42610799441 иAndroid42610799478 attempt1; Androidsuccess,
+общий CI ещё выполняется. Обнаружен failed job129138570602/yandex-auth2/4:
+единственный flaky case coach-live-v79.spec.ts:458 clockhandoffcompact,
+mobileChromium, initial30010ms наlocator.blur, retry1passed3266ms. Другой
+original caseId прошёл с первого раза2168ms.317pass/4skip вjob не заменяют
+--fail-on-flaky-tests: его rejection сохранён, green этого job не заявляем.
+
+Фактический error-context содержит не скрытое поле, а StatePanel «Не удалось
+загрузить данные / Не удалось загрузить тренировки. Повторите попытку».
+AsyncView при query.error заменяет children, поэтому формы/поля отсутствуют.
+Такой текст создаёт caught rejection listTrainingData, не HTTP !ok ветка.
+Начальной trace нет; passing retrytrace не доказывает причину initial. Точный
+transport error/abort/status неизвестен. Clock pauseAt продвигает минуту;
+15s training-data deadline/globalsetTimeout и650ms autosave — только возможные
+точки для будущей диагностики, не установленная причина. CPU/внешняя сеть
+причиной не объявлялись.
+
+Сверка11 protected test/fixture/DOM/input/autosave/AsyncView/AppLayout/repository/
+transport files: byte-exact origin/mainbd2b8452→sourcef6bb73b5. MC512 guards
+ограничены client share/detail: Live не имеет detail-history class, trainer
+не fit-client-lime; общий sheet background вне share сохраняется. Свёрнутая
+форма остаётся mounted, stable input key прежний. Product/QA/таймауты/assertions/
+CI не менялись ради прохождения.
+
+Отдельный точный clockcompact на том же productiondist локально прошёл1/1,
+3716ms, retries0/skips0, traceon. Первоначальный диагностический запуск пропустил
+1case из-за отсутствующего FIT_COACH_LIVE_V79_ACCEPTANCE; он исключён из приёмки.
+После явного обязательного флага выполнен настоящий сценарий, сам тест не менялся.
+Это невоспроизведённый initial, а не исправление причины.
+
+Доказательства: /tmp/fit-mc512-ci/auth-failed-job.log,
+/tmp/fit-mc512-ci/auth-failure-artifacts,
+/tmp/fit-mc512-clock-handoff-ci-review.json,
+/tmp/fit-mc512-clock-targeted-enabled.json и*-results. Один bounded observer
+следит только за sourceCI/Android этого PR с90s pause. Дальше дождаться финала,
+разобрать возможные остальные failures и повторить только failedjobs без
+изменения source/сохранения слабого green. Перед выпуском сообщить владельцу
+результат и этот квалифицированный flaky; отдельного разрешения выпуска нет.
+
+
+## 199. MC5.1.2 / PR2069 — CI принят, выпуск ожидает владельца, 09.11.2026
+
+Итерация199 — 2026-11-09 — GPT-6 / OpenAI. Remote source PR2069
+f6bb73b5ecfdc9ed8f10424b8b33a91b6b1dcf59, product/QA ca01f705.
+CI42610799441 attempt2 завершён success:35/35 jobs,33 сохранены изattempt1,
+повторены только failed yandex-auth2/4 иего итоговый e2e gate. Source/тесты/
+таймауты/CI не менялись между попытками. Android42610799478 attempt1success:
+assemblepassed, auth-smoke expectedskipped и не считается проверенным.
+
+Нестабильный initial подробно сохранён198: data-load StatePanel убрал всюформу,
+неизвестный caught transport rejection; passing retry/отдельный trace1/1 не
+выдаются за исправление причины. Новый local exactcase3716ms сretries0/skips0
+добавляется к основным40/40, не заменяет их. Исходный диагностический1skip
+не засчитан. Никаких изменений source ради green не сделано.
+
+Итог MC512-01–04: внешнийвид46states/36PNG exact,10naturalpaths/payloads exact,
+legacy25715records сохранены, обе роли done/duration проверены, unit34/full lint/
+build/types/startup/strictfonts2 passed; CI35/35 success after failed-onlyrerun.
+Не изменены DOM/handlers/API/данные/флаги/Live/input/keyboard/swipe/timer.
+Open: прежний серый errorMC513; historical CI rejection root неизвестен;
+реальная системная отправка/clipboard/физическийтелефон/native/OAuth не проверены.
+
+Артефакты: /tmp/fit-mc512-ci/CI-jobs.json,
+/tmp/fit-mc512-ci/Android-debug-build-jobs.json,
+/tmp/fit-mc512-ci/failed-only-rerun.json,
+/tmp/fit-mc512-final-source-receipt.json и197–198. PRbody обновляется точными
+CIlinks/ограничениями. Записи198–199 — локальная Gitквитанция после проверенного
+remotehead; не push нового docshead ради повторного всего CI без новых причин.
+Выпуск не выполнен: PRdraft/OPEN, разрешения наmerge/deploy нет.
+Дальше: сводка владельцу→его разрешение→актуальная общая очередь/main ипроверки
+затронутого новогоhead→публикация/readback→его ручнаяприёмка доMC5.1.3.
+
+
+## 200. MC5.1.2 / PR2069 — разрешение выпуска, 09.11.2026
+
+Владелец явно разрешил выпустить2069 для спортсмена и тренера в общей очереди,
+сохранить все механики идать проверку после публикации. Это заменяет только
+release hold196–199 для этогоPR, не разрешает следующие части.
+FreshGitHub: mainbd2b8452, единственный openPR2069, sourcef6bb73b5; CLEAN,
+CI35success afterfailed-onlyretry, Androidassemblepassed/ожидаемыйauthsmokeskip.
+Main со времени локальной приёмки не изменился: повтор build/browser/CI source
+без причины не запускаем. Наши локальные198–200 толькоdoc receipts; product/QA
+равны проверенномуremotehead. Перед merge повторно сверить queue/main/head,
+убратьdraft иобычныйsquash сmatch-head. Никаких чужихmerge/auto/admin/force.
+Дальше actual-main CI→штатные API/web/OTA→проверка опубликованных байтов/версий
+иclient share/done/duration обеих ролей. Physical/systemshare остаются ручной
+приёмкой владельца после публикации, не выдаются за выполненные браузером.
+
+
+## 201. MC5.1.2 / PR2069 — разрешённое слияние выполнено, 09.11.2026
+
+Fresh premerge mainbd2b8452/единственныйopen2069/remoteheadf6bb73b5 ивсе
+check contexts success/expectedskip сверены повторно. По разрешению200 удалён
+draft, выполнен обычныйsquash сmatch-head; PR2069 MERGED в
+1fa39f4a8eb581a0163626fb55dcb8ce364157a6,09.11 12:31:47UTC. Никаких admin/
+force/auto/чужихmerge. Fetchmain иполный runtime/QA/native/CI/package diff
+f6bb73b5→actual1fa пусты. Локальныеуспешные40/unit34/build/lint не повторялись
+без нового изменения.
+
+Actual-main CI42617778608 иAndroid42617778609 выполняются, это ещё не доставка.
+Один bounded observer с90s pause сохраняет jobs/runs/status в
+/tmp/fit-mc512-release; ожидает штатные API/web/OTA, не dispatch старыхрелизов.
+Подготовлена production QA26cases (10share+12duration+4nonLive) в
+/tmp/fit-mc512-public-qa; current4helpers byte-exact, fixture меняет лишь
+absoluteimports и прежний /api/v1 adapter. Default реальные networkAPI/WS/
+analytics/share/clipboard запрещены, syntheticmocks позднее разрешают только
+нужныепользовательскиесценарии; опубликованные staticassets настоящие.
+Public иverifiedZIP выборка26 подтверждена --list, браузерыпока не запускались.
+После фактической публикации: web/API/signedOTA readback, public26/ZIP26,
+86measuredstates/64PNG comparison без скрытияnotice и нормализации.
+Physical/OAuth/systemshare не считаются выполненными браузером.
+
+
+## 202. MC5.1.2 / PR2069 — фактическая публикация проверена, 09.11.2026
+
+Итерация202 — 2026-11-09 — GPT-6 / OpenAI, агент design_cleanup.
+Разрешённый2069 опубликован в1fa39f4a8eb581a0163626fb55dcb8ce364157a6:
+actualmain CI42617778608 success attempt1 (34success/1expectedmigration-skip),
+Android42617778609success. Вmain ранее нестабильная clock/test lane2/4 прошла
+без перезапускаworkflow. Исходный sourceCI flaky198 не объявляется исправленным.
+Штатные API42620977572, web42620977473 иAndroid/OTA42621297890 —success;
+ручные dispatch/старые релизы/новыефлаги не использовались.
+
+Фактическийreadback: все3плоскости exact1fa;243/243 публичных webfiles имеют
+200/верныйразмер/SHA256; DNS/pinnedIP/TLS/auth/ready/health/protectedGET401 passed.
+OTA directory/signature/publicbytes/provenance/ABI/nativeBuild9/sequence/expiry
+проверены принятым оператором; ZIP15978258bytes, sequence1794229525057.
+Final fingerprint после обоих UI прогона подтвердил прежний HTML иAPI/OTA1fa.
+Фактическиеmain/head/публичныеверсии не подменяются самим фактом merge.
+
+Новый same-production baseline получен ДО выкладки наbd2b8452: HTML before/after
+stable;26сценариев =18controlpass/8 ожидаемых modernshare ownershipred,0skip/
+retry/flaky; ошибками приложения или green26/26 это не считается. Сохранены
+26JSON/86states/64PNG, все8red только finallegacy-matchesassert.
+Ни notice, ни фон, ни sourceMath.random не нормализовались ради сравнения.
+
+Actualpublic UI26/26 за56.505s, verifiedZIP UI26/26 за49.473s, Chromium/WebKit,
+0retry/skip/flaky/fail:10share+12duration+4nonLive вкаждомокружении. Реальные
+networkAPI/WS/analytics/share/clipboard заблокированы; пользовательские действия
+обслужены синтетическимиfixture. Ни настоящих пользовательских writes, ни
+реальной внешней отправки не выполнялось. Введённыеpayload26/26совпали,
+browserdiagnostics26/26пусты. Просмотрены actualWebKit light375emptyshare,
+dark430errorshare иtrainer390invalidduration; новыхобрезаний не обнаружено.
+
+ОБЯЗАТЕЛЬНАЯ квалификация сравнения: prepub→web иweb→ZIP имеют86/86 settled
+computed/geometry/backdrop/frame/focus-scroll-anchor states exact и64/64wholepage
+PNG byte-exact. Все10 rawshare paths ивсе26finalScroll wholeobjects совпадают;
+initialscrollTop/clientHeight тоже26/26. Однакообаstrictcomparators сохранили
+exit1: ранний initialScroll.height отличается в6/5 native-duration/nonLive
+клиентских сценариях, втомчислереальныйoff. Онснимается ДО trigger.click идо
+первогоexplicit fonts.ready/settle. Причинаэтого раннего различия по сохранённым
+JSON не установлена, шрифтам/сети его не приписываем. Полноеравенство26rawpaths
+не заявляется; значениянеудалялись,baselineнепереписан,assertionsнеослаблены,
+повторныйпрогонрадиgreenнепроводился. Это ограничениепроверки сохранено открытым.
+
+Артефакты: /tmp/fit-mc512-release/current-acceptance/{web-readback,api-readback,
+ota-readback,web26,ota26,prepub-web-comparison,web-ota-comparison,
+comparison-qualification,final-fingerprint}.json; /tmp/fit-mc512-prepub-baseline-
+review.json и/tmp/fit-mc512-release/prepub26-results. Каноническийпрогресс
+закреплёнлокальнымGit; receiptsпослепроверенногоclosedremotehead не push
+ради нового CI. PRbodyполучает краткий фактическийстатус иограничения.
+
+Сохраняются прежние механики/роля/темы/плотности/флаги/данные: свойruntime
+только2CSS, UI source/handlers/API/native/package/CI byte-exact принятомуsource.
+Непроверенное: физические устройства/nativeinstall/реальныйOAuth/systemshare.
+Открыто: серыйerrorMC5.1.3, historicalcaught-rejection198, раннийheightвыше.
+
+Ручнаяприёмкавладельца после перезапуска: спортсмен сразу после завершения
+«Поделиться»→доступныеИтог/Достижение/Прогресс→закрыть/открыть; обеимролям
+done→длительность→изменить/сохранить/отмена, без скачковscroll; короткоLive
+вводвеса/явнаяотмена галочкой/таймер. Следующий MC5.1.3 только после принятия
+текущего этапа владельцем, прежнее правило MC-RELEASE-01 сохранено.
+
+
+## 203. MC5.1.3 — принятый план и база реализации, 09.11.2026
+
+Итерация203 — 2026-11-09 — GPT-6 / OpenAI. Владелец принял MC5.1.2 («всёок»)
+иодобрилзафиксировать/выполнить MC5.1.3 обеимролям. Выпуск только ПОСЛЕ
+сводки ипоследующего явногоразрешения; разрешенияmerge/deploy пока нет.
+Свежийmain49c81395 (#2070 поискшаблонов) включён ordinarymerge9ae79a5d
+внашуfeat/design-cleanup-mc513-20261109. Передправками runtime/QA/scripts/
+native/CI/package byte-exact этомуmain. Дваdocsконфликта разрешены сохранением
+exactmainprefixканоническогожурнала+нашихreleaseквитанций198–202, CURRENT
+отличалсятолькоодной MCstatusстрокой; чужиеизменениянеутрачены.
+
+MC513-01: убираемтолькоцветовыеoverride старого reviewp вдлительности обеих
+ролей, включаяvalidation p.error и2p вложеннойnetwork/conflictошибки.
+MC513-02: убираемmutedoverride старогоsharestatus исильногоLime-selector
+толькодляclientstatus.error внутри/снаружи shareокна. Владельцем становится
+существующий.error/var(--danger) всвоейтеме,0новыхтокенов/палитры/текстов.
+Runtimeровно2CSS,3точечных zero-specificity exclusions; отступы/шрифты/layout/
+неerrorstatussuccess/copied/shared/pending исоседниеfacts/date остаютсяпрежними.
+Историческаялокальнаязаготовка0f4a56fe+QApolicyfix8f9e8007/171 — источник,
+еёстарыеgreenнеприёмкатекущегоsource ивсяцепочканепереносится.
+
+MC513-03: сохраняемDOM/handlers/API/данные/флаги, ввод/выделение/keyboard/focus/
+scroll, сохранение/отмену/очистку ручнойдлительности, черновик/связь/retry,
+перечитываниеактуальнойверсии/защитуотслепойперезаписи, share3варианта/PNG/
+fallback/cancel/pendingзащиту. Галочки/undo/редактированиеподтверждённого,
+swipe/drag/collapse/rest/timer/54–48 иостальныеLiveмеханики не меняются.
+
+MC513-04: freshbaseline→candidate, Chromium/WebKit; обеclientтемы,trainer
+mobile+desktop, реальныеoffcontrols. Existing12durationownership+10share+
+14durationbehavior+4exportPNG=40, новыйvisualnetwork/conflict:clientlight390
+иtrainerdark390 в2engines=4, итоговаявыборка44 требует--listподтверждения.
+Baseline26corecases ожидает20semanticred+6offpass; JSON/полныйlifecycle
+записываютсядоfinalassert, безbypass/ослабленияassertions. Изменитьсяможет
+толькоerrorcolor ивычисляемыйcurrentColor; сравнитьgeometry/noncolorstyles/
+payload/focus/scroll, offполностью. Errorcolorсравнивать сresolveddanger
+втомжетhemеcontext, небуквальнымhex. Сохранитьcurrentwhitelist/positiveowners,
+всеborder/margin иCSSOM/style-objectroundtrip изMC512.
+
+Visualerrorchecks — отдельныйnativevisualentry, businessbehaviorbyte-exact
+main. Урок171/policyguardпроверяетсятекущимscripts/fit-lime-split.test.mjs;
+newnetworkfixtureстрогоожидает1connectionrefused+1HTTP409 толькодляduration,
+прочие404/ошибкинеигнорирует. Сборка/types/startup/fonts2/2,existingunit/lint/
+docs/CI новогоPR обязательны. Внешниесеть/writes/share изолированыfixtures.
+Physical/OAuth/systemshareневыдаютсязапроверенныебраузером.
+
+Отвергнуто: новыйкрасныйтокен,перерисовкаформ/кнопок,общаячисткаreviewCSS/
+шрифтовилистарогоoff,визуальныеснимкивbusinessbehavior,переносбудущихэтапов,
+ослаблениетаймаутов/критериеврадиgreen. Раннийrawheightlimit202 иhistorical
+CIinitialrejection198 остаютсясохранены, ихисправлениеэтимнеобещаем.
+Дальше: реализация→локальнаяприёмка/PR/CI→сводкавладельцу; невыпускатьбез
+егопоследующегоразрешения.
+
+
+## 204. MC5.1.3 — текущая реализация и локальная приёмка, 09.11.2026
+
+Итерация204 — 2026-11-09 — GPT-6 / OpenAI, агент design_cleanup.
+Product/QA commit3d0c6fe4, база main49c81395, план203/b2e56361.
+Runtime2CSS/3zero-specificitycolor-exclusions,0новыхтокенов/значений/DOM.
+Подавлены только muted durationerror p/вложенныеp иclientsharestatus.error
+внутри/снаружиокна; colorowner — existing.error/var(--danger). Шрифты14/400,
+геометрия, прочиепараграфы/status/facts/date/off прежние. СтатическийPostCSS:
+25715/25715global и123/123completion selector/property/value/importantrecords
+exact послеснятиялишь3новыхguards, это неclaim byte-orderвсехCSS.
+React/input/save/reload/версии/данные/Live/native/API/пакеты/CI/behaviorfile
+byte-exact текущемуmain; избудущихэтаповничего неперенесено.
+
+QA сохранилаexactguardwhitelists/positiveowner/4borders/margins/fullCSSOM и
+style-object/focus/scroll/anchor roundtrip. Existingduration/sharecases получили
+semanticfacts иfinalsame-theme dangerassert ПОСЛЕ полногоlifecycle/JSON. Share
+проверяетerrorвнутри, realclose→errorснаружи→reopen/reselect/retry, прежние
+2syntheticsharecalls/PNGfilename. Новыйnetworkvisual —clientlight390/trainerdark390
+×2engine; businessbehaviorнетронут, splitpolicy8/8passed. Strict intentional
+diagnostics: ровно1connectionrefused и1HTTP409 толькодляduration; другие
+404/requestfailed/consoleerror неигнорятся.
+
+Freshbaseline26:20ожидаемыхsemanticred+6realoffpass,0skip/retry/flaky. Все20
+red именно actualmuted против existingdanger, неfixture/locator/networkfailure.
+Nativeouter.error ужеdanger, дочерниеpсерые; captures/JSONсохраненыпослевсех
+реальныхдействий. ЕдинственныйновыйlocatorуточнёнДОфактическогобазовогопрогона:
+послеsavearia-labelменяется, finalfocusсмотритstableexistingbutton; исходный
+accessiblelabel по-прежнемустрогопроверяется. Нетbypassassertions.
+
+Candidate44/44,51.196s,44attempts/0retry/skip/flaky/unexpected:12durationowners
++10share+4networkvisual+14existingdurationbehavior+4existingPNG. Все90probe
+states и40semanticcaptures сохраняютgeometry/всеnoncolorproperties/backdrop/
+focus/scroll/anchor; из56errornodes ровно40меняютcolor/currentColor→danger,
+8off-muted и8networkouterdanger unchanged.46/78PNG byte-exact,32ожидаемоменяют
+толькоerrorpaint; off6cases/22states/18PNG полностьюпрежние. Payload26/26 и
+diagnostics26/26 exact; networkversions1/1/2, черновик50/сервер45послеconflict/
+явныйretry→50 сохранены. Все90CSSOM/state roundtrips true.
+
+Квалификация: исходныйstrictcomparator сохраняетexit1/report. Триlogicalbbox
+flags —по9pixels левогоглифовыноса «д» вовторойстроке «до», примерно1devicepx
+левееpbox; samefont/rect/background истарый/новыйRGB допускают одинаковую
+glyphcoverage с8bitrounding, отдельныйinkproof просмотрен. bbox/пороги не
+расширялись иперепрогонарадиgreenнет. Ещё3initialScroll.height различаютсядо
+первогоexplicitfonts/settle (2off иmodernclientdark); initialy/clientHeight
+иfinalwholeScroll exact, причинараннихзначенийнеустановлена,какlimit202.
+Полныйrawcomparison невыдаётсязаgreen, нормализации/удаленияданныхнет.
+
+Build/types/startup/strictfonts2passed, full lintpassed, existing5unitfiles
+40/40passed, splitpolicy8/8passed, docscheckpassed. ScreenshotыWebKitlight
+validation/network, trainerdarknetwork иdarkoutsideshare просмотрены: ожидаемый
+danger, кнопки/фокус/текстсохранены. Старая171QApolicyошибка неповторена.
+
+Артефакты /tmp/fit-mc513-{baseline,candidate}.json и*-results,
+/tmp/fit-mc513-comparison.json, /tmp/fit-mc513-final-review.json,
+/tmp/fit-mc513-ink-overhang-review.json, /tmp/fit-mc513-source-proof-current.json,
+/tmp/fit-mc513-baseline-data-review.json, build/lint/policylogs.
+CI новогоPR ещёнепроверен; физическиетелефоны/nativeinstall/OAuth/реальная
+systemshare не проверялись. SourceCIinitialrejection198 иrawheightlimit202
+необъявляютсяисправленными. Дальше PR/егоCI→сводкавладельцу. Разрешения
+merge/deployMC513нет, MC-RELEASE-01 сохраняется.
+
+
+## 205. MC5.1.3 / PR2073 — все проверки зелёные, выпуск ожидает владельца
+
+Итерация205 — 2026-11-09 — GPT-6 / OpenAI. PR2073 draft/OPEN,
+проверенный remotehead deb87e4b7f13cd7a707748a1ca9ff141379550b0
+(product/QA3d0c6fe4, base49c81395). Source CI42628705298 завершён success
+attempt1,35/35jobs; Android42628705228 success attempt1, assemblepassed,
+auth-smoke expectedskipped/непроверен. Отказов/повторов CI/правокрадиgreen
+этогопакетанебыло. Один boundedobserver завершён; чужиечаты/PR не опрашивались.
+
+Итог MC513-01–04: error→existing danger обеимролям; только2CSS/3guards,
+сохранены26payloads/данные/версии/черновик/реальныепользовательскиедействия.
+44/44browser безskip/retry/flaky,40unit/full lint/build/types/startup/fonts2/
+splitpolicy8/docs passed. Все90probe и40semanticcapture geometry/noncolorstyles
+exact,40errornodes меняюттолькоcolor/currentColor;46PNGexact/32expectedrecolor.
+Off6cases/22states/18PNG полностьюпрежние. Source/runtime/QA с44run не менялись.
+
+Strictanalyticalcomparison по-прежнемуexit1 с квалификацией204: прежнийглифовый
+вынос27AApixelsи3unknownearlyheight samples, y/clientHeight/finalscroll exact.
+Не выдаёмполныйrawcomparison заgreen; исходныеданные/пороги не менялись.
+HistoricalCIrejection198/earlyheight202/физическийтелефон/OAuth/systemshare
+не объявленыисправленными/провереннымиэтойзадачей. Новыхполомоквпроверенных
+сценарияхнеобнаружено. Примерыошибок —actualWebKitPNGs изfinal-review204.
+
+Квитанции /tmp/fit-mc513-ci/{green-source,CI-jobs,Android-jobs}.json и
+/tmp/fit-mc513-final-review.json. ПослеCI добавлена толькоэта локальная
+Gitквитанция/индекс, безpushновогоsourcehead иперезапускапроверокрадиdocs.
+PRbodyобновляетсязелёнымиCIlinks/известнымиограничениями.
+Следующийшаг — сводкавладельцу иТОЛЬКОегоявноеразрешение наmerge/публикацию2073
+вактуальнойобщейочереди. Draft/безautomerge; разрешениявыпускаещёнет.
+
+
+## 206. MC5.1.3 / PR2073 — разрешение выпуска и актуальная очередь
+
+Итерация206 — 2026-11-09 — OpenAI. Владелец явно разрешил выпустить PR2073
+для спортсмена и тренера в общей очереди с сохранением механик. Ограничение
+выпуска из §205 снято этим разрешением; приёмка следующего этапа остаётся
+отдельной. Проверены собственная ветка и отсутствие чужих изменений
+(только прежний служебный node_modules). Main0520c732 содержит PR2071.
+Перед нами активный PR2072: head d3f46db4, выполняется CI42637389829.
+Его не обходим. Собственный source head deb87e4b остаётся зелёным.
+
+Решение: дождаться завершения старшего активного PR, затем один раз
+интегрировать актуальный main и проверить изменившиеся условия. Отвергнут
+преждевременный merge main с повторным полным CI до окончания очереди.
+Параллельно готовится изолированная проверка актуальных публичных assets
+и подписанного OTA с новыми semantic-error/network сценариями MC513.
+Ни слияние, ни публикация на этой контрольной точке не выполнены.
+
+
+## 207. MC5.1.3 — интеграция оконченного старшего PR
+
+Итерация207 — 2026-11-09 — OpenAI. PR2072 прошёл проверки и слит
+в main0e96fbcb. Выполнен обычный merge в собственную ветку без конфликтов;
+сохранены public landing2071 и viewport-исправление template picker2072.
+Изменение package.json касается только добавления landing test; зависимости,
+lockfile, native и общие инструкции прежние. Собственный runtime diff к main
+по-прежнему ровно2CSS/3color exclusions, прочая логика MC513 не менялась.
+
+Свежая сборка/types/startup/strictfonts2 прошла. После изменения общей CSS
+и main выполнены прежние44browser cases:44passed,0skip/fail/flaky, retries0,
+50.106s. Split-policy8/8 и docs passed. Прежние40unit/full lint остаются
+доказательствами исходного пакета; актуальный объединённый head проверяет CI.
+Ограничения аналитического сравнения204 и физической приёмки сохраняются.
+Артефакты: /tmp/fit-mc513-integrated.json, -results, -build.log.
+Дальше: push одного итогового head, зелёный CI, обычный merge по данному
+разрешению, штатные публикации и30public+30signedZIP проверок.
