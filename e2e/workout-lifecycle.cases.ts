@@ -2,7 +2,7 @@ import { expect, test, type Page } from '@playwright/test'
 import { clientId, newWorkoutId, conversationId, trainerId, workoutId, workout, restTimerWorkout, mockPilot } from './fit-lime-fixtures'
 
 export function workoutLifecycleCases() {
-for (const entry of ['start', 'quick-plan', 'full-plan'] as const) test(`Lifecycle P1 inline client creation retains ${entry} context`, { tag: ['@lime-critical'] }, async ({ page }, testInfo) => {
+for (const entry of ['start', 'quick-plan', 'full-plan'] as const) test(`Lifecycle P1 connected athlete selection retains ${entry} context without manual creation`, { tag: ['@lime-critical'] }, async ({ page }, testInfo) => {
   await page.clock.setFixedTime(new Date('2026-11-01T09:00:00Z'))
   const backend = await mockPilot(page, { profileId: 'c0ac0000-6010-4000-8000-000000000001', fitLime: true, workouts: [] })
   const writes: string[] = []
@@ -28,21 +28,21 @@ for (const entry of ['start', 'quick-plan', 'full-plan'] as const) test(`Lifecyc
   await picker.getByRole('textbox', { name: 'Поиск клиента' }).fill('Новая спортсменка')
   await expect(picker.getByText('Никого не нашли', { exact: true })).toBeVisible()
   await page.screenshot({ path: testInfo.outputPath(`lifecycle-p1-${entry}-picker.png`) })
-  await picker.getByRole('button', { name: 'Клиент', exact: true }).click()
-  await expect(picker.getByRole('textbox', { name: 'Имя нового клиента' })).toHaveValue('Новая спортсменка')
-  await picker.getByRole('button', { name: 'К выбору', exact: true }).click()
-  await expect(picker.getByRole('textbox', { name: 'Поиск клиента' })).toHaveValue('Новая спортсменка')
-  await picker.getByRole('button', { name: 'Клиент', exact: true }).click()
-  await picker.getByRole('button', { name: 'Добавить и выбрать', exact: true }).click()
+  await expect(picker.getByRole('button', { name: 'Клиент', exact: true })).toHaveCount(0)
+  await expect(picker.getByRole('textbox', { name: 'Имя нового клиента' })).toHaveCount(0)
+  await picker.getByRole('textbox', { name: 'Поиск клиента' }).fill('')
+  await picker.locator(`.client-picker-item[data-client-id="${clientId}"]`).click()
+  const apply = picker.getByRole('button', { name: 'Применить клиента', exact: true })
+  if (await apply.count()) await apply.click()
   await expect(picker).toHaveCount(0)
   expect(writes).toHaveLength(0)
   expect(backend.getSaveAttempts()).toBe(0)
   if (entry === 'start') {
-    await expect(page.locator('.quick-start-format')).toContainText('Новая спортсменка')
+    await expect(page.locator('.quick-start-format')).toContainText('Алексей Смирнов')
     await expect(page.getByRole('button', { name: 'Начать тренировку', exact: true })).toBeVisible()
   } else {
     await expect(page.getByRole('textbox', { name: 'Название тренировки', exact: true })).toHaveValue('План нового клиента')
-    await expect(page.getByRole('button', { name: /Клиент: Новая спортсменка/ })).toBeVisible()
+    await expect(page.getByRole('button', { name: /Клиент: Алексей Смирнов/ })).toBeVisible()
   }
   await page.screenshot({ path: testInfo.outputPath(`lifecycle-p1-${entry}.png`) })
 })

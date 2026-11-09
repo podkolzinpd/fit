@@ -9,6 +9,7 @@ on:
       - 'public/**'
       - 'scripts/generate-app-icons.mjs'
       - 'scripts/*android*'
+      - 'scripts/prepare-official-ci-tools.mjs'
       - 'config/android-ota-public-key.pem'
       - 'capacitor.config.ts'
       - 'package.json'
@@ -22,6 +23,7 @@ on:
       - 'public/**'
       - 'scripts/generate-app-icons.mjs'
       - 'scripts/*android*'
+      - 'scripts/prepare-official-ci-tools.mjs'
       - 'config/android-ota-public-key.pem'
       - 'capacitor.config.ts'
       - 'package.json'
@@ -54,7 +56,8 @@ jobs:
           node --test scripts/android-ota-nginx.test.mjs
       - run: npm run android:sync:local
       - run: node scripts/generate-android-ota-native-fixtures.mjs
-      - run: ./gradlew testDebugUnitTest assembleDebug
+      - run: node scripts/prepare-official-ci-tools.mjs gradle
+      - run: ./gradlew --init-script "$RUNNER_TEMP/fit-ci-kotlin.init.gradle" testDebugUnitTest assembleDebug
         working-directory: android
       - uses: actions/upload-artifact@v4
         if: github.event_name != 'workflow_dispatch'
@@ -107,7 +110,8 @@ jobs:
           VITE_NUTRITION_NATIVE_COHORT: ${{ vars.VITE_NUTRITION_NATIVE_COHORT || 'false' }}
           VITE_NUTRITION_PILOT_USER_IDS: ${{ vars.VITE_NUTRITION_PILOT_USER_IDS || '' }}
           VITE_MAINTENANCE_MODE: 'false'
-      - run: ./gradlew assembleDebug
+      - run: node scripts/prepare-official-ci-tools.mjs gradle
+      - run: ./gradlew --init-script "$RUNNER_TEMP/fit-ci-kotlin.init.gradle" assembleDebug
         working-directory: android
       - uses: actions/upload-artifact@v4
         with:

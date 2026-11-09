@@ -79,7 +79,7 @@ test('six workflow choices keep five existing secrets and add only the sixth',()
   assert.ok(workflow.includes(`secrets.${secret}`))
   assert.ok(workflow.includes(`CORPORATE_ADMIN_LOGIN_SHA256=$${name}_ADMIN_LOGIN_SHA256; CORPORATE_ADMIN_ACCESS_SLOT=${slot}`))
  }
- assert.equal(workflow.includes('type: string'),false)
+ assert.ok(workflow.includes('office_name:'))
 })
 
 test('invitation pilot resolves exactly one linked trainer and never exposes identity',async()=>{
@@ -140,7 +140,7 @@ test('personal pilot uses the same closed test target and never modifies service
 
 test('personal scope preserves every old scope and uses only the existing closed services target',()=>{
  const workflow=readFileSync(new URL('../.github/workflows/manage-corporate-admin.yml',import.meta.url),'utf8')
- assert.ok(workflow.includes('options: [administrator, invitation-pilot, services-pilot, personal-pilot]'))
+ assert.ok(workflow.includes('options: [administrator, invitation-pilot, services-pilot, personal-pilot, duty-pilot, duty-office-zone]'))
  assert.ok(workflow.includes('personal-pilot) CORPORATE_ADMIN_LOGIN_SHA256=$SERVICES_TRAINER_LOGIN_SHA256 ;;'))
  assert.ok(workflow.includes('services-pilot) CORPORATE_ADMIN_LOGIN_SHA256=$SERVICES_TRAINER_LOGIN_SHA256 ;;'))
 })
@@ -151,4 +151,56 @@ test('personal pilot fails closed before a grant when another trainer is enabled
  await assert.rejects(manageCorporatePersonalPilot(client,'grant',hash),/exclusive_target_conflict/)
  assert.equal(calls.some(sql=>/^(insert|update)/.test(sql)),false)
  assert.equal(calls.at(-1),'rollback')
+})
+
+test('duty pilot uses the same closed test target and never modifies service/invitation/admin assignments',async()=>{
+ const {manageCorporateDutyPilot}=await import('./manage-corporate-admin-access.mjs')
+ for(const eligible of [true,false]){
+  const calls=[]
+  const client={async query(sql,args){calls.push({sql,args});if(sql.includes('select count(*)'))return{rows:[{n:0}]};if(sql.includes('select p.id'))return{rows:[{id:'private-trainer'}]};if(sql.includes(' eligible'))return{rows:[{eligible}]};if(sql.startsWith('select enabled'))return{rows:[{enabled:true}]};return{rows:[]}}}
+  if(!eligible){await assert.rejects(manageCorporateDutyPilot(client,'grant',hash),/ineligible/);assert.equal(calls.some(c=>c.sql.startsWith('insert')),false);assert.equal(calls.at(-1).sql,'rollback');continue}
+  assert.deepEqual(await manageCorporateDutyPilot(client,'grant',hash),{status:'applied',uniqueTrainer:true,enabled:true,eligible:true,otherEnabledTrainers:0})
+  assert.ok(calls.find(c=>c.sql.startsWith('insert into app_private.corporate_duty_pilot_trainers')))
+  assert.equal(calls.some(c=>/^(update|insert into) (public\.|app_private\.corporate_admin|app_private\.corporate_invitation)/.test(c.sql)),false)
+  assert.equal(calls.at(-1).sql,'commit')
+ }
+ for(const rows of [[],[{id:'one'},{id:'two'}]]){
+  const calls=[];const client={async query(sql){calls.push(sql);return{rows:sql.includes('select p.id')?rows:[]}}}
+  await assert.rejects(manageCorporateDutyPilot(client,'grant',hash),/target_unresolved/)
+  assert.equal(calls.some(sql=>sql.startsWith('insert')),false);assert.equal(calls.at(-1),'rollback')
+ }
+ const reads=[];const inspector={async query(sql){reads.push(sql);if(sql.includes('select count(*)'))return{rows:[{n:0}]};if(sql.includes('select p.id'))return{rows:[{id:'private-trainer'}]};if(sql.includes(' eligible'))return{rows:[{eligible:false}]};return{rows:[]}}}
+ assert.deepEqual(await manageCorporateDutyPilot(inspector,'inspect',hash),{status:'inspected',uniqueTrainer:true,enabled:false,eligible:false,otherEnabledTrainers:0})
+ assert.equal(reads[0],'begin read only');assert.equal(reads.some(sql=>/^(insert|update)/.test(sql)),false)
+})
+
+
+test('duty pilot fails closed before a grant when another trainer is enabled',async()=>{
+ const {manageCorporateDutyPilot}=await import('./manage-corporate-admin-access.mjs')
+ const calls=[];const client={async query(sql){calls.push(sql);if(sql.includes('select p.id'))return{rows:[{id:'private-target'}]};if(sql.includes('select count(*)'))return{rows:[{n:1}]};return{rows:[]}}}
+ await assert.rejects(manageCorporateDutyPilot(client,'grant',hash),/exclusive_target_conflict/)
+ assert.equal(calls.some(sql=>/^(insert|update)/.test(sql)),false)
+ assert.equal(calls.at(-1),'rollback')
+})
+
+
+test('duty scope uses only the existing closed services target',()=>{const w=readFileSync(new URL('../.github/workflows/manage-corporate-admin.yml',import.meta.url),'utf8');assert.ok(w.includes('duty-pilot) CORPORATE_ADMIN_LOGIN_SHA256=$SERVICES_TRAINER_LOGIN_SHA256 ;;'))})
+
+test('duty timezone operator fails closed for ambiguity, existing zone conflicts and never changes other office fields',async()=>{
+ const {manageCorporateDutyOfficeZone}=await import('./manage-corporate-admin-access.mjs')
+ for(const mode of ['inspect','grant','ambiguous','conflict']){
+  const calls=[];const client={async query(sql,args){calls.push({sql,args});
+   if(sql.includes('select p.id'))return{rows:[{id:'private-trainer'}]}
+   if(sql.includes('select o.id'))return{rows:mode==='ambiguous'?[{id:'one'},{id:'two'}]:[{id:'private-office',city:'Synthetic',name:'Office',time_zone:mode==='conflict'?'UTC':null,version:0}]}
+   if(sql.includes(' valid'))return{rows:[{valid:true}]}
+   if(sql.startsWith('select time_zone'))return{rows:[{time_zone:'Europe/Moscow'}]}
+   return{rows:[]}
+  }}
+  if(['ambiguous','conflict'].includes(mode)){await assert.rejects(manageCorporateDutyOfficeZone(client,'grant',hash,'Europe/Moscow'),/selection_required|existing_zone_conflict/);assert.equal(calls.some(c=>c.sql.startsWith('insert')),false);continue}
+  const r=await manageCorporateDutyOfficeZone(client,mode,hash,mode==='grant'?'Europe/Moscow':'')
+  assert.equal(r.status,mode==='grant'?'applied':'inspected');assert.equal(JSON.stringify(r).includes('private-'),false)
+  assert.equal(calls.some(c=>/^(update|delete)/.test(c.sql)),false)
+  assert.equal(calls.at(-1).sql,'commit')
+  if(mode==='inspect')assert.equal(calls.some(c=>c.sql.startsWith('insert')),false)
+ }
 })

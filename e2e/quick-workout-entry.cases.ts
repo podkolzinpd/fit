@@ -28,7 +28,7 @@ async function scrollDayForBooking(viewport: Locator) {
 
 export function quickWorkoutEntryCases() {
   test.skip(process.env.FIT_QUICK_WORKOUT_ENTRY_ACCEPTANCE !== '1', 'Dedicated native quick-entry harness')
-  test('Lifecycle P1 inline client creation retains slot context', async ({ page }, info) => {
+  test('Lifecycle P1 connected athlete selection retains slot context without manual creation', async ({ page }, info) => {
     await page.clock.setFixedTime(new Date('2026-11-01T09:00:00Z'))
     const backend = await mockPilot(page, { profileId: 'c0ac0000-6010-4000-8000-000000000001', fitLime: true, workouts: [] })
     const writes: string[] = []
@@ -45,16 +45,15 @@ export function quickWorkoutEntryCases() {
     await picker.getByRole('textbox', { name: 'Поиск клиента' }).fill('Новая спортсменка')
     await expect(picker.getByText('Никого не нашли', { exact: true })).toBeVisible()
     await page.screenshot({ path: info.outputPath('lifecycle-p1-slot-picker.png') })
-    await picker.getByRole('button', { name: 'Клиент', exact: true }).click()
-    await expect(picker.getByRole('textbox', { name: 'Имя нового клиента' })).toHaveValue('Новая спортсменка')
-    await picker.getByRole('button', { name: 'К выбору', exact: true }).click()
-    await expect(picker.getByRole('textbox', { name: 'Поиск клиента' })).toHaveValue('Новая спортсменка')
-    await picker.getByRole('button', { name: 'Клиент', exact: true }).click()
-    await picker.getByRole('button', { name: 'Добавить и выбрать', exact: true }).click()
+    await expect(picker.getByRole('button', { name: 'Клиент', exact: true })).toHaveCount(0)
+    await expect(picker.getByRole('textbox', { name: 'Имя нового клиента' })).toHaveCount(0)
+    await picker.getByRole('textbox', { name: 'Поиск клиента' }).fill('')
+    await picker.locator(`.client-picker-item[data-client-id="${clientId}"]`).click()
+    await picker.getByRole('button', { name: 'Применить клиента', exact: true }).click()
     await expect(picker).toHaveCount(0)
     expect(writes).toHaveLength(0)
     expect(backend.getSaveAttempts()).toBe(0)
-    await expect(booking).toContainText('Новая спортсменка')
+    await expect(booking).toContainText('Алексей Смирнов')
     await expect(booking).toContainText('14:00')
     await page.screenshot({ path: info.outputPath('lifecycle-p1-slot.png') })
   })
@@ -310,37 +309,104 @@ export function quickWorkoutEntryCases() {
     await expect(picker).toHaveCount(0)
   })
 
-  for (const role of ['trainer', 'client'] as const) {
-    test(`quick-entry pilot ${role} adds an exercise with atomic planned values`, async ({ page }) => {
+  // Trainer densities have different card/footer geometry. The client path is also
+  // covered in its dedicated reference suite, without widening that suite's pilot.
+  for (const { role, density } of [
+    { role: 'trainer', density: 'original' }, { role: 'trainer', density: 'compact' },
+    { role: 'client', density: 'original' },
+  ] as const) {
+    test(`quick-entry ${role} ${density} selects several exercises with atomic planned values`, async ({ page }, info) => {
       await page.clock.setFixedTime(new Date('2026-10-08T09:01:00Z'))
       const profileId = `c0ac0000-6010-4000-8000-00000000000${role === 'trainer' ? 1 : 2}`
+      await page.addInitScript(({ role, profileId, density }) => {
+        localStorage.setItem(`fit.${role === 'trainer' ? 'coach' : 'client'}LiveDensity.${profileId}`, density)
+      }, { role, profileId, density })
       const current = { ...restTimerWorkout(), createdBy: profileId, trainerId: role === 'trainer' ? profileId : restTimerWorkout().trainerId, exercises: [] }
       const backend = await mockPilot(page, { role, profileId, fitLime: true, clientLime: true, workouts: [current] })
+      const commands: Array<{ operationId: string; expectedVersion: number }> = []
       await page.route('**/v1/workouts/*/exercises', async route => {
-        const command = route.request().postDataJSON() as { exercise: { source: 'system'; ref: string; name: string; muscleGroup: 'core'; inputKind: 'duration'; prefillFromHistory?: boolean }; expectedVersion: number }
+        const command = route.request().postDataJSON() as { exercise: { source: 'system'; ref: string; name: string; muscleGroup: 'core'; inputKind: 'duration' | 'strength'; prefillFromHistory?: boolean }; expectedVersion: number; operationId: string }
+        commands.push(command)
         expect(command.exercise.prefillFromHistory).toBe(true)
         const target = backend.getWorkouts()[0]!
-        const id = '67500000-0000-4000-8000-000000000001'
-        target.exercises.push({ ...command.exercise, id, position: 0, blockId: id, blockType: 'single', blockPreset: 'set', blockRounds: 1,
+        expect(command.expectedVersion).toBe(target.version)
+        const index = target.exercises.length
+        const id = `67500000-0000-4000-8000-00000000000${index + 1}`
+        target.exercises.push({ ...command.exercise, id, position: index, blockId: id, blockType: 'single', blockPreset: 'set', blockRounds: 1,
           restBetweenExercisesSec: 0, restBetweenRoundsSec: 90, restBetweenSetsSec: 90,
-          sets: [0, 1].map(position => ({ id: `67500000-0000-4000-8000-00000000001${position}`, position, durationSec: 45 + position * 15, fact: {}, confirmedAt: null, version: 1 })) })
+          sets: [0, 1].map(position => ({ id: `67500000-0000-4000-8000-0000000000${index + 1}${position}`,
+            position, ...(command.exercise.inputKind === 'duration' ? { durationSec: 45 + position * 15 } : { weightKg: 30 + position * 5, reps: 10 - position * 2 }),
+            fact: {}, confirmedAt: null, version: 1 })) })
         target.version++
         await route.fulfill({ status: 201, json: { exercise: { id, version: target.version, replayed: false } } })
       })
       await page.goto(`/workouts/${workoutId}/live`)
+      if (role === 'trainer') await expect(page.locator(`.coach-live-density-${density}`)).toBeVisible()
       await page.getByRole('button', { name: 'Выбрать упражнение', exact: true }).click()
       const picker = page.getByRole('dialog', { name: 'Добавить упражнение', exact: true })
-      await picker.getByLabel('Поиск упражнения').fill('планка')
-      await picker.getByRole('button', { name: role === 'trainer' ? 'Добавить: Планка' : 'Выбрать: Планка', exact: true }).click()
-      if (role === 'client') await picker.getByRole('button', { name: /^Добавить (?:1|\(1\))$/ }).click()
+      for (const name of ['Присед со штангой', 'Планка']) {
+        await picker.getByLabel('Поиск упражнения').fill(name)
+        await picker.getByRole('button', { name: `Выбрать: ${name}`, exact: true }).click()
+        await expect(picker).toBeVisible()
+        expect(commands).toHaveLength(0)
+      }
+      const add = picker.locator('.coach-catalog-add, .picker-selection-bar > .primary')
+      await expect(add).toContainText(/2/)
+      await expect(add).toBeInViewport()
+      await picker.screenshot({ path: info.outputPath(`multi-${role}-${density}.png`) })
+      await add.click()
       await expect(picker).toHaveCount(0)
-      await expect.poll(() => backend.getWorkouts()[0]!.exercises.length).toBe(1)
-      const added = backend.getWorkouts()[0]!.exercises[0]!
-      expect(added.sets.map(set => set.durationSec)).toEqual([45, 60])
-      expect(added.sets.every(set => set.confirmedAt === null && Object.keys(set.fact).length === 0)).toBe(true)
-      await expect(page.getByText('Планка', { exact: true }).first()).toBeVisible()
+      expect(commands).toHaveLength(2)
+      expect(new Set(commands.map(command => command.operationId)).size).toBe(2)
+      const [strength, duration] = backend.getWorkouts()[0]!.exercises
+      expect(strength!.sets.map(set => [set.weightKg, set.reps])).toEqual([[30, 10], [35, 8]])
+      expect(duration!.sets.map(set => set.durationSec)).toEqual([45, 60])
+      expect([strength!, duration!].every(exercise => exercise.sets.every(set => set.confirmedAt === null && Object.keys(set.fact).length === 0))).toBe(true)
+      await expect(page.locator('input[name="weightKg"]').first()).toHaveValue('30')
+      await expect(page.locator('input[name="reps"]').first()).toHaveValue('10')
+      await page.getByRole('button', { name: /^(Развернуть: Планка|Начать упражнение «Планка»|Показать подходы: Планка)$/ }).first().click()
       await expect(page.locator('input[name="durationSec"]').first()).toHaveValue('45')
       await expect(page.locator('input[name="durationSec"]').nth(1)).toHaveValue('60')
     })
   }
+
+  test('quick-entry trainer batch retry preserves acknowledged selection and confirmed facts', async ({ page }) => {
+    await page.clock.setFixedTime(new Date('2026-10-08T09:01:00Z'))
+    const profileId = 'c0ac0000-6010-4000-8000-000000000001'
+    const original = { ...restTimerWorkout(), createdBy: profileId, trainerId: profileId }
+    original.exercises[0]!.sets[0]!.confirmedAt = '2026-10-08T09:00:00Z'
+    original.exercises[0]!.sets[0]!.fact = { weightKg: 40, reps: 12 }
+    const backend = await mockPilot(page, { role: 'trainer', profileId, fitLime: true, workouts: [original], failAppendAfterCommitAt: 2 })
+    let releaseAppend!: () => void
+    const appendGate = new Promise<void>(resolve => { releaseAppend = resolve })
+    await page.route('**/v1/workouts/*/exercises', async route => {
+      await appendGate
+      return route.fallback()
+    })
+    await page.goto(`/workouts/${workoutId}/live`)
+    await page.getByRole('button', { name: /^(Упражнение|Ещё упражнение)$/ }).click()
+    const picker = page.getByRole('dialog', { name: 'Добавить упражнение', exact: true })
+    for (const name of ['Жим гантелей сидя', 'Планка', 'Присед со штангой']) {
+      await picker.getByLabel('Поиск упражнения').fill(name)
+      await picker.getByRole('button', { name: `Выбрать: ${name}`, exact: true }).click()
+    }
+    const add = picker.locator('.coach-catalog-add, .picker-selection-bar > .primary')
+    await add.click()
+    try {
+      await expect(add).toBeDisabled()
+      await expect(picker.getByRole('button', { name: 'Закрыть', exact: true })).toBeDisabled()
+      await add.dispatchEvent('click')
+      expect(backend.getAppendCommands()).toHaveLength(0)
+    } finally { releaseAppend() }
+    await expect(picker.getByRole('alert')).toContainText('повторите добавление остальных')
+    await expect(add).toContainText(/2/)
+    const pending = backend.getAppendCommands()[1]
+    await add.click()
+    await expect(picker).toHaveCount(0)
+    const commands = backend.getAppendCommands()
+    expect(commands).toHaveLength(4)
+    expect(commands[2]).toEqual(pending)
+    expect(backend.getWorkouts()[0]!.exercises).toHaveLength(4)
+    expect(backend.getWorkouts()[0]!.exercises[0]!.sets[0]).toMatchObject({ confirmedAt: '2026-10-08T09:00:00Z', fact: { weightKg: 40, reps: 12 } })
+  })
 }

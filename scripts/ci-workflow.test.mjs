@@ -591,3 +591,13 @@ test('CI has no local Supabase service or legacy database lane', () => {
   assert.match(workflow, /^  database:\n    runs-on: ubuntu-latest\n    services:/m)
   assert.match(workflow, /database:[\s\S]*npm --prefix services\/api run test:db/)
 })
+
+// Infrastructure validation must use the same official provider source as stage jobs.
+test('frontend infrastructure uses the existing official mirror without skipping validation', () => {
+  const job = workflow.slice(workflow.indexOf('  frontend-infrastructure:'), workflow.indexOf('  app-tests:'))
+  assert.match(job, /TF_CLI_CONFIG_FILE:.*infra\/yandex\/terraform\.rc\.example/)
+  for (const command of ['init -backend=false', 'validate', 'test']) {
+    assert.ok(job.includes(`terraform -chdir=infra/yandex-frontend ${command}`))
+  }
+  assert.doesNotMatch(job, /continue-on-error/)
+})

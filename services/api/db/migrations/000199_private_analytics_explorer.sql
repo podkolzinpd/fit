@@ -27,7 +27,7 @@ begin
   if actor is null then return new; end if;
   if TG_OP = 'UPDATE' then
     previous := to_jsonb(old);
-    if (r - array['updated_at','version']) = (previous - array['updated_at','version']) then return new; end if;
+    if (r - array['updated_at','version','client_id','trainer_id']) = (previous - array['updated_at','version','client_id','trainer_id']) then return new; end if;
   end if;
   if TG_TABLE_NAME = 'workout_sets' then
     select e.workout_id into workout from public.workout_exercises e where e.id=new.workout_exercise_id;

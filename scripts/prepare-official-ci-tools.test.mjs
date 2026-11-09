@@ -1,0 +1,110 @@
+import assert from 'node:assert/strict'
+import { createHash } from 'node:crypto'
+import { mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
+import { test } from 'node:test'
+import { downloadVerifiedAsset, gradleCacheZip, gradleKotlinInit, kotlinCompiler, kotlinCompilerArtifacts, kotlinCompilerPom, officialTools, prepareOfficialCiTool } from './prepare-official-ci-tools.mjs'
+
+const bytes = Buffer.from('verified synthetic archive')
+const spec = { url: 'https://api.github.com/repos/synthetic/tool/releases/assets/1', size: bytes.length, sha256: createHash('sha256').update(bytes).digest('hex') }
+async function workspace(run) {
+  const root = await mkdtemp(join(tmpdir(), 'fit-ci-tools-'))
+  try { await run(root) } finally { await rm(root, { recursive: true, force: true }) }
+}
+
+test('accepts the complete verified archive and revalidates cache without another download', () => workspace(async root => {
+  const destination = join(root, 'archive.zip')
+  let requests = 0
+  const fetchAsset = async (url, options) => {
+    requests++
+    assert.equal(url, spec.url)
+    assert.equal(options.headers.Accept, 'application/octet-stream')
+    assert.equal(options.headers.Authorization, undefined)
+    return new Response(new ReadableStream({ start(controller) {
+      controller.enqueue(bytes.subarray(0, 3)); controller.enqueue(bytes.subarray(3)); controller.close()
+    } }))
+  }
+  assert.equal(await downloadVerifiedAsset(spec, destination, fetchAsset), destination)
+  assert.deepEqual(await readFile(destination), bytes)
+  await downloadVerifiedAsset(spec, destination, fetchAsset)
+  assert.equal(requests, 1)
+  assert.deepEqual(await readdir(root), ['archive.zip'])
+}))
+
+for (const [name, response, error] of [
+  ['HTTP504', () => new Response('timeout', { status: 504 }), /HTTP 504/],
+  ['partial HTTP206', () => new Response(bytes, { status: 206 }), /HTTP 206/],
+  ['truncated', () => new Response(bytes.subarray(1)), /size mismatch/],
+  ['oversized', () => new Response(Buffer.concat([bytes, bytes])), /size mismatch/],
+  ['tampered', () => new Response(Buffer.alloc(bytes.length)), /SHA256 mismatch/],
+  ['JSON metadata', () => new Response('{"asset":1}'), /size mismatch/],
+  ['interrupted stream', () => new Response(new ReadableStream({ start(controller) { controller.enqueue(bytes.subarray(0, 3)); controller.error(new Error('stream failed')) } })), /stream failed/],
+]) test(`rejects ${name} without leaving a runnable or cached artifact`, () => workspace(async root => {
+  await assert.rejects(downloadVerifiedAsset(spec, join(root, 'archive.zip'), async () => response()), error)
+  assert.deepEqual(await readdir(root), [])
+}))
+
+test('does not overwrite a corrupted existing cache or hide the checksum error', () => workspace(async root => {
+  const path = join(root, 'archive.zip'), corrupt = Buffer.alloc(bytes.length)
+  await writeFile(path, corrupt)
+  let requests = 0
+  await assert.rejects(downloadVerifiedAsset(spec, path, async () => { requests++; return new Response(bytes) }), /SHA256 mismatch/)
+  assert.equal(requests, 0)
+  assert.deepEqual(await readFile(path), corrupt)
+}))
+
+test('uses byte-identical official Kotlin artifacts and retains transitive metadata', () => workspace(async root => {
+  assert.equal(kotlinCompiler.sha256, '9fa8cdd1de0dccffe154c997d423ec6b5f53cd6d9177e3a77a9b0de03fb1bc81')
+  assert.equal(kotlinCompiler.url, 'https://api.github.com/repos/JetBrains/kotlin/releases/assets/587823233?download=complete')
+  const mavenUrl = 'https://repo.maven.apache.org/maven2/synthetic/tool.jar'
+  await downloadVerifiedAsset({ ...spec, url: mavenUrl }, join(root, 'compiler.jar'), async (url, options) => {
+    assert.equal(url, mavenUrl)
+    assert.deepEqual(options.headers, { Accept: 'application/octet-stream' })
+    return new Response(bytes)
+  })
+  const source = await readFile(new URL('./prepare-official-ci-tools.mjs', import.meta.url), 'utf8')
+  assert.doesNotMatch(source, /--offline|mavenLocal|writeFile\([^\n]*\.bin|init\.d/)
+  assert.equal(kotlinCompilerPom.sha256, 'bd4656a46ec418252e5bc5e1c20eb2029fb2a8e0e3cc94eeddfac7e87c8cd5b6')
+  assert.match(source, /await downloadVerifiedAsset\(pom,/)
+  assert.deepEqual(kotlinCompilerArtifacts.map(artifact => artifact.version), ['2.0.21', '2.2.20', '2.4.10'])
+  assert.equal(kotlinCompilerArtifacts[1].jar.sha256, '1c6c3f810bfe6a41abcbc34b3a2ef639f1e3f4aeed3a953a4b0974eea4f41889')
+  assert.equal(kotlinCompilerArtifacts[1].pom.sha256, '05ff025f7fb0932fb11fa1e1ccaef528f76027d956680f8835d438542762e20a')
+  assert.equal(kotlinCompilerArtifacts[2].jar.sha256, '9309638a2ee03e6bde9ef4b7444055a94b84ab906563675d71ff9aecb64da913')
+  assert.equal(kotlinCompilerArtifacts[2].pom.sha256, 'c3adb4f66fbfaa843c019b402d2c7e5f0880d32956bd8dd84022946177251102')
+  const init = gradleKotlinInit(join(root, "space ' quote"))
+  assert.match(init, /space%20%27%20quote/)
+  assert.match(init, /metadataSources \{ mavenPom\(\) \}/)
+  for (const { version } of kotlinCompilerArtifacts) assert.ok(init.includes(`includeVersion('org.jetbrains.kotlin', 'kotlin-compiler-embeddable', '${version}')`))
+  assert.equal([...init.matchAll(/includeVersion\(/g)].length, 3)
+  assert.doesNotMatch(init, /latest|\[|2\.0\.22/)
+  assert.match(init, /project.buildscript.repositories/)
+  assert.match(init, /project.repositories/)
+  assert.doesNotMatch(init, /artifact\(\)|includeModule|includeGroup|repositories.clear|force|substitut|offline|credentials/)
+}))
+
+test('matches Gradle8.14.3 PathAssembler without fabricating wrapper success markers', async () => {
+  const properties = await readFile(new URL('../android/gradle/wrapper/gradle-wrapper.properties', import.meta.url), 'utf8')
+  assert.equal(gradleCacheZip(properties, '/cache'), '/cache/wrapper/dists/gradle-8.14.3-all/10utluxaxniiv4wxiphsi49nj/gradle-8.14.3-all.zip')
+  for (const modified of [properties.replace('8.14.3', '8.14.4'), properties.replace('services.gradle.org', 'example.test'), properties.replace('zipStoreBase=GRADLE_USER_HOME', 'zipStoreBase=PROJECT'), properties.replace('distributionPath=wrapper/dists', 'distributionPath=../../outside')]) {
+    assert.throws(() => gradleCacheZip(modified, '/cache'), /Unreviewed/)
+  }
+  const source = await readFile(new URL('./prepare-official-ci-tools.mjs', import.meta.url), 'utf8')
+  assert.doesNotMatch(source, /writeFile\([^\n]*\.ok|mkdir\([^\n]*\.ok/)
+  await assert.rejects(prepareOfficialCiTool('arbitrary'), /Expected gradle or terraform/)
+})
+
+test('retains immutable official versions and verifies both CI and release consumers', async () => {
+  assert.equal(officialTools.gradle.sha256, 'ed1a8d686605fd7c23bdf62c7fc7add1c5b23b2bbc3721e661934ef4a4911d7c')
+  assert.equal(officialTools.terraform.sha256, '214ac0a04a4f31ee0e3eb04ab1db9213c3ecaee9d4ebfd3d05b57399081c9d25')
+  const android = await readFile(new URL('../.github/workflows/android-build.yml', import.meta.url), 'utf8')
+  assert.equal([...android.matchAll(/prepare-official-ci-tools.mjs gradle/g)].length, 2)
+  assert.match(android, /prepare-official-ci-tools.mjs gradle\n\s+- run: \.\/gradlew --init-script "\$RUNNER_TEMP\/fit-ci-kotlin.init.gradle" testDebugUnitTest assembleDebug/)
+  const release = await readFile(new URL('../.github/workflows/release-android-ota.yml', import.meta.url), 'utf8')
+  assert.match(release, /prepare-official-ci-tools.mjs gradle\n\s+cd android\n\s+\.\/gradlew --init-script "\$RUNNER_TEMP\/fit-ci-kotlin.init.gradle" testDebugUnitTest assembleRelease/)
+  const ci = await readFile(new URL('../.github/workflows/ci.yml', import.meta.url), 'utf8')
+  assert.match(ci, /node --test scripts\/prepare-official-ci-tools.test.mjs/)
+  assert.match(ci, /init -backend=false -plugin-dir="\$RUNNER_TEMP\/fit-ci-providers"/)
+  assert.match(ci, /terraform -chdir=infra\/yandex-frontend validate/)
+  assert.match(ci, /terraform -chdir=infra\/yandex-frontend test/)
+})
