@@ -7,7 +7,7 @@ import type { ChatThread, Client } from '../../shared/domain'
 import { ArchivedClientsPage, ClientsPage } from './ClientsListPage'
 import { ConnectionPage } from '../auth/ConnectionPage'
 
-const backend = vi.hoisted(() => ({ list: vi.fn(), setArchived: vi.fn(), listThreads: vi.fn(), open: vi.fn(), listFinanceOverview: vi.fn(), createInvite: vi.fn(), createRegistrationInvite: vi.fn(), revoke: vi.fn() }))
+const backend = vi.hoisted(() => ({ list: vi.fn(), setArchived: vi.fn(), listThreads: vi.fn(), open: vi.fn(), listFinanceOverview: vi.fn(), createInvite: vi.fn(), self: vi.fn(), createRegistrationInvite: vi.fn(), revoke: vi.fn() }))
 const navigation = vi.hoisted(() => ({ unified: false }))
 vi.mock('../../app/coach-workout-redesign', async importOriginal => ({
   ...await importOriginal<typeof import('../../app/coach-workout-redesign')>(),
@@ -18,7 +18,7 @@ vi.mock('../../app/trainer-schedule-v2', async importOriginal => ({
   isTrainerScheduleV2Enabled: () => navigation.unified,
 }))
 vi.mock('../../app/data-backend-context', () => ({
-  useDataBackend: () => ({ connectionDirectory: { self: () => Promise.resolve({ code: 'ABCD1234ABCD1234', fitId: 'trainer-1', emailSearchReady: true }), list: () => Promise.resolve([]), createInvitation: backend.createRegistrationInvite, revokeInvitation: backend.revoke }, source: 'yandex', clients: { list: backend.list, setArchived: backend.setArchived }, chat: { listThreads: backend.listThreads, open: backend.open }, trainerFinance: { listOverview: backend.listFinanceOverview }, invitations: { createShareForNewClient: backend.createInvite, revoke: backend.revoke } }),
+  useDataBackend: () => ({ connectionDirectory: { list: () => Promise.resolve([]), self: backend.self, createInvitation: backend.createRegistrationInvite, revokeInvitation: backend.revoke }, source: 'yandex', clients: { list: backend.list, setArchived: backend.setArchived }, chat: { listThreads: backend.listThreads, open: backend.open }, trainerFinance: { listOverview: backend.listFinanceOverview }, invitations: { createShareForNewClient: backend.createInvite, revoke: backend.revoke } }),
 }))
 vi.mock('../../app/auth-context', () => ({ useAuth: () => ({ actor: { role: 'trainer', userId: 'trainer-1' } }) }))
 
@@ -352,7 +352,7 @@ describe('ClientsPage search', () => {
     expect(screen.getByText(/· до 08\.10/)).toBeVisible()
   })
 
-  it('opens account search, scanning and manual creation without the removed Invite button', async () => {
+  it('opens account search and offers explicit scanning and registration-first invitations', async () => {
     const user = userEvent.setup()
     renderPage([])
     await user.click(await screen.findByRole('button', { name: 'Добавить спортсмена' }))
@@ -364,6 +364,9 @@ describe('ClientsPage search', () => {
     expect(await screen.findByLabelText('Камера для QR-кода')).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Создать карточку без регистрации' })).toHaveAttribute('href', '/clients/new')
     expect(screen.queryByRole('button', { name: 'Пригласить' })).not.toBeInTheDocument()
+    backend.self.mockResolvedValue({ code: 'A'.repeat(16), fitId: 'trainer-1', emailSearchReady: true })
+    await user.click(screen.getByRole('button', { name: 'Мой QR' }))
+    expect(await screen.findByRole('button', { name: 'Отправить ссылку' })).toBeVisible()
     expect(screen.queryByLabelText('Имя спортсмена')).not.toBeInTheDocument()
     expect(backend.createInvite).not.toHaveBeenCalled()
   })
@@ -411,17 +414,21 @@ describe('ClientsPage search', () => {
     expect(backend.listFinanceOverview).toHaveBeenCalledTimes(1)
   })
 
-  it('shares the personal link from My QR without creating a placeholder card', async () => {
+  it('shows one share screen without adding an unregistered athlete', async () => {
+    backend.self.mockResolvedValue({ code: 'A'.repeat(16), fitId: 'trainer-1', emailSearchReady: true })
     const user = userEvent.setup()
     renderPage([])
     await user.click(await screen.findByRole('button', { name: 'Добавить спортсмена' }))
     await user.click(screen.getByRole('button', { name: 'Мой QR' }))
+    expect(screen.getByRole('heading', { name: 'Добавить спортсмена' })).toBeVisible()
     expect(await screen.findByRole('button', { name: 'Отправить ссылку' })).toBeVisible()
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
     expect(screen.getByLabelText('Ссылка для подключения')).toHaveAttribute('value', expect.stringContaining('/connect?code='))
     expect(backend.createRegistrationInvite).not.toHaveBeenCalled()
     expect(backend.createInvite).not.toHaveBeenCalled()
     expect(await backend.list()).toEqual([])
-  })})
+  })
+})
 
 describe('ClientsPage chat actions', () => {
   it('shows a failed history read and retries without hiding the client list', async () => {

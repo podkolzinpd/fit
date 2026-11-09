@@ -22,6 +22,17 @@ describe('simple connection flow', () => {
     expect(screen.getByLabelText('Почта или Fit-код')).toBeVisible()
     expect(screen.queryByLabelText('Камера для QR-кода')).not.toBeInTheDocument()
   })
+  it('keeps the request section visible when there are no requests', async () => {
+    mount(<ConnectionRequests showEmpty />)
+    expect(screen.getByRole('heading', { name: 'Запросы и приглашения' })).toBeVisible()
+    expect(await screen.findByText('Запросов и приглашений пока нет')).toBeVisible()
+  })
+  it('reports a failed request load instead of calling the list empty', async () => {
+    repository.list.mockRejectedValue(new Error('Сеть недоступна'))
+    mount(<ConnectionRequests showEmpty />)
+    expect(await screen.findByRole('alert')).toHaveTextContent('Не удалось загрузить запросы')
+    expect(screen.queryByText('Запросов и приглашений пока нет')).not.toBeInTheDocument()
+  })
   it('accepts only Fit QR or exact code and preserves it through first login', () => {
     expect(readConnectionCode('https://fit-training.ru/connect?code=1234567890ABCDEF')).toBe('1234567890ABCDEF')
     expect(readConnectionCode('https://evil.example/connect?code=1234567890ABCDEF')).toBeNull()

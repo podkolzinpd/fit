@@ -507,7 +507,7 @@ describe('ExerciseImage', () => {
     fireEvent.error(container.querySelector('video')!)
     await waitFor(() => expect(container.querySelector('video')).toHaveAttribute('src', expect.stringContaining('attempt=2')))
     fireEvent.error(container.querySelector('video')!)
-    expect(screen.getByText('Видео не загрузилось')).toBeInTheDocument()
+    expect(await screen.findByText('Видео не загрузилось')).toBeInTheDocument()
     expect(container.querySelector('video')).not.toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'Повторить загрузку видео: Повтор файла' }))
     await waitFor(() => expect(container.querySelector('video')).toHaveAttribute('src', expect.stringContaining('attempt=3')))

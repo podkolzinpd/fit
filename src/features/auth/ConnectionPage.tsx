@@ -95,7 +95,7 @@ export function connectionStatusText(status: string, incoming: boolean): string 
   }
 }
 
-export function ConnectionRequests({ excludeRequestId }: { excludeRequestId?: string } = {}) {
+export function ConnectionRequests({ excludeRequestId, showEmpty = false }: { excludeRequestId?: string; showEmpty?: boolean } = {}) {
   const { actor } = useAuth()
   const { connectionDirectory: repository } = useDataBackend()
   const queryClient = useQueryClient()
@@ -138,8 +138,11 @@ export function ConnectionRequests({ excludeRequestId }: { excludeRequestId?: st
   const busy = decide.isPending || accept.isPending
   if (!repository) return null
   return <section className="connection-requests" aria-label="Запросы на подключение">
-    {list.data && list.data.length > 0 && <><h2>Запросы</h2>{list.data.filter(request => request.id !== excludeRequestId).map(request => <article className="card stack compact" key={request.id}>
-      <strong>{request.name}</strong><p>{request.status === 'pending' && request.incoming ? request.role === 'trainer' ? 'Хочет стать вашим тренером' : 'Хочет заниматься с вами' : connectionStatusText(request.status, request.incoming)}</p>
+    {(showEmpty || !!list.data?.length) && <h2>Запросы и приглашения</h2>}
+    {showEmpty && list.isLoading && <p role="status">Загружаем запросы…</p>}
+    {showEmpty && list.isSuccess && list.data.length === 0 && <p className="muted">Запросов и приглашений пока нет</p>}
+    {list.data && list.data.length > 0 && <>{list.data.filter(request => request.id !== excludeRequestId).map(request => <article className="card stack compact" key={request.id}>
+      <p className="eyebrow">{request.incoming ? 'Входящий запрос' : 'Отправленное приглашение'}</p><strong>{request.name}</strong><p>{request.status === 'pending' && request.incoming ? request.role === 'trainer' ? 'Хочет стать вашим тренером' : 'Хочет заниматься с вами' : connectionStatusText(request.status, request.incoming)}</p>
       {(request.status === 'pending' || request.status === 'needs_confirmation') && <>
         {selected?.id !== request.id && (request.status === 'pending' && request.incoming || request.status === 'needs_confirmation' && !request.incoming) && <button className="primary" disabled={busy} onClick={() => accept.mutate(request)}>{request.status === 'needs_confirmation' ? 'Подтвердить заново' : 'Принять'}</button>}
         {!request.incoming && <button className="secondary" disabled={busy} onClick={() => decide.mutate({ action: 'cancel', request })}>Отменить предложение</button>}

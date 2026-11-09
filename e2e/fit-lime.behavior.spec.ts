@@ -142,17 +142,17 @@ test('First invitation leaves the roster empty until the athlete accepts', { tag
   await page.route('**/v1/connection-directory', async route => {
     const command = route.request().postDataJSON() as { action: string }
     commands.push(command.action)
-    await route.fulfill({ json: { result: command.action === 'create_invitation'
-      ? { id: newWorkoutId, code: 'A'.repeat(32), expiresAt: '2026-12-08T12:00:00Z' } : [] } })
+    await route.fulfill({ json: { result: command.action === 'self' ? { code: 'A'.repeat(16), fitId: trainerId, emailSearchReady: true } : [] } })
   })
   await page.goto('/clients')
   await expect(page.locator('.state-panel-mark')).toHaveCount(0)
   await page.getByRole('button', { name: 'Добавить спортсмена', exact: true }).click()
-  await page.getByRole('button', { name: 'Пригласить', exact: true }).click()
-  await expect(page.getByRole('dialog', { name: 'Ссылка готова' })).toBeVisible()
+  await page.getByRole('button', { name: 'Мой QR', exact: true }).click()
+  await expect(page.getByRole('button', { name: 'Отправить ссылку' })).toBeVisible()
+  await expect(page.getByRole('dialog')).toHaveCount(0)
   await expect(page.getByLabel('Имя спортсмена')).toHaveCount(0)
-  expect(commands.filter(action => action === 'create_invitation')).toHaveLength(1)
-  await page.getByRole('dialog', { name: 'Ссылка готова' }).getByRole('button', { name: 'Закрыть', exact: true }).click()
+  expect(commands.filter(action => action === 'self')).toHaveLength(1)
+  expect(commands).not.toContain('create_invitation')
   await page.getByRole('button', { name: 'Назад' }).click()
   await expect(page).toHaveURL(/\/clients$/)
   await expect(page.locator('.client-card')).toHaveCount(0)

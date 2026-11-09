@@ -3,6 +3,16 @@ import { expect, test, nativeRequest, nativeSignIn } from './native-local-fixtur
 test('personal QR finds the trainer; both parties confirm using the real local API', async ({ page, browser }, info) => {
   await nativeSignIn(page, 'trainer-directory@example.test', 'trainer', 'Тренер Тест')
   await page.goto('/connect')
+  await expect(page.getByRole('button', { name: 'Пригласить', exact: true })).toHaveCount(0)
+  const viewport = page.viewportSize()!
+  for (const width of [320, 390, 430]) {
+    await page.setViewportSize({ width, height: 844 })
+    const scan = await page.getByRole('button', { name: 'Сканировать QR', exact: true }).boundingBox()
+    const ownQr = await page.getByRole('button', { name: 'Мой QR', exact: true }).boundingBox()
+    expect(scan && ownQr && scan.x + scan.width + 4 <= ownQr.x).toBe(true)
+    expect(await page.locator('body').evaluate(body => body.scrollWidth <= window.innerWidth)).toBe(true)
+  }
+  await page.setViewportSize(viewport)
   await page.getByRole('button', { name: 'Мой QR', exact: true }).click()
   await expect(page.getByAltText('Мой QR для подключения в Fit')).toBeVisible()
   const own: unknown = await (await nativeRequest(page, '/v1/connection-directory', { method: 'POST', body: { action: 'self' } })).json()

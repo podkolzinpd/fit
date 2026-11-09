@@ -3382,10 +3382,10 @@ button.workout-duration-trigger:disabled { cursor:default; opacity:1 }
 .invitation-qr img { display:block; width:min(100%,300px); height:auto; image-rendering:pixelated }
 .invitation-qr p { margin:0; font-size:13px; line-height:1.4 }
 .invitation-qr button { width:100%; background:#fff }
-.invitation-code-fallback { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:12px 14px; border:1px solid var(--border); border-radius:16px; background:var(--surface-sunken) }
+.invitation-code-fallback { display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:center; gap:12px; padding:12px 14px; border:1px solid var(--border); border-radius:16px; background:var(--surface-sunken) }
 .invitation-code-fallback > div { min-width:0 }
 .invitation-code-fallback strong { display:block; font-size:13px; line-height:1.45 }
-.invitation-code-fallback strong span { letter-spacing:.06em; user-select:all }
+.invitation-code-fallback strong span { display:block; overflow-wrap:anywhere; letter-spacing:.06em; user-select:all }
 .invitation-code-fallback p { margin:3px 0 0; font-size:12px }
 .invitation-code-fallback button { flex:0 0 auto; min-height:40px; padding:8px 10px; font-size:12px }
 .invitation-revoke { justify-self:start; min-height:44px }
@@ -3393,6 +3393,11 @@ button.workout-duration-trigger:disabled { cursor:default; opacity:1 }
 .invitation-name-dialog form label { display:grid; gap:7px; font-size:14px; font-weight:600 }
 .invitation-name-dialog form input { width:100% }
 .invitation-share-overlay ~ .modal-overlay { z-index:140 }
+
+@media (max-width:480px) {
+  .invitation-code-fallback { grid-template-columns:minmax(0,1fr) }
+  .invitation-code-fallback button { width:100%; min-width:0 }
+}
 .clients-code-fallback { display:block; width:fit-content; margin:18px auto 0; color:var(--muted); font-size:13px }
 @media (min-width:700px) {
   .invitation-share-overlay,
