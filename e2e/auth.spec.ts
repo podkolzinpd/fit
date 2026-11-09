@@ -32,13 +32,11 @@ async function saveCompactClientPlan(page: import('@playwright/test').Page) {
 }
 
 async function createRegistrationInvitation(page: import('@playwright/test').Page) {
-  await page.goto('/connect')
-  await page.getByRole('button', { name: 'Пригласить', exact: true }).click()
-  const share = page.getByRole('dialog', { name: 'Ссылка готова' })
-  await expect(share).toBeVisible()
-  const code = (await share.getByText(/Код клиента:/).textContent())?.match(/[A-F0-9]{32}/)?.[0]
-  expect(code).toBeTruthy()
-  return code!
+  const response = await nativeRequest(page, '/v1/connection-directory', { method: 'POST', body: { action: 'create_invitation' } })
+  expect(response.ok).toBe(true)
+  const { result } = await response.json() as { result: { code: string } }
+  expect(result.code).toMatch(/^[A-F0-9]{32}$/)
+  return result.code
 }
 
 async function acceptRegistrationInvitation(page: import('@playwright/test').Page, code: string) {
@@ -82,11 +80,13 @@ test('trainer invites the first registered client and plans a workout', async ({
   await expect(page.getByLabel('Имя клиента')).toHaveCount(0)
   await page.getByRole('link', { name: 'Подключить первого спортсмена' }).click()
   await expect(page).toHaveURL(/\/connect$/)
-  const invitationCode = await createRegistrationInvitation(page)
   await page.context().grantPermissions(['clipboard-read', 'clipboard-write'])
-  await page.getByRole('button', { name: 'Скопировать код клиента' }).click()
-  await expect(page.getByRole('button', { name: 'Код клиента скопирован' })).toBeVisible()
-  await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toBe(invitationCode)
+  await page.goto('/connect')
+  await page.getByRole('button', { name: 'Мой QR', exact: true }).click()
+  const link = await page.getByLabel('Ссылка для подключения').inputValue()
+  await page.getByRole('button', { name: 'Отправить ссылку', exact: true }).click()
+  await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toBe(link)
+  expect(link).toMatch(/\/connect\?code=[A-F0-9]{16}$/)
   await nativeCreateConnectedAthlete(page, { name: 'Антон' })
   await page.goto('/today')
   await expect(page.getByRole('heading', { name: 'Первая тренировка: Антон' })).toBeVisible()
@@ -226,9 +226,12 @@ test('invitation links reject the wrong role and revoked code without consuming 
   await expect(page.getByRole('heading', { level: 1, name: 'Сегодня' })).toBeVisible()
   const clientCode = await createRegistrationInvitation(page)
   await page.context().grantPermissions(['clipboard-read', 'clipboard-write'])
-  await page.getByRole('button', { name: 'Скопировать код клиента' }).click()
-  await expect(page.getByRole('button', { name: 'Код клиента скопирован' })).toBeVisible()
-  await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toBe(clientCode)
+  await page.goto('/connect')
+  await page.getByRole('button', { name: 'Мой QR', exact: true }).click()
+  const link = await page.getByLabel('Ссылка для подключения').inputValue()
+  await page.getByRole('button', { name: 'Отправить ссылку', exact: true }).click()
+  await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toBe(link)
+  expect(link).toMatch(/\/connect\?code=[A-F0-9]{16}$/)
 
   // Тренер не может использовать код клиента; код остаётся действующим для
   // правильного аккаунта и следующий переход по ссылке обрабатывается сам.

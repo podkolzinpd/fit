@@ -729,7 +729,7 @@ export const yandexPilotRepository = {
         page,
       )
     } catch (caught) {
-      throw connectionFailure(caught)
+      throw connectionFailure(caught, 'Не удалось загрузить тренировки. Повторите попытку.')
     }
     if (!response.ok) throw responseFailure(response, trainingDataResponseError(response.status))
     const result = trainingDataSchema.safeParse(await response.json())

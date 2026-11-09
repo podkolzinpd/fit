@@ -50,7 +50,7 @@ test('Compact clients keep search, initials and one add flow in trainer Lime', {
   await page.getByRole('button', { name: 'Добавить', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Добавить спортсмена', exact: true })).toBeVisible()
   expect((await page.getByRole('button', { name: 'Назад' }).locator('svg').boundingBox())!.width).toBe(24)
-  await expect(page.getByRole('button', { name: 'Пригласить', exact: true })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Мой QR', exact: true })).toBeVisible()
   await expect(page.getByRole('link', { name: 'Создать карточку вручную' })).toHaveCount(0)
   await page.screenshot({ path: info.outputPath(`clients-add-${theme}.png`) })
   await page.getByRole('button', { name: 'Назад' }).click()
@@ -4869,7 +4869,7 @@ for (const [account, profileId] of [
     await expect(page.getByRole('button', { name: 'Назад' })).toBeVisible()
     await expect(page.getByLabel('Имя', { exact: true })).toHaveCount(0)
     await expect(page.getByRole('button', { name: 'Сохранить', exact: true })).toHaveCount(0)
-    await expect(page.getByRole('button', { name: 'Пригласить', exact: true })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Мой QR', exact: true })).toBeVisible()
     if (account === 'first') {
       const screenshotPath = testInfo.outputPath('fit-lime-client-registration.png')
       await page.screenshot({ path: screenshotPath, fullPage: true })
@@ -4882,25 +4882,22 @@ for (const [account, profileId] of [
 }
 
 test('Fit Lime invitation dialog issues a registration link and keeps keyboard focus', { tag: ["@lime-clients"] }, async ({ page }, testInfo) => {
-  await mockPilot(page, { fitLime: true })
-  const code = 'A'.repeat(32)
+  await mockPilot(page, { fitLime: true, clientHasAccount: false })
+  const code = 'A'.repeat(12)
   let issued = 0, manualWrites = 0
   page.on('request', request => { if (request.method() === 'POST' && new URL(request.url()).pathname === '/v1/clients') manualWrites++ })
-  await page.route('**/v1/connection-directory', async route => {
-    const command = route.request().postDataJSON() as { action: string }
-    if (command.action !== 'create_invitation') return route.fallback()
+  await page.route('**/v1/invitation-links', async route => {
     issued++
-    return route.fulfill({ json: { result: { id: newWorkoutId, code, expiresAt: '2099-09-24T12:00:00Z' } } })
+    return route.fulfill({ json: { invitation: { id: newWorkoutId, clientId, targetRole: 'client', code, token: `${code}.${'a'.repeat(64)}`, expiresAt: '2099-09-24T12:00:00Z' } } })
   })
-  await page.goto('/clients')
-  await page.getByRole('button', { name: 'Добавить', exact: true }).click()
+  await page.goto(`/clients/${clientId}`)
   const invite = page.getByRole('button', { name: 'Пригласить', exact: true })
   await invite.click()
   const dialog = page.getByRole('dialog', { name: 'Ссылка готова' })
   await expect(dialog).toBeVisible()
   await expect(dialog).toHaveCSS('background-color', 'rgb(37, 37, 41)')
   await expect(dialog.getByLabel('Имя спортсмена')).toHaveCount(0)
-  await expect(dialog).toContainText('войти или зарегистрироваться и принять приглашение')
+  await expect(dialog).toContainText('После принятия он увидит ранее записанные тренировки')
   await expect(dialog.getByRole('button', { name: 'Закрыть' })).toBeFocused()
   await page.keyboard.press('Shift+Tab')
   await expect(dialog.getByRole('button', { name: 'Отменить приглашение' })).toBeFocused()

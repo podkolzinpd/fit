@@ -13,13 +13,10 @@ test('registration and invitation acceptance precede training; history survives 
   try {
     await nativeSignIn(page, 'registration-trainer@example.test', 'trainer', 'Тренер История')
     await page.goto('/connect')
-    const created = page.waitForResponse(response => new URL(response.url()).pathname === '/v1/connection-directory' && (response.request().postDataJSON() as { action?: string }).action === 'create_invitation')
-    await page.getByRole('button', { name: 'Пригласить', exact: true }).click()
-    const invitation = await created
-    expect(invitation.ok()).toBe(true)
+    const invitation = await nativeRequest(page, '/v1/connection-directory', { method: 'POST', body: { action: 'create_invitation' } })
+    expect(invitation.ok).toBe(true)
     const { result: share } = await invitation.json() as { result: { code: string } }
     expect(share.code).toMatch(/^[A-F0-9]{32}$/)
-    await expect(page.getByRole('dialog', { name: 'Ссылка готова' })).toBeVisible()
     await expect(page.getByLabel('Имя спортсмена')).toHaveCount(0)
     const before = await nativeRequest(page, '/v1/clients')
     expect(before.ok).toBe(true)

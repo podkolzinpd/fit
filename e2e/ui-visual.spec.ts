@@ -2820,7 +2820,7 @@ test('trainer invitation replaces manual creation and Edit keeps its visual base
   await gotoStable(page, '/clients/new')
   await expect(page).toHaveURL(/\/connect$/)
   await expect(page.getByRole('heading', { name: 'Добавить спортсмена' })).toBeVisible()
-  await expect(page.getByRole('button', { name: 'Пригласить', exact: true })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Мой QR', exact: true })).toBeVisible()
   await expect(page.getByLabel('Начальный вес, кг')).toHaveCount(0)
 
   await gotoStable(page, `/clients/${demoClientId}/edit`)
@@ -2832,7 +2832,7 @@ test('trainer invitation replaces manual creation and Edit keeps its visual base
   await page.getByRole('switch', { name: 'Тёмная тема' }).check()
   await gotoStable(page, '/clients/new')
   await expect(page).toHaveURL(/\/connect$/)
-  await expect(page.getByRole('button', { name: 'Пригласить', exact: true })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Мой QR', exact: true })).toBeVisible()
   await expect(page.getByLabel('Начальный вес, кг')).toHaveCount(0)
   await gotoStable(page, `/clients/${demoClientId}/edit`)
   await expectVisualBaseline(page, `trainer-client-edit-${profile}-dark-${process.platform}.png`, [], true, '#1d1e21')

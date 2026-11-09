@@ -5,16 +5,17 @@ import { workoutStatusPresentation } from '../../data/repositories/workout-rules
 import { isIndependentScheduleWorkout } from './schedule-filters'
 import { workoutExerciseBrief } from './workout-chronicle'
 
-export function FitLimeScheduleList({ workouts, today, returnTo, onOpenDay }: {
+export function FitLimeScheduleList({ workouts, incomplete = false, today, returnTo, onOpenDay }: {
   workouts: Workout[]
+  incomplete?: boolean
   today: LocalDate
   returnTo: string
   onOpenDay: (date: LocalDate) => void
 }) {
   const days = [...new Set(workouts.map((item) => item.workoutDate))].sort().reverse()
-  if (!days.length) return <p className="state" role="status">По этим фильтрам тренировок нет.</p>
+  if (!days.length) return incomplete ? null : <p className="state" role="status">По этим фильтрам тренировок нет.</p>
   return <section className="fit-lime-history" aria-label="Список тренировок">
-    <p className="muted">Все даты · Найдено: {workouts.length}</p>
+    <p className="muted">Все даты · {incomplete ? 'Загружено' : 'Найдено'}: {workouts.length}</p>
     {days.map((date) => {
       const items = workouts.filter((item) => item.workoutDate === date)
       const timed = items.filter((item) => item.startTime).sort((a, b) => a.startTime!.localeCompare(b.startTime!))
