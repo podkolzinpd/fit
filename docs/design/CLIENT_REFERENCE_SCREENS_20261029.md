@@ -8631,3 +8631,43 @@ remotehead; не push нового docshead ради повторного все
 Выпуск не выполнен: PRdraft/OPEN, разрешения наmerge/deploy нет.
 Дальше: сводка владельцу→его разрешение→актуальная общая очередь/main ипроверки
 затронутого новогоhead→публикация/readback→его ручнаяприёмка доMC5.1.3.
+
+
+## 200. MC5.1.2 / PR2069 — разрешение выпуска, 09.11.2026
+
+Владелец явно разрешил выпустить2069 для спортсмена и тренера в общей очереди,
+сохранить все механики идать проверку после публикации. Это заменяет только
+release hold196–199 для этогоPR, не разрешает следующие части.
+FreshGitHub: mainbd2b8452, единственный openPR2069, sourcef6bb73b5; CLEAN,
+CI35success afterfailed-onlyretry, Androidassemblepassed/ожидаемыйauthsmokeskip.
+Main со времени локальной приёмки не изменился: повтор build/browser/CI source
+без причины не запускаем. Наши локальные198–200 толькоdoc receipts; product/QA
+равны проверенномуremotehead. Перед merge повторно сверить queue/main/head,
+убратьdraft иобычныйsquash сmatch-head. Никаких чужихmerge/auto/admin/force.
+Дальше actual-main CI→штатные API/web/OTA→проверка опубликованных байтов/версий
+иclient share/done/duration обеих ролей. Physical/systemshare остаются ручной
+приёмкой владельца после публикации, не выдаются за выполненные браузером.
+
+
+## 201. MC5.1.2 / PR2069 — разрешённое слияние выполнено, 09.11.2026
+
+Fresh premerge mainbd2b8452/единственныйopen2069/remoteheadf6bb73b5 ивсе
+check contexts success/expectedskip сверены повторно. По разрешению200 удалён
+draft, выполнен обычныйsquash сmatch-head; PR2069 MERGED в
+1fa39f4a8eb581a0163626fb55dcb8ce364157a6,09.11 12:31:47UTC. Никаких admin/
+force/auto/чужихmerge. Fetchmain иполный runtime/QA/native/CI/package diff
+f6bb73b5→actual1fa пусты. Локальныеуспешные40/unit34/build/lint не повторялись
+без нового изменения.
+
+Actual-main CI42617778608 иAndroid42617778609 выполняются, это ещё не доставка.
+Один bounded observer с90s pause сохраняет jobs/runs/status в
+/tmp/fit-mc512-release; ожидает штатные API/web/OTA, не dispatch старыхрелизов.
+Подготовлена production QA26cases (10share+12duration+4nonLive) в
+/tmp/fit-mc512-public-qa; current4helpers byte-exact, fixture меняет лишь
+absoluteimports и прежний /api/v1 adapter. Default реальные networkAPI/WS/
+analytics/share/clipboard запрещены, syntheticmocks позднее разрешают только
+нужныепользовательскиесценарии; опубликованные staticassets настоящие.
+Public иverifiedZIP выборка26 подтверждена --list, браузерыпока не запускались.
+После фактической публикации: web/API/signedOTA readback, public26/ZIP26,
+86measuredstates/64PNG comparison без скрытияnotice и нормализации.
+Physical/OAuth/systemshare не считаются выполненными браузером.
