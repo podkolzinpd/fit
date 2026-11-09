@@ -8211,3 +8211,45 @@ Chromium attendance raster при одинаковых measured styles/rect/stat
 реализации/проверок/разбора сбоев и запрет повторных рутинных вопросов закреплены
 в каноническом AGENTS.md. Рутинные действия выполняет агент, не владелец;
 это не отменяет явно сохранённые границы приёмки и ограничений среды.
+
+## 189. MC5.1 — локальный перенос и проверенные границы, 09.11.2026
+
+Итерация — 09.11.2026 — GPT-6 / OpenAI. План188 реализован локально на ef3768e7,
+без push/PR/слияния/публикации. Runtime меняется только в styles.css и действующей
+fit-lime-workout-detail.css:15 scoped guards,5 слабых правил/8 деклараций.
+AST:25709/25709 исходных legacy declaration records сохранены в прежнем порядке;
+существующая detail skin — byte-prefix exact.12 защищённых source/config/MC44
+файлов byte-exact ef, MC43Live22 body exact. DOM/handlers/API/data/валидация/
+ввод/клавиатура/таймеры/жесты/настройки и другие MC5-области не менялись.
+
+Fresh production-fixture baseline до CSS:16 cases,4 реальных off passed,
+12 современных случаев ожидаемо red только на последнем ownership assert,
+после механик/JSON.40 состояний с точным CSSOM/restoration/focus-scroll-anchor,
+diagnostics0. Classifier сохраняет5 positive owners и снимает лишь13 exact
+whitelist migration blocks. Не используются env для пропуска assertions.
+MC43 native4 сохраняет keyboard/cancel/focus/rawscroll/no-write/data assertions,
+требуя новый owner-proof; настоящий legacy-positive проверен отдельными off4.
+
+После CSS: full build/types/startup/fonts, полный lint и14/14 целевых unit passed.
+Браузерный набор:100passed,0fail/flaky;14 existing duration cases skipped из-за
+пропущенного root FIT_SCHEDULE_V2_VISUAL=1. Причина — top-level test.skip двух
+существующих spec, не product failure. Это НЕ114passed. Планировался отдельный
+запуск только этих14 с правильным selection env и тем же source/build hash;
+карточка запуска отклонена пользователем, операция не выполнена. Повторно не
+запрашивалась и другим способом не обходилась.14 остаются непроверенными на
+этом изменённом source; прежний CI ef не присваивается новой версии.
+
+Сравнение baseline→candidate:40/40 settled computed/geometry/backdrop/frame/
+focus-state exact,28/28PNG byte-exact,16/16 payload/writes и initial/final
+scrollTop exact. Полные rawscroll objects11/16 exact: в5 отличается только
+ранний initial scrollHeight до font/paint barrier; settled final objects16/16
+exact. Причина раннего sampling не установлена, нормализаций/ретраев нет.
+Candidate WebKit clientlightinvalid/trainer1440saved осмотрены; вид и фокус
+сохранены. Исходный серый validation error остаётся известным отдельным MC513.
+
+Квитанции: /tmp/fit-mc51-local/; /tmp/fit-mc51-source-proof.json;
+/tmp/fit-mc51-local-comparison.json; /tmp/fit-mc51-ef-baseline-review.json.
+Непроверенное: указанные14 browser, внешний CI новой версии, physical phones.
+Дальше: сохранить reviewable локальный коммит; до будущего выпуска — недостающие
+проверки и актуальная интеграция. Самостоятельное выполнение закреплено c6e27c4e;
+явная граница MC-RELEASE-01 сохранена. Новых разрешений/вопросов сейчас нет.

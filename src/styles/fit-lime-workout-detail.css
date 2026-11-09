@@ -167,3 +167,22 @@
 .phone-frame .workout-detail-page.coach-exercise-first .workout-detail-exercise-heading strong {
   font-size: 19px; line-height: 1.3;
 }
+
+/* MC5.1: duration-only done-detail paint. Keep the native dialog's shared
+   viewport, scrolling and form layout; stronger role Lime rules still win. */
+:where(.fit-lime-shell.workout-detail-history-identity) .workout-actual-duration span {
+  color: var(--secondary-label-fg); font-size: var(--text-sm);
+}
+:where(.fit-lime-shell.workout-detail-history-identity) .workout-actual-duration strong {
+  font-size: var(--text-title); font-weight: 600;
+}
+:where(.fit-lime-shell.workout-detail-history-identity) .workout-duration-dialog {
+  border: 1px solid var(--border);
+}
+:where(.fit-lime-shell.workout-detail-history-identity) .workout-duration-dialog small {
+  font-size: var(--text-sm);
+}
+
+:where(.fit-lime-shell.workout-detail-history-identity) .workout-actual-duration button {
+  border-radius: 14px; font-size: 14px;
+}
