@@ -3,7 +3,7 @@ import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import type { BlockPreset, ExerciseSnapshot, WorkoutExerciseDraft, WorkoutSetDraft } from '../../shared/domain'
 import { formatLocalDate } from '../../shared/local-date'
-import { RPE_OPTIONS } from '../../shared/rpe'
+import { isValidRpe, RPE_OPTIONS } from '../../shared/rpe'
 import type { PreviousExerciseResult } from '../../data/contracts/workouts'
 import { applyRunningActiveRecoveryPreset, applyRunningIntervalPreset, compactExerciseDetailSummary, groupDraftsIntoBlocks, mergeBlockWithNext, moveBlock, moveDraftBlockTo, nextSetDraft, previousResultLine, resizeDraftBlockRounds, setBlockPreset, setBlockRest, splitBlock, draftBlockRoundsView } from '../../data/repositories/workout-rules'
 import { OverflowMenu, useConfirm } from '../../shared/ui'
@@ -253,6 +253,15 @@ export function WorkoutExerciseEditor({ exercises, onSaveAsTemplate, onChange, o
       } : set),
     } : exercise))
   }
+  function updateRpe(exerciseIndex: number, setIndex: number, value: string) {
+    const next = inputNumber(value)
+    if (next !== undefined && !isValidRpe(next)) return
+    const set = latestExercises.current[exerciseIndex]?.sets[setIndex]
+    if (!set || set.rpe === next) return
+    // Commit the native input signal immediately; change may follow when the
+    // picker closes. The latest draft makes that second event idempotent.
+    updateSet(exerciseIndex, setIndex, { rpe: next })
+  }
   function addSet(exerciseIndex: number) {
     commitExercises(latestExercises.current.map((exercise, current) => current === exerciseIndex ? {
       ...exercise, sets: [...exercise.sets, nextSetDraft(exercise.sets, exercise.inputKind)],
@@ -335,7 +344,7 @@ export function WorkoutExerciseEditor({ exercises, onSaveAsTemplate, onChange, o
     const repsField = safePlanInput
       ? <PlanNumberField label={`Повторы, подход ${setIndex + 1}`} placeholder={refinedPlan ? '—' : 'повт.'} name={`${exercise.blockId}-${set.position}-reps`} value={set.reps} disabled={disabled} onChange={(next) => updateSet(exerciseIndex, setIndex, { reps: next })} />
       : <input className={inputClass} aria-label={`${entryMode === 'fact' && exercise.inputKind === 'strength' ? 'Фактические повторы' : 'Повторы'}, подход ${setIndex + 1}`} type="number" inputMode="numeric" min="0" placeholder={referenceAppearance && !reference ? '—' : 'повт.'} value={set.reps ?? ''} onFocus={(event) => prepareZeroReplacement(event.currentTarget)} onChange={(event) => updateSet(exerciseIndex, setIndex, { reps: inputNumber(event.target.value) })} />
-    const rpeField = showRpe ? <select className="planned-set-rpe" aria-label={`${entryMode === 'fact' ? 'Фактический' : 'Целевой'} RPE, подход ${setIndex + 1}`} value={set.rpe ?? ''} onChange={(event) => updateSet(exerciseIndex, setIndex, { rpe: inputNumber(event.target.value) })}>
+    const rpeField = showRpe ? <select className="planned-set-rpe" aria-label={`${entryMode === 'fact' ? 'Фактический' : 'Целевой'} RPE, подход ${setIndex + 1}`} value={set.rpe ?? ''} onInput={(event) => updateRpe(exerciseIndex, setIndex, event.currentTarget.value)} onChange={(event) => updateRpe(exerciseIndex, setIndex, event.currentTarget.value)}>
       <option value="">—</option>
       {RPE_OPTIONS.map((value) => <option key={value} value={value}>{value}</option>)}
     </select> : null

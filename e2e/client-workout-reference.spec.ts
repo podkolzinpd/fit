@@ -4448,11 +4448,11 @@ for (const sample of [
     const content = document.querySelector<HTMLElement>('.content')!
     const target = document.querySelector<HTMLElement>(`[data-live-set-id="${setId}"]`)!
     const original = content.scrollTo.bind(content)
-    const frames: Array<{ t: number; scroll: number; targetTop: number; targetBottom: number; contentTargetTop: number; contentHeight: number; clockHeight: number; layoutTransitions: string[] }> = [], calls: ScrollToOptions[] = []
+    const frames: Array<{ t: number; scroll: number; targetTop: number; targetBottom: number; contentTargetTop: number; contentHeight: number; clockHeight: number; layoutTransitions: string[] }> = [], calls: Array<ScrollToOptions & { t: number }> = []
     const start = performance.now()
     content.scrollTo = function (options: ScrollToOptions | number = {}, y?: number) {
       if (typeof options === 'number') return original(options, y ?? 0)
-      calls.push(options)
+      calls.push({ ...options, t: performance.now() })
       original(options)
     }
     function sampleFrame(t: number) {
@@ -4471,6 +4471,7 @@ for (const sample of [
   await button.click()
   await expect.poll(() => backend.getWorkouts()[0]!.exercises[currentExercise]!.sets[currentSet]!.confirmedAt).not.toBeNull()
   const trace = await measurements
+  await writeFile(info.outputPath('live-handoff-frames.json'), JSON.stringify(trace, null, 2))
   await info.attach('live-handoff-frames', { body: JSON.stringify(trace), contentType: 'application/json' })
   expect(trace.calls.length).toBeLessThanOrEqual(1)
   if (Math.abs(trace.frames.at(-1)!.scroll - trace.frames[0]!.scroll) > 100) {
