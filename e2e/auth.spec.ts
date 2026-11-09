@@ -116,7 +116,26 @@ test('trainer adds the first client, plans a workout and gets an invitation code
   await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toBe(invitationCode)
 })
 
-test('client registers, starts without a profile questionnaire and creates an own workout', async ({ page }, testInfo) => {
+// Each scenario owns a fresh actor and keeps the normal 30s budget. With
+// native API routing, every hard navigation reloads Vite's uncached module
+// graph; registration, profile persistence, workout CRUD and role guards are
+// independent user contracts, rather than one cumulative navigation budget.
+async function registerClientWithCompleteProfile(page: import('@playwright/test').Page, key: string) {
+  await nativeRegister(page, { key, firstName: 'Клиент', role: 'client' })
+  await page.goto('/me/edit')
+  await fillClientProfileDetails(page)
+  await page.getByRole('button', { name: 'Сохранить профиль' }).click()
+  await expect(page).toHaveURL(/\/me$/)
+}
+
+async function openClientWorkoutDraft(page: import('@playwright/test').Page) {
+  await page.getByRole('button', { name: 'Ввести текстом' }).click()
+  await expect(page.getByRole('heading', { level: 1, name: 'Сегодня' })).toBeVisible()
+  await expect(page.getByText('Новая тренировка', { exact: true })).toBeVisible()
+  await page.getByRole('button', { name: 'Скрыть' }).click()
+}
+
+test('client registers without a questionnaire and completes the profile before training', async ({ page }, testInfo) => {
   const email = `client-signup-${testInfo.workerIndex}-${Date.now()}@fit.local`
   // Registration seeds the session before the fixture opens /auth.
   await nativeRegister(page, { key: email, firstName: 'Клиент', role: 'client' })
@@ -136,12 +155,12 @@ test('client registers, starts without a profile questionnaire and creates an ow
   await fillClientProfileDetails(page)
   await page.getByRole('button', { name: 'Сохранить профиль' }).click()
   await expect(page).toHaveURL(/\/me$/)
-  await page.goto('/me')
-  await page.getByRole('button', { name: 'Ввести текстом' }).click()
+  await expect(page.getByRole('button', { name: 'Ввести текстом', exact: true })).toBeVisible()
+})
 
-  await expect(page.getByRole('heading', { level: 1, name: 'Сегодня' })).toBeVisible()
-  await expect(page.getByText('Новая тренировка', { exact: true })).toBeVisible()
-  await page.getByRole('button', { name: 'Скрыть' }).click()
+test('client edits a completed profile and retains it after reload', async ({ page }, testInfo) => {
+  await registerClientWithCompleteProfile(page, `client-profile-${testInfo.workerIndex}-${Date.now()}@fit.local`)
+  await openClientWorkoutDraft(page)
   await page.getByRole('link', { name: 'Профиль', exact: true }).click()
   await expect(page).toHaveURL(/\/me\/profile$/)
   await page.getByRole('link', { name: 'Изменить данные' }).click()
@@ -153,9 +172,11 @@ test('client registers, starts without a profile questionnaire and creates an ow
   await expect(page.getByText('Клиент Сам', { exact: true })).toBeVisible()
   await page.reload()
   await expect(page.getByText('Клиент Сам', { exact: true })).toBeVisible()
-  await page.goto('/profile')
-  await expect(page).toHaveURL(/\/me$/)
-  await page.goto('/me/profile')
+})
+
+test('client creates and copies an own workout with both sets intact', async ({ page }, testInfo) => {
+  await registerClientWithCompleteProfile(page, `client-workout-${testInfo.workerIndex}-${Date.now()}@fit.local`)
+  await openClientWorkoutDraft(page)
   await page.getByRole('navigation', { name: 'Основная навигация' }).getByRole('link', { name: 'Тренировки' }).click()
   await page.getByRole('link', { name: 'Добавить', exact: true }).click()
   await page.getByRole('button', { name: 'Выбрать упражнения' }).click()
@@ -192,7 +213,12 @@ test('client registers, starts without a profile questionnaire and creates an ow
     page.getByRole('button', { name: 'Сохранить' }).click(),
   ])
   await expect(page.getByRole('heading', { name: 'Тренировка', level: 1, exact: true })).toBeVisible()
+})
 
+test('client cannot open trainer profile or client directory routes', async ({ page }, testInfo) => {
+  await registerClientWithCompleteProfile(page, `client-route-guard-${testInfo.workerIndex}-${Date.now()}@fit.local`)
+  await page.goto('/profile')
+  await expect(page).toHaveURL(/\/me$/)
   await page.goto('/clients')
   await expect(page).toHaveURL(/\/me$/)
 })
