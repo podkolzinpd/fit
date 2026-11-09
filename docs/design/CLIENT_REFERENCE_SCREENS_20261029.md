@@ -9022,3 +9022,54 @@ assertions остаются вvisual lane, business не превращаетс�
 не объявляются исправленными; новые находки отдельно записываются. Физическое
 устройство и systemshare не подменяются браузерной проверкой.
 Дальше: реализация и приёмка → reviewable PR/CI → сводка владельцу; без выпуска.
+
+
+## 211. MC5.1.4 — реализация и свежая локальная приёмка
+
+Итерация211 — 2026-11-09 — OpenAI. Product/QA b7f6c74d, base9a440c06.
+Потребитель подтверждён: клиентский justCompleted report; отдельный
+WorkoutCompletionCard тренера проверен через настоящее завершение Live.
+Runtime2CSS:11zero-specificity exclusions и9weakrules/13declarations.
+Card/h1 уже принадлежат сильному Lime, лишних копий нет; first-child border0,
+layout, typography500/date400 и все остальные consumers прежние.
+PostCSS proof25716/25716 declaration-branch records exact после удаления
+только11новыхguards, прежний Lime — byte-prefix.12protectedruntime/QA/config
+файлов byte-exact main, включая report/Card/WorkoutsPages/duration/share,
+текущие duration/share/probe/behavior/package/lock/playwright.
+
+QA: новыйvisual helper, существующийvisualentry;14cases=10modern+2off+2trainer.
+Исходный свежийbaseline14:10expectedownershipred/4positivepassed,15.200s.
+Всеred толькоfinalassert legacy matches, не фиктивная поломка fixture.
+Полные14JSON/14PNG собраны доassert. Реальные imageerrorSVGfallback200invalid,
+full/partial/empty,375/390/430/1440, обеclientтемы/pilot/default/off.
+Trainer nonconsumer прошёл finish→attendanceconfirm→card, facts unchanged,
+recordsGET1, report/card selectors отсутствуют. Тренерская карточка не заменена.
+
+Candidate58/58,53.424s:14new+12duration+10share+4errorvisual+14durationbehavior
++4PNGexport. Отдельно24/24existingLive29.559s: обе-role undo/latestinput/rest/
+reload, disclosure54/48, keyboardNext, compacttrustedtap/swipe/hold,
+confirmedswipe/cancel/delete/reload, pauseclock и coachout-of-order2074.
+Всё retries0,0skip/fail/flaky. Unit8files63passed; full lint, build/types/
+startup/fonts2, split-policy8, docs/diff passed. Первое пересечение build
+с ещё записываемымQA остановилось наtupletyping; доbaseline типы исправлены,
+tsc прошёл, assertions не менялись. Source actualscope frontend/browser=true.
+
+Сравнение:14/14computed geometry/styles/frame и14/14PNG byte-exact.
+12CSSOM/CSSStyleDeclaration/focus/scroll/anchor roundtrips true; positiveowners
+не удаляютсяprobe, whitelist только точныйguard, unknownnegativewhere сохранён.
+10modern legacy matches0/ablationdiff0;2off остаютсяреальнымиpositivecontrols.
+Всеpayloads/facts/rootclasses/diagnostics соответствуютbaseline.
+
+Квалификация: strictcomparator сохраняетexit1,12/14all-checks-exact. Только
+2partial375 initialScroll.height различаются: Chromium2113→2130,
+WebKit2118→2113. initialx/y0/client844 равны; finalwholeScroll2113 exact.
+Замер уже ПОСЛЕ fonts.ready, но ДО settleCompletionPaint. Причина неизвестна;
+её нельзя назвать доказанной гонкой шрифта или lazyCSS. Данные/порог не
+нормализованы, повторов радиgreen нет. Settled14screens иреальныефокус/ввод
+не показывают новых смещений. Ограничение остаётся видимым владельцу.
+
+Артефакты /tmp/fit-mc514-{baseline,candidate,live}-20261109.json и-results,
+/tmp/fit-mc514-comparison-20261109.json, source-proof-20261109.json,
+unit/lint/policy/build logs. Просмотрены actualWebKit lightfull,darkfallback
+иtrainercard. Физическийтелефон/nativeinstall/OAuth/systemshare не проверены.
+Дальше draftPR/новыйCI→сводка. Разрешенияmerge/deployMC514 нет.
