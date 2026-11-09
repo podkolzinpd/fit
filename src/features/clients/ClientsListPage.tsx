@@ -1,6 +1,7 @@
+import { ConnectionRequests } from '../auth/ConnectionPage'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react'
-import { Link, useLocation, useSearchParams } from 'react-router-dom'
+import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../../app/auth-context'
 import { isCoachWorkoutRedesignEnabled } from '../../app/coach-workout-redesign'
 import { isTrainerScheduleV2Enabled } from '../../app/trainer-schedule-v2'
@@ -12,8 +13,6 @@ import { todayInTimeZone } from '../../shared/local-date'
 import { AsyncView, Coachmark, Page } from '../../shared/ui'
 import { ArchiveIcon, CheckIcon, ChevronRightIcon, CloseIcon, HistoryIcon, SearchIcon } from '../../shared/icons'
 import { canOpenClientChat, clientChatThreads, ChatStartButton, ChatThreadsNotice, useChatThreads } from '../chat'
-import { ClientAddDialog } from './ClientAddDialog'
-import { InviteAthleteButton } from '../auth/InvitationShareActions'
 import { trainerFinanceClientLabel } from '../finance/TrainerFinanceOverviewPage'
 
 function clientInitials(name: string): string {
@@ -179,8 +178,7 @@ function ClientsListPage({ archivedOnly }: ClientsListPageProps) {
   const [searchParams, setSearchParams] = useSearchParams()
   const pageRef = useRef<HTMLDivElement>(null)
   const addTrigger = useRef<HTMLButtonElement>(null)
-  const [adding, setAdding] = useState(false)
-  const [inviting, setInviting] = useState(false)
+  const navigate = useNavigate()
   const [openClientId, setOpenClientId] = useState<string | null>(null)
   const [feedback, setFeedback] = useState<{ client: Client; message: string; canUndo: boolean } | null>(null)
   const archiveInFlight = useRef(false)
@@ -252,6 +250,13 @@ function ClientsListPage({ archivedOnly }: ClientsListPageProps) {
     window.sessionStorage.setItem(scrollKey, JSON.stringify({ path: `${location.pathname}${location.search}`, top: viewport.scrollTop }))
   }
   useEffect(() => {
+    const state: unknown = location.state
+    if (query.isSuccess && state && typeof state === 'object' && 'connectionFocus' in state && state.connectionFocus === true) {
+      addTrigger.current?.focus()
+      navigate(`${location.pathname}${location.search}`, { replace: true, state: null })
+    }
+  }, [query.isSuccess, location, navigate])
+  useEffect(() => {
     if (!query.isSuccess || !window.sessionStorage) return
     let stored: { path?: string; top?: number } | null = null
     try { stored = JSON.parse(window.sessionStorage.getItem(scrollKey) ?? 'null') as { path?: string; top?: number } | null } catch { stored = null }
@@ -277,8 +282,7 @@ function ClientsListPage({ archivedOnly }: ClientsListPageProps) {
     return () => window.cancelAnimationFrame(frame)
   }, [location.pathname, location.search, query.isSuccess, scrollKey])
 
-  const restoreAddFocus = () => window.requestAnimationFrame(() => addTrigger.current?.focus())
-  const addButton = <button ref={addTrigger} type="button" className="button primary clients-add-button" onClick={() => setAdding(true)}>{showSearch ? 'Добавить' : 'Добавить клиента'}</button>
+  const addButton = <button ref={addTrigger} type="button" className="button primary clients-add-button" onClick={() => { rememberListPosition(); navigate('/connect') }}>{showSearch ? 'Добавить' : 'Добавить спортсмена'}</button>
   const pageActions = !archivedOnly && showSearch && <div className="clients-page-header-actions">{addButton}</div>
 
   return <div ref={pageRef} onPointerDownCapture={(event) => {
@@ -295,6 +299,7 @@ function ClientsListPage({ archivedOnly }: ClientsListPageProps) {
       <button type="button" className="clients-archive-feedback-close" aria-label="Закрыть сообщение" onClick={() => setFeedback(null)}><CloseIcon /></button>
     </div>}
     {archive.error && <p className="error clients-archive-error" role="alert">{archive.error.message}</p>}
+    {!archivedOnly && <ConnectionRequests />}
     <ChatThreadsNotice loading={threads.isLoading} error={threads.error} onRetry={() => void threads.refetch()} />
     {!archivedOnly && financeEnabled && !financeInNavigation && <Link className="clients-finance-entry" to="/finance" onClick={rememberListPosition}>
       <span><strong>Финансы</strong><small>{finance.data ? `${new Intl.NumberFormat('ru-RU').format(finance.data.receivedCents / 100)} ₽ получено · ${finance.data.attentionCount} требуют внимания` : 'Абонементы, оплаты и занятия'}</small></span><ChevronRightIcon />
@@ -344,10 +349,6 @@ function ClientsListPage({ archivedOnly }: ClientsListPageProps) {
     </Link>}
     {!archivedOnly && <Link className="clients-code-fallback" aria-label="Ввести код" to="/join">Ввести код приглашения</Link>}
   </Page>
-    {adding && <ClientAddDialog onBeforeOpen={rememberListPosition}
-      onClose={() => { setAdding(false); restoreAddFocus() }}
-      onInvite={() => { setAdding(false); setInviting(true) }} />}
-    {!archivedOnly && <InviteAthleteButton open={inviting} onOpenChange={value => { setInviting(value); if (!value) restoreAddFocus() }} />}
   </div>
 }
 

@@ -1,3 +1,4 @@
+import { ConnectionRequests } from '../auth/ConnectionPage'
 import { useState, type ReactNode } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
@@ -20,10 +21,10 @@ export function ClientTrainerConnections({ clientId, finance }: { clientId: stri
     onMutate: () => setDisconnectMessage(null),
     onSuccess: async (_, trainerId) => {
       await queryClient.cancelQueries({ queryKey: ['client-trainers', clientId] })
+      setDisconnectMessage('Тренер отключён. Ваш аккаунт, тренировки, замеры и цели сохранены.')
       queryClient.setQueryData<TrainerMembership[]>(['client-trainers', clientId], (current) =>
         current?.filter((trainer) => trainer.trainerId !== trainerId))
       await queryClient.invalidateQueries()
-      setDisconnectMessage('Тренер отключён. Ваш аккаунт, тренировки, замеры и цели сохранены.')
     },
   })
   const [confirm, confirmDialog] = useConfirm()
@@ -52,6 +53,8 @@ export function ClientTrainerConnections({ clientId, finance }: { clientId: stri
       </article>
     })}
     {finance}
+    <ConnectionRequests />
+    <Link className="button primary connection-entry" to="/connect">Добавить тренера</Link>
     <Link className={`button client-trainer-search ${trainers.data?.length === 0 ? 'primary' : 'secondary'}`} to="/me/trainers"><SearchIcon />Найти тренера</Link>
     {trainers.data?.length === 0 && <div className="client-trainer-invite-actions"><p>Уже договорились с тренером?</p><InvitationShareButton clientId={clientId} targetRole="trainer" label="Пригласить тренера" className="secondary client-trainer-invite-button" /><small>Отправьте ему ссылку или QR-код.</small></div>}
     {hasTrainers && <p className="muted">У вас может быть один активный тренер. Смену подтверждаете вы — история сохранится.</p>}

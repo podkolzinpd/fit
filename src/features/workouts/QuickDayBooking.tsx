@@ -1,4 +1,4 @@
-import { useCreateWorkoutClient } from './use-create-workout-client'
+import { isWorkoutClient } from './workout-client-eligibility'
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
@@ -29,7 +29,6 @@ export function dayBookingTime(target: Element, x: number, y: number, hourHeight
 export function QuickDayBooking({ date, time, returnTo, onClose }: { date: LocalDate; time: string; returnTo: string; onClose: () => void }) {
   const { actor } = useAuth()
   const { clients: clientsRepository, workouts } = useDataBackend()
-  const createClient = useCreateWorkoutClient()
   const queryClient = useQueryClient()
   const navigate = useNavigate()
   const key = workoutFormDraftKey(actor?.userId ?? 'anonymous', `booking--${date}--${time}`)
@@ -44,7 +43,7 @@ export function QuickDayBooking({ date, time, returnTo, onClose }: { date: Local
   const submitting = useRef(false)
   const committed = useRef(false)
   const clients = useQuery({ queryKey: ['clients', false], queryFn: () => clientsRepository.list(false) })
-  const client = clients.data?.find(item => item.id === clientId)
+  const client = clients.data?.find(item => item.id === clientId && isWorkoutClient(item))
   const draft: WorkoutFormDraft = { clientId, workoutDate: selectedDate, startTime: selectedTime.start, endTime: selectedTime.end,
     requestId, title: '', exercises: [], notes: '', stageId: '', recordCompleted: false, trainingFormat: 'with_trainer', executionMode: 'manual' }
   useEffect(() => { dialog.current?.showModal(); dialog.current?.focus({ preventScroll: true }) }, [])
@@ -84,6 +83,6 @@ export function QuickDayBooking({ date, time, returnTo, onClose }: { date: Local
       </fieldset>
       {(error || save.error) && <p className="error" role="alert">{error ?? save.error?.message}</p>}
     </form>
-    {pickerOpen && <ClientPicker userId={actor.userId} clients={clients.data ?? []} selectedId={clientId} onChange={id => { setClientId(id); setError(null) }} loading={clients.isLoading} error={clients.error} onRetry={() => void clients.refetch()} onCreate={createClient} reference autoFocusSearch={false} initialOpen hideTrigger onDismiss={() => setPickerOpen(false)} />}
+    {pickerOpen && <ClientPicker userId={actor.userId} clients={clients.data?.filter(isWorkoutClient) ?? []} selectedId={clientId} onChange={id => { setClientId(id); setError(null) }} loading={clients.isLoading} error={clients.error} onRetry={() => void clients.refetch()} reference autoFocusSearch={false} initialOpen hideTrigger onDismiss={() => setPickerOpen(false)} />}
   </dialog>
 }
