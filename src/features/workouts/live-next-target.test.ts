@@ -62,3 +62,15 @@ it('continues a chosen later round before wrapping to unfinished earlier rounds'
   done(a, 0); done(b, 0)
   expect(nextLiveTarget([earlier, a, b], 'g', true, 1)?.set.id).toBe('earlier-0')
 })
+
+it('finishes later rounds before returning to an earlier pending round and tolerates a removed cursor', () => {
+  const a = exercise('a', 0, 'g', [0, 1, 2]), b = exercise('b', 1, 'g', [0, 1, 2])
+  done(a, 1); done(b, 1)
+  expect(nextLiveTarget([a, b], 'g', true, 1)?.set.id).toBe('a-2')
+  done(a, 2); done(b, 2)
+  expect(nextLiveTarget([a, b], 'g', true, 2)?.set.id).toBe('a-0')
+  a.sets = a.sets.filter(set => set.position !== 2)
+  b.sets = b.sets.filter(set => set.position !== 2)
+  expect(nextLiveTarget([a, b], 'g', true, 2)?.set.id).toBe('a-0')
+  expect(nextLiveTarget([a, b], 'removed-block', true, 2)?.set.id).toBe('a-0')
+})
