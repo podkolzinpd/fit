@@ -1,3 +1,4 @@
+import { limeCompletionReportSkinCases, limeTrainerCompletionNonConsumerCases } from './lime-completion-report-skin.cases'
 import { limeDurationErrorPaintCases } from './lime-duration-error-paint.cases'
 import { limeCompletionShareSkinCases } from './lime-completion-share-skin.cases'
 import { limeActualDurationSkinCases } from './lime-actual-duration-skin.cases'
@@ -29,6 +30,8 @@ limeLiveAttendanceSkinCases()
 limeLiveTimerReviewLayoutCases()
 limeActualDurationSkinCases()
 limeCompletionShareSkinCases()
+limeCompletionReportSkinCases()
+limeTrainerCompletionNonConsumerCases()
 limeDurationErrorPaintCases()
 
 const pilotId = 'c11e0000-6010-4000-8000-000000000001'
