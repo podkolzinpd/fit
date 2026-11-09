@@ -329,6 +329,8 @@ export async function mockPilot(page: Page, options: { role?: 'trainer' | 'clien
           preferences: { scheduleDensity },
         },
       }
+    } else if (url.pathname === '/v1/corporate-duties/access') {
+      body = { allowed: false, hasHistory: false, active: null, offices: [] }
     } else if (url.pathname === '/v1/connection-directory') {
       const command = route.request().postDataJSON() as { action: string }
       body = { result: command.action === 'list' ? [] : command.action === 'self' ? { code: 'ABCDEF0123456789', fitId: trainerId, emailSearchReady: true } : null }

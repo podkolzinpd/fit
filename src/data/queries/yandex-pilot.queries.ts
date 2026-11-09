@@ -24,6 +24,7 @@ function trainingDataQuery(page?: YandexTrainingDataPage): string {
   return `?${query.toString()}`
 }
 
+export const YANDEX_TRAINING_DATA_REQUEST_TIMEOUT_MS = 15_000
 export const YANDEX_AUTH_REQUEST_TIMEOUT_MS = 12_000
 export const YANDEX_AUTH_REQUEST_TIMEOUT_MESSAGE = 'Проверка сессии Yandex ID заняла слишком много времени.'
 
@@ -194,10 +195,10 @@ export const yandexPilotQueries = {
     sessionToken: string,
     accessMode: YandexApiAccessMode = 'read_only',
     page?: YandexTrainingDataPage,
-  ) => fetch(`${apiBaseUrl}/v1/training-data${trainingDataQuery(page)}`, {
+  ) => fetchWithTimeout(fetch, `${apiBaseUrl}/v1/training-data${trainingDataQuery(page)}`, {
     cache: 'no-store',
     headers: sessionHeaders(sessionToken, accessMode),
-  }),
+  }, YANDEX_TRAINING_DATA_REQUEST_TIMEOUT_MS, 'Загрузка тренировок заняла слишком много времени. Повторите попытку.'),
   parseWorkout: (
     apiBaseUrl: string,
     sessionToken: string,

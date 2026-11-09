@@ -1,3 +1,4 @@
+import { CorporateDutyStatistics } from '../corporate-duties/DutyStatistics'
 import { CorporatePersonalStatistics } from '../corporate-personal'
 import { CorporateServiceStatistics } from '../corporate-services'
 import { CorporateInvitations } from './Invitations'
@@ -53,12 +54,16 @@ function AdminWorkspace() {
       <button type="button" className="secondary" aria-current={invitationsTab ? 'page' : undefined} onClick={() => setParams({ tab: 'invitations' })}>Приглашения</button>
       <button type="button" className="secondary" aria-current={statisticsTab ? 'page' : undefined} onClick={() => setParams({ tab: 'statistics' })}>Статистика</button>
     </nav>
-    {statisticsTab ? personalTab
-      ? <CorporatePersonalStatistics switchView={<button className="secondary" type="button" onClick={() => setParams({tab:'statistics'})}>Услуги</button>} />
-      : <CorporateServiceStatistics switchView={<button className="secondary" type="button" onClick={() => setParams({tab:'statistics',kind:'personal'})}>Персональные</button>} /> : <AsyncView loading={query.isPending} error={query.error} onRetry={() => void query.refetch()}>
+    {statisticsTab ? <>
+      {personalTab?<CorporatePersonalStatistics switchView={<StatisticsSwitch current="personal" onChange={kind=>setParams({tab:'statistics',kind})}/>}/>:params.get('kind')==='duties'?<CorporateDutyStatistics switchView={<StatisticsSwitch current="duties" onChange={kind=>setParams({tab:'statistics',kind})}/>}/>:<CorporateServiceStatistics switchView={<StatisticsSwitch current="services" onChange={kind=>setParams({tab:'statistics',kind})}/>}/>}
+    </> : <AsyncView loading={query.isPending} error={query.error} onRetry={() => void query.refetch()}>
       {query.data && (officesTab ? <Offices key="offices" data={query.data} /> : invitationsTab ? <CorporateInvitations key="invitations" data={query.data} initialCreate={params.get('create') === '1'} /> : <Trainers key="trainers" data={query.data} onInvite={() => setParams({ tab: 'invitations', create: '1' })} />)}
     </AsyncView>}
   </>
+}
+
+function StatisticsSwitch({current,onChange}:{current:string;onChange:(kind:string)=>void}){
+ return <>{[['services','Услуги'],['personal','Персональные'],['duties','Дежурства']].filter(([kind])=>kind!==current).map(([kind,label])=><button className="secondary" type="button" key={kind} onClick={()=>onChange(kind!)}>{label}</button>)}</>
 }
 
 function useSave() {
