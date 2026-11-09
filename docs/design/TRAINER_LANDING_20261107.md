@@ -601,3 +601,89 @@ PR2071/head6c07f625: CI42625236137 все35 jobs success. Перед merge main
 обновился до49c81395(поиск шаблонов). Ветка совмещена без конфликта; собственные
 SEO/runtime файлы не изменились. Новый build и полныйCI нового head обязательны.
 Очередь GitHub:2071 раньше активных2072/2073; другие чаты не читались.
+
+
+Публикация21 завершена: PR2071/head9b44bb4b CI42630775731 —35success;
+merge0520c732, mainCI42636275681 —35success. Cloud.ru API42639725793 и
+frontend42639725841 success. 09.11,15:06UTC: HTTPS GET обеих страниц, общих
+CSS/JS/analytics, robots/sitemap200 и exact bytes. Главная metadata/counter IDs
+подтверждены, APIhealth ok/releaseId exact0520. CUA production: обе роли,
+изображения загружены, overflow нет, переключение и legacy-URL с UTM/motion/hash
+работают. Физический телефон отдельно не проверялся.
+Яндекс переобход: все3URL в очереди09.11,18:09MSK. Google: запросы всех3URL
+подтверждены. Trainer уже в индексе; новый athlete неизвестен; root в сохранённом
+отчёте просканирован08.10, но не индексирован. Это статусы до обработки заявок,
+не доказательство текущих позиций. Сниппеты обновляются после нового обхода.
+Квитанции: outputs/fit-landing-search-20261109/{checkpoint.json,
+public-verification.json,deployment-current.json,google-*-request.png,
+yandex-recrawl-queue-full.png,athlete-public.png} в зеркале проекта.
+Локальная квитанция после выпуска; новый docs-only выпуск не запускался.
+
+
+## Итерация22 — 09.11.2026 — Codex / OpenAI — восстановить параллельную Метрику
+
+Задача: по сообщению владельца проверить старый111074543 и новый114123380;
+после диагностики разрешено исправить и опубликовать параллельный сбор.
+База9a440c06, отдельный checkout fit-metrika-parallel-20261109.
+Расхождение: прежнее «счётчики сохранены» изитераций19–21 было неверным выводом
+из наличия ID в исходнике. Фактически PR2061 заменил единственный SSR loader
+111074543 на114123380. id-specific tag.js при ssr:true пропускает чужой init.
+Это подтверждено production console _ym_debug=2 (только114123380) и кодом
+официального tag; https://yandex.ru/support/metrica/ru/code/install-several-counters.
+Первый подтверждённый выпуск c28700ba09.11,08:56UTC. Точный объём пропущенных
+старым счётчиком визитов неизвестен; старые открытые вкладки могли продолжать
+сбор. Перенос посещений задним числом не обещается, искусственные цели запрещены.
+Данные нового09.11 при проверке:77visits/55users/718pageviews,
+registration_completed2 и workout_result_saved12. Это сохранённые показания
+отчёта, не уникальные тренеры и не доказательство полного учёта.
+
+MET201: каждый из трёх существующих SSR init получает свой tag.js?id=counter.
+Основной111074543 сохраняет Webvisor/clickmap/link tracking. Для113121193
+webvisor=false: вторая запись сессий не запускается, согласно документации.
+114123380 сохраняет webvisor/clickmap/trackLinks=false и очищенные URL.
+Corporate-invite исключения, native condition и sanitizers остаются прежними.
+Обе публичные посадочные по-прежнему считают только114123380.
+MET202: Node VM выполняет настоящий inline bootstrap: проверяет точное
+соответствие всех3init всем3loader, отсутствие дублей при уже вставленных
+scripts, corporate/local exclusions и приватность. До исправления6/8passed:
+missing legacy loaders и два webvisor; после8/8passed. Не подменять browser
+runtime-проверку этим тестом: после публикации нужны реальные PageView всех3ID.
+Отвергнуто: откат нового счётчика, ручные reachGoal/перенос визитов, ослабление
+ssr или CI. CSS, UI, БД, auth, история и продуктовые события не меняются.
+Проверка: целевая8/8; полный scope/CI/выпуск и runtime-приёмка впереди.
+Дальше: проверки, PR, штатный выпуск, независимые PageView всех3 в браузере.
+
+Локальная проверка22: build/tsc/lint, API1628passed/441conditional-skipped,
+iOS/media policy, infra/calendar и hosting205/205 пройдены. Первый policy
+запуск упёрся в EPERM localhost среды; штатный разрешённый повтор прошёл.
+Полный Vitest выявил устаревшее ожидание единственного loader в существующем
+privacy-тесте. Заменено точным соответствием трёх loader трём событиям init;
+корпоративный запрет сохранён, Webvisor ровно111074543. Assertions усилены,
+не удалены. Целевые Metrika/auth24/24; полный coverage нового дерева выполняется.
+
+Итог локального coverage22:3168/3168, все пороги passed. В CI42669456488
+repository-quality нашёл unsafe any только в новом mock insertBefore; добавлен
+точный тип src:string без изменения runtime/проверок. Целевой lint, typecheck
+и Metrika/auth24/24 после уточнения прошли. ПолныйCI нового head обязателен.
+
+Checkpoint22: head02185d86, PR2076. CI42670852824/attempt1: исполненные
+jobs passed,8обязательных abandoned; app/e2e закономерно failed. Полный
+attempt2 запущен без изменения кода/CI. На09.11,19:41UTC33jobs completed,
+один visual-client-390 shard2/2 выполняется47m44s; failures в последнем
+снимке нет, агрегатор e2e ещё не завершён. Logs API404 до окончания, UI
+в этом браузере не авторизован к логам; credentials не переносились.
+Более ранний2075 по последнему штатному снимку OPEN, headef7ba298.
+Один bounded watcher завершился по лимиту45min. Новых расписаний нет.
+Публикация НЕ выполнена. Для продолжения нужен полный current-head CI и
+разрешение очереди по GitHub; затем обновить от main и пройти обычный выпуск,
+HTTPS readback и настоящий PageView всех3счётчиков. Checkpoint/CI snapshots
+сохранены в outputs/fit-metrika-parallel-20261109 зеркала проекта.
+
+Продолжение22: владелец подтвердил, что предыдущий PR доехал, и поручил выпуск.
+2075 merged70b6c616; main совмещён без конфликтов в3a71f1e2. Наши runtime
+файлы не менялись. Причина долгого visual390/2 во втором CI подтверждена
+check-run annotation: hosted runner lost communication with the server;
+job завершён failure при незавершённом шаге и без доступного log. Это отказ
+runner, не подтверждённое падение screenshot assertion. Проверки/CI не ослаблены.
+После обновления main обязательны build и полныйCI нового head. Очередь2075
+разрешена; более новые2077/2078 не получают старшинство над нашим2076.
