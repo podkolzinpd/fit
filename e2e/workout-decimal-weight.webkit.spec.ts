@@ -1,4 +1,4 @@
-import { nativeCreateConnectedAthlete, nativeSignIn } from './native-local-fixture'
+import { nativeSignIn } from './native-local-fixture'
 import { expect, test } from './native-local-fixture'
 
 for (const scenario of [
@@ -10,8 +10,10 @@ for (const scenario of [
     await nativeSignIn(page, 'trainer@fit.local')
     await expect(page).toHaveURL(/\/today$/)
     const clientName = `Нагрузка ${Date.now().toString().slice(-6)}`
-    const athlete = await nativeCreateConnectedAthlete(page, { name: clientName, profile: { gender: 'female', ageYears: 30, heightCm: 170 } })
-    await page.goto(`/clients/${athlete.clientId}`)
+    await page.goto('/clients/new')
+    await page.getByLabel('Имя').fill(clientName)
+    await page.getByLabel('Пол').selectOption('female')
+    await page.getByRole('button', { name: 'Сохранить' }).click()
     await expect(page.getByRole('heading', { name: clientName })).toBeVisible()
     await page.getByRole('link', { name: /Запланировать тренировку/ }).click()
     await page.getByRole('button', { name: 'Выбрать упражнения' }).click()
@@ -134,8 +136,12 @@ test('walking lunges accept kilograms in the plan and Live on iPhone', async ({ 
   await expect(page).toHaveURL(/\/today$/)
 
   const clientName = `Выпады ${Date.now().toString().slice(-6)}`
-  const athlete = await nativeCreateConnectedAthlete(page, { name: clientName, profile: { gender: 'female', ageYears: 30, heightCm: 170 } })
-  await page.goto(`/clients/${athlete.clientId}`)
+  await page.goto('/clients/new')
+  await page.getByLabel('Имя').fill(clientName)
+  await page.getByLabel('Пол').selectOption('female')
+  await page.getByLabel('Возраст').fill('30')
+  await page.getByLabel('Рост, см').fill('170')
+  await page.getByRole('button', { name: 'Сохранить' }).click()
   await expect(page.getByRole('heading', { name: clientName })).toBeVisible()
 
   await page.getByRole('link', { name: /Запланировать тренировку/ }).click()

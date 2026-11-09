@@ -40,7 +40,6 @@ function renderPage(initialEntry = '/clients/client-1/edit') {
     <QueryClientProvider client={queryClient}>
       <Routes>
         <Route path="/clients/new" element={<ClientFormPage />} />
-        <Route path="/connect" element={<p>Подключение аккаунта</p>} />
         <Route path="/clients/:clientId/edit" element={<ClientFormPage />} />
         <Route path="/clients/:clientId" element={<p>Карточка сохранена</p>} />
       </Routes>
@@ -57,11 +56,24 @@ describe('ClientFormPage', () => {
     realtime.subscribeToClientChanges.mockClear()
   })
 
-  it('redirects the old manual-creation address to account connection without creating a card', async () => {
+  it('creates a client without optional age, height and initial weight', async () => {
+    const user = userEvent.setup()
     renderPage('/clients/new')
-    expect(await screen.findByText('Подключение аккаунта')).toBeVisible()
-    expect(repository.create).not.toHaveBeenCalled()
-    expect(screen.queryByLabelText('Имя')).not.toBeInTheDocument()
+
+    await user.type(screen.getByLabelText('Имя'), 'Вася')
+    await user.selectOptions(screen.getByLabelText('Пол'), 'male')
+    await user.click(screen.getByRole('button', { name: 'Сохранить' }))
+
+    await waitFor(() => expect(repository.create).toHaveBeenCalledWith(expect.objectContaining({
+      fullName: 'Вася',
+      gender: 'male',
+      ageYears: null,
+      ageUpdatedAt: null,
+      heightCm: null,
+      initialWeightKg: undefined,
+      initialWeightRecordedOn: undefined,
+    })))
+    expect(await screen.findByText('Карточка сохранена')).toBeVisible()
   })
 
   it('edits the canonical questionnaire without overwriting a trainer alias', async () => {

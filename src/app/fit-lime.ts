@@ -17,7 +17,7 @@ export function isFitLimeApprovedTrainerRoute(pathname: string, search: string):
   if (isAdditionalTrainerRoute(pathname)) return true
   if (pathname === '/today') return isTrainerScheduleV2CalendarRoute(pathname, search)
     || ['compose', 'review', 'save'].includes(new URLSearchParams(search).get('view') ?? '')
-  if (pathname === '/schedule' || pathname === '/join' || pathname === '/connect' || pathname === '/chat'
+  if (pathname === '/schedule' || pathname === '/join' || pathname === '/chat'
     || pathname === '/clients' || pathname === '/clients/archive'
     || pathname === '/clients/new' || pathname === '/exercises'
     || pathname === '/workouts/new' || pathname === '/assistant'
@@ -49,7 +49,7 @@ export function isFitLimeShellRoute(
       || /^\/clients\/[^/]+\/goal$/.test(pathname)
       || /^\/clients\/[^/]+\/workouts$/.test(pathname)
       || /^\/progress\/[^/]+$/.test(pathname)
-      || pathname === '/join' || pathname === '/connect'
+      || pathname === '/join'
       || pathname === '/exercises'
       || pathname === '/workouts/new' || /^\/workouts\/[^/]+\/edit$/.test(pathname)
       || /^\/workouts\/[^/]+$/.test(pathname)

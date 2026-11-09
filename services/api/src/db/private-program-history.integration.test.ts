@@ -159,10 +159,7 @@ describe.skipIf(source===undefined)('private weekly-program read-only inventory 
     expect((await f.owner.query<{n:number}>('select count(*)::int n from public.workouts where trainer_id=$1',[f.coach])).rows[0]?.n).toBe(0)
   })
   it('reads real completed graphs, holds duplicates/changed source facts and preserves finances',async()=>{
-    const f=await fixture(),id=await f.card(),athlete=randomUUID()
-    await f.owner.query("insert into public.profiles(id,account_role) values($1,'client')",[athlete])
-    await f.owner.query('update public.clients set auth_user_id=$2 where id=$1',[id,athlete])
-    await f.owner.query('insert into public.client_trainer_relationships(client_id,trainer_id,connected_by) values($1,$2,$3)',[id,f.coach,athlete])
+    const f=await fixture(),id=await f.card()
     const parsed=readSavePlannedWorkoutRequest({...f.data.workouts[0],clientId:id},null)
     if(!parsed)throw Error('synthetic_draft_required')
     await f.runtime.query('begin')

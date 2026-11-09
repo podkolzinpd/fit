@@ -344,7 +344,7 @@ async function openTrainerNutritionSummary(page: Page, lime = true) {
   await expect(page.locator('.client-detail-snapshot')).toBeAttached()
   if (lime) {
     const secondary = page.locator('.client-profile-secondary')
-    if (!await secondary.evaluate(element => (element as HTMLDetailsElement).open)) await secondary.locator('summary').click()
+    await secondary.locator('summary').click()
     await expect(secondary).toHaveAttribute('open', '')
   }
 }

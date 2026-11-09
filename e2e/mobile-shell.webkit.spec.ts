@@ -1,8 +1,7 @@
-import { mockPilot, clientId as limeClientId } from './fit-lime-fixtures'
 import { nativeRouteFetch } from './native-local-fixture'
 import { mockTrainingSummaries } from './native-summary-fixture'
 import { mockProgressBundle } from './native-progress-fixture'
-import { nativeCreateConnectedAthlete, nativeSignIn, nativeRegister, closeNativeContext } from './native-local-fixture'
+import { nativeSignIn, nativeRegister, closeNativeContext } from './native-local-fixture'
 import { mockNativeAiSession, nativeAiUrl } from './native-ai-fixture'
 import { expect, test, type Locator, type Page } from './native-local-fixture'
 import { mockResultsHistory } from './progress-results-fixture'
@@ -68,38 +67,34 @@ async function saveCompactClientPlan(page: Page) {
   ])
 }
 
-test('trainer invitation stays inside the reduced visible iPhone viewport', async ({ page }) => {
-  await mockPilot(page, { fitLime: true, clientHasAccount: false })
-  await page.route('**/v1/invitation-links', route => route.fulfill({ json: { invitation: {
-    id: demoClientId, clientId: limeClientId, targetRole: 'client', code: 'A'.repeat(12),
-    token: `${'A'.repeat(12)}.${'a'.repeat(64)}`, expiresAt: '2099-01-01T00:00:00Z',
-  } } }))
-  await page.goto(`/clients/${limeClientId}`)
-  await page.getByRole('button', { name: 'Пригласить', exact: true }).click()
-  await expect(page.getByRole('heading', { name: 'Ссылка готова' })).toBeVisible()
-  await expect(page.getByLabel('Имя спортсмена')).toHaveCount(0)
+test('trainer invitation name stays inside the visible iPhone viewport above the keyboard', async ({ page }) => {
+  await loginAsTrainer(page)
+  await page.goto('/clients')
+  await page.getByRole('button', { name: /^(Добавить|Добавить клиента)$/ }).click()
+  await page.getByRole('button', { name: 'Пригласить по ссылке' }).click()
+  await page.getByLabel('Имя спортсмена').focus()
   await page.evaluate(() => {
     document.documentElement.style.setProperty('--app-visible-height', '420px')
     document.documentElement.style.setProperty('--app-viewport-offset-top', '0px')
   })
 
-  const geometry = await page.locator('.invitation-share-overlay').evaluate((overlay) => {
+  const geometry = await page.locator('.invitation-name-overlay').evaluate((overlay) => {
     const overlayBox = overlay.getBoundingClientRect()
-    const dialogBox = overlay.querySelector('.invitation-share-dialog')!.getBoundingClientRect()
-    const actionBox = overlay.querySelector('button')!.getBoundingClientRect()
+    const dialogBox = overlay.querySelector('.invitation-name-dialog')!.getBoundingClientRect()
+    const inputBox = overlay.querySelector('input')!.getBoundingClientRect()
     return {
       overlayHeight: overlayBox.height,
       overlayBottom: overlayBox.bottom,
       dialogTop: dialogBox.top,
       dialogBottom: dialogBox.bottom,
-      actionBottom: actionBox.bottom,
+      inputBottom: inputBox.bottom,
     }
   })
 
   expect(geometry.overlayHeight).toBe(420)
   expect(geometry.dialogTop).toBeGreaterThanOrEqual(0)
   expect(geometry.dialogBottom).toBeLessThanOrEqual(geometry.overlayBottom)
-  expect(geometry.actionBottom).toBeLessThanOrEqual(geometry.overlayBottom)
+  expect(geometry.inputBottom).toBeLessThanOrEqual(geometry.overlayBottom)
 })
 
 test('trainer template list and editor use the centered header and workout form geometry', async ({ page }) => {
@@ -676,11 +671,36 @@ test('iPhone: тренер назначает интервалы, спортсм
   try {
     await register(trainer, 'Интервальный тренер', `interval-trainer-${suffix}@fit.local`)
     await expect(trainer.getByRole('heading', { name: 'Сегодня' })).toBeVisible()
-    const { clientId } = await nativeCreateConnectedAthlete(trainer, {
-      name: 'Интервальный спортсмен', key: `interval-client-${suffix}@fit.local`,
-      profile: { gender: 'female', ageYears: 30, heightCm: 170, initialWeightKg: 60 },
-    })
+    await trainer.goto('/clients')
+    await trainer.getByRole('button', { name: /^(Добавить|Добавить клиента)$/ }).click()
+    await trainer.getByRole('dialog', { name: 'Добавить клиента' }).getByRole('link', { name: 'Создать карточку', exact: true }).click()
+    await trainer.getByLabel('Имя').fill('Интервальный спортсмен')
+    await trainer.getByLabel('Пол').selectOption('female')
+    await trainer.getByLabel('Возраст').fill('30')
+    await trainer.getByLabel('Рост, см').fill('170')
+    await trainer.getByLabel('Начальный вес, кг').fill('60')
+    await trainer.keyboard.press('Escape')
+    await Promise.all([
+      trainer.waitForURL(/\/clients\/[0-9a-f-]+$/),
+      trainer.getByRole('button', { name: 'Сохранить' }).click(),
+    ])
+    const clientId = trainer.url().match(/\/clients\/([0-9a-f-]+)$/)?.[1]
+    expect(clientId).toBeTruthy()
+    await trainer.getByRole('button', { name: 'Пригласить клиента' }).click()
+    const codeText = await trainer.getByText(/Код клиента:/).textContent()
+    const code = codeText?.match(/[A-F0-9]{12}/)?.[0]
+    expect(code).toBeTruthy()
+    await trainer.getByRole('button', { name: 'Скопировать код клиента' }).click()
+    await expect(trainer.getByRole('button', { name: 'Код клиента скопирован' })).toBeVisible()
+
     await register(client, 'Интервальный спортсмен', `interval-client-${suffix}@fit.local`, 'client')
+    await expect(client.getByRole('heading', { name: 'Тренируйтесь и следите за прогрессом' })).toBeVisible()
+    await client.goto('/join')
+    await client.getByLabel('Код приглашения').fill(code!)
+    await client.getByRole('button', { name: 'Присоединиться' }).click()
+    await client.getByRole('button', { name: 'Подключить тренера', exact: true }).click()
+    await expect(client.getByRole('heading', { name: 'Тренер подключён' })).toBeVisible()
+    await client.getByRole('button', { name: 'Открыть кабинет' }).click()
     await expect(client).toHaveURL(/\/me$/)
 
     await trainer.goto(`/workouts/new?client=${clientId}`)
@@ -1252,8 +1272,18 @@ async function createIsolatedClient(page: Page, testInfo: import('@playwright/te
   await page.goto('/auth')
   await nativeRegister(page, { key: `webkit-trainer-${suffix}@fit.local`, firstName: 'WebKit тренер', role: 'trainer' })
   await expect(page.getByRole('heading', { level: 1, name: 'Сегодня' })).toBeVisible()
-  const athlete = await nativeCreateConnectedAthlete(page, { name, profile: { gender: 'female', ageYears: 30, heightCm: 170, initialWeightKg: 65 } })
-  await page.goto(`/clients/${athlete.clientId}`)
+  await page.goto('/clients/new')
+  await page.getByLabel('Имя').fill(name)
+  await page.getByLabel('Пол').selectOption('female')
+  await page.getByLabel('Возраст').fill('30')
+  await page.getByLabel('Рост, см').fill('170')
+  await page.getByLabel('Начальный вес, кг').fill('65')
+  const introduction = page.getByRole('button', { name: 'Понятно', exact: true })
+  if (await introduction.isVisible()) await introduction.click()
+  await Promise.all([
+    page.waitForURL(/\/clients\/[0-9a-f-]+$/),
+    page.getByRole('button', { name: 'Сохранить' }).click(),
+  ])
   return name
 }
 
@@ -1356,8 +1386,8 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 430, height: 932 }
 test('iPhone: форма тренера также восстанавливает оболочку после клавиатуры', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 })
   await loginAsTrainer(page)
-  await page.goto(`/clients/${demoClientId}/edit`)
-  await recoverMobileShellFromStaleKeyboard(page, page.getByLabel('Имя', { exact: true }))
+  await page.goto('/clients/new')
+  await recoverMobileShellFromStaleKeyboard(page, page.getByLabel('Имя'))
   await page.getByRole('button', { name: 'Сохранить' }).scrollIntoViewIfNeeded()
   await expect(page.getByRole('button', { name: 'Сохранить' })).toBeInViewport()
   await expectNoHorizontalOverflow(page)
@@ -2133,9 +2163,7 @@ test('iPhone: завершение сначала отправляет ввод 
   // Программный tap сохраняет фокус в input и проверяет именно finish-flush,
   // а не побочный blur браузера.
   await page.getByRole('button', { name: 'Завершить тренировку' }).evaluate((button: HTMLButtonElement) => button.click())
-  const confirmAttendance = page.getByRole('button', { name: 'Подтвердить проведение', exact: true })
-  await expect(confirmAttendance).toBeEnabled()
-  await confirmAttendance.evaluate((button: HTMLButtonElement) => button.click())
+  await page.getByRole('button', { name: 'Подтвердить проведение', exact: true }).evaluate((button: HTMLButtonElement) => button.click())
   await expect(page.getByRole('heading', { name: 'Тренировка завершена' })).toBeVisible()
   await expect.poll(() => liveCalls).toEqual(['draft', 'finish'])
 })
