@@ -72,6 +72,8 @@ test('exact email finds an existing athlete; trainer proposal needs athlete conf
     await page.screenshot({ path: info.outputPath('trainer-pending.png'), fullPage: true })
     await athlete.goto('/connect')
     await athlete.getByRole('button', { name: 'Принять', exact: true }).click()
+    await expect(athlete.getByRole('switch', { name: 'Вся история тренировок' })).not.toBeChecked()
+    await athlete.getByRole('button', { name: 'Подключить тренера', exact: true }).click()
     await expect(athlete.getByText('Вы подключены', { exact: true })).toBeVisible()
     await expect(page.getByText('Вы подключены', { exact: true })).toBeVisible({ timeout: 10_000 })
     await page.goto('/clients')

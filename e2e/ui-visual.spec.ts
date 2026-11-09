@@ -2813,15 +2813,15 @@ test('trainer Client Detail keeps its visual baselines', async ({ page }, testIn
   await expectVisualBaseline(page, `trainer-client-detail-${profile}-dark-${process.platform}.png`, [], true, '#1d1e21')
 })
 
-test('trainer invitation replaces manual creation and Edit keeps its visual baseline', async ({ page }, testInfo) => {
+test('trainer manual creation is restored and Edit keeps its visual baseline', async ({ page }, testInfo) => {
   await signIn(page, 'trainer@fit.local', /\/today$/)
   const profile = testInfo.project.name === 'visual-trainer-1440' ? 'desktop' : 'mobile'
 
   await gotoStable(page, '/clients/new')
-  await expect(page).toHaveURL(/\/connect$/)
-  await expect(page.getByRole('heading', { name: 'Добавить спортсмена' })).toBeVisible()
-  await expect(page.getByRole('button', { name: 'Мой QR', exact: true })).toBeVisible()
-  await expect(page.getByLabel('Начальный вес, кг')).toHaveCount(0)
+  await expect(page).toHaveURL(/\/clients\/new$/)
+  await expect(page.getByRole('heading', { name: 'Новый клиент' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Сохранить', exact: true })).toBeVisible()
+  await expect(page.getByLabel('Начальный вес, кг')).toBeVisible()
 
   await gotoStable(page, `/clients/${demoClientId}/edit`)
   await expect(page.getByRole('heading', { name: 'Редактировать клиента' })).toBeVisible()
@@ -2831,9 +2831,9 @@ test('trainer invitation replaces manual creation and Edit keeps its visual base
   await gotoStable(page, '/profile/settings?section=appearance')
   await page.getByRole('switch', { name: 'Тёмная тема' }).check()
   await gotoStable(page, '/clients/new')
-  await expect(page).toHaveURL(/\/connect$/)
-  await expect(page.getByRole('button', { name: 'Мой QR', exact: true })).toBeVisible()
-  await expect(page.getByLabel('Начальный вес, кг')).toHaveCount(0)
+  await expect(page).toHaveURL(/\/clients\/new$/)
+  await expect(page.getByRole('button', { name: 'Сохранить', exact: true })).toBeVisible()
+  await expect(page.getByLabel('Начальный вес, кг')).toBeVisible()
   await gotoStable(page, `/clients/${demoClientId}/edit`)
   await expectVisualBaseline(page, `trainer-client-edit-${profile}-dark-${process.platform}.png`, [], true, '#1d1e21')
 })

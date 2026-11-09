@@ -4858,18 +4858,18 @@ for (const [account, profileId] of [
   ['first', trainerId],
   ['second', '10000000-0000-4000-8000-000000000010'],
 ] as const) {
-  test(`${account} Fit Lime athlete registration entry replaces manual creation with safe return`, { tag: ["@lime-clients"] }, async ({ page }, testInfo) => {
+  test(`${account} Fit Lime manual client creation keeps safe return without implicit writes`, { tag: ["@lime-clients"] }, async ({ page }, testInfo) => {
     await mockPilot(page, { profileId, fitLime: true })
     const writes: string[] = []
     page.on('request', request => { if (request.method() === 'POST') writes.push(new URL(request.url()).pathname) })
     await page.goto('/clients/new')
-    await expect(page).toHaveURL(/\/connect$/)
+    await expect(page).toHaveURL(/\/clients\/new$/)
     await expect(page.locator('.phone-frame')).toHaveClass(/fit-lime-shell/)
-    await expect(page.getByRole('heading', { name: 'Добавить спортсмена' })).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Новый клиент' })).toBeVisible()
     await expect(page.getByRole('button', { name: 'Назад' })).toBeVisible()
-    await expect(page.getByLabel('Имя', { exact: true })).toHaveCount(0)
-    await expect(page.getByRole('button', { name: 'Сохранить', exact: true })).toHaveCount(0)
-    await expect(page.getByRole('button', { name: 'Мой QR', exact: true })).toBeVisible()
+    await expect(page.getByLabel('Имя', { exact: true })).toBeVisible()
+    await expect(page.getByLabel('Начальный вес, кг')).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Сохранить', exact: true })).toBeVisible()
     if (account === 'first') {
       const screenshotPath = testInfo.outputPath('fit-lime-client-registration.png')
       await page.screenshot({ path: screenshotPath, fullPage: true })
