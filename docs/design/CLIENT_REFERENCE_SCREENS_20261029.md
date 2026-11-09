@@ -8732,3 +8732,56 @@ review.json и/tmp/fit-mc512-release/prepub26-results. Канонический�
 done→длительность→изменить/сохранить/отмена, без скачковscroll; короткоLive
 вводвеса/явнаяотмена галочкой/таймер. Следующий MC5.1.3 только после принятия
 текущего этапа владельцем, прежнее правило MC-RELEASE-01 сохранено.
+
+
+## 203. MC5.1.3 — принятый план и база реализации, 09.11.2026
+
+Итерация203 — 2026-11-09 — GPT-6 / OpenAI. Владелец принял MC5.1.2 («всёок»)
+иодобрилзафиксировать/выполнить MC5.1.3 обеимролям. Выпуск только ПОСЛЕ
+сводки ипоследующего явногоразрешения; разрешенияmerge/deploy пока нет.
+Свежийmain49c81395 (#2070 поискшаблонов) включён ordinarymerge9ae79a5d
+внашуfeat/design-cleanup-mc513-20261109. Передправками runtime/QA/scripts/
+native/CI/package byte-exact этомуmain. Дваdocsконфликта разрешены сохранением
+exactmainprefixканоническогожурнала+нашихreleaseквитанций198–202, CURRENT
+отличалсятолькоодной MCstatusстрокой; чужиеизменениянеутрачены.
+
+MC513-01: убираемтолькоцветовыеoverride старого reviewp вдлительности обеих
+ролей, включаяvalidation p.error и2p вложеннойnetwork/conflictошибки.
+MC513-02: убираемmutedoverride старогоsharestatus исильногоLime-selector
+толькодляclientstatus.error внутри/снаружи shareокна. Владельцем становится
+существующий.error/var(--danger) всвоейтеме,0новыхтокенов/палитры/текстов.
+Runtimeровно2CSS,3точечных zero-specificity exclusions; отступы/шрифты/layout/
+неerrorstatussuccess/copied/shared/pending исоседниеfacts/date остаютсяпрежними.
+Историческаялокальнаязаготовка0f4a56fe+QApolicyfix8f9e8007/171 — источник,
+еёстарыеgreenнеприёмкатекущегоsource ивсяцепочканепереносится.
+
+MC513-03: сохраняемDOM/handlers/API/данные/флаги, ввод/выделение/keyboard/focus/
+scroll, сохранение/отмену/очистку ручнойдлительности, черновик/связь/retry,
+перечитываниеактуальнойверсии/защитуотслепойперезаписи, share3варианта/PNG/
+fallback/cancel/pendingзащиту. Галочки/undo/редактированиеподтверждённого,
+swipe/drag/collapse/rest/timer/54–48 иостальныеLiveмеханики не меняются.
+
+MC513-04: freshbaseline→candidate, Chromium/WebKit; обеclientтемы,trainer
+mobile+desktop, реальныеoffcontrols. Existing12durationownership+10share+
+14durationbehavior+4exportPNG=40, новыйvisualnetwork/conflict:clientlight390
+иtrainerdark390 в2engines=4, итоговаявыборка44 требует--listподтверждения.
+Baseline26corecases ожидает20semanticred+6offpass; JSON/полныйlifecycle
+записываютсядоfinalassert, безbypass/ослабленияassertions. Изменитьсяможет
+толькоerrorcolor ивычисляемыйcurrentColor; сравнитьgeometry/noncolorstyles/
+payload/focus/scroll, offполностью. Errorcolorсравнивать сresolveddanger
+втомжетhemеcontext, небуквальнымhex. Сохранитьcurrentwhitelist/positiveowners,
+всеborder/margin иCSSOM/style-objectroundtrip изMC512.
+
+Visualerrorchecks — отдельныйnativevisualentry, businessbehaviorbyte-exact
+main. Урок171/policyguardпроверяетсятекущимscripts/fit-lime-split.test.mjs;
+newnetworkfixtureстрогоожидает1connectionrefused+1HTTP409 толькодляduration,
+прочие404/ошибкинеигнорирует. Сборка/types/startup/fonts2/2,existingunit/lint/
+docs/CI новогоPR обязательны. Внешниесеть/writes/share изолированыfixtures.
+Physical/OAuth/systemshareневыдаютсязапроверенныебраузером.
+
+Отвергнуто: новыйкрасныйтокен,перерисовкаформ/кнопок,общаячисткаreviewCSS/
+шрифтовилистарогоoff,визуальныеснимкивbusinessbehavior,переносбудущихэтапов,
+ослаблениетаймаутов/критериеврадиgreen. Раннийrawheightlimit202 иhistorical
+CIinitialrejection198 остаютсясохранены, ихисправлениеэтимнеобещаем.
+Дальше: реализация→локальнаяприёмка/PR/CI→сводкавладельцу; невыпускатьбез
+егопоследующегоразрешения.
