@@ -3555,11 +3555,11 @@ export function LiveWorkoutPage() {
       }
       acknowledgeLiveDraft(set.id, draft, true)
       if (advanceAfterConfirm.current === set.id) {
-        if (!clientReference) advanceAfterConfirm.current = null
+        if (!clientReference && !coachV79) advanceAfterConfirm.current = null
         window.requestAnimationFrame(() => {
           // Keep the client intent cancellable until the frame actually runs.
           // A manual field selection/edit takes priority over the late handoff.
-          if (clientReference) {
+          if (clientReference || coachV79) {
             if (advanceAfterConfirm.current !== set.id) return
             advanceAfterConfirm.current = null
           }
@@ -4472,7 +4472,7 @@ export function LiveWorkoutPage() {
     </span>
   }
   function cancelClientFocusAdvance(target: EventTarget) {
-    if (clientReference && target instanceof Element && target.matches('input, select, textarea, .workout-duration-trigger')) advanceAfterConfirm.current = null
+    if ((clientReference || coachV79) && target instanceof Element && target.matches('input, select, textarea, .workout-duration-trigger')) advanceAfterConfirm.current = null
   }
   // Форма одного подхода в live: подтверждение / правка / удаление / автосейв по blur.
   function renderLiveSet(exercise: WorkoutExerciseModel, set: WorkoutSet, label?: string, current = false, roundRemoval?: { label: string; remove: () => void }) {
