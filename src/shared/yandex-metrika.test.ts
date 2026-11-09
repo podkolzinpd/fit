@@ -64,9 +64,10 @@ describe('private corporate invitation entry', () => {
         expect(insertBefore).not.toHaveBeenCalled()
         expect(ym).not.toHaveBeenCalled()
       } else {
-        expect(insertBefore).toHaveBeenCalledOnce()
+        expect(insertBefore).toHaveBeenCalledTimes(COUNTER_IDS.length)
+        expect(insertBefore.mock.calls.map(([script]) => Number(new URL(script.src).searchParams.get('id')))).toEqual([...COUNTER_IDS])
         expect(ym).toHaveBeenCalledTimes(COUNTER_IDS.length)
-        for (const id of COUNTER_IDS) expect(ym).toHaveBeenCalledWith(id, 'init', expect.objectContaining({ url: 'https://fit-training.ru/today', webvisor: id !== ACQUISITION_COUNTER_ID }))
+        for (const id of COUNTER_IDS) expect(ym).toHaveBeenCalledWith(id, 'init', expect.objectContaining({ url: 'https://fit-training.ru/today', webvisor: id === 111074543 }))
       }
     }
   })
