@@ -52,7 +52,7 @@ export function workoutTemplateReliabilityCases() {
     await expect(page.locator('.template-card')).toHaveCount(1)
     await expect(page.locator('.template-card h2')).toHaveText('Лёгкий корпус')
     await search.fill('нет такого шаблона')
-    await expect(page.getByRole('status')).toContainText('Ничего не найдено')
+    await expect(page.locator('.workout-templates-page').getByRole('status')).toContainText('Ничего не найдено')
     await expect(page.getByText('Создайте первый шаблон')).toHaveCount(0)
     await page.getByRole('button', { name: 'Очистить поиск' }).click()
     await expect(search).toBeFocused()
