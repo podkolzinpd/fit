@@ -8936,3 +8936,43 @@ assertion о скрытии play-button после playing. Компонент/�
 Агент повторное слияние/dispatch не выполнял. Запущено только наблюдение
 штатных mainCI/API/web/OTA, затем проверка опубликованных assets.
 Слияние не выдаётся за подтверждённую публикацию; её приёмка ещё впереди.
+
+
+## 209. MC5.1.3 / PR2073 — публикация и публичная приёмка завершены
+
+Итерация209 — 2026-11-09 — OpenAI. После слияния владельцем штатные
+публикации source51758098278c8f5287ff863c12071efcb3d39628 завершены:
+API42659233546, web42659233541, подписанный OTA42660841426 — success.
+MainCI42654531436 success attempt1 (34passed/1expectedskip); Android42654531424
+success attempt1. Модульные тесты main прошли без повторения ошибки208.
+Агент не делал повторный merge/dispatch и не менял код при выпуске.
+
+Реальный readback: web/API/OTA exact51758098, Git ancestry и trusted main
+проверены. Все244manifest files доступны200 и совпали по размерам/SHA256.
+API DNS/TLS/health/ready/auth/protected401 passed. OTA подпись, provenance,
+ABI/nativeBuild9, sequence1794243918753, публичные bytes15982783 passed.
+ZIP извлечён с защитой путей/размеров/ссылок. Публичные данные не записывались.
+
+На настоящих assets сайта:30/30browser59.095s; на содержимом проверенного
+подписанного ZIP:30/30browser54.817s. Оба Chromium/WebKit, retries0,
+0skip/unexpected/flaky. Состав12duration+10share+4nonLive+4network/conflict.
+Assertions исходного MC513 сохранены; только точный /api/v1→/v1 adapter
+тестового транспорта. Проверены семантические error colors, payloads,
+черновик/версии/явный retry, сохранение/отмена, focus/scroll и off-controls.
+Просмотрены реальные WebKit screenshots light validation и trainer dark
+network: сообщения danger, компоновка и кнопки сохранены. Финальный публичный
+fingerprint17:13:25UTC совпал с начальным поHTML/API/OTA.
+
+Артефакты /tmp/fit-mc513-release/current-acceptance/{web-readback,api-readback,
+ota-readback,web30,ota30}.json и screenshots. /tmp/fit-mc513-release/status.json
+содержит current-publication-and-ui-complete. Миграция MC513 доставлена обеим
+ролям; весь монохром не объявляется удалённым. Предыдущие ограничения204
+аналитического baseline и неизвестная причина единичного CIпадения208
+сохраняются в истории. Физический телефон/nativeinstall/реальная systemshare
+не проверялись браузерами и остаются пользовательской приёмкой.
+
+Владельцу: обе роли→завершённая тренировка→длительность0 (красная ошибка),
+исправление/сохранение/отмена; спортсмен→Поделиться→вариант/закрытие/отмена
+и обычная отправка с телефона. Проверить обе темы и позицию при клавиатуре.
+До подтверждения владельцем MC5.1.4 не начинаем. Локальная Gitквитанция
+после выпуска не пушится новым исходным CI; публичный статус — вPR2073.
