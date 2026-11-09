@@ -125,6 +125,16 @@ describe.skipIf(!source)('corporate administration on real actor/RLS', () => {
         union all select $2::uuid,'goals','created','synthetic-'||n,'2020-01-01T20:15:00Z'::timestamptz from generate_series(1,2) n`,[coach,athlete])
       const sorted=(await db.query<{result:{rows:Array<Record<string,unknown>>;trend:Array<{date:string;actions:number}>}}>('select app_private.private_analytics_explore($1::jsonb) result',[JSON.stringify({...filters,pageSize:50,sort:'actions',direction:'desc',group:'day'})])).rows[0]!.result
       expect(sorted.rows.slice(0,2).map(r=>r.actions)).toEqual([12,2])
+      const activeGroup=(await db.query<{result:{rows:Array<Record<string,unknown>>;summary:Record<string,number>;total:number}}>('select app_private.private_analytics_explore($1::jsonb) result',[JSON.stringify({...filters,pageSize:50,cohort:'active'})])).rows[0]!.result
+      expect(activeGroup.total).toBe(2)
+      expect(activeGroup.summary.accounts).toBe(2)
+      expect(activeGroup.summary.active).toBe(2)
+      expect(activeGroup.rows.every(row=>Number(row.actions)>0)).toBe(true)
+      const noActivity=(await db.query<{result:{rows:unknown[];summary:Record<string,number>;total:number}}>('select app_private.private_analytics_explore($1::jsonb) result',[JSON.stringify({...filters,pageSize:50,cohort:'active',feature:'nutrition'})])).rows[0]!.result
+      expect(noActivity.total).toBe(0)
+      expect(noActivity.summary.accounts).toBe(0)
+      expect(noActivity.summary.active).toBe(0)
+
       expect(sorted.trend).toEqual([expect.objectContaining({date:'2020-01-01',actions:2}),expect.objectContaining({date:'2020-01-02',actions:12})])
       // Product-owner analytics does not inherit trainer diary consent rules.
       const mealId=randomUUID()
