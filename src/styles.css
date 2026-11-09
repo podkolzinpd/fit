@@ -2758,7 +2758,7 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .workout-form-template-trigger { display:inline-flex; align-items:center; justify-content:center; gap:7px; min-height:44px; padding:8px 12px; white-space:nowrap }
 .workout-form-template-trigger svg { width:17px; height:17px }
 .workout-template-added { margin:0; color:var(--secondary-label-fg); font-size:var(--text-sm) }
-.workout-template-picker { gap:14px }
+.workout-template-picker { gap:14px; max-height:min(88dvh, 100%) }
 .workout-template-picker-list { display:grid; gap:8px; overflow-y:auto }
 .workout-template-picker-item { display:grid; gap:3px; width:100%; min-width:0; padding:14px; border:1px solid var(--border); border-radius:14px; background:var(--surface-raised); color:var(--fg); text-align:left; box-shadow:none }
 .workout-template-picker-item strong { font-size:15px; overflow-wrap:anywhere }
