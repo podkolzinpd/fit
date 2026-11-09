@@ -133,7 +133,7 @@ import { WorkoutChoice, WorkoutCta, WorkoutExercise, WorkoutExerciseCompact, Wor
 import { liveSessionProgress } from './live-session-progress'
 import { calendarExerciseResult, chronicleExercisePreview, workoutDisplayTitle, workoutExerciseBrief } from './workout-chronicle'
 import { compactScheduleEventLabel, formatScheduleDateLabel, layoutScheduleTimelineEvents, mondayWeekStart, scheduleDurationMinutes, scheduleEventStatus, scheduleExerciseLine, scheduleFocusMinutes, scheduleHourLabelCollidesWithNow, scheduleLaneClientName, scheduleTimelineScrollTop } from './schedule-presentation'
-import { trackGoal } from '../../shared/yandex-metrika'
+import { trackAcquisitionGoal, trackGoal } from '../../shared/yandex-metrika'
 import { latestWorkoutFact } from '../../shared/workout-results'
 import { liveOperationWithTimeout } from './live-operation-timeout'
 import { workoutFeedbackConfirmation } from './workout-feedback-copy'
@@ -1650,6 +1650,7 @@ export function WorkoutFormPage() {
     setEntryDate(initial.workoutDate)
   }, [formDraftReady, initial, source.data?.status, templateId, templateDraftChoice])
   const mutation = useMutation({ mutationFn: (draft: WorkoutDraft) => recordPlannedResult ? workoutsRepository.recordPlannedResult(draft) : completedMode ? workoutsRepository.saveCompleted(draft) : workoutsRepository.save(draft), onSuccess: async (id, draft) => {
+    if ((recordPlannedResult || completedMode) && actor) trackAcquisitionGoal('workout_result_saved', actor.role)
     if (editDraftEnabled) planSaved.current = true
     if (!workoutId || editDraftEnabled) removeWorkoutFormDraft(planDraftKey)
     // Перед переходом карточка должна получить новую optimistic-concurrency
@@ -4110,6 +4111,7 @@ export function LiveWorkoutPage() {
   }, onSuccess: onLiveFinished })
   async function onLiveFinished() { await onLiveEnded(true) }
   async function onLiveEnded(completed: boolean) {
+    if (completed && actor) trackAcquisitionGoal('workout_result_saved', actor.role)
     completedLocally.current = true
     const clientId = query.data?.clientId
     if (completed && clientMode && actor?.userId) markAchievementCompletion(actor.userId, workoutId)

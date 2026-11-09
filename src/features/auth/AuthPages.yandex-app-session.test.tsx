@@ -114,6 +114,7 @@ async function registrationCallbackSearch(): Promise<string> {
 
 describe('Yandex app session auth flow', () => {
   beforeEach(() => {
+    window.ym = vi.fn()
     previewInvitation.mockReset().mockResolvedValue({ targetRole: 'client', inviterName: 'Тренер', status: 'active', expiresAt: '2099-09-19T12:10:00.000Z' })
     establish.mockReset()
     retry.mockReset().mockResolvedValue(undefined)
@@ -143,6 +144,7 @@ describe('Yandex app session auth flow', () => {
   })
 
   afterEach(() => {
+    delete window.ym
     vi.unstubAllEnvs()
     vi.unstubAllGlobals()
     window.history.replaceState(null, '', '/')
@@ -374,6 +376,7 @@ describe('Yandex app session auth flow', () => {
     )
     expect(establish).toHaveBeenCalledWith(session)
     expect(readPendingYandexNativeRegistration()).toBeNull()
+    expect(window.ym).toHaveBeenCalledExactlyOnceWith(114123380, 'reachGoal', 'registration_completed', { role: 'trainer' })
   })
 
   it('keeps the registration draft for a safe OAuth restart after an API error', async () => {
@@ -397,6 +400,7 @@ describe('Yandex app session auth flow', () => {
       privacyVersion: PRIVACY_VERSION,
     })
     expect(readInvitationAuthReturn()).toBe('/join?code=AB12CD34EF56')
+    expect(window.ym).not.toHaveBeenCalled()
   })
 
   it('clears stale legal acceptance and requires a fresh registration page', async () => {
@@ -545,10 +549,12 @@ describe('Yandex app session auth flow', () => {
     expect(screen.queryByLabelText('Email старого аккаунта')).not.toBeInTheDocument()
     expect(screen.queryByLabelText('Пароль старого аккаунта')).not.toBeInTheDocument()
     expect(repository.completeYandexRegistration).not.toHaveBeenCalled()
+    expect(window.ym).not.toHaveBeenCalled()
     fireEvent.change(screen.getByLabelText('Имя'), { target: { value: 'Ирина' } })
     fireEvent.click(screen.getByRole('button', { name: 'Создать аккаунт' }))
 
     expect(await screen.findByText('new session')).toBeVisible()
+    expect(window.ym).toHaveBeenCalledExactlyOnceWith(114123380, 'reachGoal', 'registration_completed', { role: 'trainer' })
     expect(repository.completeYandexRegistration).toHaveBeenCalledWith(
       'https://stage.example.test',
       expect.objectContaining({

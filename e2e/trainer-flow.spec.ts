@@ -427,8 +427,17 @@ test('trainer connects and edits a client, filters exercises and persists a work
 })
 
 test('trainer conducts a planned workout, preserves live facts and edits its result', async ({ page }, testInfo) => {
+  await page.addInitScript(() => {
+    const calls: unknown[][] = []
+    Object.assign(window, { __fitAcquisitionCalls: calls, ym: (...args: unknown[]) => { calls.push(args) } })
+  })
+  const resultEvents = () => page.evaluate(() => {
+    const calls = (window as unknown as { __fitAcquisitionCalls: unknown[][] }).__fitAcquisitionCalls
+    return calls.filter(([id, action, name]) => id === 114123380 && action === 'reachGoal' && name === 'workout_result_saved')
+  })
   const trainerAlias = `Анна Live ${testInfo.workerIndex}-${Date.now()}`
   const { clientUrl } = await createTrainerFlowPlan(page, trainerAlias)
+  expect(await resultEvents()).toEqual([])
   await page.getByRole('button', { name: 'Начать' }).click()
   await expect(page.locator('.live-timer')).toBeVisible()
   await page.keyboard.press('Escape')
@@ -512,6 +521,7 @@ test('trainer conducts a planned workout, preserves live facts and edits its res
   // Тоннаж считает только подтверждённый факт: 42.5×9 = 383 кг.
   await expect(page.locator('.workout-fact-summary')).toContainText('Тоннаж')
   await expect(page.locator('.workout-fact-summary')).toContainText('383 кг')
+  await expect.poll(resultEvents).toEqual([[114123380, 'reachGoal', 'workout_result_saved', { role: 'trainer' }]])
 
   // Завершённую тренировку можно исправить без возврата в live: редактор
   // открывает только сохранённый факт, не подтверждая оставшийся план.
@@ -523,6 +533,10 @@ test('trainer conducts a planned workout, preserves live facts and edits its res
   await page.getByRole('button', { name: 'Сохранить изменения' }).click()
   await expect(page.locator('.workout-detail-page .workout-status-completed')).toHaveCount(0)
   await expect(page.locator('.completed-set-summary').filter({ hasText: /45 кг × 9/ }).first()).toBeVisible()
+  await expect.poll(resultEvents).toEqual([
+    [114123380, 'reachGoal', 'workout_result_saved', { role: 'trainer' }],
+    [114123380, 'reachGoal', 'workout_result_saved', { role: 'trainer' }],
+  ])
 
   // Тренировка создана из карточки клиента: после Live и правки результата
   // «Назад» возвращает к этому клиенту, не в расписание и не в редактор.
