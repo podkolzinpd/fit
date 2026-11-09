@@ -8344,3 +8344,214 @@ exact; /tmp/fit-mc51-source746-proof.json. Web readback harness16 выбран -
 Перед merge требуются green нового head, свежая GitHub очередь и завершение
 активного main/release-window. Публикация пока не завершена. Разрешение владельца
 сохраняется, новых рутинных вопросов нет; итог actual release/readback ещё гейт.
+
+## 193. MC5.1 — свежий rollback main, локальная приёмка и закрытый PR, 09.11.2026
+
+CI42583914301 на2ebde1aa завершён cancelled; Android42583914293success.
+Лог app/e2e показывает failed aggregate из-за cancelled tests/lanes, отдельная
+ошибка product assertion не выявлена. Старый head не перезапускался вслепую.
+GitHub main обновлён принятым2066/c28700ba4f1cdbd6036a0dd90916740ad8f4af83,
+отменяющим2039/2063 и возвращающим unregistered workflows. Нормальный локальный
+merge включил принятый rollback; собственный diff от него по-прежнему2 CSS,
+3QA-файла и документы. Новая schema/revert migration принадлежит main2066,
+не добавляется нашим diff и отдельно не применяется.
+
+Удалённый2065 был обновлён Brainbuster11 обычным merge main в08:22:50UTC до
+e67b6f9bdf1ca716771e22ef1fbd3feb93647847 (parents2ebde1aa+c28700ba).
+Локальный обычный merge9d66f992 имеет ПОЛНОСТЬЮ такой же tree:
+4e5c323054223affafa4261c6dc88d8849c97f52; git diff exit0, собственные правки
+сохранены. Force/reset/перезаписи remote не использовались. Новый head объясняет
+устаревание прежнего run; автор конкретного cancellation не устанавливался.
+
+На этом текущем tree заново выполнена необходимая совместимость после изменения
+App/Lime/auth/fixtures: full build/types/startup/fonts, полный lint, unit14 и
+browser114 passed,0skip/fail/flaky/retry; browser75.8s. Исходный MC44 deadline
+не повторился, его историческая причина по-прежнему unknown. AST на c287:
+25715/25715 legacy records,15guards/5rules8decl,12 protected files exact.
+Артефакты /tmp/fit-mc51-release/rollback-c287-* и rollback-local-receipt.json;
+/tmp/fit-mc51-sourcec287-proof.json. Public fixture adapter обновлён из текущего
+main с прежними assertions и строгой изоляцией пользовательских API.
+
+Блокер публикации: GitHub2065 закрыт08:30:39UTC (11:30МСК) actorBrainbuster11,
+stateCLOSED, mergeCommit null, комментариев с причиной нет. Это новое действие
+после разрешения владельца190; его смысл относительно текущего выпуска неясен.
+Запрошено одно уточнение: отмена MC5.1 либо продолжение с переоткрытием2065.
+До ответа PR не переоткрывается, заменяющий PR не создаётся, публикации нет.
+Разрешённая независимая локальная подготовка завершена и сохраняется коммитом.
+CI фактического e67/после возможного reopen и production/readback остаются
+непроверенными; старый35green D22 им не присваивается. Следующий шаг зависит
+только от смысла закрытия; рутинных технических решений от владельца не требуется.
+
+## 194. MC5.1 — закрытие разрешено, выпуск2065 продолжен, 09.11.2026
+
+Владелец прямо подтвердил: продолжить MC5.1, переоткрыть2065 и выпустить обеим
+ролям в общей очереди, сохранив механики. Неясность193 снята; повторного
+согласования слияния/публикации не требуется. При свежем чтении2065 ужеOPEN,
+remote head bc67536ce5109560ee7950432d10939c7130f820 включает main9da1ec69.
+Повторное reopen не выполняется. Новая основа добавила только read-only ops
+workflow/test и журнал, без src/e2e/package/native/public изменений относительно
+проверенного e67 tree. Local114/unit14/build/lint из193 используются повторно;
+фактический bc CI уже выполняется и не отменяется новой docs-отправкой.
+
+Локальный193-checkpoint сохраняется в своей ветке. Для выпуска используется
+отдельная собственная локальная ветка от exact remote bc, без reset/force и
+без потери чекпоинта. На source остаётся исходный scope:2CSS/3QA/документы.
+Перед merge — обязательный bc CI/Android, свежая GitHub очередь и свободное
+окно; затем actual-main проверки, штатный выпуск и web/API/signedOTA/UI readback.
+Межчатовых сообщений и изменения чужих PR нет. Фактический выпуск ещё впереди.
+
+## 195. MC5.1 / PR2065 — фактический выпуск обеим ролям принят, 09.11.2026
+
+Задача завершена: GitHub2065 MERGED в daf59f4d9ee04469cd7be11f6f7738658e561d80
+09.11 в10:06:49UTC. Его tree byte-exact sourcebc67536c; повторное reopen/merge
+не выполнялись после чтения ужеOPEN/MERGED. Current sourceCI42594737679:
+35/35success, attempt1; Android42594737944success. Actual-main CI42598475531
+success (34success/1expected skipped), attempt1; Android42598475457success.
+Источник разрешения — явное подтверждение владельца194; закрытие193 разрешено.
+
+Штатные публикации exact daf: API42601695429, web42601695443,
+Android/OTA42602008186 —success. Дублирующие dispatch/старый OTA не запускались.
+Official web manifest/публичный index сопоставлены,243/243 файла проверены
+200/размер/SHA256. Official DNS/pinnedIP/TLS/auth/ready/health/protectedGET401
+passed, оба health содержат daf. SignedOTA manifest/archive/provenance/ABI/
+nativeBuild9/sequence/expiry и публичные bytes passed; архив15977989bytes,
+sequence1794220674785. Все три фактические плоскости содержат daf.
+
+Actual public UI16/16 за26.4s и verified signed ZIP UI16/16 за20.8s:
+Chromium/WebKit,0skip/fail/flaky/retry. Синтетические пользовательские API/WS/
+аналитика изолированы; настоящих пользовательских writes/OAuth не было.
+Публичный index до/после webUI exact. Web↔ZIP:40/40 measured states,
+28/28PNG byte-exact,16/16 payload/writes, initial/final scrollTop и final scroll
+objects exact. Пять ранних initial scrollHeight различаются между web/ZIP до
+первого font/paint barrier; нормализации нет, финальные16/16 совпадают.
+
+Ограничение сравнения с локальным baseline: production показывает operational
+notice «Fit снова работает», отсутствующее в fixture build. Whole-page geometry/
+PNG не equal-environment baseline: absolute summary positions/scroll и отдельные
+intrinsic widths/grid columns различаются, источник width отдельно не установлен.
+Не заявляется40/40 whole-page exact между этими окружениями. При этом40/40
+paint properties совпадают,28/28 открытых native-dialog states полностью exact
+по measured styles/geometry; backdrop/frame40/40 exact. В выбранных actual
+WebKit clientlightinvalid и trainer1440saved clipping/overlap не обнаружены.
+Notice не скрывался ради сравнения и нашим diff не менялся.
+
+Квитанции: /tmp/fit-mc51-release/reopen-20261109/current-acceptance/;
+/tmp/fit-mc51-web-ota-comparison.json;
+/tmp/fit-mc51-production-baseline-qualification.json. Исходные red/отменённые
+run и неизвестные причины сохранены в191–193, не переписаны зелёным итогом.
+Непроверенное: физические телефоны/native install/реальный OAuth. Известный
+серый validation error остаётся отдельным MC513, без скрытого расширения scope.
+
+Сохранены ввод/keyboard/focus/scroll, clear/pending/error/conflict/retry,
+версии/факты и все прежние Live механики; свой runtime diff только2 CSS,
+15guards/5weakrules8decl,25715 legacy records без потерь. Пользовательские
+настройки/rollout/DB/API/таймеры/жесты не менялись нашим diff. Для ручной приёмки
+обеим ролям: завершённая тренировка→длительность→изменение/сохранение/отмена.
+Следующая часть очистки — после принятия этого этапа, отдельным узким PR.
+
+
+## 196. MC5.1.2 — принятый план отдельного PR, 09.11.2026
+
+Итерация196 — 2026-11-09 — GPT-6 / OpenAI.
+Задача: владелец принял MC5.1/2065 («Проверил, всё ок») и поручил
+зафиксировать и выполнить MC5.1.2, сохранив механики. Перед выпуском показать
+сделанное, проверки и ошибки; слияние/публикация только после нового явного
+разрешения (MC-RELEASE-01). Разрешения выпуска пока нет.
+
+Сверка: свежий origin/main bd2b8452 содержит опубликованный MC5.1; последующие
+изменения main затронули auth QA/корпоративный журнал, не наш runtime.
+Наша ветка feat/design-cleanup-mc512-20261109 продолжает собственный принятый
+checkpoint75cc38a1, main влит обычным merge. Чужих tracked-правок нет.
+Локальный service symlink node_modules не входит в diff. Историческая заготовка
+4d808d40/итерация170 не публиковалась: её нужно адаптировать к текущему MC5.1
+и заново проверить. Старые результаты не выдаём за текущую приёмку.
+
+Scope MC512-01: окно «Чем поделиться» спортсмена сразу после завершения.
+В src/styles.css узко исключаем старое оформление share-overlay/sheet/контролов,
+в src/styles/fit-lime-workout-completion.css явно размещаем только недостающее
+оформление принятого Lime с прежним приоритетом CSS. Размеры, сетка, отступы,
+прокрутка и уже сильные Lime-правила сохраняются; никакой общей зачистки CSS.
+Тренер не имеет этого окна: новый сценарий ему не добавляем. MC512-02 —
+регрессия done-detail/длительности обеих ролей, включая реальный off control.
+
+MC512-03: сохраняем выбор Итог/Достижение/Прогресс, недоступные варианты, PNG,
+системную отправку и существующие clipboard fallback, отмену отправки, pending
+защиту, ошибку/повтор, закрытие/повторное открытие и исходную прокрутку/фокус.
+DOM/handlers/API/данные/настройки/rollout не меняются. Live, ввод/клавиатура,
+редактирование и отмена подхода, свайпы/drag, сворачивание и таймер прежние.
+Экспорт и проверки изолированы синтетическими API; реальной отправки нет.
+
+MC512-04: fresh baseline текущего source→candidate: стили/геометрия/PNG и
+ownership/обратимость CSSOM-проверок, светлая/тёмная темы, узкий/широкий экран,
+Chromium/WebKit; existing PNG cases и duration обеих ролей. Сборка/types/fonts,
+применимые unit/lint/docs и CI нового PR. Не ослаблять критерии ради green.
+
+Отвергнуто: общий cherry-pick всей старой цепочки (захватывает будущие этапы),
+новое окно тренеру, удаление общих layout/font fallback и попутное исправление
+серой ошибки. Последняя остаётся известным отдельным MC5.1.3. Физические
+телефоны/реальная системная отправка/OAuth не считаются проверенными браузером.
+
+Дальше: реализация→проверки→PR без merge→сводка владельцу. Слияние/публикация
+после его разрешения; следующий этап только после принятия текущего.
+
+
+## 197. MC5.1.2 — реализация и локальная приёмка, 09.11.2026
+
+Итерация197 — 2026-11-09 — GPT-6 / OpenAI, агент design_cleanup.
+Расхождений с принятым196 нет. Проверенный product/QA commit ca01f705
+(родитель — plan dcf5526a, origin/main bd2b8452). Выпуск не разрешён.
+
+Сделано MC512-01: runtime diff только src/styles.css и
+src/styles/fit-lime-workout-completion.css. Из19 проверенных семейств17 реально
+применимы: добавлены18 узких исключений старого оформления и10 Lime-правил
+с17 недостающими declarations. Сильные принятые Lime-поверхности не копируются.
+Структура, размеры, overflow, сетка, min-height и line-height остались общими;
+сохранили specificity через положительный :where owner. Шрифт400/500 принятого
+Lime не заменяется старым600. Root/global font aliases и fallback не удаляются.
+PostCSS proof25715/25715 selector/property/value/important records exact после
+снятия только нового exact guard; это не утверждение о полном byte-order CSS.
+
+QA: новый e2e/lime-completion-share-skin.cases.ts зарегистрирован существующим
+client-workout-reference.spec.ts. Точный whitelist из3 известных отрицательных
+guards сохраняет identity положительных owner и неизвестных filters. Проверены
+все4 border sides/margins, исходные CSSRule/style objects, neutral layout clones,
+полный CSSOM/focus/scroll/overflow-anchor roundtrip. В duration helper добавлен
+только1 exact share guard, алгоритм/старые assertions не менялись.
+
+Fresh baseline нынешнего source:8 ожидаемых modern-ownership red и2 настоящих
+off positive pass,10 JSON и46 measured states сохранены. Candidate:40/40
+browser,39.44s,0skip/retry/flaky/unexpected:10shareownership +12durationowners
+обеих ролей +14 existingduration behavior +4existingPNG. Chromium/WebKit,
+client light390/dark430, desktop1440, emptylight375 иoffdark390. Собственные
+внешние запросы/отправка изолированы синтетическими fixtures.
+
+Before→after:46/46 computed styles/geometry/backdrop/frame/focus-scroll-anchor
+exact;36/36 UI PNG byte-exact;10/10 natural open→close→reopen/rawfocus paths
+иshare payloads exact,10/10 browser diagnostics пусты. Natural focus записан
+до отдельной калибровки keyboard focus; новый autofocus/trap не заявляются.
+Проверены выбор3 сюжетов/disabledempty, pending close+submit/overlay protection,
+ошибка иявныйretry. Unit покрывает штатные fallback/cancel.12 реальных canvas
+PNG1080×1350 прошли existing dimension/font/layout checks; побайтное сравнение
+canvas с исторической веткой не заявляется. Вручную просмотрены WebKit light375
+empty иdark430error: clipping/overlap не обнаружены, серыйerror прежний.
+
+Сборка/types/startup/fonts2/2 strict SHA passed; полный lint passed;4unitfiles
+34/34 report/share/celebration/insights/duration passed; docs checker passed.
+Первый fonts0/2 build не использовался какbaseline: восстановлены только
+2 verified licensedfonts из принятого локального signedZIP, Git их игнорирует.
+Agent previewEPERM/прерванное permission-wait выполнили0cases и не засчитаны.
+Фактический baseline иcandidate выполнены root с разрешённым локальным
+preview; безопасные обходные изменения продукта/CI не вводились.
+
+Артефакты: /tmp/fit-mc512-current-baseline.json,
+/tmp/fit-mc512-current-candidate.json, /tmp/fit-mc512-current-comparison.json,
+/tmp/fit-mc512-final-review.json, /tmp/fit-mc512-source-proof-current.json;
+*-results содержат rawJSON/PNG. Snapshot current source/font build записан
+в /tmp/fit-mc512-baseline-build-receipt.json.
+
+Открыто: прежний серый validation/share error — отдельный MC5.1.3. Реальные
+системная отправка/clipboard, физический телефон/native install/OAuth не
+проверялись и не выдаются за проверенные. Данные/DOM/handlers/API/пилоты/Live
+и ввод/keyboard/swipe/drag/timer не менялись. Тренер не получает client-only
+share sheet; его done/duration проверены. CI нового PR ещё требуется.
+Дальше: PR иего CI→сводка владельцу→только его разрешение на выпуск.

@@ -1,3 +1,4 @@
+import { limeCompletionShareSkinCases } from './lime-completion-share-skin.cases'
 import { limeActualDurationSkinCases } from './lime-actual-duration-skin.cases'
 import { limeLiveFinishSkinCases } from './lime-live-finish-skin.cases'
 import { limeLiveAttendanceSkinCases } from './lime-live-attendance-skin.cases'
@@ -26,6 +27,7 @@ limeLiveFinishSkinCases()
 limeLiveAttendanceSkinCases()
 limeLiveTimerReviewLayoutCases()
 limeActualDurationSkinCases()
+limeCompletionShareSkinCases()
 
 const pilotId = 'c11e0000-6010-4000-8000-000000000001'
 
