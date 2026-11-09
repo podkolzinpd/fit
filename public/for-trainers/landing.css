@@ -76,3 +76,14 @@ html:not(.motion) .demo-clock{display:none}
  .audiences a{font-size:11px;padding-inline:10px}.open{font-size:10px;padding-inline:10px}.open span{margin-left:4px}
 }
 @media(max-width:359px){.site-header{gap:5px;padding-inline:8px}.site-header img{width:40px}.audiences{padding-left:4px}.audiences a{padding-inline:7px;font-size:10px}.open{padding-inline:8px}.open span{display:none}}
+
+/* Short, readable answers after the product story on both audience pages. */
+.questions{max-width:960px;margin:0 auto;padding:90px 40px 100px}
+.questions .kicker{margin-bottom:14px}.questions h2{font-size:clamp(30px,4vw,44px);letter-spacing:-.04em}
+.question-list{margin-top:32px;border-top:1px solid #30332b}
+.question-list details{border-bottom:1px solid #30332b;padding:22px 0}
+.question-list summary{display:flex;align-items:center;justify-content:space-between;gap:24px;list-style:none;cursor:pointer;font-size:18px;line-height:1.5;font-weight:500}
+.question-list summary::-webkit-details-marker{display:none}.question-list summary:after{content:'+';font-size:24px;color:var(--lime);font-weight:400;flex-shrink:0}
+.question-list details[open] summary:after{content:'−'}.question-list summary:focus-visible{outline:2px solid var(--lime);outline-offset:6px}
+.question-list p{max-width:700px;margin-top:16px;font-size:16px;line-height:1.65;color:#b7bcb2}
+@media(max-width:760px){.questions{padding:64px 22px 72px}.question-list{margin-top:26px}.question-list details{padding:18px 0}.question-list summary{font-size:16px;gap:18px}.question-list p{font-size:14px;margin-top:12px}}

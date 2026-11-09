@@ -51,7 +51,10 @@
     <link rel="preload" as="image" href="/assets/home-icon-180-1879755a4578.png" data-home-screen-icon />
     <link rel="manifest" href="/site.webmanifest?v=5" />
     <link rel="preload" as="image" href="/assets/startup-photo-983c93dc4df8.jpg" fetchpriority="high" />
-    <title>Fit</title>
+    <title>ФИТ — приложение для тренеров и спортсменов</title>
+    <meta name="description" content="ФИТ помогает вести программы, расписание и результаты тренировок. Тренируйтесь самостоятельно или с тренером, записывайте подходы и следите за прогрессом." />
+    <meta property="og:title" content="ФИТ — приложение для тренеров и спортсменов" />
+    <meta property="og:description" content="Программы, расписание и результаты тренировок — в одном приложении." />
     <style id="fit-startup-shell-styles">
       html, body, #root { min-height: 100%; }
       body { margin: 0; background: #fbfaf7; color: #202022; }
@@ -352,13 +355,15 @@
   </head>
   <body>
     <div id="root"></div>
-    <main id="fit-startup-shell" class="fit-startup-shell fit-startup-photo" aria-live="polite">
+    <!--noindex-->
+    <div id="fit-startup-shell" class="fit-startup-shell fit-startup-photo" role="main" aria-live="polite" data-nosnippet>
       <img class="fit-startup-photo-image" src="/assets/startup-photo-983c93dc4df8.jpg" width="940" height="1673" alt="" aria-hidden="true" fetchpriority="high" />
       <img class="fit-startup-mark" src="/fit-logo.svg" alt="" aria-hidden="true" />
       <h1 id="fit-startup-title">Открываем Fit…</h1>
       <p id="fit-startup-message">Загружаем приложение.</p>
       <button id="fit-startup-reload" type="button" hidden>Обновить приложение</button>
-    </main>
+    </div>
+    <!--/noindex-->
     <script>
       window.__fitAttachStartupShell?.()
     </script>
