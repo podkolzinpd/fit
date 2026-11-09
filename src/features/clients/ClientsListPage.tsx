@@ -299,7 +299,7 @@ function ClientsListPage({ archivedOnly }: ClientsListPageProps) {
       <button type="button" className="clients-archive-feedback-close" aria-label="Закрыть сообщение" onClick={() => setFeedback(null)}><CloseIcon /></button>
     </div>}
     {archive.error && <p className="error clients-archive-error" role="alert">{archive.error.message}</p>}
-    {!archivedOnly && <ConnectionRequests />}
+    {!archivedOnly && <ConnectionRequests showEmpty />}
     <ChatThreadsNotice loading={threads.isLoading} error={threads.error} onRetry={() => void threads.refetch()} />
     {!archivedOnly && financeEnabled && !financeInNavigation && <Link className="clients-finance-entry" to="/finance" onClick={rememberListPosition}>
       <span><strong>Финансы</strong><small>{finance.data ? `${new Intl.NumberFormat('ru-RU').format(finance.data.receivedCents / 100)} ₽ получено · ${finance.data.attentionCount} требуют внимания` : 'Абонементы, оплаты и занятия'}</small></span><ChevronRightIcon />
