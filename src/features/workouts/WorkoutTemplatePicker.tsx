@@ -31,7 +31,7 @@ export function WorkoutTemplatePicker({ templates, loading, error, onRetry, onSe
     document.addEventListener('keydown', onEscape, true)
     return () => document.removeEventListener('keydown', onEscape, true)
   }, [onClose])
-  return <div className="sheet-overlay" onClick={onClose}>
+  return <div className="sheet-overlay exercise-picker-overlay" onClick={onClose}>
     <section className="workout-decision-sheet workout-template-picker" role="dialog" aria-modal="true" aria-label="Добавить шаблон тренировки" onKeyDown={keepTemplateFocusInside} onClick={(event) => event.stopPropagation()}>
       <header className="picker-header"><div><p className="eyebrow">ВАШИ ШАБЛОНЫ</p><h2>Добавить шаблон</h2></div><button type="button" className="picker-close" aria-label="Закрыть" autoFocus onClick={onClose}><CloseIcon /></button></header>
       <AsyncView loading={loading} error={error} onRetry={onRetry}>

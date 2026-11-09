@@ -106,6 +106,25 @@ export function workoutTemplateReliabilityCases() {
     await picker.locator('.workout-template-picker-item').last().press('Tab')
     await expect(picker.getByRole('button', { name: 'Закрыть' })).toBeFocused()
     await pickerSearch.fill('легкий')
+    await page.evaluate(() => {
+      Object.defineProperty(window.visualViewport, 'height', { configurable: true, value: 400 })
+      Object.defineProperty(window.visualViewport, 'offsetTop', { configurable: true, value: 70 })
+      window.visualViewport!.dispatchEvent(new Event('resize'))
+    })
+    await expect(page.locator('html')).toHaveCSS('--app-visible-height', '400px')
+    const keyboardGeometry = await picker.evaluate(node => {
+      const search = node.querySelector('input')!.getBoundingClientRect()
+      const result = node.querySelector('.workout-template-picker-item')!.getBoundingClientRect()
+      return { searchTop: search.top, searchBottom: search.bottom, resultBottom: result.bottom }
+    })
+    expect(keyboardGeometry.searchTop).toBeGreaterThanOrEqual(70)
+    expect(keyboardGeometry.searchBottom).toBeLessThanOrEqual(470)
+    expect(keyboardGeometry.resultBottom).toBeLessThanOrEqual(470)
+    await page.evaluate(() => {
+      Object.defineProperty(window.visualViewport, 'height', { configurable: true, value: innerHeight })
+      Object.defineProperty(window.visualViewport, 'offsetTop', { configurable: true, value: 0 })
+      window.visualViewport!.dispatchEvent(new Event('resize'))
+    })
     await page.screenshot({ path: info.outputPath('template-picker-search-lime.png'), fullPage: true })
     await picker.getByRole('button', { name: /Лёгкий корпус/ }).click()
     await expect(picker).toHaveCount(0)
