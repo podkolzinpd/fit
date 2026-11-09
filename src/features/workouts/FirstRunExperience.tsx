@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+import { useState, type FormEvent, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 
 export function ClientFirstRunIntro({ actions, afterActions, showConnection = true }: { actions?: ReactNode; afterActions?: ReactNode; showConnection?: boolean }) {
@@ -25,14 +25,39 @@ export function ClientFirstRunIntro({ actions, afterActions, showConnection = tr
   </section>
 }
 
-export function TrainerFirstRun() {
+export function TrainerFirstRun({ creating, error, onCreate }: {
+  creating: boolean
+  error: Error | null
+  onCreate: (fullName: string) => Promise<void>
+}) {
+  const [name, setName] = useState('')
+  const [validation, setValidation] = useState<string | null>(null)
+
+  async function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    const value = name.trim()
+    if (value.length < 2) {
+      setValidation('Введите имя клиента')
+      return
+    }
+    setValidation(null)
+    await onCreate(value)
+  }
+
   return <section className="first-run first-run-trainer" aria-labelledby="trainer-first-run-title">
     <div className="first-run-copy">
       <p className="eyebrow">ПЕРВЫЙ ШАГ</p>
       <h2 id="trainer-first-run-title">Планы и результаты спортсменов — в одном месте</h2>
-      <p>Подключите аккаунт спортсмена. После его согласия можно составлять тренировки.</p>
+      <p>Добавьте первого клиента и составьте для него тренировку.</p>
     </div>
-    <Link className="button primary" to="/connect">Подключить первого спортсмена</Link>
+    <form className="first-run-client-form" onSubmit={(event) => void submit(event)}>
+      <label htmlFor="first-client-name">Имя клиента</label>
+      <div>
+        <input id="first-client-name" value={name} onChange={(event) => setName(event.target.value)} placeholder="Например, Антон" autoComplete="off" />
+        <button className="primary" disabled={creating}>{creating ? 'Добавляем…' : 'Добавить первого клиента'}</button>
+      </div>
+      {(validation || error) && <p className="error" role="alert">{validation ?? error?.message}</p>}
+    </form>
   </section>
 }
 

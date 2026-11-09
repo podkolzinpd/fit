@@ -1,6 +1,5 @@
 import { test as base, expect, type BrowserContext, type Page } from '@playwright/test'
 import { spawn } from 'node:child_process'
-import { randomUUID } from 'node:crypto'
 import { once } from 'node:events'
 import { fileURLToPath } from 'node:url'
 
@@ -119,51 +118,4 @@ export async function closeNativeContext(context: BrowserContext): Promise<void>
   await Promise.all(context.pages().map(page => page.unrouteAll({ behavior: 'wait' })))
   await context.unrouteAll({ behavior: 'wait' })
   await context.close()
-}
-
-/** Seeds a registered athlete through the actual invitation/consent API; never creates a manual card. */
-export async function nativeCreateConnectedAthlete(trainerPage: Page, values: {
-  name: string; key?: string; profile?: { gender: 'male' | 'female'; ageYears: number; heightCm: number; initialWeightKg?: number; goal?: string }
-}): Promise<{
-  clientId: string; athleteKey: string; athleteProfileId: string; fullName: string
-}> {
-  const athleteKey = values.key ?? `connected-athlete-${randomUUID()}@example.test`
-  const identity = await (await fixtureRequest('session', { key: athleteKey, role: 'client', firstName: values.name })).json() as { token?: string; profileId?: string }
-  if (!identity.token || !identity.profileId || !fixtureOrigin) throw new Error('Invalid registered athlete fixture identity')
-  const athleteRequest = (path: string, body?: object) => fetch(`${fixtureOrigin}${path}`, {
-    method: body ? 'POST' : 'GET', headers: { 'x-fit-session': identity.token!, 'content-type': 'application/json' },
-    ...(body ? { body: JSON.stringify(body) } : {}),
-  })
-  if (values.profile) {
-    const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Moscow' }).format(new Date())
-    const created = await athleteRequest('/v1/clients', {
-      fullName: values.name, gender: values.profile.gender, ageYears: values.profile.ageYears,
-      ageUpdatedAt: today, heightCm: values.profile.heightCm, goal: values.profile.goal ?? null, note: null,
-      initialWeightKg: values.profile.initialWeightKg ?? null,
-      initialWeightRecordedOn: values.profile.initialWeightKg === undefined ? null : today,
-    })
-    if (!created.ok) throw new Error(`Registered athlete profile setup failed (${created.status}): ${await created.text()}`)
-  }
-  const issued = await nativeRequest(trainerPage, '/v1/connection-directory', { method: 'POST', body: { action: 'create_invitation' } })
-  if (!issued.ok) throw new Error(`Trainer invitation failed (${issued.status}): ${await issued.text()}`)
-  const { result: invitation } = await issued.json() as { result: { code: string } }
-  const resolved = await athleteRequest('/v1/connection-directory', { action: 'resolve', kind: 'code', value: invitation.code })
-  if (!resolved.ok) throw new Error(`Athlete invitation preview failed (${resolved.status}): ${await resolved.text()}`)
-  const { result: person } = await resolved.json() as { result: { id: string; invitationCode: string; expectedRelationshipId: string | null; expectedRevision: string | null } | null }
-  if (!person) throw new Error('Registered athlete could not resolve trainer invitation')
-  const accepted = await athleteRequest('/v1/connection-directory', { action: 'send', peerId: person.id, invitationCode: person.invitationCode,
-    expectedRelationshipId: person.expectedRelationshipId, expectedRevision: person.expectedRevision })
-  if (!accepted.ok) throw new Error(`Athlete connection failed (${accepted.status}): ${await accepted.text()}`)
-  const { result } = await accepted.json() as { result: { status: string } }
-  if (result.status !== 'accepted') throw new Error(`Athlete connection remained ${result.status}`)
-  const own = await athleteRequest('/v1/clients')
-  if (!own.ok) throw new Error(`Athlete card lookup failed (${own.status})`)
-  const { clients } = await own.json() as { clients: { id: string; fullName: string; hasAccount: boolean; canCreateWorkout: boolean }[] }
-  if (clients.length !== 1 || !clients[0]!.hasAccount) throw new Error('Registered athlete has no unique linked card')
-  const card = clients[0]!
-  const roster = await nativeRequest(trainerPage, '/v1/clients')
-  if (!roster.ok) throw new Error(`Trainer roster lookup failed (${roster.status})`)
-  const trainerClients = await roster.json() as { clients: { id: string; hasAccount: boolean; canCreateWorkout: boolean }[] }
-  if (!trainerClients.clients.some(client => client.id === card.id && client.hasAccount && client.canCreateWorkout)) throw new Error('Confirmed athlete is not available to the trainer')
-  return { clientId: card.id, athleteKey, athleteProfileId: identity.profileId, fullName: card.fullName }
 }

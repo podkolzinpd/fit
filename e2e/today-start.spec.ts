@@ -140,7 +140,7 @@ test('today: недоступный AI-разбор сохраняет transcrip
   expect(parserRequests).toBe(1)
 })
 
-test('today: быстрый старт ведёт к единому выбору плана или завершённой тренировки', async ({ page }) => {
+test('today: быстрый старт ведёт к единому выбору плана или завершённой тренировки', async ({ page }, testInfo) => {
   await mockNativeAiSession(page, 'trainer')
   await page.goto(nativeAiUrl('/today'))
   await page.goto(nativeAiUrl('/today'))
@@ -206,8 +206,13 @@ test('today: быстрый старт ведёт к единому выбору
   await expect(page.getByText('Как сохранить?', { exact: true })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Запланировать', exact: true })).toHaveAttribute('aria-pressed', 'true')
   await page.locator('.client-picker-trigger').click()
-  await expect(page.getByRole('button', { name: 'Клиент', exact: true })).toHaveCount(0)
-  await expect(page.getByLabel('Имя нового клиента')).toHaveCount(0)
+  await page.getByRole('button', { name: 'Клиент', exact: true }).click()
+  await expect(page.getByLabel('Имя нового клиента')).toBeVisible()
+  const quickClientName = `Тест ${testInfo.workerIndex}-${Date.now()}`
+  await page.getByLabel('Имя нового клиента').fill(quickClientName)
+  await page.getByRole('button', { name: 'Добавить и выбрать' }).click()
+  await expect(page.locator('.client-picker-trigger')).toContainText(quickClientName)
+  await page.locator('.client-picker-trigger').click()
   await page.locator('.client-picker-item').filter({ hasText: 'Анна Смирнова' }).first().click()
   await expect(page.getByText('Нет клиента?', { exact: true })).toHaveCount(0)
   await expect(page.getByRole('button', { name: 'Запланировать тренировку' })).toBeEnabled()

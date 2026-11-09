@@ -171,7 +171,7 @@ describe.skipIf(source === undefined)('one active trainer through every connecti
     expect(await actor(f.second, 'select id from public.client_progress where client_id=$1', [f.card])).toEqual([])
     expect(await actor(f.first, 'select public.can_access_client($1) allowed', [f.card])).toEqual([{ allowed: true }])
     expect(await actor(f.first, 'select note from public.client_trainers where client_id=$1', [f.card])).toEqual([])
-    await expect(actor(f.second, 'select * from public.quick_start_live_workout($1,$2)', [f.card, randomUUID()])).rejects.toMatchObject({ message: 'athlete_connection_required' })
+    await expect(actor(f.second, 'select * from public.quick_start_live_workout($1,$2)', [f.card, randomUUID()])).rejects.toMatchObject({ message: 'client_forbidden' })
     expect(await actor(f.athlete, 'select trainer_id from public.list_accessible_client_trainers() where client_id=$1', [f.card])).toEqual([{ trainer_id: f.first }])
   })
 
@@ -435,7 +435,7 @@ describe.skipIf(source === undefined)('one active trainer through every connecti
     await actor(f.first, 'select public.leave_client_space($1)', [f.card])
     expect(await actor(f.first, 'select id from public.workouts where id=$1', [ownWorkout])).toEqual([])
     expect(await actor(f.first, 'select id from public.workouts where id=$1', [plan])).toEqual([{ id: plan }])
-    await expect(actor(f.first, 'select * from public.quick_start_live_workout($1,$2)', [f.card, randomUUID()])).rejects.toMatchObject({ message: 'athlete_connection_required' })
+    await expect(actor(f.first, 'select * from public.quick_start_live_workout($1,$2)', [f.card, randomUUID()])).rejects.toMatchObject({ message: 'client_forbidden' })
     expect(await actor(f.athlete, 'select id from public.workouts where client_id=$1 order by id', [f.card])).toHaveLength(3)
   })
 

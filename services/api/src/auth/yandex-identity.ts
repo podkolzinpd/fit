@@ -30,7 +30,6 @@ export class YandexIdentityUnavailableError extends Error {
 }
 
 interface YandexIdentityClientOptions {
-  connectionEmailObserver?: { observe(subjectHash: string, emails: string[]): Promise<void> }
   corporateAdminObserver?: CorporateAdminLoginObserver
   privateAnalyticsObserver?: CorporateAdminLoginObserver
   expectedClientId: string
@@ -50,7 +49,6 @@ function parseIdentityPayload(value: unknown): {
   clientId: string
   psuid: string
   login: string
-  emails: string[]
 } | undefined {
   if (typeof value !== 'object' || value === null || Array.isArray(value)) {
     return undefined
@@ -70,14 +68,12 @@ function parseIdentityPayload(value: unknown): {
     return undefined
   }
 
-  const emails = Array.isArray(payload.emails) ? payload.emails.filter((x): x is string => typeof x === 'string') : []
-  return { clientId, psuid, login, emails }
+  return { clientId, psuid, login }
 }
 
 export class YandexIdentityClient implements YandexIdentityProvider {
   private readonly corporateAdminObserver: CorporateAdminLoginObserver | undefined
   private readonly privateAnalyticsObserver: CorporateAdminLoginObserver | undefined
-  private readonly connectionEmailObserver: YandexIdentityClientOptions['connectionEmailObserver']
   private readonly expectedClientId: string
   private readonly fetchImplementation: typeof fetch
   private readonly timeoutMs: number
@@ -90,7 +86,6 @@ export class YandexIdentityClient implements YandexIdentityProvider {
 
     this.corporateAdminObserver = options.corporateAdminObserver
     this.privateAnalyticsObserver = options.privateAnalyticsObserver
-    this.connectionEmailObserver = options.connectionEmailObserver
     this.expectedClientId = expectedClientId
     this.fetchImplementation = options.fetchImplementation ?? globalThis.fetch
     this.timeoutMs = options.timeoutMs ?? 3_000
@@ -150,9 +145,6 @@ export class YandexIdentityClient implements YandexIdentityProvider {
     }
     try { await this.privateAnalyticsObserver?.observe(subjectHash, analyticsLoginHash) } catch {
       // A failure to bind private analytics must not block ordinary sign-in.
-    }
-    try { await this.connectionEmailObserver?.observe(subjectHash, identity.emails) } catch {
-      // Discovery indexing must not block sign-in or grant any account access.
     }
     return {
       ...(nutritionLoginHash(identity.login) === undefined ? {} : { nutritionLoginHash: nutritionLoginHash(identity.login)! }),

@@ -3,7 +3,7 @@ export type AssistantNavigationLink = { path: string; label: string }
 const LINK_MARKER = /\[\[fit-link:([^|\]\n]+)\|([^\]\n]+)\]\]/gu
 const UUID = '[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}'
 const STATIC_PATHS = new Set([
-  '/assistant', '/chat', '/join', '/connect', '/me', '/me?entry=workout', '/me/edit', '/me/settings', '/me/workouts', '/me/progress', '/me/progress?view=pro',
+  '/assistant', '/chat', '/join', '/me', '/me?entry=workout', '/me/edit', '/me/settings', '/me/workouts', '/me/progress', '/me/progress?view=pro',
   '/me/progress?view=pro&mapMode=load#body-map', '/me/progress?view=pro&resultsOpen=1',
   '/me/progress#measurements', '/me/achievements', '/me/goal', '/me/finance', '/me/trainers',
   '/me/profile', '/workouts/new', '/today', '/today?view=compose', '/today?view=compose&entry=text', '/clients', '/clients/new',

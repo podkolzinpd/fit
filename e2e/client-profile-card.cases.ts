@@ -53,16 +53,16 @@ test('Profile actions preserve the selected client and quick-start format',async
 })
 
 for (const connected of [false,true]) test(`Client connection indicator uses account state ${connected}`,async({page})=>{
-  await mockPilot(page,{fitLime:true,clientHasAccount:connected,workouts:[{...workout,status:'done',title:'Прежняя тренировка',startedAt:'2026-09-24T07:00:00Z',completedAt:'2026-09-24T08:00:00Z'}]})
+  await mockPilot(page,{fitLime:true,clientHasAccount:connected,workouts:[]})
   await page.goto(`/clients/${clientId}`)
   await expect(page.getByRole('img',{name:connected ? 'Клиент подключён к приложению' : 'Клиент ещё не подключён'})).toBeVisible()
-  const invite=page.getByRole('button',{name:'Пригласить',exact:true})
+  const invite=page.getByRole('button',{name:'Пригласить в приложение',exact:true})
   if(connected) await expect(invite).toHaveCount(0)
   else {
     await expect(invite).toBeVisible()
-    await expect(page.getByRole('link',{name:'Запланировать тренировку'})).toHaveCount(0)
-    await expect(page.getByRole('button',{name:'Начать тренировку',exact:true})).toHaveCount(0)
-    await expect(page.getByText('Для новых тренировок нужно подключить аккаунт спортсмена. Прежняя история сохранена.')).toBeVisible()
+    const plan=await page.getByRole('link',{name:'Запланировать тренировку'}).boundingBox()
+    const invitation=await invite.boundingBox()
+    expect(invitation!.y).toBeGreaterThanOrEqual(plan!.y+plan!.height)
   }
   await page.getByRole('button',{name:'Действия с профилем спортсмена'}).click()
   await expect(page.getByRole('menuitem',{name:'Редактировать профиль'})).toBeVisible()
@@ -72,15 +72,6 @@ for (const connected of [false,true]) test(`Client connection indicator uses acc
   await page.getByRole('button',{name:'Отмена',exact:true}).click()
   await page.getByRole('button',{name:'Действия с профилем спортсмена'}).click()
   if(connected){await page.getByRole('menuitem',{name:'Написать',exact:true}).click();await expect(page).toHaveURL(/\/chat\//)}
-  else {
-    await page.goto(`/clients/${clientId}/workouts`)
-    await expect(page.getByRole('link',{name:'Запланировать',exact:true})).toHaveCount(0)
-    await expect(page.getByRole('link',{name:'Записать результат',exact:true})).toHaveCount(0)
-    await expect(page.getByRole('link',{name:'пригласите спортсмена'})).toHaveAttribute('href','/connect')
-    const history=page.locator('.client-history-section')
-    await expect(history.getByRole('heading',{name:'История',exact:true})).toBeVisible()
-    await expect(history.getByRole('link').filter({hasText:'Прежняя тренировка'})).toHaveAttribute('href',`/workouts/${workout.id}`)
-  }
 })
 
 for (const withGoal of [false,true]) test(`Client reference sections retain their destinations ${withGoal}`,async({page},info)=>{

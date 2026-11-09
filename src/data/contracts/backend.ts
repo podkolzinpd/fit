@@ -1,4 +1,3 @@
-import type { ConnectionDirectory } from '../../shared/connection-directory'
 import type { TrainerConnectionsRepository } from '../../shared/trainer-connection'
 import type {
   Client,
@@ -71,7 +70,6 @@ import type { AppFeedbackKind, AppFeedbackInput } from '../repositories/app-feed
 import type { NotificationStatus } from './push-notifications'
 import type { ClientRealtimeChange } from './realtime'
 export interface DataBackend {
-  connectionDirectory?: ConnectionDirectory
   source: 'yandex'
   trainerConnections?: TrainerConnectionsRepository
   clients: {

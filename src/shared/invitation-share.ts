@@ -21,12 +21,6 @@ export function corporateInvitationShareUrl(token: string, origin = window.locat
   return url.toString()
 }
 
-export function connectionShareUrl(code: string, origin = window.location.origin): string {
-  const url = new URL('/connect', invitationOrigin(origin))
-  url.search = new URLSearchParams({ code }).toString()
-  return url.toString()
-}
-
 export function invitationShareText(
   inviterName: string,
   targetRole: 'client' | 'trainer',

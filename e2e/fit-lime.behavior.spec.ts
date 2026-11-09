@@ -136,27 +136,32 @@ for (const role of ['client', 'trainer'] as const) test(`Lime Live direct input 
   await expect(first).toHaveClass(/confirmed/)
 })
 
-test('First invitation leaves the roster empty until the athlete accepts', { tag: ['@lime-clients', '@lime-critical'] }, async ({ page }) => {
+test('First-client invitation survives the empty-to-list transition', { tag: ['@lime-clients', '@lime-critical'] }, async ({ page }) => {
   await mockPilot(page, { fitLime: true, clientRecords: [] })
-  const commands: string[] = []
-  await page.route('**/v1/connection-directory', async route => {
-    const command = route.request().postDataJSON() as { action: string }
-    commands.push(command.action)
-    await route.fulfill({ json: { result: command.action === 'self' ? { code: 'A'.repeat(16), fitId: trainerId, emailSearchReady: true } : [] } })
+  let created = false
+  const commands: Array<{ fullName: string; operationId: string }> = []
+  const record = { id: clientId, fullName: 'Первый спортсмен', canonicalFullName: 'Первый спортсмен', hasAccount: false,
+    canArchive: true, archivedAt: null, ageYears: null, heightCm: null, currentWeightKg: null, gender: null,
+    ageUpdatedAt: null, goal: null, note: null, version: 1, membershipVersion: null }
+  await page.route(url => url.pathname === '/v1/clients', route => route.fulfill({ json: { clients: created ? [record] : [] } }))
+  await page.route('**/v1/invitation-links/new-client', async route => {
+    commands.push(route.request().postDataJSON() as typeof commands[number]); created = true
+    await route.fulfill({ status: 201, json: { clientId, share: { id: newWorkoutId, clientId, targetRole: 'client',
+      code: 'ABC123DEF456', token: `ABC123DEF456.${'a'.repeat(64)}`, expiresAt: '2026-11-08T12:00:00Z' } } })
   })
   await page.goto('/clients')
   await expect(page.locator('.state-panel-mark')).toHaveCount(0)
-  await page.getByRole('button', { name: 'Добавить спортсмена', exact: true }).click()
-  await page.getByRole('button', { name: 'Мой QR', exact: true }).click()
-  await expect(page.getByRole('button', { name: 'Отправить ссылку' })).toBeVisible()
-  await expect(page.getByRole('dialog')).toHaveCount(0)
-  await expect(page.getByLabel('Имя спортсмена')).toHaveCount(0)
-  expect(commands.filter(action => action === 'self')).toHaveLength(1)
-  expect(commands).not.toContain('create_invitation')
-  await page.getByRole('button', { name: 'Назад' }).click()
-  await expect(page).toHaveURL(/\/clients$/)
-  await expect(page.locator('.client-card')).toHaveCount(0)
-  await expect(page.getByRole('button', { name: 'Добавить спортсмена', exact: true })).toBeVisible()
+  await page.getByRole('button', { name: 'Добавить клиента', exact: true }).click()
+  await page.getByRole('button', { name: 'Пригласить по ссылке' }).click()
+  await page.getByLabel('Имя спортсмена').fill('Первый спортсмен')
+  await page.getByRole('button', { name: 'Создать приглашение' }).click()
+  await expect(page.getByRole('dialog', { name: 'Ссылка готова' })).toBeVisible()
+  await expect(page.locator('.client-card-copy strong')).toHaveText('Первый спортсмен')
+  expect(commands).toHaveLength(1)
+  expect(commands[0]).toMatchObject({ fullName: 'Первый спортсмен', operationId: expect.stringMatching(/^[a-f0-9-]{36}$/) })
+  await page.getByRole('dialog', { name: 'Ссылка готова' }).getByRole('button', { name: 'Закрыть', exact: true }).click()
+  await expect(page.getByRole('button', { name: 'Добавить', exact: true })).toBeVisible()
+  await expect(page.locator('.client-card')).toHaveCount(1)
 })
 
 test('Client chat tap stays separate from archive gestures', { tag: ['@lime-clients', '@lime-chat'] }, async ({ page, browserName }) => {
@@ -1248,7 +1253,7 @@ test('today keeps creation available when the trainer has no clients or workouts
   await page.clock.setFixedTime(new Date('2026-09-27T12:00:00+03:00'))
   await mockPilot(page, { hasClients: false, workouts: [] })
   await page.goto('/today')
-  await expect(page.getByRole('link', { name: 'Подключить первого спортсмена', exact: true })).toHaveAttribute('href', '/connect')
+  await expect(page.getByRole('link', { name: 'Добавить первого клиента' })).toHaveAttribute('href', '/clients/new')
   await expect(page.getByRole('link', { name: 'Надиктовать тренировку' })).toBeVisible()
   await expect(page.getByRole('link', { name: 'Ввести текстом' })).toBeVisible()
   await expect(page.locator('.schedule-v2-next-workout')).toHaveCount(0)
@@ -1389,7 +1394,7 @@ test('Trainer restores archived client before sharing an invitation', { tag: ['@
   await page.getByRole('link', { name: new RegExp(name) }).click()
   const restore = await clientCardAction(page, 'Вернуть из архива')
   await expect(restore).toBeVisible()
-  await expect(page.getByRole('button', { name: 'Пригласить', exact: true })).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'Пригласить в приложение', exact: true })).toHaveCount(0)
   await restore.click()
   const error = page.getByRole('alert').filter({ hasText: 'Не удалось вернуть клиента из архива' })
   await expect(error).toBeVisible()
@@ -1402,7 +1407,7 @@ test('Trainer restores archived client before sharing an invitation', { tag: ['@
   await expect((await clientCardAction(page, 'Обновляем…'))).toBeDisabled()
   await page.keyboard.press('Escape')
   releaseRestore!()
-  await expect(page.getByRole('button', { name: 'Пригласить', exact: true })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Пригласить в приложение', exact: true })).toBeVisible()
   await expect(error).toHaveCount(0)
   await expect(page.getByText('Сохранённая цель', { exact: true })).toBeVisible()
   await expect(page.getByText('Сохранённая заметка', { exact: true })).toBeVisible()
@@ -1411,7 +1416,7 @@ test('Trainer restores archived client before sharing an invitation', { tag: ['@
   await page.goto('/clients/archive')
   await expect(page.getByRole('link', { name: new RegExp(name) })).toHaveCount(0)
   await page.goto(`/clients/${clientId}`)
-  await page.getByRole('button', { name: 'Пригласить', exact: true }).click()
+  await page.getByRole('button', { name: 'Пригласить в приложение', exact: true }).click()
   await expect(page.getByRole('dialog', { name: 'Ссылка готова' })).toBeVisible()
   expect(restores).toBe(2)
   expect(invitations).toBe(1)
@@ -1421,7 +1426,7 @@ test('Trainer restores archived client before sharing an invitation', { tag: ['@
   await page.reload()
   await expect(page.getByRole('heading', { name })).toBeVisible()
   await expect(restore).toHaveCount(0)
-  await expect(page.getByRole('button', { name: 'Пригласить', exact: true })).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'Пригласить в приложение', exact: true })).toHaveCount(0)
   // Losing permission while the card is open must also remove the retry action.
   canArchive = true
   revokeArchivePermission = true
@@ -1448,7 +1453,7 @@ test('Invitation denial refreshes an already-connected client', { tag: ['@lime-c
     return route.fulfill({ status: 403, json: { error: 'action_not_allowed' } })
   })
   await page.goto(`/clients/${clientId}`)
-  const invite = page.getByRole('button', { name: 'Пригласить', exact: true })
+  const invite = page.getByRole('button', { name: 'Пригласить в приложение', exact: true })
   await expect(invite).toBeVisible()
   await invite.click()
   await expect(page.getByText('Недостаточно прав для этого действия.', { exact: true })).toBeVisible()
@@ -1475,7 +1480,7 @@ test('Trainer client detail opens disconnected history without creating a dialog
   let creations = 0
   await page.route('**/v1/chat/conversations', (route) => { creations += 1; return route.abort() })
   await page.goto(`/clients/${clientId}`)
-  await expect(page.getByRole('button', { name: 'Пригласить', exact: true })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Пригласить в приложение', exact: true })).toBeVisible()
   await (await clientCardAction(page, 'Написать')).click()
   await expect(page).toHaveURL(new RegExp(`/chat/${conversationId}$`))
   await expect(page.getByRole('region', { name: 'Переписка' }).getByText('Спасибо!')).toBeVisible()
@@ -1855,7 +1860,7 @@ test('today keeps workout entry usable while clients fail and recover', { tag: [
   await expect(clientError).toBeVisible()
   recovered = true
   await clientError.getByRole('button', { name: 'Повторить' }).click()
-  await expect(page.getByRole('link', { name: 'Подключить первого спортсмена' })).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Добавить первого клиента' })).toBeVisible()
 })
 
 test('new workout keeps the selected calendar day and returns to its two-week context', async ({ page }) => {

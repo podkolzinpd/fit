@@ -87,19 +87,6 @@ export function captureInvitationLink(
   return parsed.invitation === null ? null : persistInvitationLink(parsed.invitation, storage)
 }
 
-export function parseInvitationLocation(search: string, hash: string, now = Date.now()): PendingInvitationLink | null {
-  const queryInput = parseInvitationInput(search, now)
-  const hashInput = parseInvitationInput(hash, now)
-  if ((queryInput.addressed && queryInput.invitation === null)
-    || (hashInput.addressed && hashInput.invitation === null)) return null
-
-  if (queryInput.invitation !== null && hashInput.invitation !== null
-    && (queryInput.invitation.token !== hashInput.invitation.token
-      || queryInput.invitation.source !== hashInput.invitation.source)) return null
-
-  return queryInput.invitation ?? hashInput.invitation
-}
-
 export function captureInvitationLocation(
   search: string,
   hash: string,
