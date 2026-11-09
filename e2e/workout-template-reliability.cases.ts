@@ -267,7 +267,7 @@ export function workoutTemplateSourceCases() {
 
   for (const status of ['planned', 'done']) test(`Template source ${status} returns to exact workout and copies plan without facts`, { tag: ['@lime-templates'] }, async ({ page }, info) => {
     const source = { ...restTimerWorkout(), trainerId: actorId, createdBy: actorId, status, title: 'Исходный план', clientComment: 'Личная заметка клиента', wellbeing: 'normal' as const, discomfort: true }
-    source.exercises = source.exercises.map(exercise => ({ ...exercise, clientNote: 'Приватное', sets: exercise.sets.map(set => ({ ...set, weightKg: 40, fact: { weightKg: 45, reps: 9 }, confirmedAt: '2026-10-01T10:00:00Z' })) }))
+    source.exercises = source.exercises.map(exercise => ({ ...exercise, trainerComment: 'Контролировать темп.\nПауза в нижней точке.', clientNote: 'Приватное', sets: exercise.sets.map(set => ({ ...set, weightKg: 40, fact: { weightKg: 45, reps: 9 }, confirmedAt: '2026-10-01T10:00:00Z' })) }))
     await mockPilot(page, { profileId: actorId, fitLime: true, workouts: [source] })
     const commands = await captureTemplateCreation(page)
     const sourceWrites: string[] = []
@@ -296,6 +296,7 @@ export function workoutTemplateSourceCases() {
     expect(commands).toHaveLength(1)
     expect(commands[0]!.exercises[0]!.sets[0]!.weightKg).toBe(40)
     expect(commands[0]!.exercises[0]!.blockId).not.toBe(source.exercises[0]!.blockId)
+    expect(commands[0]!.exercises[0]!.trainerComment).toBe(source.exercises[0]!.trainerComment)
     for (const forbidden of ['fact', 'confirmedAt', 'clientComment', 'clientNote', 'wellbeing', 'discomfort', 'clientId', 'workoutDate']) expect(JSON.stringify(commands[0])).not.toContain(`"${forbidden}"`)
     expect(source.exercises[0]!.sets[0]!.fact.weightKg).toBe(45)
     expect(sourceWrites).toEqual([])

@@ -6,7 +6,9 @@ export function keepWorkoutFieldVisible(target: HTMLElement): void {
   if (!target.isConnected || !(content instanceof HTMLElement) || content.clientHeight <= 0) return
   const bounds = content.getBoundingClientRect()
   const viewport = window.visualViewport
-  const top = Math.max(bounds.top, viewport?.offsetTop ?? 0) + 16
+  const header = target.closest('.coach-reference-form')?.querySelector<HTMLElement>(':scope > .page-header')
+  const headerBottom = header && getComputedStyle(header).position === 'sticky' ? header.getBoundingClientRect().bottom : 0
+  const top = Math.max(bounds.top, viewport?.offsetTop ?? 0, headerBottom) + 16
   const bottom = Math.min(bounds.bottom, viewport ? viewport.offsetTop + viewport.height : innerHeight) - 16
   if (bottom <= top) return
   const field = target.getBoundingClientRect()
@@ -22,15 +24,26 @@ export function useWorkoutFieldVisibility(enabled: boolean, selector: string): v
   useEffect(() => {
     if (!enabled) return
     let frame: number | null = null
-    const schedule = () => {
+    const viewport = window.visualViewport
+    let previousHeight = viewport?.height ?? window.innerHeight
+    let explicitFocus = false
+    const schedule = (event: Event) => {
+      if (event.type === 'focusin') explicitFocus = true
       if (frame !== null) return
       frame = requestAnimationFrame(() => {
         frame = null
+        const height = viewport?.height ?? window.innerHeight
+        const expanding = height > previousHeight
+        previousHeight = height
+        const focused = explicitFocus
+        explicitFocus = false
+        // Native keyboard dismissal already brings retained content back.
+        // Counter-scrolling its transient top edge creates an up/down bounce.
+        if (expanding && !focused) return
         const target = document.activeElement
         if (target instanceof HTMLElement && target.matches(selector)) keepWorkoutFieldVisible(target)
       })
     }
-    const viewport = window.visualViewport
     viewport?.addEventListener('resize', schedule)
     viewport?.addEventListener('scroll', schedule)
     window.addEventListener('resize', schedule)

@@ -1,4 +1,5 @@
 import { AddActionLabel } from '../../shared/AddActionLabel'
+import { AutoSizeTextarea } from '../../shared/AutoSizeTextarea'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import type { BlockPreset, ExerciseSnapshot, WorkoutExerciseDraft, WorkoutSetDraft } from '../../shared/domain'
@@ -238,7 +239,7 @@ export function WorkoutExerciseEditor({ exercises, onSaveAsTemplate, onChange, o
   // Поле комментария тренера к упражнению (техника/ограничения/заметка).
   function commentField(exercise: WorkoutExerciseDraft, exerciseIndex: number) {
     if (!showTrainerComments) return null
-    return <textarea className="exercise-comment" aria-label="Комментарий к упражнению" placeholder="Комментарий к упражнению…" rows={1} value={exercise.trainerComment ?? ''} onChange={(event) => updateComment(exerciseIndex, event.target.value)} />
+    return <AutoSizeTextarea className="exercise-comment" aria-label="Комментарий к упражнению" placeholder="Комментарий к упражнению…" rows={1} value={exercise.trainerComment ?? ''} onChange={(event) => updateComment(exerciseIndex, event.target.value)} />
   }
   function updateSet(exerciseIndex: number, setIndex: number, patch: Partial<WorkoutSetDraft>) {
     commitExercises(latestExercises.current.map((exercise, currentExercise) => currentExercise === exerciseIndex ? {
@@ -404,7 +405,8 @@ export function WorkoutExerciseEditor({ exercises, onSaveAsTemplate, onChange, o
     const expanded = isExerciseExpanded(exercise, exerciseIndex)
     const hasCustomRest = exercise.restBetweenSetsSec !== undefined && exercise.restBetweenSetsSec !== 90
     const hasComment = Boolean(exercise.trainerComment)
-    const detailsHint = [hasCustomRest ? `Отдых ${exercise.restBetweenSetsSec} с` : '', hasComment ? 'Есть заметка' : ''].filter(Boolean).join(' · ')
+    const hideExpandedHints = expanded && referenceAppearance
+    const detailsHint = [hasCustomRest && (!hideExpandedHints || !showRest) ? `Отдых ${exercise.restBetweenSetsSec} с` : '', hasComment && !hideExpandedHints ? 'Есть заметка' : ''].filter(Boolean).join(' · ')
     const compactSummary = compactExerciseDetailSummary(exercise.inputKind, exercise.sets, 'planned', showRpe, exercise.ref)
     return <WorkoutExercise state="planned" className="exercise planned-exercise" key={`${exercise.ref}-${exerciseIndex}`}>
       <header className="planned-exercise-head compact-editor-exercise-head">
