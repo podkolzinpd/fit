@@ -8399,3 +8399,52 @@ workflow/test и журнал, без src/e2e/package/native/public измене
 Перед merge — обязательный bc CI/Android, свежая GitHub очередь и свободное
 окно; затем actual-main проверки, штатный выпуск и web/API/signedOTA/UI readback.
 Межчатовых сообщений и изменения чужих PR нет. Фактический выпуск ещё впереди.
+
+## 195. MC5.1 / PR2065 — фактический выпуск обеим ролям принят, 09.11.2026
+
+Задача завершена: GitHub2065 MERGED в daf59f4d9ee04469cd7be11f6f7738658e561d80
+09.11 в10:06:49UTC. Его tree byte-exact sourcebc67536c; повторное reopen/merge
+не выполнялись после чтения ужеOPEN/MERGED. Current sourceCI42594737679:
+35/35success, attempt1; Android42594737944success. Actual-main CI42598475531
+success (34success/1expected skipped), attempt1; Android42598475457success.
+Источник разрешения — явное подтверждение владельца194; закрытие193 разрешено.
+
+Штатные публикации exact daf: API42601695429, web42601695443,
+Android/OTA42602008186 —success. Дублирующие dispatch/старый OTA не запускались.
+Official web manifest/публичный index сопоставлены,243/243 файла проверены
+200/размер/SHA256. Official DNS/pinnedIP/TLS/auth/ready/health/protectedGET401
+passed, оба health содержат daf. SignedOTA manifest/archive/provenance/ABI/
+nativeBuild9/sequence/expiry и публичные bytes passed; архив15977989bytes,
+sequence1794220674785. Все три фактические плоскости содержат daf.
+
+Actual public UI16/16 за26.4s и verified signed ZIP UI16/16 за20.8s:
+Chromium/WebKit,0skip/fail/flaky/retry. Синтетические пользовательские API/WS/
+аналитика изолированы; настоящих пользовательских writes/OAuth не было.
+Публичный index до/после webUI exact. Web↔ZIP:40/40 measured states,
+28/28PNG byte-exact,16/16 payload/writes, initial/final scrollTop и final scroll
+objects exact. Пять ранних initial scrollHeight различаются между web/ZIP до
+первого font/paint barrier; нормализации нет, финальные16/16 совпадают.
+
+Ограничение сравнения с локальным baseline: production показывает operational
+notice «Fit снова работает», отсутствующее в fixture build. Whole-page geometry/
+PNG не equal-environment baseline: absolute summary positions/scroll и отдельные
+intrinsic widths/grid columns различаются, источник width отдельно не установлен.
+Не заявляется40/40 whole-page exact между этими окружениями. При этом40/40
+paint properties совпадают,28/28 открытых native-dialog states полностью exact
+по measured styles/geometry; backdrop/frame40/40 exact. В выбранных actual
+WebKit clientlightinvalid и trainer1440saved clipping/overlap не обнаружены.
+Notice не скрывался ради сравнения и нашим diff не менялся.
+
+Квитанции: /tmp/fit-mc51-release/reopen-20261109/current-acceptance/;
+/tmp/fit-mc51-web-ota-comparison.json;
+/tmp/fit-mc51-production-baseline-qualification.json. Исходные red/отменённые
+run и неизвестные причины сохранены в191–193, не переписаны зелёным итогом.
+Непроверенное: физические телефоны/native install/реальный OAuth. Известный
+серый validation error остаётся отдельным MC513, без скрытого расширения scope.
+
+Сохранены ввод/keyboard/focus/scroll, clear/pending/error/conflict/retry,
+версии/факты и все прежние Live механики; свой runtime diff только2 CSS,
+15guards/5weakrules8decl,25715 legacy records без потерь. Пользовательские
+настройки/rollout/DB/API/таймеры/жесты не менялись нашим diff. Для ручной приёмки
+обеим ролям: завершённая тренировка→длительность→изменение/сохранение/отмена.
+Следующая часть очистки — после принятия этого этапа, отдельным узким PR.
