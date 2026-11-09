@@ -8847,3 +8847,34 @@ CI новогоPR ещёнепроверен; физическиетелефон
 systemshare не проверялись. SourceCIinitialrejection198 иrawheightlimit202
 необъявляютсяисправленными. Дальше PR/егоCI→сводкавладельцу. Разрешения
 merge/deployMC513нет, MC-RELEASE-01 сохраняется.
+
+
+## 205. MC5.1.3 / PR2073 — все проверки зелёные, выпуск ожидает владельца
+
+Итерация205 — 2026-11-09 — GPT-6 / OpenAI. PR2073 draft/OPEN,
+проверенный remotehead deb87e4b7f13cd7a707748a1ca9ff141379550b0
+(product/QA3d0c6fe4, base49c81395). Source CI42628705298 завершён success
+attempt1,35/35jobs; Android42628705228 success attempt1, assemblepassed,
+auth-smoke expectedskipped/непроверен. Отказов/повторов CI/правокрадиgreen
+этогопакетанебыло. Один boundedobserver завершён; чужиечаты/PR не опрашивались.
+
+Итог MC513-01–04: error→existing danger обеимролям; только2CSS/3guards,
+сохранены26payloads/данные/версии/черновик/реальныепользовательскиедействия.
+44/44browser безskip/retry/flaky,40unit/full lint/build/types/startup/fonts2/
+splitpolicy8/docs passed. Все90probe и40semanticcapture geometry/noncolorstyles
+exact,40errornodes меняюттолькоcolor/currentColor;46PNGexact/32expectedrecolor.
+Off6cases/22states/18PNG полностьюпрежние. Source/runtime/QA с44run не менялись.
+
+Strictanalyticalcomparison по-прежнемуexit1 с квалификацией204: прежнийглифовый
+вынос27AApixelsи3unknownearlyheight samples, y/clientHeight/finalscroll exact.
+Не выдаёмполныйrawcomparison заgreen; исходныеданные/пороги не менялись.
+HistoricalCIrejection198/earlyheight202/физическийтелефон/OAuth/systemshare
+не объявленыисправленными/провереннымиэтойзадачей. Новыхполомоквпроверенных
+сценарияхнеобнаружено. Примерыошибок —actualWebKitPNGs изfinal-review204.
+
+Квитанции /tmp/fit-mc513-ci/{green-source,CI-jobs,Android-jobs}.json и
+/tmp/fit-mc513-final-review.json. ПослеCI добавлена толькоэта локальная
+Gitквитанция/индекс, безpushновогоsourcehead иперезапускапроверокрадиdocs.
+PRbodyобновляетсязелёнымиCIlinks/известнымиограничениями.
+Следующийшаг — сводкавладельцу иТОЛЬКОегоявноеразрешение наmerge/публикацию2073
+вактуальнойобщейочереди. Draft/безautomerge; разрешениявыпускаещёнет.
