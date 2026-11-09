@@ -329,6 +329,9 @@ export async function mockPilot(page: Page, options: { role?: 'trainer' | 'clien
           preferences: { scheduleDensity },
         },
       }
+    } else if (url.pathname === '/v1/connection-directory') {
+      const command = route.request().postDataJSON() as { action: string }
+      body = { result: command.action === 'list' ? [] : command.action === 'self' ? { code: 'ABCDEF0123456789', fitId: trainerId, emailSearchReady: true } : null }
     } else if (url.pathname === '/v1/corporate-personal/access') {
       body = { allowed: false }
     } else if (url.pathname === '/v1/profile' && route.request().method() === 'PUT') {
@@ -483,9 +486,8 @@ export async function mockPilot(page: Page, options: { role?: 'trainer' | 'clien
       customExercises = customExercises.map((item) => ({ ...item, archivedAt: command.archived ? '2026-09-24T09:00:00.000Z' : null, version: item.version + 1 }))
       body = { exercise: customExercises[0] }
     } else if (url.pathname === '/v1/clients' && route.request().method() === 'POST') {
-      const input = route.request().postDataJSON() as { fullName: string }
-      clientRecords = [...clientRecords, { id: '10000000-0000-4000-8000-000000000030', fullName: input.fullName, archivedAt: null, version: 1 }]
-      body = { client: { id: '10000000-0000-4000-8000-000000000030' } }
+      await route.fulfill({ status: 409, json: { error: 'athlete_registration_required' } })
+      return
     } else if (url.pathname === '/v1/clients') {
       if (failClients) {
         await route.fulfill({ status: 503, contentType: 'application/json', body: '{"error":"unavailable"}' })
@@ -495,6 +497,7 @@ export async function mockPilot(page: Page, options: { role?: 'trainer' | 'clien
         id: client.id,
         canArchive: true,
         hasAccount: options.clientHasAccount ?? true,
+        canCreateWorkout: options.clientHasAccount ?? true,
         fullName: client.fullName,
         canonicalFullName: client.fullName,
         gender: options.clientGender ?? null,

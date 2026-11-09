@@ -2208,6 +2208,7 @@ const CLIENTS_RESPONSE: PilotClientsResponse = {
     id: '1a0c5295-0a0f-4ccb-a39a-e58090967245',
     canArchive: true,
     hasAccount: false,
+    canCreateWorkout: false,
     fullName: 'Тестовый клиент',
     canonicalFullName: 'Тестовый клиент',
     gender: null,

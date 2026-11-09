@@ -490,7 +490,7 @@ function AssistantAction({ clientMode, programEnabled, action, timezone, catalog
   const payload = action.payload as SummaryPayload
   const view = assistantActionView({ tool: action.tool, payload: action.payload })
   if (action.payload.programPilot === true && (view === 'program-brief' || view === 'program-confirm')) return <AssistantProgramPilotCard key={action.id ?? 'program-brief'} payload={action.payload} enabled={programEnabled} running={running} onApply={onApplyAction} onSaved={onWorkoutSaved} onSuggestion={onSuggestion} onCancel={onCancel} showGuidance={false} clientMode={clientMode} />
-  if (view === 'client-collection') return <ClientCollectionCard payload={payload as ClientDraftPayload} onSuggestion={onSuggestion} onCancel={onCancel} />
+  if (view === 'client-collection') return <ClientDraftCard payload={payload as ClientDraftPayload} onCancel={onCancel} onConfirm={onConfirmClient} running={running} completed={completed} />
   if (view === 'client-confirm') return <ClientDraftCard payload={payload as ClientDraftPayload} onCancel={onCancel} onConfirm={onConfirmClient} running={running} completed={completed} />
   if (view === 'client-choices') return <AssistantClientChoices tool={action.tool} candidates={payload.candidates ?? []} onSuggestion={onSuggestion} onCancel={onCancel} />
   if (view === 'workout-confirm') return <AssistantWorkoutDraftCard key={`workout-${payload.clientId}`} mode="confirm" payload={payload as WorkoutDraftPayload} timezone={timezone} catalog={catalog} parseWorkout={parseWorkout} storageKey={workoutDraftStorageKey} onCancel={onCancel} onApply={onApplyAction} onSaved={onWorkoutSaved} />
@@ -508,18 +508,6 @@ function ProgramBriefCard({ payload, onCancel }: { payload: SummaryPayload; onCa
     {payload.goal && <div className="assistant-flow-fact"><small>Цель из карточки</small><strong>{payload.goal}</strong></div>}
     <div className="assistant-flow-checklist" aria-label="Что нужно уточнить"><span>Опыт тренировок</span><span>Ограничения</span><span>Доступные дни</span></div>
     <p className="assistant-flow-guidance">Ответьте одним сообщением или надиктуйте опыт, ограничения и удобные дни.</p>
-    <CancelActionButton onCancel={onCancel} />
-  </div>
-}
-
-function ClientCollectionCard({ payload, onSuggestion, onCancel }: { payload: ClientDraftPayload; onSuggestion: (value: string) => void; onCancel: () => void }) {
-  const facts = [payload.gender && (payload.gender === 'female' ? 'Женщина' : 'Мужчина'), payload.ageYears && `${payload.ageYears} лет`, payload.heightCm && `${payload.heightCm} см`, payload.initialWeightKg && `${payload.initialWeightKg} кг`].filter(Boolean)
-  return <div className="assistant-flow-card">
-    <header><span><small>Новый клиент</small><strong>{payload.fullName || 'Карточка клиента'}</strong></span><span className="assistant-flow-status">Диктовка</span></header>
-    {facts.length > 0 && <div className="assistant-flow-checklist complete">{facts.map((fact) => <span key={String(fact)}>{fact}</span>)}</div>}
-    {payload.goal && <div className="assistant-flow-fact"><small>Цель</small><strong>{payload.goal}</strong></div>}
-    <div className="assistant-flow-empty"><strong>{payload.step === 'name' ? 'Назовите клиента и данные' : 'Дополните карточку'}</strong><span>{payload.step === 'name' ? 'Имя, пол, возраст, рост, цель и вес можно надиктовать сразу.' : 'Можно отправить только недостающие значения — уже распознанные сохранятся.'}</span></div>
-    {payload.step === 'profile' && !payload.gender && <div className="assistant-choice-chips"><button type="button" onClick={() => onSuggestion('женщина')}>Женщина</button><button type="button" onClick={() => onSuggestion('мужчина')}>Мужчина</button></div>}
     <CancelActionButton onCancel={onCancel} />
   </div>
 }
@@ -684,10 +672,8 @@ function AssistantWorkoutSavedCard({ action }: { action: AssistantOrchestratorAc
   return <div className="assistant-workout-saved" role="status"><span aria-hidden="true">✓</span><div><strong>Тренировка сохранена</strong>{payload.clientName && <small>{payload.clientName}</small>}</div></div>
 }
 
-function ClientDraftCard({ payload, onCancel, onConfirm, running, completed }: { payload: ClientDraftPayload; onCancel: () => void; onConfirm: (draft: ClientDraftPayload) => void; running: boolean; completed: boolean }) {
-  const [draft, setDraft] = useState(payload)
-  const ready = Boolean(draft.fullName.trim() && draft.gender && draft.ageYears && draft.heightCm)
-  return <div className="assistant-flow-card assistant-client-draft"><header><span><small>Карточка клиента</small><strong>Проверьте данные</strong></span><span className="assistant-flow-status">Черновик</span></header><div className="assistant-client-fields"><label className="wide">Имя<input value={draft.fullName} onChange={(event) => setDraft({ ...draft, fullName: event.target.value })} /></label><label>Пол<select value={draft.gender ?? ''} onChange={(event) => setDraft({ ...draft, gender: event.target.value as ClientDraftPayload['gender'] })}><option value="" disabled>Выберите</option><option value="female">Женский</option><option value="male">Мужской</option></select></label><label>Возраст<input type="number" value={draft.ageYears ?? ''} onChange={(event) => setDraft({ ...draft, ageYears: Number(event.target.value) || undefined })} /></label><label>Рост, см<input type="number" value={draft.heightCm ?? ''} onChange={(event) => setDraft({ ...draft, heightCm: Number(event.target.value) || undefined })} /></label><label>Вес, кг<input type="number" step="0.1" value={draft.initialWeightKg ?? ''} onChange={(event) => setDraft({ ...draft, initialWeightKg: Number(event.target.value) || undefined })} /></label><label className="wide">Цель<input value={draft.goal ?? ''} onChange={(event) => setDraft({ ...draft, goal: event.target.value })} /></label></div><div className="assistant-flow-actions"><button type="button" className="primary" onClick={() => onConfirm(draft)} disabled={!ready || running || completed}>{completed ? 'Клиент создан' : running ? 'Создаю…' : 'Создать клиента'}</button>{!completed && <CancelActionButton onCancel={onCancel} />}</div></div>
+function ClientDraftCard({ onCancel, completed }: { payload: ClientDraftPayload; onCancel: () => void; onConfirm: (draft: ClientDraftPayload) => void; running: boolean; completed: boolean }) {
+  return <div className="assistant-flow-card assistant-client-draft"><p>{completed ? 'Карточка была создана ранее. История сохранена.' : 'Сначала спортсмен регистрируется в Fit и подтверждает подключение. После этого можно записывать ему тренировки.'}</p><Link className="button primary" to="/connect">Пригласить спортсмена</Link>{!completed && <CancelActionButton onCancel={onCancel} />}</div>
 }
 
 function ActionPreview({ action, onCancel }: { action: AssistantOrchestratorAction; onCancel: () => void }) {
