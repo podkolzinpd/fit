@@ -52,6 +52,7 @@ export function InvitationShareButton({
     {invitation.error && <p className="error invitation-launch-error" role="alert">{invitation.error.message}</p>}
     {invitation.data && <InvitationShareDialog
       share={invitation.data}
+      codeFirst={actor?.role === 'trainer' && isFitLimeEnabled(actor) && isTrainerScheduleV2Enabled(actor)}
       source={backend.source}
       message={invitationShareText(inviterName(actor?.firstName), targetRole)}
       onClose={() => invitation.reset()}
@@ -138,6 +139,7 @@ export function InviteAthleteButton({ className, label = 'Пригласить �
     </div>, host)}
     {invitation.data && <InvitationShareDialog
       share={invitation.data.share}
+      codeFirst={actor?.role === 'trainer' && isFitLimeEnabled(actor) && isTrainerScheduleV2Enabled(actor)}
       source={backend.source}
       message={invitationShareText(inviterName(actor?.firstName), 'client')}
       onClose={close}

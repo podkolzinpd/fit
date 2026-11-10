@@ -17,7 +17,9 @@ export function InvitationShareDialog({
   message,
   onClose,
   onRevoke,
+  codeFirst = false,
 }: {
+  codeFirst?: boolean
   share: InvitationShare
   source: InvitationLinkSource
   message: string
@@ -133,6 +135,11 @@ export function InvitationShareDialog({
   const codeLabel = share.targetRole === 'trainer' ? 'Код для тренера' : 'Код клиента'
   const host = document.querySelector('.phone-frame') ?? document.body
 
+  const codeSection = (<section className="invitation-code-fallback" aria-label="Запасной код приглашения">
+          <div><strong>{codeLabel}: <span>{share.code}</span></strong><p className="muted">Если ссылка не открывается.</p></div>
+          <button type="button" className="secondary" aria-label={codeCopyState === 'done' ? `${codeLabel} скопирован` : `Скопировать ${codeLabel.toLocaleLowerCase('ru-RU')}`} disabled={codeCopyState === 'busy'} onClick={() => void copyCode()}>{codeCopyState === 'done' ? 'Скопировано' : 'Копировать код'}</button>
+        </section>)
+
   return createPortal(<>
     <div className="modal-overlay invitation-share-overlay" role="presentation" onPointerDown={(event) => {
       if (event.target === event.currentTarget) onClose()
@@ -142,10 +149,7 @@ export function InvitationShareDialog({
           <div><p className="eyebrow">ПРИГЛАШЕНИЕ</p><h2 id="invitation-share-title">Ссылка готова</h2></div>
           <button ref={closeRef} type="button" className="icon-button" aria-label="Закрыть" onClick={onClose}><CloseIcon /></button>
         </header>
-        <section className="invitation-code-fallback" aria-label="Запасной код приглашения">
-          <div><strong>{codeLabel}: <span>{share.code}</span></strong><p className="muted">Если ссылка не открывается.</p></div>
-          <button type="button" className="secondary" aria-label={codeCopyState === 'done' ? `${codeLabel} скопирован` : `Скопировать ${codeLabel.toLocaleLowerCase('ru-RU')}`} disabled={codeCopyState === 'busy'} onClick={() => void copyCode()}>{codeCopyState === 'done' ? 'Скопировано' : 'Копировать код'}</button>
-        </section>
+        {codeFirst && codeSection}
         <p className="invitation-share-message">{message}</p>
         <p className="muted invitation-share-expiry">Действует до {expiresAt}</p>
 
@@ -164,6 +168,7 @@ export function InvitationShareDialog({
           <button type="button" className="secondary" disabled={qrDataUrl === null} onClick={saveQr}>Сохранить QR-код</button>
         </section>}
 
+        {!codeFirst && codeSection}
         {codeCopyState === 'error' && <p className="error" role="alert">Не удалось скопировать код.</p>}
 
         <button type="button" className="link danger invitation-revoke" disabled={revokeState === 'busy'} onClick={() => void revoke()}>{revokeState === 'busy' ? 'Отменяем…' : 'Отменить приглашение'}</button>
