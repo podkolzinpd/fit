@@ -5222,10 +5222,17 @@ for (const role of ['trainer','client'] as const) for (const density of ['origin
   await page.setViewportSize({width:390,height:450})
   await expect(input).toBeFocused()
   await expect(input).toBeInViewport()
-  const field = await input.boundingBox(), message = await error.boundingBox()
-  expect(field).not.toBeNull()
-  expect(message).not.toBeNull()
-  expect(field!.y >= message!.y+message!.height || field!.y+field!.height <= message!.y).toBe(true)
+  // Resizing moves the alert between hero and portal. Measure both in one
+  // rendered frame instead of retaining an element while React replaces it.
+  await expect.poll(() => page.evaluate(() => {
+   const field = document.querySelector<HTMLElement>('.live-set-input')
+   const messages = [...document.querySelectorAll<HTMLElement>('[role="alert"]')].filter(e => e.textContent?.includes('Не удалось поставить тренировку на паузу'))
+   if (!field || document.activeElement !== field || messages.length !== 1) return false
+   const f = field.getBoundingClientRect(), m = messages[0]!.getBoundingClientRect()
+   return f.width > 0 && f.height > 0 && m.width > 0 && m.height > 0
+    && m.top >= 0 && m.bottom <= window.innerHeight
+    && (f.top >= m.bottom || f.bottom <= m.top)
+  })).toBe(true)
   await input.press('Enter')
   // Enter means Next, not Done: finish editing before restoring the viewport.
   const nextInput = page.locator('.live-set-input').nth(1)
