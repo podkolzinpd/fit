@@ -3,6 +3,7 @@ import type { TrainerFinancePackageKind, TrainerFinancePackageStatus, TrainerFin
 export interface ClientFinancePackage {
   id: string
   kind: TrainerFinancePackageKind
+  singleSession?: boolean
   title: string
   sessionsTotal: number
   sessionsUsed: number
