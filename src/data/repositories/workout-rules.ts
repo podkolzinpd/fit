@@ -104,9 +104,9 @@ export function restSecondsAfterSet(workout: Workout, exercise: WorkoutExercise,
   const workoutFinished = workout.exercises.every((item) => item.sets.every((itemSet) => itemSet.id === set.id || itemSet.confirmedAt))
   if (workoutFinished) return 0
   if (!multi) return exercise.restBetweenSetsSec ?? DEFAULT_REST_BETWEEN_SETS
-  const hasPendingBeforeNextRound = blockRoundsView(block!).some((round) => round.round <= set.position + 1
+  const hasPendingInCurrentRound = blockRoundsView(block!).some((round) => round.round === set.position + 1
     && round.items.some(({ set: roundSet }) => roundSet.id !== set.id && !roundSet.confirmedAt))
-  return hasPendingBeforeNextRound ? block!.restBetweenExercisesSec : block!.restBetweenRoundsSec
+  return hasPendingInCurrentRound ? block!.restBetweenExercisesSec : block!.restBetweenRoundsSec
 }
 
 const RUNNING_INTERVAL_ROUNDS = 6

@@ -308,7 +308,7 @@ export function LiveRestTimer({ workoutId, deadline, defaultDurationSeconds = 90
   const referenceClock = reference && (onReferencePauseToggle && !referenceActions ? <button type="button" className={`${referenceClockClass} live-timer-toggle`} aria-pressed={referencePaused}
       aria-label={`${referencePaused ? 'Продолжить тренировку' : 'Поставить тренировку на паузу'}, прошло ${formatReferenceClock(elapsed)}`}
       onClick={onReferencePauseToggle}>{referenceClockContent}</button> : <div className={referenceClockClass}>{referenceClockContent}</div>)
-  const restTrigger = <button ref={trigger} type="button" className={`secondary live-rest-trigger${stateClass}`} aria-label={triggerLabel} disabled={coachPauseActions && pausePending}
+  const restTrigger = <button ref={trigger} type="button" className={`secondary live-rest-trigger${stateClass}`} aria-label={triggerLabel} disabled={pausePending}
       aria-haspopup="dialog" aria-description={onPrimary ? 'Удерживайте, чтобы открыть настройки таймера' : undefined}
       onPointerDown={coachV79 ? event => { returnTrigger.current = event.currentTarget; if (onPrimary) startLongPress() } : onPrimary ? startLongPress : undefined} onPointerUp={cancelLongPress} onPointerLeave={cancelLongPress} onPointerCancel={cancelLongPress}
       onContextMenu={(event) => { event.preventDefault(); cancelLongPress(); if (!open) openPicker() }}
@@ -316,7 +316,7 @@ export function LiveRestTimer({ workoutId, deadline, defaultDurationSeconds = 90
       {reference ? <img src={coachRestIcon} width="16" height="16" alt="" aria-hidden="true" /> : <TimerIcon />}<span>{reference && signedRemaining === null && !phase ? 'Отдых' : triggerText}</span>
     </button>
   const compactClock = phaseRemaining !== null ? phaseClock : signedRemaining !== null ? formatRest(signedRemaining) : null
-  const compactRestTrigger = coachV79 && <button type="button" data-compact={referenceActions || coachPauseActions || undefined} className={`secondary live-rest-trigger${stateClass}${compactClock !== null ? ' has-countdown' : ''}`} aria-label={triggerLabel} disabled={coachPauseActions && pausePending}
+  const compactRestTrigger = coachV79 && <button type="button" data-compact={referenceActions || coachPauseActions || undefined} className={`secondary live-rest-trigger${stateClass}${compactClock !== null ? ' has-countdown' : ''}`} aria-label={triggerLabel} disabled={pausePending}
     aria-haspopup="dialog" aria-description={onPrimary ? 'Удерживайте, чтобы открыть настройки таймера' : undefined}
     onPointerDown={event => { returnTrigger.current = event.currentTarget; if (onPrimary) startLongPress() }} onPointerUp={cancelLongPress} onPointerLeave={cancelLongPress} onPointerCancel={cancelLongPress}
     onContextMenu={(event) => { event.preventDefault(); cancelLongPress(); if (!open) openPicker() }} onClick={onPrimary ? tap : openPicker}>

@@ -678,6 +678,18 @@ describe('restSecondsAfterSet', () => {
     expect(restSecondsAfterSet(afterB, a, a.sets[0]!)).toBe(90)
   })
 
+  it('uses round rest after a later round while earlier rounds are still pending', () => {
+    const a = { ...exercise('a', 0, 'group', 'group', [s('a1', 0), s('a2', 1, true), s('a3', 2)]), restBetweenExercisesSec: 15, restBetweenRoundsSec: 90 }
+    const b = { ...exercise('b', 1, 'group', 'group', [s('b1', 0), s('b2', 1), s('b3', 2)]), restBetweenExercisesSec: 15, restBetweenRoundsSec: 90 }
+    const workout = workoutWithExercises([a, b])
+    expect(restSecondsAfterSet(workout, b, b.sets[1]!)).toBe(90)
+    expect(restSecondsAfterSet(workout, b, b.sets[2]!)).toBe(15)
+    a.sets[2]!.confirmedAt = 'now'
+    expect(restSecondsAfterSet(workout, b, b.sets[2]!)).toBe(90)
+    a.restBetweenRoundsSec = b.restBetweenRoundsSec = 0
+    expect(restSecondsAfterSet(workout, b, b.sets[1]!)).toBe(0)
+  })
+
   it('старый неполный круг завершается без несуществующего подхода', () => {
     const a = { ...exercise('a', 0, 'group', 'group', [s('a1', 0, true), s('a2', 1, true), s('a3', 2)]), restBetweenExercisesSec: 0, restBetweenRoundsSec: 90 }
     const b = { ...exercise('b', 1, 'group', 'group', [s('b1', 0, true), s('b2', 1, true)]), restBetweenExercisesSec: 0, restBetweenRoundsSec: 90 }
