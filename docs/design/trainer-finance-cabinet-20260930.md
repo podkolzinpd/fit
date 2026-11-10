@@ -2240,3 +2240,10 @@ FIN-67: FIN802 final built browser40/40, retries0; снимки новой ра�
 прогонов в cleanup-case (34 вместо30); на чистой БД все390 случаев базового набора отработали
 по исходным assertions. Production/реальные финансовые данные не использовались.
 FIN802 пока не открыт и не выпускается до приёмки FIN801.
+
+FIN-71: FIN801 merged e3677510; sourceCI42825181524 и mainCI42831619147 SUCCESS.
+Официальные API42836039747 и web42836040125 SUCCESS; public244/244 bytes + обеAPI health passed.
+OTA42837843914 и final public/native browser приёмка ещё выполняются. FIN802 source CI готовится
+от этого main параллельно оставшейся приёмке; его merge/release только после приёмки FIN801 и
+очереди GitHub. Это не параллельная публикация второго этапа. Полный rebased npm check FIN802
+прошёл3193frontend/1631API; нового runtime diff после проверки нет.
