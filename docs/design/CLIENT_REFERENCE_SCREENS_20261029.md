@@ -9488,3 +9488,22 @@ head checks зелёные, main3169 прежний, старших PR и акт
 PR2084 squash merged29217173e4ab544d51800b47070b40f699427bf5 без admin/force.
 MainCI42792077327/Android42792077021 начались. Штатная публикация web/API/OTA
 и readback ещё впереди. Доставку не заявляем до квитанции.
+
+
+## 227. MC5.1.6 — main CI: непостоянное измерение smooth scroll
+
+Main29217173: CI42792077327 attempt1 failure, Android42792077021 success.
+Auth4/4:336 passed,4 предусмотренных skips,1 flaky; Live transition reveals
+next exercise without stealing input client reduced-false single-group compact.
+First e62a9 artifact:82 rAF frames, scroll[0,355], один smooth call top528.375.
+Есть регулярные rAF14–22ms на plateau, поэтому причина не сводится доказанно
+к пропуску кадров/CPU. На переходе clock130.953→132 и content1019→1045;
+точная причина native scroll jump/batching без first renderer trace неизвестна.
+Retry:85 frames, scroll[0,74,347], один smooth call; строгий>2 passed.
+Наблюдение сохранено, не объявлено исправленным или чисто тестовым дефектом.
+
+Runtime/e2e/package/Playwright sourcef05→main292 побайтно совпадают; MC516
+меняет только done card. Первый log и диагностические артефакты сохранены
+/tmp/fit-mc516-release/main-auth4-failed.log и main-auth4-diagnostics.
+После разбора запущен один --failed rerun неизменного main. Проверки
+плавности/таймауты/анимации не ослаблялись. Публикация до green не начинается.
