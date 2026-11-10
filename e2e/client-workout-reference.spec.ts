@@ -4911,17 +4911,17 @@ for (const role of ['trainer', 'client'] as const) for (const density of ['origi
   const backend = await mockPilot(page, { role, profileId: id, clientLime: true, fitLime: true, workouts: [source] })
   await page.goto(`/workouts/${workoutId}/live`)
   const group = page.locator('.exercise-block.live')
-  await group.locator('.coach-v79-circuit-heading').click()
+  await group.locator('.coach-v79-circuit-heading,.client-circuit-toggle').click()
   await group.locator('.circuit-round').nth(1).locator('.circuit-round-toggle').click()
   const body = (exercise: number, round: number) => page.locator(`[data-live-card-key="round:${source.exercises[exercise + 1]!.sets[round]!.id}"] > :is(.coach-v79-card-body,.client-live-card-body)`)
   for (const round of [1, 0]) for (const exercise of [0, 1]) {
     const set = source.exercises[exercise + 1]!.sets[round]!
     await expect(body(exercise, round)).not.toHaveAttribute('inert', '')
-    await expect(group.locator('[data-live-card-key] > .coach-v79-card-body:not([inert])')).toHaveCount(1)
+    await expect(group.locator('[data-live-card-key] > :is(.coach-v79-card-body,.client-live-card-body):not([inert])')).toHaveCount(1)
     await page.locator(`[data-live-set-id="${set.id}"]`).getByRole('button', { name: 'Готово, отдых', exact: true }).click()
     await expect.poll(() => backend.getWorkouts()[0]!.exercises.find(item => item.id === source.exercises[exercise + 1]!.id)!.sets[round]!.confirmedAt).not.toBeNull()
   }
-  await expect(group.locator(':scope > .coach-v79-circuit-body')).toHaveAttribute('inert', '')
+  await expect(group.locator(':scope > .coach-v79-circuit-body,:scope > .client-circuit-body')).toHaveAttribute('inert', '')
   await expect(page.locator('.live-session-progress-copy')).toContainText(source.exercises[3]!.name)
   expect(backend.getWorkouts()[0]!.exercises.find(item => item.id === source.exercises[0]!.id)!.sets.every(set => !set.confirmedAt)).toBe(true)
 })
