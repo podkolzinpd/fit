@@ -591,6 +591,25 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
     let enrollmentPool: PgDatabasePool | undefined
     let runtimePool: PgDatabasePool | undefined
 
+    it('keeps a prepaid unused single purchase out of low-subscription attention without losing the receipt', async () => {
+      if (!ownerPool || !runtimePool) throw new Error('Database not ready')
+      const card=randomUUID(), request=randomUUID()
+      await ownerPool.query("insert into public.clients(id,trainer_id,full_name) values($1,$2,'Synthetic prepaid single')",[card,ACTOR_ID])
+      try {
+        await withActorTransaction(runtimePool,ACTOR_ID,db=>db.query(`select public.create_trainer_finance_service_v3(
+          $1,'session_pack','Single',1,0,200000,200000,current_date,null,null,null,current_date,$2,true)`,[card,request]))
+        const overview=(await withActorTransaction(runtimePool,ACTOR_ID,db=>db.query<{result:{clients: Array<{clientId:string;lowSessions:boolean;needsAttention:boolean;receivedCents:number;sessionsRemaining:number|null}>}}>(
+          "select public.list_trainer_finance_overview_v2(date_trunc('month',current_date)::date) as result")))[0]!.result
+        expect(overview.clients.find(x=>x.clientId===card)).toMatchObject({lowSessions:false,needsAttention:false,receivedCents:200000,sessionsRemaining:null})
+      } finally {
+        await ownerPool.query('delete from public.trainer_finance_events where client_id=$1',[card])
+        await ownerPool.query('delete from public.trainer_finance_payments where package_id in (select id from public.trainer_finance_packages where client_id=$1)',[card])
+        await ownerPool.query('delete from public.trainer_finance_packages where client_id=$1',[card])
+        await ownerPool.query('delete from public.clients where id=$1',[card])
+        await ownerPool.query('delete from app_private.finance_payment_requests where request_id=$1',[request])
+      }
+    })
+
     it.each([[0,0],[20000,0],[20000,5000],[20000,20000]])('atomically records a single service at price %i paid %i with replay and rollback', async (price,paid) => {
       if (!ownerPool || !runtimePool) throw new Error('Database not ready')
       const card=randomUUID(), workout=randomUUID(), operation=randomUUID()

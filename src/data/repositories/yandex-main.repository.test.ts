@@ -313,6 +313,13 @@ describe('Yandex main repository', () => {
     ])
     expect(fetchMock.mock.calls[4]?.[1]).toMatchObject({ method: 'DELETE', body: JSON.stringify({ expectedVersion: 1, reason: 'Ошибка' }) })
     expect(fetchMock.mock.calls[5]?.[1]).toMatchObject({ method: 'PUT', body: JSON.stringify({ expectedVersion: 1, disposition: 'free', packageId: null, comment: null, workoutDate: '2026-09-01' }) })
+    fetchMock.mockResolvedValueOnce(jsonResponse({package:{...financePackage,singleSession:true,sessionsTotal:1}}))
+    await repository.trainerFinance.createPackage(clientId,{
+      singleSession:true,kind:'session_pack',title:'Разовое',sessionsTotal:1,openingUsedSessions:0,
+      priceCents:200000,openingPaidCents:0,startsOn:'2026-11-10',endsOn:null,paymentDueOn:null,comment:null,
+    })
+    expect(fetchMock.mock.calls.at(-1)?.[0]).toBe(`${apiBaseUrl}/v1/clients/${clientId}/finance/single-services`)
+
   })
 
   it('reads client finance only from the self endpoint', async () => {

@@ -39,6 +39,7 @@ function packagePayment(item: ClientFinancePackage): string {
 }
 
 function packageBalance(item: ClientFinancePackage): string {
+  if (item.singleSession) return item.sessionsUsed > 0 ? 'Разовая · проведена' : 'Разовая · не проведена'
   if (item.kind === 'session_pack') return `${item.sessionsRemaining} из ${item.sessionsTotal}`
   return item.endsOn ? `До ${formatLocalDate(localDate(item.endsOn))}` : 'Онлайн'
 }
