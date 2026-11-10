@@ -129,3 +129,14 @@ describe('Client finance', () => {
     expect(screen.getByText('Услуг пока нет')).toBeVisible()
   })
 })
+
+it('shows an explicit single purchase without converting a legacy one-session subscription', async () => {
+  const base=summary.trainers[0]!, original=base.packages[0]!
+  getMine.mockResolvedValue({trainers:[{...base,packages:[
+    {...original,singleSession:true,title:'Разовая',sessionsTotal:1,sessionsUsed:0,sessionsRemaining:1},
+    {...original,id:'legacy',title:'Абонемент на одно',sessionsTotal:1,sessionsUsed:0,sessionsRemaining:1},
+  ]}]})
+  renderPage()
+  expect(await screen.findByText('Разовая · не проведена')).toBeVisible()
+  expect(screen.getByText('1 из 1')).toBeVisible()
+})
