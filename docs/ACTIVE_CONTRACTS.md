@@ -231,3 +231,7 @@ YAFIT-707: поиск названия в библиотеке и выборе �
 Lime и прежние действия; API/данные/история/клиентские экраны не меняются.
 
 10.11 — LO301–303: [три согласованных PR](design/LIVE_SINGLE_ACTIVE_CARD_20261104.md): произвольный порядок обеим ролям, отдых по фактической границе круга, восстановление паузы клиента при ошибке. Заменяет сохранение старого клиентского выбора в LO101–204; reload persistence вне scope.
+
+10.11 — SB-NATIVE-OPS-02: удаляется nutrition pilot inspector; athlete restore
+получает подтверждённую native пару, сохраняя feedback proof текущего входа,
+backup/history/RLS. [Scope и проверки](design/SUPABASE_DECOMMISSION_PLAN_20261023.md#sb-native-ops-02--nutrition-diagnostic-и-athlete-restore--10112026).

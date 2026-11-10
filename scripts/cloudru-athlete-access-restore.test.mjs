@@ -1,7 +1,7 @@
 import {test} from 'node:test'
 import assert from 'node:assert/strict'
 import {readFileSync} from 'node:fs'
-import {planAthleteRestore,applyAthleteRestore,verifyAthleteRestore} from './cloudru-athlete-access-restore.mjs'
+import {planAthleteRestore,applyAthleteRestore,verifyAthleteRestore,readAthleteRestoreTargets,planAthleteRestoreFromEvidence} from './cloudru-athlete-access-restore.mjs'
 
 const source=readFileSync(new URL('./cloudru-athlete-access-restore.mjs',import.meta.url),'utf8')
 const workflow=readFileSync(new URL('../.github/workflows/restore-athlete-access.yml',import.meta.url),'utf8')
@@ -44,10 +44,9 @@ test('only one card and a proven same-person chat participant may change; messag
  assert.match(source,/runtime_chat_threads/)
 })
 test('native and current profile proof are required and unknown private history prevents a ready plan',()=>{
- assert.match(source,/resolveHistoryEvidence\(client,readHistoryEvidenceSecret/)
+ assert.match(source,/resolveHistoryEvidence\(client,evidence\)/)
  assert.match(source,/current\.kinds\.includes\('feedback'\)/)
- assert.match(source,/r\.label==='athleteLegacy'/)
- assert.match(source,/r\.label==='trainerLegacy'/)
+ assert.doesNotMatch(source,/SUPABASE_|readHistoryRegistry|readHistoryTargets|sourceJson|fetch\(/)
  assert.match(source,/p\.origin==='native'/)
  assert.match(source,/uncovered=state\.references\.filter\(r=>r\.legacy>0&&!r\.covered\)/)
  assert.match(source,/ready:uncovered\.length===0/)
@@ -62,6 +61,8 @@ test('transport is fixed main-only, uses closed evidence, preserves backups and 
  assert.match(workflow,/test "\$\(hostname\)" = fit-stage-app/)
  assert.match(workflow,/group: cloudru-stage-vm/)
  assert.match(workflow,/cancel-in-progress: false/)
+ assert.doesNotMatch(workflow,/SUPABASE_|FIT_ACCOUNT_HISTORY_TARGETS/)
+ assert.match(workflow,/FIT_ATHLETE_RESTORE_TARGETS: \$\{\{ secrets\.FIT_ATHLETE_RESTORE_TARGETS/)
  assert.match(workflow,/FIT_ACCOUNT_HISTORY_EVIDENCE: \$\{\{ secrets\.FIT_ACCOUNT_HISTORY_EVIDENCE/)
  assert.match(workflow,/actions\/workflows\/ci\.yml\/runs\?branch=main&status=success/)
  assert.match(workflow,/Restore downloaded backup into a disposable PostgreSQL without network/)
@@ -71,4 +72,30 @@ test('transport is fixed main-only, uses closed evidence, preserves backups and 
  assert.match(workflow,/test "\$\(sudo stat -c '%u:%a' "\$directory\/plan\.json"\)" = 0:600/)
  assert.doesNotMatch(workflow,/workflow_dispatch:\s*\n\s*inputs:[\s\S]*?\n\s+(email|profile_id|sql|user_id|token):/)
  assert.doesNotMatch(workflow,/upload-artifact|actions: write|contents: write|--privileged|--network=host/)
+})
+
+const targets={historicalProfileId:'10000000-0000-4000-8000-000000000001',trainerProfileId:'10000000-0000-4000-8000-000000000002'}
+test('native targets require exactly two distinct confirmed UUIDs and reject the old contact-hash format',()=>{
+ assert.deepEqual(readAthleteRestoreTargets(JSON.stringify(targets)),targets)
+ for(const invalid of [undefined,'',null,[],{},'invalid', {...targets,extra:true},
+  {...targets,trainerProfileId:targets.historicalProfileId},{...targets,historicalProfileId:'invalid'},
+  [{label:'athleteLegacy',emailHash:'a'.repeat(64),role:'client'}]]){
+  assert.throws(()=>readAthleteRestoreTargets(typeof invalid==='string'?invalid:JSON.stringify(invalid)),/^Error: athlete_restore_targets$/)
+ }
+})
+test('native plan still requires authenticated feedback and refuses a profile-only proof without inventory or writes',async()=>{
+ const calls=[]
+ const client={query:async sql=>{
+  calls.push(sql)
+  if(sql.startsWith('select current_user'))return {rows:[{username:'fit_owner',readonly:'on'}]}
+  if(sql.startsWith("select 'feedback'"))return {rows:[{kind:'profile',profile_id:targets.historicalProfileId,account_role:'client',marker_matches:true}]}
+  return {rows:[]}
+ }}
+ const raw=JSON.stringify(targets)
+ await assert.rejects(planAthleteRestoreFromEvidence(client,raw,''),/fresh_feedback_required/)
+ assert.equal(calls.length,0)
+ await assert.rejects(planAthleteRestoreFromEvidence(client,raw,JSON.stringify({idSha256:'a'.repeat(64),messageSha256:'b'.repeat(64)})),/fresh_feedback_required/)
+ assert.equal(calls.at(-1),'rollback')
+ assert.equal(calls.some(sql=>/^(update|insert|delete)/i.test(sql)),false)
+ assert.equal(calls.some(sql=>sql.includes('pg_class')),false)
 })

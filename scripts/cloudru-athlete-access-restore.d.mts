@@ -9,3 +9,7 @@ export function planAthleteRestore(client: Connection, pair: AthletePair): Promi
 export function applyAthleteRestore(client: Connection, plan: AthletePlan, options?: {backupVerified: boolean}): Promise<Record<string,unknown>>
 export function verifyAthleteRestore(client: Connection, plan: AthletePlan, options?: {readProfile: ()=>Promise<{profile:{id:string;client?:{id:string}|null}}|undefined>}): Promise<Record<string,unknown>>
 export function profileReferences(client: Connection, ids: string[], cardIds: string[]): Promise<Record<string,unknown>[]>
+
+export interface AthleteRestoreTargets {historicalProfileId:string;trainerProfileId:string}
+export function readAthleteRestoreTargets(raw:string):AthleteRestoreTargets
+export function planAthleteRestoreFromEvidence(client:Connection,rawTargets:string,rawEvidence:string):Promise<AthletePlan>

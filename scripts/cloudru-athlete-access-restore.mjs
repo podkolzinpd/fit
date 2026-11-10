@@ -2,7 +2,7 @@ import {createHash} from 'node:crypto'
 import {createRequire} from 'node:module'
 import {readFile,writeFile} from 'node:fs/promises'
 import {pathToFileURL} from 'node:url'
-import {readHistoryTargets,readHistoryRegistry,readHistoryEvidenceSecret,resolveHistoryEvidence} from './cloudru-account-history-audit.mjs'
+import {readHistoryEvidenceSecret,resolveHistoryEvidence} from './cloudru-account-history-audit.mjs'
 
 const uuid=/^[a-f0-9]{8}-[a-f0-9]{4}-[1-5][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/
 const digest=value=>createHash('sha256').update(JSON.stringify(value)).digest('hex')
@@ -280,11 +280,27 @@ export async function verifyAthleteRestore(runtime,plan,{readProfile}={}){
  }catch(e){await runtime.query('rollback');throw e}
 }
 
-async function sourceJson(url,headers){
- const r=await fetch(url,{headers,redirect:'error',signal:AbortSignal.timeout(15000)})
- need(r.ok,'registry');let size=0;const chunks=[]
- for await(const c of r.body){size+=c.length;need(size<=5*1024*1024,'scope');chunks.push(c)}
- return JSON.parse(Buffer.concat(chunks).toString('utf8'))
+// Only owner-confirmed existing native profiles; never infer an actor from a login.
+export function readAthleteRestoreTargets(raw){
+ let targets;try{targets=JSON.parse(raw)}catch{need(false,'targets')}
+ need(targets&&Object.keys(targets).sort().join(',')==='historicalProfileId,trainerProfileId'
+  &&[targets.historicalProfileId,targets.trainerProfileId].every(id=>typeof id==='string'&&uuid.test(id))
+  &&targets.historicalProfileId!==targets.trainerProfileId,'targets')
+ return targets
+}
+
+export async function planAthleteRestoreFromEvidence(client,rawTargets,rawEvidence){
+ const targets=readAthleteRestoreTargets(rawTargets),evidence=readHistoryEvidenceSecret(rawEvidence)
+ need(evidence,'fresh_feedback_required')
+ await client.query('begin transaction read only')
+ let current
+ try{
+  await gate(client)
+  current=await resolveHistoryEvidence(client,evidence)
+  need(current&&current.kinds.includes('feedback'),'fresh_feedback_required')
+  await client.query('commit')
+ }catch(e){await client.query('rollback');throw e}
+ return planAthleteRestore(client,{legacyId:targets.historicalProfileId,currentId:current.profileId,trainerId:targets.trainerProfileId})
 }
 async function main(){
  need(process.env.GITHUB_REF==='refs/heads/main'&&process.env.GITHUB_REPOSITORY==='podkolzinpd/fit','environment')
@@ -297,18 +313,7 @@ async function main(){
  const client=new Client({...config,connectionTimeoutMillis:5000,query_timeout:15000});await client.connect()
  try{
   if(phase==='plan'){
-   const targets=readHistoryTargets(process.env.FIT_ACCOUNT_HISTORY_TARGETS),project=process.env.SUPABASE_PROJECT_ID
-   need(/^[a-z0-9]{20}$/.test(project??''),'environment')
-   const keys=await sourceJson(`https://api.supabase.com/v1/projects/${project}/api-keys`,{Authorization:`Bearer ${process.env.SUPABASE_ACCESS_TOKEN}`})
-   const key=keys.find(k=>k.name==='service_role')?.api_key;need(typeof key==='string'&&key.length>20,'registry')
-   const matches=await readHistoryRegistry(page=>sourceJson(`https://${project}.supabase.co/auth/v1/admin/users?page=${page}&per_page=1000`,{Authorization:`Bearer ${key}`,apikey:key}),targets)
-   const legacy=matches.filter(r=>r.label==='athleteLegacy'),trainer=matches.filter(r=>r.label==='trainerLegacy')
-   need(legacy.length===1&&trainer.length===1,'registry')
-   await client.query('begin transaction read only');await gate(client)
-   let current;try{current=await resolveHistoryEvidence(client,readHistoryEvidenceSecret(process.env.FIT_ACCOUNT_HISTORY_EVIDENCE));await client.query('commit')}
-   catch(e){await client.query('rollback');throw e}
-   need(current&&current.kinds.includes('feedback'),'fresh_feedback_required')
-   const plan=await planAthleteRestore(client,{legacyId:legacy[0].id,currentId:current.profileId,trainerId:trainer[0].id})
+   const plan=await planAthleteRestoreFromEvidence(client,process.env.FIT_ATHLETE_RESTORE_TARGETS,process.env.FIT_ACCOUNT_HISTORY_EVIDENCE)
    await writeFile('/repair/plan.json',JSON.stringify(plan),{flag:'wx',mode:0o600});console.log(JSON.stringify(plan.report))
   }else{
    const plan=JSON.parse(await readFile('/repair/plan.json','utf8'))
@@ -319,6 +324,6 @@ async function main(){
  }finally{await client.end()}
 }
 if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href){
- main().catch(e=>{const allowed=/^athlete_restore_(owner_gate|scope|catalog|pair|profile_proof|canonical|source_claimed|trainer_connection|trainer_membership|legacy_session_active|deletion_pending|empty_history|already_restored|backup_required|plan|replay_state_changed|state_changed|old_private_data|old_authored_workouts|card_changed|card_postcondition|chat_changed|chat_postcondition|protected_state_changed|runtime_role|runtime_card|runtime_history|runtime_chat|runtime_chat_threads|runtime_own_profile|profile_reader_required|registry|environment|phase|fresh_feedback_required)$/
+ main().catch(e=>{const allowed=/^athlete_restore_(owner_gate|scope|catalog|pair|profile_proof|canonical|source_claimed|trainer_connection|trainer_membership|legacy_session_active|deletion_pending|empty_history|already_restored|backup_required|plan|replay_state_changed|state_changed|old_private_data|old_authored_workouts|card_changed|card_postcondition|chat_changed|chat_postcondition|protected_state_changed|runtime_role|runtime_card|runtime_history|runtime_chat|runtime_chat_threads|runtime_own_profile|profile_reader_required|targets|environment|phase|fresh_feedback_required)$/
   console.error(allowed.test(e?.message??'')?e.message:'athlete_restore_failed');process.exitCode=1})
 }

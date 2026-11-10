@@ -2458,3 +2458,22 @@ is_yandex target и ноль других enabled profile pilots. При managem
 22:33UTC. PR1/main4c68 опубликован и принят; PR2 ещё проходит новые гейты.
 Profile pilot сохраняется OFF до actual обоих этапов; это не разрешает
 management ON или расширение целевой группы. [Журнал100](docs/design/CORPORATE_ADMIN_20261027.md).
+
+
+## Native athlete card restore — 2026-11-10
+
+`restore-athlete-access.yml` больше не читает Supabase Auth/API keys.
+Для нового `plan` нужен отдельный закрытый `FIT_ATHLETE_RESTORE_TARGETS` с ровно
+`historicalProfileId` и `trainerProfileId` (разные подтверждённые native UUID).
+Конфигурация не создаётся автоматически; её значения и разрешённый канал
+передачи подтверждаются отдельно перед реальной операцией. Старый четырёхслотовый
+email-hash target не поддерживается этим оператором; общий account-history audit
+сохраняет прежний контракт. Текущий профиль спортсмена определяется прежним
+`FIT_ACCOUNT_HISTORY_EVIDENCE`: exact authenticated feedback + message marker,
+не произвольный target UUID. Пустая/неверная конфигурация закрывает новый plan.
+
+Сохранены existing profiles/identity/roles, native inventory и права, private
+plan/fingerprint, backup/disposable restore, TTL/locks/serializable и обе RLS
+проверки. Существующие schema2 планы apply/verify совместимы. Эта правка не
+меняет secrets и не запускает восстановление. Старый nutrition pilot inspector
+удалён; native cohort preparation и текущие допуски сохранены.

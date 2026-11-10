@@ -40,10 +40,8 @@ jobs:
           BACKUP_RUN_ID: ${{ inputs.backup_run_id }}
           CONFIRMATION: ${{ inputs.confirmation }}
           CLOUDRU_DATABASE_CONFIG_JSON: ${{ secrets.CLOUDRU_STAGE_DATABASE_CONFIG_JSON }}
-          FIT_ACCOUNT_HISTORY_TARGETS: ${{ secrets.FIT_ACCOUNT_HISTORY_TARGETS }}
+          FIT_ATHLETE_RESTORE_TARGETS: ${{ secrets.FIT_ATHLETE_RESTORE_TARGETS }}
           FIT_ACCOUNT_HISTORY_EVIDENCE: ${{ secrets.FIT_ACCOUNT_HISTORY_EVIDENCE }}
-          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-          SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
         shell: bash
         run: |
           set -euo pipefail
@@ -111,7 +109,7 @@ jobs:
             printf 'MIGRATION_DATABASE_SSL_MODE=require\n' | sudo tee -a "$private_env" >/dev/null
           fi
           if test "$RESTORE_PHASE" = plan; then
-            for name in FIT_ACCOUNT_HISTORY_TARGETS FIT_ACCOUNT_HISTORY_EVIDENCE SUPABASE_ACCESS_TOKEN SUPABASE_PROJECT_ID; do
+            for name in FIT_ATHLETE_RESTORE_TARGETS FIT_ACCOUNT_HISTORY_EVIDENCE; do
               value=${!name}
               test -n "$value"
               echo "::add-mask::$value"

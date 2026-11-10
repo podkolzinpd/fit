@@ -110,3 +110,17 @@ identity/rollout/native+pilot session trace доступны только в з�
 Notes, метрики подходов, контакты и токены не читаются. Отсутствие retained
 sessions не доказывает, что человек никогда не входил: cleanup удаляет историю.
 Наличие pilot session не выбирает другую native identity и не меняет binding.
+
+
+## Native target для athlete access restore — SB-NATIVE-OPS-02
+
+После выпуска этой правки `restore-athlete-access` не использует source Auth
+или четыре email hashes. Для нового plan нужен отдельный закрытый
+FIT_ATHLETE_RESTORE_TARGETS: ровно historicalProfileId,trainerProfileId — два
+разных заранее подтверждённых native UUID. Значения не публикуются и не вычисляются
+из email; egress и конфигурация согласуются отдельно, эта правка secret не меняет.
+Текущий actor по-прежнему доказывается точным authenticated feedback через
+FIT_ACCOUNT_HISTORY_EVIDENCE, а не задаётся третьим UUID. SQL проверяет native
+identity/роль/связь/private data; backup/TTL/apply/оба RLS verify неизменны.
+Это изменение не меняет схему самого inspect-account-history и не разрешает
+применять новый HEAD вместо проверенного trusted-main оператора.
