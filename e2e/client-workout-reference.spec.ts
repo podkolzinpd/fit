@@ -5129,3 +5129,62 @@ for (const group of [false, true]) for (const order of ['pause-first', 'set-firs
     expect(setRequests).toBe(2)
   } finally { releasePause(); releaseSet() }
 })
+
+// Roles have different pause/rest controls; densities use different docking geometry.
+// The phase arithmetic is shared: client variants exercise the same shift handler.
+
+for (const role of ['trainer','client'] as const) for (const density of ['original','compact'] as const) {
+ test(`Live paused clock rest picker ${role} ${density}`,async({page},info)=>{
+  await silenceLiveAudio(page)
+  const now=Date.parse('2026-10-08T09:02:00Z'), paused=now-60000
+  await page.clock.setFixedTime(new Date(now))
+  const id=role==='trainer'?'c0ac0000-6010-4000-8000-000000000001':pilotId
+  const source=Object.assign(coachGestureWorkout(false,3),{startedAt:'2026-10-08T09:00:00Z',pausedAt:new Date(paused).toISOString(),pausedSeconds:0})
+  await page.addInitScript(({id,role,density,workoutId,paused})=>{
+   localStorage.setItem(`fit.${role==='trainer'?'coach':'client'}LiveDensity.${id}`,density)
+   sessionStorage.setItem(`fit:live-rest-until:${workoutId}`,String(paused+90000))
+  },{id,role,density,workoutId,paused})
+  await mockPilot(page,{role,profileId:id,clientLime:true,fitLime:true,workouts:[source]})
+  await page.goto(`/workouts/${workoutId}/live`)
+  await page.locator('.live-rest-trigger').filter({visible:true}).first().dispatchEvent('contextmenu')
+  const dialog=page.getByRole('dialog',{name:'Таймер отдыха',exact:true})
+  await dialog.getByRole('button',{name:'1:00',exact:true}).click()
+  await dialog.getByRole('button',{name:'Применить время · 1:00',exact:true}).click()
+  const deadline=await page.evaluate(id=>Number(sessionStorage.getItem(`fit:live-rest-until:${id}`)),workoutId)
+  await page.screenshot({path:info.outputPath('paused-rest.png')})
+  expect(deadline-paused).toBe(60000)
+  await page.locator('.live-rest-trigger').filter({visible:true}).first().dispatchEvent('contextmenu')
+  await dialog.getByRole('button',{name:'Плюс 15 секунд',exact:true}).click()
+  await dialog.getByRole('button',{name:'Минус 15 секунд',exact:true}).click()
+  await page.clock.setFixedTime(new Date(now + 120000))
+  expect(await page.evaluate(id=>Number(sessionStorage.getItem(`fit:live-rest-until:${id}`)),workoutId)).toBe(paused+60000)
+  await dialog.getByRole('button',{name:'Остановить отдых',exact:true}).click()
+  expect(await page.evaluate(id=>sessionStorage.getItem(`fit:live-rest-until:${id}`),workoutId)).toBeNull()
+ })
+}
+for (const density of ['original','compact'] as const) test(`Live paused clock work adjustment ${density}`,async({page},info)=>{
+ await silenceLiveAudio(page)
+ const now=Date.parse('2026-10-08T09:02:00Z'),paused=now-60000
+ await page.clock.setFixedTime(new Date(now))
+ const source=Object.assign(restTimerWorkout(0,true,'manual'),{startedAt:'2026-10-08T09:00:00Z',pausedAt:new Date(paused).toISOString(),pausedSeconds:0})
+ const phase={kind:'work',manual:true,setId:source.exercises[0]!.sets[0]!.id,startedAt:paused-10000,endsAt:paused+20000}
+ await page.addInitScript(({workoutId,phase,density,id})=>{
+  sessionStorage.setItem(`fit:live-phase:${workoutId}`,JSON.stringify(phase))
+  localStorage.setItem(`fit.clientLiveDensity.${id}`,density)
+ },{workoutId,phase,density,id:pilotId})
+ await mockPilot(page,{role:'client',profileId:pilotId,clientLime:true,workouts:[source]})
+ await page.goto(`/workouts/${workoutId}/live`)
+ await page.locator('.live-rest-trigger').filter({visible:true}).first().dispatchEvent('contextmenu')
+ const dialog=page.getByRole('dialog')
+ await dialog.getByRole('button',{name:'Минус 15 секунд',exact:true}).click()
+ const actual=await page.evaluate(id=>JSON.parse(sessionStorage.getItem(`fit:live-phase:${id}`)!),workoutId)
+ await page.screenshot({path:info.outputPath('paused-work.png')})
+ expect(actual.endsAt-paused).toBe(5000)
+ await dialog.getByRole('button',{name:'Минус 15 секунд',exact:true}).click()
+ expect(await page.evaluate(id=>JSON.parse(sessionStorage.getItem(`fit:live-phase:${id}`)!).endsAt,workoutId)).toBe(paused+1000)
+ await dialog.getByRole('button',{name:'Плюс 15 секунд',exact:true}).click()
+ expect(await page.evaluate(id=>JSON.parse(sessionStorage.getItem(`fit:live-phase:${id}`)!).endsAt,workoutId)).toBe(paused+16000)
+ // Wall time while paused neither expires nor confirms the manually timed set.
+ await page.clock.setFixedTime(new Date(now+120000))
+ expect(await page.evaluate(id=>JSON.parse(sessionStorage.getItem(`fit:live-phase:${id}`)!).endsAt,workoutId)).toBe(paused+16000)
+})
