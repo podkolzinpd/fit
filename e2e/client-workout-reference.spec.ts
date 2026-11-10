@@ -4935,7 +4935,7 @@ for (const role of ['trainer', 'client'] as const) for (const density of ['origi
 })
 
 // Distinct density controls must show rollback without remounting the active editor.
-for (const density of ['original', 'compact'] as const) test(`client pause failure restores timers and reads committed resume ${density}`, async ({ page }) => {
+for (const density of ['original', 'compact'] as const) test(`client pause failure restores timers and reads committed resume ${density}`, async ({ page }, info) => {
   await silenceLiveAudio(page)
   await page.clock.setFixedTime(new Date('2026-10-08T09:02:00Z'))
   const source = Object.assign(restTimerWorkout(0, true), {
@@ -4959,27 +4959,51 @@ for (const density of ['original', 'compact'] as const) test(`client pause failu
       workout.version += 1
     }
     // First and third commands fail before commit; second commits but loses its response.
-    expect(paused).toBe(attempt === 3)
+    expect(paused).toBe(attempt >= 3)
+    if (attempt === 4) {
+      workout.pausedAt = new Date(await page.evaluate(() => Date.now())).toISOString()
+      workout.version += 1
+      await route.fulfill({ json: { workout: { version: workout.version } } })
+      return
+    }
     await route.fulfill({ status: 503, json: { error: 'service_unavailable' } })
   })
   await page.goto(`/workouts/${workoutId}/live`)
   const pause = page.getByRole('button', { name: /^(Продолжить тренировку|Поставить тренировку на паузу)/ }).filter({ visible: true }).first()
+  const clickPause = async () => {
+    // Use the pinned control after scrolling, as a user can do when the
+    // error paragraph changes the hero height. Do not click a fading copy.
+    await page.locator('.content').evaluate(element => { element.scrollTop = element.scrollHeight; element.dispatchEvent(new Event('scroll')) })
+    await expect(page.locator('.coach-v79-actions')).toHaveAttribute('inert', '')
+    await page.locator('.page-header').getByRole('button', { name: /^(Продолжить тренировку|Поставить тренировку на паузу)/ }).click()
+  }
   const savedDeadline = () => page.evaluate(id => Number(sessionStorage.getItem(`fit:live-rest-until:${id}`)), workoutId)
   await expect(pause).toHaveAttribute('aria-pressed', 'true')
-  await pause.click()
+  await clickPause()
   await expect(pause).toBeEnabled()
   await expect(pause).toHaveAttribute('aria-pressed', 'true')
   expect(await savedDeadline()).toBe(deadline)
-  await pause.click()
+  await expect(page.getByRole('alert').filter({ hasText: 'Не удалось продолжить тренировку' })).toBeVisible()
+  await clickPause()
   await expect(pause).toBeEnabled()
   await expect(pause).toHaveAttribute('aria-pressed', 'false')
   expect(await savedDeadline()).toBe(deadline + 60_000)
   expect(backend.getWorkouts()[0]!.pausedSeconds).toBe(60)
-  await pause.click()
+  await expect(page.getByRole('alert').filter({ hasText: 'Не удалось продолжить тренировку' })).toHaveCount(0)
+  await clickPause()
   await expect(pause).toBeEnabled()
   await expect(pause).toHaveAttribute('aria-pressed', 'false')
   expect(await savedDeadline()).toBe(deadline + 60_000)
   expect(attempt).toBe(3)
+  const error = page.getByRole('alert').filter({ hasText: 'Не удалось поставить тренировку на паузу' })
+  await expect(error).toBeVisible()
+  await page.screenshot({ path: info.outputPath(`pause-error-${density}.png`), fullPage: true })
+  await clickPause()
+  await expect(pause).toBeEnabled()
+  await expect(pause).toHaveAttribute('aria-pressed', 'true')
+  await expect(error).toHaveCount(0)
+  expect(attempt).toBe(4)
+  expect(await savedDeadline()).toBe(deadline + 60_000)
   expect(backend.getWorkouts()[0]!.exercises.every(exercise => exercise.sets.every(set => !set.confirmedAt))).toBe(true)
 })
 
