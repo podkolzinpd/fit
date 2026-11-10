@@ -1,3 +1,5 @@
+import { readTrainerFinancePaymentDraft } from './trainer-finance-request.js'
+
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 
@@ -7,6 +9,7 @@ export interface LiveOperationRequest {
 }
 
 export interface WorkoutAttendanceRequest {
+  singleService?: { priceCents: number; paidCents: number; receivedOn: string }
   disposition: 'auto' | 'charged' | 'unassigned' | 'free' | 'trial'
   packageId: string | null
 }
@@ -21,7 +24,17 @@ export function readFinishWorkoutRequest(body: unknown): (LiveOperationRequest &
   const packageId = attendance.packageId === null || attendance.packageId === undefined ? null
     : typeof attendance.packageId === 'string' && UUID_PATTERN.test(attendance.packageId) ? attendance.packageId : undefined
   if (!disposition || packageId === undefined || (disposition === 'charged') !== (packageId !== null)) return undefined
-  return { ...operation, attendance: { disposition, packageId } }
+  let singleService: WorkoutAttendanceRequest['singleService']
+  if (attendance.singleService !== undefined) {
+    const single = record(attendance.singleService)
+    if (!single || disposition !== 'unassigned' || packageId !== null) return undefined
+    const priceCents = integer(single.priceCents, 0, 100000000000)
+    const paidCents = integer(single.paidCents, 0, 100000000000)
+    const payment = readTrainerFinancePaymentDraft({ amountCents: 1, receivedOn: single.receivedOn, comment: null })
+    if (priceCents === undefined || paidCents === undefined || paidCents > priceCents || !payment) return undefined
+    singleService = { priceCents, paidCents, receivedOn: payment.receivedOn }
+  }
+  return { ...operation, attendance: { disposition, packageId, ...(singleService ? { singleService } : {}) } }
 }
 
 export interface LiveSetDraft {

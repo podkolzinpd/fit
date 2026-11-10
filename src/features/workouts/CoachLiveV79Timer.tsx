@@ -13,6 +13,7 @@ type Props = {
   headerSlot: HTMLElement | null
   restAction: ReactNode
   compactAction: ReactNode
+  pauseError?: string
 }
 const clamp = (n: number) => Math.max(0, Math.min(1, n))
 const smooth = (n: number) => { const v = clamp(n); return v * v * (3 - 2 * v) }
@@ -24,7 +25,7 @@ export function CoachLiveV79Digits({ value }: { value: string }) {
     <span className="coach-live-digit-group" key={index}>{index > 0 && <span className="coach-live-colon">:</span>}{part}</span>)}</span>
 }
 
-export function CoachLiveV79Timer({ time, elapsed, resting, paused, phaseLabel, density, headerSlot, restAction, compactAction }: Props) {
+export function CoachLiveV79Timer({ time, elapsed, resting, paused, phaseLabel, density, headerSlot, restAction, compactAction, pauseError }: Props) {
   const wrapper = useRef<HTMLDivElement>(null)
   const large = useRef<HTMLDivElement>(null)
   const [docked, setDocked] = useState(false)
@@ -90,6 +91,8 @@ export function CoachLiveV79Timer({ time, elapsed, resting, paused, phaseLabel, 
       {(resting || phaseLabel) && !paused && <span className="coach-v79-elapsed" aria-label={`Тренировка: ${elapsed}`}><CoachLiveV79Digits value={elapsed} /></span>}
     </div>
     <div className="coach-v79-actions" inert={docked} aria-hidden={docked}>{restAction}</div>
+    {pauseError && !docked && <p className="error live-pause-error" role="alert">{pauseError}</p>}
+    {pauseError && docked && headerSlot && createPortal(<p className="error live-pause-error live-pause-error-docked" role="alert">{pauseError}</p>, headerSlot)}
     {headerSlot && createPortal(<div className="coach-v79-dock" data-state={state}>
       <div className={`coach-v79-small-clock${time.length > 5 ? ' long-clock' : ''}`} aria-hidden="true">
         {paused ? <span>Пауза</span> : <CoachLiveV79Digits value={time} />}
