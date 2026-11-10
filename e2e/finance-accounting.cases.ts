@@ -1,5 +1,5 @@
 import { expect, test, type Locator, type Page } from '@playwright/test'
-import type { TrainerFinanceClientBundle, TrainerFinanceManualSessionDraft, TrainerFinancePaymentUpdate, TrainerFinanceReceipt } from '../src/data/contracts/trainer-finance'
+import type { TrainerFinanceClientBundle, TrainerFinancePackageDraft, TrainerFinanceManualSessionDraft, TrainerFinancePaymentUpdate, TrainerFinanceReceipt } from '../src/data/contracts/trainer-finance'
 import { clientId, conversationId, newWorkoutId, workoutId, workout, mockPilot, type MockWorkout } from './fit-lime-fixtures'
 
 const coach = 'c0ac0000-6010-4000-8000-000000000001'
@@ -223,7 +223,7 @@ export function financeAccountingCases() {
       await page.screenshot({path:info.outputPath(`monthly-athlete-${width}.png`),fullPage:true})
     }
     await page.setViewportSize({width:320,height:844})
-    await page.getByRole('button',{name:'Добавить',exact:true}).click()
+    await page.getByRole('button',{name:'Добавить оплату',exact:true}).click()
     const paymentForm=page.locator('.finance-form')
     await expect(paymentForm.getByRole('heading',{name:'Добавить оплату'})).toBeVisible()
     await formGeometry(paymentForm)
@@ -478,6 +478,45 @@ export function financeAccountingCases() {
     await page.screenshot({ path: info.outputPath('lime-payment-edit-small-viewport.png'), fullPage: true })
     await page.getByRole('button', { name: 'Отмена', exact: true }).click()
     await expect(page.locator('.finance-form')).toHaveCount(0)
+    // New purchase from a zero-service payment entry. Existing geometry helper
+    // covers keyboard/scroll risks without multiplying the functional case.
+    const ledger: TrainerFinanceClientBundle = {clientId,canCreate:true,packages:[],payments:[],sessions:[]}
+    const commands: TrainerFinancePackageDraft[] = []
+    await page.route(`**/v1/clients/${clientId}/finance`,route=>route.fulfill({json:{finance:ledger}}))
+    await page.route(`**/v1/clients/${clientId}/finance/single-services`,async route=>{
+      const draft=route.request().postDataJSON() as TrainerFinancePackageDraft
+      commands.push(draft)
+      const item={id:newWorkoutId,clientId,trainerId:coach,kind:draft.kind,singleSession:draft.singleSession,
+        title:draft.title,sessionsTotal:draft.sessionsTotal,sessionsUsed:0,sessionsRemaining:draft.sessionsTotal,
+        priceCents:draft.priceCents,paidCents:draft.openingPaidCents,dueCents:draft.priceCents-draft.openingPaidCents,
+        startsOn:draft.startsOn,endsOn:draft.endsOn,paymentDueOn:draft.paymentDueOn,comment:draft.comment,
+        packageStatus:'active' as const,paymentStatus:'partial' as const,closedAt:null,version:1,createdAt:stamp,updatedAt:stamp}
+      ledger.packages.push(item)
+      await route.fulfill({json:{package:item}})
+    })
+    await page.reload()
+    await page.getByRole('tab',{name:'Оплаты: 0',exact:true}).click()
+    await page.getByRole('button',{name:'Добавить оплату',exact:true}).click()
+    const entry=page.locator('.finance-form')
+    await expect(entry.getByLabel('Тип')).toHaveValue('single')
+    await entry.getByLabel('Стоимость, ₽').fill('2000')
+    await entry.getByLabel('Уже оплачено, ₽').fill('500')
+    for(const width of [320,390,430,1440]){
+      await page.setViewportSize({width,height:844})
+      const details=entry.locator('details.finance-opening-balances')
+      await details.locator('summary').click()
+      await formGeometry(entry)
+      await details.locator('summary').click()
+      await expect(entry.getByLabel('Название')).not.toBeVisible()
+      expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true)
+      await page.locator('.content').evaluate(node=>{node.scrollTop=0})
+      await page.screenshot({path:info.outputPath(`single-payment-entry-${width}.png`),fullPage:true})
+    }
+    await entry.getByRole('button',{name:'Сохранить',exact:true}).click()
+    await expect(entry).toHaveCount(0)
+    expect(commands).toHaveLength(1)
+    expect(commands[0]).toMatchObject({singleSession:true,sessionsTotal:1,priceCents:200000,openingPaidCents:50000})
+    expect(commands[0]!.requestId).toMatch(/^[0-9a-f-]{36}$/)
   })
 
   test('Finance exact kopecks and mixed overdue debt use separate amounts', { tag: ['@lime-finance'] }, async ({ page }, info) => {

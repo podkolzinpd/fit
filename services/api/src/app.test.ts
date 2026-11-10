@@ -1193,6 +1193,21 @@ describe('trainer finance', () => {
     expect(listClient).toHaveBeenCalledWith(session, clientId)
   })
 
+  it('uses a distinct single-service endpoint so older APIs cannot silently create a subscription', async () => {
+    const { service: pilotTrainerFinance, createPackage } = finance()
+    const app = buildApp({ pilotTrainerFinance, logger: false }); apps.push(app)
+    const draft = {requestId:'60000000-0000-4000-8000-000000000001',singleSession:true,
+      kind:'session_pack',title:'Разовое занятие',sessionsTotal:1,openingUsedSessions:0,
+      priceCents:200000,openingPaidCents:50000,startsOn:'2026-11-10',endsOn:null,
+      paymentDueOn:null,comment:null}
+    const response=await app.inject({method:'POST',url:`/v1/clients/${clientId}/finance/single-services`,headers:{'x-fit-session':session.token},payload:draft})
+    expect(response.statusCode).toBe(201)
+    expect(createPackage).toHaveBeenCalledWith(session,clientId,draft)
+    const invalid=await app.inject({method:'POST',url:`/v1/clients/${clientId}/finance/single-services`,headers:{'x-fit-session':session.token},payload:{...draft,singleSession:false}})
+    expect(invalid.statusCode).toBe(400)
+    expect(createPackage).toHaveBeenCalledTimes(1)
+  })
+
   it('creates a package with opening balances through a read-write session', async () => {
     const { service: pilotTrainerFinance, createPackage } = finance()
     const app = buildApp({ pilotTrainerFinance, logger: false }); apps.push(app)
