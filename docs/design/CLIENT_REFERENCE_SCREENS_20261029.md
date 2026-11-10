@@ -9570,3 +9570,46 @@ focus/anchors/payload/destination прежние. Исторические143/14
 Android42804320635, затемweb/API/OTA. Старые release не перезапускаются.
 Readback gate сравнивает actual source с reviewed705; новое изменение
 затронутыхCSS/handlers/helpers остановит приёмку для нового review.
+
+
+## 230. MC5.1.6 — опубликовано и проверено, ждём приёмки владельца
+
+10.11.2026. PR2084 опубликован в составе70541773dae9a3623cdcc79b08414bf24eb02953,
+содержащего собственный merge29217173. Наша CSSмиграция побайтно сохранена.
+CI42804320470 и Android42804320635 success; API42807048374, web42807048358,
+OTA42807433131 success. Старые отменённые/красные сборки не публиковались.
+История проверок и диагностик225–229 сохраняется; свежая локальная приёмка
+итоговой версии144/144, применимые55unit и20/20targetstates/PNG exact.
+
+После публикации244/244webfiles HTTP200/size/SHA256 совпали с официальным
+артефактом. APIhealth/readiness/auth401/TLS/DNS/source passed. Подписи и
+публичные байты OTA проверены;15988896bytes, nativeBuild9, прежнийABI8922d2e9…,
+checksum874355d45b6a17217feaedf6a3ac79cc78d1aebac3e01b6c4265f77a8c564521,
+sequence1794310051516.
+
+Настоящий web74/74 и verified signedZIP74/74 Chromium/WebKit прошли без
+retry/skip/flaky. Строгое web↔OTA сравнение14cases/20states/20PNG exact;
+computed/geometry/rawheight/focus/scroll/payload/client destination сохранены.
+HTML/API/подписанныйOTA fingerprint до и после приёмки совпал; финальная
+проверка11:37:51UTC. Все API в браузерной приёмке синтетические/page-scoped,
+production данные не менялись.
+
+Лично просмотрены10 actualPNG: ordinary/record/partial/error/long на обеих
+сборках (WebKitmobile и Chromium1440). В целевой карточке новых обрезок и
+перекрытий нет, перенос длинного рекорда и фокус ссылки сохранены. Действующий
+production notice виден; не скрывался. Local↔public pixel parity не заявляется
+из-за notice, web↔OTA совпадение доказано.
+
+Артефакты: /tmp/fit-mc516-release/final-acceptance.json, current-acceptance,
+web-ota-trainer-comparison.json, personal-visual-review-705.json.
+Физический телефон/nativeinstall/реальныйOAuth/systemshare не проверены.
+Trainer shell фактически dark при обеих preferences; клиентские темы проверены.
+Исторические WebKit scroll/swipe наблюдения не объявляются исправленными;
+итоговый705 CI и актуальные целевые сценарии прошли. Ранние2heightMC514 и
+fontweight600/globalfontcleanup остаются прежними ограничениями scope.
+
+Владельцу: тренер — завершение, число подтверждённых подходов, рекорд при
+наличии и возврат к нужному клиенту; спортсмен — результат, длительность и
+поделиться в светлой/тёмной теме; обе роли — ввод/клавиатура, галочка/отмена,
+свайп/отмена удаления, пауза/отдых. Следующий этап только после его приёмки.
+Квитанция локальным коммитом без нового push/CI; итог также в PR2084.
