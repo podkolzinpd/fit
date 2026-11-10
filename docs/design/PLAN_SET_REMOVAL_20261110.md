@@ -82,3 +82,27 @@ WebKit не выдаётся за физический touch. Замера basel
 Открыто: финальные browser/live-regression, полный check, visual QA и CI.
 Физический телефон не проверялся. Merge/production запрещены до разрешения.
 Дальше: проверить неизменный runtime, оформить один draft PR и дождаться CI.
+
+## Итерация 3 — 10.11.2026 — Codex / OpenAI
+
+Проверка общих потребителей выявила, что reference=true использует также
+клиентский FavoriteWorkoutEditorPage. Добавлен явный showSetRemovalMenu opt-in
+только из trainer form (coachReference && !clientMode). Меню/название/selection
+других reference-потребителей прежние; новая отрицательная component-проверка
+закрепляет границу. Это не расширение задачи на клиентские готовые тренировки.
+
+Первый полный check остановлен TypeScript: Testing Library getByRole не имеет
+Playwright-опции exact. Неподдерживаемая опция убрана из новых тестов; строковое
+имя по-прежнему проверяется точно штатным matcher. tsc после исправления passed.
+Не засчитывать первый check как успешный. Целевые4файла109/109passed без ошибок.
+Legacy mobile smoke теперь точно выбирает действие упражнения (оба прежних
+режима подписи), исключая добавленное действие подхода; assertions сохранены.
+
+Существующий native Live touch regression2/2passed; planner/copy/scroll6/6passed
+до явного opt-in, финальный scoped browser выполняется. Inventory split8/8passed:
+новых browser cases0, unique union/пороги/hash не менялись. Новых component cases8:
+семь описанных выше + граница общего reference-потребителя. Скриншоты меню и
+swipe просмотрены: существующие Lime surfaces/типографика/danger, без нового CSS.
+
+Открыто: повтор полного check на окончательном runtime и свежий CI одного PR.
+Физический телефон и production не проверялись; выпуск явно не разрешён.

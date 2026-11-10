@@ -114,6 +114,7 @@ interface WorkoutExerciseEditorProps {
   referenceAppearance?: boolean
   safePlanInput?: boolean
   refinedPlan?: boolean
+  showSetRemovalMenu?: boolean
   disabled?: boolean
 }
 
@@ -133,7 +134,7 @@ function PlanNumberField({ label, placeholder, name, value, decimal, disabled, o
     defaultValue={value} step={decimal ? 'any' : 1} decimal={decimal} directInput disabled={disabled} onValueChange={onChange} />
 }
 
-export function WorkoutExerciseEditor({ exercises, onSaveAsTemplate, onChange, onOpenPicker, onReplaceExercise, onOpenTechnique, canOpenTechnique, exerciseCatalog = [], showTrainerComments = true, commentLabel = 'Заметка спортсмену', entryMode = 'plan', hideEmptyAddAction = false, previousResults = new Map(), showRpeByDefault = false, showRestByDefault = false, collapseInitialExercises = false, initialExercisesReady = true, reference = false, referenceAppearance = reference, safePlanInput = false, refinedPlan = false, disabled = false }: WorkoutExerciseEditorProps) {
+export function WorkoutExerciseEditor({ exercises, onSaveAsTemplate, onChange, onOpenPicker, onReplaceExercise, onOpenTechnique, canOpenTechnique, exerciseCatalog = [], showTrainerComments = true, commentLabel = 'Заметка спортсмену', entryMode = 'plan', hideEmptyAddAction = false, previousResults = new Map(), showRpeByDefault = false, showRestByDefault = false, collapseInitialExercises = false, initialExercisesReady = true, reference = false, referenceAppearance = reference, safePlanInput = false, refinedPlan = false, showSetRemovalMenu = false, disabled = false }: WorkoutExerciseEditorProps) {
   const [reordering, setReordering] = useState(false)
   const [confirm, confirmDialog] = useConfirm()
   const [roundError, setRoundError] = useState<string | null>(null)
@@ -437,17 +438,17 @@ export function WorkoutExerciseEditor({ exercises, onSaveAsTemplate, onChange, o
         ...(reference && onOpenTechnique && (canOpenTechnique?.(exercise) ?? true) ? [{ label: 'Техника упражнения', disabled: referenceControlsDisabled, onClick: () => onOpenTechnique(exercise) }] : []),
         ...(canMergeNext && !reordering ? [{ label: reference ? 'Объединить со следующим в суперсет' : 'Создать суперсет со следующим', disabled: referenceControlsDisabled, onClick: () => commitStructure(mergeBlockWithNext([...latestExercises.current], exerciseIndex)) }] : []),
         { label: 'Заменить', disabled: referenceControlsDisabled, onClick: () => reference ? replaceReferenceExercise(exerciseIndex) : onReplaceExercise(exerciseIndex) },
-        ...(reference ? [{ label: removalTarget ? `Удалить подход ${selectedIndex! + 1}` : 'Удалить подход', danger: true,
+        ...(reference && showSetRemovalMenu ? [{ label: removalTarget ? `Удалить подход ${selectedIndex! + 1}` : 'Удалить подход', danger: true,
           disabled: referenceControlsDisabled || !removalTarget || Boolean(removalTarget.sourceSetId) || exercise.sets.length <= 1,
           onClick: () => { if (selectedIndex !== undefined && latestExercises.current[exerciseIndex]?.sets[selectedIndex] === removalTarget) void requestRemoveReferenceSet(exerciseIndex, selectedIndex) } }] : []),
-        { label: reference ? 'Удалить упражнение' : 'Удалить', danger: true, disabled: referenceControlsDisabled, onClick: () => removeExercise(exerciseIndex) },
+        { label: reference && showSetRemovalMenu ? 'Удалить упражнение' : 'Удалить', danger: true, disabled: referenceControlsDisabled, onClick: () => removeExercise(exerciseIndex) },
       ]} /></span>
       </header>
       {expanded && <div className="compact-editor-exercise-fields">
       {(() => { const previous = previousResults.get(exercise.ref); const line = previous && previousResultLine(previous.sets, exercise.ref); return line ? <p className="exercise-prefill-note">В прошлый раз: {line}</p> : exercise.prefilledFromDate ? <p className="exercise-prefill-note">Значения с тренировки {formatLocalDate(exercise.prefilledFromDate)}</p> : null })()}
       {showRest && <label className="exercise-plan-rest-field">Отдых между подходами, с<ClampedNumberInput label={`Отдых между подходами, ${exercise.name}`} value={exercise.restBetweenSetsSec ?? 90} min={0} max={600} onCommit={(next) => { if (exercise.blockId) updateRestBetweenSets(exercise.blockId, next) }} /></label>}
       <WorkoutSetTable variant="planned" inputKind={distanceCapable ? 'distance' : exercise.inputKind} columnLabels={exerciseSetColumnLabels(exercise)} showRpe={showRpe}>
-        {exercise.sets.map((set, setIndex) => { const select = reference ? () => setSelectedSet({ exerciseKey, setIndex, structureKey }) : undefined
+        {exercise.sets.map((set, setIndex) => { const select = reference && showSetRemovalMenu ? () => setSelectedSet({ exerciseKey, setIndex, structureKey }) : undefined
           const row = <WorkoutSetRow state="planned" className={`planned-set ${distanceCapable ? 'planned-set-running' : ''} ${showRpe ? 'rpe-visible' : ''}`} key={setIndex} onFocusCapture={select} onClick={select}>
           <span className="workout-set-number planned-set-number" aria-hidden="true">{setIndex + 1}</span>
           <span className="sr-only">Подход {setIndex + 1}</span>
@@ -537,7 +538,7 @@ export function WorkoutExerciseEditor({ exercises, onSaveAsTemplate, onChange, o
           const row = <div className="block-exercise-row" key={exercise.blockId ? `${exercise.ref}-${index}` : index}><div className="block-exercise-head">{exerciseThumbnail(exercise)}<strong>{exercise.name}</strong><span className="exercise-head-actions"><OverflowMenu items={[
           { label: 'Заменить', disabled: referenceControlsDisabled, onClick: () => reference ? replaceReferenceExercise(index) : onReplaceExercise(index) },
           ...(refinedPlan ? [{ label: isRpeVisible(index) ? 'Скрыть RPE' : 'Указать RPE', disabled: referenceControlsDisabled, onClick: () => toggleRpe(index) }] : []),
-          { label: reference ? 'Удалить упражнение' : 'Удалить', danger: true, disabled: referenceControlsDisabled, onClick: () => removeExercise(index) },
+          { label: reference && showSetRemovalMenu ? 'Удалить упражнение' : 'Удалить', danger: true, disabled: referenceControlsDisabled, onClick: () => removeExercise(index) },
         ]} /></span></div>{showTrainerComments && <OptionalDetails className="exercise-comment-options" summary="Комментарий" initialOpen={Boolean(exercise.trainerComment)}>
           {commentField(exercise, index)}
         </OptionalDetails>}</div>
