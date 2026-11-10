@@ -151,14 +151,6 @@
 .fit-lime-shell .invitation-share-dialog {
   display: flex; flex-direction: column; gap: 16px;
 }
-.fit-lime-shell .invitation-share-dialog > header { order: 0; }
-.fit-lime-shell .invitation-share-dialog > .invitation-code-fallback { order: 1; }
-.fit-lime-shell .invitation-share-dialog > .invitation-share-message { order: 2; }
-.fit-lime-shell .invitation-share-dialog > .invitation-share-actions { order: 3; }
-.fit-lime-shell .invitation-share-dialog > .invitation-qr { order: 4; }
-.fit-lime-shell .invitation-share-dialog > .invitation-share-expiry { order: 5; }
-.fit-lime-shell .invitation-share-dialog > .invitation-revoke { order: 6; }
-.fit-lime-shell .invitation-share-dialog > .error { order: 7; }
 .fit-lime-shell .invitation-share-dialog .invitation-code-fallback {
   display: flex; flex-wrap: wrap; justify-content: center; gap: 12px;
   background: transparent; border: 0; text-align: center; padding: 16px 0;

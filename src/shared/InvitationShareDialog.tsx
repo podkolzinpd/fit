@@ -142,6 +142,10 @@ export function InvitationShareDialog({
           <div><p className="eyebrow">ПРИГЛАШЕНИЕ</p><h2 id="invitation-share-title">Ссылка готова</h2></div>
           <button ref={closeRef} type="button" className="icon-button" aria-label="Закрыть" onClick={onClose}><CloseIcon /></button>
         </header>
+        <section className="invitation-code-fallback" aria-label="Запасной код приглашения">
+          <div><strong>{codeLabel}: <span>{share.code}</span></strong><p className="muted">Если ссылка не открывается.</p></div>
+          <button type="button" className="secondary" aria-label={codeCopyState === 'done' ? `${codeLabel} скопирован` : `Скопировать ${codeLabel.toLocaleLowerCase('ru-RU')}`} disabled={codeCopyState === 'busy'} onClick={() => void copyCode()}>{codeCopyState === 'done' ? 'Скопировано' : 'Копировать код'}</button>
+        </section>
         <p className="invitation-share-message">{message}</p>
         <p className="muted invitation-share-expiry">Действует до {expiresAt}</p>
 
@@ -160,10 +164,6 @@ export function InvitationShareDialog({
           <button type="button" className="secondary" disabled={qrDataUrl === null} onClick={saveQr}>Сохранить QR-код</button>
         </section>}
 
-        <section className="invitation-code-fallback" aria-label="Запасной код приглашения">
-          <div><strong>{codeLabel}: <span>{share.code}</span></strong><p className="muted">Если ссылка не открывается.</p></div>
-          <button type="button" className="secondary" aria-label={codeCopyState === 'done' ? `${codeLabel} скопирован` : `Скопировать ${codeLabel.toLocaleLowerCase('ru-RU')}`} disabled={codeCopyState === 'busy'} onClick={() => void copyCode()}>{codeCopyState === 'done' ? 'Скопировано' : 'Копировать код'}</button>
-        </section>
         {codeCopyState === 'error' && <p className="error" role="alert">Не удалось скопировать код.</p>}
 
         <button type="button" className="link danger invitation-revoke" disabled={revokeState === 'busy'} onClick={() => void revoke()}>{revokeState === 'busy' ? 'Отменяем…' : 'Отменить приглашение'}</button>
