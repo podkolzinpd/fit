@@ -4935,7 +4935,7 @@ for (const role of ['trainer', 'client'] as const) for (const density of ['origi
 })
 
 // Distinct density controls must show rollback without remounting the active editor.
-for (const density of ['original', 'compact'] as const) test(`client pause failure restores timers and reads committed resume ${density}`, async ({ page }) => {
+for (const density of ['original', 'compact'] as const) test(`client pause failure restores timers and reads committed resume ${density}`, async ({ page }, info) => {
   await silenceLiveAudio(page)
   await page.clock.setFixedTime(new Date('2026-10-08T09:02:00Z'))
   const source = Object.assign(restTimerWorkout(0, true), {
@@ -4959,26 +4959,173 @@ for (const density of ['original', 'compact'] as const) test(`client pause failu
       workout.version += 1
     }
     // First and third commands fail before commit; second commits but loses its response.
-    expect(paused).toBe(attempt === 3)
+    expect(paused).toBe(attempt >= 3)
+    if (attempt === 4) {
+      workout.pausedAt = new Date(await page.evaluate(() => Date.now())).toISOString()
+      workout.version += 1
+      await route.fulfill({ json: { workout: { version: workout.version } } })
+      return
+    }
     await route.fulfill({ status: 503, json: { error: 'service_unavailable' } })
   })
   await page.goto(`/workouts/${workoutId}/live`)
   const pause = page.getByRole('button', { name: /^(Продолжить тренировку|Поставить тренировку на паузу)/ }).filter({ visible: true }).first()
+  const clickPause = async () => {
+    // Use the pinned control after scrolling, as a user can do when the
+    // error paragraph changes the hero height. Do not click a fading copy.
+    await page.locator('.content').evaluate(element => { element.scrollTop = element.scrollHeight; element.dispatchEvent(new Event('scroll')) })
+    await expect(page.locator('.coach-v79-actions')).toHaveAttribute('inert', '')
+    await page.locator('.page-header').getByRole('button', { name: /^(Продолжить тренировку|Поставить тренировку на паузу)/ }).click()
+  }
   const savedDeadline = () => page.evaluate(id => Number(sessionStorage.getItem(`fit:live-rest-until:${id}`)), workoutId)
   await expect(pause).toHaveAttribute('aria-pressed', 'true')
-  await pause.click()
+  await clickPause()
   await expect(pause).toBeEnabled()
   await expect(pause).toHaveAttribute('aria-pressed', 'true')
   expect(await savedDeadline()).toBe(deadline)
-  await pause.click()
+  await expect(page.getByRole('alert').filter({ hasText: 'Не удалось продолжить тренировку' })).toBeVisible()
+  await clickPause()
   await expect(pause).toBeEnabled()
   await expect(pause).toHaveAttribute('aria-pressed', 'false')
   expect(await savedDeadline()).toBe(deadline + 60_000)
   expect(backend.getWorkouts()[0]!.pausedSeconds).toBe(60)
-  await pause.click()
+  await expect(page.getByRole('alert').filter({ hasText: 'Не удалось продолжить тренировку' })).toHaveCount(0)
+  await clickPause()
   await expect(pause).toBeEnabled()
   await expect(pause).toHaveAttribute('aria-pressed', 'false')
   expect(await savedDeadline()).toBe(deadline + 60_000)
   expect(attempt).toBe(3)
+  const error = page.getByRole('alert').filter({ hasText: 'Не удалось поставить тренировку на паузу' })
+  await expect(error).toBeVisible()
+  await page.screenshot({ path: info.outputPath(`pause-error-${density}.png`), fullPage: true })
+  await clickPause()
+  await expect(pause).toBeEnabled()
+  await expect(pause).toHaveAttribute('aria-pressed', 'true')
+  await expect(error).toHaveCount(0)
+  expect(attempt).toBe(4)
+  expect(await savedDeadline()).toBe(deadline + 60_000)
   expect(backend.getWorkouts()[0]!.exercises.every(exercise => exercise.sets.every(set => !set.confirmedAt))).toBe(true)
+})
+
+// Role/density controls differ; keep the combined pause + confirmation path
+// covered through each actual editor, including WebKit's pending blur.
+for (const role of ['trainer', 'client'] as const) for (const density of ['original', 'compact'] as const) test(`Live pause race keeps newer rest and saved fact ${role} ${density}`, async ({ page }) => {
+  await silenceLiveAudio(page)
+  await page.clock.setFixedTime(new Date('2026-10-08T09:02:00Z'))
+  const id = role === 'trainer' ? 'c0ac0000-6010-4000-8000-000000000001' : pilotId
+  const source = Object.assign(coachGestureWorkout(false, 3), {
+    startedAt: '2026-10-08T09:00:00Z', pausedAt: '2026-10-08T09:01:00Z', pausedSeconds: 0,
+  })
+  const deadline = Date.parse('2026-10-08T09:01:30Z')
+  await page.addInitScript(({ id, density, role, workoutId, deadline }) => {
+    localStorage.setItem(`fit.${role === 'trainer' ? 'coach' : 'client'}LiveDensity.${id}`, density)
+    sessionStorage.setItem(`fit:live-rest-until:${workoutId}`, String(deadline))
+  }, { id, density, role, workoutId, deadline })
+  const backend = await mockPilot(page, { role, profileId: id, clientLime: true, fitLime: true, workouts: [source] })
+  let release!: () => void
+  const held = new Promise<void>(resolve => { release = resolve })
+  let pauses = 0
+  await page.route(`**/v1/workouts/${workoutId}/pause`, async route => {
+    pauses += 1
+    const workout = backend.getWorkouts()[0]!
+    if (pauses === 1) await held
+    else {
+      const now = await page.evaluate(() => Date.now())
+      workout.pausedSeconds = (workout.pausedSeconds ?? 0) + Math.round((now - Date.parse(workout.pausedAt!)) / 1000)
+      workout.pausedAt = undefined
+      workout.version += 1
+    }
+    // First fails before commit after the set succeeded; second commits but loses its reply.
+    await route.fulfill({ status: 503, json: { error: 'service_unavailable' } })
+  })
+  await page.goto(`/workouts/${workoutId}/live`)
+  const set = source.exercises[0]!.sets[0]!
+  const savedDeadline = () => page.evaluate(id => Number(sessionStorage.getItem(`fit:live-rest-until:${id}`)), workoutId)
+  const pause = page.getByRole('button', { name: /^(Продолжить тренировку|Поставить тренировку на паузу)/ }).filter({ visible: true }).first()
+  try {
+    await page.locator(`[data-live-set-id="${set.id}"]`).getByRole('button', { name: 'Готово, отдых', exact: true }).click()
+    await expect.poll(() => backend.getWorkouts()[0]!.exercises[0]!.sets[0]!.confirmedAt).not.toBeNull()
+    await expect(pause).toBeDisabled()
+    const next = source.exercises[0]!.sets[1]!
+    await expect(page.locator(`[data-live-set-id="${next.id}"]`).getByRole('button', { name: 'Готово, отдых', exact: true })).toBeDisabled()
+    release()
+    await expect(pause).toBeEnabled()
+    await expect(pause).toHaveAttribute('aria-pressed', 'true')
+    // Frozen at 09:01:00: a new 90s rest ends at 09:02:30, not the old 09:01:30.
+    await expect.poll(savedDeadline).toBe(Date.parse('2026-10-08T09:02:30Z'))
+    // Confirmation scrolls to its row. Use the pinned control explicitly;
+    // auto-scrolling the fading large copy races the sticky handoff.
+    await page.locator('.content').evaluate(element => { element.scrollTop = element.scrollHeight; element.dispatchEvent(new Event('scroll')) })
+    await expect(page.locator('.coach-v79-actions')).toHaveAttribute('inert', '')
+    await page.locator('.page-header').getByRole('button', { name: /^Продолжить тренировку/ }).click()
+    await expect(pause).toBeEnabled()
+    await expect(pause).toHaveAttribute('aria-pressed', 'false')
+    expect(await savedDeadline()).toBe(Date.parse('2026-10-08T09:03:30Z'))
+    expect(pauses).toBe(2)
+    expect(backend.getWorkouts()[0]!.pausedSeconds).toBe(60)
+    expect(backend.getWorkouts()[0]!.exercises.flatMap(exercise => exercise.sets).filter(set => set.confirmedAt)).toHaveLength(1)
+  } finally { release() }
+})
+
+// Network ordering is shared logic; one density suffices here. The preceding
+// race test exercises the distinct role/density controls.
+for (const group of [false, true]) for (const order of ['pause-first', 'set-first'] as const) test(`Live pause race response order ${order} group-${group}`, async ({ page }) => {
+  await silenceLiveAudio(page)
+  await page.clock.setFixedTime(new Date('2026-10-08T09:02:00Z'))
+  const source = Object.assign(coachGestureWorkout(group, 3), {
+    startedAt: '2026-10-08T09:00:00Z', pausedAt: '2026-10-08T09:01:00Z', pausedSeconds: 0,
+  })
+  // The first item of a superset has no rest; zero must not resurrect the previous deadline.
+  if (group) source.exercises.forEach(exercise => { exercise.restBetweenExercisesSec = 0 })
+  await page.addInitScript(({ id, workoutId }) => {
+    localStorage.setItem(`fit.clientLiveDensity.${id}`, 'original')
+    sessionStorage.setItem(`fit:live-rest-until:${workoutId}`, String(Date.parse('2026-10-08T09:01:30Z')))
+  }, { id: pilotId, workoutId })
+  const backend = await mockPilot(page, { role: 'client', profileId: pilotId, clientLime: true, workouts: [source], failFirstSetConfirm: true })
+  let releasePause!: () => void, releaseSet!: () => void
+  const pauseGate = new Promise<void>(resolve => { releasePause = resolve })
+  const setGate = new Promise<void>(resolve => { releaseSet = resolve })
+  let pauseRequests = 0, setRequests = 0
+  await page.route(`**/v1/workouts/${workoutId}/pause`, async route => {
+    pauseRequests += 1
+    await pauseGate
+    const workout = backend.getWorkouts()[0]!
+    workout.pausedAt = undefined; workout.pausedSeconds = 60; workout.version += 1
+    await route.fulfill({ json: { workout: { version: workout.version } } })
+  })
+  const set = source.exercises[0]!.sets[0]!
+  await page.route(`**/v1/workout-sets/${set.id}/confirm`, async route => {
+    setRequests += 1
+    await setGate
+    await route.fallback()
+  })
+  await page.goto(`/workouts/${workoutId}/live`)
+  await revealLiveSet(page, set.id)
+  const button = page.locator(`[data-live-set-id="${set.id}"]`).getByRole('button', { name: 'Готово, отдых', exact: true })
+  const failed = page.waitForResponse(response => response.url().endsWith(`/workout-sets/${set.id}/confirm`) && response.status() === 503)
+  try {
+    await button.click()
+    await expect.poll(() => pauseRequests).toBe(1)
+    await expect.poll(() => setRequests).toBe(1)
+    if (order === 'pause-first') {
+      releasePause()
+      await expect.poll(() => backend.getWorkouts()[0]!.pausedAt).toBeUndefined()
+      releaseSet()
+    } else {
+      releaseSet(); await failed
+      expect(backend.getWorkouts()[0]!.pausedAt).toBeTruthy()
+      releasePause()
+    }
+    await failed
+    await expect(button).toBeEnabled()
+    expect(backend.getWorkouts()[0]!.exercises[0]!.sets[0]!.confirmedAt).toBeNull()
+    const deadline = () => page.evaluate(id => sessionStorage.getItem(`fit:live-rest-until:${id}`), workoutId)
+    const expected = group ? null : String(Date.parse('2026-10-08T09:03:30Z'))
+    await expect.poll(deadline).toBe(expected)
+    await button.click()
+    await expect.poll(() => backend.getWorkouts()[0]!.exercises[0]!.sets[0]!.confirmedAt).not.toBeNull()
+    expect(await deadline()).toBe(expected)
+    expect(pauseRequests).toBe(1)
+    expect(setRequests).toBe(2)
+  } finally { releasePause(); releaseSet() }
 })
