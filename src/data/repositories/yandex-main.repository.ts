@@ -1157,7 +1157,7 @@ export function createYandexMainRepository(
         return payload.finance
       },
       async createPackage(clientId: string, draft: TrainerFinancePackageDraft) {
-        const payload = await writeJson(queries, `/v1/clients/${encodeURIComponent(clientId)}/finance/packages`, 'POST', draft, z.object({ package: trainerFinancePackageSchema }))
+        const payload = await writeJson(queries, `/v1/clients/${encodeURIComponent(clientId)}/finance/${draft.singleSession ? 'single-services' : 'packages'}`, 'POST', draft, z.object({ package: trainerFinancePackageSchema }))
         return payload.package
       },
       async updatePackage(packageId: string, draft: TrainerFinancePackageUpdate) {
