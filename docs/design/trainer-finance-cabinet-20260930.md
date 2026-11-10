@@ -2279,3 +2279,14 @@ finishLiveWorkout(singleService), точная частичная оплата/�
 отозвана, SQL/алгоритм не меняется; новый regression-case сохраняет доказательство и пустые facts.
 Повтор APIcheck139files/1635 passed. Вспомогательный Python ошибочно запускался из API cwd;
 запись канонического журнала затем выполнена по абсолютному пути, без ложного статуса записи.
+
+FIN-72: FIN801/PR2088 принят на e36775106008d80e0362527067765efd9b5a75f4.
+SourceCI42825181524, mainCI42831619147, API42836039747, web42836040125,
+OTA42837843914 — SUCCESS. Public244/244 файлов совпали с immutable manifest; обеAPI health passed.
+Public42/42 и verified signedZIP42/42, retries0; PNG320/390/430/1440 просмотрены в обоих артефактах.
+OTA manifest/ZIP signatures, source, expiry, checksum и ABI8922d2e9 проверены, sequence1794322260120,
+bundle d4a8ef7dd42f3d36cabd671f62ccc3c587d7f1dc4e3805dad3acd5aa4eaab3b9.
+Физический iPhone/Android не проверен; синтетические API requests из приёмки перехвачены,
+немокированные v1 запросы блокировались. Real-user finance mutations/ручных денежных SQL не было.
+Квитанция: outputs/finance-confirmed-release-20261110/pr1/acceptance.json.
+FIN802/PR2094 c69b07c7 проходит sourceCI42838769405; merge/release по GitHub очереди впереди.
