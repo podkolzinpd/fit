@@ -1,3 +1,4 @@
+import {resultMigrationGuard} from './lime-result-remainder-skin.contract'
 import {captureLimeErrorSemantics,expectLimeErrorSemantics} from './lime-error-semantics'
 import { test, expect, type Page } from '@playwright/test'
 import { writeFile } from 'node:fs/promises'
@@ -18,6 +19,7 @@ const detailOwner = ':where(.fit-lime-shell.workout-detail-history-identity) '
 // Only these complete, reviewed migration guards may be normalized. Positive
 // :where owners and any unrelated/unknown :where filters retain their identity.
 const durationMigrationGuards = [
+  resultMigrationGuard,
   ':where(:not(.fit-client-lime :is(.workout-completion-highlight, .workout-completion-missing, .workout-completion-muscles-line), .fit-client-lime :is(.workout-completion-highlight, .workout-completion-missing, .workout-completion-muscles-line) *))',
   ':where(:not(.fit-client-lime .workout-share-overlay, .fit-client-lime .workout-share-overlay *))',
   ...['.workout-actual-duration button', '.workout-actual-duration span', '.workout-actual-duration strong',

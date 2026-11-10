@@ -54,7 +54,7 @@ const PHASE_COPY = {
  * phases never overlap. A short tap runs `onPrimary` (the next logical step);
  * a long press or the context menu always opens the timer sheet.
  */
-export function LiveRestTimer({ workoutId, deadline, defaultDurationSeconds = 90, onChange, onDurationChange, phase = null, onPrimary, onPhaseChange, onPhaseExpire, onRestExpire, referenceStartedAt, onReferenceRestActiveChange, referenceWorkOvertime = false, referencePausedSeconds = 0, onReferencePauseToggle, referenceActions = false, coachPauseActions = false, pausePending = false, coachV79, settings, pausedAt = null }: {
+export function LiveRestTimer({ workoutId, deadline, defaultDurationSeconds = 90, onChange, onDurationChange, phase = null, onPrimary, onPhaseChange, onPhaseExpire, onRestExpire, referenceStartedAt, onReferenceRestActiveChange, referenceWorkOvertime = false, referencePausedSeconds = 0, onReferencePauseToggle, referenceActions = false, coachPauseActions = false, pausePending = false, pauseError, coachV79, settings, pausedAt = null }: {
   workoutId: string
   deadline: number | null
   defaultDurationSeconds?: number
@@ -78,6 +78,7 @@ export function LiveRestTimer({ workoutId, deadline, defaultDurationSeconds = 90
   /** Coach-only paired actions; does not opt into client sheet styling. */
   coachPauseActions?: boolean
   pausePending?: boolean
+  pauseError?: string
   /** Read-only presentation of this timer; never a second lifecycle owner. */
   coachV79?: { density: CoachLiveDensity; headerSlot: HTMLElement | null }
   /** Updates the pilot header only at the rest boundary, not on every tick. */
@@ -332,7 +333,7 @@ export function LiveRestTimer({ workoutId, deadline, defaultDurationSeconds = 90
   const coachActions = <div className="coach-reference-timer-actions">{pauseAction()}{restTrigger}</div>
   return <>
     {coachV79 ? <CoachLiveV79Timer time={bigTime} elapsed={formatReferenceClock(elapsed)} resting={active && !phase} paused={pausedAt !== null} phaseLabel={copy?.label}
-      density={coachV79.density} headerSlot={coachV79.headerSlot} restAction={referenceActions ? clientActions : coachPauseActions ? coachActions : restTrigger}
+      density={coachV79.density} headerSlot={coachV79.headerSlot} pauseError={pauseError} restAction={referenceActions ? clientActions : coachPauseActions ? coachActions : restTrigger}
       compactAction={referenceActions || coachPauseActions ? <div className={coachPauseActions ? 'coach-v79-compact-actions' : 'client-v79-compact-actions'}>{pauseAction(true)}{compactRestTrigger}</div> : compactRestTrigger} /> : referenceClock}
     {!coachV79 && (referenceActions ? clientActions : restTrigger)}
     {open && createPortal(<div className="sheet-overlay" onClick={() => setOpen(false)}>

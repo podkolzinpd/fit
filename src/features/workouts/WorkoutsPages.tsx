@@ -4900,7 +4900,7 @@ export function LiveWorkoutPage() {
               <LiveRestTimer workoutId={workoutId} pausedAt={livePausedAt} deadline={restEndsAt} defaultDurationSeconds={effectiveRestPickerSeconds} onChange={startRestUntil} onDurationChange={applyRestDuration}
                 coachV79={coachV79 || clientReference ? { density: clientReference ? clientLiveDensity : liveDensity, headerSlot: coachClockSlot } : undefined}
                 phase={livePhase} onPrimary={timerLeads || livePhase?.kind === 'prep' || (livePhase?.kind === 'work' && livePhase.manual) ? handleTimerPrimary : undefined} onPhaseChange={setLivePhase} onPhaseExpire={handlePhaseExpire} onRestExpire={handleRestExpire}
-                referenceActions={clientReference} coachPauseActions={coachV79} pausePending={pauseWorkout.isPending} referenceStartedAt={visualReference ? query.data.startedAt ?? null : undefined} referenceWorkOvertime={clientReference} onReferenceRestActiveChange={visualReference ? setReferenceRestActive : undefined}
+                referenceActions={clientReference} coachPauseActions={coachV79} pausePending={pauseWorkout.isPending} pauseError={pauseWorkout.isError ? `Не удалось ${pauseWorkout.variables?.paused ? 'поставить тренировку на паузу' : 'продолжить тренировку'}. Попробуйте ещё раз.` : undefined} referenceStartedAt={visualReference ? query.data.startedAt ?? null : undefined} referenceWorkOvertime={clientReference} onReferenceRestActiveChange={visualReference ? setReferenceRestActive : undefined}
                 referencePausedSeconds={visualReference ? query.data.pausedSeconds ?? 0 : 0} onReferencePauseToggle={(clientReference || coachV79) && canPauseWorkout && query.data.startedAt ? () => setWorkoutPaused(livePausedAt === null) : undefined}
                 settings={!coachReference && query.data.exercises.length > 0 ? <div className="live-mode-switch" role="group" aria-label="Кто ведёт тренировку">
                   {(['timer', 'manual'] as const).map((mode) => <button key={mode} type="button" aria-pressed={liveExecutionMode === mode}
@@ -4908,7 +4908,6 @@ export function LiveWorkoutPage() {
                 </div> : undefined} />
             </Coachmark>
           </div>
-          {(coachV79 || clientReference) && pauseWorkout.isError && <p className="error" role="alert">Не удалось {pauseWorkout.variables?.paused ? 'поставить тренировку на паузу' : 'продолжить тренировку'}. Попробуйте ещё раз.</p>}
           {phaseNotice && <div className="live-phase-notice" role="status">
             <span>{phaseNotice.kind === 'work-confirmed' ? `Подход засчитан · ${formatRest(phaseNotice.seconds)}` : 'Отдых остановлен'}</span>
             <button type="button" className="secondary" onClick={undoPhaseNotice}>{phaseNotice.kind === 'work-confirmed' ? 'Исправить' : 'Вернуть'}</button>

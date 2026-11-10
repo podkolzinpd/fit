@@ -1,3 +1,231 @@
+/* MC5.1.7 / remaining completed-result paint. The zero-specificity
+   owner preserves shared layout and planned/off consumers. */
+.exercise-comment-note:where(.fit-lime-shell.workout-detail-history-identity .workout-detail-page:is(.workout-completion-page,:has(> .coach-workout-summary,> .workout-duration-surface)) *) { font-size:var(--text-sm)
+}
+.exercise-history-link:where(.fit-lime-shell.workout-detail-history-identity .workout-detail-page:is(.workout-completion-page,:has(> .coach-workout-summary,> .workout-duration-surface)) *) { border-radius:var(--radius-sm); color:var(--secondary-label-fg); background:transparent; text-decoration:none
+}
+.exercise-history-link:hover:where(.fit-lime-shell.workout-detail-history-identity .workout-detail-page:is(.workout-completion-page,:has(> .coach-workout-summary,> .workout-duration-surface)) *) { color:var(--accent-strong)
+}
+.exercise-history-link:active:where(.fit-lime-shell.workout-detail-history-identity .workout-detail-page:is(.workout-completion-page,:has(> .coach-workout-summary,> .workout-duration-surface)) *) { color:var(--accent-strong); background:var(--accent-surface)
+}
+.exercise-history-link:focus-visible:where(.fit-lime-shell.workout-detail-history-identity .workout-detail-page:is(.workout-completion-page,:has(> .coach-workout-summary,> .workout-duration-surface)) *) { border-radius:var(--radius-sm)
+}
+.workout-fact-summary span:where(.fit-lime-shell.workout-detail-history-identity .workout-detail-page:is(.workout-completion-page,:has(> .coach-workout-summary,> .workout-duration-surface)) *) { color:var(--muted); font-size:12px; font-weight:800; letter-spacing:.06em; text-transform:uppercase
+}
+.workout-fact-summary strong:where(.fit-lime-shell.workout-detail-history-identity .workout-detail-page:is(.workout-completion-page,:has(> .coach-workout-summary,> .workout-duration-surface)) *) { font-size:15px
+}
+.workout-review-head h2:where(.fit-lime-shell.workout-detail-history-identity .workout-detail-page:is(.workout-completion-page,:has(> .coach-workout-summary,> .workout-duration-surface)) *) { font-size:18px
+}
+.workout-trainer-reactions .workout-feedback-option:where(.fit-lime-shell.workout-detail-history-identity .workout-detail-page:is(.workout-completion-page,:has(> .coach-workout-summary,> .workout-duration-surface)) *) { font-size:22px
+}
+.workout-response-limit:where(.fit-lime-shell.workout-detail-history-identity .workout-detail-page:is(.workout-completion-page,:has(> .coach-workout-summary,> .workout-duration-surface)) *) { font-size:var(--text-caption)
+}
+.workout-response-reaction:where(.fit-lime-shell.workout-detail-history-identity .workout-detail-page:is(.workout-completion-page,:has(> .coach-workout-summary,> .workout-duration-surface)) *) { border-radius:14px; background:var(--surface-sunken); font-size:23px
+}
+.workout-response-meta:where(.fit-lime-shell.workout-detail-history-identity .workout-detail-page:is(.workout-completion-page,:has(> .coach-workout-summary,> .workout-duration-surface)) *) { color:var(--muted); font-size:var(--text-caption)
+}
+.workout-feedback-fieldset legend:where(.fit-lime-shell.workout-detail-history-identity .workout-detail-page:is(.workout-completion-page,:has(> .coach-workout-summary,> .workout-duration-surface)) *) { color:var(--fg-on-surface); font-weight:var(--weight-semibold)
+}
+.workout-feedback-fieldset > .muted:where(.fit-lime-shell.workout-detail-history-identity .workout-detail-page:is(.workout-completion-page,:has(> .coach-workout-summary,> .workout-duration-surface)) *) { font-size:var(--text-caption)
+}
+.workout-rpe-scale-value strong:where(.fit-lime-shell.workout-detail-history-identity .workout-detail-page:is(.workout-completion-page,:has(> .coach-workout-summary,> .workout-duration-surface)) *) { color:var(--fg-strong); font-size:var(--text-ui); font-weight:var(--weight-semibold); font-variant-numeric:tabular-nums
+}
+.workout-rpe-scale-value > span:where(.fit-lime-shell.workout-detail-history-identity .workout-detail-page:is(.workout-completion-page,:has(> .coach-workout-summary,> .workout-duration-surface)) *) { color:var(--fg-on-surface); font-weight:var(--weight-semibold)
+}
+.workout-rpe-ticks span:where(.fit-lime-shell.workout-detail-history-identity .workout-detail-page:is(.workout-completion-page,:has(> .coach-workout-summary,> .workout-duration-surface)) *) { background:var(--rpe-track)
+}
+.workout-rpe-endpoints:where(.fit-lime-shell.workout-detail-history-identity .workout-detail-page:is(.workout-completion-page,:has(> .coach-workout-summary,> .workout-duration-surface)) *) { color:var(--secondary-label-fg); font-size:var(--text-caption)
+}
+.workout-feedback .workout-feedback-segment:where(.fit-lime-shell.workout-detail-history-identity .workout-detail-page:is(.workout-completion-page,:has(> .coach-workout-summary,> .workout-duration-surface)) *) { border:1px solid var(--border)
+}
+.workout-feedback .workout-feedback-segment .workout-feedback-option:where(.fit-lime-shell.workout-detail-history-identity .workout-detail-page:is(.workout-completion-page,:has(> .coach-workout-summary,> .workout-duration-surface)) *) { background:transparent; font-size:var(--text-ui)
+}
+.workout-feedback .workout-feedback-segment .workout-feedback-option + .workout-feedback-option:where(.fit-lime-shell.workout-detail-history-identity .workout-detail-page:is(.workout-completion-page,:has(> .coach-workout-summary,> .workout-duration-surface)) *) { border-left:1px solid var(--border)
+}
+.workout-feedback-pain > span:where(.fit-lime-shell.workout-detail-history-identity .workout-detail-page:is(.workout-completion-page,:has(> .coach-workout-summary,> .workout-duration-surface)) *) { font-weight:var(--weight-semibold)
+}
+.workout-feedback-note-row > span:where(.fit-lime-shell.workout-detail-history-identity .workout-detail-page:is(.workout-completion-page,:has(> .coach-workout-summary,> .workout-duration-surface)) *) { color:var(--secondary-label-fg); font-size:var(--text-caption)
+}
+.workout-feedback-summary p:where(.fit-lime-shell.workout-detail-history-identity .workout-detail-page:is(.workout-completion-page,:has(> .coach-workout-summary,> .workout-duration-surface)) *) { border-radius:12px; background:var(--surface-sunken)
+}
+.workout-feedback-summary span:where(.fit-lime-shell.workout-detail-history-identity .workout-detail-page:is(.workout-completion-page,:has(> .coach-workout-summary,> .workout-duration-surface)) *) { color:var(--muted); font-size:var(--text-caption)
+}
+.workout-feedback-summary strong:where(.fit-lime-shell.workout-detail-history-identity .workout-detail-page:is(.workout-completion-page,:has(> .coach-workout-summary,> .workout-duration-surface)) *) { font-size:var(--text-ui)
+}
+.workout-feedback-confirmation:where(.fit-lime-shell.workout-detail-history-identity .workout-detail-page:is(.workout-completion-page,:has(> .coach-workout-summary,> .workout-duration-surface)) *) { border:1px solid var(--success-border); border-radius:12px; color:var(--success-fg); background:var(--success-surface); font-weight:var(--weight-semibold)
+}
+.workout-detail-page > .completed-exercise-list > .completed-exercise-block:where(.fit-lime-shell.workout-detail-history-identity .workout-detail-page:is(.workout-completion-page,:has(> .coach-workout-summary,> .workout-duration-surface)) *) { border-left:2px solid var(--border); background:transparent; box-shadow:none
+}
+.workout-detail-page > .completed-exercise-list > .completed-exercise-block .completed-exercise:where(.fit-lime-shell.workout-detail-history-identity .workout-detail-page:is(.workout-completion-page,:has(> .coach-workout-summary,> .workout-duration-surface)) *) { background:transparent; box-shadow:none
+}
+.workout-history-sets:where(.fit-lime-shell.workout-detail-history-identity .workout-detail-page:is(.workout-completion-page,:has(> .coach-workout-summary,> .workout-duration-surface)) *) { border-top:1px solid var(--hairline)
+}
+.completed-exercise-details > summary:where(.fit-lime-shell.workout-detail-history-identity .workout-detail-page:is(.workout-completion-page,:has(> .coach-workout-summary,> .workout-duration-surface)) *) { color:var(--fg)
+}
+.completed-exercise-details > summary:focus-visible:where(.fit-lime-shell.workout-detail-history-identity .workout-detail-page:is(.workout-completion-page,:has(> .coach-workout-summary,> .workout-duration-surface)) *) { border-radius:var(--radius-sm)
+}
+.workout-detail-exercise-heading strong:where(.fit-lime-shell.workout-detail-history-identity .workout-detail-page:is(.workout-completion-page,:has(> .coach-workout-summary,> .workout-duration-surface)) *) { font-size:var(--type-body-size)
+}
+.exercise-details-chevron:where(.fit-lime-shell.workout-detail-history-identity .workout-detail-page:is(.workout-completion-page,:has(> .coach-workout-summary,> .workout-duration-surface)) *) { color:var(--secondary-label-fg)
+}
+.workout-detail-exercise-result:where(.fit-lime-shell.workout-detail-history-identity .workout-detail-page:is(.workout-completion-page,:has(> .coach-workout-summary,> .workout-duration-surface)) *) { font-size:var(--type-body-size); font-weight:var(--weight-semibold); font-variant-numeric:tabular-nums
+}
+.workout-history-set:where(.fit-lime-shell.workout-detail-history-identity .workout-detail-page:is(.workout-completion-page,:has(> .coach-workout-summary,> .workout-duration-surface)) *) { border-bottom:1px solid var(--hairline)
+}
+.completed-exercise .workout-history-set-number:where(.fit-lime-shell.workout-detail-history-identity .workout-detail-page:is(.workout-completion-page,:has(> .coach-workout-summary,> .workout-duration-surface)) *) { background:transparent
+}
+.completed-exercise .workout-history-set-status:where(.fit-lime-shell.workout-detail-history-identity .workout-detail-page:is(.workout-completion-page,:has(> .coach-workout-summary,> .workout-duration-surface)) *) { border-radius:8px
+}
+.workout-history-set-number:where(.fit-lime-shell.workout-detail-history-identity .workout-detail-page:is(.workout-completion-page,:has(> .coach-workout-summary,> .workout-duration-surface)) *) { border-radius:50%; color:var(--muted); background:var(--surface-sunken); font-size:12px; font-variant-numeric:tabular-nums
+}
+.workout-history-set-result strong:where(.fit-lime-shell.workout-detail-history-identity .workout-detail-page:is(.workout-completion-page,:has(> .coach-workout-summary,> .workout-duration-surface)) *) { font-size:15px
+}
+.workout-history-set .plan-note:where(.fit-lime-shell.workout-detail-history-identity .workout-detail-page:is(.workout-completion-page,:has(> .coach-workout-summary,> .workout-duration-surface)) *) { color:var(--muted); font-size:12px
+}
+.workout-history-set-status:where(.fit-lime-shell.workout-detail-history-identity .workout-detail-page:is(.workout-completion-page,:has(> .coach-workout-summary,> .workout-duration-surface)) *) { border-radius:50%; color:var(--success-fg); background:var(--success-mark-surface); font-size:14px; font-weight:800
+}
+.workout-history-set.missed:where(.fit-lime-shell.workout-detail-history-identity .workout-detail-page:is(.workout-completion-page,:has(> .coach-workout-summary,> .workout-duration-surface)) *) { opacity:.72
+}
+.workout-history-set.missed .workout-history-set-status:where(.fit-lime-shell.workout-detail-history-identity .workout-detail-page:is(.workout-completion-page,:has(> .coach-workout-summary,> .workout-duration-surface)) *) { color:var(--muted); background:var(--surface-sunken); font-weight:700
+}
+.workout-question-answer .workout-feedback-fieldset legend:where(.fit-lime-shell.workout-detail-history-identity .workout-detail-page:is(.workout-completion-page,:has(> .coach-workout-summary,> .workout-duration-surface)) *) { font-size:14px
+}
+.workout-question-answer .workout-trainer-reactions .workout-feedback-option:where(.fit-lime-shell.workout-detail-history-identity .workout-detail-page:is(.workout-completion-page,:has(> .coach-workout-summary,> .workout-duration-surface)) *) { font-size:21px
+}
+.workout-question-answer .voice-note-field > label:where(.fit-lime-shell.workout-detail-history-identity .workout-detail-page:is(.workout-completion-page,:has(> .coach-workout-summary,> .workout-duration-surface)) *) { font-size:14px
+}
+.workout-question-answer .voice-note-field textarea:where(.fit-lime-shell.workout-detail-history-identity .workout-detail-page:is(.workout-completion-page,:has(> .coach-workout-summary,> .workout-duration-surface)) *) { font-size:16px
+}
+.workout-question-answer .voice-input-button:where(.fit-lime-shell.workout-detail-history-identity .workout-detail-page:is(.workout-completion-page,:has(> .coach-workout-summary,> .workout-duration-surface)) *) { background:transparent; box-shadow:none
+}
+.workout-history-sets.workout-set-table:where(.fit-lime-shell.workout-detail-history-identity .workout-detail-page:is(.workout-completion-page,:has(> .coach-workout-summary,> .workout-duration-surface)) *) { border-top:1px solid var(--hairline)
+}
+.workout-history-set.workout-set-row:where(.fit-lime-shell.workout-detail-history-identity .workout-detail-page:is(.workout-completion-page,:has(> .coach-workout-summary,> .workout-duration-surface)) *) { border-bottom:1px solid var(--hairline)
+}
+.workout-header-contract:where(.fit-lime-shell.workout-detail-history-identity .workout-detail-page:is(.workout-completion-page,:has(> .coach-workout-summary,> .workout-duration-surface)) *) { border-bottom:1px solid var(--border)
+}
+.workout-header-eyebrow:where(.fit-lime-shell.workout-detail-history-identity .workout-detail-page:is(.workout-completion-page,:has(> .coach-workout-summary,> .workout-duration-surface)) *) { font-size:var(--type-caption-size); text-transform:uppercase
+}
+.workout-status:where(.fit-lime-shell.workout-detail-history-identity .workout-detail-page:is(.workout-completion-page,:has(> .coach-workout-summary,> .workout-duration-surface)) *) { border:1px solid var(--border); font-size:var(--type-caption-size); font-weight:var(--weight-bold)
+}
+.workout-detail-page .workout-header-meta:where(.fit-lime-shell.workout-detail-history-identity .workout-detail-page:is(.workout-completion-page,:has(> .coach-workout-summary,> .workout-duration-surface)) *) {
+  color:var(--secondary-label-fg);
+  font-size:var(--text-sm)
+}
+.workout-detail-page .workout-status[data-tone='neutral']:where(.fit-lime-shell.workout-detail-history-identity .workout-detail-page:is(.workout-completion-page,:has(> .coach-workout-summary,> .workout-duration-surface)) *) {
+  color:var(--secondary-label-fg);
+  font-size:var(--text-sm)
+}
+.workout-detail-page .workout-fact-summary span:where(.fit-lime-shell.workout-detail-history-identity .workout-detail-page:is(.workout-completion-page,:has(> .coach-workout-summary,> .workout-duration-surface)) *) {
+  color:var(--secondary-label-fg);
+  font-size:var(--text-sm)
+}
+.workout-detail-page .workout-response-meta:where(.fit-lime-shell.workout-detail-history-identity .workout-detail-page:is(.workout-completion-page,:has(> .coach-workout-summary,> .workout-duration-surface)) *) {
+  color:var(--secondary-label-fg);
+  font-size:var(--text-sm)
+}
+.workout-detail-page .workout-feedback-fieldset > .muted:where(.fit-lime-shell.workout-detail-history-identity .workout-detail-page:is(.workout-completion-page,:has(> .coach-workout-summary,> .workout-duration-surface)) *) {
+  color:var(--secondary-label-fg);
+  font-size:var(--text-sm)
+}
+.workout-detail-page .workout-feedback-summary span:where(.fit-lime-shell.workout-detail-history-identity .workout-detail-page:is(.workout-completion-page,:has(> .coach-workout-summary,> .workout-duration-surface)) *) {
+  color:var(--secondary-label-fg);
+  font-size:var(--text-sm)
+}
+.workout-detail-page .workout-history-set .plan-note:where(.fit-lime-shell.workout-detail-history-identity .workout-detail-page:is(.workout-completion-page,:has(> .coach-workout-summary,> .workout-duration-surface)) *) {
+  color:var(--secondary-label-fg);
+  font-size:var(--text-sm)
+}
+.workout-detail-page .exercise-history-link:where(.fit-lime-shell.workout-detail-history-identity .workout-detail-page:is(.workout-completion-page,:has(> .coach-workout-summary,> .workout-duration-surface)) *) {
+  font-size:var(--text-sm)
+}
+.workout-detail-history-identity .button:where(.fit-lime-shell.workout-detail-history-identity .workout-detail-page:is(.workout-completion-page,:has(> .coach-workout-summary,> .workout-duration-surface)) *) { border-radius:14px; font-size:14px; font-weight:500
+}
+.workout-detail-history-identity button:where(:not(.fit-lime-shell.workout-detail-history-identity :is(.workout-actual-duration,.workout-duration-dialog) button)):where(:not(.fit-client-lime .workout-share-overlay, .fit-client-lime .workout-share-overlay *)):where(:not(.fit-client-lime :is(.workout-completion-highlight, .workout-completion-missing, .workout-completion-muscles-line), .fit-client-lime :is(.workout-completion-highlight, .workout-completion-missing, .workout-completion-muscles-line) *)):where(.fit-lime-shell.workout-detail-history-identity .workout-detail-page:is(.workout-completion-page,:has(> .coach-workout-summary,> .workout-duration-surface)) *) { border-radius:14px; font-size:14px; font-weight:500
+}
+.workout-detail-history-identity .button.primary:where(.fit-lime-shell.workout-detail-history-identity .workout-detail-page:is(.workout-completion-page,:has(> .coach-workout-summary,> .workout-duration-surface)) *) { box-shadow:none
+}
+.workout-detail-history-identity .workout-cta[data-variant='primary']:where(:not(.fit-lime-shell.workout-detail-history-identity .workout-duration-dialog .workout-cta)):where(.fit-lime-shell.workout-detail-history-identity .workout-detail-page:is(.workout-completion-page,:has(> .coach-workout-summary,> .workout-duration-surface)) *) { box-shadow:none
+}
+.workout-detail-history-identity button.primary:where(:not(.fit-lime-shell.workout-detail-history-identity :is(.workout-actual-duration,.workout-duration-dialog) button)):where(:not(.fit-client-lime .workout-share-overlay, .fit-client-lime .workout-share-overlay *)):where(.fit-lime-shell.workout-detail-history-identity .workout-detail-page:is(.workout-completion-page,:has(> .coach-workout-summary,> .workout-duration-surface)) *) { box-shadow:none
+}
+.workout-detail-history-identity .button.secondary:where(.fit-lime-shell.workout-detail-history-identity .workout-detail-page:is(.workout-completion-page,:has(> .coach-workout-summary,> .workout-duration-surface)) *) { box-shadow:none
+}
+.workout-detail-history-identity button.secondary:where(:not(.fit-lime-shell.workout-detail-history-identity :is(.workout-actual-duration,.workout-duration-dialog) button)):where(:not(.fit-client-lime :is(.workout-completion-highlight, .workout-completion-missing, .workout-completion-muscles-line), .fit-client-lime :is(.workout-completion-highlight, .workout-completion-missing, .workout-completion-muscles-line) *)):where(.fit-lime-shell.workout-detail-history-identity .workout-detail-page:is(.workout-completion-page,:has(> .coach-workout-summary,> .workout-duration-surface)) *) { box-shadow:none
+}
+.ui-identity .workout-feedback .workout-choice[data-control-state='selected'][data-tone='destructive']:where(.fit-lime-shell.workout-detail-history-identity .workout-detail-page:is(.workout-completion-page,:has(> .coach-workout-summary,> .workout-duration-surface)) *) { border-color:var(--danger-border); background:var(--danger-surface); color:var(--danger)
+}
+.workout-detail-history-identity .button[aria-disabled='true']:where(.fit-lime-shell.workout-detail-history-identity .workout-detail-page:is(.workout-completion-page,:has(> .coach-workout-summary,> .workout-duration-surface)) *) { box-shadow:none
+}
+.workout-detail-history-identity button:disabled:where(:not(.fit-lime-shell.workout-detail-history-identity :is(.workout-actual-duration,.workout-duration-dialog) button)):where(:not(.fit-client-lime .workout-share-overlay, .fit-client-lime .workout-share-overlay *)):where(.fit-lime-shell.workout-detail-history-identity .workout-detail-page:is(.workout-completion-page,:has(> .coach-workout-summary,> .workout-duration-surface)) *) { box-shadow:none
+}
+.workout-detail-history-identity .workout-header-eyebrow:where(.fit-lime-shell.workout-detail-history-identity .workout-detail-page:is(.workout-completion-page,:has(> .coach-workout-summary,> .workout-duration-surface)) *) { font-size:12px
+}
+.workout-detail-history-identity .workout-header-meta:where(.fit-lime-shell.workout-detail-history-identity .workout-detail-page:is(.workout-completion-page,:has(> .coach-workout-summary,> .workout-duration-surface)) *) { font-weight:500
+}
+.workout-detail-history-identity .workout-status:where(.fit-lime-shell.workout-detail-history-identity .workout-detail-page:is(.workout-completion-page,:has(> .coach-workout-summary,> .workout-duration-surface)) *) { font-size:12px; font-weight:500
+}
+.workout-detail-history-identity .workout-detail-primary-actions .workout-cta:where(.fit-lime-shell.workout-detail-history-identity .workout-detail-page:is(.workout-completion-page,:has(> .coach-workout-summary,> .workout-duration-surface)) *) { border-radius:14px; font-size:14px; font-weight:500
+}
+.workout-detail-history-identity .workout-detail-page > .button.wide:where(.fit-lime-shell.workout-detail-history-identity .workout-detail-page:is(.workout-completion-page,:has(> .coach-workout-summary,> .workout-duration-surface)) *) { border-radius:14px; font-size:14px; font-weight:500
+}
+.workout-detail-history-identity .workout-fact-summary p:where(.fit-lime-shell.workout-detail-history-identity .workout-detail-page:is(.workout-completion-page,:has(> .coach-workout-summary,> .workout-duration-surface)) *) { border-right:1px solid var(--border); background:transparent
+}
+.workout-detail-history-identity .workout-fact-summary.has-calories p:nth-child(3):where(.fit-lime-shell.workout-detail-history-identity .workout-detail-page:is(.workout-completion-page,:has(> .coach-workout-summary,> .workout-duration-surface)) *) { border-top:1px solid var(--border); border-right:1px solid var(--border)
+}
+.workout-detail-history-identity .workout-fact-summary.has-calories p:nth-child(n+3):where(.fit-lime-shell.workout-detail-history-identity .workout-detail-page:is(.workout-completion-page,:has(> .coach-workout-summary,> .workout-duration-surface)) *) { border-top:1px solid var(--border)
+}
+.workout-detail-history-identity .workout-fact-summary p.workout-fact-summary-groups:where(.fit-lime-shell.workout-detail-history-identity .workout-detail-page:is(.workout-completion-page,:has(> .coach-workout-summary,> .workout-duration-surface)) *) { border-top:1px solid var(--border)
+}
+.workout-detail-history-identity .workout-fact-summary p.workout-fact-summary-record:where(.fit-lime-shell.workout-detail-history-identity .workout-detail-page:is(.workout-completion-page,:has(> .coach-workout-summary,> .workout-duration-surface)) *) { border-top:1px solid var(--border); color:var(--success-fg)
+}
+.workout-detail-history-identity .workout-fact-summary-record span:where(.fit-lime-shell.workout-detail-history-identity .workout-detail-page:is(.workout-completion-page,:has(> .coach-workout-summary,> .workout-duration-surface)) *) { color:inherit
+}
+.workout-detail-history-identity .workout-fact-summary-record strong:where(.fit-lime-shell.workout-detail-history-identity .workout-detail-page:is(.workout-completion-page,:has(> .coach-workout-summary,> .workout-duration-surface)) *) { color:inherit
+}
+.workout-detail-history-identity .workout-fact-summary span:where(.fit-lime-shell.workout-detail-history-identity .workout-detail-page:is(.workout-completion-page,:has(> .coach-workout-summary,> .workout-duration-surface)) *) { color:var(--secondary-label-fg); font-size:12px; font-weight:500; letter-spacing:0; text-transform:none
+}
+.workout-detail-history-identity .workout-fact-summary strong:where(.fit-lime-shell.workout-detail-history-identity .workout-detail-page:is(.workout-completion-page,:has(> .coach-workout-summary,> .workout-duration-surface)) *) { color:var(--fg); font-size:16px; font-weight:600
+}
+.workout-detail-history-identity .workout-detail-page > .completed-exercise-list:where(.fit-lime-shell.workout-detail-history-identity .workout-detail-page:is(.workout-completion-page,:has(> .coach-workout-summary,> .workout-duration-surface)) *) { border:1px solid var(--border); border-radius:18px; background:var(--surface-raised)
+}
+.workout-detail-history-identity .workout-detail-exercise-heading strong:where(.fit-lime-shell.workout-detail-history-identity .workout-detail-page:is(.workout-completion-page,:has(> .coach-workout-summary,> .workout-duration-surface)) *) { font-size:16px
+}
+.workout-detail-history-identity .workout-detail-exercise-result:where(.fit-lime-shell.workout-detail-history-identity .workout-detail-page:is(.workout-completion-page,:has(> .coach-workout-summary,> .workout-duration-surface)) *) { font-size:14px; font-weight:500
+}
+.workout-detail-history-identity .completed-set-summary span:where(.fit-lime-shell.workout-detail-history-identity .workout-detail-page:is(.workout-completion-page,:has(> .coach-workout-summary,> .workout-duration-surface)) *) { color:var(--secondary-label-fg); font-size:12px; font-weight:500
+}
+.workout-detail-history-identity .workout-history-set .plan-note:where(.fit-lime-shell.workout-detail-history-identity .workout-detail-page:is(.workout-completion-page,:has(> .coach-workout-summary,> .workout-duration-surface)) *) { color:var(--secondary-label-fg); font-size:12px; font-weight:500
+}
+.workout-detail-history-identity .workout-history-set.confirmed:where(.fit-lime-shell.workout-detail-history-identity .workout-detail-page:is(.workout-completion-page,:has(> .coach-workout-summary,> .workout-duration-surface)) *) { border-color:var(--border); background:transparent
+}
+.workout-detail-history-identity .exercise-history-link:where(.fit-lime-shell.workout-detail-history-identity .workout-detail-page:is(.workout-completion-page,:has(> .coach-workout-summary,> .workout-duration-surface)) *) { border-radius:14px; color:var(--secondary-label-fg)
+}
+.workout-detail-history-identity .exercise-history-link:active:where(.fit-lime-shell.workout-detail-history-identity .workout-detail-page:is(.workout-completion-page,:has(> .coach-workout-summary,> .workout-duration-surface)) *) { background:var(--surface-sunken); color:var(--fg)
+}
+.workout-detail-history-identity .workout-client-feedback:where(.fit-lime-shell.workout-detail-history-identity .workout-detail-page:is(.workout-completion-page,:has(> .coach-workout-summary,> .workout-duration-surface)) *) { border:1px solid var(--border); border-radius:18px; background:var(--surface-raised); box-shadow:none
+}
+.workout-detail-history-identity .workout-client-question:where(.fit-lime-shell.workout-detail-history-identity .workout-detail-page:is(.workout-completion-page,:has(> .coach-workout-summary,> .workout-duration-surface)) *) { border:1px solid var(--border); border-radius:18px; background:var(--surface-raised); box-shadow:none
+}
+.workout-detail-history-identity .workout-trainer-review:where(.fit-lime-shell.workout-detail-history-identity .workout-detail-page:is(.workout-completion-page,:has(> .coach-workout-summary,> .workout-duration-surface)) *) { border:1px solid var(--border); border-radius:18px; background:var(--surface-raised); box-shadow:none
+}
+.workout-detail-history-identity .workout-question-answer:where(.fit-lime-shell.workout-detail-history-identity .workout-detail-page:is(.workout-completion-page,:has(> .coach-workout-summary,> .workout-duration-surface)) *) { border:1px solid var(--border); border-radius:18px; background:var(--surface-raised); box-shadow:none
+}
+.workout-detail-history-identity .workout-review h2:where(.fit-lime-shell.workout-detail-history-identity .workout-detail-page:is(.workout-completion-page,:has(> .coach-workout-summary,> .workout-duration-surface)) *) { font-size:16px
+}
+.workout-detail-history-identity .workout-feedback-fieldset legend:where(.fit-lime-shell.workout-detail-history-identity .workout-detail-page:is(.workout-completion-page,:has(> .coach-workout-summary,> .workout-duration-surface)) *) { color:var(--fg); font-size:16px; font-weight:600
+}
+.workout-detail-history-identity .workout-review p:where(.fit-lime-shell.workout-detail-history-identity .workout-detail-page:is(.workout-completion-page,:has(> .coach-workout-summary,> .workout-duration-surface)) *) { font-size:14px; font-weight:400
+}
+.workout-detail-history-identity .workout-review-text:where(.fit-lime-shell.workout-detail-history-identity .workout-detail-page:is(.workout-completion-page,:has(> .coach-workout-summary,> .workout-duration-surface)) *) { font-size:14px; font-weight:400
+}
+.workout-detail-history-identity .workout-review p:where(:not(.fit-lime-shell .workout-duration-dialog .error, .fit-lime-shell .workout-duration-dialog .error *)):where(.fit-lime-shell.workout-detail-history-identity .workout-detail-page:is(.workout-completion-page,:has(> .coach-workout-summary,> .workout-duration-surface)) *) { color:var(--secondary-label-fg)
+}
+.workout-detail-history-identity .workout-feedback .workout-review-head h2:where(.fit-lime-shell.workout-detail-history-identity .workout-detail-page:is(.workout-completion-page,:has(> .coach-workout-summary,> .workout-duration-surface)) *) { font-size:18px
+}
+.workout-timer-confirmed-note:where(.fit-lime-shell.workout-detail-history-identity .workout-detail-page:is(.workout-completion-page,:has(> .coach-workout-summary,> .workout-duration-surface)) *) { color:var(--warning-fg); font-size:13px; font-weight:600
+}
+
 /* Stage 4 / workout card. Questions, feedback and plan actions continue to
    use their existing product contracts, with a scoped visual variant. */
 .fit-lime-shell.workout-detail-history-identity .workout-detail-page {

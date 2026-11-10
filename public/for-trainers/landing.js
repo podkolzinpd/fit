@@ -22,11 +22,13 @@
   const videos=[...document.querySelectorAll('video')];
   const mediaButton=document.querySelector('.play-media');
   const reduced=matchMedia('(prefers-reduced-motion: reduce)');
-  const stages=athlete?['schedule','plan','live','technique','result']:['schedule','plan','live','live','result'];
+  const stages=athlete?['trainer','plan','live','technique','result']:['trainer','schedule','plan','live','live','result'];
   const clamp=(v,min=0,max=1)=>Math.max(min,Math.min(max,v));
   const smooth=v=>{v=clamp(v);return v*v*(3-2*v);};
   const staticMode=()=>reduced.matches || new URLSearchParams(location.search).get('motion')==='off';
-  const END=5.25;
+  const count=stages.length;
+  const planAt=stages.indexOf('plan'),liveAt=stages.indexOf('live'),resultAt=stages.indexOf('result');
+  const END=count+.25;
   let frame=0,travel=0,layoutWidth=0,head=0,active=0,inView=true,compactLayout=false;
   let copyHeights=[];
   let lastTick=performance.now(),elapsed=athlete?15*60+45:11*60+58,clockRunning=false,lastMedia='';
@@ -61,12 +63,12 @@
     const rect=story.getBoundingClientRect();
     const p=clamp((head-rect.top)/travel)*END;
     // One continuous timeline drives text and screen. No time-based entry effects.
-    const fades=[1,2,3,4,5].map(boundary=>smooth((p-boundary+.18)/.36));
-    const weights=[1-fades[0],...fades.map((v,i)=>i===4?v:v-fades[i+1])];
+    const fades=Array.from({length:count},(_,i)=>i+1).map(boundary=>smooth((p-boundary+.18)/.36));
+    const weights=[1-fades[0],...fades.map((v,i)=>i===count-1?v:v-fades[i+1])];
     active=weights.indexOf(Math.max(...weights));
     if(innerWidth<=760 && copyHeights.length){
-      const visibleWeight=weights.slice(0,5).reduce((sum,w)=>sum+w,0);
-      const copyHeight=visibleWeight>.001?copyHeights.reduce((sum,h,i)=>sum+h*weights[i],0)/visibleWeight:copyHeights[4];
+      const visibleWeight=weights.slice(0,count).reduce((sum,w)=>sum+w,0);
+      const copyHeight=visibleWeight>.001?copyHeights.reduce((sum,h,i)=>sum+h*weights[i],0)/visibleWeight:copyHeights[count-1];
       document.querySelector('.copy-stack').style.height=`${Math.ceil(copyHeight)}px`;
       sizePhone();
     }
@@ -80,20 +82,20 @@
       const alpha=stages.reduce((sum,name,i)=>sum+(screen.dataset.screen===name?weights[i]:0),0);
       show(screen,alpha,screen.dataset.screen===stages[active]);
     });
-    const final=weights[5];
+    const final=weights[count];
     const outro=1-smooth(final*2),intro=smooth((final-.5)*2);
-    grid.style.opacity=String(outro);grid.inert=active===5;
-    show(chapters,outro,active!==5);show(closing,intro,active===5);
+    grid.style.opacity=String(outro);grid.inert=active===count;
+    show(chapters,outro,active!==count);show(closing,intro,active===count);
     // Hold the enlarged Live screen all the way through its exit to Result.
     const compact=root.classList.contains('compact');
-    const focus=athlete?0:smooth((p-2.4)/.85), scale=1+focus*(compact?0:.22);
+    const focus=athlete?0:smooth((p-liveAt-.4)/.85), scale=1+focus*(compact?0:.22);
     const width=document.querySelector('.screen-window').clientWidth;
-    root.style.setProperty('--live',String(weights[2]+weights[3]));
+    root.style.setProperty('--live',String(stages.reduce((sum,name,i)=>sum+(name==='live'?weights[i]:0),0)));
     root.style.setProperty('--live-scale',String(scale));
-    root.style.setProperty('--result-pan',String(athlete?0:(compact?80+360*smooth((p-4.1)/.65):70)*width/390));
+    root.style.setProperty('--result-pan',String(athlete?0:(compact?80+360*smooth((p-resultAt-.1)/.65):70)*width/390));
     root.style.setProperty('--schedule-pan',`${compact&&!athlete?-225*width/390:0}px`);
-    root.style.setProperty('--plan-pan',`${compact?-(athlete?150*smooth((p-1.08)/.65):80+320*smooth((p-1.08)/.65))*width/390:0}px`);
-    root.style.setProperty('--live-offset',`${-focus*(440+(compact?230*smooth((p-3.3)/.45):0))*scale*width/390}px`);
+    root.style.setProperty('--plan-pan',`${compact?-(athlete?150*smooth((p-planAt-.08)/.65):80+320*smooth((p-planAt-.08)/.65))*width/390:0}px`);
+    root.style.setProperty('--live-offset',`${-focus*(440+(compact?230*smooth((p-liveAt-1.3)/.45):0))*scale*width/390}px`);
     buttons.forEach((button,i)=>{
       if(i===active)button.setAttribute('aria-current','step');else button.removeAttribute('aria-current');
     });
@@ -110,7 +112,7 @@
     root.style.setProperty('--scene-h',`${Math.max(280,height-head)}px`);
     // Address bar expansion changes scene size, not chapter positions.
     if(!travel || Math.abs(innerWidth-layoutWidth)>40){
-      layoutWidth=innerWidth;travel=Math.max(520,Math.min(900,height))*5.3;
+      layoutWidth=innerWidth;travel=Math.max(520,Math.min(900,height))*(count+.3);
       root.style.setProperty('--travel',`${travel}px`);
     }
     if(mobile) {
@@ -155,7 +157,7 @@
   function goTo(target) {
     window.scrollTo({top:scrollY+story.getBoundingClientRect().top-head+travel*target/END,behavior:staticMode()?'instant':'smooth'});
   }
-  buttons.forEach((button,i)=>button.addEventListener('click',()=>goTo(i===3?3.4:i+.3)));
+  buttons.forEach((button,i)=>button.addEventListener('click',()=>goTo(!athlete&&i===liveAt+1?i+.4:i+.3)));
   document.querySelector('.site-header a[href="#top"]').addEventListener('click',event=>{
     if(!staticMode()){event.preventDefault();goTo(0);}
   });
