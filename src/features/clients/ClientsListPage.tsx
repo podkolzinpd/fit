@@ -19,6 +19,33 @@ import { trainerFinanceClientLabel } from '../finance/TrainerFinanceOverviewPage
 function clientInitials(name: string): string {
   return name.trim().split(/\s+/u).filter(Boolean).slice(0, 2).map(part => [...part][0]).join('').toLocaleUpperCase('ru')
 }
+function ClientListAvatar({ client }: { client: Client }) {
+  const { clients } = useDataBackend()
+  const host = useRef<HTMLSpanElement>(null)
+  const [visible, setVisible] = useState(false)
+  const [failedUrl, setFailedUrl] = useState<string | null>(null)
+  useEffect(() => {
+    if (!host.current) return
+    if (typeof IntersectionObserver === 'undefined') { setVisible(true); return }
+    const observer = new IntersectionObserver(entries => {
+      if (entries.some(entry => entry.isIntersecting)) { setVisible(true); observer.disconnect() }
+    }, { rootMargin: '120px' })
+    observer.observe(host.current)
+    return () => observer.disconnect()
+  }, [])
+  const photo = useQuery({ queryKey: ['client-photo', client.id],
+    queryFn: () => clients.photo!(client.id),
+    enabled: visible && typeof clients.photo === 'function', staleTime: 60_000 })
+  const url = photo.data?.url
+  return <span ref={host} className="client-avatar" aria-hidden="true">
+    {url && url !== failedUrl
+      ? <img src={url} alt="" width={40} height={40} loading="lazy"
+          style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }}
+          onError={() => setFailedUrl(url)} />
+      : clientInitials(client.fullName)}
+  </span>
+}
+
 const CLIENTS_SCROLL_KEY = 'fit.clientsListScroll'
 const CLIENTS_ARCHIVE_SCROLL_KEY = 'fit.clientsArchiveListScroll'
 const CLIENT_SWIPE_WIDTH = 112
@@ -156,7 +183,7 @@ function ClientSwipeCard({
       onDragStart={(event) => event.preventDefault()}
       onClickCapture={captureClick}>
       <Link className="client-card-main" to={`/clients/${client.id}`} draggable={false} onClick={onBeforeOpen}>
-        <span className="client-avatar" aria-hidden="true">{clientInitials(client.fullName)}</span>
+        <ClientListAvatar key={client.id} client={client} />
         <span className="client-card-copy"><strong>{client.fullName}</strong>{financeLabel && <span className="client-finance-state">{financeLabel}</span>}</span>
       </Link>
       {canOpenChat && <ChatStartButton clientId={client.id} trainerId={trainerId}
@@ -316,7 +343,7 @@ function ClientsListPage({ archivedOnly }: ClientsListPageProps) {
         const canOpenChat = actor?.role === 'trainer' && canOpenClientChat(client, thread)
         if (!client.canArchive) return <article className="card client-card" key={client.id}>
             <Link className="client-card-main" to={`/clients/${client.id}`} onClick={rememberListPosition}>
-              <span className="client-avatar" aria-hidden="true">{clientInitials(client.fullName)}</span>
+              <ClientListAvatar key={client.id} client={client} />
               <span className="client-card-copy"><strong>{client.fullName}</strong>{financeLabel && <span className="client-finance-state">{financeLabel}</span>}</span>
             </Link>
             {canOpenChat && <ChatStartButton clientId={client.id} trainerId={thread?.trainerId ?? actor!.userId}
