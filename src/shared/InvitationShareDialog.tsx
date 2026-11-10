@@ -144,7 +144,7 @@ export function InvitationShareDialog({
     <div className="modal-overlay invitation-share-overlay" role="presentation" onPointerDown={(event) => {
       if (event.target === event.currentTarget) onClose()
     }}>
-      <section className="invitation-share-dialog" role="dialog" aria-modal="true" aria-labelledby="invitation-share-title">
+      <section className={`invitation-share-dialog${codeFirst ? ' invitation-visual-dialog' : ''}`} role="dialog" aria-modal="true" aria-labelledby="invitation-share-title">
         <header>
           <div><p className="eyebrow">ПРИГЛАШЕНИЕ</p><h2 id="invitation-share-title">Ссылка готова</h2></div>
           <button ref={closeRef} type="button" className="icon-button" aria-label="Закрыть" onClick={onClose}><CloseIcon /></button>
