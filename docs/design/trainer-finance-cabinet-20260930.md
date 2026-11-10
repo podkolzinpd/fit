@@ -2204,3 +2204,7 @@ Chromium/WebKit, retries0. Предыдущий вывод аудита о densi
 не включал ignored private fonts, поэтому computed font-family не доказывал фактическую загрузку.
 С оригинальными шрифтами без CSS/assertion изменений прежний тест проходит; FIN804 проверяет
 компактность, не добавляет ненужное исправление.
+
+FIN-65: sourceCI42819995935: код/БД/frontend/browser lanes success; repository-quality отказал
+из-за собственного дубликата ссылки в CURRENT_STATE сверх byte-budget. Дубликат удалён,
+канонический план/ACTIVE_CONTRACTS сохранены; лимиты/гейты не менялись. Новый head проходит CI заново.
