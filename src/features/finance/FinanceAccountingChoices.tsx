@@ -15,7 +15,7 @@ export function FinanceAccountingChoices({ packages, value, disabled, unavailabl
   const name = useId()
   const choices = [
     ...packages.map(pack => ({ value: `charged:${pack.id}`, title: pack.title,
-      detail: `${financePackagePeriod(pack)} · осталось ${pack.sessionsRemaining}`, disabled: false })),
+      detail: `${financePackagePeriod(pack)} · ${pack.singleSession?pack.sessionsUsed>0?'Разовая · проведена':'Разовая · не проведена':`осталось ${pack.sessionsRemaining}`}`, disabled: false })),
     ...(unavailableValue ? [{ value: unavailableValue, title: 'Абонемент недоступен', detail: '', disabled: true }] : []),
     ...(allowNewSingle ? [{ value: 'single:new', title: 'Разовое занятие', detail: '', disabled: false }] : []),
     { value: 'unassigned', title: 'Выбрать позже', detail: '', disabled: false },

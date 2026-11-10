@@ -2365,7 +2365,7 @@ export function WorkoutDetailPage() {
       {emptyBookingPlan && <p className="booking-plan-empty">Упражнения ещё не добавлены</p>}
       {!clientCompletionReport && !emptyBookingPlan && exerciseCards}
       {attendanceResult && <section className="completed-empty-attendance"><h3>Упражнения</h3><p>Упражнения не записаны</p>{canManage && <Link className="button secondary" to={`/workouts/${workoutId}/edit`} state={childNavigationState}>Добавить результат</Link>}</section>}
-      {(justCompleted || attendanceResult) && !clientMode && <WorkoutFinanceConfirmation bundle={completionFinance.data} workoutId={workout.id} clientId={workout.clientId} trainingFormat={workout.trainingFormat ?? 'self'} />}
+      {(justCompleted || attendanceResult) && !clientMode && <WorkoutFinanceConfirmation lime={isFitLimeEnabled(actor)} bundle={completionFinance.data} workoutId={workout.id} clientId={workout.clientId} trainingFormat={workout.trainingFormat ?? 'self'} />}
       {attendanceResult && completionFinance.isError && <p className="error" role="alert">Не удалось загрузить учёт занятия. <button type="button" className="link" onClick={() => void completionFinance.refetch()}>Повторить</button></p>}
       {done && !clientMode && !workout.discomfort && <WorkoutClientFeedback workout={workout} canEdit={false} saving={feedback.isPending} error={feedback.error} onSave={(value) => feedback.mutateAsync(value)} />}
       {done && !clientMode && <details className="coach-workout-summary"><summary>Сводка тренировки</summary>{factSummary}<section className="workout-review workout-duration-surface">{durationControl}</section></details>}

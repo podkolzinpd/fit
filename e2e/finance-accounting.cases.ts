@@ -1,4 +1,4 @@
-import { expect, test, type Locator, type Page } from '@playwright/test'
+import { expect, test, type Locator, type Page, type TestInfo } from '@playwright/test'
 import type { TrainerFinanceClientBundle, TrainerFinancePackageDraft, TrainerFinanceManualSessionDraft, TrainerFinancePaymentUpdate, TrainerFinanceReceipt } from '../src/data/contracts/trainer-finance'
 import { clientId, conversationId, newWorkoutId, workoutId, workout, mockPilot, type MockWorkout } from './fit-lime-fixtures'
 
@@ -461,6 +461,55 @@ export function financeAccountingCases() {
     expect(ledger.sessions).toHaveLength(2)
   })
 
+  async function singleAttendanceCabinets(page:Page,info:TestInfo){
+    const target:MockWorkout={...workout,createdBy:coach,workoutDate:'2026-11-03',status:'planned',exercises:[],deliveryMode:'online'}
+    const ledger=await accountingFixture(page,true,[target]),base=ledger.packages[0]!
+    ledger.packages=[];ledger.sessions=[];ledger.payments=[]
+    let count=0
+    await page.route(`**/v1/workouts/${workoutId}/finish-single`,async route=>{
+      const command=route.request().postDataJSON() as {attendance:{singleService:TrainerFinanceManualSessionDraft['singleService']}}
+      count++;expect(command.attendance.singleService).toEqual({priceCents:200000,paidCents:50000,receivedOn:'2026-11-03'})
+      Object.assign(target,{status:'done',version:2,completedAt:stamp})
+      ledger.packages.push({...base,id:newWorkoutId,title:'Разовое занятие',singleSession:true,sessionsTotal:1,sessionsUsed:1,sessionsRemaining:0,priceCents:200000,paidCents:50000,dueCents:150000,startsOn:'2026-11-03',endsOn:null,packageStatus:'completed',paymentStatus:'partial'})
+      ledger.sessions.push({id:workoutId,packageId:newWorkoutId,workoutId,disposition:'charged',source:'automatic',comment:null,workoutDate:'2026-11-03',voidedAt:null,voidReason:null,version:1,createdAt:stamp,updatedAt:stamp})
+      ledger.payments.push({id:conversationId,packageId:newWorkoutId,amountCents:50000,receivedOn:'2026-11-03',source:'opening',comment:null,voidedAt:null,voidReason:null,version:1,createdAt:stamp,updatedAt:stamp})
+      await route.fulfill({json:{workout:{version:2,replayed:false}}})
+    })
+    await page.goto(`/workouts/${workoutId}`)
+    await page.getByRole('button',{name:'Отметить проведённой',exact:true}).click()
+    const sheet=page.getByRole('dialog',{name:'Отметить проведённой',exact:true})
+    await expect(sheet).toContainText('Онлайн')
+    await sheet.getByRole('button',{name:'Изменить учёт'}).click()
+    await sheet.getByRole('radio',{name:'Разовое занятие'}).click()
+    await sheet.getByLabel('Стоимость, ₽').fill('2000');await sheet.getByLabel('Получено, ₽').fill('500')
+    await sheet.getByRole('button',{name:'Подтвердить проведение',exact:true}).click()
+    const confirmation=page.locator('.workout-finance-confirmation')
+    await expect(confirmation).toContainText('Разовое занятие проведено');await expect(confirmation).toContainText(/К оплате 1\s500/)
+    expect(count).toBe(1)
+    for(const width of [320,390,430,1440]){
+      await page.setViewportSize({width,height:844});await confirmation.scrollIntoViewIfNeeded()
+      expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true)
+      await page.screenshot({path:info.outputPath(`single-confirmation-${width}.png`)})
+    }
+    await confirmation.getByRole('link',{name:'Открыть финансы'}).click()
+    await page.locator('.finance-history > summary').click()
+    await expect(page.locator('.finance-package')).toContainText('Разовая · Завершён')
+    await page.getByRole('tab',{name:'Занятия: 1'}).click()
+    await expect(page.locator('.finance-session-list')).toContainText('Разовая · проведена')
+    await expect(page.getByRole('button',{name:'Пробные',exact:true})).toHaveCount(0)
+    await expect(page.locator('.finance-session-number')).toHaveText('—')
+    // Switch this synthetic browser fixture to the athlete; no real account is used.
+    await mockPilot(page,{role:'client',clientLime:true})
+    await page.route('**/v1/me/finance',route=>route.fulfill({json:{finance:{trainers:[{trainerId:coach,trainerName:'Тренер',packages:ledger.packages,payments:ledger.payments}]}}}))
+    await page.goto('/me/finance')
+    await expect(page.locator('.client-finance-package')).toContainText('Разовая · проведена')
+    for(const width of [320,390,430,1440]){
+      await page.setViewportSize({width,height:844})
+      expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true)
+      await page.screenshot({path:info.outputPath(`single-athlete-${width}.png`),fullPage:true})
+    }
+  }
+
   test('Finance Lime owns readable cards, forms and payment actions', { tag: ['@lime-finance'] }, async ({ page }, info) => {
     await receiptFixture(page)
     await page.goto(`/clients/${clientId}/finance`)
@@ -549,6 +598,7 @@ export function financeAccountingCases() {
     expect(commands).toHaveLength(1)
     expect(commands[0]).toMatchObject({singleSession:true,sessionsTotal:1,priceCents:200000,openingPaidCents:50000})
     expect(commands[0]!.requestId).toMatch(/^[0-9a-f-]{36}$/)
+    await singleAttendanceCabinets(page,info)
   })
 
   test('Finance exact kopecks and mixed overdue debt use separate amounts', { tag: ['@lime-finance'] }, async ({ page }, info) => {

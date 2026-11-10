@@ -66,3 +66,10 @@ it('preserves an historical trial and replays frozen single money',()=>{
  fireEvent.click(screen.getByRole('button',{name:'Повторить сохранение'}))
  expect(submit).toHaveBeenCalledWith(draft)
 })
+
+it('keeps an already charged single marked performed in its historical accounting editor',()=>{
+ const session:TrainerFinanceSession={id:'session',packageId:pack.id,workoutId:'workout',disposition:'charged',source:'manual',comment:null,workoutDate:'2026-11-06',voidedAt:null,voidReason:null,version:1,createdAt:'',updatedAt:''}
+ render(<SessionAccountingForm lime packages={[{...pack,singleSession:true,sessionsTotal:1,sessionsUsed:1,sessionsRemaining:0}]} session={session} today="2026-11-06" saving={false} onCancel={vi.fn()} onSubmit={vi.fn()}/> )
+ expect(screen.getByRole('radio',{name:/Разовая · проведена/})).toBeChecked()
+ expect(screen.queryByRole('radio',{name:/не проведена/})).not.toBeInTheDocument()
+})
