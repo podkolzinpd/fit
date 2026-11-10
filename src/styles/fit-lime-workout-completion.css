@@ -1,3 +1,26 @@
+/* MC5.1.7 / remaining completed-result paint. The zero-specificity
+   owner preserves shared layout and planned/off consumers. */
+.workout-detail-history-identity .workout-completion-report .eyebrow:where(:not(.fit-client-lime :is(.workout-completion-highlight, .workout-completion-missing, .workout-completion-muscles-line), .fit-client-lime :is(.workout-completion-highlight, .workout-completion-missing, .workout-completion-muscles-line) *)):where(.fit-lime-shell.workout-detail-history-identity .workout-detail-page:is(.workout-completion-page,:has(> .coach-workout-summary,> .workout-duration-surface)) *) { color:var(--secondary-label-fg); font-size:12px; font-weight:500; letter-spacing:.06em
+}
+.workout-detail-history-identity .workout-completion-trainer-status:where(.fit-lime-shell.workout-detail-history-identity .workout-detail-page:is(.workout-completion-page,:has(> .coach-workout-summary,> .workout-duration-surface)) *) { color:var(--secondary-label-fg); font-size:13px; font-weight:500
+}
+.workout-detail-history-identity .workout-completion-trainer-status svg:where(.fit-lime-shell.workout-detail-history-identity .workout-detail-page:is(.workout-completion-page,:has(> .coach-workout-summary,> .workout-duration-surface)) *) { color:var(--success-fg)
+}
+.workout-detail-history-identity .workout-completion-recorded > summary:where(.fit-lime-shell.workout-detail-history-identity .workout-detail-page:is(.workout-completion-page,:has(> .coach-workout-summary,> .workout-duration-surface)) *)::after { color:var(--secondary-label-fg)
+}
+.workout-detail-history-identity .workout-completion-recorded > summary strong:where(.fit-lime-shell.workout-detail-history-identity .workout-detail-page:is(.workout-completion-page,:has(> .coach-workout-summary,> .workout-duration-surface)) *) { font-size:17px
+}
+.workout-detail-history-identity .workout-completion-recorded > summary > span:nth-child(2):where(.fit-lime-shell.workout-detail-history-identity .workout-detail-page:is(.workout-completion-page,:has(> .coach-workout-summary,> .workout-duration-surface)) *) { color:var(--secondary-label-fg); font-size:12px; font-weight:500
+}
+.workout-detail-history-identity .workout-completion-recorded > .completed-exercise-list:where(.fit-lime-shell.workout-detail-history-identity .workout-detail-page:is(.workout-completion-page,:has(> .coach-workout-summary,> .workout-duration-surface)) *) { border-top:1px solid var(--border)
+}
+.workout-detail-history-identity .workout-completion-recorded > .completed-exercise-list > .completed-exercise:where(.fit-lime-shell.workout-detail-history-identity .workout-detail-page:is(.workout-completion-page,:has(> .coach-workout-summary,> .workout-duration-surface)) *):where(:not(:last-child)) { border-bottom:1px solid var(--border)
+}
+.workout-detail-history-identity .workout-completion-recorded > .completed-exercise-list > .completed-exercise:where(.fit-lime-shell.workout-detail-history-identity .workout-detail-page:is(.workout-completion-page,:has(> .coach-workout-summary,> .workout-duration-surface)) *) { background:transparent; box-shadow:none
+}
+.workout-detail-history-identity .workout-completion-recorded .completed-exercise-block:where(.fit-lime-shell.workout-detail-history-identity .workout-detail-page:is(.workout-completion-page,:has(> .coach-workout-summary,> .workout-duration-surface)) *) { border-left:2px solid var(--border)
+}
+
 /* Stage 4 / completed workout and drill-down exercise history. Results,
    progress queries and share behavior remain unchanged. */
 .fit-lime-shell.workout-detail-history-identity .workout-completion,

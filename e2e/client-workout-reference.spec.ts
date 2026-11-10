@@ -1,3 +1,4 @@
+import { limeResultRemainderSkinCases } from './lime-result-remainder-skin.cases'
 import { limeTrainerCompletionSkinCases } from './lime-trainer-completion-skin.cases'
 import { limeCompletionHighlightSkinCases, limeCompletionHighlightTrainerCases } from './lime-completion-highlight-skin.cases'
 import { limeCompletionReportSkinCases, limeTrainerCompletionNonConsumerCases } from './lime-completion-report-skin.cases'
@@ -36,6 +37,7 @@ limeCompletionReportSkinCases()
 limeCompletionHighlightSkinCases()
 limeCompletionHighlightTrainerCases()
 limeTrainerCompletionSkinCases()
+limeResultRemainderSkinCases()
 limeTrainerCompletionNonConsumerCases()
 limeDurationErrorPaintCases()
 

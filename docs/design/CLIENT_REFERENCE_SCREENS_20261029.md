@@ -9655,3 +9655,123 @@ build/types/fonts/lint/docs и CI. Физический телефон/нати�
 
 Пока зафиксирован план; реализация и свежая приёмка впереди. Merge/deploy запрещены
 до нового разрешения владельца. Следующий этап без его приёмки не начинать.
+
+## 232. MC517 — весь остаток оформления результата, локальная проверка
+
+Итерация — 10.11.2026 — GPT-6.1-sol / OpenAI.
+Задача: выполнить расширенный §231 одним PR для спортсмена и тренера;
+разрешение реализации получено, разрешения merge/deploy нет.
+База origin/main70541773, план f36a2113, ветка feat/design-cleanup-mc517-20261110.
+Прежняя принятая квитанция MC516 сохранена в истории.
+
+Сделано: MC5171–MC5173 закрывают специфический остаток paint результата:
+«Что записано»/summary/счётчик/стрелка, список фактов и разделители/группы,
+feedback editable/read-only, ответ/вопрос тренера, статус доступности результата,
+нижние edit/share/copy actions. Спортсменский Report не добавлен тренеру;
+его действующие summary, review и отдельная completion card сохранены.
+Условие ограничено потомками реального done экрана: completion page либо detail
+с прямым coach summary/duration surface. Planned и выключенный Lime сохраняют
+прежние общие правила, что проверено положительными контролями.
+
+В styles.css из modern done исключены 137 visual branches / 133 stems;
+25720 исходных selector/declaration records и порядок повторных свойств точны
+после снятия только нового отрицательного guard. Layout, border:0/radius:0,
+нулевой завершающий разделитель, line-height, размеры и геометрия стрелок,
+transform/transition, native details и общие focus primitives остаются общими.
+Нужные копии стоят перед прежним accepted Lime: detail 105 правил / 205 declarations,
+completion 10 правил / 18 declarations, всего 115 / 223. Прежние байты двух
+Lime файлов сохранены целиком как suffix; равная специфичность не возрождает
+старый paint поверх accepted owners. Положительные фильтры имеют нулевую
+добавочную специфичность. Border-bottom записи копируется только для not-last-child.
+110 мёртвых declarations не скопированы: exact accepted counterparts, поздние
+дубли и доказанные текущими consumers overrides. В частности, UI selected mono
+перекрыт accepted non-destructive/danger ветвями, primary paint — действующими
+Lime owners, editable RPE только у клиента и имеет сильные client variables.
+Первоначальное предположение о тренерском editable RPE уточнено: у тренера
+read-only feedback без шкалы. Существующий общий вес номера 600 сохранён;
+мёртвую старую 800 не перенесли. Это не нормализация типографики MC7.
+
+Изменены только три runtime CSS, новый result contract/probe/cases и его entry.
+Три прежних duration/share/highlight helpers получили только import и exact
+migration guard whitelist. Их assertions/алгоритмы не переписаны. Новые positive
+owners и неизвестные отрицательные фильтры сохраняют identity при классификации.
+1630 защищённых non-CSS runtime/API/package/workflow файлов root сравнила побайтно:
+обработчики, DOM, данные, права, API, flags, CI и зависимости прежние.
+
+MC5174: свежая production build с обязательными лицензированными fonts 2/2,
+types/startup, full eslint, 55 unit / 7 suites прошли. Fixture build использует
+первый webServer.env текущего playwright.config плюс CLIENT_LIME=true,
+coach v79 fixture pilots, COACH_WORKOUT_ROLLOUT_MODE=all и строгие fonts.
+Браузерный config /tmp/fit-mc517-current-20261110.config.ts, preview5687,
+Chromium/WebKit, workers2, retries0. --list всего 168: предыдущие 144 и новые24.
+Первый candidate дал 144 passed и 24 QA classifier failures, не «168 green».
+После точных исправлений новый конечный target дал 24/24 за60.923s,
+без skips/flaky/retries. Повторять успешно выполненные144 механики не стали:
+их исходники и защищённый runtime прежние, последняя CSS-коррекция удаляет
+только доказанные мёртвые копии. Unit55/full lint root и финальные targeted lint,
+tsc, source proof завершены успешно; полный source CI будущего PR ещё гейт.
+Проверены Live input/keyboard, undo/unconfirm, swipe/drag/fold, pause/rest/timer,
+out-of-order/superset/pause race; duration/share/PNG и прежний completion skin.
+
+Новая матрица24 содержит client light/dark, Original/Compact, desktop1440/long,
+full/partial/empty/history, actual trainer dark при обеих preferences,
+planned и Lime-off обеих ролей. Настоящие Enter/Space раскрывают/сворачивают
+summary, вложенные факты раскрываются, edit link открывает /edit и возвращается.
+Feedback проходит RPE/selected good/bad/discomfort/note, disabled/pending,
+точный fixture503, retry/save/cancel. Тренерский review проходит cancel,
+send/read-only/reload с проверкой expectedVersion и неизменных фактов.
+Браузер не выполняет реальную внешнюю отправку/запись пользовательских данных.
+
+Принятый baseline — явно составной:23 завершённых случаев из
+/tmp/fit-mc517-baseline-accepted-20261110-results и один WebKit trainer full из
+/tmp/fit-mc517-baseline-centered-trainer-20261110-results. Итоговая квитанция
+/tmp/fit-mc517-baseline-union-20261110.json:24 primary JSON / 126 states / 126 PNG,
+16 terminal legacy ownership red +8 off/planned positive pass, все roundtrips.
+Только этот union используется для сравнения, первые непригодные прогоны сохранены.
+Candidate /tmp/fit-mc517-accepted-20261110-results; comparator
+/tmp/fit-mc517-comparison-20261110.json exit0:126/126 computed styles/geometry,
+frame/focus/scroll и 126/126 PNG byte-exact. Facts/version/смысловые payloads точны;
+случайные operation UUID валидируются отдельно, оба raw значения сохранены.
+CSSOM, CSSRule/style object, focus/scroll/anchor restoration строгие.
+Page errors/requestfailed отсутствуют; ровно ожидаемые503 квалифицированы путём
+feedback, прочие сетевые/console errors не игнорировались.
+
+Расхождения и отвергнутые QA-подходы: первая preview EPERM не запускала тесты.
+Первая сборка выявила только типы новой fixture; исправлены до baseline.
+Полноэкранная CSSOM-абляция с Playwright ClockController давала зависшее
+finished ожидание/стартовые transition values после restore; сохранены native
+snapshots. Контроль менял только фиксацию даты: Date-only сохранила доменные часы,
+оставив native timers/RAF. Natural ожидание нового probe bounded5s, конечные
+running/pending animations и два тихих кадра; общий MC44 helper не менялся.
+Снимок разрешает естественные animations/caret, принудительное завершение
+animations и скрытая caret style injection отвергнуты. Не обобщаем это на
+исторические CI flakes. Native zero shorthand border:0px разворачивает CSSOM
+currentcolor и border-image initial; классификатор проверяет полный authored
+shorthand, а не computed width. Встроены строгие neutral0 / red paint проверки.
+Известные negative guards законно снимаются с owner strings, но положительный
+owner scope остаётся, legacy=false; expected сравнивает только quotes/comma trivia.
+
+Открыто/ограничения: WebKit trainer editor после keyboard path иногда продолжал
+native scroll на4px при неизменных размерах/styles. Причина не доказана;
+caret-only и synchronous disabled-toggle не признаны исправлением и не оставлены
+как обход. Только его visual viewport явно центрирует реально сфокусированную
+кнопку перед capture; raw pre/post сохранены. Было pre-center0/461 при одинаковом
+post-center304; промежуточный strict comparator exit1 сохранён. В финальной паре
+raw calibration тоже совпала, но естественный путь не объявлен исправленным.
+Базовая feedback503 ошибка остаётся серой rgb(85,92,76) от route p; перенос
+пиксельно сохраняет этот исходный дефект, новый semantic color fix не добавлен.
+Общие Onest/fonts/tokens/controls/focus foundation остаются MC7/MC8.
+
+Лично просмотрены шесть реальных candidate PNG, в том числе WebKit client light
+error, dark partial facts, trainer editor с видимым keyboard focus, bottom edit,
+question editor и Chromium desktop long. Их hashes и конкретные замечания —
+/tmp/fit-mc517-visual-review-20261110.json; root отдельно посмотрела четыре кадра.
+Новых обрезаний внутри проверенных карточек не обнаружено; промежуточный viewport
+с nav не выдаётся за проверку всех hit targets, реальные click/navigation проходят.
+Source proof /tmp/fit-mc517-source-proof-20261110.json, protected proof
+/tmp/fit-mc517-protected-source-review.json. Физический iPhone, OAuth,
+нативная установка/нативная клавиатура и system share не проверены.
+
+Дальше: один PR MC5171–MC5174, его exact-source CI и сводка владельцу с этими
+ограничениями. Merge/deploy только после отдельного разрешения MC-RELEASE-01;
+публикации и реализации следующих этапов в этой итерации нет.
