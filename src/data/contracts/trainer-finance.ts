@@ -9,6 +9,7 @@ export interface TrainerFinancePackage {
   clientId: string
   trainerId: string
   kind: TrainerFinancePackageKind
+  singleSession?: boolean
   title: string
   sessionsTotal: number
   sessionsUsed: number
@@ -118,6 +119,7 @@ export interface TrainerFinancePackageDraft {
   requestId?: string
   openingReceivedOn?: string
   kind: TrainerFinancePackageKind
+  singleSession?: boolean
   title: string
   sessionsTotal: number
   openingUsedSessions: number

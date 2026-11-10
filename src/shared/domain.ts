@@ -187,6 +187,7 @@ export interface WorkoutSlotDraft {
 }
 
 export interface WorkoutAttendanceDraft {
+  singleService?: { priceCents: number; paidCents: number; receivedOn: string }
   disposition: 'auto' | 'charged' | 'unassigned' | 'free' | 'trial'
   packageId: string | null
 }
