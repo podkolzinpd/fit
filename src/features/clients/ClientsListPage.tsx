@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointer
 import { Link, useLocation, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../../app/auth-context'
 import { isCoachWorkoutRedesignEnabled } from '../../app/coach-workout-redesign'
+import { isFitLimeEnabled } from '../../app/fit-lime'
 import { isTrainerScheduleV2Enabled } from '../../app/trainer-schedule-v2'
 import { invalidateFinanceViews } from '../../app/invalidate-finance-views'
 import { useDataBackend } from '../../app/data-backend-context'
@@ -21,6 +22,8 @@ function clientInitials(name: string): string {
 }
 function ClientListAvatar({ client }: { client: Client }) {
   const { clients } = useDataBackend()
+  const { actor } = useAuth()
+  const photoEnabled = isFitLimeEnabled(actor) && isTrainerScheduleV2Enabled(actor)
   const host = useRef<HTMLSpanElement>(null)
   const [visible, setVisible] = useState(false)
   const [failedUrl, setFailedUrl] = useState<string | null>(null)
@@ -35,8 +38,8 @@ function ClientListAvatar({ client }: { client: Client }) {
   }, [])
   const photo = useQuery({ queryKey: ['client-photo', client.id],
     queryFn: () => clients.photo!(client.id),
-    enabled: visible && typeof clients.photo === 'function', staleTime: 60_000 })
-  const url = photo.data?.url
+    enabled: photoEnabled && visible && typeof clients.photo === 'function', staleTime: 60_000 })
+  const url = photoEnabled ? photo.data?.url : undefined
   return <span ref={host} className="client-avatar" aria-hidden="true">
     {url && url !== failedUrl
       ? <img src={url} alt="" width={40} height={40} loading="lazy"
