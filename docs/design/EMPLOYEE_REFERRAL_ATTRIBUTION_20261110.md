@@ -42,6 +42,13 @@ Cloud.ru registration path. Источник и счётчики разнесе�
 `e36775106008d80e0362527067765efd9b5a75f4`: web и API доступны, readiness
 зелёный, API сообщает тот же release ID.
 
-Локальные проверки, PR/CI и выпуск записываются ниже по мере завершения.
-Production migration следует применять штатным Cloud.ru workflow после проверки
-PR/CI; прямой запуск SQL на production не используется.
+Локально `npm run check` прошёл: lint, typecheck, 3,189 frontend-тестов,
+coverage выше порогов, infra/frontend/API checks и production build. API check
+включал lint, typecheck, 1,632 API-теста и build. `node
+scripts/check-migrations.mjs origin/main` прошёл.
+
+PR [#2093](https://github.com/podkolzinpd/fit/pull/2093) открыт; GitHub CI,
+включая clean PostgreSQL migration replay, ожидает завершения. Production
+migration/release ещё не выполнялись. После успешного CI изменения должны пройти
+штатный Cloud.ru release workflow и public read-back; прямой SQL на production
+не используется.
