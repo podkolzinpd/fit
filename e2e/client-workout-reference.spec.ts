@@ -4907,24 +4907,24 @@ for (const role of ['trainer', 'client'] as const) for (const density of ['origi
   await page.clock.setFixedTime(new Date('2026-11-04T09:00:00Z'))
   const source = coachGestureWorkout(true, 4)
   source.exercises = [source.exercises[2]!, source.exercises[0]!, source.exercises[1]!, source.exercises[3]!]
-  source.exercises.forEach((exercise, index) => { exercise.position = index })
+  source.exercises.forEach((exercise, index) => { exercise.position = index; exercise.restBetweenExercisesSec = 0; exercise.restBetweenRoundsSec = 90 })
   const backend = await mockPilot(page, { role, profileId: id, clientLime: true, fitLime: true, workouts: [source] })
   await page.goto(`/workouts/${workoutId}/live`)
   const group = page.locator('.exercise-block.live')
-  await group.locator('.coach-v79-circuit-heading').click()
+  await group.locator('.coach-v79-circuit-heading,.client-circuit-toggle').click()
   await group.locator('.circuit-round').nth(1).locator('.circuit-round-toggle').click()
   const body = (exercise: number, round: number) => page.locator(`[data-live-card-key="round:${source.exercises[exercise + 1]!.sets[round]!.id}"] > :is(.coach-v79-card-body,.client-live-card-body)`)
   for (const round of [1, 0]) for (const exercise of [0, 1]) {
     const set = source.exercises[exercise + 1]!.sets[round]!
     await expect(body(exercise, round)).not.toHaveAttribute('inert', '')
-    await expect(group.locator('[data-live-card-key] > .coach-v79-card-body:not([inert])')).toHaveCount(1)
+    await expect(group.locator('[data-live-card-key] > :is(.coach-v79-card-body,.client-live-card-body):not([inert])')).toHaveCount(1)
     await page.locator(`[data-live-set-id="${set.id}"]`).getByRole('button', { name: 'Готово, отдых', exact: true }).click()
     await expect.poll(() => backend.getWorkouts()[0]!.exercises.find(item => item.id === source.exercises[exercise + 1]!.id)!.sets[round]!.confirmedAt).not.toBeNull()
     const deadline = await page.evaluate(id => sessionStorage.getItem(`fit:live-rest-until:${id}`), workoutId)
     if (exercise === 0) expect(deadline).toBeNull()
     else expect(Number(deadline) - await page.evaluate(() => Date.now())).toBe(90_000)
   }
-  await expect(group.locator(':scope > .coach-v79-circuit-body')).toHaveAttribute('inert', '')
+  await expect(group.locator(':scope > .coach-v79-circuit-body,:scope > .client-circuit-body')).toHaveAttribute('inert', '')
   await expect(page.locator('.live-session-progress-copy')).toContainText(source.exercises[3]!.name)
   expect(backend.getWorkouts()[0]!.exercises.find(item => item.id === source.exercises[0]!.id)!.sets.every(set => !set.confirmedAt)).toBe(true)
 })
