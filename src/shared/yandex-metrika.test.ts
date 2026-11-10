@@ -52,7 +52,7 @@ describe('private corporate invitation entry', () => {
     const script = html.match(/<!-- Yandex\.Metrika counter -->\s*<script[^>]*>([\s\S]*?)<\/script>/)?.[1]
     expect(script).toBeTruthy()
     for (const path of ['/today', `/corporate-invite#token=${'a'.repeat(43)}`]) {
-      const ym = vi.fn(), insertBefore = vi.fn()
+      const ym = vi.fn(), insertBefore = vi.fn<(script: { src: string }) => void>()
       const location = new URL(path, 'https://fit-training.ru')
       const document = {
         scripts: [], referrer: '',
@@ -64,9 +64,10 @@ describe('private corporate invitation entry', () => {
         expect(insertBefore).not.toHaveBeenCalled()
         expect(ym).not.toHaveBeenCalled()
       } else {
-        expect(insertBefore).toHaveBeenCalledOnce()
+        expect(insertBefore).toHaveBeenCalledTimes(COUNTER_IDS.length)
+        expect(insertBefore.mock.calls.map(([script]) => Number(new URL(script.src).searchParams.get('id')))).toEqual([...COUNTER_IDS])
         expect(ym).toHaveBeenCalledTimes(COUNTER_IDS.length)
-        for (const id of COUNTER_IDS) expect(ym).toHaveBeenCalledWith(id, 'init', expect.objectContaining({ url: 'https://fit-training.ru/today', webvisor: id !== ACQUISITION_COUNTER_ID }))
+        for (const id of COUNTER_IDS) expect(ym).toHaveBeenCalledWith(id, 'init', expect.objectContaining({ url: 'https://fit-training.ru/today', webvisor: id === 111074543 }))
       }
     }
   })

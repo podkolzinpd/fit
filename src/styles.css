@@ -4656,23 +4656,34 @@ button.workout-duration-trigger:disabled { cursor:default; opacity:1 }
 .workout-detail-history-identity .workout-completion-next { min-height:44px; color:var(--fg); font-size:12px; font-weight:500 }
 .workout-detail-history-identity .workout-completion-page { display:grid; gap:14px }
 .workout-detail-history-identity .workout-completion-report { display:grid; gap:12px; margin-bottom:0 }
-.workout-detail-history-identity .workout-completion-share-card { display:grid; gap:14px; padding:18px; border:1px solid var(--border); border-radius:18px; background:var(--surface-raised) }
+.workout-detail-history-identity .workout-completion-share-card { display:grid; gap:14px; padding:18px }
+.workout-detail-history-identity .workout-completion-share-card:where(:not(.fit-client-lime .workout-completion-share-card, .fit-client-lime .workout-completion-share-card *)) { border:1px solid var(--border); border-radius:18px; background:var(--surface-raised) }
 .workout-detail-history-identity .workout-completion-report-hero { display:grid; justify-items:center; gap:8px; text-align:center }
-.workout-detail-history-identity .workout-completion-report-art { width:96px; height:96px; display:grid; place-items:center; color:var(--success-fg) }
+.workout-detail-history-identity .workout-completion-report-art { width:96px; height:96px; display:grid; place-items:center }
+.workout-detail-history-identity .workout-completion-report-art:where(:not(.fit-client-lime .workout-completion-share-card, .fit-client-lime .workout-completion-share-card *)) { color:var(--success-fg) }
 .workout-detail-history-identity .workout-completion-report-art img { display:block; width:96px; height:96px; object-fit:contain }
 .workout-detail-history-identity .workout-completion-report-art svg { width:48px; height:48px }
 .workout-detail-history-identity .workout-completion-report-hero > div { min-width:0; display:grid; gap:8px }
-.workout-detail-history-identity .workout-completion-report-subtitle { margin:0; color:var(--secondary-label-fg); font-size:14px; line-height:1.4 }
-.workout-detail-history-identity .workout-completion-report h1 { margin:0; overflow-wrap:anywhere; color:var(--fg); font-size:24px; font-weight:600; line-height:1.12; letter-spacing:-.018em }
-.workout-detail-history-identity .workout-completion-report-date { margin:0; color:var(--secondary-label-fg); font-size:12px; font-weight:500 }
-.workout-detail-history-identity .workout-completion-count-line { display:flex; align-items:baseline; justify-content:space-between; gap:12px; margin:0; color:var(--fg); font-size:14px; font-weight:500; line-height:1.4 }
-.workout-detail-history-identity .workout-completion-count-line strong { flex:0 0 auto; font-variant-numeric:tabular-nums }
-.workout-detail-history-identity .workout-completion-report-facts { display:grid; grid-template-columns:repeat(auto-fit,minmax(70px,1fr)); margin:0; padding:12px 0; border-top:1px solid var(--border); border-bottom:1px solid var(--border) }
-.workout-detail-history-identity .workout-completion-report-facts div { min-width:0; display:flex; flex-direction:column-reverse; gap:3px; padding:0 8px; border-left:1px solid var(--border) }
+.workout-detail-history-identity .workout-completion-report-subtitle { margin:0; line-height:1.4 }
+.workout-detail-history-identity .workout-completion-report-subtitle:where(:not(.fit-client-lime .workout-completion-share-card, .fit-client-lime .workout-completion-share-card *)) { color:var(--secondary-label-fg); font-size:14px }
+.workout-detail-history-identity .workout-completion-report h1 { margin:0; overflow-wrap:anywhere; line-height:1.12 }
+.workout-detail-history-identity .workout-completion-report h1:where(:not(.fit-client-lime .workout-completion-share-card, .fit-client-lime .workout-completion-share-card *)) { color:var(--fg); font-size:24px; font-weight:600; letter-spacing:-.018em }
+.workout-detail-history-identity .workout-completion-report-date { margin:0 }
+.workout-detail-history-identity .workout-completion-report-date:where(:not(.fit-client-lime .workout-completion-share-card, .fit-client-lime .workout-completion-share-card *)) { color:var(--secondary-label-fg); font-size:12px; font-weight:500 }
+.workout-detail-history-identity .workout-completion-count-line { display:flex; align-items:baseline; justify-content:space-between; gap:12px; margin:0; line-height:1.4 }
+.workout-detail-history-identity .workout-completion-count-line:where(:not(.fit-client-lime .workout-completion-share-card, .fit-client-lime .workout-completion-share-card *)) { color:var(--fg); font-size:14px; font-weight:500 }
+.workout-detail-history-identity .workout-completion-count-line strong { flex:0 0 auto }
+.workout-detail-history-identity .workout-completion-count-line strong:where(:not(.fit-client-lime .workout-completion-share-card, .fit-client-lime .workout-completion-share-card *)) { font-variant-numeric:tabular-nums }
+.workout-detail-history-identity .workout-completion-report-facts { display:grid; grid-template-columns:repeat(auto-fit,minmax(70px,1fr)); margin:0; padding:12px 0 }
+.workout-detail-history-identity .workout-completion-report-facts:where(:not(.fit-client-lime .workout-completion-share-card, .fit-client-lime .workout-completion-share-card *)) { border-top:1px solid var(--border); border-bottom:1px solid var(--border) }
+.workout-detail-history-identity .workout-completion-report-facts div { min-width:0; display:flex; flex-direction:column-reverse; gap:3px; padding:0 8px }
+.workout-detail-history-identity .workout-completion-report-facts div:where(:not(.fit-client-lime .workout-completion-share-card, .fit-client-lime .workout-completion-share-card *)) { border-left:1px solid var(--border) }
 .workout-detail-history-identity .workout-completion-report-facts div:first-child { padding-left:0; border-left:0 }
 .workout-detail-history-identity .workout-completion-report-facts div:last-child { padding-right:0 }
-.workout-detail-history-identity .workout-completion-report-facts dt { overflow-wrap:anywhere; color:var(--secondary-label-fg); font-size:12px; font-weight:500 }
-.workout-detail-history-identity .workout-completion-report-facts dd { margin:0; overflow-wrap:anywhere; color:var(--fg); font-size:17px; font-weight:600; font-variant-numeric:tabular-nums }
+.workout-detail-history-identity .workout-completion-report-facts dt { overflow-wrap:anywhere }
+.workout-detail-history-identity .workout-completion-report-facts dt:where(:not(.fit-client-lime .workout-completion-share-card, .fit-client-lime .workout-completion-share-card *)) { color:var(--secondary-label-fg); font-size:12px; font-weight:500 }
+.workout-detail-history-identity .workout-completion-report-facts dd { margin:0; overflow-wrap:anywhere }
+.workout-detail-history-identity .workout-completion-report-facts dd:where(:not(.fit-client-lime .workout-completion-share-card, .fit-client-lime .workout-completion-share-card *)) { color:var(--fg); font-size:17px; font-weight:600; font-variant-numeric:tabular-nums }
 .workout-detail-history-identity .workout-completion-highlight { display:grid; gap:8px; padding:14px; border-radius:14px; background:var(--surface-sunken) }
 .workout-detail-history-identity .workout-completion-report .eyebrow { margin:0; color:var(--secondary-label-fg); font-size:12px; font-weight:500; letter-spacing:.06em }
 .workout-detail-history-identity .workout-completion-highlight h2 { margin:0; overflow-wrap:anywhere; color:var(--fg); font-size:18px; font-weight:600; line-height:1.25 }

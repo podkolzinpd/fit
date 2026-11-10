@@ -138,3 +138,33 @@
 .workout-detail-history-identity:where(.fit-client-lime) button:where(.workout-share-overlay button) {
   font-size: 14px;
 }
+
+/* MC5.1.4: own the result hero/metrics remainder; existing stronger Lime
+   surfaces/headings and first-child separators keep their original cascade. */
+.workout-detail-history-identity:where(.fit-client-lime) .workout-completion-report-art {
+  color: var(--success-fg);
+}
+.workout-detail-history-identity:where(.fit-client-lime) .workout-completion-report-subtitle {
+  color: var(--secondary-label-fg); font-size: 14px;
+}
+.workout-detail-history-identity:where(.fit-client-lime) .workout-completion-report-date {
+  font-size: 12px;
+}
+.workout-detail-history-identity:where(.fit-client-lime) .workout-completion-count-line {
+  font-size: 14px;
+}
+.workout-detail-history-identity:where(.fit-client-lime) .workout-completion-count-line strong {
+  font-variant-numeric: tabular-nums;
+}
+.workout-detail-history-identity:where(.fit-client-lime) .workout-completion-report-facts {
+  border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);
+}
+.workout-detail-history-identity:where(.fit-client-lime) .workout-completion-report-facts div {
+  border-left: 1px solid var(--border);
+}
+.workout-detail-history-identity:where(.fit-client-lime) .workout-completion-report-facts dt {
+  font-size: 12px; font-weight: 500;
+}
+.workout-detail-history-identity:where(.fit-client-lime) .workout-completion-report-facts dd {
+  font-size: 17px; font-variant-numeric: tabular-nums;
+}
