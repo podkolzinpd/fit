@@ -233,7 +233,7 @@ export function LiveRestTimer({ workoutId, deadline, defaultDurationSeconds = 90
   function shift(delta: number) {
     if (phase) {
       // A phase can be shortened but never ended through −15: that is «Остановить».
-      onPhaseChange?.({ ...phase, endsAt: Math.max(Date.now() + 1000, phase.endsAt + delta * 1000) })
+      onPhaseChange?.({ ...phase, endsAt: Math.max((pausedAt ?? Date.now()) + 1000, phase.endsAt + delta * 1000) })
       return
     }
     if (deadline !== null) onChange(deadline + delta * 1000)
@@ -244,7 +244,7 @@ export function LiveRestTimer({ workoutId, deadline, defaultDurationSeconds = 90
     if (duration <= 0 || duration > 3600) return
     prepareGong()
     onDurationChange?.(duration)
-    onChange((coachPauseActions && pausedAt !== null ? pausedAt : Date.now()) + duration * 1000)
+    onChange((pausedAt ?? Date.now()) + duration * 1000)
     setOpen(false)
   }
 
