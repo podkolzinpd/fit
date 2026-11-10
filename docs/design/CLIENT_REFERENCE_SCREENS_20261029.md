@@ -9393,3 +9393,35 @@ PNG/style/geometry сравнение, целевыеunit/build/types/fonts/lint
 
 Дальше: одинпроверяемыйPR со сводкой владельцу, безmerge/deploy.
 Следующийэтапмиграции не начинать.
+
+
+## 222. MC5.1.6 — локальная приёмка, выпуск не разрешён
+
+2026-11-10. Product commit edf76d86f24e979d36518c981a9569f3a8001bc3.
+16 точных guards отделяют Lime WorkoutCompletionCard от legacy paint;
+6 слабых Lime-правил сохраняют 13 текущих значений. React, API, данные,
+флаги, зависимости и механики не менялись. Реальный consumer — тренер;
+отдельный результат спортсмена проверен на регрессию.
+
+Проверки: 49/49 unit (6 suites), полный lint, build/types/fonts и docs passed.
+128/128 Chromium/WebKit, без retry/skip/flaky, 124.889 с: завершение обеих
+ролей, длительность/share, ввод/клавиатура, галочка/отмена, свайпы/перенос,
+сворачивание, таймер, supersets/out-of-order и pause-error rollback.
+Baseline: 12 ожидаемых terminal ownership failures и 2 legacy-off controls
+passed; все предшествующие сравнения валидны. Candidate: 14 cases/20 states
+computed styles/geometry/raw scroll/focus/anchors/CSSOM exact; 20/20 PNG
+побайтно совпали. Payload/calls/destination/initial-final height exact.
+Source proof: 25720 исходных declaration records сохранены в порядке после
+удаления только точного guard; прежний Lime prefix byte-exact, 12 protected
+files byte-exact. Просмотрены ordinary/record/partial/error/long-record.
+
+Артефакты: /tmp/fit-mc516-final-review-20261110.json,
+/tmp/fit-mc516-comparison-20261110.json,
+/tmp/fit-mc516-source-proof-20261110.json,
+/tmp/fit-mc516-candidate-20261110.json и unit/lint/build logs.
+Новых ошибок в проверенных сценариях нет. Обе настройки темы тренера
+дают фактически dark shell; светлая тема спортсмена проверена отдельно.
+Текущий computed weight600 сохранён, глобальная очистка шрифта не выполнена.
+Физическое устройство, OAuth, native install/system share не проверены.
+Исторические два ранних измерения высоты MC514 не объявлены исправленными.
+CI ещё предстоит. Merge/deploy только после отдельного разрешения владельца.
