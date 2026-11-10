@@ -9356,3 +9356,40 @@ web-full/ota-full reports. Локальнаяприёмка110browser/49unit и2
 КороткийLiveконтроль обеимролям: вводвеса/повторов, галочка/отмена, отдых.
 До его приёмки следующийэтапмиграции не начинаем. Квитанциялокальнымкоммитом
 безповторногоpush/CI послеуспешнойдоставки; итогтакжевописанииPR2081.
+
+
+## 221. MC5.1.6 — принятый план, реализация без разрешения выпуска
+
+2026-11-10 — OpenAI. Владелец принял MC515 и поручил MC516 спортсмену и
+тренеру с сохранением механик. До выпуска показать сделанное, проверки и
+ошибки/ограничения; merge/deploy только после отдельного разрешения.
+База3169b79c (актуальныйmain), собственнаяветкаfeat/design-cleanup-mc516-20261110,
+mergeeccebbfb. Конфликты были только в собственных записях: main-журнал оказался
+точнымпрефиксом, локальные квитанции218–220 сохранены. Runtime с main объединён.
+
+Объём: оставшееся legacy paint WorkoutCompletionCard — карточка/mark/kicker,
+заголовок/описание, record strong/span, next-link. Историческаязаготовкаe7dd5b3d
+и§174 используютсятолькокакматериал, неактуальнаяприёмка. Перенести только
+недостающие Lime visual values, сохранить сильные overrides и нейтральные
+layout/geometry/focus. Общиеживыеправила не удалять целиком.
+
+Реальныйconsumerсейчастренер justCompleted&&!attendanceResult; успортсмена
+отдельныйWorkoutCompletionReport, его не переделывать, проверить регрессию.
+Сохраняем unified finish, число/facts/подтверждения, recordquery/loading/error,
+ссылкукнужномуклиенту, длительность/share результата, ввод/клавиатуру,
+галочку/отмену, свайпы/перенос/сворачивание/таймер и уже принятые
+out-of-order/superset/pause-error механики main. React/API/данные/флаги/
+зависимости/CI вscopeне входят.
+
+Проверки: свежий baseline→CSSpatch→candidate Chromium/WebKit; actualunified
+trainerexit, ordinary/partial/record/long/loading/error, original/compact,
+keyboardfocus/linkdestination. Обе настройки trainerтемы сфиксациейactualdark,
+обе фактическиеclientтемы; offcontrols только на реальносуществующихпутях.
+Strict CSSOM/styleobjects restoration, неизвестныеguardsне нормализовать,
+rawheights/scroll/focus/anchors не скрывать. Sourceproofточногоdiff,
+PNG/style/geometry сравнение, целевыеunit/build/types/fonts/lint/docs иCI.
+Исторические2раннихheightMC514 не объявлятьисправленными; физическийтелефон
+и настоящийsystemshare не считатьпройденными поавтотестам.
+
+Дальше: одинпроверяемыйPR со сводкой владельцу, безmerge/deploy.
+Следующийэтапмиграции не начинать.
