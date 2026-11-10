@@ -4908,7 +4908,7 @@ export function LiveWorkoutPage() {
                 </div> : undefined} />
             </Coachmark>
           </div>
-          {coachV79 && pauseWorkout.isError && <p className="error" role="alert">Не удалось {pauseWorkout.variables?.paused ? 'поставить тренировку на паузу' : 'продолжить тренировку'}. Попробуйте ещё раз.</p>}
+          {(coachV79 || clientReference) && pauseWorkout.isError && <p className="error" role="alert">Не удалось {pauseWorkout.variables?.paused ? 'поставить тренировку на паузу' : 'продолжить тренировку'}. Попробуйте ещё раз.</p>}
           {phaseNotice && <div className="live-phase-notice" role="status">
             <span>{phaseNotice.kind === 'work-confirmed' ? `Подход засчитан · ${formatRest(phaseNotice.seconds)}` : 'Отдых остановлен'}</span>
             <button type="button" className="secondary" onClick={undoPhaseNotice}>{phaseNotice.kind === 'work-confirmed' ? 'Исправить' : 'Вернуть'}</button>
