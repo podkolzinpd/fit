@@ -9541,3 +9541,32 @@ Runtime/тесты репозитория/таймауты/анимации не
 Текущая доставка ждёт CI42798809580 и штатных web/API/OTA307 либо проверенного
 потомка. Android42798809759 success. Один bounded observer раз300с, только
 необходимая containing main цепочка GitHub, без чатов/чужихPR.
+
+
+## 229. MC5.1.6 — содержащий main705: полная локальная приёмка зелёная
+
+307 CI завершился failure: auth2 compact pause flaky и auth4 два WebKit
+swipe flaky после Cancel (original430/compact390); встроенные retries прошли.
+Артефакты current307-auth2/auth4-failed.log, current307-auth4-diagnostics.
+Точная историческая причина rail-not-accessible без raw pointertrace неизвестна.
+Неизменённые два swipe cases×repeat5 прошли10/10 за22.529s,retry0/skip0.
+Предполагаемый контрольный --failed rerun307 НЕ выполнялся: перед ним
+обнаружен новыйmain70541773dae9a3623cdcc79b08414bf24eb02953 (PR2086).
+
+Reviewed307→705: client pause error теперь видим, старый pause test использует
+доступную закреплённую кнопку и проверяет четвёртый успешный повтор.
+Normal merge в owncheckout без конфликтов; runtime/e2e/package/config exact705.
+Наши двеCSS и10 public helpers/fixture exactf05→705. Build/types/fonts/startup
+passed.55unit из307 остаются применимыми к неизменённым модулям.
+
+Свежий расширенный набор705:144/144 browser,144attempts,retry0/skip0/flaky0,
+133.215s. Strict14cases/20states/20PNG baseline→705 exact, rawheight/scroll/
+focus/anchors/payload/destination прежние. Исторические143/144 и CI failures
+не переписываются и не объявляются зелёными.
+Артефакты /tmp/fit-mc516-current705-20261110.json/log/results,
+/tmp/fit-mc516-current705-comparison-20261110.json и review-20261110.json.
+
+Доставка ждёт штатную цепочку содержащегоmain705: CI42804320470,
+Android42804320635, затемweb/API/OTA. Старые release не перезапускаются.
+Readback gate сравнивает actual source с reviewed705; новое изменение
+затронутыхCSS/handlers/helpers остановит приёмку для нового review.
