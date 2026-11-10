@@ -9507,3 +9507,37 @@ Runtime/e2e/package/Playwright sourcef05→main292 побайтно совпад
 /tmp/fit-mc516-release/main-auth4-failed.log и main-auth4-diagnostics.
 После разбора запущен один --failed rerun неизменного main. Проверки
 плавности/таймауты/анимации не ослаблялись. Публикация до green не начинается.
+
+
+## 228. MC5.1.6 — актуальный содержащий main307 и интеграционная проверка
+
+Main продвинулся307f6424a57dc8380a7aaa04eae1c7284dd93962 (PR2085);
+CI292 attempt2 отменён штатным ci-main cancel-in-progress. Старый release
+не перезапускаем. Наш merge292 входит в307, CSSMC516 побайтно прежний.
+Reviewed diff: live-pause-recovery/WorkoutsPages сохраняют новый отдых при
+ошибке pause, новые role/density/order tests. Чужой PR не менялся.
+В own checkout normal merge711bda43, конфликты только в собственных docs:
+main-журнал точный prefix, CURRENT_STATE отличается только нашей строкой.
+Runtime/e2e/package/config после merge exact307. Локальные квитанции сохранены.
+
+Build/types/fonts/startup passed,55/55 unit. Расширенный browser набор:
+143/144 passed,0retry/skip/flaky; один timeout прежнего pause original second
+click4973, тот же attached→hidden handoff из225. Новые16 pause-race cases
+прошли. Наши14cases/20states/20PNG baseline→307 strict exact, включая
+raw focus/scroll/height/payload/link. Не объявлять общий144 зелёным.
+
+Отдельная /tmp-only диагностика сохраняет14 исходных outcome assertions
+и вместо второго generic click использует нынешний принятый путь:
+content-bottom→oldactions inert→page-header resume.click.20/20 (2engine,
+2density,repeat5),0retry/skip/failure,23.689sec. Дополнительно проверяется
+старый attached+hidden+inert ElementHandle и hit-test доступной dockкнопки.
+Runtime/тесты репозитория/таймауты/анимации не менялись; это доказательство
+доступного действия и причина QA-гонки, не замена исходной красной квитанции.
+
+Артефакты /tmp/fit-mc516-current307-20261110.json/log/results,
+/tmp/fit-mc516-current307-comparison-20261110.json,
+/tmp/fit-mc516-current307-unit.log, /tmp/fit-mc516-pause-diagnostic.
+Все10 public helpers/fixture иCSS exact307; metadata publicQA обновлена.
+Текущая доставка ждёт CI42798809580 и штатных web/API/OTA307 либо проверенного
+потомка. Android42798809759 success. Один bounded observer раз300с, только
+необходимая containing main цепочка GitHub, без чатов/чужихPR.
