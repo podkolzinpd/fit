@@ -9214,3 +9214,50 @@ Live-регрессии, unit/build/lint/fonts/docs и собственный PR
 Для MC515 собирать свежие артефакты; исторические зелёные прогоны не засчитывать.
 Физическое устройство и настоящий системный share не считать проверенными
 по браузерным тестам. Ни слияние, ни публикация этим поручением не разрешены.
+
+
+## 216. MC5.1.5 — реализация и локальная приёмка
+
+2026-11-10 — OpenAI. Проверенный product/QA commit e5c6c04b на main240dc6d6.
+Сделано:14 zero-specificity exclusions для legacy paint highlight/missing/muscles;
+11 слабых Lime-правил/20 деклараций. Neutral layout, сильные Lime overrides и
+общие потребители сохранены. React/API/данные/флаги/CI не изменялись.
+Source proof:25720 исходных declaration records и порядок одинаковы после
+снятия только14 точных новых guards; старый Lime byte-prefix сохранён.
+10 protected files byte-exact; в двух соседних QA probes добавлен только
+точный новый guard для распознавания общей button-family, assertions прежние.
+
+Новый helper проверяет client record/growth/partial/empty/loading/error/retry
+и реальный trainer unified finish с подтверждёнными фактами. Первый baseline
+имел14 QA failures: для массива backdrop ошибочно использовалась identity
+проверка toBe. Исправлено на точное структурное toEqual без изменения продукта.
+Первый лог сохранён; успешные4 trainer не повторялись в baseline. Повтор14client:
+12 ожидаемых ownership-red только в финальном assert и2 off-control passed;
+22 состояния прошли восстановление CSSOM/style objects/focus/scroll/anchors.
+
+Candidate:102/102 Chromium/WebKit,0 failures/skips/retries,2.3min. Включены
+74 completion/duration/share/PNG/error cases и28 Live regressions: undo,
+подтверждённый swipe/cancel/delete/reload, keyboardNext, collapse, hold/drag,
+pause clock, out-of-order/superset. Сравнение baseline→candidate:18cases,
+26states (22client+4trainer),26/26 PNG byte-exact; все стили/геометрия/сырые
+height/focus/scroll/anchors совпали. В error-cases ровно2 ожидаемых503,
+реальный Retry восстанавливает данные третьим запросом. Лишних ошибок нет.
+
+49 unit в6 suites passed; full lint и targeted изменённых helpers passed;
+оба production-like builds/types/startup/fonts2/2 passed; docs/diffcheck passed.
+Просмотрены clientpartial light375, growth dark430 WebKit и trainerresult WebKit.
+Trainer stored preferences light/dark проверены отдельно: текущая оболочка
+реально dark в обоих случаях. Это не доказательство отдельной светлой темы
+тренера и не повод менять её в очистке. Старые pilot trainer checks не подменяли
+modern unified flow; их исходники/assertions сохранены.
+
+Артефакты /tmp/fit-mc515-*-20261110: baseline-review.json, comparison.json,
+source-proof.json, candidate.json/log/results, unit/lint/build logs.
+Ранние два измерения MC514 остаются историческим замечанием, причина не
+установлена; свежий MC515 strict comparison прошёл без нормализации.
+Build имеет прежнее предупреждение о крупных chunks, ошибок сборки нет.
+Физический телефон/native install/настоящий системный share не проверены.
+
+Дальше: собственный PR/CI и сводка владельцу. Слияние/публикация запрещены
+до его отдельного разрешения. Проверка очереди требуется перед выпуском,
+сейчас чужие PR/чаты не опрашиваются. Следующий этап не начат.
