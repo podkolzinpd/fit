@@ -113,7 +113,7 @@ const trainerWorkspaceSchema = z.object({
   })),
 })
 const trainerFinancePackageSchema = z.object({
-  id: uuid, clientId: uuid, trainerId: uuid, kind: z.enum(['session_pack', 'online_coaching']), title: z.string(),
+  id: uuid, clientId: uuid, trainerId: uuid, kind: z.enum(['session_pack', 'online_coaching']), singleSession: z.boolean().optional(), title: z.string(),
   sessionsTotal: z.number().int().nonnegative(), sessionsUsed: z.number().int().nonnegative(),
   sessionsRemaining: z.number().int().nonnegative(), priceCents: z.number().int().nonnegative(),
   paidCents: z.number().int().nonnegative(), dueCents: z.number().int().nonnegative(),
@@ -173,7 +173,7 @@ const clientFinanceSchema = z.object({
     trainerName: z.string().min(1),
     packages: z.array(z.object({
       id: uuid,
-      kind: z.enum(['session_pack', 'online_coaching']),
+      kind: z.enum(['session_pack', 'online_coaching']), singleSession: z.boolean().optional(),
       title: z.string().min(1),
       sessionsTotal: z.number().int().nonnegative(),
       sessionsUsed: z.number().int().nonnegative(),
