@@ -126,3 +126,13 @@
   .fit-lime-shell.trainer-clients-identity .client-avatar { width: 36px; height: 36px }
   .fit-lime-shell.trainer-clients-identity .client-card-menu { margin-right: 5px }
 }
+
+/* CV201: compact photo rows; activity order and row actions stay unchanged. */
+.phone-frame.fit-lime-shell.trainer-clients-identity .clients-page > .page-header h1 { font-size: 14px; line-height: 20px; letter-spacing: 0; text-align: center; }
+.phone-frame.fit-lime-shell.trainer-clients-identity .clients-search { border: 0; border-bottom: 1px solid var(--lime-divider); border-radius: 0; background: transparent; min-height: 48px; }
+.phone-frame.fit-lime-shell.trainer-clients-identity .clients-list { gap: 0; }
+.phone-frame.fit-lime-shell.trainer-clients-identity .client-card { border: 0; border-bottom: 1px solid var(--lime-divider); border-radius: 0; background: var(--lime-bg); min-height: 64px; }
+.phone-frame.fit-lime-shell.trainer-clients-identity .client-swipe-row { border-radius: 0; background: transparent; }
+.phone-frame.fit-lime-shell.trainer-clients-identity .client-card-main { padding: 12px 0; min-height: 64px; gap: 12px; }
+.phone-frame.fit-lime-shell.trainer-clients-identity .client-avatar { flex: 0 0 40px; width: 40px; height: 40px; overflow: hidden; }
+.phone-frame.fit-lime-shell.trainer-clients-identity .client-chat-action { background: transparent; border-color: transparent; }
