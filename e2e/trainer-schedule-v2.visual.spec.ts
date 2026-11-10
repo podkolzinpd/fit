@@ -951,7 +951,7 @@ for (const width of [375, 390, 430, 1440]) test(`Figma workout Coach reference s
 
 })
 
-test('Figma workout Coach reference editor swipe replacement and deletion preserve the plan', async ({ page }) => {
+test('Figma workout Coach reference editor swipe replacement and deletion preserve the plan', async ({ page, browserName }, info) => {
   await page.setViewportSize({ width: 390, height: 932 })
   await mockPilot(page, { profileId: 'c0ac0000-6010-4000-8000-000000000002', fitLime: true, workouts: [] })
   const writes: string[] = []
@@ -969,6 +969,27 @@ test('Figma workout Coach reference editor swipe replacement and deletion preser
   await page.locator('.planned-exercise').first().getByLabel('Повторы, подход 1').fill('10')
   const planExercise = page.locator('.planned-exercise').first()
   await planExercise.getByRole('button', { name: 'Подход', exact: true }).click()
+  await planExercise.getByRole('button', { name: 'Ещё действия', exact: true }).click()
+  await expect(page.getByRole('menuitem', { name: 'Удалить подход', exact: true })).toBeDisabled()
+  await planExercise.getByLabel('Вес, подход 2').fill('29.5')
+  await planExercise.getByRole('button', { name: 'Подход', exact: true }).click()
+  await planExercise.getByLabel('Вес, подход 3').fill('32.5')
+  await planExercise.getByLabel('Повторы, подход 3').fill('6')
+  await planExercise.getByLabel('Вес, подход 2').click()
+  await planExercise.getByRole('button', { name: 'Ещё действия', exact: true }).click()
+  await expect(page.getByRole('menuitem', { name: 'Удалить упражнение', exact: true })).toBeVisible()
+  await page.screenshot({ path: info.outputPath('plan-set-delete-menu-lime.png') })
+  await page.getByRole('menuitem', { name: 'Удалить подход 2', exact: true }).click()
+  await page.getByRole('alertdialog').getByRole('button', { name: 'Отмена', exact: true }).click()
+  await expect(planExercise.locator('.planned-set')).toHaveCount(3)
+  await expect(planExercise.getByLabel('Вес, подход 2')).toHaveValue('29.5')
+  await planExercise.getByRole('button', { name: 'Ещё действия', exact: true }).click()
+  await page.getByRole('menuitem', { name: 'Удалить подход 2', exact: true }).click()
+  await page.screenshot({ path: info.outputPath('plan-set-delete-confirm-lime.png') })
+  await page.getByRole('alertdialog').getByRole('button', { name: 'Удалить подход', exact: true }).click()
+  await expect(planExercise.locator('.planned-set')).toHaveCount(2)
+  await expect(planExercise.getByLabel('Вес, подход 2')).toHaveValue('32.5')
+  await expect(planExercise.getByLabel('Повторы, подход 2')).toHaveValue('6')
   const planRow = planExercise.locator('.workout-set-swipe').nth(1)
   await expect(planExercise.locator('.planned-set-remove')).toHaveCount(0)
   expect((await planRow.locator('.planned-set-number').boundingBox())!.width).toBeGreaterThanOrEqual(44)
@@ -976,7 +997,20 @@ test('Figma workout Coach reference editor swipe replacement and deletion preser
   await planRow.getByRole('button', { name: /^Удалить подход 2:/ }).click()
   await page.getByRole('alertdialog').getByRole('button', { name: 'Отмена', exact: true }).click()
   await expect(planExercise.locator('.planned-set')).toHaveCount(2)
-  await revealCoachSetDelete(page, planRow)
+  if (browserName === 'chromium') {
+    const pan = await beginClientGesture(page, planRow, browserName, planRow.locator('.planned-set-number'))
+    const before = await page.locator('.content').evaluate(element => element.scrollTop)
+    await pan.move(0, before > 40 ? 80 : -80); await pan.end()
+    await expect.poll(() => page.locator('.content').evaluate((element, top) => Math.abs(element.scrollTop - top), before)).toBeGreaterThan(4)
+    await expect(planRow.locator('.workout-swipe-action')).toHaveCount(0)
+    await expect(planExercise.locator('.planned-set')).toHaveCount(2)
+  }
+  const field = planRow.getByLabel('Вес, подход 2')
+  const gesture = await beginClientGesture(page, planRow, browserName, field)
+  await gesture.move(60); await gesture.end()
+  await expect(field).not.toBeFocused()
+  await expect(planRow.getByRole('button', { name: /^Удалить подход 2:/ })).toBeVisible()
+  await page.screenshot({ path: info.outputPath('plan-set-delete-swipe-lime.png') })
   await planRow.getByRole('button', { name: /^Удалить подход 2:/ }).click()
   await page.getByRole('alertdialog').getByRole('button', { name: 'Удалить подход', exact: true }).click()
   await expect(planExercise.locator('.planned-set')).toHaveCount(1)
@@ -1039,7 +1073,10 @@ test('Coach copied plan replaces exercises, preserves values and retries a faile
   source.status = 'done'; source.completedAt = '2026-09-24T12:00:00Z'
   source.exercises[0]!.sets = [{ ...source.exercises[0]!.sets[0]!,
     weightKg: 20, reps: 8, fact: { weightKg: 27.5, reps: 10 }, confirmedAt: source.completedAt }]
-  await mockPilot(page, { profileId: 'c0ac0000-6010-4000-8000-000000000002', fitLime: true, workouts: [source] })
+  source.exercises[0]!.sets.push({ ...source.exercises[0]!.sets[0]!, id: 'a0000000-0000-4000-8000-000000000099',
+    position: 1, fact: { weightKg: 32.5, reps: 6 } })
+  const originalSets = structuredClone(source.exercises[0]!.sets)
+  const backend = await mockPilot(page, { profileId: 'c0ac0000-6010-4000-8000-000000000002', fitLime: true, workouts: [source] })
   const writes: Record<string, unknown>[] = []
   await page.route('**/v1/workouts', async route => {
     if (route.request().method() !== 'POST') return route.fallback()
@@ -1065,6 +1102,12 @@ test('Coach copied plan replaces exercises, preserves values and retries a faile
   await expect(picker).not.toBeVisible()
   await expect(card.getByLabel('Вес, подход 1', { exact: true })).toHaveValue('27.5')
   await expect(card.getByLabel('Повторы, подход 1', { exact: true })).toHaveValue('10')
+  await expect(card.getByLabel('Вес, подход 2', { exact: true })).toHaveValue('32.5')
+  await card.getByLabel('Вес, подход 2', { exact: true }).click()
+  await menu.click()
+  await page.getByRole('menuitem', { name: 'Удалить подход 2', exact: true }).click()
+  await page.getByRole('alertdialog').getByRole('button', { name: 'Удалить подход', exact: true }).click()
+  await expect(card.locator('.planned-set')).toHaveCount(1)
   await page.getByRole('button', { name: 'Сохранить план', exact: true }).click()
   await expect(page.getByRole('alert')).toContainText('Не удалось сохранить тренировку')
   const diagnosticButton = page.getByRole('alert').getByRole('button', { name: 'Скопировать диагностику' })
@@ -1075,6 +1118,7 @@ test('Coach copied plan replaces exercises, preserves values and retries a faile
   await page.screenshot({ path: info.outputPath('copied-plan-save-error.png') })
   await page.reload()
   await card.locator('.compact-editor-exercise-toggle').click()
+  await expect(card.locator('.planned-set')).toHaveCount(1)
   await expect(card.getByLabel('Вес, подход 1', { exact: true })).toHaveValue('27.5')
   await page.getByRole('button', { name: 'Сохранить план', exact: true }).click()
   await expect(page.locator('.workout-form-page')).not.toBeVisible()
@@ -1087,6 +1131,8 @@ test('Coach copied plan replaces exercises, preserves values and retries a faile
   expect(command.draft.exercises[0]!.ref).toBe('bench-press')
   expect(command.draft.exercises[0]).not.toHaveProperty('sourceExerciseId')
   expect(command.draft.exercises[0]!.sets[0]).not.toHaveProperty('sourceSetId')
+  expect(command.draft.exercises[0]!.sets).toHaveLength(1)
+  expect(backend.getWorkouts().find(item => item.id === workoutId)!.exercises[0]!.sets).toEqual(originalSets)
   await info.attach('copied-plan-command', { body: JSON.stringify(writes[0]), contentType: 'application/json' })
 })
 
