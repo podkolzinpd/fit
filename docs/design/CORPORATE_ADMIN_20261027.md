@@ -4076,3 +4076,38 @@ main, отправить один новый head и пройти fullCI/нас�
 Профильный pilot EMPTY/OFF, назначений/managementON нет. Отдельный grant
 прежнему закрытому тестовому тренеру допускается после actual обоих этапов;
 прежние независимые flags/права/офисы/данные/native1.1.4/code9 сохранены.
+
+
+### Итерация 100 нового выпуска — 2026-11-10 — Codex / OpenAI
+
+PR1/main4c684ae9 фактически принят09.11 в23:29:47UTC. Fullmain CI42716958992,
+buildAPI42716959670, API42720011651, web42720011981, signedOTA42720324681
+SUCCESS. Все244 публичных файла сверены по размеру/SHA и содержимому с
+official manifest. Оба API release/health/ready, DNS/TLS/anonymous401 PASS.
+OTA15983190байт, SHA eeb4465b519a177068e92cb711e91952e1576bc58d24ec119109e457c8052119;
+обе RSA подписи, source/ABI/code9, ZIP CRC и безопасные пути PASS. Web244/244
+байт-идентичен baseline8c51; OTA243/244, единственное отличие — sourceCommit
+в android-ota-build.json; остальные metadata идентичны. Поэтому переиспользованы
+30web+30OTA реальных browser случаев на неизменных bytes: новый прогон на4c68
+не выдумывается. Physical phone/OAuth не проверены. Профильный pilot OFF.
+
+Свежий GitHub00:30UTC: main4c68, все его публикации завершены, открыт только
+собственный2079. В UI checkout выполнен обычный merge реально опубликованного
+main, commit1a04d438. Шесть конфликтов — собственные добавочные docs/harness:
+сохранены локальные журналы98–99, актуальные контракты и реальный CorporateAdmin
+store в harness; все изменения чужих2075/2076/2077 сохранены. Итоговый diff к
+main содержит только UI/закрытый operator этого пакета и его проверки/документы.
+PR2079 явно retarget на main. Исправление c2de0f82 также сохранено в истории.
+Полный новый локальный check идёт до единственной отправки head; sourceCI и
+настоящий exact-head Android остаются обязательными. Merge/deploy второго
+этапа/новых назначений пока нет.
+
+
+Квитанция100: новый полный npm run check после интеграции main PASS.
+357 frontend files/3181tests (число уточнено по текущему коду), coverage
+83.18/78.17/82.12/88.02; API1628PASS/457 стандартных условных DB skips;
+lint/typecheck/iOS/media/infra/calendar/hosting/API и production builds PASS.
+Production browser21/21 новых (mock+native+visual) и2/2 прежних save-error/
+retry Chromium/WebKit PASS,0skip/flaky/retry. Native3 использует настоящий
+локальный PostgreSQL17/API; удалённые API/WS/external заблокированы.
+Native ABI8922d2e9…6cf9/version1.1.4/code9 не изменились. Пилот OFF.
