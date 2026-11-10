@@ -4842,18 +4842,19 @@ for (const entry of ['new', 'template', 'completed']) for (const theme of ['ligh
   expect(probes).toEqual(probes.map(probe => ({ state: probe.state, inherited: [] })))
 })
 
-for (const density of ['original', 'compact'] as const) test(`Coach confirms exercises out of order ${density}`, async ({ page }) => {
-  const id = 'c0ac0000-6010-4000-8000-000000000001'
-  await page.addInitScript(({ id, density }) => {
+// Both roles/densities have different retained card bodies and focus geometry.
+for (const role of ['trainer', 'client'] as const) for (const density of ['original', 'compact'] as const) test(`${role} confirms exercises out of order ${density}`, async ({ page }) => {
+  const id = role === 'trainer' ? 'c0ac0000-6010-4000-8000-000000000001' : pilotId
+  await page.addInitScript(({ id, density, role }) => {
     localStorage.setItem(`fit.liveExerciseAnimation.${id}`, 'false')
-    localStorage.setItem(`fit.coachLiveDensity.${id}`, density)
-  }, { id, density })
+    localStorage.setItem(`fit.${role === 'trainer' ? 'coach' : 'client'}LiveDensity.${id}`, density)
+  }, { id, density, role })
   await silenceLiveAudio(page)
   const source = coachGestureWorkout(false, 3)
-  const backend = await mockPilot(page, { role: 'trainer', profileId: id, clientLime: true, fitLime: true, workouts: [source], failFirstSetConfirm: true })
+  const backend = await mockPilot(page, { role, profileId: id, clientLime: true, fitLime: true, workouts: [source], failFirstSetConfirm: true })
   await page.goto(`/workouts/${workoutId}/live`)
   const cards = page.locator('.live-exercise')
-  const bodies = page.locator('.live-exercise > .coach-v79-card-body')
+  const bodies = page.locator('.live-exercise > :is(.coach-v79-card-body,.client-live-card-body)')
   await cards.nth(1).locator('button.coach-v79-card-toggle').click()
   const first = source.exercises[1]!.sets[0]!
   const failedResponse = page.waitForResponse(response => response.url().endsWith(`/workout-sets/${first.id}/confirm`) && response.status() >= 500)
@@ -4898,31 +4899,32 @@ async function silenceLiveAudio(page: Page) {
   })
 }
 
-for (const density of ['original', 'compact'] as const) test(`Coach confirms later superset round ${density}`, async ({ page }) => {
-  const id = 'c0ac0000-6010-4000-8000-000000000001'
-  await page.addInitScript(({ id, density }) => {
+// Both roles/densities have different retained card bodies and focus geometry.
+for (const role of ['trainer', 'client'] as const) for (const density of ['original', 'compact'] as const) test(`${role} confirms later superset round ${density}`, async ({ page }) => {
+  const id = role === 'trainer' ? 'c0ac0000-6010-4000-8000-000000000001' : pilotId
+  await page.addInitScript(({ id, density, role }) => {
     localStorage.setItem(`fit.liveExerciseAnimation.${id}`, 'false')
-    localStorage.setItem(`fit.coachLiveDensity.${id}`, density)
-  }, { id, density })
+    localStorage.setItem(`fit.${role === 'trainer' ? 'coach' : 'client'}LiveDensity.${id}`, density)
+  }, { id, density, role })
   await silenceLiveAudio(page)
   await page.clock.setFixedTime(new Date('2026-11-04T09:00:00Z'))
   const source = coachGestureWorkout(true, 4)
   source.exercises = [source.exercises[2]!, source.exercises[0]!, source.exercises[1]!, source.exercises[3]!]
   source.exercises.forEach((exercise, index) => { exercise.position = index })
-  const backend = await mockPilot(page, { role: 'trainer', profileId: id, clientLime: true, fitLime: true, workouts: [source] })
+  const backend = await mockPilot(page, { role, profileId: id, clientLime: true, fitLime: true, workouts: [source] })
   await page.goto(`/workouts/${workoutId}/live`)
   const group = page.locator('.exercise-block.live')
-  await group.locator('.coach-v79-circuit-heading').click()
+  await group.locator('.coach-v79-circuit-heading,.client-circuit-toggle').click()
   await group.locator('.circuit-round').nth(1).locator('.circuit-round-toggle').click()
-  const body = (exercise: number, round: number) => page.locator(`[data-live-card-key="round:${source.exercises[exercise + 1]!.sets[round]!.id}"] > .coach-v79-card-body`)
+  const body = (exercise: number, round: number) => page.locator(`[data-live-card-key="round:${source.exercises[exercise + 1]!.sets[round]!.id}"] > :is(.coach-v79-card-body,.client-live-card-body)`)
   for (const round of [1, 0]) for (const exercise of [0, 1]) {
     const set = source.exercises[exercise + 1]!.sets[round]!
     await expect(body(exercise, round)).not.toHaveAttribute('inert', '')
-    await expect(group.locator('[data-live-card-key] > .coach-v79-card-body:not([inert])')).toHaveCount(1)
+    await expect(group.locator('[data-live-card-key] > :is(.coach-v79-card-body,.client-live-card-body):not([inert])')).toHaveCount(1)
     await page.locator(`[data-live-set-id="${set.id}"]`).getByRole('button', { name: 'Готово, отдых', exact: true }).click()
     await expect.poll(() => backend.getWorkouts()[0]!.exercises.find(item => item.id === source.exercises[exercise + 1]!.id)!.sets[round]!.confirmedAt).not.toBeNull()
   }
-  await expect(group.locator(':scope > .coach-v79-circuit-body')).toHaveAttribute('inert', '')
+  await expect(group.locator(':scope > .coach-v79-circuit-body,:scope > .client-circuit-body')).toHaveAttribute('inert', '')
   await expect(page.locator('.live-session-progress-copy')).toContainText(source.exercises[3]!.name)
   expect(backend.getWorkouts()[0]!.exercises.find(item => item.id === source.exercises[0]!.id)!.sets.every(set => !set.confirmedAt)).toBe(true)
 })
