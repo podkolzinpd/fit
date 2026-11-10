@@ -17,7 +17,7 @@ test('each audience has distinct indexable HTML without requiring JavaScript', a
     assert.match(html, /<meta name="robots" content="index,follow">/)
     assert.equal([...html.matchAll(/<h1\b/g)].length, 1)
     assert.doesNotMatch(html, /<template\b/)
-    assert.equal([...html.matchAll(/<details>/g)].length, 3)
+    assert.equal([...html.matchAll(/<details>/g)].length, 4)
     const role = page === 'for-athletes' ? 'athlete' : 'trainer'
     assert.match(html, new RegExp(`<body[^>]*data-audience="${role}"`))
     assert.match(html, new RegExp(`data-audience="${role}" aria-current="page"`))
@@ -29,7 +29,11 @@ test('each audience has distinct indexable HTML without requiring JavaScript', a
     if (role === 'athlete') {
       assert.match(html, /дневник тренировок/)
       assert.match(html, /data-screen="technique"/)
-      assert.match(html, /athlete-home.webp/)
+      assert.match(html, /data-screen="trainer"/)
+      assert.match(html, /Можно ли найти тренера в ФИТ/)
+      assert.equal([...html.matchAll(/data-copy=/g)].length, 5)
+      assert.equal([...html.matchAll(/data-step=/g)].length, 5)
+      assert.match(html, /athlete-trainer-search.png/)
       assert.doesNotMatch(html, /data-placement="trainer-page"|motion-schedule-day.webp/)
     }
   }

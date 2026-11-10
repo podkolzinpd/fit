@@ -1,3 +1,4 @@
+import type { TrainerFinanceClientBundle } from '../trainer-finance.js'
 import { S3Client, DeleteObjectCommand } from '@aws-sdk/client-s3'
 import { DatabasePilotCustomExercisePhotos } from '../custom-exercise-photo.js'
 import { YandexMediaObjectStorage } from '../object-storage-media.js'
@@ -589,6 +590,39 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
     let ownerPool: Pool | undefined
     let enrollmentPool: PgDatabasePool | undefined
     let runtimePool: PgDatabasePool | undefined
+
+    it.each([[0,0],[20000,0],[20000,5000],[20000,20000]])('atomically records a single service at price %i paid %i with replay and rollback', async (price,paid) => {
+      if (!ownerPool || !runtimePool) throw new Error('Database not ready')
+      const card=randomUUID(), workout=randomUUID(), operation=randomUUID()
+      const command=(id:string, cost:number, received:number, actor=ACTOR_ID, version=1) => withActorTransaction(runtimePool!,actor,
+        db=>db.query('select * from public.finish_single_trainer_workout($1,$2,$3,$4,$5,current_date)',[workout,version,id,cost,received]))
+      await ownerPool.query("insert into public.clients(id,trainer_id,full_name) values($1,$2,'Synthetic single client')",[card,ACTOR_ID])
+      await ownerPool.query("insert into public.workouts(id,trainer_id,client_id,created_by,workout_date,status,training_format) values($1,$2,$3,$2,current_date,'planned','with_trainer')",[workout,ACTOR_ID,card])
+      try {
+        await expect(command(randomUUID(),price,paid,OUTSIDE_TRAINER_ID)).rejects.toThrow()
+        await expect(command(randomUUID(),price,paid,ACTOR_ID,99)).rejects.toThrow()
+        expect((await ownerPool.query('select id from public.trainer_finance_packages where client_id=$1',[card])).rows).toHaveLength(0)
+        const first=await command(operation,price,paid)
+        expect(first[0]).toMatchObject({replayed:false})
+        expect((await command(operation,price,paid))[0]).toMatchObject({replayed:true})
+        await expect(command(operation,price+1,paid)).rejects.toThrow()
+        const bundle=(await withActorTransaction(runtimePool,ACTOR_ID,db=>db.query<{result:TrainerFinanceClientBundle}>(
+          'select public.list_trainer_finance_client_v2($1) as result',[card])))[0]!.result
+        expect(bundle.packages).toHaveLength(1)
+        expect(bundle.packages[0]).toMatchObject({singleSession:true,priceCents:price,paidCents:paid,dueCents:price-paid,sessionsUsed:1,sessionsRemaining:0})
+        expect(bundle.payments).toHaveLength(paid>0?1:0)
+        expect(bundle.sessions.filter(x=>x.voidedAt===null)).toHaveLength(1)
+      } finally {
+        await ownerPool.query('delete from public.trainer_finance_events where client_id=$1',[card])
+        await ownerPool.query('delete from public.trainer_finance_payments where package_id in (select id from public.trainer_finance_packages where client_id=$1)',[card])
+        await ownerPool.query('delete from public.trainer_finance_sessions where client_id=$1',[card])
+        await ownerPool.query('delete from public.trainer_finance_packages where client_id=$1',[card])
+        await ownerPool.query('delete from public.workouts where id=$1',[workout])
+        await ownerPool.query('delete from public.clients where id=$1',[card])
+        await ownerPool.query('delete from app_private.finance_payment_requests where request_id=$1',[operation])
+        await ownerPool.query('delete from app_private.live_workout_operations where resource_id=$1',[workout])
+      }
+    })
 
     it('reschedules every coach lifecycle state with interval, replay, facts and charged finance intact', async () => {
       if (!ownerPool || !runtimePool) throw new Error('Database not ready')

@@ -5131,3 +5131,122 @@ for (const group of [false, true]) for (const order of ['pause-first', 'set-firs
     expect(setRequests).toBe(2)
   } finally { releasePause(); releaseSet() }
 })
+
+// Roles have different pause/rest controls; densities use different docking geometry.
+// The phase arithmetic is shared: client variants exercise the same shift handler.
+
+for (const role of ['trainer','client'] as const) for (const density of ['original','compact'] as const) {
+ test(`Live paused clock rest picker ${role} ${density}`,async({page},info)=>{
+  await silenceLiveAudio(page)
+  const now=Date.parse('2026-10-08T09:02:00Z'), paused=now-60000
+  await page.clock.setFixedTime(new Date(now))
+  const id=role==='trainer'?'c0ac0000-6010-4000-8000-000000000001':pilotId
+  const source=Object.assign(coachGestureWorkout(false,3),{startedAt:'2026-10-08T09:00:00Z',pausedAt:new Date(paused).toISOString(),pausedSeconds:0})
+  await page.addInitScript(({id,role,density,workoutId,paused})=>{
+   localStorage.setItem(`fit.${role==='trainer'?'coach':'client'}LiveDensity.${id}`,density)
+   sessionStorage.setItem(`fit:live-rest-until:${workoutId}`,String(paused+90000))
+  },{id,role,density,workoutId,paused})
+  await mockPilot(page,{role,profileId:id,clientLime:true,fitLime:true,workouts:[source]})
+  await page.goto(`/workouts/${workoutId}/live`)
+  await page.locator('.live-rest-trigger').filter({visible:true}).first().dispatchEvent('contextmenu')
+  const dialog=page.getByRole('dialog',{name:'Таймер отдыха',exact:true})
+  await dialog.getByRole('button',{name:'1:00',exact:true}).click()
+  await dialog.getByRole('button',{name:'Применить время · 1:00',exact:true}).click()
+  const deadline=await page.evaluate(id=>Number(sessionStorage.getItem(`fit:live-rest-until:${id}`)),workoutId)
+  await page.screenshot({path:info.outputPath('paused-rest.png')})
+  expect(deadline-paused).toBe(60000)
+  await page.locator('.live-rest-trigger').filter({visible:true}).first().dispatchEvent('contextmenu')
+  await dialog.getByRole('button',{name:'Плюс 15 секунд',exact:true}).click()
+  await dialog.getByRole('button',{name:'Минус 15 секунд',exact:true}).click()
+  await page.clock.setFixedTime(new Date(now + 120000))
+  expect(await page.evaluate(id=>Number(sessionStorage.getItem(`fit:live-rest-until:${id}`)),workoutId)).toBe(paused+60000)
+  await dialog.getByRole('button',{name:'Остановить отдых',exact:true}).click()
+  expect(await page.evaluate(id=>sessionStorage.getItem(`fit:live-rest-until:${id}`),workoutId)).toBeNull()
+ })
+}
+for (const density of ['original','compact'] as const) test(`Live paused clock work adjustment ${density}`,async({page},info)=>{
+ await silenceLiveAudio(page)
+ const now=Date.parse('2026-10-08T09:02:00Z'),paused=now-60000
+ await page.clock.setFixedTime(new Date(now))
+ const source=Object.assign(restTimerWorkout(0,true,'manual'),{startedAt:'2026-10-08T09:00:00Z',pausedAt:new Date(paused).toISOString(),pausedSeconds:0})
+ const phase={kind:'work',manual:true,setId:source.exercises[0]!.sets[0]!.id,startedAt:paused-10000,endsAt:paused+20000}
+ await page.addInitScript(({workoutId,phase,density,id})=>{
+  sessionStorage.setItem(`fit:live-phase:${workoutId}`,JSON.stringify(phase))
+  localStorage.setItem(`fit.clientLiveDensity.${id}`,density)
+ },{workoutId,phase,density,id:pilotId})
+ await mockPilot(page,{role:'client',profileId:pilotId,clientLime:true,workouts:[source]})
+ await page.goto(`/workouts/${workoutId}/live`)
+ await page.locator('.live-rest-trigger').filter({visible:true}).first().dispatchEvent('contextmenu')
+ const dialog=page.getByRole('dialog')
+ await dialog.getByRole('button',{name:'Минус 15 секунд',exact:true}).click()
+ const actual=await page.evaluate(id=>(JSON.parse(sessionStorage.getItem(`fit:live-phase:${id}`)!) as { endsAt: number }),workoutId)
+ await page.screenshot({path:info.outputPath('paused-work.png')})
+ expect(actual.endsAt-paused).toBe(5000)
+ await dialog.getByRole('button',{name:'Минус 15 секунд',exact:true}).click()
+ expect(await page.evaluate(id=>(JSON.parse(sessionStorage.getItem(`fit:live-phase:${id}`)!) as { endsAt: number }).endsAt,workoutId)).toBe(paused+1000)
+ await dialog.getByRole('button',{name:'Плюс 15 секунд',exact:true}).click()
+ expect(await page.evaluate(id=>(JSON.parse(sessionStorage.getItem(`fit:live-phase:${id}`)!) as { endsAt: number }).endsAt,workoutId)).toBe(paused+16000)
+ // Wall time while paused neither expires nor confirms the manually timed set.
+ await page.clock.setFixedTime(new Date(now+120000))
+ expect(await page.evaluate(id=>(JSON.parse(sessionStorage.getItem(`fit:live-phase:${id}`)!) as { endsAt: number }).endsAt,workoutId)).toBe(paused+16000)
+})
+
+// Distinct trainer/client controls and both dock geometries must expose the same error.
+for (const role of ['trainer','client'] as const) for (const density of ['original','compact'] as const) {
+ test(`Live pause error follows controls ${role} ${density}`,async({page},info)=>{
+  await silenceLiveAudio(page)
+  await page.clock.setFixedTime(new Date('2026-10-08T09:02:00Z'))
+  const id=role==='trainer'?'c0ac0000-6010-4000-8000-000000000001':pilotId
+  await page.addInitScript(({id,role,density})=>localStorage.setItem(`fit.${role==='trainer'?'coach':'client'}LiveDensity.${id}`,density),{id,role,density})
+  const source=Object.assign(coachGestureWorkout(false,4),{startedAt:'2026-10-08T09:00:00Z'})
+  await mockPilot(page,{role,profileId:id,clientLime:true,fitLime:true,workouts:[source]})
+  let fail = true
+  await page.route(`**/v1/workouts/${workoutId}/pause`,route=> fail ? route.fulfill({status:503,json:{error:'service_unavailable'}}) : route.fallback())
+  await page.goto(`/workouts/${workoutId}/live`)
+  await expect(page.locator('.live-session-progress-copy')).toContainText(source.exercises[0]!.name)
+  await page.locator('.content').evaluate(e=>{e.scrollTop=e.scrollHeight;e.dispatchEvent(new Event('scroll'))})
+  await expect(page.locator('.coach-v79-actions')).toHaveAttribute('inert','')
+  const position = await page.locator('.content').evaluate(e=>e.scrollTop)
+  await page.locator('.page-header').getByRole('button',{name:/^Поставить тренировку на паузу/}).click()
+  const error=page.getByRole('alert').filter({hasText:'Не удалось поставить тренировку на паузу'})
+  await expect(error).toBeVisible()
+  await page.screenshot({path:info.outputPath('audit-pause-error-dock.png')})
+  await expect(error).toHaveCount(1)
+  expect(Math.abs(await page.locator('.content').evaluate(e=>e.scrollTop)-position)).toBeLessThan(2)
+  await expect(error).toBeInViewport()
+  await page.locator('.content').evaluate(e=>{e.scrollTop=0;e.dispatchEvent(new Event('scroll'))})
+  await expect(page.locator('.coach-v79-actions')).not.toHaveAttribute('inert','')
+  await expect(error).toHaveCount(1)
+  await expect(error).toBeInViewport()
+  await page.screenshot({path:info.outputPath('pause-error-hero.png')})
+  const input = page.locator('.live-set-input').first()
+  await input.fill('25')
+  await page.setViewportSize({width:390,height:450})
+  await expect(input).toBeFocused()
+  await expect(input).toBeInViewport()
+  // Resizing moves the alert between hero and portal. Measure both in one
+  // rendered frame instead of retaining an element while React replaces it.
+  await expect.poll(() => page.evaluate(() => {
+   const field = document.querySelector<HTMLElement>('.live-set-input')
+   const messages = [...document.querySelectorAll<HTMLElement>('[role="alert"]')].filter(e => e.textContent?.includes('Не удалось поставить тренировку на паузу'))
+   if (!field || document.activeElement !== field || messages.length !== 1) return false
+   const f = field.getBoundingClientRect(), m = messages[0]!.getBoundingClientRect()
+   return f.width > 0 && f.height > 0 && m.width > 0 && m.height > 0
+    && m.top >= 0 && m.bottom <= window.innerHeight
+    && (f.top >= m.bottom || f.bottom <= m.top)
+  })).toBe(true)
+  await input.press('Enter')
+  // Enter means Next, not Done: finish editing before restoring the viewport.
+  const nextInput = page.locator('.live-set-input').nth(1)
+  await expect(nextInput).toBeFocused()
+  await expect(nextInput).toBeInViewport()
+  await nextInput.blur()
+  await expect(nextInput).not.toBeFocused()
+  await page.setViewportSize({width:390,height:844})
+  await page.locator('.content').evaluate(e=>{e.scrollTop=0;e.dispatchEvent(new Event('scroll'))})
+  await expect(page.locator('.coach-v79-actions')).not.toHaveAttribute('inert','')
+  fail = false
+  await page.locator('.coach-v79-actions').getByRole('button',{name:/^Поставить тренировку на паузу/}).click()
+  await expect(error).toHaveCount(0)
+ })
+}

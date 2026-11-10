@@ -185,3 +185,14 @@ describe('versioned Live set removal', () => {
     }
   })
 })
+
+it('accepts explicit single-service attendance and rejects invented money or mixed accounting', () => {
+  const base = {operationId,expectedVersion:1,attendance:{disposition:'unassigned',packageId:null,
+    singleService:{priceCents:20000,paidCents:5000,receivedOn:'2026-11-10'}}}
+  expect(readFinishWorkoutRequest(base)).toEqual(base)
+  for (const singleService of [{priceCents:20000,paidCents:20001,receivedOn:'2026-11-10'},
+    {priceCents:null,paidCents:0,receivedOn:'2026-11-10'},
+    {priceCents:0,paidCents:0,receivedOn:'2026-02-30'}])
+    expect(readFinishWorkoutRequest({...base,attendance:{...base.attendance,singleService}})).toBeUndefined()
+  expect(readFinishWorkoutRequest({...base,attendance:{...base.attendance,disposition:'free'}})).toBeUndefined()
+})

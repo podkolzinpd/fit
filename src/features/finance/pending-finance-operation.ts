@@ -5,7 +5,7 @@ const comment = z.string().nullable()
 const cents = z.number().int().min(0).max(100000000000)
 const envelope = { requestId: z.uuid(), attempts: z.number().int().nonnegative() }
 export const pendingPackageSchema = z.object({ ...envelope,
-  draft: z.object({ kind: z.enum(['session_pack', 'online_coaching']), title: z.string(),
+  draft: z.object({ kind: z.enum(['session_pack', 'online_coaching']), singleSession: z.boolean().optional(), title: z.string(),
     sessionsTotal: z.number().int(), openingUsedSessions: z.number().int(), priceCents: cents,
     openingPaidCents: cents, openingReceivedOn: date.optional(), startsOn: date,
     endsOn: date.nullable(), paymentDueOn: date.nullable(), comment }),
