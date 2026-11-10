@@ -5027,7 +5027,11 @@ for (const role of ['trainer', 'client'] as const) for (const density of ['origi
     await expect(pause).toHaveAttribute('aria-pressed', 'true')
     // Frozen at 09:01:00: a new 90s rest ends at 09:02:30, not the old 09:01:30.
     await expect.poll(savedDeadline).toBe(Date.parse('2026-10-08T09:02:30Z'))
-    await pause.click()
+    // Confirmation scrolls to its row. Use the pinned control explicitly;
+    // auto-scrolling the fading large copy races the sticky handoff.
+    await page.locator('.content').evaluate(element => { element.scrollTop = element.scrollHeight; element.dispatchEvent(new Event('scroll')) })
+    await expect(page.locator('.coach-v79-actions')).toHaveAttribute('inert', '')
+    await page.locator('.page-header').getByRole('button', { name: /^Продолжить тренировку/ }).click()
     await expect(pause).toBeEnabled()
     await expect(pause).toHaveAttribute('aria-pressed', 'false')
     expect(await savedDeadline()).toBe(Date.parse('2026-10-08T09:03:30Z'))
