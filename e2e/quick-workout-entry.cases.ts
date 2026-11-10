@@ -248,6 +248,11 @@ export function quickWorkoutEntryCases() {
       for(const width of [320,390,430,1440]){
         await page.setViewportSize({width,height:844})
         expect(await booking.evaluate(node=>node.scrollWidth<=node.clientWidth)).toBe(true)
+        expect(await booking.getByRole('heading',{name:'Записать клиента',exact:true}).evaluate(node=>node.scrollWidth<=node.clientWidth+1)).toBe(true)
+        const headingBox=(await booking.getByRole('heading',{name:'Записать клиента',exact:true}).boundingBox())!
+        const closeBox=(await booking.getByRole('button',{name:'Закрыть запись',exact:true}).boundingBox())!
+        expect(closeBox.width).toBeGreaterThanOrEqual(44)
+        expect(headingBox.x+headingBox.width).toBeLessThanOrEqual(closeBox.x-8)
         for(const button of await booking.getByRole('group',{name:'Формат тренировки'}).getByRole('button').all())expect((await button.boundingBox())!.height).toBeGreaterThanOrEqual(44)
         await page.screenshot({path:info.outputPath(`booking-online-${width}.png`)})
       }
