@@ -4,7 +4,7 @@ import {runner} from 'node-pg-migrate'
 import {Pool,type QueryResultRow} from 'pg'
 import {readOwnProfile} from '../profile.js'
 import {afterAll,beforeAll,describe,expect,it} from 'vitest'
-import {planAthleteRestore,applyAthleteRestore,verifyAthleteRestore,type AthletePair,type AthletePlan} from '../../../../scripts/cloudru-athlete-access-restore.mjs'
+import {planAthleteRestore,applyAthleteRestore,verifyAthleteRestore,planAthleteRestoreFromEvidence,type AthletePair,type AthletePlan} from '../../../../scripts/cloudru-athlete-access-restore.mjs'
 const source=process.env.TEST_DATABASE_URL
 const database=`fit_athlete_restore_${process.pid}`
 describe.skipIf(source===undefined)('proven athlete card access preserves both profiles and all history with real RLS',()=>{
@@ -75,7 +75,18 @@ describe.skipIf(source===undefined)('proven athlete card access preserves both p
   return {id,message}
  }
  it('changes only one card owner; keeps 21 done + active workout, decimal facts, both profiles and new private history',async()=>{
-  const f=await fixture(),p=await plan(f)
+  const f=await fixture(),message='Synthetic authenticated restoration evidence',feedback=randomUUID()
+  await owner.query(`insert into public.app_feedback(id,user_id,account_role,kind,message,screen_path,app_version,display_mode,user_agent)
+    values($1,$2,'client','problem',$3,'/synthetic','synthetic','browser','synthetic')`,[feedback,f.currentId,message])
+  const c=await owner.connect()
+  let p:AthletePlan
+  const targets=JSON.stringify({historicalProfileId:f.legacyId,trainerProfileId:f.trainerId})
+  const evidence=JSON.stringify({idSha256:createHash('sha256').update(feedback).digest('hex'),messageSha256:createHash('sha256').update(message).digest('hex')})
+  try{
+   await expect(planAthleteRestoreFromEvidence(c,targets,JSON.stringify({idSha256:createHash('sha256').update(feedback).digest('hex'),messageSha256:'0'.repeat(64)}))).rejects.toThrow('feedback_mismatch')
+   p=await planAthleteRestoreFromEvidence(c,targets,evidence)
+  }finally{c.release()}
+  expect(p.pair).toEqual({legacyId:f.legacyId,currentId:f.currentId,trainerId:f.trainerId})
   expect(p.ready).toBe(true)
   expect(p.report).toMatchObject({repairReady:true,uncoveredOldData:[]})
   await expect(verify(p)).rejects.toThrow('runtime_own_profile')

@@ -721,3 +721,59 @@ passed; infra433/434, единственный прежний Mac mock curl401. 
 не объявляется зелёным. Оставшиеся calendar/hosting/API1575passed/336skipped
 и оба build прошли отдельно. Product/API/SQL не меняются; отдельный local
 DB/browser прогон не добавляется. Exact-head CI после push — в PR.
+
+
+### SB-NATIVE-OPS-02 — nutrition diagnostic и athlete restore — 10.11.2026
+
+Итерация — 2026-11-10 — Codex / OpenAI. Задача: по команде владельца убрать
+следующие Supabase consumers. Основа main70541773; отдельная ветка.
+Удаляются inspect-nutrition-pilot.yml и его source Auth/Yandex rollout inspector.
+Native preparation использовал оттуда readNutritionAccounts: сам валидатор
+перенесён в существующий prepare-nutrition-native-cohort.mjs без изменения
+fingerprints, normalization, состава cohort или runtime-допусков.
+
+Решение SB-NATIVE-OPS-02: restore-athlete-access сохраняет plan/apply/verify,
+но больше не перечисляет Supabase Auth users и не получает source credentials.
+Новый закрытый FIT_ATHLETE_RESTORE_TARGETS содержит ровно historicalProfileId
+и trainerProfileId: два разных заранее подтверждённых существующих native UUID.
+Текущий athlete actor по-прежнему определяется только через точный authenticated
+feedback в FIT_ACCOUNT_HISTORY_EVIDENCE, с проверкой message marker и роли.
+Нативные SQL guards повторно проверяют все три профиля, canonical card,
+identity origin, связь и private history; apply/verify и schema2 не меняются.
+
+Расхождение: старый target был email-hash lookup через внешний Auth. Новый
+источник — явно подтверждённая native пара, по прежнему native restore pattern.
+Перед будущим новым plan требуется отдельная настройка закрытого target;
+значения/egress не разрешаются автоматически этой кодовой правкой. Секреты
+не читались и не менялись. Старые приватные apply/verify планы совместимы.
+Отвергнуто: выбирать текущего actor по произвольному UUID или имени,
+отменять feedback proof, удалять полезное восстановление или переписывать
+общий history audit (он всё ещё сравнивает source данные для других операций).
+
+Соответствие тестов: 8 native cohort/release/migration cases из прежнего
+inspect-nutrition-pilot.test.mjs сохранены в prepare-nutrition-native-cohort.test.mjs.
+Остальные 9 случаев проверяли только удалённый inspector/registry/старый rollout;
+заменяющего контракта нет. Два новых unit cases проверяют строгий native target
+и отказ profile-only evidence до inventory. Существующий PostgreSQL happy path
+расширен реальным feedback resolution и отказом неверного marker; остальные
+история/чат/RLS/rollback cases сохранены. Матрицы/timeouts/retries/gates прежние.
+
+Проверка: 16 целевых unit/policy passed. Полный check, PostgreSQL/RLS и exact-head
+CI ещё гейты; результаты будут дописаны после выполнения. Production операции,
+restore, data writes, deployments и удаление remote Supabase не выполняются.
+Открыто: остальные source consumers/rollback остаются в инвентаре выше.
+
+
+Локальная проверка 10.11:16 целевых tests passed; YAML/Bash, docs/archive,
+diff-check и migration safety0SQL passed. Общий check:lint/typecheck passed,
+frontend3182passed/6failed (5timeouts и1assertion в двух неизменённых файлах);
+оба набора изолированно76/76passed без retries/изменения timeout.
+Infra476/477: прежний Mac mock-curl тест вызывает реальный HTTP и падает;
+этот файл не менялся. Calendar policy и hosting205 passed; API lint/typecheck
+passed,1627passed/1bundle-timeout/457conditional skips. Изолированный bundle
+9/9passed и API build passed. Полный host check не объявляется зелёным.
+Новый DB-case локально не исполнялся: отсутствовала Podman VM; подготовленная
+тестовая VM не стала доступной (SSH handshake reset). Production не использован;
+реальный PostgreSQL/RLS прогон остаётся обязательным CI-гейтом.
+
+Frontend production build/startup passed. Exact-head CI после push — в PR.

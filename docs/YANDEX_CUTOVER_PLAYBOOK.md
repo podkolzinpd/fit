@@ -89,6 +89,15 @@ SB-PILOT-MANAGER-RETIRE-01 удаляет ручной workflow, который 
 и исторические SQL сохранены для остальных consumers. Это не запуск remote
 изменений и не изменение текущего пользовательского допуска.
 
+## Native ops cleanup — 10.11.2026
+
+SB-NATIVE-OPS-02 удаляет старую nutrition pilot диагностику и Supabase Auth
+lookup из restore-athlete-access. Native cohort preparation сохранён; athlete
+restore принимает закрытую подтверждённую native пару и прежнее feedback proof
+текущего входа. Plan/apply/verify, backup, история и RLS прежние. Перед новым
+plan нужна отдельно согласованная настройка target, существующие планы совместимы.
+Secrets/data/remote ресурсы не изменены. [Контракт и проверки](design/SUPABASE_DECOMMISSION_PLAN_20261023.md#sb-native-ops-02--nutrition-diagnostic-и-athlete-restore--10112026).
+
 ## Общая методика продуктовой разработки
 
 ### Точечное восстановление подтверждённой связи — YAFIT-701
