@@ -4907,24 +4907,73 @@ for (const role of ['trainer', 'client'] as const) for (const density of ['origi
   await page.clock.setFixedTime(new Date('2026-11-04T09:00:00Z'))
   const source = coachGestureWorkout(true, 4)
   source.exercises = [source.exercises[2]!, source.exercises[0]!, source.exercises[1]!, source.exercises[3]!]
-  source.exercises.forEach((exercise, index) => { exercise.position = index })
+  source.exercises.forEach((exercise, index) => { exercise.position = index; exercise.restBetweenExercisesSec = 0; exercise.restBetweenRoundsSec = 90 })
   const backend = await mockPilot(page, { role, profileId: id, clientLime: true, fitLime: true, workouts: [source] })
   await page.goto(`/workouts/${workoutId}/live`)
   const group = page.locator('.exercise-block.live')
-  await group.locator('.coach-v79-circuit-heading').click()
+  await group.locator('.coach-v79-circuit-heading,.client-circuit-toggle').click()
   await group.locator('.circuit-round').nth(1).locator('.circuit-round-toggle').click()
   const body = (exercise: number, round: number) => page.locator(`[data-live-card-key="round:${source.exercises[exercise + 1]!.sets[round]!.id}"] > :is(.coach-v79-card-body,.client-live-card-body)`)
   for (const round of [1, 0]) for (const exercise of [0, 1]) {
     const set = source.exercises[exercise + 1]!.sets[round]!
     await expect(body(exercise, round)).not.toHaveAttribute('inert', '')
-    await expect(group.locator('[data-live-card-key] > .coach-v79-card-body:not([inert])')).toHaveCount(1)
+    await expect(group.locator('[data-live-card-key] > :is(.coach-v79-card-body,.client-live-card-body):not([inert])')).toHaveCount(1)
     await page.locator(`[data-live-set-id="${set.id}"]`).getByRole('button', { name: 'Готово, отдых', exact: true }).click()
     await expect.poll(() => backend.getWorkouts()[0]!.exercises.find(item => item.id === source.exercises[exercise + 1]!.id)!.sets[round]!.confirmedAt).not.toBeNull()
     const deadline = await page.evaluate(id => sessionStorage.getItem(`fit:live-rest-until:${id}`), workoutId)
     if (exercise === 0) expect(deadline).toBeNull()
     else expect(Number(deadline) - await page.evaluate(() => Date.now())).toBe(90_000)
   }
-  await expect(group.locator(':scope > .coach-v79-circuit-body')).toHaveAttribute('inert', '')
+  await expect(group.locator(':scope > .coach-v79-circuit-body,:scope > .client-circuit-body')).toHaveAttribute('inert', '')
   await expect(page.locator('.live-session-progress-copy')).toContainText(source.exercises[3]!.name)
   expect(backend.getWorkouts()[0]!.exercises.find(item => item.id === source.exercises[0]!.id)!.sets.every(set => !set.confirmedAt)).toBe(true)
+})
+
+// Distinct density controls must show rollback without remounting the active editor.
+for (const density of ['original', 'compact'] as const) test(`client pause failure restores timers and reads committed resume ${density}`, async ({ page }) => {
+  await silenceLiveAudio(page)
+  await page.clock.setFixedTime(new Date('2026-10-08T09:02:00Z'))
+  const source = Object.assign(restTimerWorkout(0, true), {
+    startedAt: '2026-10-08T09:00:00Z', pausedAt: '2026-10-08T09:01:00Z', pausedSeconds: 0,
+  })
+  const deadline = Date.parse('2026-10-08T09:02:30Z')
+  await page.addInitScript(({ id, deadline, profile, density }) => {
+    sessionStorage.setItem(`fit:live-rest-until:${id}`, String(deadline))
+    localStorage.setItem(`fit.clientLiveDensity.${profile}`, density)
+  }, { id: workoutId, deadline, profile: pilotId, density })
+  const backend = await mockPilot(page, { role: 'client', profileId: pilotId, clientLime: true, workouts: [source] })
+  let attempt = 0
+  await page.route(`**/v1/workouts/${workoutId}/pause`, async route => {
+    attempt += 1
+    const { paused } = route.request().postDataJSON() as { paused: boolean }
+    const workout = backend.getWorkouts()[0]!
+    if (attempt === 2) {
+      const now = await page.evaluate(() => Date.now())
+      workout.pausedSeconds = (workout.pausedSeconds ?? 0) + Math.round((now - Date.parse(workout.pausedAt!)) / 1000)
+      workout.pausedAt = undefined
+      workout.version += 1
+    }
+    // First and third commands fail before commit; second commits but loses its response.
+    expect(paused).toBe(attempt === 3)
+    await route.fulfill({ status: 503, json: { error: 'service_unavailable' } })
+  })
+  await page.goto(`/workouts/${workoutId}/live`)
+  const pause = page.getByRole('button', { name: /^(Продолжить тренировку|Поставить тренировку на паузу)/ }).filter({ visible: true }).first()
+  const savedDeadline = () => page.evaluate(id => Number(sessionStorage.getItem(`fit:live-rest-until:${id}`)), workoutId)
+  await expect(pause).toHaveAttribute('aria-pressed', 'true')
+  await pause.click()
+  await expect(pause).toBeEnabled()
+  await expect(pause).toHaveAttribute('aria-pressed', 'true')
+  expect(await savedDeadline()).toBe(deadline)
+  await pause.click()
+  await expect(pause).toBeEnabled()
+  await expect(pause).toHaveAttribute('aria-pressed', 'false')
+  expect(await savedDeadline()).toBe(deadline + 60_000)
+  expect(backend.getWorkouts()[0]!.pausedSeconds).toBe(60)
+  await pause.click()
+  await expect(pause).toBeEnabled()
+  await expect(pause).toHaveAttribute('aria-pressed', 'false')
+  expect(await savedDeadline()).toBe(deadline + 60_000)
+  expect(attempt).toBe(3)
+  expect(backend.getWorkouts()[0]!.exercises.every(exercise => exercise.sets.every(set => !set.confirmedAt))).toBe(true)
 })

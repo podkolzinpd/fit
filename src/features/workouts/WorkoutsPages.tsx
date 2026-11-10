@@ -3349,7 +3349,7 @@ export function LiveWorkoutPage() {
   // используем встроенный диалог в панели вместо нативного confirm.
   const [confirmFinish, setConfirmFinish] = useState(false)
   const [restEndsAt, setRestEndsAt] = useState<number | null>(null)
-  const coachPausePending = useRef(false)
+  const livePausePending = useRef(false)
   const [referenceRestActive, setReferenceRestActive] = useState(false)
   const [restContextExerciseId, setRestContextExerciseId] = useState<string | null>(null)
   const [restPickerSeconds, setRestPickerSeconds] = useState(90)
@@ -3710,7 +3710,7 @@ export function LiveWorkoutPage() {
     setRestEndsAt(endsAt)
     storeRestDeadline(workoutId, endsAt)
     inactivityReminder.noteActivity(endsAt)
-    if (endsAt !== null && endsAt > Date.now() && (!coachV79 || pauseAt === null)) void scheduleNativeRestTimerNotification(workoutId, endsAt)
+    if (endsAt !== null && endsAt > Date.now() && (!(coachV79 || clientReference) || pauseAt === null)) void scheduleNativeRestTimerNotification(workoutId, endsAt)
     else void cancelNativeRestTimerNotification(workoutId)
   }
   function stopRest() {
@@ -3736,7 +3736,7 @@ export function LiveWorkoutPage() {
     setLivePhaseState(next)
     storeLivePhase(workoutId, next)
     inactivityReminder.noteActivity(next?.endsAt ?? null)
-    if (next === null || coachV79 && pauseAt !== null) {
+    if (next === null || (coachV79 || clientReference) && pauseAt !== null) {
       void cancelNativeRestTimerNotification(workoutId)
       return
     }
@@ -4673,7 +4673,7 @@ export function LiveWorkoutPage() {
     mutationFn: ({ workout, paused }: { workout: Workout; paused: boolean; timers?: { rest: number | null; phase: LivePhaseTimer | null } }) => workoutsRepository.setLivePause(workout, paused),
     onSuccess: (version) => queryClient.setQueryData<Workout>(['workout', workoutId], (workout) => workout ? { ...workout, version } : workout),
     onError: async (_error, { workout, paused, timers }): Promise<void> => {
-      if (!coachV79 || !timers) { void query.refetch(); return }
+      if (!timers) { void query.refetch(); return }
       const result = await query.refetch()
       // An uncertain reply can still have committed. Read back before rolling
       // back the optimistic clock or allowing a second resume to shift it.
@@ -4683,15 +4683,15 @@ export function LiveWorkoutPage() {
       else { setLivePhase(null, restoredPause); startRestUntil(timers.rest, restoredPause) }
       queryClient.setQueryData<Workout>(['workout', workoutId], current => current ? { ...current, pausedAt: workout.pausedAt, pausedSeconds: workout.pausedSeconds } : current)
     },
-    onSettled: () => { coachPausePending.current = false },
+    onSettled: () => { livePausePending.current = false },
   })
   // Пауза замораживает всё сразу на экране; сервер фиксирует её следом.
   // Снятие сдвигает отдых и идущий подход на длительность паузы.
   function setWorkoutPaused(paused: boolean) {
     const workout = query.data
-    if (!workout || !canPauseWorkout || paused === (livePausedAt !== null) || coachV79 && coachPausePending.current) return
-    if (coachV79) coachPausePending.current = true
-    const timers = coachV79 ? { rest: restEndsAt, phase: livePhaseRef.current } : undefined
+    if (!workout || !canPauseWorkout || paused === (livePausedAt !== null) || livePausePending.current) return
+    livePausePending.current = true
+    const timers = { rest: restEndsAt, phase: livePhaseRef.current }
     const now = Date.now()
     if (paused) {
       void cancelNativeRestTimerNotification(workoutId)
@@ -4882,7 +4882,7 @@ export function LiveWorkoutPage() {
               <LiveRestTimer workoutId={workoutId} pausedAt={livePausedAt} deadline={restEndsAt} defaultDurationSeconds={effectiveRestPickerSeconds} onChange={startRestUntil} onDurationChange={applyRestDuration}
                 coachV79={coachV79 || clientReference ? { density: clientReference ? clientLiveDensity : liveDensity, headerSlot: coachClockSlot } : undefined}
                 phase={livePhase} onPrimary={timerLeads || livePhase?.kind === 'prep' || (livePhase?.kind === 'work' && livePhase.manual) ? handleTimerPrimary : undefined} onPhaseChange={setLivePhase} onPhaseExpire={handlePhaseExpire} onRestExpire={handleRestExpire}
-                referenceActions={clientReference} coachPauseActions={coachV79} pausePending={coachV79 && pauseWorkout.isPending} referenceStartedAt={visualReference ? query.data.startedAt ?? null : undefined} referenceWorkOvertime={clientReference} onReferenceRestActiveChange={visualReference ? setReferenceRestActive : undefined}
+                referenceActions={clientReference} coachPauseActions={coachV79} pausePending={pauseWorkout.isPending} referenceStartedAt={visualReference ? query.data.startedAt ?? null : undefined} referenceWorkOvertime={clientReference} onReferenceRestActiveChange={visualReference ? setReferenceRestActive : undefined}
                 referencePausedSeconds={visualReference ? query.data.pausedSeconds ?? 0 : 0} onReferencePauseToggle={(clientReference || coachV79) && canPauseWorkout && query.data.startedAt ? () => setWorkoutPaused(livePausedAt === null) : undefined}
                 settings={!coachReference && query.data.exercises.length > 0 ? <div className="live-mode-switch" role="group" aria-label="Кто ведёт тренировку">
                   {(['timer', 'manual'] as const).map((mode) => <button key={mode} type="button" aria-pressed={liveExecutionMode === mode}
