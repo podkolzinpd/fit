@@ -9477,3 +9477,14 @@ auth-diagnostics; первая квитанция source-runs-attempt1-failed.js
 timeout. При повторном сбое — новый trace и адресная диагностика.
 Merge controller и after-merge корректно остановились на первом failure;
 после принятого rerun возобновляются с прежними head/main/queue guards.
+
+
+## 226. MC5.1.6 — CI зелёный, PR2084 слит, доставка впереди
+
+10.11.2026 09:36UTC. Source f05fa54f: CI42785856416 attempt2 success,
+Android42785856336 attempt1 success. Повторены только failed jobs; первый
+flaky сохранён225, код/assertions/таймауты не менялись. Перед merge свежие
+head checks зелёные, main3169 прежний, старших PR и активных публикаций нет.
+PR2084 squash merged29217173e4ab544d51800b47070b40f699427bf5 без admin/force.
+MainCI42792077327/Android42792077021 начались. Штатная публикация web/API/OTA
+и readback ещё впереди. Доставку не заявляем до квитанции.
