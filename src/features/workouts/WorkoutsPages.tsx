@@ -3136,7 +3136,7 @@ export function LiveWorkoutPage() {
   // position плана: пользователь может временно перейти к любому упражнению и
   // затем вернуться к частично выполненному.
   const liveSelectionRevision = useRef(0)
-  const [coachRoundCursor, setCoachRoundCursor] = useState<{ blockId: string; position: number } | null>(null)
+  const [liveRoundCursor, setLiveRoundCursor] = useState<{ blockId: string; position: number } | null>(null)
   const [activeExerciseId, setActiveExerciseId] = useState<string | null>(null)
   useEffect(() => {
     if (!query.data) return
@@ -3538,15 +3538,15 @@ export function LiveWorkoutPage() {
         ? applyLiveSetConfirmation(workout, set.id, draft, version, new Date().toISOString()) : workout)
       if ((coachV79 || clientReference) && before) {
         const after = queryClient.getQueryData<Workout>(['workout', workoutId])
-        const followsConfirmedBlock = coachV79 && Boolean(owner)
-        const preserveSelection = coachV79 && context?.selectionRevision !== liveSelectionRevision.current
+        const followsConfirmedBlock = Boolean(owner)
+        const preserveSelection = context?.selectionRevision !== liveSelectionRevision.current
         const next = after && nextLiveTarget(after.exercises,
           followsConfirmedBlock ? owner?.blockId : selectedLiveBlock?.blockId, followsConfirmedBlock,
           followsConfirmedBlock ? set.position : undefined)
         const changedCard = next && owner && (next.exercise.id !== owner.id
           || owner.blockType !== 'single' && next.set.position !== set.position)
         if (!preserveSelection) {
-          if (coachV79) setCoachRoundCursor(next ? { blockId: next.exercise.blockId, position: next.set.position } : null)
+          setLiveRoundCursor(next ? { blockId: next.exercise.blockId, position: next.set.position } : null)
           nextExerciseAnchor.current = changedCard ? next.set.id : null
           setActiveExerciseId(next?.exercise.id ?? null)
           setLiveCardDisplay(null)
@@ -4599,13 +4599,13 @@ export function LiveWorkoutPage() {
     ?? query.data?.exercises.find((exercise) => exercise.sets.some((set) => !set.confirmedAt))
   const selectedLiveBlock = groupIntoBlocks(query.data?.exercises ?? [])
     .find((block) => block.exercises.some((exercise) => exercise.id === selectedLiveExercise?.id))
-  const coachExecutionTarget = coachV79 && query.data ? nextLiveTarget(query.data.exercises,
-    selectedLiveBlock?.blockId, true, coachRoundCursor?.blockId === selectedLiveBlock?.blockId ? coachRoundCursor?.position : undefined) : undefined
-  const activeLiveExercise = coachExecutionTarget?.exercise ?? (selectedLiveBlock && selectedLiveBlock.exercises.length > 1
+  const selectedExecutionTarget = (coachV79 || clientReference) && query.data ? nextLiveTarget(query.data.exercises,
+    selectedLiveBlock?.blockId, true, liveRoundCursor?.blockId === selectedLiveBlock?.blockId ? liveRoundCursor?.position : undefined) : undefined
+  const activeLiveExercise = selectedExecutionTarget?.exercise ?? (selectedLiveBlock && selectedLiveBlock.exercises.length > 1
     ? blockRoundsView(selectedLiveBlock)[currentRoundIndex(blockRoundsView(selectedLiveBlock))]?.items.find(({ set }) => !set.confirmedAt)?.exercise ?? selectedLiveExercise
     : selectedLiveExercise)
   // Текущий подход: в суперсете/круге — первый невыполненный в текущем круге.
-  const currentLiveSet = coachExecutionTarget?.set ?? (selectedLiveBlock && selectedLiveBlock.exercises.length > 1
+  const currentLiveSet = selectedExecutionTarget?.set ?? (selectedLiveBlock && selectedLiveBlock.exercises.length > 1
     ? (() => { const rounds = blockRoundsView(selectedLiveBlock); return rounds[currentRoundIndex(rounds)]?.items.find(({ set }) => !set.confirmedAt)?.set })()
     : activeLiveExercise?.sets.find((set) => !set.confirmedAt))
   const automaticLiveCardKey = currentLiveSet && activeLiveExercise ? liveRowCardKey(activeLiveExercise, currentLiveSet) : null
@@ -4871,8 +4871,8 @@ export function LiveWorkoutPage() {
         const activeCircuit = liveBlocks.find((block) => block.exercises.length > 1
           && block.exercises.some((exercise) => exercise.id === activeLiveExercise?.id))
         const circuitRounds = activeCircuit ? blockRoundsView(activeCircuit) : null
-        const circuitCurrent = circuitRounds ? coachV79 && coachExecutionTarget
-          ? circuitRounds.findIndex(round => round.items.some(item => item.set.id === coachExecutionTarget.set.id)) : currentRoundIndex(circuitRounds) : 0
+        const circuitCurrent = circuitRounds ? selectedExecutionTarget
+          ? circuitRounds.findIndex(round => round.items.some(item => item.set.id === selectedExecutionTarget.set.id)) : currentRoundIndex(circuitRounds) : 0
         return (
         /* Закреплённый блок: таймер + отдых + прогресс активной круговой. */
         <><div ref={haloRef} className={`live-pinned${query.data.exercises.length === 0 ? ' live-pinned-empty' : ''}`}>
@@ -5012,8 +5012,8 @@ export function LiveWorkoutPage() {
         }
         // Многоэлементный блок — по кругам, со счётчиком «Круг R из N».
         const rounds = blockRoundsView(block)
-        const current = blockDone ? -1 : coachV79 && coachExecutionTarget?.exercise.blockId === block.blockId
-          ? rounds.findIndex(round => round.items.some(item => item.set.id === coachExecutionTarget.set.id)) : currentRoundIndex(rounds)
+        const current = blockDone ? -1 : selectedExecutionTarget?.exercise.blockId === block.blockId
+          ? rounds.findIndex(round => round.items.some(item => item.set.id === selectedExecutionTarget.set.id)) : currentRoundIndex(rounds)
         const latestRound = rounds.at(-1)
         const canUndoAddedRound = lastAddedRound?.blockId === block.blockId && latestRound?.round === lastAddedRound.position + 1
           && Boolean(latestRound?.items.length === block.exercises.length
@@ -5023,7 +5023,7 @@ export function LiveWorkoutPage() {
           if (await askConfirm({ message: 'Убрать последний пустой круг?', confirmLabel: 'Убрать', danger: true })) removeRound.mutate({ blockId: block.blockId, position: latestRound.round - 1 })
         }
         const activeCircuitSetId = blockStatus === 'current'
-          ? (coachV79 ? coachExecutionTarget?.set.id : rounds.flatMap((round) => round.items).find(({ set }) => !set.confirmedAt)?.set.id)
+          ? (coachV79 || clientReference ? selectedExecutionTarget?.set.id : rounds.flatMap((round) => round.items).find(({ set }) => !set.confirmedAt)?.set.id)
           : undefined
         const blockExpanded = coachV79 || clientReference
           ? Boolean(openLiveCardKey()?.startsWith(`scope:${block.blockId}:`)) || block.exercises.some(exercise => exercise.sets.some(set => liveRowCardKey(exercise, set) === openLiveCardKey()))
