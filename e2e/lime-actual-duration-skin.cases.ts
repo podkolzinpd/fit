@@ -18,6 +18,7 @@ const detailOwner = ':where(.fit-lime-shell.workout-detail-history-identity) '
 // Only these complete, reviewed migration guards may be normalized. Positive
 // :where owners and any unrelated/unknown :where filters retain their identity.
 const durationMigrationGuards = [
+  ':where(:not(.fit-client-lime :is(.workout-completion-highlight, .workout-completion-missing, .workout-completion-muscles-line), .fit-client-lime :is(.workout-completion-highlight, .workout-completion-missing, .workout-completion-muscles-line) *))',
   ':where(:not(.fit-client-lime .workout-share-overlay, .fit-client-lime .workout-share-overlay *))',
   ...['.workout-actual-duration button', '.workout-actual-duration span', '.workout-actual-duration strong',
     '.workout-duration-dialog .actions button', '.workout-duration-dialog .field input', '.workout-duration-dialog .workout-cta',
