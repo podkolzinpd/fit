@@ -4920,6 +4920,9 @@ for (const role of ['trainer', 'client'] as const) for (const density of ['origi
     await expect(group.locator('[data-live-card-key] > .coach-v79-card-body:not([inert])')).toHaveCount(1)
     await page.locator(`[data-live-set-id="${set.id}"]`).getByRole('button', { name: 'Готово, отдых', exact: true }).click()
     await expect.poll(() => backend.getWorkouts()[0]!.exercises.find(item => item.id === source.exercises[exercise + 1]!.id)!.sets[round]!.confirmedAt).not.toBeNull()
+    const deadline = await page.evaluate(id => sessionStorage.getItem(`fit:live-rest-until:${id}`), workoutId)
+    if (exercise === 0) expect(deadline).toBeNull()
+    else expect(Number(deadline) - await page.evaluate(() => Date.now())).toBe(90_000)
   }
   await expect(group.locator(':scope > .coach-v79-circuit-body')).toHaveAttribute('inert', '')
   await expect(page.locator('.live-session-progress-copy')).toContainText(source.exercises[3]!.name)
