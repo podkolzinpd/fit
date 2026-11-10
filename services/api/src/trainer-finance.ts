@@ -12,6 +12,7 @@ export interface TrainerFinancePackage {
   clientId: string
   trainerId: string
   kind: TrainerFinancePackageKind
+  singleSession?: boolean
   title: string
   sessionsTotal: number
   sessionsUsed: number
@@ -120,6 +121,7 @@ export interface TrainerFinanceOverview {
 export interface ClientFinancePackage {
   id: string
   kind: TrainerFinancePackageKind
+  singleSession?: boolean
   title: string
   sessionsTotal: number
   sessionsUsed: number
@@ -156,6 +158,7 @@ export interface TrainerFinancePackageDraft {
   requestId?: string
   openingReceivedOn?: string
   kind: TrainerFinancePackageKind
+  singleSession?: boolean
   title: string
   sessionsTotal: number
   openingUsedSessions: number
@@ -170,6 +173,7 @@ export interface TrainerFinancePackageDraft {
 export interface TrainerFinancePackageUpdate {
   expectedVersion: number
   kind: TrainerFinancePackageKind
+  singleSession?: boolean
   title: string
   sessionsTotal: number
   priceCents: number
@@ -295,7 +299,9 @@ export class DatabasePilotTrainerFinance implements PilotTrainerFinance {
   createPackage(session: YandexActorSessionInput, clientId: string, draft: TrainerFinancePackageDraft) {
     return this.run(session, async (client) => {
       const rows = await client.query<PackageRow>(
-        `select public.create_trainer_finance_service_v2(
+        draft.singleSession ? `select public.create_trainer_finance_service_v3(
+          $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, true
+        ) as package` : `select public.create_trainer_finance_service_v2(
           $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13
         ) as package`,
         [clientId, draft.kind, draft.title, draft.sessionsTotal, draft.openingUsedSessions,

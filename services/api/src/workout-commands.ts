@@ -547,6 +547,12 @@ export function finishLiveWorkout(
   operationId: string,
   attendance?: WorkoutAttendanceRequest,
 ): Promise<PilotLiveCommandResult> {
+  if (attendance?.singleService) {
+    const single = attendance.singleService
+    return runLiveCommand(client,
+      'select version, replayed from public.finish_single_trainer_workout($1,$2,$3,$4,$5,$6)',
+      [workoutId, expectedVersion, operationId, single.priceCents, single.paidCents, single.receivedOn])
+  }
   return runLiveCommand(
     client,
     attendance ? 'select version, replayed from public.finish_live_workout($1, $2, $3, true, $4, $5)'

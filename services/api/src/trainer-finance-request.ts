@@ -48,6 +48,10 @@ export function readTrainerFinancePackageDraft(value: unknown): TrainerFinancePa
   if (!validRequestId(input.requestId)) return undefined
   const openingReceivedOn = input.openingReceivedOn === undefined ? undefined : date(input.openingReceivedOn)
   if (input.openingReceivedOn !== undefined && typeof openingReceivedOn !== 'string') return undefined
+  const singleSession = input.singleSession
+  if (singleSession !== undefined && typeof singleSession !== 'boolean') return undefined
+  if (singleSession === true && (input.kind !== 'session_pack' || input.sessionsTotal !== 1
+    || typeof input.requestId !== 'string')) return undefined
   const kind = input.kind
   const title = text(input.title, 120)
   const sessionsTotal = integer(input.sessionsTotal, 0, 10000)
@@ -67,6 +71,7 @@ export function readTrainerFinancePackageDraft(value: unknown): TrainerFinancePa
     || endsOn === undefined || paymentDueOn === undefined || comment === undefined
     || (endsOn !== null && endsOn < startsOn)) return undefined
   return { kind, title, sessionsTotal, openingUsedSessions, priceCents, openingPaidCents,
+    ...(singleSession === undefined ? {} : { singleSession }),
     startsOn, endsOn, paymentDueOn, comment,
     ...(typeof input.requestId === 'string' ? { requestId: input.requestId } : {}),
     ...(typeof openingReceivedOn === 'string' ? { openingReceivedOn } : {}),
@@ -76,7 +81,7 @@ export function readTrainerFinancePackageDraft(value: unknown): TrainerFinancePa
 export function readTrainerFinancePackageUpdate(value: unknown): TrainerFinancePackageUpdate | undefined {
   const input = record(value)
   if (!input) return undefined
-  const base = readTrainerFinancePackageDraft({ ...input, openingUsedSessions: 0, openingPaidCents: 0 })
+  const base = readTrainerFinancePackageDraft({ ...input, singleSession: undefined, openingUsedSessions: 0, openingPaidCents: 0 })
   const expectedVersion = integer(input.expectedVersion, 1, Number.MAX_SAFE_INTEGER)
   if (!base || expectedVersion === undefined) return undefined
   return {
