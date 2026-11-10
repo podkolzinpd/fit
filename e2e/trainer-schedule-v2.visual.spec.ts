@@ -3639,8 +3639,16 @@ for (const width of [390, 430, 1440]) {
     await expect(plan.getByRole('button', { name: 'Запланировать' })).toBeVisible()
     await plan.getByRole('button', { name: 'Клиент: Выберите клиента' }).click()
     await page.getByRole('button', { name: /Александра Константинопольская/ }).click()
+    await plan.getByRole('button',{name:'Онлайн',exact:true}).click()
+    await expect(plan.getByRole('button',{name:'Онлайн',exact:true})).toHaveAttribute('aria-pressed','true')
     expect(await plan.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true)
     await page.screenshot({ path: testInfo.outputPath('lime-window-type.png') })
+    if(width===390){
+      await page.setViewportSize({width:320,height:844})
+      expect(await plan.evaluate(node=>node.scrollWidth<=node.clientWidth)).toBe(true)
+      for(const button of await plan.getByRole('group',{name:'Формат тренировки'}).getByRole('button').all())expect((await button.boundingBox())!.height).toBeGreaterThanOrEqual(44)
+      await page.screenshot({path:testInfo.outputPath('quick-plan-online-320.png')})
+    }
   })
 }
 
@@ -3767,6 +3775,8 @@ for (const profileId of [trainerId, '10000000-0000-4000-8000-000000000010']) {
     await plan.getByRole('textbox', { name: 'Название тренировки' }).fill('Сила и баланс')
     await plan.getByRole('button', { name: 'Клиент: Выберите клиента' }).click()
     await page.getByRole('dialog', { name: 'Выбор клиента' }).getByRole('button', { name: /Алексей Смирнов/ }).click()
+    const deliveryMode=profileId===trainerId?'online':'in_person'
+    if(deliveryMode==='online')await plan.getByRole('button',{name:'Онлайн',exact:true}).click()
     const sourceKey = `fit.workout-form-draft.${profileId}.new--2026-09-29--quick`
     const source = await page.evaluate((key) => JSON.parse(localStorage.getItem(key)!) as { requestId: string }, sourceKey)
     const legacyKey = `fit.today-draft.${profileId}`
@@ -3775,11 +3785,11 @@ for (const profileId of [trainerId, '10000000-0000-4000-8000-000000000010']) {
     await plan.getByRole('button', { name: 'Ввести текстом' }).click()
     await expect(page).toHaveURL(/view=compose&entry=text&date=2026-09-29/)
     const voiceKey = `${legacyKey}.plan.${source.requestId}`
-    await expect.poll(async () => page.evaluate((key) => JSON.parse(localStorage.getItem(key)!) as unknown, voiceKey)).toMatchObject({ workoutDate: '2026-09-29', clientId, title: 'Сила и баланс', requestId: source.requestId, sourceFormDraftKey: sourceKey, trainingFormat: 'with_trainer', text: '' })
+    await expect.poll(async () => page.evaluate((key) => JSON.parse(localStorage.getItem(key)!) as unknown, voiceKey)).toMatchObject({ workoutDate: '2026-09-29', clientId, title: 'Сила и баланс', requestId: source.requestId, sourceFormDraftKey: sourceKey, trainingFormat: 'with_trainer', deliveryMode, text: '' })
     await page.reload()
     await expect(page.getByRole('button', { name: 'Выбрать упражнения вручную' })).toBeVisible()
     expect(await page.evaluate((key) => JSON.parse(localStorage.getItem(key)!) as unknown, legacyKey)).toEqual(legacyDraft)
-    expect(await page.evaluate((key) => JSON.parse(localStorage.getItem(key)!) as unknown, voiceKey)).toMatchObject({ workoutDate: '2026-09-29', clientId, trainingFormat: 'with_trainer' })
+    expect(await page.evaluate((key) => JSON.parse(localStorage.getItem(key)!) as unknown, voiceKey)).toMatchObject({ workoutDate: '2026-09-29', clientId, trainingFormat: 'with_trainer', deliveryMode })
     // A real editor step must keep the plan identity through review, save and back.
     await page.evaluate((key) => {
       const draft = JSON.parse(localStorage.getItem(key)!) as Record<string, unknown>
@@ -3792,7 +3802,7 @@ for (const profileId of [trainerId, '10000000-0000-4000-8000-000000000010']) {
     await page.getByRole('button', { name: 'Далее', exact: true }).click()
     await expect(page).toHaveURL(new RegExp(`view=save&plan=${source.requestId}$`))
     await page.reload()
-    await expect.poll(async () => page.evaluate((key) => JSON.parse(localStorage.getItem(key)!) as unknown, sourceKey)).toMatchObject({ workoutDate: '2026-09-29', clientId, title: 'Сила и баланс', exercises: [{ name: 'Приседания', sets: [{ reps: 8 }] }] })
+    await expect.poll(async () => page.evaluate((key) => JSON.parse(localStorage.getItem(key)!) as unknown, sourceKey)).toMatchObject({ workoutDate: '2026-09-29', clientId, title: 'Сила и баланс', deliveryMode, exercises: [{ name: 'Приседания', sets: [{ reps: 8 }] }] })
     await expect(page.getByRole('button', { name: 'Для кого тренировка: Алексей Смирнов' })).toBeVisible()
     await page.screenshot({ path: testInfo.outputPath('lime-isolated-plan-save.png'), fullPage: true })
     await page.getByRole('button', { name: '← К проверке' }).click()

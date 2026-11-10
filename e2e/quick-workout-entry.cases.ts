@@ -241,6 +241,18 @@ export function quickWorkoutEntryCases() {
     await booking.getByRole('button', { name: 'Выбрать клиента', exact: true }).click()
     await page.locator('.client-picker-item').first().click()
     await page.getByRole('button', { name: 'Применить клиента' }).click()
+    await booking.getByRole('button',{name:'Онлайн',exact:true}).click()
+    await expect(booking.getByRole('button',{name:'Онлайн',exact:true})).toHaveAttribute('aria-pressed','true')
+    if(density==='comfortable'){
+      const viewportSize=page.viewportSize()!
+      for(const width of [320,390,430,1440]){
+        await page.setViewportSize({width,height:844})
+        expect(await booking.evaluate(node=>node.scrollWidth<=node.clientWidth)).toBe(true)
+        for(const button of await booking.getByRole('group',{name:'Формат тренировки'}).getByRole('button').all())expect((await button.boundingBox())!.height).toBeGreaterThanOrEqual(44)
+        await page.screenshot({path:info.outputPath(`booking-online-${width}.png`)})
+      }
+      await page.setViewportSize(viewportSize)
+    }
     await booking.screenshot({ path: info.outputPath(`booking-${density}.png`) })
     await booking.getByRole('button', { name: 'Записать', exact: true }).click()
     await expect(booking.getByRole('alert')).toBeVisible()
@@ -251,6 +263,9 @@ export function quickWorkoutEntryCases() {
     expect(commands[1]!.requestId).toBe(commands[0]!.requestId)
     expect(commands[1]!.exercises).toEqual([])
     const created = backend.getWorkouts()[0]!
+    expect(created).toMatchObject({trainingFormat:'with_trainer',deliveryMode:'online'})
+    expect(commands[0]).toMatchObject({trainingFormat:'online'})
+    expect(commands[1]).toEqual(commands[0])
     expect(created.status).toBe('planned')
     expect(created.startTime).toBe('14:00')
     expect(created.workoutDate).toBe('2026-10-08')

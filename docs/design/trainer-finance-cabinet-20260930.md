@@ -2290,3 +2290,15 @@ bundle d4a8ef7dd42f3d36cabd671f62ccc3c587d7f1dc4e3805dad3acd5aa4eaab3b9.
 немокированные v1 запросы блокировались. Real-user finance mutations/ручных денежных SQL не было.
 Квитанция: outputs/finance-confirmed-release-20261110/pr1/acceptance.json.
 FIN802/PR2094 c69b07c7 проходит sourceCI42838769405; merge/release по GitHub очереди впереди.
+
+FIN-73: последняя сверка входов FIN803 выявила два ещё не обновлённых компонента: FitLimePlanComposer
+и QuickDayBooking. Оба теперь используют тот же Lime selector очно/онлайн/самостоятельно;
+плановый draft, голосовой draft, navigation state и возврат сохраняют deliveryMode. Today reset
+возвращает очный default. В Mono quick-booking сохранена прежняя статическая подпись; пилоты/rollout
+не расширяются. Это завершение согласованного scope FIN803, не новая коммерческая механика.
+16/16 old typography/voice/lifecycle browser cases и14/14 связанных native quick-booking cases
+прошли без retries. Новых browser-case/осей нет; screenshots320/390/430/1440 просмотрены для обоих
+изменённых окон. Обычное нажатие, история, жесты, потеря ответа и тот же requestId проверены.
+Полный повтор npm check FIN803 после изменения входов прошёл3195 frontend/1635 API и прочие фазы.
+FIN804 clean full npm check наe2ac8b9a (до расширения родителя FIN803) также прошёл целиком:
+3201frontend/1635API. Дальнейшая интеграция/CI берёт актуальный родительский main.

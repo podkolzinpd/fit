@@ -142,7 +142,7 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
   const [restoredClientDraft, setRestoredClientDraft] = useState(false)
   const [reviewedText, setReviewedText] = useState<string | null>(null)
   const limePlanning = !clientMode && isFitLimeEnabled(actor)
-  const entryState = location.state as { newClientDraft?: boolean; returnTo?: unknown; planClientId?: string; planStartTime?: string; planEndTime?: string; planTrainingFormat?: WorkoutTrainingFormat; planTitle?: string; planRequestId?: string; sourceFormDraftKey?: string } | null
+  const entryState = location.state as { newClientDraft?: boolean; returnTo?: unknown; planClientId?: string; planStartTime?: string; planEndTime?: string; planTrainingFormat?: WorkoutTrainingFormat; planDeliveryMode?: 'in_person'|'online'; planTitle?: string; planRequestId?: string; sourceFormDraftKey?: string } | null
   const returnTo = limePlanning ? safeWorkoutReturnTo(entryState?.returnTo) ?? '/today' : clientMode ? '/me' : '/today'
   const [planMetadata, setPlanMetadata] = useState(() => ({
     title: limePlanning ? entryState?.planTitle : undefined,
@@ -202,7 +202,7 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
   const [prepSeconds, setPrepSeconds] = useState(0)
   // undefined — режим не выбран явно и следует формату тренировки.
   const [executionMode, setExecutionMode] = useState<WorkoutExecutionMode | undefined>(undefined)
-  const [deliveryMode,setDeliveryMode]=useState<'in_person'|'online'>('in_person')
+  const [deliveryMode,setDeliveryMode]=useState<'in_person'|'online'>(clientMode?'in_person':entryState?.planDeliveryMode??'in_person')
   const [trainingFormat, setTrainingFormat] = useState<WorkoutTrainingFormat | undefined>(clientMode ? 'self' : entryState?.planTrainingFormat ?? defaultWorkoutTrainingFormat(clientMode ? 'client' : 'trainer'))
   const trainingFormatTouched = useRef(limePlanning && Boolean(entryState?.planTrainingFormat))
   const finance = useQuery({
@@ -810,6 +810,7 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
     setWorkoutDate(today)
     setStartTime('')
     setTrainingFormat(defaultWorkoutTrainingFormat(clientMode ? 'client' : 'trainer'))
+    setDeliveryMode('in_person')
     trainingFormatTouched.current = false
     setManualRefs([])
     setRemovedRefs([])
