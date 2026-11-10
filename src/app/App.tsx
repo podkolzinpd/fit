@@ -10,7 +10,7 @@ import { AppLayout } from './AppLayout'
 import { ClientLimeStandaloneLayout } from './ClientLimeStandaloneLayout'
 import { AppViewportProvider } from './app-viewport'
 import { isAssistantNavPilotEnabled, isTrainerFinancePilotEnabled, trainerHomePath } from './feature-flags'
-import { AuthCallbackPage, AuthPage, ForgotPasswordPage, InvitationPage, JoinPage, ResetPasswordPage, YandexAppSessionPage, YandexAssistantFeaturesRefreshPage, YandexPilotCallbackPage } from '../features/auth'
+import { AuthCallbackPage, AuthPage, EmployeeReferralRedirectPage, ForgotPasswordPage, InvitationPage, JoinPage, ResetPasswordPage, YandexAppSessionPage, YandexAssistantFeaturesRefreshPage, YandexPilotCallbackPage } from '../features/auth'
 import { ArchivedClientsPage, ClientDetailPage, ClientFormPage, ClientProfilePage, ClientProfileSettingsPage, ClientsPage, GoalPage, MyClientEditPage, MyClientPage, MyGoalPage, MyProgressPage, MyWorkoutsPage } from '../features/clients'
 import { ExercisesPage } from '../features/exercises'
 import { ProgressPage } from '../features/progress'
@@ -89,6 +89,7 @@ function TrainerTodayPage() {
 
 const router = createBrowserRouter([
   { element: <ClientLimeStandaloneLayout />, children: [
+  { path: '/r/:code', element: <EmployeeReferralRedirectPage /> },
   { path: '/auth', element: <AuthPage /> },
   { path: '/auth/forgot', element: <ForgotPasswordPage /> },
   { path: '/auth/reset', element: <ResetPasswordPage /> },

@@ -705,6 +705,7 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
     const accountRole = 'accountRole' in body ? body.accountRole : undefined
     const termsVersion = 'termsVersion' in body ? body.termsVersion : undefined
     const privacyVersion = 'privacyVersion' in body ? body.privacyVersion : undefined
+    const referralCode = 'referralCode' in body ? body.referralCode : null
     if (
       typeof firstName !== 'string'
       || firstName.trim().length < 2
@@ -715,6 +716,8 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
       || (accountRole !== 'trainer' && accountRole !== 'client')
       || typeof termsVersion !== 'string'
       || typeof privacyVersion !== 'string'
+      || (referralCode !== null && (typeof referralCode !== 'string'
+        || !/^[a-z0-9-]{3,64}$/i.test(referralCode)))
     ) return undefined
     try {
       new Intl.DateTimeFormat('en-US', { timeZone: timezone.trim() }).format()
@@ -729,6 +732,7 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
       accountRole: normalizedRole,
       termsVersion,
       privacyVersion,
+      referralCode: typeof referralCode === 'string' ? referralCode.toLowerCase() : null,
     }
   }
 
@@ -740,6 +744,7 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
     const accountRole = 'accountRole' in body ? body.accountRole : undefined
     const termsVersion = 'termsVersion' in body ? body.termsVersion : undefined
     const privacyVersion = 'privacyVersion' in body ? body.privacyVersion : undefined
+    const referralCode = 'referralCode' in body ? body.referralCode : null
     if (
       typeof handoffToken !== 'string'
       || !/^[A-Za-z0-9_-]{43}$/.test(handoffToken)
@@ -752,6 +757,8 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
       || (accountRole !== 'trainer' && accountRole !== 'client')
       || typeof termsVersion !== 'string'
       || typeof privacyVersion !== 'string'
+      || (referralCode !== null && (typeof referralCode !== 'string'
+        || !/^[a-z0-9-]{3,64}$/i.test(referralCode)))
     ) return undefined
     try {
       new Intl.DateTimeFormat('en-US', { timeZone: timezone.trim() }).format()
@@ -766,6 +773,7 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
       accountRole: normalizedRole,
       termsVersion,
       privacyVersion,
+      referralCode: typeof referralCode === 'string' ? referralCode.toLowerCase() : null,
     }
   }
 
@@ -1381,6 +1389,7 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
         accountRole: command.accountRole,
         firstName: command.firstName,
         timezone: command.timezone,
+        ...(command.referralCode === null ? {} : { referralCode: command.referralCode }),
       })
       const session = await options.yandexAppSessionIssuer.issue(completed.subjectHash)
       if (session === undefined || session.profile.id !== completed.profileId) {
@@ -1437,6 +1446,7 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
         accountRole: command.accountRole,
         firstName: command.firstName,
         timezone: command.timezone,
+        ...(command.referralCode === null ? {} : { referralCode: command.referralCode }),
       })
       const session = await options.yandexAppSessionIssuer.issue(subjectHash)
       if (session === undefined || session.profile.id !== registration.profileId) {
@@ -1470,6 +1480,30 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
         'Yandex native registration unavailable',
       )
       return reply.code(503).send({ error: 'service_unavailable' })
+    }
+  })
+
+  app.post('/v1/referrals/:code/click', async (request, reply) => {
+    const { code } = request.params as { code?: unknown }
+    if (typeof code !== 'string' || !/^[a-z0-9-]{3,64}$/i.test(code)) {
+      return reply.code(400).send({ error: 'invalid_request' })
+    }
+    const database = options.databasePool
+    if (database === undefined) return reply.code(503).send({ error: 'service_unavailable' })
+    try {
+      const connection = await database.connect()
+      try {
+        const rows = await connection.query<{ recorded: boolean }>(
+          'select app_private.record_referral_click($1) as recorded',
+          [code.toLowerCase()],
+        )
+        return reply.header('cache-control', 'no-store').code(202)
+          .send({ recorded: rows[0]?.recorded === true })
+      } finally {
+        connection.release()
+      }
+    } catch (error) {
+      return sendSafeDatabaseFailure(reply, error, 'Referral click recording failed')
     }
   })
 

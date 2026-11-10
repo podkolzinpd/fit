@@ -13,6 +13,7 @@ export interface YandexNativeRegistrationInput {
   accountRole: 'trainer' | 'client'
   firstName: string
   timezone: string
+  referralCode?: string | null
 }
 
 export interface YandexNativeRegistration {
@@ -63,7 +64,7 @@ export class DatabaseYandexNativeRegistrar implements YandexNativeRegistrar {
     try {
       const rows = await connection.query<RegistrationRow>(
         `select app_private.register_yandex_account(
-           $1, $2, $3, $4, $5, $6
+           $1, $2, $3, $4, $5, $6, $7
          ) as profile_id`,
         [
           subjectHash,
@@ -72,6 +73,7 @@ export class DatabaseYandexNativeRegistrar implements YandexNativeRegistrar {
           input.accountRole,
           CURRENT_TERMS_VERSION,
           CURRENT_PRIVACY_VERSION,
+          input.referralCode ?? null,
         ],
       )
       const profileId = rows[0]?.profile_id

@@ -529,6 +529,10 @@ async function assistantTurnResponse(request: () => Promise<Response>): Promise<
 }
 
 export const yandexPilotRepository = {
+  async recordReferralClick(apiBaseUrl: string, code: string): Promise<void> {
+    const response = await yandexPilotQueries.recordReferralClick(apiBaseUrl, code)
+    if (!response.ok) throw new Error('Referral click request failed.')
+  },
   async exchangeCodeForSession(apiBaseUrl: string, code: string, codeVerifier: string): Promise<YandexPilotSession> {
     let response: Response
     try {
@@ -578,6 +582,7 @@ export const yandexPilotRepository = {
       timezone: string
       termsVersion: string
       privacyVersion: string
+      referralCode?: string | null
     },
   ): Promise<YandexAppSession> {
     let response: Response
@@ -607,6 +612,7 @@ export const yandexPilotRepository = {
       timezone: string
       termsVersion: string
       privacyVersion: string
+      referralCode?: string | null
     },
   ): Promise<YandexAppSession> {
     let response: Response
