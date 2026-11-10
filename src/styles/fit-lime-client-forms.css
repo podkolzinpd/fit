@@ -137,3 +137,38 @@
   .fit-lime-shell.auth-join-identity .join-page { padding: 16px 16px calc(116px + env(safe-area-inset-bottom)) }
   .fit-lime-shell.trainer-client-form-identity .client-form-section { padding: 18px }
 }
+
+/* CV301–305: trainer presentation; invitation commands remain unchanged. */
+.fit-lime-shell .invitation-name-dialog,
+.fit-lime-shell .invitation-share-dialog {
+  padding: 20px; max-height: calc(var(--app-visible-height, 100dvh) - 32px);
+  overflow-y: auto; overscroll-behavior: contain;
+}
+.fit-lime-shell .invitation-name-dialog h2,
+.fit-lime-shell .invitation-share-dialog h2 {
+  font-size: 18px; line-height: 24px; letter-spacing: -.02em;
+}
+.fit-lime-shell .invitation-share-dialog {
+  display: flex; flex-direction: column; gap: 16px;
+}
+.fit-lime-shell .invitation-share-dialog > header { order: 0; }
+.fit-lime-shell .invitation-share-dialog > .invitation-code-fallback { order: 1; }
+.fit-lime-shell .invitation-share-dialog > .invitation-share-message { order: 2; }
+.fit-lime-shell .invitation-share-dialog > .invitation-share-actions { order: 3; }
+.fit-lime-shell .invitation-share-dialog > .invitation-qr { order: 4; }
+.fit-lime-shell .invitation-share-dialog > .invitation-share-expiry { order: 5; }
+.fit-lime-shell .invitation-share-dialog > .invitation-revoke { order: 6; }
+.fit-lime-shell .invitation-share-dialog > .error { order: 7; }
+.fit-lime-shell .invitation-share-dialog .invitation-code-fallback {
+  display: flex; flex-wrap: wrap; justify-content: center; gap: 12px;
+  background: transparent; border: 0; text-align: center; padding: 16px 0;
+}
+.fit-lime-shell .invitation-code-fallback strong span {
+  display: block; font-size: 26px; line-height: 32px; overflow-wrap: anywhere;
+}
+.fit-lime-shell .invitation-share-dialog .invitation-share-actions button {
+  min-height: 48px; border-radius: 18px;
+}
+.fit-lime-shell .invitation-share-dialog .invitation-revoke {
+  min-height: 48px; border: 1px solid currentColor; border-radius: 18px;
+}
