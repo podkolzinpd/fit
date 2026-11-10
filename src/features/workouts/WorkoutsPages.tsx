@@ -84,6 +84,7 @@ import type { ParsedWorkoutExercise } from './quick-workout-entry'
 import { createLiveSetCoordinator } from './live-set-coordinator'
 import { revealLiveExercise } from './live-exercise-reveal'
 import { nextLiveTarget } from './live-next-target'
+import { recoverLivePauseTimers, type LiveTimerSnapshot } from './live-pause-recovery'
 import { createLiveUnconfirmedSets } from './live-unconfirmed-sets'
 import { liveUnconfirmDraft } from './live-unconfirm-draft'
 import { createLiveSetAutosave } from './live-set-autosave'
@@ -3350,6 +3351,9 @@ export function LiveWorkoutPage() {
   const [confirmFinish, setConfirmFinish] = useState(false)
   const [restEndsAt, setRestEndsAt] = useState<number | null>(null)
   const livePausePending = useRef(false)
+  const liveRestRef = useRef<number | null>(null)
+  const liveRestRevision = useRef(0)
+  const livePhaseRevision = useRef(0)
   const [referenceRestActive, setReferenceRestActive] = useState(false)
   const [restContextExerciseId, setRestContextExerciseId] = useState<string | null>(null)
   const [restPickerSeconds, setRestPickerSeconds] = useState(90)
@@ -3400,6 +3404,9 @@ export function LiveWorkoutPage() {
   useEffect(() => {
     confirmationRestSeconds.current.clear()
     const deadline = restoreRestDeadline(workoutId)
+    liveRestRef.current = deadline
+    liveRestRevision.current += 1
+    livePhaseRevision.current += 1
     setRestEndsAt(deadline)
     setRestContextExerciseId(null)
     setRestPickerSeconds(90)
@@ -3707,6 +3714,8 @@ export function LiveWorkoutPage() {
   // Запускает отдых до абсолютного момента endsAt (мс). null — отдыха нет
   // (напр. между упражнениями суперсета, seconds=0): таймер не показываем.
   function startRestUntil(endsAt: number | null, pauseAt = livePausedAt) {
+    liveRestRef.current = endsAt
+    liveRestRevision.current += 1
     setRestEndsAt(endsAt)
     storeRestDeadline(workoutId, endsAt)
     inactivityReminder.noteActivity(endsAt)
@@ -3732,6 +3741,7 @@ export function LiveWorkoutPage() {
     return seconds
   }
   function setLivePhase(next: LivePhaseTimer | null, pauseAt = livePausedAt) {
+    livePhaseRevision.current += 1
     livePhaseRef.current = next
     setLivePhaseState(next)
     storeLivePhase(workoutId, next)
@@ -4560,13 +4570,14 @@ export function LiveWorkoutPage() {
                 onPointerDown={() => { skipBlurForSet.current = set.id; liveSetAutosave.clear(set.id) }}
                 onClick={() => { skipBlurForSet.current = null; unconfirmLiveSet(set) }}>{set.timerConfirmed ? <TimerIcon /> : visualReference ? <CheckIcon /> : <span aria-hidden="true">✓</span>}</button>
             : set.confirmedAt ? <button type="button" className={`secondary live-set-check done${set.timerConfirmed ? ' timer' : ''}`} aria-label={set.timerConfirmed ? 'Засчитано таймером, изменить подход' : 'Редактировать подход'} title={coachReference ? 'Подход выполнен — изменить результат' : undefined} onClick={() => setEditingSets((prev) => new Set(prev).add(set.id))}>{set.timerConfirmed ? <TimerIcon /> : visualReference ? <CheckIcon /> : <span aria-hidden="true">✓</span>}</button>
-            : <button type="button" className="live-set-check" aria-label={confirmLabel} aria-busy={confirmationPending} disabled={confirm.isPending}
+            : <button type="button" className="live-set-check" aria-label={confirmLabel} aria-busy={confirmationPending} disabled={confirm.isPending || pauseWorkout.isPending}
                 onPointerDown={(event) => {
                   prepareGong(); skipBlurForSet.current = set.id; liveSetAutosave.clear(set.id)
                   const active = document.activeElement
                   advanceAfterConfirm.current = directLiveInput && active instanceof HTMLInputElement && active.classList.contains('live-set-input') && active.form === event.currentTarget.form ? set.id : null
                 }}
                 onClick={(event) => {
+                  if (livePausePending.current) return
                   prepareGong()
                   resumeWorkoutIfPaused()
                   const running = livePhaseRef.current
@@ -4670,28 +4681,34 @@ export function LiveWorkoutPage() {
     if (restEndsAt === null || restEndsAt <= Date.now()) startWorkTimer(currentLiveSet, activeLiveExercise)
   }, [timerLeads])
   const pauseWorkout = useMutation({
-    mutationFn: ({ workout, paused }: { workout: Workout; paused: boolean; timers?: { rest: number | null; phase: LivePhaseTimer | null } }) => workoutsRepository.setLivePause(workout, paused),
+    mutationFn: ({ workout, paused }: { workout: Workout; paused: boolean; timers: { before: LiveTimerSnapshot; optimistic: LiveTimerSnapshot } }) => workoutsRepository.setLivePause(workout, paused),
     onSuccess: (version) => queryClient.setQueryData<Workout>(['workout', workoutId], (workout) => workout ? { ...workout, version } : workout),
     onError: async (_error, { workout, paused, timers }): Promise<void> => {
-      if (!timers) { void query.refetch(); return }
       const result = await query.refetch()
       // An uncertain reply can still have committed. Read back before rolling
       // back the optimistic clock or allowing a second resume to shift it.
       if (!result.error && result.data && Boolean(result.data.pausedAt) === paused) { pauseWorkout.reset(); return }
-      const restoredPause = workout.pausedAt ? Date.parse(workout.pausedAt) : null
-      if (timers.phase) { startRestUntil(timers.rest, restoredPause); setLivePhase(timers.phase, restoredPause) }
-      else { setLivePhase(null, restoredPause); startRestUntil(timers.rest, restoredPause) }
-      queryClient.setQueryData<Workout>(['workout', workoutId], current => current ? { ...current, pausedAt: workout.pausedAt, pausedSeconds: workout.pausedSeconds } : current)
+      const authoritative = !result.error && result.data ? result.data : workout
+      const restoredPause = authoritative.pausedAt ? Date.parse(authoritative.pausedAt) : null
+      const recovered = recoverLivePauseTimers(timers.before, timers.optimistic,
+        liveTimerSnapshot(timers.optimistic.pausedAt), restoredPause, Date.now())
+      if (recovered.phase) { startRestUntil(recovered.rest, restoredPause); setLivePhase(recovered.phase, restoredPause) }
+      else { setLivePhase(null, restoredPause); startRestUntil(recovered.rest, restoredPause) }
+      queryClient.setQueryData<Workout>(['workout', workoutId], current => current ? { ...current, pausedAt: authoritative.pausedAt, pausedSeconds: authoritative.pausedSeconds } : current)
     },
     onSettled: () => { livePausePending.current = false },
   })
+  function liveTimerSnapshot(pausedAt: number | null): LiveTimerSnapshot {
+    return { rest: liveRestRef.current, phase: livePhaseRef.current,
+      restRevision: liveRestRevision.current, phaseRevision: livePhaseRevision.current, pausedAt }
+  }
   // Пауза замораживает всё сразу на экране; сервер фиксирует её следом.
   // Снятие сдвигает отдых и идущий подход на длительность паузы.
   function setWorkoutPaused(paused: boolean) {
     const workout = query.data
     if (!workout || !canPauseWorkout || paused === (livePausedAt !== null) || livePausePending.current) return
     livePausePending.current = true
-    const timers = { rest: restEndsAt, phase: livePhaseRef.current }
+    const before = liveTimerSnapshot(livePausedAt)
     const now = Date.now()
     if (paused) {
       void cancelNativeRestTimerNotification(workoutId)
@@ -4706,7 +4723,8 @@ export function LiveWorkoutPage() {
         : current)
     }
     trackGoal(paused ? 'live_workout_paused' : 'live_workout_resumed')
-    pauseWorkout.mutate({ workout, paused, timers })
+    const optimistic = liveTimerSnapshot(paused ? now : null)
+    pauseWorkout.mutate({ workout, paused, timers: { before, optimistic } })
   }
   /** Действие с подходом значит, что человек вернулся к тренировке, — пауза снимается сама. */
   function resumeWorkoutIfPaused() {
