@@ -168,3 +168,39 @@
 .workout-detail-history-identity:where(.fit-client-lime) .workout-completion-report-facts dd {
   font-size: 17px; font-variant-numeric: tabular-nums;
 }
+
+/* MC5.1.5: lower report paint. Keep neutral layouts and the existing muted
+   nonblocking achievement alert; explicit .error remains owned by danger. */
+.workout-detail-history-identity:where(.fit-client-lime) .workout-completion-highlight .eyebrow {
+  color: var(--secondary-label-fg); font-size: 12px;
+}
+.workout-detail-history-identity:where(.fit-client-lime) .workout-completion-highlight h2 {
+  font-size: 18px;
+}
+.workout-detail-history-identity:where(.fit-client-lime) .workout-completion-missing {
+  border-top: 1px solid var(--border);
+}
+.workout-detail-history-identity:where(.fit-client-lime) .workout-completion-missing strong {
+  font-size: 12px;
+}
+.workout-detail-history-identity:where(.fit-client-lime) .workout-completion-missing p {
+  color: var(--secondary-label-fg); font-size: 13px;
+}
+.workout-detail-history-identity:where(.fit-client-lime) .workout-completion-highlight-record > svg {
+  color: var(--success-fg);
+}
+.workout-detail-history-identity:where(.fit-client-lime) .workout-completion-highlight-record span {
+  color: var(--secondary-label-fg); font-size: 14px; font-weight: 500;
+}
+.workout-detail-history-identity:where(.fit-client-lime) .workout-completion-highlight-record small {
+  color: var(--success-fg); font-size: 12px; font-weight: 500;
+}
+.workout-detail-history-identity:where(.fit-client-lime) .workout-completion-highlight-error p {
+  color: var(--secondary-label-fg); font-size: 13px;
+}
+.workout-detail-history-identity:where(.fit-client-lime) .workout-completion-muscles-line {
+  font-size: 13px; font-weight: 500;
+}
+.workout-detail-history-identity:where(.fit-client-lime) .workout-completion-muscles-line span {
+  color: var(--secondary-label-fg); font-size: 12px;
+}

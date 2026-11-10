@@ -1,3 +1,4 @@
+import { limeCompletionHighlightSkinCases, limeCompletionHighlightTrainerCases } from './lime-completion-highlight-skin.cases'
 import { limeCompletionReportSkinCases, limeTrainerCompletionNonConsumerCases } from './lime-completion-report-skin.cases'
 import { limeDurationErrorPaintCases } from './lime-duration-error-paint.cases'
 import { limeCompletionShareSkinCases } from './lime-completion-share-skin.cases'
@@ -31,6 +32,8 @@ limeLiveTimerReviewLayoutCases()
 limeActualDurationSkinCases()
 limeCompletionShareSkinCases()
 limeCompletionReportSkinCases()
+limeCompletionHighlightSkinCases()
+limeCompletionHighlightTrainerCases()
 limeTrainerCompletionNonConsumerCases()
 limeDurationErrorPaintCases()
 
