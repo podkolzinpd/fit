@@ -11,7 +11,7 @@ import { isTrainerFinancePilotEnabled } from '../../app/feature-flags'
 import type { Client } from '../../shared/domain'
 import { todayInTimeZone } from '../../shared/local-date'
 import { AsyncView, Coachmark, Page } from '../../shared/ui'
-import { ArchiveIcon, CheckIcon, ChevronRightIcon, CloseIcon, HistoryIcon, SearchIcon } from '../../shared/icons'
+import { AddIcon, ArchiveIcon, CheckIcon, ChevronRightIcon, CloseIcon, HistoryIcon, SearchIcon } from '../../shared/icons'
 import { canOpenClientChat, clientChatThreads, ChatStartButton, ChatThreadsNotice, useChatThreads } from '../chat'
 import { ClientAddDialog } from './ClientAddDialog'
 import { InviteAthleteButton } from '../auth/InvitationShareActions'
@@ -308,7 +308,7 @@ function ClientsListPage({ archivedOnly }: ClientsListPageProps) {
   }, [location.pathname, location.search, query.isSuccess, scrollKey])
 
   const restoreAddFocus = () => window.requestAnimationFrame(() => addTrigger.current?.focus())
-  const addButton = <button ref={addTrigger} type="button" className="button primary clients-add-button" onClick={() => setAdding(true)}>{showSearch ? 'Добавить' : 'Добавить клиента'}</button>
+  const addButton = <button ref={addTrigger} type="button" className="button primary clients-add-button" onClick={() => setAdding(true)}>{isFitLimeEnabled(actor) && isTrainerScheduleV2Enabled(actor) ? <><AddIcon /><span>{showSearch ? 'Добавить' : 'Добавить клиента'}</span></> : showSearch ? 'Добавить' : 'Добавить клиента'}</button>
   const pageActions = !archivedOnly && showSearch && <div className="clients-page-header-actions">{addButton}</div>
 
   return <div ref={pageRef} onPointerDownCapture={(event) => {
