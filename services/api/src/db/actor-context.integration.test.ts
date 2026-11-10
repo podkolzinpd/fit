@@ -653,6 +653,38 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
       }finally{await ownerPool.query('delete from public.workouts where id=$1',[workout])}
     })
 
+    it('finishes a paid single from populated Live without confirming blank sets or duplicating a reopened request',async()=>{
+      if(!ownerPool||!runtimePool)throw new Error('Database not ready')
+      const card=randomUUID(),workout=randomUUID(),exercise=randomUUID(),set=randomUUID(),operation=randomUUID()
+      await ownerPool.query("insert into public.clients(id,trainer_id,full_name) values($1,$2,'Synthetic single Live')",[card,ACTOR_ID])
+      await ownerPool.query("insert into public.workouts(id,trainer_id,client_id,created_by,workout_date,status,started_at,training_format) values($1,$2,$3,$2,current_date,'in_progress',now()-interval '10 minutes','with_trainer')",[workout,ACTOR_ID,card])
+      await ownerPool.query("insert into public.workout_exercises(id,workout_id,trainer_id,client_id,position,exercise_source,exercise_ref,exercise_name,muscle_group,input_kind) values($1,$2,$3,$4,0,'system','single-live-proof','Synthetic single exercise','legs','strength')",[exercise,workout,ACTOR_ID,card])
+      await ownerPool.query('insert into public.workout_sets(id,workout_exercise_id,trainer_id,client_id,position,plan_reps) values($1,$2,$3,$4,0,10)',[set,exercise,ACTOR_ID,card])
+      const draft={disposition:'unassigned' as const,packageId:null,singleService:{priceCents:20000,paidCents:5000,receivedOn:new Date().toISOString().slice(0,10)}}
+      const run=(op=operation,version=1)=>withActorTransaction(runtimePool!,ACTOR_ID,db=>finishLiveWorkout(db,workout,version,op,draft))
+      try{
+        expect(await run()).toMatchObject({version:2,replayed:false})
+        expect((await ownerPool.query('select confirmed_at,fact_reps from public.workout_sets where id=$1',[set])).rows[0]).toEqual({confirmed_at:null,fact_reps:null})
+        expect(await run()).toMatchObject({version:2,replayed:true})
+        await expect(run(randomUUID(),2)).rejects.toThrow()
+        // Reopening a pending form must retain the committed path even after a later exercise edit.
+        await ownerPool.query('delete from public.workout_exercises where id=$1',[exercise])
+        expect(await run()).toMatchObject({version:2,replayed:true})
+        const bundle=(await withActorTransaction(runtimePool,ACTOR_ID,db=>db.query<{result:TrainerFinanceClientBundle}>('select public.list_trainer_finance_client_v2($1) as result',[card])))[0]!.result
+        expect(bundle.packages).toHaveLength(1);expect(bundle.payments).toHaveLength(1);expect(bundle.sessions.filter(x=>x.voidedAt===null)).toHaveLength(1)
+        expect(bundle.packages[0]).toMatchObject({singleSession:true,paidCents:5000,dueCents:15000,sessionsUsed:1,sessionsRemaining:0})
+      }finally{
+        await ownerPool.query('delete from public.trainer_finance_events where client_id=$1',[card])
+        await ownerPool.query('delete from public.trainer_finance_payments where client_id=$1',[card])
+        await ownerPool.query('delete from public.trainer_finance_sessions where client_id=$1',[card])
+        await ownerPool.query('delete from public.trainer_finance_packages where client_id=$1',[card])
+        await ownerPool.query('delete from public.workouts where id=$1',[workout])
+        await ownerPool.query('delete from public.clients where id=$1',[card])
+        await ownerPool.query('delete from app_private.finance_payment_requests where request_id=$1',[operation])
+        await ownerPool.query('delete from app_private.live_workout_operations where resource_id=$1',[workout])
+      }
+    })
+
     it.each([[0,0],[20000,0],[20000,5000],[20000,20000]])('atomically records a single service at price %i paid %i with replay and rollback', async (price,paid) => {
       if (!ownerPool || !runtimePool) throw new Error('Database not ready')
       const card=randomUUID(), workout=randomUUID(), operation=randomUUID()
