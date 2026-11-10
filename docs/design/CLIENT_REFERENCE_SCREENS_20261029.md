@@ -9279,3 +9279,149 @@ PR остаётся OPEN/DRAFT, merge/deploy не выполнялись. Сле
 и проверка доставки; сейчас эта часть не разрешена. Следующий этап не начат.
 Эта локальная квитанция не требует повторного push/CI; статус добавляется
 в описание PR. Физический телефон и системный share остаются непроверенными.
+
+
+## 218. MC5.1.5 — выпуск разрешён, актуальный main интегрирован
+
+2026-11-10. Владелец явно разрешил выпустить PR2081 для спортсмена и тренера
+в общей очереди. Перед выпуском main продвинулся на bc65534f (PR2080,
+порядок выполнения Live); normal merge020440cf без конфликтов сохранил
+изменения обеих задач. Новый sourceproof наbc655:25720records exact,
+14guards/11rules20decl, protectedlogic соответствует новому main.
+
+Production-like сборка/types/startup/fonts прошла. Прежний grep выбрал94
+сценария, поскольку main переименовал и расширил8 out-of-order/superset
+проверок на обе роли. Прогон94/94passed, затем отдельно16/16 актуальных
+проверок обеих ролей/плотностей/движков. Итого110unique, безskip/retry/fail.
+Strict baseline→integrated:26states/26PNG exact, включаяrawheight ифокус.
+Артефакты /tmp/fit-mc515-integrated*-20261110 иrelease/local-ready.json.
+
+Источник CI020440cf; прежний зелёный9be8 не засчитывается новойверсии.
+Собственный observer с90с паузой/45с сетевымтаймаутом; очередь толькоGitHub,
+без чужихчатов. Контроллер разрешаетmergeтолькоexacthead+зелёныйCI+localreceipt,
+нетстаршихPR/активнойпредыдущейпубликации; сменаmainостанавливаетвыпуск.
+Доmerge сообщены результаты и прежние ограничения216–217. Следующийэтап
+не начат; эта запись пока не означаетслияниеилидоставку.
+
+
+## 219. MC5.1.5 — merge и публикация web/API; OTA ожидает актуальную версию
+
+2026-11-10. PR2081 слит06:32:31UTC в6d52c50c930a130416ed97cdd4a768aa5c12b1cd.
+Передmerge старшихopenPR/активныхпубликаций не было, mainbc655/head020440cf
+проверены. SourceCI42764321506 иAndroid42764321417 success.
+MainCI42769202604 иAndroid42769202379 success, безrerun.
+Web42772488692 иAPI42772488639 success. OTA42772771908 failed на
+Require current main before installing artifacts: SOURCE6d52 уже заменён
+main09257d78 (PR2082), поэтому точнаяпроверкаcurrent==SOURCE остановила
+установку. Защита сохранена; старыйrelease не перезапускался.
+
+Следующийmain содержитнашmerge, diffне затрагиваетCSSMC515. Длядоставки
+наAndroidожидается штатнаяактуальнаяпубликация снашимизменениями. Ограниченный
+процесс проверяет только необходимую цепочкуmain/CI/публикаций раз в300с,
+безкоординациичатов/измененийчужихPR. Фактическийweb/API/подписанныйOTA
+и UI должны быть проверены послеуспешнойцепочки; пока не заявленыпринятыми.
+
+
+## 220. MC5.1.5 — опубликовано и проверено, ждём приёмки владельца
+
+2026-11-10. Фактически доставлены web/API/OTA09257d789ded6aa8f02ab22e8ed3927a87faa13b,
+содержащие нашmerge6d52c50c/PR2081. RelevantCSSdiff отнашегомерджа пуст;
+чужиеPR не сливались/не менялись. CI42772788044 иAndroid42772788068 success;
+API42776334504/web42776334487/OTA42776625575 success. СтарыйOTAfailure219
+сохранён как отказзащитыустаревшегокоммита; защиты/конфиги не менялись.
+
+Readback:244/244 webfiles HTTP200/размер/SHA256 соответствуют officialartifact;
+APIhealth/readiness/auth401/TLS/DNS/source passed. OTAmanifest/archiveподписи
+и публичныйreadback passed,15988409bytes,checksum
+f82bf33971525750de86d26943c06c15b71cb997f3da04b162b60eea141dbe08,
+nativeBuild9/прежнийABI8922d2e9…,sequence1794296346034.
+
+Actualpublishedweb60/60 иverifiedsignedZIP60/60 Chromium/WebKit прошли,
+безskip/fail/flaky/retry. 18highlight/unifiedtrainer +report/duration/share/
+error/nonLivecontrols. ТочныеknownAPIprefix adapters только во временном QA,
+всеAPIpage-scoped/synthetic, productionданные не изменялись. Fingerprint
+HTML/API/OTA вначале/конце совпал; финальнаяпроверка07:46:52UTC.
+Просмотрены publishedWebKitclientpartiallight375 иtrainerdarkresult через
+newunifiedfinish. Действующийинцидентныйбаннер виден, этойзадачейне изменён.
+
+Артефакты /tmp/fit-mc515-release/final-acceptance.json,current-acceptance,
+web-full/ota-full reports. Локальнаяприёмка110browser/49unit и26PNGexact
+сохранена216–218. Новыхошибок в проверенныхцелевыхсценариях не обнаружено.
+Физическоеустройство/nativeinstall/настоящийsystemshare не проверены.
+Ранние2heightизMC514 остаются историческимнаблюдением; свежие26stateexact.
+
+Владельцу: спортсмен — полное/частичное завершение, достижения/«Не завершено»/
+«Нагрузка», длительностьcancel/save, поделиться, светлая/тёмнаятемы;
+тренер — единоеокнозавершения, подтверждённыеподходы, возвраткклиенту.
+КороткийLiveконтроль обеимролям: вводвеса/повторов, галочка/отмена, отдых.
+До его приёмки следующийэтапмиграции не начинаем. Квитанциялокальнымкоммитом
+безповторногоpush/CI послеуспешнойдоставки; итогтакжевописанииPR2081.
+
+
+## 221. MC5.1.6 — принятый план, реализация без разрешения выпуска
+
+2026-11-10 — OpenAI. Владелец принял MC515 и поручил MC516 спортсмену и
+тренеру с сохранением механик. До выпуска показать сделанное, проверки и
+ошибки/ограничения; merge/deploy только после отдельного разрешения.
+База3169b79c (актуальныйmain), собственнаяветкаfeat/design-cleanup-mc516-20261110,
+mergeeccebbfb. Конфликты были только в собственных записях: main-журнал оказался
+точнымпрефиксом, локальные квитанции218–220 сохранены. Runtime с main объединён.
+
+Объём: оставшееся legacy paint WorkoutCompletionCard — карточка/mark/kicker,
+заголовок/описание, record strong/span, next-link. Историческаязаготовкаe7dd5b3d
+и§174 используютсятолькокакматериал, неактуальнаяприёмка. Перенести только
+недостающие Lime visual values, сохранить сильные overrides и нейтральные
+layout/geometry/focus. Общиеживыеправила не удалять целиком.
+
+Реальныйconsumerсейчастренер justCompleted&&!attendanceResult; успортсмена
+отдельныйWorkoutCompletionReport, его не переделывать, проверить регрессию.
+Сохраняем unified finish, число/facts/подтверждения, recordquery/loading/error,
+ссылкукнужномуклиенту, длительность/share результата, ввод/клавиатуру,
+галочку/отмену, свайпы/перенос/сворачивание/таймер и уже принятые
+out-of-order/superset/pause-error механики main. React/API/данные/флаги/
+зависимости/CI вscopeне входят.
+
+Проверки: свежий baseline→CSSpatch→candidate Chromium/WebKit; actualunified
+trainerexit, ordinary/partial/record/long/loading/error, original/compact,
+keyboardfocus/linkdestination. Обе настройки trainerтемы сфиксациейactualdark,
+обе фактическиеclientтемы; offcontrols только на реальносуществующихпутях.
+Strict CSSOM/styleobjects restoration, неизвестныеguardsне нормализовать,
+rawheights/scroll/focus/anchors не скрывать. Sourceproofточногоdiff,
+PNG/style/geometry сравнение, целевыеunit/build/types/fonts/lint/docs иCI.
+Исторические2раннихheightMC514 не объявлятьисправленными; физическийтелефон
+и настоящийsystemshare не считатьпройденными поавтотестам.
+
+Дальше: одинпроверяемыйPR со сводкой владельцу, безmerge/deploy.
+Следующийэтапмиграции не начинать.
+
+
+## 222. MC5.1.6 — локальная приёмка, выпуск не разрешён
+
+2026-11-10. Product commit edf76d86f24e979d36518c981a9569f3a8001bc3.
+16 точных guards отделяют Lime WorkoutCompletionCard от legacy paint;
+6 слабых Lime-правил сохраняют 13 текущих значений. React, API, данные,
+флаги, зависимости и механики не менялись. Реальный consumer — тренер;
+отдельный результат спортсмена проверен на регрессию.
+
+Проверки: 49/49 unit (6 suites), полный lint, build/types/fonts и docs passed.
+128/128 Chromium/WebKit, без retry/skip/flaky, 124.889 с: завершение обеих
+ролей, длительность/share, ввод/клавиатура, галочка/отмена, свайпы/перенос,
+сворачивание, таймер, supersets/out-of-order и pause-error rollback.
+Baseline: 12 ожидаемых terminal ownership failures и 2 legacy-off controls
+passed; все предшествующие сравнения валидны. Candidate: 14 cases/20 states
+computed styles/geometry/raw scroll/focus/anchors/CSSOM exact; 20/20 PNG
+побайтно совпали. Payload/calls/destination/initial-final height exact.
+Source proof: 25720 исходных declaration records сохранены в порядке после
+удаления только точного guard; прежний Lime prefix byte-exact, 12 protected
+files byte-exact. Просмотрены ordinary/record/partial/error/long-record.
+
+Артефакты: /tmp/fit-mc516-final-review-20261110.json,
+/tmp/fit-mc516-comparison-20261110.json,
+/tmp/fit-mc516-source-proof-20261110.json,
+/tmp/fit-mc516-candidate-20261110.json и unit/lint/build logs.
+Новых ошибок в проверенных сценариях нет. Обе настройки темы тренера
+дают фактически dark shell; светлая тема спортсмена проверена отдельно.
+Текущий computed weight600 сохранён, глобальная очистка шрифта не выполнена.
+Физическое устройство, OAuth, native install/system share не проверены.
+Исторические два ранних измерения высоты MC514 не объявлены исправленными.
+CI ещё предстоит. Merge/deploy только после отдельного разрешения владельца.

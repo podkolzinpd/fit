@@ -829,17 +829,23 @@ p { margin: 6px 0 }
 .summary.done-summary strong { font-size: 15px }
 .summary.done-summary-3 { grid-template-columns: repeat(3, 1fr) }
 .summary.done-summary-3 strong { font-size: 14px }
-.workout-completion { display: flex; align-items: flex-start; gap: 14px; margin-bottom: 22px; padding: 17px; border: 1px solid var(--success-border); border-radius: 18px; background: var(--success-surface); box-shadow:none}
-.workout-completion-mark { flex: 0 0 auto; width: 48px; height: 48px; display: grid; place-items: center; border-radius: 16px; color: var(--success-fg); background: var(--success-mark-surface) }
+.workout-completion { display: flex; align-items: flex-start; gap: 14px; margin-bottom: 22px; padding: 17px }
+.workout-completion:where(:not(.fit-lime-shell.workout-detail-history-identity .workout-completion, .fit-lime-shell.workout-detail-history-identity .workout-completion *)) { border: 1px solid var(--success-border); border-radius: 18px; background: var(--success-surface); box-shadow:none }
+.workout-completion-mark { flex: 0 0 auto; width: 48px; height: 48px; display: grid; place-items: center }
+.workout-completion-mark:where(:not(.fit-lime-shell.workout-detail-history-identity .workout-completion, .fit-lime-shell.workout-detail-history-identity .workout-completion *)) { border-radius: 16px; color: var(--success-fg); background: var(--success-mark-surface) }
 .workout-completion-mark svg { width: 27px; height: 27px; stroke-width: 2 }
 .workout-completion-body { min-width: 0; display: grid; gap: 3px }
-.workout-completion-kicker { color: var(--success-fg); font-size: var(--text-caption); font-weight: var(--weight-bold); letter-spacing: var(--tracking-label); text-transform: uppercase }
-.workout-completion h2 { margin: 2px 0 3px; font-size: var(--text-section) }
-.workout-completion p { margin: 0; color: var(--muted); font-size: var(--text-ui) }
+.workout-completion-kicker:where(:not(.fit-lime-shell.workout-detail-history-identity .workout-completion, .fit-lime-shell.workout-detail-history-identity .workout-completion *)) { color: var(--success-fg); font-size: var(--text-caption); font-weight: var(--weight-bold); letter-spacing: var(--tracking-label); text-transform: uppercase }
+.workout-completion h2 { margin: 2px 0 3px }
+.workout-completion h2:where(:not(.fit-lime-shell.workout-detail-history-identity .workout-completion, .fit-lime-shell.workout-detail-history-identity .workout-completion *)) { font-size: var(--text-section) }
+.workout-completion p { margin: 0 }
+.workout-completion p:where(:not(.fit-lime-shell.workout-detail-history-identity .workout-completion, .fit-lime-shell.workout-detail-history-identity .workout-completion *)) { color: var(--muted); font-size: var(--text-ui) }
 .workout-completion-record { min-width: 0; display: grid; gap: 2px; margin-top: 3px }
-.workout-completion-record strong { color: var(--success-fg); font-size: var(--text-ui); line-height: var(--leading-snug) }
-.workout-completion-record span { color: var(--fg); font-size: var(--text-body); font-weight: var(--weight-bold) }
-.workout-completion-next { width: fit-content; min-height: 44px; display: inline-flex; align-items: center; gap: 4px; margin-top: 4px; color: var(--accent-strong); font-size: var(--text-ui); font-weight: var(--weight-bold); text-decoration: none }
+.workout-completion-record strong { line-height: var(--leading-snug) }
+.workout-completion-record strong:where(:not(.fit-lime-shell.workout-detail-history-identity .workout-completion, .fit-lime-shell.workout-detail-history-identity .workout-completion *)) { color: var(--success-fg); font-size: var(--text-ui) }
+.workout-completion-record span:where(:not(.fit-lime-shell.workout-detail-history-identity .workout-completion, .fit-lime-shell.workout-detail-history-identity .workout-completion *)) { color: var(--fg); font-size: var(--text-body); font-weight: var(--weight-bold) }
+.workout-completion-next { width: fit-content; min-height: 44px; display: inline-flex; align-items: center; gap: 4px; margin-top: 4px }
+.workout-completion-next:where(:not(.fit-lime-shell.workout-detail-history-identity .workout-completion, .fit-lime-shell.workout-detail-history-identity .workout-completion *)) { color: var(--accent-strong); font-size: var(--text-ui); font-weight: var(--weight-bold); text-decoration: none }
 .workout-completion-next svg { width: 18px; height: 18px }
 .card-meta { color: var(--muted); font-size: var(--text-caption); margin-top: 2px }
 .card-author { margin: 3px 0 0; color: var(--accent-strong); font-size: var(--text-caption); font-weight: var(--weight-semibold); line-height: var(--leading-snug) }
@@ -4645,15 +4651,18 @@ button.workout-duration-trigger:disabled { cursor:default; opacity:1 }
 .workout-detail-history-identity .workout-status[data-tone='success'] { border-color:var(--success-border); background:var(--surface-sunken); color:var(--success-fg) }
 .workout-detail-history-identity .workout-status[data-tone='warning'] { border-color:var(--border); background:var(--surface-sunken); color:var(--warning-fg) }
 
-.workout-detail-history-identity .workout-completion { gap:14px; margin-bottom:18px; padding:18px; border-color:var(--success-border); border-radius:18px; background:var(--surface-raised); box-shadow:none}
-.workout-detail-history-identity .workout-completion-mark { width:48px; height:48px; border-radius:14px; background:var(--surface-sunken); color:var(--success-fg) }
+.workout-detail-history-identity .workout-completion { gap:14px; margin-bottom:18px; padding:18px }
+.workout-detail-history-identity .workout-completion:where(:not(.fit-lime-shell.workout-detail-history-identity .workout-completion, .fit-lime-shell.workout-detail-history-identity .workout-completion *)) { border-color:var(--success-border); border-radius:18px; background:var(--surface-raised); box-shadow:none }
+.workout-detail-history-identity .workout-completion-mark { width:48px; height:48px }
+.workout-detail-history-identity .workout-completion-mark:where(:not(.fit-lime-shell.workout-detail-history-identity .workout-completion, .fit-lime-shell.workout-detail-history-identity .workout-completion *)) { border-radius:14px; background:var(--surface-sunken); color:var(--success-fg) }
 .workout-detail-history-identity .workout-completion-mark svg { stroke-width:1.8 }
-.workout-detail-history-identity .workout-completion-kicker { color:var(--success-fg); font-size:12px; font-weight:500; letter-spacing:.06em }
-.workout-detail-history-identity .workout-completion h2 { color:var(--fg); font-size:18px; font-weight:600 }
-.workout-detail-history-identity .workout-completion p { color:var(--secondary-label-fg); font-size:14px; font-weight:400 }
-.workout-detail-history-identity .workout-completion-record strong { color:var(--success-fg); font-size:12px; font-weight:500 }
-.workout-detail-history-identity .workout-completion-record span { color:var(--fg); font-size:16px; font-weight:600 }
-.workout-detail-history-identity .workout-completion-next { min-height:44px; color:var(--fg); font-size:12px; font-weight:500 }
+.workout-detail-history-identity .workout-completion-kicker:where(:not(.fit-lime-shell.workout-detail-history-identity .workout-completion, .fit-lime-shell.workout-detail-history-identity .workout-completion *)) { color:var(--success-fg); font-size:12px; font-weight:500; letter-spacing:.06em }
+.workout-detail-history-identity .workout-completion h2:where(:not(.fit-lime-shell.workout-detail-history-identity .workout-completion, .fit-lime-shell.workout-detail-history-identity .workout-completion *)) { color:var(--fg); font-size:18px; font-weight:600 }
+.workout-detail-history-identity .workout-completion p:where(:not(.fit-lime-shell.workout-detail-history-identity .workout-completion, .fit-lime-shell.workout-detail-history-identity .workout-completion *)) { color:var(--secondary-label-fg); font-size:14px; font-weight:400 }
+.workout-detail-history-identity .workout-completion-record strong:where(:not(.fit-lime-shell.workout-detail-history-identity .workout-completion, .fit-lime-shell.workout-detail-history-identity .workout-completion *)) { color:var(--success-fg); font-size:12px; font-weight:500 }
+.workout-detail-history-identity .workout-completion-record span:where(:not(.fit-lime-shell.workout-detail-history-identity .workout-completion, .fit-lime-shell.workout-detail-history-identity .workout-completion *)) { color:var(--fg); font-size:16px; font-weight:600 }
+.workout-detail-history-identity .workout-completion-next { min-height:44px }
+.workout-detail-history-identity .workout-completion-next:where(:not(.fit-lime-shell.workout-detail-history-identity .workout-completion, .fit-lime-shell.workout-detail-history-identity .workout-completion *)) { color:var(--fg); font-size:12px; font-weight:500 }
 .workout-detail-history-identity .workout-completion-page { display:grid; gap:14px }
 .workout-detail-history-identity .workout-completion-report { display:grid; gap:12px; margin-bottom:0 }
 .workout-detail-history-identity .workout-completion-share-card { display:grid; gap:14px; padding:18px }
