@@ -106,3 +106,24 @@ swipe просмотрены: существующие Lime surfaces/типог�
 
 Открыто: повтор полного check на окончательном runtime и свежий CI одного PR.
 Физический телефон и production не проверялись; выпуск явно не разрешён.
+
+## Итерация 4 — 10.11.2026 — Codex / OpenAI
+
+Проверенная runtime/test версия9cf3b418. Финальный scoped browser6/6passed
+в Chromium/WebKit; клиентский ready-plan/favorite-editor2/2passed в штатном
+Yandex/Lime WebKit режиме. Прежний Live touch2/2passed, targeted component109/109,
+структура browser inventory8/8passed. Результаты без retries/новых skip; старые
+assertions и inventory сохранены. Просмотрены Lime menu/confirm/swipe снимки.
+
+Полный повторный npm run check прошёл: frontend358files/3196tests; API139passed
+files/1630tests и17штатных DB-dependent files/461tests skipped; все policy-наборы,
+lint/types, проверенные шрифты и production build passed. Местный fixture
+PostgreSQL55432 недоступен: native DB smoke локально не запускался; реальный
+PostgreSQL остаётся обязательным CI gate. Физический телефон не проверялся.
+
+PSR101–105 проверены локально. Этот docs-only commit записывает результат,
+не меняя проверенный runtime/test source. PSR106 ещё открыт: один draft PR,
+CI его точного head, readback draft/без automerge. Статус и точные runs далее
+фиксируются в YAFIT-708 и PR; готовность не выдаётся за production-выпуск.
+После разрешения владельца потребуется свежая проверка main/head/очереди и
+штатный выпуск с production-приёмкой. Сейчас merge/публикация не разрешены.
