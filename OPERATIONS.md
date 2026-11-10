@@ -2443,3 +2443,18 @@ profile version, managementVersion и commandId. Вне пилота прежн�
 совместим. Выдача через SQL/SSH/произвольный target запрещена; закрытый оператор
 и UI относятся к PR2. До отдельного разрешения владельца merge/deploy/grant
 этого пакета не выполняются. [TPA101–109](docs/design/CORPORATE_ADMIN_20261027.md).
+
+
+TPA PR2: `scope=profile-pilot` подготовлен в том же guarded операторе. Он всегда
+выбирает прежний закрытый SERVICES hash независимо от admin account input;
+не использует flags услуг/персональных/дежурств. Grant требует unique confirmed
+is_yandex target и ноль других enabled profile pilots. При management ON сначала
+явный OFF через admin UI; оператор не сбрасывает/не включает переключатель и
+не пишет выдуманного audit actor. Inspect только читает; после grant/revoke нужен
+новый независимый inspect. Никакой workflow этого этапа до notBeforeUTC из
+отложенного разрешения Антона не запускается.
+
+Фактическая квитанция TPA: отложенное разрешение Антона действует после09.11
+22:33UTC. PR1/main4c68 опубликован и принят; PR2 ещё проходит новые гейты.
+Profile pilot сохраняется OFF до actual обоих этапов; это не разрешает
+management ON или расширение целевой группы. [Журнал100](docs/design/CORPORATE_ADMIN_20261027.md).

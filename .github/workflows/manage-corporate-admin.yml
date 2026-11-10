@@ -14,10 +14,10 @@ on:
         default: primary
         options: [primary, additional, third, fourth, fifth, sixth]
       scope:
-        description: Administrator capability or the independent invitation/services/personal/duty test pilots
+        description: Administrator capability or the independent invitation/services/personal/duty/profile test pilots
         type: choice
         default: administrator
-        options: [administrator, invitation-pilot, services-pilot, personal-pilot, duty-pilot, duty-office-zone]
+        options: [administrator, invitation-pilot, services-pilot, personal-pilot, duty-pilot, duty-office-zone, profile-pilot]
       time_zone:
         description: Explicit IANA office timezone; only duty-office-zone grant uses it
         type: string
@@ -83,6 +83,7 @@ jobs:
             services-pilot) CORPORATE_ADMIN_LOGIN_SHA256=$SERVICES_TRAINER_LOGIN_SHA256 ;;
             personal-pilot) CORPORATE_ADMIN_LOGIN_SHA256=$SERVICES_TRAINER_LOGIN_SHA256 ;;
             duty-pilot) CORPORATE_ADMIN_LOGIN_SHA256=$SERVICES_TRAINER_LOGIN_SHA256 ;;
+            profile-pilot) CORPORATE_ADMIN_LOGIN_SHA256=$SERVICES_TRAINER_LOGIN_SHA256 ;;
             duty-office-zone) CORPORATE_ADMIN_LOGIN_SHA256=$SERVICES_TRAINER_LOGIN_SHA256 ;;
             *) exit 1 ;;
           esac

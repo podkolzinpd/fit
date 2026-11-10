@@ -140,7 +140,7 @@ test('personal pilot uses the same closed test target and never modifies service
 
 test('personal scope preserves every old scope and uses only the existing closed services target',()=>{
  const workflow=readFileSync(new URL('../.github/workflows/manage-corporate-admin.yml',import.meta.url),'utf8')
- assert.ok(workflow.includes('options: [administrator, invitation-pilot, services-pilot, personal-pilot, duty-pilot, duty-office-zone]'))
+ assert.ok(workflow.includes('options: [administrator, invitation-pilot, services-pilot, personal-pilot, duty-pilot, duty-office-zone, profile-pilot]'))
  assert.ok(workflow.includes('personal-pilot) CORPORATE_ADMIN_LOGIN_SHA256=$SERVICES_TRAINER_LOGIN_SHA256 ;;'))
  assert.ok(workflow.includes('services-pilot) CORPORATE_ADMIN_LOGIN_SHA256=$SERVICES_TRAINER_LOGIN_SHA256 ;;'))
 })
@@ -203,4 +203,34 @@ test('duty timezone operator fails closed for ambiguity, existing zone conflicts
   assert.equal(calls.at(-1).sql,'commit')
   if(mode==='inspect')assert.equal(calls.some(c=>c.sql.startsWith('insert')),false)
  }
+})
+
+
+test('profile pilot grants only its independent confirmed closed target and never changes a management switch',async()=>{
+ const {manageCorporateProfilePilot}=await import('./manage-corporate-admin-access.mjs')
+ for(const action of ['inspect','grant','revoke']){
+  const calls=[];const client={async query(sql,args){calls.push({sql,args});if(sql.includes('select p.id'))return{rows:[{id:'private-target'}]};if(sql.includes('select count(*)'))return{rows:[{n:0}]};if(sql.includes('select managed'))return{rows:[{managed:false}]};if(sql.includes(' eligible'))return{rows:[{eligible:true}]};if(sql.startsWith('select enabled'))return{rows:[{enabled:action==='grant'}]};return{rows:[]}}}
+  assert.deepEqual(await manageCorporateProfilePilot(client,action,hash),{status:action==='inspect'?'inspected':'applied',uniqueTrainer:true,enabled:action==='grant',eligible:true,managedByAdmin:false,otherEnabledTrainers:0})
+  assert.equal(calls[0].sql,action==='inspect'?'begin read only':'begin')
+  const writes=calls.filter(c=>/^(insert|update|delete)/.test(c.sql))
+  assert.ok(writes.every(c=>c.sql.includes('app_private.corporate_profile_pilot_trainers')))
+  if(action==='inspect')assert.deepEqual(writes,[])
+  assert.equal(calls.at(-1).sql,'commit')
+ }
+})
+test('profile pilot fails closed for invalid target, ambiguous identity, extra cohort, eligibility and an active management switch',async()=>{
+ const {manageCorporateProfilePilot}=await import('./manage-corporate-admin-access.mjs')
+ for(const scenario of ['invalid','absent','ambiguous','other','ineligible','managed']){
+  const calls=[];const client={async query(sql){calls.push(sql);if(sql.includes('select p.id'))return{rows:scenario==='absent'?[]:scenario==='ambiguous'?[{id:'one'},{id:'two'}]:[{id:'private-target'}]};if(sql.includes('select count(*)'))return{rows:[{n:scenario==='other'?1:0}]};if(sql.includes('select managed'))return{rows:[{managed:scenario==='managed'}]};if(sql.includes(' eligible'))return{rows:[{eligible:scenario!=='ineligible'}]};return{rows:[]}}}
+  await assert.rejects(manageCorporateProfilePilot(client,'grant',scenario==='invalid'?'invalid':hash),/profile_pilot_/)
+  assert.equal(calls.some(sql=>/^(insert|update|delete)/.test(sql)),false)
+  if(scenario!=='invalid')assert.equal(calls.at(-1),'rollback')
+ }
+})
+test('profile scope uses only the existing closed target and retains current-main and running-release guards',()=>{
+ const w=readFileSync(new URL('../.github/workflows/manage-corporate-admin.yml',import.meta.url),'utf8')
+ assert.ok(w.includes('profile-pilot) CORPORATE_ADMIN_LOGIN_SHA256=$SERVICES_TRAINER_LOGIN_SHA256 ;;'))
+ assert.ok(w.includes('test "$GITHUB_REF" = refs/heads/main'))
+ assert.ok(w.includes('git ls-remote origin refs/heads/main'))
+ assert.ok(w.includes('test "$release" = "$(git rev-parse HEAD)"'))
 })

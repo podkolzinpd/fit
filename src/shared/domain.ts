@@ -949,7 +949,11 @@ export interface TrainerProfileDraft {
   certificates: TrainerCertificate[]
 }
 
+export interface TrainerProfileManagement { available: boolean; managedByAdmin: boolean; version: number }
+export interface TrainerProfileWriteContext { version: number; managementVersion: number; commandId: string }
+
 export interface TrainerProfessionalProfile {
+  profileManagement?: TrainerProfileManagement
   /** Only server-approved corporate assignments; never part of the editable draft. */
   yandexOffices?: Array<{ city: string; name: string }>
   publicId: UUID

@@ -39,7 +39,9 @@ if(process.argv[1] && import.meta.url===pathToFileURL(process.argv[1]).href) {
     pool=new Pool({...config,max:1,connectionTimeoutMillis:5000})
     const client=await pool.connect()
     try {
-      const result=process.env.CORPORATE_ADMIN_SCOPE==='duty-office-zone'
+      const result=process.env.CORPORATE_ADMIN_SCOPE==='profile-pilot'
+        ?await manageCorporateProfilePilot(client,process.env.CORPORATE_ADMIN_ACTION,process.env.CORPORATE_ADMIN_LOGIN_SHA256)
+        :process.env.CORPORATE_ADMIN_SCOPE==='duty-office-zone'
         ?await manageCorporateDutyOfficeZone(client,process.env.CORPORATE_ADMIN_ACTION,process.env.CORPORATE_ADMIN_LOGIN_SHA256,process.env.CORPORATE_DUTY_TIME_ZONE,process.env.CORPORATE_DUTY_OFFICE_NAME)
         :process.env.CORPORATE_ADMIN_SCOPE==='duty-pilot'
         ?await manageCorporateDutyPilot(client,process.env.CORPORATE_ADMIN_ACTION,process.env.CORPORATE_ADMIN_LOGIN_SHA256)
@@ -224,5 +226,45 @@ export async function manageCorporateDutyOfficeZone(client,action,loginHash,time
     await client.query('commit')
     return {status:action==='inspect'?'inspected':'applied',uniqueTrainer:true,
       offices:offices.rows.map(o=>({city:o.city,name:o.name,timeZone:action==='grant'?timeZone:o.time_zone??null,version:action==='grant'&&!o.time_zone?1:o.version}))}
+  }catch(error){await client.query('rollback');throw error}
+}
+
+// Independent profile pilot, bound to the same already-approved closed test target.
+export async function manageCorporateProfilePilot(client, action, loginHash) {
+  if (!['inspect','grant','revoke'].includes(action) || !/^[a-f0-9]{64}$/.test(loginHash)) throw Error('profile_pilot_target_invalid')
+  await client.query(action==='inspect'?'begin read only':'begin')
+  try {
+    await client.query("set local statement_timeout='5s'")
+    await client.query("set local lock_timeout='2s'")
+    if(action!=='inspect')await client.query('select pg_advisory_xact_lock(159,1)')
+    const matches=await client.query(`select p.id from public.profiles p join public.trainers t on t.profile_id=p.id
+      where p.account_role='trainer' and p.id in (
+        select profile_id from app_private.fit_lime_pilot_allowlist where login_sha256=$1
+        union select profile_id from app_private.trainer_schedule_v2_allowlist where login_sha256=$1
+        union select profile_id from app_private.nutrition_native_bindings where login_sha256=$1
+      ) and exists(select 1 from app_private.auth_identities i where i.provider='yandex' and i.profile_id=p.id) limit 2`,[loginHash])
+    if(matches.rows.length!==1)throw Error('profile_pilot_target_unresolved')
+    const id=matches.rows[0].id
+    const others=await client.query('select count(*)::int n from app_private.corporate_profile_pilot_trainers where enabled and profile_id<>$1',[id])
+    const otherEnabledTrainers=others.rows[0]?.n
+    if(!Number.isInteger(otherEnabledTrainers)||otherEnabledTrainers<0)throw Error('profile_pilot_readback_failed')
+    if(action==='grant'&&otherEnabledTrainers!==0)throw Error('profile_pilot_exclusive_target_conflict')
+    const control=await client.query('select managed from app_private.corporate_profile_management where trainer_id=$1',[id])
+    const managedByAdmin=control.rows[0]?.managed===true
+    // A pilot operator never silently locks the professional profile. Reset a
+    // live management switch through the audited admin UI before changing pilot.
+    if(action!=='inspect'&&managedByAdmin)throw Error('profile_pilot_management_reset_required')
+    const eligibility=await client.query(`select exists(select 1 from public.corporate_trainers t
+      where t.trainer_id=$1 and t.is_yandex) eligible`,[id])
+    const eligible=eligibility.rows[0]?.eligible===true
+    if(action==='grant'&&!eligible)throw Error('profile_pilot_target_ineligible')
+    if(action==='grant')await client.query(`insert into app_private.corporate_profile_pilot_trainers(profile_id,enabled) values($1,true)
+      on conflict(profile_id) do update set enabled=true`,[id])
+    if(action==='revoke')await client.query('update app_private.corporate_profile_pilot_trainers set enabled=false where profile_id=$1',[id])
+    const result=await client.query('select enabled from app_private.corporate_profile_pilot_trainers where profile_id=$1',[id])
+    const enabled=result.rows[0]?.enabled===true
+    if(action==='grant'&&!enabled||action==='revoke'&&enabled)throw Error('profile_pilot_readback_failed')
+    await client.query('commit')
+    return{status:action==='inspect'?'inspected':'applied',uniqueTrainer:true,enabled,eligible,managedByAdmin,otherEnabledTrainers}
   }catch(error){await client.query('rollback');throw error}
 }
