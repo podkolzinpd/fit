@@ -320,3 +320,16 @@ nutrition/package должны явно получать этот день; time
 по настоящему now(). Нельзя исправлять заменой всех фильтров наUTC или ослаблять
 assertions. ВоспроизведениеUTC→Moscow и обе sessiontimezone:21/21+21/21.
 [Причина и границы исправления](design/CLIENT_REFERENCE_SCREENS_20261029.md#213-mc514--блокер-ci-даты-синтетических-записей-аналитики).
+
+## MC517 / CSSOM zero и естественный visual capture — 10.11.2026
+
+`border:0` в browser CSSOM разворачивается в width0px, color currentcolor и
+border-image initial. Это полная neutral shorthand, не оставшийся paint.
+Проверять authored shorthand через native CSSStyleDeclaration и сохранять
+standalone border-color:red / border1pxsolidred как paint; computed width0
+сам по себе ничего не исключает. Известные negative migration guards могут
+законно исчезать из owner identity, positive scope и неизвестные filters — нет.
+При широком CSSOM restore fixed domain Date не требует подмены native RAF/timers;
+сохранять исходный red и причинный контроль. Screenshot не должен принудительно
+завершать motion/прятать caret без квалификации. Native scroll sampling не
+объявлять исправленным после viewport calibration. [Данные и границы — §232](design/CLIENT_REFERENCE_SCREENS_20261029.md#232-mc517--весь-остаток-оформления-результата-локальная-проверка).

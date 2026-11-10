@@ -9425,3 +9425,388 @@ files byte-exact. Просмотрены ordinary/record/partial/error/long-reco
 Физическое устройство, OAuth, native install/system share не проверены.
 Исторические два ранних измерения высоты MC514 не объявлены исправленными.
 CI ещё предстоит. Merge/deploy только после отдельного разрешения владельца.
+
+
+## 223. MC5.1.6 — черновик PR2084, серверная приёмка выполняется
+
+PR https://github.com/podkolzinpd/fit/pull/2084 открыт как draft.
+Проверяемый source f05fa54f48103c3c5c573ae43dd3381551ebabf0.
+CI42785856416 и Android42785856336 выполняются; migration-safety success.
+Итоговый зелёный CI пока не подтверждён. Один ограниченный observer:
+/tmp/fit-mc516-ci-observe.py, receipt /tmp/fit-mc516-ci/source-runs.json,
+green-source.json появляется только после успеха обеих цепочек.
+Следующий шаг: прочитать результат собственного CI, при ошибке разобрать
+его; после успеха обновить квитанцию. Merge/deploy запрещены до отдельного
+разрешения. Локальная приёмка222 действительна, runtime после неё не менялся.
+Эта запись сохраняется локально без дополнительного push и повторного CI.
+
+
+## 224. MC5.1.6 — разрешение выпуска и очередь
+
+10.11.2026 владелец разрешил выпустить PR2084 для спортсмена и тренера после
+зелёного CI в общей очереди. Повторное разрешение не требуется. Собственный
+PR переведён из draft; source f05fa54f. Main3169b79c не изменился, старших
+открытых PR на первом снимке нет. Контроллер перед merge повторно проверяет
+точный head, CI, main, старшие PR и активные публикации. При новом main
+останавливается для интеграции; активные PR не обходит.
+Локальные128 browser/49 unit/20 PNG exact действительны; runtime не менялся.
+CI ещё выполняется, merge и доставка не объявлены завершёнными.
+После merge — штатные main CI/Android/web/API/OTA, затем readback и
+браузерная приёмка фактически опубликованных web и подписанного OTA.
+Следующий этап не начинать до приёмки владельца.
+
+
+## 225. MC5.1.6 — первый CI, диагностика единственного flaky
+
+Source f05fa54f: Android42785856336 success; CI42785856416 attempt1 failure.
+33 jobs success; auth2/4 и итоговый e2e failed из-за одного flaky (337 passed,
+4 предусмотренных skips, повтор самого сценария прошёл). Сценарий main2083:
+client pause failure restores timers and reads committed resume original.
+Второй click4973 выбрал full-size pause, во время action произошёл переход
+к dock: header перехватил pointer, прежняя attached-кнопка стала hidden.
+Snapshot сохраняет доступную dock pause. Locator заново вычисляется между
+calls, но action повторяет старый ElementHandle до detach/timeout.
+Точный инициатор докинга в первом attempt без trace неизвестен; дефект
+таймера/потеря управления этим логом не доказаны. Ошибочный alert не причина:
+этот alert показывается только тренеру. Source/UI/проверки не менялись.
+
+Исходные log/artifact сохранены /tmp/fit-mc516-ci/auth-failed.log и
+auth-diagnostics; первая квитанция source-runs-attempt1-failed.json.
+Один повтор только failed jobs разрешён задачей и запущен на том же head.
+Никаких force clicks, отключения анимаций, ослабления assertions или роста
+timeout. При повторном сбое — новый trace и адресная диагностика.
+Merge controller и after-merge корректно остановились на первом failure;
+после принятого rerun возобновляются с прежними head/main/queue guards.
+
+
+## 226. MC5.1.6 — CI зелёный, PR2084 слит, доставка впереди
+
+10.11.2026 09:36UTC. Source f05fa54f: CI42785856416 attempt2 success,
+Android42785856336 attempt1 success. Повторены только failed jobs; первый
+flaky сохранён225, код/assertions/таймауты не менялись. Перед merge свежие
+head checks зелёные, main3169 прежний, старших PR и активных публикаций нет.
+PR2084 squash merged29217173e4ab544d51800b47070b40f699427bf5 без admin/force.
+MainCI42792077327/Android42792077021 начались. Штатная публикация web/API/OTA
+и readback ещё впереди. Доставку не заявляем до квитанции.
+
+
+## 227. MC5.1.6 — main CI: непостоянное измерение smooth scroll
+
+Main29217173: CI42792077327 attempt1 failure, Android42792077021 success.
+Auth4/4:336 passed,4 предусмотренных skips,1 flaky; Live transition reveals
+next exercise without stealing input client reduced-false single-group compact.
+First e62a9 artifact:82 rAF frames, scroll[0,355], один smooth call top528.375.
+Есть регулярные rAF14–22ms на plateau, поэтому причина не сводится доказанно
+к пропуску кадров/CPU. На переходе clock130.953→132 и content1019→1045;
+точная причина native scroll jump/batching без first renderer trace неизвестна.
+Retry:85 frames, scroll[0,74,347], один smooth call; строгий>2 passed.
+Наблюдение сохранено, не объявлено исправленным или чисто тестовым дефектом.
+
+Runtime/e2e/package/Playwright sourcef05→main292 побайтно совпадают; MC516
+меняет только done card. Первый log и диагностические артефакты сохранены
+/tmp/fit-mc516-release/main-auth4-failed.log и main-auth4-diagnostics.
+После разбора запущен один --failed rerun неизменного main. Проверки
+плавности/таймауты/анимации не ослаблялись. Публикация до green не начинается.
+
+
+## 228. MC5.1.6 — актуальный содержащий main307 и интеграционная проверка
+
+Main продвинулся307f6424a57dc8380a7aaa04eae1c7284dd93962 (PR2085);
+CI292 attempt2 отменён штатным ci-main cancel-in-progress. Старый release
+не перезапускаем. Наш merge292 входит в307, CSSMC516 побайтно прежний.
+Reviewed diff: live-pause-recovery/WorkoutsPages сохраняют новый отдых при
+ошибке pause, новые role/density/order tests. Чужой PR не менялся.
+В own checkout normal merge711bda43, конфликты только в собственных docs:
+main-журнал точный prefix, CURRENT_STATE отличается только нашей строкой.
+Runtime/e2e/package/config после merge exact307. Локальные квитанции сохранены.
+
+Build/types/fonts/startup passed,55/55 unit. Расширенный browser набор:
+143/144 passed,0retry/skip/flaky; один timeout прежнего pause original second
+click4973, тот же attached→hidden handoff из225. Новые16 pause-race cases
+прошли. Наши14cases/20states/20PNG baseline→307 strict exact, включая
+raw focus/scroll/height/payload/link. Не объявлять общий144 зелёным.
+
+Отдельная /tmp-only диагностика сохраняет14 исходных outcome assertions
+и вместо второго generic click использует нынешний принятый путь:
+content-bottom→oldactions inert→page-header resume.click.20/20 (2engine,
+2density,repeat5),0retry/skip/failure,23.689sec. Дополнительно проверяется
+старый attached+hidden+inert ElementHandle и hit-test доступной dockкнопки.
+Runtime/тесты репозитория/таймауты/анимации не менялись; это доказательство
+доступного действия и причина QA-гонки, не замена исходной красной квитанции.
+
+Артефакты /tmp/fit-mc516-current307-20261110.json/log/results,
+/tmp/fit-mc516-current307-comparison-20261110.json,
+/tmp/fit-mc516-current307-unit.log, /tmp/fit-mc516-pause-diagnostic.
+Все10 public helpers/fixture иCSS exact307; metadata publicQA обновлена.
+Текущая доставка ждёт CI42798809580 и штатных web/API/OTA307 либо проверенного
+потомка. Android42798809759 success. Один bounded observer раз300с, только
+необходимая containing main цепочка GitHub, без чатов/чужихPR.
+
+
+## 229. MC5.1.6 — содержащий main705: полная локальная приёмка зелёная
+
+307 CI завершился failure: auth2 compact pause flaky и auth4 два WebKit
+swipe flaky после Cancel (original430/compact390); встроенные retries прошли.
+Артефакты current307-auth2/auth4-failed.log, current307-auth4-diagnostics.
+Точная историческая причина rail-not-accessible без raw pointertrace неизвестна.
+Неизменённые два swipe cases×repeat5 прошли10/10 за22.529s,retry0/skip0.
+Предполагаемый контрольный --failed rerun307 НЕ выполнялся: перед ним
+обнаружен новыйmain70541773dae9a3623cdcc79b08414bf24eb02953 (PR2086).
+
+Reviewed307→705: client pause error теперь видим, старый pause test использует
+доступную закреплённую кнопку и проверяет четвёртый успешный повтор.
+Normal merge в owncheckout без конфликтов; runtime/e2e/package/config exact705.
+Наши двеCSS и10 public helpers/fixture exactf05→705. Build/types/fonts/startup
+passed.55unit из307 остаются применимыми к неизменённым модулям.
+
+Свежий расширенный набор705:144/144 browser,144attempts,retry0/skip0/flaky0,
+133.215s. Strict14cases/20states/20PNG baseline→705 exact, rawheight/scroll/
+focus/anchors/payload/destination прежние. Исторические143/144 и CI failures
+не переписываются и не объявляются зелёными.
+Артефакты /tmp/fit-mc516-current705-20261110.json/log/results,
+/tmp/fit-mc516-current705-comparison-20261110.json и review-20261110.json.
+
+Доставка ждёт штатную цепочку содержащегоmain705: CI42804320470,
+Android42804320635, затемweb/API/OTA. Старые release не перезапускаются.
+Readback gate сравнивает actual source с reviewed705; новое изменение
+затронутыхCSS/handlers/helpers остановит приёмку для нового review.
+
+
+## 230. MC5.1.6 — опубликовано и проверено, ждём приёмки владельца
+
+10.11.2026. PR2084 опубликован в составе70541773dae9a3623cdcc79b08414bf24eb02953,
+содержащего собственный merge29217173. Наша CSSмиграция побайтно сохранена.
+CI42804320470 и Android42804320635 success; API42807048374, web42807048358,
+OTA42807433131 success. Старые отменённые/красные сборки не публиковались.
+История проверок и диагностик225–229 сохраняется; свежая локальная приёмка
+итоговой версии144/144, применимые55unit и20/20targetstates/PNG exact.
+
+После публикации244/244webfiles HTTP200/size/SHA256 совпали с официальным
+артефактом. APIhealth/readiness/auth401/TLS/DNS/source passed. Подписи и
+публичные байты OTA проверены;15988896bytes, nativeBuild9, прежнийABI8922d2e9…,
+checksum874355d45b6a17217feaedf6a3ac79cc78d1aebac3e01b6c4265f77a8c564521,
+sequence1794310051516.
+
+Настоящий web74/74 и verified signedZIP74/74 Chromium/WebKit прошли без
+retry/skip/flaky. Строгое web↔OTA сравнение14cases/20states/20PNG exact;
+computed/geometry/rawheight/focus/scroll/payload/client destination сохранены.
+HTML/API/подписанныйOTA fingerprint до и после приёмки совпал; финальная
+проверка11:37:51UTC. Все API в браузерной приёмке синтетические/page-scoped,
+production данные не менялись.
+
+Лично просмотрены10 actualPNG: ordinary/record/partial/error/long на обеих
+сборках (WebKitmobile и Chromium1440). В целевой карточке новых обрезок и
+перекрытий нет, перенос длинного рекорда и фокус ссылки сохранены. Действующий
+production notice виден; не скрывался. Local↔public pixel parity не заявляется
+из-за notice, web↔OTA совпадение доказано.
+
+Артефакты: /tmp/fit-mc516-release/final-acceptance.json, current-acceptance,
+web-ota-trainer-comparison.json, personal-visual-review-705.json.
+Физический телефон/nativeinstall/реальныйOAuth/systemshare не проверены.
+Trainer shell фактически dark при обеих preferences; клиентские темы проверены.
+Исторические WebKit scroll/swipe наблюдения не объявляются исправленными;
+итоговый705 CI и актуальные целевые сценарии прошли. Ранние2heightMC514 и
+fontweight600/globalfontcleanup остаются прежними ограничениями scope.
+
+Владельцу: тренер — завершение, число подтверждённых подходов, рекорд при
+наличии и возврат к нужному клиенту; спортсмен — результат, длительность и
+поделиться в светлой/тёмной теме; обе роли — ввод/клавиатура, галочка/отмена,
+свайп/отмена удаления, пауза/отдых. Следующий этап только после его приёмки.
+Квитанция локальным коммитом без нового push/CI; итог также в PR2084.
+
+
+## 231. MC5.1.7 — расширенный экран результата, принятый план
+
+2026-11-10 — OpenAI. MC516 принят владельцем («Проверил, всё ок»).
+Владелец отклонил избыточное дробление по нескольким CSS-правилам и разрешил
+реализацию единого MC517 по всему оставшемуся оформлению результата спортсмена
+и тренера. Эта запись заменяет узкий объём §175; исторические результаты
+не являются приёмкой новой реализации. Выпуск по MC-RELEASE-01 только после
+сводки сделанного/проверок/ограничений и отдельного разрешения владельца.
+
+База: origin/main70541773; локальная квитанция MC516 — 8cd2be4b.
+Ветка feat/design-cleanup-mc517-20261110. Сохраняем прежние квитанции.
+
+- MC5171: убрать остаточное legacy paint блока «Что записано» целиком:
+  оболочка, summary/счётчик/стрелка, список, разделители и группы.
+- MC5172: перенести оставшееся оформление обратной связи и статуса доступности
+  результата тренеру, сохранив реальные различия editable/read-only обеих ролей.
+- MC5173: очистить остаточные зависимости нижних действий результата, edit/share
+  и соответствующих тренерских consumers без добавления отсутствующих сценариев.
+- MC5174: доказать сохранение внешнего вида и механик на свежем baseline/candidate,
+  включая общие правила вне результата; подготовить один проверяемый PR.
+
+Границы: уже перенесённые skin-правила не дублировать; обработчики, API, данные,
+права, flags, зависимости/CI и общий font/foundation не менять. Общую геометрию,
+нативное details, focus, scroll и reduced motion сохранить. Общие правила,
+нужные другим экранам, не удалять целиком. Спортсменский Report и тренерский
+результат остаются разными действующими сценариями. При обнаружении необходимости
+изменить поведение/архитектуру фиксировать отдельно, не расширять этот CSS PR.
+
+Проверка: Chromium/WebKit, обе клиентские темы, actual trainer theme, обе плотности;
+полный/частичный/пустой результат, длинные значения, closed/open/collapsed,
+keyboard focus, нижние действия и scroll/hit targets. Feedback: RPE, wellbeing,
+боль, заметка, pending/error/retry, сохранение/отмена и read-only у другой роли.
+Связанные duration/share/edit/navigation и Live input/keyboard/check/uncheck/
+swipe/reorder/pause/rest сохранить. Source proof неизменности обработчиков и
+вне-scope CSS, computed styles/geometry/PNG baseline→candidate, targeted unit,
+build/types/fonts/lint/docs и CI. Физический телефон/нативный share отдельно
+от браузерных доказательств. Исторические flaky/height-наблюдения не скрывать.
+
+Пока зафиксирован план; реализация и свежая приёмка впереди. Merge/deploy запрещены
+до нового разрешения владельца. Следующий этап без его приёмки не начинать.
+
+## 232. MC517 — весь остаток оформления результата, локальная проверка
+
+Итерация — 10.11.2026 — GPT-6.1-sol / OpenAI.
+Задача: выполнить расширенный §231 одним PR для спортсмена и тренера;
+разрешение реализации получено, разрешения merge/deploy нет.
+База origin/main70541773, план f36a2113, ветка feat/design-cleanup-mc517-20261110.
+Прежняя принятая квитанция MC516 сохранена в истории.
+
+Сделано: MC5171–MC5173 закрывают специфический остаток paint результата:
+«Что записано»/summary/счётчик/стрелка, список фактов и разделители/группы,
+feedback editable/read-only, ответ/вопрос тренера, статус доступности результата,
+нижние edit/share/copy actions. Спортсменский Report не добавлен тренеру;
+его действующие summary, review и отдельная completion card сохранены.
+Условие ограничено потомками реального done экрана: completion page либо detail
+с прямым coach summary/duration surface. Planned и выключенный Lime сохраняют
+прежние общие правила, что проверено положительными контролями.
+
+В styles.css из modern done исключены 137 visual branches / 133 stems;
+25720 исходных selector/declaration records и порядок повторных свойств точны
+после снятия только нового отрицательного guard. Layout, border:0/radius:0,
+нулевой завершающий разделитель, line-height, размеры и геометрия стрелок,
+transform/transition, native details и общие focus primitives остаются общими.
+Нужные копии стоят перед прежним accepted Lime: detail 105 правил / 205 declarations,
+completion 10 правил / 18 declarations, всего 115 / 223. Прежние байты двух
+Lime файлов сохранены целиком как suffix; равная специфичность не возрождает
+старый paint поверх accepted owners. Положительные фильтры имеют нулевую
+добавочную специфичность. Border-bottom записи копируется только для not-last-child.
+110 мёртвых declarations не скопированы: exact accepted counterparts, поздние
+дубли и доказанные текущими consumers overrides. В частности, UI selected mono
+перекрыт accepted non-destructive/danger ветвями, primary paint — действующими
+Lime owners, editable RPE только у клиента и имеет сильные client variables.
+Первоначальное предположение о тренерском editable RPE уточнено: у тренера
+read-only feedback без шкалы. Существующий общий вес номера 600 сохранён;
+мёртвую старую 800 не перенесли. Это не нормализация типографики MC7.
+
+Изменены только три runtime CSS, новый result contract/probe/cases и его entry.
+Три прежних duration/share/highlight helpers получили только import и exact
+migration guard whitelist. Их assertions/алгоритмы не переписаны. Новые positive
+owners и неизвестные отрицательные фильтры сохраняют identity при классификации.
+1630 защищённых non-CSS runtime/API/package/workflow файлов root сравнила побайтно:
+обработчики, DOM, данные, права, API, flags, CI и зависимости прежние.
+
+MC5174: свежая production build с обязательными лицензированными fonts 2/2,
+types/startup, full eslint, 55 unit / 7 suites прошли. Fixture build использует
+первый webServer.env текущего playwright.config плюс CLIENT_LIME=true,
+coach v79 fixture pilots, COACH_WORKOUT_ROLLOUT_MODE=all и строгие fonts.
+Браузерный config /tmp/fit-mc517-current-20261110.config.ts, preview5687,
+Chromium/WebKit, workers2, retries0. --list всего 168: предыдущие 144 и новые24.
+Первый candidate дал 144 passed и 24 QA classifier failures, не «168 green».
+После точных исправлений новый конечный target дал 24/24 за60.923s,
+без skips/flaky/retries. Повторять успешно выполненные144 механики не стали:
+их исходники и защищённый runtime прежние, последняя CSS-коррекция удаляет
+только доказанные мёртвые копии. Unit55/full lint root и финальные targeted lint,
+tsc, source proof завершены успешно; полный source CI будущего PR ещё гейт.
+Проверены Live input/keyboard, undo/unconfirm, swipe/drag/fold, pause/rest/timer,
+out-of-order/superset/pause race; duration/share/PNG и прежний completion skin.
+
+Новая матрица24 содержит client light/dark, Original/Compact, desktop1440/long,
+full/partial/empty/history, actual trainer dark при обеих preferences,
+planned и Lime-off обеих ролей. Настоящие Enter/Space раскрывают/сворачивают
+summary, вложенные факты раскрываются, edit link открывает /edit и возвращается.
+Feedback проходит RPE/selected good/bad/discomfort/note, disabled/pending,
+точный fixture503, retry/save/cancel. Тренерский review проходит cancel,
+send/read-only/reload с проверкой expectedVersion и неизменных фактов.
+Браузер не выполняет реальную внешнюю отправку/запись пользовательских данных.
+
+Принятый baseline — явно составной:23 завершённых случаев из
+/tmp/fit-mc517-baseline-accepted-20261110-results и один WebKit trainer full из
+/tmp/fit-mc517-baseline-centered-trainer-20261110-results. Итоговая квитанция
+/tmp/fit-mc517-baseline-union-20261110.json:24 primary JSON / 126 states / 126 PNG,
+16 terminal legacy ownership red +8 off/planned positive pass, все roundtrips.
+Только этот union используется для сравнения, первые непригодные прогоны сохранены.
+Candidate /tmp/fit-mc517-accepted-20261110-results; comparator
+/tmp/fit-mc517-comparison-20261110.json exit0:126/126 computed styles/geometry,
+frame/focus/scroll и 126/126 PNG byte-exact. Facts/version/смысловые payloads точны;
+случайные operation UUID валидируются отдельно, оба raw значения сохранены.
+CSSOM, CSSRule/style object, focus/scroll/anchor restoration строгие.
+Page errors/requestfailed отсутствуют; ровно ожидаемые503 квалифицированы путём
+feedback, прочие сетевые/console errors не игнорировались.
+
+Расхождения и отвергнутые QA-подходы: первая preview EPERM не запускала тесты.
+Первая сборка выявила только типы новой fixture; исправлены до baseline.
+Полноэкранная CSSOM-абляция с Playwright ClockController давала зависшее
+finished ожидание/стартовые transition values после restore; сохранены native
+snapshots. Контроль менял только фиксацию даты: Date-only сохранила доменные часы,
+оставив native timers/RAF. Natural ожидание нового probe bounded5s, конечные
+running/pending animations и два тихих кадра; общий MC44 helper не менялся.
+Снимок разрешает естественные animations/caret, принудительное завершение
+animations и скрытая caret style injection отвергнуты. Не обобщаем это на
+исторические CI flakes. Native zero shorthand border:0px разворачивает CSSOM
+currentcolor и border-image initial; классификатор проверяет полный authored
+shorthand, а не computed width. Встроены строгие neutral0 / red paint проверки.
+Известные negative guards законно снимаются с owner strings, но положительный
+owner scope остаётся, legacy=false; expected сравнивает только quotes/comma trivia.
+
+Открыто/ограничения: WebKit trainer editor после keyboard path иногда продолжал
+native scroll на4px при неизменных размерах/styles. Причина не доказана;
+caret-only и synchronous disabled-toggle не признаны исправлением и не оставлены
+как обход. Только его visual viewport явно центрирует реально сфокусированную
+кнопку перед capture; raw pre/post сохранены. Было pre-center0/461 при одинаковом
+post-center304; промежуточный strict comparator exit1 сохранён. В финальной паре
+raw calibration тоже совпала, но естественный путь не объявлен исправленным.
+Базовая feedback503 ошибка остаётся серой rgb(85,92,76) от route p; перенос
+пиксельно сохраняет этот исходный дефект, новый semantic color fix не добавлен.
+Общие Onest/fonts/tokens/controls/focus foundation остаются MC7/MC8.
+
+Лично просмотрены шесть реальных candidate PNG, в том числе WebKit client light
+error, dark partial facts, trainer editor с видимым keyboard focus, bottom edit,
+question editor и Chromium desktop long. Их hashes и конкретные замечания —
+/tmp/fit-mc517-visual-review-20261110.json; root отдельно посмотрела четыре кадра.
+Новых обрезаний внутри проверенных карточек не обнаружено; промежуточный viewport
+с nav не выдаётся за проверку всех hit targets, реальные click/navigation проходят.
+Source proof /tmp/fit-mc517-source-proof-20261110.json, protected proof
+/tmp/fit-mc517-protected-source-review.json. Физический iPhone, OAuth,
+нативная установка/нативная клавиатура и system share не проверены.
+
+Дальше: один PR MC5171–MC5174, его exact-source CI и сводка владельцу с этими
+ограничениями. Merge/deploy только после отдельного разрешения MC-RELEASE-01;
+публикации и реализации следующих этапов в этой итерации нет.
+
+
+## 233. MC5.1.7 / PR2092 — серверная приёмка, без выпуска
+
+2026-11-10 — OpenAI. Подготовлен PR https://github.com/podkolzinpd/fit/pull/2092.
+Опубликована только ветка feat/design-cleanup-mc517-20261110, source
+0fcedbd3d4904073dfb0b13d3950207a95dab125; база локальной приёмки70541773.
+Выпуск НЕ разрешён: merge/deploy не выполнялись, auto-merge не включался.
+
+CI42832415137 и Android42832415259 запущены для собственного PR. Наблюдение
+одним ограниченным процессом с паузой90s, без чужих чатов/PR/очередей.
+Итог exact-source CI: 36 SUCCESS, 0 failed/pending, 1 условный SKIPPED
+(Android auth-smoke). Финальный receipt /tmp/fit-mc517-ci-final.json.
+Повторное чтение PR: OPEN, head0fcedbd3, autoMergeRequest=null.
+GitHub показывает BEHIND: перед разрешённым выпуском актуальность main
+и необходимые проверки нового head будут сверены отдельно.
+
+Локальная приёмка подтверждена root: 144 regression на первом CSS candidate,
+24/24 final new cases без retry/skip/flaky; 126/126 states и PNG exact.
+55unit/7suites, full lint, build/types/fonts/docs passed. Root лично просмотрела
+4 PNG нижних действий обеих ролей, light feedback и trainer editor; новых
+наложений внутри карточек не обнаружила. Protected1630files unchanged.
+Ограничения §232 (native WebKit pre-calibration scroll, серый feedback error,
+непроверенный физический телефон/native share) сохраняются.
+
+Следующее действие — сводка владельцу и ожидание его разрешения выпуска.
+Выпуск только после его отдельного разрешения, следующий этап не начинать.
+
+Ручная приёмка после будущего разрешённого выпуска: у спортсмена открыть свежий
+результат и результат из истории, раскрыть список фактов/групп, изменить и сохранить
+самочувствие/заметку, проверить нижние действия и поделиться. У тренера открыть
+завершённую тренировку клиента, раскрыть факты, открыть/отменить/отправить отзыв,
+перезайти и проверить сохранённый отзыв и переход к редактированию. Проверить
+узкий экран и обе доступные темы спортсмена; тренерский текущий экран остаётся
+тёмным. Отдельно на телефоне проверить фокус/клавиатуру и возврат прокрутки.
