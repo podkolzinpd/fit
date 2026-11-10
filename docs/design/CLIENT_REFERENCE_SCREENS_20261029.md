@@ -9126,3 +9126,156 @@ fixed-moscow}.log; before20skip — только диагностический 
 предыдущегоcandidate. Rawcomparison сноваexit1: толькоpartial375initialheight
 Cr2130→1814,Wk2113→2118; finalheight2113 везде. Причина ранних замеров остаётся
 не доказана; данные не нормализуются. Публикация ещё не выполнена.
+
+
+## 214. MC5.1.4 — PR2077 опубликован и проверен
+
+Итерация214 — 2026-11-10 — OpenAI. Выпуск выполнен по разрешению владельца
+из212, после временного gate и проверки очереди черезGitHub. Ранних открытых
+PR/активных предыдущих публикаций передmerge не было. Чужие чаты/PR не менялись.
+PR2077 merged09.11 22:18:10UTC, commit8c51ce43c2f7c16e7cdc606305dfd9ced7cf7216.
+Проверенный source2a2ae096: CI42706236857 35success, Android42706236753 success,
+attempt1. Исправлению предшествовал сохранённый красныйdatabase42703171962;
+его34остальныхjobpassed. Причина и fixturefix описаны213, assertions сохранены.
+
+Main8c51: CI42710643203 34passed+1expectedmigration-skip, Android42710643622
+success, attempt1. API42713832238, web42713832234, OTA42714325717 success.
+Проверена фактическая публикация всех трёх плоскостей именно8c51, без выдачи
+merge за доставку.244/244webfiles HTTP200/size/SHA256 match официальномуartifact;
+APIhealth/readiness/auth401/TLS/provenance passed. OTAподписи/manifest/archive
+и publicreadback passed,15983191bytes,checksum8238b1d91211aa7a0b5e8ddbc37a299
+686269483a8f2c99d3e4ac9905ea97a3d,nativeBuild9,прежнийABI8922d2e9…,
+sequence1794264525741. APK/native/флаги/данные не изменялись этой задачей.
+
+Опубликованныйweb:42сразуpassed,2trainercontrol остановились на ожидании
+старого attendance-dialog. Причина — локальная сборка с pilotcohort оставляла
+синтетического defaulttrainer в прежнемLive, а productioncoachreference включён.
+Actualsnapshot/code показывают действующий unified «Завершение тренировки».
+Только временный publicQA adapter переведён на это окно + checkedradio +submit;
+все result/facts/personalrecords/nonconsumer assertions сохранены. Эти2/2passed
+в обоих движках. Итого покрыты44uniquewebcases, не утверждается первичный44/44.
+Успешные42 не повторялись. В будущем QA текущей trainercohort должен явно
+проверять publishedunifiedflow; старый nonconsumer остаётся отдельнымконтролем.
+
+Проверенный signedZIP:44/44Chromium/WebKit,0skip/fail/flaky,retries0. При
+возобновлении локальный orchestrationscript остановился на отсутствующей env
+до стартаZIPUI; исправлен setup, архив повторно не извлекался, первыйUIпрогон
+прошёл. Данные/порог/assertions не менялись. ВсеAPIсинтетические и page-scoped,
+вproduction ничего не записывалось. Просмотрены реальныеWebKitclientlight и
+trainerdark последействующегоLivefinish. Финальныйfingerprint22:57:27UTC
+HTML/API/OTA совпал с исходным: приёмка относится к одной опубликованной версии.
+
+Артефакты /tmp/fit-mc514-release/final-acceptance.json иcurrent-acceptance:
+web44.json(42+2stopped),web-trainer2.json,web44-combined.json,ota44.json,
+web/api/ota-readback иfinal-fingerprint. Локальная приёмка86browser+31unit,
+исходные63unit и обе DBtimezone21+21 сохранены в211–213. Ранние2height samples
+по-прежнему квалификация, не доказанный исправленный баг; settled14PNG и
+geometry совпали. Физическийтелефон/nativeinstall/реальныеOAuth/systemshare
+не проверены. Новых ошибок в завершённых пользовательских сценариях не найдено.
+
+Владельцу: у спортсмена завершить полную/частичную тренировку, проверить верх
+результата/дату/показатели, длительность cancel/save и поделиться; у тренера
+завершить черезединоеокно, проверить карточкурезультата ивозвраткклиенту.
+Обе темы. До его подтверждения MC5.1.5 не начинаем. Квитанция локальная,
+без повторногоpush/CI после публикации; публичная сводка вPR2077.
+
+
+## 215. MC5.1.5 — принятый план, реализация без выпуска
+
+2026-11-10. Владелец принял MC5.1.4 и поручил выполнить MC5.1.5
+для спортсмена и тренера. Выпуск только после нового разрешения владельца;
+до него подготовить изменения, проверки и сводку оставшихся замечаний.
+База origin/main240dc6d6 интегрирована merge70470ab5; предыдущая квитанция214
+сохранена. Историческая заготовка cdc1ba84/§173 — источник анализа,
+не доказательство приёмки на текущем main.
+
+Объём: отделить от монохромного наследования клиентские блоки результата
+highlight (рекорд/первый результат/рост), loading/error/retry, «Не завершено»
+и «Нагрузка». Сохранить текущие внешний вид, геометрию и сильные Lime-правила;
+владельцу Lime передать только недостающие визуальные значения. У тренера
+отдельная WorkoutCompletionCard: общие используемые стили не удалять,
+проверить отсутствие изменений через актуальное единое окно завершения.
+
+Сохраняем расчёты и приоритет достижений, полное/частичное/пустое завершение,
+факты и историю, retry/доступность share, длительность и фокус, ввод/клавиатуру,
+Live undo, свайпы, перенос, сворачивание и таймер/отдых. Не меняем React/API,
+флаги выпуска, данные, зависимости или CI.
+
+Порядок: baseline Chromium/WebKit обеих тем на текущей базе; узкий CSS-патч;
+candidate со сверкой геометрии/PNG/каскада и удаления legacy-владения;
+record/growth/baseline, loading/error/recovery, длинные названия, partial/empty;
+trainer unified finish с явным подтверждением нового потока. Далее релевантные
+Live-регрессии, unit/build/lint/fonts/docs и собственный PR/CI. Повтор успешных
+проверок только при новой причине. До выпуска показать владельцу конкретные
+изменения, результаты и ограничения.
+
+Два ранних измерения высоты MC514 остаются квалифицированным наблюдением:
+причина не доказана, данные не нормализовать и не выдавать за исправление.
+Для MC515 собирать свежие артефакты; исторические зелёные прогоны не засчитывать.
+Физическое устройство и настоящий системный share не считать проверенными
+по браузерным тестам. Ни слияние, ни публикация этим поручением не разрешены.
+
+
+## 216. MC5.1.5 — реализация и локальная приёмка
+
+2026-11-10 — OpenAI. Проверенный product/QA commit e5c6c04b на main240dc6d6.
+Сделано:14 zero-specificity exclusions для legacy paint highlight/missing/muscles;
+11 слабых Lime-правил/20 деклараций. Neutral layout, сильные Lime overrides и
+общие потребители сохранены. React/API/данные/флаги/CI не изменялись.
+Source proof:25720 исходных declaration records и порядок одинаковы после
+снятия только14 точных новых guards; старый Lime byte-prefix сохранён.
+10 protected files byte-exact; в двух соседних QA probes добавлен только
+точный новый guard для распознавания общей button-family, assertions прежние.
+
+Новый helper проверяет client record/growth/partial/empty/loading/error/retry
+и реальный trainer unified finish с подтверждёнными фактами. Первый baseline
+имел14 QA failures: для массива backdrop ошибочно использовалась identity
+проверка toBe. Исправлено на точное структурное toEqual без изменения продукта.
+Первый лог сохранён; успешные4 trainer не повторялись в baseline. Повтор14client:
+12 ожидаемых ownership-red только в финальном assert и2 off-control passed;
+22 состояния прошли восстановление CSSOM/style objects/focus/scroll/anchors.
+
+Candidate:102/102 Chromium/WebKit,0 failures/skips/retries,2.3min. Включены
+74 completion/duration/share/PNG/error cases и28 Live regressions: undo,
+подтверждённый swipe/cancel/delete/reload, keyboardNext, collapse, hold/drag,
+pause clock, out-of-order/superset. Сравнение baseline→candidate:18cases,
+26states (22client+4trainer),26/26 PNG byte-exact; все стили/геометрия/сырые
+height/focus/scroll/anchors совпали. В error-cases ровно2 ожидаемых503,
+реальный Retry восстанавливает данные третьим запросом. Лишних ошибок нет.
+
+49 unit в6 suites passed; full lint и targeted изменённых helpers passed;
+оба production-like builds/types/startup/fonts2/2 passed; docs/diffcheck passed.
+Просмотрены clientpartial light375, growth dark430 WebKit и trainerresult WebKit.
+Trainer stored preferences light/dark проверены отдельно: текущая оболочка
+реально dark в обоих случаях. Это не доказательство отдельной светлой темы
+тренера и не повод менять её в очистке. Старые pilot trainer checks не подменяли
+modern unified flow; их исходники/assertions сохранены.
+
+Артефакты /tmp/fit-mc515-*-20261110: baseline-review.json, comparison.json,
+source-proof.json, candidate.json/log/results, unit/lint/build logs.
+Ранние два измерения MC514 остаются историческим замечанием, причина не
+установлена; свежий MC515 strict comparison прошёл без нормализации.
+Build имеет прежнее предупреждение о крупных chunks, ошибок сборки нет.
+Физический телефон/native install/настоящий системный share не проверены.
+
+Дальше: собственный PR/CI и сводка владельцу. Слияние/публикация запрещены
+до его отдельного разрешения. Проверка очереди требуется перед выпуском,
+сейчас чужие PR/чаты не опрашиваются. Следующий этап не начат.
+
+
+## 217. MC5.1.5 — PR2081 готов к решению владельца, без выпуска
+
+2026-11-10. Draft https://github.com/podkolzinpd/fit/pull/2081 открыт на
+9be8ec1337b32fe493a93f25c6fc208f9dd77c2f. Проверено05:44UTC:37check contexts
+завершены,36SUCCESS+1SKIPPED(auth-smoke); failures/pending0. Основной CI
+42758417852, auth-smoke отдельного workflow42758417913 ожидаемо skipped.
+Ограниченный observer с паузой90с завершился сетевой ошибкой GitHub; актуальный
+итог восстановлен точечным чтением собственного PR, без rerun/restart тестов.
+Локальные102browser/49unit/26PNG и ограничения216 сохраняются.
+
+PR остаётся OPEN/DRAFT, merge/deploy не выполнялись. Следующее действие только
+после разрешения владельца: проверить актуальный head/main/общую очередь,
+при изменении базы выполнить требуемую интеграцию и проверки. Затем выпуск
+и проверка доставки; сейчас эта часть не разрешена. Следующий этап не начат.
+Эта локальная квитанция не требует повторного push/CI; статус добавляется
+в описание PR. Физический телефон и системный share остаются непроверенными.
