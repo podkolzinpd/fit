@@ -27,8 +27,6 @@ import type {
   TrainerMembership,
   TrainerCatalogFilters,
   TrainerDiscoveryPromptAction,
-  TrainerProfileDraft,
-  TrainerProfilePhotoUpload,
   TrainerWorkspace,
   Workout,
   WorkoutDraft,
@@ -64,7 +62,7 @@ import {
 } from './training-summary-mappers'
 import { trainingSummaryGenerationError } from './training-summary-errors'
 import { customExerciseImageSchema, yandexPilotRepository, type YandexPilotTrainingData } from './yandex-pilot.repository'
-import { expandSpecialtiesForCatalogSearch, trainerCatalogPageSchema, trainerProfessionalProfileSchema } from '../../shared/trainer-profile'
+import { expandSpecialtiesForCatalogSearch, trainerCatalogPageSchema, trainerProfileManagementSchema, trainerProfessionalProfileSchema } from '../../shared/trainer-profile'
 import {
   PRIVACY_VERSION,
   TERMS_VERSION,
@@ -451,6 +449,8 @@ const workoutTemplateResponseSchema = z.object({ template: workoutTemplateSchema
 type ResponseErrorFactory = (status: number, code?: string) => Error
 
 function errorForStatus(status: number, code?: string): RepositoryError {
+  if (code === 'trainer_profile_managed') return new RepositoryError(code, 'Анкетой управляет администратор. Ваши изменения не сохранены.')
+  if (code === 'trainer_profile_refresh_required') return new RepositoryError(code, 'Обновите приложение и загрузите актуальную анкету перед редактированием.')
   if (code === 'connection_changed') return new RepositoryError(code, 'Подключение изменилось. Проверьте условия и подтвердите заново.')
   if (code === 'connection_offer_unavailable') return new RepositoryError(code, 'Приглашение больше не действует. Попросите тренера отправить новое.')
   if (code === 'connection_forbidden') return new RepositoryError(code, 'Подключение может подтвердить только приглашённый спортсмен.')
@@ -1225,31 +1225,32 @@ export function createYandexMainRepository(
       },
     },
     trainerProfiles: {
+      async getManagement() { return readJson(queries, '/v1/trainer-profile/access', trainerProfileManagementSchema) },
       async getOwn() {
         return readJson(queries, '/v1/trainer-profile', trainerProfessionalProfileSchema.nullable())
       },
-      async saveDraft(draft: TrainerProfileDraft) {
-        return writeJson(queries, '/v1/trainer-profile', 'PUT', draft, trainerProfessionalProfileSchema)
+      async saveDraft(draft, context) {
+        return writeJson(queries, '/v1/trainer-profile', 'PUT', context ? { ...draft, ...context } : draft, trainerProfessionalProfileSchema)
       },
-      async uploadPhoto(draft: TrainerProfileDraft, photo: TrainerProfilePhotoUpload, replaceLegacy = false) {
+      async uploadPhoto(draft, photo, replaceLegacy = false, context) {
         return writeJson(queries, '/v1/trainer-profile/photos', 'POST', {
-          draft, photo, replaceLegacy,
+          draft, photo, replaceLegacy, ...context,
         }, trainerProfessionalProfileSchema, trainerPhotoErrorForStatus)
       },
-      async reorderPhotos(photoIds: string[]) {
-        return writeJson(queries, '/v1/trainer-profile/photos/order', 'PATCH', { photoIds }, trainerProfessionalProfileSchema)
+      async reorderPhotos(photoIds, context) {
+        return writeJson(queries, '/v1/trainer-profile/photos/order', 'PATCH', { photoIds, ...context }, trainerProfessionalProfileSchema)
       },
-      async deletePhoto(photoId: string) {
-        return writeJson(queries, `/v1/trainer-profile/photos/${encodeURIComponent(photoId)}`, 'DELETE', undefined, trainerProfessionalProfileSchema)
+      async deletePhoto(photoId, context) {
+        return writeJson(queries, `/v1/trainer-profile/photos/${encodeURIComponent(photoId)}`, 'DELETE', context, trainerProfessionalProfileSchema)
       },
-      async publish() {
-        return writeJson(queries, '/v1/trainer-profile/publish', 'POST', {}, trainerProfessionalProfileSchema)
+      async publish(context) {
+        return writeJson(queries, '/v1/trainer-profile/publish', 'POST', context ?? {}, trainerProfessionalProfileSchema)
       },
-      async unpublish() {
-        return writeJson(queries, '/v1/trainer-profile/unpublish', 'POST', {}, trainerProfessionalProfileSchema)
+      async unpublish(context) {
+        return writeJson(queries, '/v1/trainer-profile/unpublish', 'POST', context ?? {}, trainerProfessionalProfileSchema)
       },
-      async setCatalogListing(listed: boolean) {
-        return writeJson(queries, '/v1/trainer-profile/catalog', 'POST', { listed }, trainerProfessionalProfileSchema)
+      async setCatalogListing(listed, context) {
+        return writeJson(queries, '/v1/trainer-profile/catalog', 'POST', { listed, ...context }, trainerProfessionalProfileSchema)
       },
       async listCatalog(filters: TrainerCatalogFilters, page) {
         const params = new URLSearchParams()

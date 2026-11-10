@@ -13,6 +13,7 @@ export interface CorporateTrainer {
   publishedName?: string | null
   photoUrl?: string | null
   photoUnavailable?: boolean
+  profileEditingAvailable?: boolean
   isYandex: boolean
   officeIds: string[]
   version: number

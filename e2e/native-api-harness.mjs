@@ -144,6 +144,10 @@ try {
   options.chatMediaStore = new YandexChatMediaStore(storage)
   const { DatabasePilotTrainerProfiles } = await nativeModule('trainer-profile')
   options.pilotTrainerProfiles = new DatabasePilotTrainerProfiles(runtime, storage)
+  const { CorporateProfilesStore } = await import('../services/api/dist/corporate-profile.js')
+  options.corporateProfiles = new CorporateProfilesStore(runtime, options.pilotTrainerProfiles)
+  const { CorporateAdminStore } = await nativeModule('corporate-admin')
+  options.corporateAdmin = new CorporateAdminStore(runtime, storage)
   const { DatabasePilotCustomExercisePhotos } = await nativeModule('custom-exercise-photo')
   options.pilotCustomExercisePhotos = new DatabasePilotCustomExercisePhotos(runtime, storage)
   const { DatabasePilotTrainingSummaries } = await nativeModule('training-summary')
@@ -184,6 +188,21 @@ try {
     const token = createHash('sha256').update(`${databaseName}:${resetId}:${id}:${++sessionSequence}`).digest('base64url')
     await owner.query("insert into app_private.yandex_app_sessions(token_sha256,profile_id,expires_at) values($1,$2,now()+interval '1 day') on conflict(token_sha256) do nothing",[sha(token),id])
     return { profileId: id, token, expiresAt: new Date(Date.now()+86_400_000).toISOString() }
+  })
+  app.post('/__fixtures/corporate-profile', async (request,reply) => {
+    const value=request.body
+    const target=profiles.get(value?.trainerKey),administrator=profiles.get(value?.adminKey)
+    if(!target||!administrator||value.trainerKey===value.adminKey) return reply.code(422).send({error:'fixture_identity_required'})
+    const office=uuid('synthetic-profile-office')
+    await owner.query('begin')
+    try {
+      await owner.query("insert into app_private.corporate_admins(profile_id) values($1) on conflict(profile_id) do update set enabled=true",[administrator])
+      await owner.query("insert into public.corporate_offices(id,city,name,address) values($1,'Тестовый город','Тестовый офис','Синтетический адрес') on conflict(id) do nothing",[office])
+      await owner.query('insert into public.corporate_trainers(trainer_id,is_yandex) values($1,true) on conflict(trainer_id) do update set is_yandex=true',[target])
+      await owner.query('insert into public.corporate_trainer_offices(trainer_id,office_id) values($1,$2) on conflict do nothing',[target,office])
+      await owner.query('insert into app_private.corporate_profile_pilot_trainers(profile_id,enabled) values($1,true) on conflict(profile_id) do update set enabled=true',[target])
+      await owner.query('commit');return {trainerId:target,officeId:office}
+    }catch(error){await owner.query('rollback');throw error}
   })
   app.get('/__fixtures/media/*', async (request, reply) => {
     const key = request.url.slice('/__fixtures/media/'.length)

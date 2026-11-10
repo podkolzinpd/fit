@@ -43,3 +43,18 @@
 .corporate-invitation-share > p { margin:0; }
 
 .corporate-admin-shell .corporate-statistics-actions { display:flex; gap:8px; flex-wrap:wrap; }
+
+.corporate-profile-editor { min-width:0; }
+.corporate-profile-control { padding:16px 0; }
+.corporate-profile-control p { color:var(--muted); margin-top:8px; }
+.corporate-profile-history { list-style:none; padding:0; }
+.corporate-profile-history li { padding:16px 0; border-bottom:1px solid var(--border); }
+.corporate-profile-history time { display:block; color:var(--muted); }
+.corporate-profile-history dd { margin-left:0; overflow-wrap:anywhere; white-space:pre-wrap; }
+.corporate-profile-history dt { font-weight:600; }
+.corporate-profile-editor summary { min-height:44px; padding:12px 0; cursor:pointer; }
+
+.corporate-profile-editor { grid-template-columns:minmax(0,1fr); }
+.corporate-profile-editor .trainer-professional-embedded { min-width:0; }
+.corporate-profile-control .switch-row { padding-inline:0; }
+.corporate-profile-editor .trainer-photo-item-actions button { min-height:44px; min-width:44px; }
