@@ -9454,3 +9454,26 @@ CI ещё выполняется, merge и доставка не объявле�
 После merge — штатные main CI/Android/web/API/OTA, затем readback и
 браузерная приёмка фактически опубликованных web и подписанного OTA.
 Следующий этап не начинать до приёмки владельца.
+
+
+## 225. MC5.1.6 — первый CI, диагностика единственного flaky
+
+Source f05fa54f: Android42785856336 success; CI42785856416 attempt1 failure.
+33 jobs success; auth2/4 и итоговый e2e failed из-за одного flaky (337 passed,
+4 предусмотренных skips, повтор самого сценария прошёл). Сценарий main2083:
+client pause failure restores timers and reads committed resume original.
+Второй click4973 выбрал full-size pause, во время action произошёл переход
+к dock: header перехватил pointer, прежняя attached-кнопка стала hidden.
+Snapshot сохраняет доступную dock pause. Locator заново вычисляется между
+calls, но action повторяет старый ElementHandle до detach/timeout.
+Точный инициатор докинга в первом attempt без trace неизвестен; дефект
+таймера/потеря управления этим логом не доказаны. Ошибочный alert не причина:
+этот alert показывается только тренеру. Source/UI/проверки не менялись.
+
+Исходные log/artifact сохранены /tmp/fit-mc516-ci/auth-failed.log и
+auth-diagnostics; первая квитанция source-runs-attempt1-failed.json.
+Один повтор только failed jobs разрешён задачей и запущен на том же head.
+Никаких force clicks, отключения анимаций, ослабления assertions или роста
+timeout. При повторном сбое — новый trace и адресная диагностика.
+Merge controller и after-merge корректно остановились на первом failure;
+после принятого rerun возобновляются с прежними head/main/queue guards.
