@@ -5227,6 +5227,12 @@ for (const role of ['trainer','client'] as const) for (const density of ['origin
   expect(message).not.toBeNull()
   expect(field!.y >= message!.y+message!.height || field!.y+field!.height <= message!.y).toBe(true)
   await input.press('Enter')
+  // Enter means Next, not Done: finish editing before restoring the viewport.
+  const nextInput = page.locator('.live-set-input').nth(1)
+  await expect(nextInput).toBeFocused()
+  await expect(nextInput).toBeInViewport()
+  await nextInput.blur()
+  await expect(nextInput).not.toBeFocused()
   await page.setViewportSize({width:390,height:844})
   await page.locator('.content').evaluate(e=>{e.scrollTop=0;e.dispatchEvent(new Event('scroll'))})
   await expect(page.locator('.coach-v79-actions')).not.toHaveAttribute('inert','')
