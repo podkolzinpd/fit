@@ -2247,3 +2247,73 @@ OTA42837843914 и final public/native browser приёмка ещё выполн
 от этого main параллельно оставшейся приёмке; его merge/release только после приёмки FIN801 и
 очереди GitHub. Это не параллельная публикация второго этапа. Полный rebased npm check FIN802
 прошёл3193frontend/1631API; нового runtime diff после проверки нет.
+
+FIN-68: FIN803 подготовлен локально: явная разовая в проведении и ручном учёте; стоимость и
+получено отдельно, zero/free допустимы, pending/retry сохраняет исходные деньги. Новые distinct
+finish-single/single-sessions маршруты не дают старому API проигнорировать новые поля.
+Новый delivery_mode сохраняет очно/онлайн отдельно от training_format=self/with_trainer:
+финансовые месячные фильтры и учёт присутствия не меняются. Actor/version setter, нормализация
+self и общая транзакция проверены на собственной PG55441; wire aliases защищают откат API.
+План, quick start, ручное создание результата, редактирование, Live и детали читают/сохраняют формат;
+черновики сохраняют delivery. Пробное отсутствует в новых Lime действиях, историческое trial и Mono
+селекты сохранены. Незаполненные подходы не подтверждаются автоматически.
+Полный frontend coverage3195/359, APIcheck1635/139, lint/types/build и остальные фазы check passed.
+Полный test:db passed на чистой PG55441; дополнительно рабочая команда savePlannedWorkout сохраняет
+online/with_trainer, ownership/version/self reset подтверждены. Первое падение нового теста было
+неполной очисткой созданного ручной операцией workout; собственный synthetic container пересоздан,
+очистка исправлена, прежние assertions не менялись. Старый response без online не расширяется
+лишним default-полем, точные fixtures сохранены.
+40/40 finance browser passed без retries; 14/14 расширенных старых format/editor cases passed после
+обновления wire expectations/fixture на новый явный формат. Геометрия всех widths, обычные клики,
+позиция submit после inner scroll, исходные YS Geo. Снимки просмотрены; итоговая нейтральная окраска
+использует существующий lime-text-secondary, а не отсутствующий токен. Физический iPhone не проверен.
+PR пока не открыт: FIN801 merged e3677510 после exact-headCI42825181524 SUCCESS;
+старший2087 явно non-merge/non-release по собственному GitHub описанию и завершённому CI.
+MainCI42831619147/публикация FIN801 впереди. FIN802→803→804 выпускаются только после приёмки предыдущего.
+
+FIN-70: дополнительная приёмка FIN803 проверяет заполненный упражнениями Live с пустым подходом:
+finishLiveWorkout(singleService), точная частичная оплата/долг, replay, новый operationId после
+проведения (отказ без второй услуги/оплаты) и replay после последующего удаления упражнения.
+Все assertions прошли на прежней функции207 и собственной PG55441. Первоначальная гипотеза об
+ограничении пустыми тренировками была основана на169; действующая170 уже снимает его. Гипотеза
+отозвана, SQL/алгоритм не меняется; новый regression-case сохраняет доказательство и пустые facts.
+Повтор APIcheck139files/1635 passed. Вспомогательный Python ошибочно запускался из API cwd;
+запись канонического журнала затем выполнена по абсолютному пути, без ложного статуса записи.
+
+FIN-72: FIN801/PR2088 принят на e36775106008d80e0362527067765efd9b5a75f4.
+SourceCI42825181524, mainCI42831619147, API42836039747, web42836040125,
+OTA42837843914 — SUCCESS. Public244/244 файлов совпали с immutable manifest; обеAPI health passed.
+Public42/42 и verified signedZIP42/42, retries0; PNG320/390/430/1440 просмотрены в обоих артефактах.
+OTA manifest/ZIP signatures, source, expiry, checksum и ABI8922d2e9 проверены, sequence1794322260120,
+bundle d4a8ef7dd42f3d36cabd671f62ccc3c587d7f1dc4e3805dad3acd5aa4eaab3b9.
+Физический iPhone/Android не проверен; синтетические API requests из приёмки перехвачены,
+немокированные v1 запросы блокировались. Real-user finance mutations/ручных денежных SQL не было.
+Квитанция: outputs/finance-confirmed-release-20261110/pr1/acceptance.json.
+FIN802/PR2094 c69b07c7 проходит sourceCI42838769405; merge/release по GitHub очереди впереди.
+
+FIN-73: последняя сверка входов FIN803 выявила два ещё не обновлённых компонента: FitLimePlanComposer
+и QuickDayBooking. Оба теперь используют тот же Lime selector очно/онлайн/самостоятельно;
+плановый draft, голосовой draft, navigation state и возврат сохраняют deliveryMode. Today reset
+возвращает очный default. В Mono quick-booking сохранена прежняя статическая подпись; пилоты/rollout
+не расширяются. Это завершение согласованного scope FIN803, не новая коммерческая механика.
+16/16 old typography/voice/lifecycle browser cases и14/14 связанных native quick-booking cases
+прошли без retries. Новых browser-case/осей нет; screenshots320/390/430/1440 просмотрены для обоих
+изменённых окон. Обычное нажатие, история, жесты, потеря ответа и тот же requestId проверены.
+Полный повтор npm check FIN803 после изменения входов прошёл3195 frontend/1635 API и прочие фазы.
+FIN804 clean full npm check наe2ac8b9a (до расширения родителя FIN803) также прошёл целиком:
+3201frontend/1635API. Дальнейшая интеграция/CI берёт актуальный родительский main.
+
+FIN-74: после разрешённого возобновления FIN802 интегрирован с maina6bb1ba1 (head31c0cda5).
+Полный npm check3193frontend/1631API и40/40 browser passed; форма оплаты320/390/430/1440 просмотрена.
+Current-head sourceCI42883104279 ещё выполняется; слияние и публикация FIN802 не заявляются.
+Предыдущий активный выпускa6bb завершён: CI42879577154/API42888767762/web42888768004/OTA42889887181 SUCCESS.
+PR2093 подтверждённо стоит: неизменныйcfa6dbee, CI42837120964 завершён failure, новых запусков,
+коммитов, комментариев и review нет в нескольких разнесённых снимках GitHub. Антон разрешил
+обходить только стоящие PR; активные выпуски ожидались, чужие изменения/чаты не трогались.
+FIN803 на актуальном основании: check3195frontend/1635API,70finance/formats+14quick-booking browser passed.
+FIN804: все check gates passed, полный coverage3201 при2 локальных workers, API1635 и остальные фазы.
+Первый общий coverage дал4 сбоя вне финансов; те же76 тестов отдельно и полный набор при2 workers
+прошли. Assertions, timeouts, coverage thresholds и CI policy не менялись. Его70+14 browser также passed.
+Снимки разовой и форматов с исходными YS Geo просмотрены; header/close записи320 дополнительно
+проверены существующими кейсами: текст помещается, gap>=8px и close44px; CSS-исправление не требуется.
+Mono и нерешённые механики вне diff. Физические телефоны не проверены; выпуск803/804 ещё впереди.

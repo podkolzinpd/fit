@@ -392,9 +392,20 @@ export function financeAccountingCases() {
     await expect(sheet.getByText('Абонемент не выбран', { exact: true })).toBeVisible()
     await sheet.getByRole('button', { name: 'Выбрать', exact: true }).click()
     await expect(sheet.getByText('По текущим условиям')).toHaveCount(0)
+    await expect(sheet.getByRole('radio',{name:'Пробное занятие'})).toHaveCount(0)
+    await sheet.getByRole('radio',{name:'Разовое занятие'}).click()
+    await sheet.getByLabel('Стоимость, ₽').fill('2000')
+    await sheet.getByLabel('Получено, ₽').fill('500')
+    for(const width of [320,390,430,1440]){
+      await page.setViewportSize({width,height:844})
+      await sheet.getByLabel('Дата получения').scrollIntoViewIfNeeded()
+      expect(await sheet.evaluate(node=>node.scrollWidth<=node.clientWidth+1)).toBe(true)
+      await page.screenshot({path:info.outputPath(`single-attendance-${width}.png`)})
+    }
     const first = sheet.getByRole('radio', { name: /01.11.2026 — 30.11.2026 · осталось 3/ })
     const second = sheet.getByRole('radio', { name: /03.11.2026 — 02.12.2026 · осталось 10/ })
     await expect(first).not.toBeChecked(); await expect(second).not.toBeChecked()
+    await second.click()
     for (const width of [320, 390, 430, 1440]) {
       await page.setViewportSize({ width, height: 844 })
       await first.scrollIntoViewIfNeeded()
@@ -424,9 +435,30 @@ export function financeAccountingCases() {
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
       await page.screenshot({ path: info.outputPath(`manual-package-choice-${width}.png`), fullPage: true })
     }
-    await form.getByRole('button', { name: 'Отмена', exact: true }).click()
+    await form.getByRole('radio',{name:'Разовое занятие'}).click()
+    await form.getByLabel('Стоимость, ₽').fill('2000')
+    await form.getByLabel('Получено, ₽').fill('500')
+    for(const width of [320,390,430,1440]){
+      await page.setViewportSize({width,height:844})
+      await formGeometry(form)
+      await page.screenshot({path:info.outputPath(`single-manual-${width}.png`),fullPage:true})
+      const submit=form.getByRole('button',{name:'Добавить',exact:true})
+      await submit.scrollIntoViewIfNeeded()
+      expect(await submit.evaluate(node=>{const r=node.getBoundingClientRect();return node.contains(document.elementFromPoint(r.x+r.width/2,r.y+r.height/2))})).toBe(true)
+      await page.screenshot({path:info.outputPath(`single-manual-submit-${width}.png`),fullPage:true})
+    }
+    const singles:TrainerFinanceManualSessionDraft[]=[]
+    await page.route(`**/v1/clients/${clientId}/finance/single-sessions`,async route=>{
+      const draft=route.request().postDataJSON() as TrainerFinanceManualSessionDraft;singles.push(draft)
+      expect(draft.singleService).toEqual({priceCents:200000,paidCents:50000,receivedOn:'2026-11-03'})
+      const session={...ledger.sessions[0]!,id:conversationId,workoutId:conversationId,packageId:null,disposition:'charged' as const,workoutDate:draft.workoutDate}
+      ledger.sessions.push(session)
+      await route.fulfill({json:{session}})
+    })
+    await form.getByRole('button',{name:'Добавить',exact:true}).click()
     await expect(form).toHaveCount(0)
-    expect(ledger.sessions).toHaveLength(1)
+    expect(singles).toHaveLength(1)
+    expect(ledger.sessions).toHaveLength(2)
   })
 
   test('Finance Lime owns readable cards, forms and payment actions', { tag: ['@lime-finance'] }, async ({ page }, info) => {
@@ -1025,8 +1057,8 @@ export function financeAccountingCases() {
     await form.getByLabel('Дата занятия').fill('2026-10-20')
     // A fully consumed October service is unavailable to a new session.
     await expect(form.locator('input[type=radio][value^="charged:"]')).toHaveCount(0)
-    await form.getByRole('radio', { name: 'Пробное занятие' }).click()
-    await form.getByLabel('Комментарий').fill('Пробное занятие после перерыва')
+    await form.getByRole('radio', { name: 'Без списания' }).click()
+    await form.getByLabel('Комментарий').fill('Бесплатное занятие после перерыва')
     await form.getByRole('button', { name: 'Добавить', exact: true }).click()
     await expect(form.getByRole('button', { name: 'Повторить сохранение' })).toBeEnabled()
     await expect(form.getByLabel('Дата занятия')).toBeDisabled()
@@ -1041,7 +1073,7 @@ export function financeAccountingCases() {
     await form.getByRole('button', { name: 'Отмена' }).click()
     expect(commands).toHaveLength(1)
     await page.getByRole('button', { name: 'Проверить сохранение' }).click()
-    await expect(form.getByLabel('Комментарий')).toHaveValue('Пробное занятие после перерыва')
+    await expect(form.getByLabel('Комментарий')).toHaveValue('Бесплатное занятие после перерыва')
     await form.getByRole('button', { name: 'Повторить сохранение' }).click()
     await expect(page.getByRole('tab', { name: 'Занятия: 2' })).toBeVisible()
     expect(commands).toHaveLength(2)
@@ -1066,7 +1098,7 @@ export function financeAccountingCases() {
     await expect(form.locator(`input[type=radio][value="charged:${conversationId}"]`)).toBeChecked()
     await page.screenshot({ path: info.outputPath('current-charge.png'), fullPage: true })
     await form.getByLabel('Дата').fill('2026-11-03')
-    await expect(form.getByRole('radio', { name: 'Выбрать абонемент позже' })).toBeChecked()
+    await expect(form.getByRole('radio', { name: 'Выбрать позже' })).toBeChecked()
     await expect(form.getByRole('radio', { name: /Октябрь/ })).toHaveCount(0)
     await form.locator(`input[type=radio][value="charged:${newWorkoutId}"]`).check()
     await page.route(`**/v1/finance/sessions/${workoutId}`, route => {

@@ -220,7 +220,9 @@ export function savePlannedWorkout(
         [saved.workout_id],
       )
     }
-    return { id: saved.workout_id, version: safeVersion(formatted[0]?.version ?? saved.version) }
+    const version = formatted[0]?.version ?? saved.version
+    const delivered = draft.deliveryMode ? await client.query<{version:string}>('select public.set_workout_delivery_mode($1,$2,$3) as version',[saved.workout_id,draft.deliveryMode,version]) : []
+    return { id: saved.workout_id, version: safeVersion(delivered[0]?.version ?? version) }
   }, () => step)
 }
 
@@ -244,7 +246,9 @@ export function saveCompletedWorkout(
       'select public.set_workout_training_format($1, $2, $3, $4) as version',
       [saved.workout_id, draft.trainingFormat ?? null, saved.version, expectedVersion === null],
     )
-    return { id: saved.workout_id, version: safeVersion(formatted[0]?.version ?? saved.version) }
+    const version = formatted[0]?.version ?? saved.version
+    const delivered = draft.deliveryMode ? await client.query<{version:string}>('select public.set_workout_delivery_mode($1,$2,$3) as version',[saved.workout_id,draft.deliveryMode,version]) : []
+    return { id: saved.workout_id, version: safeVersion(delivered[0]?.version ?? version) }
   })
 }
 
@@ -268,7 +272,9 @@ export function recordPlannedWorkoutResult(
       'select public.set_workout_training_format($1, $2, $3, false) as version',
       [saved.workout_id, draft.trainingFormat ?? null, saved.version],
     )
-    return { id: saved.workout_id, version: safeVersion(formatted[0]?.version ?? saved.version) }
+    const version = formatted[0]?.version ?? saved.version
+    const delivered = draft.deliveryMode ? await client.query<{version:string}>('select public.set_workout_delivery_mode($1,$2,$3) as version',[saved.workout_id,draft.deliveryMode,version]) : []
+    return { id: saved.workout_id, version: safeVersion(delivered[0]?.version ?? version) }
   })
 }
 
@@ -474,6 +480,7 @@ export function quickStartLiveWorkout(
   clientId: string | null,
   operationId: string,
   trainingFormat?: 'self' | 'with_trainer',
+  deliveryMode?: 'in_person' | 'online',
 ): Promise<PilotQuickStartResult> {
   return runCommand(async () => {
     const rows = await client.query<QuickStartRow>(
@@ -487,6 +494,7 @@ export function quickStartLiveWorkout(
         'select public.set_workout_training_format($1, $2, null, true)',
         [result.workout_id, trainingFormat ?? null],
       )
+      if(deliveryMode) await client.query('select public.set_workout_delivery_mode($1,$2,null)',[result.workout_id,deliveryMode])
     }
     return { id: result.workout_id, resumed: result.resumed }
   })

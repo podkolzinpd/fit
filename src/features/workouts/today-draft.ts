@@ -19,6 +19,7 @@ export interface TodayDraft {
   workoutDate?: string
   startTime?: string
   actualDurationMinutes?: string
+  deliveryMode?: 'in_person' | 'online'
   trainingFormat?: WorkoutTrainingFormat
   prepSeconds?: number
   executionMode?: 'timer' | 'manual'
@@ -42,6 +43,7 @@ function isDraft(value: unknown): value is TodayDraft {
     && (draft.workoutDate === undefined || typeof draft.workoutDate === 'string')
     && (draft.startTime === undefined || typeof draft.startTime === 'string')
     && (draft.actualDurationMinutes === undefined || typeof draft.actualDurationMinutes === 'string')
+    && (draft.deliveryMode === undefined || draft.deliveryMode === 'in_person' || draft.deliveryMode === 'online')
     && (draft.trainingFormat === undefined || draft.trainingFormat === 'self' || draft.trainingFormat === 'with_trainer')
     && (draft.prepSeconds === undefined || (Number.isInteger(draft.prepSeconds) && draft.prepSeconds >= 0 && draft.prepSeconds <= 600))
     && (draft.executionMode === undefined || draft.executionMode === 'timer' || draft.executionMode === 'manual')
