@@ -4,7 +4,7 @@ import { createPortal } from 'react-dom'
 
 import type { InvitationLinkSource, InvitationShare } from './domain'
 import { copyText } from './clipboard'
-import { CloseIcon } from './icons'
+import { CheckIcon, CloseIcon, CopyIcon } from './icons'
 import { invitationShareUrl } from './invitation-share'
 import { useConfirm } from './ui'
 import { trackGoal } from './yandex-metrika'
@@ -136,8 +136,8 @@ export function InvitationShareDialog({
   const host = document.querySelector('.phone-frame') ?? document.body
 
   const codeSection = (<section className="invitation-code-fallback" aria-label="Запасной код приглашения">
-          <div><strong>{codeLabel}: <span>{share.code}</span></strong><p className="muted">Если ссылка не открывается.</p></div>
-          <button type="button" className="secondary" aria-label={codeCopyState === 'done' ? `${codeLabel} скопирован` : `Скопировать ${codeLabel.toLocaleLowerCase('ru-RU')}`} disabled={codeCopyState === 'busy'} onClick={() => void copyCode()}>{codeCopyState === 'done' ? 'Скопировано' : 'Копировать код'}</button>
+          <div><strong>{codeLabel}: <span>{share.code}</span></strong><p className={codeFirst ? 'sr-only' : 'muted'}>Если ссылка не открывается.</p></div>
+          <button type="button" className="secondary" aria-label={codeCopyState === 'done' ? `${codeLabel} скопирован` : `Скопировать ${codeLabel.toLocaleLowerCase('ru-RU')}`} disabled={codeCopyState === 'busy'} onClick={() => void copyCode()}>{codeFirst ? codeCopyState === 'done' ? <CheckIcon /> : <CopyIcon /> : codeCopyState === 'done' ? 'Скопировано' : 'Копировать код'}</button>
         </section>)
 
   return createPortal(<>
@@ -150,8 +150,8 @@ export function InvitationShareDialog({
           <button ref={closeRef} type="button" className="icon-button" aria-label="Закрыть" onClick={onClose}><CloseIcon /></button>
         </header>
         {codeFirst && codeSection}
-        <p className="invitation-share-message">{message}</p>
-        <p className="muted invitation-share-expiry">Действует до {expiresAt}</p>
+        <p className={codeFirst ? 'sr-only' : 'invitation-share-message'}>{message}</p>
+        {!codeFirst && <p className="muted invitation-share-expiry">Действует до {expiresAt}</p>}
 
         <div className="invitation-share-actions">
           <button type="button" className="primary" disabled={shareState === 'busy'} onClick={() => void sendLink()}>{shareState === 'busy' ? 'Открываем…' : shareState === 'done' ? (canUseSystemShare ? 'Отправлено' : 'Текст скопирован') : 'Отправить ссылку'}</button>
@@ -171,6 +171,7 @@ export function InvitationShareDialog({
         {!codeFirst && codeSection}
         {codeCopyState === 'error' && <p className="error" role="alert">Не удалось скопировать код.</p>}
 
+        {codeFirst && <p className="muted invitation-share-expiry">Действует до {expiresAt}</p>}
         <button type="button" className="link danger invitation-revoke" disabled={revokeState === 'busy'} onClick={() => void revoke()}>{revokeState === 'busy' ? 'Отменяем…' : 'Отменить приглашение'}</button>
         {revokeState === 'error' && <p className="error" role="alert">Не удалось отменить приглашение.</p>}
       </section>

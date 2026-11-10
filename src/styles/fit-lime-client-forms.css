@@ -180,3 +180,9 @@
 .phone-frame.fit-lime-shell .invitation-visual-dialog .invitation-code-fallback strong { font-size: 14px; font-weight: 400; }
 .phone-frame.fit-lime-shell .invitation-visual-dialog .invitation-code-fallback strong span { display: block; margin-top: 8px; font-size: 28px; line-height: 32px; letter-spacing: .08em; }
 .phone-frame.fit-lime-shell .invitation-visual-dialog .invitation-revoke { color: var(--warning-fg); border-color: currentColor; }
+
+.phone-frame.fit-lime-shell .invitation-visual-dialog .invitation-code-fallback { align-items: center; gap: 8px; }
+.phone-frame.fit-lime-shell .invitation-visual-dialog .invitation-code-fallback strong span { font-size: 24px; letter-spacing: .02em; }
+.phone-frame.fit-lime-shell .invitation-visual-dialog .invitation-code-fallback > button { display: grid; place-items: center; width: 44px; min-height: 44px; padding: 0; align-self: end; border: 0; background: transparent; }
+.phone-frame.fit-lime-shell .invitation-visual-dialog .invitation-code-fallback > button svg { width: 24px; height: 24px; }
+.phone-frame.fit-lime-shell .invitation-visual-dialog .invitation-share-expiry { margin: 0; text-align: center; font-size: 12px; line-height: 18px; }

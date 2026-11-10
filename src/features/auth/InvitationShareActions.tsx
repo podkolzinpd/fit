@@ -129,7 +129,7 @@ export function InviteAthleteButton({ className, label = 'Пригласить �
     }}>
       <section ref={nameDialogRef} className={`invitation-name-dialog${fitLimePilot ? ' invitation-visual-dialog' : ''}`} role="dialog" aria-modal="true" aria-labelledby="invitation-name-title" onKeyDown={onNameDialogKeyDown}>
         <header><div><p className="eyebrow">НОВЫЙ СПОРТСМЕН</p><h2 id="invitation-name-title">Кого пригласить?</h2></div><button type="button" className="icon-button" aria-label="Закрыть" onClick={close}><CloseIcon /></button></header>
-        <p className="muted">Имя появится в списке клиентов. Остальные данные спортсмен заполнит позже.</p>
+        <p className={fitLimePilot ? 'sr-only' : 'muted'}>Имя появится в списке клиентов. Остальные данные спортсмен заполнит позже.</p>
         <form className="stack" onSubmit={submit}>
           <label>Имя спортсмена<input autoFocus value={fullName} minLength={2} maxLength={120} required onChange={(event) => setFullName(event.target.value)} /></label>
           {invitation.error && <p className="error" role="alert">{invitation.error.message}</p>}
