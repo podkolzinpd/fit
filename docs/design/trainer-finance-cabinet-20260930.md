@@ -2247,3 +2247,26 @@ OTA42837843914 и final public/native browser приёмка ещё выполн
 от этого main параллельно оставшейся приёмке; его merge/release только после приёмки FIN801 и
 очереди GitHub. Это не параллельная публикация второго этапа. Полный rebased npm check FIN802
 прошёл3193frontend/1631API; нового runtime diff после проверки нет.
+
+FIN-68: FIN803 подготовлен локально: явная разовая в проведении и ручном учёте; стоимость и
+получено отдельно, zero/free допустимы, pending/retry сохраняет исходные деньги. Новые distinct
+finish-single/single-sessions маршруты не дают старому API проигнорировать новые поля.
+Новый delivery_mode сохраняет очно/онлайн отдельно от training_format=self/with_trainer:
+финансовые месячные фильтры и учёт присутствия не меняются. Actor/version setter, нормализация
+self и общая транзакция проверены на собственной PG55441; wire aliases защищают откат API.
+План, quick start, ручное создание результата, редактирование, Live и детали читают/сохраняют формат;
+черновики сохраняют delivery. Пробное отсутствует в новых Lime действиях, историческое trial и Mono
+селекты сохранены. Незаполненные подходы не подтверждаются автоматически.
+Полный frontend coverage3195/359, APIcheck1635/139, lint/types/build и остальные фазы check passed.
+Полный test:db passed на чистой PG55441; дополнительно рабочая команда savePlannedWorkout сохраняет
+online/with_trainer, ownership/version/self reset подтверждены. Первое падение нового теста было
+неполной очисткой созданного ручной операцией workout; собственный synthetic container пересоздан,
+очистка исправлена, прежние assertions не менялись. Старый response без online не расширяется
+лишним default-полем, точные fixtures сохранены.
+40/40 finance browser passed без retries; 14/14 расширенных старых format/editor cases passed после
+обновления wire expectations/fixture на новый явный формат. Геометрия всех widths, обычные клики,
+позиция submit после inner scroll, исходные YS Geo. Снимки просмотрены; итоговая нейтральная окраска
+использует существующий lime-text-secondary, а не отсутствующий токен. Физический iPhone не проверен.
+PR пока не открыт: FIN801 merged e3677510 после exact-headCI42825181524 SUCCESS;
+старший2087 явно non-merge/non-release по собственному GitHub описанию и завершённому CI.
+MainCI42831619147/публикация FIN801 впереди. FIN802→803→804 выпускаются только после приёмки предыдущего.

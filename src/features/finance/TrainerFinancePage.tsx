@@ -1,3 +1,4 @@
+import { financeInputCents as cents } from './finance-input-cents'
 import { ChevronDownIcon } from '../../shared/icons'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useId, useRef, useState, type FormEvent, type ReactNode } from 'react'
@@ -33,12 +34,6 @@ function money(cents: number) {
   return new Intl.NumberFormat('ru-RU', { style: 'currency', currency: 'RUB', maximumFractionDigits: cents % 100 === 0 ? 0 : 2 }).format(cents / 100)
 }
 
-function cents(value: FormDataEntryValue | null): number {
-  const normalized = String(value ?? '').trim().replace(/\s/g, '').replace(',', '.')
-  const amount = Number(normalized)
-  if (!Number.isFinite(amount) || amount < 0 || amount > 1000000000 || !/^\d+(?:\.\d{1,2})?$/.test(normalized)) throw new Error('Проверьте сумму')
-  return Math.round(amount * 100)
-}
 
 function integer(value: FormDataEntryValue | null, label: string) {
   const parsed = Number(value)
@@ -378,7 +373,8 @@ function TrainerFinanceClientPage() {
       const [disposition, packageId = ''] = draft.value.split(':')
       return trainerFinance.createManualSession(clientId, {
         requestId: manualOperation.current.requestId,
-        disposition: disposition as TrainerFinanceSession['disposition'],
+        disposition: disposition === 'single' ? 'unassigned' : disposition as TrainerFinanceSession['disposition'],
+        ...(draft.singleService ? {singleService:draft.singleService} : {}),
         packageId: disposition === 'charged' ? packageId : null,
         comment: draft.comment, workoutDate: draft.workoutDate,
       })

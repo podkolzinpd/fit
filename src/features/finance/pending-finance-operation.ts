@@ -14,7 +14,7 @@ export const pendingPaymentSchema = z.object({ ...envelope, packageId: z.string(
   draft: z.object({ amountCents: cents, receivedOn: date, comment }),
 })
 export const pendingSessionSchema = z.object({ ...envelope,
-  draft: z.object({ workoutDate: date, value: z.string(), comment }),
+  draft: z.object({ workoutDate: date, value: z.string(), comment, singleService:z.object({priceCents:cents,paidCents:cents,receivedOn:date}).optional() }),
 })
 
 // Tab-scoped recovery survives navigation/reload without sharing financial

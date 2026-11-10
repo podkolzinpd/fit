@@ -60,7 +60,7 @@ import type {
 export interface PilotWorkoutsWriter {
   rename(sessionToken: YandexActorSessionInput, workoutId: string, title: string, expectedVersion: number): Promise<number>
   setActualDuration(sessionToken: YandexActorSessionInput, workoutId: string, durationSec: number | null, expectedVersion: number): Promise<number>
-  quickStart(sessionToken: YandexActorSessionInput, clientId: string | null, operationId: string, trainingFormat?: 'self' | 'with_trainer'): Promise<PilotQuickStartResult>
+  quickStart(sessionToken: YandexActorSessionInput, clientId: string | null, operationId: string, trainingFormat?: 'self' | 'with_trainer', deliveryMode?: 'in_person' | 'online'): Promise<PilotQuickStartResult>
   cancelEmpty(sessionToken: YandexActorSessionInput, workoutId: string, expectedVersion: number): Promise<number>
   submitFeedback(sessionToken: YandexActorSessionInput, workoutId: string, feedback: WorkoutFeedbackRequest): Promise<number>
   setReview(sessionToken: YandexActorSessionInput, workoutId: string, response: WorkoutTrainerResponseRequest): Promise<number>
@@ -246,8 +246,8 @@ export class DatabasePilotWorkoutsWriter implements PilotWorkoutsWriter {
     return withYandexActorSession(this.pool, sessionToken, work)
   }
 
-  quickStart(sessionToken: YandexActorSessionInput, clientId: string | null, operationId: string, trainingFormat?: 'self' | 'with_trainer') {
-    return this.withSession(sessionToken, (client) => quickStartLiveWorkout(client, clientId, operationId, trainingFormat))
+  quickStart(sessionToken: YandexActorSessionInput, clientId: string | null, operationId: string, trainingFormat?: 'self' | 'with_trainer', deliveryMode?: 'in_person' | 'online') {
+    return this.withSession(sessionToken, (client) => quickStartLiveWorkout(client, clientId, operationId, trainingFormat, deliveryMode))
   }
 
   cancelEmpty(sessionToken: YandexActorSessionInput, workoutId: string, expectedVersion: number) {

@@ -22,7 +22,7 @@ describe('Lime accounting choice', () => {
     fireEvent.click(screen.getByRole('radio', { name: /Персональные тренировки 01.11.2026 — 30.11.2026 · осталось 3/ }))
     fireEvent.change(screen.getByLabelText('Дата занятия'), { target: { value: '2026-12-01' } })
     expect(screen.queryByRole('radio', { name: /Персональные тренировки/ })).not.toBeInTheDocument()
-    expect(screen.getByRole('radio', { name: 'Выбрать абонемент позже' })).toBeChecked()
+    expect(screen.getByRole('radio', { name: 'Выбрать позже' })).toBeChecked()
     fireEvent.click(screen.getByRole('button', { name: 'Добавить' }))
     expect(submit).toHaveBeenCalledWith({ workoutDate: '2026-12-01', value: 'unassigned', comment: null })
   })
@@ -47,4 +47,22 @@ describe('Lime accounting choice', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Повторить сохранение' }))
     expect(submit).toHaveBeenCalledWith(draft)
   })
+})
+
+it('records an explicit partially paid single without a separate trial type',()=>{
+ const submit=vi.fn()
+ render(<SessionAccountingForm lime packages={[]} today="2026-11-10" saving={false} onCancel={vi.fn()} onSubmit={submit}/> )
+ expect(screen.queryByRole('radio',{name:'Пробное занятие'})).not.toBeInTheDocument()
+ fireEvent.click(screen.getByRole('radio',{name:'Разовое занятие'}))
+ fireEvent.change(screen.getByLabelText('Стоимость, ₽'),{target:{value:'2000'}})
+ fireEvent.change(screen.getByLabelText('Получено, ₽'),{target:{value:'500'}})
+ fireEvent.click(screen.getByRole('button',{name:'Добавить'}))
+ expect(submit).toHaveBeenCalledWith({workoutDate:'2026-11-10',value:'single:new',comment:null,singleService:{priceCents:200000,paidCents:50000,receivedOn:'2026-11-10'}})
+})
+it('preserves an historical trial and replays frozen single money',()=>{
+ const submit=vi.fn(),draft={workoutDate:'2026-11-10',value:'single:new',comment:null,singleService:{priceCents:200000,paidCents:50000,receivedOn:'2026-11-09'}}
+ render(<SessionAccountingForm lime packages={[]} today="2026-11-10" initialDraft={draft} locked saving={false} onCancel={vi.fn()} onSubmit={submit}/> )
+ expect(screen.getByLabelText('Стоимость, ₽')).toBeDisabled()
+ fireEvent.click(screen.getByRole('button',{name:'Повторить сохранение'}))
+ expect(submit).toHaveBeenCalledWith(draft)
 })

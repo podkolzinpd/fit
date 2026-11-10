@@ -194,7 +194,7 @@ it('Lime explicit deferral does not charge even without available packages', asy
   show('complete');await screen.findByText('Нет подходящего абонемента')
   fireEvent.click(screen.getByRole('button',{name:'Изменить учёт'}))
   expect(screen.queryByText('По текущим условиям')).not.toBeInTheDocument()
-  fireEvent.click(screen.getByRole('radio',{name:'Выбрать абонемент позже'}))
+  fireEvent.click(screen.getByRole('radio',{name:'Выбрать позже'}))
   fireEvent.click(screen.getByRole('button',{name:'Подтвердить проведение'}))
   await waitFor(()=>expect(backend.confirmAttendance).toHaveBeenCalledWith(workout,{disposition:'unassigned',packageId:null},expect.any(String)))
 })
