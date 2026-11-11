@@ -22,3 +22,8 @@ jobs:
           test "$(hostname)" = fit-stage-app
           sudo timeout 30 journalctl CONTAINER_NAME=fit-api-stage --since="24 hours ago" --lines=200000 --output=json --no-pager 2>/dev/null |
             python3 scripts/incident-support-code-diagnostics.py
+      - name: Read only database connection aggregates and running release
+        run: |
+          set -euo pipefail
+          sudo podman inspect fit-api-stage --format '{{.Config.Image}} {{.State.StartedAt}}'
+          sudo timeout 20 podman exec -i fit-api-stage node --input-type=module < scripts/incident-db-state.mjs

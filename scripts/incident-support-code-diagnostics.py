@@ -46,7 +46,16 @@ for line in sys.stdin:
 print(json.dumps({"event": "incident_scan", **counts, "matchedRequests": len(records)}))
 for request_id, item in records.items():
     result = module.summarize(item["lines"], request_id)
-    result.update(requestId=request_id, failures=item["failures"], timestamps=item["times"])
+    methods = set()
+    operations = set()
+    for line in item["lines"]:
+        req = json.loads(json.loads(line)["MESSAGE"]).get("req", {})
+        if req.get("method") in {"GET", "POST", "PATCH", "DELETE"}:
+            methods.add(req["method"])
+        url = req.get("url", "").split("?", 1)[0]
+        if url in {"/v1/training-data", "/v1/commands", "/v1/clients", "/v1/connections"}:
+            operations.add(url)
+    result.update(requestId=request_id, failures=item["failures"], timestamps=item["times"], methods=sorted(methods), operations=sorted(operations))
     print(json.dumps(result))
 
 if records:
@@ -72,3 +81,10 @@ if records:
             if isinstance(value, str) and re.fullmatch(r"[0-9A-Za-z_]{1,40}", value):
                 safe[key] = value
         print(json.dumps(safe))
+
+windows = []
+for stamp, entry in context:
+    if entry.get("event") == "database_pool_window" and entry.get("poolRole") == "api":
+        keys = ("acquired", "acquireErrors", "capacityErrors", "failedAcquireMaxMs", "acquireMaxMs", "waitingMax", "occupiedMax", "totalMax")
+        windows.append({"timestamp": stamp, **{k: entry[k] for k in keys if isinstance(entry.get(k), (int, float))}})
+print(json.dumps({"event": "incident_pool_timeline", "windows": windows[-100:]}))
