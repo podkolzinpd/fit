@@ -1,6 +1,7 @@
 import type {
   TrainerFinanceManualSessionDraft,
   TrainerFinancePackageDraft,
+  TrainerFinanceBalanceCorrection,
   TrainerFinancePackageUpdate,
   TrainerFinancePaymentDraft,
   TrainerFinancePaymentUpdate,
@@ -162,4 +163,14 @@ export function readTrainerFinanceSingleService(value: unknown): {priceCents:num
   const receivedOn=date(input.receivedOn)
   if (priceCents===undefined || paidCents===undefined || paidCents>priceCents || typeof receivedOn!=='string') return undefined
   return {priceCents,paidCents,receivedOn}
+}
+
+export function readTrainerFinanceBalanceCorrection(value: unknown): TrainerFinanceBalanceCorrection | undefined {
+  const input = record(value)
+  if (!input || typeof input.requestId !== 'string' || !uuidPattern.test(input.requestId)) return undefined
+  const expectedVersion = integer(input.expectedVersion, 1, Number.MAX_SAFE_INTEGER)
+  const remainingSessions = integer(input.remainingSessions, 0, 10000)
+  const reason = typeof input.reason === 'string' ? input.reason.trim() : ''
+  if (expectedVersion === undefined || remainingSessions === undefined || !reason || reason.length > 500) return undefined
+  return { requestId: input.requestId, expectedVersion, remainingSessions, reason }
 }

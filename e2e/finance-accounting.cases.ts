@@ -125,7 +125,7 @@ async function receiptFixture(page: Page, fitLime = true, extraReceipts = 0, mon
       totalCount: payments.length, totalCents: payments.reduce((sum,item) => sum+item.amountCents,0),
       clients: [...new Map(receipts.filter(item => !item.voidedAt).map(item => [item.clientId, { id: item.clientId, name: item.clientName }])).values()], payments: payments.slice(offset, offset + 50) } } })
   })
-  return { name, service, receipts }
+  return { name, service, receipts, ledger }
 }
 
 async function uncertainCreateFixture(page: Page, kind: 'payment' | 'package', fitLime = true) {
@@ -511,7 +511,7 @@ export function financeAccountingCases() {
   }
 
   test('Finance Lime owns readable cards, forms and payment actions', { tag: ['@lime-finance'] }, async ({ page }, info) => {
-    await receiptFixture(page)
+    const {service: balanceService, ledger: balanceLedger} = await receiptFixture(page)
     await page.goto(`/clients/${clientId}/finance`)
     await expect(page.locator('.phone-frame')).toHaveClass(/finance-lime-shell/)
     await expect(page.locator('.phone-frame')).not.toHaveClass(/trainer-finance-identity/)
@@ -529,6 +529,52 @@ export function financeAccountingCases() {
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
       await page.screenshot({ path: info.outputPath(`lime-service-${width}.png`), fullPage: true })
     }
+    // FIN901–906: same released finance form, no new case/matrix. The first
+    // response is lost after application; reload/retry must retain its identity.
+    const sourceHistory = structuredClone({payments:balanceLedger.payments,sessions:balanceLedger.sessions})
+    const corrections: Array<{requestId:string;expectedVersion:number;remainingSessions:number;reason:string}> = []
+    let savedCorrection: typeof balanceService | undefined
+    await page.route(`**/v1/finance/packages/${balanceService.id}/balance-corrections`,async route=>{
+      const command=route.request().postDataJSON() as typeof corrections[number]
+      corrections.push(command)
+      if(!savedCorrection){
+        expect(command).toMatchObject({expectedVersion:1,remainingSessions:7,reason:'Исправление переноса'})
+        expect(command.requestId).toMatch(/^[0-9a-f-]{36}$/)
+        Object.assign(balanceService,{sessionsRemaining:7,sessionsUsed:3,version:2})
+        savedCorrection=structuredClone(balanceService)
+        return route.fulfill({status:503,json:{error:'service_unavailable'}})
+      }
+      expect(command).toEqual(corrections[0])
+      return route.fulfill({json:{package:savedCorrection}})
+    })
+    await card.getByRole('button',{name:/Действия с услугой/}).click()
+    await page.getByRole('menuitem',{name:'Скорректировать остаток',exact:true}).click()
+    const balanceForm=page.locator('.finance-form')
+    await balanceForm.getByLabel('Должно остаться').fill('7')
+    await balanceForm.getByRole('button',{name:'Отмена',exact:true}).click()
+    expect(corrections).toHaveLength(0)
+    await card.getByRole('button',{name:/Действия с услугой/}).click()
+    await page.getByRole('menuitem',{name:'Скорректировать остаток',exact:true}).click()
+    await balanceForm.getByLabel('Должно остаться').fill('7')
+    await balanceForm.getByLabel('Причина').fill('Исправление переноса')
+    for(const width of [320,390]){
+      await page.setViewportSize({width,height:500})
+      await balanceForm.getByLabel('Причина').focus()
+      await formGeometry(balanceForm)
+      await balanceForm.getByRole('button',{name:'Сохранить',exact:true}).scrollIntoViewIfNeeded()
+      await page.screenshot({path:info.outputPath(`lime-balance-correction-${width}.png`),fullPage:true})
+    }
+    await balanceForm.getByRole('button',{name:'Сохранить',exact:true}).click()
+    await expect(balanceForm.getByRole('button',{name:'Повторить сохранение',exact:true})).toBeVisible()
+    await expect(balanceForm.getByLabel('Должно остаться')).toBeDisabled()
+    await page.reload()
+    await expect(balanceForm.getByLabel('Должно остаться')).toHaveValue('7')
+    await expect(balanceForm.getByLabel('Причина')).toHaveValue('Исправление переноса')
+    await balanceForm.getByRole('button',{name:'Повторить сохранение',exact:true}).click()
+    await expect(balanceForm).toHaveCount(0)
+    await expect(card.locator('.finance-service-balance')).toContainText('7 из 10')
+    expect(corrections).toHaveLength(2)
+    expect({payments:balanceLedger.payments,sessions:balanceLedger.sessions}).toEqual(sourceHistory)
     await page.setViewportSize({ width: 320, height: 500 })
     // Start with a short viewport; resizing an unfocused page is not a keyboard gesture.
     await page.reload()

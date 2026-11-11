@@ -2360,3 +2360,108 @@ FIN804 перенесён нафактический squash2099; file tree со�
 Код иlocal gates завершены:3201frontend/1635API, полныйPG,70+14browser; source/mainCI ипубличная
 приёмка финального этапа ещё гейты. Итог публикации фиксируется в описании заключительного PR FIN804.
 Mono и нерешённые механики не реализуются. Physical iPhone/Android/PWA не проверены.
+
+
+## FIN901–906 — исправление начального остатка — 11.11.2026
+
+Тикет: [YAFIT-709](https://st.yandex-team.ru/YAFIT-709).
+
+Антон разрешил один PR и полный выпуск с production-приёмкой. Строго Lime,
+минимальный scope, без потери тренировок, списаний и оплат.
+
+- FIN901: в существующем меню абонемента «Скорректировать остаток». Короткая
+  существующая finance-form: текущий остаток, «Должно остаться», «Причина»,
+  Отмена/Сохранить; прежние Lime компоненты/шрифты/поля, без нового дизайна.
+- FIN902: изменяется только opening_used_sessions. Купленное количество и
+  реальное списание неизменны; максимум остатка = total минус действующие
+  реальные charged sessions. Разовая/ведение не получают это действие.
+- FIN903: существующий trainer_finance_events хранит before/after, actor/date
+  и причину коррекции; старые события, workouts/sessions/payments неизменны.
+- FIN904: общий client ledger lock, actor/owner/version guards, существующая
+  квитанция finance_payment_requests с отдельным operation discriminator.
+  Повтор запроса возвращает тот же результат, не корректирует второй раз.
+- FIN905: существующие pending/retry и invalidateFinanceViews; отмена без записи,
+  ошибки сохраняют ввод, неизвестный исход сохраняет operationId/expectedVersion
+  через reload. Конфликт требует сверки актуального блока перед новым submit.
+- FIN906: targeted UI/API/PG17 concurrency/replay/history, существующий browser
+  case без расширения inventory, полный check/CI, штатный выпуск и public/OTA
+  readback с synthetic API и заблокированными немокированными API-запросами.
+
+### Итерация 1 — 11.11.2026 — Codex / OpenAI
+
+Основа main1a2f569a, чистый отдельный worktree finance-balance-correction-20261111.
+Аудит: поле начального расхода доступно только при создании с30.09; update API
+его исключает. Последняя FIN801–804 не удаляла существующую корректировку.
+Расхождений с утверждённым планом нет. История фиксируется имеющимся audit trigger;
+нового журнала/таблицы расчёта и изменения формулы не требуется. Новая forward
+миграция добавит только атомарную команду/её минимальные grants; backfill/перепись
+данных, изменение broad ACL, таймеров, оплаты, Live и rollout вне scope.
+Отвергнуто: произвольное редактирование остатка сверх реальных списаний, signed
+balance-offset и параллельный ledger; фиктивные посещения/оплаты; новое окно
+подтверждения поверх формы. Дальше: реализация, проверки и один PR.
+
+
+### Итерация 2 — 11.11.2026 — Codex / OpenAI
+
+Сделано: миграция212 добавляет только correct_trainer_finance_balance с actor/owner,
+version и общим ledger lock. Существующие finance_payment_requests дают replay
+по точному payload с отдельным discriminator. Меняются только opening_used_sessions
+и версия; триггер создаёт обычное событие, обогащается только это новое событие
+before/after + причиной и requestId. Старые события/комментарий/деньги/реальные
+workouts и sessions не переписываются. Same-value command не создаёт события.
+API read-write guard и типизированный native repository; существующая Lime форма
+изолирована отдельным FinanceBalanceCorrectionForm без CSS/новых dependencies.
+Reuse actor/client-scoped sessionStorage и invalidateFinanceViews. До отправки
+сначала durable pending; при storage failure не остаётся скрытого старого draft.
+Неизвестный исход удерживает тот же requestId/version через reload; definitive
+reject разблокирует сохранённые поля, конфликт обновляет текущий блок перед новым
+submit. Это не меняет прежний create/payment retry helper.
+
+Проверки: frontend targeted132passed, API282passed до дополнительной проверки
+read-only в том же case; финальный полный check проверяет итоговый тест. Native PG
+целевая2/2passed: snapshot всех workouts/sessions/payments и старых events равен,
+увеличение/ноль/повтор/старый replay после нового изменения/actor/client-self;
+реальный блокирующий ledger lock + новое manual charged заставляет коррекцию
+отказаться, не скрывая новое списание. Полный test:db:466passed/2штатных conditional
+skips плюс6native-erasure passed. Отдельная локальная PG17,55443; чужие контейнеры
+не менялись. Existing browser case2/2 Chromium/WebKit без retries; потерянный ответ
+после apply, cancel/reload/replay и исходные finance histories проверены. Новых
+browser cases/осей0; inventory8/8, migration safety1file passed. Lime PNG320/390
+просмотрены, form geometry44px и прежний font проверены.
+
+Ранние проверки не выдаются за успех: первый UI case использовал не-Lime actor,
+затем actor flag изолирован только новыми cases. Testing Library exact-option
+заменена штатным точным строковым matcher; typed mock исправил lint, fixture
+non-null исправил typecheck. PG test сначала использовал client вместо чужого
+тренера (403), затем создан отдельный trainer (404). Прямой private payload read
+не разрешён fit_api и без actor возвращает null; тест читает существующий public
+actor-context bundle, ACL не расширялись. Эти fixture ошибки не объявляются
+продуктовыми дефектами; assertions/таймауты/coverage gates не ослаблены.
+
+Открыто: текущий полный check, один PR/свежий CI/очередь/main, штатный выпуск
+API→web→OTA и реальная production-сборка. Телефон не проверен; actual-user writes
+для приёмки не планируются. Статус runs/публикации далее — YAFIT-709 и PR.
+
+
+### Итерация 3 — 11.11.2026 — Codex / OpenAI
+
+Локальная приёмка завершена. Все этапы check прошли: frontend359files/3218tests,
+lint/types/coverage, media/infra/calendar/hosting policies; API139passedfiles/1640tests
+и17штатных DB-dependent files/468skips; production build/startup. Первый check
+остановился на типах новых frontend fixtures, затем frontend/policies целиком
+прошли, API lint потребовал типизировать результаты трёх новых PG test queries.
+После type-only правки весь API check и build прошли отдельно. Общий прежний
+командный exit1 не выдаётся за exit0; успешные неизменённые frontend/policy этапы
+не повторялись. PostgreSQL test:db до этих test-only аннотаций прошёл466cases
+и6node cases; SQL/runtime побайтно прежние. Targeted frontend/repository132passed;
+новые четыре UI cases покрывают отмену, неизвестный результат/reload/replay,
+версионный конфликт, validation/storage/definitive reject.
+
+Финальная ручная сверка scope: только начальный расход и version; новая команда
+не меняет package total/comment/dates/prices, workouts/sessions/payments и старые
+events. Новый audit event сохраняет reason/requestId, no-op не пишет событие.
+Новая forward-миграция не меняет существующие данные; штатный execute grant
+только fit_api на actor-guarded функцию, без новых broad roles/ACL/секретов.
+Снимки существующей Lime формы просмотрены, CSS не добавлялся.
+Дальше: один PR; обязательный CI exact head, актуальный main/очередь GitHub и
+полный штатный выпуск. Production и физический телефон ещё не проверены.

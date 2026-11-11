@@ -319,6 +319,12 @@ describe('Yandex main repository', () => {
       priceCents:200000,openingPaidCents:0,startsOn:'2026-11-10',endsOn:null,paymentDueOn:null,comment:null,
     })
     expect(fetchMock.mock.calls.at(-1)?.[0]).toBe(`${apiBaseUrl}/v1/clients/${clientId}/finance/single-services`)
+    const correction = {requestId:'70000000-0000-4000-8000-000000000001',expectedVersion:1,remainingSessions:6,reason:'Перенос'}
+    fetchMock.mockResolvedValueOnce(jsonResponse({package:{...financePackage,sessionsRemaining:6,version:2}}))
+    await expect(repository.trainerFinance.correctPackageBalance(financePackageId,correction)).resolves.toMatchObject({sessionsRemaining:6,version:2})
+    expect(fetchMock.mock.calls.at(-1)?.[0]).toBe(`${apiBaseUrl}/v1/finance/packages/${financePackageId}/balance-corrections`)
+    expect(fetchMock.mock.calls.at(-1)?.[1]).toMatchObject({method:'POST',body:JSON.stringify(correction)})
+
 
   })
 

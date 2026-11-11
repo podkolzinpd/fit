@@ -135,6 +135,13 @@ export type TrainerFinancePackageUpdate = Omit<TrainerFinancePackageDraft, 'open
   expectedVersion: number
 }
 
+export interface TrainerFinanceBalanceCorrection {
+  requestId: string
+  expectedVersion: number
+  remainingSessions: number
+  reason: string
+}
+
 export interface TrainerFinancePaymentDraft {
   requestId?: string
   amountCents: number
@@ -154,6 +161,7 @@ export interface TrainerFinanceRepository {
   listClient(clientId: string): Promise<TrainerFinanceClientBundle>
   createPackage(clientId: string, draft: TrainerFinancePackageDraft): Promise<TrainerFinancePackage>
   updatePackage(packageId: string, draft: TrainerFinancePackageUpdate): Promise<TrainerFinancePackage>
+  correctPackageBalance(packageId: string, draft: TrainerFinanceBalanceCorrection): Promise<TrainerFinancePackage>
   addPayment(packageId: string, draft: TrainerFinancePaymentDraft): Promise<TrainerFinancePayment>
   updatePayment(paymentId: string, draft: TrainerFinancePaymentUpdate): Promise<TrainerFinancePayment>
   voidPayment(paymentId: string, expectedVersion: number, reason: string): Promise<void>

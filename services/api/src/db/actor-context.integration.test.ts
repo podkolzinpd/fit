@@ -1,4 +1,4 @@
-import type { TrainerFinanceClientBundle } from '../trainer-finance.js'
+import type { TrainerFinancePackage, TrainerFinanceClientBundle } from '../trainer-finance.js'
 import { S3Client, DeleteObjectCommand } from '@aws-sdk/client-s3'
 import { DatabasePilotCustomExercisePhotos } from '../custom-exercise-photo.js'
 import { YandexMediaObjectStorage } from '../object-storage-media.js'
@@ -590,6 +590,101 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
     let ownerPool: Pool | undefined
     let enrollmentPool: PgDatabasePool | undefined
     let runtimePool: PgDatabasePool | undefined
+
+    it('corrects only opening finance balance with replay, ownership and preserved history', async () => {
+      if (!ownerPool || !runtimePool) throw new Error('Database not ready')
+      const card = randomUUID(), athlete = randomUUID(), foreignTrainer = randomUUID(), operations = [randomUUID(), randomUUID(), randomUUID(), randomUUID()]
+      const command = (sql: string, args: unknown[] = [], actor = ACTOR_ID) => withActorTransaction(runtimePool!, actor, db => db.query<{ result: TrainerFinancePackage }>(sql, args))
+      await ownerPool.query("insert into public.profiles(id,account_role) values($1,'client')", [athlete])
+      await ownerPool.query("insert into public.profiles(id,account_role) values($1,'trainer')", [foreignTrainer])
+      await ownerPool.query("insert into public.clients(id,trainer_id,auth_user_id,full_name) values($1,$2,$3,'Synthetic balance')", [card,ACTOR_ID,athlete])
+      await ownerPool.query('insert into public.client_trainers(client_id,trainer_id) values($1,$2)',[card,ACTOR_ID])
+      await ownerPool.query('insert into public.client_trainer_relationships(client_id,trainer_id,connected_by) values($1,$2,$3)',[card,ACTOR_ID,athlete])
+      try {
+        const pack = (await command("select public.create_trainer_finance_service_v2($1,'session_pack','Opening balance',8,3,3200000,3200000,current_date,null,null,'Keep comment',current_date,$2) as result",[card,operations[0]]))[0]!.result
+        for (let n=0;n<2;n++) await command("select public.create_trainer_finance_manual_session($1,$2,current_date,'charged',$3,null) as result",[card,randomUUID(),pack.id])
+        const snapshot = async () => ({
+          workouts: (await ownerPool!.query('select to_jsonb(w) as row from public.workouts w where client_id=$1 order by id',[card])).rows,
+          sessions: (await ownerPool!.query('select to_jsonb(s) as row from public.trainer_finance_sessions s where client_id=$1 order by id',[card])).rows,
+          payments: (await ownerPool!.query('select to_jsonb(p) as row from public.trainer_finance_payments p where client_id=$1 order by id',[card])).rows,
+        })
+        const before = await snapshot()
+        const oldEvents = (await ownerPool.query('select * from public.trainer_finance_events where client_id=$1 order by id',[card])).rows
+        const sql='select public.correct_trainer_finance_balance($1,$2,$3,$4,$5) as result'
+        const args=[pack.id,pack.version,6,'Исправление переноса',operations[1]]
+        const corrected=(await command(sql,args))[0]!.result
+        expect(corrected).toMatchObject({sessionsTotal:8,sessionsUsed:2,sessionsRemaining:6,priceCents:3200000,paidCents:3200000,comment:'Keep comment'})
+        expect((await command(sql,args))[0]!.result).toEqual(corrected)
+        expect(await snapshot()).toEqual(before)
+        const events=(await ownerPool.query('select * from public.trainer_finance_events where client_id=$1 order by id',[card])).rows
+        expect(events.slice(0,oldEvents.length)).toEqual(oldEvents)
+        expect(events).toHaveLength(oldEvents.length+1)
+        expect(events.at(-1)).toMatchObject({actor_id:ACTOR_ID,previous_data:{opening_used_sessions:3},current_data:{opening_used_sessions:0,balanceCorrection:{previousRemaining:3,remainingSessions:6,reason:'Исправление переноса',requestId:operations[1]}}})
+        await expect(command(sql,[...args.slice(0,2),5,args[3],args[4]])).rejects.toMatchObject({code:'PT409'})
+        await expect(command(sql,[pack.id,pack.version,5,'Старая версия',randomUUID()])).rejects.toMatchObject({code:'PT409'})
+        await expect(command(sql,[pack.id,corrected.version,7,'Нельзя скрывать списания',randomUUID()])).rejects.toMatchObject({code:'PT422'})
+        await expect(command(sql,[pack.id,corrected.version,5,'Чужой блок',randomUUID()],foreignTrainer)).rejects.toMatchObject({code:'PT404'})
+        await expect(command(sql,[pack.id,corrected.version,5,'Спортсмен',randomUUID()],athlete)).rejects.toMatchObject({code:'PT403'})
+        const zero=(await command(sql,[pack.id,corrected.version,0,'Нулевой остаток',operations[2]]))[0]!.result
+        expect(zero.sessionsRemaining).toBe(0)
+        expect((await command(sql,args))[0]!.result).toEqual(corrected)
+        expect((await withActorTransaction(runtimePool,ACTOR_ID,db=>db.query<{result:TrainerFinanceClientBundle}>('select public.list_trainer_finance_client_v2($1) as result',[card])))[0]!.result.packages.find(p=>p.id===pack.id)?.sessionsRemaining).toBe(0)
+        const restored=(await command(sql,[pack.id,zero.version,5,'Перепроверка переноса',operations[3]]))[0]!.result
+        expect(restored).toMatchObject({sessionsTotal:8,sessionsRemaining:5,paidCents:3200000})
+        const own=(await withActorTransaction(runtimePool,athlete,db=>db.query<{result:{trainers:Array<{packages:Array<{id:string;sessionsRemaining:number}>}>}}>('select public.list_client_finance_self_v2() as result')))[0]!.result
+        expect(own.trainers.flatMap(t=>t.packages).find(p=>p.id===pack.id)?.sessionsRemaining).toBe(5)
+        expect(await snapshot()).toEqual(before)
+      } finally {
+        await ownerPool.query('delete from public.trainer_finance_events where client_id=$1',[card])
+        await ownerPool.query('delete from public.trainer_finance_sessions where client_id=$1',[card])
+        await ownerPool.query('delete from public.trainer_finance_payments where client_id=$1',[card])
+        await ownerPool.query('delete from public.trainer_finance_packages where client_id=$1',[card])
+        await ownerPool.query('delete from public.workouts where client_id=$1',[card])
+        await ownerPool.query('delete from public.client_trainer_relationships where client_id=$1',[card])
+        await ownerPool.query('delete from public.client_trainers where client_id=$1',[card])
+        await ownerPool.query('delete from public.clients where id=$1',[card])
+        await ownerPool.query('delete from public.profiles where id=$1',[athlete])
+        await ownerPool.query('delete from public.profiles where id=$1',[foreignTrainer])
+      }
+    })
+
+    it('serializes balance correction with an actual session without hiding the new charge', async () => {
+      if (!ownerPool || !runtimePool) throw new Error('Database not ready')
+      const pack=randomUUID(), operation=randomUUID(), sessionOperation=randomUUID()
+      const peers=new Pool({connectionString:requireLocalTestDatabaseUrl(),max:2})
+      const blocker=await peers.connect(), editor=await peers.connect()
+      let pending: Promise<{error:unknown}> | undefined
+      let recordedWorkout: string | undefined
+      try {
+        await ownerPool.query("insert into public.trainer_finance_packages(id,trainer_id,client_id,title,sessions_total,opening_used_sessions,price_cents,starts_on) values($1,$2,$3,'Concurrent opening',8,3,1000000,current_date)",[pack,ACTOR_ID,CLIENT_ID])
+        await blocker.query('begin');await blocker.query("select set_config('request.jwt.claim.sub',$1,true)",[ACTOR_ID])
+        await blocker.query('select pg_advisory_xact_lock(hashtextextended($1,0))',[`${ACTOR_ID}:${CLIENT_ID}`])
+        const blockerPid=(await blocker.query<{pid:number}>('select pg_backend_pid() as pid')).rows[0]!.pid
+        await editor.query('begin');await editor.query('set local role fit_api')
+        await editor.query("select set_config('request.jwt.claim.sub',$1,true)",[ACTOR_ID])
+        const editorPid=(await editor.query<{pid:number}>('select pg_backend_pid() as pid')).rows[0]!.pid
+        pending=editor.query("select public.correct_trainer_finance_balance($1,1,8,'Перенос',$2)",[pack,operation])
+          .then(()=>({error:null}),(error:unknown)=>({error}))
+        await vi.waitFor(async()=>expect((await ownerPool!.query<{blocked:boolean}>('select $1::int=any(pg_blocking_pids($2::int)) as blocked',[blockerPid,editorPid])).rows[0]!.blocked).toBe(true))
+        await blocker.query('set local role fit_api')
+        const written=(await blocker.query<{result:{workoutId:string}}>("select public.create_trainer_finance_manual_session($1,$2,current_date,'charged',$3,null) as result",[CLIENT_ID,sessionOperation,pack])).rows[0]!.result
+        recordedWorkout=written.workoutId
+        await blocker.query('commit')
+        expect((await pending).error).toMatchObject({code:'PT422'})
+        await editor.query('rollback')
+        expect((await ownerPool.query('select opening_used_sessions,version from public.trainer_finance_packages where id=$1',[pack])).rows[0]).toMatchObject({opening_used_sessions:3})
+        expect((await ownerPool.query<{count:number}>("select count(*)::integer as count from public.trainer_finance_sessions where package_id=$1 and disposition='charged' and voided_at is null",[pack])).rows[0]!.count).toBe(1)
+        expect((await ownerPool.query<{count:number}>('select count(*)::integer as count from app_private.finance_payment_requests where actor_id=$1 and request_id=$2',[ACTOR_ID,operation])).rows[0]!.count).toBe(0)
+      } finally {
+        await blocker.query('rollback');await editor.query('rollback');await pending
+        blocker.release();editor.release();await peers.end()
+        const events=await ownerPool.query<{id:string;workout_id:string}>('select id,workout_id from public.trainer_finance_sessions where package_id=$1',[pack])
+        await ownerPool.query("delete from public.trainer_finance_events where entity_id=$1 or (entity_type='session' and entity_id=any($2::uuid[]))",[pack,events.rows.map(row=>row.id)])
+        await ownerPool.query('delete from public.trainer_finance_sessions where package_id=$1',[pack])
+        await ownerPool.query('delete from public.trainer_finance_packages where id=$1',[pack])
+        if(recordedWorkout) await ownerPool.query('delete from public.workouts where id=$1',[recordedWorkout])
+      }
+    })
 
     it('reconciles single money and online attendance across both roles, month history, corrections and archive',async()=>{
       if(!ownerPool||!runtimePool)throw new Error('Database not ready')
