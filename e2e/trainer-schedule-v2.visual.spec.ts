@@ -4886,7 +4886,10 @@ for (const [account, profileId] of [
     await expect(page.locator('.phone-frame')).toHaveClass(/fit-lime-shell/)
     await expect(page.getByRole('heading', { name: 'Новый клиент' })).toBeVisible()
     await expect(page.getByRole('button', { name: 'Назад' })).toBeVisible()
-    await expect(page.locator('.client-form-section')).toHaveCSS('background-color', 'rgb(26, 26, 28)')
+    // CV101: flat form from the approved client-creation export.
+    await expect(page.locator('.client-form-section')).toHaveCSS('background-color', 'rgb(0, 0, 0)')
+    await expect(page.locator('.client-visual-form .page-header h1')).toHaveCSS('font-size', '14px')
+    await expect(page.getByRole('button', { name: 'Сохранить' })).toBeVisible()
     if (account === 'first') {
       const screenshotPath = testInfo.outputPath('fit-lime-client-create.png')
       await page.screenshot({ path: screenshotPath, fullPage: true })
