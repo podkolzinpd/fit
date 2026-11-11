@@ -10503,3 +10503,61 @@ PR не означает публикацию. Перед выпуском ну�
 Проверенные runtime SHA256:
 - src/styles.css: `6d73552f0128781a6cd1d922a2536a554a2070dbaf45ecb7c2a290f7aa342919`
 - src/styles/fit-lime-workout-form.css: `782b8f3ae056d8d505e8468f7f1ca30f55c4e48219cff6cfb643c959ff60e372`
+
+## 247. MC519 — согласованное исправление CI в PR2103
+
+2026-11-11 — Codex / OpenAI. Владелец ответил «Да, добавить исправление CI»
+на конкретное предложение использовать уже применяемый образ Playwright
+в PR2103. Это расширяет только подготовку CI поверх CSS/QA/docs плана242;
+публикация/слияние приложения по-прежнему НЕ разрешены, MC-RELEASE-01 прежний.
+Основная реализация и план закреплены0f3ea284/4fd86564.
+
+Проверенная причина блокировки: CI run43047829595 attempt1 —10 Lime jobs
+не дошли до тестов из-за DNS archive.ubuntu.com при install--with-deps.
+Chromium5 завершилисьexit100, WebKit5 остановлены35min budget. Один исходный
+v79 clock-handoff получил locator.blur timeout, прошёл retry, но fail-on-flaky
+правильно отклонил job. На baseline и candidate неизменный сценарий отдельно
+прошёл по2/2 (Chromium/WebKit). После чтения всех rawlogs выполнен ровно один
+failed-only rerun, включивший cancelled WebKit; успешные задачи не повторялись.
+Attempt2 завершён:25success,10 Lime снова заблокированы DNS/установкой и
+dependent e2e failed, auth-smoke штатноskip. Повторный clock-handoff shard
+прошёл безflaky. Третьего слепого повтора нет, никакой тест/timeout не ослаблен.
+
+Уточнение к §243/246:10 локальных native backend запусков —5сценариев×2engine.
+Стандартный CI выбирает5 Chromium; оба native Chromium shards прошли.
+Дополнительные5 WebKit native запусков штатная конфигурация не выбирает:
+они остаются непроверенными, не объявляются закрытыми CI. Отбор/матрица
+не расширяются в этом исправлении.316локальных browsercases охватывают
+оба движка; физический iPhone/native keyboard/OAuth/install не проверены.
+
+Сделано: только e2e-fit-lime job в .github/workflows/ci.yml использует тот же
+mcr.microsoft.com/playwright:v1.61.1-noble, что и работающие browser lanes.
+Готовые браузеры/OS dependencies заменяют повторную apt/browser installation
+и правку системных sources. Сохранены35min, matrix/engines/partitions,
+permissions/gate, checksum fonts до тестов, original env17public names,
+точный run-fit-lime-ci script/args, inventory validation, worker/failure
+правила и оба artifact uploads. Production секреты в контейнер не передаются;
+GH_TOKEN остаётся только в прежнем fonts step. App config/rollout не меняются.
+
+Старые2 tests, проверявшие удалённую apt-реализацию, заменены проверками
+соответствия image/package-lock, отсутствия изменения system archives,
+исполнения фактической workflow shell для10 engine/lane/shard сочетаний,
+точной передачи env/argv и propagation37 при сбое Docker. Прежние checks
+обоих engines/fonts/gates/no production secrets сохранены. Это смена тестов
+устаревшего способа установки, не снятие UI/data assertions.
+
+Проверка:71/71 CI workflow/scope/public-font tests, полный eslint passed.
+YAML parsed, bash-n passed; независимое структурное сравнение подтверждает
+неизменность всех других jobs, matrix/gate/permissions/timeout и17publicenv.
+Docker локально не запущен (прежний Podman blocker), его реальный запуск
+остаётся обязательным CI на новом head. Никакого green до этого не заявляется.
+Runtime CSS SHA256 прежние4fd86564:316browser/78unit/190native0delta остаются
+проверкой той же реализации, не повторены без изменения runtime.
+Source proof25720/order/прежний Lime exact. Из1876protected nonCSS ровно2
+разрешённых CI файла меняются (workflow и его тесты), остальные1874 exact;
+неожиданных source/API/logic/flags изменений0. Исходное1876/1876 proof
+для4fd сохраняется отдельно и не переписывается.
+
+Дальше: после завершившейся attempt2 обновить тот же PR отдельным CI-коммитом,
+дождаться обязательного CI нового head и показать итог владельцу.
+Самостоятельного merge/deploy нет. Следующий MC не начат.
