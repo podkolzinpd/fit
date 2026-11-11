@@ -26,3 +26,11 @@ describe('workoutFinanceConfirmation', () => {
     expect(workoutFinanceConfirmation(bundle, 'another-workout', 'with_trainer')).toEqual({ title: 'Не списано', detail: 'Нет абонемента' })
   })
 })
+
+it.each([[0,0,'Бесплатно'],[200000,0,'К оплате 2 000 ₽'],[200000,50000,'К оплате 1 500 ₽'],[200000,200000,'Оплачено']])('explains one-off price %s paid %s without subscription leftovers',(price,paid,detail)=>{
+ const single={...bundle,packages:[{...bundle.packages[0]!,singleSession:true,sessionsTotal:1,sessionsUsed:1,sessionsRemaining:0,priceCents:Number(price),paidCents:Number(paid),dueCents:Number(price)-Number(paid)}]}
+ const result=workoutFinanceConfirmation(single,'workout','with_trainer',true)
+ expect(result?.title).toBe('Разовое занятие проведено')
+ expect(result?.detail.replace(/\s/g,' ')).toBe(String(detail).replace(/\s/g,' '))
+ expect(workoutFinanceConfirmation(single,'workout','with_trainer',false)?.detail).toContain('осталось 0')
+})

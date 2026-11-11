@@ -1,5 +1,5 @@
-import { expect, test, type Locator, type Page } from '@playwright/test'
-import type { TrainerFinanceClientBundle, TrainerFinanceManualSessionDraft, TrainerFinancePaymentUpdate, TrainerFinanceReceipt } from '../src/data/contracts/trainer-finance'
+import { expect, test, type Locator, type Page, type TestInfo } from '@playwright/test'
+import type { TrainerFinanceClientBundle, TrainerFinancePackageDraft, TrainerFinanceManualSessionDraft, TrainerFinancePaymentUpdate, TrainerFinanceReceipt } from '../src/data/contracts/trainer-finance'
 import { clientId, conversationId, newWorkoutId, workoutId, workout, mockPilot, type MockWorkout } from './fit-lime-fixtures'
 
 const coach = 'c0ac0000-6010-4000-8000-000000000001'
@@ -223,7 +223,7 @@ export function financeAccountingCases() {
       await page.screenshot({path:info.outputPath(`monthly-athlete-${width}.png`),fullPage:true})
     }
     await page.setViewportSize({width:320,height:844})
-    await page.getByRole('button',{name:'Добавить',exact:true}).click()
+    await page.getByRole('button',{name:'Добавить оплату',exact:true}).click()
     const paymentForm=page.locator('.finance-form')
     await expect(paymentForm.getByRole('heading',{name:'Добавить оплату'})).toBeVisible()
     await formGeometry(paymentForm)
@@ -392,9 +392,20 @@ export function financeAccountingCases() {
     await expect(sheet.getByText('Абонемент не выбран', { exact: true })).toBeVisible()
     await sheet.getByRole('button', { name: 'Выбрать', exact: true }).click()
     await expect(sheet.getByText('По текущим условиям')).toHaveCount(0)
+    await expect(sheet.getByRole('radio',{name:'Пробное занятие'})).toHaveCount(0)
+    await sheet.getByRole('radio',{name:'Разовое занятие'}).click()
+    await sheet.getByLabel('Стоимость, ₽').fill('2000')
+    await sheet.getByLabel('Получено, ₽').fill('500')
+    for(const width of [320,390,430,1440]){
+      await page.setViewportSize({width,height:844})
+      await sheet.getByLabel('Дата получения').scrollIntoViewIfNeeded()
+      expect(await sheet.evaluate(node=>node.scrollWidth<=node.clientWidth+1)).toBe(true)
+      await page.screenshot({path:info.outputPath(`single-attendance-${width}.png`)})
+    }
     const first = sheet.getByRole('radio', { name: /01.11.2026 — 30.11.2026 · осталось 3/ })
     const second = sheet.getByRole('radio', { name: /03.11.2026 — 02.12.2026 · осталось 10/ })
     await expect(first).not.toBeChecked(); await expect(second).not.toBeChecked()
+    await second.click()
     for (const width of [320, 390, 430, 1440]) {
       await page.setViewportSize({ width, height: 844 })
       await first.scrollIntoViewIfNeeded()
@@ -424,10 +435,80 @@ export function financeAccountingCases() {
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
       await page.screenshot({ path: info.outputPath(`manual-package-choice-${width}.png`), fullPage: true })
     }
-    await form.getByRole('button', { name: 'Отмена', exact: true }).click()
+    await form.getByRole('radio',{name:'Разовое занятие'}).click()
+    await form.getByLabel('Стоимость, ₽').fill('2000')
+    await form.getByLabel('Получено, ₽').fill('500')
+    for(const width of [320,390,430,1440]){
+      await page.setViewportSize({width,height:844})
+      await formGeometry(form)
+      await page.screenshot({path:info.outputPath(`single-manual-${width}.png`),fullPage:true})
+      const submit=form.getByRole('button',{name:'Добавить',exact:true})
+      await submit.scrollIntoViewIfNeeded()
+      expect(await submit.evaluate(node=>{const r=node.getBoundingClientRect();return node.contains(document.elementFromPoint(r.x+r.width/2,r.y+r.height/2))})).toBe(true)
+      await page.screenshot({path:info.outputPath(`single-manual-submit-${width}.png`),fullPage:true})
+    }
+    const singles:TrainerFinanceManualSessionDraft[]=[]
+    await page.route(`**/v1/clients/${clientId}/finance/single-sessions`,async route=>{
+      const draft=route.request().postDataJSON() as TrainerFinanceManualSessionDraft;singles.push(draft)
+      expect(draft.singleService).toEqual({priceCents:200000,paidCents:50000,receivedOn:'2026-11-03'})
+      const session={...ledger.sessions[0]!,id:conversationId,workoutId:conversationId,packageId:null,disposition:'charged' as const,workoutDate:draft.workoutDate}
+      ledger.sessions.push(session)
+      await route.fulfill({json:{session}})
+    })
+    await form.getByRole('button',{name:'Добавить',exact:true}).click()
     await expect(form).toHaveCount(0)
-    expect(ledger.sessions).toHaveLength(1)
+    expect(singles).toHaveLength(1)
+    expect(ledger.sessions).toHaveLength(2)
   })
+
+  async function singleAttendanceCabinets(page:Page,info:TestInfo){
+    const target:MockWorkout={...workout,createdBy:coach,workoutDate:'2026-11-03',status:'planned',exercises:[],deliveryMode:'online'}
+    const ledger=await accountingFixture(page,true,[target]),base=ledger.packages[0]!
+    ledger.packages=[];ledger.sessions=[];ledger.payments=[]
+    let count=0
+    await page.route(`**/v1/workouts/${workoutId}/finish-single`,async route=>{
+      const command=route.request().postDataJSON() as {attendance:{singleService:TrainerFinanceManualSessionDraft['singleService']}}
+      count++;expect(command.attendance.singleService).toEqual({priceCents:200000,paidCents:50000,receivedOn:'2026-11-03'})
+      Object.assign(target,{status:'done',version:2,completedAt:stamp})
+      ledger.packages.push({...base,id:newWorkoutId,title:'Разовое занятие',singleSession:true,sessionsTotal:1,sessionsUsed:1,sessionsRemaining:0,priceCents:200000,paidCents:50000,dueCents:150000,startsOn:'2026-11-03',endsOn:null,packageStatus:'completed',paymentStatus:'partial'})
+      ledger.sessions.push({id:workoutId,packageId:newWorkoutId,workoutId,disposition:'charged',source:'automatic',comment:null,workoutDate:'2026-11-03',voidedAt:null,voidReason:null,version:1,createdAt:stamp,updatedAt:stamp})
+      ledger.payments.push({id:conversationId,packageId:newWorkoutId,amountCents:50000,receivedOn:'2026-11-03',source:'opening',comment:null,voidedAt:null,voidReason:null,version:1,createdAt:stamp,updatedAt:stamp})
+      await route.fulfill({json:{workout:{version:2,replayed:false}}})
+    })
+    await page.goto(`/workouts/${workoutId}`)
+    await page.getByRole('button',{name:'Отметить проведённой',exact:true}).click()
+    const sheet=page.getByRole('dialog',{name:'Отметить проведённой',exact:true})
+    await expect(sheet).toContainText('Онлайн')
+    await sheet.getByRole('button',{name:'Изменить учёт'}).click()
+    await sheet.getByRole('radio',{name:'Разовое занятие'}).click()
+    await sheet.getByLabel('Стоимость, ₽').fill('2000');await sheet.getByLabel('Получено, ₽').fill('500')
+    await sheet.getByRole('button',{name:'Подтвердить проведение',exact:true}).click()
+    const confirmation=page.locator('.workout-finance-confirmation')
+    await expect(confirmation).toContainText('Разовое занятие проведено');await expect(confirmation).toContainText(/К оплате 1\s500/)
+    expect(count).toBe(1)
+    for(const width of [320,390,430,1440]){
+      await page.setViewportSize({width,height:844});await confirmation.scrollIntoViewIfNeeded()
+      expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true)
+      await page.screenshot({path:info.outputPath(`single-confirmation-${width}.png`)})
+    }
+    await confirmation.getByRole('link',{name:'Открыть финансы'}).click()
+    await page.locator('.finance-history > summary').click()
+    await expect(page.locator('.finance-package')).toContainText('Разовая · Завершён')
+    await page.getByRole('tab',{name:'Занятия: 1'}).click()
+    await expect(page.locator('.finance-session-list')).toContainText('Разовая · проведена')
+    await expect(page.getByRole('button',{name:'Пробные',exact:true})).toHaveCount(0)
+    await expect(page.locator('.finance-session-number')).toHaveText('—')
+    // Switch this synthetic browser fixture to the athlete; no real account is used.
+    await mockPilot(page,{role:'client',clientLime:true})
+    await page.route('**/v1/me/finance',route=>route.fulfill({json:{finance:{trainers:[{trainerId:coach,trainerName:'Тренер',packages:ledger.packages,payments:ledger.payments}]}}}))
+    await page.goto('/me/finance')
+    await expect(page.locator('.client-finance-package')).toContainText('Разовая · проведена')
+    for(const width of [320,390,430,1440]){
+      await page.setViewportSize({width,height:844})
+      expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true)
+      await page.screenshot({path:info.outputPath(`single-athlete-${width}.png`),fullPage:true})
+    }
+  }
 
   test('Finance Lime owns readable cards, forms and payment actions', { tag: ['@lime-finance'] }, async ({ page }, info) => {
     await receiptFixture(page)
@@ -478,6 +559,46 @@ export function financeAccountingCases() {
     await page.screenshot({ path: info.outputPath('lime-payment-edit-small-viewport.png'), fullPage: true })
     await page.getByRole('button', { name: 'Отмена', exact: true }).click()
     await expect(page.locator('.finance-form')).toHaveCount(0)
+    // New purchase from a zero-service payment entry. Existing geometry helper
+    // covers keyboard/scroll risks without multiplying the functional case.
+    const ledger: TrainerFinanceClientBundle = {clientId,canCreate:true,packages:[],payments:[],sessions:[]}
+    const commands: TrainerFinancePackageDraft[] = []
+    await page.route(`**/v1/clients/${clientId}/finance`,route=>route.fulfill({json:{finance:ledger}}))
+    await page.route(`**/v1/clients/${clientId}/finance/single-services`,async route=>{
+      const draft=route.request().postDataJSON() as TrainerFinancePackageDraft
+      commands.push(draft)
+      const item={id:newWorkoutId,clientId,trainerId:coach,kind:draft.kind,singleSession:draft.singleSession,
+        title:draft.title,sessionsTotal:draft.sessionsTotal,sessionsUsed:0,sessionsRemaining:draft.sessionsTotal,
+        priceCents:draft.priceCents,paidCents:draft.openingPaidCents,dueCents:draft.priceCents-draft.openingPaidCents,
+        startsOn:draft.startsOn,endsOn:draft.endsOn,paymentDueOn:draft.paymentDueOn,comment:draft.comment,
+        packageStatus:'active' as const,paymentStatus:'partial' as const,closedAt:null,version:1,createdAt:stamp,updatedAt:stamp}
+      ledger.packages.push(item)
+      await route.fulfill({json:{package:item}})
+    })
+    await page.reload()
+    await page.getByRole('tab',{name:'Оплаты: 0',exact:true}).click()
+    await page.getByRole('button',{name:'Добавить оплату',exact:true}).click()
+    const entry=page.locator('.finance-form')
+    await expect(entry.getByLabel('Тип')).toHaveValue('single')
+    await entry.getByLabel('Стоимость, ₽').fill('2000')
+    await entry.getByLabel('Уже оплачено, ₽').fill('500')
+    for(const width of [320,390,430,1440]){
+      await page.setViewportSize({width,height:844})
+      const details=entry.locator('details.finance-opening-balances')
+      await details.locator('summary').click()
+      await formGeometry(entry)
+      await details.locator('summary').click()
+      await expect(entry.getByLabel('Название')).not.toBeVisible()
+      expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true)
+      await page.locator('.content').evaluate(node=>{node.scrollTop=0})
+      await page.screenshot({path:info.outputPath(`single-payment-entry-${width}.png`),fullPage:true})
+    }
+    await entry.getByRole('button',{name:'Сохранить',exact:true}).click()
+    await expect(entry).toHaveCount(0)
+    expect(commands).toHaveLength(1)
+    expect(commands[0]).toMatchObject({singleSession:true,sessionsTotal:1,priceCents:200000,openingPaidCents:50000})
+    expect(commands[0]!.requestId).toMatch(/^[0-9a-f-]{36}$/)
+    await singleAttendanceCabinets(page,info)
   })
 
   test('Finance exact kopecks and mixed overdue debt use separate amounts', { tag: ['@lime-finance'] }, async ({ page }, info) => {
@@ -986,8 +1107,8 @@ export function financeAccountingCases() {
     await form.getByLabel('Дата занятия').fill('2026-10-20')
     // A fully consumed October service is unavailable to a new session.
     await expect(form.locator('input[type=radio][value^="charged:"]')).toHaveCount(0)
-    await form.getByRole('radio', { name: 'Пробное занятие' }).click()
-    await form.getByLabel('Комментарий').fill('Пробное занятие после перерыва')
+    await form.getByRole('radio', { name: 'Без списания' }).click()
+    await form.getByLabel('Комментарий').fill('Бесплатное занятие после перерыва')
     await form.getByRole('button', { name: 'Добавить', exact: true }).click()
     await expect(form.getByRole('button', { name: 'Повторить сохранение' })).toBeEnabled()
     await expect(form.getByLabel('Дата занятия')).toBeDisabled()
@@ -1002,7 +1123,7 @@ export function financeAccountingCases() {
     await form.getByRole('button', { name: 'Отмена' }).click()
     expect(commands).toHaveLength(1)
     await page.getByRole('button', { name: 'Проверить сохранение' }).click()
-    await expect(form.getByLabel('Комментарий')).toHaveValue('Пробное занятие после перерыва')
+    await expect(form.getByLabel('Комментарий')).toHaveValue('Бесплатное занятие после перерыва')
     await form.getByRole('button', { name: 'Повторить сохранение' }).click()
     await expect(page.getByRole('tab', { name: 'Занятия: 2' })).toBeVisible()
     expect(commands).toHaveLength(2)
@@ -1027,7 +1148,7 @@ export function financeAccountingCases() {
     await expect(form.locator(`input[type=radio][value="charged:${conversationId}"]`)).toBeChecked()
     await page.screenshot({ path: info.outputPath('current-charge.png'), fullPage: true })
     await form.getByLabel('Дата').fill('2026-11-03')
-    await expect(form.getByRole('radio', { name: 'Выбрать абонемент позже' })).toBeChecked()
+    await expect(form.getByRole('radio', { name: 'Выбрать позже' })).toBeChecked()
     await expect(form.getByRole('radio', { name: /Октябрь/ })).toHaveCount(0)
     await form.locator(`input[type=radio][value="charged:${newWorkoutId}"]`).check()
     await page.route(`**/v1/finance/sessions/${workoutId}`, route => {

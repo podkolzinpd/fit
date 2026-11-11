@@ -6,8 +6,9 @@ import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { ChatThread, Client } from '../../shared/domain'
 import { ArchivedClientsPage, ClientsPage } from './ClientsListPage'
 
-const backend = vi.hoisted(() => ({ list: vi.fn(), setArchived: vi.fn(), listThreads: vi.fn(), open: vi.fn(), listFinanceOverview: vi.fn(), createInvite: vi.fn(), revoke: vi.fn() }))
+const backend = vi.hoisted(() => ({ list: vi.fn(), photo: vi.fn(), setArchived: vi.fn(), listThreads: vi.fn(), open: vi.fn(), listFinanceOverview: vi.fn(), createInvite: vi.fn(), revoke: vi.fn() }))
 const navigation = vi.hoisted(() => ({ unified: false }))
+vi.mock('../../app/fit-lime', () => ({ isFitLimeEnabled: () => navigation.unified }))
 vi.mock('../../app/coach-workout-redesign', async importOriginal => ({
   ...await importOriginal<typeof import('../../app/coach-workout-redesign')>(),
   isCoachWorkoutRedesignEnabled: () => navigation.unified,
@@ -17,7 +18,7 @@ vi.mock('../../app/trainer-schedule-v2', async importOriginal => ({
   isTrainerScheduleV2Enabled: () => navigation.unified,
 }))
 vi.mock('../../app/data-backend-context', () => ({
-  useDataBackend: () => ({ source: 'yandex', clients: { list: backend.list, setArchived: backend.setArchived }, chat: { listThreads: backend.listThreads, open: backend.open }, trainerFinance: { listOverview: backend.listFinanceOverview }, invitations: { createShareForNewClient: backend.createInvite, revoke: backend.revoke } }),
+  useDataBackend: () => ({ source: 'yandex', clients: { list: backend.list, photo: backend.photo, setArchived: backend.setArchived }, chat: { listThreads: backend.listThreads, open: backend.open }, trainerFinance: { listOverview: backend.listFinanceOverview }, invitations: { createShareForNewClient: backend.createInvite, revoke: backend.revoke } }),
 }))
 vi.mock('../../app/auth-context', () => ({ useAuth: () => ({ actor: { role: 'trainer', userId: 'trainer-1' } }) }))
 
@@ -86,6 +87,7 @@ function renderPage(clients: Client[] | undefined, initialEntry = '/clients') {
 beforeEach(() => {
   navigation.unified = false
   Object.assign(HTMLElement.prototype, { hasPointerCapture: () => false, setPointerCapture: () => undefined, releasePointerCapture: () => undefined })
+  backend.photo.mockReset().mockResolvedValue(null)
   backend.list.mockReset()
   backend.setArchived.mockReset()
   backend.listThreads.mockReset().mockResolvedValue([])
@@ -503,5 +505,25 @@ describe('ClientsPage chat actions', () => {
 
     await user.click(screen.getByRole('button', { name: 'Сообщения с Анна Смирнова' }))
     await waitFor(() => expect(screen.getByText('Чат открыт')).toBeVisible())
+  })
+})
+
+
+describe('client list photos', () => {
+  it('keeps initials outside the Lime scope without fetching private photos', async () => {
+    renderPage([client('photo-client', 'Анна Смирнова')])
+    expect(await screen.findByText('АС')).toBeVisible()
+    expect(backend.photo).not.toHaveBeenCalled()
+  })
+  it('uses the existing photo endpoint and restores initials after an image error', async () => {
+    navigation.unified = true
+    backend.photo.mockResolvedValue({ url: 'https://example.test/private-photo.jpg', version: 1 })
+    const { container } = renderPage([client('photo-client', 'Анна Смирнова')])
+    await waitFor(() => expect(container.querySelector('.client-avatar img')).toHaveAttribute('src', 'https://example.test/private-photo.jpg'))
+    expect(backend.photo).toHaveBeenCalledWith('photo-client')
+    fireEvent.error(container.querySelector('.client-avatar img')!)
+    expect(await screen.findByText('АС')).toBeVisible()
+    expect(container.querySelector('.client-avatar img')).toBeNull()
+    expect(screen.getByRole('link', { name: 'Анна Смирнова' })).toHaveAttribute('href', '/clients/photo-client')
   })
 })

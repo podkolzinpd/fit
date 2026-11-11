@@ -5,6 +5,6 @@ export function defaultWorkoutTrainingFormat(role: 'trainer' | 'client'): Workou
   return role === 'trainer' ? 'with_trainer' : 'self'
 }
 
-export function workoutTrainingFormatLabel(format: WorkoutTrainingFormat): string {
-  return format === 'with_trainer' ? 'С тренером' : 'Самостоятельно'
+export function workoutTrainingFormatLabel(format: WorkoutTrainingFormat, deliveryMode?: 'in_person' | 'online'): string {
+  return format === 'with_trainer' ? deliveryMode === 'online' ? 'Онлайн' : 'С тренером' : 'Самостоятельно'
 }
