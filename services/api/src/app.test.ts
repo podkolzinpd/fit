@@ -3125,6 +3125,47 @@ describe('Yandex PKCE pilot callback', () => {
   })
 })
 
+describe('employee referral tracking', () => {
+  it('records a public click for a valid code without requiring a session', async () => {
+    const database = buildDatabasePool()
+    database.query.mockResolvedValue([{ recorded: true }])
+    const app = buildApp({ databasePool: database.pool, logger: false })
+    apps.push(app)
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/v1/referrals/STAFF-001/click',
+    })
+
+    expect(response.statusCode).toBe(202)
+    expect(response.json()).toEqual({ recorded: true })
+    expect(database.query).toHaveBeenCalledWith(
+      'select app_private.record_referral_click($1) as recorded',
+      ['staff-001'],
+    )
+    expect(database.release).toHaveBeenCalledOnce()
+  })
+
+  it('rejects malformed codes before touching the database', async () => {
+    const database = buildDatabasePool()
+    const connect = vi.fn().mockResolvedValue(database.connection)
+    const app = buildApp({
+      databasePool: { connect, end: vi.fn().mockResolvedValue(undefined) },
+      logger: false,
+    })
+    apps.push(app)
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/v1/referrals/not%20a%20code/click',
+    })
+
+    expect(response.statusCode).toBe(400)
+    expect(response.json()).toEqual({ error: 'invalid_request' })
+    expect(connect).not.toHaveBeenCalled()
+  })
+})
+
 describe('Yandex ID app session endpoints', () => {
   it('registers a native Yandex account and returns its read-write session', async () => {
     const oauth = buildOAuthCodeProvider()
@@ -3151,6 +3192,7 @@ describe('Yandex ID app session endpoints', () => {
         accountRole: 'trainer',
         termsVersion: CURRENT_TERMS_VERSION,
         privacyVersion: CURRENT_PRIVACY_VERSION,
+        referralCode: 'STAFF-001',
       },
     })
 
@@ -3163,6 +3205,7 @@ describe('Yandex ID app session endpoints', () => {
       accountRole: 'trainer',
       firstName: 'Ирина',
       timezone: 'Europe/Moscow',
+      referralCode: 'staff-001',
     })
     expect(appSession.issue).toHaveBeenCalledWith(SUBJECT_HASH)
   })
@@ -3256,6 +3299,7 @@ describe('Yandex ID app session endpoints', () => {
         accountRole: 'client',
         termsVersion: CURRENT_TERMS_VERSION,
         privacyVersion: CURRENT_PRIVACY_VERSION,
+        referralCode: 'staff-001',
       },
     })
 
@@ -3563,6 +3607,7 @@ describe('Yandex ID app session endpoints', () => {
         accountRole: 'client',
         termsVersion: CURRENT_TERMS_VERSION,
         privacyVersion: CURRENT_PRIVACY_VERSION,
+        referralCode: 'staff-001',
       },
     })
 
@@ -3570,6 +3615,7 @@ describe('Yandex ID app session endpoints', () => {
     expect(response.json()).toEqual(APP_SESSION_RESPONSE)
     expect(handoff.register).toHaveBeenCalledWith('h'.repeat(43), {
       accountRole: 'client', firstName: 'Ирина', timezone: 'Europe/Moscow',
+      referralCode: 'staff-001',
     })
     expect(session.issue).toHaveBeenCalledWith(SUBJECT_HASH)
 
