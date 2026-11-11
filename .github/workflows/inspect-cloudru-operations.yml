@@ -1,12 +1,120 @@
 name: Inspect Cloud.ru production operations
+
 on:
+  schedule:
+    - cron: '43 * * * *'
   workflow_dispatch:
+    inputs:
+      telegram_test:
+        description: Send one owner-requested monitoring connection test
+        type: boolean
+        default: false
+      prepare_jitsi:
+        description: Run one explicit bounded meeting setup action on the existing VM
+        type: boolean
+        default: false
+      jitsi_phase:
+        description: Meeting action; api-stage/enable/disable update protected env only, then require normal API release
+        type: choice
+        default: prepare
+        options: [prepare, resume, ingress, diagnose, auth, proxy, qa, api-status, api-stage, api-enable, api-disable]
+      qa_public_key:
+        description: Ephemeral RSA public key for encrypted synthetic five-minute room credentials
+        type: string
+        default: ''
+      capacity:
+        description: Read only bounded host/container resource aggregates; skip application diagnostics
+        type: boolean
+        default: false
+      nutrition_search:
+        description: Read only ten public food searches from the running API, without actor or diary access
+        type: boolean
+        default: false
+      runtime_database_probe:
+        description: Read-only runtime-role connection and transaction-limit probe, without application queries
+        type: boolean
+        default: false
+      background_audit:
+        description: Read-only push queue age/type aggregates and reminder timezone expression diagnostics; never sends or claims
+        type: boolean
+        default: false
+      unregistered_clients_audit:
+        description: Read-only counts of manual cards, actual trainer list visibility and workout access; no identities
+        type: boolean
+        default: false
+      account_history:
+        description: Read only the four owner-approved account history matches and visibility counts
+        type: boolean
+        default: false
+      workout_history_target:
+        description: Read only one privately approved journal-import target and existing workout counts
+        type: boolean
+        default: false
+      api_errors:
+        description: Read only sanitized API command error-code counts for the last 24 hours
+        type: boolean
+        default: false
+      api_request_id:
+        description: Read sanitized technical diagnostics for one request UUID from the last 24 hours
+        type: string
+        default: ''
+      api_request_time:
+        description: Optional UTC time from copied diagnostics, YYYY-MM-DDTHH:MM:SSZ (narrows the read to four minutes)
+        type: string
+        default: ''
+      speech_diagnostics:
+        description: Read only aggregate SpeechKit relay lifecycle statuses for the last 15 minutes
+        type: boolean
+        default: false
+      renewal_check:
+        description: Also run a bounded Let's Encrypt staging renewal check
+        type: boolean
+        default: false
+
 permissions:
   contents: read
+
 jobs:
-  inspect:
+  prepare-jitsi:
+    if: github.event_name == 'workflow_dispatch' && inputs.prepare_jitsi
+    uses: ./.github/workflows/configure-cloudru-jitsi.yml
+    with:
+      phase: ${{ inputs.jitsi_phase }}
+      qa_public_key: ${{ inputs.qa_public_key }}
+  capacity:
+    if: github.event_name == 'workflow_dispatch' && inputs.capacity && !inputs.prepare_jitsi && !inputs.telegram_test
     runs-on: [self-hosted, cloudru-stage]
     timeout-minutes: 3
+    concurrency:
+      group: cloudru-stage-vm
+      cancel-in-progress: false
+    steps:
+      - name: Read host and container capacity without application data or credentials
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REPOSITORY" = podkolzinpd/fit
+          test "$(hostname)" = fit-stage-app
+          date -u '+Measured at %Y-%m-%dT%H:%M:%SZ'
+          nproc
+          uptime
+          free -m
+          df -h /
+          vmstat 2 6
+          sudo timeout 20 podman ps --format 'table {{.Names}}\t{{.Status}}'
+          sudo timeout 20 podman stats --no-stream --format 'table {{.Name}}\t{{.CPU}}\t{{.MemUsage}}\t{{.MemPerc}}\t{{.NetIO}}\t{{.BlockIO}}'
+          for resource in cpu memory io; do
+            printf '%s pressure\n' "$resource"
+            cat "/proc/pressure/$resource"
+          done
+          printf 'OOM events in last 7 days: '
+          sudo journalctl -k --since='7 days ago' --output=cat --no-pager |
+            awk 'tolower($0) ~ /out of memory|oom-kill|killed process/ {count++} END {print count+0}'
+          printf 'Listening port numbers (no addresses/process arguments)\n'
+          ss -H -lntu | awk '{n=split($5,a,":"); print $1, a[n]}' | sort -u
+  inspect:
+    if: github.event_name != 'workflow_dispatch' || (!inputs.capacity && !inputs.prepare_jitsi && !inputs.telegram_test)
+    runs-on: [self-hosted, cloudru-stage]
+    timeout-minutes: 8
     concurrency:
       group: cloudru-stage-vm
       cancel-in-progress: false
@@ -14,17 +122,390 @@ jobs:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
-      - name: Read only technical metadata for the reported finish failure
+      - name: Read bounded and sanitized background diagnostics
         run: |
           set -euo pipefail
           test "$GITHUB_REPOSITORY" = podkolzinpd/fit
-          test "$GITHUB_REF" = refs/heads/fix/request-codes-503-20261111
+          test "$GITHUB_REF" = refs/heads/main
           test "$(hostname)" = fit-stage-app
-          sudo timeout 20 journalctl CONTAINER_NAME=fit-api-stage --since="2026-11-11 18:55:00 UTC" --until="2026-11-11 19:05:00 UTC" --lines=20000 --output=json --no-pager 2>/dev/null |
-            python3 scripts/incident-finish-diagnostics.py
-          sudo podman inspect fit-api-stage --format '{{.Config.Image}} {{.State.StartedAt}}'
-      - name: Read only ingress status counts in the incident window
+          sudo systemctl show fit-background.service --property=Result --property=ExecMainCode --property=ExecMainStatus
+          sudo journalctl --unit=fit-background.service --since="15 minutes ago" --lines=100 --output=json --no-pager |
+            python3 scripts/cloudru-background-diagnostics.py
+      - name: Probe public nutrition search in the running API
+        if: github.event_name == 'workflow_dispatch' && inputs.nutrition_search
         run: |
           set -euo pipefail
-          sudo timeout 20 tail -n 10000 /var/log/nginx/access.log |
-            python3 scripts/incident-nginx-diagnostics.py
+          test "$GITHUB_REPOSITORY" = podkolzinpd/fit
+          test "$GITHUB_REF" = refs/heads/main
+          test "$(hostname)" = fit-stage-app
+          sudo podman inspect fit-api-stage --format '{{.Config.Image}}' | tee -a "$GITHUB_STEP_SUMMARY"
+          sudo timeout 105 podman exec fit-api-stage node dist/nutrition-search-probe.js | tee -a "$GITHUB_STEP_SUMMARY"
+      - name: Read only bounded API command error-code counts
+        if: github.event_name == 'workflow_dispatch' && inputs.api_errors
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REPOSITORY" = podkolzinpd/fit
+          test "$GITHUB_REF" = refs/heads/main
+          test "$(hostname)" = fit-stage-app
+          sudo timeout 15 journalctl CONTAINER_NAME=fit-api-stage --since="24 hours ago" --lines=5000 --output=json --no-pager 2>/dev/null |
+            python3 scripts/cloudru-api-command-diagnostics.py | tee -a "$GITHUB_STEP_SUMMARY"
+      - name: Read only bounded diagnostics for one API request
+        if: github.event_name == 'workflow_dispatch' && inputs.api_request_id != ''
+        env:
+          REQUEST_ID: ${{ inputs.api_request_id }}
+          REQUEST_TIME: ${{ inputs.api_request_time }}
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REPOSITORY" = podkolzinpd/fit
+          test "$GITHUB_REF" = refs/heads/main
+          test "$(hostname)" = fit-stage-app
+          [[ "$REQUEST_ID" =~ ^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$ ]]
+          bounds=(--since="24 hours ago")
+          if test -n "$REQUEST_TIME"; then
+            [[ "$REQUEST_TIME" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$ ]]
+            epoch=$(date -u -d "$REQUEST_TIME" +%s)
+            now=$(date -u +%s)
+            test "$epoch" -le "$now"
+            test "$epoch" -ge "$((now - 86400))"
+            bounds=(--since="@$((epoch - 120))" --until="@$((epoch + 120))")
+          fi
+          sudo timeout 15 journalctl CONTAINER_NAME=fit-api-stage "${bounds[@]}" --lines=5000 --output=json --no-pager 2>/dev/null |
+            python3 scripts/cloudru-api-request-diagnostics.py "$REQUEST_ID" | tee -a "$GITHUB_STEP_SUMMARY"
+      - name: Read only aggregate SpeechKit relay lifecycle statuses
+        if: github.event_name == 'workflow_dispatch' && inputs.speech_diagnostics
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REPOSITORY" = podkolzinpd/fit
+          test "$GITHUB_REF" = refs/heads/main
+          test "$(hostname)" = fit-stage-app
+          sudo timeout 15 journalctl CONTAINER_NAME=fit-speechkit-cloudru --since="15 minutes ago" --lines=500 --output=json --no-pager |
+            python3 scripts/cloudru-speech-diagnostics.py | tee -a "$GITHUB_STEP_SUMMARY"
+      - name: Inspect runtime, workers, certificates and backup freshness without reading user data
+        env:
+          SPEECH_EXPECTED_URL: ${{ vars.CLOUDRU_SPEECHKIT_RELAY_URL }}
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REPOSITORY" = podkolzinpd/fit
+          test "$GITHUB_REF" = refs/heads/main
+          test "$(hostname)" = fit-stage-app
+          failed=0
+          check() {
+            label=$1
+            shift
+            if "$@" >/dev/null 2>&1; then
+              printf '%s: passed\n' "$label" | tee -a "$GITHUB_STEP_SUMMARY"
+            else
+              printf '%s: failed\n' "$label" | tee -a "$GITHUB_STEP_SUMMARY"
+              failed=1
+            fi
+          }
+          for unit in nginx certbot.timer fit-background.timer; do
+            check "$unit" sudo systemctl is-active --quiet "$unit"
+          done
+          for domain in fit-training.ru api.fit-training.ru; do
+            check "Certificate $domain >=14 days" sudo openssl x509 -noout -checkend 1209600 \
+              -in "/etc/letsencrypt/live/$domain/fullchain.pem"
+          done
+          available=$(df -Pk / | awk 'NR == 2 {print $4}')
+          check 'Runner disk >=2 GiB' test "$available" -ge 2097152
+          check 'API ready' curl --fail --silent --max-time 5 http://127.0.0.1:18080/ready
+          check 'Frontend available' curl --fail --silent --max-time 5 http://127.0.0.1:18081/auth
+          if test -n "$SPEECH_EXPECTED_URL"; then
+            check 'Speech relay configured URL' test "$SPEECH_EXPECTED_URL" = wss://api.fit-training.ru/stt
+            check 'Speech relay service' sudo systemctl is-active --quiet fit-speechkit.service
+            check 'Speech relay available' curl --fail --silent --max-time 5 http://127.0.0.1:18084/health
+          else
+            echo 'Speech relay disabled by configuration.' | tee -a "$GITHUB_STEP_SUMMARY"
+          fi
+          if sudo test -f /opt/fit/BACKUP_VERIFIED_AT; then
+            backup=$(sudo cat /opt/fit/BACKUP_VERIFIED_AT)
+            verified=$(date -d "$backup" +%s)
+            age=$(( $(date +%s) - verified ))
+            check 'Offsite backup restore verified within48h' test "$age" -ge 0
+            check 'Offsite backup restore freshness' test "$age" -lt 172800
+          else
+            echo 'Offsite backup restore: missing' | tee -a "$GITHUB_STEP_SUMMARY"
+            failed=1
+          fi
+          result=$(sudo systemctl show fit-background.service --property=Result --value)
+          check 'Background last run' test "$result" = success
+          revision=$(cat /opt/fit/RUNNING_SHA)
+          [[ "$revision" =~ ^[a-f0-9]{40}$ ]]
+          image=$(sudo podman inspect fit-api-stage --format '{{.Config.Image}}')
+          check 'Running API marker matches container' test "$image" = "localhost/fit-api:$revision"
+          printf 'API release: %s; free disk: %s MiB\n' "$revision" "$((available / 1024))" >> "$GITHUB_STEP_SUMMARY"
+          exit "$failed"
+      - name: Inspect only private queue aggregates in a read-only transaction
+        if: always()
+        env:
+          CLOUDRU_DATABASE_CONFIG_JSON: ${{ secrets.CLOUDRU_STAGE_DATABASE_CONFIG_JSON }}
+          BACKGROUND_AUDIT: ${{ github.event_name == 'workflow_dispatch' && inputs.background_audit }}
+          UNREGISTERED_CLIENTS_AUDIT: ${{ github.event_name == 'workflow_dispatch' && inputs.unregistered_clients_audit }}
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REPOSITORY" = podkolzinpd/fit
+          test "$GITHUB_REF" = refs/heads/main
+          test "$(hostname)" = fit-stage-app
+          test "$(sudo stat -c '%u:%a' /opt/fit/secrets)" = 0:700
+          id="$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
+          [[ "$id" =~ ^[0-9]+-[0-9]+$ ]]
+          owner="/opt/fit/secrets/queue-inspect-$id.env"
+          sudo test ! -e "$owner"
+          sudo install -m 600 /dev/null "$owner"
+          trap 'sudo rm -f -- "$owner"' EXIT
+          jq -e '.MIGRATION_DATABASE_HOST == "10.70.10.67" and .MIGRATION_DATABASE_PORT == "5432" and
+            .MIGRATION_DATABASE_NAME == "fit" and .MIGRATION_DATABASE_USER == "fit_owner" and
+            all(.[]; type == "string" and length > 0 and (test("[\u0000-\u001f\u007f]") | not))' \
+            <<<"$CLOUDRU_DATABASE_CONFIG_JSON" >/dev/null
+          jq -r 'to_entries[] | select(.key | startswith("MIGRATION_DATABASE_")) | "\(.key)=\(.value)"' \
+            <<<"$CLOUDRU_DATABASE_CONFIG_JSON" | sudo tee "$owner" >/dev/null
+          printf 'MIGRATION_DATABASE_SSL_MODE=require\n' | sudo tee -a "$owner" >/dev/null
+          revision=$(cat /opt/fit/RUNNING_SHA)
+          [[ "$revision" =~ ^[a-f0-9]{40}$ ]]
+          if test "$BACKGROUND_AUDIT" = true; then
+            sudo podman run --rm --read-only --memory=128m --cpus=0.5 --timeout=60 --cap-drop=ALL \
+              --security-opt=no-new-privileges --env-file "$owner" \
+              -v "$PWD/scripts/cloudru-background-audit.mjs:/inspection.mjs:ro" \
+              "localhost/fit-api:$revision" node /inspection.mjs | tee -a "$GITHUB_STEP_SUMMARY"
+          fi
+          if test "$UNREGISTERED_CLIENTS_AUDIT" = true; then
+            jq -e '.DATABASE_HOST == "10.70.10.67" and .DATABASE_PORT == "5432" and
+              .DATABASE_NAME == "fit" and .DATABASE_USER == "fit_api" and .DATABASE_URL == null' \
+              <<<"$CLOUDRU_DATABASE_CONFIG_JSON" >/dev/null
+            jq -r 'to_entries[] | select(.key | test("^DATABASE_(HOST|PORT|NAME|USER|PASSWORD)$")) | "\(.key)=\(.value)"' \
+              <<<"$CLOUDRU_DATABASE_CONFIG_JSON" | sudo tee -a "$owner" >/dev/null
+            printf 'DATABASE_SSL_MODE=require\n' | sudo tee -a "$owner" >/dev/null
+            sudo podman run --rm -i --read-only --memory=256m --cpus=0.5 --timeout=120 --cap-drop=ALL \
+              --security-opt=no-new-privileges --env-file "$owner" \
+              "localhost/fit-api:$revision" node --input-type=module - <<'JS_UNREGISTERED' | tee -a "$GITHUB_STEP_SUMMARY"
+          export async function inspectUnregisteredAccess(client, runtime = client) {
+            const count = value => {
+              if (!Number.isSafeInteger(value) || value < 0) throw Error('manual_audit_count_invalid');
+              return value;
+            };
+            await client.query('begin transaction isolation level repeatable read read only');
+            try {
+              await client.query("set local statement_timeout='10s'");
+              await client.query("set local lock_timeout='2s'");
+              const gate = (await client.query("select current_user name,current_setting('transaction_read_only') readonly")).rows[0];
+              if (gate?.name !== 'fit_owner' || gate.readonly !== 'on') throw Error('manual_audit_readonly_required');
+              if (runtime !== client) {
+                const snapshot=(await client.query('select pg_export_snapshot() snapshot')).rows[0].snapshot;
+                if (!/^[0-9a-f]{8}-[0-9a-f]{8}-[0-9]+$/i.test(snapshot)) throw Error('manual_audit_snapshot_invalid');
+                await runtime.query('begin transaction isolation level repeatable read read only');
+                await runtime.query(`set transaction snapshot '${snapshot}'`);
+                await runtime.query("set local statement_timeout='10s'");
+                await runtime.query("set local lock_timeout='2s'");
+              }
+              const totals = (await client.query(`select count(*)::int cards,
+                count(*) filter(where c.archived_at is null and c.merged_into_client_id is null)::int active,
+                count(*) filter(where c.archived_at is not null)::int archived,
+                count(*) filter(where c.merged_into_client_id is not null)::int merged,
+                count(*) filter(where c.created_at<'2026-11-09T00:16:44Z' and c.archived_at is null and c.merged_into_client_id is null)::int old_active
+                from public.clients c where c.auth_user_id is null`)).rows[0];
+              const owners = (await client.query(`select c.trainer_id,p.account_role,
+                array_agg(c.id order by c.id) ids,
+                array_agg(c.id order by c.id) filter(where c.created_at<'2026-11-09T00:16:44Z') old_ids
+                from public.clients c join public.profiles p on p.id=c.trainer_id
+                where c.auth_user_id is null and c.archived_at is null and c.merged_into_client_id is null
+                group by c.trainer_id,p.account_role order by c.trainer_id limit 501`)).rows;
+              if (owners.length>500) throw Error('manual_audit_scope_exceeded');
+              const result = {event:'manual_client_access_readonly_audit',readOnly:true,productionMutated:false,
+                oldBoundary:'before_PR2039_merge',cards:count(totals.cards),active:count(totals.active),archived:count(totals.archived),
+                merged:count(totals.merged),oldActive:count(totals.old_active),owners:owners.length,
+                visible:0,oldVisible:0,canCreateWorkout:0,oldCanCreateWorkout:0,workouts:0,visibleWorkouts:0,ownersWithMissingCards:0,
+                oldOwnersWithMissingCards:0,ownersNotTrainer:0};
+              for (const owner of owners) {
+                if (!Array.isArray(owner.ids) || owner.ids.length>5000) throw Error('manual_audit_scope_exceeded');
+                const old = owner.old_ids ?? [];
+                const expected = count((await client.query('select count(*)::int n from public.workouts where client_id=any($1::uuid[]) and deleted_at is null',[owner.ids])).rows[0].n);
+                if (runtime === client) await client.query('set local role fit_api');
+                const role = (await runtime.query(`select current_user name,rolsuper,rolbypassrls from pg_roles where rolname=current_user`)).rows[0];
+                if (role?.name!=='fit_api' || role.rolsuper!==false || role.rolbypassrls!==false) throw Error('manual_audit_runtime_role_invalid');
+                await runtime.query("select set_config('request.jwt.claim.sub',$1,true)",[owner.trainer_id]);
+                const visible = (await runtime.query('select id,public.can_create_client_workout(id) can_create from public.list_client_overviews(false) where id=any($1::uuid[])',[owner.ids])).rows;
+                const ids = new Set(visible.map(row=>row.id));
+                const creatable = new Set(visible.filter(row=>row.can_create===true).map(row=>row.id));
+                result.visible+=ids.size; result.oldVisible+=old.filter(id=>ids.has(id)).length;
+                result.canCreateWorkout+=creatable.size; result.oldCanCreateWorkout+=old.filter(id=>creatable.has(id)).length;
+                result.ownersWithMissingCards+=Number(ids.size!==owner.ids.length);
+                result.oldOwnersWithMissingCards+=Number(old.some(id=>!ids.has(id)));
+                result.ownersNotTrainer+=Number(owner.account_role!=='trainer');
+                result.workouts+=expected;
+                result.visibleWorkouts+=count((await runtime.query('select count(*)::int n from public.workouts where client_id=any($1::uuid[]) and deleted_at is null',[owner.ids])).rows[0].n);
+                if (runtime === client) await client.query('reset role');
+              }
+              if (result.active!==owners.reduce((sum,owner)=>sum+owner.ids.length,0)) throw Error('manual_audit_incomplete');
+              if (runtime !== client) await runtime.query('commit');
+              await client.query('commit');
+              return result;
+            } catch (error) { if (runtime !== client) await runtime.query('rollback'); await client.query('rollback'); throw error; }
+          }
+          // Runtime entry: owner credentials stay inside the existing protected container.
+          const {buildDatabaseConnectionConfig}=await import('/app/dist/db/connection-config.js');
+          const config=buildDatabaseConnectionConfig('MIGRATION_DATABASE');
+          if(config?.host!=='10.70.10.67'||config.port!==5432||config.database!=='fit'||config.user!=='fit_owner'
+            ||process.env.MIGRATION_DATABASE_SSL_MODE!=='require') throw Error('manual_audit_environment_invalid');
+          const {createRequire}=await import('node:module');
+          const {Client}=createRequire('/app/package.json')('pg');
+          const runtimeConfig=buildDatabaseConnectionConfig('DATABASE');
+          if(runtimeConfig?.host!==config.host||runtimeConfig.port!==config.port||runtimeConfig.database!==config.database
+            ||runtimeConfig.user!=='fit_api'||process.env.DATABASE_SSL_MODE!=='require') throw Error('manual_audit_runtime_environment_invalid');
+          const runtime=new Client({...runtimeConfig,connectionTimeoutMillis:5000,query_timeout:15000});
+          const client=new Client({...config,connectionTimeoutMillis:5000,query_timeout:15000});
+          await Promise.all([client.connect(),runtime.connect()]);
+          try {console.log(JSON.stringify(await inspectUnregisteredAccess(client,runtime)));}
+          catch(error) {
+            console.log(JSON.stringify({event:'manual_client_access_readonly_audit_failed',
+              code:/^[A-Z0-9]{5}$/.test(error.code??'')?error.code:'unknown',
+              reason:/^manual_audit_[a-z_]+$/.test(error.message??'')?error.message:'query_failed'}));
+            process.exitCode=1;
+          } finally {await Promise.allSettled([client.end(),runtime.end()]);}
+          JS_UNREGISTERED
+          fi
+          sudo podman run --rm --read-only --memory=128m --cpus=0.5 --timeout=20 --cap-drop=ALL \
+            --security-opt=no-new-privileges --env-file "$owner" \
+            "localhost/fit-api:$revision" node dist/cloudru-operations-health.js | tee -a "$GITHUB_STEP_SUMMARY"
+      - name: Probe only runtime database connection and transaction settings
+        if: always() && github.event_name == 'workflow_dispatch' && inputs.runtime_database_probe
+        env:
+          CLOUDRU_DATABASE_CONFIG_JSON: ${{ secrets.CLOUDRU_STAGE_DATABASE_CONFIG_JSON }}
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REPOSITORY" = podkolzinpd/fit
+          test "$GITHUB_REF" = refs/heads/main
+          test "$(hostname)" = fit-stage-app
+          sudo test ! -L /opt/fit/secrets
+          test "$(sudo stat -c '%u:%a' /opt/fit/secrets)" = 0:700
+          id="$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
+          [[ "$id" =~ ^[0-9]+-[0-9]+$ ]]
+          probe="/opt/fit/secrets/runtime-probe-$id.env"
+          sudo test ! -e "$probe"
+          sudo test ! -L "$probe"
+          sudo install -m 600 /dev/null "$probe"
+          trap 'sudo rm -f -- "$probe"' EXIT
+          jq -e '.DATABASE_HOST == "10.70.10.67" and .DATABASE_PORT == "5432" and
+            .DATABASE_NAME == "fit" and .DATABASE_USER == "fit_api" and .DATABASE_URL == null and
+            all(.[]; type == "string" and length > 0 and (test("[\u0000-\u001f\u007f]") | not))' \
+            <<<"$CLOUDRU_DATABASE_CONFIG_JSON" >/dev/null
+          jq -r 'to_entries[] | select(.key | test("^DATABASE_(HOST|PORT|NAME|USER|PASSWORD)$")) | "\(.key)=\(.value)"' \
+            <<<"$CLOUDRU_DATABASE_CONFIG_JSON" | sudo tee "$probe" >/dev/null
+          printf 'DATABASE_SSL_MODE=require\n' | sudo tee -a "$probe" >/dev/null
+          revision=$(cat /opt/fit/RUNNING_SHA)
+          [[ "$revision" =~ ^[a-f0-9]{40}$ ]]
+          test "$(sudo podman inspect fit-api-stage --format '{{.Config.Image}}')" = "localhost/fit-api:$revision"
+          sudo podman run --rm --read-only --memory=128m --cpus=0.5 --timeout=20 --cap-drop=ALL \
+            --security-opt=no-new-privileges --env-file "$probe" \
+            -v "$PWD/scripts/cloudru-runtime-db-probe.mjs:/inspection.mjs:ro" \
+            "localhost/fit-api:$revision" node /inspection.mjs | tee -a "$GITHUB_STEP_SUMMARY"
+      - name: Inspect only the owner-approved account history without changing records
+        if: github.event_name == 'workflow_dispatch' && ((always() && inputs.workout_history_target) || (success() && inputs.account_history))
+        env:
+          CLOUDRU_DATABASE_CONFIG_JSON: ${{ secrets.CLOUDRU_STAGE_DATABASE_CONFIG_JSON }}
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
+          FIT_ACCOUNT_HISTORY_TARGETS: ${{ secrets.FIT_ACCOUNT_HISTORY_TARGETS }}
+          FIT_ACCOUNT_HISTORY_EVIDENCE: ${{ secrets.FIT_ACCOUNT_HISTORY_EVIDENCE }}
+          FIT_WORKOUT_HISTORY_TARGET: ${{ inputs.workout_history_target && secrets.FIT_WORKOUT_HISTORY_TARGET || '' }}
+          WORKOUT_HISTORY_TARGET_MODE: ${{ inputs.workout_history_target }}
+          ACCOUNT_HISTORY_MODE: ${{ inputs.account_history }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REPOSITORY" = podkolzinpd/fit
+          test "$GITHUB_REF" = refs/heads/main
+          test "$(hostname)" = fit-stage-app
+          if test "$WORKOUT_HISTORY_TARGET_MODE" = true; then
+            test "$ACCOUNT_HISTORY_MODE" != true
+            test -n "$FIT_WORKOUT_HISTORY_TARGET"
+          fi
+          umask 077
+          sudo test ! -L /opt/fit/secrets
+          test "$(sudo stat -c '%u:%a' /opt/fit/secrets)" = 0:700
+          owner="/opt/fit/secrets/account-history-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT.env"
+          sudo test ! -e "$owner"
+          sudo test ! -L "$owner"
+          sudo install -m 600 /dev/null "$owner"
+          trap 'sudo rm -f -- "$owner"' EXIT
+          jq -e '.MIGRATION_DATABASE_HOST == "10.70.10.67" and .MIGRATION_DATABASE_PORT == "5432" and
+            .MIGRATION_DATABASE_NAME == "fit" and .MIGRATION_DATABASE_USER == "fit_owner" and
+            .DATABASE_HOST == "10.70.10.67" and .DATABASE_PORT == "5432" and
+            .DATABASE_NAME == "fit" and .DATABASE_USER == "fit_api" and
+            .MIGRATION_DATABASE_URL == null and .DATABASE_URL == null and all(.[]; type == "string" and length > 0 and
+            (test("[\u0000-\u001f\u007f]") | not))' <<<"$CLOUDRU_DATABASE_CONFIG_JSON" >/dev/null
+          jq -r 'to_entries[] | select(.key | test("^(MIGRATION_DATABASE|DATABASE)_(HOST|PORT|NAME|USER|PASSWORD)$")) | "\(.key)=\(.value)"' \
+            <<<"$CLOUDRU_DATABASE_CONFIG_JSON" | sudo tee "$owner" >/dev/null
+          names=(SUPABASE_ACCESS_TOKEN SUPABASE_PROJECT_ID)
+          if test "$WORKOUT_HISTORY_TARGET_MODE" = true; then
+            names+=(FIT_WORKOUT_HISTORY_TARGET)
+          else
+            names+=(FIT_ACCOUNT_HISTORY_TARGETS)
+          fi
+          for name in "${names[@]}"; do
+            value=${!name}
+            test -n "$value"
+            echo "::add-mask::$value"
+            test "$value" = "${value//$'\n'/}"
+            test "$value" = "${value//$'\r'/}"
+            printf '%s=%s\n' "$name" "$value" | sudo tee -a "$owner" >/dev/null
+          done
+          if test "$WORKOUT_HISTORY_TARGET_MODE" != true && test -n "$FIT_ACCOUNT_HISTORY_EVIDENCE"; then
+            echo "::add-mask::$FIT_ACCOUNT_HISTORY_EVIDENCE"
+            test "$FIT_ACCOUNT_HISTORY_EVIDENCE" = "${FIT_ACCOUNT_HISTORY_EVIDENCE//$'\n'/}"
+            test "$FIT_ACCOUNT_HISTORY_EVIDENCE" = "${FIT_ACCOUNT_HISTORY_EVIDENCE//$'\r'/}"
+            printf 'FIT_ACCOUNT_HISTORY_EVIDENCE=%s\n' "$FIT_ACCOUNT_HISTORY_EVIDENCE" | sudo tee -a "$owner" >/dev/null
+          fi
+          printf 'MIGRATION_DATABASE_SSL_MODE=require\nDATABASE_SSL_MODE=require\nGITHUB_REF=refs/heads/main\nGITHUB_REPOSITORY=podkolzinpd/fit\n' | sudo tee -a "$owner" >/dev/null
+          revision=$(cat /opt/fit/RUNNING_SHA)
+          [[ "$revision" =~ ^[a-f0-9]{40}$ ]]
+          sudo podman run --rm --read-only --memory=256m --cpus=0.5 --timeout=120 --cap-drop=ALL \
+            --security-opt=no-new-privileges --env-file "$owner" \
+            -v "$PWD/scripts/cloudru-account-history-audit.mjs:/inspection.mjs:ro" \
+            "localhost/fit-api:$revision" node /inspection.mjs | tee -a "$GITHUB_STEP_SUMMARY"
+      - name: Verify certificate renewal against the staging CA
+        if: always() && inputs.renewal_check
+        run: |
+          set -euo pipefail
+          if sudo timeout 300 certbot renew --dry-run --non-interactive --no-random-sleep-on-renew >/dev/null 2>&1; then
+            echo 'Certificate renewal dry-run: passed' >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo 'Certificate renewal dry-run: failed' >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
+
+  telegram-test:
+    if: github.event_name == 'workflow_dispatch' && inputs.telegram_test
+    runs-on: ubuntu-24.04
+    timeout-minutes: 2
+    concurrency:
+      group: fit-telegram-delivery-test
+      cancel-in-progress: false
+    steps:
+      - name: Verify bot and send one technical connection message
+        env:
+          BOT_TOKEN: ${{ secrets.FIT_ALERT_TELEGRAM_BOT_TOKEN }}
+          CHAT_ID: ${{ secrets.FIT_ALERT_TELEGRAM_CHAT_ID }}
+        run: |
+          python3 - <<'PYTHON'
+          import json, os, re, urllib.request, urllib.parse
+          phase = 'getMe'
+          try:
+              raw = os.environ['BOT_TOKEN']
+              candidates = re.findall(r'[0-9]{6,}:[A-Za-z0-9_-]{20,}', raw)
+              print(json.dumps({'event':'fit_token_format','candidate_count':len(candidates),'whitespace_trimmed':raw != raw.strip()}), flush=True)
+              if len(candidates) != 1: raise ValueError('invalid_token_format')
+              base = 'https://api.telegram.org/bot' + candidates[0]
+              with urllib.request.urlopen(base + '/getMe', timeout=10) as response:
+                  bot = json.load(response)
+              if not bot.get('ok'): raise RuntimeError()
+              print(json.dumps({'event':'fit_telegram_bot_verified','bot_username':bot['result']['username']}), flush=True)
+              phase = 'sendMessage'
+              payload = urllib.parse.urlencode({'chat_id': os.environ['CHAT_ID'], 'text': 'Fit: тест мониторинга. Бот подключён, доставка алертов в этот чат работает.'}).encode()
+              with urllib.request.urlopen(urllib.request.Request(base + '/sendMessage', data=payload), timeout=10) as response:
+                  result = json.load(response)
+              if not result.get('ok'): raise RuntimeError()
+              print(json.dumps({'event':'fit_telegram_test','delivered':True,'bot_username':bot['result']['username'],'message_id':result['result']['message_id']}))
+          except Exception as error:
+              print(json.dumps({'event':'fit_telegram_test_failed','phase':phase,'error_type':type(error).__name__,'http_status':getattr(error,'code',None)}))
+              raise SystemExit(1)
+          PYTHON

@@ -635,3 +635,38 @@ Cloud.ru публикует открытый инцидент с08.11,15:06:
 Дальше: подтверждение Cloud.ru по конкретному кластеру и безопасный план
 устранения зависимости от аварийного участка. Обращение подготовлено локально,
 не отправлялось; для внешней коммуникации нужно отдельное разрешение.
+
+
+### Уточнение —11.11.2026,22:00МСК — ошибка завершения разового занятия
+
+Новый скриншот: в WorkoutAttendanceSheet выбран single:new, видна общая
+network_unavailable ошибка и действие «Обновить запись». Кода диагностики
+на этом экране нет: компонент выводит только error.message, хотя repository
+сохраняет request diagnostics. Поэтому конкретный сбой на телефоне пока не
+сопоставлен с request ID и не объявляется прежней аварией DB.
+
+[Штатная проверка22:03](https://github.com/podkolzinpd/fit/actions/runs/43083530451):
+API ready passed, runtimeDB ready=true. [Первый bounded scan22:04:20](https://github.com/podkolzinpd/fit/actions/runs/43083701982)
+ещё не нашёл finish/finish-single в18:55–19:04UTC, database failure codes пусты.
+[Расширенная проверка22:06](https://github.com/podkolzinpd/fit/actions/runs/43083975085)
+в окне21:55–22:05МСК:202API journal entries,96ответов200; нет5xx и acquireErrors.
+Есть одинPOST /v1/workouts/:id/finish-single в22:04:56.857МСК,
+request ID882f2704-29d7-4b3a-8853-a50dc58f2fb5;200 за48ms.
+Nginx независимо зафиксировал POSTfinish-single200. Его identity/тело/суммы
+не читались; связь со скриншотом не доказана. Владелец получил вопрос,
+удалось ли завершить после повтора.
+
+Публичные read-only healthGET200 и preflightOPTIONS finish-single204 прошли:
+origin fit-training.ru, POST и необходимые headers разрешены, diagnostic
+response headers открыты. Эти проверки не доказывают доступность с телефона.
+API running45dc394f, StartedAt21:43:04МСК — без перезапуска в окне скриншота.
+Перед finish Live flushes pending confirmations/drafts и читает свежую workout;
+ошибка может возникнуть до finish-запроса. Fetch/preflight failure отображается
+общим network_unavailable; физическая сеть, точный этап и server commit по
+скриншоту неизвестны. Не обвинять интернет пользователя и не объявлять
+неподтверждённую потерю/дублирование оплаты.
+
+Ручного завершения/оплаты, повторного POST или изменения пользовательских
+данных агент не выполнял. Productionкод/настройки не менялись. Без requestID
+или подтверждённого воспроизведения нет оснований менять финансовую логику,
+увеличивать тайм-ауты или связывать этот случай с прежней недоступностью DB.
