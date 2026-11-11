@@ -70,7 +70,7 @@ language sql stable security definer set search_path='' as $$
   select exists(select 1 from public.profiles p
     join public.trainers t on t.profile_id=p.id
     join public.corporate_trainers c on c.trainer_id=p.id and c.is_yandex
-    
+
     where (app_private.corporate_testing_enabled(p.id) or exists(select 1 from app_private.corporate_service_pilot_trainers legacy where legacy.profile_id=p.id and legacy.enabled)) and p.id=auth.uid() and p.account_role='trainer' and exists(
       select 1 from public.corporate_trainer_offices b join public.corporate_offices o on o.id=b.office_id
       where b.trainer_id=p.id and not o.archived))
@@ -81,14 +81,14 @@ language sql stable security definer set search_path='' as $$
   select exists(select 1 from public.profiles p
     join public.trainers t on t.profile_id=p.id
     join public.corporate_trainers c on c.trainer_id=p.id and c.is_yandex
-    
+
     where (app_private.corporate_testing_enabled(p.id) or exists(select 1 from app_private.corporate_personal_pilot_trainers legacy where legacy.profile_id=p.id and legacy.enabled)) and p.id=p_trainer and p.account_role='trainer')
 $$;
 
 create or replace function app_private.corporate_duty_allowed() returns boolean
 language sql stable security definer set search_path='' as $$
   select exists(select 1 from public.profiles p join public.corporate_trainers t on t.trainer_id=p.id and t.is_yandex
-    
+
     where (app_private.corporate_testing_enabled(p.id) or exists(select 1 from app_private.corporate_duty_pilot_trainers legacy where legacy.profile_id=p.id and legacy.enabled)) and p.id=auth.uid() and p.account_role='trainer')
 $$;
 
@@ -96,7 +96,7 @@ create or replace function app_private.corporate_profile_available(p_target uuid
 language sql stable security definer set search_path='' as $$
  select exists(select 1 from public.corporate_trainers c
  join public.profiles p on p.id=c.trainer_id and p.account_role='trainer'
- 
+
  where (app_private.corporate_testing_enabled(c.trainer_id) or exists(select 1 from app_private.corporate_profile_pilot_trainers legacy where legacy.profile_id=c.trainer_id and legacy.enabled)) and c.trainer_id=p_target and c.is_yandex)
 $$;
 
@@ -123,7 +123,7 @@ end $$;
 
 create or replace function app_private.decide_corporate_trainer_invitation(p_id uuid,p_approve boolean)
 returns void language plpgsql security definer set search_path='' as $$
-declare v app_private.corporate_trainer_invitations; state text; current_version bigint;
+declare v app_private.corporate_trainer_invitations; state text; current_version bigint; assigned_offices uuid[];
 begin
   if not app_private.is_corporate_admin() then raise exception 'corporate_forbidden' using errcode='PT403'; end if;
   if p_approve is null then raise exception 'corporate_invalid' using errcode='PT422'; end if;
@@ -139,9 +139,17 @@ begin
     if not exists(select 1 from public.profiles p join public.trainers t on t.profile_id=p.id where p.id=v.claimed_by and p.account_role='trainer') then
       raise exception 'corporate_not_found' using errcode='PT404'; end if;
     if not app_private.corporate_invitation_offices_valid(v.office_ids) then raise exception 'corporate_invalid' using errcode='PT422'; end if;
-    if not exists(select 1 from public.corporate_trainers where trainer_id=v.claimed_by and is_yandex) then
+    -- Add invited offices without replacing the trainer's previous active offices.
+    select array_agg(distinct office_id order by office_id) into assigned_offices from (
+      select unnest(v.office_ids) office_id
+      union select b.office_id from public.corporate_trainer_offices b join public.corporate_offices o on o.id=b.office_id
+        where b.trainer_id=v.claimed_by and not o.archived
+    ) offices;
+    if not exists(select 1 from public.corporate_trainers where trainer_id=v.claimed_by and is_yandex)
+      or exists(select 1 from unnest(v.office_ids) invited where not exists(
+        select 1 from public.corporate_trainer_offices b where b.trainer_id=v.claimed_by and b.office_id=invited)) then
       select coalesce((select version from public.corporate_trainers where trainer_id=v.claimed_by),0) into current_version;
-      perform app_private.save_corporate_trainer(v.claimed_by,true,v.office_ids,current_version);
+      perform app_private.save_corporate_trainer(v.claimed_by,true,assigned_offices,current_version);
     end if;
     update app_private.corporate_trainer_invitations set approved_by=auth.uid(),approved_at=now() where id=p_id;
     insert into app_private.corporate_invitation_audit(invitation_id,actor_id,action) values(p_id,auth.uid(),'approve');
