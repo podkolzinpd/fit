@@ -3,6 +3,8 @@ from collections import Counter
 rows=[]
 requests={}
 failures=Counter()
+operations=Counter()
+statuses=Counter()
 pools=[]
 for line in sys.stdin:
     try:
@@ -16,6 +18,16 @@ for line in sys.stdin:
     req=entry.get("req",{})
     url=req.get("url","") if isinstance(req,dict) else ""
     rid=entry.get("reqId")
+    if isinstance(url,str) and url.startswith('/'):
+        path=url.split('?',1)[0]
+        known={'v1','health','ready','clients','connections','training-data','workouts','workout-sets','workout-exercises','finish','finish-single','start','pause','trainer-finance','me','overview','packages','payments','sessions','set','confirm'}
+        safe='/'.join(segment if segment in known or not segment else ':id' for segment in path.split('/'))
+        method=req.get('method','other')
+        if method not in {'GET','POST','PUT','PATCH','DELETE','OPTIONS'}: method='other'
+        operations[method+' '+safe]+=1
+    response=entry.get('res')
+    if isinstance(response,dict) and isinstance(response.get('statusCode'),int):
+        statuses[str(response['statusCode'])]+=1
     if isinstance(rid,str) and re.fullmatch(r"[a-f0-9-]{36}",rid) and isinstance(url,str):
         path=url.split("?",1)[0]
         m=re.fullmatch(r"/v1/workouts/[a-f0-9-]{36}/(finish|finish-single)",path)
@@ -35,4 +47,4 @@ for stamp,entry in rows:
         item.update(status=res["statusCode"],completedAtUs=stamp)
     duration=entry.get("responseTime")
     if isinstance(duration,(int,float)): item["durationMs"]=round(duration)
-print(json.dumps({"event":"finish_incident","journalEntries":len(rows),"finishRequests":list(requests.values())[-50:],"databaseFailureCodes":dict(failures),"poolWindows":pools[-20:]}))
+print(json.dumps({"event":"finish_incident","journalEntries":len(rows),"requestOperations":dict(operations),"responseStatuses":dict(statuses),"finishRequests":list(requests.values())[-50:],"databaseFailureCodes":dict(failures),"poolWindows":pools[-20:]}))

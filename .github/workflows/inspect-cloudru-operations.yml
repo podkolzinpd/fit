@@ -23,3 +23,8 @@ jobs:
           sudo timeout 20 journalctl CONTAINER_NAME=fit-api-stage --since="2026-11-11 18:55:00 UTC" --until="2026-11-11 19:05:00 UTC" --lines=20000 --output=json --no-pager 2>/dev/null |
             python3 scripts/incident-finish-diagnostics.py
           sudo podman inspect fit-api-stage --format '{{.Config.Image}} {{.State.StartedAt}}'
+      - name: Read only ingress status counts in the incident window
+        run: |
+          set -euo pipefail
+          sudo timeout 20 tail -n 10000 /var/log/nginx/access.log |
+            python3 scripts/incident-nginx-diagnostics.py
