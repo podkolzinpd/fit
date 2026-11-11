@@ -148,6 +148,14 @@ try {
   options.corporateProfiles = new CorporateProfilesStore(runtime, options.pilotTrainerProfiles)
   const { CorporateAdminStore } = await nativeModule('corporate-admin')
   options.corporateAdmin = new CorporateAdminStore(runtime, storage)
+  const { CorporateInvitationsStore } = await nativeModule('corporate-invitations')
+  options.corporateInvitations = new CorporateInvitationsStore(runtime)
+  const { CorporateServicesStore } = await nativeModule('corporate-services')
+  options.corporateServices = new CorporateServicesStore(runtime)
+  const { CorporatePersonalStore } = await nativeModule('corporate-personal')
+  options.corporatePersonal = new CorporatePersonalStore(runtime)
+  const { CorporateDutiesStore } = await nativeModule('corporate-duties')
+  options.corporateDuties = new CorporateDutiesStore(runtime)
   const { DatabasePilotCustomExercisePhotos } = await nativeModule('custom-exercise-photo')
   options.pilotCustomExercisePhotos = new DatabasePilotCustomExercisePhotos(runtime, storage)
   const { DatabasePilotTrainingSummaries } = await nativeModule('training-summary')
@@ -198,9 +206,11 @@ try {
     try {
       await owner.query("insert into app_private.corporate_admins(profile_id) values($1) on conflict(profile_id) do update set enabled=true",[administrator])
       await owner.query("insert into public.corporate_offices(id,city,name,address) values($1,'Тестовый город','Тестовый офис','Синтетический адрес') on conflict(id) do nothing",[office])
+      if(value.invitationOnly!==true){
       await owner.query('insert into public.corporate_trainers(trainer_id,is_yandex) values($1,true) on conflict(trainer_id) do update set is_yandex=true',[target])
       await owner.query('insert into public.corporate_trainer_offices(trainer_id,office_id) values($1,$2) on conflict do nothing',[target,office])
       await owner.query('insert into app_private.corporate_profile_pilot_trainers(profile_id,enabled) values($1,true) on conflict(profile_id) do update set enabled=true',[target])
+      }
       await owner.query('commit');return {trainerId:target,officeId:office}
     }catch(error){await owner.query('rollback');throw error}
   })
