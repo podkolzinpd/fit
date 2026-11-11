@@ -27,7 +27,7 @@ export function CorporateInvitations({data,initialCreate=false}:{data:CorporateA
     {creating&&<form className="corporate-admin-editor" aria-label="Новое приглашение" onSubmit={form.handleSubmit(()=>create.mutate())}>
       <h3>Офисы тренера</h3>
       <fieldset disabled={create.isPending}>
-        <Field label="Почта тренера"><input type="email" autoComplete="off" maxLength={254} {...form.register('recipientEmail',{onChange:()=>{if(create.isError){create.reset();setOperationId(crypto.randomUUID())}}})}/></Field>
+        <Field label="Почта тренера"><input type="email" className="ym-disable-keys" autoComplete="off" maxLength={254} {...form.register('recipientEmail',{onChange:()=>{if(create.isError){create.reset();setOperationId(crypto.randomUUID())}}})}/></Field>
         <p>Любая почта. Можно оставить пустой и передать ссылку лично. Письмо автоматически не отправляется.</p>
         {data.offices.filter(o=>!o.archived).map(o=><label className="corporate-admin-checkbox" key={o.id}><input type="checkbox" checked={officeIds.includes(o.id)} onChange={e=>{if(create.isError){create.reset();setOperationId(crypto.randomUUID())}setOfficeIds(old=>e.target.checked?[...old,o.id]:old.filter(id=>id!==o.id))}}/>{o.city} · {o.name}</label>)}
         {!data.offices.some(o=>!o.archived)&&<p>Сначала добавьте активный офис.</p>}

@@ -4316,3 +4316,13 @@ p2/local-isolated/browser.json; это local production build, не публик
 Новый PG-контроль проверяет архивный+активный прежние офисы, добавление нового
 и отдельный cohort revoke с неизменными назначениями и membership version;
 корпоративный PG17 набор84/84PASS безskip.
+
+Квитанция окончательного сохранения офисов: API1640PASS/475conditionalskip,
+lint/typecheck/build PASS; PG17 корпоративный набор84/84PASS. В UI checkout
+после обычного merge6c79c3dd проверены9/9 реальных native API/PG17 browser
+случаев (новые6+прежниеprofile3); skips/flaky/retries0.
+Новое поле почты дополнительно получает ym-disable-keys внутри прежнего
+ym-hide-content; production Chromium/WebKit2/2 подтвердили markers и весь
+путь от создания приглашения до реального start/stop дежурства.
+Это local приёмка. Начатый GitHub CI первого head не отменён; финальный
+push и второй PR ждут его завершения, затем необходим новый exact-head CI.

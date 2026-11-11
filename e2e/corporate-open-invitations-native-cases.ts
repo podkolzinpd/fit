@@ -13,6 +13,8 @@ export function registerCorporateOpenNativeCases(){
  test('real API invitation accepts an unrelated contact email, confirms the actual trainer and opens all test modules',async({page},info)=>{
   await page.goto('/admin');await page.getByRole('button',{name:'Приглашения',exact:true}).click()
   await page.getByRole('button',{name:'Пригласить тренера',exact:true}).click()
+  await expect(page.getByLabel('Почта тренера',{exact:true})).toHaveClass(/ym-disable-keys/)
+  expect(await page.getByLabel('Почта тренера',{exact:true}).evaluate(el=>el.closest('.ym-hide-content')!==null)).toBe(true)
   await page.getByLabel('Почта тренера',{exact:true}).fill(' Colleague@MAIL.RU ')
   await page.getByRole('checkbox',{name:'Тестовый город · Тестовый офис',exact:true}).check()
   await page.getByRole('button',{name:'Создать приглашение',exact:true}).click()
