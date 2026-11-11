@@ -4282,3 +4282,13 @@ PR2087 проверен в GitHub: DIRTY и прямо исключает merge/
 Новый PG-контроль проверяет архивный+активный прежние офисы, добавление нового
 и отдельный cohort revoke с неизменными назначениями и membership version;
 корпоративный PG17 набор84/84PASS безskip.
+
+Квитанция initial CI43085006165/head111a4d27:33/35jobs SUCCESS, красный
+WebKit finance visual1/4 и итоговый e2e; Finance Lime owns readable cards,
+forms and payment actions трижды упёрся в page.goto/locator.click30s.
+Все corporate/API/DB/app gates прошли; это не зелёная приёмка выпуска.
+Логи сохранены приватно. Тесты/таймауты/retries не менялись.
+За время CI опубликован main8be75f05 с чужой migration213. Собственная ещё
+не опубликованная migration213 переименована214; чужая213 сохраняется
+побайтно. Далее обычный merge нового main, локальная проверка упавшего
+неизменённого financecase и новый полный CI окончательного head.
