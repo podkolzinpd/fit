@@ -348,3 +348,14 @@ paint/font/borders и ввод, не замораживать interval ради 
 Native lazy currentSrc не доказывает запрос; readiness связывать с пассивными
 image request events/eager/viewport. Нельзя скрывать media или scroll различия.
 [Метод, исходные reds и границы — §239](design/CLIENT_REFERENCE_SCREENS_20261029.md#239-mc518--весь-редактор-актуальная-база-и-локальная-приёмка).
+
+### MC518: семантические семьи CSS вместо числа оптимизированных правил
+
+Разделение mixed rules и добавление scoped owners меняют CSSRule grouping.
+Legacy QA должны сопоставлять точные selector branches, снимать только reviewed
+negative guards и сохранять positive/unknown :where. Физический count8→9 не
+исправляется слепым обновлением числа. Before/during native paint и legacy
+positive controls обязательны; CSSOM/rule/style/sheet identity восстанавливается.
+Новое условие post-ablation native repaint нельзя ошибочно объявлять прежним
+контрактом, если исходные тесты его не имели; var-border нельзя перепарсивать
+для успокоения probe. [Разбор](design/CLIENT_REFERENCE_SCREENS_20261029.md), §240.

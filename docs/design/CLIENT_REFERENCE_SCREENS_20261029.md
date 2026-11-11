@@ -10116,3 +10116,62 @@ Root лично просмотрела реальные clientdark390/light430/t
 не проверены. Старые MC517157px/4px/gray feedback/swipe observations не закрыты.
 Следующее: rootreview→push/один PR→exact-source CI→сводка владельцу. Merge и
 публикация только после отдельного разрешения. Никаких следующих MC сейчас.
+
+## 240. MC518 — точный контракт старых Live-проб и синхронизация main
+
+2026-11-11 — Codex / OpenAI. Первый PR2102/head ea2df1c5 прошёл33 CI checks,
+но native shards1/3 дали по49 одинаковых отказов (Chromium/WebKit): card17,
+set28, timer2, duration2; aggregate e2e закономерно red, legacy auth-smoke skipped.
+Полные журналы `/tmp/fit-mc518/ci-native-shard{1,3}-job.log`, итог первого head
+`/tmp/fit-mc518/ci-ea2df1c5-final.json` сохранены. Других причин отказа в этих
+двух job не найдено. Проверки не перезапускались на неизменённом плохом head.
+
+Причина — существующие QA выбирали CSSStyleRule целиком и снимали любой
+:where, включая positive editor owners. Разделение mixed declarations меняет
+физическое число правил (card8→9), хотя исходные selector/property/order
+сохраняются. Число CSSRule не является числом прежних семантических семейств.
+Изменены только четыре Live QA: card/set/timer/duration. В существующем duration
+helper переиспользуется общий browser callback с exact branch manifests,
+whitelist только проверенных negative guards; positive и unknown owners
+остаются отдельными identities. Reviewed family/paint sets: card9/8,
+set34/29, timer30/28, duration7/7. Полные sets проверяются, не только их размеры.
+Compiled proof: `/tmp/fit-mc518-live-qa-compiled-proof.json`.
+
+Исходный контракт before→during ablation сохранён: у modern нет matching/
+inherited legacy paint и нет native style/geometry differences; у14 legacy
+positive controls matching sets исходны, наследование есть и actual differences
+непусты. Captures дополнены всеми четырьмя border и отсутствовавшими margins.
+Unrelated merged branches остаются; neutral geometry сохраняется отдельными
+временными rules. Проверяется полный CSSOM text, actual rule/style/sheet object
+identity после восстановления; исходные declaration objects не перепарсиваются.
+Ошибки/requests/console, где они проверялись прежде, не исключены; retries,
+timeouts, кейсы и skip-политика не изменены.
+
+Попытка дополнительно потребовать native capture==before ПОСЛЕ искусственной
+абляции дала6 отложенных colour/font/layout observations при точном CSSOM.
+Это новое дополнительное условие отсутствовало во всех четырёх исходных helper
+(git show ea2df1c5); не является прежним контрактом приложения. Попытки reparse
+и clear/restore не приняты: duration исходно предупреждает о var-border
+shorthand/side override. Raw `/tmp/fit-mc518-live-qa-fixed-20261111.json`,
+`live-qa-reparse-*` и `live-qa-clear-*` сохранены, продуктовыми багами не названы.
+Убрано только это новое избыточное условие; все исходные before/during assertions
+и усиленный CSSOM/object roundtrip сохранены. Нативный renderer не исправлялся
+посредством изменений продукта или нормализации снимков.
+
+Первый CI и локальные native процессы завершились до обновления ветки.
+Включён опубликованный main eb5a5314 обычным merge b36e0abe: referral/auth/private
+analytics2093/2101 без изменений editor/CSS и rollout. Собственные runtime
+файлы по-прежнему только два CSS. Относительно нового main original25720,
+selector/property/order и Lime suffix exact;117rules/206decl,1876 protected
+non-CSS unchanged. Независимый root proof1657 unchanged:
+`/tmp/fit-mc518/protected-source-main-eb5a5314-baseline.json`.
+Оба CSS SHA прежние4913584c/ed10787f; поэтому §239 остаётся доказательством
+собственного paint переноса, а main features не приписываются этой миграции.
+
+Новая production build/types/startup/fonts2 PASS; targeted lint4/full e2e types
+PASS. Все168 Live cases на обновлённой базе прошли149.316s, retry/skip/flaky0:
+`/tmp/fit-mc518-live-qa-final-main-20261111.json`. Ранее проверенные editor56,
+210 native states/4atomic,184unit и существующие mechanics не выдаются за
+повторный новый прогон. Bulk-fill/старые scroll и native raster observations
+из §239 не закрыты. Далее — source commit/push и обязательный CI нового head;
+сводка владельцу до выпуска. Merge PR/публикация по-прежнему не разрешены.
