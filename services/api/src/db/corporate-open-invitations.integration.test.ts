@@ -89,11 +89,21 @@ describe.skipIf(!source)('open corporate invitations — real PostgreSQL17/actor
   expect(bundle.trainers).toContainEqual(expect.objectContaining({id:coach,testingEnabled:true,testingVersion:3,profileEditingAvailable:true}))
  })
  it('adds invited offices to an existing member without replacing previous assignments',async()=>{
-  const previousOffice=randomUUID();await actor(admin,'select app_private.save_corporate_office($1,$2,$3,$4,false,0)',[previousOffice,'Synthetic','Previous','Test'])
-  await actor(admin,'select app_private.save_corporate_trainer($1,true,$2,0)',[coach,[previousOffice]])
+  const previousOffice=randomUUID(),stableOffice=randomUUID()
+  for(const [id,name]of [[previousOffice,'Previous'],[stableOffice,'Stable']])await actor(admin,'select app_private.save_corporate_office($1,$2,$3,$4,false,0)',[id,'Synthetic',name,'Test'])
+  await actor(admin,'select app_private.save_corporate_trainer($1,true,$2,0)',[coach,[previousOffice,stableOffice]])
+  await actor(admin,'select app_private.save_corporate_office($1,$2,$3,$4,true,1)',[previousOffice,'Synthetic','Previous','Test'])
   const {id,hash}=await create();await claim(hash);await approve(id)
-  expect((await pool.query<{office_id:string}>('select office_id from public.corporate_trainer_offices where trainer_id=$1',[coach])).rows.map(r=>r.office_id).sort()).toEqual([office,previousOffice].sort())
+  const assigned=async()=>(await pool.query<{office_id:string}>('select office_id from public.corporate_trainer_offices where trainer_id=$1',[coach])).rows.map(r=>r.office_id).sort()
+  expect(await assigned()).toEqual([office,previousOffice,stableOffice].sort())
   await approve(id);expect((await pool.query('select version from public.corporate_trainers where trainer_id=$1',[coach])).rows).toEqual([{version:'2'}])
+  // The active-office editor omits archived assignments. Changing only test
+  // access must neither delete those links nor increment membership version.
+  const store=new CorporateAdminStore(runtime)
+  await store.saveTrainer(session,{id:coach,isYandex:true,officeIds:[office,stableOffice],version:2,testingEnabled:false,testingVersion:1})
+  expect(await assigned()).toEqual([office,previousOffice,stableOffice].sort())
+  expect((await pool.query('select version from public.corporate_trainers where trainer_id=$1',[coach])).rows).toEqual([{version:'2'}])
+  expect(await access()).toEqual([{services:false,personal:false,duty:false,profile:false}])
  })
  it('does not rewrite independent pilots and refuses enrollment removal while profile management is on',async()=>{
   const tables=['corporate_service_pilot_trainers','corporate_personal_pilot_trainers','corporate_duty_pilot_trainers','corporate_profile_pilot_trainers']
