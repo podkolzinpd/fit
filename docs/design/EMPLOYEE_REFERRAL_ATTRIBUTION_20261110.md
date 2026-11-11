@@ -26,7 +26,7 @@
 
 ## Реализация и решения
 
-Добавлена миграция `000208_employee_referral_attribution.sql`, API click route,
+Добавлена миграция `000210_employee_referral_attribution.sql`, API click route,
 маршрут redirect, хранение кода до завершения регистрации и передача кода в оба
 Cloud.ru registration path. Источник и счётчики разнесены по таблицам.
 
@@ -52,3 +52,9 @@ PR [#2093](https://github.com/podkolzinpd/fit/pull/2093) открыт; GitHub CI
 migration/release ещё не выполнялись. После успешного CI изменения должны пройти
 штатный Cloud.ru release workflow и public read-back; прямой SQL на production
 не используется.
+
+11.11: после обновления ветки на `bd928e0` номера `000208` и `000209` уже заняты
+финансовыми миграциями main; наша миграция перенесена на `000210`. В предыдущем
+CI все gates прошли, кроме одного старого `e2e/coach-live-v79.spec.ts` timeout
+при возврате с паузы; он не затрагивает referral flow. Новый run на обновлённой
+базе должен подтвердить, что проблема снята.
