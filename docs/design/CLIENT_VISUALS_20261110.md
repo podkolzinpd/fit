@@ -101,3 +101,5 @@ CV403: отдельный анализ структурированной цел
 Проверки/фактический выпуск CV401–402 пока впереди.
 
 CV401–402 local: typecheck/lint/build/startup/docs/diff passed;45 unit/component tests;20 Chromium/WebKit scenarios25.7s,0retry. Form360/ready390WebKitPNG просмотрены. Первыйbrowserrun16pass/4fail из-за substring-селектора имени (совпадал с заголовком); заменён точным именем, проверки команд/ошибок/повтора/QR/отзыва сохранены. SourceCI и выпуск впереди.
+
+CV401 уточнение: микрофон общей заметки в заголовке через прежний compactVoice; handlers/source/undo сохраняются.53unit5filespassed;20browser1.2m0retry;PNGformWebKitпросмотрен. TSC выявил route-string вместоboolean в prop, исправлено Boolean(fitLimeBack); build/startuppassed. Новая голова требует полногоCI.
