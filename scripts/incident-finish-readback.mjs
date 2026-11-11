@@ -1,5 +1,6 @@
 import { readFileSync } from 'node:fs'
-import { Client } from 'pg'
+import { createRequire } from 'node:module'
+const { Client } = createRequire('/app/package.json')('pg')
 import { buildDatabaseConnectionConfig } from '/app/dist/db/connection-config.js'
 const target=JSON.parse(readFileSync(0,'utf8'))
 if(!/^[a-f0-9-]{36}$/.test(target.workoutId??'')) throw Error('invalid reviewed target')
