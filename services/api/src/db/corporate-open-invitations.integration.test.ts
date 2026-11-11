@@ -88,6 +88,13 @@ describe.skipIf(!source)('open corporate invitations — real PostgreSQL17/actor
   const adminStore=new CorporateAdminStore(runtime);const bundle=await adminStore.bundle(session)
   expect(bundle.trainers).toContainEqual(expect.objectContaining({id:coach,testingEnabled:true,testingVersion:3,profileEditingAvailable:true}))
  })
+ it('adds invited offices to an existing member without replacing previous assignments',async()=>{
+  const previousOffice=randomUUID();await actor(admin,'select app_private.save_corporate_office($1,$2,$3,$4,false,0)',[previousOffice,'Synthetic','Previous','Test'])
+  await actor(admin,'select app_private.save_corporate_trainer($1,true,$2,0)',[coach,[previousOffice]])
+  const {id,hash}=await create();await claim(hash);await approve(id)
+  expect((await pool.query<{office_id:string}>('select office_id from public.corporate_trainer_offices where trainer_id=$1',[coach])).rows.map(r=>r.office_id).sort()).toEqual([office,previousOffice].sort())
+  await approve(id);expect((await pool.query('select version from public.corporate_trainers where trainer_id=$1',[coach])).rows).toEqual([{version:'2'}])
+ })
  it('does not rewrite independent pilots and refuses enrollment removal while profile management is on',async()=>{
   const tables=['corporate_service_pilot_trainers','corporate_personal_pilot_trainers','corporate_duty_pilot_trainers','corporate_profile_pilot_trainers']
   for(const table of tables)await pool.query(`insert into app_private.${table}(profile_id,enabled)values($1,false)`,[other])
