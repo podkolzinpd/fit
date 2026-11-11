@@ -69,3 +69,16 @@ test('the former analytics URL retains its existing trainer fallback',async({pag
   await mockNativeAiSession(page,'trainer');await page.goto(nativeAiUrl('/analytics'))
   await expect(page.getByRole('heading',{name:'Сегодня',exact:true})).toBeVisible()
 })
+
+test('referral report exposes period counts and source search without people filters',async({page})=>{
+  await page.routeWebSocket('**/*',socket=>socket.close())
+  await mockNativeAiSession(page,'trainer')
+  await page.route('**/v1/private-analytics/explore',route=>route.fulfill({json:{...base,total:1,rows:[{id:'s1',name:'Сотрудница',code:'staff-001',clicks:4,registrations:1,conversion:25,active:true}],summary:{clicks:4,registrations:1,conversion:25}}}))
+  await page.goto(nativeAiUrl('/private-analytics?section=referrals'))
+  await expect(page.getByRole('table',{name:'Реферальные ссылки',exact:true})).toBeVisible()
+  await expect(page.getByText('staff-001',{exact:true})).toBeVisible()
+  await expect(page.getByRole('combobox',{name:'Роль',exact:true})).toHaveCount(0)
+  await expect(page.getByRole('region',{name:'Динамика реферальных событий'})).toBeVisible()
+  await expect.poll(()=>page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth)).toBe(true)
+  await page.screenshot({path:'test-results/referral-report.png',fullPage:true})
+})
