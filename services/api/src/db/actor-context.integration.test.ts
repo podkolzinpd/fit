@@ -591,6 +591,52 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
     let enrollmentPool: PgDatabasePool | undefined
     let runtimePool: PgDatabasePool | undefined
 
+    it('reconciles single money and online attendance across both roles, month history, corrections and archive',async()=>{
+      if(!ownerPool||!runtimePool)throw new Error('Database not ready')
+      const card=randomUUID(),athlete=randomUUID(),workout=randomUUID(),operation=randomUUID()
+      const command=(sql:string,args:unknown[]=[],actor=ACTOR_ID)=>withActorTransaction(runtimePool!,actor,db=>db.query<JsonResultRow>(sql,args))
+      await ownerPool.query("insert into public.profiles(id,account_role) values($1,'client')",[athlete])
+      await ownerPool.query("insert into public.clients(id,trainer_id,auth_user_id,full_name) values($1,$2,$3,'Synthetic reconciled single')",[card,ACTOR_ID,athlete])
+      await ownerPool.query('insert into public.client_trainers(client_id,trainer_id) values($1,$2)',[card,ACTOR_ID])
+      await ownerPool.query('insert into public.client_trainer_relationships(client_id,trainer_id,connected_by) values($1,$2,$3)',[card,ACTOR_ID,athlete])
+      await ownerPool.query("insert into public.workouts(id,trainer_id,client_id,created_by,workout_date,status,training_format,delivery_mode) values($1,$2,$3,$2,current_date,'planned','with_trainer','online')",[workout,ACTOR_ID,card])
+      const bundle=async()=>(await withActorTransaction(runtimePool!,ACTOR_ID,db=>db.query<{result:TrainerFinanceClientBundle}>('select public.list_trainer_finance_client_v2($1) as result',[card])))[0]!.result
+      const overview=async(previous=false)=>(await command(`select public.list_trainer_finance_overview_v2((date_trunc('month',current_date)${previous?"-interval '1 month'":''})::date) as result`))[0]!.result as {clients:Array<{clientId:string;receivedCents:number;dueCents:number;completedSessions:number;lowSessions:boolean;activeClient:boolean}>}
+      const history=async(previous=false)=>(await command(`select public.list_trainer_finance_payments((date_trunc('month',current_date)${previous?"-interval '1 month'":''})::date,$1,0) as result`,[card]))[0]!.result as {totalCents:number;payments:unknown[]}
+      const self=async()=>(await command('select public.list_client_finance_self_v2() as result',[],athlete))[0]!.result as {trainers:Array<{packages:Array<{singleSession:boolean;dueCents:number;paidCents:number;sessionsUsed:number}>}>}
+      try{
+        await command("select public.finish_single_trainer_workout($1,1,$2,20000,5000,(date_trunc('month',current_date)-interval '1 day')::date) as result",[workout,operation])
+        expect((await bundle()).packages[0]).toMatchObject({singleSession:true,dueCents:15000,paidCents:5000,sessionsUsed:1})
+        expect((await self()).trainers[0]!.packages[0]).toMatchObject({singleSession:true,dueCents:15000,paidCents:5000,sessionsUsed:1})
+        expect((await overview()).clients.find(c=>c.clientId===card)).toMatchObject({receivedCents:0,dueCents:15000,completedSessions:1,lowSessions:false})
+        expect((await overview(true)).clients.find(c=>c.clientId===card)).toMatchObject({receivedCents:5000,dueCents:15000,completedSessions:0})
+        expect((await history(true)).totalCents).toBe(5000)
+        const payment=(await bundle()).payments[0]!
+        await command('select public.update_trainer_finance_payment($1,$2,7000,current_date,null) as result',[payment.id,payment.version])
+        expect((await bundle()).packages[0]).toMatchObject({dueCents:13000,paidCents:7000,sessionsUsed:1})
+        expect((await self()).trainers[0]!.packages[0]).toMatchObject({dueCents:13000,paidCents:7000,sessionsUsed:1})
+        expect((await history()).totalCents).toBe(7000);expect((await history(true)).totalCents).toBe(0)
+        expect((await overview()).clients.find(c=>c.clientId===card)).toMatchObject({receivedCents:7000,dueCents:13000,completedSessions:1})
+        const version=(await ownerPool.query<{version:string}>('select version from public.clients where id=$1',[card])).rows[0]!.version
+        await command('select public.set_client_archived($1,true,$2) as result',[card,version])
+        expect((await bundle()).packages[0]).toMatchObject({dueCents:13000,paidCents:7000,sessionsUsed:1})
+        expect((await overview()).clients.find(c=>c.clientId===card)).toMatchObject({receivedCents:7000,dueCents:13000,completedSessions:1,activeClient:false})
+        expect((await history()).totalCents).toBe(7000)
+      }finally{
+        await ownerPool.query('delete from public.trainer_finance_events where client_id=$1',[card])
+        await ownerPool.query('delete from public.trainer_finance_payments where client_id=$1',[card])
+        await ownerPool.query('delete from public.trainer_finance_sessions where client_id=$1',[card])
+        await ownerPool.query('delete from public.trainer_finance_packages where client_id=$1',[card])
+        await ownerPool.query('delete from public.workouts where id=$1',[workout])
+        await ownerPool.query('delete from public.client_trainers where client_id=$1',[card])
+        await ownerPool.query('delete from public.client_trainer_relationships where client_id=$1',[card])
+        await ownerPool.query('delete from public.clients where id=$1',[card])
+        await ownerPool.query('delete from public.profiles where id=$1',[athlete])
+        await ownerPool.query('delete from app_private.finance_payment_requests where request_id=$1',[operation])
+        await ownerPool.query('delete from app_private.live_workout_operations where resource_id=$1',[workout])
+      }
+    })
+
     it('keeps a prepaid unused single purchase out of low-subscription attention without losing the receipt', async () => {
       if (!ownerPool || !runtimePool) throw new Error('Database not ready')
       const card=randomUUID(), request=randomUUID()
@@ -607,6 +653,81 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
         await ownerPool.query('delete from public.trainer_finance_packages where client_id=$1',[card])
         await ownerPool.query('delete from public.clients where id=$1',[card])
         await ownerPool.query('delete from app_private.finance_payment_requests where request_id=$1',[request])
+      }
+    })
+
+    it('atomically creates one manual single and its receipt, rejects changed retries and foreign actors',async()=>{
+      if(!ownerPool||!runtimePool)throw new Error('Database not ready')
+      const card=randomUUID(),request=randomUUID()
+      await ownerPool.query("insert into public.clients(id,trainer_id,full_name) values($1,$2,'Synthetic manual single')",[card,ACTOR_ID])
+      const run=(paid=5000,actor=ACTOR_ID)=>withActorTransaction(runtimePool!,actor,db=>db.query('select public.create_manual_single_finance_session($1,$2,current_date,20000,$3,current_date,null) as result',[card,request,paid]))
+      try{
+        await expect(run(5000,OUTSIDE_TRAINER_ID)).rejects.toThrow()
+        const first=await run();expect(await run()).toEqual(first)
+        await expect(run(6000)).rejects.toThrow()
+        const bundle=(await withActorTransaction(runtimePool,ACTOR_ID,db=>db.query<{result:TrainerFinanceClientBundle}>('select public.list_trainer_finance_client_v2($1) as result',[card])))[0]!.result
+        expect(bundle.packages).toHaveLength(1);expect(bundle.payments).toHaveLength(1);expect(bundle.sessions).toHaveLength(1)
+        expect(bundle.packages[0]).toMatchObject({singleSession:true,priceCents:20000,paidCents:5000,dueCents:15000,sessionsUsed:1,sessionsRemaining:0})
+      }finally{
+        await ownerPool.query('delete from public.trainer_finance_events where client_id=$1',[card])
+        await ownerPool.query('delete from public.trainer_finance_payments where package_id in(select id from public.trainer_finance_packages where client_id=$1)',[card])
+        await ownerPool.query('delete from public.trainer_finance_sessions where client_id=$1',[card])
+        await ownerPool.query('delete from public.trainer_finance_packages where client_id=$1',[card])
+        await ownerPool.query('delete from public.workouts where client_id=$1',[card])
+        await ownerPool.query('delete from public.clients where id=$1',[card])
+        await ownerPool.query('delete from app_private.finance_payment_requests where request_id=$1',[request])
+        await ownerPool.query('delete from app_private.finance_manual_requests where request_id=$1',[request])
+      }
+    })
+    it('keeps online delivery independent of presence, guarded by ownership and workout version',async()=>{
+      if(!ownerPool||!runtimePool)throw new Error('Database not ready')
+      const workout=randomUUID()
+      await ownerPool.query("insert into public.workouts(id,trainer_id,client_id,created_by,workout_date,status,training_format) values($1,$2,$3,$2,current_date,'planned','with_trainer')",[workout,ACTOR_ID,CLIENT_ID])
+      const mode=(version:number,actor=ACTOR_ID)=>withActorTransaction(runtimePool!,actor,db=>db.query("select public.set_workout_delivery_mode($1,'online',$2) as version",[workout,version]))
+      try{
+        await expect(mode(1,OUTSIDE_TRAINER_ID)).rejects.toThrow()
+        expect((await mode(1))[0]).toEqual({version:'2'})
+        await expect(mode(1)).rejects.toThrow()
+        expect((await mode(2))[0]).toEqual({version:'2'})
+        expect((await ownerPool.query('select training_format,delivery_mode from public.workouts where id=$1',[workout])).rows[0]).toEqual({training_format:'with_trainer',delivery_mode:'online'})
+        await withActorTransaction(runtimePool,ACTOR_ID,db=>db.query("select public.set_workout_training_format($1,'self',2,false)",[workout]))
+        expect((await ownerPool.query('select delivery_mode from public.workouts where id=$1',[workout])).rows[0]).toEqual({delivery_mode:'in_person'})
+        await expect(mode(3)).rejects.toThrow()
+        const saved=await withActorTransaction(runtimePool,ACTOR_ID,db=>savePlannedWorkout(db,{id:workout,clientId:CLIENT_ID,workoutDate:new Date().toISOString().slice(0,10),startTime:null,endTime:null,notes:null,trainingFormat:'with_trainer',deliveryMode:'online',exercises:[]},3))
+        expect(saved.version).toBeGreaterThan(3)
+        expect((await ownerPool.query('select training_format,delivery_mode from public.workouts where id=$1',[workout])).rows[0]).toEqual({training_format:'with_trainer',delivery_mode:'online'})
+      }finally{await ownerPool.query('delete from public.workouts where id=$1',[workout])}
+    })
+
+    it('finishes a paid single from populated Live without confirming blank sets or duplicating a reopened request',async()=>{
+      if(!ownerPool||!runtimePool)throw new Error('Database not ready')
+      const card=randomUUID(),workout=randomUUID(),exercise=randomUUID(),set=randomUUID(),operation=randomUUID()
+      await ownerPool.query("insert into public.clients(id,trainer_id,full_name) values($1,$2,'Synthetic single Live')",[card,ACTOR_ID])
+      await ownerPool.query("insert into public.workouts(id,trainer_id,client_id,created_by,workout_date,status,started_at,training_format) values($1,$2,$3,$2,current_date,'in_progress',now()-interval '10 minutes','with_trainer')",[workout,ACTOR_ID,card])
+      await ownerPool.query("insert into public.workout_exercises(id,workout_id,trainer_id,client_id,position,exercise_source,exercise_ref,exercise_name,muscle_group,input_kind) values($1,$2,$3,$4,0,'system','single-live-proof','Synthetic single exercise','legs','strength')",[exercise,workout,ACTOR_ID,card])
+      await ownerPool.query('insert into public.workout_sets(id,workout_exercise_id,trainer_id,client_id,position,plan_reps) values($1,$2,$3,$4,0,10)',[set,exercise,ACTOR_ID,card])
+      const draft={disposition:'unassigned' as const,packageId:null,singleService:{priceCents:20000,paidCents:5000,receivedOn:new Date().toISOString().slice(0,10)}}
+      const run=(op=operation,version=1)=>withActorTransaction(runtimePool!,ACTOR_ID,db=>finishLiveWorkout(db,workout,version,op,draft))
+      try{
+        expect(await run()).toMatchObject({version:2,replayed:false})
+        expect((await ownerPool.query('select confirmed_at,fact_reps from public.workout_sets where id=$1',[set])).rows[0]).toEqual({confirmed_at:null,fact_reps:null})
+        expect(await run()).toMatchObject({version:2,replayed:true})
+        await expect(run(randomUUID(),2)).rejects.toThrow()
+        // Reopening a pending form must retain the committed path even after a later exercise edit.
+        await ownerPool.query('delete from public.workout_exercises where id=$1',[exercise])
+        expect(await run()).toMatchObject({version:2,replayed:true})
+        const bundle=(await withActorTransaction(runtimePool,ACTOR_ID,db=>db.query<{result:TrainerFinanceClientBundle}>('select public.list_trainer_finance_client_v2($1) as result',[card])))[0]!.result
+        expect(bundle.packages).toHaveLength(1);expect(bundle.payments).toHaveLength(1);expect(bundle.sessions.filter(x=>x.voidedAt===null)).toHaveLength(1)
+        expect(bundle.packages[0]).toMatchObject({singleSession:true,paidCents:5000,dueCents:15000,sessionsUsed:1,sessionsRemaining:0})
+      }finally{
+        await ownerPool.query('delete from public.trainer_finance_events where client_id=$1',[card])
+        await ownerPool.query('delete from public.trainer_finance_payments where client_id=$1',[card])
+        await ownerPool.query('delete from public.trainer_finance_sessions where client_id=$1',[card])
+        await ownerPool.query('delete from public.trainer_finance_packages where client_id=$1',[card])
+        await ownerPool.query('delete from public.workouts where id=$1',[workout])
+        await ownerPool.query('delete from public.clients where id=$1',[card])
+        await ownerPool.query('delete from app_private.finance_payment_requests where request_id=$1',[operation])
+        await ownerPool.query('delete from app_private.live_workout_operations where resource_id=$1',[workout])
       }
     })
 

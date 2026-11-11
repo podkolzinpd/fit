@@ -1,0 +1,4 @@
+.fit-lime-shell .single-session-fields { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 12px; margin: 12px 0; padding: 12px; border: 0; border-radius: var(--lime-radius-card); background: var(--lime-surface-raised); }
+.fit-lime-shell .single-session-fields .field { min-width: 0; }
+.fit-lime-shell .single-session-fields input { min-width: 0; width: 100%; min-height: 44px; border: 1px solid var(--lime-divider); border-radius: 16px; background: var(--lime-surface); color: var(--lime-text); font: inherit; font-size: 16px; padding: 10px; }
+.fit-lime-shell .single-session-fields .field:has(input[type="date"]) { grid-column: 1/-1; }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { readTrainerFinancePaymentDraft, readTrainerFinancePackageDraft } from './trainer-finance-request.js'
+import { readTrainerFinancePaymentDraft, readTrainerFinancePackageDraft, readTrainerFinanceManualSessionDraft } from './trainer-finance-request.js'
 
 describe('finance payment calendar validation', () => {
   it.each(['2026-02-30', '2026-02-29', '2026-04-31', '0000-01-01', '2026-13-01'])('rejects impossible date %s before database access', receivedOn => {
@@ -20,4 +20,13 @@ it('validates explicit single service without converting legacy one-session pack
   expect(readTrainerFinancePackageDraft(legacy)).not.toHaveProperty('singleSession')
   for (const invalid of [{sessionsTotal:2},{kind:'online_coaching'},{requestId:undefined},{singleSession:'true'}])
     expect(readTrainerFinancePackageDraft({...singleDraft,...invalid})).toBeUndefined()
+})
+
+it('requires explicit valid one-off cost and rejects ambiguous manual accounting',()=>{
+ const singleService={priceCents:200000,paidCents:50000,receivedOn:'2026-11-10'}
+ const draft={requestId:singleDraft.requestId,workoutDate:'2026-11-10',disposition:'unassigned',packageId:null,comment:null,singleService}
+ expect(readTrainerFinanceManualSessionDraft(draft)).toEqual(draft)
+ for(const change of [{priceCents:undefined},{priceCents:-1},{paidCents:200001},{paidCents:0.5},{receivedOn:'2026-02-30'}])
+  expect(readTrainerFinanceManualSessionDraft({...draft,singleService:{...singleService,...change}})).toBeUndefined()
+ expect(readTrainerFinanceManualSessionDraft({...draft,disposition:'trial'})).toBeUndefined()
 })
