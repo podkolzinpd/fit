@@ -117,7 +117,7 @@ export class DatabaseYandexAuthHandoffService implements YandexAuthHandoffServic
       return readCompleted(await connection.query<CompletedRow>(
         `select profile_id, subject_sha256
          from app_private.register_yandex_account_from_handoff(
-           $1, $2, $3, $4, $5, $6
+           $1, $2, $3, $4, $5, $6, $7
          )`,
         [
           tokenHash,
@@ -126,6 +126,7 @@ export class DatabaseYandexAuthHandoffService implements YandexAuthHandoffServic
           input.accountRole,
           CURRENT_TERMS_VERSION,
           CURRENT_PRIVACY_VERSION,
+          input.referralCode ?? null,
         ],
       ))
     } catch (error) {

@@ -1,6 +1,6 @@
 import { useContext, useEffect, useMemo, useRef, useState, type FormEvent, type PropsWithChildren } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
+import { Link, Navigate, useLocation, useNavigate, useParams } from 'react-router-dom'
 import {
   yandexPilotRepository,
   type YandexPilotClient,
@@ -18,6 +18,7 @@ import {
   getYandexAppSessionEntryConfig,
   getYandexIdPilotConfig,
   getYandexNativeRegistrationConfig,
+  getYandexReferralApiBaseUrl,
   getYandexOnlyAuthConfig,
   trainerHomePath,
 } from '../../app/feature-flags'
@@ -41,6 +42,7 @@ import {
   savePendingYandexNativeRegistration,
 } from './yandex-pilot-oauth'
 import { yandexAuthorizationRedirectUri } from './yandex-redirect-uri'
+import { clearReferralCode, readReferralCode, saveReferralCode } from './referral-attribution'
 import { publicInvitationLinksRepository } from '../../data/repositories/public-invitation-links.repository'
 import { YandexPilotConnections } from './YandexPilotConnections'
 import { YandexPilotTrainingData } from './YandexPilotTrainingData'
@@ -108,6 +110,29 @@ export function AuthIdentityScreen({ children, className }: PropsWithChildren<{ 
     themeVariantClass(themeVariant),
     className,
   ].filter(Boolean).join(' ')}>{children}</main>
+}
+
+export function EmployeeReferralRedirectPage() {
+  const { code = '' } = useParams()
+  const navigate = useNavigate()
+  const recorded = useRef(false)
+
+  useEffect(() => {
+    const referralCode = saveReferralCode(code)
+    if (referralCode === null) {
+      navigate('/auth', { replace: true })
+      return
+    }
+    if (recorded.current) return
+    recorded.current = true
+    const apiBaseUrl = getYandexReferralApiBaseUrl()
+    if (apiBaseUrl !== null) {
+      void yandexPilotRepository.recordReferralClick(apiBaseUrl, referralCode).catch(() => undefined)
+    }
+    navigate('/auth', { replace: true })
+  }, [code, navigate])
+
+  return <main className="state">Открываем FIT…</main>
 }
 
 export function AuthPage() {
@@ -211,12 +236,13 @@ function YandexNativeRegistrationCallbackPage() {
             registrationConfig.apiBaseUrl,
             authorization.code,
             authorization.codeVerifier,
-            registrationDraft,
+            { ...registrationDraft, referralCode: readReferralCode() },
           )
         })
         const result = await registrationRequest.current
         if (cancelled) return
         clearPendingYandexNativeRegistration()
+        clearReferralCode()
         establish(result)
         trackAcquisitionGoal('registration_completed', result.profile.accountRole)
         navigate('/auth/yandex/session', { replace: true })
@@ -358,6 +384,7 @@ function YandexAppSessionCallbackPage() {
     setSetupError(null)
     try {
       const result = await request()
+      if (registration) clearReferralCode()
       establish(result)
       if (registration) trackAcquisitionGoal('registration_completed', result.profile.accountRole)
       navigate('/auth/yandex/session', { replace: true })
@@ -384,6 +411,7 @@ function YandexAppSessionCallbackPage() {
       timezone: systemTimeZone(),
       termsVersion: TERMS_VERSION,
       privacyVersion: PRIVACY_VERSION,
+      referralCode: readReferralCode(),
     }), true)
   }
 

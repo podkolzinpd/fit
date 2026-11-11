@@ -80,7 +80,7 @@ export function parseAnalyticsFilters(body: unknown): AnalyticsFilters | undefin
   const section = text('section', 'people'), sort = text('sort', 'name'), direction = text('direction', 'asc'), group = text('group', 'day')
   const role = text('role'), person = text('person'), trainer = text('trainer'), registration = text('registration'), feature = text('feature'), exercise = text('exercise'), search = text('search'), cohort = text('cohort'), status = text('status'), entity = text('entity'), workout = text('workout')
   if ([section,sort,direction,group,role,person,trainer,registration,feature,exercise,search,cohort,status,entity,workout].some(v => v === null)) return undefined
-  if (!['','new','active','accounts'].includes(cohort!) || !['','planned','in_progress','done','cancelled'].includes(status!) || !['people','activities','workouts','nutrition','payments','packages','exercises','exercise_detail','features','feedback','sets'].includes(section!)
+  if (!['','new','active','accounts'].includes(cohort!) || !['','planned','in_progress','done','cancelled'].includes(status!) || !['people','activities','workouts','nutrition','payments','packages','exercises','exercise_detail','features','feedback','sets','referrals'].includes(section!)
     || !['asc','desc'].includes(direction!) || !['day','week','month'].includes(group!)
     || !['','trainer','client','offline'].includes(role!) || !['','self','trainer','connected'].includes(registration!)
     || !/^[a-z_]{1,40}$/.test(sort!) || person!.length > 50 || trainer!.length > 36 || feature!.length > 40 || exercise!.length > 180 || search!.length > 120 || entity!.length > 180 || workout!.length > 36) return undefined
