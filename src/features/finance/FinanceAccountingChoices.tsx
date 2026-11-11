@@ -3,7 +3,9 @@ import type { TrainerFinancePackage } from '../../data/contracts/trainer-finance
 import { financePackagePeriod } from './finance-package-label'
 import './finance-accounting-choices.css'
 
-export function FinanceAccountingChoices({ packages, value, disabled, unavailableValue, onChange }: {
+export function FinanceAccountingChoices({ packages, value, disabled, unavailableValue, onChange, allowNewSingle = false, historicalTrial = false }: {
+  allowNewSingle?: boolean
+  historicalTrial?: boolean
   packages: TrainerFinancePackage[]
   value: string
   disabled: boolean
@@ -13,10 +15,11 @@ export function FinanceAccountingChoices({ packages, value, disabled, unavailabl
   const name = useId()
   const choices = [
     ...packages.map(pack => ({ value: `charged:${pack.id}`, title: pack.title,
-      detail: `${financePackagePeriod(pack)} · осталось ${pack.sessionsRemaining}`, disabled: false })),
+      detail: `${financePackagePeriod(pack)} · ${pack.singleSession?pack.sessionsUsed>0?'Разовая · проведена':'Разовая · не проведена':`осталось ${pack.sessionsRemaining}`}`, disabled: false })),
     ...(unavailableValue ? [{ value: unavailableValue, title: 'Абонемент недоступен', detail: '', disabled: true }] : []),
-    { value: 'unassigned', title: 'Выбрать абонемент позже', detail: '', disabled: false },
-    { value: 'trial', title: 'Пробное занятие', detail: '', disabled: false },
+    ...(allowNewSingle ? [{ value: 'single:new', title: 'Разовое занятие', detail: '', disabled: false }] : []),
+    { value: 'unassigned', title: 'Выбрать позже', detail: '', disabled: false },
+    ...(historicalTrial ? [{ value: 'trial', title: 'Пробное занятие', detail: '', disabled: false }] : []),
     { value: 'free', title: 'Без списания', detail: '', disabled: false },
   ]
   return <fieldset className="finance-accounting-choices" disabled={disabled}>

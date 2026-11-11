@@ -137,3 +137,93 @@
   .fit-lime-shell.auth-join-identity .join-page { padding: 16px 16px calc(116px + env(safe-area-inset-bottom)) }
   .fit-lime-shell.trainer-client-form-identity .client-form-section { padding: 18px }
 }
+
+/* CV101: presentation only; the same form owns validation and submission. */
+.phone-frame.fit-lime-shell.trainer-client-form-identity .client-visual-form .page-header {
+  display: flex; align-items: center; gap: 12px; margin-bottom: 24px;
+}
+.phone-frame.fit-lime-shell.trainer-client-form-identity .client-visual-form .page-header h1 {
+  flex: 1; text-align: center; font-size: 14px; line-height: 20px; letter-spacing: 0;
+}
+.phone-frame.fit-lime-shell.trainer-client-form-identity .client-visual-form .client-form-save {
+  flex: 0 0 44px; width: 44px; height: 44px; border-radius: 50%;
+  background: var(--lime-accent); color: var(--lime-text-on-accent);
+}
+.phone-frame.fit-lime-shell.trainer-client-form-identity .client-visual-form .client-form-section {
+  padding: 0; border: 0; background: var(--lime-bg); gap: 20px;
+}
+.phone-frame.fit-lime-shell.trainer-client-form-identity .client-visual-form .client-form-section-head {
+  margin-bottom: 4px;
+}
+.phone-frame.fit-lime-shell.trainer-client-form-identity .client-visual-form .client-form-section-head h2 {
+  font-size: 16px; line-height: 22px;
+}
+.phone-frame.fit-lime-shell.trainer-client-form-identity .client-visual-form .field {
+  min-width: 0; gap: 6px;
+}
+.phone-frame.fit-lime-shell.trainer-client-form-identity .client-visual-form .field > span {
+  font-size: 12px; line-height: 16px;
+}
+.phone-frame.fit-lime-shell.trainer-client-form-identity .client-visual-form input {
+  min-height: 44px; border-radius: 0; border-width: 0 0 1px; background: transparent;
+}
+.phone-frame.fit-lime-shell.trainer-client-form-identity .client-visual-form textarea {
+  border-radius: 20px; min-height: 104px; resize: vertical;
+}
+.phone-frame.fit-lime-shell.trainer-client-form-identity .client-visual-form .client-display-settings {
+  margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--lime-divider);
+}
+.phone-frame.fit-lime-shell.trainer-client-form-identity .client-visual-form .actions {
+  margin-top: 20px; flex-wrap: wrap;
+}
+
+.phone-frame.fit-lime-shell.trainer-client-form-identity .client-form-save svg[data-original-icon] { filter: brightness(0); }
+
+/* CV301–305: trainer presentation; invitation commands remain unchanged. */
+.fit-lime-shell .invitation-name-dialog.invitation-visual-dialog,
+.fit-lime-shell .invitation-share-dialog.invitation-visual-dialog {
+  padding: 20px; max-height: calc(var(--app-visible-height, 100dvh) - 32px);
+  overflow-y: auto; overscroll-behavior: contain;
+}
+.fit-lime-shell .invitation-name-dialog.invitation-visual-dialog h2,
+.fit-lime-shell .invitation-share-dialog.invitation-visual-dialog h2 {
+  font-size: 18px; line-height: 24px; letter-spacing: -.02em;
+}
+.fit-lime-shell .invitation-share-dialog.invitation-visual-dialog {
+  display: flex; flex-direction: column; gap: 16px;
+}
+.fit-lime-shell .invitation-share-dialog.invitation-visual-dialog .invitation-code-fallback {
+  display: flex; flex-wrap: wrap; justify-content: center; gap: 12px;
+  background: transparent; border: 0; text-align: center; padding: 16px 0;
+}
+.fit-lime-shell .invitation-visual-dialog .invitation-code-fallback strong span {
+  display: block; font-size: 26px; line-height: 32px; overflow-wrap: anywhere;
+}
+.fit-lime-shell .invitation-share-dialog.invitation-visual-dialog .invitation-share-actions button {
+  min-height: 48px; border-radius: 18px;
+}
+.fit-lime-shell .invitation-share-dialog.invitation-visual-dialog .invitation-revoke {
+  min-height: 48px; border: 1px solid currentColor; border-radius: 18px;
+}
+
+/* CV301–305: trainer presentation; shared client dialog keeps its layout. */
+.phone-frame.fit-lime-shell .invitation-visual-dialog { padding: 16px 20px 24px; border-radius: 28px; }
+.phone-frame.fit-lime-shell .invitation-visual-dialog > header { position: relative; min-height: 44px; display: grid; grid-template-columns: 44px minmax(0,1fr) 44px; align-items: center; margin-bottom: 16px; }
+.phone-frame.fit-lime-shell .invitation-visual-dialog > header > div { grid-column: 2; grid-row: 1; text-align: center; }
+.phone-frame.fit-lime-shell .invitation-visual-dialog > header > button { grid-column: 1; grid-row: 1; }
+.phone-frame.fit-lime-shell .invitation-visual-dialog > header .eyebrow { display: none; }
+.phone-frame.fit-lime-shell .invitation-visual-dialog > header h2 { margin: 0; font-size: 14px; line-height: 20px; letter-spacing: 0; }
+.phone-frame.fit-lime-shell .invitation-visual-dialog > .muted { font-size: 12px; line-height: 18px; }
+.phone-frame.fit-lime-shell .invitation-visual-dialog form label { font-size: 14px; color: var(--lime-text-secondary); }
+.phone-frame.fit-lime-shell .invitation-visual-dialog form input { padding-inline: 0; border-width: 0 0 1px; border-radius: 0; background: transparent; }
+.phone-frame.fit-lime-shell .invitation-visual-dialog .invitation-share-message { font-size: 14px; line-height: 20px; }
+.phone-frame.fit-lime-shell .invitation-visual-dialog .invitation-code-fallback { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; margin: 0; padding: 12px 0; }
+.phone-frame.fit-lime-shell .invitation-visual-dialog .invitation-code-fallback strong { font-size: 14px; font-weight: 400; }
+.phone-frame.fit-lime-shell .invitation-visual-dialog .invitation-code-fallback strong span { display: block; margin-top: 8px; font-size: 28px; line-height: 32px; letter-spacing: .08em; }
+.phone-frame.fit-lime-shell .invitation-visual-dialog .invitation-revoke { color: var(--warning-fg); border-color: currentColor; }
+
+.phone-frame.fit-lime-shell .invitation-visual-dialog .invitation-code-fallback { align-items: center; gap: 8px; }
+.phone-frame.fit-lime-shell .invitation-visual-dialog .invitation-code-fallback strong span { font-size: 24px; letter-spacing: .02em; }
+.phone-frame.fit-lime-shell .invitation-visual-dialog .invitation-code-fallback > button { display: grid; place-items: center; width: 44px; min-height: 44px; padding: 0; align-self: end; border: 0; background: transparent; }
+.phone-frame.fit-lime-shell .invitation-visual-dialog .invitation-code-fallback > button svg { width: 24px; height: 24px; }
+.phone-frame.fit-lime-shell .invitation-visual-dialog .invitation-share-expiry { margin: 0; text-align: center; font-size: 12px; line-height: 18px; }

@@ -38,9 +38,8 @@ test('Compact clients keep search, initials and one add flow in trainer Lime', {
   const card = page.locator('.client-card').filter({ hasText: 'Александра' })
   const shortCard = page.locator('.client-card').filter({ hasText: 'Марк' })
   const shortHeight = (await shortCard.boundingBox())!.height
-  expect(shortHeight).toBeGreaterThanOrEqual(68)
-  expect(shortHeight).toBeLessThanOrEqual(84)
-  expect((await shortCard.locator('.client-avatar').boundingBox())!.width).toBe(36)
+  expect(shortHeight).toBe(65)
+  expect((await shortCard.locator('.client-avatar').boundingBox())!.width).toBe(40)
   await expect(card.locator('.client-avatar')).toHaveText('АК')
   await expect(card).not.toContainText(/ИМТ|Нужно дополнить профиль/)
   await page.getByRole('searchbox', { name: 'Поиск клиента' }).fill('Нет совпадений')
@@ -791,6 +790,9 @@ for (const width of [375, 390, 430, 1440]) test(`Figma workout Coach reference f
   await page.getByText('Настройки плана', { exact: true }).click()
   await expect(page.getByRole('button', { name: 'Добавить шаблон' })).toBeVisible()
   await page.getByLabel('Подготовка перед стартом').selectOption('10')
+  await page.getByRole('button',{name:'Онлайн',exact:true}).click()
+  await expect(page.getByRole('button',{name:'Онлайн',exact:true})).toHaveAttribute('aria-pressed','true')
+  await page.screenshot({path:info.outputPath('plan-online-format.png')})
   await page.getByRole('button', { name: 'С тренером', exact: true }).click()
   await page.getByText('Настройки плана', { exact: true }).click()
   await page.getByRole('button', { name: 'Выбрать упражнения', exact: true }).click()
@@ -853,7 +855,7 @@ for (const width of [375, 390, 430, 1440]) test(`Figma workout Coach reference f
   await page.getByRole('button', { name: 'Сохранить план' }).click()
   await expect(page.locator('.coach-reference-form')).not.toBeVisible()
   expect(sent).toHaveLength(2); expect(sent[1]).toEqual(sent[0])
-  expect(sent[0]).toMatchObject({ title: 'На всё тело: силовая тренировка', notes: 'Не торопиться в негативной фазе', prepSeconds: 10, trainingFormat: 'with_trainer', startTime: '12:00', endTime: '13:00' })
+  expect(sent[0]).toMatchObject({ title: 'На всё тело: силовая тренировка', notes: 'Не торопиться в негативной фазе', prepSeconds: 10, trainingFormat: 'in_person', startTime: '12:00', endTime: '13:00' })
   expect(sent[0]!.exercises.map(exercise => exercise.name)).toEqual(['Планка', 'Присед со штангой'])
   expect(sent[0]!.exercises[1]!.sets[0]!.weightKg).toBe(27.5)
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
@@ -951,7 +953,7 @@ for (const width of [375, 390, 430, 1440]) test(`Figma workout Coach reference s
 
 })
 
-test('Figma workout Coach reference editor swipe replacement and deletion preserve the plan', async ({ page }) => {
+test('Figma workout Coach reference editor swipe replacement and deletion preserve the plan', async ({ page, browserName }, info) => {
   await page.setViewportSize({ width: 390, height: 932 })
   await mockPilot(page, { profileId: 'c0ac0000-6010-4000-8000-000000000002', fitLime: true, workouts: [] })
   const writes: string[] = []
@@ -969,6 +971,27 @@ test('Figma workout Coach reference editor swipe replacement and deletion preser
   await page.locator('.planned-exercise').first().getByLabel('Повторы, подход 1').fill('10')
   const planExercise = page.locator('.planned-exercise').first()
   await planExercise.getByRole('button', { name: 'Подход', exact: true }).click()
+  await planExercise.getByRole('button', { name: 'Ещё действия', exact: true }).click()
+  await expect(page.getByRole('menuitem', { name: 'Удалить подход', exact: true })).toBeDisabled()
+  await planExercise.getByLabel('Вес, подход 2').fill('29.5')
+  await planExercise.getByRole('button', { name: 'Подход', exact: true }).click()
+  await planExercise.getByLabel('Вес, подход 3').fill('32.5')
+  await planExercise.getByLabel('Повторы, подход 3').fill('6')
+  await planExercise.getByLabel('Вес, подход 2').click()
+  await planExercise.getByRole('button', { name: 'Ещё действия', exact: true }).click()
+  await expect(page.getByRole('menuitem', { name: 'Удалить упражнение', exact: true })).toBeVisible()
+  await page.screenshot({ path: info.outputPath('plan-set-delete-menu-lime.png') })
+  await page.getByRole('menuitem', { name: 'Удалить подход 2', exact: true }).click()
+  await page.getByRole('alertdialog').getByRole('button', { name: 'Отмена', exact: true }).click()
+  await expect(planExercise.locator('.planned-set')).toHaveCount(3)
+  await expect(planExercise.getByLabel('Вес, подход 2')).toHaveValue('29.5')
+  await planExercise.getByRole('button', { name: 'Ещё действия', exact: true }).click()
+  await page.getByRole('menuitem', { name: 'Удалить подход 2', exact: true }).click()
+  await page.screenshot({ path: info.outputPath('plan-set-delete-confirm-lime.png') })
+  await page.getByRole('alertdialog').getByRole('button', { name: 'Удалить подход', exact: true }).click()
+  await expect(planExercise.locator('.planned-set')).toHaveCount(2)
+  await expect(planExercise.getByLabel('Вес, подход 2')).toHaveValue('32.5')
+  await expect(planExercise.getByLabel('Повторы, подход 2')).toHaveValue('6')
   const planRow = planExercise.locator('.workout-set-swipe').nth(1)
   await expect(planExercise.locator('.planned-set-remove')).toHaveCount(0)
   expect((await planRow.locator('.planned-set-number').boundingBox())!.width).toBeGreaterThanOrEqual(44)
@@ -976,7 +999,20 @@ test('Figma workout Coach reference editor swipe replacement and deletion preser
   await planRow.getByRole('button', { name: /^Удалить подход 2:/ }).click()
   await page.getByRole('alertdialog').getByRole('button', { name: 'Отмена', exact: true }).click()
   await expect(planExercise.locator('.planned-set')).toHaveCount(2)
-  await revealCoachSetDelete(page, planRow)
+  if (browserName === 'chromium') {
+    const pan = await beginClientGesture(page, planRow, browserName, planRow.locator('.planned-set-number'))
+    const before = await page.locator('.content').evaluate(element => element.scrollTop)
+    await pan.move(0, before > 40 ? 80 : -80); await pan.end()
+    await expect.poll(() => page.locator('.content').evaluate((element, top) => Math.abs(element.scrollTop - top), before)).toBeGreaterThan(4)
+    await expect(planRow.locator('.workout-swipe-action')).toHaveCount(0)
+    await expect(planExercise.locator('.planned-set')).toHaveCount(2)
+  }
+  const field = planRow.getByLabel('Вес, подход 2')
+  const gesture = await beginClientGesture(page, planRow, browserName, field)
+  await gesture.move(60); await gesture.end()
+  await expect(field).not.toBeFocused()
+  await expect(planRow.getByRole('button', { name: /^Удалить подход 2:/ })).toBeVisible()
+  await page.screenshot({ path: info.outputPath('plan-set-delete-swipe-lime.png') })
   await planRow.getByRole('button', { name: /^Удалить подход 2:/ }).click()
   await page.getByRole('alertdialog').getByRole('button', { name: 'Удалить подход', exact: true }).click()
   await expect(planExercise.locator('.planned-set')).toHaveCount(1)
@@ -1039,7 +1075,10 @@ test('Coach copied plan replaces exercises, preserves values and retries a faile
   source.status = 'done'; source.completedAt = '2026-09-24T12:00:00Z'
   source.exercises[0]!.sets = [{ ...source.exercises[0]!.sets[0]!,
     weightKg: 20, reps: 8, fact: { weightKg: 27.5, reps: 10 }, confirmedAt: source.completedAt }]
-  await mockPilot(page, { profileId: 'c0ac0000-6010-4000-8000-000000000002', fitLime: true, workouts: [source] })
+  source.exercises[0]!.sets.push({ ...source.exercises[0]!.sets[0]!, id: 'a0000000-0000-4000-8000-000000000099',
+    position: 1, fact: { weightKg: 32.5, reps: 6 } })
+  const originalSets = structuredClone(source.exercises[0]!.sets)
+  const backend = await mockPilot(page, { profileId: 'c0ac0000-6010-4000-8000-000000000002', fitLime: true, workouts: [source] })
   const writes: Record<string, unknown>[] = []
   await page.route('**/v1/workouts', async route => {
     if (route.request().method() !== 'POST') return route.fallback()
@@ -1065,6 +1104,12 @@ test('Coach copied plan replaces exercises, preserves values and retries a faile
   await expect(picker).not.toBeVisible()
   await expect(card.getByLabel('Вес, подход 1', { exact: true })).toHaveValue('27.5')
   await expect(card.getByLabel('Повторы, подход 1', { exact: true })).toHaveValue('10')
+  await expect(card.getByLabel('Вес, подход 2', { exact: true })).toHaveValue('32.5')
+  await card.getByLabel('Вес, подход 2', { exact: true }).click()
+  await menu.click()
+  await page.getByRole('menuitem', { name: 'Удалить подход 2', exact: true }).click()
+  await page.getByRole('alertdialog').getByRole('button', { name: 'Удалить подход', exact: true }).click()
+  await expect(card.locator('.planned-set')).toHaveCount(1)
   await page.getByRole('button', { name: 'Сохранить план', exact: true }).click()
   await expect(page.getByRole('alert')).toContainText('Не удалось сохранить тренировку')
   const diagnosticButton = page.getByRole('alert').getByRole('button', { name: 'Скопировать диагностику' })
@@ -1075,6 +1120,7 @@ test('Coach copied plan replaces exercises, preserves values and retries a faile
   await page.screenshot({ path: info.outputPath('copied-plan-save-error.png') })
   await page.reload()
   await card.locator('.compact-editor-exercise-toggle').click()
+  await expect(card.locator('.planned-set')).toHaveCount(1)
   await expect(card.getByLabel('Вес, подход 1', { exact: true })).toHaveValue('27.5')
   await page.getByRole('button', { name: 'Сохранить план', exact: true }).click()
   await expect(page.locator('.workout-form-page')).not.toBeVisible()
@@ -1087,6 +1133,8 @@ test('Coach copied plan replaces exercises, preserves values and retries a faile
   expect(command.draft.exercises[0]!.ref).toBe('bench-press')
   expect(command.draft.exercises[0]).not.toHaveProperty('sourceExerciseId')
   expect(command.draft.exercises[0]!.sets[0]).not.toHaveProperty('sourceSetId')
+  expect(command.draft.exercises[0]!.sets).toHaveLength(1)
+  expect(backend.getWorkouts().find(item => item.id === workoutId)!.exercises[0]!.sets).toEqual(originalSets)
   await info.attach('copied-plan-command', { body: JSON.stringify(writes[0]), contentType: 'application/json' })
 })
 
@@ -3636,8 +3684,16 @@ for (const width of [390, 430, 1440]) {
     await expect(plan.getByRole('button', { name: 'Запланировать' })).toBeVisible()
     await plan.getByRole('button', { name: 'Клиент: Выберите клиента' }).click()
     await page.getByRole('button', { name: /Александра Константинопольская/ }).click()
+    await plan.getByRole('button',{name:'Онлайн',exact:true}).click()
+    await expect(plan.getByRole('button',{name:'Онлайн',exact:true})).toHaveAttribute('aria-pressed','true')
     expect(await plan.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true)
     await page.screenshot({ path: testInfo.outputPath('lime-window-type.png') })
+    if(width===390){
+      await page.setViewportSize({width:320,height:844})
+      expect(await plan.evaluate(node=>node.scrollWidth<=node.clientWidth)).toBe(true)
+      for(const button of await plan.getByRole('group',{name:'Формат тренировки'}).getByRole('button').all())expect((await button.boundingBox())!.height).toBeGreaterThanOrEqual(44)
+      await page.screenshot({path:testInfo.outputPath('quick-plan-online-320.png')})
+    }
   })
 }
 
@@ -3764,6 +3820,8 @@ for (const profileId of [trainerId, '10000000-0000-4000-8000-000000000010']) {
     await plan.getByRole('textbox', { name: 'Название тренировки' }).fill('Сила и баланс')
     await plan.getByRole('button', { name: 'Клиент: Выберите клиента' }).click()
     await page.getByRole('dialog', { name: 'Выбор клиента' }).getByRole('button', { name: /Алексей Смирнов/ }).click()
+    const deliveryMode=profileId===trainerId?'online':'in_person'
+    if(deliveryMode==='online')await plan.getByRole('button',{name:'Онлайн',exact:true}).click()
     const sourceKey = `fit.workout-form-draft.${profileId}.new--2026-09-29--quick`
     const source = await page.evaluate((key) => JSON.parse(localStorage.getItem(key)!) as { requestId: string }, sourceKey)
     const legacyKey = `fit.today-draft.${profileId}`
@@ -3772,11 +3830,11 @@ for (const profileId of [trainerId, '10000000-0000-4000-8000-000000000010']) {
     await plan.getByRole('button', { name: 'Ввести текстом' }).click()
     await expect(page).toHaveURL(/view=compose&entry=text&date=2026-09-29/)
     const voiceKey = `${legacyKey}.plan.${source.requestId}`
-    await expect.poll(async () => page.evaluate((key) => JSON.parse(localStorage.getItem(key)!) as unknown, voiceKey)).toMatchObject({ workoutDate: '2026-09-29', clientId, title: 'Сила и баланс', requestId: source.requestId, sourceFormDraftKey: sourceKey, trainingFormat: 'with_trainer', text: '' })
+    await expect.poll(async () => page.evaluate((key) => JSON.parse(localStorage.getItem(key)!) as unknown, voiceKey)).toMatchObject({ workoutDate: '2026-09-29', clientId, title: 'Сила и баланс', requestId: source.requestId, sourceFormDraftKey: sourceKey, trainingFormat: 'with_trainer', deliveryMode, text: '' })
     await page.reload()
     await expect(page.getByRole('button', { name: 'Выбрать упражнения вручную' })).toBeVisible()
     expect(await page.evaluate((key) => JSON.parse(localStorage.getItem(key)!) as unknown, legacyKey)).toEqual(legacyDraft)
-    expect(await page.evaluate((key) => JSON.parse(localStorage.getItem(key)!) as unknown, voiceKey)).toMatchObject({ workoutDate: '2026-09-29', clientId, trainingFormat: 'with_trainer' })
+    expect(await page.evaluate((key) => JSON.parse(localStorage.getItem(key)!) as unknown, voiceKey)).toMatchObject({ workoutDate: '2026-09-29', clientId, trainingFormat: 'with_trainer', deliveryMode })
     // A real editor step must keep the plan identity through review, save and back.
     await page.evaluate((key) => {
       const draft = JSON.parse(localStorage.getItem(key)!) as Record<string, unknown>
@@ -3789,7 +3847,7 @@ for (const profileId of [trainerId, '10000000-0000-4000-8000-000000000010']) {
     await page.getByRole('button', { name: 'Далее', exact: true }).click()
     await expect(page).toHaveURL(new RegExp(`view=save&plan=${source.requestId}$`))
     await page.reload()
-    await expect.poll(async () => page.evaluate((key) => JSON.parse(localStorage.getItem(key)!) as unknown, sourceKey)).toMatchObject({ workoutDate: '2026-09-29', clientId, title: 'Сила и баланс', exercises: [{ name: 'Приседания', sets: [{ reps: 8 }] }] })
+    await expect.poll(async () => page.evaluate((key) => JSON.parse(localStorage.getItem(key)!) as unknown, sourceKey)).toMatchObject({ workoutDate: '2026-09-29', clientId, title: 'Сила и баланс', deliveryMode, exercises: [{ name: 'Приседания', sets: [{ reps: 8 }] }] })
     await expect(page.getByRole('button', { name: 'Для кого тренировка: Алексей Смирнов' })).toBeVisible()
     await page.screenshot({ path: testInfo.outputPath('lime-isolated-plan-save.png'), fullPage: true })
     await page.getByRole('button', { name: '← К проверке' }).click()
@@ -3955,6 +4013,9 @@ for (const width of [390, 430, 1440]) {
     await expect(page.getByRole('heading', { name: fullName, exact: true })).toBeVisible()
     await expect(format).toContainText('Формат тренировки')
     await expect(format.getByRole('button', { name: 'С тренером', exact: true })).toHaveAttribute('aria-pressed', 'true')
+    await format.getByRole('button',{name:'Онлайн',exact:true}).click()
+    await expect(format.getByRole('button',{name:'Онлайн',exact:true})).toHaveAttribute('aria-pressed','true')
+    await page.screenshot({path:testInfo.outputPath('quick-start-online.png')})
     await format.getByRole('button', { name: 'Самостоятельно', exact: true }).click()
     await expect(format.getByRole('button', { name: 'Самостоятельно', exact: true })).toHaveAttribute('aria-pressed', 'true')
     const start = format.getByRole('button', { name: 'Начать тренировку', exact: true })
@@ -3968,6 +4029,14 @@ for (const width of [390, 430, 1440]) {
     }
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width)
     await page.screenshot({ path: testInfo.outputPath('figma-quick-start-format.png') })
+    if(width===390){
+      await page.setViewportSize({width:320,height:844})
+      await format.getByRole('button',{name:'Онлайн',exact:true}).click()
+      for(const button of await format.getByRole('button').all()){
+        const bounds=await button.boundingBox();expect(bounds!.height).toBeGreaterThanOrEqual(44);expect(bounds!.x).toBeGreaterThanOrEqual(0);expect(bounds!.x+bounds!.width).toBeLessThanOrEqual(320)
+      }
+      await page.screenshot({path:testInfo.outputPath('quick-start-online-320.png')})
+    }
     await format.getByRole('button', { name: 'Отмена', exact: true }).click()
     await expect(format).not.toBeVisible()
     await expect(page.getByRole('button', { name: 'Начать тренировку', exact: true })).toBeVisible()
@@ -4150,7 +4219,7 @@ for (const width of [390, 430, 1440]) {
     await expect(page.locator('.fit-lime-shell')).toBeVisible()
     await expect(page.locator('.trainer-tab-bar [data-original-icon="users"]')).toBeVisible()
     await expect(page.locator('.trainer-tab-bar')).toHaveCSS('backdrop-filter', 'blur(22px)')
-    await expect(page.locator('.page-header h1')).toHaveCSS('font-size', '24px')
+    await expect(page.locator('.page-header h1')).toHaveCSS('font-size', '14px')
     await expect(page.locator('.page-header h1')).toHaveCSS('font-weight', '500')
     await expect(page.locator('.fit-lime-shell')).toHaveCSS('background-color', 'rgb(0, 0, 0)')
     if (process.env.FIT_LIME_FONTS_REQUIRED === 'true') {
@@ -4748,7 +4817,7 @@ for (const [account, profileId] of [
     await page.goto('/clients')
     await expect(page.locator('.phone-frame')).toHaveClass(/fit-lime-shell/)
     await expect(page.getByRole('heading', { name: 'Клиенты' })).toBeVisible()
-    await expect(page.locator('.client-card').first()).toHaveCSS('background-color', 'rgb(26, 26, 28)')
+    await expect(page.locator('.client-card').first()).toHaveCSS('background-color', 'rgb(0, 0, 0)')
     await page.getByRole('searchbox', { name: 'Поиск клиента' }).fill('кузнец')
     await expect(page.getByRole('link', { name: /Вера Кузнецова/ })).toBeVisible()
     await expect(page.getByRole('link', { name: /Алексей Смирнов/ })).toHaveCount(0)
@@ -4862,7 +4931,10 @@ for (const [account, profileId] of [
     await expect(page.locator('.phone-frame')).toHaveClass(/fit-lime-shell/)
     await expect(page.getByRole('heading', { name: 'Новый клиент' })).toBeVisible()
     await expect(page.getByRole('button', { name: 'Назад' })).toBeVisible()
-    await expect(page.locator('.client-form-section')).toHaveCSS('background-color', 'rgb(26, 26, 28)')
+    // CV101: flat form from the approved client-creation export.
+    await expect(page.locator('.client-form-section')).toHaveCSS('background-color', 'rgb(0, 0, 0)')
+    await expect(page.locator('.client-visual-form .page-header h1')).toHaveCSS('font-size', '14px')
+    await expect(page.getByRole('button', { name: 'Сохранить' })).toBeVisible()
     if (account === 'first') {
       const screenshotPath = testInfo.outputPath('fit-lime-client-create.png')
       await page.screenshot({ path: screenshotPath, fullPage: true })

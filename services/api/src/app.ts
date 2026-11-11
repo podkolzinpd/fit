@@ -2080,13 +2080,15 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
       (finance) => reply.header('cache-control', 'no-store').send({ finance }))
   })
 
-  app.post('/v1/clients/:clientId/finance/sessions', async (request, reply) => {
+  for (const sessionPath of ['/v1/clients/:clientId/finance/sessions','/v1/clients/:clientId/finance/single-sessions']) {
+  app.post(sessionPath, async (request, reply) => {
     const session = readYandexActorSession(request.headers)
     const { clientId } = request.params as { clientId?: unknown }
     const draft = readTrainerFinanceManualSessionDraft(request.body)
     if (session === undefined) return reply.code(401).send({ error: 'unauthorized' })
     if (session.accessMode !== 'read_write') return reply.code(403).send({ error: 'read_write_session_required' })
-    if (typeof clientId !== 'string' || !uuidPattern.test(clientId) || draft === undefined) {
+    if (typeof clientId !== 'string' || !uuidPattern.test(clientId) || draft === undefined
+      || (sessionPath.endsWith('/single-sessions') && !draft?.singleService)) {
       return reply.code(400).send({ error: 'invalid_request' })
     }
     if (options.pilotTrainerFinance === undefined) return reply.code(503).send({ error: 'service_unavailable' })
@@ -2095,13 +2097,17 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
       (financeSession) => reply.header('cache-control', 'no-store').code(201).send({ session: financeSession }))
   })
 
-  app.post('/v1/clients/:clientId/finance/packages', async (request, reply) => {
+  }
+
+  for (const servicePath of ['/v1/clients/:clientId/finance/packages', '/v1/clients/:clientId/finance/single-services']) {
+  app.post(servicePath, async (request, reply) => {
     const session = readYandexActorSession(request.headers)
     const { clientId } = request.params as { clientId?: unknown }
     const draft = readTrainerFinancePackageDraft(request.body)
     if (session === undefined) return reply.code(401).send({ error: 'unauthorized' })
     if (session.accessMode !== 'read_write') return reply.code(403).send({ error: 'read_write_session_required' })
-    if (typeof clientId !== 'string' || !uuidPattern.test(clientId) || draft === undefined) {
+    if (typeof clientId !== 'string' || !uuidPattern.test(clientId) || draft === undefined
+      || (servicePath.endsWith('/single-services') && draft.singleSession !== true)) {
       return reply.code(400).send({ error: 'invalid_request' })
     }
     if (options.pilotTrainerFinance === undefined) return reply.code(503).send({ error: 'service_unavailable' })
@@ -2109,6 +2115,8 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
       () => options.pilotTrainerFinance!.createPackage(session, clientId, draft),
       (financePackage) => reply.header('cache-control', 'no-store').code(201).send({ package: financePackage }))
   })
+
+  }
 
   app.put('/v1/finance/packages/:packageId', async (request, reply) => {
     const session = readYandexActorSession(request.headers)
@@ -3262,11 +3270,11 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
         && (typeof fields.clientId !== 'string' || !uuidPattern.test(fields.clientId)))) {
       return reply.code(400).send({ error: 'invalid_request' })
     }
-    if (fields.trainingFormat !== undefined && fields.trainingFormat !== 'self' && fields.trainingFormat !== 'with_trainer') return reply.code(400).send({ error: 'invalid_request' })
+    if (fields.trainingFormat !== undefined && fields.trainingFormat !== 'self' && fields.trainingFormat !== 'with_trainer' && fields.trainingFormat !== 'online' && fields.trainingFormat !== 'in_person') return reply.code(400).send({ error: 'invalid_request' })
     const writer = options.pilotWorkoutsWriter
     if (!writer) return reply.code(503).send({ error: 'service_unavailable' })
     return sendPilotCommand(reply,
-      () => writer.quickStart(sessionToken, (fields.clientId as string | null | undefined) ?? null, fields.operationId as string, fields.trainingFormat as 'self' | 'with_trainer' | undefined),
+      () => fields.trainingFormat === 'online' || fields.trainingFormat === 'in_person' ? writer.quickStart(sessionToken,(fields.clientId as string|null|undefined)??null,fields.operationId as string,'with_trainer',fields.trainingFormat) : writer.quickStart(sessionToken,(fields.clientId as string|null|undefined)??null,fields.operationId as string,fields.trainingFormat as 'self'|'with_trainer'|undefined),
       (started) => reply.header('cache-control', 'no-store').send({ workout: started }))
   })
 
@@ -4208,7 +4216,8 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
     )
   })
 
-  app.post('/v1/workouts/:workoutId/finish', async (request, reply) => {
+  for (const finishPath of ['/v1/workouts/:workoutId/finish','/v1/workouts/:workoutId/finish-single']) {
+  app.post(finishPath, async (request, reply) => {
     const sessionToken = readCompatibleYandexActorSession(request.headers)
     const { workoutId } = request.params as { workoutId?: unknown }
     const command = readFinishWorkoutRequest(request.body)
@@ -4219,6 +4228,7 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
       typeof workoutId !== 'string'
       || !uuidPattern.test(workoutId)
       || command === undefined
+      || (finishPath.endsWith('/finish-single') && !command?.attendance?.singleService)
     ) {
       return reply.code(400).send({ error: 'invalid_request' })
     }
@@ -4240,6 +4250,8 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
         .send({ workout: { id: workoutId, ...result } }),
     )
   })
+
+  }
 
   app.post('/v1/workouts/:workoutId/pause', async (request, reply) => {
     const sessionToken = readCompatibleYandexActorSession(request.headers)

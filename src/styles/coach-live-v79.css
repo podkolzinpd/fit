@@ -95,3 +95,8 @@
   :is(.coach-live-v79,.client-live-v79) .coach-v79-large-clock, :is(.coach-live-v79,.client-live-v79) .coach-v79-glow::before, :is(.coach-live-v79,.client-live-v79) .coach-v79-glow::after { transition: none; }
   :is(.coach-live-v79,.client-live-v79) .coach-v79-timer[data-state] .coach-v79-large-clock > .coach-live-digits { animation: none; }
 }
+
+/* Keep failures beside the usable pause control without moving the workout.
+   The dock message is outside the clock's opacity layer and cannot steal input. */
+.phone-frame.fit-lime-shell.workout-live-reference.live-identity :is(.coach-live-v79,.client-live-v79) .live-pause-error { color: var(--danger); font-size: 13px; line-height: 18px; text-align: left; }
+:is(.coach-live-v79,.client-live-v79) .live-pause-error-docked { position: absolute; inset: 100% 8px auto; margin: 4px 0 0; padding: 8px 12px; border-radius: 12px; background: var(--lime-surface); pointer-events: none; }

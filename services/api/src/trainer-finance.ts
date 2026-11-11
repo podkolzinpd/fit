@@ -202,7 +202,7 @@ export interface TrainerFinanceSessionUpdate {
   workoutDate: string
 }
 
-export type TrainerFinanceManualSessionDraft = Omit<TrainerFinanceSessionUpdate, 'expectedVersion'> & { requestId: string }
+export type TrainerFinanceManualSessionDraft = Omit<TrainerFinanceSessionUpdate, 'expectedVersion'> & { requestId: string; singleService?: {priceCents:number;paidCents:number;receivedOn:string} }
 
 type BundleRow = QueryResultRow & { bundle: TrainerFinanceClientBundle }
 type PackageRow = QueryResultRow & { package: TrainerFinancePackage }
@@ -358,6 +358,13 @@ export class DatabasePilotTrainerFinance implements PilotTrainerFinance {
 
   createManualSession(session: YandexActorSessionInput, clientId: string, draft: TrainerFinanceManualSessionDraft) {
     return this.run(session, async (client) => {
+      if (draft.singleService) {
+        const single=draft.singleService
+        return (await client.query<SessionRow>(
+          'select public.create_manual_single_finance_session($1,$2,$3,$4,$5,$6,$7) as session',
+          [clientId,draft.requestId,draft.workoutDate,single.priceCents,single.paidCents,single.receivedOn,draft.comment],
+        ))[0]!.session
+      }
       const rows = await client.query<SessionRow>(
         'select public.create_trainer_finance_manual_session($1,$2,$3,$4,$5,$6) as session',
         [clientId, draft.requestId, draft.workoutDate, draft.disposition, draft.packageId, draft.comment],
