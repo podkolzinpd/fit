@@ -27,3 +27,9 @@ jobs:
           set -euo pipefail
           sudo podman inspect fit-api-stage --format '{{.Config.Image}} {{.State.StartedAt}}'
           sudo timeout 20 podman exec -i fit-api-stage node --input-type=module < scripts/incident-db-state.mjs
+      - name: Read fixed host failure counts for the incident interval
+        run: |
+          set -euo pipefail
+          sudo timeout 20 journalctl --since="2026-11-11 17:15:00 UTC" --until="2026-11-11 17:40:00 UTC" --lines=100000 --output=json --no-pager 2>/dev/null |
+            python3 scripts/incident-host-events.py
+          sudo podman ps --format '{{.Names}} {{.Status}}'
