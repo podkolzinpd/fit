@@ -5278,6 +5278,13 @@ describe('pilot live workout core commands', () => {
     expect(writer.quickStart).toHaveBeenCalledTimes(1)
   })
 
+  it('normalizes online quick-start while retaining trainer presence',async()=>{
+    const writer=buildWorkoutsWriter(),app=buildApp({pilotWorkoutsWriter:writer.pilotWorkoutsWriter,logger:false});apps.push(app)
+    const response=await app.inject({method:'POST',url:'/v1/workouts/quick-start',headers:{'x-fit-pilot-session':sessionToken},payload:{clientId:QUICK_START_CLIENT_ID,operationId:OPERATION_IDS.start,trainingFormat:'online'}})
+    expect(response.statusCode).toBe(200)
+    expect(writer.quickStart).toHaveBeenCalledWith(sessionToken,QUICK_START_CLIENT_ID,OPERATION_IDS.start,'with_trainer','online')
+  })
+
   it('rejects quick-start without a valid operation ID', async () => {
     const writer = buildWorkoutsWriter()
     const app = buildApp({ pilotWorkoutsWriter: writer.pilotWorkoutsWriter, logger: false })

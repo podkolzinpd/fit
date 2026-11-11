@@ -1,3 +1,4 @@
+import { WorkoutFormatChoices } from './WorkoutFormatChoices'
 import { useCreateWorkoutClient } from './use-create-workout-client'
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
@@ -34,6 +35,8 @@ export function QuickDayBooking({ date, time, returnTo, onClose }: { date: Local
   const navigate = useNavigate()
   const key = workoutFormDraftKey(actor?.userId ?? 'anonymous', `booking--${date}--${time}`)
   const [saved] = useState(() => readWorkoutFormDraft(key))
+  const [trainingFormat,setTrainingFormat]=useState(saved?.trainingFormat??'with_trainer')
+  const [deliveryMode,setDeliveryMode]=useState<'in_person'|'online'>(saved?.deliveryMode??'in_person')
   const [clientId, setClientId] = useState(saved?.clientId ?? '')
   const [selectedDate, setSelectedDate] = useState(saved?.workoutDate ?? date)
   const [selectedTime, setSelectedTime] = useState({ start: saved?.startTime ?? time, end: saved?.endTime ?? '' })
@@ -46,7 +49,7 @@ export function QuickDayBooking({ date, time, returnTo, onClose }: { date: Local
   const clients = useQuery({ queryKey: ['clients', false], queryFn: () => clientsRepository.list(false) })
   const client = clients.data?.find(item => item.id === clientId)
   const draft: WorkoutFormDraft = { clientId, workoutDate: selectedDate, startTime: selectedTime.start, endTime: selectedTime.end,
-    requestId, title: '', exercises: [], notes: '', stageId: '', recordCompleted: false, trainingFormat: 'with_trainer', executionMode: 'manual' }
+    requestId, title: '', exercises: [], notes: '', stageId: '', recordCompleted: false, ...(isFitLimeEnabled(actor)?{trainingFormat,deliveryMode}:{trainingFormat:'with_trainer' as const}), executionMode: 'manual' }
   useEffect(() => { dialog.current?.showModal(); dialog.current?.focus({ preventScroll: true }) }, [])
   useEffect(() => { if (!committed.current && clientId) writeWorkoutFormDraft(key, draft) }, [key, draft, clientId])
   const save = useMutation({
@@ -79,7 +82,7 @@ export function QuickDayBooking({ date, time, returnTo, onClose }: { date: Local
       <fieldset disabled={save.isPending}>
         <button type="button" className="quick-booking-client" onClick={() => setPickerOpen(true)}><span className="fit-lime-plan-avatar">{client?.fullName.slice(0, 1) ?? <AddIcon />}</span><span>{client?.fullName ?? 'Выбрать клиента'}</span></button>
         <WorkoutDatePicker clientId={clientId} today={todayInTimeZone(actor.timezone)} value={selectedDate} onChange={setSelectedDate} time={selectedTime} onTimeChange={setSelectedTime} reference={isFitLimeEnabled(actor)} triggerLabel={`${formatRelativeLocalDate(selectedDate, todayInTimeZone(actor.timezone))} · ${selectedTime.start || 'Время'}${selectedTime.end ? `–${selectedTime.end}` : ''}`} />
-        <p className="quick-booking-format">С тренером</p>
+        {isFitLimeEnabled(actor)?<WorkoutFormatChoices format={trainingFormat} deliveryMode={deliveryMode} disabled={save.isPending} onChange={(format,delivery)=>{setTrainingFormat(format);setDeliveryMode(delivery)}}/>:<p className="quick-booking-format">С тренером</p>}
         <button type="submit" className="primary wide" aria-busy={save.isPending}>{save.isPending ? 'Сохраняем…' : 'Записать'}</button>
       </fieldset>
       {(error || save.error) && <p className="error" role="alert">{error ?? save.error?.message}</p>}

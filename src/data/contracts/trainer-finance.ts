@@ -146,7 +146,7 @@ export type TrainerFinancePaymentUpdate = TrainerFinancePaymentDraft & { expecte
 
 export type TrainerFinanceSessionUpdate = Pick<TrainerFinanceSession, 'disposition' | 'packageId' | 'comment' | 'workoutDate'> & { expectedVersion: number }
 
-export type TrainerFinanceManualSessionDraft = Omit<TrainerFinanceSessionUpdate, 'expectedVersion'> & { requestId: string }
+export type TrainerFinanceManualSessionDraft = Omit<TrainerFinanceSessionUpdate, 'expectedVersion'> & { requestId: string; singleService?: {priceCents:number;paidCents:number;receivedOn:string} }
 
 export interface TrainerFinanceRepository {
   listPayments(month: string, clientId?: string, offset?: number): Promise<TrainerFinancePaymentHistory>

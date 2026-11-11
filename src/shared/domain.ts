@@ -463,6 +463,7 @@ export interface WorkoutDraft {
   /** Снэпшот названия избранного на момент планирования; пишется только при создании, никогда не обновляется. */
   favoriteTitle?: string
   /** Определяет, должна ли завершённая тренировка списывать занятие из абонемента. */
+  deliveryMode?: 'in_person' | 'online'
   trainingFormat?: WorkoutTrainingFormat
   /** Обратный отсчёт «Подготовка» перед первым подходом Live; null — выключено, отсутствие ключа сохраняет текущее значение. */
   prepSeconds?: number | null
@@ -558,6 +559,7 @@ export interface Workout {
   origin?: 'manual' | 'ai'
   /** Снэпшот названия избранного на момент планирования (не живая ссылка на favorite_workouts.title); null для тренировок, не из избранного. */
   favoriteTitle?: string | null
+  deliveryMode?: 'in_person' | 'online'
   trainingFormat?: WorkoutTrainingFormat
   /** Обратный отсчёт «Подготовка» перед первым подходом Live; null/отсутствие — без подготовки. */
   prepSeconds?: number | null

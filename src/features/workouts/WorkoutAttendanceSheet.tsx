@@ -1,3 +1,4 @@
+import { SingleSessionFields, readSingleServiceFields, type SingleServiceDraft } from '../finance/SingleSessionFields'
 import { useEffect, useRef, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '../../app/auth-context'
@@ -23,6 +24,9 @@ export function WorkoutAttendanceSheet({ workout, action, onCompleted, onClose, 
   const queryClient = useQueryClient()
   const [target, setTarget] = useState(workout)
   const [selection, setSelection] = useState('auto')
+  const singleAttempt=useRef<SingleServiceDraft|null>(null)
+  const [pendingSingle,setPendingSingle]=useState<SingleServiceDraft|null>(null)
+  const [singleError,setSingleError]=useState<string|null>(null)
   const [editing, setEditing] = useState(false)
   const [needsReload, setNeedsReload] = useState(false)
   const requestId = useRef(crypto.randomUUID())
@@ -43,10 +47,10 @@ export function WorkoutAttendanceSheet({ workout, action, onCompleted, onClose, 
   const selected = selection.startsWith('charged:') ? eligible.find(p => p.id === selection.slice(8)) : undefined
   const automatic = selection === 'auto' && eligible.length === 1 ? eligible[0] : undefined
   const pack = selected ?? automatic
-  const accountingTitle = selection === 'trial' ? 'Пробное занятие' : selection === 'free' || !withTrainer ? 'Без списания'
+  const accountingTitle = selection==='single:new'?'Разовое занятие':selection === 'trial' ? 'Пробное занятие' : selection === 'free' || !withTrainer ? 'Без списания'
     : selection === 'unassigned' ? 'Абонемент не выбран' : pack ? 'Спишется 1 занятие'
       : eligible.length > 1 ? 'Абонемент не выбран' : 'Нет подходящего абонемента'
-  const accountingDetail = pack ? `${pack.title}${lime ? ` · ${financePackagePeriod(pack)}` : ''} · останется ${pack.sessionsRemaining - 1}`
+  const accountingDetail = selection==='single:new'?'':pack ? `${pack.title}${lime ? ` · ${financePackagePeriod(pack)}` : ''} · останется ${pack.sessionsRemaining - 1}`
     : !withTrainer ? 'Абонемент не списывается' : 'Занятие сохранится без списания'
   useEffect(() => {
     const previous = document.activeElement instanceof HTMLElement ? document.activeElement : null
@@ -64,7 +68,8 @@ export function WorkoutAttendanceSheet({ workout, action, onCompleted, onClose, 
       if (!workouts.confirmAttendance) throw new Error('Проведение занятия недоступно')
       if (selection.startsWith('charged:') && !selected) throw new Error('Обновите список абонементов')
       const disposition = selected ? 'charged' : selection === 'trial' ? 'trial' : selection === 'free' ? 'free' : selection === 'unassigned' ? 'unassigned' : 'auto'
-      const draft: WorkoutAttendanceDraft = { disposition, packageId: selected?.id ?? null }
+      const draft: WorkoutAttendanceDraft = { disposition:selection==='single:new'?'unassigned':disposition, packageId: selected?.id ?? null,
+        ...(selection==='single:new'&&singleAttempt.current?{singleService:singleAttempt.current}:{}) }
       const prepared = beforeSave ? await beforeSave() : target
       await workouts.confirmAttendance(prepared, draft, requestId.current)
     },
@@ -77,7 +82,7 @@ export function WorkoutAttendanceSheet({ workout, action, onCompleted, onClose, 
     if (currentAction !== 'delete' && fresh.status === (completed ? 'done' : 'cancelled')) { await onCompleted(currentAction); return }
     if (fresh.status !== target.status) { onClose(); return }
     if (currentAction === 'delete' && fresh.exercises.length > 0) setChoice('complete')
-    if (fresh.version !== target.version) requestId.current = crypto.randomUUID()
+    if (fresh.version !== target.version) { requestId.current = crypto.randomUUID(); if(singleAttempt.current){singleAttempt.current=null;setPendingSingle(null);setSelection('auto')} }
     setTarget(fresh); setNeedsReload(false); save.reset()
     if (completed && withTrainer) await finance.refetch()
   } })
@@ -87,8 +92,14 @@ export function WorkoutAttendanceSheet({ workout, action, onCompleted, onClose, 
     onCancel={event => { if (busy) event.preventDefault() }} onClose={event => { if (event.target === event.currentTarget) onClose() }}>
     {live ? <FitLimeSheetHeader title="Завершение тренировки" backLabel="Закрыть" onBack={onClose} disabled={busy} /> : <header><h2>{completed ? 'Отметить проведённой' : 'Не состоялась'}</h2><button type="button" aria-label="Закрыть" disabled={busy} onClick={onClose}><CloseIcon /></button></header>}
     <p className="workout-attendance-client">{target.clientName}</p>
-    <p className="workout-attendance-date">{formatLocalDate(target.workoutDate)} · {target.startTime?.slice(0, 5) ?? 'без времени'} · {workoutTrainingFormatLabel(target.trainingFormat ?? 'self')}</p>
-    <form onSubmit={event => { event.preventDefault(); if (!busy && !submitting.current && !needsReload && !futureCompletion && !financePending && (!deleting || canDelete)) { submitting.current = true; save.mutate(currentAction) } }}>
+    <p className="workout-attendance-date">{formatLocalDate(target.workoutDate)} · {target.startTime?.slice(0, 5) ?? 'без времени'} · {workoutTrainingFormatLabel(target.trainingFormat ?? 'self',target.deliveryMode)}</p>
+    <form onSubmit={event => { event.preventDefault(); if (!busy && !submitting.current && !needsReload && !futureCompletion && !financePending && (!deleting || canDelete)) {
+        setSingleError(null)
+        try {
+          if(completed&&selection==='single:new'){singleAttempt.current??=readSingleServiceFields(event.currentTarget,todayInTimeZone(actor?.timezone));setPendingSingle(singleAttempt.current)}
+          submitting.current = true; save.mutate(currentAction)
+        }catch(cause){setSingleError(cause instanceof Error?cause.message:'Проверьте сумму')}
+      } }}>
       {live && <fieldset className="workout-live-exit-choices" disabled={busy || needsReload}>
         <legend className="sr-only">Действие с тренировкой</legend>
         {([{ value: 'complete', label: 'Завершить тренировку' }, { value: 'cancel', label: 'Отметить как несостоявшуюся' }, ...(canDelete ? [{ value: 'delete', label: 'Удалить пустую тренировку' }] : [])] as const).map(item => <label key={item.value} className={item.value === 'delete' ? 'workout-live-exit-delete' : undefined}>
@@ -97,15 +108,17 @@ export function WorkoutAttendanceSheet({ workout, action, onCompleted, onClose, 
       </fieldset>}
       {futureCompletion ? <section className="workout-attendance-accounting" role="status"><strong>Дата занятия ещё не наступила</strong><p>Выберите сегодня или прошедший день перед проведением.</p>{onChangeDate && <button type="button" className="secondary" disabled={busy} onClick={onChangeDate}>Изменить дату</button>}</section> : completed ? <section className="workout-attendance-accounting" aria-label="Учёт занятия">
         {financePending ? <p role={finance.isError ? 'alert' : 'status'}>{finance.isError ? 'Не удалось загрузить абонементы.' : 'Проверяем абонементы…'}{finance.isError && <button type="button" className="link" onClick={() => void finance.refetch()}>Повторить</button>}</p>
-          : <><strong><CheckSmallIcon />{accountingTitle}</strong><p>{accountingDetail}</p></>}
+          : <><strong><CheckSmallIcon />{accountingTitle}</strong>{accountingDetail && <p>{accountingDetail}</p>}</>}
         {withTrainer && !financePending && <><button type="button" className="link" disabled={busy || needsReload} onClick={() => setEditing(!editing)}>{!pack && eligible.length > 1 ? 'Выбрать' : 'Изменить учёт'}</button>
-          {editing && (lime ? <FinanceAccountingChoices packages={eligible}
+          {editing && (lime ? <FinanceAccountingChoices allowNewSingle packages={eligible}
             value={automatic ? `charged:${automatic.id}` : selection === 'auto' ? '' : selection}
-            disabled={busy || needsReload} onChange={setSelection} /> : <label>Учёт занятия<select value={selection} disabled={busy || needsReload} onChange={event => setSelection(event.target.value)}>
+            disabled={busy || needsReload || pendingSingle!==null} onChange={setSelection} /> : <label>Учёт занятия<select value={selection} disabled={busy || needsReload} onChange={event => setSelection(event.target.value)}>
             <option value="auto">По текущим условиям</option>{eligible.map(p => <option key={p.id} value={`charged:${p.id}`}>Списать: {p.title}</option>)}
             <option value="unassigned">Выбрать позже</option><option value="trial">Пробное</option><option value="free">Без списания</option>
           </select></label>)}</>}
       </section> : !live && <p className="workout-attendance-accounting">Запись и план сохранятся. Занятие не спишется.</p>}
+      {lime && completed && selection==='single:new' && <SingleSessionFields today={todayInTimeZone(actor?.timezone)} disabled={busy||needsReload||pendingSingle!==null} initial={pendingSingle??undefined}/>}
+      {singleError&&<p className="error" role="alert">{singleError}</p>}
       {!live && !completed && target.exercises.some(exercise => exercise.sets.some(set => set.confirmedAt)) && <p className="workout-attendance-note">В тренировке есть записанные результаты. Они сохранятся, занятие не спишется.</p>}
       {!live && completed && <p className="workout-attendance-note">Записанные результаты сохранятся. Остальные можно добавить позже.</p>}
       {(save.error || reload.error) && <p className="error" role="alert">{(reload.error ?? save.error)?.message}</p>}

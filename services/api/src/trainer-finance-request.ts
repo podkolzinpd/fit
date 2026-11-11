@@ -148,6 +148,18 @@ export function readTrainerFinanceManualSessionDraft(value: unknown): TrainerFin
   if (!input || typeof input.requestId !== 'string'
     || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(input.requestId)) return undefined
   const draft = readTrainerFinanceSessionUpdate({ ...input, expectedVersion: 1 })
+  const singleService=input.singleService===undefined?undefined:readTrainerFinanceSingleService(input.singleService)
+  if (input.singleService!==undefined && (!singleService || draft?.disposition!=='unassigned' || draft.packageId!==null)) return undefined
   return draft ? { requestId: input.requestId, disposition: draft.disposition,
-    packageId: draft.packageId, comment: draft.comment, workoutDate: draft.workoutDate } : undefined
+    ...(singleService?{singleService}:{}),packageId: draft.packageId, comment: draft.comment, workoutDate: draft.workoutDate } : undefined
+}
+
+export function readTrainerFinanceSingleService(value: unknown): {priceCents:number;paidCents:number;receivedOn:string} | undefined {
+  const input=record(value)
+  if (!input) return undefined
+  const priceCents=integer(input.priceCents,0,100000000000)
+  const paidCents=integer(input.paidCents,0,100000000000)
+  const receivedOn=date(input.receivedOn)
+  if (priceCents===undefined || paidCents===undefined || paidCents>priceCents || typeof receivedOn!=='string') return undefined
+  return {priceCents,paidCents,receivedOn}
 }
