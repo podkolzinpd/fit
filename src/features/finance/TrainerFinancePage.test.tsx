@@ -21,11 +21,12 @@ const bundle: TrainerFinanceClientBundle = {
   payments: [{ id: paymentId, packageId, amountCents: 1000000, receivedOn: '2026-09-01', source: 'manual', comment: null, voidedAt: null, voidReason: null, version: 1, createdAt: '2026-09-01T10:00:00.000Z', updatedAt: '2026-09-01T10:00:00.000Z' }],
   sessions: [{ id: sessionId, packageId, workoutId, disposition: 'charged', source: 'automatic', comment: null, workoutDate: '2026-09-05', voidedAt: null, voidReason: null, version: 1, createdAt: '2026-09-05T10:00:00.000Z', updatedAt: '2026-09-05T10:00:00.000Z' }],
 }
+const correctionFixture = vi.hoisted(() => ({ lime: false }))
 const clients = vi.hoisted(() => ({ get: vi.fn() }))
-const finance = vi.hoisted(() => ({ listClient: vi.fn(), createPackage: vi.fn<TrainerFinanceRepository['createPackage']>(), updatePackage: vi.fn(), addPayment: vi.fn<TrainerFinanceRepository['addPayment']>(), updatePayment: vi.fn(), voidPayment: vi.fn(), updateSession: vi.fn(), createManualSession: vi.fn<TrainerFinanceRepository['createManualSession']>() }))
+const finance = vi.hoisted(() => ({ listClient: vi.fn(), correctPackageBalance: vi.fn<TrainerFinanceRepository['correctPackageBalance']>(), createPackage: vi.fn<TrainerFinanceRepository['createPackage']>(), updatePackage: vi.fn(), addPayment: vi.fn<TrainerFinanceRepository['addPayment']>(), updatePayment: vi.fn(), voidPayment: vi.fn(), updateSession: vi.fn(), createManualSession: vi.fn<TrainerFinanceRepository['createManualSession']>() }))
 const workouts = vi.hoisted(() => ({ saveCompleted: vi.fn() }))
 
-vi.mock('../../app/auth-context', () => ({ useAuth: () => ({ actor: { kind: 'trainer', role: 'trainer', userId: trainerId, email: null, firstName: 'Ирина', lastName: null, timezone: 'Europe/Moscow' } as SessionActor }) }))
+vi.mock('../../app/auth-context', () => ({ useAuth: () => ({ actor: { kind: 'trainer', role: 'trainer', userId: trainerId, email: null, firstName: 'Ирина', lastName: null, timezone: 'Europe/Moscow', experiments: { fitLime: correctionFixture.lime } } as SessionActor }) }))
 vi.mock('../../app/data-backend-context', () => ({ useDataBackend: () => ({ clients, trainerFinance: finance, workouts }) }))
 
 function renderPage(financeBackTo?: '/finance', queryClient = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: 20_000 }, mutations: { retry: false } } })) {
@@ -38,6 +39,107 @@ function renderPage(financeBackTo?: '/finance', queryClient = new QueryClient({ 
 }
 
 describe('TrainerFinancePage', () => {
+  it('opens a Lime balance correction and cancels without changing financial history', async () => {
+    const user = userEvent.setup()
+    const original = structuredClone(bundle)
+    correctionFixture.lime = true
+    renderPage()
+    await screen.findByRole('heading', { name: 'Персональные тренировки' })
+    await user.click(screen.getByRole('button', { name: 'Действия с услугой Персональные тренировки' }))
+    await user.click(screen.getByRole('menuitem', { name: 'Скорректировать остаток' }))
+    expect(screen.getByLabelText('Должно остаться')).toHaveValue(8)
+    expect(screen.getByLabelText('Причина')).toBeVisible()
+    await user.clear(screen.getByLabelText('Должно остаться'))
+    await user.type(screen.getByLabelText('Должно остаться'), '6')
+    await user.click(screen.getByRole('button', { name: 'Отмена' }))
+    expect(finance.correctPackageBalance).not.toHaveBeenCalled()
+    expect(bundle).toEqual(original)
+  })
+  it('keeps the same balance request through an uncertain result, cancel and reload', async () => {
+    correctionFixture.lime = true
+    const user = userEvent.setup()
+    finance.correctPackageBalance.mockRejectedValueOnce(new RepositoryError('network_unavailable', 'Сеть недоступна'))
+      .mockResolvedValueOnce({ ...bundle.packages[0]!, sessionsRemaining: 6, version: 2 })
+    const view = renderPage()
+    await screen.findByRole('heading', { name: 'Персональные тренировки' })
+    await user.click(screen.getByRole('button', { name: 'Действия с услугой Персональные тренировки' }))
+    await user.click(screen.getByRole('menuitem', { name: 'Скорректировать остаток' }))
+    await user.clear(screen.getByLabelText('Должно остаться')); await user.type(screen.getByLabelText('Должно остаться'), '6')
+    await user.type(screen.getByLabelText('Причина'), 'Исправление переноса')
+    await user.click(screen.getByRole('button', { name: 'Сохранить' }))
+    await screen.findByRole('button', { name: 'Повторить сохранение' })
+    expect(screen.getByLabelText('Должно остаться')).toBeDisabled()
+    await user.click(screen.getByRole('button', { name: 'Отмена' }))
+    view.unmount()
+    renderPage()
+    expect(await screen.findByLabelText('Должно остаться')).toHaveValue(6)
+    expect(screen.getByLabelText('Причина')).toHaveValue('Исправление переноса')
+    finance.listClient.mockResolvedValue({ ...bundle, packages: [{ ...bundle.packages[0]!, sessionsRemaining: 6, version: 2 }] })
+    await user.click(screen.getByRole('button', { name: 'Повторить сохранение' }))
+    await waitFor(() => expect(screen.queryByLabelText('Должно остаться')).not.toBeInTheDocument())
+    expect(finance.correctPackageBalance).toHaveBeenCalledTimes(2)
+    expect(finance.correctPackageBalance.mock.calls[1]).toEqual(finance.correctPackageBalance.mock.calls[0])
+    expect(finance.correctPackageBalance.mock.calls[0]).toEqual([packageId, expect.objectContaining({ expectedVersion: 1, remainingSessions: 6, reason: 'Исправление переноса' })])
+    expect(screen.getByText('6 из 10')).toBeVisible()
+  })
+
+  it('retains fields and reviews the latest balance after a version conflict', async () => {
+    correctionFixture.lime = true
+    const user = userEvent.setup()
+    finance.correctPackageBalance.mockRejectedValueOnce(new RepositoryError('PT409', 'Конфликт'))
+    renderPage()
+    await screen.findByRole('heading', { name: 'Персональные тренировки' })
+    await user.click(screen.getByRole('button', { name: 'Действия с услугой Персональные тренировки' }))
+    await user.click(screen.getByRole('menuitem', { name: 'Скорректировать остаток' }))
+    await user.clear(screen.getByLabelText('Должно остаться')); await user.type(screen.getByLabelText('Должно остаться'), '0')
+    await user.click(screen.getByRole('button', { name: 'Сохранить' }))
+    expect(screen.getByRole('alert')).toHaveTextContent('Укажите причину')
+    expect(finance.correctPackageBalance).not.toHaveBeenCalled()
+    await user.type(screen.getByLabelText('Причина'), 'Перенос')
+    finance.listClient.mockResolvedValue({ ...bundle, packages: [{ ...bundle.packages[0]!, sessionsRemaining: 7, version: 2 }] })
+    await user.click(screen.getByRole('button', { name: 'Сохранить' }))
+    await waitFor(() => expect(screen.getByText(/Сейчас 7 из 10/)).toBeVisible())
+    expect(screen.getByRole('alert')).toHaveTextContent('Данные блока изменились')
+    expect(screen.getByLabelText('Должно остаться')).toHaveValue(0)
+    expect(screen.getByLabelText('Причина')).toHaveValue('Перенос')
+    expect(screen.getByLabelText('Должно остаться')).toBeEnabled()
+    finance.correctPackageBalance.mockResolvedValueOnce({ ...bundle.packages[0]!, sessionsRemaining: 0, version: 3 })
+    await user.click(screen.getByRole('button', { name: 'Сохранить' }))
+    await waitFor(() => expect(finance.correctPackageBalance).toHaveBeenCalledTimes(2))
+    expect(finance.correctPackageBalance.mock.calls[1]?.[1]).toMatchObject({ expectedVersion: 2, remainingSessions: 0 })
+    expect(finance.correctPackageBalance.mock.calls[1]?.[1].requestId).not.toBe(finance.correctPackageBalance.mock.calls[0]?.[1].requestId)
+  })
+
+  it('keeps balance input after a definitive rejection and a local storage failure', async () => {
+    correctionFixture.lime = true
+    const user = userEvent.setup()
+    renderPage()
+    await screen.findByRole('heading', { name: 'Персональные тренировки' })
+    await user.click(screen.getByRole('button', { name: 'Действия с услугой Персональные тренировки' }))
+    await user.click(screen.getByRole('menuitem', { name: 'Скорректировать остаток' }))
+    await user.clear(screen.getByLabelText('Должно остаться')); await user.type(screen.getByLabelText('Должно остаться'), '11')
+    await user.type(screen.getByLabelText('Причина'), 'Перенос')
+    await user.click(screen.getByRole('button', { name: 'Сохранить' }))
+    expect(screen.getByRole('alert')).toHaveTextContent('Укажите целое число')
+    expect(finance.correctPackageBalance).not.toHaveBeenCalled()
+    await user.clear(screen.getByLabelText('Должно остаться')); await user.type(screen.getByLabelText('Должно остаться'), '6')
+    const storage = sessionStorage
+    vi.stubGlobal('sessionStorage', { getItem: storage.getItem.bind(storage), setItem: () => { throw new DOMException('Full', 'QuotaExceededError') } })
+    try {
+      await user.click(screen.getByRole('button', { name: 'Сохранить' }))
+      await screen.findByText('Не удалось сохранить проверку операции на устройстве. Повторите попытку.')
+      expect(finance.correctPackageBalance).not.toHaveBeenCalled()
+    } finally { vi.stubGlobal('sessionStorage', storage) }
+    await user.clear(screen.getByLabelText('Должно остаться')); await user.type(screen.getByLabelText('Должно остаться'), '5')
+    finance.correctPackageBalance.mockRejectedValueOnce(new RepositoryError('PT422', 'Недопустимый остаток'))
+    await user.click(screen.getByRole('button', { name: 'Сохранить' }))
+    await screen.findByText(/Проверьте остаток с учётом уже списанных/)
+    expect(finance.correctPackageBalance.mock.calls[0]?.[1]).toMatchObject({ remainingSessions: 5, reason: 'Перенос' })
+    expect(screen.getByLabelText('Должно остаться')).toBeEnabled()
+    expect(screen.getByLabelText('Должно остаться')).toHaveValue(5)
+    expect(storage.length).toBe(0)
+  })
+
   it('hides the payment CTA for a fully paid service and retains correction through payment history', async () => {
     finance.listClient.mockResolvedValue({ ...bundle,
       packages: [{ ...bundle.packages[0]!, paidCents: 2500000, dueCents: 0, paymentStatus: 'paid' }],
@@ -204,6 +306,8 @@ describe('TrainerFinancePage', () => {
   })
 
   beforeEach(() => {
+    correctionFixture.lime = false
+    finance.correctPackageBalance.mockReset()
     sessionStorage.clear()
     clients.get.mockReset().mockResolvedValue(client)
     finance.listClient.mockReset().mockResolvedValue(bundle)

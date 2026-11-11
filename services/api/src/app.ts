@@ -186,6 +186,7 @@ import {
   readTrainerFinanceManualSessionDraft,
   readTrainerFinancePackageDraft,
   readTrainerFinancePackageUpdate,
+  readTrainerFinanceBalanceCorrection,
   readTrainerFinancePaymentDraft,
   readTrainerFinancePaymentUpdate,
   readTrainerFinanceVoidPayment,
@@ -2117,6 +2118,20 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
   })
 
   }
+
+  app.post('/v1/finance/packages/:packageId/balance-corrections', async (request, reply) => {
+    const session = readYandexActorSession(request.headers)
+    const { packageId } = request.params as { packageId?: unknown }
+    const draft = readTrainerFinanceBalanceCorrection(request.body)
+    if (session === undefined) return reply.code(401).send({ error: 'unauthorized' })
+    if (session.accessMode !== 'read_write') return reply.code(403).send({ error: 'read_write_session_required' })
+    if (typeof packageId !== 'string' || !uuidPattern.test(packageId) || draft === undefined)
+      return reply.code(400).send({ error: 'invalid_request' })
+    if (options.pilotTrainerFinance === undefined) return reply.code(503).send({ error: 'service_unavailable' })
+    return sendPilotCommand(reply,
+      () => options.pilotTrainerFinance!.correctPackageBalance(session, packageId, draft),
+      financePackage => reply.header('cache-control', 'no-store').send({ package: financePackage }))
+  })
 
   app.put('/v1/finance/packages/:packageId', async (request, reply) => {
     const session = readYandexActorSession(request.headers)

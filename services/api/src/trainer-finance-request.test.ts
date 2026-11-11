@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { readTrainerFinancePaymentDraft, readTrainerFinancePackageDraft, readTrainerFinanceManualSessionDraft } from './trainer-finance-request.js'
+import { readTrainerFinanceBalanceCorrection, readTrainerFinancePaymentDraft, readTrainerFinancePackageDraft, readTrainerFinanceManualSessionDraft } from './trainer-finance-request.js'
 
 describe('finance payment calendar validation', () => {
   it.each(['2026-02-30', '2026-02-29', '2026-04-31', '0000-01-01', '2026-13-01'])('rejects impossible date %s before database access', receivedOn => {
@@ -29,4 +29,11 @@ it('requires explicit valid one-off cost and rejects ambiguous manual accounting
  for(const change of [{priceCents:undefined},{priceCents:-1},{paidCents:200001},{paidCents:0.5},{receivedOn:'2026-02-30'}])
   expect(readTrainerFinanceManualSessionDraft({...draft,singleService:{...singleService,...change}})).toBeUndefined()
  expect(readTrainerFinanceManualSessionDraft({...draft,disposition:'trial'})).toBeUndefined()
+})
+
+it('requires a version, stable request id, whole balance and a meaningful correction reason', () => {
+  const value = { requestId: singleDraft.requestId, expectedVersion: 2, remainingSessions: 0, reason: ' Исправление переноса ' }
+  expect(readTrainerFinanceBalanceCorrection(value)).toEqual({ ...value, reason: 'Исправление переноса' })
+  for (const change of [{requestId:undefined},{requestId:'bad'},{expectedVersion:0},{remainingSessions:-1},{remainingSessions:0.5},{remainingSessions:10001},{remainingSessions:null},{reason:'  '},{reason:'x'.repeat(501)}])
+    expect(readTrainerFinanceBalanceCorrection({...value,...change})).toBeUndefined()
 })

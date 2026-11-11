@@ -1135,15 +1135,35 @@ describe('trainer finance', () => {
     const listOverview = vi.fn<PilotTrainerFinance['listOverview']>().mockResolvedValue(overview)
     const listClient = vi.fn<PilotTrainerFinance['listClient']>().mockResolvedValue(bundle)
     const createPackage = vi.fn<PilotTrainerFinance['createPackage']>().mockResolvedValue(financePackage)
+    const correctPackageBalance = vi.fn<PilotTrainerFinance['correctPackageBalance']>().mockResolvedValue({ ...financePackage, version: 2 })
     const updatePackage = vi.fn<PilotTrainerFinance['updatePackage']>().mockResolvedValue({ ...financePackage, version: 2 })
     const addPayment = vi.fn<PilotTrainerFinance['addPayment']>().mockResolvedValue(payment)
     const updatePayment = vi.fn<PilotTrainerFinance['updatePayment']>().mockResolvedValue({ ...payment, version: 2 })
     const voidPayment = vi.fn<PilotTrainerFinance['voidPayment']>().mockResolvedValue(undefined)
     const createManualSession = vi.fn<PilotTrainerFinance['createManualSession']>().mockResolvedValue(financeSession)
     const updateSession = vi.fn<PilotTrainerFinance['updateSession']>().mockResolvedValue({ ...financeSession, disposition: 'free', packageId: null, version: 2 })
-    return { service: { listPayments, listClientSelf, listOverview, listClient, createPackage, updatePackage, addPayment, updatePayment, voidPayment, updateSession, createManualSession } satisfies PilotTrainerFinance,
-      listPayments, listClientSelf, listOverview, listClient, createPackage, updatePackage, addPayment, updatePayment, voidPayment, updateSession, createManualSession }
+    return { service: { listPayments, listClientSelf, listOverview, listClient, createPackage, updatePackage, correctPackageBalance, addPayment, updatePayment, voidPayment, updateSession, createManualSession } satisfies PilotTrainerFinance,
+      listPayments, listClientSelf, listOverview, listClient, createPackage, updatePackage, correctPackageBalance, addPayment, updatePayment, voidPayment, updateSession, createManualSession }
   }
+
+  it('guards and routes balance corrections with their original replay identity', async () => {
+    const { service: pilotTrainerFinance, correctPackageBalance } = finance()
+    const app = buildApp({ pilotTrainerFinance, logger: false }); apps.push(app)
+    const draft = { requestId: '70000000-0000-4000-8000-000000000001', expectedVersion: 1, remainingSessions: 6, reason: 'Исправление переноса' }
+    const input = { method: 'POST' as const, url: `/v1/finance/packages/${packageId}/balance-corrections`, payload: draft }
+    expect((await app.inject(input)).statusCode).toBe(401)
+    expect((await app.inject({ ...input, headers: { 'x-fit-pilot-session': session.token } })).statusCode).toBe(403)
+    expect(correctPackageBalance).not.toHaveBeenCalled()
+    const response = await app.inject({ ...input, headers: { 'x-fit-session': session.token } })
+    expect(response.statusCode).toBe(200)
+    expect(response.headers['cache-control']).toBe('no-store')
+    expect(correctPackageBalance).toHaveBeenCalledWith(session, packageId, draft)
+    expect((await app.inject({ ...input, payload: { ...draft, reason: '' }, headers: { 'x-fit-session': session.token } })).statusCode).toBe(400)
+    correctPackageBalance.mockRejectedValueOnce(new TrainerFinanceError('conflict'))
+    expect((await app.inject({ ...input, headers: { 'x-fit-session': session.token } })).statusCode).toBe(409)
+    correctPackageBalance.mockRejectedValueOnce(new TrainerFinanceError('forbidden'))
+    expect((await app.inject({ ...input, headers: { 'x-fit-session': session.token } })).statusCode).toBe(403)
+  })
 
   it('reads client finance from the authenticated session without a client id', async () => {
     const { service: pilotTrainerFinance, listClientSelf } = finance()
