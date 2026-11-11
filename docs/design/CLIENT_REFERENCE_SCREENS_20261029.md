@@ -10602,3 +10602,72 @@ Lime exact;1878 protected nonCSS в новой базе,1876 unchanged и тол
 Дальше: зафиксировать integration commit в том же PR2103, полный CI нового
 head и финальная сводка. Слияние/публикация только после свежего разрешения
 владельца; CI-авторизация этого не заменяет. Следующий MC не начат.
+
+## 249. MC519 — финальная квитанция приёмки, без публикации
+
+2026-11-11 — Codex / OpenAI. Код PR2103: cca20f93c3e3cceece004c8541edd2a586562d80,
+база45dc394f. CI run43080166258 attempt2 завершёнSUCCESS:36checks SUCCESS,
+0pending/failure; auth-smoke штатноSKIPPED. PROPEN, autoMergeNULL.
+Слияние/публикация не выполнялись и не разрешены. Авторизация CI отдельно
+исполнена3af14376; она не является разрешением выпуска приложения.
+
+В attempt1 интеграции одна WebKit visual1/4 задача упала на30s общего
+финансового сценария Finance Lime owns readable cards, forms and payment
+actions (finance-accounting.cases513). Падения на разных поздних действиях:
+click вкладки и последующие goto, не assertion финансовых сумм/истории.
+В main к тому же монолиту добавлен FIN901 block; это наблюдение, а не
+доказательство причины таймаута. Тест/лимит/финансовый код не менялись.
+
+Изолированный неизменный сценарий прошёл2/2 на текущемкоде. Диагностическое
+сопоставление same45dcJS + originalCSS (источникиCSS1a2/45dc identical)
+также2/2; это counterfactual, НЕ продуктовая приёмка. В balancedABBA8
+warmed runs всеpassed, но общий сценарий с текущимCSS дольше старогоCSS.
+Сам по себе elapsed включает screenshot/context/navigation и не доказывает
+задержку ввода или FPS. Дополнительно passive reporter собрал163 техже
+APIsteps:35clicks median32/32ms,7inputs median5/4ms max16/15ms,6navigations
+sum1422/1453ms;23screenshots sum1631/1969ms. Это локальные сравнительные
+измерения, не доказательство физического iPhone/native keyboard.
+
+Read-only design_cleanup проверила эквивалентное сужение route predicate:
+182BODY snapshots/380captures, в том числе34portal snapshots,0rootset
+differences;7 topology sourcefiles unchanged. Минимальный CSS-эксперимент
+с existing trainer-schedule-identity и bounded directchild HAS дал прежнюю
+семантику, но balancedABBA не дал устойчивого выигрыша (WebKit7.322/8.104s
+против7.322/7.923s). Изменения3 собственных файлов ТОЧНО возвращены из
+проверенного backup, не коммичены. Локальный dist пересобран изcca20f93.
+Ни финансовый сценарий, ни assertions, ни30s не разбивались/не ослаблялись.
+
+После анализа выполнен ОДИН failed-only rerun только visualWebKit1/4 и
+dependent gate;34successful jobs не повторялись. Исходный Finance513
+прошёлretry0/22.396s. В этом же job обнаружен ДРУГОЙ flaky:
+Figma calendar Coach unified routes retain list, finance and template
+context (trainer-schedule-v2.visual94), при «Назад» ожидался
+month=2026-08&filter=overdue, один запуск получил month=2026-08.
+Стандартный retry прошёл; итогjob151passed/1flaky/4skip. Это наблюдение
+НЕ объявляется исправленным и НЕ приписывается CSS без доказанной причины.
+Тот же общий case ранее проходил в baseline/candidate102; новый факт не
+отменяет старые результаты. Посторонние финансовые URL/обработчики/тесты
+не исправлялись в MC519. Открыто: нестабильный возврат финансового фильтра,
+причина не установлена; владелец должен видеть его до решения о выпуске.
+
+Итог собственного блока:316unique local browser cases и78unit passed;
+после main38 повторены,190native0differences;71CI workflow/scope/fonttests
+passed; build/types/startup/fonts2/lint/docs/source proofpassed.25720
+global records/order и accepted Lime unchanged;1876/1878nonCSS новойбазы
+exact, кроме2разрешённыхCIfiles. Runtime CSS hashes прежние4fd/3af/cca.
+Ни новых механик, ни DOM/React/API/workout data/ролей/охвата не добавлено.
+RawPNG176/190exact,14 квалифицированных generatedcode/select/JPEGdiff
+сохранены, без масок и без утверждения pixel-parity.
+
+Ограничения: физический iPhone/native keyboard/OAuth/install и5extra
+nativeWebKit backend cases не проверены; стандартный CI выбирает5Chromium.
+Прежние69px/scroll/feedback/SELECT наблюдения не объявляются исправленными.
+Следующий MC не начат. Дальше: сводка владельцу с оставшимся flaky и
+ожидание свежего разрешения выпуска; перед merge актуальность/очередь
+только по GitHub, без координации/мониторинга других чатов.
+
+Эта docs-only квитанция фиксируется отдельным локальным commit, безpush,
+чтобы не менять уже проверенный remotehead PRcca20f93 и не повторять CI
+ради записи его результата. Runtime/CI source относительноremotehead0diff.
+Локальная receipt не является публикацией и переносится в общую историю
+при следующей согласованной записи по установленному workflow.
