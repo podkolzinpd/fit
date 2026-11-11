@@ -9942,3 +9942,177 @@ swipeflaky и непроверенный physicalphone) не закрывают�
 
 Дальше: source/consumer map→baseline→один полный scoped CSS patch→проверки→
 PR/собственныйCI→сводка владельцу. Выпуск и следующий этап пока не разрешены.
+
+## 238. MC518 — карта потребителей и исходная проверка
+
+2026-11-11 — Codex / OpenAI. Работа продолжается на собственной ветке
+feat/design-cleanup-mc518-20261111 от main 58e376b6; план §237 и локальные
+квитанции предыдущих этапов сохранены. Разрешена подготовка, выпуск не разрешён.
+
+Основной потребитель — WorkoutFormPage на /workouts/new и /workouts/:id/edit:
+план, запись выполненной тренировки и редактирование результата обеих ролей.
+Внутри используется WorkoutExerciseEditor, включая обычные упражнения и блоки.
+Today review включён только как существующий второй редактор тех же значений:
+маркер .today-review внутри workout-create-edit-identity; Today start, quick
+compose, расписание и библиотека шаблонов не становятся областью переноса.
+Template/favorite editor остаётся отдельным потребителем общих правил.
+Вложенные окна учитываются по реальному DOM внутри той же phone-frame:
+дата, длительность, выбор клиента/упражнений/техники/шаблона, меню и useConfirm.
+Нативный time popup ОС не объявляется проверенным браузерным screenshot.
+
+Начальный верхний инвентарь уточнён до 434 selector stems / 447 ветвей с paint.
+Положительные уже принятые Lime owners исключены из legacy classifier;
+известные отрицательные guards снимаются только по точному whitelist.
+Это область анализа, а не число будущих копий. Живость проверяется абляцией;
+вспомогательные cascade source markers сами по себе не доказывают мёртвость
+наследуемых свойств и состояний, которых нет в кадре.
+
+Fresh production build: types/startup и строгие SHA256 обоих YS Geo прошли.
+Первый prebuild без шрифтов остановлен до тестов и не использован как baseline;
+два файла восстановлены из предыдущей проверенной локальной копии, исходники
+и package не менялись. QA types / targeted lint прошли; список — 28 cases
+в Chromium/WebKit, retries 0, без изменения тестового timeout.
+
+Первый baseline не принят: 3 passed, 25 unexpected. Из них 16 дошли до
+ожидаемого ownership red; 6 trainer cases пытались открыть summary у div
+.workout-notes (исправлен только locator на details.workout-notes); 3 strict
+restore mismatch сохранили CSSOM, но расходились по шрифту hidden/SVG nodes;
+2 WebKit cases дали ResizeObserver warning. Все исходные JSON/log/PNG оставлены
+в /tmp/fit-mc518-baseline-20261111*. Product CSS пока не менялся.
+
+Подготовлена адресная причинная проверка изоляции абляции от React:
+script-free DOM mirror обязан совпасть с живой страницей до мутации по всем
+computed/geometry, SVG/hidden, focus-visible, формам/selection/checked/open,
+scroll и native dialog top layer. Реальные действия, network diagnostics и
+PNG остаются на live page. После удаления временных CSS rules строго
+проверяются весь CSSOM, прежние CSSRule/style objects и состояние.
+Диагностика не означает исправления продуктовых scroll/ResizeObserver.
+
+## 239. MC518 — весь редактор, актуальная база и локальная приёмка
+
+2026-11-11 — Codex / OpenAI. База bd928e07, обычная интеграция c00aca1f;
+ветка feat/design-cleanup-mc518-20261111. §238 сохранён как ранняя история;
+его28-case inventory и mutation/mirror метод не являются финальной приёмкой.
+Выпуск не разрешён. Следующие MC не начинались.
+
+Фактическая граница — реальный `.workout-form-page` new/edit/planned/done
+и `.today-review` того же редактора внутри Lime shell и client/coach reference.
+Today start/quickcompose/расписание, template/favorite editors исключены.
+QuickWorkoutEntry внутри формы включён; одноимённые Today компоненты автоматически
+не включаются. Реальный client pilot c11e…0001 и strict reference/refined classes
+проверены. Client rollout остаётся pilot, coach fixture all; outside-pilot/off
+и template controls сохраняют настоящее legacy matching. Trainer preferences
+light/dark имеют фактическую dark тему. Нативное окно времени ОС не проверено.
+
+Свежий main bd сохраняет client-add вложенные формы2096/2097 и trainer selected-set
+removal2098. PSR menu применяется только к тренеру: selected set1 enabled;
+клиент не получает эту команду и сохраняет прежнее «Удалить». React/DOM/handlers,
+API/data/финансы/флаги/CI/package/fonts foundation побайтно main.
+
+Финальный метод — native never-mutated proof, **не успешная CSSOM абляция**:
+
+| Ранний diagnostic check | Принятое независимое доказательство |
+| --- | --- |
+| CSSRule/style restore после искусственной mutation | CSSOM content + actual CSSRule/style object identity неизменны до/после каждого native capture; mutation отсутствует |
+| Чувствительность modern к снятию legacy skin | Нулевое пересечение всех legacy paint selectors с actual nodes, предками и originating pseudo; positive controls сохраняют legacy matching |
+| Mixed rules/старые guards | Все selector/property/value/important sequences и порядок сохранены после снятия только exact нового MC518 guard |
+| Сохранение вида и состояния | Native baseline/candidate computed/geometry/forms/selection/focus/scroll/PNG; raw differences не скрываются и не нормализуются |
+| Функциональная обратимость mutation | Реальные действия и existing mechanics на неизменённом продукте; нет искусственной mutation |
+
+Ранние clone/mirror/restore reds сохранены: same-origin/forms selection/modality,
+SVG/hidden styles и native recalc не объявляются продуктовыми исправлениями.
+One-off zero-copy build-level ablation использована лишь для поиска actual paint;
+50pass/2template scope-red привели к точной marker-границе, оба controls затем green.
+Вспомогательный Chromium source-winner26/26,55.318s не заменяет native сравнение.
+Zero-copy никогда не был готовым продуктом или публикацией. Сохраняются property
+winner/shorthand/important/ancestor distinctions; нет computedRGB новых tokens.
+
+Инвентарь515families/531ветвь,560guard occurrences. Глобальные25720/25720 исходных
+records и полный declaration order exact; accepted Lime suffix exact. Копируются
+только исходные живые paint свойства; structural geometry остаётся общей.
+Финальный перенос117weak rules/206rendered declarations (200authored +6side-expansions). Карта authored-source-property/evidence:
+`/tmp/fit-mc518-refined-copies-20261111.json`; proof:
+`/tmp/fit-mc518-source-proof-20261111.json`. Protected1873 файлов unchanged;
+root независимый1654 proof — `/tmp/fit-mc518/protected-source-main-bd928-baseline.json`.
+Четыре прежних QA helper меняют лишь import+exact guard whitelist; positiveowners,
+unknown guards, существующие assertions/retries/timeouts сохранены.
+
+Динамический аудит выполнен по32свойствам22ветвей, а не целым selector:
+`/tmp/fit-mc518-dynamic-audit-20261111.json`. Native baseline→red candidate→final2
+подтвердили original danger:hover, toggle focus radius и unit focus border.
+Final dynamic2/2,16states,10.671s. Quick candidate selected недостижим: unresolved
+исключает choices, выбор сразу удаляет строку; не копируется3мёртвых declarations.
+Соседние preview sections, pending parse,503local fallback, ambiguous/partial/resolve,
+локальное добавление двух групп, voice record/success/pending formatter/undo проверены
+в4случаях тех же ролей/тем. Динамический recording interval имеет proportional digits:
+baseline0:00→0:01 изменял BUTTON126.88→123.48/x246.13→249.52 и2иконки.
+Он не заморожен; full static geometry/PNG claim для running clock заменён
+atomic recording paint/font/all4borders + raw label/rect, строгими native
+focus/value/selection и partial/Stop/undo assertions. Это не снятие проверки
+CSS-регрессии: baseline и candidate сохраняют одно и то же независимое paint
+доказательство, прочие210states проходят полный never-mutated capture.
+При первых добавлениях QA исправлены только реальное client reopen после add,
+role-qualified font14px client/12px trainer по исходным обоим engines и финальный
+actual .workout-form-exercises locator; raw failures сохранены. Ни одного фактического внешнего запроса/сохранения данных.
+
+Финальная матрица —56cases/210staticstates/210PNG+4atomic recording points:
+52с targeted provenance плюс4полных QuickWorkoutEntry cases. Baseline имеет
+6positivegreen/50terminal ownershipred;56unique candidategreen, retry/skip/flaky0.
+Последние4 прошли28.646s. Каждый static capture сохраняет CSSOM/style refs,
+focus/scroll/form/selection. Медиа ждётся по настоящим пассивным request events,
+eager/near-visible readiness и React loading completion. currentSrc не доказывает
+запрос native-lazy; изображения не скрываются, offscreen lazy не форсится.
+
+Accepted aggregate/provenance — `/tmp/fit-mc518-accepted-{baseline,candidate}-20261111.json`
+и results; `/tmp/fit-mc518-accepted-qualified-comparison-20261111.json` exit0:
+210/210computed/geometry/form/selection/focus/scroll exact,4/4atomic recording
+paint/font/all4borders/fieldstate exact. Raw strict comparator exit1 сохраняется:
+188/210PNG byteexact,46BODY UUID serialization differences,4savepayload identities,
+3post-navigation rawFinal observations. Это не blanket pixel-exact утверждение.
+Все22PNG перечислены с SHA/bbox/RGB counts/crops в
+`/tmp/fit-mc518-accepted-png-differences-20261111.json`:12static-media raster,
+4visible error-correlation codes,4native caret и2native validation tooltip.
+JPEG SHA совпадают,540×540/1frame, одинаковая поза проверена визуально; точный
+механизм native raster-различия не установлен, анимацией не назван. Native
+validation wording/frame прежние, его raster cause также не установлен.
+
+Сохранено дополнительное bulk-fill наблюдение: trainerChromium parse-input
+исходный61вдвухruns/candidate130,89recty−69 при равных widths/heights/styles/focus.
+`/tmp/fit-mc518-full-block-raw-210-comparison-20261111.json` и qualified-review
+не переименованы в green. Cause не доказан: VoiceNoteField имеет native focus,
+useEffect/RAF auto-resize без публичного completion event; не утверждается, что
+именно они вызвали сдвиг. Для доказательства настоящего пользовательского ввода
+этот единственный case использует pressSequentially каждой строки и Enter,
+без scroll/focus correction после. Matched original/candidate keyboard pair:
+.content104вобоих, остальные состояния648/1121/929/931/99/135exact; candidate1
+прошёл14.500s. В accepted union заменён только этот sample с явной provenance.
+Bulk-fill не объявлен исправленным; source/таймер/пороги не менялись.
+Identity relation ограничена проверенной инъективной биекцией UUID block/swipe/
+aria drag-help, fixed source IDs обязаны совпадать; все остальные HTML bytes,
+numeric/text/structure значения и retry body внутри каждого run точны.
+BODY outerHTML с независимыми UUID не объявляется сменой фокуса или scroll.
+
+Квалификации raw сохраняются: ранее trainer plan options WebKit один раз1425
+против1129 в двух baseline; targeted unchanged candidate снова1129. Причина
+наблюдения неизвестна; не названо исправлением. Три rawFinal после successful
+navigation сняты без ожидания result mount, не доказывают result geometry.
+Raw PNG различия по видимым correlation codes/caret phase/native static-image
+raster сохраняются отдельно; изображения не названы анимированными (JPEG1frame).
+Никакого blanket pixel-exact утверждения; каждый PNG raw diff перечислен.
+
+Локально: production types/build/startup/fonts2 PASS; full lint PASS;
+184/184 unit11 suites fresh bd PASS; split-policy8/8 PASS.
+Полный e2e/tsconfig --noEmit PASS после финальной keyboard ветки. Existing editor68+
+currentV79swipe2 green; unchanged old touch-CDP2 отдельно на nonV79 fixture5.007s.
+Оригинальные214:210pass/4environment-mediared и122:120pass/2QA-mediared сохранены;
+voice relay fixture и old CDP V79 mismatch не названы продуктовыми багами.
+Проверенный union после targeted replacements 128unique (56native editor+70existing editor/V79+2old nonV79 CDP), retry/skip/flaky0; успешные70editor
+не повторялись без причины. Ранее Live28/result64 green при неизменном scope;
+точный source CI нового PR ещё обязательный гейт.
+
+Root лично просмотрела реальные clientdark390/light430/trainergroup430 и
+динамические/native nested frames: явных новых наложений/обрезаний не нашла.
+Физические устройства, системная клавиатура/нативный time popup, OAuth/install
+не проверены. Старые MC517157px/4px/gray feedback/swipe observations не закрыты.
+Следующее: rootreview→push/один PR→exact-source CI→сводка владельцу. Merge и
+публикация только после отдельного разрешения. Никаких следующих MC сейчас.

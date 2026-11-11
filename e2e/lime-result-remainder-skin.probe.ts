@@ -1,9 +1,11 @@
+import {editorMigrationGuard} from './lime-editor-skin.contract'
 import {expect,type Page} from '@playwright/test'
 import {writeFile} from 'node:fs/promises'
 
 import {resultPageSelector,resultOwnerFilter,resultMigrationGuard,resultFamilies,resultOwnerSelectors} from './lime-result-remainder-skin.contract'
 const trainerFamilies=resultFamilies
 const trainerMigrationGuards=[
+  editorMigrationGuard,
  resultMigrationGuard,
  ':where(:not(.fit-lime-shell.workout-detail-history-identity :is(.workout-actual-duration,.workout-duration-dialog) button))',
  ':where(:not(.fit-client-lime .workout-share-overlay, .fit-client-lime .workout-share-overlay *))',
