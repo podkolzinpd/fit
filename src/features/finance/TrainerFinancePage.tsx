@@ -1,3 +1,4 @@
+import { FinanceBalanceCorrectionForm } from './FinanceBalanceCorrectionForm'
 import { financeInputCents as cents } from './finance-input-cents'
 import { ChevronDownIcon } from '../../shared/icons'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
@@ -13,10 +14,10 @@ import { useDataBackend } from '../../app/data-backend-context'
 import { invalidateFinanceViews } from '../../app/invalidate-finance-views'
 import { invalidateWorkoutResults } from '../../app/invalidate-workout-results'
 import { RepositoryError } from '../../data/repositories/error'
-import { clearFinanceOperation, financeOperationKey, pendingPackageSchema, pendingPaymentSchema, pendingSessionSchema, readFinanceOperation, writeFinanceOperation } from './pending-finance-operation'
+import { clearFinanceOperation, financeOperationKey, pendingBalanceCorrectionSchema, pendingPackageSchema, pendingPaymentSchema, pendingSessionSchema, readFinanceOperation, writeFinanceOperation } from './pending-finance-operation'
 import { financePackagePeriod } from './finance-package-label'
 import { SessionAccountingForm, type SessionAccountingDraft } from './SessionAccountingForm'
-import type { TrainerFinancePackage, TrainerFinancePackageDraft, TrainerFinancePayment, TrainerFinanceSession, TrainerFinancePaymentDraft } from '../../data/contracts/trainer-finance'
+import type { TrainerFinanceBalanceCorrection, TrainerFinancePackage, TrainerFinancePackageDraft, TrainerFinancePayment, TrainerFinanceSession, TrainerFinancePaymentDraft } from '../../data/contracts/trainer-finance'
 import { addDays, daysBetween, formatLocalDate, formatMonth, localDate, todayInTimeZone } from '../../shared/local-date'
 import { AsyncView, Field, InlineRequestError, OverflowMenu, Page, useConfirm } from '../../shared/ui'
 
@@ -277,8 +278,10 @@ function TrainerFinanceClientPage() {
   const packageKey = financeOperationKey(actor?.userId ?? '', clientId, 'package')
   const paymentKey = financeOperationKey(actor?.userId ?? '', clientId, 'payment')
   const manualKey = financeOperationKey(actor?.userId ?? '', clientId, 'session')
+  const balanceKey = financeOperationKey(actor?.userId ?? '', clientId, 'balance')
   const [restored] = useState(() => ({
     package: readFinanceOperation(packageKey, pendingPackageSchema),
+    balance: readFinanceOperation(balanceKey, pendingBalanceCorrectionSchema),
     payment: readFinanceOperation(paymentKey, pendingPaymentSchema),
     manual: readFinanceOperation(manualKey, pendingSessionSchema),
   }))
@@ -292,6 +295,9 @@ function TrainerFinanceClientPage() {
   const pendingPaymentPackageId = pendingPayment?.packageId ?? null
   const manualOperation = useRef<{ draft: SessionAccountingDraft; requestId: string; attempts: number } | null>(restored.manual)
   const [pendingManualDraft, setPendingManualDraft] = useState<SessionAccountingDraft | null>(restored.manual?.draft ?? null)
+  const balanceOperation = useRef(restored.balance)
+  const [pendingBalance, setPendingBalance] = useState(restored.balance)
+  const [balanceId, setBalanceId] = useState<string | null>(restored.balance?.packageId ?? null)
   const [manualOpen, setManualOpen] = useState(false)
   const [sessionEditor, setSessionEditor] = useState<string | null>(null)
   const [confirm, confirmDialog] = useConfirm()
@@ -306,6 +312,34 @@ function TrainerFinanceClientPage() {
       queryClient.invalidateQueries({ queryKey: ['trainer-attention'] }),
       queryClient.invalidateQueries({ queryKey: ['clients'] })])
   }
+  const correctBalance = useMutation({
+    mutationFn: async (value: Pick<TrainerFinanceBalanceCorrection, 'remainingSessions' | 'reason'>) => {
+      const item = finance.data?.packages.find(pack => pack.id === balanceId)
+      if (!item) throw new Error('Блок не найден. Обновите страницу.')
+      const requestId = balanceOperation.current?.requestId ?? crypto.randomUUID()
+      const operation = balanceOperation.current ?? { packageId: item.id, requestId, attempts: 0,
+        draft: { ...value, requestId, expectedVersion: item.version } }
+      operation.attempts += 1
+      writeFinanceOperation(balanceKey, operation)
+      balanceOperation.current = operation
+      setPendingBalance({ ...operation })
+      return trainerFinance.correctPackageBalance(operation.packageId, operation.draft)
+    },
+    onSuccess: async () => {
+      await refresh()
+      clearFinanceOperation(balanceKey, balanceOperation.current?.requestId)
+      balanceOperation.current = null; setPendingBalance(null); setBalanceId(null)
+    },
+    onError: async error => {
+      // Definitive rejections did not apply this idempotent command. Keep the
+      // fields, refresh a conflict, and use a new operation only after review.
+      if (error instanceof RepositoryError && ['invalid_request', 'PT422', 'PT403', 'PT404', 'PT409', '40001'].includes(error.code)) {
+        clearFinanceOperation(balanceKey, balanceOperation.current?.requestId)
+        balanceOperation.current = null; setPendingBalance(null)
+        if (['PT409', '40001'].includes(error.code)) await refresh()
+      }
+    },
+  })
   const savePackage = useMutation({
     mutationFn: async ({ draft, editor }: { draft: TrainerFinancePackageDraft; editor: PackageEditor }) => {
       if (editor.mode === 'edit') return trainerFinance.updatePackage(editor.item.id, { ...draft, expectedVersion: editor.item.version })
@@ -460,7 +494,10 @@ function TrainerFinanceClientPage() {
   const renderPackage = (item: TrainerFinancePackage, history = false) => {
     const servicePayments = payments.filter((payment) => payment.packageId === item.id)
     return <article className={`finance-package card${history ? ' is-history' : ''}`} key={item.id}>
-      <header><div><span className={`finance-status finance-status-${item.packageStatus}`}>{isFitLimeEnabled(actor) && item.singleSession ? 'Разовая · ' : item.kind === 'online_coaching' ? isFitLimeEnabled(actor) ? 'Ведение · ' : 'Онлайн · ' : ''}{PACKAGE_STATUS[item.packageStatus]}</span><h2>{item.title}</h2></div><OverflowMenu label={`Действия с услугой ${item.title}`} items={[...(canCreate && !(isFitLimeEnabled(actor) && item.singleSession) ? [{ label: 'Продлить', disabled: pendingPackageDraft !== null, onClick: () => openPackage({ mode: 'renew', item }) }] : []), { label: 'Редактировать', disabled: pendingPackageDraft !== null, onClick: () => openPackage({ mode: 'edit', item }) }]} /></header>
+      <header><div><span className={`finance-status finance-status-${item.packageStatus}`}>{isFitLimeEnabled(actor) && item.singleSession ? 'Разовая · ' : item.kind === 'online_coaching' ? isFitLimeEnabled(actor) ? 'Ведение · ' : 'Онлайн · ' : ''}{PACKAGE_STATUS[item.packageStatus]}</span><h2>{item.title}</h2></div><OverflowMenu label={`Действия с услугой ${item.title}`} items={[...(canCreate && !(isFitLimeEnabled(actor) && item.singleSession) ? [{ label: 'Продлить', disabled: pendingPackageDraft !== null, onClick: () => openPackage({ mode: 'renew', item }) }] : []), { label: 'Редактировать', disabled: pendingPackageDraft !== null, onClick: () => openPackage({ mode: 'edit', item }) },
+        ...(isFitLimeEnabled(actor) && item.kind === 'session_pack' && !item.singleSession ? [{ label: 'Скорректировать остаток',
+          disabled: pendingBalance !== null && pendingBalance.packageId !== item.id,
+          onClick: () => { if (!balanceOperation.current) correctBalance.reset(); setBalanceId(item.id) } }] : [])]} /></header>
       <div className="finance-package-summary finance-service-balance">
         {item.kind === 'session_pack'
           ? <p><span>{isFitLimeEnabled(actor) && item.singleSession ? 'Занятие' : 'Осталось занятий'}</span><strong>{isFitLimeEnabled(actor) && item.singleSession ? item.sessionsUsed > 0 ? 'Проведено' : 'Не проведено' : `${item.sessionsRemaining} из ${item.sessionsTotal}`}</strong></p>
@@ -503,9 +540,14 @@ function TrainerFinanceClientPage() {
       </AsyncView>
     </>}
     <AsyncView loading={finance.isLoading} error={finance.error} onRetry={() => void finance.refetch()}>
+      {balanceId && finance.isSuccess && !finance.data?.packages.some(item => item.id === balanceId) && <div role="alert"><p>Блок недоступен. Вернитесь к списку услуг и обновите данные.</p><button type="button" className="secondary" onClick={() => setBalanceId(null)}>К услугам</button></div>}
+      {balanceId && finance.data?.packages.find(item => item.id === balanceId) && <FinanceBalanceCorrectionForm key={balanceId}
+        item={finance.data.packages.find(item => item.id === balanceId)!} initialDraft={pendingBalance?.draft}
+        locked={pendingBalance !== null} saving={correctBalance.isPending} error={correctBalance.error}
+        onCancel={() => setBalanceId(null)} onSubmit={value => correctBalance.mutate(value)} />}
       {packageEditor && <PackageForm paymentEntry={packageEditor.mode === 'new' && packageEditor.fromPayment} lime={isFitLimeEnabled(actor)} current={packageEditor.mode === 'edit' ? packageEditor.item : undefined} template={packageEditor.mode === 'renew' ? packageEditor.item : undefined} today={today} saving={savePackage.isPending} error={savePackage.error} initialDraft={pendingPackageDraft ?? undefined} locked={pendingPackageDraft !== null} onCancel={() => setPackageEditor(null)} onSubmit={(draft) => savePackage.mutate({ draft, editor: packageEditor })} />}
       {paymentEditor && <PaymentForm onNewService={isFitLimeEnabled(actor) && canCreate && !pendingPaymentDraft ? () => openPackage({ mode: 'new', fromPayment: true }) : undefined} lime={isFitLimeEnabled(actor)} current={paymentEditor.payment} packages={paymentEditor.direct ? packages.filter((item) => item.id === paymentEditor.packageId) : packages} packageId={paymentEditor.packageId} today={today} saving={savePayment.isPending} error={savePayment.error} initialDraft={pendingPaymentDraft ?? undefined} locked={pendingPaymentDraft !== null} onCancel={() => setPaymentEditor(null)} onSubmit={(draft, packageId) => savePayment.mutate({ draft, packageId, editor: paymentEditor })} />}
-      {!packageEditor && !paymentEditor && <>
+      {!packageEditor && !paymentEditor && !balanceId && <>
         <div className="finance-tabs" role="tablist" aria-label="Раздел финансов клиента">{FINANCE_TABS.map((tab) => <button id={`finance-${tab.id}-tab`} key={tab.id} type="button" role="tab" aria-label={`${tab.label}: ${tabCount[tab.id]}`} aria-selected={activeTab === tab.id} aria-controls={`finance-${tab.id}-panel`} className={activeTab === tab.id ? 'is-active' : ''} onClick={() => changeTab(tab.id)}><span>{tab.label}</span><small>{tabCount[tab.id]}</small></button>)}</div>
 
         {monthView.enabled && activeTab !== 'packages' && <div className="finance-filter-row" role="group" aria-label="Период истории">

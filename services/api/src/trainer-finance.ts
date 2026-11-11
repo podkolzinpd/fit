@@ -183,6 +183,13 @@ export interface TrainerFinancePackageUpdate {
   comment: string | null
 }
 
+export interface TrainerFinanceBalanceCorrection {
+  requestId: string
+  expectedVersion: number
+  remainingSessions: number
+  reason: string
+}
+
 export interface TrainerFinancePaymentDraft {
   requestId?: string
   amountCents: number
@@ -237,6 +244,7 @@ export interface PilotTrainerFinance {
   listClient(session: YandexActorSessionInput, clientId: string): Promise<TrainerFinanceClientBundle>
   createPackage(session: YandexActorSessionInput, clientId: string, draft: TrainerFinancePackageDraft): Promise<TrainerFinancePackage>
   updatePackage(session: YandexActorSessionInput, packageId: string, draft: TrainerFinancePackageUpdate): Promise<TrainerFinancePackage>
+  correctPackageBalance(session: YandexActorSessionInput, packageId: string, draft: TrainerFinanceBalanceCorrection): Promise<TrainerFinancePackage>
   addPayment(session: YandexActorSessionInput, packageId: string, draft: TrainerFinancePaymentDraft): Promise<TrainerFinancePayment>
   updatePayment(session: YandexActorSessionInput, paymentId: string, draft: TrainerFinancePaymentUpdate): Promise<TrainerFinancePayment>
   voidPayment(session: YandexActorSessionInput, paymentId: string, expectedVersion: number, reason: string): Promise<void>
@@ -324,6 +332,13 @@ export class DatabasePilotTrainerFinance implements PilotTrainerFinance {
       )
       return rows[0]!.package
     })
+  }
+
+  correctPackageBalance(session: YandexActorSessionInput, packageId: string, draft: TrainerFinanceBalanceCorrection) {
+    return this.run(session, async (client) => (await client.query<PackageRow>(
+      'select public.correct_trainer_finance_balance($1,$2,$3,$4,$5) as package',
+      [packageId, draft.expectedVersion, draft.remainingSessions, draft.reason, draft.requestId],
+    ))[0]!.package)
   }
 
   addPayment(session: YandexActorSessionInput, packageId: string, draft: TrainerFinancePaymentDraft) {

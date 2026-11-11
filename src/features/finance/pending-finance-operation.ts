@@ -10,6 +10,10 @@ export const pendingPackageSchema = z.object({ ...envelope,
     openingPaidCents: cents, openingReceivedOn: date.optional(), startsOn: date,
     endsOn: date.nullable(), paymentDueOn: date.nullable(), comment }),
 })
+export const pendingBalanceCorrectionSchema = z.object({ ...envelope, packageId: z.uuid(),
+  draft: z.object({ requestId: z.uuid(), expectedVersion: z.number().int().positive(),
+    remainingSessions: z.number().int().min(0).max(10000), reason: z.string().trim().min(1).max(500) }),
+}).refine(value => value.requestId === value.draft.requestId)
 export const pendingPaymentSchema = z.object({ ...envelope, packageId: z.string(),
   draft: z.object({ amountCents: cents, receivedOn: date, comment }),
 })
