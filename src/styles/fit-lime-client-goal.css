@@ -114,3 +114,23 @@
   .fit-lime-shell.trainer-client-goal-identity .goal-block,
   .fit-lime-shell.trainer-client-goal-identity .goal-criterion-form { padding: 18px }
 }
+
+/* CV103: keep every stage and criterion visible in the existing workspace. */
+.fit-lime-shell.trainer-client-goal-identity .goal-head {
+  flex-wrap: wrap; gap: 12px;
+}
+.fit-lime-shell.trainer-client-goal-identity .goal-head h2 {
+  overflow-wrap: anywhere; min-width: 0;
+}
+.fit-lime-shell.trainer-client-goal-identity .stage-row {
+  border-radius: 20px; padding: 16px; gap: 12px; flex-wrap: wrap;
+}
+.fit-lime-shell.trainer-client-goal-identity .stage-row > div:first-child {
+  flex: 1 1 180px; min-width: 0; overflow-wrap: anywhere;
+}
+.fit-lime-shell.trainer-client-goal-identity .stage-actions {
+  display: flex; flex-wrap: wrap; gap: 12px;
+}
+.fit-lime-shell.trainer-client-goal-identity .stage-actions button {
+  min-height: 44px;
+}
