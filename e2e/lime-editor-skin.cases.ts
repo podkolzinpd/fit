@@ -1,3 +1,4 @@
+import {librarySkinContract} from './lime-library-skin.contract'
 import {captureLimeErrorSemantics,expectLimeErrorSemantics} from './lime-error-semantics'
 import {expect,test} from '@playwright/test'
 import {writeFile} from 'node:fs/promises'
@@ -89,7 +90,7 @@ export function limeEditorSkinCases(){
   let hoverDanger:Awaited<ReturnType<typeof captureLimeErrorSemantics>>|undefined
   const voiceRecordingPoints:unknown[]=[]
   const states:Array<{state:string}&Awaited<ReturnType<typeof probeEditorSkin>>>=[]
-  const probe=async(name:string)=>{if(sample.mode==='save')await page.mouse.move(1,1);await page.mouse.move(0,0);states.push({state:name,...await probeEditorSkin(page,info.outputPath('editor-'+name+'.png'),sample.mode==='template'?pageSelector:undefined)})}
+  const probe=async(name:string)=>{if(sample.mode==='save')await page.mouse.move(1,1);await page.mouse.move(0,0);states.push({state:name,...await probeEditorSkin(page,info.outputPath('editor-'+name+'.png'),sample.mode==='template'?pageSelector:undefined,sample.mode==='template'?librarySkinContract:undefined)})}
   const rawInitial=await page.locator('.content').evaluate(n=>({y:n.scrollTop,height:n.scrollHeight,client:n.clientHeight}))
   await probe('initial')
   if((['plan','group','done'] as readonly string[]).includes(sample.mode)){
@@ -185,6 +186,6 @@ export function limeEditorSkinCases(){
   await writeFile(info.outputPath('editor-skin.json'),JSON.stringify({sample,source,path,rootClasses,templateCalls,states,rawInitial,rawFinal,writes,...(sample.mode==='clarify'?{parseCalls,parseRequests,parseCandidates,voiceRecordingPoints}:{}),dynamicHover:hoverDanger,diagnostics:{errors,failed,responses,consoleErrors}},null,2))
   expect(errors).toEqual([]);expect(failed).toEqual([]);expect(responses).toEqual(sample.mode==='template-sheet'?[{status:503,path:'/v1/workout-templates'},{status:503,path:'/v1/workout-templates'}]:sample.mode==='save'?[{status:503,path:'/v1/workouts/'+workoutId}]:sample.mode==='clarify'?[{status:503,path:'/v1/assistant/yandex/parse-workout'}]:[]);expect(consoleErrors.filter(e=>!(((sample.mode==='template-sheet'&&e.path==='/v1/workout-templates')||(sample.mode==='save'&&e.path==='/v1/workouts/'+workoutId)||(sample.mode==='clarify'&&e.path==='/v1/assistant/yandex/parse-workout'))&&e.text.startsWith('Failed to load resource:')))).toEqual([]);if(sample.mode!=='save')expect(writes).toEqual([])
   if(hoverDanger)expectLimeErrorSemantics(hoverDanger)
-  for(const state of states)assertEditorOwnership(state,sample.lime&&sample.mode!=='template')
+  for(const state of states)assertEditorOwnership(state,sample.lime,sample.mode==='template'?librarySkinContract:undefined)
  })
 }

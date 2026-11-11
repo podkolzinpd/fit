@@ -359,3 +359,15 @@ positive controls обязательны; CSSOM/rule/style/sheet identity вос
 Новое условие post-ablation native repaint нельзя ошибочно объявлять прежним
 контрактом, если исходные тесты его не имели; var-border нельзя перепарсивать
 для успокоения probe. [Разбор](design/CLIENT_REFERENCE_SCREENS_20261029.md), §240.
+
+
+### Нативная диагностика: успешный HTTP204 не обязательно даёт requestfinished
+
+MC519, 11.11.2026: изолированные actual-query/nativefetch воспроизводят в
+Chromium response204/oktrue, затем net::ERR_ABORTED, если пустой поток не
+читается. Реальный loopback HTTPserver даёт то же; чтение0bytes даёт finished.
+Это не доказательство сбоя удаления или deadline. Не менять приложение и
+не заменять204на200 ради paint-теста. Сохранять raw события; допустимая
+квалификация обязана связывать ТОТ ЖЕ Request с204 и проверять точный
+endpoint/method/count и успешное изменение UI/данных. Все другие requestfailed
+остаются ошибками. [Доказательства и узкая квалификация MC519](design/CLIENT_REFERENCE_SCREENS_20261029.md#244-mc519--полные-native-baseline-и-квалификация-http204).

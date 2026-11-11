@@ -10290,3 +10290,216 @@ computed observations не объявляются исправленными п�
 Физический iPhone/OAuth/native install не выдаются за браузерную приёмку.
 До выпуска — сводка: сделанное, проверки, ошибки/ограничения; затем ожидание
 отдельного разрешения. Сейчас никакого merge/deploy.
+
+
+## 243. MC519 — исходная сборка, механики и реальные границы
+
+2026-11-11 — Codex / OpenAI. План242 закреплён0f3ea284. Исходная
+production build1a2f569a прошла types/startup/fonts2, dist сохранён независимо
+от дальнейших CSS в /tmp/fit-mc519/baseline-dist. Все78unit в6 подходящих
+suites passed(4.06s): шаблоны/favorite editor/draft/name sheet/context/rules.
+Исходники обработчиков/API/флагов/build защищены SHA2561876 файлов; e2e/CSS
+не включены в эту карту, их собственные изменения проверяются отдельно.
+
+Существующая browser выборка112 Chromium/WebKit дала100passed(69.957s).
+10 native backend cases завершились до UI: в новой worktree отсутствовал
+API pg. Переиспользованы установленные deps своей прежней worktree, API
+собран; локальная PG55432/55474/5432 недоступна. Собственный контейнер
+fit-mc519-pg-20261111 создан, но оба осмысленных start завершились host
+`proxy already running`; inspect подтверждает created/not running. Другие
+контейнеры/данные/production не менялись. Эти10 native cases остаются CI gate,
+не выдаются за пройденные и не заменяются моками ради green.
+
+Два отказа исходного UI-test «Lime trainer adds a template directly to a client
+plan» были устаревшими DOM ожиданиями: опубликованный refined plan использует
+div.coach-plan-note вместо details[open] и actual calendar вместо date input.
+В единственном существующем тесте сохранены строгие исходные branches для
+оригинальной формы; в refined проверяются видимый textbox/точная заметка,
+selected7октября2026 в открытом календаре, закрытие и прежние exact date/
+notes/exercises/clientId payload и один write. Broad regex дня сначала
+совпал17/27; исправлен на точное accessible name7октября, это ошибка QA, не
+продукта. Исходные промежуточные red сохранены. Финальные2/2 passed4.233s,
+retries/skip0. Это102 уникальных реально успешных baselinecases, не112green.
+Полный e2e typecheck passed. /tmp/fit-mc519/baseline-mechanics-qualified.json
+и existing-mechanics-grep.txt сохраняют точную выборку без удаления tests.
+
+Scope-аудит: trainer template editor не является workout-editor-reference;
+содержимое нельзя молча приравнять к refinedMC518. У спортсмена shared
+client-workouts-identity содержит также current/history, поэтому нужен
+actual active #workouts-presets-panel:not([hidden]) и его overlays.
+Favorite/template editors имеют собственные route-markers. Source-selector
+и trainer library входят целиком, календарь и соседние tabs не входят.
+Новый native reader переиспользует прежний MC518 через optional explicit
+contract, default assertions/capture/CSSOM identity сохраняются. Два старых
+MC518template nonconsumer tests не удаляются: в согласованном новом этапе
+должны строго проверять нового library-owner; off и прочие контроли сохраняются.
+
+Далее: native consumer/paint baseline новых состояний, перенос доказанного
+CSS, source/order+computed/geometry/screenshot comparison и существующие
+регрессии, один PR/CI. Слияние/публикация не разрешены.
+
+
+## 244. MC519 — полные native baseline и квалификация HTTP204
+
+2026-11-11 — Codex / OpenAI. Новый native reader переиспользует MC518 с
+явным library contract; исходные default before/after capture, CSSOM text/
+object identity, поля/focus/scroll и все assertions сохранены. Матрица19×2
+проверяет whole athlete presets/favorite editor и trainer library/source/
+template editor, negative current/ordinary editor и rollout-off.
+
+Первые38 и repair20 были диагностикой новых QA, не green приёмкой. Исправлены
+fixture readiness (реальные cards/options/heldGET), pending submit locators
+со строгими idle/pending accessible names, scoped catalog action, semantic
+combobox для Client Field, точное имя «Повторы». Group fixtures содержат
+2круга/rest15/90 и отдельные duration/distance/RPE; dynamic hover/focus и
+held parse503→ambiguous→preview→add80kg/8reps реально пройдены. Приложение
+не исправлялось ради этих test setup/locator различий, raw red сохранены.
+
+Отдельно исследован Chrome DELETE: состояние UI9cards/2commands и HTTP204
+успешны, но requestfailed сообщал net::ERR_ABORTED. Production writeEmpty
+только ждёт Response.ok и не читает body; этот путь не использует deadline
+wrapper/AbortController. Независимый bundled actual-query recorder без React/
+query cache воспроизвёл то же и nativefetch: unread204→oktrue+ERR_ABORTED,
+чтение0bytes→finished,200control→finished; same-origin также воспроизводит.
+Второй recorder с реальным loopback HTTPserver без API interception подтвердил
+то же nativefetch и actualqueries. Для loopback понадобилось штатное test-only
+Chromium local-network-access разрешение; production permissions не менялись.
+Новое предположение recorder о bodyNull/finished оказалось неверным в этом
+движке и убрано только из диагностического recorder; raw observable bodyNull
+false и весь response→failed/finished timeline сохранены. Это НЕ продуктовая
+приёмка и НЕ исправление приложения/SDK.
+
+В новой paintQA диагностике проверяется WeakMap actualRequest→actualStatus.
+Разрешено только0 либо1 exact favorite-limit DELETE net::ERR_ABORTED, которому
+у ТОГО ЖЕ Request уже соответствует204, и только при строгих2commands/9cards.
+Другие endpoints/ошибки/status/числоfailures отклоняются. Реальные503/409
+тоже проверяются по точным method/path/status и состояниям формы; нет blanket
+ignore failed[], замены204на200 или принудительного чтения body в приложении.
+История/факты не меняются; /v1/workouts writes=[] обязательны для библиотеки.
+Диагностические artifacts /tmp/fit-mc519/query204 и http204, source helper
+включает пояснение узкой наблюдаемой платформенной сигнатуры.
+
+Итоговый baseline38/182states:36полных кейсов из baseline-library-final плюс
+2parse-added после исправления только имени поля, styles/build1a2 неизменны.
+30modern доходят до terminalownershipred — доказанная legacy зависимость;
+8off/preserved controls passed. Это НЕ38успешных productcases: ожидаемый
+red классифицирован, все промежуточные отказы хранятся. Эталонная выборка
+/tmp/fit-mc519/baseline-library-accepted-results и baseline-library-accepted.json.
+Все UI/data/capture проверки до finalownership реально завершились.
+
+Auxiliary Chromium winner15 имеет12pass/3ошибочных terminal legacyMatches
+assertions у mixed уже принятых catalog/quick consumers. Все15 прошли flows
+и сохранили maps; источникassert не является контрактом приложения, outputs
+не выдаются за greenприёмку. Маркеры толькоcustomproperty для выбора actual
+winning authored declarations; окончательный native comparator их не использует.
+Для отбора literal original selectors сверяются с git1a2; совпадений stems
+со specializedLime недостаточно. Отдельный collision audit218families дал0
+literal source/Lime collisions. Map сам по себе не доказывает нужность копии:
+эквивалентныйfallback может дать те же значения.
+
+Поэтому выполнен guard-only WIP:231actual native families,262guardoccurrences,
+0copies. Source25720/25720, declaration/fallback order и1876protectednonCSS
+файлов exact; accepted Lime пока побайтно без изменений. Эта временная
+сборка(types/startup/fonts2PASS) только для causal native delta, НЕ готовый
+продукт и НЕ публикация. Далее пересечение delta с actualsource winner map →
+минимальные authored copies → отдельно matchedcandidate38+регрессии/CI.
+Слияние/публикация по-прежнему только после новой сводки/разрешения владельца.
+
+
+## 245. MC519 — уточнение полноты каскада по native сравнению
+
+2026-11-11 — Codex / OpenAI. Перед финальным переносом добавлены фактические
+состояния фокуса в названии и select единицы дистанции двух grouped editors.
+Select расположен в строке бега, не в окне настроек; новые UI не добавлялись.
+Эталон дополнен четырьмя полными engine flows: все data/capture завершены,
+отказ только ожидаемый terminal legacy ownership. Полная выборка38/190states.
+
+Первый кандидат прошёл38/38 сценариев, но строгий независимый comparator
+обнаружил78 состояний с отличием native styles/geometry (124/190 rawPNG exact).
+Этот прогон НЕ считается приёмкой внешнего вида. В частности менялись размер
+полей16→14, вес шрифта400→500, заголовки, линия блока и disabled link.
+Проверки не ослаблялись: сохранены raw38 и подробные12877 прямых/производных
+различий в /tmp/fit-mc519/candidate-native-details.json.
+
+Причина неполноты первого отбора: одновременное выключение ancestor и child
+может дать fallback, совпадающий с исходным child, и скрыть необходимую child
+копию. Поэтому одного zero-delta∩winner недостаточно: после переноса обязателен
+повторный native comparison, включая authored declarations дочерних правил.
+Исходный marker map содержит явные16px/400, их нельзя подменять вычисленными
+значениями или новым fallback. Structural border0 остаётся shared; лишний
+новый stroke исключается точным owner condition.
+
+Независимые проверки: global25720/order и1876 protected nonCSS exact, полный
+eslint и e2e TypeScript passed. Новых runtime механизмов/данных/флагов нет.
+Свежий origin/main остаётся1a2. Дальше: устранить реальные cascade deltas,
+заново сравнить весь native набор, выполнить прежние регрессии и свой PR/CI.
+Слияние/публикация по-прежнему не разрешены.
+
+
+## 246. MC519 — цельный перенос готовых/шаблонов, локальная приёмка
+
+2026-11-11 — Codex / OpenAI. Выполнен весь согласованный MC5191–4 одним
+изменением обеим ролям; без следующего этапа и без публикации. Runtime diff
+ограничен src/styles.css и существующим fit-lime-workout-form.css.
+233 живых selector families из старого слоя выключены только на активных
+athlete presets/favorite editor и trainer library/source/template editor.
+113 zero-specificity Lime rules/217 authored properties из188 исходных
+declarations сохранены до прежнего accepted Lime; перекрытое не копировалось.
+Два точных exceptions сохраняют shared block-options border0 и stronger
+disabled link styling. Название/единицы проверены реальным фокусом; title
+лишних копий не получил. Переход «Запланировать» ведёт в прежний MC518 editor,
+не создаёт скрытое новое окно в библиотеке. Voice recording уже полностью
+оформлен stronger accepted Lime, его CSS не дублируется.
+
+Native ownership QA:38/38 passed,0retry/skip/flaky,91.352s. Строгое сравнение
+всех190states с исходной принятой сборкой1a2:0 отличий в native computed
+styles/geometry/fields/interaction/focus/scroll, backdrop/frame, данных
+команд/парсера и сохранности истории. CSSOM/DOM и object identity capture
+не меняет. Изменяемые generated UUID/errorcode допускаются только доказанной
+инъективной связью, фиксированные IDs не меняются. /v1/workouts writes=[]
+для библиотечных сценариев обязательны. Исходный rejected candidate1 не
+смешивается с принятым candidate2.
+
+177/190 rawPNG побайтно одинаковы. Остальные13 не маскировались и не
+объявляются pixel-exact:10 показывают разные generated errorcodes; ещё3
+локальны в нативных select glyphs/JPEG. Ограниченный повтор тех же версий
+без смены сборки воспроизвёл raster различия в тех же controls/images:
+по4flow/32states baseline repeat29PNG exact и candidate repeat30exact,
+native0delta в обоих. Отдельный readonly recorder всех computed CSS
+свойств select и font faces дал0различий baseline/candidate, а initialPNG
+в том сравнении exact; исходная glyph-сигнатура2338pixels воспроизведена
+между двумя baseline-снимками. Никакого изменения приложения/отключения
+действий/масок/подмены renderer нет. Все rawPNG/JSON сохранены локально
+в /tmp/fit-mc519; это квалификация наблюдения, не обещание pixel-parity.
+
+Прежние сценарии:102/102 library/favorite/template reliability, drafts,
+CRUD, plan context, search/filter и текущие переходы passed68.591s. Ещё
+176/176 неповторяющихся ordinary editor/Live timer+duration/result remainder/
+actual duration/share ownership прошли301.314s. Всего316 уникальных browser
+cases в Chromium/WebKit, без retries/skips/flaky. Ранее78unit в6suites
+прошли; защищённый runtime logic с тех пор не менялся. Новый native reader
+переиспользован с явным contract,6точных guard whitelist adapters сохраняют
+positive/unknown guards и прежние assertions. Единственная stale бизнес-QA
+адаптация notes/date проверена отдельно на baseline и в финальных102; payload,
+client/date/note и single-write assertions сохранены.
+
+Сборка/types/startup/YS Geo2of2, полный eslint, полный e2e TS, diff check
+прошли. Независимый source proof:25720/25720 original global records,
+declaration/fallback order и прежние Lime suffixes exact;1876 protected
+nonCSS source/API/build/flag files неизменны. API/DOM/React handlers, данные,
+черновики, input/selection/Next/keyboard/gesture/таймер механизмы, роли/права,
+охват/production configs/packages/workflows не менялись. Foundation/fonts
+MC7/8 остаются отдельными.
+
+Ограничения:10 local native backend cases не выполнены из-за отсутствия
+PostgreSQL/Podman proxyalreadyrunning (§243); они не отключены и остаются
+обязательным CI gate. Физический iPhone, native keyboard/OAuth/install не
+проверены; прежние69px/scroll/feedback/SELECT observations (§241–243) не
+объявлены исправленными. Новых регрессий в локальном проверенном наборе
+не найдено. CI и точный head будут зафиксированы в собственном PR; зелёный
+PR не означает публикацию. Перед выпуском нужна новая сводка/разрешение
+владельца MC-RELEASE-01. Следующий MC не начат.
+
+Проверенные runtime SHA256:
+- src/styles.css: `6d73552f0128781a6cd1d922a2536a554a2070dbaf45ecb7c2a290f7aa342919`
+- src/styles/fit-lime-workout-form.css: `782b8f3ae056d8d505e8468f7f1ca30f55c4e48219cff6cfb643c959ff60e372`

@@ -1,7 +1,12 @@
+import {libraryMigrationGuard} from './lime-library-skin.contract'
 import {expect,type Page,type Request} from '@playwright/test'
 import {writeFile} from 'node:fs/promises'
 import {createHash} from 'node:crypto'
 import {editorPageSelector,editorOwnerFilter,editorMigrationGuard,editorFamilies,editorOwnerSelectors,editorKnownGuards} from './lime-editor-skin.contract'
+// MC519 reuses this read-only reader with an explicit library contract. The
+// default contract and every existing editor assertion remain unchanged.
+export type NativeWorkoutSkinContract={selector:string;families:string[];knownGuards:string[];migrationGuard:string;ownerFilter:string;ownerSelectors:string[]}
+const editorSkinContract:NativeWorkoutSkinContract={selector:editorPageSelector,families:editorFamilies,knownGuards:[libraryMigrationGuard,...editorKnownGuards],migrationGuard:editorMigrationGuard,ownerFilter:editorOwnerFilter,ownerSelectors:editorOwnerSelectors}
 // Passive image-request metadata distinguishes real loading from untouched lazy
 // images. No image source/loading attribute or browser API is changed.
 const mediaRequests=new WeakMap<Page,{pending:Set<Request>}>()
@@ -34,7 +39,7 @@ async function settleEditorPaint(page:Page,selector:string){
  try{await Promise.race([work(),new Promise<never>((_,reject)=>{timer=setTimeout(()=>reject(Error('Editor paint did not settle within 5000 ms')),5000)})])}finally{stopped=true;clearTimeout(timer)}
 }
 
-async function captureEditorSkin(page:Page,selector:string){
+async function captureEditorSkin(page:Page,selector:string,families:string[]=editorFamilies){
   return page.locator('.phone-frame').evaluate((root, {selector,families}) => {
     const properties = ['display','position','top','right','bottom','left','content','appearance','-webkit-appearance','fill','stroke','stroke-width','background-image','background-size','background-position','background-repeat','background-origin','background-clip','mask-image','mask-size','color','background-color','font-family','font-size','font-weight','font-variant-numeric','text-transform','text-decoration-line','text-decoration-color','text-decoration-style','letter-spacing','line-height','width','height','min-width','min-height','max-height','gap','grid-template-columns','padding-top','padding-right','padding-bottom','padding-left','margin-top','margin-right','margin-bottom','margin-left','border-top-width','border-top-color','border-top-style','border-right-width','border-right-color','border-right-style','border-bottom-width','border-bottom-color','border-bottom-style','border-left-width','border-left-color','border-left-style','border-radius','box-shadow','outline-color','outline-width','outline-style','outline-offset','overflow-x','overflow-y','scroll-snap-type','touch-action','transform','--rpe-accent','--rpe-track','animation-name','animation-duration','transition-property','transition-duration','opacity','align-items','justify-content']
     const targets = Array.from(root.querySelectorAll(selector)), nodes = [...new Set(targets.flatMap(node => {const ancestors:Element[]=[];for(let p=node.parentElement;p;p=p.parentElement)ancestors.push(p);return [node,...node.querySelectorAll('*'),...ancestors]}))]
@@ -45,7 +50,7 @@ async function captureEditorSkin(page:Page,selector:string){
     for(const dialog of root.querySelectorAll('dialog'))add(dialog,'::backdrop')
     for(const [node,list] of pseudos)for(const pseudo of list){const css=getComputedStyle(node,pseudo),rect=node.getBoundingClientRect();captured.push({tag:node.tagName+pseudo,class:node.getAttribute('class')||'',interaction:{focus:node===document.activeElement,focusVisible:node.matches(':focus-visible'),disabled:node.matches(':disabled'),expanded:node.getAttribute('aria-expanded'),open:node.hasAttribute('open')},scroll:[node.scrollLeft,node.scrollTop,node.scrollHeight,node.clientHeight],style:Object.fromEntries(properties.map(property=>[property,css.getPropertyValue(property)])),rect:[rect.x,rect.y,rect.width,rect.height].map(value=>Math.round(value*100)/100)})}
     return captured
-  }, {selector,families:editorFamilies})
+  }, {selector,families})
  }
 
 
@@ -53,12 +58,12 @@ async function captureEditorSkin(page:Page,selector:string){
 // ownership. The complete legacy source/order is checked separately; native
 // selector intersection (including ancestors and originating pseudo elements)
 // and exact baseline/candidate capture prove isolation and preserved appearance.
-export async function probeEditorSkin(page:Page,screenshot?:string,selectorOverride?:string){
- const selector=selectorOverride??editorPageSelector
+export async function probeEditorSkin(page:Page,screenshot?:string,selectorOverride?:string,contract:NativeWorkoutSkinContract=editorSkinContract){
+ const selector=selectorOverride??contract.selector
  await settleEditorPaint(page,selector)
  const cssom=()=>page.evaluate(()=>Array.from(document.styleSheets).map(s=>Array.from(s.cssRules).map(r=>r.cssText).join('\n')))
  const state=()=>page.evaluate(()=>({focus:document.activeElement?.outerHTML,scroll:[document.scrollingElement,...document.querySelectorAll('.content,.workout-form-page,.today-review')].filter((n):n is HTMLElement=>n instanceof HTMLElement).map(n=>({tag:n.tagName,class:n.className,x:n.scrollLeft,y:n.scrollTop,height:n.scrollHeight,client:n.clientHeight}))}))
- const before=await captureEditorSkin(page,selector);expect(before.length).toBeGreaterThan(0)
+ const before=await captureEditorSkin(page,selector,contract.families);expect(before.length).toBeGreaterThan(0)
  const cssomBefore=await cssom(),stateBefore=await state()
  const sources=await page.evaluateHandle(()=>{
   const rules:{rule:CSSStyleRule;style:CSSStyleDeclaration;selector:string;text:string}[]=[]
@@ -96,14 +101,14 @@ export async function probeEditorSkin(page:Page,screenshot?:string,selectorOverr
   for(const sheet of Array.from(document.styleSheets))visit(sheet.cssRules,!sheet.disabled&&(!sheet.media.mediaText||matchMedia(sheet.media.mediaText).matches))
   const unknown=families[0]!+':where(:not(.mc518-unknown-owner))'
   return {rules:selected.length,families:[...new Set(selected.map(strip))],matches,ancestorMatches,pseudoMatches,activeMatches,matchedLegacyPaint,unsupported,owners:[...foundOwners].sort(),ownerDefinitions:[...ownerDefinitions].sort(),legacyMatches:selected.every(s=>{const a=query(strip(s)),b=query(s);return a.length===b.length&&a.every((n,i)=>n===b[i])}),selectedPositiveOwners:selected.filter(s=>strip(s).includes(':where(')),classifierBorderChecks,classifierGuardChecks:{known:strip(families[0]!+guards[0]!)===normalize(families[0]!),unknownRetained:strip(unknown)===normalize(unknown)},classifierOwnerChecks:[...ownerSelectors].map(s=>({selector:s,retained:strip(s).includes(normalize(ownerScope)),legacy:common.has(strip(s))})),observedNodes:observed.size,ancestorNodes:ancestors.size}
- },{families:editorFamilies,guards:[editorMigrationGuard,...editorKnownGuards],owners:editorOwnerSelectors,ownerScope:':where('+editorOwnerFilter+')',selector})
+ },{families:contract.families,guards:[contract.migrationGuard,...contract.knownGuards],owners:contract.ownerSelectors,ownerScope:':where('+contract.ownerFilter+')',selector})
  expect(result.classifierBorderChecks).toEqual({fullZeroNeutral:true,sideZeroNeutral:true,colorPaint:true,borderPaint:true,explicitColorOnZeroPaint:true})
  expect(result.classifierGuardChecks).toEqual({known:true,unknownRetained:true});expect(result.selectedPositiveOwners).toEqual([])
- expect(result.classifierOwnerChecks).toHaveLength(editorOwnerSelectors.length);expect(result.classifierOwnerChecks.every(c=>c.retained&&!c.legacy)).toBe(true)
+ expect(result.classifierOwnerChecks).toHaveLength(contract.ownerSelectors.length);expect(result.classifierOwnerChecks.every(c=>c.retained&&!c.legacy)).toBe(true)
  const backdrop=await page.locator(selector).evaluateAll(nodes=>nodes.map(n=>getComputedStyle(n).backgroundColor)),frameBackground=await page.locator('.phone-frame').evaluate(n=>getComputedStyle(n).backgroundColor)
  if(screenshot)await page.screenshot({path:screenshot,animations:'allow',caret:'initial'})
  await settleEditorPaint(page,selector)
- const after=await captureEditorSkin(page,selector),stateAfter=await state()
+ const after=await captureEditorSkin(page,selector,contract.families),stateAfter=await state()
  if(screenshot&&JSON.stringify(after)!==JSON.stringify(before))await writeFile(screenshot+'.capture-drift.json',JSON.stringify({before,after,stateBefore,stateAfter},null,2))
  expect(after).toEqual(before);expect(stateAfter).toEqual(stateBefore);expect(await cssom()).toEqual(cssomBefore)
  expect(await sources.evaluate(rules=>rules.every(s=>s.rule.style===s.style&&s.rule.selectorText===s.selector&&s.rule.style.cssText===s.text))).toBe(true)
@@ -111,8 +116,8 @@ export async function probeEditorSkin(page:Page,screenshot?:string,selectorOverr
  return {before,backdrop,frameBackground,...result,stateBefore,cssomSHA256:createHash('sha256').update(JSON.stringify(cssomBefore)).digest('hex'),cssomNeverMutated:true,styleObjectsUnchanged:true,nativeCaptureStable:true,focusScrollAnchorNeverMutated:true,method:'Native source/selector/ancestor/pseudo intersection + exact capture; no CSSOM or DOM mutation'}
 }
 
-export function assertEditorOwnership(result:Awaited<ReturnType<typeof probeEditorSkin>>,lime:boolean){
+export function assertEditorOwnership(result:Awaited<ReturnType<typeof probeEditorSkin>>,lime:boolean,contract:NativeWorkoutSkinContract=editorSkinContract){
  expect(result.families.length).toBeGreaterThan(0);expect(result.observedNodes).toBeGreaterThan(0)
- if(lime){expect(result.matches).toEqual([]);expect(result.ancestorMatches).toEqual([]);expect(result.pseudoMatches).toEqual([]);expect(result.ownerDefinitions).toEqual(editorOwnerSelectors.map(s=>s.replace(/,\s*/g,',').replace(/"/g,"'")).sort())}
+ if(lime){expect(result.matches).toEqual([]);expect(result.ancestorMatches).toEqual([]);expect(result.pseudoMatches).toEqual([]);expect(result.ownerDefinitions).toEqual(contract.ownerSelectors.map(s=>s.replace(/,\s*/g,',').replace(/"/g,"'")).sort())}
  else{expect(result.owners).toEqual([]);expect(result.legacyMatches).toBe(true);expect(result.matches.length).toBeGreaterThan(0);expect(result.activeMatches.length).toBeGreaterThan(0)}
 }

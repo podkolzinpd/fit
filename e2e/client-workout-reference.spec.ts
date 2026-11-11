@@ -1,3 +1,4 @@
+import {limeLibrarySkinCases} from './lime-library-skin.cases'
 import {limeEditorSkinCases} from './lime-editor-skin.cases'
 import { limeResultRemainderSkinCases } from './lime-result-remainder-skin.cases'
 import { limeTrainerCompletionSkinCases } from './lime-trainer-completion-skin.cases'
@@ -23,6 +24,7 @@ import { revealLiveSet, beginClientGesture, coachGestureWorkout, restTimerWorkou
 test.skip(process.env.FIT_CLIENT_WORKOUT_ACCEPTANCE !== '1', 'Dedicated native client-workout harness')
 
 // Own-profile fixtures require the same compiled client Lime/auth configuration.
+limeLibrarySkinCases()
 limeEditorSkinCases()
 ownProfileCases()
 limeLiveCardShellCases()
