@@ -74,3 +74,13 @@ it('shows section-specific metrics without repeating people cards or unrelated c
     expect(screen.queryByRole('region',{name:'Динамика'})).not.toBeInTheDocument()
   }
 })
+
+it('opens referral report with period totals and hides unrelated people filters', async()=>{
+  write.mockImplementation(async()=>new Response(JSON.stringify({...result,total:1,rows:[{id:'source',name:'Сотрудница',code:'staff-001',clicks:4,registrations:1,conversion:25,active:true}],summary:{clicks:4,registrations:1,conversion:25}}),{status:200}))
+  show()
+  await userEvent.click(screen.getByRole('button',{name:'Реферальные ссылки'}))
+  await waitFor(()=>expect(write).toHaveBeenLastCalledWith('/v1/private-analytics/explore','POST',expect.objectContaining({section:'referrals'})))
+  expect(await screen.findByText('staff-001')).toBeInTheDocument()
+  expect(screen.queryByLabelText('Кого анализируем')).not.toBeInTheDocument()
+  expect(screen.getByRole('region',{name:'Динамика реферальных событий'})).toBeInTheDocument()
+})
