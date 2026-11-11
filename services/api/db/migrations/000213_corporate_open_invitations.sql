@@ -123,7 +123,7 @@ end $$;
 
 create or replace function app_private.decide_corporate_trainer_invitation(p_id uuid,p_approve boolean)
 returns void language plpgsql security definer set search_path='' as $$
-declare v app_private.corporate_trainer_invitations; state text; current_version bigint; assigned_offices uuid[];
+declare v app_private.corporate_trainer_invitations; state text; current_version bigint; assigned_offices uuid[]; before_offices uuid[];
 begin
   if not app_private.is_corporate_admin() then raise exception 'corporate_forbidden' using errcode='PT403'; end if;
   if p_approve is null then raise exception 'corporate_invalid' using errcode='PT422'; end if;
@@ -139,17 +139,24 @@ begin
     if not exists(select 1 from public.profiles p join public.trainers t on t.profile_id=p.id where p.id=v.claimed_by and p.account_role='trainer') then
       raise exception 'corporate_not_found' using errcode='PT404'; end if;
     if not app_private.corporate_invitation_offices_valid(v.office_ids) then raise exception 'corporate_invalid' using errcode='PT422'; end if;
-    -- Add invited offices without replacing the trainer's previous active offices.
+    -- Keep even archived assignments: invitation approval only adds offices.
+    select coalesce(array_agg(b.office_id order by b.office_id),'{}'::uuid[]) into before_offices
+      from public.corporate_trainer_offices b where b.trainer_id=v.claimed_by;
     select array_agg(distinct office_id order by office_id) into assigned_offices from (
       select unnest(v.office_ids) office_id
-      union select b.office_id from public.corporate_trainer_offices b join public.corporate_offices o on o.id=b.office_id
-        where b.trainer_id=v.claimed_by and not o.archived
+      union select unnest(before_offices) office_id
     ) offices;
-    if not exists(select 1 from public.corporate_trainers where trainer_id=v.claimed_by and is_yandex)
-      or exists(select 1 from unnest(v.office_ids) invited where not exists(
-        select 1 from public.corporate_trainer_offices b where b.trainer_id=v.claimed_by and b.office_id=invited)) then
+    if cardinality(assigned_offices)>100 then raise exception 'corporate_invalid' using errcode='PT422'; end if;
+    if not exists(select 1 from public.corporate_trainers where trainer_id=v.claimed_by and is_yandex) then
       select coalesce((select version from public.corporate_trainers where trainer_id=v.claimed_by),0) into current_version;
-      perform app_private.save_corporate_trainer(v.claimed_by,true,assigned_offices,current_version);
+      perform app_private.save_corporate_trainer(v.claimed_by,true,v.office_ids,current_version);
+    elsif assigned_offices<>before_offices then
+      insert into public.corporate_trainer_offices(trainer_id,office_id)
+        select v.claimed_by,unnest(v.office_ids) on conflict do nothing;
+      update public.corporate_trainers set version=version+1,updated_at=now() where trainer_id=v.claimed_by;
+      insert into app_private.corporate_admin_audit(actor_id,entity_kind,entity_id,before_data,after_data)
+        values(auth.uid(),'trainer',v.claimed_by,jsonb_build_object('isYandex',true,'officeIds',before_offices),
+          jsonb_build_object('isYandex',true,'officeIds',assigned_offices));
     end if;
     update app_private.corporate_trainer_invitations set approved_by=auth.uid(),approved_at=now() where id=p_id;
     insert into app_private.corporate_invitation_audit(invitation_id,actor_id,action) values(p_id,auth.uid(),'approve');
@@ -218,6 +225,30 @@ begin
       jsonb_build_object('isYandex',p_enabled,'officeIds',office_ids));
 end $$;
 
+-- A test-access-only edit must not rewrite membership or silently prune archived
+-- offices omitted by the existing active-office form. Combined edits stay atomic.
+create function app_private.save_corporate_trainer_and_testing(p_id uuid,p_enabled boolean,p_offices uuid[],p_version bigint,p_testing boolean,p_testing_version bigint)
+returns void language plpgsql security definer set search_path='' as $$
+declare member public.corporate_trainers; active_offices uuid[]; requested uuid[];
+begin
+ if not app_private.is_corporate_admin() then raise exception 'corporate_forbidden' using errcode='PT403'; end if;
+ perform pg_catalog.pg_advisory_xact_lock(159,1);
+ if not app_private.is_corporate_admin() then raise exception 'corporate_forbidden' using errcode='PT403'; end if;
+ if p_enabled is null or p_offices is null or cardinality(p_offices)>100 or array_position(p_offices,null) is not null
+  or p_version is null or p_version<0 or p_testing is null or p_testing_version is null or p_testing_version<0 then
+  raise exception 'corporate_invalid' using errcode='PT422'; end if;
+ select * into member from public.corporate_trainers where trainer_id=p_id for update;
+ select coalesce(array_agg(distinct x order by x),'{}'::uuid[]) into requested from unnest(p_offices) x;
+ select coalesce(array_agg(b.office_id order by b.office_id),'{}'::uuid[]) into active_offices
+  from public.corporate_trainer_offices b join public.corporate_offices o on o.id=b.office_id and not o.archived where b.trainer_id=p_id;
+ if not (p_enabled and member.is_yandex and member.version=p_version and cardinality(requested)>0 and requested=active_offices) then
+  perform app_private.save_corporate_trainer(p_id,p_enabled,p_offices,p_version);
+ end if;
+ if p_enabled then perform app_private.set_corporate_testing(p_id,p_testing,p_testing_version); end if;
+end $$;
+revoke all on function app_private.save_corporate_trainer_and_testing(uuid,boolean,uuid[],bigint,boolean,bigint) from public;
+grant execute on function app_private.save_corporate_trainer_and_testing(uuid,boolean,uuid[],bigint,boolean,bigint) to fit_api;
+
 create function app_private.confirm_corporate_invitation_testing(p_id uuid) returns void
 language plpgsql security definer set search_path='' as $$
 declare invitation app_private.corporate_trainer_invitations; current_version bigint;
@@ -257,6 +288,7 @@ do $$ begin
  raise exception 'corporate_testing_rollback_requires_empty_state'; end if;
 end $$;
 drop function app_private.corporate_admin_bundle_with_testing();
+drop function app_private.save_corporate_trainer_and_testing(uuid,boolean,uuid[],bigint,boolean,bigint);
 drop function app_private.confirm_corporate_invitation_testing(uuid);
 drop function app_private.create_corporate_invitation_for_recipient(uuid,text,uuid[],text);
 create or replace function app_private.corporate_services_allowed() returns boolean

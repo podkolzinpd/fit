@@ -88,9 +88,13 @@ export class CorporateAdminStore {
       if (rows[0]?.allowed !== true) {
         throw Object.assign(new Error('corporate_not_found'), { code: 'PT404' })
       }
-      await client.query('select app_private.save_corporate_trainer($1,$2,$3::uuid[],$4)',
-        [draft.id, draft.isYandex, draft.officeIds, draft.version])
-      if (draft.testingEnabled!==undefined && draft.isYandex) await client.query('select app_private.set_corporate_testing($1,$2,$3)',[draft.id,draft.testingEnabled,draft.testingVersion])
+      if (draft.testingEnabled===undefined) {
+        await client.query('select app_private.save_corporate_trainer($1,$2,$3::uuid[],$4)',
+          [draft.id, draft.isYandex, draft.officeIds, draft.version])
+      } else {
+        await client.query('select app_private.save_corporate_trainer_and_testing($1,$2,$3::uuid[],$4,$5,$6)',
+          [draft.id,draft.isYandex,draft.officeIds,draft.version,draft.testingEnabled,draft.testingVersion])
+      }
     })
   }
 }
