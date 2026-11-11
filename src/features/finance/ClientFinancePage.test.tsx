@@ -3,7 +3,7 @@ import { render, screen, waitFor } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { ClientFinanceSummary } from '../../data/contracts/client-finance'
-import { ClientFinanceHomeCard, ClientFinancePage } from './ClientFinancePage'
+import { ClientFinanceHomeCard, ClientFinancePage, ClientFinanceDetails } from './ClientFinancePage'
 
 const trainerId = 'd2b80c5e-f60b-42b0-ae3f-308e91bbcb9b'
 const clientUserId = '974f21af-f304-421f-81bd-050dbfabdd46'
@@ -139,4 +139,11 @@ it('shows an explicit single purchase without converting a legacy one-session su
   renderPage()
   expect(await screen.findByText('Разовая · не проведена')).toBeVisible()
   expect(screen.getByText('1 из 1')).toBeVisible()
+})
+
+it('names period coaching as coaching only in the new identity',()=>{
+ const trainer=summary.trainers[0]!,finance={trainers:[{...trainer,packages:[{...trainer.packages[0]!,kind:'online_coaching' as const,sessionsTotal:0,sessionsUsed:0,sessionsRemaining:0}]}]}
+ render(<MemoryRouter><ClientFinanceDetails lime finance={finance}/></MemoryRouter>)
+ expect(screen.getByText('Ведение · Активен')).toBeVisible()
+ expect(screen.queryByText('Онлайн · Активен')).not.toBeInTheDocument()
 })

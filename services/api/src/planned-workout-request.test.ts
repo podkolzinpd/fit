@@ -268,3 +268,7 @@ describe('favorite workout exercises', () => {
     expect(readFavoriteWorkoutExercises([exercise, { ...exercise, blockId: WORKOUT_ID }])).toBeUndefined()
   })
 })
+
+it.each(['online','in_person'] as const)('normalizes explicit %s delivery without replacing financial presence',delivery=>{
+ expect(readSavePlannedWorkoutRequest({...validRequest(),trainingFormat:delivery},null)).toMatchObject({draft:{trainingFormat:'with_trainer',deliveryMode:delivery}})
+})

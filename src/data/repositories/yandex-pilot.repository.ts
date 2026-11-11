@@ -177,6 +177,7 @@ const workoutSchema = z.object({
   pausedAt: yandexDateTimeSchema.optional(),
   pausedSeconds: z.number().int().nonnegative().optional(),
   title: z.string().max(120).nullable().optional(),
+  deliveryMode: z.enum(['in_person', 'online']).optional(),
   trainingFormat: z.enum(['self', 'with_trainer']).optional(),
   startedBy: z.uuid().nullable(),
   completedBy: z.uuid().nullable(),

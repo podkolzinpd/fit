@@ -181,7 +181,7 @@ export interface DataBackend {
     home(today: LocalDate): Promise<WorkoutHomeSummary[]>
     clientStats(clientId: string, today: LocalDate): Promise<ClientStats>
     findActive: (clientId: string) => Promise<WorkoutSummary | null>
-    quickStart(clientId?: string, operationId?: string, trainingFormat?: "self" | "with_trainer"): Promise<{
+    quickStart(clientId?: string, operationId?: string, trainingFormat?: "self" | "with_trainer", deliveryMode?: "in_person" | "online"): Promise<{
       id: string
       resumed: boolean
     }>
