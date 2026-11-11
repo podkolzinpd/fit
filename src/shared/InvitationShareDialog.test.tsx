@@ -73,3 +73,20 @@ describe('InvitationShareDialog', () => {
     expect(onClose).toHaveBeenCalledOnce()
   })
 })
+
+
+it('trainer code-first layout preserves copying and confirmation before revoke', async () => {
+  copyText.mockResolvedValue(undefined)
+  const user = userEvent.setup()
+  const onRevoke = vi.fn().mockResolvedValue(undefined)
+  render(<InvitationShareDialog codeFirst share={share} source="yandex" message="Приглашение" onClose={vi.fn()} onRevoke={onRevoke} />)
+  const code = screen.getByRole('region', { name: 'Запасной код приглашения' })
+  const send = screen.getByRole('button', { name: 'Отправить ссылку' })
+  expect(code.compareDocumentPosition(send) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  await user.click(screen.getByRole('button', { name: 'Скопировать код для тренера' }))
+  expect(copyText).toHaveBeenLastCalledWith(share.code)
+  await user.click(screen.getByRole('button', { name: 'Отменить приглашение' }))
+  expect(onRevoke).not.toHaveBeenCalled()
+  await user.click(within(screen.getByRole('alertdialog')).getByRole('button', { name: 'Отозвать' }))
+  await waitFor(() => expect(onRevoke).toHaveBeenCalledOnce())
+})

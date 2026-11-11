@@ -114,6 +114,7 @@ interface WorkoutExerciseEditorProps {
   referenceAppearance?: boolean
   safePlanInput?: boolean
   refinedPlan?: boolean
+  showSetRemovalMenu?: boolean
   disabled?: boolean
 }
 
@@ -133,7 +134,7 @@ function PlanNumberField({ label, placeholder, name, value, decimal, disabled, o
     defaultValue={value} step={decimal ? 'any' : 1} decimal={decimal} directInput disabled={disabled} onValueChange={onChange} />
 }
 
-export function WorkoutExerciseEditor({ exercises, onSaveAsTemplate, onChange, onOpenPicker, onReplaceExercise, onOpenTechnique, canOpenTechnique, exerciseCatalog = [], showTrainerComments = true, commentLabel = 'Заметка спортсмену', entryMode = 'plan', hideEmptyAddAction = false, previousResults = new Map(), showRpeByDefault = false, showRestByDefault = false, collapseInitialExercises = false, initialExercisesReady = true, reference = false, referenceAppearance = reference, safePlanInput = false, refinedPlan = false, disabled = false }: WorkoutExerciseEditorProps) {
+export function WorkoutExerciseEditor({ exercises, onSaveAsTemplate, onChange, onOpenPicker, onReplaceExercise, onOpenTechnique, canOpenTechnique, exerciseCatalog = [], showTrainerComments = true, commentLabel = 'Заметка спортсмену', entryMode = 'plan', hideEmptyAddAction = false, previousResults = new Map(), showRpeByDefault = false, showRestByDefault = false, collapseInitialExercises = false, initialExercisesReady = true, reference = false, referenceAppearance = reference, safePlanInput = false, refinedPlan = false, showSetRemovalMenu = false, disabled = false }: WorkoutExerciseEditorProps) {
   const [reordering, setReordering] = useState(false)
   const [confirm, confirmDialog] = useConfirm()
   const [roundError, setRoundError] = useState<string | null>(null)
@@ -142,6 +143,12 @@ export function WorkoutExerciseEditor({ exercises, onSaveAsTemplate, onChange, o
   const [confirmingStructure, setConfirmingStructure] = useState(false)
   const structurePending = useRef(false)
   const referenceControlsDisabled = disabled || confirmingStructure
+  const structureKey = JSON.stringify(exercises.map((exercise, index) => [draftExerciseKey(exercise, index), exercise.ref, exercise.blockType,
+    exercise.sets.map(set => [set.position, set.sourceSetId])]))
+  const [selectedSet, setSelectedSet] = useState<{ exerciseKey: string; setIndex: number; structureKey: string } | null>(null)
+  // A changed structure must never reuse a selected neighbour's old ordinal.
+  // Value edits keep their selection; external hydration/reordering clears it.
+  useEffect(() => { setSelectedSet(null) }, [structureKey])
   // Два поля одного подхода могут отправить change до перерисовки родителя (особенно
   // в WebKit и автотестах). Последний commit держим синхронно, чтобы следующее поле не
   // перезатёрло предыдущее устаревшим props-снимком.
@@ -151,6 +158,11 @@ export function WorkoutExerciseEditor({ exercises, onSaveAsTemplate, onChange, o
     if (disabled) return
     latestExercises.current = next
     onChange(next)
+  }
+  function commitStructure(next: WorkoutExerciseDraft[]) {
+    if (disabled) return
+    setSelectedSet(null)
+    commitExercises(next)
   }
   function changeRepetitionTimeMode(value: string) {
     commitExercises(latestExercises.current.map((item, index) => index === settingsExerciseIndex
@@ -170,13 +182,13 @@ export function WorkoutExerciseEditor({ exercises, onSaveAsTemplate, onChange, o
       || set.durationMin !== undefined || set.durationSec !== undefined || set.distanceKm !== undefined || set.rpe !== undefined)
     if (hasValues && !await confirm({ message: 'Удалить круги с заполненными значениями?', confirmLabel: 'Удалить круги', danger: true })) return false
     setRoundError(null)
-    commitExercises(resizeDraftBlockRounds([...latestExercises.current], blockId, next))
+    commitStructure(resizeDraftBlockRounds([...latestExercises.current], blockId, next))
     return true
   }
   function applyRunningPreset(activeRecovery: boolean) {
     if (settingsExerciseIndex === null) return
     const current = [...latestExercises.current]
-    commitExercises(activeRecovery
+    commitStructure(activeRecovery
       ? applyRunningActiveRecoveryPreset(current, settingsExerciseIndex)
       : applyRunningIntervalPreset(current, settingsExerciseIndex))
     setSettingsExerciseIndex(null)
@@ -264,7 +276,7 @@ export function WorkoutExerciseEditor({ exercises, onSaveAsTemplate, onChange, o
     updateSet(exerciseIndex, setIndex, { rpe: next })
   }
   function addSet(exerciseIndex: number) {
-    commitExercises(latestExercises.current.map((exercise, current) => current === exerciseIndex ? {
+    commitStructure(latestExercises.current.map((exercise, current) => current === exerciseIndex ? {
       ...exercise, sets: [...exercise.sets, nextSetDraft(exercise.sets, exercise.inputKind)],
     } : exercise))
   }
@@ -273,7 +285,7 @@ export function WorkoutExerciseEditor({ exercises, onSaveAsTemplate, onChange, o
       setRoundError('Выполненный подход нельзя удалить из плана.')
       return
     }
-    commitExercises(latestExercises.current.map((exercise, current) => current === exerciseIndex ? {
+    commitStructure(latestExercises.current.map((exercise, current) => current === exerciseIndex ? {
       ...exercise,
       sets: exercise.sets.filter((_, index) => index !== setIndex).map((set, position) => ({ ...set, position })),
     } : exercise))
@@ -310,7 +322,7 @@ export function WorkoutExerciseEditor({ exercises, onSaveAsTemplate, onChange, o
       } finally { structurePending.current = false; setConfirmingStructure(false) }
       setRpeOverrides((current) => new Map([...current].filter(([index]) => index !== exerciseIndex).map(([index, value]) => [index > exerciseIndex ? index - 1 : index, value])))
     }
-    commitExercises(latestExercises.current.filter((_, index) => index !== exerciseIndex).map((exercise, position) => ({ ...exercise, position })))
+    commitStructure(latestExercises.current.filter((_, index) => index !== exerciseIndex).map((exercise, position) => ({ ...exercise, position })))
   }
 
   function moveReferenceBlock(id: string, target: number) {
@@ -323,10 +335,10 @@ export function WorkoutExerciseEditor({ exercises, onSaveAsTemplate, onChange, o
     currentBlocks.splice(target, 0, moved)
     const indexes = currentBlocks.flatMap((block) => block.items.map((item) => item.index))
     setRpeOverrides((overrides) => new Map(indexes.flatMap((oldIndex, newIndex) => overrides.has(oldIndex) ? [[newIndex, overrides.get(oldIndex)!] as const] : [])))
-    commitExercises(moveDraftBlockTo(current, id, target))
+    commitStructure(moveDraftBlockTo(current, id, target))
   }
   function replaceReferenceExercise(index: number) {
-    if (!disabled && !structurePending.current) onReplaceExercise(index)
+    if (!disabled && !structurePending.current) { setSelectedSet(null); onReplaceExercise(index) }
   }
 
   const blocks = groupDraftsIntoBlocks([...exercises])
@@ -399,6 +411,9 @@ export function WorkoutExerciseEditor({ exercises, onSaveAsTemplate, onChange, o
 
   // Одиночное упражнение (вне блока): подходы и видимый вход в суперсет.
   function renderExercise(exercise: WorkoutExerciseDraft, exerciseIndex: number, canMergeNext: boolean, reorder?: React.ReactNode, canReorder = false) {
+    const exerciseKey = draftExerciseKey(exercise, exerciseIndex)
+    const selectedIndex = selectedSet?.structureKey === structureKey && selectedSet.exerciseKey === exerciseKey ? selectedSet.setIndex : undefined
+    const removalTarget = selectedIndex === undefined ? undefined : exercise.sets[selectedIndex]
     const distanceCapable = !allowsDurationWeight(exercise) && (exercise.inputKind === 'distance' || (exercise.inputKind === 'duration' && (allowsOptionalDistance(exercise) || exercise.sets.some((set) => set.distanceKm !== undefined))))
     const showRpe = isRpeVisible(exerciseIndex)
     const showRest = showRestByDefault
@@ -421,16 +436,20 @@ export function WorkoutExerciseEditor({ exercises, onSaveAsTemplate, onChange, o
         { label: 'Настройки упражнения', disabled: referenceControlsDisabled, onClick: () => setSettingsExerciseIndex(exerciseIndex) },
         { label: showRpe ? 'Скрыть RPE' : 'Указать RPE', disabled: referenceControlsDisabled, onClick: () => toggleRpe(exerciseIndex) },
         ...(reference && onOpenTechnique && (canOpenTechnique?.(exercise) ?? true) ? [{ label: 'Техника упражнения', disabled: referenceControlsDisabled, onClick: () => onOpenTechnique(exercise) }] : []),
-        ...(canMergeNext && !reordering ? [{ label: reference ? 'Объединить со следующим в суперсет' : 'Создать суперсет со следующим', disabled: referenceControlsDisabled, onClick: () => commitExercises(mergeBlockWithNext([...latestExercises.current], exerciseIndex)) }] : []),
+        ...(canMergeNext && !reordering ? [{ label: reference ? 'Объединить со следующим в суперсет' : 'Создать суперсет со следующим', disabled: referenceControlsDisabled, onClick: () => commitStructure(mergeBlockWithNext([...latestExercises.current], exerciseIndex)) }] : []),
         { label: 'Заменить', disabled: referenceControlsDisabled, onClick: () => reference ? replaceReferenceExercise(exerciseIndex) : onReplaceExercise(exerciseIndex) },
-        { label: 'Удалить', danger: true, disabled: referenceControlsDisabled, onClick: () => removeExercise(exerciseIndex) },
+        ...(reference && showSetRemovalMenu ? [{ label: removalTarget ? `Удалить подход ${selectedIndex! + 1}` : 'Удалить подход', danger: true,
+          disabled: referenceControlsDisabled || !removalTarget || Boolean(removalTarget.sourceSetId) || exercise.sets.length <= 1,
+          onClick: () => { if (selectedIndex !== undefined && latestExercises.current[exerciseIndex]?.sets[selectedIndex] === removalTarget) void requestRemoveReferenceSet(exerciseIndex, selectedIndex) } }] : []),
+        { label: reference && showSetRemovalMenu ? 'Удалить упражнение' : 'Удалить', danger: true, disabled: referenceControlsDisabled, onClick: () => removeExercise(exerciseIndex) },
       ]} /></span>
       </header>
       {expanded && <div className="compact-editor-exercise-fields">
       {(() => { const previous = previousResults.get(exercise.ref); const line = previous && previousResultLine(previous.sets, exercise.ref); return line ? <p className="exercise-prefill-note">В прошлый раз: {line}</p> : exercise.prefilledFromDate ? <p className="exercise-prefill-note">Значения с тренировки {formatLocalDate(exercise.prefilledFromDate)}</p> : null })()}
       {showRest && <label className="exercise-plan-rest-field">Отдых между подходами, с<ClampedNumberInput label={`Отдых между подходами, ${exercise.name}`} value={exercise.restBetweenSetsSec ?? 90} min={0} max={600} onCommit={(next) => { if (exercise.blockId) updateRestBetweenSets(exercise.blockId, next) }} /></label>}
       <WorkoutSetTable variant="planned" inputKind={distanceCapable ? 'distance' : exercise.inputKind} columnLabels={exerciseSetColumnLabels(exercise)} showRpe={showRpe}>
-        {exercise.sets.map((set, setIndex) => { const row = <WorkoutSetRow state="planned" className={`planned-set ${distanceCapable ? 'planned-set-running' : ''} ${showRpe ? 'rpe-visible' : ''}`} key={setIndex}>
+        {exercise.sets.map((set, setIndex) => { const select = reference && showSetRemovalMenu ? () => setSelectedSet({ exerciseKey, setIndex, structureKey }) : undefined
+          const row = <WorkoutSetRow state="planned" className={`planned-set ${distanceCapable ? 'planned-set-running' : ''} ${showRpe ? 'rpe-visible' : ''}`} key={setIndex} onFocusCapture={select} onClick={select}>
           <span className="workout-set-number planned-set-number" aria-hidden="true">{setIndex + 1}</span>
           <span className="sr-only">Подход {setIndex + 1}</span>
           {setFields(exercise, exerciseIndex, setIndex, showRpe)}
@@ -502,7 +521,7 @@ export function WorkoutExerciseEditor({ exercises, onSaveAsTemplate, onChange, o
             { label: 'Разделить суперсет', disabled: referenceControlsDisabled, onClick: async () => {
               const rest = block.items.map(({ exercise }) => `${exercise.name} — ${exercise.restBetweenSetsSec ?? 90} с`).join('; ')
               if (await confirm({ message: `Разделить суперсет? Отдых между подходами: ${rest}.`, confirmLabel: 'Разделить' })) {
-                commitExercises(splitBlock([...latestExercises.current], block.blockId))
+                commitStructure(splitBlock([...latestExercises.current], block.blockId))
               }
             } },
           ]} />
@@ -519,7 +538,7 @@ export function WorkoutExerciseEditor({ exercises, onSaveAsTemplate, onChange, o
           const row = <div className="block-exercise-row" key={exercise.blockId ? `${exercise.ref}-${index}` : index}><div className="block-exercise-head">{exerciseThumbnail(exercise)}<strong>{exercise.name}</strong><span className="exercise-head-actions"><OverflowMenu items={[
           { label: 'Заменить', disabled: referenceControlsDisabled, onClick: () => reference ? replaceReferenceExercise(index) : onReplaceExercise(index) },
           ...(refinedPlan ? [{ label: isRpeVisible(index) ? 'Скрыть RPE' : 'Указать RPE', disabled: referenceControlsDisabled, onClick: () => toggleRpe(index) }] : []),
-          { label: 'Удалить', danger: true, disabled: referenceControlsDisabled, onClick: () => removeExercise(index) },
+          { label: reference && showSetRemovalMenu ? 'Удалить упражнение' : 'Удалить', danger: true, disabled: referenceControlsDisabled, onClick: () => removeExercise(index) },
         ]} /></span></div>{showTrainerComments && <OptionalDetails className="exercise-comment-options" summary="Комментарий" initialOpen={Boolean(exercise.trainerComment)}>
           {commentField(exercise, index)}
         </OptionalDetails>}</div>

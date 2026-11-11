@@ -15,7 +15,7 @@ import { ClientProfileHeader } from './ClientProfileHeader'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Controller, useForm, useWatch } from 'react-hook-form'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { bmiLabel, splitClientWorkouts } from '../../data/repositories/workout-rules'
 import { ClientFirstRunIntro, PresetWorkoutPicker, TodayPage, WorkoutExercisesSummary, storeFirstWorkoutIntent, workoutCountLabel, type FirstWorkoutIntent } from '../workouts'
@@ -29,7 +29,7 @@ import { z } from 'zod'
 import { useClientRealtime } from '../../app/use-client-realtime'
 import { useAuth } from '../../app/auth-context'
 import { useDataBackend } from '../../app/data-backend-context'
-import { AnalyticsIcon, ChevronRightIcon, HistoryIcon, KeyboardIcon, RecordIcon, ScheduleIcon } from '../../shared/icons'
+import { AnalyticsIcon, CheckIcon, ChevronRightIcon, HistoryIcon, KeyboardIcon, RecordIcon, ScheduleIcon } from '../../shared/icons'
 import { InvitationShareButton } from '../auth/InvitationShareActions'
 import { canOpenClientChat, useOpenClientChat, ChatStartButton, ChatThreadsNotice, useChatThreads } from '../chat'
 import { isRepositoryConflict } from '../../data/repositories/error'
@@ -191,6 +191,7 @@ function ClientForm({
   const { clients: clientsRepository, athleteSportProfile } = useDataBackend()
   const { actor } = useAuth()
   const queryClient = useQueryClient()
+  const formId = useId()
   const today = todayInTimeZone(actor?.timezone)
   const fitLimeBack = createMode === 'trainer' && isFitLimeEnabled(actor) && isTrainerScheduleV2Enabled(actor)
     ? existing ? `/clients/${existing.id}` : '/clients'
@@ -255,9 +256,9 @@ function ClientForm({
       queryClient.invalidateQueries({ queryKey: ['client', existing.id] }),
     ])
   } })
-  const contents = <form className="stack client-profile-form" onSubmit={(event) => void form.handleSubmit((values) => mutation.mutate(values))(event)}>
+  const contents = <form id={formId} className="stack client-profile-form" onSubmit={(event) => void form.handleSubmit((values) => mutation.mutate(values))(event)}>
       <section className="client-form-section">
-        <div className="client-form-section-head">
+        <div className={fitLimeBack ? 'sr-only' : 'client-form-section-head'}>
           <p className="eyebrow">ПРОФИЛЬ СПОРТСМЕНА</p>
           <h2>Основные данные</h2>
           <p>Эти данные помогают вести тренировки и отслеживать прогресс.</p>
@@ -304,12 +305,12 @@ function ClientForm({
         <Controller control={form.control} name="privateNote" render={({ field }) => <VoiceNoteField name={field.name} source="client_form" label="Личная заметка" value={field.value ?? ''} onValueChange={field.onChange} />} />
       </section>}
       {mutation.error && <p className="error">{mutation.error.message}</p>}
-      <div className="actions">{onCancel && <button type="button" className="secondary" disabled={mutation.isPending} onClick={onCancel}>Отмена</button>}<button className="primary" disabled={mutation.isPending} aria-busy={mutation.isPending}>{mutation.isPending ? 'Сохраняем…' : createMode === 'self' && !existing ? 'Сохранить профиль' : 'Сохранить'}</button></div>
+      <div className="actions">{onCancel && <button type="button" className="secondary" disabled={mutation.isPending} onClick={onCancel}>Отмена</button>}{(!fitLimeBack || embedded) && <button className="primary" disabled={mutation.isPending} aria-busy={mutation.isPending}>{mutation.isPending ? 'Сохраняем…' : createMode === 'self' && !existing ? 'Сохранить профиль' : 'Сохранить'}</button>}</div>
     </form>
   const title = createMode === 'self' && !existing
     ? 'Профиль спортсмена'
     : existing ? createMode === 'self' ? 'Редактировать профиль' : 'Редактировать клиента' : 'Новый клиент'
-  return embedded ? contents : <Page title={title} back={fitLimeBack} className={createMode === 'self' ? 'client-self-edit-page' : undefined}>{contents}</Page>
+  return embedded ? contents : <Page title={title} back={fitLimeBack} className={createMode === 'self' ? 'client-self-edit-page' : fitLimeBack ? 'client-visual-form' : undefined} action={fitLimeBack && <button type="submit" form={formId} className="client-form-save icon-button" aria-label="Сохранить" disabled={mutation.isPending} aria-busy={mutation.isPending}><CheckIcon /></button>}>{contents}</Page>
 }
 
 // Notes belong to the trainer membership; profile goals use the client version.
