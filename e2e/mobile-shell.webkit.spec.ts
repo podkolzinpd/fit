@@ -1773,7 +1773,7 @@ test('iPhone: создание тренировки сфокусировано �
   const actions = page.getByRole('button', { name: 'Ещё действия' })
   await actions.last().scrollIntoViewIfNeeded()
   await actions.last().click()
-  await expect(page.getByRole('menuitem', { name: 'Удалить' })).toBeVisible()
+  await expect(page.getByRole('menuitem', { name: /^Удалить(?: упражнение)?$/ })).toBeVisible()
   await expectOverflowMenuAboveBars(page)
   await page.keyboard.press('Escape')
   const save = page.getByRole('button', { name: 'Сохранить план', exact: true })
