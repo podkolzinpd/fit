@@ -1,3 +1,4 @@
+import { InlineRequestError } from '../../shared/ui'
 import { SingleSessionFields, readSingleServiceFields, type SingleServiceDraft } from '../finance/SingleSessionFields'
 import { useEffect, useRef, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
@@ -86,6 +87,7 @@ export function WorkoutAttendanceSheet({ workout, action, onCompleted, onClose, 
     setTarget(fresh); setNeedsReload(false); save.reset()
     if (completed && withTrainer) await finance.refetch()
   } })
+  const requestError = reload.error ?? save.error
   const busy = save.isPending || reload.isPending
   const financePending = completed && withTrainer && (finance.isPending || finance.isFetching || finance.isError)
   return <dialog ref={dialog} className={`workout-attendance-sheet${live ? ' workout-live-exit-sheet workout-decision-sheet' : ''}`} aria-label={live ? 'Завершение тренировки' : completed ? 'Отметить проведённой' : 'Тренировка не состоялась'}
@@ -121,7 +123,7 @@ export function WorkoutAttendanceSheet({ workout, action, onCompleted, onClose, 
       {singleError&&<p className="error" role="alert">{singleError}</p>}
       {!live && !completed && target.exercises.some(exercise => exercise.sets.some(set => set.confirmedAt)) && <p className="workout-attendance-note">В тренировке есть записанные результаты. Они сохранятся, занятие не спишется.</p>}
       {!live && completed && <p className="workout-attendance-note">Записанные результаты сохранятся. Остальные можно добавить позже.</p>}
-      {(save.error || reload.error) && <p className="error" role="alert">{(reload.error ?? save.error)?.message}</p>}
+      {requestError && <InlineRequestError error={requestError} />}
       {needsReload && <button type="button" className="secondary wide" disabled={busy} onClick={() => reload.mutate()}>Обновить запись</button>}
       <button type="submit" className={`primary wide${live && deleting ? ' danger' : ''}`} disabled={busy || needsReload || futureCompletion || financePending || (deleting && !canDelete)} aria-busy={save.isPending}>{save.isPending ? 'Сохраняем…' : live ? deleting ? 'Удалить пустую тренировку' : completed ? 'Завершить тренировку' : 'Отметить как несостоявшуюся' : completed ? 'Подтвердить проведение' : 'Отметить: не состоялась'}</button>
       <button type="button" className="link workout-attendance-cancel" disabled={busy} onClick={onClose}>{live ? 'Продолжить тренировку' : 'Отмена'}</button>

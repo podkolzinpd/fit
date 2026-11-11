@@ -1,6 +1,6 @@
 import { expect, test, type Locator, type Page, type TestInfo } from '@playwright/test'
 import type { TrainerFinanceClientBundle, TrainerFinancePackageDraft, TrainerFinanceManualSessionDraft, TrainerFinancePaymentUpdate, TrainerFinanceReceipt } from '../src/data/contracts/trainer-finance'
-import { clientId, conversationId, newWorkoutId, workoutId, workout, mockPilot, type MockWorkout } from './fit-lime-fixtures'
+import { clientId, conversationId, newWorkoutId, workoutId, workout, mockPilot, copyTemplateDiagnostic, type MockWorkout } from './fit-lime-fixtures'
 
 const coach = 'c0ac0000-6010-4000-8000-000000000001'
 const stamp = '2026-10-01T10:00:00Z'
@@ -466,9 +466,12 @@ export function financeAccountingCases() {
     const ledger=await accountingFixture(page,true,[target]),base=ledger.packages[0]!
     ledger.packages=[];ledger.sessions=[];ledger.payments=[]
     let count=0
+    const attempts: unknown[] = []
     await page.route(`**/v1/workouts/${workoutId}/finish-single`,async route=>{
       const command=route.request().postDataJSON() as {attendance:{singleService:TrainerFinanceManualSessionDraft['singleService']}}
-      count++;expect(command.attendance.singleService).toEqual({priceCents:200000,paidCents:50000,receivedOn:'2026-11-03'})
+      count++; attempts.push(command)
+      if (count === 1) return route.abort('failed')
+      expect(command.attendance.singleService).toEqual({priceCents:200000,paidCents:50000,receivedOn:'2026-11-03'})
       Object.assign(target,{status:'done',version:2,completedAt:stamp})
       ledger.packages.push({...base,id:newWorkoutId,title:'Разовое занятие',singleSession:true,sessionsTotal:1,sessionsUsed:1,sessionsRemaining:0,priceCents:200000,paidCents:50000,dueCents:150000,startsOn:'2026-11-03',endsOn:null,packageStatus:'completed',paymentStatus:'partial'})
       ledger.sessions.push({id:workoutId,packageId:newWorkoutId,workoutId,disposition:'charged',source:'automatic',comment:null,workoutDate:'2026-11-03',voidedAt:null,voidReason:null,version:1,createdAt:stamp,updatedAt:stamp})
@@ -483,9 +486,30 @@ export function financeAccountingCases() {
     await sheet.getByRole('radio',{name:'Разовое занятие'}).click()
     await sheet.getByLabel('Стоимость, ₽').fill('2000');await sheet.getByLabel('Получено, ₽').fill('500')
     await sheet.getByRole('button',{name:'Подтвердить проведение',exact:true}).click()
+    const alert = sheet.getByRole('alert')
+    await expect(alert).toContainText(/FIT-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}/)
+    await expect(sheet.getByRole('button', { name: 'Подтвердить проведение', exact: true })).toBeDisabled()
+    const diagnostic = await copyTemplateDiagnostic(page)
+    expect(diagnostic).toContain('POST /v1/workouts/:id/finish-single')
+    expect(diagnostic).toContain('Этап: network')
+    for (const width of [390, 430, 1440]) {
+      await page.setViewportSize({ width, height: width === 1440 ? 1000 : 844 })
+      const copy = alert.getByRole('button', { name: 'Скопировать диагностику' })
+      await copy.scrollIntoViewIfNeeded()
+      expect((await copy.boundingBox())!.height).toBeGreaterThanOrEqual(44)
+      expect(await sheet.evaluate(node => node.scrollWidth <= node.clientWidth + 1)).toBe(true)
+      await page.screenshot({ path: info.outputPath(`attendance-diagnostics-${width}.png`) })
+    }
+    await expect(sheet.getByLabel('Стоимость, ₽')).toHaveValue('2000')
+    await expect(sheet.getByLabel('Получено, ₽')).toHaveValue('500')
+    await sheet.getByRole('button', { name: 'Обновить запись' }).click()
+    await expect(sheet.getByRole('button', { name: 'Подтвердить проведение', exact: true })).toBeEnabled()
+    await sheet.getByRole('button', { name: 'Подтвердить проведение', exact: true }).click()
+    expect(attempts).toHaveLength(2)
+    expect(attempts[1]).toEqual(attempts[0])
     const confirmation=page.locator('.workout-finance-confirmation')
     await expect(confirmation).toContainText('Разовое занятие проведено');await expect(confirmation).toContainText(/К оплате 1\s500/)
-    expect(count).toBe(1)
+    expect(count).toBe(2)
     for(const width of [320,390,430,1440]){
       await page.setViewportSize({width,height:844});await confirmation.scrollIntoViewIfNeeded()
       expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true)

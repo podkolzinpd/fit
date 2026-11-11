@@ -3,6 +3,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Workout } from '../../shared/domain'
 import { localDate } from '../../shared/local-date'
+import { attachRequestDiagnostics } from '../../shared/request-diagnostics'
 import { WorkoutAttendanceSheet } from './WorkoutAttendanceSheet'
 
 const identity = vi.hoisted(() => ({ lime: false }))
@@ -197,4 +198,48 @@ it('Lime explicit deferral does not charge even without available packages', asy
   fireEvent.click(screen.getByRole('radio',{name:'Выбрать позже'}))
   fireEvent.click(screen.getByRole('button',{name:'Подтвердить проведение'}))
   await waitFor(()=>expect(backend.confirmAttendance).toHaveBeenCalledWith(workout,{disposition:'unassigned',packageId:null},expect.any(String)))
+})
+
+
+it('exposes the preparation diagnostic before sending single-session completion', async () => {
+  identity.lime = true
+  const failure = attachRequestDiagnostics(new Error('Не удалось подключиться к серверу.'), {
+    requestId: '00000000-0000-4000-8000-6755e382712b',
+    occurredAt: '2026-11-11T19:00:00Z', backend: 'yandex',
+    operation: 'GET /v1/training-data', stage: 'network',
+  })
+  const prepare = vi.fn().mockRejectedValue(failure)
+  render(<QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })}>
+    <WorkoutAttendanceSheet workout={workout} action="complete" beforeSave={prepare} onClose={vi.fn()} onCompleted={vi.fn()} />
+  </QueryClientProvider>)
+  await screen.findByText('Нет подходящего абонемента')
+  fireEvent.click(screen.getByRole('button', { name: 'Изменить учёт' }))
+  fireEvent.click(screen.getByRole('radio', { name: /^Разовое занятие$/ }))
+  fireEvent.change(screen.getByLabelText('Стоимость, ₽'), { target: { value: '3700' } })
+  fireEvent.change(screen.getByLabelText('Получено, ₽'), { target: { value: '3700' } })
+  fireEvent.click(screen.getByRole('button', { name: 'Подтвердить проведение' }))
+  const alert = await screen.findByRole('alert')
+  expect(alert).toHaveTextContent('FIT-6755-E382-712B')
+  expect(screen.getByRole('button', { name: 'Скопировать диагностику' })).toBeVisible()
+  expect(screen.getByRole('button', { name: 'Подтвердить проведение' })).toBeDisabled()
+  expect(screen.getByLabelText('Стоимость, ₽')).toHaveValue(3700)
+  expect(screen.getByLabelText('Получено, ₽')).toHaveValue(3700)
+  expect(prepare).toHaveBeenCalledOnce()
+  expect(backend.confirmAttendance).not.toHaveBeenCalled()
+})
+
+it('shows the latest reload diagnostic rather than the earlier failed write', async () => {
+  const diagnostic = (suffix: string, operation: string) => attachRequestDiagnostics(new Error('Нет ответа'), {
+    requestId: `00000000-0000-4000-8000-${suffix}`, occurredAt: '2026-11-11T19:00:00Z',
+    backend: 'yandex', operation, stage: 'network',
+  })
+  backend.confirmAttendance.mockRejectedValue(diagnostic('6755e382712b', 'POST /v1/workouts/:id/finish'))
+  backend.get.mockRejectedValue(diagnostic('7bc37fa3fd93', 'GET /v1/training-data'))
+  show('complete')
+  await screen.findByText('Нет подходящего абонемента')
+  fireEvent.click(screen.getByRole('button', { name: 'Подтвердить проведение' }))
+  fireEvent.click(await screen.findByRole('button', { name: 'Обновить запись' }))
+  await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent('FIT-7BC3-7FA3-FD93'))
+  expect(screen.getByRole('alert')).not.toHaveTextContent('FIT-6755-E382-712B')
+  expect(backend.confirmAttendance).toHaveBeenCalledOnce()
 })
