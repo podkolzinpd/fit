@@ -4326,3 +4326,30 @@ ym-hide-content; production Chromium/WebKit2/2 подтвердили markers и
 путь от создания приглашения до реального start/stop дежурства.
 Это local приёмка. Начатый GitHub CI первого head не отменён; финальный
 push и второй PR ждут его завершения, затем необходим новый exact-head CI.
+
+
+Квитанция initial CI43085006165/head111a4d27:33/35jobs SUCCESS, красный
+WebKit finance visual1/4 и итоговый e2e; Finance Lime owns readable cards,
+forms and payment actions трижды упёрся в page.goto/locator.click30s.
+Все corporate/API/DB/app gates прошли; это не зелёная приёмка выпуска.
+Логи сохранены приватно. Тесты/таймауты/retries не менялись.
+За время CI опубликован main8be75f05 с чужой migration213. Собственная ещё
+не опубликованная migration213 переименована214; чужая213 сохраняется
+побайтно. Далее обычный merge нового main, локальная проверка упавшего
+неизменённого financecase и новый полный CI окончательного head.
+
+Уточнение к предыдущей записи:8be75f05 подтверждён как Git main; его
+официальная публикация здесь ещё не проверена. Перед merge своего PR
+обязательны свежие main CI/публикации/health, Git-статус их не заменяет.
+Finance Lime owns readable cards, forms and payment actions: точный
+неизменённый WebKit case отдельно на production build прошёл1/1 за7.6s,
+с прежними assertions/30s/retry0 и официальными verified fonts2/2. Это
+диагностика исходного красного CI, не подмена нового full source gate.
+Полный локальный DB после main8be/migration214: первая restore-ступень
+прошла; в основной группе400PASS/2skip и один прежний cleanup-case упал
+по global quota (35/19 вместо31/15). Отдельно тот же неизменённый case1/1
+PASS; остаток всех DB-ступеней и native erasure6/6 PASS. Исходный local
+red сохранён, за зелёный полный DB run не выдаётся. Обязателен новый
+полный CI окончательного head. Корпоративные84/84 в полном DB этапе PASS.
+Проверено: native erasure штатно блокирует trainer profile до удаления,
+новый cohort не расширяет его допуск и не требует ослабления guard.
