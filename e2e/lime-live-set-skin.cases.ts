@@ -1,6 +1,113 @@
+import {editorMigrationGuard,editorOwnerFilter,editorOwnerSelectors} from './lime-editor-skin.contract'
+import {ablateLiveSkinBranches,restoreLiveSkinBranches} from './lime-live-duration-skin.cases'
 import { test, expect } from '@playwright/test'
 import { writeFile } from 'node:fs/promises'
 import { mockPilot, coachGestureWorkout, workoutId } from './fit-lime-fixtures'
+
+// Reviewed bd928e07: 32 authored groups contain 34 selector families, 29 with paint. Exact sets survive optimizer splitting/merging.
+const liveSetManifest = {
+  "families": [
+    ".live-identity .workout-set-table",
+    ".live-identity .workout-set-table-head",
+    ".live-identity .live-set-table > .live-set",
+    ".live-identity .live-set-table > .live-set + .live-set",
+    ".live-identity .live-set-grid",
+    ".live-identity .live-set.rpe-visible .live-set-grid",
+    ".live-identity .live-set-grid > :not(:first-child)",
+    ".live-identity .workout-duration-trigger.live-set-input",
+    ".live-identity .live-set-number",
+    ".live-identity .live-set-input",
+    ".live-identity .live-set-rpe",
+    ".live-identity .live-set-input:focus",
+    ".live-identity .live-set-rpe:focus",
+    ".live-identity .live-set-input.plan-hint",
+    ".live-identity .live-set-confirm",
+    ".live-identity .live-set-check",
+    ".live-identity .live-set-save",
+    ".live-identity .live-set-expanded .live-set-check",
+    ".live-identity .live-set-expanded .live-set-save",
+    ".live-identity .live-set.editing > .live-set-grid",
+    ".live-identity .live-set.editing .live-set-save",
+    ".live-identity .live-set-check.done",
+    ".live-identity .live-set.confirmed > .live-set-grid",
+    ".live-identity .live-set.confirmed > .live-set-grid > :not(:first-child)",
+    ".live-identity .live-set.confirmed .live-set-number",
+    ".live-identity .live-set.confirmed .live-set-confirm",
+    ".live-identity .live-set.confirmed .live-set-input",
+    ".live-identity .live-set.confirmed .live-set-rpe",
+    ".live-identity .live-set.confirmed .live-set-check.done",
+    ".live-identity .live-set-save-feedback .save-status",
+    ".live-identity .live-set.invalid > .live-set-grid",
+    ".live-identity .live-set-validation",
+    ".live-identity .live-workout-page .live-set-table > .live-set",
+    ".live-identity .live-workout-page .live-set-table > .live-set + .live-set"
+  ],
+  "paintFamilies": [
+    ".live-identity .live-set-check",
+    ".live-identity .live-set-check.done",
+    ".live-identity .live-set-expanded .live-set-check",
+    ".live-identity .live-set-expanded .live-set-save",
+    ".live-identity .live-set-grid",
+    ".live-identity .live-set-grid > :not(:first-child)",
+    ".live-identity .live-set-input",
+    ".live-identity .live-set-input.plan-hint",
+    ".live-identity .live-set-input:focus",
+    ".live-identity .live-set-number",
+    ".live-identity .live-set-rpe",
+    ".live-identity .live-set-rpe:focus",
+    ".live-identity .live-set-save",
+    ".live-identity .live-set-save-feedback .save-status",
+    ".live-identity .live-set-table > .live-set + .live-set",
+    ".live-identity .live-set-validation",
+    ".live-identity .live-set.confirmed .live-set-check.done",
+    ".live-identity .live-set.confirmed .live-set-input",
+    ".live-identity .live-set.confirmed .live-set-number",
+    ".live-identity .live-set.confirmed .live-set-rpe",
+    ".live-identity .live-set.confirmed > .live-set-grid",
+    ".live-identity .live-set.confirmed > .live-set-grid > :not(:first-child)",
+    ".live-identity .live-set.editing .live-set-save",
+    ".live-identity .live-set.editing > .live-set-grid",
+    ".live-identity .live-set.invalid > .live-set-grid",
+    ".live-identity .live-workout-page .live-set-table > .live-set",
+    ".live-identity .live-workout-page .live-set-table > .live-set + .live-set",
+    ".live-identity .workout-set-table",
+    ".live-identity .workout-set-table-head"
+  ],
+  "guards": [
+    ":where(:not(.fit-lime-shell.workout-live-reference :is(.coach-live-v79,.client-live-v79) .workout-set-table))",
+    ":where(:not(.fit-lime-shell.workout-live-reference :is(.coach-live-v79,.client-live-v79) .workout-set-table-head))",
+    ":where(:not(.fit-lime-shell.workout-live-reference :is(.coach-live-v79,.client-live-v79) .live-set-table > .live-set))",
+    ":where(:not(.fit-lime-shell.workout-live-reference :is(.coach-live-v79,.client-live-v79) .live-set-table > .live-set + .live-set))",
+    ":where(:not(.fit-lime-shell.workout-live-reference :is(.coach-live-v79,.client-live-v79) .live-set-grid))",
+    ":where(:not(.fit-lime-shell.workout-live-reference :is(.coach-live-v79,.client-live-v79) .live-set.rpe-visible .live-set-grid))",
+    ":where(:not(.fit-lime-shell.workout-live-reference :is(.coach-live-v79,.client-live-v79) .live-set-grid > :not(:first-child)))",
+    ":where(:not(.fit-lime-shell.workout-live-reference :is(.coach-live-v79,.client-live-v79) .workout-duration-trigger.live-set-input))",
+    ":where(:not(.fit-lime-shell.workout-live-reference :is(.coach-live-v79,.client-live-v79) .live-set-number))",
+    ":where(:not(.fit-lime-shell.workout-live-reference :is(.coach-live-v79,.client-live-v79) .live-set-input))",
+    ":where(:not(.fit-lime-shell.workout-live-reference :is(.coach-live-v79,.client-live-v79) .live-set-rpe))",
+    ":where(:not(.fit-lime-shell.workout-live-reference :is(.coach-live-v79,.client-live-v79) .live-set-input:focus))",
+    ":where(:not(.fit-lime-shell.workout-live-reference :is(.coach-live-v79,.client-live-v79) .live-set-rpe:focus))",
+    ":where(:not(.fit-lime-shell.workout-live-reference :is(.coach-live-v79,.client-live-v79) .live-set-input.plan-hint))",
+    ":where(:not(.fit-lime-shell.workout-live-reference :is(.coach-live-v79,.client-live-v79) .live-set-confirm))",
+    ":where(:not(.fit-lime-shell.workout-live-reference :is(.coach-live-v79,.client-live-v79) .live-set-check))",
+    ":where(:not(.fit-lime-shell.workout-live-reference :is(.coach-live-v79,.client-live-v79) .live-set-save))",
+    ":where(:not(.fit-lime-shell.workout-live-reference :is(.coach-live-v79,.client-live-v79) .live-set-expanded .live-set-check))",
+    ":where(:not(.fit-lime-shell.workout-live-reference :is(.coach-live-v79,.client-live-v79) .live-set-expanded .live-set-save))",
+    ":where(:not(.fit-lime-shell.workout-live-reference :is(.coach-live-v79,.client-live-v79) .live-set.editing > .live-set-grid))",
+    ":where(:not(.fit-lime-shell.workout-live-reference :is(.coach-live-v79,.client-live-v79) .live-set.editing .live-set-save))",
+    ":where(:not(.fit-lime-shell.workout-live-reference :is(.coach-live-v79,.client-live-v79) .live-set-check.done))",
+    ":where(:not(.fit-lime-shell.workout-live-reference :is(.coach-live-v79,.client-live-v79) .live-set.confirmed > .live-set-grid))",
+    ":where(:not(.fit-lime-shell.workout-live-reference :is(.coach-live-v79,.client-live-v79) .live-set.confirmed > .live-set-grid > :not(:first-child)))",
+    ":where(:not(.fit-lime-shell.workout-live-reference :is(.coach-live-v79,.client-live-v79) .live-set.confirmed .live-set-number))",
+    ":where(:not(.fit-lime-shell.workout-live-reference :is(.coach-live-v79,.client-live-v79) .live-set.confirmed .live-set-confirm))",
+    ":where(:not(.fit-lime-shell.workout-live-reference :is(.coach-live-v79,.client-live-v79) .live-set.confirmed .live-set-input))",
+    ":where(:not(.fit-lime-shell.workout-live-reference :is(.coach-live-v79,.client-live-v79) .live-set.confirmed .live-set-rpe))",
+    ":where(:not(.fit-lime-shell.workout-live-reference :is(.coach-live-v79,.client-live-v79) .live-set.confirmed .live-set-check.done))",
+    ":where(:not(.fit-lime-shell.workout-live-reference :is(.coach-live-v79,.client-live-v79) .live-set-save-feedback .save-status))",
+    ":where(:not(.fit-lime-shell.workout-live-reference :is(.coach-live-v79,.client-live-v79) .live-set.invalid > .live-set-grid))",
+    ":where(:not(.fit-lime-shell.workout-live-reference :is(.coach-live-v79,.client-live-v79) .live-set-validation))"
+  ]
+}
 
 // MC3.2 tests CSS ownership, separately from the existing input/gesture tests.
 // Themes exercise different tokens, densities different geometry, metric kinds
@@ -69,63 +176,34 @@ export function limeLiveSetSkinCases() {
     }
     await page.evaluate(() => new Promise<void>(done => requestAnimationFrame(() => requestAnimationFrame(() => done()))))
     if (sample.kind === 'strength' && sample.lime && sample.width !== 375) await page.screenshot({ path: info.outputPath('set-skin.png'), animations: 'disabled' })
-    const before = await root.evaluate(element => {
-      const props = ['display', 'position', 'color', 'background-color', 'font-family', 'font-size', 'font-weight', 'line-height', 'width', 'height', 'min-width', 'min-height', 'gap', 'row-gap', 'column-gap', 'box-shadow', 'outline-width', 'outline-style', 'outline-color', 'border-top-width', 'border-top-style', 'border-top-color', 'border-left-width', 'border-left-color', 'border-radius', 'margin-top', 'margin-bottom', 'padding-top', 'padding-right', 'padding-bottom', 'padding-left', 'overflow-x', 'overflow-y', 'text-overflow', 'white-space', 'cursor', 'align-items', 'justify-content', 'grid-template-columns']
+    const capture = () => root.evaluate(element => {
+      const props = ['display', 'position', 'color', 'background-color', 'font-family', 'font-size', 'font-weight', 'line-height', 'width', 'height', 'min-width', 'min-height', 'gap', 'row-gap', 'column-gap', 'box-shadow', 'outline-width', 'outline-style', 'outline-color', 'border-top-width', 'border-top-style', 'border-top-color', 'border-left-width', 'border-left-color', 'border-radius', 'margin-top', 'margin-bottom', 'padding-top', 'padding-right', 'padding-bottom', 'padding-left', 'overflow-x', 'overflow-y', 'text-overflow', 'white-space', 'cursor', 'align-items', 'justify-content', 'grid-template-columns', 'border-right-width', 'border-right-style', 'border-right-color', 'border-bottom-width', 'border-bottom-style', 'border-bottom-color', 'border-left-style', 'margin-right', 'margin-left']
       return Array.from(element.querySelectorAll('.live-set-table, .workout-set-table-head, form[data-live-set-id], form[data-live-set-id] *')).map(node => {
         const css = getComputedStyle(node), r = node.getBoundingClientRect()
         return { tag: node.tagName, class: node.getAttribute('class') || '', style: Object.fromEntries(props.map(p => [p, css.getPropertyValue(p)])), rect: [r.x, r.y, r.width, r.height].map(v => Math.round(v * 100) / 100) }
       })
     })
-    const result = await page.evaluate(() => {
-      const changed: [CSSStyleRule, string][] = []
-      const visit = (rules: CSSRuleList) => {
-        for (const rule of Array.from(rules)) {
-          if (rule instanceof CSSStyleRule && /^\.live-identity\b/.test(rule.selectorText) && /\.(?:workout-set-table(?:-head)?|live-set-(?:table|grid|number|input|rpe|confirm|check|save|save-feedback|validation))(?![\w-])/.test(rule.selectorText)) {
-            changed.push([rule, rule.style.cssText])
-          }
-          if ('cssRules' in rule) visit((rule as CSSGroupingRule).cssRules)
-        }
-      }
-      for (const sheet of Array.from(document.styleSheets)) visit(sheet.cssRules)
-      const legacyMatches = changed.every(([rule]) => {
-        let original = rule.selectorText
-        while (original.includes(':where(')) {
-          const start = original.indexOf(':where(')
-          let end = start + 7, depth = 1
-          while (depth && end < original.length) { if (original[end] === '(') depth++; if (original[end] === ')') depth--; end++ }
-          original = original.slice(0, start) + original.slice(end)
-        }
-        const retained = Array.from(document.querySelectorAll(rule.selectorText))
-        const previous = Array.from(document.querySelectorAll(original))
-        return retained.length === previous.length && retained.every((node, index) => node === previous[index])
-      })
-      const applied = changed.filter(([rule]) => document.querySelector(rule.selectorText))
-      for (const [rule] of applied) rule.style.setProperty('--mc32-legacy-set-probe', 'legacy')
-      const inherited = Array.from(document.querySelectorAll('.live-workout-page form[data-live-set-id], .live-workout-page form[data-live-set-id] *'))
-        .filter(node => getComputedStyle(node).getPropertyValue('--mc32-legacy-set-probe').trim() === 'legacy').length
-      // Do not rewrite unrelated CSSOM entries: it can itself invalidate native
-      // focus painting. Only rules with actual consumers need ablation/restoring.
-      for (const [rule] of applied) rule.style.cssText = ''
-      return { rules: changed.length, inherited, legacyMatches, matches: applied.map(([r]) => r.selectorText), restore: applied.map(([r, s]) => ({ selector: r.selectorText, text: s })) }
-    })
-    await page.evaluate(() => new Promise<void>(done => requestAnimationFrame(() => requestAnimationFrame(() => done()))))
-    const after = await root.evaluate((element, properties) => Array.from(element.querySelectorAll('.live-set-table, .workout-set-table-head, form[data-live-set-id], form[data-live-set-id] *')).map(node => {
-      const css = getComputedStyle(node), r = node.getBoundingClientRect()
-      return { style: Object.fromEntries(properties.map(p => [p, css.getPropertyValue(p)])), rect: [r.x, r.y, r.width, r.height].map(v => Math.round(v * 100) / 100) }
-    }), Object.keys(before[0]!.style))
+    const before=await capture()
+    const ablation=await page.evaluateHandle(ablateLiveSkinBranches,{...liveSetManifest,guards:[editorMigrationGuard,...liveSetManifest.guards],owners:editorOwnerSelectors,ownerScope:':where('+editorOwnerFilter+')',targets:".live-workout-page form[data-live-set-id],.live-workout-page form[data-live-set-id] *"})
+    const result=await ablation.evaluate(value=>({rules:value.rules,families:value.families,paintFamilies:value.paintFamilies,matches:value.matches,inherited:value.inherited,legacyMatches:value.legacyMatches,classifierChecks:value.classifierChecks,selectedPositiveOwners:value.selectedPositiveOwners}))
+    let after:typeof before=[]
+    let restoration:ReturnType<typeof restoreLiveSkinBranches>
+    try {
+      await page.evaluate(()=>new Promise<void>(resolve=>requestAnimationFrame(()=>requestAnimationFrame(()=>resolve()))))
+      after=await capture()
+    }finally{restoration=await ablation.evaluate(restoreLiveSkinBranches);await ablation.dispose()}
+    expect(restoration).toEqual({cssomRoundtrip:true,styleObjectsUnchanged:true,sheetsUnchanged:true})
     expect(after).toHaveLength(before.length)
     const differences = before.flatMap((a, i) => {
       const b = after[i]!, props = Object.keys(a.style).filter(p => a.style[p] !== b.style[p])
       return props.length || JSON.stringify(a.rect) !== JSON.stringify(b.rect) ? [{ tag: a.tag, class: a.class, changes: Object.fromEntries(props.map(p => [p, [a.style[p], b.style[p]]])), rect: JSON.stringify(a.rect) !== JSON.stringify(b.rect) ? [a.rect, b.rect] : undefined }] : []
     })
-    await page.evaluate(restore => {
-      let index = 0
-      const visit = (rules: CSSRuleList) => { for (const rule of Array.from(rules)) { if (rule instanceof CSSStyleRule && rule.selectorText === restore[index]?.selector) { rule.style.cssText = restore[index]!.text; index++ } if ('cssRules' in rule) visit((rule as CSSGroupingRule).cssRules) } }
-      for (const sheet of Array.from(document.styleSheets)) visit(sheet.cssRules)
-    }, result.restore)
-    await writeFile(info.outputPath('set-skin.json'), JSON.stringify({ sample, before, ...result, differences }, null, 2))
-    expect(result.rules).toBe(32)
-    if (sample.lime) { expect(result.matches).toEqual([]); expect(result.inherited).toBe(0); expect(differences).toEqual([]) }
-    else { expect(result.inherited).toBeGreaterThan(0); expect(result.legacyMatches).toBe(true); expect(differences.length).toBeGreaterThan(0) }
+    await writeFile(info.outputPath('set-skin.json'), JSON.stringify({ sample, before, ...result, restoration, differences }, null, 2))
+    expect(result.families).toEqual([...liveSetManifest.families].sort())
+    expect(result.paintFamilies).toEqual([...liveSetManifest.paintFamilies].sort())
+    expect(result.classifierChecks).toEqual({known:true,positiveRetained:true,unknownRetained:true,actualOwnersRetained:true})
+    expect(result.selectedPositiveOwners).toEqual([])
+    if (sample.lime) { expect(result.matches).toEqual([]); expect(result.inherited).toEqual([]); expect(differences).toEqual([]) }
+    else { expect(result.inherited.length).toBeGreaterThan(0); expect(result.legacyMatches).toBe(true); expect(differences.length).toBeGreaterThan(0) }
   })
 }

@@ -333,3 +333,29 @@ standalone border-color:red / border1pxsolidred как paint; computed width0
 сохранять исходный red и причинный контроль. Screenshot не должен принудительно
 завершать motion/прятать caret без квалификации. Native scroll sampling не
 объявлять исправленным после viewport calibration. [Данные и границы — §232](design/CLIENT_REFERENCE_SCREENS_20261029.md#232-mc517--весь-остаток-оформления-результата-локальная-проверка).
+
+
+## MC518 / полный editor skin и нативное состояние — 11.11.2026
+
+Fixture обязан проходить тот же compiled pilot и реальные root markers, что
+потребитель. Статический source-winner не доказывает hover/focus/выбор/parse status:
+проверять authored paint по каждому свойству и реально достижимому состоянию.
+Синхронно исчезающий selected-кандидат не требует мёртвой CSS-копии.
+При read-only proof CSSOM/style identity остаются неизменными; не строить DOM
+mirror ради универсальной обратимости. У running clock proportional digits
+двигают геометрию даже на baseline: сохранять label/rect raw, проверять atomic
+paint/font/borders и ввод, не замораживать interval ради static PNG.
+Native lazy currentSrc не доказывает запрос; readiness связывать с пассивными
+image request events/eager/viewport. Нельзя скрывать media или scroll различия.
+[Метод, исходные reds и границы — §239](design/CLIENT_REFERENCE_SCREENS_20261029.md#239-mc518--весь-редактор-актуальная-база-и-локальная-приёмка).
+
+### MC518: семантические семьи CSS вместо числа оптимизированных правил
+
+Разделение mixed rules и добавление scoped owners меняют CSSRule grouping.
+Legacy QA должны сопоставлять точные selector branches, снимать только reviewed
+negative guards и сохранять positive/unknown :where. Физический count8→9 не
+исправляется слепым обновлением числа. Before/during native paint и legacy
+positive controls обязательны; CSSOM/rule/style/sheet identity восстанавливается.
+Новое условие post-ablation native repaint нельзя ошибочно объявлять прежним
+контрактом, если исходные тесты его не имели; var-border нельзя перепарсивать
+для успокоения probe. [Разбор](design/CLIENT_REFERENCE_SCREENS_20261029.md), §240.
