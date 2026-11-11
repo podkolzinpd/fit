@@ -4258,3 +4258,9 @@ Legacy flags/админправа/данные/native не переписыва�
 Первый targeted PG17/API31/31 PASS; ещё идут полный applicable check,
 расширенная приёмка шести разных synthetic accounts и новый exact-head CI.
 Открыто: PR не создан, production не менялся. PR2 и actual выпуск впереди.
+
+Квитанция PR1: полный frontend набор и политики/build PASS; API1640PASS
+(474 стандартных conditional skips без TEST_DATABASE_URL); отдельный реальный
+PG17 шести корпоративных suites83/83PASS безskip. Scope diff требует full
+frontend/browser; native ABI/version не менялись. Migration safety и docs PASS.
+Exact-head GitHub CI/применимый Android и actual публикация остаются гейтами.

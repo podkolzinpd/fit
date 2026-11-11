@@ -70,7 +70,7 @@ language sql stable security definer set search_path='' as $$
   select exists(select 1 from public.profiles p
     join public.trainers t on t.profile_id=p.id
     join public.corporate_trainers c on c.trainer_id=p.id and c.is_yandex
-    
+
     where (app_private.corporate_testing_enabled(p.id) or exists(select 1 from app_private.corporate_service_pilot_trainers legacy where legacy.profile_id=p.id and legacy.enabled)) and p.id=auth.uid() and p.account_role='trainer' and exists(
       select 1 from public.corporate_trainer_offices b join public.corporate_offices o on o.id=b.office_id
       where b.trainer_id=p.id and not o.archived))
@@ -81,14 +81,14 @@ language sql stable security definer set search_path='' as $$
   select exists(select 1 from public.profiles p
     join public.trainers t on t.profile_id=p.id
     join public.corporate_trainers c on c.trainer_id=p.id and c.is_yandex
-    
+
     where (app_private.corporate_testing_enabled(p.id) or exists(select 1 from app_private.corporate_personal_pilot_trainers legacy where legacy.profile_id=p.id and legacy.enabled)) and p.id=p_trainer and p.account_role='trainer')
 $$;
 
 create or replace function app_private.corporate_duty_allowed() returns boolean
 language sql stable security definer set search_path='' as $$
   select exists(select 1 from public.profiles p join public.corporate_trainers t on t.trainer_id=p.id and t.is_yandex
-    
+
     where (app_private.corporate_testing_enabled(p.id) or exists(select 1 from app_private.corporate_duty_pilot_trainers legacy where legacy.profile_id=p.id and legacy.enabled)) and p.id=auth.uid() and p.account_role='trainer')
 $$;
 
@@ -96,7 +96,7 @@ create or replace function app_private.corporate_profile_available(p_target uuid
 language sql stable security definer set search_path='' as $$
  select exists(select 1 from public.corporate_trainers c
  join public.profiles p on p.id=c.trainer_id and p.account_role='trainer'
- 
+
  where (app_private.corporate_testing_enabled(c.trainer_id) or exists(select 1 from app_private.corporate_profile_pilot_trainers legacy where legacy.profile_id=c.trainer_id and legacy.enabled)) and c.trainer_id=p_target and c.is_yandex)
 $$;
 
