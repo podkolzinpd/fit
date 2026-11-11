@@ -56,3 +56,15 @@ describe('private analytics explorer',()=>{
     await app.close()
   })
 })
+
+it('keeps referral reporting behind the existing session and allowlist boundary',async()=>{
+  const app=Fastify(),explore=vi.fn().mockResolvedValue({rows:[]})
+  registerPrivateAnalyticsRoutes(app,{bundle:vi.fn(),explore})
+  const request={method:'POST' as const,url:'/v1/private-analytics/explore',payload:{from:'2026-11-01',to:'2026-11-11',section:'referrals'}}
+  expect((await app.inject(request)).statusCode).toBe(401)
+  expect(explore).not.toHaveBeenCalled()
+  explore.mockRejectedValueOnce(Object.assign(new Error('denied'),{code:'PT403'}))
+  expect((await app.inject({...request,headers:{'x-fit-session':'synthetic'}})).statusCode).toBe(403)
+  expect(explore).toHaveBeenCalledWith(expect.anything(),expect.objectContaining({section:'referrals'}))
+  await app.close()
+})
