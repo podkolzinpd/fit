@@ -4296,3 +4296,12 @@ API/PG runtime совпадает с проверенным PR1; sourceCI/Androi
 production ещё впереди. PR1 первоначальный CI43085006165 идёт; подготовлен
 дополнительный PG-контракт сохранения прежних офисов84/84PASS, push ждёт
 завершения начатого CI, без его отмены.
+
+Итоговая локальная браузерная приёмка OPN: PR1 production-build51/51 и PR2
+production-build57/57, skip/flaky/retry0; реальные externalAPI/WS заблокированы.
+PR2 включает реальные native API/PG17 новые6cases и прежние профильные3cases.
+Результаты — приватные receipts p1/local-isolated/browser.json и
+p2/local-isolated/browser.json; это local production build, не публикация.
+Все runtime изменения первого этапа включены обычным merge e81b46ed,
+обе истории сохранены. Следом — завершение начатого CI первого head,
+один push окончательного PR1 и создание stacked PR2, без отмены runs.
