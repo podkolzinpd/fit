@@ -10733,3 +10733,60 @@ readonlypublictransport, realAPI/write continuations запрещены. Это 
 план доставки, не фактпубликации и не nativeinstall/physicalphone.
 Дальше: terminalcurrentCI→свежийmain/queue→exactheadmerge→mainCI→
 штатныеAPI/web/signedOTA→публичныйreadback иUI→сводка/владелецпринимает.
+
+
+## 252. MC519 — приоритетные пакеты опубликованы, main включён и проверен
+
+2026-11-12, Codex/OpenAI. Последнее поручение владельца: проверить публикации
+2110/2111, затем продолжить2103, разобратьCI и выпустить послеgreen в очереди.
+Сводка до выпуска/сохранностьмеханик обязательны, новогоразрешения не нужно.
+
+GitHub:2110 merged3d6d2769; изменения2111 опубликованы через replacement
+2113/28904e8c и последующийmain2114/87d77bf2. Прямое ancestry e6758c62
+(merge2111 в исходнуюstackedbranch) кmain расходится из-за squash, оно НЕ
+объявляется прямымmainmerge. Published87d содержит оба пакета по истории
+источников/составу исходников; CI43255754626, Android43255755235,
+API43260564229, web43260564457, signedOTA43263613462 SUCCESS.
+ПубличныйhealthAPI и проверенныйподписьюOTA source87d; HTMLfingerprint
+сохранён. Priorityhold снят только после этогоreadback. Чужиечаты/PR/CI
+не исправлялись и не сливались нами.
+
+Причина оставшегося CI-фейла: ранееFinance513 объединял независимые
+service/payment/correction иsingleattendance сценарии под одним30s
+whole-test budget. В опубликованномmain ужеесть2112/48feac61: ровно3
+строки выделяют singleAttendanceCabinets в самостоятельный test с прежним
+helper. Исходные assertions, UI-команды, coach→athlete путь, данные, все
+скриншоты и30s НЕ изменены/удалены. Повторное собственное исправление не
+создавалось; прежниеCSS/perf эксперименты не применяются. Таймаут не
+выдаётся за доказанный баг данных или задержку отдельного ввода.
+
+Опубликованныйmain87d включён в свою прежнюю рабочуюкопию merge6a3d3563,
+безконфликтов. Новые контракты/REGRESSION_LESSONS прочитаны поdiff; основные
+AGENTS/FIT_WORKFLOW прежние. Incoming native-RAF/reveal исправления и
+корпоративные права/миграции сохраняются побайтно main. Sourceproof87d:
+1881protectednonCSS,1879неизменны,2разрешённыхCIфайла;25720globalCSS
+records/order ипрежнийLime suffix exact; runtimeCSS hashes прежние4fd.
+Ни DOM/обработчики/данные/флаги/роль/механики не изменены нашей миграцией.
+
+Проверено после интеграции: build/types/startup/fonts2/2, eslint,20unit
+(3связанныхфайла),79CI/workflow/scope/font/split tests. Управляемый прогон
+fit-storage run20261112-212108-c3649bc4:226/226 browsercases в Chromium
+иWebKit,0retry/skip/flaky,245.510s,251801743bytes; резерв2GiB освобождён,
+принятыйrun закреплёнpin. Это38library +финансы +клавиатура/ввод/свайпы/
+переходыLive, включая свежий native-frame контракт обеимролям.
+Строгий сравнитель:38samples/190states,0native differences поstyles,
+geometry,focus,scroll,полям/selection/переданнымданным; rawPNG177/190exact.
+Остальные13 сохраняют прежние категории generatedcode/nativeSelect/JPEG,
+безмасок и безутверждения полнойpixel-parity. Прежние316browser+78unit
+результаты исторические;226 — отдельный новый integration-run, не ихсумма.
+
+Новаяработа соблюдает storagepolicy: собственный checkout зарегистрирован
+под стабильнойзадачейfit-monochrome-cleanup, безновойкопии; перед прогоном
+проверено110GB свободных при20GiBheadroom. Старыеартефакты переиспользуются
+по прежнимпутям, новаяJSONдиагностика компактная без потери raw-полей.
+
+Открыто: новыйполный CI итоговогоhead и доставка; physicaliPhone/native
+keyboard/install и5extraWebKitnativebackend по-прежнему не проверены.
+Финансовыйreturnfilterflaky/InBodyretry изстарыхCI не объявляются
+исправленными этойCSSмиграцией. Далее push→greenownCI→свежаяочередь/main→
+merge→официальнаяпубликация→readonlyUI/readback→приёмкавладельца.
