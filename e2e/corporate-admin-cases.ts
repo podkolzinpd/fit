@@ -400,7 +400,7 @@ test('corporate invitation guest, wrong role and terminal states do not claim au
   let status='active',claims=0
   const routes=async()=>{
   await page.route('**/v1/corporate-invitations/preview',r=>r.fulfill({json:{invitation:{status,expiresAt:'2099-01-01T00:00:00Z',offices:[{city:'Москва',name:'Тестовый офис'}]}}}))
-  await page.route('**/v1/corporate-invitations/claim',r=>{claims++;return r.fulfill({status:403,json:{error:'corporate_invitation_pilot_only'}})})
+  await page.route('**/v1/corporate-invitations/claim',r=>{claims++;return r.fulfill({status:403,json:{error:'corporate_trainer_required'}})})
   }
   await routes()
   const url=nativeAiUrl(`/corporate-invite#token=${token}`)
@@ -430,7 +430,7 @@ test('corporate invitation guest, wrong role and terminal states do not claim au
   await page.goto('about:blank')
   await page.goto(url)
   await page.getByRole('button',{name:'Присоединиться к кабинету Яндекса'}).click()
-  await expect(page.getByRole('alert')).toContainText('только выбранным тестовым аккаунтам')
+  await expect(page.getByRole('alert')).toContainText('Откройте приглашение из аккаунта тренера.')
   for(const value of ['revoked','expired']){
     status=value
     await page.goto('about:blank')

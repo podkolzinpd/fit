@@ -14,6 +14,8 @@ export interface CorporateTrainer {
   photoUrl?: string | null
   photoUnavailable?: boolean
   profileEditingAvailable?: boolean
+  testingEnabled?: boolean
+  testingVersion?: number
   isYandex: boolean
   officeIds: string[]
   version: number

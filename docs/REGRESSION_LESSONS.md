@@ -203,6 +203,24 @@ running/pending layout transitions. Отмена ручным фокусом д�
 ослаблением bounds. Red/green и реальный CI trace —
 [Live112](design/CLIENT_REFERENCE_SCREENS_20261029.md#итерация-112--2026-11-03--codex--openai).
 
+### Проверка настоящих кадров (12.11.2026)
+
+`page.clock.setFixedTime` устанавливает также timer-based RAF. В проверке
+native smooth scroll это давало несколько «стабильных» отсчётов между настоящими
+кадрами и расхождение с `document.timeline.currentTime` до90ms. Для такого
+сценария фиксировать только Date, оставляя RAF/performance/timers браузеру;
+проверять совпадение RAF timestamp с CSS timeline. Сохранить прежние проверки
+плавности, фокуса, bounds, DOM, фактов и стандартные таймауты. Диагностика и
+квитанции — [кабинет Яндекса,119](design/CORPORATE_ADMIN_20261027.md#итерация119--2026-11-12--codex--openai--native-live-frame-clock).
+
+900ms wall-clock guard также отменял reveal между вторым и третьим настоящими
+стабильными кадрами на загруженном renderer:917ms/stable1 и912ms/stable2,
+при тех же geometry успешный третий кадр приходил на972–1002ms. Ограничивать
+работу числом rendered frames, а отмену native scroll отсчитывать от его запроса;
+скрытие страницы отменяет pending reveal. В тесте окно1600ms начинается с click,
+наблюдатель сохраняется до bounds-check и ловит поздний вызов вне окна;
+плавность/focus/данные и30s не ослабляются. [Причина и red/green120](design/CORPORATE_ADMIN_20261027.md#итерация120--2026-11-12--codex--openai--live-render-frame-budget).
+
 
 ## RL-FINANCE-TWO-CONTROL-GRID-20261107
 

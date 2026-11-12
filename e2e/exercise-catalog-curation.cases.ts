@@ -3,13 +3,12 @@ import { expect, test } from './native-local-fixture'
 
 export function exerciseCatalogCurationCases() {
 for (const role of ['trainer', 'client'] as const) {
-  test(`curated catalog keeps ${role} variants, aliases and forms usable in light/dark`, async ({ page }, testInfo) => {
+for (const dark of [false, true]) {
+  test(`curated catalog keeps ${role} variants, aliases and forms usable in ${dark ? 'dark' : 'light'}`, async ({ page }, testInfo) => {
     await page.setViewportSize({ width: role === 'client' ? 430 : 390, height: 844 })
-    await page.goto('/auth')
     await nativeSignIn(page, `${role}@fit.local`)
     await expect(page).toHaveURL(role === 'client' ? /\/me$/ : /\/(today|clients)$/)
     const profile = role === 'client' ? '/me/settings' : '/profile/settings?section=appearance'
-    for (const dark of [false, true]) {
       const draftUrl = `/workouts/new?date=2026-09-${dark ? '17' : '16'}`
       await page.goto(profile)
       await page.getByRole('switch', { name: 'Тёмная тема' }).setChecked(dark)
@@ -68,7 +67,7 @@ for (const role of ['trainer', 'client'] as const) {
       await expect(dialog.locator('.picker-list')).toBeVisible()
       await expect(page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).resolves.toBe(true)
       await page.screenshot({ path: testInfo.outputPath(`${role}-${dark ? 'dark' : 'light'}-filters.png`) })
-    }
   })
+}
 }
 }
