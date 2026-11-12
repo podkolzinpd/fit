@@ -146,7 +146,7 @@ export function InvitationShareDialog({
     }}>
       <section className={`invitation-share-dialog${codeFirst ? ' invitation-visual-dialog' : ''}`} role="dialog" aria-modal="true" aria-labelledby="invitation-share-title">
         <header>
-          <div><p className="eyebrow">ПРИГЛАШЕНИЕ</p><h2 id="invitation-share-title">Ссылка готова</h2></div>
+          <div><p className="eyebrow">ПРИГЛАШЕНИЕ</p><h2 id="invitation-share-title">{codeFirst ? 'Приглашение готово' : 'Ссылка готова'}</h2></div>
           <button ref={closeRef} type="button" className="icon-button" aria-label="Закрыть" onClick={onClose}><CloseIcon /></button>
         </header>
         {codeFirst && codeSection}
@@ -156,7 +156,7 @@ export function InvitationShareDialog({
         <div className="invitation-share-actions">
           <button type="button" className="primary" disabled={shareState === 'busy'} onClick={() => void sendLink()}>{shareState === 'busy' ? 'Открываем…' : shareState === 'done' ? (canUseSystemShare ? 'Отправлено' : 'Текст скопирован') : 'Отправить ссылку'}</button>
           <button type="button" className="secondary" disabled={copyState === 'busy'} onClick={() => void copyLink()}>{copyState === 'done' ? 'Ссылка скопирована' : copyState === 'busy' ? 'Копируем…' : 'Скопировать ссылку'}</button>
-          <button type="button" className="secondary" aria-expanded={showQr} onClick={() => setShowQr((value) => { if (!value) trackGoal('invitation_qr_opened'); return !value })}>{showQr ? 'Скрыть QR-код' : 'Показать QR-код'}</button>
+          <button type="button" className="secondary" aria-expanded={showQr} onClick={() => setShowQr((value) => { if (!value) trackGoal('invitation_qr_opened'); return !value })}>{showQr ? 'Скрыть QR-код' : codeFirst ? 'Открыть QR-код' : 'Показать QR-код'}</button>
         </div>
         {(copyState === 'error' || shareState === 'error') && <p className="error" role="alert">Не удалось выполнить действие. Попробуйте ещё раз.</p>}
 

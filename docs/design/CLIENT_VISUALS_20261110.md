@@ -76,3 +76,62 @@ auth1/4 также обнаружил изменение outline rest-time-wheel
 Логи сохранены локально. Слепой повтор не запускался; новый head требует full CI.
 Открыто: окончательные browser сценарии, актуализация main, full CI и выпуск.
 Дальше: завершить проверки каждого PR, штатно пройти очередь GitHub и приёмку.
+
+
+## CV401–403 — исправление полноты визуалов, 11.11.2026
+
+Владелец разрешил доделать визуалы, проверить и выпустить без изменения механики.
+CV401: возраст/рост вертикально, компактная текстовая цель, плоские поля и кнопки;
+существующие пол/общая заметка/личные настройки сохранены, поля не удаляются.
+CV402: тренерские подписи «Укажите имя клиента», «Имя клиента», «Далее»,
+«Приглашение готово», «Открыть QR-код» по экспорту; callbacks/operationId прежние.
+CV403: отдельный анализ структурированной цели до сохранения, без реализации.
+Смена крестика на стрелку в приглашении отклонена: текущая кнопка закрывает,
+а не возвращает предыдущий шаг. Сохраняем честную семантику и действие закрытия.
+Пол/прочие отсутствующие в макете действующие поля сохраняются по поручению.
+Не считаем текстовую цель структурированной; этот разрыв остаётся явно открытым.
+
+Безопасный вариант для цели: сначала сохранить карточку существующей командой,
+затем открыть существующий редактор цели с этапами. Ошибка цели не должна
+повторно создавать клиента. Для ввода до сохранения нужен отдельный черновик,
+который хранит весь набор этапов/критериев и известные ID после каждого успеха;
+повтор неизвестного результата создания клиента запрещён без reconciliation.
+Это отдельная механика, не часть визуального выпуска. Рекомендуется первый
+вариант с явным действием «Сохранить клиента и настроить цель», после согласования.
+Проверки/фактический выпуск CV401–402 пока впереди.
+
+CV401–402 local: typecheck/lint/build/startup/docs/diff passed;45 unit/component tests;20 Chromium/WebKit scenarios25.7s,0retry. Form360/ready390WebKitPNG просмотрены. Первыйbrowserrun16pass/4fail из-за substring-селектора имени (совпадал с заголовком); заменён точным именем, проверки команд/ошибок/повтора/QR/отзыва сохранены. SourceCI и выпуск впереди.
+
+CV401 уточнение: микрофон общей заметки в заголовке через прежний compactVoice; handlers/source/undo сохраняются.53unit5filespassed;20browser1.2m0retry;PNGformWebKitпросмотрен. TSC выявил route-string вместоboolean в prop, исправлено Boolean(fitLimeBack); build/startuppassed. Новая голова требует полногоCI.
+
+### PR2105 — CI diagnosis, 12.11.2026
+
+Source d80bb85b CI43085177021 attempts1/2 failed only finance WebKit visual1
+and its aggregate. The combined finance readability case exhausted its shared
+30-second deadline at different late steps (resize, save, navigation, screenshot).
+All original logs remain in outputs/figma-client-audit-20261110 outside Git.
+No third blind rerun: split independent receipt/payment-entry/attendance fixtures
+into three tests. Every assertion, viewport and screenshot remains; timeout,
+retries and strict-flaky gates are unchanged. Application finance logic unchanged.
+WebKit isolated synthetic acceptance: 3/3, 12.6s, no retries (5.0/2.2/4.0s).
+ESLint and diff checks passed. Main8be75f05 included by ordinary merge, preserving
+referral migration and existing contracts. New source requires full fresh CI.
+Goal/subgoal-before-client-save remains proposal only and is excluded.
+
+Partition inventory follow-up: source c60 CI repository-quality correctly caught
+742→744 full and156→158 scoped cases after the split. Updated exact counts and
+added explicit presence checks for both extracted flows; union/disjoint checks
+remain unchanged. Local partition8/8, infrastructure policy483/483 and hosting205/205
+passed. Initial restricted local policy run could not bind127.0.0.1; approved local
+rerun passed without assertion changes. No CI runtime configuration changed.
+
+### Интеграция после выпуска2103, 12.11
+
+Main71f54fc2 включён обычным merge. За время ожидания PR2112 уже опубликовал
+исправление общего finance timeout: singleAttendanceCabinets выделен отдельно,
+полный743/scoped157 inventory проверен. Два конфликта объединены выбором
+точной принятой main-версии finance cases и partition guard. Наше дополнительное
+разделение payment-entry больше не требуется: исходные проверки остаются в
+принятом большом case, ни один assertion/viewport/скриншот не удалён. Собственные
+промежуточные c60/dc82 и их диагностика сохранены в истории; новый diff не содержит
+finance/CI исправлений. Визуалы CV401–402 и запрет изменения goal механики сохранены.

@@ -271,7 +271,7 @@ function ClientForm({
         {createMode === 'trainer' && <Controller
           control={form.control}
           name="note"
-          render={({ field }) => <VoiceNoteField name={field.name} source="client_form" label="Общий комментарий" value={field.value ?? ''} onValueChange={field.onChange} />}
+          render={({ field }) => <VoiceNoteField name={field.name} source="client_form" compactVoice={Boolean(fitLimeBack)} label="Общий комментарий" value={field.value ?? ''} onValueChange={field.onChange} />}
         />}
       </section>
       {createMode === 'self' && athleteSportProfile.supportsSportInterests && <section className="client-form-section athlete-sport-edit">

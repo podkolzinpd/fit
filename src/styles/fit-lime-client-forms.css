@@ -227,3 +227,37 @@
 .phone-frame.fit-lime-shell .invitation-visual-dialog .invitation-code-fallback > button { display: grid; place-items: center; width: 44px; min-height: 44px; padding: 0; align-self: end; border: 0; background: transparent; }
 .phone-frame.fit-lime-shell .invitation-visual-dialog .invitation-code-fallback > button svg { width: 24px; height: 24px; }
 .phone-frame.fit-lime-shell .invitation-visual-dialog .invitation-share-expiry { margin: 0; text-align: center; font-size: 12px; line-height: 18px; }
+
+/* CV401: reference spacing without changing fields or save commands. */
+.phone-frame.fit-lime-shell.trainer-client-form-identity .client-visual-form .client-form-section > .split {
+  display: flex; flex-direction: column; gap: 16px;
+}
+.phone-frame.fit-lime-shell.trainer-client-form-identity .client-visual-form .client-form-section { gap: 16px; }
+.phone-frame.fit-lime-shell.trainer-client-form-identity .client-visual-form .page-back,
+.phone-frame.fit-lime-shell .invitation-visual-dialog > header > .icon-button {
+  width: 44px; height: 44px; padding: 10px; border: 0; background: transparent; box-shadow: none;
+}
+.phone-frame.fit-lime-shell.trainer-client-form-identity .client-visual-form select {
+  min-height: 44px; padding-inline: 0; border-radius: 0; border-width: 0 0 1px; background-color: transparent;
+}
+.phone-frame.fit-lime-shell.trainer-client-form-identity .client-visual-form textarea[name="goal"] {
+  min-height: 64px; border: 0; border-bottom: 1px solid var(--lime-divider); border-radius: 0; background: transparent; padding-inline: 0;
+}
+.phone-frame.fit-lime-shell.trainer-client-form-identity .client-visual-form input[type="number"] { appearance: textfield; }
+.phone-frame.fit-lime-shell.trainer-client-form-identity .client-visual-form input::-webkit-inner-spin-button,
+.phone-frame.fit-lime-shell.trainer-client-form-identity .client-visual-form input::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+.phone-frame.fit-lime-shell .invitation-visual-dialog .invitation-revoke {
+  border: 0; background: color-mix(in srgb, var(--warning-fg) 16%, transparent);
+}
+
+/* Keep the existing voice controller; only its placement changes. */
+.phone-frame.fit-lime-shell.trainer-client-form-identity .client-visual-form .voice-note-field {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center;
+}
+.phone-frame.fit-lime-shell.trainer-client-form-identity .client-visual-form .voice-note-field > label { grid-column: 1; grid-row: 1; }
+.phone-frame.fit-lime-shell.trainer-client-form-identity .client-visual-form .voice-note-field > textarea { grid-column: 1 / -1; grid-row: 2; }
+.phone-frame.fit-lime-shell.trainer-client-form-identity .client-visual-form .voice-note-field > .voice-input-icon { display: contents; }
+.phone-frame.fit-lime-shell.trainer-client-form-identity .client-visual-form .voice-note-field > .voice-input-status { grid-column: 1 / -1; }
+
+.phone-frame.fit-lime-shell.trainer-client-form-identity .client-visual-form .voice-note-field > .voice-input-icon > button { grid-column: 2; grid-row: 1; }
+.phone-frame.fit-lime-shell.trainer-client-form-identity .client-visual-form .voice-note-field > .voice-input-icon > .voice-input-status { grid-column: 1 / -1; }
