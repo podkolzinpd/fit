@@ -4422,7 +4422,17 @@ for (const sample of [
   ...(['group-member', 'group-round', 'group-single', 'single-group', 'group-group'] as const).flatMap(shape =>
     (['client', 'trainer'] as const).flatMap(role => (['original', 'compact'] as const).map(density => ({ role, reduced: false, shape, density })))),
 ] as const) test(`Live transition reveals next exercise without stealing input ${sample.role} reduced-${sample.reduced} ${sample.shape} ${sample.density}`, async ({ page }, info) => {
-  await page.clock.setFixedTime(new Date('2026-11-03T09:00:00Z'))
+  // This case measures native CSS/smooth-scroll frames. Playwright's clock also
+  // replaces RAF with timers, which can report several stable samples between
+  // actual rendering frames. Freeze the domain date only; keep native RAF/time.
+  await page.addInitScript(() => {
+    const NativeDate = Date, fixed = NativeDate.parse('2026-11-03T09:00:00Z')
+    window.Date = new Proxy(NativeDate, {
+      construct: (target, args, newTarget) => Reflect.construct(target, args.length ? args : [fixed], newTarget) as Date,
+      apply: () => new NativeDate(fixed).toString(),
+      get: (target, key, receiver) => key === 'now' ? () => fixed : Reflect.get(target, key, receiver) as unknown,
+    })
+  })
   await page.emulateMedia({ reducedMotion: sample.reduced ? 'reduce' : 'no-preference' })
   const id = sample.role === 'client' ? pilotId : 'c0ac0000-6010-4000-8000-000000000001'
   await page.addInitScript(({ id, density }) => {
@@ -4464,11 +4474,11 @@ for (const sample of [
   await button.scrollIntoViewIfNeeded()
   const handle = await row.getByLabel('Фактический вес', { exact: true }).elementHandle()
   const next = page.locator(`[data-live-set-id="${nextId}"]`)
-  const measurements = page.evaluate(setId => new Promise<{ frames: Array<{ t: number; scroll: number }>; calls: ScrollToOptions[] }>(resolve => {
+  const measurements = page.evaluate(setId => new Promise<{ frames: Array<{ t: number; animationTime: number; scroll: number }>; calls: ScrollToOptions[] }>(resolve => {
     const content = document.querySelector<HTMLElement>('.content')!
     const target = document.querySelector<HTMLElement>(`[data-live-set-id="${setId}"]`)!
     const original = content.scrollTo.bind(content)
-    const frames: Array<{ t: number; scroll: number; targetTop: number; targetBottom: number; contentTargetTop: number; contentHeight: number; clockHeight: number; layoutTransitions: string[] }> = [], calls: Array<ScrollToOptions & { t: number }> = []
+    const frames: Array<{ t: number; animationTime: number; scroll: number; targetTop: number; targetBottom: number; contentTargetTop: number; contentHeight: number; clockHeight: number; layoutTransitions: string[] }> = [], calls: Array<ScrollToOptions & { t: number }> = []
     const start = performance.now()
     content.scrollTo = function (options: ScrollToOptions | number = {}, y?: number) {
       if (typeof options === 'number') return original(options, y ?? 0)
@@ -4478,7 +4488,7 @@ for (const sample of [
     function sampleFrame(t: number) {
       const bounds = target.getBoundingClientRect()
       const animations = content.getAnimations?.({ subtree: true }) ?? []
-      frames.push({ t, scroll: content.scrollTop, targetTop: bounds.top, targetBottom: bounds.bottom,
+      frames.push({ t, animationTime: Number(document.timeline.currentTime), scroll: content.scrollTop, targetTop: bounds.top, targetBottom: bounds.bottom,
         contentTargetTop: bounds.top + content.scrollTop, contentHeight: content.scrollHeight,
         clockHeight: document.querySelector('.coach-v79-large-clock')?.getBoundingClientRect().height ?? 0,
         layoutTransitions: animations.filter(a => a.playState === 'running' || a.pending)
@@ -4493,6 +4503,9 @@ for (const sample of [
   const trace = await measurements
   await writeFile(info.outputPath('live-handoff-frames.json'), JSON.stringify(trace, null, 2))
   await info.attach('live-handoff-frames', { body: JSON.stringify(trace), contentType: 'application/json' })
+  // Each sample must belong to a real rendering frame, not a clock timer tick.
+  expect(trace.frames.length).toBeGreaterThan(1)
+  for (const frame of trace.frames) expect(Math.abs(frame.t - frame.animationTime)).toBeLessThanOrEqual(1)
   expect(trace.calls.length).toBeLessThanOrEqual(1)
   if (Math.abs(trace.frames.at(-1)!.scroll - trace.frames[0]!.scroll) > 100) {
     expect(trace.calls).toHaveLength(1)
