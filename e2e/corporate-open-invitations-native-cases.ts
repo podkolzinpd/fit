@@ -60,9 +60,9 @@ export function registerCorporateOpenNativeCases(){
   await expect(page.getByRole('form',{name:/Настройки/})).toHaveCount(0)
   await nativeSignIn(page,'trainer');expect(await(await nativeRequest(page,'/v1/corporate-duties/access')).json()).toMatchObject({allowed:true})
  })
- test('visual recipient form and pending account fit narrow and desktop screens in both themes',async({page},info)=>{
-  for(const theme of ['light','dark'])for(const width of [320,1440]){
-   await page.setViewportSize({width,height:900});await page.goto('/admin');await page.evaluate(theme=>localStorage.setItem('fit.appTheme',theme),theme);await page.reload()
+ for(const theme of ['light','dark'])for(const width of [320,1440]){
+  test(`visual recipient form and pending account fit ${theme} ${width}`,async({page},info)=>{
+   await page.setViewportSize({width,height:900});await page.evaluate(theme=>localStorage.setItem('fit.appTheme',theme),theme);await page.goto('/admin')
    await page.getByRole('button',{name:'Приглашения',exact:true}).click();await page.getByRole('button',{name:'Пригласить тренера',exact:true}).click()
    await page.getByLabel('Почта тренера',{exact:true}).fill('long.contact.address@example.test')
    const input=page.getByLabel('Почта тренера',{exact:true});await expect(input).toBeVisible()
@@ -70,7 +70,7 @@ export function registerCorporateOpenNativeCases(){
    expect((await input.boundingBox())!.width).toBeGreaterThan(150)
    await page.getByRole('button',{name:'Создать приглашение',exact:true}).scrollIntoViewIfNeeded();await expect(page.getByRole('button',{name:'Создать приглашение',exact:true})).toBeVisible()
    await page.screenshot({path:info.outputPath(`recipient-form-${theme}-${width}.png`),fullPage:true})
-  }
- })
+  })
+ }
 
 }
