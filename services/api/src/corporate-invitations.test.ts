@@ -7,6 +7,8 @@ describe('corporate invitations HTTP boundaries',()=>{
  it('accepts bounded offices and opaque tokens, not links or raw metadata',()=>{
   expect(readCorporateInvitationCreate({id,officeIds:[id,id]})).toEqual({id,officeIds:[id]})
   for(const body of [null,{id,officeIds:[]},{id:'bad',officeIds:[id]},{id,officeIds:['bad']}])expect(readCorporateInvitationCreate(body)).toBeNull()
+  expect(readCorporateInvitationCreate({id,officeIds:[id],recipientEmail:' Synthetic@MAIL.RU '})).toMatchObject({recipientEmail:'synthetic@mail.ru'})
+  for(const recipientEmail of ['bad','a@b','a@b.c\nX: header','a'.repeat(250)+'@example.test',42]) expect(readCorporateInvitationCreate({id,officeIds:[id],recipientEmail})).toBeNull()
   expect(readCorporateInvitationToken({token})).toBe(token)
   expect(readCorporateInvitationToken({token:'https://example.test/invite'})).toBeNull()
  })
@@ -24,6 +26,9 @@ describe('corporate invitations HTTP boundaries',()=>{
   expect(store.preview).toHaveBeenCalledExactlyOnceWith(token)
   expect((await app.inject({method:'POST',url:`/v1/admin/invitations/${id}/approve`,headers,payload:{}})).statusCode).toBe(200)
   expect(store.decide).toHaveBeenCalledWith(expect.objectContaining({accessMode:'read_write'}),id,true)
+  expect((await app.inject({method:'POST',url:`/v1/admin/invitations/${id}/approve`,headers,payload:{enableTesting:true}})).statusCode).toBe(200)
+  expect(store.decide).toHaveBeenLastCalledWith(expect.objectContaining({accessMode:'read_write'}),id,true,true)
+  expect((await app.inject({method:'POST',url:`/v1/admin/invitations/${id}/revoke`,headers,payload:{enableTesting:true}})).statusCode).toBe(422)
   expect((await app.inject({method:'POST',url:'/v1/corporate-invitations/claim',headers,payload:{token}})).json()).toEqual({status:'claimed'})
   await app.close()
  })

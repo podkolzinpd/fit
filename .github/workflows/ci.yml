@@ -550,6 +550,7 @@ jobs:
             browser: webkit
         acceptance: ${{ fromJSON(needs.e2e-scope.outputs.lime_partitions) }}
     env:
+      PLAYWRIGHT_IMAGE: mcr.microsoft.com/playwright:v1.61.1-noble
       FIT_SCHEDULE_V2_VISUAL: '1'
       FIT_LIME_FONTS_REQUIRED: 'true'
       VITE_CLIENT_LIME_ENABLED: 'true'
@@ -575,20 +576,37 @@ jobs:
         run: node scripts/prepare-fit-lime-ci-fonts.mjs
         env:
           GH_TOKEN: ${{ github.token }}
-      # Azure's package mirror repeatedly exhausted this job's time budget.
-      # Keep the same signed Ubuntu suites/packages and Playwright version.
-      - name: Use the official Ubuntu archive for browser dependencies
-        run: |
-          for fit_ubuntu_source in /etc/apt/sources.list.d/ubuntu.sources /etc/apt/apt-mirrors.txt; do
-            if [ -f "$fit_ubuntu_source" ]; then
-              sudo sed -i 's|http://azure.archive.ubuntu.com/ubuntu|https://archive.ubuntu.com/ubuntu|g; s|https://azure.archive.ubuntu.com/ubuntu|https://archive.ubuntu.com/ubuntu|g' "$fit_ubuntu_source"
-            fi
-          done
-      - run: npx playwright install --with-deps ${{ matrix.engine.browser }}
+      # Reuse the same versioned runtime as the other browser lanes. It already
+      # contains both browsers and their system dependencies; no apt download.
+      - name: Pull pinned Playwright runtime
+        run: docker pull "$PLAYWRIGHT_IMAGE"
       # Each test owns its BrowserContext and page-scoped API mocks; there is
       # no shared database. Two workers shorten the suite on the same runner.
       - name: Run full release or scoped PR Fit Lime acceptance partition
-        run: node scripts/run-fit-lime-ci.mjs "$LIME_PROJECT" "$LIME_MODE" "$LIME_TAGS" "$LIME_LANE" "$LIME_SHARD"
+        run: |
+          docker run --rm --init --ipc=host --network host \
+            --env CI=true \
+            --env FIT_SCHEDULE_V2_VISUAL \
+            --env FIT_LIME_FONTS_REQUIRED \
+            --env VITE_CLIENT_LIME_ENABLED \
+            --env VITE_YANDEX_API_BASE_URL \
+            --env VITE_YANDEX_OAUTH_CLIENT_ID \
+            --env VITE_YANDEX_APP_SESSION_ENABLED \
+            --env VITE_YANDEX_MAIN_ROUTING_ENABLED \
+            --env VITE_YANDEX_ONLY_AUTH_ENABLED \
+            --env VITE_YANDEX_NATIVE_REGISTRATION_ENABLED \
+            --env VITE_ASSISTANT_NAV_ENABLED \
+            --env VITE_ASSISTANT_NAV_PILOT_USER_IDS \
+            --env VITE_ASSISTANT_PROGRAM_ENABLED \
+            --env LIME_PROJECT \
+            --env LIME_MODE \
+            --env LIME_TAGS \
+            --env LIME_LANE \
+            --env LIME_SHARD \
+            --volume "${{ github.workspace }}:/work" \
+            --workdir /work \
+            "$PLAYWRIGHT_IMAGE" \
+            sh -c 'node scripts/run-fit-lime-ci.mjs "$LIME_PROJECT" "$LIME_MODE" "$LIME_TAGS" "$LIME_LANE" "$LIME_SHARD"'
         env:
           LIME_PROJECT: ${{ matrix.engine.project }}
           LIME_MODE: ${{ needs.e2e-scope.outputs.lime_mode }}

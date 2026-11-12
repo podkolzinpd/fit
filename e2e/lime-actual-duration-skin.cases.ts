@@ -1,3 +1,4 @@
+import {libraryMigrationGuard} from './lime-library-skin.contract'
 import {editorMigrationGuard} from './lime-editor-skin.contract'
 import {resultMigrationGuard} from './lime-result-remainder-skin.contract'
 import {captureLimeErrorSemantics,expectLimeErrorSemantics} from './lime-error-semantics'
@@ -20,6 +21,7 @@ const detailOwner = ':where(.fit-lime-shell.workout-detail-history-identity) '
 // Only these complete, reviewed migration guards may be normalized. Positive
 // :where owners and any unrelated/unknown :where filters retain their identity.
 const durationMigrationGuards = [
+  libraryMigrationGuard,
   editorMigrationGuard,
   resultMigrationGuard,
   ':where(:not(.fit-client-lime :is(.workout-completion-highlight, .workout-completion-missing, .workout-completion-muscles-line), .fit-client-lime :is(.workout-completion-highlight, .workout-completion-missing, .workout-completion-muscles-line) *))',

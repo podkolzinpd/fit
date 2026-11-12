@@ -124,3 +124,14 @@ added explicit presence checks for both extracted flows; union/disjoint checks
 remain unchanged. Local partition8/8, infrastructure policy483/483 and hosting205/205
 passed. Initial restricted local policy run could not bind127.0.0.1; approved local
 rerun passed without assertion changes. No CI runtime configuration changed.
+
+### Интеграция после выпуска2103, 12.11
+
+Main71f54fc2 включён обычным merge. За время ожидания PR2112 уже опубликовал
+исправление общего finance timeout: singleAttendanceCabinets выделен отдельно,
+полный743/scoped157 inventory проверен. Два конфликта объединены выбором
+точной принятой main-версии finance cases и partition guard. Наше дополнительное
+разделение payment-entry больше не требуется: исходные проверки остаются в
+принятом большом case, ни один assertion/viewport/скриншот не удалён. Собственные
+промежуточные c60/dc82 и их диагностика сохранены в истории; новый diff не содержит
+finance/CI исправлений. Визуалы CV401–402 и запрет изменения goal механики сохранены.

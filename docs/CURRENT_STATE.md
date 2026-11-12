@@ -16,7 +16,7 @@ YAFIT-700: [Статусы тренера](design/COACH_WORKOUT_STATUS_DISPLAY_2
 31.10 — YAFIT-697: время быстрого старта обеим ролям, проведение пустой записи
 и «Не состоялась» тренеру. [План, проверки и выпуск](design/COACH_ATTENDANCE_AND_START_TIME_20261031.md).
 PR1906–1908 опубликованы db96685e; итог в YAFIT-697.
-MC518: редактор обеим ролям, PR2102; Live QA168 green, CI нового head. Выпуск после разрешения. [Итог](design/CLIENT_REFERENCE_SCREENS_20261029.md), §240.
+MC519/PR2103: main87d включён;226browser/190states/79CIguards passed. НовыйCI впереди; выпуск разрешён. [Журнал](design/CLIENT_REFERENCE_SCREENS_20261029.md), §242–252.
 30.10 — YAFIT-695 завершён: компактная история у тренера опубликована PR1892/cccecf35. [H101–H107, журнал и production-приёмка](https://st.yandex-team.ru/YAFIT-695).
 29.10 — YAFIT-673: полный список упражнений выбранного дня у тренера, записанные факты под названиями; обычный список/клиентский календарь прежние. План и статус выпуска: [каноническая запись](design/COACH_CALENDAR_FULL_EXERCISES_20261029.md). Локальные целевые/браузерные проверки пройдены, полный check/CI/production ещё гейты.
 Исходная база документа: main203f539d21fbc5cf79b1c930dc8467bbc8dc5c3b,28.10.2026; это не автоматически текущая production-сборка. Перед работой сверить main, нужный тикет и фактический выпуск.
@@ -32,7 +32,7 @@ P4/PR1882 опубликован наe5b5aa1d:213 файлов/health и public 
 P1–P4 завершены; итог — итерация26 канонического журнала и YAFIT-674.
 31.10 справочник заполнен:32 офиса добавлены,33/33 после reload; итерация27.
 02.11: [кабинет Яндекса](design/CORPORATE_ADMIN_20261027.md): PR1930/1937 опубликованы.
-SRV/ADM/CPT/DUT приняты; personal/DUT testON. TPA:2078 опубликован/принят4c68;2079 интегрирован main, новые проверки; profile pilotOFF; [журнал100](design/CORPORATE_ADMIN_20261027.md).
+SRV/ADM/CPT/DUT/TPA и OPN1 приняты. PR2114: Live race исправлен, local69+unit3221 PASS; CI/выпуск впереди. [Журнал120](design/CORPORATE_ADMIN_20261027.md).
 
 ## Точка продолжения
 [UX:4PR, проверки](design/WORKOUT_LIFECYCLE_UX_AUDIT_20261101.md).

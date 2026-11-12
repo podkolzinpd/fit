@@ -133,3 +133,53 @@ it('keeps manual focus cancellation while native smooth scrolling has not painte
   expect(s.frames.size).toBe(0)
   stop()
 })
+
+it('waits for a slow fold to finish instead of abandoning the next row between rendering frames', () => {
+  const s = scene()
+  let now = 0
+  vi.spyOn(performance, 'now').mockImplementation(() => now)
+  const fold = { transitionProperty: 'grid-template-rows', playState: 'running', pending: false }
+  Object.defineProperty(s.content, 'getAnimations', { value: () => [fold] })
+  const stop = revealLiveExercise(s.row, s.card, s.content, s.pinned)
+  s.step()
+  now = 1100; s.step()
+  expect(s.scroll).not.toHaveBeenCalled()
+  fold.playState = 'finished'
+  s.step(4)
+  expect(s.scroll).toHaveBeenCalledExactlyOnceWith({ top: 588, behavior: 'smooth' })
+  // The scroll's cancellation budget starts at the reveal, not before the fold.
+  now = 1900; s.step(4)
+  document.querySelector<HTMLInputElement>('#search')!.focus()
+  expect(s.scroll).toHaveBeenLastCalledWith({ top: 0, behavior: 'instant' })
+  expect(s.frames.size).toBe(0)
+  stop()
+})
+
+it('bounds an unsettled fold by rendered frames even when the wall clock has not advanced', () => {
+  const s = scene()
+  vi.spyOn(performance, 'now').mockReturnValue(0)
+  Object.defineProperty(s.content, 'getAnimations', { value: () => [
+    { transitionProperty: 'height', playState: 'running', pending: false },
+  ] })
+  const stop = revealLiveExercise(s.row, s.card, s.content, s.pinned)
+  s.step(240)
+  expect(s.scroll).not.toHaveBeenCalled()
+  expect(s.frames.size).toBe(0)
+  stop()
+})
+
+it('abandons a pending reveal when the page is hidden and does not restart it on return', () => {
+  const s = scene()
+  const stop = revealLiveExercise(s.row, s.card, s.content, s.pinned)
+  s.step(2)
+  const visibility = vi.spyOn(document, 'visibilityState', 'get').mockReturnValue('hidden')
+  document.dispatchEvent(new Event('visibilitychange'))
+  expect(s.frames.size).toBe(0)
+  const hiddenStop = revealLiveExercise(s.row, s.card, s.content, s.pinned)
+  expect(s.frames.size).toBe(0)
+  visibility.mockReturnValue('visible')
+  document.dispatchEvent(new Event('visibilitychange'))
+  s.step(4)
+  expect(s.scroll).not.toHaveBeenCalled()
+  hiddenStop(); stop()
+})

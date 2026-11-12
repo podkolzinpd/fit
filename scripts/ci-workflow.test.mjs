@@ -78,7 +78,8 @@ test('requires Fit Lime route checks in both engines without production secrets'
   assert.ok(job.indexOf('prepare-fit-lime-ci-fonts.mjs') < job.indexOf('run-fit-lime-ci.mjs'))
   assert.match(job, /project: mobile-chromium\n\s+browser: chromium/)
   assert.match(job, /project: lime-acceptance-webkit\n\s+browser: webkit/)
-  assert.match(job, /playwright install --with-deps \$\{\{ matrix\.engine\.browser \}\}/)
+  assert.match(job, /docker pull "\$PLAYWRIGHT_IMAGE"/)
+  assert.match(job, /timeout-minutes: 35/)
   assert.match(job, /node scripts\/run-fit-lime-ci\.mjs "\$LIME_PROJECT" "\$LIME_MODE" "\$LIME_TAGS"/)
   assert.match(job, /LIME_PROJECT: \$\{\{ matrix\.engine\.project \}\}/)
   assert.match(job, /LIME_MODE: \$\{\{ needs\.e2e-scope\.outputs\.lime_mode \}\}/)
@@ -92,46 +93,49 @@ test('requires Fit Lime route checks in both engines without production secrets'
   assert.match(workflow, /"\$FIT_LIME_RESULT" != "success"/)
 })
 
-test('Fit Lime archive replacement preserves suites, components and signing trust', () => {
-  const job = workflow.slice(workflow.indexOf('  e2e-fit-lime:\n'), workflow.indexOf('  e2e:\n'))
-  const expression = job.match(/sudo sed -i '([^']+)'/)?.[1]
-  assert.ok(expression)
-  assert.ok(job.indexOf('Use the official Ubuntu archive') < job.indexOf('playwright install --with-deps'))
-  for (const uri of ['http://azure.archive.ubuntu.com/ubuntu', 'https://azure.archive.ubuntu.com/ubuntu', 'https://archive.ubuntu.com/ubuntu', 'http://security.ubuntu.com/ubuntu']) {
-    const source = `Types: deb\nURIs: ${uri}\nSuites: noble noble-updates noble-backports\nComponents: main universe restricted multiverse\nSigned-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg\n`
-    // Execute the workflow's substitution without sudo, -i or system files.
-    const result = spawnSync('sed', ['-e', expression], { input: source, encoding: 'utf8' })
-    assert.equal(result.status, 0, result.stderr)
-    const expectedUri = uri.includes('azure.archive.ubuntu.com') ? 'https://archive.ubuntu.com/ubuntu' : uri
-    assert.equal(result.stdout, source.replace(`URIs: ${uri}`, `URIs: ${expectedUri}`))
-  }
+test('Fit Lime uses the matching preinstalled browser runtime without changing system archives', () => {
+  const job = workflow.slice(workflow.indexOf('  e2e-fit-lime:'), workflow.indexOf('  e2e:'))
+  const lock = JSON.parse(readFileSync(join(import.meta.dirname, '..', 'package-lock.json'), 'utf8'))
+  const version = lock.packages['node_modules/@playwright/test'].version
+  assert.ok(job.includes('PLAYWRIGHT_IMAGE: mcr.microsoft.com/playwright:v' + version + '-noble'))
+  assert.ok(job.indexOf('prepare-fit-lime-ci-fonts.mjs') < job.indexOf('docker pull'))
+  assert.ok(job.indexOf('docker pull') < job.indexOf('run-fit-lime-ci.mjs'))
+  assert.doesNotMatch(job, /playwright install|apt-get|\/etc\/apt\/|sudo sed|continue-on-error/)
 })
 
-test('Fit Lime updates the actual deb822 and mirror-list runner configurations', () => {
-  const job = workflow.slice(workflow.indexOf('  e2e-fit-lime:\n'), workflow.indexOf('  e2e:\n'))
-  const actual = inlineShell(job).find(script => script.includes('azure.archive.ubuntu.com'))
-  assert.ok(actual)
-  // Run the workflow shell against temporary files. The backup suffix makes
-  // sed portable on macOS/Linux; neither sudo nor system apt files are used.
-  const script = actual.replaceAll('/etc/apt/', '"$FIT_APT_TEST_ROOT"/').replace('sudo sed -i ', 'sed -i.bak ')
-  const sources = {
-    'sources.list.d/ubuntu.sources': 'Types: deb\nURIs: http://azure.archive.ubuntu.com/ubuntu\nSuites: noble noble-updates noble-security\nComponents: main universe\nSigned-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg\n',
-    'apt-mirrors.txt': 'http://azure.archive.ubuntu.com/ubuntu priority:1\nhttps://azure.archive.ubuntu.com/ubuntu priority:2\nhttps://archive.ubuntu.com/ubuntu\nhttp://security.ubuntu.com/ubuntu\n',
-  }
-  for (const present of [[], ['sources.list.d/ubuntu.sources'], ['apt-mirrors.txt'], Object.keys(sources)]) {
-    const directory = mkdtempSync(join(tmpdir(), 'fit-apt-archive-'))
-    try {
-      mkdirSync(join(directory, 'sources.list.d'))
-      for (const path of present) writeFileSync(join(directory, path), sources[path])
-      const result = spawnSync('bash', ['-eu', '-c', script], {
-        encoding: 'utf8', env: { ...process.env, FIT_APT_TEST_ROOT: directory },
-      })
-      assert.equal(result.status, 0, result.stderr)
-      for (const path of present) {
-        assert.equal(readFileSync(join(directory, path), 'utf8'), sources[path].replaceAll('http://azure.archive.ubuntu.com/ubuntu', 'https://archive.ubuntu.com/ubuntu').replaceAll('https://azure.archive.ubuntu.com/ubuntu', 'https://archive.ubuntu.com/ubuntu'))
+test('Fit Lime container forwards every lane input and propagates browser failures', () => {
+  const job = workflow.slice(workflow.indexOf('  e2e-fit-lime:'), workflow.indexOf('  e2e:'))
+  const script = inlineShell(job).find(value => value.includes('docker run'))
+  assert.ok(script)
+  const jobEnv = job.slice(job.indexOf('    env:\n'), job.indexOf('    steps:\n'))
+  const forwarded = [...jobEnv.matchAll(/^      ([A-Z0-9_]+):/gm)].map(match => match[1])
+    .filter(name => name !== 'PLAYWRIGHT_IMAGE')
+    .concat(['LIME_PROJECT', 'LIME_MODE', 'LIME_TAGS', 'LIME_LANE', 'LIME_SHARD'])
+  const env = Object.fromEntries(forwarded.map(name => [name, 'fixture-' + name]))
+  assert.doesNotMatch(script, /GH_TOKEN|GITHUB_TOKEN|--env-file|--privileged|\|\| true|--grep|--retries|--timeout|--max-failures/)
+  for (const project of ['mobile-chromium', 'lime-acceptance-webkit']) {
+    for (const [lane, shards] of [['behavior', ['1/1']], ['visual', ['1/4', '2/4', '3/4', '4/4']]]) {
+      for (const shard of shards) {
+        // Audit the actual shell's argument boundaries without launching Docker.
+        const result = spawnSync('bash', ['-eu', '-c', 'docker() { printf "%s\\0" "$@"; };\n' + script], {
+          encoding: 'utf8', env: { ...process.env, ...env, PLAYWRIGHT_IMAGE: 'fixture-image', LIME_PROJECT: project, LIME_LANE: lane, LIME_SHARD: shard },
+        })
+        assert.equal(result.status, 0, result.stderr)
+        const args = result.stdout.split('\0').slice(0, -1)
+        assert.deepEqual(args.slice(0, 6), ['run', '--rm', '--init', '--ipc=host', '--network', 'host'])
+        const passed = args.flatMap((value, index) => value === '--env' ? [args[index + 1]] : [])
+        assert.deepEqual(passed, ['CI=true', ...forwarded])
+        assert.ok(args.includes('fixture:/work'))
+        assert.deepEqual(args.slice(-6), ['--workdir', '/work', 'fixture-image', 'sh', '-c', 'node scripts/run-fit-lime-ci.mjs "$LIME_PROJECT" "$LIME_MODE" "$LIME_TAGS" "$LIME_LANE" "$LIME_SHARD"'])
       }
-    } finally { rmSync(directory, { recursive: true, force: true }) }
+    }
   }
+  const failure = spawnSync('bash', ['-eu', '-c', 'docker() { return 37; };\n' + script], {
+    encoding: 'utf8', env: { ...process.env, ...env, PLAYWRIGHT_IMAGE: 'fixture-image' },
+  })
+  assert.equal(failure.status, 37)
+  assert.match(job, /if: always\(\)[\s\S]*path: test-results\/lime-timings\.json/)
+  assert.match(job, /if: failure\(\)[\s\S]*path: test-results\//)
 })
 
 test('Fit Lime scope is computed from the real PR diff and trusted event without a bypass input', () => {

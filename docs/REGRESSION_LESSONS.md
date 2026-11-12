@@ -203,6 +203,24 @@ running/pending layout transitions. Отмена ручным фокусом д�
 ослаблением bounds. Red/green и реальный CI trace —
 [Live112](design/CLIENT_REFERENCE_SCREENS_20261029.md#итерация-112--2026-11-03--codex--openai).
 
+### Проверка настоящих кадров (12.11.2026)
+
+`page.clock.setFixedTime` устанавливает также timer-based RAF. В проверке
+native smooth scroll это давало несколько «стабильных» отсчётов между настоящими
+кадрами и расхождение с `document.timeline.currentTime` до90ms. Для такого
+сценария фиксировать только Date, оставляя RAF/performance/timers браузеру;
+проверять совпадение RAF timestamp с CSS timeline. Сохранить прежние проверки
+плавности, фокуса, bounds, DOM, фактов и стандартные таймауты. Диагностика и
+квитанции — [кабинет Яндекса,119](design/CORPORATE_ADMIN_20261027.md#итерация119--2026-11-12--codex--openai--native-live-frame-clock).
+
+900ms wall-clock guard также отменял reveal между вторым и третьим настоящими
+стабильными кадрами на загруженном renderer:917ms/stable1 и912ms/stable2,
+при тех же geometry успешный третий кадр приходил на972–1002ms. Ограничивать
+работу числом rendered frames, а отмену native scroll отсчитывать от его запроса;
+скрытие страницы отменяет pending reveal. В тесте окно1600ms начинается с click,
+наблюдатель сохраняется до bounds-check и ловит поздний вызов вне окна;
+плавность/focus/данные и30s не ослабляются. [Причина и red/green120](design/CORPORATE_ADMIN_20261027.md#итерация120--2026-11-12--codex--openai--live-render-frame-budget).
+
 
 ## RL-FINANCE-TWO-CONTROL-GRID-20261107
 
@@ -359,3 +377,15 @@ positive controls обязательны; CSSOM/rule/style/sheet identity вос
 Новое условие post-ablation native repaint нельзя ошибочно объявлять прежним
 контрактом, если исходные тесты его не имели; var-border нельзя перепарсивать
 для успокоения probe. [Разбор](design/CLIENT_REFERENCE_SCREENS_20261029.md), §240.
+
+
+### Нативная диагностика: успешный HTTP204 не обязательно даёт requestfinished
+
+MC519, 11.11.2026: изолированные actual-query/nativefetch воспроизводят в
+Chromium response204/oktrue, затем net::ERR_ABORTED, если пустой поток не
+читается. Реальный loopback HTTPserver даёт то же; чтение0bytes даёт finished.
+Это не доказательство сбоя удаления или deadline. Не менять приложение и
+не заменять204на200 ради paint-теста. Сохранять raw события; допустимая
+квалификация обязана связывать ТОТ ЖЕ Request с204 и проверять точный
+endpoint/method/count и успешное изменение UI/данных. Все другие requestfailed
+остаются ошибками. [Доказательства и узкая квалификация MC519](design/CLIENT_REFERENCE_SCREENS_20261029.md#244-mc519--полные-native-baseline-и-квалификация-http204).
