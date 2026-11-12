@@ -1,3 +1,4 @@
+import {libraryMigrationGuard} from './lime-library-skin.contract'
 import {editorMigrationGuard,editorOwnerFilter,editorOwnerSelectors} from './lime-editor-skin.contract'
 import { test, expect } from '@playwright/test'
 import { writeFile } from 'node:fs/promises'
@@ -159,7 +160,7 @@ export function limeLiveDurationSkinCases() {
     })
     const before = await capture()
     if (sample.lime && (sample.state === 'sheet' || sample.state === 'overdue')) await page.screenshot({ path: info.outputPath('duration-skin.png'), animations: 'disabled' })
-    const ablation=await page.evaluateHandle(ablateLiveSkinBranches,{...liveDurationManifest,guards:[editorMigrationGuard,...liveDurationManifest.guards],owners:editorOwnerSelectors,ownerScope:':where('+editorOwnerFilter+')',targets:".workout-duration-sheet,.workout-duration-sheet *"})
+    const ablation=await page.evaluateHandle(ablateLiveSkinBranches,{...liveDurationManifest,guards:[libraryMigrationGuard,editorMigrationGuard,...liveDurationManifest.guards],owners:editorOwnerSelectors,ownerScope:':where('+editorOwnerFilter+')',targets:".workout-duration-sheet,.workout-duration-sheet *"})
     const result=await ablation.evaluate(value=>({rules:value.rules,families:value.families,paintFamilies:value.paintFamilies,matches:value.matches,inherited:value.inherited,legacyMatches:value.legacyMatches,classifierChecks:value.classifierChecks,selectedPositiveOwners:value.selectedPositiveOwners}))
     let after:typeof before=[]
     let restoration:ReturnType<typeof restoreLiveSkinBranches>

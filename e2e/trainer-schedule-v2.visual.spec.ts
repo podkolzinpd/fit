@@ -3648,9 +3648,26 @@ test('Lime trainer adds a template directly to a client plan', { tag: ["@lime-te
   await page.screenshot({ path: testInfo.outputPath('lime-template-picker-390.png'), fullPage: true, animations: 'disabled' })
   await picker.locator('.workout-template-picker-item').click()
   await expect(page.getByText(`Добавлен шаблон «${templateName}»`)).toBeVisible()
-  await expect(page.locator('.workout-notes')).toHaveAttribute('open', '')
-  await expect(page.getByLabel('Заметка')).toHaveValue('Держать спокойный темп')
-  await expect(page.getByLabel('Дата')).toHaveValue('2026-10-07')
+  const notes = page.locator('.workout-notes')
+  // Refined plans render the note inline; the original form uses open details.
+  // Both must expose the exact imported text before saving the same payload.
+  if (await notes.evaluate(node => node.tagName === 'DETAILS')) {
+    await expect(notes).toHaveAttribute('open', '')
+  } else {
+    await expect(notes).toHaveClass(/coach-plan-note/)
+  }
+  const noteField = notes.getByRole('textbox')
+  await expect(noteField).toBeVisible()
+  await expect(noteField).toHaveValue('Держать спокойный темп')
+  if (await page.locator('.coach-plan-date').count()) {
+    await page.locator('.coach-plan-date').getByRole('button', { name: 'Выбрать дату', exact: true }).click()
+    const calendar = page.locator('dialog.fit-lime-date-picker[open]')
+    await expect(calendar.getByRole('button', { name: /^7 октября 2026 г\.$/ })).toHaveAttribute('aria-pressed', 'true')
+    await calendar.getByRole('button', { name: 'Закрыть календарь', exact: true }).click()
+    await expect(calendar).not.toBeVisible()
+  } else {
+    await expect(page.getByLabel('Дата', { exact: true })).toHaveValue('2026-10-07')
+  }
   await expect(page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).resolves.toBe(true)
   await page.getByRole('button', { name: 'Сохранить план' }).click()
   await expect.poll(() => writes.length).toBe(1)

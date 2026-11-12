@@ -1,3 +1,4 @@
+import {libraryMigrationGuard} from './lime-library-skin.contract'
 import {editorMigrationGuard,editorOwnerFilter,editorOwnerSelectors} from './lime-editor-skin.contract'
 import {ablateLiveSkinBranches,restoreLiveSkinBranches} from './lime-live-duration-skin.cases'
 import { test, expect } from '@playwright/test'
@@ -155,7 +156,7 @@ export function limeLiveTimerSkinCases() {
     })
     const before = await capture()
     if (sample.lime && (sample.state === 'sheet' || sample.state === 'overdue')) await page.screenshot({ path: info.outputPath('timer-skin.png'), animations: 'disabled' })
-    const ablation=await page.evaluateHandle(ablateLiveSkinBranches,{...liveTimerManifest,guards:[editorMigrationGuard,...liveTimerManifest.guards],owners:editorOwnerSelectors,ownerScope:':where('+editorOwnerFilter+')',targets:".coach-v79-timer,.coach-v79-timer *,.coach-v79-dock,.coach-v79-dock *,.live-rest-sheet,.live-rest-sheet *"})
+    const ablation=await page.evaluateHandle(ablateLiveSkinBranches,{...liveTimerManifest,guards:[libraryMigrationGuard,editorMigrationGuard,...liveTimerManifest.guards],owners:editorOwnerSelectors,ownerScope:':where('+editorOwnerFilter+')',targets:".coach-v79-timer,.coach-v79-timer *,.coach-v79-dock,.coach-v79-dock *,.live-rest-sheet,.live-rest-sheet *"})
     const result=await ablation.evaluate(value=>({rules:value.rules,families:value.families,paintFamilies:value.paintFamilies,matches:value.matches,inherited:value.inherited,legacyMatches:value.legacyMatches,classifierChecks:value.classifierChecks,selectedPositiveOwners:value.selectedPositiveOwners}))
     let after:typeof before=[]
     let restoration:ReturnType<typeof restoreLiveSkinBranches>
