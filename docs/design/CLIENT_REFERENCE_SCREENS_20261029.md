@@ -10813,3 +10813,71 @@ Sequence43988 теперь наблюдает только CI/публикаци
 /tmp/fit-mc519-release/release-controller.json иsequence-status.json.
 Runtime/флаги не менялись после приёмки252; следующийMC не начат.
 Эта docs-only запись локальная, безpush, не запускает CI ради квитанции.
+
+
+## 254. MC519 / PR2103 — опубликовано; доставка и приёмка с явными ограничениями
+
+2026-11-12, Codex/OpenAI. PR2103 опубликован71f54fc27be98cf32acc63370665c806ca565ba6
+после подтверждения приоритетных2110/изменений2111 (§252). Повторного
+merge/ручногоdeploy не было. Git tree проверенногоhead4ec32ce2 иsquash71
+одинаков:9793dd7994675a0df847092ffefe3c6537eaa6fc. PRCI43280151025 и
+mainCI43285187610, Android43285187518 SUCCESS, первыеattempt безrerun.
+ШтатныеAPI43289706088,web43289706134,AndroidOTA43290348200 SUCCESS.
+
+Публичнаядоставка:246/246webфайлов status/size/SHA256 exact.
+APIhealth/ready иобеAPIплоскости проверены существующим verifier; public
+APIrelease71. Подписи/source/ABI/nativeBuild9 иpublicreadback OTAпрошли;
+archive16073367bytes. Отпечаткиweb/API/signedOTA до/после UI ипосле
+изолированногоdiagnostic одинаковы. Это НЕnativeinstall/physicalphone.
+Роли/флаги/охват/данные/обработчики не менялись при выпуске.
+
+Приёмкадоставленного: оригинальные38librarycases,6QAфайлов побайтово
+совпадают с провереннымsource; прежнийreadonlypublictransport. Настоящие
+API/write continuations и неизвестныезапросы запрещены, данные synthetic.
+Webглавныйrun:37/38passed,1whole-test30stimeout,0retry/skip/flaky,177.918s.
+Timeout в trainer-dark430-template-editor/mobileChromium во время probe
+после открытиякаталога. Втрассе нет прикладного assertionmismatch; сбор
+CSS/контрольныхсостояний исчерпал общийbudget, teardown добавил5s.
+Конкретнаяпричина общейдлительности НЕустановлена и не выдаётся за
+доказанныйбаг приложения/отдельного ввода. Оригинальные38rawcaptures/
+190states успелизаписаться; исходныйtimedOut остаётсяtimedOut.
+
+Послеанализа выполнен ОДИН изолированныйunchangedcase наpublicweb,
+mobileChromium/workers1:1/1passed18.184s, безretry/skip/flaky. Таймаут30s,
+всеassertions/UIкоманды иsourceQA прежние. Успешные37не повторялись.
+Это отдельнаяквалификация, НЕперезаписьпервогопрогона в38/38green.
+SignedOTApreview:38/38passed128.761s,0retry/skip/flaky. Прикладныхошибок
+в изолированномсценарии/OTA не обнаружено. Actualnativephone не проверен.
+
+Дополнительный readonlycross-plane сравнитель использовал ОРИГИНАЛЬНЫЕ
+38webrawcaptures и38OTA, БЕЗподменыпроблемногоsample диагностическим.
+190/190before(style/geometry/field/selection), backdrop/frame иscroll
+равны. ПолныйстрогийHTMLпаритет НЕgreen:6focusouterHTMLразличий —
+1off-control coachmarkinline top/left;2ordinary-editorcontrol captures
+с разнымinlineheight скрытыхexercise-note textarea (web36/30 vsOTA38);
+3catalogcaptures сfixtureimgsrc publicorigin vslocalOTAorigin.
+Исходныйstrictreport сохраняет6ошибок; размерыскрытыхполей/позиция
+подсказки не объявляются исправленными или доказанно вызваннымиMC519.
+PNG173/190exact,rawdiffs сохранены, масок/нормализации нет. Визуально
+просмотреныactualathlete lightfavorites/WebKit иtrainerdarktemplates/
+Chromium: согласованные карточки/меню/навигация сохранены; coachmark
+первогоиспользования существует и не удалялсяэтимэтапом.
+
+Storage: собственныйcheckout переиспользован; артефакты хранятся по
+одномуexactsource, результаты не копировались междустадиями. Managedruns
+20261112-223448-6b30f32f(web),20261112-223746-5dc3d8ad(OTA),
+20261112-224353-086336c5(single diagnostic) закрепленыpin, включая
+исходныйfailedrun. Старыеисточники/диагностика не удалялись.
+
+Квитанции: /tmp/fit-mc519-release/final-acceptance.json — исходный
+неполностьюgreenwebрезультат; final-qualified-receipt.json — доставка/
+отдельныйdiagnostic/ограничения; published-web-ota-comparison.json —
+неослабленныйstrictcross-plane; source-proof87d иpinnedrun226 из§252.
+
+Дальше: владелец проверяет спортсменГотовые/избранное,тренерШаблоны/
+назначение, ввод/заметки/клавиатуру, сохранностьLive галочки/свайпов/
+таймера на телефоне. Прежние5extraWebKitnativebackend,physicaliPhone/
+OAuth/install истарые69px/SELECT/filter-return/InBodyнаблюдения не
+объявляются закрытыми. СледующийMC не начинался, ждётприёмки.
+Эта docs-onlyквитанция локальная безpush, чтобыне повторятьCI ради
+результата ужеопубликованногоsource;носитсявследующуюсогласованнуюисторию.
