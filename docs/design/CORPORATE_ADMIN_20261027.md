@@ -4607,3 +4607,20 @@ source и отсутствие активных main-публикаций. Эт�
 
 Первый этап принят на опубликованном main48feac61dd9c30f57ae50b335de868194e7e3042 после полногоmainCI/официальных API/web/signedOTA. Public readback: 246files size/SHA/bytes, OTAcrypto/source/ABI/native9, dualAPIrelease/health/ready/DNS-TLS/anonymous401 PASS. Actual51web+51OTA безskip/flaky/retry, screenshots просмотрены; физический телефон/OAuth не проверены.
 Сохранены собственные pending receipts109, опубликованный main интегрирован обычным merge, обе истории и чужие изменения сохранены. PR2111 фактически squash слит в старую ветку первого этапа, а неmain; опубликованный main не содержит UI. Его tree равен21f. Обычным merge сохранены обе истории внешнего e675 и21f, новая ветка продолжает только собственный этап2. Replacement PR наmain/новые fullCI и реальный exact-head Android следуют после applicable local checks. Runtime src/API/public/native/package по сравнению с проверенным21f6f747 не менялся; новый diff — принятый test repair/inventory и история/docs.
+
+
+### Итерация112 — 2026-11-12 — Codex / OpenAI — source этапа2 и reviewed browser retry
+
+Задача: завершить тот же второй этап через PR2113 наmain после actual приёмки1. Новый sourcef6a85f83 включает обе сохранённые истории2111/e675 и опубликованный48fe. Android43188768914 assemble SUCCESS.
+Расхождения: fullCI43188768872/attempt1 FAILURE только e2e-chromium(2/2) и его aggregate;33 прочихjobs SUCCESS. Catalog trainer case трижды global30s, собственный visual recipient case дваждыglobal30s и штатно прошёл3попытку (flaky). Трассы: повторные native/Vite goto/reload около5s, накопление времени; исходные red/flaky/logs/traces сохранены. Runtime/каталог/ожидания/таймауты/CI не менялись.
+Проверка: точные2cases локально dev2/2 и production2/2, retries0/skip0/flaky0, прежние30s; realAPI/WS/external заблокированы. Это diagnostic, не fullgreen и неproduction.
+Решение: один reviewed штатный rerun всего упавшего browserjob и зависимогоaggregate, с сохранением33same-headgreen и реальной Androidсборки. Отвергнуто: обход red, отключение/ослабление тестов, изменение чужого каталога, выдача local заproduction.
+Открыто: новый sourceCI, fullmainCI/официальная публикация/actual57web+57OTA/visual впереди; новых реальных grants нет. Дальше: только после всехgreen штатный squash --match-head и приёмка.
+
+
+### Итерация113 — 2026-11-12 — Codex / OpenAI — второй этап штатно вmain
+
+Задача: после actual приёмки1 выпустить тот же этап2. SourceCI43188768872/attempt2 SUCCESS35/35latestjobs; целиком повторён упавший browserjob/aggregate,33same-headgreen сохранены. Точныйsourcef6a85f83f7756531e995335a4284e6af5511f63c, Android43188768914 assembleSUCCESS. Red/flakyattempt1 и diagnostic не скрыты; тесты/лимиты/конфигурация не менялись.
+Сделано: свежие GitHubqueue/main/публикации проверены; подтверждённое Антоном первенство только своего пакета, чужие PR не менялись. Main48fe actual принят, все официальные публикации завершены, наложения нет. PR2113 штатно squash --match-head f6a слит12.11.09:54:31UTC на28904e8cc83a7f764debcce77c5de812a9037da3. Истории21f/e675/main сохранены.
+Проверка: sourcefull35/35 и реальный Androidpassed. FullmainCI/Android и официальные API/web/signedOTA теперь обязательны; merge ещё не приёмка. Физический телефон/OAuth не проверены.
+Открыто: actual57web+57OTA/crypto/manifestallfiles/dualAPI иvisual впереди. Реальные контакты/гранты не создавались; отдельныеlegacyflags/данные/native9 не менялись. Дальше: один boundedobserver/main и фактическая приёмка, без повторных успешных прогонов или дублирования workflows.
