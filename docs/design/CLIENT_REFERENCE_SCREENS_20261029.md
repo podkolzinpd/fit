@@ -10955,3 +10955,88 @@ source/влияние/предлагаемыйперенос и сообщить
 реальнойдоставки и проверка владельцем обеихстраниц/тем/календаря/истории/
 back/ввода/клавиатуры и прежнегоLive на телефоне. ФизическийiPhone/OAuth/
 nativeinstall не подменяются браузером. СледующийMC без приёмки не начинать.
+
+
+## 256. MC5.2 — целый блок списков и календаря подготовлен к PR
+
+2026-11-13, Codex/OpenAI. Реализован план §255 для спортсмена и тренера.
+Выпуск не разрешён: перед слиянием нужна отдельная сводка и явное разрешение
+владельца по MC-RELEASE-01. Следующий этап не начат.
+
+Исходная версия — main71f54fc2. Ветка обновлена с main30987aa1 коммитом
+cfb28821 без конфликтов. Новые изменения форм из #2105 не переделывались.
+Runtime этого PR — только styles.css и три прежних Lime-слоя workouts,
+calendar, progress-history; React, DOM, обработчики, API, права, данные,
+флаги выпуска, CI, зависимости и foundation не менялись.
+
+Перед переносом записаны 52 случая /112 native-состояний Chromium+WebKit:
+обе роли, доступные темы,375/390/430/1440, списки, календари, выбор дня,
+смена месяца, today/selected/count, loading/error/retry/empty, pending и
+пагинация20→26, hover/pressed/keyboard focus, соседние и off-контроли.
+Первый полный baseline:10 controls passed,40 ожидаемых terminal ownership
+red,2 ошибочных ожидания рамки focus. Они исправлены по actual accepted
+Lime winner2px/offset3px вместо старого перекрытого3px/1px; отдельный
+исходный повтор этих двух дошёл только до ожидаемого ownership red.
+Исходный полный прогон не заменён «зелёным». Квалифицированный manifest
+указывает оригинальные52 raw-файла, включая явный двухслучайный followup.
+
+Native-измерения выявили115 активных семейств. В styles.css изолированы
+113 source-правил /136 paint-фрагментов только от выбранных активных
+страниц. Остальные потребители сохраняют прежние объявления и порядок.
+Перенесено131 literal source-свойство в63 слабых правила /62 определения
+владения: workouts3rules/4decl, calendar18/40, progress-history42/87.
+Все значения/important/исходные селекторы сверены с original source.
+Прежние Lime-файлы сохранены побайтно как suffix; их композиция сильнее.
+25720 исходных selector/declaration records, per-selector порядок и значения
+сохранены.1942 остальных runtime/CI/noncandidateCSS файла неизменны от309.
+Общие переменные/алиасы и структурные identity-классы остаются foundation;
+их наличие не объявляется законченной глобальной очисткой монохрома.
+
+Для минимизации отдельно выполнены guard-only causal52 и вспомогательный
+Chromium26 direct-winner проход. Во вспомогательном проходе временно
+вставлялся style с custom-property markers, затем удалялся с проверкой
+CSSOM restoration. Это НЕ primary native proof. Основные baseline и оба
+candidate прохода не меняют DOM/CSSOM/focus/selection/scroll ради проверки.
+Первый candidate52 был functional-green, но native comparison выявил
+три зависимости: specific16px calendar text, danger-color mask и разную
+прозрачность copy у ролей. Исправлены только literal CSS-переносом; QA,
+fixtures, таймауты и assertions ради «зелёного» не ослаблялись.
+
+Итоговый candidate52/52 passed67.478s,0retry/skip/flaky. Все112 состояний
+совпадают по computed styles, geometry, fields/selection/interaction,
+backdrop, scroll, данным, запросам и отсутствию workout writes. PNG106/112
+побайтно точны. Исходный strict report остаётся FALSE:6 load-error body
+focus.outerHTML отличаются generated FIT support-code. Отдельная строгая
+квалификация проверила одну точную пару кодов на случай, совпадение всех
+прочих HTML bytes/scroll и отсутствие иных PNG-отличий. Источник: crypto.
+randomUUID в data/queries/request-diagnostics.ts234 и requestSupportCode
+в shared/request-diagnostics.ts62. PNG не маскировались/не нормализовались;
+побайтное полное совпадение HTML/PNG не заявляется.
+
+Сохраняемые механики дополнительно:74/74 business/library/Live regression
+(112.562s),8/8 Live unconfirm/reload/timed/manual/reconfirm-folding (8.433s),
+0retry/skip/flaky. Прежние38 library кейсов проходят с exact-known guard
+adapter; shared reader расширен только optional outline для MC52, default
+paint и проверки unknown/positive guards сохранены.32/32 unit в6 suites
+(29+3 отдельным запуском workout-home), build/types, fonts2/2, startup,
+полный lint до integration и final QA lint/e2e types, diff check прошли.
+Полный CI собственного PR запускается после коммита; результат ещё не
+подменяется локальной проверкой.
+
+Открытое наблюдение baseline: trainer history-calendar selected-day430
+с очень длинным заголовком и PR/status badges сжимает title в узкую колонку.
+Source: WorkoutsPages1278–1284, styles.css workout-chronicle-head flex и
+head-badges flex:0 0 auto. Наблюдение сообщено владельцу, не исправлялось
+и не скрывалось сокращением fixture; итоговый native-паритет его сохраняет.
+Локальный PostgreSQL/native backend недоступен на5432/55432/55474, его
+реальная WebKit-проверка остаётся CI. Physical iPhone/OAuth/native install
+не проверены этим браузерным этапом. Старые наблюдения §254 не закрывались.
+
+Квитанции: /tmp/fit-mc519/mc52-source-proof.json, mc52-runtime-hashes.json,
+mc52-baseline-native-qualified.json, mc52-candidate2-comparison.json,
+mc52-candidate2-qualified-parity.json; /tmp/fit-mc52-authored-map-final.json.
+Исходные managed runs:233010-9a005cec,233628-a6ed7ad6,233957-c2ec388e,
+235040-4b0e6053 (20261112);000454-275295d3,000926-bec9f0f4,
+001116-4bbb88c4,001406-759bdea4 (20261113). Они хранят оригинальные raw/
+PNG/logs. Собственный checkout переиспользован, результаты не копировались;
+новые большие прогоны выполнены через fit-storage reserve1GiB.

@@ -1,3 +1,4 @@
+import {workoutListMigrationGuard} from './lime-workout-list-skin.scope'
 import {libraryMigrationGuard} from './lime-library-skin.contract'
 import {expect,type Page,type Request} from '@playwright/test'
 import {writeFile} from 'node:fs/promises'
@@ -5,8 +6,8 @@ import {createHash} from 'node:crypto'
 import {editorPageSelector,editorOwnerFilter,editorMigrationGuard,editorFamilies,editorOwnerSelectors,editorKnownGuards} from './lime-editor-skin.contract'
 // MC519 reuses this read-only reader with an explicit library contract. The
 // default contract and every existing editor assertion remain unchanged.
-export type NativeWorkoutSkinContract={selector:string;families:string[];knownGuards:string[];migrationGuard:string;ownerFilter:string;ownerSelectors:string[]}
-const editorSkinContract:NativeWorkoutSkinContract={selector:editorPageSelector,families:editorFamilies,knownGuards:[libraryMigrationGuard,...editorKnownGuards],migrationGuard:editorMigrationGuard,ownerFilter:editorOwnerFilter,ownerSelectors:editorOwnerSelectors}
+export type NativeWorkoutSkinContract={selector:string;families:string[];knownGuards:string[];migrationGuard:string;ownerFilter:string;ownerSelectors:string[];additionalPaintProperties?:string[]}
+const editorSkinContract:NativeWorkoutSkinContract={selector:editorPageSelector,families:editorFamilies,knownGuards:[workoutListMigrationGuard,libraryMigrationGuard,...editorKnownGuards],migrationGuard:editorMigrationGuard,ownerFilter:editorOwnerFilter,ownerSelectors:editorOwnerSelectors}
 // Passive image-request metadata distinguishes real loading from untouched lazy
 // images. No image source/loading attribute or browser API is changed.
 const mediaRequests=new WeakMap<Page,{pending:Set<Request>}>()
@@ -71,14 +72,14 @@ export async function probeEditorSkin(page:Page,screenshot?:string,selectorOverr
   for(const sheet of Array.from(document.styleSheets))visit(sheet.cssRules)
   return rules
  })
- const result=await page.evaluate(({families,guards,owners,ownerScope,selector})=>{
+ const result=await page.evaluate(({families,guards,owners,ownerScope,selector,additionalPaintProperties})=>{
   const normalize=(s:string)=>s.replace(/,\s*/g,',').replace(/"/g,"'")
   const common=new Set(families.map(normalize)),allowed=new Set(guards.map(normalize)),ownerSelectors=new Set(owners.map(normalize))
   const split=(s:string)=>{const list:string[]=[];let n=0,q='',start=0;for(let i=0;i<s.length;i++){const c=s[i]!;if(q){if(c===q&&s[i-1]!=='\\')q=''}else if(c==='"'||c==="'")q=c;else if(c==='('||c==='[')n++;else if(c===')'||c===']')n--;else if(c===','&&!n){list.push(s.slice(start,i).trim());start=i+1}}list.push(s.slice(start).trim());return list}
   const strip=(s:string)=>{let i=0;while((i=s.indexOf(':where(',i))>=0){let j=i+7,n=1,q='';for(;j<s.length&&n;j++){const c=s[j]!;if(q){if(c===q&&s[j-1]!=='\\')q=''}else if(c==='"'||c==="'")q=c;else if(c==='(')n++;else if(c===')')n--}if(allowed.has(normalize(s.slice(i,j))))s=s.slice(0,i)+s.slice(j);else i=j}return normalize(s)}
   const zero=document.createElement('span').style;zero.border='0'
   const neutral=(p:string,v:string,s:CSSStyleDeclaration)=>p.startsWith('border')&&Array.from(zero).includes(p)&&v===zero.getPropertyValue(p)&&(s.getPropertyValue('border')===zero.getPropertyValue('border')||['top','right','bottom','left'].some(side=>p.startsWith('border-'+side+'-')&&s.getPropertyValue('border-'+side)===zero.getPropertyValue('border-'+side)))
-  const paint=(p:string,v:string,s:CSSStyleDeclaration)=>!(p.startsWith('font')&&(p==='font-variant-numeric'||v.trim()==='inherit'))&&/^(?:color|background(?:-.+)?|border(?:-.+)?|box-shadow|font(?:-.+)?|letter-spacing|text-transform|text-decoration(?:-.+)?|opacity)$/.test(p)&&!(/^border/.test(p)&&/^(?:0(?:px)?|none)$/.test(v.trim()))&&!neutral(p,v,s)
+  const paint=(p:string,v:string,s:CSSStyleDeclaration)=>!(p.startsWith('font')&&(p==='font-variant-numeric'||v.trim()==='inherit'))&&(/^(?:color|background(?:-.+)?|border(?:-.+)?|box-shadow|font(?:-.+)?|letter-spacing|text-transform|text-decoration(?:-.+)?|opacity)$/.test(p)||additionalPaintProperties.includes(p))&&!(/^border/.test(p)&&/^(?:0(?:px)?|none)$/.test(v.trim()))&&!neutral(p,v,s)
   const classified=(css:string)=>{const s=document.createElement('span').style;s.cssText=css;return Array.from(s).filter(p=>paint(p,s.getPropertyValue(p),s))}
   const classifierBorderChecks={fullZeroNeutral:!classified('border:0').length,sideZeroNeutral:!classified('border-top:0').length,colorPaint:classified('border-color:red').some(p=>p.endsWith('color')),borderPaint:!!classified('border:1px solid red').length,explicitColorOnZeroPaint:classified('border:0;border-color:red').some(p=>p.endsWith('color'))}
   const targets=Array.from(document.querySelectorAll(selector)),owned=new Set(targets.flatMap(n=>[n,...n.querySelectorAll('*')])),ancestors=new Set<Element>()
@@ -101,7 +102,7 @@ export async function probeEditorSkin(page:Page,screenshot?:string,selectorOverr
   for(const sheet of Array.from(document.styleSheets))visit(sheet.cssRules,!sheet.disabled&&(!sheet.media.mediaText||matchMedia(sheet.media.mediaText).matches))
   const unknown=families[0]!+':where(:not(.mc518-unknown-owner))'
   return {rules:selected.length,families:[...new Set(selected.map(strip))],matches,ancestorMatches,pseudoMatches,activeMatches,matchedLegacyPaint,unsupported,owners:[...foundOwners].sort(),ownerDefinitions:[...ownerDefinitions].sort(),legacyMatches:selected.every(s=>{const a=query(strip(s)),b=query(s);return a.length===b.length&&a.every((n,i)=>n===b[i])}),selectedPositiveOwners:selected.filter(s=>strip(s).includes(':where(')),classifierBorderChecks,classifierGuardChecks:{known:strip(families[0]!+guards[0]!)===normalize(families[0]!),unknownRetained:strip(unknown)===normalize(unknown)},classifierOwnerChecks:[...ownerSelectors].map(s=>({selector:s,retained:strip(s).includes(normalize(ownerScope)),legacy:common.has(strip(s))})),observedNodes:observed.size,ancestorNodes:ancestors.size}
- },{families:contract.families,guards:[contract.migrationGuard,...contract.knownGuards],owners:contract.ownerSelectors,ownerScope:':where('+contract.ownerFilter+')',selector})
+ },{families:contract.families,guards:[contract.migrationGuard,...contract.knownGuards],owners:contract.ownerSelectors,ownerScope:':where('+contract.ownerFilter+')',selector,additionalPaintProperties:contract.additionalPaintProperties??[]})
  expect(result.classifierBorderChecks).toEqual({fullZeroNeutral:true,sideZeroNeutral:true,colorPaint:true,borderPaint:true,explicitColorOnZeroPaint:true})
  expect(result.classifierGuardChecks).toEqual({known:true,unknownRetained:true});expect(result.selectedPositiveOwners).toEqual([])
  expect(result.classifierOwnerChecks).toHaveLength(contract.ownerSelectors.length);expect(result.classifierOwnerChecks.every(c=>c.retained&&!c.legacy)).toBe(true)
