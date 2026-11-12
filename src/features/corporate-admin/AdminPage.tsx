@@ -177,7 +177,7 @@ function TrainerForm({ trainer, offices, onClose }: { trainer: CorporateTrainer;
     editorRef.current?.scrollIntoView({ block: 'start', behavior: 'instant' })
     headingRef.current?.focus({ preventScroll: true })
   }, [trainer])
-  const form = useForm({ defaultValues: { ...trainer, officeIds: trainer.officeIds.filter(id => offices.some(o => o.id === id && !o.archived)) } })
+  const form = useForm({ defaultValues: { ...trainer, testingEnabled:trainer.testingEnabled??false,testingVersion:trainer.testingVersion??0, officeIds: trainer.officeIds.filter(id => offices.some(o => o.id === id && !o.archived)) } })
   const save = useSave()
   const enabled = useWatch({ control: form.control, name: 'isYandex' })
   return <form ref={editorRef} className="corporate-admin-editor" aria-label={`Настройки ${trainer.name}`} onSubmit={form.handleSubmit(async value => {
@@ -187,6 +187,7 @@ function TrainerForm({ trainer, offices, onClose }: { trainer: CorporateTrainer;
     <h3 ref={headingRef} tabIndex={-1}>{trainer.name}</h3>
     <fieldset disabled={save.isPending}>
       <label className="corporate-admin-checkbox"><input type="checkbox" {...form.register('isYandex')} />Тренер Яндекса</label>
+      {enabled&&<><label className="corporate-admin-checkbox"><input type="checkbox" {...form.register('testingEnabled')}/>Доступ к тестированию Яндекса</label><p>Персональные тренировки, дежурства, услуги и редактирование анкеты администратором. Управление анкетой включается отдельно. Ранее выданные индивидуальные доступы сохраняются.</p></>}
       <fieldset className="corporate-admin-office-options"><legend>Офисы тренера{enabled ? ' · выберите хотя бы один' : ''}</legend>
         {offices.filter(o => !o.archived).map(o => <label className="corporate-admin-checkbox" key={o.id}><input type="checkbox" value={o.id} {...form.register('officeIds')} />{o.city} · {o.name}</label>)}
         {!offices.some(o => !o.archived) && <p>Сначала добавьте активный офис в разделе «Офисы».</p>}
