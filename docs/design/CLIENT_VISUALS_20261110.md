@@ -117,3 +117,10 @@ WebKit isolated synthetic acceptance: 3/3, 12.6s, no retries (5.0/2.2/4.0s).
 ESLint and diff checks passed. Main8be75f05 included by ordinary merge, preserving
 referral migration and existing contracts. New source requires full fresh CI.
 Goal/subgoal-before-client-save remains proposal only and is excluded.
+
+Partition inventory follow-up: source c60 CI repository-quality correctly caught
+742→744 full and156→158 scoped cases after the split. Updated exact counts and
+added explicit presence checks for both extracted flows; union/disjoint checks
+remain unchanged. Local partition8/8, infrastructure policy483/483 and hosting205/205
+passed. Initial restricted local policy run could not bind127.0.0.1; approved local
+rerun passed without assertion changes. No CI runtime configuration changed.

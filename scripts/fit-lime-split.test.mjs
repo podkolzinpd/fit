@@ -87,7 +87,7 @@ test('finance/template visual matrices cannot grow back into full business chain
   assert.doesNotMatch(bodies.get('template'), /page\.clock|page\.reload|commands|\/health|rows\.size/)
 })
 
-test('real Playwright partitions preserve the 742-case union without duplicates in either engine', () => {
+test('real Playwright partitions preserve the 744-case union without duplicates in either engine', () => {
   const collect = (args) => {
     const result = spawnSync(process.execPath, [join(root, 'node_modules/playwright/cli.js'), ...args, '--list', '--reporter=json'],
       { cwd: root, encoding: 'utf8', timeout: 60000, env: { ...process.env, FIT_SCHEDULE_V2_VISUAL: '1' } })
@@ -103,12 +103,15 @@ test('real Playwright partitions preserve the 742-case union without duplicates 
   }
   for (const { project } of engines) {
     const full = collect(fitLimeArgs(project, 'full').args)
-    assert.equal(full.length, 742) // Parent741 plus template search; all previous cases remain.
+    assert.equal(full.length, 744) // Parent742 plus two independent finance flows; all original assertions remain.
     assert.equal(full.filter(key => key.endsWith('Template search preserves names, editor return and picker focus without extra writes')).length, 1)
     for (const width of [375, 390, 430]) {
       assert.equal(full.filter(key => key.endsWith(`Client profile loads approved YS Geo at ${width}`)).length, 1)
     }
     assert.equal(full.filter(key => key.endsWith('Finance Lime owns readable cards, forms and payment actions')).length, 1)
+    for (const title of ['Finance Lime creates a single service from payment entry', 'Finance Lime single attendance reaches trainer and athlete cabinets']) {
+      assert.equal(full.filter(key => key.endsWith(title)).length, 1, title)
+    }
     assert.equal(full.filter(key => key.endsWith('Finance package choice distinguishes periods and preserves explicit attendance accounting')).length, 1)
     assert.equal(full.filter(key => key.endsWith('Finance exact kopecks and mixed overdue debt use separate amounts')).length, 1)
     for (const title of ['Finance receipts filter, correct and delete across clients with retained context', 'Finance receipt loading, failure and retry retain the selected period and client', ...['Mono light','Mono dark','Lime light'].map(variant => `Finance receipt layout ${variant}`)]) {
@@ -163,7 +166,7 @@ test('real Playwright partitions preserve the 742-case union without duplicates 
     const scoped = collect(fitLimeArgs(project, 'scoped', 'critical,finance').args)
     const scopedParts = fitLimePartitions('scoped').flatMap(({ lane, shard }) =>
       collect(fitLimeArgs(project, 'scoped', 'critical,finance', lane, shard).args))
-    assert.equal(scoped.length, 156) // Parent155 plus FIN603; no existing case is omitted.
+    assert.equal(scoped.length, 158) // Parent156 plus two independent finance flows; no existing case is omitted.
     assert.equal(new Set(scopedParts).size, scopedParts.length)
     assert.deepEqual(scopedParts.sort(), scoped.sort())
   }
