@@ -103,3 +103,17 @@ CV403: отдельный анализ структурированной цел
 CV401–402 local: typecheck/lint/build/startup/docs/diff passed;45 unit/component tests;20 Chromium/WebKit scenarios25.7s,0retry. Form360/ready390WebKitPNG просмотрены. Первыйbrowserrun16pass/4fail из-за substring-селектора имени (совпадал с заголовком); заменён точным именем, проверки команд/ошибок/повтора/QR/отзыва сохранены. SourceCI и выпуск впереди.
 
 CV401 уточнение: микрофон общей заметки в заголовке через прежний compactVoice; handlers/source/undo сохраняются.53unit5filespassed;20browser1.2m0retry;PNGformWebKitпросмотрен. TSC выявил route-string вместоboolean в prop, исправлено Boolean(fitLimeBack); build/startuppassed. Новая голова требует полногоCI.
+
+### PR2105 — CI diagnosis, 12.11.2026
+
+Source d80bb85b CI43085177021 attempts1/2 failed only finance WebKit visual1
+and its aggregate. The combined finance readability case exhausted its shared
+30-second deadline at different late steps (resize, save, navigation, screenshot).
+All original logs remain in outputs/figma-client-audit-20261110 outside Git.
+No third blind rerun: split independent receipt/payment-entry/attendance fixtures
+into three tests. Every assertion, viewport and screenshot remains; timeout,
+retries and strict-flaky gates are unchanged. Application finance logic unchanged.
+WebKit isolated synthetic acceptance: 3/3, 12.6s, no retries (5.0/2.2/4.0s).
+ESLint and diff checks passed. Main8be75f05 included by ordinary merge, preserving
+referral migration and existing contracts. New source requires full fresh CI.
+Goal/subgoal-before-client-save remains proposal only and is excluded.

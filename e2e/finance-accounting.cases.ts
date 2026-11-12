@@ -605,8 +605,13 @@ export function financeAccountingCases() {
     await page.screenshot({ path: info.outputPath('lime-payment-edit-small-viewport.png'), fullPage: true })
     await page.getByRole('button', { name: 'Отмена', exact: true }).click()
     await expect(page.locator('.finance-form')).toHaveCount(0)
-    // New purchase from a zero-service payment entry. Existing geometry helper
-    // covers keyboard/scroll risks without multiplying the functional case.
+  })
+
+  // Independent fixtures get independent test deadlines; preserve all widths,
+  // assertions and screenshots rather than spending one deadline across flows.
+  test('Finance Lime creates a single service from payment entry', { tag: ['@lime-finance'] }, async ({ page }, info) => {
+    await receiptFixture(page)
+    // New purchase from a zero-service payment entry.
     const ledger: TrainerFinanceClientBundle = {clientId,canCreate:true,packages:[],payments:[],sessions:[]}
     const commands: TrainerFinancePackageDraft[] = []
     await page.route(`**/v1/clients/${clientId}/finance`,route=>route.fulfill({json:{finance:ledger}}))
@@ -621,7 +626,7 @@ export function financeAccountingCases() {
       ledger.packages.push(item)
       await route.fulfill({json:{package:item}})
     })
-    await page.reload()
+    await page.goto(`/clients/${clientId}/finance`)
     await page.getByRole('tab',{name:'Оплаты: 0',exact:true}).click()
     await page.getByRole('button',{name:'Добавить оплату',exact:true}).click()
     const entry=page.locator('.finance-form')
@@ -644,6 +649,9 @@ export function financeAccountingCases() {
     expect(commands).toHaveLength(1)
     expect(commands[0]).toMatchObject({singleSession:true,sessionsTotal:1,priceCents:200000,openingPaidCents:50000})
     expect(commands[0]!.requestId).toMatch(/^[0-9a-f-]{36}$/)
+  })
+
+  test('Finance Lime single attendance reaches trainer and athlete cabinets', { tag: ['@lime-finance'] }, async ({ page }, info) => {
     await singleAttendanceCabinets(page,info)
   })
 
