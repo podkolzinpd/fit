@@ -4557,3 +4557,23 @@ flaky/retry/unexpected. Локальные config/guards блокируют real
 externalorigins. Все279expect/53screenshot calls и helper body byte-identical;
 source diff ровно3 добавленные строки плюс собственные canonical/CURRENT.
 Новый источник CI/actual публикация ремонта ещё впереди.
+
+CI43175020834/head1c13ac85: policy-тест полного inventory справедливо
+зафиксировал743 вместо прежних742 зарегистрированных cases. Это ровно
+вынесенный самостоятельный attendance test; первая локальная проверка
+lint/build/browser не включала inventory policy — пропуск учтён.
+Обновлён ожидаемый размер union743; дополнительно проверяется ровно одно
+вхождение нового test в каждом движке. Все прежние проверки присутствия,
+совпадения partition union/full и отсутствия дубликатов остаются. Это
+обновление реестра проверок после согласованного разделения, не отключение
+quality gate; CI workflows/selection/matrix/timeouts не меняются.
+Начатый старый sourceCI не отменяется; перед новым push ждём terminal.
+
+Первый технический sourceCI43175020834 завершён:33/35jobs SUCCESS,
+все браузерные partitions, включая прежний finance WebKit блокер, зелёные;
+красные только repository-quality(старые742/156) и зависимый appaggregate.
+Перед обновлением дождались terminal, начатые проверки не отменялись.
+После обновления full743/scoped157 и проверок нового case exactly-once
+локальный полный infra:policy:test PASS(финальная группа483/483,0skip),
+targetlint/gitdiff/docs PASS. Gates/selection/workflow/matrix не изменены.
+Следом новый полный sourceCI окончательного head; первый red сохраняется.
