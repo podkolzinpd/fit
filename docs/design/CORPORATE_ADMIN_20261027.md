@@ -4111,3 +4111,325 @@ Production browser21/21 новых (mock+native+visual) и2/2 прежних sav
 retry Chromium/WebKit PASS,0skip/flaky/retry. Native3 использует настоящий
 локальный PostgreSQL17/API; удалённые API/WS/external заблокированы.
 Native ABI8922d2e9…6cf9/version1.1.4/code9 не изменились. Пилот OFF.
+
+
+### Итерация 101 нового выпуска — 2026-11-10 — Codex / OpenAI
+
+PR2079 head24d17490 прошёл sourceCI42729621276 и exact-head Android42729620947
+SUCCESS. После свежих GitHub queue/main/отсутствия публикаций и dualAPI-гейтов
+обычный squash --match-head-commit выполнен00:56UTC; новый main240dc6d6614e5bf0c8cb779592f90688d40bda45.
+Не использовались admin/bypass/force/deletebranch, чужие PR/CI не менялись.
+
+Full mainCI42732048565 attempt1 красный. Два прежних неизменённых сценария:
+ExerciseImage manual recovery после двух file-load ошибок не увидел ожидаемый
+alert; WebKit Live single-group/compact получил только2 позиции scroll при
+проверке smooth transition. Этот Live случай уже прошёл встроенный retry, но
+строгий --fail-on-flaky-tests верно сохранил красный gate. Публикации API/web/
+OTA автоматически skipped; новый интерфейс не объявляется доставленным,
+профильный pilot EMPTY/OFF. Main Android42732048557 SUCCESS.
+
+Полные Git tree source24d и main240dc идентичны68072526e17cf7a63505ddea2eec94693094d94f.
+В sourceCI и полном локальном3181frontend оба старых сценария проходили;
+отдельно неизменённый ExerciseImage33/33 PASS. Код/тесты/таймауты/retries и
+fail-on-flaky gate не менялись. Выполнен ровно один стандартный --failed rerun
+того же собственного CI42732048565. Attempt1 red logs сохранены. Повторный
+красный остановит продолжение для диагностики, автоматического «до зелёного»
+цикла нет. Пока работают прежние опубликованные4c68 сайт/API/Android; свежий
+read-only health обоих API/DNS/TLS/ready подтверждён02:36UTC.
+
+Один bounded процесс ждёт attempt2/штатные автопубликации и затем проверяет
+actual manifest/SHA/размеры/dualAPI/signedOTA и51web+51OTA browser случаев.
+Отдельный Build Cloud.ru stage API по paths не применим к UI-only diff: это
+не пропуск API-build — официальный Release Cloud.ru stage API сам собирает
+exact-main image перед миграциями/smoke. Старые skipped workflow после
+attempt1 не считаются результатом новой попытки. Ручных deploy/дубликатов нет.
+Пилот остаётся OFF до actual приёмки обоих этапов и просмотра кадров; затем
+только protected profile-pilot для прежнего test и новый independent inspect.
+
+
+### Итерация 102 нового выпуска — 2026-11-10 — Codex / OpenAI
+
+Оба этапа TPA101–109 фактически опубликованы и приняты. PR1/main4c68 принят
+раньше интеграции второго checkout. PR2/main240dc6d6: fullCI42732048565
+attempt2 SUCCESS35/35jobs; sourceCI42729621276 и exact-head Android42729620947
+SUCCESS, mainAndroid42732048557 SUCCESS. Не менялись код/проверки прежних
+ExerciseImage/Live, --fail-on-flaky-tests сохранён; attempt1 red logs остались.
+Один --failed rerun завершился без повторной ошибки, новых rerun не было.
+
+Официальные API42745565305/web42745565316/signedOTA42745837824 SUCCESS.
+Actual main240dc readback02:57UTC:244/244 файлов сайта совпали размером/SHA
+и байтами с official manifest; оба API release/health/ready/anonymous401,
+DNS/TLS PASS. OTA15988100байт, SHA6fd2085d36367141c2fd14ed766eb3daad564829baf60be9ea6047bebca45d6c;
+обе RSA подписи, sourceCommit, ABI8922d2e9…6cf9, native1.1.4/code9 и ZIP CRC/
+безопасные пути проверены. API/web/OTA не подменялись локальной сборкой.
+
+На полученных файлах выполнены51web+51OTA browser случая (30 прежнего
+кабинета,18 profile mock/visual,3 real local API/PG17), Chromium/WebKit,
+0skip/0flaky/0retry. Все production API/WS/external origins заблокированы,
+записи только synthetic. Просмотрены actual web light1440/admin-form и
+WebKit dark320/form-bottom, OTA dark320/owner-read-only и WebKit light1440/
+admin-form: элементы/кнопки вписываются, read-only notice и карточка доступны.
+Физический телефон и OAuth не проверены. Повторять неизменные успешные
+прогоны ради нового статуса не потребовалось.
+
+Перед любым назначением оба этапа отмечены принятыми; свежие GitHub/main/
+публикации завершены и current dualAPI240dc подтверждён. Protected
+profile-pilot inspect42756619904: uniqueTrainer/eligible true, enabled false,
+managedByAdmin false, otherEnabledTrainers0. Выбирается только прежний
+закрытый SERVICES hash, произвольные UUID/email не передаются. Grant и
+отдельное последующее committed inspect фиксируются следующей квитанцией.
+
+
+Окончательная квитанция102: после actual приёмки обоих этапов выполнен
+ровно один protected scope=profile-pilot grant42756776271 на main240dc.
+Новый независимый committed inspect42756942013 завершён04:37:43UTC:
+uniqueTrainer/eligible/enabled true, otherEnabledTrainers0, managedByAdmin
+false. Пилот включён ровно прежнему закрытому тестовому тренеру; admin
+management ON не выставлялся. Независимые SRV/CPT/DUT/INV/ADM scopes, роли,
+офисы, данные и native1.1.4/code9 не изменялись; другие grant/revoke отсутствуют.
+Production SQL/SSH не использовались, только официальный защищённый workflow.
+Пакет2078/2079 принят целиком; остаётся только закрытие своего heartbeat и
+фиксация финальной квитанции. Другие автоматизации/чаты/ветки не трогаются.
+
+Закрытие102: только automation pr2078-pr2079 удалена официальным инструментом
+приложения (deleteStatus=deleted). Все собственные операторы/наблюдатели
+завершены, свой локальный PG17 остановлен с сохранением данных. Старые
+automation5/services1940/1948 не трогались и не восстанавливались. Финальные
+PR-квитанции обновлены; повторных grants/публикаций/CI не требуется.
+
+
+### Итерация 103 — 2026-11-11 — план открытия тестирования (предложение)
+
+Задача: предложить план подключения тренеров по произвольной почте и ссылке
+к предстоящему тестированию. Список пользователя содержит шесть уникальных
+адресатов; PII в журнал не переносится. Это обсуждение, не разрешение на
+реализацию/публикацию/назначения.
+Проверка: fetch origin/main45dc394f; root/branch/status проверены.
+В main claim и approve по-прежнему требуют corporate_invitation_pilot_trainers;
+точное сообщение скрина соответствует corporate_invitation_pilot_only.
+Форма приглашения сейчас содержит офисы, но не адресата/email. Логин
+Яндекс ID и контактный email различаются; default_email не даёт прав.
+Предложение PR1: убрать single-test допуск именно из валидного приглашения,
+сохранить trainer/session/token/expiry/revoke/admin-confirm/office guards;
+добавить адресата без публичного поиска пользователей и без назначения
+прав по введённому email. Предложение PR2: адресное создание/выдача ссылки,
+понятный вход/смена аккаунта/ожидание и подтверждение реального аккаунта;
+согласованный набор SRV/CPT/DUT/TPA для подтверждённых участников теста,
+без ручного закрытого hash на каждую учётку. Независимые flags и отзыв
+сохраняются; management ON остаётся отдельным явным действием админа.
+Проверки: разные домены/новый и прежний аккаунт/несовпадение контактного
+email и входа/повторы/неверная роль/отзыв/истечение/гонки; полный CI
+и exact-head Android; последовательные публикации и actual web/OTA.
+Приёмка: шесть реальных адресатов, ссылка→вход→claim→admin approve→
+доступ к согласованным функциям; реальный OAuth/телефон проверяются
+отдельно и не подменяются синтетическими браузерными тестами.
+Отвергнуто: только скрыть сообщение, grant по строке email, открыть
+админку всем, повторять старый single-target оператор для новых адресатов.
+Открыто: список трактуется как тренеры по контексту скрина; назначения
+администраторов отдельны. Итоговый rollout scope и реализация ещё не
+утверждены. Код/production/пилоты/аккаунты этой итерацией не менялись.
+Дальше: согласовать предложенный двухэтапный план перед реализацией.
+
+
+### Открытое подключение тестовых тренеров — OPN101–108 — 2026-11-11
+
+Антон разрешил реализацию, проверки и последовательный выпуск двух PR;
+цель — самостоятельное подключение шести первых и следующих тренеров
+по любой почте из кабинета. Контактные адреса остаются вне Git.
+
+| ID | Действующий контракт |
+| --- | --- |
+| OPN101 | Любой авторизованный trainer может принять действующую одноразовую ссылку; старый single-target INV205 заменяется только для приглашений |
+| OPN102 | Контактная почта любого домена, нормализация trim/lower, проверка формата и защита повторной активной заявки; адрес не является identity и не выдаёт прав |
+| OPN103 | Права только после явного admin approval реального вошедшего аккаунта и офисов; без автоматического повышения роли, email/OAuth scopes или общего user search |
+| OPN104 | Подтверждение нового UI явно включает независимый cohort тестирования; SRV/CPT/DUT/TPA допускают cohort И подтверждённого тренера Яндекса; прежние pilot rows неизменны |
+| OPN105 | Для уже подключённого тренера cohort доступен из его карточки с CAS и audit; management ON отдельно, по умолчанию OFF; отзыв cohort при managed ON требует явного OFF |
+| OPN106 | Claim/approval/revoke/expiry/admin revocation/role checks сериализуются прежним lock159,1; повтор approve не возвращает отозванный cohort; removal is_yandex сбрасывает cohort и management, readd не восстанавливает |
+| OPN107 | Почта только в admin list, token только digest; private no-store/analytics guards/вход и возврат прежние; ссылка не даёт admin прав |
+| OPN108 | Два последовательных выпуска: PR1 API/forward migration, PR2 UI; main/CI/Android и actual web/OTA/dual API, без наложения публикаций и обхода очереди |
+
+### Итерация 104 — 2026-11-11 — реализация OPN PR1
+
+База main45dc394f; отдельный checkout/ветка, прежний completed checkout
+не занят. Добавлена forward213: адресат приглашения, пустой cohort/audit,
+защищённый setter, согласованное подтверждение, совместимое старое approve.
+Legacy flags/админправа/данные/native не переписываются. INV205 заменён
+валидной ссылкой + реальным trainer + подтверждением admin.
+Первый targeted PG17/API31/31 PASS; ещё идут полный applicable check,
+расширенная приёмка шести разных synthetic accounts и новый exact-head CI.
+Открыто: PR не создан, production не менялся. PR2 и actual выпуск впереди.
+
+Квитанция PR1: полный frontend набор и политики/build PASS; API1640PASS
+(474 стандартных conditional skips без TEST_DATABASE_URL); отдельный реальный
+PG17 шести корпоративных suites83/83PASS безskip. Scope diff требует full
+frontend/browser; native ABI/version не менялись. Migration safety и docs PASS.
+Exact-head GitHub CI/применимый Android и actual публикация остаются гейтами.
+
+Уточнение OPN106: подтверждение существующего участника добавляет офисы из
+приглашения к прежним активным назначениям; их не заменяет. Семь новых PG
+случаев и весь корпоративный PG-набор84/84PASS. API lint/typecheck PASS.
+PR2087 проверен в GitHub: DIRTY и прямо исключает merge/production из своей
+задачи. PR2103 на двух снимках одного head с завершённым красным CI и без
+активных runs. Перед собственным merge сверить заново: изменение head/новый
+активный CI возвращает более ранний PR вперёд. Чужие ветки/CI не менялись.
+
+
+### Итерация 105 — 2026-11-11 — OPN PR2, локальная приёмка
+
+Добавлена почта адресата любого домена (необязательна для личной передачи
+ссылки), показ адресата/имени фактически вошедшего тренера и явное admin
+подтверждение всего набора тестирования. Письма не отправляются автоматически.
+В карточке подтверждённого тренера — cohort checkbox/CAS; прежние отдельные
+допуски сохраняются, управление анкетой включается отдельно.
+Локально frontend3218/359files PASS, coverage83.11/78.16/82.13/88; lint/types и
+infra/calendar/hosting/media/iOS PASS. Production build со штатными synthetic
+app-session flags PASS. Реальный native API/PG17 browser: шесть уникальных
+случаев (по три Chromium/WebKit), включая новый полный путь, existing member,
+повторы и четыре visual состояния320/1440light/dark. Два случая исправлены
+только в тесте: точный textbox вместо одноимённого region и профильный access
+endpoint для ещё не созданной анкеты (GET profile законно возвращает null).
+Последний полный путь расширен реальным start/stop дежурства:2/2PASS.
+WebKitdark320/Chromiumlight1440 PNG просмотрены: поля/кнопки/шрифты помещаются,
+overflow нет. Настоящие productionAPI/WS/external origins заблокированы;
+физический телефон и настоящий OAuth не проверены.
+API/PG runtime совпадает с проверенным PR1; sourceCI/Android обоих PR и
+production ещё впереди. PR1 первоначальный CI43085006165 идёт; подготовлен
+дополнительный PG-контракт сохранения прежних офисов84/84PASS, push ждёт
+завершения начатого CI, без его отмены.
+
+Итоговая локальная браузерная приёмка OPN: PR1 production-build51/51 и PR2
+production-build57/57, skip/flaky/retry0; реальные externalAPI/WS заблокированы.
+PR2 включает реальные native API/PG17 новые6cases и прежние профильные3cases.
+Результаты — приватные receipts p1/local-isolated/browser.json и
+p2/local-isolated/browser.json; это local production build, не публикация.
+Все runtime изменения первого этапа включены обычным merge e81b46ed,
+обе истории сохранены. Следом — завершение начатого CI первого head,
+один push окончательного PR1 и создание stacked PR2, без отмены runs.
+
+
+Уточнение OPN103/105/106: сохранение касается также архивных назначений.
+Повторное приглашение существующего подтверждённого тренера только добавляет
+офисы, включая корректный membership audit/version, не удаляя старые связи.
+Изменение только cohort из карточки не переписывает membership: активная
+форма не может неявно удалить скрытые архивные назначения. Совмещённые
+изменения membership/cohort остаются одной транзакцией с прежним CAS.
+Новый PG-контроль проверяет архивный+активный прежние офисы, добавление нового
+и отдельный cohort revoke с неизменными назначениями и membership version;
+корпоративный PG17 набор84/84PASS безskip.
+
+Квитанция окончательного сохранения офисов: API1640PASS/475conditionalskip,
+lint/typecheck/build PASS; PG17 корпоративный набор84/84PASS. В UI checkout
+после обычного merge6c79c3dd проверены9/9 реальных native API/PG17 browser
+случаев (новые6+прежниеprofile3); skips/flaky/retries0.
+Новое поле почты дополнительно получает ym-disable-keys внутри прежнего
+ym-hide-content; production Chromium/WebKit2/2 подтвердили markers и весь
+путь от создания приглашения до реального start/stop дежурства.
+Это local приёмка. Начатый GitHub CI первого head не отменён; финальный
+push и второй PR ждут его завершения, затем необходим новый exact-head CI.
+
+
+Квитанция initial CI43085006165/head111a4d27:33/35jobs SUCCESS, красный
+WebKit finance visual1/4 и итоговый e2e; Finance Lime owns readable cards,
+forms and payment actions трижды упёрся в page.goto/locator.click30s.
+Все corporate/API/DB/app gates прошли; это не зелёная приёмка выпуска.
+Логи сохранены приватно. Тесты/таймауты/retries не менялись.
+За время CI опубликован main8be75f05 с чужой migration213. Собственная ещё
+не опубликованная migration213 переименована214; чужая213 сохраняется
+побайтно. Далее обычный merge нового main, локальная проверка упавшего
+неизменённого financecase и новый полный CI окончательного head.
+
+Уточнение к предыдущей записи:8be75f05 подтверждён как Git main; его
+официальная публикация здесь ещё не проверена. Перед merge своего PR
+обязательны свежие main CI/публикации/health, Git-статус их не заменяет.
+Finance Lime owns readable cards, forms and payment actions: точный
+неизменённый WebKit case отдельно на production build прошёл1/1 за7.6s,
+с прежними assertions/30s/retry0 и официальными verified fonts2/2. Это
+диагностика исходного красного CI, не подмена нового full source gate.
+Полный локальный DB после main8be/migration214: первая restore-ступень
+прошла; в основной группе400PASS/2skip и один прежний cleanup-case упал
+по global quota (35/19 вместо31/15). Отдельно тот же неизменённый case1/1
+PASS; остаток всех DB-ступеней и native erasure6/6 PASS. Исходный local
+red сохранён, за зелёный полный DB run не выдаётся. Обязателен новый
+полный CI окончательного head. Корпоративные84/84 в полном DB этапе PASS.
+Проверено: native erasure штатно блокирует trainer profile до удаления,
+новый cohort не расширяет его допуск и не требует ослабления guard.
+
+
+### Итерация 106 — 2026-11-12 — GitHub Actions: внешний блокер выпуска
+
+Оба PR созданы:2107/head88f4d9ef и stacked2109/headcbcdf57d. Текущие
+CI43095423158/43095434788 и Android43095434965 с20:20UTC остаются queued
+с0jobs; workflow active, pending deployments/ручных approvals нет.
+GitHub объявил major outage Actions20:48UTC, затем resolved21:21UTC и
+сообщил об обработанном backlog; наши три runs при свежем чтении всё ещё
+не получили заданий. Статус сервиса: https://www.githubstatus.com/ .
+Штатное восстановление после resolved проверено только для собственного
+первого run: два normal cancel отклонены (CLI отображает общий HTTP409 как
+completed), один normal full rerun отклонён как already running. Поэтому
+не делаем вывода о внутренней причине; исходные run_attempt1/queued0jobs
+не изменились, отмена/повтор не произошли. Force/admin/bypass/new dispatch
+не использовались, чужие workflows/ветки не менялись.
+Текущие production, реальные учётки/почты/пилоты этой задачей не менялись;
+оба этапа НЕ выпущены и actual web/Android приёмка ещё не состоялась.
+Локальные проверки и исходный red сохранены в итерациях104–105/квитанциях.
+Один существующий ограниченный observer продолжает читать только свои
+CI/Android с интервалом90s. Условие продолжения: реальные current-head
+CI SUCCESS, UI Android assemble SUCCESS; затем свежие GitHub queue/main/
+публикации, штатный PR1 merge→official release→actual51web+51OTA и
+просмотр; только после этого интеграция опубликованного main/retarget2109,
+новые exact-head gates и PR2 release/actual57web+57OTA. Никаких grants по
+списку email: реальные trainer/офисы/cohort подтверждает администратор.
+Эта запись пока local-only: ради квитанции не меняем head активного CI.
+
+Дополнительная проверка22:05UTC: актуальный Git main по-прежнему8be75f05;
+CI43089706973 завершён failure, официальные API/web/OTA runs skipped.
+Красный включает не только upload-artifact: app-tests3217PASS/1FAIL
+(ExerciseImage manual file-load recovery, нет текста «Видео не загрузилось»),
+прежний finance WebKitcase с timeout/assertion; исходные логи сохранены.
+Эти области нашим diff не менялись; свой локальный полный frontend3218PASS
+не подменяет обязательный green main. Чужой mainCI не отменяли/повторяли.
+Вопрос об исключении force-cancel для ровно трёх собственных zero-job runs
+отправлен Антону; ответа пока нет, исключение не применялось. Оно само по
+себе не снимает отдельный гейт green main/официальных публикаций.
+
+12.11: Антон явно разрешил восстановить ровно три зависшие проверки.
+Свежие reads подтвердили исходные heads/attempt1/queued0jobs. По одному
+POST force-cancel на43095423158/43095434788/43095434965 отклонены409
+«Cannot cancel a workflow run that has not been queued yet». Ни отмена,
+ни rerun не произошли; исходники/production/чужие runs не менялись.
+Официальная диагностика GitHub описывает такие no-job/out-of-sync409
+и рекомендует Support clearance, поскольку зависший concurrency group
+может блокировать последующие runs:
+https://docs.github.com/en/actions/how-tos/troubleshoot-workflows#canceling-workflows .
+Общий status GitHub operational. Техническая причина не объявляется
+доказанной. Подготовлена приватная заявка ровно на эти3runs, не отправлена.
+CI main8be75f05 остаётся failure; официальные API/web/OTA skipped.
+Нужны очистка провайдером/реальное изменение состояния, полный green
+current-head CI/Android и отдельно green main/официальные публикации.
+
+
+### Итерация 107 — 2026-11-12 — Codex / OpenAI — пересоздание OPN PR
+
+Задача: Антон прямо поручил удалить зависшие проверки и заново создать два
+PR по тем же задачам. В Support не обращаться — явный отказ сохранён.
+Расхождение: GitHub не принял DELETE для ровно трёх согласованных zero-job
+runs43095423158/43095434788/43095434965 (403); прежние normal/force cancel
+также отклонены409. Удаление не состоялось, скрывать старые runs нельзя.
+Решение: закрыть свои2107/2109 и создать два новых PR из сохранённой истории
+на новых собственных ветках. Для CI новый номер PR задаёт отдельную штатную
+concurrency group; настройки workflow и обязательные gates не меняются.
+Это новый явный выбор Антона после отказа восстановления старых runs,
+а не дублирующий dispatch или обход обязательных проверок старого PR.
+Сделано локально: новые ветки от проверенных исходников; перенесены только
+собственные receipts106/107, прежние коммиты и все чужие изменения сохранены.
+Продуктовый backend/UI код, migration214 и native1.1.4/code9 не меняются.
+Отвергнуто: force-push, удаление веток, новый workflow, ослабление CI,
+слияние без проверок и отправка Support без разрешения. Ничего из этого
+не выполняется. Старые PR будут закрыты без удаления исходных веток.
+Проверка: main8be75f05 не изменился, локальные продуктовые проверки104–105
+применимы. Новые current-head полные CI и реальный UI Android обязательны.
+Открыто: основной main CI красный, официальные API/web/OTA skipped; наши
+два этапа ещё не выпущены. Шесть реальных тренеров не подключены автоматически.
+Дальше: новые PR/checks; свежая GitHub очередь и main gates; обычный squash
+PR1, полный mainCI/официальная публикация/actual приёмка; затем интеграция
+опубликованного main/retarget PR2, новые checks и отдельный выпуск/приёмка.

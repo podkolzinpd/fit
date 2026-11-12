@@ -7,6 +7,7 @@ import type { MediaObjectStorage } from './object-storage-media.js'
 interface AdminTrainer {
   id: string; name: string; isYandex: boolean; officeIds: string[]; version: number
   profileEditingAvailable?: boolean
+  testingEnabled?: boolean; testingVersion?: number
   publicId?: string | null; publishedName?: string | null
   photoPath?: string | null; avatarDataUrl?: string | null
 }
@@ -52,7 +53,9 @@ export function trainerCommand(body: unknown) {
     if (!officeIds.includes(id)) officeIds.push(id)
   }
   if (v.isYandex && officeIds.length === 0) return null
-  return { id: v.id, isYandex: v.isYandex, officeIds, version: v.version }
+  if (v.testingEnabled!==undefined && (typeof v.testingEnabled!=='boolean' || !version(v.testingVersion))) return null
+  return { id: v.id, isYandex: v.isYandex, officeIds, version: v.version,
+    ...(typeof v.testingEnabled==='boolean'?{testingEnabled:v.testingEnabled,testingVersion:Number(v.testingVersion)}:{}) }
 }
 
 export class CorporateAdminStore {
@@ -65,7 +68,7 @@ export class CorporateAdminStore {
   }
   bundle(session: YandexActorSession) {
     return withYandexActorSession(this.pool, session, async client => {
-      const rows = await client.query<{ bundle: AdminBundle }>('select app_private.corporate_admin_bundle_with_profile_access() bundle')
+      const rows = await client.query<{ bundle: AdminBundle }>('select app_private.corporate_admin_bundle_with_testing() bundle')
       if (!rows[0]?.bundle) throw new Error('corporate_bundle_missing')
       return exposeAdminTrainerPhotos(rows[0].bundle, this.media)
     })
@@ -85,8 +88,13 @@ export class CorporateAdminStore {
       if (rows[0]?.allowed !== true) {
         throw Object.assign(new Error('corporate_not_found'), { code: 'PT404' })
       }
-      await client.query('select app_private.save_corporate_trainer($1,$2,$3::uuid[],$4)',
-        [draft.id, draft.isYandex, draft.officeIds, draft.version])
+      if (draft.testingEnabled===undefined) {
+        await client.query('select app_private.save_corporate_trainer($1,$2,$3::uuid[],$4)',
+          [draft.id, draft.isYandex, draft.officeIds, draft.version])
+      } else {
+        await client.query('select app_private.save_corporate_trainer_and_testing($1,$2,$3::uuid[],$4,$5,$6)',
+          [draft.id,draft.isYandex,draft.officeIds,draft.version,draft.testingEnabled,draft.testingVersion])
+      }
     })
   }
 }
@@ -124,7 +132,7 @@ export function registerCorporateAdminRoutes(app: FastifyInstance, store: Corpor
           const code = failure?.code
           const message = failure?.message
           if (typeof code === 'string' && ['PT403','PT404','PT409','PT422'].includes(code)) {
-            const known = typeof message === 'string' && ['corporate_forbidden','corporate_not_found','corporate_conflict','corporate_invalid','corporate_office_in_use','corporate_office_duplicate'].includes(message)
+            const known = typeof message === 'string' && ['corporate_forbidden','corporate_not_found','corporate_conflict','corporate_invalid','corporate_office_in_use','corporate_testing_managed', 'corporate_office_duplicate'].includes(message)
             return reply.code(Number(code.slice(2))).send({ error: known ? message : 'corporate_invalid' })
           }
           request.log.warn({ event: 'corporate_admin_request_failed' }, 'Corporate admin request failed')
