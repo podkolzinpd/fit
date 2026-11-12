@@ -4577,3 +4577,33 @@ quality gate; CI workflows/selection/matrix/timeouts не меняются.
 локальный полный infra:policy:test PASS(финальная группа483/483,0skip),
 targetlint/gitdiff/docs PASS. Gates/selection/workflow/matrix не изменены.
 Следом новый полный sourceCI окончательного head; первый red сохраняется.
+
+
+
+Финальный source18573fd9/CI43179022443: исправленный inventory прошёл,
+но DB-job получил13таймаутов5s в четырёх неизменённых API suite. В source
+1c13ac85 и main3d ранее DBjob зелёный; services/api между1c→185 побайтно
+прежний. Первый диагностический фильтр13 дал12PASS/1assertion из-за
+пропущенного предшествующего контекста — не использован как green gate.
+Полные четыре suite на отдельном чистом localPG17 прошли270PASS/1прежний
+conditionalskip с исходными5s. Настоящие prodSQL/SSH не использовались.
+После terminal исходного workflow(34SUCCESS/DBfailure) штатно повторён
+весь failedDBjob: чистые миграции и полный DB/RLS/restore/push/history/
+erasure порядок; старые34passed того жеhead сохранены, не подменены иной
+версией. Итог CI43179022443/attempt2 SUCCESS,35/35 latest jobsSUCCESS,
+app/e2e/api/database проверены; sourcehead18573fd9. Таймауты/SQL не меняли.
+Технический2112 штатно squash match-head18573fd9 слит12.11.08:30:51UTC,
+main48feac61dd9c30f57ae50b335de868194e7e3042 включает продуктовый2110.
+Проверены fresh root/branch/dirty/main/CLEAN/MERGEABLE, зелёный полный
+source и отсутствие активных main-публикаций. Это разрешённый ремонт
+красного main; admin/bypass/force/deletebranch не использовались.
+Новый full mainCI/официальные API/web/OTA и actual51web+51OTA/просмотр
+ещё впереди. PR2111 до этой фактической приёмки не интегрируется/не выпускается.
+Эти фактические receipts пока local-only: не меняем head ради журнала;
+после приёмки1 перенести добавленный хвост в тот же canonical на PR2111.
+
+
+### Итерация 111 — 2026-11-12 — Codex / OpenAI — actual приёмка1, интеграция2
+
+Первый этап принят на опубликованном main48feac61dd9c30f57ae50b335de868194e7e3042 после полногоmainCI/официальных API/web/signedOTA. Public readback: 246files size/SHA/bytes, OTAcrypto/source/ABI/native9, dualAPIrelease/health/ready/DNS-TLS/anonymous401 PASS. Actual51web+51OTA безskip/flaky/retry, screenshots просмотрены; физический телефон/OAuth не проверены.
+Сохранены собственные pending receipts109, опубликованный main интегрирован обычным merge, обе истории и чужие изменения сохранены. PR2111 фактически squash слит в старую ветку первого этапа, а неmain; опубликованный main не содержит UI. Его tree равен21f. Обычным merge сохранены обе истории внешнего e675 и21f, новая ветка продолжает только собственный этап2. Replacement PR наmain/новые fullCI и реальный exact-head Android следуют после applicable local checks. Runtime src/API/public/native/package по сравнению с проверенным21f6f747 не менялся; новый diff — принятый test repair/inventory и история/docs.
