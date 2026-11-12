@@ -10790,3 +10790,26 @@ keyboard/install и5extraWebKitnativebackend по-прежнему не пров
 Финансовыйreturnfilterflaky/InBodyretry изстарыхCI не объявляются
 исправленными этойCSSмиграцией. Далее push→greenownCI→свежаяочередь/main→
 merge→официальнаяпубликация→readonlyUI/readback→приёмкавладельца.
+
+
+## 253. MC519 / PR2103 — слито после полного greenCI, доставка ожидается
+
+2026-11-12, Codex/OpenAI. Итоговыйhead4ec32ce2 получил36SUCCESS, один
+штатныйauth-smokeSKIP; CI43280151025attempt1 SUCCESS. Дополнительных
+rerun на этомhead не было. Передmerge main87d77bf2 был актуален, активных
+раннихпубликаций не было. Единственный ранний2087 повторно сохранил
+headb7601e7b/update10.11T12:52:41Z/allrunscompleted: прежний обход
+подтверждён GitHub, бездругихчатов и безслияниячужогоPR. Приоритетные
+2110/2111 уже доставлены в опубликованном87d по§252.
+
+Разрешённыйexactheadmerge2103 выполнен ипрочитанобратно: squash
+71f54fc27be98cf32acc63370665c806ca565ba6. Повторногоmerge/deploy нет.
+Sequence43988 теперь наблюдает только CI/публикации собственногоmainsha
+с90sпаузами. Послеофициальногоуспеха — readonlypublicreadback и
+исходные38web+38signedOTA UI cases черезfit-storage. Это ещё не
+подтверждённаядоставка; physicalphone иnativeinstall непроверены.
+
+Квитанции: /tmp/fit-mc519/ci-final.json,
+/tmp/fit-mc519-release/release-controller.json иsequence-status.json.
+Runtime/флаги не менялись после приёмки252; следующийMC не начат.
+Эта docs-only запись локальная, безpush, не запускает CI ради квитанции.
