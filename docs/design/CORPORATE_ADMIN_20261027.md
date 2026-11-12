@@ -4524,3 +4524,56 @@ singleAttendanceCabinets создаёт собственные fixture/ledger и
 тест не меняем. Оба продукта ещё НЕ приняты:2110 MERGED/не опубликован,
 2111 OPEN/до actual приёмки1 не интегрируется/не выпускается. Production
 по-прежнему проверенная основа8be, новые реальные grants не выполнялись.
+
+
+### Итерация 110 — 2026-11-12 — Codex / OpenAI — разрешённый технический PR
+
+Задача: Антон явно разрешил дополнительный технический PR, отделяющий
+независимый singleAttendanceCabinets от перегруженного финансового теста,
+с сохранением всех checks/viewports/screenshots/30s, затем продолжить OPN.
+Расхождение: main43166394613 дважды красный на прежнем большом financecase;
+первый продуктовый2110 уже слит, но не принят/не опубликован;2111 ждёт.
+Решение: отдельная собственная ветка от актуального3d6d2769; существующий
+helper перенесён в самостоятельный test с прежним @lime-finance. Новое
+покрытие не заменяет старое: все279expect/53screenshot calls и четыре
+ширины320/390/430/1440 сохранены, helper byte-identical. Код приложения,
+CI workflows, лимиты, API/SQL/flags/native и чужие ветки не меняются.
+Отвергнуто: третий blind rerun, увеличенный timeout, отключённые assertions,
+publication на старом красномCI, включение этого ремонта вPR2 до приёмки1.
+Проверки этого source впереди. После зелёного полного sourceCI — штатный
+squash ремонта main; новый полный mainCI/официальная публикация/actual
+приёмка содержимого2110 на исправленной основе. Затем normal merge уже
+опубликованного main в2111, retargetmain и все новые CI/Android/гейты2.
+Это согласованное расширение пакета одним техническим PR; прежний red
+main диагностический, исправляется этим source, а не обходится admin/force.
+
+CIF101–104: самостоятельный attendance test; assertions/screenshots/
+viewports/30s прежние; никаких runtime/workflow изменений; fullsource+
+main/официальный выпуск/actual51web+51OTA обязательны перед приёмкой1.
+Локально lint target и свежий synthetic production build PASS. На обоих
+движках Chromium/WebKit исходные карточки/формы/коррекция/оплата и новый
+standaloneattendance прошли dev4/4(16.14s),production4/4(7.73s),0skip/
+flaky/retry/unexpected. Локальные config/guards блокируют realAPI/WS и
+externalorigins. Все279expect/53screenshot calls и helper body byte-identical;
+source diff ровно3 добавленные строки плюс собственные canonical/CURRENT.
+Новый источник CI/actual публикация ремонта ещё впереди.
+
+CI43175020834/head1c13ac85: policy-тест полного inventory справедливо
+зафиксировал743 вместо прежних742 зарегистрированных cases. Это ровно
+вынесенный самостоятельный attendance test; первая локальная проверка
+lint/build/browser не включала inventory policy — пропуск учтён.
+Обновлён ожидаемый размер union743; дополнительно проверяется ровно одно
+вхождение нового test в каждом движке. Все прежние проверки присутствия,
+совпадения partition union/full и отсутствия дубликатов остаются. Это
+обновление реестра проверок после согласованного разделения, не отключение
+quality gate; CI workflows/selection/matrix/timeouts не меняются.
+Начатый старый sourceCI не отменяется; перед новым push ждём terminal.
+
+Первый технический sourceCI43175020834 завершён:33/35jobs SUCCESS,
+все браузерные partitions, включая прежний finance WebKit блокер, зелёные;
+красные только repository-quality(старые742/156) и зависимый appaggregate.
+Перед обновлением дождались terminal, начатые проверки не отменялись.
+После обновления full743/scoped157 и проверок нового case exactly-once
+локальный полный infra:policy:test PASS(финальная группа483/483,0skip),
+targetlint/gitdiff/docs PASS. Gates/selection/workflow/matrix не изменены.
+Следом новый полный sourceCI окончательного head; первый red сохраняется.

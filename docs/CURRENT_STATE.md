@@ -32,7 +32,7 @@ P4/PR1882 опубликован наe5b5aa1d:213 файлов/health и public 
 P1–P4 завершены; итог — итерация26 канонического журнала и YAFIT-674.
 31.10 справочник заполнен:32 офиса добавлены,33/33 после reload; итерация27.
 02.11: [кабинет Яндекса](design/CORPORATE_ADMIN_20261027.md): PR1930/1937 опубликованы.
-SRV/ADM/CPT/DUT/TPA приняты. OPN2110 слит: mainCI дважды finance WebKit timeout; согласование точечной test-правки;2111 ждёт; [журнал109](design/CORPORATE_ADMIN_20261027.md).
+SRV/ADM/CPT/DUT/TPA приняты. OPN2110 слит,2111 ждёт; согласован отдельный ремонт finance WebKit; [журнал110](design/CORPORATE_ADMIN_20261027.md).
 
 ## Точка продолжения
 [UX:4PR, проверки](design/WORKOUT_LIFECYCLE_UX_AUDIT_20261101.md).
