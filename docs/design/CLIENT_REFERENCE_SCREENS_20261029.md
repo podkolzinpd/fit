@@ -10697,3 +10697,39 @@ CI новогоremotehead: run43092357557, attempt1. Финальный полн
 Финансовый filterflaky из§249 остаётся незакрытым наблюдением.
 Выпуск по-прежнему только после отдельного разрешения владельца;
 следующийMC не начат. Эта запись и квитанция локальные, безpush.
+
+
+## 251. MC519 — разрешение выпуска и разбор CI ce835139
+
+2026-11-12, Codex/OpenAI. Владелец прямо разрешил дождаться greenCI и
+выпустить PR2103 спортсмену/тренеру в общейочереди без новойpermission.
+Механики/охват/темы прежние, следующийMC без приёмки не начинать.
+СвойPR OPEN, headce835139, main8be75f05; правилаAGENTS/FIT_WORKFLOW
+по сравнению с принятойбазой прежние. Локальные receiptcommits сохраняются
+безpush, не меняют проверяемыйremotehead. Никаких чужихчатов/PR не сливала.
+
+CI43092357557 attempt1 завершилсяfailure. Семь joblogs сохранены
+в /tmp/fit-mc519-release/job-*.log. Пять jobs прошли свои браузерные
+assertions и упали только на GitHub CreateArtifact: HTML/upstream вместо
+JSON после5attempts. ВWebKitvisual1/4 исходныйFinance513 снова превысил
+30s в разных позднихдействиях (втомчисле финальном переходе/me/finance).
+Предыдущие независимые baseline/candidate ABBA и passiveinput proof
+сохраняются: источник причины не установлен, данные/assertions не сломаны.
+WebKitvisual4/4: InBodylight390 один timeout ожиданияimportresult, retry
+прошёл; самjob упал наCreateArtifact. Новые scopefixes не придумывались,
+тесты/таймауты/финансовыйкод не менялись. Выполнен ровноОДИН failed-only
+rerun этогоhead; успешные28jobs не повторялись. Один watcher69981,90s.
+
+Очередь GitHub: единственныйранний2087 сохранил headb7601e7b иupdated
+2026-11-10T12:52:41Z в независимых предыдущих/currentснимках; всеегоCI
+завершены. Обход допустим только если это состояние подтвердится прямо
+передmerge; любое движение отменяет обход. Currentmain8be не публиковался
+из-за своегоCIfailure, автопубликацииskipped, активныхвыпусков в снимке нет.
+СвоёgreenCI должно покрыть actualmain8be; прежнийCIcca не подставляется.
+
+Подготовлена послепубликационная приёмка38исходныхlibrarycases на web и
+38наverifiedsignedOTA в двухдвижках:6QAфайлов побайтово, прежний
+readonlypublictransport, realAPI/write continuations запрещены. Это пока
+план доставки, не фактпубликации и не nativeinstall/physicalphone.
+Дальше: terminalcurrentCI→свежийmain/queue→exactheadmerge→mainCI→
+штатныеAPI/web/signedOTA→публичныйreadback иUI→сводка/владелецпринимает.
