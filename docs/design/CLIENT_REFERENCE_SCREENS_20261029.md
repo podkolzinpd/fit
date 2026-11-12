@@ -11040,3 +11040,33 @@ mc52-candidate2-qualified-parity.json; /tmp/fit-mc52-authored-map-final.json.
 001116-4bbb88c4,001406-759bdea4 (20261113). Они хранят оригинальные raw/
 PNG/logs. Собственный checkout переиспользован, результаты не копировались;
 новые большие прогоны выполнены через fit-storage reserve1GiB.
+
+
+## 257. MC5.2 — PR #2115 проверен, публикация удержана
+
+2026-11-13, Codex/OpenAI. [PR #2115](https://github.com/podkolzinpd/fit/pull/2115)
+подготовлен как DRAFT. Проверенный удалённый head3b339ca99215979b5599a00e861d03b122def013.
+План закреплён41a1d0f9, реализация/QA/журнал3b339ca9; scope и результаты §256.
+
+Полный CI run43308679404,attempt1,head3b339ca9: workflow completed/success,
+36 успешных check contexts,0failed/pending. Единственный штатный auth-smoke
+SKIPPED не переименовывается в passed. Android assemble, API/database,
+app-tests, Chromium/WebKit, все Lime и Yandex acceptance группы завершены
+успешно. Наблюдение велось одним bounded-процессом с паузой90s, без
+обращения к другим чатам/их CI. Долгие own jobs однократно разобраны по
+шагам; не перезапускались и не ослаблялись.
+
+Сводка:134/134 локальных browser cases и32/32 unit;112 состояний exact по
+native style/geometry/fields/interaction/scroll/data. RawstrictFALSE для
+6generated support-code HTML различий иPNG106/112 оставлены с отдельной
+квалификацией §256. Прежнее сжатие длинного title в календаре тренера
+открыто и сообщено владельцу; физический телефон не проверен.
+
+PR/body содержит actual CI результат и ограничения. Слияние, включение
+новых профилей, публикация и следующийMC НЕ выполнялись. Дальше — явное
+разрешение владельца именно #2115, затем свежийmain/exact-headCI/общая
+очередь и доказательство доставки. Новая очередь сейчас не опрашивалась,
+так как выпуск ещё не разрешён. Квитанция CI: /tmp/fit-mc519/mc52-ci-final.json;
+checkpoint: /tmp/fit-mc519/mc52-checkpoint.json. Эта docs-only квитанция
+сохранена локально, безpush ради повтора уже зелёного CI; исходный PR
+остаётся на проверенном3b339ca9, квитанция переносится дальше при необходимости.
