@@ -4433,3 +4433,147 @@ concurrency group; настройки workflow и обязательные gates
 Дальше: новые PR/checks; свежая GitHub очередь и main gates; обычный squash
 PR1, полный mainCI/официальная публикация/actual приёмка; затем интеграция
 опубликованного main/retarget PR2, новые checks и отдельный выпуск/приёмка.
+
+Квитанция пересоздания:2109/2107 CLOSED без deletebranch; новые2110
+(cbe50461,base main) и2111(21f6f747,stacked на новую backend-ветку).
+CI43157572787/43157580407 и Android43157580432 получили реальные jobs,
+в отличие от старых zero-job runs. Итоговая зелень/выпуск пока не заявлены.
+Исходники runtime относительно старых проверенных heads побайтно прежние;
+новые diff только в собственных receipts/CURRENT, UI включает backend
+обычным merge. Support не отправлялся по прямому отказу Антона.
+
+
+### Итерация 108 — 2026-11-12 — Codex / OpenAI — новые source gates и main
+
+Задача: продолжить разрешённый выпуск двух OPN этапов; Антон явно назначил
+наш пакет первым и сообщил об остановке остальных. Другие PR/CI не менять.
+Расхождения: старые zero-job runs не удалены (GitHub403), но новые номера
+PR получили задания; штатные workflows/concurrency/test assertions прежние.
+Проверено:2110/headcbe50461 CI43157572787 SUCCESS35jobs;2111/head21f6f747
+CI43157580407 SUCCESS35jobs. Реальный Android43157580432 assemble SUCCESS
+ровно21f6f747 (auth-smoke штатно skipped); телефон/OAuth этим не проверены.
+Main8be75f05: старыйCI43089706973 остаётся красным. Для проверки основы
+нашего выпуска запущен отдельный штатный full CI43159060261/manual main,
+без изменения старого run и без активного дубля; SUCCESS, обязательные
+app/e2e/api/database зелёные. Ни код, ни assertions/timeouts не менялись.
+Решение: restore основы только официальными current-main workflows после
+fullgreen. ManualCI не запускает API/web автоматически по push-filter;
+поэтому официальный API release вызывается с ci_run_id43159060261, затем
+web с тем же ID, после него подписанный OTA по обычной автоматике.
+Публикации последовательно, readback всех файлов size/SHA/crypto и обоих
+API/DNS/TLS обязателен до merge2110. Исходные red/403/409 не скрываются.
+Открыто: оба собственных PR ещё OPEN/не выпущены; публикация основы идёт.
+Независимые старые flags/roles/offices/data/native остаются прежними.
+Дальше: actual baseline readback, свежие main/head/priority guards,
+обычный squash match-head2110; полный own mainCI/официальный выпуск/
+actual51web+51OTA и просмотр. Только после приёмкиPR1 normal merge
+опубликованного main вPR2/retarget, новые fullCI/Android и второй выпуск.
+
+Квитанция основы:8be75f05 официально опубликован через API43165303086,
+web43165659164, auto signedOTA43165909877. Public readback12.11.06:10UTC:
+246/246 web files size/SHA/bytes совпали с official manifest, OTA16064471B,
+две подписи/source/ABI/native9 проверены; оба API release/health/ready,
+DNS/TLS и anonymous401 PASS. Это приёмка основы, не собственных OPN PR.
+2110 штатно squash --match-head-commit cbe50461 слит12.11.06:11:28UTC,
+main3d6d27697ff245361c3cce60f0fe068cb98cb79c. Перед merge: root/branch/
+dirty/main/PR MERGEABLE+CLEAN/current-source CI и отсутствие активных
+публикаций проверены; явный приоритет Антона действует, другие PR не меняли.
+Ни bypass, ни deletebranch/force не использовались. Новый full mainCI идёт;
+собственная публикация/actual51web+51OTA/просмотр ещё не состоялись.
+PR2 до фактической приёмки первого остаётся без интеграции/retarget.
+
+
+### Итерация 109 — 2026-11-12 — Codex / OpenAI — own main WebKit red/review
+
+Задача: actual приёмка первого этапа после штатного merge2110.
+Расхождение: mainCI43166394613/attempt1 на3d6d2769 FAILURE: e2e-fit-lime
+(webkit,visual,1/4) и итоговыйe2e; app/API/database SUCCESS. Публикации skipped.
+Факты: в неизменённом finance-accounting.cases.ts:513 три попытки упёрлись
+в общий30s в поздних setViewportSize/page.goto (490/478/504); функциональная
+ошибка ledger не зафиксирована. workout-template-reliability.cases.ts:37
+однажды ожидал КОРПУС вместо ведущих пробелов, затем прошёл штатный retry:
+итог этого job150PASS/1FAIL finance/1FLAKY template/4прежнихskip.
+Диагностика: сохранены original logs,70MB CI artifact, traces. Retry trace
+финансов показывает goto3856ms, reload2749/2718ms и исчерпание общего
+лимита; trace шаблона на штатном retry прошёл. CI запускает dev Vite, а не
+production preview. Эти src/e2e области относительно зелёной основы8be
+побайтно не менялись; новые source gates обоих PR35/35 зелёные.
+Проверка без изменения assertions/30s/retry0: точные два cases на iPhone
+WebKit с2workers прошли dev2/2(15.76s total) и production2/2(7.17s total),
+skip/flaky/unexpected0; все настоящие API/WS/external origins blocked.
+Причина среды как окончательный root cause не объявляется доказанной.
+Решение: один reviewed полный rerun этого собственного mainCI, а не только
+failed jobs, тот жеhead3d6d2769; attempt2 зарегистрирован. Первоначальный
+red сохранён, ни код, ни assertions/timeouts/workflows не менялись.
+Отвергнуто: blind retry loop, ослабление времени/проверок, посторонний
+рефакторинг финансов/шаблонов и publication при красномCI.
+Открыто: attempt2/main official publication/actual51web+51OTA ещё впереди.
+Продолжение: принять первый этап только после всех гейтов; затем PR2.
+
+Attempt2CI43166394613 на том же3d6d2769 снова FAILURE только finance
+WebKitvisual1/4 иe2e. В этом shard151PASS/1FAIL finance/4прежнихskip;
+шаблон прошёл безflake. Финансы снова3x30s, поздние goto/click в helper.
+Третьего blind rerun нет. Обнаружена конкретная граница: самостоятельный
+singleAttendanceCabinets создаёт собственные fixture/ledger и вызывается
+после уже большого отдельного сценария карточек/форм/коррекции/оплаты.
+Подготовлен приватный diff-предложение: перенести этот готовый helper в
+отдельный test с прежним finance tag; все expect/screenshot/viewports и
+стандартный30s сохранены, product/CI config не меняются. Diff НЕ применён.
+Нужен выбор Антона: один дополнительный технический PR вне исходных двух
+продуктовых этапов и финансовой области; без согласования чужой финансовый
+тест не меняем. Оба продукта ещё НЕ приняты:2110 MERGED/не опубликован,
+2111 OPEN/до actual приёмки1 не интегрируется/не выпускается. Production
+по-прежнему проверенная основа8be, новые реальные grants не выполнялись.
+
+
+### Итерация 110 — 2026-11-12 — Codex / OpenAI — разрешённый технический PR
+
+Задача: Антон явно разрешил дополнительный технический PR, отделяющий
+независимый singleAttendanceCabinets от перегруженного финансового теста,
+с сохранением всех checks/viewports/screenshots/30s, затем продолжить OPN.
+Расхождение: main43166394613 дважды красный на прежнем большом financecase;
+первый продуктовый2110 уже слит, но не принят/не опубликован;2111 ждёт.
+Решение: отдельная собственная ветка от актуального3d6d2769; существующий
+helper перенесён в самостоятельный test с прежним @lime-finance. Новое
+покрытие не заменяет старое: все279expect/53screenshot calls и четыре
+ширины320/390/430/1440 сохранены, helper byte-identical. Код приложения,
+CI workflows, лимиты, API/SQL/flags/native и чужие ветки не меняются.
+Отвергнуто: третий blind rerun, увеличенный timeout, отключённые assertions,
+publication на старом красномCI, включение этого ремонта вPR2 до приёмки1.
+Проверки этого source впереди. После зелёного полного sourceCI — штатный
+squash ремонта main; новый полный mainCI/официальная публикация/actual
+приёмка содержимого2110 на исправленной основе. Затем normal merge уже
+опубликованного main в2111, retargetmain и все новые CI/Android/гейты2.
+Это согласованное расширение пакета одним техническим PR; прежний red
+main диагностический, исправляется этим source, а не обходится admin/force.
+
+CIF101–104: самостоятельный attendance test; assertions/screenshots/
+viewports/30s прежние; никаких runtime/workflow изменений; fullsource+
+main/официальный выпуск/actual51web+51OTA обязательны перед приёмкой1.
+Локально lint target и свежий synthetic production build PASS. На обоих
+движках Chromium/WebKit исходные карточки/формы/коррекция/оплата и новый
+standaloneattendance прошли dev4/4(16.14s),production4/4(7.73s),0skip/
+flaky/retry/unexpected. Локальные config/guards блокируют realAPI/WS и
+externalorigins. Все279expect/53screenshot calls и helper body byte-identical;
+source diff ровно3 добавленные строки плюс собственные canonical/CURRENT.
+Новый источник CI/actual публикация ремонта ещё впереди.
+
+CI43175020834/head1c13ac85: policy-тест полного inventory справедливо
+зафиксировал743 вместо прежних742 зарегистрированных cases. Это ровно
+вынесенный самостоятельный attendance test; первая локальная проверка
+lint/build/browser не включала inventory policy — пропуск учтён.
+Обновлён ожидаемый размер union743; дополнительно проверяется ровно одно
+вхождение нового test в каждом движке. Все прежние проверки присутствия,
+совпадения partition union/full и отсутствия дубликатов остаются. Это
+обновление реестра проверок после согласованного разделения, не отключение
+quality gate; CI workflows/selection/matrix/timeouts не меняются.
+Начатый старый sourceCI не отменяется; перед новым push ждём terminal.
+
+Первый технический sourceCI43175020834 завершён:33/35jobs SUCCESS,
+все браузерные partitions, включая прежний finance WebKit блокер, зелёные;
+красные только repository-quality(старые742/156) и зависимый appaggregate.
+Перед обновлением дождались terminal, начатые проверки не отменялись.
+После обновления full743/scoped157 и проверок нового case exactly-once
+локальный полный infra:policy:test PASS(финальная группа483/483,0skip),
+targetlint/gitdiff/docs PASS. Gates/selection/workflow/matrix не изменены.
+Следом новый полный sourceCI окончательного head; первый red сохраняется.

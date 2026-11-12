@@ -644,6 +644,9 @@ export function financeAccountingCases() {
     expect(commands).toHaveLength(1)
     expect(commands[0]).toMatchObject({singleSession:true,sessionsTotal:1,priceCents:200000,openingPaidCents:50000})
     expect(commands[0]!.requestId).toMatch(/^[0-9a-f-]{36}$/)
+  })
+
+  test('Finance Lime single attendance stays consistent in trainer and athlete cabinets', { tag: ['@lime-finance'] }, async ({ page }, info) => {
     await singleAttendanceCabinets(page,info)
   })
 
