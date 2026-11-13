@@ -1,3 +1,81 @@
+/* MC5.2: active athlete/trainer workout list/history residual authored paint.
+   Zero-specificity route ownership; accepted Lime composition stays below. */
+.client-workouts-identity .client-history-calendar:where(:is(.fit-client-lime.client-workouts-identity:has(> .content > .client-workouts-page > :is(#workouts-current-panel:not([hidden]),#workouts-history-panel:not([hidden]))),.fit-client-lime.client-workouts-identity:has(> .content > .client-workouts-page > :is(#workouts-current-panel:not([hidden]),#workouts-history-panel:not([hidden]))) *,.fit-lime-shell.client-workouts-identity:has(> .content > .trainer-client-workouts-page),.fit-lime-shell.client-workouts-identity:has(> .content > .trainer-client-workouts-page) *)) {
+    border: 1px solid var(--border)
+}
+.client-workouts-identity .client-history-calendar-toolbar h3:where(:is(.fit-client-lime.client-workouts-identity:has(> .content > .client-workouts-page > :is(#workouts-current-panel:not([hidden]),#workouts-history-panel:not([hidden]))),.fit-client-lime.client-workouts-identity:has(> .content > .client-workouts-page > :is(#workouts-current-panel:not([hidden]),#workouts-history-panel:not([hidden]))) *,.fit-lime-shell.client-workouts-identity:has(> .content > .trainer-client-workouts-page),.fit-lime-shell.client-workouts-identity:has(> .content > .trainer-client-workouts-page) *)) {
+    font-size: 18px;
+    font-weight: 600;
+    letter-spacing: -.012em
+}
+.client-workouts-identity .client-history-calendar-arrow:where(:is(.fit-client-lime.client-workouts-identity:has(> .content > .client-workouts-page > :is(#workouts-current-panel:not([hidden]),#workouts-history-panel:not([hidden]))),.fit-client-lime.client-workouts-identity:has(> .content > .client-workouts-page > :is(#workouts-current-panel:not([hidden]),#workouts-history-panel:not([hidden]))) *,.fit-lime-shell.client-workouts-identity:has(> .content > .trainer-client-workouts-page),.fit-lime-shell.client-workouts-identity:has(> .content > .trainer-client-workouts-page) *)) {
+    border-radius: 14px
+}
+.client-workouts-identity .client-history-calendar-weekday:where(:is(.fit-client-lime.client-workouts-identity:has(> .content > .client-workouts-page > :is(#workouts-current-panel:not([hidden]),#workouts-history-panel:not([hidden]))),.fit-client-lime.client-workouts-identity:has(> .content > .client-workouts-page > :is(#workouts-current-panel:not([hidden]),#workouts-history-panel:not([hidden]))) *,.fit-lime-shell.client-workouts-identity:has(> .content > .trainer-client-workouts-page),.fit-lime-shell.client-workouts-identity:has(> .content > .trainer-client-workouts-page) *)) {
+    color: var(--muted);
+    font-size: 12px;
+    font-weight: 500
+}
+.client-workouts-identity .client-history-calendar-day:where(:is(.fit-client-lime.client-workouts-identity:has(> .content > .client-workouts-page > :is(#workouts-current-panel:not([hidden]),#workouts-history-panel:not([hidden]))),.fit-client-lime.client-workouts-identity:has(> .content > .client-workouts-page > :is(#workouts-current-panel:not([hidden]),#workouts-history-panel:not([hidden]))) *,.fit-lime-shell.client-workouts-identity:has(> .content > .trainer-client-workouts-page),.fit-lime-shell.client-workouts-identity:has(> .content > .trainer-client-workouts-page) *)) {
+    border-radius: 10px;
+    color: var(--secondary-label-fg)
+}
+.client-workouts-identity .client-history-calendar-day > span:where(:is(.fit-client-lime.client-workouts-identity:has(> .content > .client-workouts-page > :is(#workouts-current-panel:not([hidden]),#workouts-history-panel:not([hidden]))),.fit-client-lime.client-workouts-identity:has(> .content > .client-workouts-page > :is(#workouts-current-panel:not([hidden]),#workouts-history-panel:not([hidden]))) *,.fit-lime-shell.client-workouts-identity:has(> .content > .trainer-client-workouts-page),.fit-lime-shell.client-workouts-identity:has(> .content > .trainer-client-workouts-page) *)) {
+    border-radius: 10px;
+    background: transparent;
+    color: inherit;
+    font-size: 12px;
+    font-weight: 500
+}
+.client-workouts-identity .client-history-calendar-day > button:where(:is(.fit-client-lime.client-workouts-identity:has(> .content > .client-workouts-page > :is(#workouts-current-panel:not([hidden]),#workouts-history-panel:not([hidden]))),.fit-client-lime.client-workouts-identity:has(> .content > .client-workouts-page > :is(#workouts-current-panel:not([hidden]),#workouts-history-panel:not([hidden]))) *,.fit-lime-shell.client-workouts-identity:has(> .content > .trainer-client-workouts-page),.fit-lime-shell.client-workouts-identity:has(> .content > .trainer-client-workouts-page) *)) {
+    border-radius: 10px;
+    font-size: 12px
+}
+.client-workouts-identity .client-history-calendar-day.outside:where(:is(.fit-client-lime.client-workouts-identity:has(> .content > .client-workouts-page > :is(#workouts-current-panel:not([hidden]),#workouts-history-panel:not([hidden]))),.fit-client-lime.client-workouts-identity:has(> .content > .client-workouts-page > :is(#workouts-current-panel:not([hidden]),#workouts-history-panel:not([hidden]))) *,.fit-lime-shell.client-workouts-identity:has(> .content > .trainer-client-workouts-page),.fit-lime-shell.client-workouts-identity:has(> .content > .trainer-client-workouts-page) *)) {
+    color: var(--muted)
+}
+.client-workouts-identity .client-history-calendar-day.future:where(:is(.fit-client-lime.client-workouts-identity:has(> .content > .client-workouts-page > :is(#workouts-current-panel:not([hidden]),#workouts-history-panel:not([hidden]))),.fit-client-lime.client-workouts-identity:has(> .content > .client-workouts-page > :is(#workouts-current-panel:not([hidden]),#workouts-history-panel:not([hidden]))) *,.fit-lime-shell.client-workouts-identity:has(> .content > .trainer-client-workouts-page),.fit-lime-shell.client-workouts-identity:has(> .content > .trainer-client-workouts-page) *)) {
+    color: var(--muted)
+}
+.client-workouts-identity .client-history-calendar-day.today > span:where(:is(.fit-client-lime.client-workouts-identity:has(> .content > .client-workouts-page > :is(#workouts-current-panel:not([hidden]),#workouts-history-panel:not([hidden]))),.fit-client-lime.client-workouts-identity:has(> .content > .client-workouts-page > :is(#workouts-current-panel:not([hidden]),#workouts-history-panel:not([hidden]))) *,.fit-lime-shell.client-workouts-identity:has(> .content > .trainer-client-workouts-page),.fit-lime-shell.client-workouts-identity:has(> .content > .trainer-client-workouts-page) *)) {
+    box-shadow: inset 0 0 0 1px var(--fg)
+}
+.client-workouts-identity .client-history-calendar-day-mark:where(:is(.fit-client-lime.client-workouts-identity:has(> .content > .client-workouts-page > :is(#workouts-current-panel:not([hidden]),#workouts-history-panel:not([hidden]))),.fit-client-lime.client-workouts-identity:has(> .content > .client-workouts-page > :is(#workouts-current-panel:not([hidden]),#workouts-history-panel:not([hidden]))) *,.fit-lime-shell.client-workouts-identity:has(> .content > .trainer-client-workouts-page),.fit-lime-shell.client-workouts-identity:has(> .content > .trainer-client-workouts-page) *)) {
+    border-radius: 999px;
+    background: currentColor;
+    color: var(--mono-primary);
+    font-size: 10px;
+    font-weight: 600
+}
+.client-workouts-identity .client-history-calendar-day-mark:not(:empty):where(:is(.fit-client-lime.client-workouts-identity:has(> .content > .client-workouts-page > :is(#workouts-current-panel:not([hidden]),#workouts-history-panel:not([hidden]))),.fit-client-lime.client-workouts-identity:has(> .content > .client-workouts-page > :is(#workouts-current-panel:not([hidden]),#workouts-history-panel:not([hidden]))) *,.fit-lime-shell.client-workouts-identity:has(> .content > .trainer-client-workouts-page),.fit-lime-shell.client-workouts-identity:has(> .content > .trainer-client-workouts-page) *)) {
+    background: var(--mono-primary);
+    color: var(--mono-on-primary)
+}
+.client-workouts-identity .client-history-calendar-day.selected .client-history-calendar-day-mark:where(:is(.fit-client-lime.client-workouts-identity:has(> .content > .client-workouts-page > :is(#workouts-current-panel:not([hidden]),#workouts-history-panel:not([hidden]))),.fit-client-lime.client-workouts-identity:has(> .content > .client-workouts-page > :is(#workouts-current-panel:not([hidden]),#workouts-history-panel:not([hidden]))) *,.fit-lime-shell.client-workouts-identity:has(> .content > .trainer-client-workouts-page),.fit-lime-shell.client-workouts-identity:has(> .content > .trainer-client-workouts-page) *)) {
+    background: var(--mono-on-primary);
+    color: var(--mono-primary)
+}
+.client-workouts-identity .client-history-calendar-state:where(:is(.fit-client-lime.client-workouts-identity:has(> .content > .client-workouts-page > :is(#workouts-current-panel:not([hidden]),#workouts-history-panel:not([hidden]))),.fit-client-lime.client-workouts-identity:has(> .content > .client-workouts-page > :is(#workouts-current-panel:not([hidden]),#workouts-history-panel:not([hidden]))) *,.fit-lime-shell.client-workouts-identity:has(> .content > .trainer-client-workouts-page),.fit-lime-shell.client-workouts-identity:has(> .content > .trainer-client-workouts-page) *)) {
+    border-radius: 14px;
+    background: var(--surface-sunken);
+    color: var(--secondary-label-fg);
+    font-size: 14px
+}
+.client-workouts-identity .client-history-calendar-state button:where(:is(.fit-client-lime.client-workouts-identity:has(> .content > .client-workouts-page > :is(#workouts-current-panel:not([hidden]),#workouts-history-panel:not([hidden]))),.fit-client-lime.client-workouts-identity:has(> .content > .client-workouts-page > :is(#workouts-current-panel:not([hidden]),#workouts-history-panel:not([hidden]))) *,.fit-lime-shell.client-workouts-identity:has(> .content > .trainer-client-workouts-page),.fit-lime-shell.client-workouts-identity:has(> .content > .trainer-client-workouts-page) *)) {
+    border-radius: 14px;
+    font-size: 14px
+}
+.client-workouts-identity .client-history-calendar-selection:where(:is(.fit-client-lime.client-workouts-identity:has(> .content > .client-workouts-page > :is(#workouts-current-panel:not([hidden]),#workouts-history-panel:not([hidden]))),.fit-client-lime.client-workouts-identity:has(> .content > .client-workouts-page > :is(#workouts-current-panel:not([hidden]),#workouts-history-panel:not([hidden]))) *,.fit-lime-shell.client-workouts-identity:has(> .content > .trainer-client-workouts-page),.fit-lime-shell.client-workouts-identity:has(> .content > .trainer-client-workouts-page) *)) {
+    border-top: 1px solid var(--border)
+}
+.client-workouts-identity .client-history-calendar-selection-head h4:where(:is(.fit-client-lime.client-workouts-identity:has(> .content > .client-workouts-page > :is(#workouts-current-panel:not([hidden]),#workouts-history-panel:not([hidden]))),.fit-client-lime.client-workouts-identity:has(> .content > .client-workouts-page > :is(#workouts-current-panel:not([hidden]),#workouts-history-panel:not([hidden]))) *,.fit-lime-shell.client-workouts-identity:has(> .content > .trainer-client-workouts-page),.fit-lime-shell.client-workouts-identity:has(> .content > .trainer-client-workouts-page) *)) {
+    font-weight: 600
+}
+.client-workouts-identity .client-history-calendar-selection-head span:where(:is(.fit-client-lime.client-workouts-identity:has(> .content > .client-workouts-page > :is(#workouts-current-panel:not([hidden]),#workouts-history-panel:not([hidden]))),.fit-client-lime.client-workouts-identity:has(> .content > .client-workouts-page > :is(#workouts-current-panel:not([hidden]),#workouts-history-panel:not([hidden]))) *,.fit-lime-shell.client-workouts-identity:has(> .content > .trainer-client-workouts-page),.fit-lime-shell.client-workouts-identity:has(> .content > .trainer-client-workouts-page) *)) {
+    color: var(--secondary-label-fg);
+    font-size: 12px;
+    font-weight: 500
+}
 /* Calendar Day: the 36px visual marker is independent of its >=44px hit area.
    Shared by the client history calendar and the client date sheet. */
 .phone-frame.fit-client-lime .lime-calendar-day-marker {

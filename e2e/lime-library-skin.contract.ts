@@ -1,3 +1,4 @@
+import {workoutListMigrationGuard} from './lime-workout-list-skin.scope'
 import {editorFamilies,editorKnownGuards,editorMigrationGuard} from './lime-editor-skin.contract'
 import type {NativeWorkoutSkinContract} from './lime-editor-skin.probe'
 
@@ -250,5 +251,5 @@ export const libraryOwnerSelectors: string[]=[
 ]
 export const librarySkinContract:NativeWorkoutSkinContract={
  selector:'.workout-templates-page,.workout-template-source-page,.workout-template-editor-page,.favorite-workout-editor-page,#workouts-presets-panel:not([hidden]),.client-workouts-page > .page-header,.client-workouts-page .progress-view-tabs,.sheet-overlay,.modal-overlay,.overflow-list',
- families:libraryFamilies,knownGuards:[editorMigrationGuard,...editorKnownGuards],migrationGuard:libraryMigrationGuard,ownerFilter:libraryOwnerFilter,ownerSelectors:libraryOwnerSelectors
+ families:libraryFamilies,knownGuards:[workoutListMigrationGuard,editorMigrationGuard,...editorKnownGuards],migrationGuard:libraryMigrationGuard,ownerFilter:libraryOwnerFilter,ownerSelectors:libraryOwnerSelectors
 }
