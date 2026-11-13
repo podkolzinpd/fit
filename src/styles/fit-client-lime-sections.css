@@ -1,3 +1,321 @@
+/* MC5.3: residual Progress authored paint. Dedicated route ownership; accepted Lime composition remains below unchanged. */
+.progress-identity:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    box-shadow: none
+}
+.progress-identity .eyebrow:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    color: var(--muted);
+    font-size: 12px;
+    letter-spacing: .06em
+}
+.progress-identity .ai-progress-card:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    box-shadow: none
+}
+.progress-identity .running-progress-card:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    box-shadow: none
+}
+.progress-identity .progress-story-period:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    background: var(--surface-raised)
+}
+.progress-identity .ai-progress-title h2:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    color: var(--secondary-label-fg)
+}
+.progress-identity .client-progress-card .ai-progress-periods button:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    font-size: 12px
+}
+.progress-identity .client-progress-card .ai-progress-periods button:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *))::before {
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--surface-sunken)
+}
+.progress-identity .client-progress-card .ai-progress-periods button.active:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    box-shadow: none
+}
+.progress-identity .client-progress-card .ai-progress-periods button.active:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *))::before {
+    background: var(--surface-raised);
+    border-color: var(--fg)
+}
+.progress-identity .body-progress-map > header span:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    color: var(--secondary-label-fg);
+    font-size: 12px;
+    font-weight: 500
+}
+.progress-identity .body-progress-map > header h3:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    font-size: 16px
+}
+.progress-identity .body-progress-modes:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *))::before {
+    border-color: var(--border);
+    background: var(--surface-sunken)
+}
+.progress-identity .body-progress-modes button:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    font-size: var(--type-body-size)
+}
+.progress-identity .body-progress-sides:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    border-radius: var(--radius-pill);
+    background: transparent
+}
+.progress-identity .body-progress-sides:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *))::before {
+    border-color: var(--border);
+    background: var(--surface-sunken)
+}
+.progress-identity .body-progress-sides button:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    border-radius: var(--radius-pill);
+    font-size: var(--type-caption-size)
+}
+.progress-identity .body-progress-sides button[aria-pressed='true']:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    color: var(--fg);
+    box-shadow: none
+}
+.progress-identity .body-progress-visual:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    background: transparent
+}
+.progress-identity .body-progress-overlay:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    filter: none
+}
+.progress-identity .body-progress-detail:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    border-color: var(--border);
+    background: transparent
+}
+.progress-identity .client-progress-measurements-story:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    background: var(--surface-raised)
+}
+.progress-identity .client-progress-measurements-story:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    border-bottom: 1px solid var(--border)
+}
+.progress-identity .client-progress-measurements-story h3:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    color: var(--fg);
+    font-size: 14px
+}
+.progress-identity .client-progress-regularity-story h3:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    color: var(--fg);
+    font-size: 14px
+}
+.progress-identity .client-progress-goal-story h3:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    color: var(--fg);
+    font-size: 14px
+}
+.progress-identity .client-progress-goal-story p:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    font-size: 12px
+}
+.progress-identity .period-comparison-facts dt span:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    color: var(--secondary-label-fg);
+    font-size: 11px
+}
+.progress-identity .period-comparison-facts dt:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    font-size: 12px
+}
+.progress-identity .period-comparison-facts dd:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    font-size: 16px
+}
+.progress-identity .period-comparison-facts > div.positive dd:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    color: var(--success-fg)
+}
+.progress-identity .measurement-story-current span:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    color: var(--secondary-label-fg);
+    font-size: 11px
+}
+.progress-identity .measurement-story-current small:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    color: var(--secondary-label-fg);
+    font-size: 11px
+}
+.progress-identity .measurement-story-facts dt:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    color: var(--secondary-label-fg);
+    font-size: 11px
+}
+.progress-identity .measurement-story-selector button:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    font-size: 12px
+}
+.progress-identity .measurement-story-facts dd:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    font-size: 12px
+}
+.progress-identity .measurement-story-explanation p:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    font-size: 12px
+}
+.progress-identity .measurement-story-after-period:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    font-size: 12px
+}
+.progress-identity .regularity-story-facts dt:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    color: var(--secondary-label-fg);
+    font-size: 11px
+}
+.progress-identity .regularity-story-facts dd:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    font-size: 12px
+}
+.progress-identity .client-progress-goal-story h3:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    font-size: 16px
+}
+.progress-identity .ai-progress-auto-error:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    border: 1px solid var(--danger-border);
+    background: var(--surface-raised)
+}
+.progress-identity .goal-criteria-progress-list:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    border-top: 1px solid var(--border)
+}
+.progress-identity .goal-criterion-progress-row:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    border-bottom: 1px solid var(--border)
+}
+.progress-identity .goal-criterion-progress-row header strong:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    font-size: 14px
+}
+.progress-identity .goal-criterion-progress-row header span:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    color: var(--secondary-label-fg);
+    font-size: 12px;
+    font-weight: 500
+}
+.progress-identity .goal-criterion-progress-row dt:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    color: var(--secondary-label-fg);
+    font-size: 12px
+}
+.progress-identity .goal-criterion-progress-row dd:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    font-size: 14px
+}
+.progress-identity .running-progress-card h2:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    font-size: 18px
+}
+.progress-identity .running-progress-total strong:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    font-size: 24px
+}
+.progress-identity .running-progress-total span:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    color: var(--secondary-label-fg);
+    font-size: 14px;
+    font-weight: 400
+}
+.progress-identity .running-progress-metrics:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    border-radius: 14px
+}
+.progress-identity .running-progress-metrics > div:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    background: var(--surface-elevated)
+}
+.progress-identity .running-progress-metrics strong:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    font-size: 18px
+}
+.progress-identity .running-progress-insight:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    background: var(--surface-elevated)
+}
+.progress-identity .measurement-actions:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    border-color: var(--border)
+}
+.progress-identity .measurement-actions .secondary:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    border-color: var(--border);
+    background: var(--surface-elevated);
+    color: var(--fg);
+    box-shadow: none
+}
+.progress-identity .measurement-story-management .client-progress-form:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    background: transparent
+}
+.progress-identity .measurement-story-management .client-progress-history:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    background: transparent
+}
+.progress-identity .measurement-story-management .metrics-manager:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    background: transparent
+}
+.progress-identity .client-progress-form:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    border-color: var(--border);
+    box-shadow: none
+}
+.progress-identity .client-progress-history:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    border-color: var(--border);
+    box-shadow: none
+}
+.progress-identity .client-progress-form .field:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    color: var(--secondary-label-fg);
+    font-size: 12px;
+    font-weight: 500
+}
+.progress-identity .client-progress-form input:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    font-weight: 400
+}
+.progress-identity .client-progress-form textarea:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    font-weight: 400
+}
+.progress-identity .client-progress-form button.primary:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    border-color: var(--mono-primary);
+    background: var(--mono-primary);
+    color: var(--mono-on-primary);
+    box-shadow: none
+}
+.progress-identity .client-progress-form button.secondary:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    border-color: var(--border);
+    background: transparent;
+    color: var(--fg);
+    box-shadow: none
+}
+.progress-identity .client-progress-history .card:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    border-color: var(--border);
+    border-radius: 14px;
+    background: var(--surface-elevated);
+    box-shadow: none
+}
+.progress-identity .tab-bar:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    box-shadow: none
+}
+.progress-identity .tab-bar a svg:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    opacity: 1;
+    stroke-width: 1.8
+}
+.progress-identity .ai-progress-sheet:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    box-shadow: none
+}
+.progress-identity .progress-story-period .ai-progress-title h2:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    font-size: 16px;
+    letter-spacing: -.01em;
+    text-transform: none
+}
+.progress-identity .progress-pro-list > details:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    background: transparent
+}
+.progress-identity .progress-pro-list > details.card:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    background: transparent
+}
+.progress-identity .progress-pro-list > details.client-progress-comparison:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    background: transparent
+}
+.progress-identity .progress-pro-list > details > summary.progress-details-toggle:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    border: 1px solid var(--border);
+    background: var(--surface)
+}
+.progress-identity .progress-pro-list > details[open] > summary.progress-details-toggle:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    border: 1px solid var(--border);
+    background: var(--surface)
+}
+.progress-identity .progress-pro-list > details[open]:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    background: transparent
+}
+.progress-identity .progress-pro-section .client-progress-goal-story.standalone:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    background: transparent
+}
+.progress-identity .client-progress-goal-story.standalone:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    border: 1px solid var(--border);
+    background: var(--surface)
+}
+.progress-identity .client-progress-goal-story.compact h3:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    font-size: 16px
+}
+.progress-identity .client-progress-goal-story.compact .goal-compact-status:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    color: var(--muted);
+    font-size: var(--type-caption-size)
+}
+.progress-identity .client-progress-goal-story.compact .goal-compact-status strong:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    color: var(--fg)
+}
+.progress-identity .period-rhythm .client-progress-regularity-story:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    background: transparent
+}
+.progress-identity .client-progress-card summary.progress-details-toggle:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    background: var(--surface);
+    color: var(--fg);
+    font-size: var(--type-body-size);
+    font-weight: 500
+}
+
 /* Client surfaces share the same light/dark tokens, including body portals. */
 .phone-frame.fit-client-lime :is(.client-profile-card, .client-finance-home,
   .client-finance-package, .client-finance-payments, .client-progress-measurement,

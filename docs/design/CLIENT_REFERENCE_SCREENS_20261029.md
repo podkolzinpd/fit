@@ -11040,3 +11040,291 @@ mc52-candidate2-qualified-parity.json; /tmp/fit-mc52-authored-map-final.json.
 001116-4bbb88c4,001406-759bdea4 (20261113). Они хранят оригинальные raw/
 PNG/logs. Собственный checkout переиспользован, результаты не копировались;
 новые большие прогоны выполнены через fit-storage reserve1GiB.
+
+
+## 257. MC5.2 — PR #2115 проверен, публикация удержана
+
+2026-11-13, Codex/OpenAI. [PR #2115](https://github.com/podkolzinpd/fit/pull/2115)
+подготовлен как DRAFT. Проверенный удалённый head3b339ca99215979b5599a00e861d03b122def013.
+План закреплён41a1d0f9, реализация/QA/журнал3b339ca9; scope и результаты §256.
+
+Полный CI run43308679404,attempt1,head3b339ca9: workflow completed/success,
+36 успешных check contexts,0failed/pending. Единственный штатный auth-smoke
+SKIPPED не переименовывается в passed. Android assemble, API/database,
+app-tests, Chromium/WebKit, все Lime и Yandex acceptance группы завершены
+успешно. Наблюдение велось одним bounded-процессом с паузой90s, без
+обращения к другим чатам/их CI. Долгие own jobs однократно разобраны по
+шагам; не перезапускались и не ослаблялись.
+
+Сводка:134/134 локальных browser cases и32/32 unit;112 состояний exact по
+native style/geometry/fields/interaction/scroll/data. RawstrictFALSE для
+6generated support-code HTML различий иPNG106/112 оставлены с отдельной
+квалификацией §256. Прежнее сжатие длинного title в календаре тренера
+открыто и сообщено владельцу; физический телефон не проверен.
+
+PR/body содержит actual CI результат и ограничения. Слияние, включение
+новых профилей, публикация и следующийMC НЕ выполнялись. Дальше — явное
+разрешение владельца именно #2115, затем свежийmain/exact-headCI/общая
+очередь и доказательство доставки. Новая очередь сейчас не опрашивалась,
+так как выпуск ещё не разрешён. Квитанция CI: /tmp/fit-mc519/mc52-ci-final.json;
+checkpoint: /tmp/fit-mc519/mc52-checkpoint.json. Эта docs-only квитанция
+сохранена локально, безpush ради повтора уже зелёного CI; исходный PR
+остаётся на проверенном3b339ca9, квитанция переносится дальше при необходимости.
+
+
+## 258. MC5.2 — #2115 опубликован для спортсмена и тренера
+
+2026-11-13, Codex/OpenAI. Владелец явно разрешил выпуск #2115 в общей
+очереди. До merge повторно проверены main30987aa1, head3b339ca9,
+36 successful checks и единственный штатный auth-smoke skip.
+Локальная docs-only квитанция4abf8a70 сохранена; её не подмешивали в
+проверенный удалённый head ради нового CI. Новых runtime-правок нет.
+
+Старший #2087 подтверждённо неактивен: тот же b7601e7b и terminal CI,
+что в прежней сохранённой проверке; lastcommit10.11,updatedAt10.11,
+новых запусков/ревью/auto-merge нет. Это не вывод по одному возрасту.
+Других старших PR и выполняющихся публикаций нет. Его код/CI/слияние
+не менялись; чаты и агенты для очереди не опрашивались.
+
+После готовности PR слит squash с match-head3b339ca9 в
+[ecbf825c2390f06e2ea7531e47cb12458906185b](https://github.com/podkolzinpd/fit/commit/ecbf825c2390f06e2ea7531e47cb12458906185b),
+mergedAt2026-11-13T07:54:06Z. Весь Git tree побайтно совпадает с проверенным
+head:1c2e27f45290441fe8b88427b5b219db2ce2ae1a. Никаких конфликтов,
+обновлений runtime/флагов/cohort/механик при выпуске не было.
+
+Main CI43389071976 и Android43389072014 завершены success,attempt1.
+CI main:34successful jobs,1 штатный skip; повторные запуски не требовались.
+Штатные публикации точного main успешны:
+- API43393494172;
+- frontend43393494215;
+- signed Android OTA43393826838.
+Ручные обходы CI, новые workflow dispatch, изменения CI/CD, секретов,
+конфигурации/cohort и другие PR не требовались.
+
+До публикации дополнительно записан реальный public baseline52/112:
+10controls pass,42 ожидаемых terminal old-painter ownership red,
+0unexpected. Все действия/проверки данных до ownership прошли.
+HTML/API/подпись прежнего OTA стабильны весь baseline; actual app-data
+writes не выполнялись. Исходный raw-прогон сохранён, не заменён зелёным.
+
+После публикации скачаны один раз только артефакты ecbf825c,
+246 публичных файлов и /auth HTML сверены с release manifest по размеру/
+SHA256. API сообщает точный ecbf825c, подписи/ABI/source/checksum/public
+readback OTA прошли. Из проверенного архива безопасно извлечён bundle для
+браузера; реальная установка на телефон этим не подменяется.
+
+Опубликованный web52/52 passed123.148s и signedOTA52/52 passed101.450s,
+оба Chromium+WebKit,0retry/skip/flaky. Импортировались реальные исходные
+cases/fixtures/probe без изменения действий/assertions. Public transport
+допускает реальные static GET/HEAD; API выполняется только page fixtures,
+неизвестная сеть и любые реальные API/write continuation запрещены.
+
+Два независимых strict comparison: public before→after и web→signedOTA.
+Каждый112/112 exact по native computed/geometry/fields/selection/
+interaction/scroll/backdrop/данным/запросам. Rawstrict остаётся FALSE
+из-за6 load-error body focus HTML с разными generated support codes;
+PNG106/112 byte-exact. Каждая пара квалифицирована отдельно: все остальные
+HTML bytes и scroll совпадают, остальные PNG точны. Никаких масок,
+нормализации/удаления снимков, изменения ожиданий ради green не было.
+HTML/API/signedOTA fingerprints стабильны весь post-publication QA.
+
+Проверены неизменность layouts/фокуса/прокрутки и source ownership;
+реальные тренировки/профили при UI-проверках не записывались. Прежний
+сжатый длинный title тренерского selected-day открыт отдельно, не
+исправлялся. Physical iPhone/native install/OAuth не проверены.
+
+Квитанции: /tmp/fit-mc52-release/final-acceptance.json,
+premerge-receipt.json,last-merge-gate.json,merged-tree-proof.json,
+publication-runs.json,delivery-receipt.json,web-before-after-strict.json,
+web-before-after-qualified.json,web-ota-strict.json,web-ota-qualified.json,
+final-fingerprint.json. Managed/pinned runs (20261113):110646-69a44d4e
+(public baseline),113407-dfa72fc0(artifacts),113453-b9240c04(web),
+113708-0dbf5ddd(OTA). Новые прогоны/артефакты через fit-storage reserve1GiB,
+checkout прежний; результаты использовались по исходным путям без копий.
+
+Владелец проверяет на телефоне: спортсмен Мои тренировки/Актуальное/
+История,список/календарь,светлая/тёмная; тренер Клиент→Тренировки,
+список/календарь,день/месяц,открытие и возврат; загрузку ещё/копирование;
+в тестовом Live ввод/клавиатуру,изменение выполненного подхода без снятия
+галочки,явную отмену галочкой,свайпы/перенос,отдых/таймер и обе плотности.
+Следующий MC не начинался; ждёт его приёмки. Квитанция docs-only локальная
+безpush/повторной публикации уже доставленного runtime.
+
+
+## 259. MC5.3 — «Прогресс» целиком, спортсмен и тренер, согласованный план
+
+2026-11-13, Codex/OpenAI. Владелец принял опубликованный MC5.2: «Проверил,
+всё ок», затем разрешил фиксацию/реализацию MC5.3 целиком обеим ролям.
+Это приёмка предыдущего этапа владельцем; независимая physical-device
+проверка исполнителем не заявляется. Прежние находки, включая title из258,
+не объявляются исправленными общей приёмкой.
+Разрешены исходная проверка, реализация, собственный PR и CI. Выпуск только
+ПОСЛЕ отдельной сводки и нового явного разрешения именно MC5.3/его PR
+по MC-RELEASE-01. Следующий MC и выпуск сейчас не разрешены.
+
+Fresh main ecbf825c2390f06e2ea7531e47cb12458906185b (#2115) проверен.
+Собственная рабочая копия design-cleanup-mc519-20261111 переиспользуется,
+ветка feat/design-cleanup-mc53-20261113 создана от main, без нового checkout/
+зависимостей/архива. Docs-only квитанции MC52 4abf8a70 и506cd534 перенесены
+отдельно (01dd9056/7eed0106); unsquashed runtime старой ветки не возвращён.
+Рабочее дерево runtime равно main. Общие AGENTS/FIT_WORKFLOW/контракты уже
+прочитаны и не изменены. Recall FIT/MC5/монохром/прогресс нашёл только старые
+общие дайджесты августа без текущего MC; текущий код/журнал — точный источник.
+
+ОДИН PR, пять результатов:
+- MC531 — спортсмен /me/progress целиком: текущие overview/pro и раскрытия,
+  периоды/графики/карта тела, существующий preview достижений, замеры,
+  inline add/edit/history/metrics, import/recognize/apply InBody и результаты,
+  состояния загрузки/пусто/ошибка/повтор/pending/disabled. Сохранить фактические
+  links/query/hash и переходы. Полная отдельная галерея достижений не входит.
+- MC532 — тренер /progress/:clientId: обзор и существующие дочерние страницы
+  ?view=measurements и ?view=running, карточки/детали/периоды/графики,
+  встроенные/custom metric tabs и overflow-sheet, замеры/add/edit/history/
+  metric-management/confirm, read-only InBody и настоящие действия/возврат.
+  Не добавлять спортсмену отсутствующие trainer subpages/действия, тренеру —
+  отсутствующий импорт InBody. Обе роли сохраняют свои права и доступность.
+- MC533 — перед CSS: полный consumer/source/cascade audit и native baseline;
+  отделить действующие остатки specific mono paint от уже работающих Lime
+  owners, structural layout и общей foundation. Перенести только необходимые
+  literal declarations в прежние fit-client-lime-sections.css и
+  fit-lime-progress-history.css; точные дополнительные потребности сначала
+  доказать. Глобальный styles.css ограничить zero-specificity guards только
+  реальными Lime Progress roots; остальные consumers/порядок/специфичность
+  сохраняются. Мёртвое/перекрытое не копировать; глобально удалять лишь при
+  доказанном отсутствии иных consumers. Не собирать второй комплект UI.
+- MC534 — данные и механики: прежние AI/summary/calculation inputs/outputs,
+  метрики/единицы/история/периоды/окна графиков, mouse/touch/scroll выбора,
+  раскрытия/навигация и локальные черновики остаются. Формы/даты/валидация/
+  версия/права/canManage, read-before-delete и uncertain/lost-reply recovery
+  клиента, подтверждение удаления/ошибка тренера сохраняются раздельно.
+  Import InBody сохраняет файл/recognition/apply/reset/error; back/cancel,
+  focus/selection/клавиатура и отсутствие двойных записей проверяются.
+  Runtime React/DOM/обработчики/API/query keys/DTO/права/данные/флаги/CI/
+  зависимости/native не меняются. Live/каталог/MC52 — защищённые потребители.
+- MC535 — native before/after в Chromium+WebKit: обе роли/доступные темы,
+ 375/390/430 и применимый desktop, overview/pro/disclosures/periods/charts,
+  loading/empty/error/retry/pending, формы add/edit/cancel/save/error,
+  built-in/custom metrics/overflow/archive, InBody и role-specific dialogs.
+  Количество cases/states фиксируется после фактических запусков, не обещается
+  заранее. Прежние meaningful business/unit/native fixtures переиспользуются;
+  добавляются недостающие ownership/paint/вложенные состояния того же блока.
+  CSS gate закрыт до baseline. Основной probe не меняет DOM/CSSOM/focus/
+  selection/scroll; payload/история, styles/geometry/SVG/поля/фокус/прокрутка
+  сравниваются без масок и ослаблений. Вспомогательные диагностики отмечать
+  отдельно, raw failures/доказанные ограничения не переименовывать в passed.
+
+Границы: Progress обеих ролей, его реальные страницы и вложенные состояния.
+Главная/полный профиль/галерея достижений/вход/запуск — другие блоки.
+Глобальные Onest/fallback/tokens/foundation MC7/8 не трогать. Редизайна,
+новых функций и унификации различных role workflows нет. Реальный дефект
+или старый вид — записать source/влияние/предлагаемый принятый источник,
+сообщить владельцу; не чинить попутно без принятой границы.
+
+Проверки: source/consumer audit → исходные работающие unit/business/native
+состояния → минимальный перенос → strict comparison → необходимые build/
+fonts/lint/types/regressions/полный CI точного head. Успешные прогоны без
+новой причины не повторять; подтверждённый unchanged baseline build можно
+переиспользовать с проверяемым source/env provenance. Данные тестов synthetic;
+никаких production API writes. Новые большие прогоны/артефакты через
+fit-storage task fit-monochrome-cleanup с измеренным reserve; исходные пути
+переиспользуются, baseline/input pin, raw поля/PNG/logs не обрезаются.
+
+До выпуска: конкретная сводка выполненного, обеих ролей/экранов, проверенного/
+непроверенного, ошибок/остатка и сценария телефонной приёмки; только затем
+новое разрешение на выпуск. После него — общая GitHub очередь, exact-head
+CI/main, реальная доставка и приёмка владельцем. Следующий MC до неё не начинать.
+
+## 260. MC5.3 — исходная проверка и граница реализации
+
+2026-11-13. План259 закреплён локальным233f8411; выпуск НЕ разрешён.
+Исходный application tree равен принятому MC52/ecbf825c. Новый checkout,
+зависимости, runtime-компоненты, CI/rollout и реальные данные не менялись.
+Переиспользован проверенный локальный build с проверкой source/env/assetSHA,
+не повторная ненужная сборка. Журнал /tmp/fit-mc53/checkpoint.json.
+
+Исходные проверки:39unit suites/278PASS и48existing business e2ePASS,
+0retry/skip/flaky. В них включены обе роли, client read-before-delete/
+lost-reply recovery, trainer canManage/confirm, InBody recognition/review/retry,
+body-map geometry и OFF-потребители. Локальный native API backend на трёх
+штатных портах недоступен; его настоящие сценарии сохраняются обязательным
+CI-gate, не заменяются моками и не объявляются пройденными локально.
+
+Новый read-only native baseline82cases/196states квалифицирован по обеим
+ролям, темам и размерам.10OFF/external controlsPASS;72positive cases имеют
+ТОЛЬКО ожидаемое последнее падение проверки legacy paint ownership ПОСЛЕ
+успешных UI/data/probe assertions. Это не зелёный тест миграции: исходные
+красные отчёты сохраняются. Ни один primary probe не меняет CSSOM/DOM/
+focus/selection/scroll. Полные DOM/SVG, computed styles/geometry/поля/select/
+focus/selection/scroll/data/payload/PNG сохранены без масок и нормализации.
+История тренировок неизменна. Все входы comparison закреплены fit-storage.
+Новые QA-ошибки точных accessible labels/скрытого overview в ПРО/SVG image
+исправлены по source+rawcontext; повторены только незавершённые22, затем10
+случаев, а не успешные60. Источники/raw failures не переписаны.
+Manifest /tmp/fit-mc53/native-baseline-qualified.json ссылается на исходные
+managed runs135118-83349176,140039-08af8c77,140619-a07a97db.
+
+Отдельный AUX76cases/186witnesses определяет исходных победителей каскада
+в прежнем неизменённом build. Он временно добавляет marker stylesheet и
+всегда удаляет его;186/186CSSOMRestoredtrue. Это ВСПОМОГАТЕЛЬНАЯ диагностика,
+не primary доказательство внешнего вида. Raw4externalPASS/72expectedownerRED
+квалифицированы отдельно; /tmp/fit-mc53/auxiliary-qualified.json, pinned
+run140717-91c14484. Source-only preview сохраняет полный порядок всех25720
+исходных selector/context/declaration records после снятия точного guard.
+Observed/unseen families — верхние границы, не число необходимых копий.
+
+Существующая находка MC53-F01: MetricsManager.addManual синхронно очищает
+имя и единицу после onCreate; при последующем503 введённое уже пусто.
+Подтверждено source и native observations обеих ролей/двух браузеров.
+Не объявляется желаемым поведением и не исправляется попутно CSS-миграцией.
+Грабли QA: exact accessible label у общего Field включает default textarea
+text/select options. Для заполненных полей используется точный name/контейнер
+с отдельным строгим caption и прежними value/payload assertions.
+
+Дополнительные source-proven состояния keyboard focus/раскрытий проверяются
+адресно до candidatebuild; предыдущие82 не повторяются без новой причины.
+Итог переноса, comparison, необходимые регрессии и CI будут дописаны после
+фактической проверки. Этот checkpoint не разрешает merge/publish MC5.3.
+
+MC53 implementation checkpoint: native baseline расширен адресными12focus/
+disclosure cases до94cases/228states, без повтора прежних82. Manifestv2:
+/tmp/fit-mc53/native-baseline-qualified-v2.json. Native probe по-прежнему
+read-only; взаимодействия keyboard/focus выполняет только сценарий ДО probe.
+Runtime изменён только в3CSS:838 authored literal declarations в прежних
+Lime-файлах; original25720 selector/context/declaration records/order exact,
+1943защищённых runtime/CI/прочихCSS без изменений, обе прежние Lime-части
+byte-exact suffix. Positive/negative route scopes zero-specificity, без:has.
+Все838property/value/priority/context имеют точный источник в baseecbf.
+Helpers source-proof/literal-proof и candidate3-source-summary в /tmp/fit-mc53.
+
+Первая проверка94PASS сама по себе НЕ означала паритет: strict comparison
+выявил пропущенные hex/transparent/unitless stroke/filter values и border
+shorthand/reset precedence. Причина authored-map — CSSOM сериализует значения
+иначе исходного CSS; несовпадение строк НЕ доказывает stronger/no-live owner.
+Весь binding пересчитан по selector/property/context, копии остались literal
+из исходника. Добавлены source-proven logical-border и neutral-reset masks.
+Rawcandidate1/2 comparers и PNG сохранены, не нормализованы и не переименованы
+в passed. Candidate2 имел94PASS; финальная правкаC3 — ровно1originalmobile
+border-right:0 перед border-bottom для плиток тренера. C3build/types/fonts2/2/
+startup checkPASS, final native/regressions/CI ещё ожидаются.
+
+Контроль original-source replay8cases/16states на ecBF (все3CSS временно
+заменены исходными, затем проверяемо восстановлены) воспроизвёл без миграции
+перестановку RechartsLine/ReferenceLine и5/7adaptive axis ticks. В WebKit
+после fill также различалась фаза native auto-scroll у history-editor.
+Это отдельные исходные нестабильности наблюдения, не разрешение скрывать
+rawdiffs. Контроль pinned144503-5b7984e6; recovery/result фиксируют восстановление
+CSS. Исходные baseline manifests остаются неизменны. Финальная классификация
+расхождений и ограничения должны быть показаны до запроса выпуска.
+Новый QA trainer save теперь ждёт source-bound завершающий GETпрофиля:
+ProgressPages59 сначала закрывает форму, затем последовательно инвалидирует
+progress и client; прежний JSON мог фиксироваться до последнего чтения.
+React callbacks/query keys/запросы продукта не изменялись.
+
+Оставшиеся199из746static source families классифицированы отдельно:
+disconnectedlegacy52; impossible current role/composition45; absent exact
+currentmarkup/state57; impossible/static-art predicates25; externalHome/
+Today/fullgallery9; impossible trainerlight5; structural/numericfoundation6.
+В214modern native states нет их legacy-paint пересечений. Source witness
+/tmp/fit-mc53/source-boundary-note.json; это не blanket«unseen=dead».
+Conditional focus/goals/signals/wins/analysis/InBody/after-period owners входят
+в838. Общая foundation/Onest и другие страницы не расширены вMC53.
