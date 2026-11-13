@@ -11498,3 +11498,70 @@ disabled и повторное открытие. Реальные productionwrit
 Это предложенный план, не разрешение реализации/нового PR/выпуска. После
 поручения реализации — сводка выполненного/проверок/ошибок, затем отдельное
 разрешение именно выпуска по MC-RELEASE-01. Следующий код пока не начат.
+
+
+## 263. MC5.4 — профиль, редактирование и настройки целиком, принятый план
+
+2026-11-13, Codex/OpenAI. Пользователь принял MC53 и поручил зафиксировать
+и выполнить MC54 целиком обеим ролям, все механики сохранить. Перед выпуском
+нужна сводка сделанного/проверенного/ошибок; merge и публикация только после
+его отдельного разрешения по MC-RELEASE-01. Сейчас выпуск НЕ разрешён.
+
+Fresh main4dbacefc (#2116), прежняя собственная worktree переиспользуется,
+ветка feat/design-cleanup-mc54-20261113 от origin/main. Только docsreceipts
+89981283/0ee57ec4/a621f3fd перенесены как b68474de/deca8578/2d88f7ed; старый
+unsquashedruntime не возвращён. Git tracked runtime byteexactmain, чужих
+изменений нет, зависимости прежние. Recall FIT/монохром/профиль/MC54 нашёл
+только общую августовскую запись, специфической истории MC54 нет. Текущие
+источники — код, COP/SET и этот журнал. Собственный design_cleanup отвечает
+за source/consumer audit; соседние чаты/ветки/очередь не опрашиваются.
+
+Один PR, пять результатов:
+- MC541 — спортсмен /me/profile,/me/edit,/me/settings целиком: собственные
+  фото/данные/показатели, goal/stages preview, спорт/bio/раскрытия, встроенные
+  связи с тренером/услуги и действия, существующая форма редактирования, все
+  настройки и их действующие вложенные состояния/ошибки/диалоги/окна.
+- MC542 — тренер /profile,/profile/trainer и /profile/settings со всеми
+  section: профессиональная анкета/фото/публикация/редактор, readonly/admin
+  варианты, locations/metro/specialties/certificates, обзор настроек, Live/
+  расписание/оформление/уведомления/установка/аккаунт/помощь/feedback.
+- MC543 — только доказанная остаточная visual dependency: source/consumer/
+  cascade audit до CSS, исходный native baseline, перенос literal объявлений
+  в уже существующие Lime profile/client слои в прежнем порядке/специфичности.
+  Structural layout и уже действующие modern declarations не дублировать.
+  Shared старые consumers/rolloutOFF сохранять. .trainer-profile-identity
+  также стоит на /profile/yandex-services: это НЕ разрешение мигрировать
+  корпоративные сервисы. Реальную профильную composition границу доказать,
+  не применить голый общий root ко всему. Отдельные каталоги/публичные анкеты,
+  чаты, финансы, goal editor/corporate business pages остаются снаружи; их
+  переходы из профиля, возврат и отсутствие collateral changes проверить.
+- MC544 — сохранить DOM/React/handlers/API/keys/DTO/roles/capabilities/privacy/
+  versions/queries/defaults/rollout/CI/dependencies/native. Фото canonical и
+  права/конфликты/retry; формы/pending/disabled/errors/drafts/cancel; маршруты
+  section/direct URL/back/swipe; input/focus/selection/native keyboard и
+  scroll. Настройки прежних scopes account/device; Original/Compact, client
+  animations defaultON, trainer прежний default, wheel/RPE/rest, темы и карта
+  тела; failedstorage/session choice/reset/reload и серверный rollback. Push
+  permission/unknown/cached/denied/install/platform states прежние, реальная
+  доставка не обещается. Logout/delete ссылки и подтверждения прежние.
+- MC545 — before/after Chromium+WebKit обеих ролей/доступных тем, mobile
+  375/390/430 и применимыйdesktop; normal/empty/loading/error/retry/pending/
+  disabled/focus/expanded/portals/longtext. Native probe не меняет CSSOM/DOM/
+  focus/selection/scroll; все raw JSON/PNG/request/diagnostics сохраняются
+  без масок/ослаблений. Число кейсов фиксируется после реального прогона.
+  Переиспользовать existing profile/settings/photo/COP/SET tests, добавить
+  только недостающую ownership/interaction проверку; регрессия Live после
+  настроек и защищённых MC53/MC52/каталога. Build/types/lint/fonts/docs и
+  обязательный CI точного head. Успешные прогоны без причины не повторять.
+
+Общие Onest/fonts/tokens/foundation — прежние MC7/8, не удалять глобально.
+Если в scope обнаружится функциональный дефект/старый вид — записать source/
+влияние/принятый источник замены, не исправлять механики попутно. Реальные
+productionwrites/AI/push/upload отсутствуют: приёмка synthetic API. Физический
+iPhone/реальные разрешения и nativeinstall отдельно отмечать непроверенными.
+Новые большие результаты только fit-storage task fit-monochrome-cleanup,
+резерв по пилоту, inputs pinned; новый checkout/полный архив не создавать.
+
+Дальше: source/consumer map и исходные работающие сценарии → baseline gate →
+минимальный CSS перенос → comparison/regression → PR/собственный CI → сводка
+владельцу. Ни merge/deploy, ни следующий MC без его приёмки не начинать.
