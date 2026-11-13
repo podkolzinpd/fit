@@ -11713,3 +11713,44 @@ CI точного head ещё гейт. Только этот PR наблюда�
 конкретная сводка владельцу. Разрешения на merge/publication нет; выпуск и
 следующий MC не начинать. После разрешённой публикации проверить профиль,
 редактор, настройки/сохранение/reload и Live после смены настроек обеих ролей.
+
+
+## 268. MC5.4 — разрешение выпуска и исправление зависимости старой проверки
+
+Владелец явно разрешил выпуск PR2117 сообщением «разрешаю». Повторного
+разрешения не требуется. Слияние ещё не выполнено: обязательный CI exact head
+должен завершиться успешно, очередь проверяется только через GitHub.
+Старший PR2087 подтверждён неактивным: точные head/update/terminal CI прежние
+относительно собственных сохранённых MC52/MC53 наблюдений и свежего чтения;
+активных main-публикаций перед нами нет. Чужие чаты не читались.
+
+Исходная опубликованная версия4dbacefc зафиксирована в116cases/252states:
+8OFF/external PASS,108modern завершили все действия/native/data checks и
+только последнюю ожидаемую проверку старой ownership.6reference=false cases
+остаются вlocal/CI122: текущий public all-rollout не позволяет воспроизвести
+их без смены флагов. Проверки не выключены и не ослаблены. Public fingerprints
+до/после baseline совпали (HTML/API/signedOTA). Primary raw inputs pinned.
+
+CI43492177458 head38ea0304 завершился с20 одинаковыми ошибками в двух
+auth-shards: assertActualDurationOwnership118 потерял3 общих modal families.
+Все остальные проверки завершились; слияние до исправления не начиналось.
+Причина: прежний reader экрана результата не распознавал новый точный
+profileMigrationGuard и ошибочно исключал помеченные им source definitions
+из своего отчёта. За пределами профиля guard сохраняет прежнее применение
+стилей; весь original source stream/order уже доказан неизменным.
+
+Исправление только2строки e2e/lime-actual-duration-skin.cases.ts: импорт
+profileMigrationGuard из pure scope и добавление в explicit reviewed guards.
+Families, ожидаемые значения, assertions, probe/restoration и неизвестные/
+положительные фильтры сохранены. Src/CSS/API/DOM/механики не изменялись.
+Адресные20/20 Chromium+WebKit PASS без retry/skip/flaky, types/lint PASS.
+Полный CI нового head остаётся обязательным гейтом; повтор существующих
+успешных локальных сценариев при неизменном runtime не нужен.
+
+Raw failed logs и fix-run pinned; /tmp/fit-mc54/ci-failure-cause.json и
+duration-classifier-fix-location.json; public baseline qualified manifest в
+/tmp/fit-mc54-release/public-baseline-qualified.json. Старый CI не объявлен
+зелёным. Уточнение статуса: ранний успешный run43490845956 был Android debug,
+а не всем CI; неточная формулировка исправлена в чате. После конечного CI —
+merge, штатная публикация и readback. Итоговые docs-only квитанции сохранять
+локально, без повторного push/restart уже проверенного runtime.
