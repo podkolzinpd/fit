@@ -11565,3 +11565,44 @@ iPhone/реальные разрешения и nativeinstall отдельно �
 Дальше: source/consumer map и исходные работающие сценарии → baseline gate →
 минимальный CSS перенос → comparison/regression → PR/собственный CI → сводка
 владельцу. Ни merge/deploy, ни следующий MC без его приёмки не начинать.
+
+
+## 264. MC5.4 — исходное состояние и native baseline до CSS
+
+Runtime всё ещё byteexact4dbacefc, толькоQA добавлена. Исходная production
+сборкаPASS (собственный dist, безкопиипроекта),139unit/25suites PASS; прежние
+сквозныеprofile/COP/photo/subgoals/publication/notification32browser PASS
+(0retry/skip/flaky). Проверки source/owner сохраняют ужепринятые COP/SET.
+Новая матрица110cases/218states: обе роли/доступные темы375/390/430/1440,
+profile/edit/forms/save/cancel/pending/error/retry/invalid/photo/metro/
+publication/readonly/settings/training/schedule/body/theme/feedback/install/
+notifications, commonLime/referenceOFF и OFF/external controls.
+
+Qualified manifest /tmp/fit-mc54/native-baseline-qualified-v2.json связывает
+все полные untouched snapshots/PNG/data/requests;8OFF/external PASS,102modern
+сценария прошлиmechanics/nativecapture и завершаются только точным ожидаемым
+oldlegacyownership123:34. Это НЕ зелёный migrated прогон. Probe не меняет
+CSSOM/DOM/фокус/selection/scroll. RawпаденияновойQA сохранены: DTO не содержал
+обязательныйnullable currentWeightKg; exactlabelснепустойtextarea требовал
+реальныйtextbox ARIA locator; OFFprofile старыйmarkup; async notification
+check нельзя ждать доуспехаserver: оставлено обычноеclick истрогие pending/
+rollback/success assertions. Правок приложения/тестовыхожиданий продукта нет.
+Последующие недостающие captures добавлены адресно, прочие не повторялись.
+
+Корпоративныйсервисentry вобычномfixture теперьполучает корректныйallowedfalse,
+отдельный503capability-error проверяетwarning/retry; businesspages внеscope.
+Встроенныеprofileметро — inline listbox; ownclientphoto только upload/replace/
+retry, fullscreen/remove не выдуманы; trainerowncard неpublicgallery.
+Dedicatedtrainerboundary использует имеющийся data-viewport-route наcontent,
+directprofilepage и followingportals/nav. Nakedtrainerframe3paint остаётся
+sharedfoundation/strongerLime подexternalcorporatecontrol, без :has/DOMchanges.
+
+Static upperbound543families/1475sourcepaintrecords неравен числу переносов.
+Сейчасготовится отдельныйauxdirect-declaration marker witness каскада после
+чистогоnativeprobe, с finallyremove/cssomRestored и сохранениемвсехконтекстов/
+псевдо/guardcompetitors. Это диагностическаяCSSOMоперация, НЕprimarynative
+proof и НЕ копирование computedvalue вCSS. Значенияcandidate берутся только
+из pinnedGit source; neutral masks сохраняютисходныйcontext/порядок.
+Primaryinputs pinned; большиеrunтолькоfit-storage/stabletask. Выпуск всё
+ещё НЕ разрешён. Дальше auxiliary→reviewedsourceplan→CSSgate→candidate→
+нативное сравнение/регрессии/CI и сводка перед разрешением владельца.
