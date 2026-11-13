@@ -1,4 +1,5 @@
 import {libraryMigrationGuard} from './lime-library-skin.contract'
+import {profileMigrationGuard} from './lime-profile-skin.scope'
 import {editorMigrationGuard} from './lime-editor-skin.contract'
 import {resultMigrationGuard} from './lime-result-remainder-skin.contract'
 import {captureLimeErrorSemantics,expectLimeErrorSemantics} from './lime-error-semantics'
@@ -21,6 +22,7 @@ const detailOwner = ':where(.fit-lime-shell.workout-detail-history-identity) '
 // Only these complete, reviewed migration guards may be normalized. Positive
 // :where owners and any unrelated/unknown :where filters retain their identity.
 const durationMigrationGuards = [
+  profileMigrationGuard,
   libraryMigrationGuard,
   editorMigrationGuard,
   resultMigrationGuard,
