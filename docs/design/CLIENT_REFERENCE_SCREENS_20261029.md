@@ -11070,3 +11070,82 @@ PR/body содержит actual CI результат и ограничения.
 checkpoint: /tmp/fit-mc519/mc52-checkpoint.json. Эта docs-only квитанция
 сохранена локально, безpush ради повтора уже зелёного CI; исходный PR
 остаётся на проверенном3b339ca9, квитанция переносится дальше при необходимости.
+
+
+## 258. MC5.2 — #2115 опубликован для спортсмена и тренера
+
+2026-11-13, Codex/OpenAI. Владелец явно разрешил выпуск #2115 в общей
+очереди. До merge повторно проверены main30987aa1, head3b339ca9,
+36 successful checks и единственный штатный auth-smoke skip.
+Локальная docs-only квитанция4abf8a70 сохранена; её не подмешивали в
+проверенный удалённый head ради нового CI. Новых runtime-правок нет.
+
+Старший #2087 подтверждённо неактивен: тот же b7601e7b и terminal CI,
+что в прежней сохранённой проверке; lastcommit10.11,updatedAt10.11,
+новых запусков/ревью/auto-merge нет. Это не вывод по одному возрасту.
+Других старших PR и выполняющихся публикаций нет. Его код/CI/слияние
+не менялись; чаты и агенты для очереди не опрашивались.
+
+После готовности PR слит squash с match-head3b339ca9 в
+[ecbf825c2390f06e2ea7531e47cb12458906185b](https://github.com/podkolzinpd/fit/commit/ecbf825c2390f06e2ea7531e47cb12458906185b),
+mergedAt2026-11-13T07:54:06Z. Весь Git tree побайтно совпадает с проверенным
+head:1c2e27f45290441fe8b88427b5b219db2ce2ae1a. Никаких конфликтов,
+обновлений runtime/флагов/cohort/механик при выпуске не было.
+
+Main CI43389071976 и Android43389072014 завершены success,attempt1.
+CI main:34successful jobs,1 штатный skip; повторные запуски не требовались.
+Штатные публикации точного main успешны:
+- API43393494172;
+- frontend43393494215;
+- signed Android OTA43393826838.
+Ручные обходы CI, новые workflow dispatch, изменения CI/CD, секретов,
+конфигурации/cohort и другие PR не требовались.
+
+До публикации дополнительно записан реальный public baseline52/112:
+10controls pass,42 ожидаемых terminal old-painter ownership red,
+0unexpected. Все действия/проверки данных до ownership прошли.
+HTML/API/подпись прежнего OTA стабильны весь baseline; actual app-data
+writes не выполнялись. Исходный raw-прогон сохранён, не заменён зелёным.
+
+После публикации скачаны один раз только артефакты ecbf825c,
+246 публичных файлов и /auth HTML сверены с release manifest по размеру/
+SHA256. API сообщает точный ecbf825c, подписи/ABI/source/checksum/public
+readback OTA прошли. Из проверенного архива безопасно извлечён bundle для
+браузера; реальная установка на телефон этим не подменяется.
+
+Опубликованный web52/52 passed123.148s и signedOTA52/52 passed101.450s,
+оба Chromium+WebKit,0retry/skip/flaky. Импортировались реальные исходные
+cases/fixtures/probe без изменения действий/assertions. Public transport
+допускает реальные static GET/HEAD; API выполняется только page fixtures,
+неизвестная сеть и любые реальные API/write continuation запрещены.
+
+Два независимых strict comparison: public before→after и web→signedOTA.
+Каждый112/112 exact по native computed/geometry/fields/selection/
+interaction/scroll/backdrop/данным/запросам. Rawstrict остаётся FALSE
+из-за6 load-error body focus HTML с разными generated support codes;
+PNG106/112 byte-exact. Каждая пара квалифицирована отдельно: все остальные
+HTML bytes и scroll совпадают, остальные PNG точны. Никаких масок,
+нормализации/удаления снимков, изменения ожиданий ради green не было.
+HTML/API/signedOTA fingerprints стабильны весь post-publication QA.
+
+Проверены неизменность layouts/фокуса/прокрутки и source ownership;
+реальные тренировки/профили при UI-проверках не записывались. Прежний
+сжатый длинный title тренерского selected-day открыт отдельно, не
+исправлялся. Physical iPhone/native install/OAuth не проверены.
+
+Квитанции: /tmp/fit-mc52-release/final-acceptance.json,
+premerge-receipt.json,last-merge-gate.json,merged-tree-proof.json,
+publication-runs.json,delivery-receipt.json,web-before-after-strict.json,
+web-before-after-qualified.json,web-ota-strict.json,web-ota-qualified.json,
+final-fingerprint.json. Managed/pinned runs (20261113):110646-69a44d4e
+(public baseline),113407-dfa72fc0(artifacts),113453-b9240c04(web),
+113708-0dbf5ddd(OTA). Новые прогоны/артефакты через fit-storage reserve1GiB,
+checkout прежний; результаты использовались по исходным путям без копий.
+
+Владелец проверяет на телефоне: спортсмен Мои тренировки/Актуальное/
+История,список/календарь,светлая/тёмная; тренер Клиент→Тренировки,
+список/календарь,день/месяц,открытие и возврат; загрузку ещё/копирование;
+в тестовом Live ввод/клавиатуру,изменение выполненного подхода без снятия
+галочки,явную отмену галочкой,свайпы/перенос,отдых/таймер и обе плотности.
+Следующий MC не начинался; ждёт его приёмки. Квитанция docs-only локальная
+безpush/повторной публикации уже доставленного runtime.
