@@ -11381,3 +11381,89 @@ clear-on-failed-metric-create не исправлен. Нестабильнос�
 Эта итоговая docs-only квитанция сохраняется локально отдельным коммитом,
 без повторного push/restart CI уже проверенного a8632c08. В PR текущий код
 и план; GitHub body обновляется результатами, auto-merge не включается.
+
+
+## 261. MC5.3 — разрешённый выпуск PR2116, 2026-11-13
+
+Пользователь явно разрешил выпуск спортсмену и тренеру в общей очереди.
+Перед merge: main ecbf825c, head a8632c08, все проверки PR завершены успешно.
+Единственный старший открытый PR2087 подтверждён неактивным по сохранённым
+и свежим GitHub head/commit/CI/update; активных публикаций перед нами нет.
+PR2116 слит 2026-11-13T16:19:30Z, merge
+4dbacefc6f53abedb1468f03b4b6c4ce62615bfb. Полное дерево merge побайтно
+совпадает с проверенным head a8632c08. Публикация не подменяется merge:
+идёт единый ограниченный наблюдатель main CI и трёх штатных публикаций.
+Все квитанции этого выпуска: /tmp/fit-mc53-release; checkpoint обновлён.
+Флаги/когорты/данные/механики/CI не менялись; следующий MC не начат.
+
+Published pre-MC53 baseline: 92 applicable browser cases /224 native states,
+source ecbf825c stable at initial/end/targeted-end fingerprints. Public all
+rollout makes only commonLime/referenceOFF fixture inapplicable (2engines);
+local/CI94 retain its original assertions. No flags changed. Raw initial:
+10pass +82fail, of which81 complete expected final legacy ownership reds,
+one Chromium running capture drift12nodes/0.31px in comparison numeric grid;
+focus/scroll identical. Targeted original-public-source running both engines
+completed all native/data assertions then expected legacy ownership red.
+Joined complete captures only; initial failure and full trace retained/pinned,
+no claim first-run92PASS. No source/probe/assertion/DOM/CSS mutation.
+/tmp/fit-mc53-release/public-baseline-qualified.json binds all raw inputs.
+
+ИТОГ ВЫПУСКА MC53/2116, 2026-11-13, после разрешения владельца:
+main CI43461581353 и Android43461581339 SUCCESS attempt1. В CI34SUCCESS,
+одно прежнее conditional auth-smokeSKIPPED, падений/повторов main нет.
+API43467568387, frontend43467568270, signedAPK/OTA43469091607 SUCCESS
+attempt1 для точного merge4dbacefc. Все246webfiles GET/size/SHA256 совпали
+с официальным manifest. OTA подписи/archiveSHA/publicreadback PASS;
+nativeBuild9, ABI8922d2e9…, sequence1794589564950. Финальный fingerprint
+2026-11-13T17:35:26Z подтверждает ту же версию API/HTML/signedOTA за всю QA.
+
+Контрольная ghartifact загрузка оборвалась connectionreset — не публикация.
+Полные точные ZIP затем получены диапазонами Content-Range/length/ETag;
+CRC/пути/отсутствие symlinks/duplicates проверены. Полный webZIP не скачан
+повторно. Только штатному cloudru-release.json39МБ разрешён лимит64МБ,
+прочие guards32МБ/total128МБ сохранены. Все rawfailed receipts сохранены.
+Pinned202312-cf5f7543 содержит восстановленную полную сверку файлов/подписей;
+registry первого запуска остаётся failed, успешный resume58059 записан
+отдельно, не переписан в ложный firstpass.
+
+PublishedQA: настоящие webassets и extracted signedOTA, прежние actions/
+assertions/поля/фокусы не изменены. API fixtures; настоящие productionwrites/
+analytics/share/clipboard запрещены. Веб первый прогон91PASS/1FAIL: WebKit
+query-error снимок пересёк появление двух button.link/Повторить независимых
+errorpanels. Адресная проверка только этого сценария2PASS в обоих engines;
+rawfailure/capture-drift сохранены. Joined только полные92cases/224states
+через read-only symlinkview; JSON/PNG не копируются/не изменяются. Pinned
+202216-3a98c18f/202740-19ddef38. Не заявлять первый прогон92PASS. SignedOTA
+92PASS/224states,0retry/skip/flaky, pinned202542-1b38be89. Local94+72regression
+из260 не повторялись. Public referenceOFF2case остаются в local/CI94,
+общественная all-rollout версия не может включить их без смены флагов.
+
+Raw published strict before/after FALSE441leafdiffs,203/224PNG byteexact;
+web/OTA FALSE1179leafdiffs,198/224PNG byteexact. В каждом сравнении все92
+applicationdata/read/write/diagnostics exact. ВнеRecharts native captures
+223/224 и221/224exact. Остаток1+3states — только жёсткий перенос rectY на
+точную дельту .content scrollY при одинаковом focusHTML и всех остальных
+свойствах/размерах/формах. NativeWebKittextarea/fill имеет разные устойчивые
+фазы прокрутки, отмеченные и в прежнем original control. Никакого изменения
+фокуса/scrollcallbacks/JS не было; полная scrollparity не заявляется.
+Во всех41/44различающихся Recharts совпали root/viewBox/исходные plot и
+referencepaths/data/computed-style sets. Отличаются adaptiveY ticks/grid,
+измерение крайней подписи/позиция на4.6px, portalorder, offscreen measurement
+span76/79/80. SourcegetTicks.js25–42/90–107 и DOMUtils.getStringSize неизменны;
+вариации видны и между одинаковыми web/OTA CSS (обе CSSfiles byteexact).
+Supportcode UUID и placement внешнего OFFcoachmark меняют bodyfocusHTML:
+остальные HTMLbytes exact, coachmarkinnerHTML/атрибуты кроме top/left exact.
+Protected src/shared/ui.tsx.updatePosition использует nativeanchor/frame/
+bubble getBoundingClientRect и resize/scroll. Это не полный SVG/pixel match.
+Supplemental final-residual-note.json связывает raw, не маскируя и не меняя
+первичные сравнения. Визуально осмотрены clientlightoverview и trainerdark
+measurements: исходная композиция сохранена. Графики попутно не чинились.
+
+Все квитанции /tmp/fit-mc53-release/final-acceptance.json и delivery-receipt.json.
+PhysicaliPhone/nativeinstall/реальныеAI исполнителем не проверены. Прежний
+MC53-F01 clear-on-failed-metric-create сохранён, за исправление не выдаётся.
+После публикации владелец проверяет спортсмена: Прогресс/Обзор/ПРО/периоды,
+замеры add/edit/cancel/save/history/metrics/InBody. Тренер: Прогресс клиента,
+замеры/бег/возврат/история/окна. Доступные темы и ввод/клавиатура на iPhone.
+Следующий MC до приёмки не начинать. Docs-only receipt локальным коммитом;
+повторный push/restart CI опубликованного кода не нужен.
