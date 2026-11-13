@@ -25,6 +25,8 @@ const samples:readonly ProfileSkinSample[]=[
  {role:'client',theme:'light',width:390,mode:'feedback',lime:true},
  {role:'client',theme:'dark',width:430,mode:'install',lime:true},
  {role:'client',theme:'dark',width:375,mode:'connections',lime:true},
+ {role:'client',theme:'light',width:390,mode:'invite',lime:true},
+ {role:'client',theme:'dark',width:430,mode:'finance',lime:true},
  {role:'client',theme:'light',width:390,mode:'notify-working',lime:true},
  {role:'client',theme:'dark',width:430,mode:'notify-error',lime:true},
  {role:'trainer',theme:'dark',width:390,mode:'profile',lime:true},
@@ -38,6 +40,10 @@ const samples:readonly ProfileSkinSample[]=[
  {role:'trainer',theme:'dark',width:375,mode:'editor-details',lime:true},
  {role:'trainer',theme:'dark',width:390,mode:'metro',lime:true},
  {role:'trainer',theme:'dark',width:430,mode:'photo',lime:true},
+ {role:'trainer',theme:'dark',width:390,mode:'photos',lime:true},
+ {role:'trainer',theme:'light',width:430,mode:'legacy-photo',lime:true},
+ {role:'trainer',theme:'dark',width:375,mode:'specialties',lime:true},
+ {role:'trainer',theme:'dark',width:375,mode:'metro-more',lime:true},
  {role:'trainer',theme:'dark',width:390,mode:'published',lime:true},
  {role:'trainer',theme:'dark',width:375,mode:'unpublish',lime:true},
  {role:'trainer',theme:'light',width:430,mode:'publication-error',lime:true},
@@ -98,6 +104,10 @@ export function limeProfileSkinCases(){
     const sports=page.locator('.athlete-sport-card');await expect(sports.locator('.athlete-sport-tag')).toHaveCount(6);await sports.getByRole('button',{name:/Показать ещё/}).click();await expect(sports.locator('.athlete-sport-tag')).toHaveCount(8);await probe('sports-expanded');await sports.getByRole('button',{name:'Свернуть'}).click();await expect(sports.locator('.athlete-sport-tag')).toHaveCount(6);await probe('sports-collapsed')
    }else if(sample.mode==='goal'){
     const goal=page.getByRole('region',{name:'Моя цель'});await goal.getByText(/Все подцели/).click();await expect(goal.locator('li')).toHaveCount(1);await probe('goal-expanded');await goal.getByText(/Все подцели/).click();await probe('goal-collapsed')
+   }else if(sample.mode==='invite'){
+    const connections=page.getByRole('region',{name:'Связь с тренером'});await expect(connections.getByRole('heading',{name:'Найдите своего тренера'})).toBeVisible();await probe('no-trainer');await connections.getByRole('button',{name:'Пригласить тренера',exact:true}).click();const dialog=page.locator('.invitation-share-dialog');await expect(dialog).toBeVisible();await probe('invitation-dialog');await dialog.getByRole('button',{name:'Показать QR-код',exact:true}).click();await expect(dialog.getByRole('img',{name:'QR-код приглашения в Fit'})).toBeVisible();await probe('invitation-qr');await dialog.getByRole('button',{name:'Отменить приглашение',exact:true}).click();await expect(page.getByRole('alertdialog')).toBeVisible();await probe('invitation-revoke-confirm');await page.getByRole('alertdialog').getByRole('button',{name:'Отмена',exact:true}).click();await dialog.getByRole('button',{name:'Закрыть',exact:true}).click();await expect(connections.locator('.client-home-invitations article')).toHaveCount(1);await probe('active-invitation')
+   }else if(sample.mode==='finance'){
+    const finance=page.locator('.client-finance-home');await expect(finance.locator('.client-finance-home-row').first()).toBeVisible();await probe('finance-populated')
    }else if(sample.mode==='connections'){
     const connections=page.getByRole('region',{name:'Связь с тренером'});await connections.getByRole('button',{name:/Действия с тренером/}).click();await expect(page.getByRole('menu')).toBeVisible();await probe('connection-menu');await page.getByRole('menuitem',{name:'Отключить'}).click();await expect(page.getByRole('alertdialog')).toBeVisible();await probe('connection-confirm');await page.getByRole('alertdialog').getByRole('button',{name:'Отмена'}).click();await expect(page.getByRole('alertdialog')).toHaveCount(0);await expect(connections.locator('.client-trainer-connection-card')).toHaveCount(1)
    }else if(edit){
@@ -109,13 +119,20 @@ export function limeProfileSkinCases(){
       await page.getByRole('button',{name:'Сохранить',exact:true}).click();await expect.poll(()=>fixture.held()).toBe(1);await expect(page.getByRole('button',{name:'Отмена',exact:true})).toBeDisabled();await probe('edit-pending');fixture.release();await expect(page.locator('.client-profile-form .error')).toBeVisible();await expect(name).toHaveValue('Алексей MC54');await probe('edit-error');await page.getByRole('button',{name:'Сохранить',exact:true}).click();await expect(page).toHaveURL(/\/me$/);expect(fixture.attempts()).toBe(2);expect(fixture.data().client.canonicalFullName).toBe('Алексей MC54')
      }else{await page.getByRole('button',{name:'Отмена',exact:true}).click();await expect(page).toHaveURL(/\/me\/profile$/);await expect(page.getByRole('region',{name:'Мои данные'})).toContainText('Алексей Смирнов')}
     }
-   }else if(sample.mode.startsWith('editor')||sample.mode==='metro'||sample.mode==='photo'&&sample.role==='trainer'){
+   }else if(sample.mode.startsWith('editor')||sample.mode.startsWith('metro')||['photos','legacy-photo','specialties'].includes(sample.mode)||sample.mode==='photo'&&sample.role==='trainer'){
     await openEditor();await probe('editor-ready')
-    if(sample.mode==='editor-details'||sample.mode==='metro'){
+    if(sample.mode==='photos'){
+     await expect(editor().locator('.trainer-photo-list > li')).toHaveCount(3);await expect(editor().getByLabel('Выбрать фото')).toBeDisabled();await probe('three-photos');await editor().locator('.trainer-photo-list > li').nth(1).getByRole('button',{name:'Удалить',exact:true}).click();await expect(page.getByRole('alertdialog')).toBeVisible();await probe('photo-delete-confirm');await page.getByRole('alertdialog').getByRole('button',{name:'Отмена',exact:true}).click();await expect(editor().locator('.trainer-photo-list > li')).toHaveCount(3)
+    }else if(sample.mode==='legacy-photo'){
+     await expect(editor().locator('.trainer-photo-legacy img')).toBeVisible();await probe('legacy-photo')
+    }else if(sample.mode==='specialties'){
+     await editor().getByText(/^Направления ·/).click();await expect(editor().locator('.trainer-specialties-limit-note')).toBeVisible();await expect(editor().locator('.trainer-specialty-option-legacy')).toContainText('Прежнее направление MC54');await probe('specialties-limit');await editor().locator('.trainer-specialty-option-legacy').getByRole('button',{name:'Убрать',exact:true}).click();await expect(editor().locator('.trainer-specialties-limit-note')).toHaveCount(0);await probe('specialties-legacy-removed');await editor().getByRole('checkbox').filter({visible:true}).nth(5).check();await expect(editor().locator('.trainer-specialties-limit-note')).toBeVisible();await probe('specialties-reselected')
+    }else if(sample.mode==='editor-details'||sample.mode.startsWith('metro')){
      await editor().getByText(/^Направления ·/).click();await expect(editor().getByRole('checkbox').first()).toBeVisible();await probe('editor-specialties')
      for(const details of await editor().locator('details').all())if(!await details.getAttribute('open'))await details.locator(':scope > summary').click()
-     if(sample.mode==='metro'){
+     if(sample.mode.startsWith('metro')){
       const metro=editor().getByRole('combobox',{name:/Метро/});await metro.fill('Динамо');await expect(page.getByRole('listbox')).toBeVisible();await probe('metro-results');await page.getByRole('option',{name:/Динамо/}).first().click();await expect(editor().getByRole('button',{name:'Убрать станцию Динамо'})).toBeVisible();await probe('metro-selected')
+      if(sample.mode==='metro-more'){await metro.fill('Несуществующая станция MC54');await expect(editor().locator('.metro-picker-empty')).toBeVisible();await probe('metro-empty');await metro.fill('Парк');await expect(page.getByRole('listbox')).toBeVisible();await metro.press('Escape');await expect(page.getByRole('listbox')).toHaveCount(0);await probe('metro-keyboard-closed')}
      }else await probe('editor-details')
     }else if(sample.mode==='photo'){
      await editor().getByLabel('Выбрать фото').setInputFiles('public/exercises/reference/close-grip-lat-pulldown.jpg');await expect(editor().locator('.trainer-photo-editor').getByRole('alert')).toBeVisible();await probe('trainer-photo-error')

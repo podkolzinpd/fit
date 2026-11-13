@@ -559,7 +559,7 @@ export const profileSourceFamilies:string[]=[
 export const profileCaptureOnlyPseudoOrigins=[".client-own-goal-stages li[aria-current]::marker"]
 export const profileFamilies=[...profileSourceFamilies,...profileCaptureOnlyPseudoOrigins]
 export const profileOwners:string[]=[]
-export const profilePageSelector='.client-profile-page,.client-self-edit-page,.profile-page,.modal-overlay,.sheet-overlay,.overflow-list,.coachmark-bubble,.tab-bar'
+export const profilePageSelector='.client-profile-page,.client-self-edit-page,.profile-page,.modal-overlay,.invitation-share-dialog,.sheet-overlay,.overflow-list,.coachmark-bubble,.tab-bar'
 export const profileCaptureProperties=['filter','visibility','object-fit','object-position','fill-opacity','fill-rule','stroke-opacity','stroke-dasharray','stroke-dashoffset','stroke-linecap','stroke-linejoin','stroke-miterlimit','clip-path','vector-effect','stop-color','stop-opacity','cursor','user-select','pointer-events','font-variation-settings','list-style-type','list-style-position']
 export const profileContract:NativeWorkoutSkinContract={
  selector:profilePageSelector,families:profileFamilies,knownGuards:[progressMigrationGuard,workoutListMigrationGuard,libraryMigrationGuard,editorMigrationGuard,...editorKnownGuards],migrationGuard:profileMigrationGuard,ownerFilter:profileOwnerFilter,ownerSelectors:profileOwners,

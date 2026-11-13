@@ -1,8 +1,10 @@
-import {expect,type Page,type Request,type Route} from '@playwright/test'
+import {expect,test,type Page,type Request,type Route} from '@playwright/test'
+import {readFile} from 'node:fs/promises'
 import {mockPilot,clientId,trainerId,publicTrainerDraft} from './fit-lime-fixtures'
 import {observeEditorImages} from './lime-editor-skin.probe'
 import {SPORT_INTEREST_LABELS} from '../src/shared/sport-interests'
 import type {TrainerProfileDraft} from '../src/shared/domain'
+import {TRAINER_SPECIALTIES} from '../src/shared/trainer-profile'
 
 export type ProfileSkinSample={role:'client'|'trainer';theme:'light'|'dark';width:number;mode:string;lime:boolean;section?:string;reference?:boolean}
 export async function prepareProfileSkin(page:Page,sample:ProfileSkinSample){
@@ -24,6 +26,9 @@ export async function prepareProfileSkin(page:Page,sample:ProfileSkinSample){
  let professional={publicId:'54000000-0000-4000-8000-000000000060',draft:{...structuredClone(publicTrainerDraft),displayName:'Антон Князев',avatarDataUrl:null,photos:[],certificates:[{title:'Подготовка тренеров',organization:'Синтетический институт',year:2020}]}as TrainerProfileDraft,published:null as TrainerProfileDraft|null,listedInCatalog:false,publishedAt:null as string|null,updatedAt:'2026-11-13T09:00:00.000Z',version:1,isBrandTrainer:false}
  if(sample.mode==='empty'||sample.mode==='load-error')professional={...professional,draft:{...professional.draft,bio:'',specialties:[],city:'',metroStationIds:[],customLocations:[],trainingModes:[],experienceStartYear:null,education:'',formats:'',price:'',acceptingClients:false,certificates:[]}}
  if(sample.mode==='published'||sample.mode==='unpublish'||sample.mode==='publication-error')professional={...professional,published:structuredClone(professional.draft),listedInCatalog:true,publishedAt:'2026-11-13T09:00:00Z'}
+ if(sample.mode==='photos')professional.draft.photos=Array.from({length:3},(_,i)=>({id:'54000000-0000-4000-8000-'+String(100+i).padStart(12,'0'),url:new URL('/exercises/reference/close-grip-lat-pulldown.jpg',test.info().project.use.baseURL).href,thumbnailUrl:new URL('/exercises/reference/close-grip-lat-pulldown.jpg',test.info().project.use.baseURL).href,mimeType:'image/jpeg',width:100,height:100}))
+ if(sample.mode==='legacy-photo')professional.draft.avatarDataUrl='data:image/jpeg;base64,'+(await readFile('public/exercises/reference/close-grip-lat-pulldown.jpg')).toString('base64')
+ if(sample.mode==='specialties')professional.draft.specialties=[...TRAINER_SPECIALTIES.slice(0,5),'Прежнее направление MC54']
  let photo={url:null as string|null,version:0},grid='comfortable',feedbackCount=0,mutationAttempts=0,queryFailure=sample.mode==='load-error'
  const notificationMode=sample.mode.startsWith('notify-'),pushPreferences={workout_reminder:true,workout_scheduled:true,chat_message:false}
  let notifyFailure=sample.mode==='notify-error'
@@ -61,6 +66,15 @@ export async function prepareProfileSkin(page:Page,sample:ProfileSkinSample){
   await route.fulfill({json:photo})
  })
  await page.route('**/v1/corporate-services/access',route=>sample.mode==='capability-error'?route.fulfill({status:503,json:{error:'unavailable'}}):route.fulfill({json:{allowed:false}}))
+ if(sample.mode==='invite'){
+  const invitation={id:'54000000-0000-4000-8000-000000000090',clientId,targetRole:'trainer' as const,expiresAt:'2026-11-20T09:00:00Z',createdAt:'2026-11-13T09:00:00Z'},invitations:typeof invitation[]=[]
+  await page.route('**/v1/connections',route=>route.fulfill({json:{memberships:[],invitations}}))
+  await page.route('**/v1/invitation-links',async route=>{
+   expect(route.request().postDataJSON()).toEqual({clientId,targetRole:'trainer'});invitations.push(invitation)
+   await route.fulfill({json:{invitation:{...invitation,code:'540000000001',token:'540000000001.'+'0'.repeat(64)}}})
+  })
+ }
+ if(sample.mode==='finance')await page.route('**/v1/me/finance',route=>route.fulfill({json:{finance:{trainers:[{trainerId,trainerName:'Дмитрий Соколов',packages:[{id:'54000000-0000-4000-8000-000000000091',kind:'session_pack',title:'8 тренировок',sessionsTotal:8,sessionsUsed:3,sessionsRemaining:5,priceCents:1600000,paidCents:1200000,dueCents:400000,startsOn:'2026-09-01',endsOn:'2026-12-01',paymentDueOn:'2026-11-20',packageStatus:'active',paymentStatus:'partial'}],payments:[]}]}}}))
  await page.route('**/v1/trainer-profile/access',route=>route.fulfill({json:{available:sample.mode==='readonly',managedByAdmin:sample.mode==='readonly',version:1}}))
  await page.route('**/v1/trainer-profile',async route=>{
   if(route.request().method()==='GET'){
