@@ -11328,3 +11328,56 @@ Today/fullgallery9; impossible trainerlight5; structural/numericfoundation6.
 /tmp/fit-mc53/source-boundary-note.json; это не blanket«unseen=dead».
 Conditional focus/goals/signals/wins/analysis/InBody/after-period owners входят
 в838. Общая foundation/Onest и другие страницы не расширены вMC53.
+
+ИТОГ ПЕРЕД РАЗРЕШЕНИЕМ ВЫПУСКА, 2026-11-13:
+PR https://github.com/podkolzinpd/fit/pull/2116, draft/open, проверенный head
+a8632c088d774fab5b3973b87701801bc7d52bd5.
+План233f8411 в PR. Runtime только3CSS; flags/API/React/DOM/callbacks/CI/
+dependencies не менялись. Код покрывает обе роли целиком; ни merge, ни publish
+не выполнялись. Разрешение именно MC53/2116 от владельца ещё НЕ получено.
+
+Локально:94native+72regression=166PASS,0retry/skip/flaky. Регрессии включают
+замеры/recovery/права/InBody, ввод/клавиатуру/подтверждённые факты Live,
+отмену подхода, свайпы/удаление/перенос/отдых и каталог.278unit/39suites
+исходного блокаPASS; их component/repository source остался byte-exact.
+Build/types/full lint+finaltargetlint/e2e types/fonts2/2/startup/docsPASS.
+Окончательные source/literal proofs:838decl/431rules/420owners,25720original
+records/order exact,1943protected без изменений,2accepted Lime byte suffix.
+
+CI и Android debug build attempt1 SUCCESS для ТОЧНО a8632c08…:
+CI43421156342, Android43421156292.36checksSUCCESS, auth-smoke условноSKIPPED
+по неизменённому workflow; другихskip/failure/cancel нет. Локальная БД не
+запускалась; обязательные серверные/браузерные проверки прошли в CI.
+
+Остатки сравнения НЕ скрыты: primary strict JSON всё ещё false/238leafdiffs,
+221из228PNG побайтноточны. Supplemental read-only decomposition подтвердил
+228/228outside-Recharts native captures EXACT (styles/geometry/form/select/
+focus/selection/scroll); у SVG совпадают root/viewBox, все исходные кривые/
+reference-line attrs/data и computed-style sets по class. Отличия ограничены
+исходным adaptiveY ticks/grid76/78/80 vs76/77/78/79/80, Rechartsportalorder
+Line/ReferenceLine и offscreen measurement span. Они воспроизведены повтором
+неизменённогоecbf и/или OFF-control; dependency/component source unchanged.
+Это source-qualified прежняя недетерминированность, НЕ full SVG byte parity.
+6PNG имеют разные generated support codes (12paired HTMLfields; sourceUUID),
+ещё1PNG — фаза каретки2×18CSSpx внутри того же focusedtextarea с теми же
+value/selection/rect/styles, остальные пиксели точны. PNG/HTML/style/data не
+маскированы и не нормализованы. Единственный завершающий read-delta — ранее
+не дожидались profileGET после trainer save; candidate совпал с независимым
+original-source replay при source-bound ожидании. Запросы продукта неизменны.
+
+Квитанция /tmp/fit-mc53/pre-release-acceptance.json, raw comparison и
+candidate3-residual-audit-v3.json/candidate3-top-data-audit.json отдельно.
+Pinned final native145144-8a958f21 и regression150423-34a2a128; baseline/
+source-winner/original-control inputs тоже pinned. Временные CSS original
+replay восстановлены до838literal; приложение повторно собрано кандидатом3.
+
+Ограничения приёмки: physical iPhone/native keyboard не проверены исполнителем;
+local recognition/AI fixture-bound, без реальных AI requests. Прежний MC53-F01
+clear-on-failed-metric-create не исправлен. Нестабильность SVG/фазыWebKit
+автопрокрутки в original control записана как наблюдение, не выдана за новый
+продуктовый дефект и не исправлена попутно. Полное попиксельное/полноеSVG
+равенство не заявляется. Следующий MC и выпуск без разрешения не начинать.
+
+Эта итоговая docs-only квитанция сохраняется локально отдельным коммитом,
+без повторного push/restart CI уже проверенного a8632c08. В PR текущий код
+и план; GitHub body обновляется результатами, auto-merge не включается.
