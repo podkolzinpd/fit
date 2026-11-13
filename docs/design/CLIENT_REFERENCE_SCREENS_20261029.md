@@ -11233,3 +11233,98 @@ fit-storage task fit-monochrome-cleanup с измеренным reserve; исх�
 непроверенного, ошибок/остатка и сценария телефонной приёмки; только затем
 новое разрешение на выпуск. После него — общая GitHub очередь, exact-head
 CI/main, реальная доставка и приёмка владельцем. Следующий MC до неё не начинать.
+
+## 260. MC5.3 — исходная проверка и граница реализации
+
+2026-11-13. План259 закреплён локальным233f8411; выпуск НЕ разрешён.
+Исходный application tree равен принятому MC52/ecbf825c. Новый checkout,
+зависимости, runtime-компоненты, CI/rollout и реальные данные не менялись.
+Переиспользован проверенный локальный build с проверкой source/env/assetSHA,
+не повторная ненужная сборка. Журнал /tmp/fit-mc53/checkpoint.json.
+
+Исходные проверки:39unit suites/278PASS и48existing business e2ePASS,
+0retry/skip/flaky. В них включены обе роли, client read-before-delete/
+lost-reply recovery, trainer canManage/confirm, InBody recognition/review/retry,
+body-map geometry и OFF-потребители. Локальный native API backend на трёх
+штатных портах недоступен; его настоящие сценарии сохраняются обязательным
+CI-gate, не заменяются моками и не объявляются пройденными локально.
+
+Новый read-only native baseline82cases/196states квалифицирован по обеим
+ролям, темам и размерам.10OFF/external controlsPASS;72positive cases имеют
+ТОЛЬКО ожидаемое последнее падение проверки legacy paint ownership ПОСЛЕ
+успешных UI/data/probe assertions. Это не зелёный тест миграции: исходные
+красные отчёты сохраняются. Ни один primary probe не меняет CSSOM/DOM/
+focus/selection/scroll. Полные DOM/SVG, computed styles/geometry/поля/select/
+focus/selection/scroll/data/payload/PNG сохранены без масок и нормализации.
+История тренировок неизменна. Все входы comparison закреплены fit-storage.
+Новые QA-ошибки точных accessible labels/скрытого overview в ПРО/SVG image
+исправлены по source+rawcontext; повторены только незавершённые22, затем10
+случаев, а не успешные60. Источники/raw failures не переписаны.
+Manifest /tmp/fit-mc53/native-baseline-qualified.json ссылается на исходные
+managed runs135118-83349176,140039-08af8c77,140619-a07a97db.
+
+Отдельный AUX76cases/186witnesses определяет исходных победителей каскада
+в прежнем неизменённом build. Он временно добавляет marker stylesheet и
+всегда удаляет его;186/186CSSOMRestoredtrue. Это ВСПОМОГАТЕЛЬНАЯ диагностика,
+не primary доказательство внешнего вида. Raw4externalPASS/72expectedownerRED
+квалифицированы отдельно; /tmp/fit-mc53/auxiliary-qualified.json, pinned
+run140717-91c14484. Source-only preview сохраняет полный порядок всех25720
+исходных selector/context/declaration records после снятия точного guard.
+Observed/unseen families — верхние границы, не число необходимых копий.
+
+Существующая находка MC53-F01: MetricsManager.addManual синхронно очищает
+имя и единицу после onCreate; при последующем503 введённое уже пусто.
+Подтверждено source и native observations обеих ролей/двух браузеров.
+Не объявляется желаемым поведением и не исправляется попутно CSS-миграцией.
+Грабли QA: exact accessible label у общего Field включает default textarea
+text/select options. Для заполненных полей используется точный name/контейнер
+с отдельным строгим caption и прежними value/payload assertions.
+
+Дополнительные source-proven состояния keyboard focus/раскрытий проверяются
+адресно до candidatebuild; предыдущие82 не повторяются без новой причины.
+Итог переноса, comparison, необходимые регрессии и CI будут дописаны после
+фактической проверки. Этот checkpoint не разрешает merge/publish MC5.3.
+
+MC53 implementation checkpoint: native baseline расширен адресными12focus/
+disclosure cases до94cases/228states, без повтора прежних82. Manifestv2:
+/tmp/fit-mc53/native-baseline-qualified-v2.json. Native probe по-прежнему
+read-only; взаимодействия keyboard/focus выполняет только сценарий ДО probe.
+Runtime изменён только в3CSS:838 authored literal declarations в прежних
+Lime-файлах; original25720 selector/context/declaration records/order exact,
+1943защищённых runtime/CI/прочихCSS без изменений, обе прежние Lime-части
+byte-exact suffix. Positive/negative route scopes zero-specificity, без:has.
+Все838property/value/priority/context имеют точный источник в baseecbf.
+Helpers source-proof/literal-proof и candidate3-source-summary в /tmp/fit-mc53.
+
+Первая проверка94PASS сама по себе НЕ означала паритет: strict comparison
+выявил пропущенные hex/transparent/unitless stroke/filter values и border
+shorthand/reset precedence. Причина authored-map — CSSOM сериализует значения
+иначе исходного CSS; несовпадение строк НЕ доказывает stronger/no-live owner.
+Весь binding пересчитан по selector/property/context, копии остались literal
+из исходника. Добавлены source-proven logical-border и neutral-reset masks.
+Rawcandidate1/2 comparers и PNG сохранены, не нормализованы и не переименованы
+в passed. Candidate2 имел94PASS; финальная правкаC3 — ровно1originalmobile
+border-right:0 перед border-bottom для плиток тренера. C3build/types/fonts2/2/
+startup checkPASS, final native/regressions/CI ещё ожидаются.
+
+Контроль original-source replay8cases/16states на ecBF (все3CSS временно
+заменены исходными, затем проверяемо восстановлены) воспроизвёл без миграции
+перестановку RechartsLine/ReferenceLine и5/7adaptive axis ticks. В WebKit
+после fill также различалась фаза native auto-scroll у history-editor.
+Это отдельные исходные нестабильности наблюдения, не разрешение скрывать
+rawdiffs. Контроль pinned144503-5b7984e6; recovery/result фиксируют восстановление
+CSS. Исходные baseline manifests остаются неизменны. Финальная классификация
+расхождений и ограничения должны быть показаны до запроса выпуска.
+Новый QA trainer save теперь ждёт source-bound завершающий GETпрофиля:
+ProgressPages59 сначала закрывает форму, затем последовательно инвалидирует
+progress и client; прежний JSON мог фиксироваться до последнего чтения.
+React callbacks/query keys/запросы продукта не изменялись.
+
+Оставшиеся199из746static source families классифицированы отдельно:
+disconnectedlegacy52; impossible current role/composition45; absent exact
+currentmarkup/state57; impossible/static-art predicates25; externalHome/
+Today/fullgallery9; impossible trainerlight5; structural/numericfoundation6.
+В214modern native states нет их legacy-paint пересечений. Source witness
+/tmp/fit-mc53/source-boundary-note.json; это не blanket«unseen=dead».
+Conditional focus/goals/signals/wins/analysis/InBody/after-period owners входят
+в838. Общая foundation/Onest и другие страницы не расширены вMC53.

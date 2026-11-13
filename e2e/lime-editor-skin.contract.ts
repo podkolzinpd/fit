@@ -1,3 +1,4 @@
+import {progressMigrationGuard} from './lime-progress-skin.scope'
 // Whole workout create/edit consumers; template editor and off gates stay legacy.
 export const editorPageSelector='.workout-form-page,.today-review,.sheet-overlay,.modal-overlay,.overflow-list'
 export const editorOwnerFilter=":is(.fit-lime-shell.workout-create-edit-identity:is(.coach-workout-reference,.client-workout-reference):has(.workout-form-page:not(.workout-template-editor-page,.favorite-workout-editor-page),.today-review),.fit-lime-shell.workout-create-edit-identity:is(.coach-workout-reference,.client-workout-reference):has(.workout-form-page:not(.workout-template-editor-page,.favorite-workout-editor-page),.today-review) *)"
@@ -520,6 +521,7 @@ export const editorFamilies=[
   ".fit-lime-plan-dialog:has(.workout-template-picker)"
 ]
 export const editorKnownGuards=[
+  progressMigrationGuard,
   ":where(:not(.fit-lime-shell.workout-detail-history-identity .workout-detail-page:is(.workout-completion-page,:has(> .coach-workout-summary,> .workout-duration-surface)) *))",
   ":where(:not(.fit-lime-shell.workout-live-reference:has(.coach-live-v79,.client-live-v79) :is(.live-rest-sheet,.workout-duration-sheet,.workout-live-exit-sheet)))",
   ":where(:not(.fit-lime-shell.workout-live-reference:has(.coach-live-v79,.client-live-v79) .modal-overlay))",
