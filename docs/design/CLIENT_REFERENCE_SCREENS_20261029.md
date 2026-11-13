@@ -11754,3 +11754,79 @@ duration-classifier-fix-location.json; public baseline qualified manifest в
 а не всем CI; неточная формулировка исправлена в чате. После конечного CI —
 merge, штатная публикация и readback. Итоговые docs-only квитанции сохранять
 локально, без повторного push/restart уже проверенного runtime.
+
+
+## 269. MC5.4 — опубликовано и проверено, 14.11.2026
+
+После явного разрешения владельца PR2117 слит 13.11.2026T20:54:15Z:
+merge27c8d603a24a91190743b3f57b48aa1be092b5e4, проверенный head70392ad9.
+Полные деревья совпали. Старший2087 подтверждён неактивным несколькими
+сохранёнными и свежим GitHub снимками exact head/update/terminal CI;
+активных публикаций перед нами не было. Чужие чаты и PR не изменялись.
+
+PR CI43499875053 и Android43499875197 SUCCESS,36SUCCESS/1conditionalSKIPPED.
+Main CI43505809656 SUCCESS attempt2, Android43505809759 SUCCESS attempt1.
+Main attempt1:32SUCCESS/1SKIPPED, одно visual WebKit задание и зависимый итог
+упали (1failed/2flaky в155-case наборе). Source/event/test tree совпадал с
+проверенным PR, где тот же155-case набор прошёл; локальные6 адресных сценариев
+также PASS. По коду найден возможный ранний before-read текста до enabled
+формы; точная причина CI без trace не объявлена доказанной инфраструктурой
+или исправленным продуктовым дефектом. После завершения остальных заданий
+повторено только одно failed visual задание и зависимый итог.155PASS за8.9m,
+код, assertions и timeout не менялись. Исходные падения сохранены.
+
+Штатные публикации exact27c8: API43514023420, frontend43514023415,
+signedAPK/OTA43514403919 — SUCCESS attempt1. Все246 публичных web-файлов
+совпали с официальным manifest по GET/size/SHA256. API health/ready/release
+и маршруты проверены; подписанные OTA manifest/archive, checksum и public
+readback PASS. NativeBuild9, ABI8922d2e9…, sequence1794606811771. Флаги,
+когорты, роли, обработчики и данные не менялись. Runtime — прежние3CSS,
+779literal declarations/458families/370owners;1943 защищённых файла exact.
+
+Published web116PASS/252states и подписанный OTA в browser preview116PASS/
+252states,0retry/skip/flaky. Исходные тесты/действия/probe/assertions прежние;
+все API записи synthetic, реальные push/share/clipboard/analytics запрещены.
+6reference=false случаев недоступны в текущем public all-rollout, остаются
+вlocal/CI122. Local122native+62regression+3221unit, targeted duration20 и
+visual6 PASS. Физический iPhone/настоящая native keyboard, native install
+и реальные permissions/push delivery исполнителем не проверены.
+
+Raw strict before-web FALSE325fields,220/252PNG exact; web-OTA FALSE679fields,
+226/252PNG exact. Все1004 поля и58 различных PNG имеют отдельные raw/source
+bindings; первичные JSON/PNG не нормализованы, не маскированы, не исправлены
+и не объявлены full exact. Before-web styles252/252 exact; web-OTA251/252,
+единственное отличие —4 border-color имеющегося card:hover. Формы, selection
+и interaction states252/252 exact в обоих сравнениях. Все local document
+coordinates/width/height/scroll ranges совпадают; viewport rect deltas строго
+противоположны фактическому scroll. Read17/19 отличается двумя повторными
+readonly GET после save/invalidation/navigation, данные и записи совпадают.
+Остальное: UUID supportcodes, native caret, fixture photo origins и QR для
+реального respective origin (browser loopback не равен native installation).
+Все9 QR HTML/dataURI различий сверены независимым encoder с точными URL.
+
+Контроль подписанного original4db: проверена подпись/archiveSHA и все246
+существующих извлечённых файлов, исходники не копировались/не подменялись.
+10cases/34states завершили native/data checks и только ожидаемую последнюю
+старую ownership RED. На original повторены feedback1547/1548, read17/19,
+hover/default border и все8 спорных web/OTA viewport phases. Sports Chromium:
+oldWeb==newWeb449/837, oldOTA==newOTA793/793; appearance Chromium839/838,
+WebKit565/548. Следовательно344/44/17/1px различия уже существовали в старом
+signed source; это не новая миграция. Начальная native/browser/origin фаза
+и точный async timing не установлены, исправления scroll/caret не заявляются.
+
+Final fingerprint13.11.2026T22:28:31Z подтверждает неизменные HTML/API/signedOTA
+27c8 за всю published QA. Визуально осмотрены опубликованные client light и
+trainer dark profile. Все inputs/build/failed/control/final receipts pinned
+в fit-storage task fit-monochrome-cleanup. Полная квитанция:
+/tmp/fit-mc54-release/final-acceptance.json; delivery-receipt.json,
+public-before-after-residual-summary.json и original-viewport-control-comparison.json
+связывают raw доказательства. Main visual issue отдельно main-visual-retry-reason.json.
+
+Владелец проверяет обе роли: профиль/фото/редактор, отмена/сохранение, настройки
+темы/плотности/анимаций и reload; тренер также профессиональные раскрытия и
+настройку расписания. После настроек — Live ввод/клавиатура/галочка/отмена,
+отдых и свайпы на физическом iPhone. Следующий MC до приёмки не начат.
+Эта docs-only квитанция закрепляется локальным коммитом без push/restart
+проверенного и опубликованного runtime. Прежние открытые находки внеMC54
+не закрываются общей приёмкой. Следующий guard до CI проверять также во всех
+ранних explicit-whitelist readers, сохраняя неизвестные/положительные owners.
