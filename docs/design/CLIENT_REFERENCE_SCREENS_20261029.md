@@ -11675,3 +11675,41 @@ Raw comparison не объявлен полностью byte-exact: отдель
 Build/fonts/startup PASS; полный lint PASS; e2e types PASS; все 3221 unit
 в 359 suites PASS. Финальный runtime и полный browser comparison ещё гейт
 перед сводкой владельцу. Merge/publication не разрешены и не выполнялись.
+
+
+## 267. MC5.4 — финальная локальная приёмка, PR2117
+
+Проверенный runtime832ae9d7, source plan/proof v4. Финальная сборка PASS.
+После исправления disabled-color весь профильный native набор122/122 PASS,
+260 состояний, Chromium+WebKit, без retry/skip/flaky. Дополнительно62/62
+регрессии PASS: существующий профиль/фото/подцели/публикация/уведомления,
+Live direct input, клавиатурный Next, ввод времени при смене плотности,
+свайп/удержание, удаление круга, отмена подхода, отдых/retry; прежние owners
+Progress, библиотеки и списка тренировок обеих ролей. React/API и механики
+не изменены. 3221 unit /359 suites, полный lint, финальные e2e types/targeted
+lint, build/fonts/startup и docscheck PASS.
+
+Строгое сравнение всех260 состояний: computed styles, geometry, input/select,
+focus/selection/scroll, data/read/write/diagnostics совпали. Размеры и шрифты
+не изменились. Raw DOM/PNG НЕ полностью byte-exact:24 различающихся DOM-fields
+принадлежат исключительно случайному коду поддержки в12 error states;
+236/260 PNG точные, остальные12 — те же коды, ещё12 — сплошная полоса native
+caret3–4px×51px. Отдельная range/pixel диагностика сохранена; raw comparison
+остаётся false и НЕ переименован в полный PASS, данные не маскированы и не
+нормализованы. Поздний fixture404 из предыдущей попытки на финальном прогоне
+не повторился; реальное устройство/permissions/native install/push delivery
+не проверены, реальные production writes не выполнялись.
+
+Primary inputs и итоговые build/native/unit/regression receipts сохранены
+в fit-storage task fit-monochrome-cleanup. Manifest/comparison/checkpoint:
+/tmp/fit-mc54/native-baseline-qualified-final.json,
+/tmp/fit-mc54/final-native-comparison.json,
+/tmp/fit-mc54/final-native-classification.json,
+/tmp/fit-mc54/final-raw-support-code-proof.json и checkpoint.json.
+
+Собственный [PR2117](https://github.com/podkolzinpd/fit/pull/2117) создан draft;
+CI точного head ещё гейт. Только этот PR наблюдается одним процессом с
+минутными паузами, чужие чаты/агенты/очередь не опрашиваются. После CI —
+конкретная сводка владельцу. Разрешения на merge/publication нет; выпуск и
+следующий MC не начинать. После разрешённой публикации проверить профиль,
+редактор, настройки/сохранение/reload и Live после смены настроек обеих ролей.
