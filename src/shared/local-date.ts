@@ -56,10 +56,6 @@ export function currentTimeInTimeZone(timeZone?: string | null, now = new Date()
   return `${value.hour}:${value.minute}`
 }
 
-export function todayLocalDate(now = new Date()): LocalDate {
-  return todayInTimeZone(systemTimeZone(), now)
-}
-
 export function formatLocalDate(value: LocalDate, locale = 'ru-RU'): string {
   const [year, month, day] = value.split('-').map(Number)
   return new Intl.DateTimeFormat(locale, { day: 'numeric', month: 'long', year: 'numeric' })

@@ -100,7 +100,3 @@ export const VITAL_FREE_PACK_EXERCISES = [
   { source: 'system', ref: 'vital-smith-seated-military-press', name: 'Армейский жим сидя в Смите (Тренажёр Смита)', muscleGroup: 'shoulders', inputKind: 'strength', equipment: 'Тренажёр Смита', equipmentRef: 'machine', primaryMuscleDetail: 'Передняя дельта', secondaryMuscles: ['Трицепс'], level: 'intermediate', imageUrl: vitalPoster('smith-seated-military-press'), motionImageUrl: vitalEndPoster('smith-seated-military-press'), instructions: ['Поставьте скамью под гриф Смита и прижмите спину.', 'Снимите гриф со стопоров и выжмите вверх.', 'Плавно опустите к верхней части груди.'] },
   { source: 'system', ref: 'vital-reverse-pec-deck', name: 'Обратная бабочка (Тренажёр)', muscleGroup: 'shoulders', inputKind: 'strength', equipment: 'Тренажёр', equipmentRef: 'machine', primaryMuscleDetail: 'Задняя дельта', secondaryMuscles: ['Середина спины'], level: 'beginner', imageUrl: vitalPoster('reverse-pec-deck'), motionImageUrl: vitalEndPoster('reverse-pec-deck'), instructions: ['Сядьте лицом к спинке и возьмитесь за рукояти.', 'Разведите руки назад, сводя лопатки без подъёма плеч.', 'Плавно верните рукояти вперёд.'] },
 ] as const satisfies readonly ExerciseSnapshot[]
-
-export const VITAL_FREE_PACK_VIDEO_BY_REF: Readonly<Record<string, string>> = Object.fromEntries(
-  Object.entries(VITAL_FREE_PACK_MEDIA_BY_REF).map(([ref, media]) => [ref, media.techniqueVideoUrl]),
-)

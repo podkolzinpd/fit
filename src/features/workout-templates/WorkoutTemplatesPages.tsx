@@ -12,7 +12,7 @@ import type { ExerciseSnapshot, WorkoutExerciseDraft, WorkoutTemplateDraft } fro
 import { formatLocalDate } from '../../shared/local-date'
 import { AddIcon, CopyIcon, ScheduleIcon } from '../../shared/icons'
 import { filterWorkoutTemplates, WorkoutTemplateSearch, WorkoutTemplateSearchEmpty } from '../../shared/workout-template-search'
-import { AsyncView, EmptyState, Field, InlineRequestError, OverflowMenu, Page, StatePanel, useConfirm } from '../../shared/ui'
+import { AsyncView, EmptyState, Field, InlineRequestError, OverflowMenu, Page, useConfirm } from '../../shared/ui'
 import { ExercisePicker, useExerciseCatalog } from '../exercises'
 import { LoadMoreButton, safeWorkoutReturnTo, readWorkoutFormDraft, type WorkoutNavigationState, readTemplatePlanContext, returnToTemplatePlan, applyCreatedTemplate, templateReturnSteps, type TemplatePlanContext, QuickWorkoutEntry, WorkoutCta, WorkoutExerciseEditor, WorkoutHeader, workoutDisplayTitle, workoutExerciseBrief, type ParsedWorkoutExercise } from '../workouts'
 import { VoiceNoteField } from '../voice-input'
@@ -315,8 +315,4 @@ function WorkoutTemplateEditor({ templateId, sourceWorkoutId, draftKey, context,
 export function WorkoutTemplateAssignPage() {
   const { templateId = '' } = useParams()
   return <Navigate to={`/workouts/new?template=${encodeURIComponent(templateId)}`} replace />
-}
-
-export function MissingWorkoutTemplatePage() {
-  return <Page title="Шаблон недоступен" back="/schedule/templates"><StatePanel tone="info" title="Не удалось открыть шаблон" description="Возможно, он был удалён." /></Page>
 }

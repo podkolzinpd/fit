@@ -490,8 +490,9 @@ Production workflow задаёт API min_instances=1; минимум также 
 с дополнительным запасом для перекрытия старой/новой ревизий. Три API-процесса
 и один dispatcher уже могут занять все20; четыре API — без запаса dispatcher.
 Migration runner runtime preflight тоже относится к этому пользователю,
-owner-пул — нет. Сейчас `yandexDatabasePool()` не вызывается функциями; если
-его подключат, такой consumer тоже войдёт в runtime-бюджет.
+owner-пул — нет. Неиспользовавшаяся фабрика `yandexDatabasePool()` удалена
+при [очистке 14.11](docs/design/UNUSED_CODE_CLEANUP_20261114.md).
+Любой новый DB-consumer функций тоже должен учитываться в runtime-бюджете.
 
 После deployment проверять в Cloud Logging окна API и dispatcher, особенно
 `waitingMax>0`, рост acquisition duration и `53300`; сопоставлять с Managed

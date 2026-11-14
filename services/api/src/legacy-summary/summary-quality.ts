@@ -502,7 +502,3 @@ export function assessSummaryQuality(
 export function summaryQualityIssues(summary: unknown, trainingData: unknown): string[] {
   return assessSummaryQuality(summary, trainingData).blockingIssues
 }
-
-export function summaryQualityAdvisories(summary: unknown, trainingData: unknown): string[] {
-  return assessSummaryQuality(summary, trainingData).advisories
-}

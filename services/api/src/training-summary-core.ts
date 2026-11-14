@@ -21,20 +21,9 @@ import { invokeYandexLlmCompletion } from "./yandex-llm-function-client.js"
 
 const YANDEX_COMPLETION_URL =
   "https://llm.api.cloud.yandex.net/foundationModels/v1/completion"
-const MAX_PERIOD_DAYS = 366
 export const MAX_SOURCE_ROWS = 10_000
 const MAX_DIRECT_MODEL_INPUT_CHARS = 80_000
 const inFlightSummaryRequests = new Map<string, Promise<YandexSummaryResult>>()
-
-type SummarizeRequest = {
-  client_id: string
-  period_start: string
-  period_end: string
-  force: boolean
-  trigger_reason: "create" | "new_workout" | "period_change" | "manual_refresh"
-  diagnostic?: 'preflight' | 'run_once' | undefined
-  diagnostic_fingerprint?: string | undefined
-}
 
 export type WorkoutRow = {
   id: string
@@ -90,9 +79,6 @@ export type ProgressRow = {
     value: number
   }>
 }
-
-export type CustomMetricRow = { id: string; name: string; unit: string | null }
-export type ProgressCustomRow = { progress_id: string; metric_id: string; value: number | string }
 
 type YandexCompletionResponse = {
   result?: {
@@ -259,64 +245,6 @@ export function trainerSummaryAsText(summary: TrainerSummary): string {
     `Прогресс\n${summary.progress.map((item) => `- ${item}`).join("\n")}`,
     `Регулярность\n${summary.consistency}${attention}`,
   ].join("\n\n")
-}
-
-export function parseRequest(value: unknown): SummarizeRequest {
-  if (!value || typeof value !== "object") {
-    throw new HttpError(400, "request_body_required")
-  }
-
-  const body = value as Record<string, unknown>
-  const clientId = body.client_id
-  const periodStart = body.period_start
-  const periodEnd = body.period_end
-  const force = body.force
-  const triggerReason = body.trigger_reason
-  if (body.diagnostic !== undefined && body.diagnostic !== 'preflight' && body.diagnostic !== 'run_once') {
-    throw new HttpError(400, 'invalid_diagnostic')
-  }
-  if (body.diagnostic === 'run_once' && typeof body.diagnostic_fingerprint !== 'string') {
-    throw new HttpError(400, 'diagnostic_preflight_required')
-  }
-  const uuidPattern =
-    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
-  const datePattern = /^\d{4}-\d{2}-\d{2}$/
-
-  if (typeof clientId !== "string" || !uuidPattern.test(clientId)) {
-    throw new HttpError(400, "invalid_client_id")
-  }
-  if (
-    typeof periodStart !== "string" || !datePattern.test(periodStart) ||
-    typeof periodEnd !== "string" || !datePattern.test(periodEnd)
-  ) {
-    throw new HttpError(400, "invalid_period")
-  }
-  if (force !== undefined && typeof force !== "boolean") {
-    throw new HttpError(400, "invalid_force")
-  }
-  if (triggerReason !== undefined && triggerReason !== "create" && triggerReason !== "new_workout" &&
-    triggerReason !== "period_change" && triggerReason !== "manual_refresh") {
-    throw new HttpError(400, "invalid_trigger_reason")
-  }
-
-  const startMs = Date.parse(`${periodStart}T00:00:00Z`)
-  const endMs = Date.parse(`${periodEnd}T00:00:00Z`)
-  if (!Number.isFinite(startMs) || !Number.isFinite(endMs) || endMs < startMs) {
-    throw new HttpError(400, "invalid_period")
-  }
-  if ((endMs - startMs) / 86_400_000 + 1 > MAX_PERIOD_DAYS) {
-    throw new HttpError(400, "period_too_long")
-  }
-
-  return {
-    client_id: clientId,
-    period_start: periodStart,
-    period_end: periodEnd,
-    force: force === true,
-    trigger_reason: triggerReason ?? "manual_refresh",
-    diagnostic: body.diagnostic,
-    diagnostic_fingerprint: typeof body.diagnostic_fingerprint === 'string' ? body.diagnostic_fingerprint : undefined,
-  }
 }
 
 export function requiredSecret(name: string): string {

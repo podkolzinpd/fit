@@ -18,12 +18,10 @@ const counts={seconds:z.number().nonnegative(),days:z.number().int().nonnegative
 const report=z.object({...counts,open:z.number().int().nonnegative(),review:z.number().int().nonnegative(),records:z.array(duty),
  nextCursor:z.object({at:instant,id:z.uuid()}).nullable(),trainers:z.array(z.object({id:z.uuid(),name:z.string()})),offices:z.array(zoneOffice),
  byTrainer:z.array(z.object({...counts,trainerId:z.uuid()})),byOffice:z.array(z.object({...counts,officeId:z.uuid()}))}) satisfies z.ZodType<CorporateDutyReport>
-export type DutyReport=z.infer<typeof report>
 export type DutyCommand=CorporateDutyCommand
 const auditState=z.object({started_at:instant,ended_at:instant.nullable(),office_name:z.string(),office_city:z.string(),time_zone:z.string(),voided:z.boolean(),long_confirmed:z.boolean(),version:z.number().int().positive()})
 const audit=z.object({current:duty,records:z.array(z.object({id:z.number().int().positive(),actor_id:z.uuid(),actorName:z.string(),occurred_at:instant,
  action:z.enum(['start','stop','correct','void','restore','confirm']),reason:z.string().nullable(),before_data:auditState.nullable(),after_data:auditState}))})
-export type DutyAudit=z.infer<typeof audit>
 async function request<T>(schema:z.ZodType<T>,path:string,body?:object):Promise<T>{
  const session=yandexAppSessionTransport()
  if(!session)throw new CorporateDutyError(401,'Войдите в ФИТ снова.')
