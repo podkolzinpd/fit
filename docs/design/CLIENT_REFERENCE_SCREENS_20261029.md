@@ -12082,3 +12082,48 @@ docs/CURRENT_STATE.md. Локально то же нарушение воспр�
 не менялись. Main5325de7e интегрирован без конфликтов: только публичный
 тренерский landing,3CSS приложения побайтно прежние. Повторный CI требуется
 на окончательном head.
+
+
+## 275. MC5.5 — итоговая приёмка перед разрешением выпуска
+
+2026-11-14, Codex / OpenAI. Согласованный единый блок MC551–555 реализован
+для спортсмена и тренера в draft PR2120. Проверенная версия PR:
+d3f88faa7973d6bbd75328c4872da32eb44c7e09, main5325de7e интегрирован.
+Runtime побайтно прежний с74b09e8e: собственный diff приложения —3CSS,
+без React/DOM/handlers/API/query keys/flags/settings/privacy изменений.
+Перенос443семейств/572исходных объявлений/286owners; исходный порядок25720
+записей сохранён. Foundation/шрифты/shared sprite и OFF/V1 остаются общими
+потребителями; отдельные соседние страницы не присоединялись.
+
+Итоговый CI d3f88faa завершён:37checks,36SUCCESS,1штатный SKIPPED(auth-smoke),
+ошибок0. Источник /tmp/fit-mc55/ci-final.json и readback owner-gate-readback.json;
+https://github.com/podkolzinpd/fit/actions/runs/43589943882/job/132432441534. Все обязательные gates прошли; ручные
+перезапуски CI без изменения причины не использовались.
+
+Локальная приёмка:lint/typecheck/build;359suite/3221unit PASS с прежними
+coverage thresholds;90browser-сценариев/142native состояния обеих ролей и
+движков;104проверки текущих механик. Дополнительные QA-коррекции CI:share10PASS
+с точным guard иpublication6PASS с естественным open/close prerequisite;
+исходные geometry/style/focus/scroll/CSSOM assertions сохранены. Workflow
+docs/структура PR проходят,7тестов валидатора PASS; CURRENT_STATE в бюджете.
+Результаты исходной/итоговой базы и точной CI-диагностики pinned fit-storage.
+
+Оговорки не сняты зелёным CI:strict rawRED30,PNG138/142exact;28служебных
+различий source-qualified. Два GET multiplicity (26→18 и10→11) имеют прежние
+endpoints/данные/записи, но точная причина количества не доказана. Две
+code-only PNG области и две узкие caret-shaped полосы описаны в§273;
+фаза мигания не измерялась. Геометрия/computed/fields/scroll/data/write exact.
+Причина прежнего cold closed→error native currentColor drift скрытого switch
+также не объявляется исправленным product bug:точный raw и уточнённый flow
+сохранены в§274. Физический iPhone/нативная клавиатура/реальный push и
+production запись не проверялись. Реальных production writes0.
+
+Решение: MC-RELEASE-01 сохраняется. Владелец получает сводку сделанного,
+проверок и оставшихся границ ДО выпуска. PR остаётся draft; merge/auto-merge/
+публикация не запускались и сейчас не разрешены. Следующий этап без приёмки
+не начинать. Дальше — отдельное разрешение Антона, затем собственная очередь
+по GitHub, актуальность main/head и проверка доставки после публикации.
+
+Эта финальная квитанция сохраняется локальным docs-only коммитом; не отправлять
+её отдельным push исключительно ради повторного запуска уже зелёного CI.
+Проверенный remote release head остаётся d3f88faa.
