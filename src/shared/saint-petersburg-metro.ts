@@ -94,9 +94,3 @@ export const SAINT_PETERSBURG_METRO_STATIONS = [
   { id: 'spb-elektrosila', name: 'Электросила', lines: [LINE_2] },
   { id: 'spb-yugo-zapadnaya', name: 'Юго-Западная', lines: [LINE_6] },
 ] as const satisfies readonly SaintPetersburgMetroStation[]
-
-const byId = new Map<string, SaintPetersburgMetroStation>(SAINT_PETERSBURG_METRO_STATIONS.map((station) => [station.id, station]))
-
-export function saintPetersburgMetroStationById(id: string): SaintPetersburgMetroStation | undefined {
-  return byId.get(id)
-}

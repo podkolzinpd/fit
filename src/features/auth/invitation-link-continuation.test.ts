@@ -1,7 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 
 import {
-  captureInvitationLink,
   captureInvitationLocation,
   clearPendingInvitationLink,
   hasPendingInvitationLink,
@@ -60,7 +59,7 @@ describe('invitation link continuation', () => {
       get: () => { throw new DOMException('Access is denied', 'SecurityError') },
     })
 
-    expect(captureInvitationLink(`#token=${token}&source=yandex`, undefined, 1000)).toEqual({
+    expect(captureInvitationLocation('', `#token=${token}&source=yandex`, undefined, 1000)).toEqual({
       token, source: 'yandex', savedAt: 1000,
     })
   })
@@ -69,20 +68,20 @@ describe('invitation link continuation', () => {
     const blockedStorage = memoryStorage()
     blockedStorage.setItem = () => { throw new DOMException('Access is denied', 'SecurityError') }
 
-    expect(captureInvitationLink(`#token=${token}&source=supabase`, blockedStorage, 1000)).toEqual({
+    expect(captureInvitationLocation('', `#token=${token}&source=supabase`, blockedStorage, 1000)).toEqual({
       token, source: 'supabase', savedAt: 1000,
     })
     expect(readPendingInvitationLink(blockedStorage, 1000)).toBeNull()
   })
 
   it('rejects malformed and stale values and removes a completed invitation', () => {
-    expect(captureInvitationLink('#token=short&source=supabase', window.sessionStorage, 1000)).toBeNull()
-    expect(captureInvitationLink(`#token=${token}&source=supabase&next=/clients`, window.sessionStorage, 1000)).toBeNull()
-    expect(captureInvitationLink(`#token=${token}&token=${token}`, window.sessionStorage, 1000)).toBeNull()
-    captureInvitationLink(`#token=${token}&source=supabase`, window.sessionStorage, 1000)
+    expect(captureInvitationLocation('', '#token=short&source=supabase', window.sessionStorage, 1000)).toBeNull()
+    expect(captureInvitationLocation('', `#token=${token}&source=supabase&next=/clients`, window.sessionStorage, 1000)).toBeNull()
+    expect(captureInvitationLocation('', `#token=${token}&token=${token}`, window.sessionStorage, 1000)).toBeNull()
+    captureInvitationLocation('', `#token=${token}&source=supabase`, window.sessionStorage, 1000)
     expect(readPendingInvitationLink(window.sessionStorage, 8 * 24 * 60 * 60 * 1000)).toBeNull()
 
-    captureInvitationLink(`#token=${token}&source=supabase`, window.sessionStorage, Date.now())
+    captureInvitationLocation('', `#token=${token}&source=supabase`, window.sessionStorage, Date.now())
     expect(hasPendingInvitationLink()).toBe(true)
     clearPendingInvitationLink()
     expect(hasPendingInvitationLink()).toBe(false)

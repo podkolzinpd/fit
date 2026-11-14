@@ -2,7 +2,7 @@ import { render, screen, waitFor } from '@testing-library/react'
 import { useState } from 'react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
-import { VoiceNoteField, replaceWithTranscript } from './VoiceNoteField'
+import { appendTranscript, VoiceNoteField } from './VoiceNoteField'
 
 vi.mock('./VoiceInputButton', () => ({
   VoiceInputButton: ({ onTranscript }: { onTranscript: (text: string) => void | (() => void) }) => {
@@ -15,9 +15,9 @@ vi.mock('./VoiceInputButton', () => ({
 }))
 
 describe('appendTranscript', () => {
-  it('normalizes the transcript used to replace the note', () => {
-    expect(replaceWithTranscript('  Жим лёжа 40 кг ')).toBe('Жим лёжа 40 кг')
-    expect(replaceWithTranscript('  ')).toBe('')
+  it('normalizes a transcript appended to an empty note', () => {
+    expect(appendTranscript('', '  Жим лёжа 40 кг ')).toBe('Жим лёжа 40 кг')
+    expect(appendTranscript('', '  ')).toBe('')
   })
 
   it('appends recognized text and returns focus', async () => {

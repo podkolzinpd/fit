@@ -2895,22 +2895,6 @@ export const MOSCOW_METRO_STATIONS = [
   }
 ] as const satisfies readonly MoscowMetroStation[]
 
-const byId = new Map<string, MoscowMetroStation>(MOSCOW_METRO_STATIONS.map((station) => [station.id, station]))
-
-export function moscowMetroStationById(id: string): MoscowMetroStation | undefined {
-  return byId.get(id)
-}
-
 export function normalizeMetroSearch(value: string): string {
   return value.trim().toLocaleLowerCase('ru-RU').replaceAll('ё', 'е')
-}
-
-export function searchMoscowMetroStations(query: string): readonly MoscowMetroStation[] {
-  const normalized = normalizeMetroSearch(query)
-  if (!normalized) return MOSCOW_METRO_STATIONS
-  return MOSCOW_METRO_STATIONS.filter((station) => {
-    const haystack = [station.name, ...station.lines.flatMap((line) => [line.code, line.name])]
-      .map(normalizeMetroSearch).join(' ')
-    return haystack.includes(normalized)
-  })
 }

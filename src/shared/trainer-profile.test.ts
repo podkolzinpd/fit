@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { emptyTrainerProfileDraft, expandSpecialtiesForCatalogSearch, LEGACY_REHAB_ADAPTIVE_SPECIALTY, parseTrainerCatalogPage, parseTrainerProfile, TRAINER_SPECIALTIES, TRAINER_SPECIALTIES_MAX, validatePublishableTrainerProfile } from './trainer-profile'
+import { emptyTrainerProfileDraft, expandSpecialtiesForCatalogSearch, LEGACY_REHAB_ADAPTIVE_SPECIALTY, trainerCatalogPageSchema, parseTrainerProfile, TRAINER_SPECIALTIES, TRAINER_SPECIALTIES_MAX, validatePublishableTrainerProfile } from './trainer-profile'
 
 describe('trainer profile', () => {
   it('allows a trainer to publish a profile with only the account name', () => {
@@ -44,7 +44,7 @@ describe('trainer profile', () => {
 
   it('rejects the old duplicated profile shape from the Yandex catalog contract', () => {
     const profile = emptyTrainerProfileDraft('Анна Иванова')
-    expect(() => parseTrainerCatalogPage({
+    expect(() => trainerCatalogPageSchema.parse({
       items: [{
         publicId: '9190a86f-a191-42d8-912e-a7e0ea0f331d',
         draft: profile,
