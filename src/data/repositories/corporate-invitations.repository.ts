@@ -2,7 +2,6 @@ import { z } from 'zod'
 import { corporateInvitationPreview, corporateInvitationRequest } from '../queries/corporate-invitations.queries'
 const status=z.enum(['active','claimed','approved','revoked','expired'])
 const invitation=z.object({id:z.uuid(),status,createdAt:z.iso.datetime({offset:true}),expiresAt:z.iso.datetime({offset:true}),officeIds:z.array(z.uuid()),trainerName:z.string().nullable(),recipientEmail:z.string().nullable().optional()})
-export type CorporateInvitation=z.infer<typeof invitation>
 const preview=z.object({status,expiresAt:z.iso.datetime({offset:true}),offices:z.array(z.object({city:z.string(),name:z.string()}))})
 async function read(response:Response):Promise<unknown> {
   const body:unknown=await response.json().catch(()=>null)

@@ -59,21 +59,6 @@ export type ClientContextRow = {
   gender: string | null
 }
 
-export function clientContextRows(value: unknown): ClientContextRow[] {
-  if (!Array.isArray(value)) return []
-  return value.flatMap((row): ClientContextRow[] => {
-    if (!record(row) || typeof row.id !== 'string' || typeof row.full_name !== 'string') return []
-    return [{
-      id: row.id,
-      fullName: row.full_name,
-      goal: typeof row.goal === 'string' ? row.goal : null,
-      ageYears: typeof row.age_years === 'number' ? row.age_years : null,
-      heightCm: typeof row.height_cm === 'number' || typeof row.height_cm === 'string' ? row.height_cm : null,
-      gender: typeof row.gender === 'string' ? row.gender : null,
-    }]
-  })
-}
-
 function actionRecord(value: unknown): Record<string, unknown> | undefined {
   return record(value) ? value : undefined
 }

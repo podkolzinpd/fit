@@ -128,13 +128,6 @@ export const RUNNING_EXERCISE_REFS: ReadonlySet<string> = new Set([
   ...RUNNING_DRILLS.map((exercise) => exercise.ref),
 ])
 
-// Короткий базовый набор, который тренер может быстро добавить перед основной
-// частью тренировки. Мобилити фиксируем временем, а не выдуманными повторами.
-export const WARMUP_MOBILITY_REFS = new Set([
-  'joint-warmup', 'shoulder-mobility', 'band-external-rotation', 'thoracic-mobility',
-  'hip-mobility', 'ankle-mobility', 'dynamic-hamstring-stretch', 'cat-cow',
-])
-
 const WARMUP_AND_MOBILITY = [
   { source: 'system', ref: 'joint-warmup', name: 'Суставная разминка', muscleGroup: 'other', inputKind: 'duration', equipment: 'Без оборудования', primaryMuscleDetail: 'Разминка', instructions: ['Выполните мягкие круговые движения основными суставами без боли. Укажите общее время.'] },
   { source: 'system', ref: 'shoulder-mobility', name: 'Мобилизация плеч', muscleGroup: 'shoulders', inputKind: 'duration', equipment: 'Резина', primaryMuscleDetail: 'Плечи', instructions: ['Выполните контролируемые движения плечами в комфортной амплитуде. Укажите время работы.'] },

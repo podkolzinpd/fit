@@ -7,7 +7,6 @@ export type AssistantRoute = { tool: RoutedTool | null; mode: 'start' | 'continu
 export type RouterHistory = readonly { author: string; content: string }[]
 const routedTools = ['record_workout', 'create_program_draft'] as const
 const cancellationReplies = ['Создание программы отменено.', 'Хорошо, запись тренировки отменена.']
-export const assistantToolStateFilter = `action.not.is.null,content.in.(${cancellationReplies.map((reply) => JSON.stringify(reply)).join(',')})`
 const changeConditionsControls = ['Изменить условия программы', 'Изменить условия']
 const changeClientControls = ['Сменить клиента', 'Другой клиент']
 const isChangeClientControl = (message: string) => changeClientControls.some((control) => control.toLocaleLowerCase('ru') === message.trim().toLocaleLowerCase('ru'))
