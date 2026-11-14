@@ -162,10 +162,6 @@ export function parseTrainerCatalogPage(value: unknown): TrainerCatalogPage {
   return trainerCatalogPageSchema.parse(value)
 }
 
-export function parseTrainerProfileDraft(value: unknown): TrainerProfileDraft {
-  return trainerProfileDraftSchema.parse(value)
-}
-
 export function validatePublishableTrainerProfile(draft: TrainerProfileDraft): string | null {
   if (draft.displayName.trim().length < 2) return 'Укажите имя тренера.'
   // Форма не даёт выбрать больше TRAINER_SPECIALTIES_MAX, но анкета, где

@@ -90,12 +90,6 @@ export const EXERCISE_PICKER_REPLACEMENTS: Readonly<Record<string, string>> = Ob
 )
 
 export type CatalogSection = 'core' | 'uncommon' | 'rare' | 'formats'
-export const CATALOG_SECTIONS: ReadonlyArray<{ value: CatalogSection; label: string }> = [
-  { value: 'core', label: 'Основные' },
-  { value: 'uncommon', label: 'Дополнительные' },
-  { value: 'rare', label: 'Редкие и специальные' },
-  { value: 'formats', label: 'Форматы тренировки' },
-]
 
 export function exerciseCatalogRoot(exercise: ExerciseSnapshot): string {
   if (exercise.source !== 'system') return exercise.ref

@@ -144,13 +144,6 @@ export function Switch({ label, checked, onChange, disabled }: {
   </label>
 }
 
-// Единый статус-бейдж (текущий/предстоит/выполнено) для быстрого понимания
-// положения в тренировке. Цвет и подпись — по семантике статуса.
-const STATUS_BADGE: Record<string, string> = { current: 'Сейчас', upcoming: 'Далее', done: 'Готово' }
-export function StatusBadge({ status }: { status: 'current' | 'upcoming' | 'done' }) {
-  return <span className={`status-badge status-${status}`}>{STATUS_BADGE[status]}</span>
-}
-
 export interface ConfirmOptions {
   message: string
   confirmLabel?: string

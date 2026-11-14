@@ -1,11 +1,3 @@
-export function blobFromDataUrl(dataUrl: string): Blob {
-  const encoded = dataUrl.slice('data:image/jpeg;base64,'.length)
-  const binary = atob(encoded)
-  const bytes = new Uint8Array(binary.length)
-  for (let index = 0; index < binary.length; index += 1) bytes[index] = binary.charCodeAt(index)
-  return new Blob([bytes], { type: 'image/jpeg' })
-}
-
 export interface PreparedImage {
   dataUrl: string
   mimeType: 'image/jpeg'
