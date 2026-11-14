@@ -11978,3 +11978,58 @@ Origin/main теперь c736d4ca/PR2118: read-only diff показывает у
 содержат движущийся origin/main c736, но реальный source CSS там именно
 pinned27c8 (проверен git show/SHA); это не новая baseline приложения.
 Выпуск/merge по-прежнему НЕ разрешён.
+
+
+## 273. MC5.5 — локальная приёмка интегрированной ветки и PR2120
+
+PR2120 создан draft, release НЕ разрешён. Source443families/572decl/286owners,
+main c736d4ca интегрирован2f7710af безконфликтов; собственный runtime diff
+от main — ровно3CSS. CSS mainc736 побайтно совпадает с pinned27c8, на котором
+собрана исходная нативная база. Остальные изменения main сохранены.
+Подтверждение /tmp/fit-mc55/integration-source-proof.json.
+
+Интегрированный production-mode browser:88PASS основных/nested OFF +2PASS
+booking в прежнем synthetic pilot2 quickON =90/142 native states, без retry/
+skip/flaky. Механики: полный выбранный набор104PASS в Chromium+WebKit с
+quickON, включая ввод/клавиатуру, подтверждение/отмену галочкой, отдых/паузу,
+свайпы/hold, cache/home/return, даты/периоды/плотности/фильтры. До этого
+выявленный недостающий status fallback исправлен именно source paint.
+
+Один прежний synthetic focus probe в Chromium был нестабилен после reload:
+второй RAF однажды опережал корректное раскрытие; диагностические размеры
+после фокуса совпали обеим движкам. Его точная единичная фаза не записана.
+Source useCoachNavigationScroll отменяет pending restore на настоящие
+wheel/touchstart/pointerdown/keydown, а голый focus() этого не делает.
+Тест теперь задаёт penultimate focus без прокрутки, отправляет настоящее
+клавиатурное событие Shift для существующего takeover, затем выполняет
+прежний native focus последней строки. Добавлен toBeFocused; все прежние
+geometry/цвет/safe-area assertions и прежние2RAF сохранены. Safari Tab
+preference не используется как допущение. Production обработчики не менялись.
+Оба движка проходят; полный104PASS после этой QA-правки.
+
+Lint/typecheck/build PASS. После интеграции main полный coverage359 suites/
+3221 tests PASS: statements83.23%,branches78.20%,functions82.27%,lines88.12%;
+пороги80/75/80/80 прежние. Старыеunknown/positive guard assertions и default
+capture-root прежние. Звук только acceptance-выхода направлен в существующий
+zero-gain sink; таймеры/алармы/проверки приложения сохранены.
+
+Strict raw /tmp/fit-mc55/native-integrated-comparison.json по-прежнему RED30,
+не заменяется PASS: computed/form/geometry/scroll/background различий0,
+данные/записи exact, PNG138/142 exact.28/30 raw fields source-qualified
+(UUID/supportcode/parallel ordering).2 поля multiplicity оставлены с границей:
+active Chromium GET26→18 на прежних6 endpoints; exact18 уже наблюдается в
+исходном WebKit, но same-engine oldChromium18 не доказан. Inbox-error Chromium
+GET10→11 — ровно дополнительный GET/v1/chat/threads, прочие counts/503 прежние;
+source polling5000/refetchOnMount совместим, точный triggering момент не записан.
+Новых endpoint/data/write различий нет, причины этих двух count-delta не
+объявляются установленными. PNG residual:2code-only bbox внутри реального
+codeSTRONG +2узкие caret-shaped полосы внутри focused plan input, без
+различий текста/selection/styles/geometry; фаза мигания не доказана.
+Квитанция /tmp/fit-mc55/raw-integrated-residual-qualification.json сохраняет
+полные исходные значения/SHA/PNG без masks/нормализации.
+
+Весь исходный material и исправленные failures сохранены. Физический iPhone/
+нативная клавиатура/реальные push и запись production не проверялись и не
+выдаются за browser. Реальных production writes0. CI текущего PR ещё гейт;
+после него — сводка владельцу, затем отдельное разрешение выпуска и очередь.
+Следующий MC без его приёмки не начинать.
