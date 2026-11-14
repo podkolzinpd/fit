@@ -114,8 +114,3 @@ export function appendTranscript(current: string, transcript: string): string {
   const existing = current.trimEnd()
   return existing ? `${existing}\n${next}` : next
 }
-
-// Backward-compatible name for callers that only need normalization.
-export function replaceWithTranscript(transcript: string): string {
-  return transcript.trim()
-}

@@ -14,7 +14,7 @@ import {
   saveInvitationAuthReturn,
 } from './invitation-auth-return'
 import {
-  captureInvitationLink,
+  captureInvitationLocation,
   readPendingInvitationLink,
 } from './invitation-link-continuation'
 import { PRIVACY_VERSION, TERMS_VERSION } from '../../shared/legal'
@@ -593,7 +593,7 @@ describe('Yandex app session auth flow', () => {
     vi.stubEnv('VITE_YANDEX_NATIVE_REGISTRATION_ENABLED', 'true')
     vi.stubEnv('VITE_YANDEX_MAIN_ROUTING_ENABLED', 'true')
     vi.stubEnv('VITE_YANDEX_ONLY_AUTH_ENABLED', 'true')
-    captureInvitationLink(`?token=AB12CD34EF56.${'a'.repeat(64)}&source=yandex`)
+    captureInvitationLocation(`?token=AB12CD34EF56.${'a'.repeat(64)}&source=yandex`, '')
     saveInvitationAuthReturn('/invite')
     previewInvitation.mockResolvedValue({ targetRole, inviterName: 'Отправитель', status: 'active', expiresAt: '2099-09-19T12:10:00.000Z' })
     repository.exchangeCodeForAppSession.mockRejectedValueOnce(new YandexAccountSetupRequiredError({
@@ -693,7 +693,7 @@ describe('Yandex app session auth flow', () => {
   it('returns a linked Yandex account to the pending invitation', async () => {
     const token = `AB12CD34EF56.${'a'.repeat(64)}`
     vi.stubEnv('VITE_YANDEX_MAIN_ROUTING_ENABLED', 'true')
-    captureInvitationLink(`#token=${token}&source=yandex`)
+    captureInvitationLocation('', `#token=${token}&source=yandex`)
     saveInvitationAuthReturn('/invite')
     window.history.replaceState(null, '', `/auth/yandex/callback${await appCallbackSearch()}`)
     render(<MemoryRouter initialEntries={['/auth/yandex/callback']}>

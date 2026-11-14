@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
-import { SAINT_PETERSBURG_METRO_STATIONS, saintPetersburgMetroStationById } from './saint-petersburg-metro'
+import { SAINT_PETERSBURG_METRO_STATIONS } from './saint-petersburg-metro'
+import { metroStationById } from './metro'
 
 describe('Saint Petersburg metro directory', () => {
   it('contains all current named locations and the sixth line', () => {
@@ -13,11 +14,11 @@ describe('Saint Petersburg metro directory', () => {
   it('uses unique stable ids and resolves every station by id', () => {
     const ids = SAINT_PETERSBURG_METRO_STATIONS.map((station) => station.id)
     expect(new Set(ids).size).toBe(ids.length)
-    expect(ids.every((id) => saintPetersburgMetroStationById(id)?.id === id)).toBe(true)
+    expect(ids.every((id) => metroStationById(id)?.id === id)).toBe(true)
   })
 
   it('combines same-name transfer locations', () => {
-    expect(saintPetersburgMetroStationById('spb-tehnologicheskiy-institut')?.lines.map((line) => line.code)).toEqual(['1', '2'])
-    expect(saintPetersburgMetroStationById('spb-ploschad-aleksandra-nevskogo')?.lines.map((line) => line.code)).toEqual(['3', '4'])
+    expect(metroStationById('spb-tehnologicheskiy-institut')?.lines.map((line) => line.code)).toEqual(['1', '2'])
+    expect(metroStationById('spb-ploschad-aleksandra-nevskogo')?.lines.map((line) => line.code)).toEqual(['3', '4'])
   })
 })

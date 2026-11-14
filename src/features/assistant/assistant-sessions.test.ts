@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { AssistantOrchestratorAction } from '../../data/assistant-contract'
 import type { LocalDate } from '../../shared/local-date'
-import { compactAssistantContent, conversationTitle, filterTerminalAssistantMessages, groupAssistantConversations, groupWorkoutDictationReceipts, isInteractiveAssistantAction, isReadOnlyConversation, isWorkoutDictationReceipt, latestActiveAssistantAction, latestActiveWorkoutAction, latestAssistantSurfaceAction, mergeAssistantMessages, selectTodayConversation, workoutDictationFragmentLabel } from './assistant-sessions'
+import { compactAssistantContent, conversationTitle, filterTerminalAssistantMessages, groupAssistantConversations, groupWorkoutDictationReceipts, isInteractiveAssistantAction, isReadOnlyConversation, isWorkoutDictationReceipt, latestActiveAssistantAction, latestAssistantSurfaceAction, mergeAssistantMessages, selectTodayConversation, workoutDictationFragmentLabel } from './assistant-sessions'
 
 const conversations = [
   { id: 'old', title: null, created_at: '2026-08-24T18:00:00.000Z' },
@@ -94,7 +94,7 @@ describe('assistant sessions', () => {
       { id: 'saved', conversation_id: 'today', turn_id: 'saved', author: 'assistant', content: 'Тренировка сохранена', action: makeAction('applied'), created_at: '2026-08-25T09:01:00.000Z' },
     ]
 
-    expect(latestActiveWorkoutAction(messages, 'today')).toBeUndefined()
+    expect(latestAssistantSurfaceAction(messages, 'today', false)).toBeUndefined()
     expect(filterTerminalAssistantMessages(messages).find((message) => message.id === 'saved')?.action?.lifecycleStatus).toBe('applied')
   })
 
@@ -104,17 +104,17 @@ describe('assistant sessions', () => {
       { id: 'draft', conversation_id: 'today', turn_id: 'draft', author: 'assistant', content: 'Продолжайте', action: draft, created_at: '2026-08-25T09:00:00.000Z' },
       { id: 'small-talk', conversation_id: 'today', turn_id: 'hello', author: 'assistant', content: 'Здравствуйте!', action: null, created_at: '2026-08-25T09:01:00.000Z' },
     ]
-    expect(latestActiveWorkoutAction(base, 'today')?.message.id).toBe('draft')
+    expect(latestAssistantSurfaceAction(base, 'today', false)?.message.id).toBe('draft')
     expect(latestActiveAssistantAction(base, 'today')?.message.id).toBe('draft')
     const cancelled = [...base, { id: 'cancelled', conversation_id: 'today', turn_id: 'cancel', author: 'assistant', content: 'Хорошо, запись тренировки отменена.', action: null, created_at: '2026-08-25T09:02:00.000Z' }]
-    expect(latestActiveWorkoutAction(cancelled, 'today')).toBeUndefined()
+    expect(latestAssistantSurfaceAction(cancelled, 'today', false)).toBeUndefined()
     expect(latestActiveAssistantAction(cancelled, 'today')).toBeUndefined()
     const restarted = [...cancelled, { id: 'new-draft', conversation_id: 'today', turn_id: 'new-draft', author: 'assistant', content: 'Новая тренировка', action: draft, created_at: '2026-08-25T09:03:00.000Z' }]
-    expect(latestActiveWorkoutAction(restarted, 'today')?.message.id).toBe('new-draft')
+    expect(latestAssistantSurfaceAction(restarted, 'today', false)?.message.id).toBe('new-draft')
     expect(latestActiveAssistantAction(restarted, 'today')?.message.id).toBe('new-draft')
   })
 
-  it('ignores legacy active tools when the chat is temporarily workout-only', () => {
+  it('keeps the newest tool instead of resurrecting an older workout', () => {
     const workout = { tool: 'record_workout' as const, status: 'needs_input' as const, title: 'Тренировка', description: 'Продолжайте', payload: { step: 'workout' } }
     const legacy = { tool: 'create_program_draft' as const, status: 'needs_input' as const, title: 'Программа', description: 'Уточните', payload: { step: 'brief' } }
     const messages = [
@@ -122,7 +122,7 @@ describe('assistant sessions', () => {
       { id: 'legacy', conversation_id: 'today', turn_id: 'legacy', author: 'assistant', content: 'Уточните', action: legacy, created_at: '2026-08-25T09:01:00.000Z' },
     ]
     expect(latestActiveAssistantAction(messages, 'today')?.message.id).toBe('legacy')
-    expect(latestActiveWorkoutAction(messages, 'today')).toBeUndefined()
+    expect(latestAssistantSurfaceAction(messages, 'today', false)?.message.id).toBe('legacy')
   })
 
   it('does not restore a workout card when recording is routed to the home page', () => {

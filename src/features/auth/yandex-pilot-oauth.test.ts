@@ -7,7 +7,7 @@ import {
   readPendingYandexNativeRegistration,
   savePendingYandexNativeRegistration,
 } from './yandex-pilot-oauth'
-import { captureInvitationLink, readPendingInvitationLink } from './invitation-link-continuation'
+import { captureInvitationLocation, readPendingInvitationLink } from './invitation-link-continuation'
 import { PRIVACY_VERSION, TERMS_VERSION } from '../../shared/legal'
 
 const storage = new Map<string, string>()
@@ -120,7 +120,7 @@ describe('Yandex ID pilot OAuth', () => {
 
   it('keeps a protected invitation token out of the Yandex OAuth URL', async () => {
     const token = `AB12CD34EF56.${'a'.repeat(64)}`
-    captureInvitationLink(`#token=${token}&source=yandex`, storageAdapter)
+    captureInvitationLocation('', `#token=${token}&source=yandex`, storageAdapter)
 
     const authorizationUrl = await createYandexAuthorizationUrl(
       'public-client-id',

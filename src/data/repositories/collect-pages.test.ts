@@ -1,12 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { collectPages, pageFromLookahead } from './collect-pages'
-
-describe('pageFromLookahead', () => {
-  it('uses one lookahead row to expose the next offset without returning it', () => {
-    expect(pageFromLookahead([0, 1, 2], 2, 50)).toEqual({ items: [0, 1], nextOffset: 52 })
-    expect(pageFromLookahead([0, 1], 2, 50)).toEqual({ items: [0, 1], nextOffset: undefined })
-  })
-})
+import { collectPages } from './collect-pages'
 
 describe('collectPages', () => {
   it('loads a large result in bounded sequential pages', async () => {

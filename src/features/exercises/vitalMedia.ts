@@ -208,7 +208,3 @@ export function useVitalMediaState(source: string | undefined, enabled = true): 
 
   return { ...media, retry }
 }
-
-export function useVitalMediaUrl(source: string | undefined, enabled = true) {
-  return useVitalMediaState(source, enabled).url
-}

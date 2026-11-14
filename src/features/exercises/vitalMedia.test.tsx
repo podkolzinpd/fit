@@ -10,9 +10,9 @@ vi.mock('../../app/data-backend-context', () => ({
   useDataBackend: () => ({ exercises: { vitalMediaMode: backend.mode, createVitalMediaUrl: createSignedUrl } }),
 }))
 
-import { useVitalMediaState, useVitalMediaUrl } from './vitalMedia'
+import { useVitalMediaState } from './vitalMedia'
 
-describe('useVitalMediaUrl', () => {
+describe('useVitalMediaState', () => {
   afterEach(() => {
     cleanup()
     backend.mode = 'public'
@@ -23,13 +23,13 @@ describe('useVitalMediaUrl', () => {
   })
 
   it('keeps ordinary assets unchanged', () => {
-    const { result } = renderHook(() => useVitalMediaUrl('/exercises/free/squat.jpg'))
+    const { result } = renderHook(() => useVitalMediaState('/exercises/free/squat.jpg').url)
     expect(result.current).toBe('/exercises/free/squat.jpg')
     expect(createSignedUrl).not.toHaveBeenCalled()
   })
 
   it('keeps Gym Pro paths local in tests', () => {
-    const { result } = renderHook(() => useVitalMediaUrl('/exercises/vital-pro/squat.mp4'))
+    const { result } = renderHook(() => useVitalMediaState('/exercises/vital-pro/squat.mp4').url)
     expect(result.current).toBe('/exercises/vital-pro/squat.mp4')
     expect(createSignedUrl).not.toHaveBeenCalled()
   })
@@ -75,7 +75,7 @@ describe('useVitalMediaUrl', () => {
   it('does not resolve disabled private media', () => {
     vi.stubEnv('MODE', 'production')
     backend.mode = 'signed'
-    const { result } = renderHook(() => useVitalMediaUrl('/exercises/vital-pro/disabled.mp4', false))
+    const { result } = renderHook(() => useVitalMediaState('/exercises/vital-pro/disabled.mp4', false).url)
     expect(result.current).toBeUndefined()
     expect(createSignedUrl).not.toHaveBeenCalled()
   })
@@ -85,7 +85,7 @@ describe('useVitalMediaUrl', () => {
     backend.mode = 'signed'
     createSignedUrl.mockResolvedValue('https://signed.example/native-squat')
 
-    const { result } = renderHook(() => useVitalMediaUrl('/exercises/vital-pro/native-squat.mp4'))
+    const { result } = renderHook(() => useVitalMediaState('/exercises/vital-pro/native-squat.mp4').url)
 
     await waitFor(() => expect(result.current).toBe('https://signed.example/native-squat'))
     expect(createSignedUrl).toHaveBeenCalledWith('vital-pro/native-squat.mp4', 3600)
@@ -95,7 +95,7 @@ describe('useVitalMediaUrl', () => {
     vi.stubEnv('MODE', 'production')
     createSignedUrl.mockResolvedValue('https://signed.example/native')
     const source = '/exercises/vital-pro/mode-switch.mp4'
-    const { result, rerender } = renderHook(() => useVitalMediaUrl(source))
+    const { result, rerender } = renderHook(() => useVitalMediaState(source).url)
     expect(result.current).toBe(source)
     expect(createSignedUrl).not.toHaveBeenCalled()
 
@@ -114,7 +114,7 @@ describe('useVitalMediaUrl', () => {
     createSignedUrl.mockRejectedValueOnce(new Error('temporary'))
       .mockResolvedValueOnce('https://signed.example/recovered')
 
-    const { result } = renderHook(() => useVitalMediaUrl('/exercises/vital-pro/recovered.jpg'))
+    const { result } = renderHook(() => useVitalMediaState('/exercises/vital-pro/recovered.jpg').url)
 
     await waitFor(() => expect(result.current).toBe('https://signed.example/recovered'))
     expect(createSignedUrl).toHaveBeenCalledTimes(2)

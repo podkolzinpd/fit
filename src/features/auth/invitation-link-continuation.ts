@@ -77,16 +77,6 @@ export function readPendingInvitationLink(
   }
 }
 
-export function captureInvitationLink(
-  value: string,
-  storage: Storage | undefined = browserStorage(),
-  now = Date.now(),
-): PendingInvitationLink | null {
-  const parsed = parseInvitationInput(value, now)
-  if (!parsed.addressed) return readPendingInvitationLink(storage, now)
-  return parsed.invitation === null ? null : persistInvitationLink(parsed.invitation, storage)
-}
-
 export function captureInvitationLocation(
   search: string,
   hash: string,
