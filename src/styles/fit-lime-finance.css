@@ -74,3 +74,8 @@
 @media (min-width: 600px) {
   .phone-frame.fit-lime-shell.finance-lime-shell :is(.trainer-finance-page, .finance-overview-page) { padding-inline: 20px; }
 }
+
+/* Native selection, using the existing Lime control and original chevron. */
+.finance-lime-shell .finance-select-field { position: relative; display: block; min-width: 0; }
+.finance-lime-shell .finance-select-field select { appearance: none; padding-right: 44px; }
+.finance-lime-shell .finance-select-field > svg { position: absolute; right: 14px; top: 50%; width: 20px; height: 20px; transform: translateY(-50%); pointer-events: none; }

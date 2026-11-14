@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointer
 import { Link, useLocation, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../../app/auth-context'
 import { isCoachWorkoutRedesignEnabled } from '../../app/coach-workout-redesign'
+import { isFitLimeEnabled } from '../../app/fit-lime'
 import { isTrainerScheduleV2Enabled } from '../../app/trainer-schedule-v2'
 import { invalidateFinanceViews } from '../../app/invalidate-finance-views'
 import { useDataBackend } from '../../app/data-backend-context'
@@ -10,7 +11,7 @@ import { isTrainerFinancePilotEnabled } from '../../app/feature-flags'
 import type { Client } from '../../shared/domain'
 import { todayInTimeZone } from '../../shared/local-date'
 import { AsyncView, Coachmark, Page } from '../../shared/ui'
-import { ArchiveIcon, CheckIcon, ChevronRightIcon, CloseIcon, HistoryIcon, SearchIcon } from '../../shared/icons'
+import { AddIcon, ArchiveIcon, CheckIcon, ChevronRightIcon, CloseIcon, HistoryIcon, SearchIcon } from '../../shared/icons'
 import { canOpenClientChat, clientChatThreads, ChatStartButton, ChatThreadsNotice, useChatThreads } from '../chat'
 import { ClientAddDialog } from './ClientAddDialog'
 import { InviteAthleteButton } from '../auth/InvitationShareActions'
@@ -19,6 +20,35 @@ import { trainerFinanceClientLabel } from '../finance/TrainerFinanceOverviewPage
 function clientInitials(name: string): string {
   return name.trim().split(/\s+/u).filter(Boolean).slice(0, 2).map(part => [...part][0]).join('').toLocaleUpperCase('ru')
 }
+function ClientListAvatar({ client }: { client: Client }) {
+  const { clients } = useDataBackend()
+  const { actor } = useAuth()
+  const photoEnabled = isFitLimeEnabled(actor) && isTrainerScheduleV2Enabled(actor)
+  const host = useRef<HTMLSpanElement>(null)
+  const [visible, setVisible] = useState(false)
+  const [failedUrl, setFailedUrl] = useState<string | null>(null)
+  useEffect(() => {
+    if (!host.current) return
+    if (typeof IntersectionObserver === 'undefined') { setVisible(true); return }
+    const observer = new IntersectionObserver(entries => {
+      if (entries.some(entry => entry.isIntersecting)) { setVisible(true); observer.disconnect() }
+    }, { rootMargin: '120px' })
+    observer.observe(host.current)
+    return () => observer.disconnect()
+  }, [])
+  const photo = useQuery({ queryKey: ['client-photo', client.id],
+    queryFn: () => clients.photo!(client.id),
+    enabled: photoEnabled && visible && typeof clients.photo === 'function', staleTime: 60_000 })
+  const url = photoEnabled ? photo.data?.url : undefined
+  return <span ref={host} className="client-avatar" aria-hidden="true">
+    {url && url !== failedUrl
+      ? <img src={url} alt="" width={40} height={40} loading="lazy"
+          style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }}
+          onError={() => setFailedUrl(url)} />
+      : clientInitials(client.fullName)}
+  </span>
+}
+
 const CLIENTS_SCROLL_KEY = 'fit.clientsListScroll'
 const CLIENTS_ARCHIVE_SCROLL_KEY = 'fit.clientsArchiveListScroll'
 const CLIENT_SWIPE_WIDTH = 112
@@ -156,7 +186,7 @@ function ClientSwipeCard({
       onDragStart={(event) => event.preventDefault()}
       onClickCapture={captureClick}>
       <Link className="client-card-main" to={`/clients/${client.id}`} draggable={false} onClick={onBeforeOpen}>
-        <span className="client-avatar" aria-hidden="true">{clientInitials(client.fullName)}</span>
+        <ClientListAvatar key={client.id} client={client} />
         <span className="client-card-copy"><strong>{client.fullName}</strong>{financeLabel && <span className="client-finance-state">{financeLabel}</span>}</span>
       </Link>
       {canOpenChat && <ChatStartButton clientId={client.id} trainerId={trainerId}
@@ -278,7 +308,7 @@ function ClientsListPage({ archivedOnly }: ClientsListPageProps) {
   }, [location.pathname, location.search, query.isSuccess, scrollKey])
 
   const restoreAddFocus = () => window.requestAnimationFrame(() => addTrigger.current?.focus())
-  const addButton = <button ref={addTrigger} type="button" className="button primary clients-add-button" onClick={() => setAdding(true)}>{showSearch ? 'Добавить' : 'Добавить клиента'}</button>
+  const addButton = <button ref={addTrigger} type="button" className="button primary clients-add-button" onClick={() => setAdding(true)}>{isFitLimeEnabled(actor) && isTrainerScheduleV2Enabled(actor) ? <><AddIcon /><span>{showSearch ? 'Добавить' : 'Добавить клиента'}</span></> : showSearch ? 'Добавить' : 'Добавить клиента'}</button>
   const pageActions = !archivedOnly && showSearch && <div className="clients-page-header-actions">{addButton}</div>
 
   return <div ref={pageRef} onPointerDownCapture={(event) => {
@@ -316,7 +346,7 @@ function ClientsListPage({ archivedOnly }: ClientsListPageProps) {
         const canOpenChat = actor?.role === 'trainer' && canOpenClientChat(client, thread)
         if (!client.canArchive) return <article className="card client-card" key={client.id}>
             <Link className="client-card-main" to={`/clients/${client.id}`} onClick={rememberListPosition}>
-              <span className="client-avatar" aria-hidden="true">{clientInitials(client.fullName)}</span>
+              <ClientListAvatar key={client.id} client={client} />
               <span className="client-card-copy"><strong>{client.fullName}</strong>{financeLabel && <span className="client-finance-state">{financeLabel}</span>}</span>
             </Link>
             {canOpenChat && <ChatStartButton clientId={client.id} trainerId={thread?.trainerId ?? actor!.userId}

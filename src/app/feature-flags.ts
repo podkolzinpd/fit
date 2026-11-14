@@ -217,6 +217,10 @@ export function getYandexNativeRegistrationConfig(): YandexIdPilotConfig | null 
   return getYandexPublicConfig()
 }
 
+export function getYandexReferralApiBaseUrl(): string | null {
+  return getYandexPublicConfig()?.apiBaseUrl ?? null
+}
+
 // Финальный auth cutover — отдельный общий switch. Он становится эффективным
 // только поверх готовых app-session, native registration и sticky Yandex
 // routing, чтобы один ошибочный env не оставил пользователя без рабочего пути.

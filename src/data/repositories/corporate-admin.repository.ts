@@ -5,7 +5,7 @@ import { RepositoryError } from './error'
 
 const office = z.object({ id: z.uuid(), city: z.string(), name: z.string(), address: z.string(), archived: z.boolean(), version: z.number().int().nonnegative() })
 const trainer = z.object({ id: z.uuid(), name: z.string(), isYandex: z.boolean(), officeIds: z.array(z.uuid()), version: z.number().int().nonnegative(),
-  publicId: z.uuid().nullable().optional(), publishedName: z.string().nullable().optional(), photoUrl: z.string().nullable().optional(), photoUnavailable: z.boolean().optional(), profileEditingAvailable: z.boolean().optional() })
+  publicId: z.uuid().nullable().optional(), publishedName: z.string().nullable().optional(), photoUrl: z.string().nullable().optional(), photoUnavailable: z.boolean().optional(), profileEditingAvailable: z.boolean().optional(), testingEnabled: z.boolean().optional(), testingVersion: z.number().int().nonnegative().optional() })
 const bundle = z.object({ offices: z.array(office), trainers: z.array(trainer) })
 
 async function response(path: Parameters<typeof corporateAdminRequest>[0], body?: object): Promise<unknown> {
@@ -20,6 +20,7 @@ async function response(path: Parameters<typeof corporateAdminRequest>[0], body?
       corporate_conflict: 'Данные уже изменены. Обновите список и повторите изменение.',
       corporate_office_in_use: 'Это единственный активный офис у тренера Яндекса. Сначала назначьте другой офис или отключите отметку тренера.',
       corporate_office_duplicate: 'Такой офис уже есть в справочнике.',
+      corporate_testing_managed: 'Сначала выключите управление анкетой администратором, затем отключите тестирование.',
       corporate_invalid: 'Проверьте поля и выберите действующие офисы.',
     }
     throw new RepositoryError(code, messages[code] ?? 'Не удалось выполнить действие. Повторите попытку.')
@@ -38,6 +39,6 @@ export const corporateAdminRepository = {
     z.object({ saved: z.literal(true) }).parse(await response('offices', draft))
   },
   async saveTrainer(draft: CorporateTrainer): Promise<void> {
-    z.object({ saved: z.literal(true) }).parse(await response('trainers', { id: draft.id, isYandex: draft.isYandex, officeIds: draft.officeIds, version: draft.version }))
+    z.object({ saved: z.literal(true) }).parse(await response('trainers', { id: draft.id, isYandex: draft.isYandex, officeIds: draft.officeIds, version: draft.version, ...(draft.testingEnabled===undefined?{}:{testingEnabled:draft.testingEnabled,testingVersion:draft.testingVersion??0}) }))
   },
 }

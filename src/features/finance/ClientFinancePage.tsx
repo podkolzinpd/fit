@@ -1,3 +1,4 @@
+import { isClientLimeEnabled } from '../../app/client-lime'
 import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../../app/auth-context'
@@ -39,6 +40,7 @@ function packagePayment(item: ClientFinancePackage): string {
 }
 
 function packageBalance(item: ClientFinancePackage): string {
+  if (item.singleSession) return item.sessionsUsed > 0 ? 'Разовая · проведена' : 'Разовая · не проведена'
   if (item.kind === 'session_pack') return `${item.sessionsRemaining} из ${item.sessionsTotal}`
   return item.endsOn ? `До ${formatLocalDate(localDate(item.endsOn))}` : 'Онлайн'
 }
@@ -82,12 +84,12 @@ export function ClientFinanceHomeCard() {
   return finance.data ? <ClientFinanceHomeContent finance={finance.data} /> : null
 }
 
-function PackageCard({ item }: { item: ClientFinancePackage }) {
+function PackageCard({ item, lime }: { item: ClientFinancePackage; lime: boolean }) {
   const period = item.endsOn
     ? `${formatLocalDate(localDate(item.startsOn))} — ${formatLocalDate(localDate(item.endsOn))}`
     : `С ${formatLocalDate(localDate(item.startsOn))}`
   return <article className="client-finance-package">
-    <header><div><span className={`client-finance-status is-${item.packageStatus}`}>{item.kind === 'online_coaching' ? 'Онлайн · ' : ''}{PACKAGE_STATUS[item.packageStatus]}</span><h3>{item.title}</h3></div><strong>{packageBalance(item)}</strong></header>
+    <header><div><span className={`client-finance-status is-${item.packageStatus}`}>{item.kind === 'online_coaching' ? lime?'Ведение · ':'Онлайн · ' : ''}{PACKAGE_STATUS[item.packageStatus]}</span><h3>{item.title}</h3></div><strong>{packageBalance(item)}</strong></header>
     <p className="client-finance-period">{period}</p>
     <div className="client-finance-package-money">
       <p><span>Стоимость</span><strong>{money(item.priceCents)}</strong></p>
@@ -98,13 +100,13 @@ function PackageCard({ item }: { item: ClientFinancePackage }) {
   </article>
 }
 
-function TrainerFinanceSection({ trainer }: { trainer: ClientFinanceTrainer }) {
+function TrainerFinanceSection({ trainer, lime }: { trainer: ClientFinanceTrainer; lime: boolean }) {
   const packages = [...trainer.packages].sort((a, b) => packageOrder(a) - packageOrder(b)
     || b.startsOn.localeCompare(a.startsOn))
   const packageNames = new Map(packages.map((item) => [item.id, item.title]))
   return <section className="client-finance-trainer" aria-labelledby={`client-finance-trainer-${trainer.trainerId}`}>
     <div className="client-finance-section-heading"><p className="eyebrow">ТРЕНЕР</p><h2 id={`client-finance-trainer-${trainer.trainerId}`}>{trainer.trainerName}</h2></div>
-    <div className="client-finance-package-list">{packages.map((item) => <PackageCard key={item.id} item={item} />)}</div>
+    <div className="client-finance-package-list">{packages.map((item) => <PackageCard key={item.id} item={item} lime={lime} />)}</div>
     <section className="client-finance-payments" aria-labelledby={`client-finance-payments-${trainer.trainerId}`}>
       <h3 id={`client-finance-payments-${trainer.trainerId}`}>Оплаты</h3>
       {trainer.payments.length === 0
@@ -114,10 +116,10 @@ function TrainerFinanceSection({ trainer }: { trainer: ClientFinanceTrainer }) {
   </section>
 }
 
-export function ClientFinanceDetails({ finance }: { finance: ClientFinanceSummary }) {
+export function ClientFinanceDetails({ finance, lime = false }: { finance: ClientFinanceSummary; lime?: boolean }) {
   return finance.trainers.length === 0
     ? <EmptyState title="Оплат пока нет" description="Здесь появится информация, когда тренер добавит услугу." />
-    : <div className="client-finance-trainer-list">{finance.trainers.map((trainer) => <TrainerFinanceSection key={trainer.trainerId} trainer={trainer} />)}</div>
+    : <div className="client-finance-trainer-list">{finance.trainers.map((trainer) => <TrainerFinanceSection key={trainer.trainerId} trainer={trainer} lime={lime} />)}</div>
 }
 
 export function ClientFinancePage() {
@@ -130,7 +132,7 @@ export function ClientFinancePage() {
   })
   return <Page title="Оплата тренировок" back="/me/profile" swipeBack className="client-finance-page">
     <AsyncView loading={finance.isLoading} error={finance.error} onRetry={() => void finance.refetch()}>
-      {finance.data && <ClientFinanceDetails finance={finance.data} />}
+      {finance.data && <ClientFinanceDetails finance={finance.data} lime={isClientLimeEnabled(actor)} />}
     </AsyncView>
   </Page>
 }

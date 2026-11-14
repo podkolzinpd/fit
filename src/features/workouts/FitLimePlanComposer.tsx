@@ -1,3 +1,4 @@
+import { WorkoutFormatChoices } from './WorkoutFormatChoices'
 import { WorkoutTemplatePicker } from './WorkoutTemplatePicker'
 import { persistTemplateSource, type TemplatePlanContext } from './template-plan-context'
 import { appendWorkoutTemplateExercises } from '../../data/repositories/workout-template-rules'
@@ -98,6 +99,7 @@ function FitLimePlanForm({ date, returnTo, onClose, onBack, initialDraft }: {
   const [requestId] = useState(() => saved?.requestId ?? crypto.randomUUID())
   const [error, setError] = useState<string | null>(null)
   const [pickerOpen, setPickerOpen] = useState(false)
+  const [deliveryMode,setDeliveryMode]=useState<'in_person'|'online'>(saved?.deliveryMode??'in_person')
   const [trainingFormat, setTrainingFormat] = useState(saved?.trainingFormat ?? 'with_trainer')
   // Keep the saved Live mode while removing its control from this planning window.
   const executionMode = saved?.executionMode
@@ -109,7 +111,7 @@ function FitLimePlanForm({ date, returnTo, onClose, onBack, initialDraft }: {
   const draft = {
     clientId, title, requestId, workoutDate: selectedDate, startTime: time.start,
     endTime: time.end, notes, stageId: saved?.stageId ?? '',
-    recordCompleted: false, exercises, trainingFormat, prepSeconds: saved?.prepSeconds,
+    recordCompleted: false, exercises, trainingFormat, deliveryMode, prepSeconds: saved?.prepSeconds,
     ...(executionMode ? { executionMode } : {}),
   }
   useEffect(() => {
@@ -185,11 +187,11 @@ function FitLimePlanForm({ date, returnTo, onClose, onBack, initialDraft }: {
         trainerComment: exercise.trainerComment, structure: exercise,
       })),
       clientId, workoutDate: selectedDate, startTime: time.start, endTime: time.end,
-      trainingFormat, title, requestId, sourceFormDraftKey: key, recordMode: 'planned',
+      trainingFormat, deliveryMode, title, requestId, sourceFormDraftKey: key, recordMode: 'planned',
       ...(executionMode ? { executionMode } : {}),
     })
     const params = new URLSearchParams({ view: 'compose', entry, date: selectedDate, plan: requestId })
-    navigate(`/today?${params}`, { state: { returnTo, planClientId: clientId, planStartTime: time.start, planEndTime: time.end, planTrainingFormat: trainingFormat, planTitle: title, planRequestId: requestId, sourceFormDraftKey: key } })
+    navigate(`/today?${params}`, { state: { returnTo, planClientId: clientId, planStartTime: time.start, planEndTime: time.end, planTrainingFormat: trainingFormat, planDeliveryMode:deliveryMode, planTitle: title, planRequestId: requestId, sourceFormDraftKey: key } })
     onClose('navigate')
   }
   const today = todayInTimeZone(actor?.timezone)
@@ -198,10 +200,7 @@ function FitLimePlanForm({ date, returnTo, onClose, onBack, initialDraft }: {
   if (!isFitLimeEnabled(actor) || saved?.recordCompleted) return null
   const options = <>
     {!time.start && <p className="fit-lime-plan-time-hint">{time.end ? 'Начало не указано' : 'Без времени'}</p>}
-    <div className="workout-record-mode" role="group" aria-label="Формат тренировки">
-      <button type="button" className={trainingFormat === 'with_trainer' ? 'active' : ''} aria-pressed={trainingFormat === 'with_trainer'} onClick={() => setTrainingFormat('with_trainer')}>С тренером</button>
-      <button type="button" className={trainingFormat === 'self' ? 'active' : ''} aria-pressed={trainingFormat === 'self'} onClick={() => setTrainingFormat('self')}>Самостоятельно</button>
-    </div>
+    <WorkoutFormatChoices format={trainingFormat} deliveryMode={deliveryMode} disabled={mutation.isPending} onChange={(format,delivery)=>{setTrainingFormat(format);setDeliveryMode(delivery)}}/>
 
   </>
   return <dialog ref={dialog} tabIndex={-1} role="dialog" className={`fit-lime-plan-dialog${reference ? ' coach-reference-composer' : ''}`} aria-label="Быстрое создание тренировки" onClose={(event) => { if (event.target === event.currentTarget) onClose() }} onCancel={(event) => { if (mutation.isPending) event.preventDefault() }}>

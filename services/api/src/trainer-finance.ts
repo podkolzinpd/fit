@@ -183,6 +183,13 @@ export interface TrainerFinancePackageUpdate {
   comment: string | null
 }
 
+export interface TrainerFinanceBalanceCorrection {
+  requestId: string
+  expectedVersion: number
+  remainingSessions: number
+  reason: string
+}
+
 export interface TrainerFinancePaymentDraft {
   requestId?: string
   amountCents: number
@@ -202,7 +209,7 @@ export interface TrainerFinanceSessionUpdate {
   workoutDate: string
 }
 
-export type TrainerFinanceManualSessionDraft = Omit<TrainerFinanceSessionUpdate, 'expectedVersion'> & { requestId: string }
+export type TrainerFinanceManualSessionDraft = Omit<TrainerFinanceSessionUpdate, 'expectedVersion'> & { requestId: string; singleService?: {priceCents:number;paidCents:number;receivedOn:string} }
 
 type BundleRow = QueryResultRow & { bundle: TrainerFinanceClientBundle }
 type PackageRow = QueryResultRow & { package: TrainerFinancePackage }
@@ -237,6 +244,7 @@ export interface PilotTrainerFinance {
   listClient(session: YandexActorSessionInput, clientId: string): Promise<TrainerFinanceClientBundle>
   createPackage(session: YandexActorSessionInput, clientId: string, draft: TrainerFinancePackageDraft): Promise<TrainerFinancePackage>
   updatePackage(session: YandexActorSessionInput, packageId: string, draft: TrainerFinancePackageUpdate): Promise<TrainerFinancePackage>
+  correctPackageBalance(session: YandexActorSessionInput, packageId: string, draft: TrainerFinanceBalanceCorrection): Promise<TrainerFinancePackage>
   addPayment(session: YandexActorSessionInput, packageId: string, draft: TrainerFinancePaymentDraft): Promise<TrainerFinancePayment>
   updatePayment(session: YandexActorSessionInput, paymentId: string, draft: TrainerFinancePaymentUpdate): Promise<TrainerFinancePayment>
   voidPayment(session: YandexActorSessionInput, paymentId: string, expectedVersion: number, reason: string): Promise<void>
@@ -326,6 +334,13 @@ export class DatabasePilotTrainerFinance implements PilotTrainerFinance {
     })
   }
 
+  correctPackageBalance(session: YandexActorSessionInput, packageId: string, draft: TrainerFinanceBalanceCorrection) {
+    return this.run(session, async (client) => (await client.query<PackageRow>(
+      'select public.correct_trainer_finance_balance($1,$2,$3,$4,$5) as package',
+      [packageId, draft.expectedVersion, draft.remainingSessions, draft.reason, draft.requestId],
+    ))[0]!.package)
+  }
+
   addPayment(session: YandexActorSessionInput, packageId: string, draft: TrainerFinancePaymentDraft) {
     return this.run(session, async (client) => {
       const rows = await client.query<PaymentRow>(
@@ -358,6 +373,13 @@ export class DatabasePilotTrainerFinance implements PilotTrainerFinance {
 
   createManualSession(session: YandexActorSessionInput, clientId: string, draft: TrainerFinanceManualSessionDraft) {
     return this.run(session, async (client) => {
+      if (draft.singleService) {
+        const single=draft.singleService
+        return (await client.query<SessionRow>(
+          'select public.create_manual_single_finance_session($1,$2,$3,$4,$5,$6,$7) as session',
+          [clientId,draft.requestId,draft.workoutDate,single.priceCents,single.paidCents,single.receivedOn,draft.comment],
+        ))[0]!.session
+      }
       const rows = await client.query<SessionRow>(
         'select public.create_trainer_finance_manual_session($1,$2,$3,$4,$5,$6) as session',
         [clientId, draft.requestId, draft.workoutDate, draft.disposition, draft.packageId, draft.comment],

@@ -72,7 +72,7 @@ test('trainer invitation name stays inside the visible iPhone viewport above the
   await page.goto('/clients')
   await page.getByRole('button', { name: /^(Добавить|Добавить клиента)$/ }).click()
   await page.getByRole('button', { name: 'Пригласить по ссылке' }).click()
-  await page.getByLabel('Имя спортсмена').focus()
+  await page.getByLabel(/^Имя (спортсмена|клиента)$/).focus()
   await page.evaluate(() => {
     document.documentElement.style.setProperty('--app-visible-height', '420px')
     document.documentElement.style.setProperty('--app-viewport-offset-top', '0px')
@@ -1773,7 +1773,7 @@ test('iPhone: создание тренировки сфокусировано �
   const actions = page.getByRole('button', { name: 'Ещё действия' })
   await actions.last().scrollIntoViewIfNeeded()
   await actions.last().click()
-  await expect(page.getByRole('menuitem', { name: 'Удалить' })).toBeVisible()
+  await expect(page.getByRole('menuitem', { name: /^Удалить(?: упражнение)?$/ })).toBeVisible()
   await expectOverflowMenuAboveBars(page)
   await page.keyboard.press('Escape')
   const save = page.getByRole('button', { name: 'Сохранить план', exact: true })

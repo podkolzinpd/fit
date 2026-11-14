@@ -1,3 +1,5 @@
+import {editorMigrationGuard} from './lime-editor-skin.contract'
+import {resultMigrationGuard} from './lime-result-remainder-skin.contract'
 import {test,expect,type Page} from '@playwright/test'
 import {writeFile} from 'node:fs/promises'
 import {mockPilot,restTimerWorkout,workoutId,clientId} from './fit-lime-fixtures'
@@ -21,6 +23,8 @@ const highlightFamilies=[
   ".workout-detail-history-identity button.secondary"
 ]
 const highlightMigrationGuards=[
+  editorMigrationGuard,
+  resultMigrationGuard,
   ':where(:not(.fit-client-lime :is(.workout-completion-highlight, .workout-completion-missing, .workout-completion-muscles-line), .fit-client-lime :is(.workout-completion-highlight, .workout-completion-missing, .workout-completion-muscles-line) *))',
   ':where(:not(.fit-lime-shell.workout-detail-history-identity :is(.workout-actual-duration,.workout-duration-dialog) button))',
   ':where(:not(.fit-client-lime .workout-share-overlay, .fit-client-lime .workout-share-overlay *))',

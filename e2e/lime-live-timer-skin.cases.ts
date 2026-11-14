@@ -1,6 +1,107 @@
+import {libraryMigrationGuard} from './lime-library-skin.contract'
+import {editorMigrationGuard,editorOwnerFilter,editorOwnerSelectors} from './lime-editor-skin.contract'
+import {ablateLiveSkinBranches,restoreLiveSkinBranches} from './lime-live-duration-skin.cases'
 import { test, expect } from '@playwright/test'
 import { writeFile } from 'node:fs/promises'
 import { mockPilot, restTimerWorkout, workoutId } from './fit-lime-fixtures'
+
+// Reviewed bd928e07: 30 selector families, 28 with paint; two trigger geometry families stay structural.
+const liveTimerManifest = {
+  "families": [
+    ".workout-decision-sheet",
+    ".live-identity .live-pinned",
+    ".live-identity .live-timer",
+    ".live-identity .live-timer .live-dot-mark",
+    ".live-identity .live-timer.resting",
+    ".live-identity .live-timer.resting .live-dot-mark",
+    ".live-identity .rest-timer",
+    ".live-identity .rest-timer strong",
+    ".live-identity .rest-step",
+    ".live-identity .rest-controls .link",
+    ".live-identity .live-timer-toolbar .live-timer",
+    ".live-identity .live-timer-toolbar button.live-rest-trigger",
+    ".live-rest-countdown",
+    ".live-rest-countdown.overdue",
+    ".live-rest-divider",
+    ".live-rest-new-time",
+    ".rest-time-wheel-field > span",
+    ".rest-time-wheel",
+    ".rest-time-wheel:focus-visible",
+    ".rest-time-wheel [role='option']",
+    ".rest-time-wheel [role='option'].selected",
+    ".rest-time-separator",
+    ".live-rest-apply",
+    ".live-rest-trigger.resting",
+    ".live-rest-trigger.rest-overdue",
+    ".live-rest-trigger.phase-prep",
+    ".live-rest-trigger.phase-work",
+    ".live-identity .live-pinned-empty .live-timer-toolbar .live-timer",
+    ".live-identity .live-pinned-empty .live-timer-toolbar button.live-rest-trigger",
+    ".live-identity .live-timer.paused"
+  ],
+  "paintFamilies": [
+    ".live-identity .live-pinned",
+    ".live-identity .live-pinned-empty .live-timer-toolbar .live-timer",
+    ".live-identity .live-timer",
+    ".live-identity .live-timer .live-dot-mark",
+    ".live-identity .live-timer-toolbar .live-timer",
+    ".live-identity .live-timer.paused",
+    ".live-identity .live-timer.resting",
+    ".live-identity .live-timer.resting .live-dot-mark",
+    ".live-identity .rest-controls .link",
+    ".live-identity .rest-step",
+    ".live-identity .rest-timer",
+    ".live-identity .rest-timer strong",
+    ".live-rest-apply",
+    ".live-rest-countdown",
+    ".live-rest-countdown.overdue",
+    ".live-rest-divider",
+    ".live-rest-new-time",
+    ".live-rest-trigger.phase-prep",
+    ".live-rest-trigger.phase-work",
+    ".live-rest-trigger.rest-overdue",
+    ".live-rest-trigger.resting",
+    ".rest-time-separator",
+    ".rest-time-wheel",
+    ".rest-time-wheel [role='option']",
+    ".rest-time-wheel [role='option'].selected",
+    ".rest-time-wheel-field > span",
+    ".rest-time-wheel:focus-visible",
+    ".workout-decision-sheet"
+  ],
+  "guards": [
+    ":where(:not(.fit-lime-shell.workout-live-reference:has(.coach-live-v79,.client-live-v79) :is(.live-rest-sheet,.workout-duration-sheet,.workout-live-exit-sheet)))",
+    ":where(:not(.fit-lime-shell.workout-live-reference:has(.coach-live-v79,.client-live-v79) .live-pinned))",
+    ":where(:not(.fit-lime-shell.workout-live-reference:has(.coach-live-v79,.client-live-v79) .live-timer))",
+    ":where(:not(.fit-lime-shell.workout-live-reference:has(.coach-live-v79,.client-live-v79) .live-timer .live-dot-mark))",
+    ":where(:not(.fit-lime-shell.workout-live-reference:has(.coach-live-v79,.client-live-v79) .live-timer.resting))",
+    ":where(:not(.fit-lime-shell.workout-live-reference:has(.coach-live-v79,.client-live-v79) .live-timer.resting .live-dot-mark))",
+    ":where(:not(.fit-lime-shell.workout-live-reference:has(.coach-live-v79,.client-live-v79) .rest-timer))",
+    ":where(:not(.fit-lime-shell.workout-live-reference:has(.coach-live-v79,.client-live-v79) .rest-timer strong))",
+    ":where(:not(.fit-lime-shell.workout-live-reference:has(.coach-live-v79,.client-live-v79) .rest-step))",
+    ":where(:not(.fit-lime-shell.workout-live-reference:has(.coach-live-v79,.client-live-v79) .rest-controls .link))",
+    ":where(:not(.fit-lime-shell.workout-live-reference:has(.coach-live-v79,.client-live-v79) .live-timer-toolbar .live-timer))",
+    ":where(:not(.fit-lime-shell.workout-live-reference:has(.coach-live-v79,.client-live-v79) .live-timer-toolbar button.live-rest-trigger))",
+    ":where(:not(.fit-lime-shell.workout-live-reference:has(.coach-live-v79,.client-live-v79) .live-rest-sheet .live-rest-countdown))",
+    ":where(:not(.fit-lime-shell.workout-live-reference:has(.coach-live-v79,.client-live-v79) .live-rest-sheet .live-rest-countdown.overdue))",
+    ":where(:not(.fit-lime-shell.workout-live-reference:has(.coach-live-v79,.client-live-v79) .live-rest-sheet .live-rest-divider))",
+    ":where(:not(.fit-lime-shell.workout-live-reference:has(.coach-live-v79,.client-live-v79) .live-rest-sheet .live-rest-new-time))",
+    ":where(:not(.fit-lime-shell.workout-live-reference:has(.coach-live-v79,.client-live-v79) :is(.live-rest-sheet,.workout-duration-sheet) .rest-time-wheel-field > span))",
+    ":where(:not(.fit-lime-shell.workout-live-reference:has(.coach-live-v79,.client-live-v79) :is(.live-rest-sheet,.workout-duration-sheet) .rest-time-wheel))",
+    ":where(:not(.fit-lime-shell.workout-live-reference:has(.coach-live-v79,.client-live-v79) :is(.live-rest-sheet,.workout-duration-sheet) .rest-time-wheel:focus-visible))",
+    ":where(:not(.fit-lime-shell.workout-live-reference:has(.coach-live-v79,.client-live-v79) :is(.live-rest-sheet,.workout-duration-sheet) .rest-time-wheel [role='option']))",
+    ":where(:not(.fit-lime-shell.workout-live-reference:has(.coach-live-v79,.client-live-v79) :is(.live-rest-sheet,.workout-duration-sheet) .rest-time-wheel [role='option'].selected))",
+    ":where(:not(.fit-lime-shell.workout-live-reference:has(.coach-live-v79,.client-live-v79) :is(.live-rest-sheet,.workout-duration-sheet) .rest-time-separator))",
+    ":where(:not(.fit-lime-shell.workout-live-reference:has(.coach-live-v79,.client-live-v79) .live-rest-sheet .live-rest-apply))",
+    ":where(:not(.fit-lime-shell.workout-live-reference:has(.coach-live-v79,.client-live-v79) .live-rest-trigger.resting))",
+    ":where(:not(.fit-lime-shell.workout-live-reference:has(.coach-live-v79,.client-live-v79) .live-rest-trigger.rest-overdue))",
+    ":where(:not(.fit-lime-shell.workout-live-reference:has(.coach-live-v79,.client-live-v79) .live-rest-trigger.phase-prep))",
+    ":where(:not(.fit-lime-shell.workout-live-reference:has(.coach-live-v79,.client-live-v79) .live-rest-trigger.phase-work))",
+    ":where(:not(.fit-lime-shell.workout-live-reference:has(.coach-live-v79,.client-live-v79) .live-pinned-empty .live-timer-toolbar .live-timer))",
+    ":where(:not(.fit-lime-shell.workout-live-reference:has(.coach-live-v79,.client-live-v79) .live-pinned-empty .live-timer-toolbar button.live-rest-trigger))",
+    ":where(:not(.fit-lime-shell.workout-live-reference:has(.coach-live-v79,.client-live-v79) .live-timer.paused))"
+  ]
+}
 
 // Check the real cascade, including the portal sheet, instead of checking class names.
 export function limeLiveTimerSkinCases() {
@@ -48,101 +149,30 @@ export function limeLiveTimerSkinCases() {
     await page.evaluate(() => document.fonts.ready)
     await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))))
     const capture = () => page.locator('.phone-frame').evaluate(root => {
-      const properties = ['display','position','color','background-color','font-family','font-size','font-weight','line-height','width','height','min-width','min-height','max-height','gap','grid-template-columns','padding-top','padding-right','padding-bottom','padding-left','margin-top','margin-bottom','border-top-width','border-top-color','border-top-style','border-radius','box-shadow','outline-color','outline-width','outline-style','outline-offset','overflow-x','overflow-y','scroll-snap-type','touch-action','opacity','align-items','justify-content']
+      const properties = ['display','position','color','background-color','font-family','font-size','font-weight','line-height','width','height','min-width','min-height','max-height','gap','grid-template-columns','padding-top','padding-right','padding-bottom','padding-left','margin-top','margin-bottom','border-top-width','border-top-color','border-top-style','border-radius','box-shadow','outline-color','outline-width','outline-style','outline-offset','overflow-x','overflow-y','scroll-snap-type','touch-action','opacity','align-items','justify-content', 'border-right-width', 'border-right-style', 'border-right-color', 'border-bottom-width', 'border-bottom-style', 'border-bottom-color', 'border-left-width', 'border-left-style', 'border-left-color', 'margin-right', 'margin-left']
       const targets = Array.from(root.querySelectorAll('.live-pinned,.coach-v79-timer,.coach-v79-dock,.live-rest-sheet,.live-timer-toolbar'))
       const nodes = [...new Set(targets.flatMap(node => [node,...node.querySelectorAll('*')]))]
       return nodes.map(node => { const css=getComputedStyle(node),r=node.getBoundingClientRect();return {tag:node.tagName,class:node.getAttribute('class')||'',style:Object.fromEntries(properties.map(p=>[p,css.getPropertyValue(p)])),rect:[r.x,r.y,r.width,r.height].map(v=>Math.round(v*100)/100)} })
     })
     const before = await capture()
     if (sample.lime && (sample.state === 'sheet' || sample.state === 'overdue')) await page.screenshot({ path: info.outputPath('timer-skin.png'), animations: 'disabled' })
-    const result = await page.evaluate(() => {
-      const common = new Set(['.workout-decision-sheet', '.live-rest-countdown', '.live-rest-countdown.overdue', '.live-rest-divider', '.live-rest-new-time', '.rest-time-wheel-field > span', '.rest-time-wheel', '.rest-time-wheel:focus-visible', ".rest-time-wheel [role='option']", ".rest-time-wheel [role='option'].selected", '.rest-time-separator', '.live-rest-apply', '.live-rest-trigger.resting', '.live-rest-trigger.rest-overdue', '.live-rest-trigger.phase-prep', '.live-rest-trigger.phase-work'])
-      const visual = /^(?:color|background(?:-.+)?|border(?:-.+)?|box-shadow|font-(?:family|size|weight)|outline(?:-.+)?|animation)$/
-      const strip = (selector: string) => {
-        while (selector.includes(':where(')) {
-          const start = selector.indexOf(':where(')
-          let end = start + 7, depth = 1
-          while (depth && end < selector.length) { if (selector[end] === '(') depth++; if (selector[end] === ')') depth--; end++ }
-          selector = selector.slice(0, start) + selector.slice(end)
-        }
-        return selector.replace(/"/g, "'")
-      }
-      // Commas inside :has/:is/attribute values are not selector-list separators.
-      const branches = (text: string) => {
-        const list: string[] = []
-        let depth = 0, quote = '', start = 0
-        for (let i = 0; i < text.length; i++) {
-          const char = text[i]!
-          if (quote) { if (char === quote && text.charCodeAt(i - 1) !== 92) quote = ''; continue }
-          if (char === '"' || char === "'") quote = char
-          else if (char === '(' || char === '[') depth++
-          else if (char === ')' || char === ']') depth--
-          else if (char === ',' && !depth) { list.push(text.slice(start, i).trim()); start = i + 1 }
-        }
-        list.push(text.slice(start).trim())
-        return list
-      }
-      const changed: { rule: CSSStyleRule; selectors: string[]; selected: string[] }[] = []
-      const visit = (rules: CSSRuleList) => {
-        for (const rule of Array.from(rules)) {
-          if (rule instanceof CSSStyleRule) {
-            const selectors = branches(rule.selectorText)
-            const selected = selectors.filter(selector => {
-              const original = strip(selector)
-              return /^\.live-identity\b/.test(original) && /\.(?:live-timer(?:-toolbar)?|live-pinned(?:-empty)?|rest-timer|rest-step|rest-controls)(?![\w-])/.test(original)
-                || common.has(original) && Array.from(rule.style).some(p => visual.test(p))
-            })
-            if (selected.length) changed.push({ rule, selectors, selected })
-          }
-          if ('cssRules' in rule) visit((rule as CSSGroupingRule).cssRules)
-        }
-      }
-      for (const sheet of Array.from(document.styleSheets)) visit(sheet.cssRules)
-      const selected = changed.flatMap(item => item.selected)
-      const matches = selected.filter(selector => document.querySelector(selector))
-      const legacyMatches = selected.every(selector => {
-        const previous = Array.from(document.querySelectorAll(strip(selector))), current = Array.from(document.querySelectorAll(selector))
-        return previous.length === current.length && previous.every((node, i) => node === current[i])
-      })
-      const probe = document.createElement('style')
-      probe.textContent = matches.map(selector => selector + ' { --mc41-legacy-timer-probe: legacy; }').join(' ')
-      document.head.append(probe)
-      const inherited = Array.from(document.querySelectorAll('.coach-v79-timer,.coach-v79-timer *,.coach-v79-dock,.coach-v79-dock *,.live-rest-sheet,.live-rest-sheet *')).filter(node => getComputedStyle(node).getPropertyValue('--mc41-legacy-timer-probe').trim() === 'legacy').length
-      probe.remove()
-      const restore: { selector: string; current: string; text: string }[] = []
-      for (const { rule, selectors, selected } of changed) {
-        if (!selected.some(selector => document.querySelector(selector))) continue
-        const selector = rule.selectorText, text = rule.style.cssText
-        const retained = selectors.filter(branch => !selected.includes(branch))
-        // Preserve unrelated branches that the optimizer merged into this rule.
-        if (retained.length) rule.selectorText = retained.join(', ')
-        else rule.style.cssText = ''
-        restore.push({ selector, current: rule.selectorText, text })
-      }
-      return { rules: changed.length, families: [...new Set(selected.map(strip))], matches, inherited, legacyMatches, restore }
-    })
-    await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))))
-    const after = await capture()
-    await page.evaluate(restore => {
-      let index = 0
-      const visit = (rules: CSSRuleList) => {
-        for (const rule of Array.from(rules)) {
-          const saved = restore[index]
-          if (rule instanceof CSSStyleRule && saved && rule.selectorText === saved.current) {
-            rule.selectorText = saved.selector
-            rule.style.cssText = saved.text
-            index++
-          }
-          if ('cssRules' in rule) visit((rule as CSSGroupingRule).cssRules)
-        }
-      }
-      for (const sheet of Array.from(document.styleSheets)) visit(sheet.cssRules)
-    }, result.restore)
+    const ablation=await page.evaluateHandle(ablateLiveSkinBranches,{...liveTimerManifest,guards:[libraryMigrationGuard,editorMigrationGuard,...liveTimerManifest.guards],owners:editorOwnerSelectors,ownerScope:':where('+editorOwnerFilter+')',targets:".coach-v79-timer,.coach-v79-timer *,.coach-v79-dock,.coach-v79-dock *,.live-rest-sheet,.live-rest-sheet *"})
+    const result=await ablation.evaluate(value=>({rules:value.rules,families:value.families,paintFamilies:value.paintFamilies,matches:value.matches,inherited:value.inherited,legacyMatches:value.legacyMatches,classifierChecks:value.classifierChecks,selectedPositiveOwners:value.selectedPositiveOwners}))
+    let after:typeof before=[]
+    let restoration:ReturnType<typeof restoreLiveSkinBranches>
+    try {
+      await page.evaluate(()=>new Promise<void>(resolve=>requestAnimationFrame(()=>requestAnimationFrame(()=>resolve()))))
+      after=await capture()
+    }finally{restoration=await ablation.evaluate(restoreLiveSkinBranches);await ablation.dispose()}
+    expect(restoration).toEqual({cssomRoundtrip:true,styleObjectsUnchanged:true,sheetsUnchanged:true})
     expect(after).toHaveLength(before.length)
     const differences=before.flatMap((a,i)=>{const b=after[i]!;const changes=Object.fromEntries(Object.keys(a.style).filter(p=>a.style[p]!==b.style[p]).map(p=>[p,[a.style[p],b.style[p]]]));return Object.keys(changes).length||JSON.stringify(a.rect)!==JSON.stringify(b.rect)?[{tag:a.tag,class:a.class,changes,rect:JSON.stringify(a.rect)!==JSON.stringify(b.rect)?[a.rect,b.rect]:undefined}]:[]})
-    await writeFile(info.outputPath('timer-skin.json'),JSON.stringify({sample,before,...result,differences},null,2))
-    expect(result.families).toHaveLength(30)
-    if(sample.lime){expect(result.matches).toEqual([]);expect(result.inherited).toBe(0);expect(differences).toEqual([])}
+    await writeFile(info.outputPath('timer-skin.json'),JSON.stringify({sample,before,...result,restoration,differences},null,2))
+    expect(result.families).toEqual([...liveTimerManifest.families].sort())
+    expect(result.paintFamilies).toEqual([...liveTimerManifest.paintFamilies].sort())
+    expect(result.classifierChecks).toEqual({known:true,positiveRetained:true,unknownRetained:true,actualOwnersRetained:true})
+    expect(result.selectedPositiveOwners).toEqual([])
+    if(sample.lime){expect(result.matches).toEqual([]);expect(result.inherited).toEqual([]);expect(differences).toEqual([])}
     else{expect(result.matches.length).toBeGreaterThan(0);expect(result.legacyMatches).toBe(true);expect(differences.length).toBeGreaterThan(0)}
   })
 }

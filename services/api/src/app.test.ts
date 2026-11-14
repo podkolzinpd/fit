@@ -1135,15 +1135,35 @@ describe('trainer finance', () => {
     const listOverview = vi.fn<PilotTrainerFinance['listOverview']>().mockResolvedValue(overview)
     const listClient = vi.fn<PilotTrainerFinance['listClient']>().mockResolvedValue(bundle)
     const createPackage = vi.fn<PilotTrainerFinance['createPackage']>().mockResolvedValue(financePackage)
+    const correctPackageBalance = vi.fn<PilotTrainerFinance['correctPackageBalance']>().mockResolvedValue({ ...financePackage, version: 2 })
     const updatePackage = vi.fn<PilotTrainerFinance['updatePackage']>().mockResolvedValue({ ...financePackage, version: 2 })
     const addPayment = vi.fn<PilotTrainerFinance['addPayment']>().mockResolvedValue(payment)
     const updatePayment = vi.fn<PilotTrainerFinance['updatePayment']>().mockResolvedValue({ ...payment, version: 2 })
     const voidPayment = vi.fn<PilotTrainerFinance['voidPayment']>().mockResolvedValue(undefined)
     const createManualSession = vi.fn<PilotTrainerFinance['createManualSession']>().mockResolvedValue(financeSession)
     const updateSession = vi.fn<PilotTrainerFinance['updateSession']>().mockResolvedValue({ ...financeSession, disposition: 'free', packageId: null, version: 2 })
-    return { service: { listPayments, listClientSelf, listOverview, listClient, createPackage, updatePackage, addPayment, updatePayment, voidPayment, updateSession, createManualSession } satisfies PilotTrainerFinance,
-      listPayments, listClientSelf, listOverview, listClient, createPackage, updatePackage, addPayment, updatePayment, voidPayment, updateSession, createManualSession }
+    return { service: { listPayments, listClientSelf, listOverview, listClient, createPackage, updatePackage, correctPackageBalance, addPayment, updatePayment, voidPayment, updateSession, createManualSession } satisfies PilotTrainerFinance,
+      listPayments, listClientSelf, listOverview, listClient, createPackage, updatePackage, correctPackageBalance, addPayment, updatePayment, voidPayment, updateSession, createManualSession }
   }
+
+  it('guards and routes balance corrections with their original replay identity', async () => {
+    const { service: pilotTrainerFinance, correctPackageBalance } = finance()
+    const app = buildApp({ pilotTrainerFinance, logger: false }); apps.push(app)
+    const draft = { requestId: '70000000-0000-4000-8000-000000000001', expectedVersion: 1, remainingSessions: 6, reason: 'Исправление переноса' }
+    const input = { method: 'POST' as const, url: `/v1/finance/packages/${packageId}/balance-corrections`, payload: draft }
+    expect((await app.inject(input)).statusCode).toBe(401)
+    expect((await app.inject({ ...input, headers: { 'x-fit-pilot-session': session.token } })).statusCode).toBe(403)
+    expect(correctPackageBalance).not.toHaveBeenCalled()
+    const response = await app.inject({ ...input, headers: { 'x-fit-session': session.token } })
+    expect(response.statusCode).toBe(200)
+    expect(response.headers['cache-control']).toBe('no-store')
+    expect(correctPackageBalance).toHaveBeenCalledWith(session, packageId, draft)
+    expect((await app.inject({ ...input, payload: { ...draft, reason: '' }, headers: { 'x-fit-session': session.token } })).statusCode).toBe(400)
+    correctPackageBalance.mockRejectedValueOnce(new TrainerFinanceError('conflict'))
+    expect((await app.inject({ ...input, headers: { 'x-fit-session': session.token } })).statusCode).toBe(409)
+    correctPackageBalance.mockRejectedValueOnce(new TrainerFinanceError('forbidden'))
+    expect((await app.inject({ ...input, headers: { 'x-fit-session': session.token } })).statusCode).toBe(403)
+  })
 
   it('reads client finance from the authenticated session without a client id', async () => {
     const { service: pilotTrainerFinance, listClientSelf } = finance()
@@ -1191,6 +1211,21 @@ describe('trainer finance', () => {
     expect(response.statusCode).toBe(200)
     expect(response.json()).toEqual({ finance: bundle })
     expect(listClient).toHaveBeenCalledWith(session, clientId)
+  })
+
+  it('uses a distinct single-service endpoint so older APIs cannot silently create a subscription', async () => {
+    const { service: pilotTrainerFinance, createPackage } = finance()
+    const app = buildApp({ pilotTrainerFinance, logger: false }); apps.push(app)
+    const draft = {requestId:'60000000-0000-4000-8000-000000000001',singleSession:true,
+      kind:'session_pack',title:'Разовое занятие',sessionsTotal:1,openingUsedSessions:0,
+      priceCents:200000,openingPaidCents:50000,startsOn:'2026-11-10',endsOn:null,
+      paymentDueOn:null,comment:null}
+    const response=await app.inject({method:'POST',url:`/v1/clients/${clientId}/finance/single-services`,headers:{'x-fit-session':session.token},payload:draft})
+    expect(response.statusCode).toBe(201)
+    expect(createPackage).toHaveBeenCalledWith(session,clientId,draft)
+    const invalid=await app.inject({method:'POST',url:`/v1/clients/${clientId}/finance/single-services`,headers:{'x-fit-session':session.token},payload:{...draft,singleSession:false}})
+    expect(invalid.statusCode).toBe(400)
+    expect(createPackage).toHaveBeenCalledTimes(1)
   })
 
   it('creates a package with opening balances through a read-write session', async () => {
@@ -3110,6 +3145,47 @@ describe('Yandex PKCE pilot callback', () => {
   })
 })
 
+describe('employee referral tracking', () => {
+  it('records a public click for a valid code without requiring a session', async () => {
+    const database = buildDatabasePool()
+    database.query.mockResolvedValue([{ recorded: true }])
+    const app = buildApp({ databasePool: database.pool, logger: false })
+    apps.push(app)
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/v1/referrals/STAFF-001/click',
+    })
+
+    expect(response.statusCode).toBe(202)
+    expect(response.json()).toEqual({ recorded: true })
+    expect(database.query).toHaveBeenCalledWith(
+      'select app_private.record_referral_click($1) as recorded',
+      ['staff-001'],
+    )
+    expect(database.release).toHaveBeenCalledOnce()
+  })
+
+  it('rejects malformed codes before touching the database', async () => {
+    const database = buildDatabasePool()
+    const connect = vi.fn().mockResolvedValue(database.connection)
+    const app = buildApp({
+      databasePool: { connect, end: vi.fn().mockResolvedValue(undefined) },
+      logger: false,
+    })
+    apps.push(app)
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/v1/referrals/not%20a%20code/click',
+    })
+
+    expect(response.statusCode).toBe(400)
+    expect(response.json()).toEqual({ error: 'invalid_request' })
+    expect(connect).not.toHaveBeenCalled()
+  })
+})
+
 describe('Yandex ID app session endpoints', () => {
   it('registers a native Yandex account and returns its read-write session', async () => {
     const oauth = buildOAuthCodeProvider()
@@ -3136,6 +3212,7 @@ describe('Yandex ID app session endpoints', () => {
         accountRole: 'trainer',
         termsVersion: CURRENT_TERMS_VERSION,
         privacyVersion: CURRENT_PRIVACY_VERSION,
+        referralCode: 'STAFF-001',
       },
     })
 
@@ -3148,6 +3225,7 @@ describe('Yandex ID app session endpoints', () => {
       accountRole: 'trainer',
       firstName: 'Ирина',
       timezone: 'Europe/Moscow',
+      referralCode: 'staff-001',
     })
     expect(appSession.issue).toHaveBeenCalledWith(SUBJECT_HASH)
   })
@@ -3241,6 +3319,7 @@ describe('Yandex ID app session endpoints', () => {
         accountRole: 'client',
         termsVersion: CURRENT_TERMS_VERSION,
         privacyVersion: CURRENT_PRIVACY_VERSION,
+        referralCode: 'staff-001',
       },
     })
 
@@ -3548,6 +3627,7 @@ describe('Yandex ID app session endpoints', () => {
         accountRole: 'client',
         termsVersion: CURRENT_TERMS_VERSION,
         privacyVersion: CURRENT_PRIVACY_VERSION,
+        referralCode: 'staff-001',
       },
     })
 
@@ -3555,6 +3635,7 @@ describe('Yandex ID app session endpoints', () => {
     expect(response.json()).toEqual(APP_SESSION_RESPONSE)
     expect(handoff.register).toHaveBeenCalledWith('h'.repeat(43), {
       accountRole: 'client', firstName: 'Ирина', timezone: 'Europe/Moscow',
+      referralCode: 'staff-001',
     })
     expect(session.issue).toHaveBeenCalledWith(SUBJECT_HASH)
 
@@ -5261,6 +5342,13 @@ describe('pilot live workout core commands', () => {
     expect(writer.quickStart).toHaveBeenCalledWith(sessionToken, QUICK_START_CLIENT_ID, OPERATION_IDS.start, 'self')
     expect((await app.inject({ method: 'POST', url: '/v1/workouts/quick-start', headers: { 'x-fit-pilot-session': sessionToken }, payload: { ...payload, trainingFormat: 'other' } })).statusCode).toBe(400)
     expect(writer.quickStart).toHaveBeenCalledTimes(1)
+  })
+
+  it('normalizes online quick-start while retaining trainer presence',async()=>{
+    const writer=buildWorkoutsWriter(),app=buildApp({pilotWorkoutsWriter:writer.pilotWorkoutsWriter,logger:false});apps.push(app)
+    const response=await app.inject({method:'POST',url:'/v1/workouts/quick-start',headers:{'x-fit-pilot-session':sessionToken},payload:{clientId:QUICK_START_CLIENT_ID,operationId:OPERATION_IDS.start,trainingFormat:'online'}})
+    expect(response.statusCode).toBe(200)
+    expect(writer.quickStart).toHaveBeenCalledWith(sessionToken,QUICK_START_CLIENT_ID,OPERATION_IDS.start,'with_trainer','online')
   })
 
   it('rejects quick-start without a valid operation ID', async () => {

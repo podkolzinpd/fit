@@ -177,6 +177,7 @@ const workoutSchema = z.object({
   pausedAt: yandexDateTimeSchema.optional(),
   pausedSeconds: z.number().int().nonnegative().optional(),
   title: z.string().max(120).nullable().optional(),
+  deliveryMode: z.enum(['in_person', 'online']).optional(),
   trainingFormat: z.enum(['self', 'with_trainer']).optional(),
   startedBy: z.uuid().nullable(),
   completedBy: z.uuid().nullable(),
@@ -332,8 +333,6 @@ export type YandexPilotSession = z.infer<typeof sessionSchema>
 export type YandexAppSession = z.infer<typeof appSessionSchema>
 export type YandexAppSessionProfile = z.infer<typeof appSessionProfileSchema>
 export type YandexPilotClient = z.infer<typeof clientSchema>
-export type YandexPilotMembership = z.infer<typeof membershipSchema>
-export type YandexPilotInvitation = z.infer<typeof invitationSchema>
 export type YandexPilotConnections = Omit<z.infer<typeof connectionsSchema>, 'accessMode'>
 export type YandexPilotCreatedInvitation = z.infer<typeof createdInvitationSchema>['invitation']
 export type YandexPilotTrainingData = Omit<z.infer<typeof trainingDataSchema>, 'accessMode'>
@@ -529,6 +528,10 @@ async function assistantTurnResponse(request: () => Promise<Response>): Promise<
 }
 
 export const yandexPilotRepository = {
+  async recordReferralClick(apiBaseUrl: string, code: string): Promise<void> {
+    const response = await yandexPilotQueries.recordReferralClick(apiBaseUrl, code)
+    if (!response.ok) throw new Error('Referral click request failed.')
+  },
   async exchangeCodeForSession(apiBaseUrl: string, code: string, codeVerifier: string): Promise<YandexPilotSession> {
     let response: Response
     try {
@@ -578,6 +581,7 @@ export const yandexPilotRepository = {
       timezone: string
       termsVersion: string
       privacyVersion: string
+      referralCode?: string | null
     },
   ): Promise<YandexAppSession> {
     let response: Response
@@ -607,6 +611,7 @@ export const yandexPilotRepository = {
       timezone: string
       termsVersion: string
       privacyVersion: string
+      referralCode?: string | null
     },
   ): Promise<YandexAppSession> {
     let response: Response

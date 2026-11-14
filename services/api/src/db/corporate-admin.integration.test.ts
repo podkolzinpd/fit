@@ -444,7 +444,7 @@ describe.skipIf(!source)('corporate administration on real actor/RLS', () => {
     for(const id of [invited,coach]) {
       await expect(actor(id,'select app_private.list_corporate_trainer_invitations()')).rejects.toMatchObject({code:'PT403'})
       await expect(actor(id,'insert into app_private.corporate_invitation_pilot_trainers(profile_id,enabled) values($1,true)',[id])).rejects.toMatchObject({code:'42501'})
-      await expect(actor(id,'select app_private.claim_corporate_trainer_invitation($1)',[invitationHash])).rejects.toMatchObject({code:'PT403',message:'corporate_invitation_pilot_only'})
+      await expect(actor(id,'select app_private.claim_corporate_trainer_invitation($1)',[invitationHash])).rejects.toMatchObject({code:'PT404',message:'corporate_not_found'})
     }
     await expect(actor(athlete,'select app_private.claim_corporate_trainer_invitation($1)',[invitationHash])).rejects.toMatchObject({code:'PT403',message:'corporate_trainer_required'})
     await expect(actor(invited,'select app_private.create_corporate_trainer_invitation($1,$2,$3::uuid[])',[invitation,invitationHash,[officeId]])).rejects.toMatchObject({code:'PT403'})
@@ -514,7 +514,7 @@ describe.skipIf(!source)('corporate administration on real actor/RLS', () => {
     } finally {await runtime.end()}
   })
 
-  it('rechecks administrator and pilot access after waiting for an owner revocation',async()=>{
+  it('rechecks administrator and trainer role after waiting for an owner revocation',async()=>{
     async function revokedWhileWaiting(id:string,sql:string,args:unknown[],revoke:(c:PoolClient)=>Promise<unknown>,message:string) {
       const blocker=await pool.connect(), waiter=await pool.connect()
       let pending:Promise<unknown>|undefined
@@ -549,12 +549,12 @@ describe.skipIf(!source)('corporate administration on real actor/RLS', () => {
       expect((await pool.query('select revoked_at from app_private.corporate_trainer_invitations where id=$1',[revokeId])).rows).toEqual([{revoked_at:null}])
       await pool.query('update app_private.corporate_admins set enabled=true where profile_id=$1',[admin])
       await actor(admin,'select app_private.create_corporate_trainer_invitation($1,$2,$3::uuid[])',[claimId,digest(claimId),[officeId]])
-      await revokedWhileWaiting(otherInvited,'select app_private.claim_corporate_trainer_invitation($1)',[digest(claimId)],c=>c.query('update app_private.corporate_invitation_pilot_trainers set enabled=false where profile_id=$1',[otherInvited]),'corporate_invitation_pilot_only')
+      await revokedWhileWaiting(otherInvited,'select app_private.claim_corporate_trainer_invitation($1)',[digest(claimId)],c=>c.query("update public.profiles set account_role='client' where id=$1",[otherInvited]),'corporate_trainer_required')
       expect((await pool.query('select claimed_at from app_private.corporate_trainer_invitations where id=$1',[claimId])).rows).toEqual([{claimed_at:null}])
       expect((await pool.query('select trainer_id from public.corporate_trainers where trainer_id=$1',[otherInvited])).rowCount).toBe(0)
     } finally {
       await pool.query('update app_private.corporate_admins set enabled=true where profile_id=$1',[admin])
-      await pool.query('update app_private.corporate_invitation_pilot_trainers set enabled=true where profile_id=$1',[otherInvited])
+      await pool.query("update public.profiles set account_role='trainer' where id=$1",[otherInvited])
     }
   })
 

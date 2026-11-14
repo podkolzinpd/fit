@@ -91,6 +91,17 @@ function sessionHeaders(
 }
 
 export const yandexPilotQueries = {
+  recordReferralClick: (apiBaseUrl: string, code: string) => fetchWithTimeout(
+    globalThis.fetch,
+    `${apiBaseUrl}/v1/referrals/${encodeURIComponent(code)}/click`,
+    {
+      method: 'POST',
+      cache: 'no-store',
+      keepalive: true,
+    },
+    4_000,
+    'Referral click request timed out.',
+  ),
   exchangeCodeForSession: (apiBaseUrl: string, code: string, codeVerifier: string) => yandexOAuthCodeFetch(apiBaseUrl, `${apiBaseUrl}/v1/auth/yandex/pilot`, {
     method: 'POST',
     cache: 'no-store',
@@ -117,6 +128,7 @@ export const yandexPilotQueries = {
       timezone: string
       termsVersion: string
       privacyVersion: string
+      referralCode?: string | null
     },
   ) => yandexOAuthCodeFetch(apiBaseUrl, `${apiBaseUrl}/v1/auth/yandex/register`, {
     method: 'POST',
@@ -133,6 +145,7 @@ export const yandexPilotQueries = {
       timezone: string
       termsVersion: string
       privacyVersion: string
+      referralCode?: string | null
     },
   ) => yandexAuthFetch(`${apiBaseUrl}/v1/auth/yandex/complete-registration`, {
     method: 'POST',

@@ -1,3 +1,1568 @@
+/* MC5.3: residual Progress authored paint. Dedicated route ownership; accepted Lime composition remains below unchanged. */
+.client-progress-section-head h2:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    font-size: var(--type-title-size);
+    letter-spacing: var(--tracking-tight)
+}
+.client-progress-form .compact:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    background: transparent
+}
+.chart-range:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    color: var(--muted);
+    font-weight: 400;
+    font-size: 13px
+}
+.metric-tab:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    border: 1px solid var(--border)
+}
+.progress-page .chart:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    box-shadow: none
+}
+.trainer-progress-week span:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    text-transform: uppercase
+}
+.trainer-progress-route-card:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    text-decoration: none
+}
+.measurement-actions:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    border-top: 1px solid var(--border)
+}
+.progress-form-card:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    border: 1px solid var(--border)
+}
+.trainer-measurements-workspace > .progress-form-card:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    border-top: 1px solid var(--border)
+}
+.trainer-measurements-workspace > .progress-history:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    border-top: 1px solid var(--border)
+}
+.trainer-measurements-workspace > .metrics-manager:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    border-top: 1px solid var(--border)
+}
+.measurement-section-heading h2:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    font-size: var(--type-section-size)
+}
+.measurement-section-heading > span:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    color: var(--muted);
+    font-size: var(--type-caption-size)
+}
+.ai-progress-demo:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    border: 1px solid var(--ai-demo-border);
+    letter-spacing: var(--tracking-label);
+    text-transform: uppercase
+}
+.ai-progress-stats:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    border-bottom: 1px solid var(--ai-divider)
+}
+.ai-progress-empty:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    border-block: 1px solid var(--ai-divider);
+    color: var(--ai-empty-fg)
+}
+.client-copy-toggle:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    border-top: 1px solid var(--ai-divider)
+}
+.client-copy-editor:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    border-radius: 15px
+}
+.client-copy-heading p:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    color: var(--muted);
+    font-size: var(--text-xs)
+}
+.client-copy-heading > span:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    border-radius: 99px;
+    color: var(--accent-weak);
+    background: var(--accent-surface);
+    font-size: var(--text-xs);
+    font-weight: var(--weight-bold)
+}
+.ai-progress-sheet:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    border: 1px solid var(--border);
+    border-bottom: 0
+}
+.ai-progress-sheet > header h2:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    font-size: var(--type-title-size)
+}
+.ai-progress-sheet-list p:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    font-size: var(--type-body-size)
+}
+.ai-progress-sheet .client-copy-editor:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    background: transparent
+}
+.ai-progress-sheet .client-copy-editor .field:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    font-size: 13px
+}
+.client-progress-card .ai-progress-periods:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    box-shadow: none
+}
+.body-progress-map:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    border: 1px solid var(--ai-divider);
+    border-radius: var(--radius-lg)
+}
+.body-progress-map > header span:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    letter-spacing: var(--tracking-label);
+    text-transform: uppercase
+}
+.body-progress-modes:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *))::before {
+    border: 1px solid var(--border);
+    border-radius: 9px
+}
+.body-progress-modes button:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    background: transparent;
+    box-shadow: none
+}
+.body-progress-modes button[aria-pressed="true"]:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *))::before {
+    border-radius: 7px;
+    background: var(--surface-raised)
+}
+.body-progress-sides:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *))::before {
+    border: 1px solid color-mix(in srgb,var(--border) 72%,transparent);
+    border-radius: var(--radius-pill)
+}
+.body-progress-sides button:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    background: transparent;
+    color: var(--muted);
+    box-shadow: none
+}
+.body-progress-sides button[aria-pressed="true"]:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *))::before {
+    border-radius: var(--radius-pill);
+    background: var(--surface-raised)
+}
+.body-progress-region:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    outline: none
+}
+.body-progress-region-fill:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    opacity: 1
+}
+.body-progress-region-shape:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    stroke: var(--success)
+}
+.body-progress-region-hit:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    fill: transparent;
+    stroke: transparent;
+    stroke-width: 6px
+}
+.body-progress-region.selected .body-progress-region-shape:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    fill: color-mix(in srgb,var(--success) 40%,var(--bg));
+    fill-opacity: .58;
+    stroke-opacity: .95;
+    stroke-width: 1px
+}
+.body-progress-region:focus-visible .body-progress-region-hit:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    stroke: color-mix(in srgb,var(--success-fg) 48%,transparent);
+    stroke-width: 3px
+}
+.body-progress-detail:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    border-top: 1px solid var(--border)
+}
+.body-progress-detail-heading strong:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    font-size: var(--type-body-size)
+}
+.body-progress-detail-heading span:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    color: var(--success-fg);
+    font-size: var(--type-section-size);
+    font-weight: var(--weight-bold);
+    letter-spacing: 0;
+    text-transform: none
+}
+.body-progress-detail .body-progress-primary-detail:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    color: var(--fg-strong);
+    font-size: var(--type-body-size);
+    font-weight: 400
+}
+.body-progress-primary-detail .body-progress-metric-detail:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    color: var(--secondary-label-fg);
+    font-size: var(--type-body-size);
+    font-weight: 400
+}
+.body-progress-sheet > header small:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    color: var(--muted);
+    font-size: var(--type-caption-size)
+}
+.body-progress-sheet-value:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    color: var(--success-fg);
+    font-size: var(--type-numeric-size)
+}
+.body-progress-empty:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    border: 1px dashed var(--border);
+    border-radius: var(--radius-md);
+    color: var(--muted);
+    font-size: var(--type-caption-size)
+}
+.progress-story-hero:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    border-block: 1px solid var(--ai-divider)
+}
+.progress-story-hero > span:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    letter-spacing: var(--tracking-label);
+    text-transform: uppercase
+}
+.client-progress-wins:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    border-bottom: 1px solid var(--ai-divider)
+}
+.client-progress-wins article > span:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    border-radius: 50%
+}
+.client-progress-wins article p:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    color: var(--muted)
+}
+.client-progress-main-now-head > span:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    color: var(--secondary-label-fg);
+    font-size: var(--type-caption-size);
+    font-weight: var(--weight-semibold);
+    letter-spacing: var(--tracking-label);
+    text-transform: uppercase
+}
+.client-progress-details-trigger:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    color: var(--accent-strong);
+    font-size: var(--type-caption-size)
+}
+.client-progress-main-now p:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    color: var(--muted)
+}
+.client-progress-main-now > strong:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    border-top: 1px solid var(--border);
+    color: var(--fg);
+    font-size: var(--type-caption-size)
+}
+.client-progress-comparison:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    border-bottom: 1px solid var(--ai-divider)
+}
+.period-comparison-facts:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    border-top: 1px solid var(--border)
+}
+.period-comparison-facts > div:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    border-bottom: 1px solid var(--border)
+}
+.period-comparison-facts dt:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    color: var(--fg);
+    font-weight: var(--weight-semibold)
+}
+.period-comparison-facts dt span:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    font-weight: var(--weight-regular)
+}
+.period-comparison-facts dd:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    color: var(--fg)
+}
+.period-comparison-limitation:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    border-top: 1px solid var(--border);
+    color: var(--muted)
+}
+.period-comparison-limitation:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    color: var(--fg)
+}
+.period-comparison-empty:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    color: var(--fg);
+    font-size: var(--type-caption-size)
+}
+.period-comparison-limitation:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    color: var(--muted)
+}
+.client-progress-measurements-story > header span:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    font-weight: var(--weight-semibold);
+    letter-spacing: var(--tracking-label);
+    text-transform: uppercase
+}
+.client-progress-measurements-story > header .link:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    font-size: var(--type-caption-size)
+}
+.measurement-story-selector button:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    background: transparent;
+    color: var(--muted);
+    font-weight: var(--weight-semibold)
+}
+.measurement-story-selector button[aria-selected='true']:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    border-color: var(--fg);
+    background: var(--surface-sunken);
+    color: var(--fg)
+}
+.measurement-story-selector button span:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    border-radius: 999px;
+    background: var(--surface-muted);
+    color: var(--fg);
+    font-size: 9px;
+    letter-spacing: 0;
+    text-transform: none
+}
+.measurement-story-current:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    border-block: 1px solid var(--border)
+}
+.measurement-story-current strong:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    color: var(--fg);
+    font-size: clamp(26px,8vw,34px)
+}
+.measurement-story-current > div:last-child span:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    color: var(--fg);
+    font-size: var(--type-caption-size);
+    font-weight: var(--weight-semibold)
+}
+.client-progress-measurements-story .chart.compact:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    background: transparent
+}
+.client-progress-measurements-story .chart.compact h2:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    color: var(--fg);
+    font-size: var(--type-caption-size);
+    font-weight: var(--weight-semibold)
+}
+.client-progress-measurements-story .chart.compact .chart-empty-window:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    border: 1px dashed var(--border);
+    border-radius: var(--radius-md)
+}
+.measurement-story-facts:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    border-top: 1px solid var(--border)
+}
+.measurement-story-facts > div:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    border-bottom: 1px solid var(--border)
+}
+.measurement-story-facts dd:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    color: var(--fg);
+    font-weight: var(--weight-semibold)
+}
+.measurement-story-after-period:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    font-size: var(--type-caption-size)
+}
+.measurement-story-state:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    font-size: var(--type-caption-size)
+}
+.measurement-story-empty p:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    font-size: var(--type-caption-size)
+}
+.measurement-story-after-period:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    color: var(--muted)
+}
+.measurement-story-explanation:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    border-top: 1px solid var(--border)
+}
+.measurement-story-explanation p:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    color: var(--fg)
+}
+.measurement-story-state:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    color: var(--muted)
+}
+.measurement-story-empty:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    color: var(--muted)
+}
+.measurement-story-management:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    border-top: 1px solid var(--border)
+}
+.inbody-import:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    background: var(--surface-raised)
+}
+.inbody-import-copy h2:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    font-size: var(--type-title-size)
+}
+.inbody-import-error:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    color: var(--danger)
+}
+.inbody-import-result:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    border-radius: var(--radius-md);
+    background: var(--surface-sunken)
+}
+.inbody-details summary:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    font-weight: var(--weight-semibold)
+}
+.inbody-details dt:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    color: var(--muted);
+    font-size: var(--type-caption-size)
+}
+.inbody-segments p:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    color: var(--muted);
+    font-size: var(--type-caption-size)
+}
+.inbody-segments p span:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    color: var(--fg);
+    font-weight: var(--weight-semibold)
+}
+.inbody-progress-card:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    background: var(--surface-raised)
+}
+.inbody-progress-card > header h2:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    font-size: var(--type-title-size)
+}
+.inbody-progress-card > header time:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    color: var(--muted);
+    font-size: var(--type-caption-size)
+}
+.inbody-progress-metrics > div:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    border-radius: var(--radius-md);
+    background: var(--surface-sunken)
+}
+.inbody-progress-metrics span:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    color: var(--muted);
+    font-size: var(--type-caption-size)
+}
+.inbody-progress-metrics small:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    color: var(--muted);
+    font-size: var(--type-caption-size)
+}
+.inbody-progress-metrics strong:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    font-size: var(--type-body-size)
+}
+.inbody-progress-metrics small.positive:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    color: var(--success)
+}
+.inbody-progress-metrics small.negative:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    color: var(--danger)
+}
+.measurement-story-management .client-progress-form:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    border-top: 1px solid var(--border)
+}
+.measurement-story-management .client-progress-history:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    border-top: 1px solid var(--border)
+}
+.measurement-story-management .metrics-manager:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    border-top: 1px solid var(--border);
+    box-shadow: none
+}
+.client-progress-regularity-story > header strong:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    color: var(--fg);
+    font-size: var(--type-body-size)
+}
+.client-progress-goal-story > span:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    letter-spacing: var(--tracking-label);
+    text-transform: uppercase
+}
+.client-progress-goal-story-head > span:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    color: var(--accent-strong);
+    font-size: var(--type-caption-size);
+    font-weight: var(--weight-bold);
+    letter-spacing: var(--tracking-label);
+    text-transform: uppercase
+}
+.goal-foundation-status:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    background: var(--surface-sunken);
+    color: var(--fg);
+    font-size: 11px
+}
+.goal-foundation-status.needs_data:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    border-style: dashed
+}
+.goal-foundation-status.needs_review:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    border-style: dashed
+}
+.goal-foundation-facts > div:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--surface-sunken)
+}
+.goal-foundation-facts dt:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    color: var(--muted);
+    font-size: 11px
+}
+.goal-foundation-facts dd:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    color: var(--fg);
+    font-size: var(--type-caption-size);
+    font-weight: var(--weight-semibold)
+}
+.client-progress-goal-story p:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    color: var(--muted)
+}
+.client-progress-goal-story.empty:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    border-bottom: 1px solid var(--ai-divider)
+}
+.client-progress-story-state:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    color: var(--muted);
+    font-size: var(--type-caption-size)
+}
+.trainer-progress-signals:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    border: 1px solid var(--border)
+}
+.trainer-progress-signals > header span:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    color: var(--secondary-label-fg);
+    font-size: var(--type-micro-size);
+    font-weight: var(--weight-semibold);
+    letter-spacing: var(--tracking-label);
+    text-transform: uppercase
+}
+.trainer-progress-signals > header h3:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    color: var(--fg);
+    font-size: var(--type-caption-size)
+}
+.trainer-progress-signals > header .link:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    color: var(--fg);
+    font-size: var(--type-caption-size)
+}
+.trainer-progress-signals-content:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    border-top: 1px solid var(--border)
+}
+.trainer-progress-signals-content > p:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    color: var(--muted);
+    font-size: var(--type-caption-size)
+}
+.trainer-progress-signals-content li + li:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    border-top: 1px solid var(--border)
+}
+.trainer-progress-signals-content li > strong:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    color: var(--fg);
+    font-size: var(--type-caption-size)
+}
+.trainer-progress-signals-content li p:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    color: var(--fg);
+    font-size: var(--type-caption-size)
+}
+.trainer-progress-signals-content li p span:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    color: var(--secondary-label-fg);
+    font-size: var(--type-micro-size);
+    font-weight: var(--weight-semibold);
+    text-transform: uppercase
+}
+.ai-progress-auto-error .link:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    color: inherit
+}
+.progress-detailed-analysis-lead:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    color: var(--secondary-label-fg);
+    font-size: 14px
+}
+.progress-detailed-analysis-section:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    border-top: 1px solid var(--border)
+}
+.progress-detailed-analysis-section h3:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    color: var(--fg);
+    font-size: 14px;
+    font-weight: 600
+}
+.progress-detailed-analysis-section li:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    color: var(--fg);
+    font-size: 14px
+}
+.progress-detailed-analysis-section li:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *))::before {
+    border-radius: 50%;
+    background: var(--accent-strong)
+}
+.progress-detailed-analysis-empty:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    color: var(--secondary-label-fg);
+    font-size: 14px
+}
+@media (min-width:700px) {
+    .trainer-progress-story-card .progress-story-hero > strong:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+        font-size: 40px
+    }
+}
+.metric-manual-hint:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    font-size: 13px
+}
+.metric:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    border-bottom: 1px solid var(--border)
+}
+.running-progress-periods:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    border: 1px solid var(--border)
+}
+.running-progress-periods button:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    background: transparent;
+    box-shadow: none
+}
+.running-progress-metrics:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    border: 1px solid var(--border)
+}
+.running-progress-metrics > div + div:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    border-left: 1px solid var(--border)
+}
+.running-progress-metrics span:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    color: var(--muted);
+    font-size: 11px
+}
+.running-progress-insight:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    color: var(--fg-on-surface)
+}
+.running-progress-insight p:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    font-size: 14px
+}
+.running-progress-insight span:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    color: var(--muted);
+    font-size: 12px
+}
+.client-progress-section-head h2:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    font-size: var(--type-title-size)
+}
+.trainer-progress-identity:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    box-shadow: none
+}
+.trainer-progress-identity .progress-page > .page-header p:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    color: var(--secondary-label-fg);
+    font-size: 12px;
+    font-weight: 500
+}
+.trainer-progress-identity .page-back:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    box-shadow: none
+}
+.trainer-progress-identity .page-back svg:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    stroke-width: 1.8
+}
+.trainer-progress-identity .eyebrow:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    color: var(--secondary-label-fg);
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: .06em
+}
+.trainer-progress-identity .trainer-progress-week:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    border: 1px solid var(--border)
+}
+.trainer-progress-identity .ai-progress-card:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    border: 1px solid var(--border)
+}
+.trainer-progress-identity .trainer-progress-route-card:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    border: 1px solid var(--border)
+}
+.trainer-progress-identity .running-progress-card:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    border: 1px solid var(--border)
+}
+.trainer-progress-identity .trainer-measurements-workspace:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    border: 1px solid var(--border)
+}
+.trainer-progress-identity .trainer-progress-week.is-positive:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    box-shadow: none
+}
+.trainer-progress-identity .trainer-progress-week.is-positive span:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    color: var(--secondary-label-fg);
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: .06em
+}
+.trainer-progress-identity .trainer-progress-week p:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    color: var(--secondary-label-fg);
+    font-size: 12px;
+    font-weight: 400
+}
+.trainer-progress-identity .progress-story-period:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    border-bottom: 1px solid var(--border)
+}
+.trainer-progress-identity .ai-progress-title h2:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    color: var(--secondary-label-fg);
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: .06em;
+    text-transform: uppercase
+}
+.trainer-progress-identity .ai-progress-demo.published:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    border-color: var(--border);
+    border-radius: 10px;
+    background: var(--surface-sunken);
+    color: var(--secondary-label-fg);
+    font-size: 12px;
+    font-weight: 500
+}
+.trainer-progress-identity .ai-progress-periods:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    border-radius: 10px;
+    background: transparent
+}
+.trainer-progress-identity .ai-progress-periods button:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    border-radius: 10px;
+    background: transparent;
+    color: var(--secondary-label-fg);
+    font-size: 12px;
+    font-weight: 500;
+    box-shadow: none
+}
+.trainer-progress-identity .ai-progress-periods button:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *))::before {
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--surface-sunken)
+}
+.trainer-progress-identity .ai-progress-periods button.active:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    background: transparent;
+    color: var(--fg);
+    box-shadow: none
+}
+.trainer-progress-identity .progress-story-hero > span:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    color: var(--secondary-label-fg);
+    font-size: 12px;
+    font-weight: 500
+}
+.trainer-progress-identity .progress-story-hero > strong:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    color: var(--success-fg);
+    font-size: 40px;
+    font-weight: 600;
+    letter-spacing: -.035em
+}
+.trainer-progress-identity .progress-story-hero h3:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    color: var(--fg);
+    font-size: 18px;
+    font-weight: 600
+}
+.trainer-progress-identity .progress-story-hero p:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    color: var(--secondary-label-fg);
+    font-size: 12px;
+    font-weight: 400
+}
+.trainer-progress-identity .ai-progress-stats:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    border-color: var(--border);
+    background: var(--surface-raised)
+}
+.trainer-progress-identity .ai-progress-stats div:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    border-right: 1px solid var(--border);
+    background: transparent
+}
+.trainer-progress-identity .ai-progress-stats div:last-child:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    border-right: 0
+}
+.trainer-progress-identity .ai-progress-stats strong:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    color: var(--fg);
+    font-size: 18px;
+    font-weight: 600
+}
+.trainer-progress-identity .ai-progress-stats span:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    color: var(--secondary-label-fg);
+    font-size: 12px;
+    font-weight: 500
+}
+.trainer-progress-identity .body-progress-map:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    border-color: var(--border);
+    background: var(--surface-raised)
+}
+.trainer-progress-identity .body-progress-map > header span:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    color: var(--secondary-label-fg);
+    font-size: 12px;
+    font-weight: 500
+}
+.trainer-progress-identity .body-progress-map > header h3:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    color: var(--fg);
+    font-size: 16px;
+    font-weight: 600
+}
+.trainer-progress-identity .body-progress-modes:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    border-radius: var(--radius-md);
+    background: transparent
+}
+.trainer-progress-identity .body-progress-modes:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *))::before {
+    border-color: var(--border);
+    background: var(--surface-sunken)
+}
+.trainer-progress-identity .body-progress-modes button:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    border-radius: var(--radius-md);
+    color: var(--secondary-label-fg);
+    font-size: var(--type-body-size);
+    font-weight: 500
+}
+.trainer-progress-identity .body-progress-modes button[aria-pressed='true']:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    color: var(--fg);
+    box-shadow: none
+}
+.trainer-progress-identity .body-progress-sides:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    border-radius: var(--radius-pill);
+    background: transparent
+}
+.trainer-progress-identity .body-progress-sides:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *))::before {
+    border-color: var(--border);
+    background: var(--surface-sunken)
+}
+.trainer-progress-identity .body-progress-sides button:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    border-radius: var(--radius-pill);
+    font-size: var(--type-caption-size);
+    font-weight: 500
+}
+.trainer-progress-identity .body-progress-sides button[aria-pressed='true']:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    color: var(--fg);
+    box-shadow: none
+}
+.trainer-progress-identity .body-progress-visual:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    background: transparent
+}
+.trainer-progress-identity .body-progress-overlay:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    filter: none
+}
+.trainer-progress-identity .body-progress-detail:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    border-color: var(--border);
+    background: transparent
+}
+.trainer-progress-identity .client-progress-wins:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    border-color: var(--border)
+}
+.trainer-progress-identity .client-progress-comparison:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    border-color: var(--border)
+}
+.trainer-progress-identity .client-progress-overview:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    border: 1px solid var(--fg)
+}
+.trainer-progress-identity .client-progress-wins h3:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    color: var(--fg);
+    font-size: 14px;
+    font-weight: 600
+}
+.trainer-progress-identity .client-progress-comparison h3:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    color: var(--fg);
+    font-size: 14px;
+    font-weight: 600
+}
+.trainer-progress-identity .client-progress-measurements-story h3:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    color: var(--fg);
+    font-size: 14px;
+    font-weight: 600
+}
+.trainer-progress-identity .client-progress-regularity-story h3:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    color: var(--fg);
+    font-size: 14px;
+    font-weight: 600
+}
+.trainer-progress-identity .client-progress-goal-story h3:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    color: var(--fg);
+    font-weight: 600
+}
+.trainer-progress-identity .client-progress-main-now h3:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    color: var(--fg);
+    font-size: 14px;
+    font-weight: 600
+}
+.trainer-progress-identity .client-progress-wins article > span:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    background: var(--success);
+    box-shadow: none
+}
+.trainer-progress-identity .client-progress-wins article strong:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    font-size: 12px
+}
+.trainer-progress-identity .client-progress-wins article p:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    font-size: 12px
+}
+.trainer-progress-identity .client-progress-goal-story p:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    font-size: 12px
+}
+.trainer-progress-identity .client-progress-main-now p:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    font-size: 12px
+}
+.trainer-progress-identity .client-progress-main-now:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    border-bottom: 1px solid var(--border);
+    background: transparent
+}
+.trainer-progress-identity .client-progress-main-now h3:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    font-size: 18px
+}
+.trainer-progress-identity .client-progress-overview .client-progress-goal-story:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    background: transparent
+}
+.trainer-progress-identity .client-progress-overview .client-progress-goal-story.empty:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    background: transparent
+}
+.trainer-progress-identity .client-progress-overview .client-progress-goal-story h3:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    font-size: 16px
+}
+.trainer-progress-identity .client-progress-overview .client-progress-story-state:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    border-top: 1px solid var(--border);
+    background: transparent
+}
+.trainer-progress-identity .client-progress-comparison > header p:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    color: var(--secondary-label-fg);
+    font-size: 11px
+}
+.trainer-progress-identity .period-comparison-facts dt span:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    color: var(--secondary-label-fg);
+    font-size: 11px
+}
+.trainer-progress-identity .period-comparison-facts dt:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    font-size: 12px
+}
+.trainer-progress-identity .period-comparison-limitation:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    font-size: 12px
+}
+.trainer-progress-identity .period-comparison-facts dd:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    font-size: 16px;
+    font-weight: 600
+}
+.trainer-progress-identity .period-comparison-facts > div.positive dd:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    color: var(--success-fg)
+}
+.trainer-progress-identity .client-progress-measurements-story:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    border: 1px solid var(--border)
+}
+.trainer-progress-identity .client-progress-measurements-story > header span:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    color: var(--secondary-label-fg);
+    font-size: 11px
+}
+.trainer-progress-identity .measurement-story-current span:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    color: var(--secondary-label-fg);
+    font-size: 11px
+}
+.trainer-progress-identity .measurement-story-current small:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    color: var(--secondary-label-fg);
+    font-size: 11px
+}
+.trainer-progress-identity .measurement-story-facts dt:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    color: var(--secondary-label-fg);
+    font-size: 11px
+}
+.trainer-progress-identity .measurement-story-selector button:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    font-size: 12px
+}
+.trainer-progress-identity .measurement-story-facts dd:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    font-size: 12px
+}
+.trainer-progress-identity .measurement-story-explanation p:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    font-size: 12px
+}
+.trainer-progress-identity .measurement-story-after-period:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    font-size: 12px
+}
+.trainer-progress-identity .client-progress-regularity-story:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    border: 1px solid var(--border)
+}
+.trainer-progress-identity .regularity-story-facts dt:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    color: var(--secondary-label-fg);
+    font-size: 11px
+}
+.trainer-progress-identity .regularity-story-facts dd:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    font-size: 12px
+}
+.trainer-progress-identity .client-progress-goal-story > span:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    color: var(--secondary-label-fg);
+    font-size: 12px;
+    font-weight: 500
+}
+.trainer-progress-identity .client-progress-goal-story.empty:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    border-color: var(--border);
+    border-radius: 14px;
+    background: var(--surface-elevated)
+}
+.trainer-progress-identity .trainer-progress-signals:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    border-radius: 14px;
+    background: var(--surface-elevated)
+}
+.trainer-progress-identity .client-copy-toggle:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    border-color: var(--border)
+}
+.trainer-progress-identity .client-copy-toggle .link:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    color: var(--fg);
+    font-size: 12px;
+    font-weight: 500
+}
+.trainer-progress-identity .ai-progress-auto-error:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    border: 1px solid var(--danger-border);
+    border-radius: 14px;
+    background: var(--surface-elevated)
+}
+.trainer-progress-identity .ai-progress-empty:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    border-color: var(--border);
+    background: var(--surface-elevated)
+}
+.trainer-progress-identity .trainer-progress-route-card:focus-visible:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    outline: 2px solid var(--fg);
+    outline-offset: 2px
+}
+.trainer-progress-identity .trainer-progress-route-card span:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    color: var(--secondary-label-fg);
+    font-size: 12px;
+    font-weight: 400
+}
+.trainer-progress-identity .trainer-progress-route-card > svg:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    color: var(--secondary-label-fg);
+    stroke-width: 1.8
+}
+.trainer-progress-identity .trainer-progress-route-meta svg:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    color: var(--secondary-label-fg);
+    stroke-width: 1.8
+}
+.trainer-progress-identity .trainer-progress-route-meta b:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    color: var(--fg);
+    font-size: 18px;
+    font-weight: 600
+}
+.trainer-progress-identity .running-progress-periods:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    border-color: var(--border);
+    border-radius: 14px;
+    background: var(--surface-sunken)
+}
+.trainer-progress-identity .running-progress-periods button:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    border-radius: 10px;
+    color: var(--secondary-label-fg);
+    font-size: 12px;
+    font-weight: 500
+}
+.trainer-progress-identity .running-progress-periods button.active:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    background: var(--surface-raised);
+    color: var(--fg);
+    box-shadow: none
+}
+.trainer-progress-identity .running-progress-total strong:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    color: var(--fg);
+    font-size: 24px;
+    font-weight: 600
+}
+.trainer-progress-identity .running-progress-total span:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    color: var(--secondary-label-fg);
+    font-size: 14px;
+    font-weight: 400
+}
+.trainer-progress-identity .running-progress-metrics > div:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    background: var(--surface-elevated)
+}
+.trainer-progress-identity .running-progress-metrics strong:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    color: var(--fg);
+    font-size: 18px;
+    font-weight: 600
+}
+.trainer-progress-identity .running-progress-metrics span:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    color: var(--secondary-label-fg);
+    font-size: 12px
+}
+.trainer-progress-identity .running-progress-insight:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    border: 1px solid var(--border);
+    color: var(--fg)
+}
+.trainer-progress-identity .trainer-measurements-workspace-head > span:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    color: var(--secondary-label-fg);
+    font-size: 12px;
+    font-weight: 400
+}
+.trainer-progress-identity .metric-tab:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    font-size: 12px;
+    font-weight: 500;
+    box-shadow: none
+}
+.trainer-progress-identity .measurement-trend .chart:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    background: transparent;
+    box-shadow: none
+}
+.trainer-progress-identity .measurement-trend .chart h2:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    color: var(--fg);
+    font-size: 16px;
+    font-weight: 600
+}
+.trainer-progress-identity .measurement-trend .recharts-cartesian-grid line:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    stroke: var(--border)
+}
+.trainer-progress-identity .measurement-trend .recharts-line-curve:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    stroke: var(--mono-primary)
+}
+.trainer-progress-identity .measurement-actions:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    border-color: var(--border)
+}
+.trainer-progress-identity .measurement-actions button:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    border-radius: 14px;
+    font-size: 12px;
+    font-weight: 500;
+    box-shadow: none
+}
+.trainer-progress-identity .measurement-actions .measurement-primary-action:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    border: 1px solid var(--mono-primary)
+}
+.trainer-progress-identity .measurement-actions .link:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    color: var(--fg)
+}
+.trainer-progress-identity .progress-form-card:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    box-shadow: none
+}
+.trainer-progress-identity .progress-history:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    background: transparent;
+    box-shadow: none
+}
+.trainer-progress-identity .metrics-manager:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    background: transparent;
+    box-shadow: none
+}
+.trainer-progress-identity .progress-form-card h2:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    color: var(--fg);
+    font-size: 18px;
+    font-weight: 600
+}
+.trainer-progress-identity .progress-history h2:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    color: var(--fg);
+    font-size: 18px;
+    font-weight: 600
+}
+.trainer-progress-identity .metrics-manager h2:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    color: var(--fg);
+    font-size: 18px;
+    font-weight: 600
+}
+.trainer-progress-identity .field:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    color: var(--secondary-label-fg);
+    font-size: 12px;
+    font-weight: 500
+}
+.trainer-progress-identity input:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    border: 1px solid var(--border);
+    font-weight: 400;
+    box-shadow: none
+}
+.trainer-progress-identity select:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    border: 1px solid var(--border);
+    font-weight: 400;
+    box-shadow: none
+}
+.trainer-progress-identity textarea:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    font-weight: 400;
+    box-shadow: none
+}
+.trainer-progress-identity input:focus:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    border-color: var(--mono-primary);
+    outline: 2px solid var(--accent-ring);
+    outline-offset: 1px
+}
+.trainer-progress-identity select:focus:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    border-color: var(--mono-primary);
+    outline: 2px solid var(--accent-ring);
+    outline-offset: 1px
+}
+.trainer-progress-identity textarea:focus:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    outline: 2px solid var(--accent-ring);
+    outline-offset: 1px
+}
+.trainer-progress-identity .progress-form-card .actions button:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    font-size: 14px;
+    font-weight: 500;
+    box-shadow: none
+}
+.trainer-progress-identity .metric-preset-row button:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    border-radius: 14px;
+    font-size: 14px;
+    font-weight: 500;
+    box-shadow: none
+}
+.trainer-progress-identity .inline-form button:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    border-radius: 14px;
+    font-size: 14px;
+    font-weight: 500;
+    box-shadow: none
+}
+.trainer-progress-identity .progress-form-card .primary:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    border: 1px solid var(--mono-primary)
+}
+.trainer-progress-identity .inline-form button:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    border: 1px solid var(--mono-primary)
+}
+.trainer-progress-identity .progress-form-card .secondary:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    border: 1px solid var(--border)
+}
+.trainer-progress-identity .metric-preset-row .secondary:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--fg)
+}
+.trainer-progress-identity button:disabled:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    border-color: var(--border)
+}
+.trainer-progress-identity .progress-history .card:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    border-color: var(--border);
+    border-radius: 14px;
+    background: var(--surface-elevated);
+    box-shadow: none
+}
+.trainer-progress-identity .progress-history .card strong:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    color: var(--fg);
+    font-size: 14px;
+    font-weight: 500
+}
+.trainer-progress-identity .progress-history .card p:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    color: var(--secondary-label-fg);
+    font-size: 12px;
+    font-weight: 400
+}
+.trainer-progress-identity .row-actions .link:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    color: var(--fg);
+    font-size: 12px;
+    font-weight: 500
+}
+.trainer-progress-identity .metrics-manager .link:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    font-size: 12px;
+    font-weight: 500
+}
+.trainer-progress-identity .metrics-manager .danger:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    color: var(--danger)
+}
+.trainer-progress-identity .metric:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    border-color: var(--border)
+}
+.trainer-progress-identity .metric span:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    color: var(--secondary-label-fg);
+    font-size: 12px;
+    font-weight: 400
+}
+.trainer-progress-identity .metric-manual-hint:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    color: var(--secondary-label-fg);
+    font-size: 12px;
+    font-weight: 400
+}
+.trainer-progress-identity .measurement-section-heading > span:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    color: var(--secondary-label-fg);
+    font-size: 12px;
+    font-weight: 400
+}
+.trainer-progress-identity .error:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    color: var(--danger);
+    font-size: 12px;
+    font-weight: 500
+}
+.trainer-progress-identity .state-panel h2:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    color: var(--fg);
+    font-size: 18px;
+    font-weight: 600
+}
+.trainer-progress-identity .state-panel p:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    font-size: 14px;
+    font-weight: 400
+}
+.trainer-progress-identity .ai-progress-sheet:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    border-color: var(--border);
+    border-radius: 18px 18px 0 0;
+    background: var(--surface-elevated);
+    box-shadow: none
+}
+.trainer-progress-identity .exercise-picker:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    box-shadow: none
+}
+.trainer-progress-identity .picker-close:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    border-radius: 14px;
+    color: var(--fg)
+}
+.trainer-progress-identity .picker-item:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    border-color: var(--border);
+    background: transparent;
+    color: var(--fg);
+    font-size: 14px;
+    font-weight: 500
+}
+.trainer-progress-identity .tab-bar a:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    background: transparent
+}
+@media (max-width:640px) {
+    .trainer-progress-identity .ai-progress-stats div:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+        border-right: 0;
+        border-bottom: 1px solid var(--border)
+    }
+}
+@media (max-width:640px) {
+    .trainer-progress-identity .ai-progress-stats div:last-child:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+        border-bottom: 0
+    }
+}
+.body-progress-detail > .body-progress-action-row:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    border-top: 1px solid var(--border);
+    background: transparent;
+    color: var(--fg);
+    font-size: var(--type-body-size);
+    font-weight: var(--weight-medium);
+    text-decoration: none;
+    box-shadow: none
+}
+.client-body-map-disclosure > .body-progress-map:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    background: transparent
+}
+.body-progress-zone-picker > summary:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    color: var(--secondary-label-fg);
+    font-size: var(--type-caption-size);
+    text-decoration: underline
+}
+.body-progress-zone-list > button:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    border: 1px solid transparent;
+    border-radius: var(--radius-md);
+    background: transparent;
+    color: var(--fg);
+    font-size: var(--type-body-size);
+    font-weight: 400;
+    box-shadow: none
+}
+.body-progress-zone-list > button[aria-pressed='true']:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    border-color: var(--border);
+    background: var(--surface-elevated)
+}
+.body-progress-zone-list > button strong:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    font-size: var(--type-body-size);
+    font-weight: 600
+}
+.body-progress-zone-list > button:focus-visible:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    outline: 2px solid var(--fg);
+    outline-offset: 2px
+}
+.body-progress-zone-picker > summary:focus-visible:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    outline: 2px solid var(--fg);
+    outline-offset: 2px
+}
+.body-progress-list-fallback > p:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    color: var(--secondary-label-fg);
+    font-size: var(--type-body-size)
+}
+.progress-period-dates:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    color: var(--muted);
+    font-size: var(--type-caption-size)
+}
+.progress-view-tabs button:where(:not(:is(.fit-client-lime.client-workouts-identity:has(#workouts-presets-panel:not([hidden])),.fit-client-lime.client-workouts-identity:has(#workouts-presets-panel:not([hidden])) *,.fit-client-lime.workout-create-edit-identity:has(.favorite-workout-editor-page),.fit-client-lime.workout-create-edit-identity:has(.favorite-workout-editor-page) *,.fit-lime-shell:has(.workout-templates-page,.workout-template-source-page),.fit-lime-shell:has(.workout-templates-page,.workout-template-source-page) *,.fit-lime-shell.workout-create-edit-identity:has(.workout-template-editor-page),.fit-lime-shell.workout-create-edit-identity:has(.workout-template-editor-page) *))):where(:not(:is(.fit-client-lime.client-workouts-identity:has(> .content > .client-workouts-page > :is(#workouts-current-panel:not([hidden]),#workouts-history-panel:not([hidden]))),.fit-client-lime.client-workouts-identity:has(> .content > .client-workouts-page > :is(#workouts-current-panel:not([hidden]),#workouts-history-panel:not([hidden]))) *,.fit-lime-shell.client-workouts-identity:has(> .content > .trainer-client-workouts-page),.fit-lime-shell.client-workouts-identity:has(> .content > .trainer-client-workouts-page) *))):where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    font-size: var(--type-caption-size)
+}
+.progress-analysis-preview:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    border: 1px solid var(--border);
+    background: var(--surface-sunken)
+}
+.progress-analysis-preview-head h3:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    font-size: 16px
+}
+.progress-analysis-preview-head span:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    color: var(--muted);
+    font-size: var(--type-caption-size)
+}
+.progress-analysis-update:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    color: var(--success-fg)
+}
+.progress-overview-panel .period-exercise-results > h3 + .muted:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    font-size: var(--type-caption-size)
+}
+.progress-pro-intro:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    color: var(--muted);
+    font-size: var(--type-caption-size)
+}
+.progress-pro-list:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    background: transparent
+}
+.progress-details-copy > span:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    font-weight: 500
+}
+.progress-details-copy > small:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    color: var(--muted);
+    font-size: var(--type-micro-size);
+    font-weight: 400
+}
+.progress-pro-section .running-progress-card:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    background: transparent
+}
+.results-center-filters label:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    font-size: var(--type-caption-size)
+}
+.center-result-row:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    border-top: 1px solid var(--border)
+}
+.center-result-row header span:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    color: var(--muted);
+    font-size: var(--type-caption-size)
+}
+.volume-source-sets ul:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    font-size: var(--type-caption-size)
+}
+.weekly-load-list > li:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    border-top: 1px solid var(--border)
+}
+.weekly-load-list header strong:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    font-size: var(--type-caption-size)
+}
+.weekly-load-bar:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    border-radius: var(--radius-pill);
+    background: var(--surface-sunken)
+}
+.weekly-load-bar span:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    background: var(--fg);
+    border-radius: inherit
+}
+.client-results-center summary:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *))::before {
+    border-top: 5px solid transparent;
+    border-bottom: 5px solid transparent;
+    border-left: 7px solid currentColor
+}
+.weekly-training-load summary:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *))::before {
+    border-top: 5px solid transparent;
+    border-bottom: 5px solid transparent;
+    border-left: 7px solid currentColor
+}
+.athlete-achievements-preview:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    border: 1px solid #323238
+}
+.athlete-achievements-heading h2:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    font-size: 18px;
+    letter-spacing: -.02em
+}
+.athlete-achievements-heading > span:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    font-size: 13px
+}
+.athlete-achievements-preview a:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    font-size: 14px;
+    text-decoration: none
+}
+.athlete-achievements-state:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    color: #c6c6cb;
+    font-size: 14px
+}
+.athlete-achievements-state button:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    color: #19191c;
+    background: var(--fit-brand-accent)
+}
+.athlete-achievement-badge:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    color: #f8f8f6
+}
+.athlete-achievement-badge.has-static-art:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    border-radius: 20%;
+    background: #232328;
+    box-shadow: none
+}
+.athlete-achievement-badge.has-static-art.is-earned:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    box-shadow: none
+}
+.athlete-achievement-badge.has-static-art:not(.is-earned) .athlete-achievement-static-art:where(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *)) {
+    filter: grayscale(1) brightness(.7);
+    opacity: .82
+}
+
+/* MC5.2: active athlete/trainer workout list/history residual authored paint.
+   Zero-specificity route ownership; accepted Lime composition stays below. */
+.card-meta:where(:is(.fit-client-lime.client-workouts-identity:has(> .content > .client-workouts-page > :is(#workouts-current-panel:not([hidden]),#workouts-history-panel:not([hidden]))),.fit-client-lime.client-workouts-identity:has(> .content > .client-workouts-page > :is(#workouts-current-panel:not([hidden]),#workouts-history-panel:not([hidden]))) *,.fit-lime-shell.client-workouts-identity:has(> .content > .trainer-client-workouts-page),.fit-lime-shell.client-workouts-identity:has(> .content > .trainer-client-workouts-page) *)) {
+    color: var(--muted);
+    font-size: var(--text-caption)
+}
+.past-workout-plan-card:where(:is(.fit-client-lime.client-workouts-identity:has(> .content > .client-workouts-page > :is(#workouts-current-panel:not([hidden]),#workouts-history-panel:not([hidden]))),.fit-client-lime.client-workouts-identity:has(> .content > .client-workouts-page > :is(#workouts-current-panel:not([hidden]),#workouts-history-panel:not([hidden]))) *,.fit-lime-shell.client-workouts-identity:has(> .content > .trainer-client-workouts-page),.fit-lime-shell.client-workouts-identity:has(> .content > .trainer-client-workouts-page) *)) {
+    text-decoration: none
+}
+.workout-chronicle-open:where(:is(.fit-client-lime.client-workouts-identity:has(> .content > .client-workouts-page > :is(#workouts-current-panel:not([hidden]),#workouts-history-panel:not([hidden]))),.fit-client-lime.client-workouts-identity:has(> .content > .client-workouts-page > :is(#workouts-current-panel:not([hidden]),#workouts-history-panel:not([hidden]))) *,.fit-lime-shell.client-workouts-identity:has(> .content > .trainer-client-workouts-page),.fit-lime-shell.client-workouts-identity:has(> .content > .trainer-client-workouts-page) *)) {
+    border-radius: inherit;
+    color: inherit;
+    text-decoration: none
+}
+.workout-chronicle-copy:where(:is(.fit-client-lime.client-workouts-identity:has(> .content > .client-workouts-page > :is(#workouts-current-panel:not([hidden]),#workouts-history-panel:not([hidden]))),.fit-client-lime.client-workouts-identity:has(> .content > .client-workouts-page > :is(#workouts-current-panel:not([hidden]),#workouts-history-panel:not([hidden]))) *,.fit-lime-shell.client-workouts-identity:has(> .content > .trainer-client-workouts-page),.fit-lime-shell.client-workouts-identity:has(> .content > .trainer-client-workouts-page) *)) {
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    background: var(--surface-sunken);
+    color: var(--fg)
+}
+.workout-chronicle-exercises:where(:is(.fit-client-lime.client-workouts-identity:has(> .content > .client-workouts-page > :is(#workouts-current-panel:not([hidden]),#workouts-history-panel:not([hidden]))),.fit-client-lime.client-workouts-identity:has(> .content > .client-workouts-page > :is(#workouts-current-panel:not([hidden]),#workouts-history-panel:not([hidden]))) *,.fit-lime-shell.client-workouts-identity:has(> .content > .trainer-client-workouts-page),.fit-lime-shell.client-workouts-identity:has(> .content > .trainer-client-workouts-page) *)) {
+    border-top: 1px solid var(--hairline);
+    border-bottom: 1px solid var(--hairline)
+}
+.workout-chronicle-exercise-name .workout-exercise-comment:where(:not(:is(.fit-lime-shell.workout-create-edit-identity:is(.coach-workout-reference,.client-workout-reference):has(.workout-form-page:not(.workout-template-editor-page,.favorite-workout-editor-page),.today-review),.fit-lime-shell.workout-create-edit-identity:is(.coach-workout-reference,.client-workout-reference):has(.workout-form-page:not(.workout-template-editor-page,.favorite-workout-editor-page),.today-review) *))):where(:is(.fit-client-lime.client-workouts-identity:has(> .content > .client-workouts-page > :is(#workouts-current-panel:not([hidden]),#workouts-history-panel:not([hidden]))),.fit-client-lime.client-workouts-identity:has(> .content > .client-workouts-page > :is(#workouts-current-panel:not([hidden]),#workouts-history-panel:not([hidden]))) *,.fit-lime-shell.client-workouts-identity:has(> .content > .trainer-client-workouts-page),.fit-lime-shell.client-workouts-identity:has(> .content > .trainer-client-workouts-page) *)) {
+    color: var(--fg)
+}
+.calendar-day-details .workout-chronicle-exercise:where(:is(.fit-client-lime.client-workouts-identity:has(> .content > .client-workouts-page > :is(#workouts-current-panel:not([hidden]),#workouts-history-panel:not([hidden]))),.fit-client-lime.client-workouts-identity:has(> .content > .client-workouts-page > :is(#workouts-current-panel:not([hidden]),#workouts-history-panel:not([hidden]))) *,.fit-lime-shell.client-workouts-identity:has(> .content > .trainer-client-workouts-page),.fit-lime-shell.client-workouts-identity:has(> .content > .trainer-client-workouts-page) *)) {
+    border-bottom: 1px solid var(--border)
+}
+.workout-chronicle-card.calendar-day-details .workout-chronicle-exercise-name:where(:is(.fit-client-lime.client-workouts-identity:has(> .content > .client-workouts-page > :is(#workouts-current-panel:not([hidden]),#workouts-history-panel:not([hidden]))),.fit-client-lime.client-workouts-identity:has(> .content > .client-workouts-page > :is(#workouts-current-panel:not([hidden]),#workouts-history-panel:not([hidden]))) *,.fit-lime-shell.client-workouts-identity:has(> .content > .trainer-client-workouts-page),.fit-lime-shell.client-workouts-identity:has(> .content > .trainer-client-workouts-page) *)) {
+    color: var(--fg);
+    font-size: 16px
+}
+.workout-chronicle-card.calendar-day-details .workout-chronicle-exercise > strong:where(:is(.fit-client-lime.client-workouts-identity:has(> .content > .client-workouts-page > :is(#workouts-current-panel:not([hidden]),#workouts-history-panel:not([hidden]))),.fit-client-lime.client-workouts-identity:has(> .content > .client-workouts-page > :is(#workouts-current-panel:not([hidden]),#workouts-history-panel:not([hidden]))) *,.fit-lime-shell.client-workouts-identity:has(> .content > .trainer-client-workouts-page),.fit-lime-shell.client-workouts-identity:has(> .content > .trainer-client-workouts-page) *)) {
+    color: var(--secondary-label-fg);
+    font-weight: 400
+}
+.workout-chronicle-muscles:where(:is(.fit-client-lime.client-workouts-identity:has(> .content > .client-workouts-page > :is(#workouts-current-panel:not([hidden]),#workouts-history-panel:not([hidden]))),.fit-client-lime.client-workouts-identity:has(> .content > .client-workouts-page > :is(#workouts-current-panel:not([hidden]),#workouts-history-panel:not([hidden]))) *,.fit-lime-shell.client-workouts-identity:has(> .content > .trainer-client-workouts-page),.fit-lime-shell.client-workouts-identity:has(> .content > .trainer-client-workouts-page) *)) {
+    font-weight: 500
+}
+.workout-chronicle-muscles span:where(:is(.fit-client-lime.client-workouts-identity:has(> .content > .client-workouts-page > :is(#workouts-current-panel:not([hidden]),#workouts-history-panel:not([hidden]))),.fit-client-lime.client-workouts-identity:has(> .content > .client-workouts-page > :is(#workouts-current-panel:not([hidden]),#workouts-history-panel:not([hidden]))) *,.fit-lime-shell.client-workouts-identity:has(> .content > .trainer-client-workouts-page),.fit-lime-shell.client-workouts-identity:has(> .content > .trainer-client-workouts-page) *)) {
+    color: var(--fg)
+}
+.client-workouts-identity .client-workout-section-head .eyebrow:where(:is(.fit-client-lime.client-workouts-identity:has(> .content > .client-workouts-page > :is(#workouts-current-panel:not([hidden]),#workouts-history-panel:not([hidden]))),.fit-client-lime.client-workouts-identity:has(> .content > .client-workouts-page > :is(#workouts-current-panel:not([hidden]),#workouts-history-panel:not([hidden]))) *,.fit-lime-shell.client-workouts-identity:has(> .content > .trainer-client-workouts-page),.fit-lime-shell.client-workouts-identity:has(> .content > .trainer-client-workouts-page) *)) {
+    color: var(--muted);
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: .06em
+}
+.client-workouts-identity .client-workout-section-head h2:where(:not(:is(.fit-client-lime.client-workouts-identity:has(#workouts-presets-panel:not([hidden])),.fit-client-lime.client-workouts-identity:has(#workouts-presets-panel:not([hidden])) *,.fit-client-lime.workout-create-edit-identity:has(.favorite-workout-editor-page),.fit-client-lime.workout-create-edit-identity:has(.favorite-workout-editor-page) *,.fit-lime-shell:has(.workout-templates-page,.workout-template-source-page),.fit-lime-shell:has(.workout-templates-page,.workout-template-source-page) *,.fit-lime-shell.workout-create-edit-identity:has(.workout-template-editor-page),.fit-lime-shell.workout-create-edit-identity:has(.workout-template-editor-page) *))):where(:is(.fit-client-lime.client-workouts-identity:has(> .content > .client-workouts-page > :is(#workouts-current-panel:not([hidden]),#workouts-history-panel:not([hidden]))),.fit-client-lime.client-workouts-identity:has(> .content > .client-workouts-page > :is(#workouts-current-panel:not([hidden]),#workouts-history-panel:not([hidden]))) *,.fit-lime-shell.client-workouts-identity:has(> .content > .trainer-client-workouts-page),.fit-lime-shell.client-workouts-identity:has(> .content > .trainer-client-workouts-page) *)) {
+    font-size: 18px
+}
+.client-workouts-identity .client-workout-section-head h2:where(:not(:is(.fit-client-lime.client-workouts-identity:has(#workouts-presets-panel:not([hidden])),.fit-client-lime.client-workouts-identity:has(#workouts-presets-panel:not([hidden])) *,.fit-client-lime.workout-create-edit-identity:has(.favorite-workout-editor-page),.fit-client-lime.workout-create-edit-identity:has(.favorite-workout-editor-page) *,.fit-lime-shell:has(.workout-templates-page,.workout-template-source-page),.fit-lime-shell:has(.workout-templates-page,.workout-template-source-page) *,.fit-lime-shell.workout-create-edit-identity:has(.workout-template-editor-page),.fit-lime-shell.workout-create-edit-identity:has(.workout-template-editor-page) *))):where(:is(.fit-client-lime.client-workouts-identity:has(> .content > .client-workouts-page > :is(#workouts-current-panel:not([hidden]),#workouts-history-panel:not([hidden]))),.fit-client-lime.client-workouts-identity:has(> .content > .client-workouts-page > :is(#workouts-current-panel:not([hidden]),#workouts-history-panel:not([hidden]))) *,.fit-lime-shell.client-workouts-identity:has(> .content > .trainer-client-workouts-page),.fit-lime-shell.client-workouts-identity:has(> .content > .trainer-client-workouts-page) *)) {
+    letter-spacing: -.012em
+}
+.client-workouts-identity .client-history-view-toggle:where(:is(.fit-client-lime.client-workouts-identity:has(> .content > .client-workouts-page > :is(#workouts-current-panel:not([hidden]),#workouts-history-panel:not([hidden]))),.fit-client-lime.client-workouts-identity:has(> .content > .client-workouts-page > :is(#workouts-current-panel:not([hidden]),#workouts-history-panel:not([hidden]))) *,.fit-lime-shell.client-workouts-identity:has(> .content > .trainer-client-workouts-page),.fit-lime-shell.client-workouts-identity:has(> .content > .trainer-client-workouts-page) *)) {
+    border: 1px solid var(--border)
+}
+.client-workouts-identity .client-history-view-toggle button:where(:is(.fit-client-lime.client-workouts-identity:has(> .content > .client-workouts-page > :is(#workouts-current-panel:not([hidden]),#workouts-history-panel:not([hidden]))),.fit-client-lime.client-workouts-identity:has(> .content > .client-workouts-page > :is(#workouts-current-panel:not([hidden]),#workouts-history-panel:not([hidden]))) *,.fit-lime-shell.client-workouts-identity:has(> .content > .trainer-client-workouts-page),.fit-lime-shell.client-workouts-identity:has(> .content > .trainer-client-workouts-page) *)) {
+    border-radius: 10px;
+    background: transparent;
+    color: var(--secondary-label-fg);
+    font-size: 14px
+}
+.client-workouts-identity .past-workout-plan-card:where(:is(.fit-client-lime.client-workouts-identity:has(> .content > .client-workouts-page > :is(#workouts-current-panel:not([hidden]),#workouts-history-panel:not([hidden]))),.fit-client-lime.client-workouts-identity:has(> .content > .client-workouts-page > :is(#workouts-current-panel:not([hidden]),#workouts-history-panel:not([hidden]))) *,.fit-lime-shell.client-workouts-identity:has(> .content > .trainer-client-workouts-page),.fit-lime-shell.client-workouts-identity:has(> .content > .trainer-client-workouts-page) *)) {
+    border: 1px solid var(--border);
+    color: var(--fg)
+}
+.client-workouts-identity .workout-status:where(:not(:is(.fit-lime-shell.workout-create-edit-identity:is(.coach-workout-reference,.client-workout-reference):has(.workout-form-page:not(.workout-template-editor-page,.favorite-workout-editor-page),.today-review),.fit-lime-shell.workout-create-edit-identity:is(.coach-workout-reference,.client-workout-reference):has(.workout-form-page:not(.workout-template-editor-page,.favorite-workout-editor-page),.today-review) *))):where(:is(.fit-client-lime.client-workouts-identity:has(> .content > .client-workouts-page > :is(#workouts-current-panel:not([hidden]),#workouts-history-panel:not([hidden]))),.fit-client-lime.client-workouts-identity:has(> .content > .client-workouts-page > :is(#workouts-current-panel:not([hidden]),#workouts-history-panel:not([hidden]))) *,.fit-lime-shell.client-workouts-identity:has(> .content > .trainer-client-workouts-page),.fit-lime-shell.client-workouts-identity:has(> .content > .trainer-client-workouts-page) *)) {
+    border-radius: 10px;
+    font-weight: 500
+}
+.client-workouts-identity .workout-status[data-state='current']:where(:not(:is(.fit-lime-shell.workout-create-edit-identity:is(.coach-workout-reference,.client-workout-reference):has(.workout-form-page:not(.workout-template-editor-page,.favorite-workout-editor-page),.today-review),.fit-lime-shell.workout-create-edit-identity:is(.coach-workout-reference,.client-workout-reference):has(.workout-form-page:not(.workout-template-editor-page,.favorite-workout-editor-page),.today-review) *))):where(:is(.fit-client-lime.client-workouts-identity:has(> .content > .client-workouts-page > :is(#workouts-current-panel:not([hidden]),#workouts-history-panel:not([hidden]))),.fit-client-lime.client-workouts-identity:has(> .content > .client-workouts-page > :is(#workouts-current-panel:not([hidden]),#workouts-history-panel:not([hidden]))) *,.fit-lime-shell.client-workouts-identity:has(> .content > .trainer-client-workouts-page),.fit-lime-shell.client-workouts-identity:has(> .content > .trainer-client-workouts-page) *)) {
+    border-color: var(--warning-border);
+    background: var(--warning-surface);
+    color: var(--warning-fg)
+}
+.client-workouts-identity .workout-status[data-tone='success']:where(:not(:is(.fit-lime-shell.workout-create-edit-identity:is(.coach-workout-reference,.client-workout-reference):has(.workout-form-page:not(.workout-template-editor-page,.favorite-workout-editor-page),.today-review),.fit-lime-shell.workout-create-edit-identity:is(.coach-workout-reference,.client-workout-reference):has(.workout-form-page:not(.workout-template-editor-page,.favorite-workout-editor-page),.today-review) *))):where(:is(.fit-client-lime.client-workouts-identity:has(> .content > .client-workouts-page > :is(#workouts-current-panel:not([hidden]),#workouts-history-panel:not([hidden]))),.fit-client-lime.client-workouts-identity:has(> .content > .client-workouts-page > :is(#workouts-current-panel:not([hidden]),#workouts-history-panel:not([hidden]))) *,.fit-lime-shell.client-workouts-identity:has(> .content > .trainer-client-workouts-page),.fit-lime-shell.client-workouts-identity:has(> .content > .trainer-client-workouts-page) *)) {
+    border-color: var(--border);
+    background: var(--surface-sunken)
+}
+.client-workouts-identity .past-workout-plan-copy > strong:where(:is(.fit-client-lime.client-workouts-identity:has(> .content > .client-workouts-page > :is(#workouts-current-panel:not([hidden]),#workouts-history-panel:not([hidden]))),.fit-client-lime.client-workouts-identity:has(> .content > .client-workouts-page > :is(#workouts-current-panel:not([hidden]),#workouts-history-panel:not([hidden]))) *,.fit-lime-shell.client-workouts-identity:has(> .content > .trainer-client-workouts-page),.fit-lime-shell.client-workouts-identity:has(> .content > .trainer-client-workouts-page) *)) {
+    font-weight: 600
+}
+.client-workouts-identity .past-workout-plan-action:where(:is(.fit-client-lime.client-workouts-identity:has(> .content > .client-workouts-page > :is(#workouts-current-panel:not([hidden]),#workouts-history-panel:not([hidden]))),.fit-client-lime.client-workouts-identity:has(> .content > .client-workouts-page > :is(#workouts-current-panel:not([hidden]),#workouts-history-panel:not([hidden]))) *,.fit-lime-shell.client-workouts-identity:has(> .content > .trainer-client-workouts-page),.fit-lime-shell.client-workouts-identity:has(> .content > .trainer-client-workouts-page) *)) {
+    color: var(--fg);
+    font-size: 12px;
+    font-weight: 500
+}
+.client-workouts-identity .past-workout-plan-action svg:where(:is(.fit-client-lime.client-workouts-identity:has(> .content > .client-workouts-page > :is(#workouts-current-panel:not([hidden]),#workouts-history-panel:not([hidden]))),.fit-client-lime.client-workouts-identity:has(> .content > .client-workouts-page > :is(#workouts-current-panel:not([hidden]),#workouts-history-panel:not([hidden]))) *,.fit-lime-shell.client-workouts-identity:has(> .content > .trainer-client-workouts-page),.fit-lime-shell.client-workouts-identity:has(> .content > .trainer-client-workouts-page) *)) {
+    color: var(--muted)
+}
+.client-workouts-identity .workout-pr-badge:where(:is(.fit-client-lime.client-workouts-identity:has(> .content > .client-workouts-page > :is(#workouts-current-panel:not([hidden]),#workouts-history-panel:not([hidden]))),.fit-client-lime.client-workouts-identity:has(> .content > .client-workouts-page > :is(#workouts-current-panel:not([hidden]),#workouts-history-panel:not([hidden]))) *,.fit-lime-shell.client-workouts-identity:has(> .content > .trainer-client-workouts-page),.fit-lime-shell.client-workouts-identity:has(> .content > .trainer-client-workouts-page) *)) {
+    background: transparent;
+    font-weight: 500
+}
+.client-workouts-identity .workout-chronicle-card .card-author:where(:is(.fit-client-lime.client-workouts-identity:has(> .content > .client-workouts-page > :is(#workouts-current-panel:not([hidden]),#workouts-history-panel:not([hidden]))),.fit-client-lime.client-workouts-identity:has(> .content > .client-workouts-page > :is(#workouts-current-panel:not([hidden]),#workouts-history-panel:not([hidden]))) *,.fit-lime-shell.client-workouts-identity:has(> .content > .trainer-client-workouts-page),.fit-lime-shell.client-workouts-identity:has(> .content > .trainer-client-workouts-page) *)) {
+    font-size: 12px;
+    font-weight: 500
+}
+.client-workouts-identity .workout-chronicle-exercises:where(:is(.fit-client-lime.client-workouts-identity:has(> .content > .client-workouts-page > :is(#workouts-current-panel:not([hidden]),#workouts-history-panel:not([hidden]))),.fit-client-lime.client-workouts-identity:has(> .content > .client-workouts-page > :is(#workouts-current-panel:not([hidden]),#workouts-history-panel:not([hidden]))) *,.fit-lime-shell.client-workouts-identity:has(> .content > .trainer-client-workouts-page),.fit-lime-shell.client-workouts-identity:has(> .content > .trainer-client-workouts-page) *)) {
+    border-color: var(--border)
+}
+.client-workouts-identity .workout-chronicle-exercise-name:where(:is(.fit-client-lime.client-workouts-identity:has(> .content > .client-workouts-page > :is(#workouts-current-panel:not([hidden]),#workouts-history-panel:not([hidden]))),.fit-client-lime.client-workouts-identity:has(> .content > .client-workouts-page > :is(#workouts-current-panel:not([hidden]),#workouts-history-panel:not([hidden]))) *,.fit-lime-shell.client-workouts-identity:has(> .content > .trainer-client-workouts-page),.fit-lime-shell.client-workouts-identity:has(> .content > .trainer-client-workouts-page) *)) {
+    color: var(--secondary-label-fg);
+    font-size: 14px
+}
+.client-workouts-identity .workout-chronicle-exercise > strong:where(:is(.fit-client-lime.client-workouts-identity:has(> .content > .client-workouts-page > :is(#workouts-current-panel:not([hidden]),#workouts-history-panel:not([hidden]))),.fit-client-lime.client-workouts-identity:has(> .content > .client-workouts-page > :is(#workouts-current-panel:not([hidden]),#workouts-history-panel:not([hidden]))) *,.fit-lime-shell.client-workouts-identity:has(> .content > .trainer-client-workouts-page),.fit-lime-shell.client-workouts-identity:has(> .content > .trainer-client-workouts-page) *)) {
+    font-size: 14px
+}
+.client-workouts-identity .workout-chronicle-more:where(:is(.fit-client-lime.client-workouts-identity:has(> .content > .client-workouts-page > :is(#workouts-current-panel:not([hidden]),#workouts-history-panel:not([hidden]))),.fit-client-lime.client-workouts-identity:has(> .content > .client-workouts-page > :is(#workouts-current-panel:not([hidden]),#workouts-history-panel:not([hidden]))) *,.fit-lime-shell.client-workouts-identity:has(> .content > .trainer-client-workouts-page),.fit-lime-shell.client-workouts-identity:has(> .content > .trainer-client-workouts-page) *)) {
+    font-size: 12px;
+    font-weight: 500
+}
+.client-workouts-identity .workout-chronicle-facts span:where(:is(.fit-client-lime.client-workouts-identity:has(> .content > .client-workouts-page > :is(#workouts-current-panel:not([hidden]),#workouts-history-panel:not([hidden]))),.fit-client-lime.client-workouts-identity:has(> .content > .client-workouts-page > :is(#workouts-current-panel:not([hidden]),#workouts-history-panel:not([hidden]))) *,.fit-lime-shell.client-workouts-identity:has(> .content > .trainer-client-workouts-page),.fit-lime-shell.client-workouts-identity:has(> .content > .trainer-client-workouts-page) *)) {
+    border-radius: 10px;
+    background: var(--surface-sunken);
+    color: var(--secondary-label-fg);
+    font-size: 12px;
+    font-weight: 500
+}
+.client-workouts-identity .workout-chronicle-facts .attention:where(:is(.fit-client-lime.client-workouts-identity:has(> .content > .client-workouts-page > :is(#workouts-current-panel:not([hidden]),#workouts-history-panel:not([hidden]))),.fit-client-lime.client-workouts-identity:has(> .content > .client-workouts-page > :is(#workouts-current-panel:not([hidden]),#workouts-history-panel:not([hidden]))) *,.fit-lime-shell.client-workouts-identity:has(> .content > .trainer-client-workouts-page),.fit-lime-shell.client-workouts-identity:has(> .content > .trainer-client-workouts-page) *)) {
+    color: var(--danger);
+    background: var(--surface-sunken)
+}
+.client-workouts-identity .workout-chronicle-comment:where(:is(.fit-client-lime.client-workouts-identity:has(> .content > .client-workouts-page > :is(#workouts-current-panel:not([hidden]),#workouts-history-panel:not([hidden]))),.fit-client-lime.client-workouts-identity:has(> .content > .client-workouts-page > :is(#workouts-current-panel:not([hidden]),#workouts-history-panel:not([hidden]))) *,.fit-lime-shell.client-workouts-identity:has(> .content > .trainer-client-workouts-page),.fit-lime-shell.client-workouts-identity:has(> .content > .trainer-client-workouts-page) *)) {
+    border-radius: 14px;
+    background: var(--surface-elevated);
+    font-size: 12px
+}
+.client-workouts-identity .workout-chronicle-response:where(:is(.fit-client-lime.client-workouts-identity:has(> .content > .client-workouts-page > :is(#workouts-current-panel:not([hidden]),#workouts-history-panel:not([hidden]))),.fit-client-lime.client-workouts-identity:has(> .content > .client-workouts-page > :is(#workouts-current-panel:not([hidden]),#workouts-history-panel:not([hidden]))) *,.fit-lime-shell.client-workouts-identity:has(> .content > .trainer-client-workouts-page),.fit-lime-shell.client-workouts-identity:has(> .content > .trainer-client-workouts-page) *)) {
+    border-radius: 14px;
+    background: var(--surface-elevated);
+    font-size: 12px
+}
+.client-workouts-identity .workout-chronicle-note-label:where(:is(.fit-client-lime.client-workouts-identity:has(> .content > .client-workouts-page > :is(#workouts-current-panel:not([hidden]),#workouts-history-panel:not([hidden]))),.fit-client-lime.client-workouts-identity:has(> .content > .client-workouts-page > :is(#workouts-current-panel:not([hidden]),#workouts-history-panel:not([hidden]))) *,.fit-lime-shell.client-workouts-identity:has(> .content > .trainer-client-workouts-page),.fit-lime-shell.client-workouts-identity:has(> .content > .trainer-client-workouts-page) *)) {
+    font-size: 12px;
+    font-weight: 500
+}
+.client-workouts-identity .state-panel h2:where(:not(:is(.fit-client-lime.client-workouts-identity:has(#workouts-presets-panel:not([hidden])),.fit-client-lime.client-workouts-identity:has(#workouts-presets-panel:not([hidden])) *,.fit-client-lime.workout-create-edit-identity:has(.favorite-workout-editor-page),.fit-client-lime.workout-create-edit-identity:has(.favorite-workout-editor-page) *,.fit-lime-shell:has(.workout-templates-page,.workout-template-source-page),.fit-lime-shell:has(.workout-templates-page,.workout-template-source-page) *,.fit-lime-shell.workout-create-edit-identity:has(.workout-template-editor-page),.fit-lime-shell.workout-create-edit-identity:has(.workout-template-editor-page) *))):where(:is(.fit-client-lime.client-workouts-identity:has(> .content > .client-workouts-page > :is(#workouts-current-panel:not([hidden]),#workouts-history-panel:not([hidden]))),.fit-client-lime.client-workouts-identity:has(> .content > .client-workouts-page > :is(#workouts-current-panel:not([hidden]),#workouts-history-panel:not([hidden]))) *,.fit-lime-shell.client-workouts-identity:has(> .content > .trainer-client-workouts-page),.fit-lime-shell.client-workouts-identity:has(> .content > .trainer-client-workouts-page) *)) {
+    font-size: 18px;
+    font-weight: 600
+}
+.client-workouts-identity .state-panel-action .button:where(:is(.fit-client-lime.client-workouts-identity:has(> .content > .client-workouts-page > :is(#workouts-current-panel:not([hidden]),#workouts-history-panel:not([hidden]))),.fit-client-lime.client-workouts-identity:has(> .content > .client-workouts-page > :is(#workouts-current-panel:not([hidden]),#workouts-history-panel:not([hidden]))) *,.fit-lime-shell.client-workouts-identity:has(> .content > .trainer-client-workouts-page),.fit-lime-shell.client-workouts-identity:has(> .content > .trainer-client-workouts-page) *)) {
+    border-radius: 14px;
+    font-size: 14px
+}
+.client-workouts-identity .state-panel-action button:where(:not(:is(.fit-client-lime.client-workouts-identity:has(#workouts-presets-panel:not([hidden])),.fit-client-lime.client-workouts-identity:has(#workouts-presets-panel:not([hidden])) *,.fit-client-lime.workout-create-edit-identity:has(.favorite-workout-editor-page),.fit-client-lime.workout-create-edit-identity:has(.favorite-workout-editor-page) *,.fit-lime-shell:has(.workout-templates-page,.workout-template-source-page),.fit-lime-shell:has(.workout-templates-page,.workout-template-source-page) *,.fit-lime-shell.workout-create-edit-identity:has(.workout-template-editor-page),.fit-lime-shell.workout-create-edit-identity:has(.workout-template-editor-page) *))):where(:is(.fit-client-lime.client-workouts-identity:has(> .content > .client-workouts-page > :is(#workouts-current-panel:not([hidden]),#workouts-history-panel:not([hidden]))),.fit-client-lime.client-workouts-identity:has(> .content > .client-workouts-page > :is(#workouts-current-panel:not([hidden]),#workouts-history-panel:not([hidden]))) *,.fit-lime-shell.client-workouts-identity:has(> .content > .trainer-client-workouts-page),.fit-lime-shell.client-workouts-identity:has(> .content > .trainer-client-workouts-page) *)) {
+    border-radius: 14px;
+    background: var(--mono-primary);
+    color: var(--mono-on-primary);
+    font-size: 14px
+}
+.client-workouts-identity .tab-bar a svg:where(:is(.fit-client-lime.client-workouts-identity:has(> .content > .client-workouts-page > :is(#workouts-current-panel:not([hidden]),#workouts-history-panel:not([hidden]))),.fit-client-lime.client-workouts-identity:has(> .content > .client-workouts-page > :is(#workouts-current-panel:not([hidden]),#workouts-history-panel:not([hidden]))) *,.fit-lime-shell.client-workouts-identity:has(> .content > .trainer-client-workouts-page),.fit-lime-shell.client-workouts-identity:has(> .content > .trainer-client-workouts-page) *)):where(.fit-client-lime *) {
+    opacity: 1
+}
+.phone-frame :is(.workout-chronicle-title, .workout-card-title):where(:is(.fit-client-lime.client-workouts-identity:has(> .content > .client-workouts-page > :is(#workouts-current-panel:not([hidden]),#workouts-history-panel:not([hidden]))),.fit-client-lime.client-workouts-identity:has(> .content > .client-workouts-page > :is(#workouts-current-panel:not([hidden]),#workouts-history-panel:not([hidden]))) *,.fit-lime-shell.client-workouts-identity:has(> .content > .trainer-client-workouts-page),.fit-lime-shell.client-workouts-identity:has(> .content > .trainer-client-workouts-page) *)) {
+    font-size: 18px;
+    font-weight: 600
+}
+.phone-frame .workout-card-date:where(:is(.fit-client-lime.client-workouts-identity:has(> .content > .client-workouts-page > :is(#workouts-current-panel:not([hidden]),#workouts-history-panel:not([hidden]))),.fit-client-lime.client-workouts-identity:has(> .content > .client-workouts-page > :is(#workouts-current-panel:not([hidden]),#workouts-history-panel:not([hidden]))) *,.fit-lime-shell.client-workouts-identity:has(> .content > .trainer-client-workouts-page),.fit-lime-shell.client-workouts-identity:has(> .content > .trainer-client-workouts-page) *)) {
+    color: var(--muted);
+    font-size: 12px
+}
+.phone-frame .workout-chronicle-heading > small:where(:is(.fit-client-lime.client-workouts-identity:has(> .content > .client-workouts-page > :is(#workouts-current-panel:not([hidden]),#workouts-history-panel:not([hidden]))),.fit-client-lime.client-workouts-identity:has(> .content > .client-workouts-page > :is(#workouts-current-panel:not([hidden]),#workouts-history-panel:not([hidden]))) *,.fit-lime-shell.client-workouts-identity:has(> .content > .trainer-client-workouts-page),.fit-lime-shell.client-workouts-identity:has(> .content > .trainer-client-workouts-page) *)) {
+    color: var(--muted);
+    font-size: 12px
+}
+.phone-frame .workout-chronicle-brief:where(:is(.fit-client-lime.client-workouts-identity:has(> .content > .client-workouts-page > :is(#workouts-current-panel:not([hidden]),#workouts-history-panel:not([hidden]))),.fit-client-lime.client-workouts-identity:has(> .content > .client-workouts-page > :is(#workouts-current-panel:not([hidden]),#workouts-history-panel:not([hidden]))) *,.fit-lime-shell.client-workouts-identity:has(> .content > .trainer-client-workouts-page),.fit-lime-shell.client-workouts-identity:has(> .content > .trainer-client-workouts-page) *)) {
+    color: var(--muted);
+    font-size: 14px
+}
 /* Stage 3, point 24: trainer progress, measurements, running and client history. */
 .fit-lime-shell.trainer-progress-identity .progress-page,
 .fit-lime-shell.client-workouts-identity .trainer-client-workouts-page {

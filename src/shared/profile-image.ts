@@ -2,7 +2,6 @@ import type { TrainerProfilePhotoUpload } from './domain'
 import { prepareImage } from './image-prep'
 
 const MAX_SOURCE_BYTES = 20 * 1024 * 1024
-const LEGACY_PROFILE_IMAGE_MAX_BYTES = 630_000
 const PROFILE_IMAGE_MAX_BYTES = 850_000
 const PROFILE_THUMBNAIL_MAX_BYTES = 160_000
 
@@ -16,11 +15,6 @@ export function isSupportedProfileImage(file: Pick<File, 'name' | 'type'>): bool
 function validateSource(file: File) {
   if (!isSupportedProfileImage(file)) throw new Error('Выберите фотографию.')
   if (file.size > MAX_SOURCE_BYTES) throw new Error('Фото должно быть меньше 20 МБ.')
-}
-
-export async function prepareProfileImage(file: File): Promise<string> {
-  validateSource(file)
-  return (await prepareImage(file, { maxBytes: LEGACY_PROFILE_IMAGE_MAX_BYTES, maxEdge: 960 })).dataUrl
 }
 
 /** Produces the private full-size object and the compact catalog thumbnail. */

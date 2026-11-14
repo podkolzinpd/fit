@@ -1,3 +1,4 @@
+import { WorkoutFormatChoices } from './WorkoutFormatChoices'
 import type { QuickWorkoutEntryDraft } from './quick-workout-draft'
 import { WorkoutTemplatePicker } from './WorkoutTemplatePicker'
 import { persistTemplateSource, type TemplatePlanContext } from './template-plan-context'
@@ -1440,6 +1441,7 @@ export function WorkoutFormPage() {
   const [startTime, setStartTime] = useState('')
   const [actualDurationMinutes, setActualDurationMinutes] = useState('')
   const [durationError, setDurationError] = useState<string | null>(null)
+  const [deliveryMode,setDeliveryMode]=useState<'in_person'|'online'>('in_person')
   const [trainingFormat, setTrainingFormat] = useState<WorkoutTrainingFormat | undefined>(defaultWorkoutTrainingFormat(clientMode ? 'client' : 'trainer'))
   const trainingFormatTouched = useRef(false)
   const [endTime, setEndTime] = useState('')
@@ -1543,7 +1545,7 @@ export function WorkoutFormPage() {
   function openTemplateDestination(library = false, applyOnSave = true) {
     if (!actor || completedMode || composerBusy) return
     const key = workoutId ? workoutFormDraftKey(actor.userId, `edit-${workoutId}`) : planDraftKey
-    const draft: WorkoutFormDraft = { clientId, workoutDate: entryDate, startTime, endTime, actualDurationMinutes, notes, title, stageId: selectedStageId, recordCompleted: false, exercises, trainingFormat, prepSeconds, executionMode, composerText: composerSnapshot?.text ?? '', composerSnapshot,
+    const draft: WorkoutFormDraft = { clientId, workoutDate: entryDate, startTime, endTime, actualDurationMinutes, notes, title, stageId: selectedStageId, recordCompleted: false, exercises, trainingFormat, deliveryMode, prepSeconds, executionMode, composerText: composerSnapshot?.text ?? '', composerSnapshot,
       ...(workoutId ? { sourceVersion: source.data?.version } : { sourceVersion: favoriteDraftVersion.current, requestId: createRequestId.current }) }
     if (!persistTemplateSource(key, draft)) { setPrefillError('Не удалось сохранить черновик на устройстве. План остаётся открыт.'); return }
     const returnState = { ...navigationState, templatePlanDraftKey: key }
@@ -1580,6 +1582,7 @@ export function WorkoutFormPage() {
       setStageId(saved.stageId)
       setRecordCompleted(saved.recordCompleted)
       setTrainingFormat(clientMode ? 'self' : saved.trainingFormat ?? defaultWorkoutTrainingFormat('trainer'))
+      setDeliveryMode(clientMode?'in_person':saved.deliveryMode??'in_person')
       trainingFormatTouched.current = Boolean(saved.trainingFormat)
       setDraftExercises(copiedWorkout || plannedFromFavorite || Boolean(templateId)
         ? saved.exercises.map((exercise) => ({ ...exercise, name: copiedExerciseName(exercise) }))
@@ -1606,6 +1609,7 @@ export function WorkoutFormPage() {
         ? workoutId ? source.data?.stageId ?? '' : initial.stageId ?? undefined
         : initial.stageId ?? '')
       setTrainingFormat(clientMode ? 'self' : initial.trainingFormat ?? defaultWorkoutTrainingFormat('trainer'))
+      setDeliveryMode(clientMode?'in_person':initial.deliveryMode??'in_person')
       trainingFormatTouched.current = Boolean(workoutId || initial.trainingFormat)
     }
     setFormDraftReady(true)
@@ -1620,7 +1624,7 @@ export function WorkoutFormPage() {
 
   useEffect(() => {
     if (!formDraftReady || stageLoading || editDraftEnabled && planSaved.current || workoutId && !editDraftEnabled) return
-    const draft = { composerText: composerSnapshot?.text, composerSnapshot, clientId, workoutDate: entryDate, startTime, endTime, actualDurationMinutes, notes, title, stageId: clientReference || templateId ? selectedStageId : stageId ?? '', recordCompleted, exercises, trainingFormat, prepSeconds, executionMode }
+    const draft = { composerText: composerSnapshot?.text, composerSnapshot, clientId, workoutDate: entryDate, startTime, endTime, actualDurationMinutes, notes, title, stageId: clientReference || templateId ? selectedStageId : stageId ?? '', recordCompleted, exercises, trainingFormat, deliveryMode, prepSeconds, executionMode }
     if (workoutId) {
       const fingerprint = JSON.stringify({ ...draft, composerText: draft.composerText || undefined, composerSnapshot: draft.composerText ? draft.composerSnapshot : undefined })
       editBaseline.current ??= fingerprint
@@ -1634,7 +1638,7 @@ export function WorkoutFormPage() {
       }
       writeWorkoutFormDraft(planDraftKey, { ...draft, sourceVersion: editSourceVersion.current })
     } else writeWorkoutFormDraft(draftKey, { ...draft, sourceVersion: favoriteDraftVersion.current, requestId: createRequestId.current })
-  }, [composerSnapshot, actualDurationMinutes, clientId, clientReference, selectedStageId, stageLoading, draftKey, planDraftKey, editDraftEnabled, safePlanInput, endTime, entryDate, exercises, formDraftReady, notes, title, recordCompleted, stageId, startTime, trainingFormat, prepSeconds, executionMode, workoutId])
+  }, [composerSnapshot, actualDurationMinutes, clientId, clientReference, selectedStageId, stageLoading, draftKey, planDraftKey, editDraftEnabled, safePlanInput, endTime, entryDate, exercises, formDraftReady, notes, title, recordCompleted, stageId, startTime, deliveryMode, trainingFormat, prepSeconds, executionMode, workoutId])
 
   useEffect(() => {
     if (!safePlanInput || !hasEditChanges) return
@@ -1817,7 +1821,7 @@ export function WorkoutFormPage() {
       ...(completedMode ? { actualDurationSec } : { prepSeconds: prepSeconds || null, executionMode: executionMode ?? DEFAULT_EXECUTION_MODE }),
       title: title.trim() || null,
       notes: notes || undefined, stageId: stageId || null, exercises, version: safePlanInput && workoutId ? editSourceVersion.current : source.data?.version,
-      favoriteTitle: initial?.favoriteTitle, trainingFormat: clientMode ? 'self' : trainingFormat ?? 'with_trainer' })
+      favoriteTitle: initial?.favoriteTitle, ...(isFitLimeEnabled(actor)&&!clientMode?{deliveryMode}:{}), trainingFormat: clientMode ? 'self' : trainingFormat ?? 'with_trainer' })
   }
   const availableClients = clientMode ? (mine.data ? [mine.data] : []) : clients.data
   const selectedClientName = availableClients?.find((client) => client.id === clientId)?.fullName
@@ -1899,13 +1903,13 @@ export function WorkoutFormPage() {
         <div className="workout-form-section-head"><p className="eyebrow">КОГДА</p></div>
         {clientLime ? <ClientWorkoutDateControl clientId={clientId} excludeWorkoutId={workoutId} value={entryDate} today={today} onChange={(next) => { setEntryDate(next); setFormTimeError(null) }} start={startTime} end={!readyPlan && showEndTime ? endTime : undefined} onTimeChange={(next) => { setStartTime(next.start); if (!readyPlan) setEndTime(next.end); setFormTimeError(null) }} disabled={mutation.isPending} /> : <div className="split workout-time-row"><Field label="Дата"><input name="date" type="date" value={entryDate} onChange={(event) => setEntryDate(localDate(event.target.value))} required /></Field><Field label="Начало"><input name="startTime" type="time" value={startTime} onChange={(event) => { setStartTime(event.target.value); (event.currentTarget.form?.elements.namedItem('endTime') as HTMLInputElement | null)?.setCustomValidity('') }} /></Field></div>}
         {formTimeError && <p ref={formTimeErrorRef} className="error" role="alert" tabIndex={-1}>{formTimeError}</p>}
-        {!clientMode && <div className="workout-record-mode" role="group" aria-label="Формат тренировки"><button type="button" className={(trainingFormat ?? 'self') === 'self' ? 'active' : ''} aria-pressed={(trainingFormat ?? 'self') === 'self'} onClick={() => { trainingFormatTouched.current = true; setTrainingFormat('self') }}>Самостоятельно</button><button type="button" className={trainingFormat === 'with_trainer' ? 'active' : ''} aria-pressed={trainingFormat === 'with_trainer'} onClick={() => { trainingFormatTouched.current = true; setTrainingFormat('with_trainer') }}>С тренером</button></div>}
+        {!clientMode && (isFitLimeEnabled(actor) ? <WorkoutFormatChoices format={trainingFormat??'self'} deliveryMode={deliveryMode} onChange={(format,delivery)=>{trainingFormatTouched.current=true;setTrainingFormat(format);setDeliveryMode(delivery)}}/> : <div className="workout-record-mode" role="group" aria-label="Формат тренировки"><button type="button" className={(trainingFormat ?? 'self') === 'self' ? 'active' : ''} aria-pressed={(trainingFormat ?? 'self') === 'self'} onClick={() => { trainingFormatTouched.current = true; setTrainingFormat('self') }}>Самостоятельно</button><button type="button" className={trainingFormat === 'with_trainer' ? 'active' : ''} aria-pressed={trainingFormat === 'with_trainer'} onClick={() => { trainingFormatTouched.current = true; setTrainingFormat('with_trainer') }}>С тренером</button></div>)}
         {!readyPlan && (showEndTime
           ? clientLime ? <button type="button" className="link workout-remove-end-time" onClick={() => { setEndTime(''); setShowEndTime(false); setFormTimeError(null) }}>Убрать окончание</button> : <div className="workout-end-time"><Field label="Окончание"><input name="endTime" type="time" value={endTime} onChange={(event) => { setEndTime(event.target.value); event.currentTarget.setCustomValidity('') }} /></Field><button type="button" className="link" onClick={() => { setEndTime(''); setShowEndTime(false) }}>Убрать окончание</button></div>
           : <button type="button" className="link workout-add-end-time" onClick={() => setShowEndTime(true)}><AddActionLabel>Добавить время окончания</AddActionLabel></button>)}
         </>}
         {coachReference && !workoutId && <div className="workout-record-mode" role="group" aria-label="Тип тренировки"><button type="button" className={!recordCompleted ? 'active' : ''} aria-pressed={!recordCompleted} onClick={() => setRecordCompleted(false)}>План</button><button type="button" className={recordCompleted ? 'active' : ''} aria-pressed={recordCompleted} onClick={() => setRecordCompleted(true)}>Завершённая</button></div>}
-        {coachReference && <div className="workout-record-mode" role="group" aria-label="Формат тренировки"><button type="button" className={(trainingFormat ?? 'self') === 'self' ? 'active' : ''} aria-pressed={(trainingFormat ?? 'self') === 'self'} onClick={() => { trainingFormatTouched.current = true; setTrainingFormat('self') }}>Самостоятельно</button><button type="button" className={trainingFormat === 'with_trainer' ? 'active' : ''} aria-pressed={trainingFormat === 'with_trainer'} onClick={() => { trainingFormatTouched.current = true; setTrainingFormat('with_trainer') }}>С тренером</button></div>}
+        {coachReference && (isFitLimeEnabled(actor) ? <WorkoutFormatChoices format={trainingFormat??'self'} deliveryMode={deliveryMode} onChange={(format,delivery)=>{trainingFormatTouched.current=true;setTrainingFormat(format);setDeliveryMode(delivery)}}/> : <div className="workout-record-mode" role="group" aria-label="Формат тренировки"><button type="button" className={(trainingFormat ?? 'self') === 'self' ? 'active' : ''} aria-pressed={(trainingFormat ?? 'self') === 'self'} onClick={() => { trainingFormatTouched.current = true; setTrainingFormat('self') }}>Самостоятельно</button><button type="button" className={trainingFormat === 'with_trainer' ? 'active' : ''} aria-pressed={trainingFormat === 'with_trainer'} onClick={() => { trainingFormatTouched.current = true; setTrainingFormat('with_trainer') }}>С тренером</button></div>)}
         <CoachPlanOptions reference={coachReference || readyPlan}>
         {readyPlan && <>
           <Field label="Окончание"><input type="time" value={endTime} onChange={(event) => { setEndTime(event.target.value); setShowEndTime(Boolean(event.target.value)); setFormTimeError(null) }} /></Field>
@@ -1941,11 +1945,11 @@ export function WorkoutFormPage() {
           exerciseCatalog={catalog.exercises}
           canOpenTechnique={(exercise) => hasExerciseTechnique(findCatalogExercise(catalog.exercises, exercise))}
           onOpenTechnique={(exercise) => { const meta = findCatalogExercise(catalog.exercises, exercise); if (hasExerciseTechnique(meta)) setTechniqueExercise(meta) }}
-          showTrainerComments={!clientMode} entryMode={completedMode ? 'fact' : 'plan'} hideEmptyAddAction previousResults={previousResultReferences} showRpeByDefault={showRpeByDefault} showRestByDefault={showRestByDefault} collapseInitialExercises={copiedWorkout || plannedFromFavorite || Boolean(templateId || presetId)} initialExercisesReady={formDraftReady} reference={coachReference} referenceAppearance={coachReference || clientReference} safePlanInput={safePlanInput || readyPlan} refinedPlan={refinedPlan} disabled={mutation.isPending || pickerOpen || templatePickerOpen} />
+          showTrainerComments={!clientMode} entryMode={completedMode ? 'fact' : 'plan'} hideEmptyAddAction previousResults={previousResultReferences} showRpeByDefault={showRpeByDefault} showRestByDefault={showRestByDefault} collapseInitialExercises={copiedWorkout || plannedFromFavorite || Boolean(templateId || presetId)} initialExercisesReady={formDraftReady} reference={coachReference} showSetRemovalMenu={coachReference && !clientMode} referenceAppearance={coachReference || clientReference} safePlanInput={safePlanInput || readyPlan} refinedPlan={refinedPlan} disabled={mutation.isPending || pickerOpen || templatePickerOpen} />
       </section>
       {prefillError && <p className="error">{prefillError}</p>}
       {!refinedPlan && !coachReference && mutation.error && <InlineRequestError error={mutation.error} message={saveErrorMessage} />}
-      {limePlan && !coachReference && params.get('entry') === 'quick' && <p className="today-plan-summary">{clients.data?.find((client) => client.id === clientId)?.fullName ?? 'Выберите клиента'} · {formatLocalDate(entryDate)} · {startTime ? `${startTime}${endTime ? `–${endTime}` : ''}` : 'Без времени'} · {workoutTrainingFormatLabel(trainingFormat ?? 'self')}</p>}
+      {limePlan && !coachReference && params.get('entry') === 'quick' && <p className="today-plan-summary">{clients.data?.find((client) => client.id === clientId)?.fullName ?? 'Выберите клиента'} · {formatLocalDate(entryDate)} · {startTime ? `${startTime}${endTime ? `–${endTime}` : ''}` : 'Без времени'} · {workoutTrainingFormatLabel(trainingFormat ?? 'self',deliveryMode)}</p>}
       {!coachReference && <div className="actions workout-action-row"><WorkoutCta pending={mutation.isPending} pendingLabel="Сохраняем…" disabled={stageLoading || exercises.length === 0 && !limePlan}>{recordPlannedResult ? 'Сохранить результат' : recordCompleted ? 'Записать тренировку' : completedMode ? 'Сохранить изменения' : 'Сохранить план'}</WorkoutCta></div>}
       </CoachFormControls>
     </form>}</AsyncView>
@@ -2329,7 +2333,7 @@ export function WorkoutDetailPage() {
         action={manageMenuInHeader ? <OverflowMenu label="Другие действия с тренировкой" items={workoutManageItems} /> : undefined}
         meta={<>{actor?.role === 'trainer' && trainerOwned && workoutsRepository.rescheduleSlot
           ? <button type="button" className="workout-slot-trigger" aria-label="Изменить дату и время тренировки" onClick={() => setSlotSheetOpen(true)}><ScheduleIcon /><span>{formatLocalDate(workout.workoutDate)} · {slotTimeLabel(workout)}</span><ChevronRightIcon /></button>
-          : <span>{formatLocalDate(workout.workoutDate)} · {workout.startTime?.slice(0, 5) ?? 'без времени'}</span>}<span>{workoutTrainingFormatLabel(workout.trainingFormat ?? 'self')}</span>{clientMode && !done && authorLabel && <span>{authorLabel}</span>}{clientAuthoredReadOnly && <span>Создано клиентом · упражнения только для просмотра</span>}{stageTitle && <span>Цель: {stageTitle}</span>}</>} />}
+          : <span>{formatLocalDate(workout.workoutDate)} · {workout.startTime?.slice(0, 5) ?? 'без времени'}</span>}<span>{workoutTrainingFormatLabel(workout.trainingFormat ?? 'self',workout.deliveryMode)}</span>{clientMode && !done && authorLabel && <span>{authorLabel}</span>}{clientAuthoredReadOnly && <span>Создано клиентом · упражнения только для просмотра</span>}{stageTitle && <span>Цель: {stageTitle}</span>}</>} />}
       {clientMode && workout.title && <p className="workout-plan-title">{workout.title}</p>}
       {(isFitLimeEnabled(actor) || isClientLimeEnabled(actor)) && workout.plannedDate && <p className="workout-plan-title">Исходный план: {formatLocalDate(localDate(workout.plannedDate))}{workout.plannedStartTime ? ` · ${workout.plannedStartTime.slice(0, 5)}${workout.plannedEndTime ? `–${workout.plannedEndTime.slice(0, 5)}` : ''}` : ' · без времени'}</p>}
       {(isFitLimeEnabled(actor) || isClientLimeEnabled(actor)) && workout.status === 'planned' && canExecute && workout.workoutDate !== today && <p className="workout-plan-title">Тренировка начнётся сегодня. Исходная дата плана сохранится.</p>}
@@ -2361,7 +2365,7 @@ export function WorkoutDetailPage() {
       {emptyBookingPlan && <p className="booking-plan-empty">Упражнения ещё не добавлены</p>}
       {!clientCompletionReport && !emptyBookingPlan && exerciseCards}
       {attendanceResult && <section className="completed-empty-attendance"><h3>Упражнения</h3><p>Упражнения не записаны</p>{canManage && <Link className="button secondary" to={`/workouts/${workoutId}/edit`} state={childNavigationState}>Добавить результат</Link>}</section>}
-      {(justCompleted || attendanceResult) && !clientMode && <WorkoutFinanceConfirmation bundle={completionFinance.data} workoutId={workout.id} clientId={workout.clientId} trainingFormat={workout.trainingFormat ?? 'self'} />}
+      {(justCompleted || attendanceResult) && !clientMode && <WorkoutFinanceConfirmation lime={isFitLimeEnabled(actor)} bundle={completionFinance.data} workoutId={workout.id} clientId={workout.clientId} trainingFormat={workout.trainingFormat ?? 'self'} />}
       {attendanceResult && completionFinance.isError && <p className="error" role="alert">Не удалось загрузить учёт занятия. <button type="button" className="link" onClick={() => void completionFinance.refetch()}>Повторить</button></p>}
       {done && !clientMode && !workout.discomfort && <WorkoutClientFeedback workout={workout} canEdit={false} saving={feedback.isPending} error={feedback.error} onSave={(value) => feedback.mutateAsync(value)} />}
       {done && !clientMode && <details className="coach-workout-summary"><summary>Сводка тренировки</summary>{factSummary}<section className="workout-review workout-duration-surface">{durationControl}</section></details>}
@@ -4858,7 +4862,7 @@ export function LiveWorkoutPage() {
   const exerciseCountLabel = `${exerciseCount} ${exerciseCount % 100 >= 11 && exerciseCount % 100 <= 14 ? 'упражнений' : exerciseCount % 10 === 1 ? 'упражнение' : exerciseCount % 10 >= 2 && exerciseCount % 10 <= 4 ? 'упражнения' : 'упражнений'}`
   const canConfirmAttendance = actor?.role === 'trainer' && Boolean(workoutsRepository.confirmAttendance && query.data && query.data.status === 'in_progress' && (!query.data.createdBy || query.data.createdBy === actor.userId))
   const trainerLiveExit = coachReference && canConfirmAttendance
-  const liveHeader = query.data && <WorkoutHeader eyebrow={visualReference ? exerciseCountLabel : 'LIVE'} title={visualReference ? query.data.title || workoutFocusTitle(muscleGroupLabels(query.data.exercises)) : query.data.clientName} state="current" showStatus={!visualReference && query.data.exercises.length > 0} className="live-session-header" action={canConfirmAttendance && !trainerLiveExit ? <OverflowMenu label="Действия с тренировкой" items={[{ label: 'Не состоялась', onClick: () => setLiveAttendanceAction('cancel') }]} /> : undefined} meta={<>{coachReference && <span className="coach-live-client">{query.data.clientName}</span>}<span>{workoutTrainingFormatLabel(query.data.trainingFormat ?? 'self')}</span>{!visualReference && query.data.title && <span>{query.data.title}</span>}{visualReference && exerciseCount > 0 && <span className="coach-live-exercise-markers" aria-label="Состояния упражнений">{query.data.exercises.map((exercise, index) => <span key={exercise.id} className={exercise.sets.length > 0 && exercise.sets.every((set) => set.confirmedAt) ? 'done' : exercise.id === activeLiveExercise?.id ? 'current' : ''} aria-label={`Упражнение ${index + 1}: ${exercise.sets.length > 0 && exercise.sets.every((set) => set.confirmedAt) ? 'выполнено' : exercise.id === activeLiveExercise?.id ? 'текущее' : 'ожидает'}`} />)}</span>}{sessionProgress.setCount > 0 ? <div className="live-session-progress">
+  const liveHeader = query.data && <WorkoutHeader eyebrow={visualReference ? exerciseCountLabel : 'LIVE'} title={visualReference ? query.data.title || workoutFocusTitle(muscleGroupLabels(query.data.exercises)) : query.data.clientName} state="current" showStatus={!visualReference && query.data.exercises.length > 0} className="live-session-header" action={canConfirmAttendance && !trainerLiveExit ? <OverflowMenu label="Действия с тренировкой" items={[{ label: 'Не состоялась', onClick: () => setLiveAttendanceAction('cancel') }]} /> : undefined} meta={<>{coachReference && <span className="coach-live-client">{query.data.clientName}</span>}<span>{workoutTrainingFormatLabel(query.data.trainingFormat ?? 'self',query.data.deliveryMode)}</span>{!visualReference && query.data.title && <span>{query.data.title}</span>}{visualReference && exerciseCount > 0 && <span className="coach-live-exercise-markers" aria-label="Состояния упражнений">{query.data.exercises.map((exercise, index) => <span key={exercise.id} className={exercise.sets.length > 0 && exercise.sets.every((set) => set.confirmedAt) ? 'done' : exercise.id === activeLiveExercise?.id ? 'current' : ''} aria-label={`Упражнение ${index + 1}: ${exercise.sets.length > 0 && exercise.sets.every((set) => set.confirmedAt) ? 'выполнено' : exercise.id === activeLiveExercise?.id ? 'текущее' : 'ожидает'}`} />)}</span>}{sessionProgress.setCount > 0 ? <div className="live-session-progress">
     <span className="live-session-progress-copy"><span>{sessionProgress.complete ? 'Все упражнения выполнены' : activeLiveExercise ? `Сейчас: ${activeLiveExercise.name} · подход ${sessionProgress.activeSetNumber} из ${sessionProgress.activeExerciseSetCount}` : 'Выберите упражнение'}</span><strong>Готово {sessionProgress.completedSetCount} из {sessionProgress.setCount}</strong></span>
     <span className="live-session-progress-track" role="progressbar" aria-label="Выполненные подходы" aria-valuemin={0} aria-valuemax={sessionProgress.setCount} aria-valuenow={sessionProgress.completedSetCount}><span style={{ width: `${sessionProgress.percent}%` }} /></span>
   </div> : null}</>} />

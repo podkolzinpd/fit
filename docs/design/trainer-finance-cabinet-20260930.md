@@ -2208,3 +2208,260 @@ Chromium/WebKit, retries0. Предыдущий вывод аудита о densi
 FIN-65: sourceCI42819995935: код/БД/frontend/browser lanes success; repository-quality отказал
 из-за собственного дубликата ссылки в CURRENT_STATE сверх byte-budget. Дубликат удалён,
 канонический план/ACTIVE_CONTRACTS сохранены; лимиты/гейты не менялись. Новый head проходит CI заново.
+FIN-63: FIN802 подготовка отa37d65c8 в отдельном worktree, пока FIN801 проходитCI.
+Lime вход «Добавить оплату» работает при нуле услуг и сохраняет existing createService+opening payment.
+Существующая/новая доступны при наличии услуг; canCreate и pending/replay сохраняются.
+Разовая — явный выбор, старый пакет1 не преобразуется. Ведение только за период; количество/срок
+абонемента прежние. Одноимённые услуги различимы по периоду и долгу. Mono ветви форм прежние.
+Новые4 component-case проверяют zero-services atomic command, pack1≠single, различимость и исключённый scope.
+Существующий browser «Finance Lime owns…» расширен zero-services состоянием и геометрией новой формы:
+новых browser-case нет, старые assertions сохранены; число сценариев прежнее40 в двух движках.
+
+FIN-64: компактная разовая показывает тип, стоимость/получено и дату получения; название и условия
+доступны в существующем раскрытии, не удаляются. Только Lime select использует исходный chevron.
+Отдельный single-services endpoint защищает откат API: старый сервер отвечает404 до записи,
+а не молча отбрасывает singleSession и создаёт обычный пакет. Прежний packages endpoint сохранён.
+Геометрия всех полей проверяется при открытом раскрытии, компактный снимок при закрытом; assertions
+не ослаблены. 40/40 browser до уточнения компактности и2/2 после;9 finance-unit files/93tests passed.
+Полный local coverage дал17 таймаутов вне финансов; повтор9files с2workers оставил2files,
+последовательный повтор —2 ExercisePicker failures. Посторонний код/таймауты не меняются; CI обязателен.
+
+FIN-66: FIN802 включает минимальное изменение read-model до появления первой новой разовой:
+оплаченная разовая с остатком1 не считается заканчивающимся абонементом. Стоимость/поступления/
+долги и месячная посещаемость сохранены. Это перенос зависимой части FIN804, не новая механика.
+Отдельный PG-case проверяет unused prepaid single, receivedCents и отсутствие ложного attention.
+Изолированный ExercisePicker на base и FIN802 прошёл68/68 без изменений; посторонний код и лимиты
+тестов сохранены. Дальнейший CI проверяет новый head полностью.
+
+FIN-67: FIN802 final built browser40/40, retries0; снимки новой разовой320/390/430/1440 с
+исходными YS Geo. API app267 passed; finance93 и repo/client95 passed; API lint/types passed.
+Полный test:db на новой собственной чистой PG55440 passed, включая clean chain и reapply208.
+Первый повтор на длительно живущей PG55439 обнаружил4 истёкших тестовых app sessions из прежних
+прогонов в cleanup-case (34 вместо30); на чистой БД все390 случаев базового набора отработали
+по исходным assertions. Production/реальные финансовые данные не использовались.
+FIN802 пока не открыт и не выпускается до приёмки FIN801.
+
+FIN-71: FIN801 merged e3677510; sourceCI42825181524 и mainCI42831619147 SUCCESS.
+Официальные API42836039747 и web42836040125 SUCCESS; public244/244 bytes + обеAPI health passed.
+OTA42837843914 и final public/native browser приёмка ещё выполняются. FIN802 source CI готовится
+от этого main параллельно оставшейся приёмке; его merge/release только после приёмки FIN801 и
+очереди GitHub. Это не параллельная публикация второго этапа. Полный rebased npm check FIN802
+прошёл3193frontend/1631API; нового runtime diff после проверки нет.
+
+FIN-68: FIN803 подготовлен локально: явная разовая в проведении и ручном учёте; стоимость и
+получено отдельно, zero/free допустимы, pending/retry сохраняет исходные деньги. Новые distinct
+finish-single/single-sessions маршруты не дают старому API проигнорировать новые поля.
+Новый delivery_mode сохраняет очно/онлайн отдельно от training_format=self/with_trainer:
+финансовые месячные фильтры и учёт присутствия не меняются. Actor/version setter, нормализация
+self и общая транзакция проверены на собственной PG55441; wire aliases защищают откат API.
+План, quick start, ручное создание результата, редактирование, Live и детали читают/сохраняют формат;
+черновики сохраняют delivery. Пробное отсутствует в новых Lime действиях, историческое trial и Mono
+селекты сохранены. Незаполненные подходы не подтверждаются автоматически.
+Полный frontend coverage3195/359, APIcheck1635/139, lint/types/build и остальные фазы check passed.
+Полный test:db passed на чистой PG55441; дополнительно рабочая команда savePlannedWorkout сохраняет
+online/with_trainer, ownership/version/self reset подтверждены. Первое падение нового теста было
+неполной очисткой созданного ручной операцией workout; собственный synthetic container пересоздан,
+очистка исправлена, прежние assertions не менялись. Старый response без online не расширяется
+лишним default-полем, точные fixtures сохранены.
+40/40 finance browser passed без retries; 14/14 расширенных старых format/editor cases passed после
+обновления wire expectations/fixture на новый явный формат. Геометрия всех widths, обычные клики,
+позиция submit после inner scroll, исходные YS Geo. Снимки просмотрены; итоговая нейтральная окраска
+использует существующий lime-text-secondary, а не отсутствующий токен. Физический iPhone не проверен.
+PR пока не открыт: FIN801 merged e3677510 после exact-headCI42825181524 SUCCESS;
+старший2087 явно non-merge/non-release по собственному GitHub описанию и завершённому CI.
+MainCI42831619147/публикация FIN801 впереди. FIN802→803→804 выпускаются только после приёмки предыдущего.
+
+FIN-69: FIN804 локально согласует подтверждение разовой, историческую строку занятия и выбор
+ранее списанной разовой (проведена, не «не проведена»). У разовой нет фиктивного остатка/номера
+абонемента; подтверждение различает бесплатно, оплачено и точный остаток долга. У клиента Lime
+ведение за период называется «Ведение», Mono сохраняет прежний текст. Пустой фильтр trial скрыт
+только в Lime; исторические trial доступны. Cache invalidation уже покрывает нужные ключи —
+дублирующего механизма не добавлено. Общая очистка Mono и нерешённые коммерческие правила вне scope.
+Собственная PG55442: полный test:db passed, основной набор391passed/2conditional skips;
+новый cross-read case сверяет обе роли, overview, client bundle, общий журнал, даты оплаты через
+границу месяца, исправление суммы/даты и архив. История/долг сохраняются, online считается
+с тренером один раз. Первое отклонение доступа было отсутствием явной связи в bound-client fixture;
+fixture дополнен client_trainers/relationship, production guards сохранены.
+Frontend coverage3200/359 passed до финального уточнения подписи исторической разовой; после
+уточнения24 targeted passed. APIcheck1635/139, lint/types/build/startup и остальные check-фазы
+пройдены. Первоначальное добавление отдельного browser-case выявлено 742-case guard; тот же
+сквозной сценарий встроен в existing «Finance Lime owns…», не удалён. Матрица742 и8 policy cases
+сохранены без изменения guards/timeouts. Изначальные42/42 browser passed; после композиции4/4
+изменённых finance/quick cases passed без retries. Снимки320/390/430/1440 просмотрены, финальный
+цвет/геометрия трёх форматов на320 проверены. Source CI и публикация FIN804 ещё гейты.
+FIN802 перенесён на e3677510 (0a822650), полный npm check прошёл:3193 frontend/1631 API.
+FIN803 перенесён на FIN802 (328cba89), runtime diff сохранён; docs budgets passed.
+FIN801 mainCI42831619147 SUCCESS; официальная публикация/публичная приёмка выполняются.
+
+
+FIN-70: дополнительная приёмка FIN803 проверяет заполненный упражнениями Live с пустым подходом:
+finishLiveWorkout(singleService), точная частичная оплата/долг, replay, новый operationId после
+проведения (отказ без второй услуги/оплаты) и replay после последующего удаления упражнения.
+Все assertions прошли на прежней функции207 и собственной PG55441. Первоначальная гипотеза об
+ограничении пустыми тренировками была основана на169; действующая170 уже снимает его. Гипотеза
+отозвана, SQL/алгоритм не меняется; новый regression-case сохраняет доказательство и пустые facts.
+Повтор APIcheck139files/1635 passed. Вспомогательный Python ошибочно запускался из API cwd;
+запись канонического журнала затем выполнена по абсолютному пути, без ложного статуса записи.
+
+FIN-72: FIN801/PR2088 принят на e36775106008d80e0362527067765efd9b5a75f4.
+SourceCI42825181524, mainCI42831619147, API42836039747, web42836040125,
+OTA42837843914 — SUCCESS. Public244/244 файлов совпали с immutable manifest; обеAPI health passed.
+Public42/42 и verified signedZIP42/42, retries0; PNG320/390/430/1440 просмотрены в обоих артефактах.
+OTA manifest/ZIP signatures, source, expiry, checksum и ABI8922d2e9 проверены, sequence1794322260120,
+bundle d4a8ef7dd42f3d36cabd671f62ccc3c587d7f1dc4e3805dad3acd5aa4eaab3b9.
+Физический iPhone/Android не проверен; синтетические API requests из приёмки перехвачены,
+немокированные v1 запросы блокировались. Real-user finance mutations/ручных денежных SQL не было.
+Квитанция: outputs/finance-confirmed-release-20261110/pr1/acceptance.json.
+FIN802/PR2094 c69b07c7 проходит sourceCI42838769405; merge/release по GitHub очереди впереди.
+
+FIN-73: последняя сверка входов FIN803 выявила два ещё не обновлённых компонента: FitLimePlanComposer
+и QuickDayBooking. Оба теперь используют тот же Lime selector очно/онлайн/самостоятельно;
+плановый draft, голосовой draft, navigation state и возврат сохраняют deliveryMode. Today reset
+возвращает очный default. В Mono quick-booking сохранена прежняя статическая подпись; пилоты/rollout
+не расширяются. Это завершение согласованного scope FIN803, не новая коммерческая механика.
+16/16 old typography/voice/lifecycle browser cases и14/14 связанных native quick-booking cases
+прошли без retries. Новых browser-case/осей нет; screenshots320/390/430/1440 просмотрены для обоих
+изменённых окон. Обычное нажатие, история, жесты, потеря ответа и тот же requestId проверены.
+Полный повтор npm check FIN803 после изменения входов прошёл3195 frontend/1635 API и прочие фазы.
+FIN804 clean full npm check наe2ac8b9a (до расширения родителя FIN803) также прошёл целиком:
+3201frontend/1635API. Дальнейшая интеграция/CI берёт актуальный родительский main.
+
+FIN-74: после разрешённого возобновления FIN802 интегрирован с maina6bb1ba1 (head31c0cda5).
+Полный npm check3193frontend/1631API и40/40 browser passed; форма оплаты320/390/430/1440 просмотрена.
+Current-head sourceCI42883104279 ещё выполняется; слияние и публикация FIN802 не заявляются.
+Предыдущий активный выпускa6bb завершён: CI42879577154/API42888767762/web42888768004/OTA42889887181 SUCCESS.
+PR2093 подтверждённо стоит: неизменныйcfa6dbee, CI42837120964 завершён failure, новых запусков,
+коммитов, комментариев и review нет в нескольких разнесённых снимках GitHub. Антон разрешил
+обходить только стоящие PR; активные выпуски ожидались, чужие изменения/чаты не трогались.
+FIN803 на актуальном основании: check3195frontend/1635API,70finance/formats+14quick-booking browser passed.
+FIN804: все check gates passed, полный coverage3201 при2 локальных workers, API1635 и остальные фазы.
+Первый общий coverage дал4 сбоя вне финансов; те же76 тестов отдельно и полный набор при2 workers
+прошли. Assertions, timeouts, coverage thresholds и CI policy не менялись. Его70+14 browser также passed.
+Снимки разовой и форматов с исходными YS Geo просмотрены; header/close записи320 дополнительно
+проверены существующими кейсами: текст помещается, gap>=8px и close44px; CSS-исправление не требуется.
+Mono и нерешённые механики вне diff. Физические телефоны не проверены; выпуск803/804 ещё впереди.
+
+FIN-75: FIN802/PR2094 принят на1cf4350bed2a85108e01daf27f2fb11d38c43ffd.
+SourceCI42883104279/mainCI42892860675 иAPI42898858751/web42898858816/OTA42900287261 SUCCESS.
+MainCI сначала дал1 сбой неизменённого ExerciseImage manual recovery:3192/3193; runtime/test tree
+совпадает с зелёным source31c0, отдельные33/33 прошли. Только failed jobs повторены успешно,
+без изменения tests/timeouts/CI. Public246/246 byte/hash иAPI health,42public+42signedZIP browser0retries.
+ABI8922d2e9fc2c9a092d10f7b6066acdc46edf0fbe7ee7a15159e02a44e7126cf9;
+OTA sequence1794344840635/bundle280159b15f26b7434e5900ea1a787d3c3ac95912ec188417a45276af40d450ec.
+Сайт имеет существующий production announcement: он не скрывался; после обычной прокрутки
+5-point hit-test всей кнопки прошёл320/390/430/1440, ещё2existing public cases иполныйZIP42;
+соответствующие снимки обоих артефактов просмотрены. Подписи/source/expiry/SHA256 проверены.
+FIN803/PR2099: sourceCI42893450308 SUCCESS наc706f231, merged6c94703c; mainCI42911964349 выполняется.
+Перед merge7снимков2095 с21:36по22:06UTC сохранили unchanged Draft536cb25e без active jobs/движения.
+2096/f96008cb и2097/06183396 завершили failure21:26/21:27UTC без новых запусков/коммитов/reviews.
+После fresh read они обойдены как стоящие по прямому разрешению;2087/2098 явно не для выпуска,
+2093 остался на прежнем красном head. Чужие PR/чаты не менялись. Активные проверки ожидались.
+FIN804 перенесён нафактический squash2099; file tree совпал с проверенным5840d660 до этой docs-записи.
+Код иlocal gates завершены:3201frontend/1635API, полныйPG,70+14browser; source/mainCI ипубличная
+приёмка финального этапа ещё гейты. Итог публикации фиксируется в описании заключительного PR FIN804.
+Mono и нерешённые механики не реализуются. Physical iPhone/Android/PWA не проверены.
+
+
+## FIN901–906 — исправление начального остатка — 11.11.2026
+
+Тикет: [YAFIT-709](https://st.yandex-team.ru/YAFIT-709).
+
+Антон разрешил один PR и полный выпуск с production-приёмкой. Строго Lime,
+минимальный scope, без потери тренировок, списаний и оплат.
+
+- FIN901: в существующем меню абонемента «Скорректировать остаток». Короткая
+  существующая finance-form: текущий остаток, «Должно остаться», «Причина»,
+  Отмена/Сохранить; прежние Lime компоненты/шрифты/поля, без нового дизайна.
+- FIN902: изменяется только opening_used_sessions. Купленное количество и
+  реальное списание неизменны; максимум остатка = total минус действующие
+  реальные charged sessions. Разовая/ведение не получают это действие.
+- FIN903: существующий trainer_finance_events хранит before/after, actor/date
+  и причину коррекции; старые события, workouts/sessions/payments неизменны.
+- FIN904: общий client ledger lock, actor/owner/version guards, существующая
+  квитанция finance_payment_requests с отдельным operation discriminator.
+  Повтор запроса возвращает тот же результат, не корректирует второй раз.
+- FIN905: существующие pending/retry и invalidateFinanceViews; отмена без записи,
+  ошибки сохраняют ввод, неизвестный исход сохраняет operationId/expectedVersion
+  через reload. Конфликт требует сверки актуального блока перед новым submit.
+- FIN906: targeted UI/API/PG17 concurrency/replay/history, существующий browser
+  case без расширения inventory, полный check/CI, штатный выпуск и public/OTA
+  readback с synthetic API и заблокированными немокированными API-запросами.
+
+### Итерация 1 — 11.11.2026 — Codex / OpenAI
+
+Основа main1a2f569a, чистый отдельный worktree finance-balance-correction-20261111.
+Аудит: поле начального расхода доступно только при создании с30.09; update API
+его исключает. Последняя FIN801–804 не удаляла существующую корректировку.
+Расхождений с утверждённым планом нет. История фиксируется имеющимся audit trigger;
+нового журнала/таблицы расчёта и изменения формулы не требуется. Новая forward
+миграция добавит только атомарную команду/её минимальные grants; backfill/перепись
+данных, изменение broad ACL, таймеров, оплаты, Live и rollout вне scope.
+Отвергнуто: произвольное редактирование остатка сверх реальных списаний, signed
+balance-offset и параллельный ledger; фиктивные посещения/оплаты; новое окно
+подтверждения поверх формы. Дальше: реализация, проверки и один PR.
+
+
+### Итерация 2 — 11.11.2026 — Codex / OpenAI
+
+Сделано: миграция212 добавляет только correct_trainer_finance_balance с actor/owner,
+version и общим ledger lock. Существующие finance_payment_requests дают replay
+по точному payload с отдельным discriminator. Меняются только opening_used_sessions
+и версия; триггер создаёт обычное событие, обогащается только это новое событие
+before/after + причиной и requestId. Старые события/комментарий/деньги/реальные
+workouts и sessions не переписываются. Same-value command не создаёт события.
+API read-write guard и типизированный native repository; существующая Lime форма
+изолирована отдельным FinanceBalanceCorrectionForm без CSS/новых dependencies.
+Reuse actor/client-scoped sessionStorage и invalidateFinanceViews. До отправки
+сначала durable pending; при storage failure не остаётся скрытого старого draft.
+Неизвестный исход удерживает тот же requestId/version через reload; definitive
+reject разблокирует сохранённые поля, конфликт обновляет текущий блок перед новым
+submit. Это не меняет прежний create/payment retry helper.
+
+Проверки: frontend targeted132passed, API282passed до дополнительной проверки
+read-only в том же case; финальный полный check проверяет итоговый тест. Native PG
+целевая2/2passed: snapshot всех workouts/sessions/payments и старых events равен,
+увеличение/ноль/повтор/старый replay после нового изменения/actor/client-self;
+реальный блокирующий ledger lock + новое manual charged заставляет коррекцию
+отказаться, не скрывая новое списание. Полный test:db:466passed/2штатных conditional
+skips плюс6native-erasure passed. Отдельная локальная PG17,55443; чужие контейнеры
+не менялись. Existing browser case2/2 Chromium/WebKit без retries; потерянный ответ
+после apply, cancel/reload/replay и исходные finance histories проверены. Новых
+browser cases/осей0; inventory8/8, migration safety1file passed. Lime PNG320/390
+просмотрены, form geometry44px и прежний font проверены.
+
+Ранние проверки не выдаются за успех: первый UI case использовал не-Lime actor,
+затем actor flag изолирован только новыми cases. Testing Library exact-option
+заменена штатным точным строковым matcher; typed mock исправил lint, fixture
+non-null исправил typecheck. PG test сначала использовал client вместо чужого
+тренера (403), затем создан отдельный trainer (404). Прямой private payload read
+не разрешён fit_api и без actor возвращает null; тест читает существующий public
+actor-context bundle, ACL не расширялись. Эти fixture ошибки не объявляются
+продуктовыми дефектами; assertions/таймауты/coverage gates не ослаблены.
+
+Открыто: текущий полный check, один PR/свежий CI/очередь/main, штатный выпуск
+API→web→OTA и реальная production-сборка. Телефон не проверен; actual-user writes
+для приёмки не планируются. Статус runs/публикации далее — YAFIT-709 и PR.
+
+
+### Итерация 3 — 11.11.2026 — Codex / OpenAI
+
+Локальная приёмка завершена. Все этапы check прошли: frontend359files/3218tests,
+lint/types/coverage, media/infra/calendar/hosting policies; API139passedfiles/1640tests
+и17штатных DB-dependent files/468skips; production build/startup. Первый check
+остановился на типах новых frontend fixtures, затем frontend/policies целиком
+прошли, API lint потребовал типизировать результаты трёх новых PG test queries.
+После type-only правки весь API check и build прошли отдельно. Общий прежний
+командный exit1 не выдаётся за exit0; успешные неизменённые frontend/policy этапы
+не повторялись. PostgreSQL test:db до этих test-only аннотаций прошёл466cases
+и6node cases; SQL/runtime побайтно прежние. Targeted frontend/repository132passed;
+новые четыре UI cases покрывают отмену, неизвестный результат/reload/replay,
+версионный конфликт, validation/storage/definitive reject.
+
+Финальная ручная сверка scope: только начальный расход и version; новая команда
+не меняет package total/comment/dates/prices, workouts/sessions/payments и старые
+events. Новый audit event сохраняет reason/requestId, no-op не пишет событие.
+Новая forward-миграция не меняет существующие данные; штатный execute grant
+только fit_api на actor-guarded функцию, без новых broad roles/ACL/секретов.
+Снимки существующей Lime формы просмотрены, CSS не добавлялся.
+Дальше: один PR; обязательный CI exact head, актуальный main/очередь GitHub и
+полный штатный выпуск. Production и физический телефон ещё не проверены.

@@ -1,3 +1,6 @@
+import { FinanceBalanceCorrectionForm } from './FinanceBalanceCorrectionForm'
+import { financeInputCents as cents } from './finance-input-cents'
+import { ChevronDownIcon } from '../../shared/icons'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useId, useRef, useState, type FormEvent, type ReactNode } from 'react'
 import { Link, useLocation, useParams } from 'react-router-dom'
@@ -11,9 +14,10 @@ import { useDataBackend } from '../../app/data-backend-context'
 import { invalidateFinanceViews } from '../../app/invalidate-finance-views'
 import { invalidateWorkoutResults } from '../../app/invalidate-workout-results'
 import { RepositoryError } from '../../data/repositories/error'
-import { clearFinanceOperation, financeOperationKey, pendingPackageSchema, pendingPaymentSchema, pendingSessionSchema, readFinanceOperation, writeFinanceOperation } from './pending-finance-operation'
+import { clearFinanceOperation, financeOperationKey, pendingBalanceCorrectionSchema, pendingPackageSchema, pendingPaymentSchema, pendingSessionSchema, readFinanceOperation, writeFinanceOperation } from './pending-finance-operation'
+import { financePackagePeriod } from './finance-package-label'
 import { SessionAccountingForm, type SessionAccountingDraft } from './SessionAccountingForm'
-import type { TrainerFinancePackage, TrainerFinancePackageDraft, TrainerFinancePayment, TrainerFinanceSession, TrainerFinancePaymentDraft } from '../../data/contracts/trainer-finance'
+import type { TrainerFinanceBalanceCorrection, TrainerFinancePackage, TrainerFinancePackageDraft, TrainerFinancePayment, TrainerFinanceSession, TrainerFinancePaymentDraft } from '../../data/contracts/trainer-finance'
 import { addDays, daysBetween, formatLocalDate, formatMonth, localDate, todayInTimeZone } from '../../shared/local-date'
 import { AsyncView, Field, InlineRequestError, OverflowMenu, Page, useConfirm } from '../../shared/ui'
 
@@ -31,12 +35,6 @@ function money(cents: number) {
   return new Intl.NumberFormat('ru-RU', { style: 'currency', currency: 'RUB', maximumFractionDigits: cents % 100 === 0 ? 0 : 2 }).format(cents / 100)
 }
 
-function cents(value: FormDataEntryValue | null): number {
-  const normalized = String(value ?? '').trim().replace(/\s/g, '').replace(',', '.')
-  const amount = Number(normalized)
-  if (!Number.isFinite(amount) || amount < 0 || amount > 1000000000 || !/^\d+(?:\.\d{1,2})?$/.test(normalized)) throw new Error('Проверьте сумму')
-  return Math.round(amount * 100)
-}
 
 function integer(value: FormDataEntryValue | null, label: string) {
   const parsed = Number(value)
@@ -49,8 +47,9 @@ function optional(form: FormData, name: string) {
   return value || null
 }
 
-export function PackageForm({ current, template, today, saving, error, initialDraft, locked = false, onCancel, onSubmit, lime = false }: {
+export function PackageForm({ current, template, today, saving, error, initialDraft, locked = false, onCancel, onSubmit, lime = false, paymentEntry = false }: {
   lime?: boolean
+  paymentEntry?: boolean
   current?: TrainerFinancePackage
   template?: TrainerFinancePackage
   initialDraft?: TrainerFinancePackageDraft
@@ -69,8 +68,9 @@ export function PackageForm({ current, template, today, saving, error, initialDr
   const renewalEnd = template?.endsOn && template.endsOn >= template.startsOn
     ? addDays(localDate(renewalStart), daysBetween(localDate(template.startsOn), localDate(template.endsOn))) : ''
   const [startsOn, setStartsOn] = useState(initialDraft?.startsOn ?? current?.startsOn ?? renewalStart)
+  const [singleSession, setSingleSession] = useState(lime && (initialDraft?.singleSession ?? source?.singleSession ?? paymentEntry))
   const [kind, setKind] = useState<TrainerFinancePackage['kind']>(initialDraft?.kind ?? source?.kind ?? 'session_pack')
-  const [title, setTitle] = useState(initialDraft?.title ?? source?.title ?? 'Персональные тренировки')
+  const [title, setTitle] = useState(initialDraft?.title ?? source?.title ?? (singleSession ? 'Разовое занятие' : 'Персональные тренировки'))
   const [priceValue, setPriceValue] = useState(initialDraft ? String(initialDraft.priceCents / 100) : source ? String(source.priceCents / 100) : '')
   const [paidValue, setPaidValue] = useState(initialDraft ? String(initialDraft.openingPaidCents / 100) : '0')
   const submit = (event: FormEvent<HTMLFormElement>) => {
@@ -83,7 +83,7 @@ export function PackageForm({ current, template, today, saving, error, initialDr
       const values = new FormData(form)
       const errors: Record<string, string> = {}
       if (!String(values.get('title') ?? '').trim()) errors.title = 'Укажите название услуги'
-      if (kind === 'session_pack' && !current && Number(values.get('openingUsedSessions')) > Number(values.get('sessionsTotal'))) {
+      if (!singleSession && kind === 'session_pack' && !current && Number(values.get('openingUsedSessions')) > Number(values.get('sessionsTotal'))) {
         errors.openingUsedSessions = 'Проведённых занятий не может быть больше общего количества'
       }
       if (!current && Number(values.get('openingPaid')) > Number(values.get('price'))) errors.openingPaid = 'Оплата не может быть больше стоимости'
@@ -112,8 +112,8 @@ export function PackageForm({ current, template, today, saving, error, initialDr
     }
     try {
       const form = new FormData(event.currentTarget)
-      const sessionsTotal = kind === 'session_pack' ? integer(form.get('sessionsTotal'), 'Всего занятий') : 0
-      const openingUsedSessions = kind === 'session_pack' && !current ? integer(form.get('openingUsedSessions'), 'Уже проведено') : 0
+      const sessionsTotal = singleSession ? 1 : kind === 'session_pack' ? integer(form.get('sessionsTotal'), 'Всего занятий') : 0
+      const openingUsedSessions = !singleSession && kind === 'session_pack' && !current ? integer(form.get('openingUsedSessions'), 'Уже проведено') : 0
       const priceCents = cents(form.get('price'))
       const openingPaidCents = current ? 0 : cents(form.get('openingPaid'))
       if (kind === 'session_pack' && (sessionsTotal < 1 || openingUsedSessions > sessionsTotal)) throw new Error('Проведённых занятий не может быть больше общего количества')
@@ -125,7 +125,7 @@ export function PackageForm({ current, template, today, saving, error, initialDr
       if (openingPaidCents > 0) localDate(String(form.get('openingReceivedOn')))
       if (endsOn && endsOn < startsOn) throw new Error('Окончание не может быть раньше начала')
       onSubmit({
-        kind, title: String(form.get('title') ?? '').trim(), sessionsTotal, openingUsedSessions,
+        kind, ...(singleSession ? { singleSession: true } : {}), title: String(form.get('title') ?? '').trim(), sessionsTotal, openingUsedSessions,
         priceCents, openingPaidCents,
         ...(!current && openingPaidCents > 0 ? { openingReceivedOn: String(form.get('openingReceivedOn') ?? '') } : {}),
         startsOn, endsOn,
@@ -139,8 +139,8 @@ export function PackageForm({ current, template, today, saving, error, initialDr
   const field = (name: string, label: string, input: ReactNode) => lime
     ? <div key={name} className="lime-finance-field"><Field label={label}>{input}</Field>{fieldErrors[name] && <small className="error" role="alert" id={`${errorId}-${name}`}>{fieldErrors[name]}</small>}</div>
     : <Field key={name} label={label}>{input}</Field>
-  const sessions = kind === 'session_pack' && field('sessionsTotal', lime ? 'Количество занятий' : 'Всего занятий', <input disabled={saving || locked} {...validation('sessionsTotal')} name="sessionsTotal" type="number" inputMode="numeric" min="1" max="10000" required defaultValue={initialDraft?.sessionsTotal ?? (source?.sessionsTotal || 10)} />)
-  const used = kind === 'session_pack' && !current && field('openingUsedSessions', lime ? 'Уже проведено, занятий' : 'Уже проведено', <input disabled={saving || locked} {...validation('openingUsedSessions')} name="openingUsedSessions" type="number" inputMode="numeric" min="0" max="10000" required defaultValue={initialDraft?.openingUsedSessions ?? 0} />)
+  const sessions = !singleSession && kind === 'session_pack' && field('sessionsTotal', lime ? 'Количество занятий' : 'Всего занятий', <input disabled={saving || locked} {...validation('sessionsTotal')} name="sessionsTotal" type="number" inputMode="numeric" min="1" max="10000" required defaultValue={initialDraft?.sessionsTotal ?? (source?.sessionsTotal || 10)} />)
+  const used = !singleSession && kind === 'session_pack' && !current && field('openingUsedSessions', lime ? 'Уже проведено, занятий' : 'Уже проведено', <input disabled={saving || locked} {...validation('openingUsedSessions')} name="openingUsedSessions" type="number" inputMode="numeric" min="0" max="10000" required defaultValue={initialDraft?.openingUsedSessions ?? 0} />)
   const price = field('price', 'Стоимость, ₽', <input disabled={saving || locked} {...validation('price')} name="price" type="number" inputMode="decimal" min="0" max="1000000000" step="0.01" required value={priceValue} onChange={(event) => setPriceValue(event.target.value)} />)
   const paid = !current && field('openingPaid', 'Уже оплачено, ₽', <input disabled={saving || locked} {...validation('openingPaid')} name="openingPaid" type="number" inputMode="decimal" min="0" max="1000000000" step="0.01" required value={paidValue} onChange={(event) => setPaidValue(event.target.value)} />)
   const costAndPayment = <div className="finance-cost-payment">
@@ -148,29 +148,34 @@ export function PackageForm({ current, template, today, saving, error, initialDr
     {!current && <button type="button" className="link finance-fill-payment" disabled={saving || locked || Number(priceValue) <= 0 || !priceValue} onClick={() => setPaidValue(priceValue)}>Вся сумма</button>}
     {!current && Number(paidValue) > 0 && field('openingReceivedOn', 'Дата получения', <input disabled={saving || locked} {...validation('openingReceivedOn')} name="openingReceivedOn" type="date" required defaultValue={initialDraft?.openingReceivedOn ?? today} />)}
   </div>
+  const titleField = field('title', 'Название', <input disabled={saving || locked} {...validation('title')} name="title" required maxLength={120} value={title} onChange={(event) => setTitle(event.target.value)} />)
+  const commentField = field('comment', 'Комментарий', <textarea disabled={saving || locked} {...validation('comment')} name="comment" rows={2} maxLength={2000} defaultValue={initialDraft?.comment ?? source?.comment ?? ''} />)
   const dates = <>
     {field('startsOn', 'Начало', <input disabled={saving || locked} {...validation('startsOn')} name="startsOn" type="date" required value={startsOn} onChange={(event) => setStartsOn(event.target.value)} />)}
     {field('endsOn', 'Окончание', <input disabled={saving || locked} {...validation('endsOn')} name="endsOn" type="date" required={kind === 'online_coaching'} min={startsOn} defaultValue={initialDraft ? initialDraft.endsOn ?? '' : current?.endsOn ?? renewalEnd} />)}
     {field('paymentDueOn', 'Оплатить до', <input disabled={saving || locked} {...validation('paymentDueOn')} name="paymentDueOn" type="date" defaultValue={initialDraft ? initialDraft.paymentDueOn ?? '' : current?.paymentDueOn ?? ''} />)}
   </>
+  const typeSelect = <select name="kind" value={singleSession ? 'single' : kind} disabled={saving || locked || Boolean(current)} onChange={(event) => {
+      const next = event.target.value
+      setSingleSession(next === 'single')
+      setKind(next === 'online_coaching' ? 'online_coaching' : 'session_pack')
+      if (['Персональные тренировки', 'Онлайн-сопровождение', 'Разовое занятие', 'Ведение'].includes(title))
+        setTitle(next === 'single' ? 'Разовое занятие' : next === 'session_pack' ? 'Персональные тренировки' : lime ? 'Ведение' : 'Онлайн-сопровождение')
+    }}>{lime && <option value="single">Разовое занятие</option>}<option value="session_pack">{lime ? 'Абонемент' : 'Пакет занятий'}</option><option value="online_coaching">{lime ? 'Ведение за период' : 'Онлайн-сопровождение'}</option></select>
   return <form className={`finance-form card${lime ? ' lime-finance-form' : ''}`} noValidate={lime} aria-busy={saving} onSubmit={submit}>
-    <div className="finance-form-heading"><div>{!lime && <p className="eyebrow">ФИНАНСЫ</p>}<h2>{current ? 'Редактирование' : template ? 'Продление' : 'Новая услуга'}</h2></div></div>
-    <Field label="Тип"><select name="kind" value={kind} disabled={saving || locked || Boolean(current)} onChange={(event) => {
-      const next = event.target.value as TrainerFinancePackage['kind']
-      setKind(next)
-      if (title === 'Персональные тренировки' || title === 'Онлайн-сопровождение') setTitle(next === 'session_pack' ? 'Персональные тренировки' : 'Онлайн-сопровождение')
-    }}><option value="session_pack">Пакет занятий</option><option value="online_coaching">Онлайн-сопровождение</option></select></Field>
-    {field('title', 'Название', <input disabled={saving || locked} {...validation('title')} name="title" required maxLength={120} value={title} onChange={(event) => setTitle(event.target.value)} />)}
+    <div className="finance-form-heading"><div>{!lime && <p className="eyebrow">ФИНАНСЫ</p>}<h2>{current ? 'Редактирование' : template ? 'Продление' : paymentEntry ? 'Добавить оплату' : 'Новая услуга'}</h2></div></div>
+    <Field label="Тип">{lime ? <span className="finance-select-field">{typeSelect}<ChevronDownIcon /></span> : typeSelect}</Field>
+    {!singleSession && titleField}
     {lime ? <>
-      {kind === 'session_pack' && <fieldset><legend>Занятия</legend>{sessions}</fieldset>}
+      {sessions && <fieldset><legend>Занятия</legend>{sessions}</fieldset>}
       <fieldset><legend>Стоимость и оплата</legend>{costAndPayment}</fieldset>
-      <fieldset><legend>Сроки</legend><div className="finance-form-grid">{dates}</div></fieldset>
+      <>{singleSession ? <details className="finance-opening-balances"><summary>Дополнительно</summary>{titleField}<div className="finance-form-grid">{dates}</div>{commentField}</details> : <fieldset><legend>Сроки</legend><div className="finance-form-grid">{dates}</div></fieldset>}</>
       {used && <details className="finance-opening-balances"><summary>Уже проведённые занятия</summary><div className="finance-form-grid">{used}</div></details>}
     </> : <>{current
       ? <div className="finance-form-grid">{sessions}{price}</div>
       : <><div className="finance-form-grid">{sessions}{used}</div>{costAndPayment}</>}
       <div className="finance-form-grid">{dates}</div></>}
-    {field('comment', 'Комментарий', <textarea disabled={saving || locked} {...validation('comment')} name="comment" rows={2} maxLength={2000} defaultValue={initialDraft?.comment ?? source?.comment ?? ''} />)}
+    {!singleSession && commentField}
     {validationError && <p className="error" role="alert">{validationError}</p>}
     {locked && !error && <p role="status">Сохранение не подтверждено</p>}
     {error && <InlineRequestError error={error} message={locked ? 'Сохранение не подтверждено' : undefined} />}
@@ -180,8 +185,9 @@ export function PackageForm({ current, template, today, saving, error, initialDr
   </form>
 }
 
-export function PaymentForm({ lime = false, current, packages = [], packageId, today, saving, error, initialDraft, locked = false, onCancel, onSubmit }: {
+export function PaymentForm({ lime = false, current, packages = [], packageId, today, saving, error, initialDraft, locked = false, onCancel, onSubmit, onNewService }: {
   lime?: boolean
+  onNewService?: () => void
   current?: TrainerFinancePayment
   initialDraft?: TrainerFinancePaymentDraft
   locked?: boolean
@@ -196,6 +202,7 @@ export function PaymentForm({ lime = false, current, packages = [], packageId, t
   const [validationError, setValidationError] = useState<string | null>(null)
   const [selectedPackageId, setSelectedPackageId] = useState(packageId ?? packages[0]?.id ?? '')
   const [amount, setAmount] = useState(initialDraft ? String(initialDraft.amountCents / 100) : current ? String(current.amountCents / 100) : initialPaymentAmount(selectedPackageId, packages))
+  const selectedPackage = packages.find(item => item.id === selectedPackageId)
   return <form className="finance-form card" aria-busy={saving} onSubmit={(event) => {
     event.preventDefault()
     if (saving) return
@@ -213,7 +220,9 @@ export function PaymentForm({ lime = false, current, packages = [], packageId, t
     }
   }}>
     <div className="finance-form-heading"><div>{!lime && <p className="eyebrow">ОПЛАТА</p>}<h2>{current ? lime ? 'Изменить оплату' : 'Редактирование' : 'Добавить оплату'}</h2></div></div>
-    {!current && packages.length > 1 && <Field label="Услуга"><select disabled={saving || locked} name="packageId" required value={selectedPackageId} onChange={(event) => { setSelectedPackageId(event.target.value); setAmount(initialPaymentAmount(event.target.value, packages)) }}>{packages.map((item) => <option key={item.id} value={item.id}>{item.title}</option>)}</select></Field>}
+    {!current && packages.length > 1 && <Field label="Услуга"><select disabled={saving || locked} name="packageId" required value={selectedPackageId} onChange={(event) => { setSelectedPackageId(event.target.value); setAmount(initialPaymentAmount(event.target.value, packages)) }}>{packages.map((item) => <option key={item.id} value={item.id}>{lime ? `${item.title} · ${financePackagePeriod(item)} · к оплате ${money(item.dueCents)}` : item.title}</option>)}</select></Field>}
+    {lime && selectedPackage && (current || packages.length === 1) && <p className="finance-payment-package">{selectedPackage.title} · {financePackagePeriod(selectedPackage)} · к оплате {money(selectedPackage.dueCents)}</p>}
+    {lime && onNewService && !current && <button type="button" className="secondary" disabled={saving || locked} onClick={onNewService}>Новая услуга</button>}
     <div className="finance-form-grid"><Field label="Сумма, ₽"><input disabled={saving || locked} name="amount" type="number" inputMode="decimal" min="0.01" max="1000000000" step="0.01" required value={amount} onChange={(event) => setAmount(event.target.value)} /></Field><Field label="Дата"><input disabled={saving || locked} name="receivedOn" type="date" required defaultValue={initialDraft?.receivedOn ?? current?.receivedOn ?? today} /></Field></div>
     <Field label="Комментарий">{lime ? <textarea disabled={saving || locked} name="comment" rows={2} maxLength={2000} defaultValue={initialDraft?.comment ?? current?.comment ?? ''} /> : <input disabled={saving || locked} name="comment" maxLength={2000} defaultValue={initialDraft?.comment ?? current?.comment ?? ''} />}</Field>
     {validationError && <p className="error" role="alert">{validationError}</p>}
@@ -235,7 +244,7 @@ function isFirstRejectedCreate(error: Error, operation: { attempts: number } | n
   return operation?.attempts === 1 && error instanceof RepositoryError && ['invalid_request', 'PT422', 'PT403', 'PT404'].includes(error.code)
 }
 
-type PackageEditor = { mode: 'new' } | { mode: 'edit' | 'renew'; item: TrainerFinancePackage }
+type PackageEditor = { mode: 'new'; fromPayment?: boolean } | { mode: 'edit' | 'renew'; item: TrainerFinancePackage }
 
 const FINANCE_TABS: { id: FinanceTab; label: string }[] = [
   { id: 'packages', label: 'Услуги' },
@@ -269,8 +278,10 @@ function TrainerFinanceClientPage() {
   const packageKey = financeOperationKey(actor?.userId ?? '', clientId, 'package')
   const paymentKey = financeOperationKey(actor?.userId ?? '', clientId, 'payment')
   const manualKey = financeOperationKey(actor?.userId ?? '', clientId, 'session')
+  const balanceKey = financeOperationKey(actor?.userId ?? '', clientId, 'balance')
   const [restored] = useState(() => ({
     package: readFinanceOperation(packageKey, pendingPackageSchema),
+    balance: readFinanceOperation(balanceKey, pendingBalanceCorrectionSchema),
     payment: readFinanceOperation(paymentKey, pendingPaymentSchema),
     manual: readFinanceOperation(manualKey, pendingSessionSchema),
   }))
@@ -284,6 +295,9 @@ function TrainerFinanceClientPage() {
   const pendingPaymentPackageId = pendingPayment?.packageId ?? null
   const manualOperation = useRef<{ draft: SessionAccountingDraft; requestId: string; attempts: number } | null>(restored.manual)
   const [pendingManualDraft, setPendingManualDraft] = useState<SessionAccountingDraft | null>(restored.manual?.draft ?? null)
+  const balanceOperation = useRef(restored.balance)
+  const [pendingBalance, setPendingBalance] = useState(restored.balance)
+  const [balanceId, setBalanceId] = useState<string | null>(restored.balance?.packageId ?? null)
   const [manualOpen, setManualOpen] = useState(false)
   const [sessionEditor, setSessionEditor] = useState<string | null>(null)
   const [confirm, confirmDialog] = useConfirm()
@@ -298,6 +312,34 @@ function TrainerFinanceClientPage() {
       queryClient.invalidateQueries({ queryKey: ['trainer-attention'] }),
       queryClient.invalidateQueries({ queryKey: ['clients'] })])
   }
+  const correctBalance = useMutation({
+    mutationFn: async (value: Pick<TrainerFinanceBalanceCorrection, 'remainingSessions' | 'reason'>) => {
+      const item = finance.data?.packages.find(pack => pack.id === balanceId)
+      if (!item) throw new Error('Блок не найден. Обновите страницу.')
+      const requestId = balanceOperation.current?.requestId ?? crypto.randomUUID()
+      const operation = balanceOperation.current ?? { packageId: item.id, requestId, attempts: 0,
+        draft: { ...value, requestId, expectedVersion: item.version } }
+      operation.attempts += 1
+      writeFinanceOperation(balanceKey, operation)
+      balanceOperation.current = operation
+      setPendingBalance({ ...operation })
+      return trainerFinance.correctPackageBalance(operation.packageId, operation.draft)
+    },
+    onSuccess: async () => {
+      await refresh()
+      clearFinanceOperation(balanceKey, balanceOperation.current?.requestId)
+      balanceOperation.current = null; setPendingBalance(null); setBalanceId(null)
+    },
+    onError: async error => {
+      // Definitive rejections did not apply this idempotent command. Keep the
+      // fields, refresh a conflict, and use a new operation only after review.
+      if (error instanceof RepositoryError && ['invalid_request', 'PT422', 'PT403', 'PT404', 'PT409', '40001'].includes(error.code)) {
+        clearFinanceOperation(balanceKey, balanceOperation.current?.requestId)
+        balanceOperation.current = null; setPendingBalance(null)
+        if (['PT409', '40001'].includes(error.code)) await refresh()
+      }
+    },
+  })
   const savePackage = useMutation({
     mutationFn: async ({ draft, editor }: { draft: TrainerFinancePackageDraft; editor: PackageEditor }) => {
       if (editor.mode === 'edit') return trainerFinance.updatePackage(editor.item.id, { ...draft, expectedVersion: editor.item.version })
@@ -365,7 +407,8 @@ function TrainerFinanceClientPage() {
       const [disposition, packageId = ''] = draft.value.split(':')
       return trainerFinance.createManualSession(clientId, {
         requestId: manualOperation.current.requestId,
-        disposition: disposition as TrainerFinanceSession['disposition'],
+        disposition: disposition === 'single' ? 'unassigned' : disposition as TrainerFinanceSession['disposition'],
+        ...(draft.singleService ? {singleService:draft.singleService} : {}),
         packageId: disposition === 'charged' ? packageId : null,
         comment: draft.comment, workoutDate: draft.workoutDate,
       })
@@ -433,6 +476,7 @@ function TrainerFinanceClientPage() {
   const tabCount: Record<FinanceTab, number> = { packages: packages.length, sessions: periodSessions.length + attendanceWithoutLedger.length, payments: visiblePayments.length }
   const openPackage = (editor: PackageEditor) => {
     if (!packageOperation.current && !savePackage.isPending) savePackage.reset()
+    setPaymentEditor(null)
     setPackageEditor(packageOperation.current?.editor ?? editor)
   }
   const openPayment = (packageId: string, payment?: TrainerFinancePayment, direct = false) => {
@@ -450,10 +494,13 @@ function TrainerFinanceClientPage() {
   const renderPackage = (item: TrainerFinancePackage, history = false) => {
     const servicePayments = payments.filter((payment) => payment.packageId === item.id)
     return <article className={`finance-package card${history ? ' is-history' : ''}`} key={item.id}>
-      <header><div><span className={`finance-status finance-status-${item.packageStatus}`}>{item.kind === 'online_coaching' ? 'Онлайн · ' : ''}{PACKAGE_STATUS[item.packageStatus]}</span><h2>{item.title}</h2></div><OverflowMenu label={`Действия с услугой ${item.title}`} items={[...(canCreate ? [{ label: 'Продлить', disabled: pendingPackageDraft !== null, onClick: () => openPackage({ mode: 'renew', item }) }] : []), { label: 'Редактировать', disabled: pendingPackageDraft !== null, onClick: () => openPackage({ mode: 'edit', item }) }]} /></header>
+      <header><div><span className={`finance-status finance-status-${item.packageStatus}`}>{isFitLimeEnabled(actor) && item.singleSession ? 'Разовая · ' : item.kind === 'online_coaching' ? isFitLimeEnabled(actor) ? 'Ведение · ' : 'Онлайн · ' : ''}{PACKAGE_STATUS[item.packageStatus]}</span><h2>{item.title}</h2></div><OverflowMenu label={`Действия с услугой ${item.title}`} items={[...(canCreate && !(isFitLimeEnabled(actor) && item.singleSession) ? [{ label: 'Продлить', disabled: pendingPackageDraft !== null, onClick: () => openPackage({ mode: 'renew', item }) }] : []), { label: 'Редактировать', disabled: pendingPackageDraft !== null, onClick: () => openPackage({ mode: 'edit', item }) },
+        ...(isFitLimeEnabled(actor) && item.kind === 'session_pack' && !item.singleSession ? [{ label: 'Скорректировать остаток',
+          disabled: pendingBalance !== null && pendingBalance.packageId !== item.id,
+          onClick: () => { if (!balanceOperation.current) correctBalance.reset(); setBalanceId(item.id) } }] : [])]} /></header>
       <div className="finance-package-summary finance-service-balance">
         {item.kind === 'session_pack'
-          ? <p><span>Осталось занятий</span><strong>{item.sessionsRemaining} из {item.sessionsTotal}</strong></p>
+          ? <p><span>{isFitLimeEnabled(actor) && item.singleSession ? 'Занятие' : 'Осталось занятий'}</span><strong>{isFitLimeEnabled(actor) && item.singleSession ? item.sessionsUsed > 0 ? 'Проведено' : 'Не проведено' : `${item.sessionsRemaining} из ${item.sessionsTotal}`}</strong></p>
           : <p><span>Период</span><strong>{formatLocalDate(localDate(item.startsOn))} — {item.endsOn ? formatLocalDate(localDate(item.endsOn)) : '—'}</strong></p>}
       </div>
       <div className="finance-package-facts finance-service-money"><p><span>Стоимость</span><strong>{money(item.priceCents)}</strong></p><p><span>Оплачено</span><strong>{money(item.paidCents)}</strong></p><p><span>К оплате</span><strong>{money(item.dueCents)}</strong></p></div>
@@ -493,9 +540,14 @@ function TrainerFinanceClientPage() {
       </AsyncView>
     </>}
     <AsyncView loading={finance.isLoading} error={finance.error} onRetry={() => void finance.refetch()}>
-      {packageEditor && <PackageForm lime={isFitLimeEnabled(actor)} current={packageEditor.mode === 'edit' ? packageEditor.item : undefined} template={packageEditor.mode === 'renew' ? packageEditor.item : undefined} today={today} saving={savePackage.isPending} error={savePackage.error} initialDraft={pendingPackageDraft ?? undefined} locked={pendingPackageDraft !== null} onCancel={() => setPackageEditor(null)} onSubmit={(draft) => savePackage.mutate({ draft, editor: packageEditor })} />}
-      {paymentEditor && <PaymentForm lime={isFitLimeEnabled(actor)} current={paymentEditor.payment} packages={paymentEditor.direct ? packages.filter((item) => item.id === paymentEditor.packageId) : packages} packageId={paymentEditor.packageId} today={today} saving={savePayment.isPending} error={savePayment.error} initialDraft={pendingPaymentDraft ?? undefined} locked={pendingPaymentDraft !== null} onCancel={() => setPaymentEditor(null)} onSubmit={(draft, packageId) => savePayment.mutate({ draft, packageId, editor: paymentEditor })} />}
-      {!packageEditor && !paymentEditor && <>
+      {balanceId && finance.isSuccess && !finance.data?.packages.some(item => item.id === balanceId) && <div role="alert"><p>Блок недоступен. Вернитесь к списку услуг и обновите данные.</p><button type="button" className="secondary" onClick={() => setBalanceId(null)}>К услугам</button></div>}
+      {balanceId && finance.data?.packages.find(item => item.id === balanceId) && <FinanceBalanceCorrectionForm key={balanceId}
+        item={finance.data.packages.find(item => item.id === balanceId)!} initialDraft={pendingBalance?.draft}
+        locked={pendingBalance !== null} saving={correctBalance.isPending} error={correctBalance.error}
+        onCancel={() => setBalanceId(null)} onSubmit={value => correctBalance.mutate(value)} />}
+      {packageEditor && <PackageForm paymentEntry={packageEditor.mode === 'new' && packageEditor.fromPayment} lime={isFitLimeEnabled(actor)} current={packageEditor.mode === 'edit' ? packageEditor.item : undefined} template={packageEditor.mode === 'renew' ? packageEditor.item : undefined} today={today} saving={savePackage.isPending} error={savePackage.error} initialDraft={pendingPackageDraft ?? undefined} locked={pendingPackageDraft !== null} onCancel={() => setPackageEditor(null)} onSubmit={(draft) => savePackage.mutate({ draft, editor: packageEditor })} />}
+      {paymentEditor && <PaymentForm onNewService={isFitLimeEnabled(actor) && canCreate && !pendingPaymentDraft ? () => openPackage({ mode: 'new', fromPayment: true }) : undefined} lime={isFitLimeEnabled(actor)} current={paymentEditor.payment} packages={paymentEditor.direct ? packages.filter((item) => item.id === paymentEditor.packageId) : packages} packageId={paymentEditor.packageId} today={today} saving={savePayment.isPending} error={savePayment.error} initialDraft={pendingPaymentDraft ?? undefined} locked={pendingPaymentDraft !== null} onCancel={() => setPaymentEditor(null)} onSubmit={(draft, packageId) => savePayment.mutate({ draft, packageId, editor: paymentEditor })} />}
+      {!packageEditor && !paymentEditor && !balanceId && <>
         <div className="finance-tabs" role="tablist" aria-label="Раздел финансов клиента">{FINANCE_TABS.map((tab) => <button id={`finance-${tab.id}-tab`} key={tab.id} type="button" role="tab" aria-label={`${tab.label}: ${tabCount[tab.id]}`} aria-selected={activeTab === tab.id} aria-controls={`finance-${tab.id}-panel`} className={activeTab === tab.id ? 'is-active' : ''} onClick={() => changeTab(tab.id)}><span>{tab.label}</span><small>{tabCount[tab.id]}</small></button>)}</div>
 
         {monthView.enabled && activeTab !== 'packages' && <div className="finance-filter-row" role="group" aria-label="Период истории">
@@ -511,7 +563,7 @@ function TrainerFinanceClientPage() {
 
         <section id="finance-sessions-panel" className="finance-tab-panel" data-finance-tab="sessions" role="tabpanel" aria-labelledby="finance-sessions-tab" hidden={activeTab !== 'sessions'}>
           <div className="finance-section-heading"><div>{!isFitLimeEnabled(actor) && <p className="eyebrow">ЗАНЯТИЯ</p>}<h2>{monthView.enabled ? monthView.allHistory ? 'Все занятия' : 'Занятия за месяц' : isFitLimeEnabled(actor) ? 'Проведённые занятия' : 'Проведённые'}</h2></div>{!manualOpen && (canCreate || pendingManualDraft) && <button type="button" className="primary" onClick={() => { if (!manualOperation.current) addManualSession.reset(); setManualOpen(true) }}>{pendingManualDraft ? 'Проверить сохранение' : 'Добавить'}</button>}</div>
-          <div className="finance-filter-row finance-session-filters" role="group" aria-label="Фильтр занятий"><button type="button" className={sessionFilter === 'all' ? 'is-active' : ''} aria-pressed={sessionFilter === 'all'} onClick={() => setSessionFilter('all')}>Все</button><button type="button" className={sessionFilter === 'unassigned' ? 'is-active' : ''} aria-pressed={sessionFilter === 'unassigned'} onClick={() => setSessionFilter('unassigned')}>Без списания</button><button type="button" className={sessionFilter === 'trial' ? 'is-active' : ''} aria-pressed={sessionFilter === 'trial'} onClick={() => setSessionFilter('trial')}>Пробные</button></div>
+          <div className="finance-filter-row finance-session-filters" role="group" aria-label="Фильтр занятий"><button type="button" className={sessionFilter === 'all' ? 'is-active' : ''} aria-pressed={sessionFilter === 'all'} onClick={() => setSessionFilter('all')}>Все</button><button type="button" className={sessionFilter === 'unassigned' ? 'is-active' : ''} aria-pressed={sessionFilter === 'unassigned'} onClick={() => setSessionFilter('unassigned')}>Без списания</button>{(!isFitLimeEnabled(actor) || sessions.some(session=>session.disposition==='trial')) && <button type="button" className={sessionFilter === 'trial' ? 'is-active' : ''} aria-pressed={sessionFilter === 'trial'} onClick={() => setSessionFilter('trial')}>Пробные</button>}</div>
           {manualOpen && <SessionAccountingForm lime={isFitLimeEnabled(actor)} packages={packages} today={today} initialDraft={pendingManualDraft ?? undefined}
             locked={pendingManualDraft !== null} saving={addManualSession.isPending} error={addManualSession.error}
             onCancel={() => { setManualOpen(false); if (!manualOperation.current) addManualSession.reset() }}
@@ -525,8 +577,8 @@ function TrainerFinanceClientPage() {
             const session = row.session
             const editing = sessionEditor === session.id
             const sessionPackage = session.packageId ? packageById.get(session.packageId) : undefined
-            const number = sessionNumberById.get(session.id)
-            return <div className={`finance-session${editing ? ' is-editing' : ''}`} key={session.id}><div className="finance-session-row"><div className="finance-session-leading"><span className="finance-session-number">{number ? `№${number}` : '—'}</span><Link to={`/workouts/${session.workoutId}`}><strong>{formatLocalDate(localDate(session.workoutDate))}</strong><span>{session.source === 'manual' ? 'Добавлено вручную' : 'Из завершённой тренировки'}</span></Link></div><div className="finance-session-accounting"><strong>{SESSION_STATUS[session.disposition]}</strong><span>{sessionPackage?.title ?? 'Без абонемента'}</span></div><OverflowMenu label={`Действия с занятием ${formatLocalDate(localDate(session.workoutDate))}`} items={[{ label: 'Изменить учёт', onClick: () => { updateSession.reset(); setSessionEditor(session.id) } }]} /></div>{editing && <SessionAccountingForm key={session.id} lime={isFitLimeEnabled(actor)} packages={packages} today={today} session={session}
+            const number = isFitLimeEnabled(actor)&&sessionPackage?.singleSession ? undefined : sessionNumberById.get(session.id)
+            return <div className={`finance-session${editing ? ' is-editing' : ''}`} key={session.id}><div className="finance-session-row"><div className="finance-session-leading"><span className="finance-session-number">{number ? `№${number}` : '—'}</span><Link to={`/workouts/${session.workoutId}`}><strong>{formatLocalDate(localDate(session.workoutDate))}</strong><span>{session.source === 'manual' ? 'Добавлено вручную' : 'Из завершённой тренировки'}</span></Link></div><div className="finance-session-accounting"><strong>{isFitLimeEnabled(actor)&&sessionPackage?.singleSession&&session.disposition==='charged'?'Разовая · проведена':SESSION_STATUS[session.disposition]}</strong><span>{sessionPackage?.title ?? 'Без абонемента'}</span></div><OverflowMenu label={`Действия с занятием ${formatLocalDate(localDate(session.workoutDate))}`} items={[{ label: 'Изменить учёт', onClick: () => { updateSession.reset(); setSessionEditor(session.id) } }]} /></div>{editing && <SessionAccountingForm key={session.id} lime={isFitLimeEnabled(actor)} packages={packages} today={today} session={session}
               saving={updateSession.isPending} error={updateSession.error} onCancel={() => setSessionEditor(null)}
               onSubmit={draft => updateSession.mutate({ session, ...draft })} />}</div>
           })}</div>
@@ -537,7 +589,7 @@ function TrainerFinanceClientPage() {
           <div className={`finance-payment-overview${monthView.enabled && !monthView.allHistory ? ' finance-monthly-payments-summary' : ''}`}>
             {(!monthView.enabled || monthView.allHistory) && <p><span>{monthView.enabled ? 'Получено за всю историю' : 'Получено'}</span><strong>{monthView.enabled ? financeMoney(receivedCents) : money(receivedCents)}</strong></p>}
             <p><span>{monthView.enabled ? 'К оплате сейчас' : 'К оплате'}</span><strong>{money(dueCents)}</strong></p></div>
-          <div className="finance-section-heading"><div>{!isFitLimeEnabled(actor) && <p className="eyebrow">ОПЛАТЫ</p>}<h2>{monthView.enabled ? monthView.allHistory ? 'Все оплаты' : 'Оплаты за месяц' : isFitLimeEnabled(actor) ? 'История оплат' : 'История'}</h2></div><button type="button" className="primary" disabled={packages.length === 0 && !pendingPaymentDraft} onClick={() => openPayment(activePackages[0]?.id ?? packages[0]?.id ?? '')}>{pendingPaymentDraft ? 'Проверить сохранение' : 'Добавить'}</button></div>
+          <div className="finance-section-heading"><div>{!isFitLimeEnabled(actor) && <p className="eyebrow">ОПЛАТЫ</p>}<h2>{monthView.enabled ? monthView.allHistory ? 'Все оплаты' : 'Оплаты за месяц' : isFitLimeEnabled(actor) ? 'История оплат' : 'История'}</h2></div><button type="button" className="primary" disabled={packages.length === 0 && !pendingPaymentDraft && (!isFitLimeEnabled(actor) || !canCreate)} onClick={() => isFitLimeEnabled(actor) && packages.length === 0 && !pendingPaymentDraft ? openPackage({ mode: 'new', fromPayment: true }) : openPayment(activePackages[0]?.id ?? packages[0]?.id ?? '')}>{pendingPaymentDraft ? 'Проверить сохранение' : isFitLimeEnabled(actor) ? 'Добавить оплату' : 'Добавить'}</button></div>
           <div className="finance-payment-list finance-payment-ledger">{visiblePayments.map((payment) => renderPayment(payment))}</div>
           {finance.isSuccess && visiblePayments.length === 0 && <p className="finance-empty">{monthView.enabled && !monthView.allHistory ? 'За этот месяц оплат нет.' : 'Оплат пока нет.'}</p>}
         </section>

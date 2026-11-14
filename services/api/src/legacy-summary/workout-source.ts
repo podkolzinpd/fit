@@ -5,8 +5,6 @@ export type SummaryWorkoutRow = {
   deleted_at: string | null
 }
 
-export type CompletedSummaryWorkoutRow = SummaryWorkoutRow & { workout_date: string }
-
 const LOCAL_DATE = /^\d{4}-\d{2}-\d{2}$/
 
 /**

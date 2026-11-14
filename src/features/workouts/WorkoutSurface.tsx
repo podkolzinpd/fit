@@ -1,4 +1,4 @@
-import type { ButtonHTMLAttributes, CSSProperties, PropsWithChildren, ReactNode } from 'react'
+import type { ButtonHTMLAttributes, CSSProperties, HTMLAttributes, PropsWithChildren, ReactNode } from 'react'
 
 export type WorkoutUiState = 'planned' | 'current' | 'upcoming' | 'completed' | 'partial' | 'decision' | 'cancelled' | 'skipped' | 'history'
 export type WorkoutUiTone = 'accent' | 'success' | 'warning' | 'neutral'
@@ -80,11 +80,11 @@ export function WorkoutExerciseCompact({ title, meta, state, leading, onClick, a
     : <div className={`workout-exercise-compact workout-exercise-${state} ${className}`.trim()} data-state={state}>{content}</div>
 }
 
-export function WorkoutSetRow({ state, className = '', children }: PropsWithChildren<{
+export function WorkoutSetRow({ state, className = '', children, ...props }: PropsWithChildren<{
   state: WorkoutUiState
   className?: string
-}>) {
-  return <div className={`workout-set-row workout-set-contract workout-set-${state} ${className}`.trim()} data-state={state}>{children}</div>
+} & HTMLAttributes<HTMLDivElement>>) {
+  return <div {...props} className={`workout-set-row workout-set-contract workout-set-${state} ${className}`.trim()} data-state={state}>{children}</div>
 }
 
 const ACTION_VARIANT_CLASSES: Record<WorkoutActionVariant, string> = {

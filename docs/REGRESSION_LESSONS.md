@@ -203,6 +203,24 @@ running/pending layout transitions. Отмена ручным фокусом д�
 ослаблением bounds. Red/green и реальный CI trace —
 [Live112](design/CLIENT_REFERENCE_SCREENS_20261029.md#итерация-112--2026-11-03--codex--openai).
 
+### Проверка настоящих кадров (12.11.2026)
+
+`page.clock.setFixedTime` устанавливает также timer-based RAF. В проверке
+native smooth scroll это давало несколько «стабильных» отсчётов между настоящими
+кадрами и расхождение с `document.timeline.currentTime` до90ms. Для такого
+сценария фиксировать только Date, оставляя RAF/performance/timers браузеру;
+проверять совпадение RAF timestamp с CSS timeline. Сохранить прежние проверки
+плавности, фокуса, bounds, DOM, фактов и стандартные таймауты. Диагностика и
+квитанции — [кабинет Яндекса,119](design/CORPORATE_ADMIN_20261027.md#итерация119--2026-11-12--codex--openai--native-live-frame-clock).
+
+900ms wall-clock guard также отменял reveal между вторым и третьим настоящими
+стабильными кадрами на загруженном renderer:917ms/stable1 и912ms/stable2,
+при тех же geometry успешный третий кадр приходил на972–1002ms. Ограничивать
+работу числом rendered frames, а отмену native scroll отсчитывать от его запроса;
+скрытие страницы отменяет pending reveal. В тесте окно1600ms начинается с click,
+наблюдатель сохраняется до bounds-check и ловит поздний вызов вне окна;
+плавность/focus/данные и30s не ослабляются. [Причина и red/green120](design/CORPORATE_ADMIN_20261027.md#итерация120--2026-11-12--codex--openai--live-render-frame-budget).
+
 
 ## RL-FINANCE-TWO-CONTROL-GRID-20261107
 
@@ -320,3 +338,54 @@ nutrition/package должны явно получать этот день; time
 по настоящему now(). Нельзя исправлять заменой всех фильтров наUTC или ослаблять
 assertions. ВоспроизведениеUTC→Moscow и обе sessiontimezone:21/21+21/21.
 [Причина и границы исправления](design/CLIENT_REFERENCE_SCREENS_20261029.md#213-mc514--блокер-ci-даты-синтетических-записей-аналитики).
+
+## MC517 / CSSOM zero и естественный visual capture — 10.11.2026
+
+`border:0` в browser CSSOM разворачивается в width0px, color currentcolor и
+border-image initial. Это полная neutral shorthand, не оставшийся paint.
+Проверять authored shorthand через native CSSStyleDeclaration и сохранять
+standalone border-color:red / border1pxsolidred как paint; computed width0
+сам по себе ничего не исключает. Известные negative migration guards могут
+законно исчезать из owner identity, positive scope и неизвестные filters — нет.
+При широком CSSOM restore fixed domain Date не требует подмены native RAF/timers;
+сохранять исходный red и причинный контроль. Screenshot не должен принудительно
+завершать motion/прятать caret без квалификации. Native scroll sampling не
+объявлять исправленным после viewport calibration. [Данные и границы — §232](design/CLIENT_REFERENCE_SCREENS_20261029.md#232-mc517--весь-остаток-оформления-результата-локальная-проверка).
+
+
+## MC518 / полный editor skin и нативное состояние — 11.11.2026
+
+Fixture обязан проходить тот же compiled pilot и реальные root markers, что
+потребитель. Статический source-winner не доказывает hover/focus/выбор/parse status:
+проверять authored paint по каждому свойству и реально достижимому состоянию.
+Синхронно исчезающий selected-кандидат не требует мёртвой CSS-копии.
+При read-only proof CSSOM/style identity остаются неизменными; не строить DOM
+mirror ради универсальной обратимости. У running clock proportional digits
+двигают геометрию даже на baseline: сохранять label/rect raw, проверять atomic
+paint/font/borders и ввод, не замораживать interval ради static PNG.
+Native lazy currentSrc не доказывает запрос; readiness связывать с пассивными
+image request events/eager/viewport. Нельзя скрывать media или scroll различия.
+[Метод, исходные reds и границы — §239](design/CLIENT_REFERENCE_SCREENS_20261029.md#239-mc518--весь-редактор-актуальная-база-и-локальная-приёмка).
+
+### MC518: семантические семьи CSS вместо числа оптимизированных правил
+
+Разделение mixed rules и добавление scoped owners меняют CSSRule grouping.
+Legacy QA должны сопоставлять точные selector branches, снимать только reviewed
+negative guards и сохранять positive/unknown :where. Физический count8→9 не
+исправляется слепым обновлением числа. Before/during native paint и legacy
+positive controls обязательны; CSSOM/rule/style/sheet identity восстанавливается.
+Новое условие post-ablation native repaint нельзя ошибочно объявлять прежним
+контрактом, если исходные тесты его не имели; var-border нельзя перепарсивать
+для успокоения probe. [Разбор](design/CLIENT_REFERENCE_SCREENS_20261029.md), §240.
+
+
+### Нативная диагностика: успешный HTTP204 не обязательно даёт requestfinished
+
+MC519, 11.11.2026: изолированные actual-query/nativefetch воспроизводят в
+Chromium response204/oktrue, затем net::ERR_ABORTED, если пустой поток не
+читается. Реальный loopback HTTPserver даёт то же; чтение0bytes даёт finished.
+Это не доказательство сбоя удаления или deadline. Не менять приложение и
+не заменять204на200 ради paint-теста. Сохранять raw события; допустимая
+квалификация обязана связывать ТОТ ЖЕ Request с204 и проверять точный
+endpoint/method/count и успешное изменение UI/данных. Все другие requestfailed
+остаются ошибками. [Доказательства и узкая квалификация MC519](design/CLIENT_REFERENCE_SCREENS_20261029.md#244-mc519--полные-native-baseline-и-квалификация-http204).

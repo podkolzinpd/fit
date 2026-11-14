@@ -1,3 +1,9 @@
+import {limeProfileSkinCases} from './lime-profile-skin.cases'
+import {limeProgressSkinCases} from './lime-progress-skin.cases'
+import {limeWorkoutListSkinCases} from './lime-workout-list-skin.cases'
+import {limeLibrarySkinCases} from './lime-library-skin.cases'
+import {limeEditorSkinCases} from './lime-editor-skin.cases'
+import { limeResultRemainderSkinCases } from './lime-result-remainder-skin.cases'
 import { limeTrainerCompletionSkinCases } from './lime-trainer-completion-skin.cases'
 import { limeCompletionHighlightSkinCases, limeCompletionHighlightTrainerCases } from './lime-completion-highlight-skin.cases'
 import { limeCompletionReportSkinCases, limeTrainerCompletionNonConsumerCases } from './lime-completion-report-skin.cases'
@@ -21,6 +27,11 @@ import { revealLiveSet, beginClientGesture, coachGestureWorkout, restTimerWorkou
 test.skip(process.env.FIT_CLIENT_WORKOUT_ACCEPTANCE !== '1', 'Dedicated native client-workout harness')
 
 // Own-profile fixtures require the same compiled client Lime/auth configuration.
+limeProfileSkinCases()
+limeProgressSkinCases()
+limeWorkoutListSkinCases()
+limeLibrarySkinCases()
+limeEditorSkinCases()
 ownProfileCases()
 limeLiveCardShellCases()
 limeLiveSetSkinCases()
@@ -36,6 +47,7 @@ limeCompletionReportSkinCases()
 limeCompletionHighlightSkinCases()
 limeCompletionHighlightTrainerCases()
 limeTrainerCompletionSkinCases()
+limeResultRemainderSkinCases()
 limeTrainerCompletionNonConsumerCases()
 limeDurationErrorPaintCases()
 
@@ -4418,7 +4430,17 @@ for (const sample of [
   ...(['group-member', 'group-round', 'group-single', 'single-group', 'group-group'] as const).flatMap(shape =>
     (['client', 'trainer'] as const).flatMap(role => (['original', 'compact'] as const).map(density => ({ role, reduced: false, shape, density })))),
 ] as const) test(`Live transition reveals next exercise without stealing input ${sample.role} reduced-${sample.reduced} ${sample.shape} ${sample.density}`, async ({ page }, info) => {
-  await page.clock.setFixedTime(new Date('2026-11-03T09:00:00Z'))
+  // This case measures native CSS/smooth-scroll frames. Playwright's clock also
+  // replaces RAF with timers, which can report several stable samples between
+  // actual rendering frames. Freeze the domain date only; keep native RAF/time.
+  await page.addInitScript(() => {
+    const NativeDate = Date, fixed = NativeDate.parse('2026-11-03T09:00:00Z')
+    window.Date = new Proxy(NativeDate, {
+      construct: (target, args, newTarget) => Reflect.construct(target, args.length ? args : [fixed], newTarget) as Date,
+      apply: () => new NativeDate(fixed).toString(),
+      get: (target, key, receiver) => key === 'now' ? () => fixed : Reflect.get(target, key, receiver) as unknown,
+    })
+  })
   await page.emulateMedia({ reducedMotion: sample.reduced ? 'reduce' : 'no-preference' })
   const id = sample.role === 'client' ? pilotId : 'c0ac0000-6010-4000-8000-000000000001'
   await page.addInitScript(({ id, density }) => {
@@ -4460,12 +4482,17 @@ for (const sample of [
   await button.scrollIntoViewIfNeeded()
   const handle = await row.getByLabel('Фактический вес', { exact: true }).elementHandle()
   const next = page.locator(`[data-live-set-id="${nextId}"]`)
-  const measurements = page.evaluate(setId => new Promise<{ frames: Array<{ t: number; scroll: number }>; calls: ScrollToOptions[] }>(resolve => {
+  const measurements = page.evaluateHandle(({ setId, currentId }) => new Promise<{
+    frames: Array<{ t: number; animationTime: number; scroll: number }>
+    calls: Array<ScrollToOptions & { t: number }>
+    finishedAt: number
+    restore: () => void
+  }>(resolve => {
     const content = document.querySelector<HTMLElement>('.content')!
     const target = document.querySelector<HTMLElement>(`[data-live-set-id="${setId}"]`)!
     const original = content.scrollTo.bind(content)
-    const frames: Array<{ t: number; scroll: number; targetTop: number; targetBottom: number; contentTargetTop: number; contentHeight: number; clockHeight: number; layoutTransitions: string[] }> = [], calls: Array<ScrollToOptions & { t: number }> = []
-    const start = performance.now()
+    const frames: Array<{ t: number; animationTime: number; scroll: number; targetTop: number; targetBottom: number; contentTargetTop: number; contentHeight: number; clockHeight: number; layoutTransitions: string[] }> = [], calls: Array<ScrollToOptions & { t: number }> = []
+    let start = 0
     content.scrollTo = function (options: ScrollToOptions | number = {}, y?: number) {
       if (typeof options === 'number') return original(options, y ?? 0)
       calls.push({ ...options, t: performance.now() })
@@ -4474,21 +4501,33 @@ for (const sample of [
     function sampleFrame(t: number) {
       const bounds = target.getBoundingClientRect()
       const animations = content.getAnimations?.({ subtree: true }) ?? []
-      frames.push({ t, scroll: content.scrollTop, targetTop: bounds.top, targetBottom: bounds.bottom,
+      frames.push({ t, animationTime: Number(document.timeline.currentTime), scroll: content.scrollTop, targetTop: bounds.top, targetBottom: bounds.bottom,
         contentTargetTop: bounds.top + content.scrollTop, contentHeight: content.scrollHeight,
         clockHeight: document.querySelector('.coach-v79-large-clock')?.getBoundingClientRect().height ?? 0,
         layoutTransitions: animations.filter(a => a.playState === 'running' || a.pending)
           .map(a => 'transitionProperty' in a ? String(a.transitionProperty) : 'animation') })
       if (performance.now() - start < 1600) requestAnimationFrame(sampleFrame)
-      else { content.scrollTo = original; resolve({ frames, calls }) }
+      else resolve({ frames, calls, finishedAt: performance.now(), restore: () => { content.scrollTo = original } })
     }
-    requestAnimationFrame(sampleFrame)
-  }), nextId)
+    // Measure the user's click, excluding Playwright's pre-click positioning.
+    function begin(event: MouseEvent) {
+      if (!(event.target instanceof Element) || !event.target.closest(`[data-live-set-id="${currentId}"] button`)) return
+      document.removeEventListener('click', begin, true)
+      start = performance.now()
+      requestAnimationFrame(sampleFrame)
+    }
+    document.addEventListener('click', begin, true)
+  }), { setId: nextId, currentId })
   await button.click()
   await expect.poll(() => backend.getWorkouts()[0]!.exercises[currentExercise]!.sets[currentSet]!.confirmedAt).not.toBeNull()
-  const trace = await measurements
+  const measurement = await measurements
+  const trace = await measurement.evaluate(({ frames, calls, finishedAt }) => ({ frames, calls, finishedAt }))
   await writeFile(info.outputPath('live-handoff-frames.json'), JSON.stringify(trace, null, 2))
   await info.attach('live-handoff-frames', { body: JSON.stringify(trace), contentType: 'application/json' })
+  // Each sample must belong to a real rendering frame, not a clock timer tick.
+  expect(trace.frames.length).toBeGreaterThan(1)
+  for (const frame of trace.frames) expect(Math.abs(frame.t - frame.animationTime)).toBeLessThanOrEqual(1)
+  for (const call of trace.calls) expect(call.t).toBeLessThanOrEqual(trace.finishedAt)
   expect(trace.calls.length).toBeLessThanOrEqual(1)
   if (Math.abs(trace.frames.at(-1)!.scroll - trace.frames[0]!.scroll) > 100) {
     expect(trace.calls).toHaveLength(1)
@@ -4503,6 +4542,11 @@ for (const sample of [
     const viewport = window.visualViewport!
     return row.top >= Math.max(content.top, header.bottom) && row.bottom <= Math.min(content.bottom, viewport.offsetTop + viewport.height)
   })).toBe(true)
+  // Keep the observer through the bounds check: a late reveal must not escape
+  // the smoothness assertions just because the sampling window has ended.
+  expect(await measurement.evaluate(({ calls }) => calls)).toEqual(trace.calls)
+  await measurement.evaluate(result => result.restore())
+  await measurement.dispose()
   expect(await page.evaluate(() => window.scrollY)).toBe(0)
   for (const preserved of confirmedFacts) expect(backend.getWorkouts()[0]!.exercises.flatMap(exercise => exercise.sets).find(set => set.id === preserved.id)!.fact).toEqual(preserved.fact)
   expect(await next.evaluate(element => Boolean(element.closest('[inert]')))).toBe(false)

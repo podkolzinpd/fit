@@ -52,6 +52,7 @@ export function InvitationShareButton({
     {invitation.error && <p className="error invitation-launch-error" role="alert">{invitation.error.message}</p>}
     {invitation.data && <InvitationShareDialog
       share={invitation.data}
+      codeFirst={actor?.role === 'trainer' && isFitLimeEnabled(actor) && isTrainerScheduleV2Enabled(actor)}
       source={backend.source}
       message={invitationShareText(inviterName(actor?.firstName), targetRole)}
       onClose={() => invitation.reset()}
@@ -126,18 +127,19 @@ export function InviteAthleteButton({ className, label = 'Пригласить �
     {open && invitation.data === undefined && createPortal(<div className="modal-overlay invitation-name-overlay" role="presentation" onPointerDown={(event) => {
       if (event.target === event.currentTarget) close()
     }}>
-      <section ref={nameDialogRef} className="invitation-name-dialog" role="dialog" aria-modal="true" aria-labelledby="invitation-name-title" onKeyDown={onNameDialogKeyDown}>
-        <header><div><p className="eyebrow">НОВЫЙ СПОРТСМЕН</p><h2 id="invitation-name-title">Кого пригласить?</h2></div><button type="button" className="icon-button" aria-label="Закрыть" onClick={close}><CloseIcon /></button></header>
-        <p className="muted">Имя появится в списке клиентов. Остальные данные спортсмен заполнит позже.</p>
+      <section ref={nameDialogRef} className={`invitation-name-dialog${fitLimePilot ? ' invitation-visual-dialog' : ''}`} role="dialog" aria-modal="true" aria-labelledby="invitation-name-title" onKeyDown={onNameDialogKeyDown}>
+        <header><div><p className="eyebrow">НОВЫЙ СПОРТСМЕН</p><h2 id="invitation-name-title">{fitLimePilot ? 'Укажите имя клиента' : 'Кого пригласить?'}</h2></div><button type="button" className="icon-button" aria-label="Закрыть" onClick={close}><CloseIcon /></button></header>
+        <p className={fitLimePilot ? 'sr-only' : 'muted'}>Имя появится в списке клиентов. Остальные данные спортсмен заполнит позже.</p>
         <form className="stack" onSubmit={submit}>
-          <label>Имя спортсмена<input autoFocus value={fullName} minLength={2} maxLength={120} required onChange={(event) => setFullName(event.target.value)} /></label>
+          <label>{fitLimePilot ? 'Имя клиента' : 'Имя спортсмена'}<input autoFocus value={fullName} minLength={2} maxLength={120} required onChange={(event) => setFullName(event.target.value)} /></label>
           {invitation.error && <p className="error" role="alert">{invitation.error.message}</p>}
-          <button className="primary" disabled={invitation.isPending} aria-busy={invitation.isPending}>{invitation.isPending ? 'Создаём ссылку…' : 'Создать приглашение'}</button>
+          <button className="primary" disabled={invitation.isPending} aria-busy={invitation.isPending}>{invitation.isPending ? 'Создаём ссылку…' : fitLimePilot ? 'Далее' : 'Создать приглашение'}</button>
         </form>
       </section>
     </div>, host)}
     {invitation.data && <InvitationShareDialog
       share={invitation.data.share}
+      codeFirst={actor?.role === 'trainer' && isFitLimeEnabled(actor) && isTrainerScheduleV2Enabled(actor)}
       source={backend.source}
       message={invitationShareText(inviterName(actor?.firstName), 'client')}
       onClose={close}

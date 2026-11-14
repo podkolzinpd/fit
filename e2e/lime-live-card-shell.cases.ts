@@ -1,6 +1,44 @@
+import {editorMigrationGuard,editorOwnerFilter,editorOwnerSelectors} from './lime-editor-skin.contract'
+import {ablateLiveSkinBranches,restoreLiveSkinBranches} from './lime-live-duration-skin.cases'
 import { test, expect } from '@playwright/test'
 import { writeFile } from 'node:fs/promises'
 import { mockPilot, coachGestureWorkout, workoutId } from './fit-lime-fixtures'
+
+// Reviewed bd928e07: eight authored groups contain nine selector families; eight carry paint, head gap is structural.
+const liveCardManifest = {
+  "families": [
+    ".live-identity .workout-exercise-contract",
+    ".live-identity .live-exercise.current",
+    ".live-identity .live-exercise-head",
+    ".live-identity .live-exercise-head h2",
+    ".live-identity .live-exercise-head h3",
+    ".live-identity .overflow-trigger",
+    ".live-identity .live-exercise-upcoming",
+    ".live-identity .live-exercise-upcoming.started",
+    ".live-identity .live-exercise-upcoming .live-exercise-head h2"
+  ],
+  "paintFamilies": [
+    ".live-identity .live-exercise-head h2",
+    ".live-identity .live-exercise-head h3",
+    ".live-identity .live-exercise-upcoming",
+    ".live-identity .live-exercise-upcoming .live-exercise-head h2",
+    ".live-identity .live-exercise-upcoming.started",
+    ".live-identity .live-exercise.current",
+    ".live-identity .overflow-trigger",
+    ".live-identity .workout-exercise-contract"
+  ],
+  "guards": [
+    ":where(:not(.fit-lime-shell.workout-live-reference :is(.coach-live-v79,.client-live-v79) .workout-exercise-contract))",
+    ":where(:not(.fit-lime-shell.workout-live-reference :is(.coach-live-v79,.client-live-v79) .live-exercise.current))",
+    ":where(:not(.fit-lime-shell.workout-live-reference :is(.coach-live-v79,.client-live-v79) .live-exercise-head))",
+    ":where(:not(.fit-lime-shell.workout-live-reference :is(.coach-live-v79,.client-live-v79) .live-exercise-head h2))",
+    ":where(:not(.fit-lime-shell.workout-live-reference :is(.coach-live-v79,.client-live-v79) .live-exercise-head h3))",
+    ":where(:not(.fit-lime-shell.workout-live-reference :is(.coach-live-v79,.client-live-v79) .workout-exercise-contract .overflow-trigger))",
+    ":where(:not(.fit-lime-shell.workout-live-reference :is(.coach-live-v79,.client-live-v79) .live-exercise-upcoming))",
+    ":where(:not(.fit-lime-shell.workout-live-reference :is(.coach-live-v79,.client-live-v79) .live-exercise-upcoming.started))",
+    ":where(:not(.fit-lime-shell.workout-live-reference :is(.coach-live-v79,.client-live-v79) .live-exercise-upcoming .live-exercise-head h2))"
+  ]
+}
 
 // MC3.1: legacy shell rules can be removed from modern cards without replacing
 // their already approved Lime appearance. The legacy consumer remains active.
@@ -40,7 +78,7 @@ export function limeLiveCardShellCases() {
         await expect(page.locator('.phone-frame')).not.toHaveClass(/fit-lime-shell/)
       await page.evaluate(() => document.fonts.ready)
       const capture = () => cards.evaluateAll(roots => {
-        const properties = ['display', 'color', 'background-color', 'background-image', 'font-family', 'font-size', 'font-weight', 'line-height', 'letter-spacing', 'width', 'height', 'min-width', 'min-height', 'gap', 'row-gap', 'column-gap', 'box-shadow', 'border-top-width', 'border-top-style', 'border-top-color', 'border-right-width', 'border-right-color', 'border-bottom-width', 'border-bottom-color', 'border-left-width', 'border-left-color', 'border-top-left-radius', 'border-top-right-radius', 'border-bottom-left-radius', 'border-bottom-right-radius', 'margin-top', 'margin-right', 'margin-bottom', 'margin-left', 'padding-top', 'padding-right', 'padding-bottom', 'padding-left', 'opacity', 'align-items', 'justify-content', 'grid-template-columns']
+        const properties = ['display', 'color', 'background-color', 'background-image', 'font-family', 'font-size', 'font-weight', 'line-height', 'letter-spacing', 'width', 'height', 'min-width', 'min-height', 'gap', 'row-gap', 'column-gap', 'box-shadow', 'border-top-width', 'border-top-style', 'border-top-color', 'border-right-width', 'border-right-color', 'border-bottom-width', 'border-bottom-color', 'border-left-width', 'border-left-color', 'border-top-left-radius', 'border-top-right-radius', 'border-bottom-left-radius', 'border-bottom-right-radius', 'margin-top', 'margin-right', 'margin-bottom', 'margin-left', 'padding-top', 'padding-right', 'padding-bottom', 'padding-left', 'opacity', 'align-items', 'justify-content', 'grid-template-columns', 'border-right-style', 'border-bottom-style', 'border-left-style']
         return roots.flatMap((root, index) => [root, ...root.querySelectorAll('*')].map(node => {
           const css = getComputedStyle(node), r = node.getBoundingClientRect()
           return { card: index, tag: node.tagName, class: node.getAttribute('class') || '', style: Object.fromEntries(properties.map(p => [p, css.getPropertyValue(p)])), rect: [r.x, r.y, r.width, r.height].map(v => Math.round(v * 100) / 100) }
@@ -50,76 +88,27 @@ export function limeLiveCardShellCases() {
         await page.screenshot({ path: info.outputPath('card-shell.png'), animations: 'disabled' })
       }
       const before = await capture()
-      const saved = await page.evaluateHandle(() => {
-        const changed: Array<[
-          CSSStyleRule,
-          string
-        ]> = []
-        const visit = (rules: CSSRuleList) => {
-          for (const rule of Array.from(rules)) {
-            if (rule instanceof CSSStyleRule && /^\.live-identity\b/.test(rule.selectorText) && /workout-exercise-contract|live-exercise\.current|live-exercise-head|overflow-trigger|live-exercise-upcoming/.test(rule.selectorText)) {
-              changed.push([rule, rule.style.cssText])
-              rule.style.cssText = ''
-            }
-            if ('cssRules' in rule)
-              visit((rule as CSSGroupingRule).cssRules)
-          }
-        }
-        for (const sheet of Array.from(document.styleSheets))
-          visit(sheet.cssRules)
-        return changed
-      })
-      let after: typeof before = []
-      let inherited: string[]
-      try {
-        expect(await saved.evaluate(a => a.length)).toBe(8)
-      if (!sample.lime) {
-        // The zero-specificity guard must retain exactly the same legacy nodes.
-        expect(await saved.evaluate(list => list.every(([rule]) => {
-          let original = rule.selectorText
-          while (original.includes(':where(')) {
-            const start = original.indexOf(':where(')
-            let end = start + ':where('.length, depth = 1
-            while (depth && end < original.length) {
-              if (original[end] === '(') depth++
-              if (original[end] === ')') depth--
-              end++
-            }
-            original = original.slice(0, start) + original.slice(end)
-          }
-          const retained = Array.from(document.querySelectorAll(rule.selectorText))
-          const previous = Array.from(document.querySelectorAll(original))
-          return retained.length === previous.length && retained.every((node, index) => node === previous[index])
-        }))).toBe(true)
-      }
-        inherited = await saved.evaluate(list => {
-          for (const [r] of list)
-            r.style.setProperty('--mc31-legacy-card-probe', 'legacy')
-          try {
-            return Array.from(document.querySelectorAll('.live-workout-page :is(.workout-exercise-contract,.workout-exercise-compact)'))
-              .flatMap(root => [root, ...root.querySelectorAll('*')])
-              .filter(node => getComputedStyle(node).getPropertyValue('--mc31-legacy-card-probe').trim() === 'legacy')
-              .map(node => node.tagName + '.' + (node.getAttribute('class') || ''))
-          }
-          finally {
-            for (const [r] of list)
-              r.style.removeProperty('--mc31-legacy-card-probe')
-          }
-        })
-        after = await capture()
-      }
-      finally {
-        await saved.evaluate(a => { for (const [r, s] of a)
-          r.style.cssText = s; })
-        await saved.dispose()
-      }
+      const ablation=await page.evaluateHandle(ablateLiveSkinBranches,{...liveCardManifest,guards:[editorMigrationGuard,...liveCardManifest.guards],owners:editorOwnerSelectors,ownerScope:':where('+editorOwnerFilter+')',targets:".live-workout-page :is(.workout-exercise-contract,.workout-exercise-compact),.live-workout-page :is(.workout-exercise-contract,.workout-exercise-compact) *"})
+      const result=await ablation.evaluate(value=>({rules:value.rules,families:value.families,paintFamilies:value.paintFamilies,matches:value.matches,inherited:value.inherited,legacyMatches:value.legacyMatches,classifierChecks:value.classifierChecks,selectedPositiveOwners:value.selectedPositiveOwners}))
+      let after:typeof before=[]
+      let restoration:ReturnType<typeof restoreLiveSkinBranches>
+      try { after=await capture() }
+      finally { restoration=await ablation.evaluate(restoreLiveSkinBranches);await ablation.dispose() }
+      expect(restoration).toEqual({cssomRoundtrip:true,styleObjectsUnchanged:true,sheetsUnchanged:true})
+      const inherited=result.inherited
       expect(after.length).toBe(before.length)
       const differences = before.flatMap((a, i) => {
         const b = after[i]!, props = Object.keys(a.style).filter(p => a.style[p] !== b.style[p])
         return props.length || JSON.stringify(a.rect) !== JSON.stringify(b.rect) ? [{ card: a.card, tag: a.tag, class: a.class, changes: Object.fromEntries(props.map(p => [p, [a.style[p], b.style[p]]])), rect: JSON.stringify(a.rect) !== JSON.stringify(b.rect) ? [a.rect, b.rect] : undefined }] : []
       })
-      await writeFile(info.outputPath('ablation.json'), JSON.stringify({ sample, nodes: before.length, inherited, differences, before }, null, 2))
+      await writeFile(info.outputPath('ablation.json'), JSON.stringify({ sample, nodes: before.length, ...result, restoration, differences, before }, null, 2))
+      expect(result.families).toEqual([...liveCardManifest.families].sort())
+      expect(result.paintFamilies).toEqual([...liveCardManifest.paintFamilies].sort())
+      expect(result.classifierChecks).toEqual({known:true,positiveRetained:true,unknownRetained:true,actualOwnersRetained:true})
+      expect(result.selectedPositiveOwners).toEqual([])
+      if(!sample.lime)expect(result.legacyMatches).toBe(true)
       if (sample.lime) {
+        expect(result.matches).toEqual([])
         expect(inherited).toEqual([])
         expect(differences).toEqual([])
       }

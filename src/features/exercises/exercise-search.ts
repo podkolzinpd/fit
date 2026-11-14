@@ -459,13 +459,6 @@ export function matchesExerciseSearch(exercise: ExerciseSnapshot, search: string
   return queryTokens.every((token) => tokenMatches(token, searchableTokens, searchableTokenStems))
 }
 
-// Точное разговорное имя — достаточное основание для разбора записи без
-// лишнего экрана выбора. Например «гребля 10 мин».
-export function isExerciseSearchAlias(exercise: ExerciseSnapshot, search: string): boolean {
-  const query = normalizeExerciseSearch(search)
-  return Boolean(query) && (SEARCH_ALIASES[exercise.ref] ?? []).some((alias) => normalizeExerciseSearch(alias) === query)
-}
-
 export interface ExerciseSearchConflict {
   phrase: string
   exerciseRefs: string[]

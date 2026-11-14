@@ -13,7 +13,8 @@ export function readCorporateInvitationCreate(body: unknown) {
   if (!v || typeof v.id!=='string' || !uuid.test(v.id) || !Array.isArray(v.officeIds) || v.officeIds.length<1 || v.officeIds.length>100) return null
   const officeIds: string[]=[]
   for (const id of v.officeIds) { if (typeof id!=='string' || !uuid.test(id)) return null; if (!officeIds.includes(id)) officeIds.push(id) }
-  return {id:v.id,officeIds}
+  if (v.recipientEmail !== undefined && (typeof v.recipientEmail !== 'string' || v.recipientEmail.trim().length>254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.recipientEmail.trim()) || Array.from(v.recipientEmail).some(char=>char.charCodeAt(0)<32||char.charCodeAt(0)===127))) return null
+  return {id:v.id,officeIds,...(typeof v.recipientEmail==='string'?{recipientEmail:v.recipientEmail.trim().toLowerCase()}:{})}
 }
 export function readCorporateInvitationToken(body: unknown): string | null {
   const token=record(body)?.token
@@ -30,7 +31,7 @@ export class CorporateInvitationsStore {
   create(session: YandexActorSession,draft:NonNullable<ReturnType<typeof readCorporateInvitationCreate>>) {
     return withYandexActorSession(this.pool,session,async c => {
       const token=randomBytes(32).toString('base64url')
-      await c.query('select app_private.create_corporate_trainer_invitation($1,$2,$3::uuid[])',[draft.id,hash(token),draft.officeIds])
+      await c.query('select app_private.create_corporate_invitation_for_recipient($1,$2,$3::uuid[],$4)',[draft.id,hash(token),draft.officeIds,draft.recipientEmail??null])
       return {id:draft.id,token}
     })
   }
@@ -42,9 +43,10 @@ export class CorporateInvitationsStore {
   claim(session:YandexActorSession,token:string) {
     return withYandexActorSession(this.pool,session,async c => ({status:(await c.query<{ status:string }>('select app_private.claim_corporate_trainer_invitation($1) status',[hash(token)]))[0]!.status}))
   }
-  decide(session:YandexActorSession,id:string,approve:boolean) {
+  decide(session:YandexActorSession,id:string,approve:boolean,enableTesting=false) {
     return withYandexActorSession(this.pool,session,async c => {
-      await c.query('select app_private.decide_corporate_trainer_invitation($1,$2)',[id,approve]); return {saved:true}
+      if (approve && enableTesting) await c.query('select app_private.confirm_corporate_invitation_testing($1)',[id])
+      else await c.query('select app_private.decide_corporate_trainer_invitation($1,$2)',[id,approve]); return {saved:true}
     })
   }
 }
@@ -76,11 +78,13 @@ export function registerCorporateInvitationRoutes(app:FastifyInstance,store:Corp
         }
         const id=record(request.params)?.id
         if (typeof id!=='string'||!uuid.test(id)) return reply.code(422).send({error:'corporate_invalid'})
-        return reply.send(await store.decide(session!,id,kind==='approve'))
+        const enableTesting=record(request.body)?.enableTesting
+        if (enableTesting!==undefined && (typeof enableTesting!=='boolean' || kind!=='approve')) return reply.code(422).send({error:'corporate_invalid'})
+        return reply.send(await (enableTesting===true?store.decide(session!,id,true,true):store.decide(session!,id,kind==='approve')))
       } catch(error) {
         if (error instanceof YandexAppSessionInvalidError) return reply.code(401).send({error:'unauthorized'})
         const e=record(error)
-        const known=['corporate_forbidden','corporate_not_found','corporate_invalid','corporate_conflict','corporate_trainer_required','corporate_invitation_pilot_only','corporate_invitation_unavailable','corporate_invitation_limit']
+        const known=['corporate_forbidden','corporate_not_found','corporate_invalid','corporate_conflict','corporate_trainer_required','corporate_invitation_pilot_only','corporate_invitation_unavailable','corporate_invitation_limit','corporate_email_invalid','corporate_recipient_pending','corporate_testing_managed']
         if (typeof e?.code==='string' && ['PT403','PT404','PT409','PT422'].includes(e.code) && typeof e.message==='string' && known.includes(e.message)) return reply.code(Number(e.code.slice(2))).send({error:e.message})
         request.log.warn({event:'corporate_invitation_failed'},'Corporate invitation failed')
         return reply.code(503).send({error:'service_unavailable'})

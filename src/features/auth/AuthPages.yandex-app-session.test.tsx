@@ -3,7 +3,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { ReactNode } from 'react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { AuthPage, YandexAppSessionPage, YandexAssistantFeaturesRefreshPage, YandexPilotCallbackPage } from './AuthPages'
+import { AuthPage, EmployeeReferralRedirectPage, YandexAppSessionPage, YandexAssistantFeaturesRefreshPage, YandexPilotCallbackPage } from './AuthPages'
 import {
   createYandexAuthorizationUrl,
   readPendingYandexNativeRegistration,
@@ -62,6 +62,7 @@ vi.mock('../../app/yandex-app-session-context', () => ({
 }))
 
 const repository = vi.hoisted(() => ({
+  recordReferralClick: vi.fn(),
   exchangeCodeForAppSession: vi.fn(),
   registerYandexAccount: vi.fn(),
   completeYandexRegistration: vi.fn(),
@@ -121,6 +122,7 @@ describe('Yandex app session auth flow', () => {
     reset.mockReset()
     signOut.mockReset().mockResolvedValue(undefined)
     repository.exchangeCodeForAppSession.mockReset().mockResolvedValue(session)
+    repository.recordReferralClick.mockReset().mockResolvedValue(undefined)
     repository.registerYandexAccount.mockReset().mockResolvedValue(session)
     repository.completeYandexRegistration.mockReset().mockResolvedValue(session)
     repository.revokeAppSession.mockReset().mockResolvedValue(undefined)
@@ -149,6 +151,7 @@ describe('Yandex app session auth flow', () => {
     vi.unstubAllGlobals()
     window.history.replaceState(null, '', '/')
     sessionStorage.clear()
+    window.localStorage.clear()
   })
 
   it('ends a retired linking callback with the normal login retry and no API exchange', async () => {
@@ -353,6 +356,7 @@ describe('Yandex app session auth flow', () => {
   it('registers after the PKCE callback and clears the pending profile draft', async () => {
     vi.stubEnv('VITE_YANDEX_NATIVE_REGISTRATION_ENABLED', 'true')
     vi.stubEnv('VITE_YANDEX_MAIN_ROUTING_ENABLED', 'true')
+    window.localStorage.setItem('fit.referralSource', 'staff-001')
     window.history.replaceState(null, '', `/auth/yandex/callback${await registrationCallbackSearch()}`)
     render(<MemoryRouter initialEntries={['/auth/yandex/callback']}>
       <Routes>
@@ -372,11 +376,29 @@ describe('Yandex app session auth flow', () => {
         timezone: 'Europe/Moscow',
         termsVersion: TERMS_VERSION,
         privacyVersion: PRIVACY_VERSION,
+        referralCode: 'staff-001',
       },
     )
     expect(establish).toHaveBeenCalledWith(session)
     expect(readPendingYandexNativeRegistration()).toBeNull()
+    expect(window.localStorage.getItem('fit.referralSource')).toBeNull()
     expect(window.ym).toHaveBeenCalledExactlyOnceWith(114123380, 'reachGoal', 'registration_completed', { role: 'trainer' })
+  })
+
+  it('stores a valid employee referral, records a click and opens auth', async () => {
+    render(<MemoryRouter initialEntries={['/r/STAFF-001']}>
+      <Routes>
+        <Route path="/r/:code" element={<EmployeeReferralRedirectPage />} />
+        <Route path="/auth" element={<p>auth page</p>} />
+      </Routes>
+    </MemoryRouter>)
+
+    expect(await screen.findByText('auth page')).toBeVisible()
+    await waitFor(() => expect(repository.recordReferralClick).toHaveBeenCalledWith(
+      'https://stage.example.test',
+      'staff-001',
+    ))
+    expect(window.localStorage.getItem('fit.referralSource')).toBe('staff-001')
   })
 
   it('keeps the registration draft for a safe OAuth restart after an API error', async () => {

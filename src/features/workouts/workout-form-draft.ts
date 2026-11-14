@@ -18,6 +18,7 @@ export interface WorkoutFormDraft {
   stageId: string
   recordCompleted: boolean
   exercises: WorkoutDraft['exercises']
+  deliveryMode?: 'in_person' | 'online'
   trainingFormat?: WorkoutTrainingFormat
   prepSeconds?: number
   executionMode?: 'timer' | 'manual'
@@ -40,6 +41,7 @@ function isDraft(value: unknown): value is WorkoutFormDraft {
     && typeof draft.stageId === 'string'
     && typeof draft.recordCompleted === 'boolean'
     && Array.isArray(draft.exercises)
+    && (draft.deliveryMode === undefined || draft.deliveryMode === 'in_person' || draft.deliveryMode === 'online')
     && (draft.trainingFormat === undefined || draft.trainingFormat === 'self' || draft.trainingFormat === 'with_trainer')
     && (draft.prepSeconds === undefined || (Number.isInteger(draft.prepSeconds) && draft.prepSeconds >= 0 && draft.prepSeconds <= 600))
     && (draft.executionMode === undefined || draft.executionMode === 'timer' || draft.executionMode === 'manual')
@@ -89,7 +91,7 @@ export function removeWorkoutFormDraft(key: string): void {
 export function hasWorkoutFormContent(draft: WorkoutFormDraft | null, initialDate: LocalDate): draft is WorkoutFormDraft {
   return Boolean(draft && (draft.clientId || draft.title?.trim() || draft.composerText?.trim() || draft.notes.trim()
     || draft.exercises.length || draft.startTime || draft.endTime || draft.recordCompleted
-    || draft.trainingFormat === 'self' || draft.workoutDate !== initialDate))
+    || draft.trainingFormat === 'self' || draft.deliveryMode === 'online' || draft.workoutDate !== initialDate))
 }
 
 /** Explicitly retained alternatives when a trainer starts a new quick plan. */

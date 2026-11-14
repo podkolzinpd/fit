@@ -317,7 +317,3 @@ export function formatRegularityNumber(value: number): string {
 export function regularityWorkoutLabel(count: number): string {
   return `${count} ${workoutNoun(count)}`
 }
-
-export function regularityWeekCountLabel(count: number): string {
-  return `${count} ${weekNoun(count)}`
-}

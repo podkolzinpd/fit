@@ -1,3 +1,5 @@
+import { isFitLimeEnabled } from '../../app/fit-lime'
+import { WorkoutFormatChoices } from './WorkoutFormatChoices'
 import { useCreateWorkoutClient } from './use-create-workout-client'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useRef, useState } from 'react'
@@ -34,20 +36,21 @@ export function QuickStartWorkout({ role, clientId, clients = [], workouts, load
   const navigate = useNavigate()
   const [formatLocked, setFormatLocked] = useState(false)
   const [formatOpen, setFormatOpen] = useState(false)
+  const [deliveryMode,setDeliveryMode]=useState<'in_person'|'online'>('in_person')
   const [trainingFormat, setTrainingFormat] = useState<'self' | 'with_trainer'>('with_trainer')
   const [pickerOpen, setPickerOpen] = useState(initialPickerOpen)
   const [createdClient, setCreatedClient] = useState<ClientPickerSelection | null>(null)
   const choosing = useRef(false)
   const submitting = useRef(false)
   const [targetClientId, setTargetClientId] = useState<string | null>(null)
-  const operation = useRef<{ clientId: string | null; id: string; format: 'self' | 'with_trainer' } | null>(null)
+  const operation = useRef<{ clientId: string | null; id: string; format: 'self' | 'with_trainer'; delivery:'in_person'|'online' } | null>(null)
   const active = clientId && workouts?.find((workout) => workout.clientId === clientId && workout.status === 'in_progress')
   const canContinue = Boolean(active)
   const selectedActive = workouts?.find(workout => workout.clientId === targetClientId && workout.status === 'in_progress')
   const start = useMutation({
     mutationFn: async (selectedClientId: string | null) => {
-      if (operation.current?.clientId !== selectedClientId) operation.current = { clientId: selectedClientId, id: crypto.randomUUID(), format: role === 'client' ? 'self' : trainingFormat }
-      return repository.quickStart(selectedClientId ?? undefined, operation.current.id, operation.current.format)
+      if (operation.current?.clientId !== selectedClientId) operation.current = { clientId: selectedClientId, id: crypto.randomUUID(), format: role === 'client' ? 'self' : trainingFormat, delivery: role==='client'?'in_person':deliveryMode }
+      return operation.current.delivery==='online' ? repository.quickStart(selectedClientId ?? undefined,operation.current.id,operation.current.format,'online') : repository.quickStart(selectedClientId??undefined,operation.current.id,operation.current.format)
     },
     onSuccess: async ({ id, resumed }) => {
       trackGoal(resumed ? 'quick_start_resumed' : 'quick_start_created')
@@ -81,6 +84,7 @@ export function QuickStartWorkout({ role, clientId, clients = [], workouts, load
     setTargetClientId(selectedClientId)
     setFormatLocked(operation.current?.clientId === selectedClientId)
     setTrainingFormat(operation.current?.clientId === selectedClientId ? operation.current.format : 'with_trainer')
+    setDeliveryMode(operation.current?.clientId===selectedClientId?operation.current.delivery:'in_person')
     setFormatOpen(true)
   }
 
@@ -104,7 +108,7 @@ export function QuickStartWorkout({ role, clientId, clients = [], workouts, load
     {!formatOpen && !pickerOpen && <button type="button" className="quick-start-button" disabled={unavailable || start.isPending} onClick={() => { choosing.current = false; action() }}>{start.isPending ? 'Начинаем…' : buttonLabel}</button>}
     {formatOpen && <div className="quick-start-format" aria-busy={start.isPending}>
       <p>{clients.find((item) => item.id === targetClientId)?.fullName ?? (createdClient?.id === targetClientId ? createdClient.fullName : 'Формат тренировки')}</p>
-      {selectedActive ? <p>У клиента уже идёт тренировка. Продолжим её без изменений.</p> : <div className="workout-record-mode" role="group" aria-label="Формат тренировки"><button type="button" disabled={start.isPending || formatLocked} className={trainingFormat === 'with_trainer' ? 'active' : ''} aria-pressed={trainingFormat === 'with_trainer'} onClick={() => setTrainingFormat('with_trainer')}>С тренером</button><button type="button" disabled={start.isPending || formatLocked} className={trainingFormat === 'self' ? 'active' : ''} aria-pressed={trainingFormat === 'self'} onClick={() => setTrainingFormat('self')}>Самостоятельно</button></div>}
+      {selectedActive ? <p>У клиента уже идёт тренировка. Продолжим её без изменений.</p> : isFitLimeEnabled(actor) ? <WorkoutFormatChoices format={trainingFormat} deliveryMode={deliveryMode} disabled={start.isPending||formatLocked} onChange={(format,delivery)=>{setTrainingFormat(format);setDeliveryMode(delivery)}}/> : <div className="workout-record-mode" role="group" aria-label="Формат тренировки"><button type="button" disabled={start.isPending || formatLocked} className={trainingFormat === 'with_trainer' ? 'active' : ''} aria-pressed={trainingFormat === 'with_trainer'} onClick={() => setTrainingFormat('with_trainer')}>С тренером</button><button type="button" disabled={start.isPending || formatLocked} className={trainingFormat === 'self' ? 'active' : ''} aria-pressed={trainingFormat === 'self'} onClick={() => setTrainingFormat('self')}>Самостоятельно</button></div>}
       <div className="actions"><button type="button" className="secondary" disabled={start.isPending} onClick={() => { setFormatOpen(false); start.reset() }}>Отмена</button><button type="button" className="primary" disabled={start.isPending} onClick={() => begin(targetClientId)}>{start.isPending ? 'Начинаем…' : start.error ? 'Повторить' : selectedActive ? 'Продолжить тренировку' : 'Начать тренировку'}</button></div>
     </div>}
     {role === 'trainer' && !clientId && !loading && !error && clients.length === 0 && <p className="quick-start-status">Сначала <Link to="/clients/new">добавьте клиента</Link>.</p>}

@@ -50,7 +50,7 @@ import { diagnosticsForResponse } from '../queries/request-diagnostics'
 import { toJson } from '../queries/json'
 import { currentAppFeedbackContext } from './app-feedback-context'
 import type { CustomExercise } from '../contracts/exercises'
-import type { TrainerFinancePackageDraft, TrainerFinancePackageUpdate, TrainerFinancePaymentDraft, TrainerFinancePaymentUpdate, TrainerFinanceSessionUpdate, TrainerFinanceManualSessionDraft } from '../contracts/trainer-finance'
+import type { TrainerFinanceBalanceCorrection, TrainerFinancePackageDraft, TrainerFinancePackageUpdate, TrainerFinancePaymentDraft, TrainerFinancePaymentUpdate, TrainerFinanceSessionUpdate, TrainerFinanceManualSessionDraft } from '../contracts/trainer-finance'
 import { RepositoryError } from './error'
 import { collectPages } from './collect-pages'
 import { roundMetric } from './progress-rules'
@@ -638,6 +638,7 @@ function workout(value: YandexPilotTrainingData['workouts'][number]): Workout {
     ...(value.pausedAt ? { pausedAt: value.pausedAt } : {}),
     ...(value.pausedSeconds ? { pausedSeconds: value.pausedSeconds } : {}),
     title: value.title ?? null,
+    ...(value.deliveryMode ? { deliveryMode: value.deliveryMode } : {}),
     trainingFormat: value.trainingFormat ?? 'self',
     startedBy: value.startedBy,
     completedBy: value.completedBy,
@@ -759,7 +760,7 @@ function workoutDraft(draft: WorkoutDraft): Record<string, unknown> {
     stageId: draft.stageId ?? null,
     favoriteTitle: draft.favoriteTitle ?? null,
     ...(draft.title === undefined ? {} : { title: draft.title }),
-    ...(draft.trainingFormat === undefined ? {} : { trainingFormat: draft.trainingFormat }),
+    ...(draft.trainingFormat === undefined ? {} : { trainingFormat: draft.trainingFormat === 'with_trainer' && draft.deliveryMode ? draft.deliveryMode : draft.trainingFormat }),
     ...(draft.prepSeconds === undefined ? {} : { prepSeconds: draft.prepSeconds }),
     ...(draft.executionMode === undefined ? {} : { executionMode: draft.executionMode }),
     ...(draft.id === undefined ? {} : { expectedVersion: draft.version }),
@@ -1157,7 +1158,11 @@ export function createYandexMainRepository(
         return payload.finance
       },
       async createPackage(clientId: string, draft: TrainerFinancePackageDraft) {
-        const payload = await writeJson(queries, `/v1/clients/${encodeURIComponent(clientId)}/finance/packages`, 'POST', draft, z.object({ package: trainerFinancePackageSchema }))
+        const payload = await writeJson(queries, `/v1/clients/${encodeURIComponent(clientId)}/finance/${draft.singleSession ? 'single-services' : 'packages'}`, 'POST', draft, z.object({ package: trainerFinancePackageSchema }))
+        return payload.package
+      },
+      async correctPackageBalance(packageId: string, draft: TrainerFinanceBalanceCorrection) {
+        const payload = await writeJson(queries, `/v1/finance/packages/${encodeURIComponent(packageId)}/balance-corrections`, 'POST', draft, z.object({ package: trainerFinancePackageSchema }))
         return payload.package
       },
       async updatePackage(packageId: string, draft: TrainerFinancePackageUpdate) {
@@ -1176,7 +1181,7 @@ export function createYandexMainRepository(
         await writeEmpty(queries, `/v1/finance/payments/${encodeURIComponent(paymentId)}`, 'DELETE', { expectedVersion, reason })
       },
       async createManualSession(clientId: string, draft: TrainerFinanceManualSessionDraft) {
-        const payload = await writeJson(queries, `/v1/clients/${encodeURIComponent(clientId)}/finance/sessions`, 'POST', draft, z.object({ session: trainerFinanceSessionSchema }))
+        const payload = await writeJson(queries, `/v1/clients/${encodeURIComponent(clientId)}/finance/${draft.singleService?'single-sessions':'sessions'}`, 'POST', draft, z.object({ session: trainerFinanceSessionSchema }))
         return payload.session
       },
       async updateSession(sessionId: string, draft: TrainerFinanceSessionUpdate) {
@@ -1620,9 +1625,9 @@ export function createYandexMainRepository(
           z.object({ workout: workoutSummarySchema.extend({ status: z.literal('in_progress') }).nullable() }))
         return payload.workout === null ? null : { ...payload.workout, workoutDate: localDate(payload.workout.workoutDate) }
       },
-      async quickStart(clientId, operationId, trainingFormat) {
+      async quickStart(clientId, operationId, trainingFormat, deliveryMode) {
         const payload = await writeJson(queries, '/v1/workouts/quick-start', 'POST',
-          { clientId: clientId ?? null, operationId: operationId ?? crypto.randomUUID(), ...(trainingFormat ? { trainingFormat } : {}) },
+          { clientId: clientId ?? null, operationId: operationId ?? crypto.randomUUID(), ...(trainingFormat ? { trainingFormat: trainingFormat === 'with_trainer' && deliveryMode ? deliveryMode : trainingFormat } : {}) },
           z.object({ workout: z.object({ id: uuid, resumed: z.boolean() }) }))
         invalidate()
         return payload.workout
@@ -1717,7 +1722,7 @@ export function createYandexMainRepository(
       async replaceLiveExercise(item, exerciseId, exercise) { return liveCommand(`/v1/workouts/${item.id}/exercises/${exerciseId}`, 'PUT', item.version, { exercise: { source: exercise.source, ref: exercise.ref, customExerciseId: exercise.customExerciseId ?? null, name: exercise.name, muscleGroup: exercise.muscleGroup, inputKind: exercise.inputKind } }) },
       async finish(item) { return liveCommand(`/v1/workouts/${item.id}/finish`, 'POST', item.version) },
       async confirmAttendance(item, attendance, operationId) {
-        return liveCommand(`/v1/workouts/${item.id}/finish`, 'POST', item.version, { attendance }, operationId)
+        return liveCommand(`/v1/workouts/${item.id}/${attendance.singleService?'finish-single':'finish'}`, 'POST', item.version, { attendance }, operationId)
       },
       // Пауза — переключатель без ожидаемой версии (YAFIT-627); ответ несёт новую версию тренировки.
       async setLivePause(item, paused) {

@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto'
-import { eligibleProgramExercises, PROGRAM_CATALOG_VERSION, PROGRAM_CATALOG, type ProgramExercise } from './catalog.js'
+import { eligibleProgramExercises, PROGRAM_CATALOG_VERSION, PROGRAM_CATALOG } from './catalog.js'
 import { activityOverlap, isCalendarDate, missingBriefFields, type ProgramBrief } from './brief.js'
 import { programSessionCount } from './context.js'
 import { type ProgramLoad } from './load.js'
@@ -42,20 +42,6 @@ export function programSelectionSlots(brief: ProgramBrief) {
       accessories: catalog.filter((exercise) => ['accessory', 'vertical_push', 'vertical_pull'].includes(exercise.movement) && !exercise.unsupportedTrunk).map((exercise) => exercise.ref),
     }
   })
-}
-
-/** The schema itself requires every essential movement; the model chooses refs. */
-export function programTemplateSchema(_catalog: readonly ProgramExercise[], brief: ProgramBrief) {
-  const slots = programSelectionSlots(brief)
-  const movements = requiredMovements(brief)
-  return { type: 'object', additionalProperties: false, required: ['days'], properties: {
-    days: { type: 'object', additionalProperties: false, required: slots.map((slot) => slot.key), properties: Object.fromEntries(slots.map((slot) => [slot.key, {
-      type: 'object', additionalProperties: false, required: [...movements, 'accessory'], properties: {
-        ...Object.fromEntries(movements.map((movement) => [movement, { type: 'string', enum: slot.choices[movement] }])),
-        accessory: { type: ['string', 'null'], enum: [null, ...slot.accessories] },
-      },
-    }])) },
-  } }
 }
 
 export function prescribeProgram(raw: unknown, brief: ProgramBrief, today: string, load: ProgramLoad): ProgramTemplate {

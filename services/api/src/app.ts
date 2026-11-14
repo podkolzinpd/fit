@@ -186,6 +186,7 @@ import {
   readTrainerFinanceManualSessionDraft,
   readTrainerFinancePackageDraft,
   readTrainerFinancePackageUpdate,
+  readTrainerFinanceBalanceCorrection,
   readTrainerFinancePaymentDraft,
   readTrainerFinancePaymentUpdate,
   readTrainerFinanceVoidPayment,
@@ -705,6 +706,7 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
     const accountRole = 'accountRole' in body ? body.accountRole : undefined
     const termsVersion = 'termsVersion' in body ? body.termsVersion : undefined
     const privacyVersion = 'privacyVersion' in body ? body.privacyVersion : undefined
+    const referralCode = 'referralCode' in body ? body.referralCode : null
     if (
       typeof firstName !== 'string'
       || firstName.trim().length < 2
@@ -715,6 +717,8 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
       || (accountRole !== 'trainer' && accountRole !== 'client')
       || typeof termsVersion !== 'string'
       || typeof privacyVersion !== 'string'
+      || (referralCode !== null && (typeof referralCode !== 'string'
+        || !/^[a-z0-9-]{3,64}$/i.test(referralCode)))
     ) return undefined
     try {
       new Intl.DateTimeFormat('en-US', { timeZone: timezone.trim() }).format()
@@ -729,6 +733,7 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
       accountRole: normalizedRole,
       termsVersion,
       privacyVersion,
+      referralCode: typeof referralCode === 'string' ? referralCode.toLowerCase() : null,
     }
   }
 
@@ -740,6 +745,7 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
     const accountRole = 'accountRole' in body ? body.accountRole : undefined
     const termsVersion = 'termsVersion' in body ? body.termsVersion : undefined
     const privacyVersion = 'privacyVersion' in body ? body.privacyVersion : undefined
+    const referralCode = 'referralCode' in body ? body.referralCode : null
     if (
       typeof handoffToken !== 'string'
       || !/^[A-Za-z0-9_-]{43}$/.test(handoffToken)
@@ -752,6 +758,8 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
       || (accountRole !== 'trainer' && accountRole !== 'client')
       || typeof termsVersion !== 'string'
       || typeof privacyVersion !== 'string'
+      || (referralCode !== null && (typeof referralCode !== 'string'
+        || !/^[a-z0-9-]{3,64}$/i.test(referralCode)))
     ) return undefined
     try {
       new Intl.DateTimeFormat('en-US', { timeZone: timezone.trim() }).format()
@@ -766,6 +774,7 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
       accountRole: normalizedRole,
       termsVersion,
       privacyVersion,
+      referralCode: typeof referralCode === 'string' ? referralCode.toLowerCase() : null,
     }
   }
 
@@ -1381,6 +1390,7 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
         accountRole: command.accountRole,
         firstName: command.firstName,
         timezone: command.timezone,
+        ...(command.referralCode === null ? {} : { referralCode: command.referralCode }),
       })
       const session = await options.yandexAppSessionIssuer.issue(completed.subjectHash)
       if (session === undefined || session.profile.id !== completed.profileId) {
@@ -1437,6 +1447,7 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
         accountRole: command.accountRole,
         firstName: command.firstName,
         timezone: command.timezone,
+        ...(command.referralCode === null ? {} : { referralCode: command.referralCode }),
       })
       const session = await options.yandexAppSessionIssuer.issue(subjectHash)
       if (session === undefined || session.profile.id !== registration.profileId) {
@@ -1470,6 +1481,30 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
         'Yandex native registration unavailable',
       )
       return reply.code(503).send({ error: 'service_unavailable' })
+    }
+  })
+
+  app.post('/v1/referrals/:code/click', async (request, reply) => {
+    const { code } = request.params as { code?: unknown }
+    if (typeof code !== 'string' || !/^[a-z0-9-]{3,64}$/i.test(code)) {
+      return reply.code(400).send({ error: 'invalid_request' })
+    }
+    const database = options.databasePool
+    if (database === undefined) return reply.code(503).send({ error: 'service_unavailable' })
+    try {
+      const connection = await database.connect()
+      try {
+        const rows = await connection.query<{ recorded: boolean }>(
+          'select app_private.record_referral_click($1) as recorded',
+          [code.toLowerCase()],
+        )
+        return reply.header('cache-control', 'no-store').code(202)
+          .send({ recorded: rows[0]?.recorded === true })
+      } finally {
+        connection.release()
+      }
+    } catch (error) {
+      return sendSafeDatabaseFailure(reply, error, 'Referral click recording failed')
     }
   })
 
@@ -2046,13 +2081,15 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
       (finance) => reply.header('cache-control', 'no-store').send({ finance }))
   })
 
-  app.post('/v1/clients/:clientId/finance/sessions', async (request, reply) => {
+  for (const sessionPath of ['/v1/clients/:clientId/finance/sessions','/v1/clients/:clientId/finance/single-sessions']) {
+  app.post(sessionPath, async (request, reply) => {
     const session = readYandexActorSession(request.headers)
     const { clientId } = request.params as { clientId?: unknown }
     const draft = readTrainerFinanceManualSessionDraft(request.body)
     if (session === undefined) return reply.code(401).send({ error: 'unauthorized' })
     if (session.accessMode !== 'read_write') return reply.code(403).send({ error: 'read_write_session_required' })
-    if (typeof clientId !== 'string' || !uuidPattern.test(clientId) || draft === undefined) {
+    if (typeof clientId !== 'string' || !uuidPattern.test(clientId) || draft === undefined
+      || (sessionPath.endsWith('/single-sessions') && !draft?.singleService)) {
       return reply.code(400).send({ error: 'invalid_request' })
     }
     if (options.pilotTrainerFinance === undefined) return reply.code(503).send({ error: 'service_unavailable' })
@@ -2061,19 +2098,39 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
       (financeSession) => reply.header('cache-control', 'no-store').code(201).send({ session: financeSession }))
   })
 
-  app.post('/v1/clients/:clientId/finance/packages', async (request, reply) => {
+  }
+
+  for (const servicePath of ['/v1/clients/:clientId/finance/packages', '/v1/clients/:clientId/finance/single-services']) {
+  app.post(servicePath, async (request, reply) => {
     const session = readYandexActorSession(request.headers)
     const { clientId } = request.params as { clientId?: unknown }
     const draft = readTrainerFinancePackageDraft(request.body)
     if (session === undefined) return reply.code(401).send({ error: 'unauthorized' })
     if (session.accessMode !== 'read_write') return reply.code(403).send({ error: 'read_write_session_required' })
-    if (typeof clientId !== 'string' || !uuidPattern.test(clientId) || draft === undefined) {
+    if (typeof clientId !== 'string' || !uuidPattern.test(clientId) || draft === undefined
+      || (servicePath.endsWith('/single-services') && draft.singleSession !== true)) {
       return reply.code(400).send({ error: 'invalid_request' })
     }
     if (options.pilotTrainerFinance === undefined) return reply.code(503).send({ error: 'service_unavailable' })
     return sendPilotCommand(reply,
       () => options.pilotTrainerFinance!.createPackage(session, clientId, draft),
       (financePackage) => reply.header('cache-control', 'no-store').code(201).send({ package: financePackage }))
+  })
+
+  }
+
+  app.post('/v1/finance/packages/:packageId/balance-corrections', async (request, reply) => {
+    const session = readYandexActorSession(request.headers)
+    const { packageId } = request.params as { packageId?: unknown }
+    const draft = readTrainerFinanceBalanceCorrection(request.body)
+    if (session === undefined) return reply.code(401).send({ error: 'unauthorized' })
+    if (session.accessMode !== 'read_write') return reply.code(403).send({ error: 'read_write_session_required' })
+    if (typeof packageId !== 'string' || !uuidPattern.test(packageId) || draft === undefined)
+      return reply.code(400).send({ error: 'invalid_request' })
+    if (options.pilotTrainerFinance === undefined) return reply.code(503).send({ error: 'service_unavailable' })
+    return sendPilotCommand(reply,
+      () => options.pilotTrainerFinance!.correctPackageBalance(session, packageId, draft),
+      financePackage => reply.header('cache-control', 'no-store').send({ package: financePackage }))
   })
 
   app.put('/v1/finance/packages/:packageId', async (request, reply) => {
@@ -3228,11 +3285,11 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
         && (typeof fields.clientId !== 'string' || !uuidPattern.test(fields.clientId)))) {
       return reply.code(400).send({ error: 'invalid_request' })
     }
-    if (fields.trainingFormat !== undefined && fields.trainingFormat !== 'self' && fields.trainingFormat !== 'with_trainer') return reply.code(400).send({ error: 'invalid_request' })
+    if (fields.trainingFormat !== undefined && fields.trainingFormat !== 'self' && fields.trainingFormat !== 'with_trainer' && fields.trainingFormat !== 'online' && fields.trainingFormat !== 'in_person') return reply.code(400).send({ error: 'invalid_request' })
     const writer = options.pilotWorkoutsWriter
     if (!writer) return reply.code(503).send({ error: 'service_unavailable' })
     return sendPilotCommand(reply,
-      () => writer.quickStart(sessionToken, (fields.clientId as string | null | undefined) ?? null, fields.operationId as string, fields.trainingFormat as 'self' | 'with_trainer' | undefined),
+      () => fields.trainingFormat === 'online' || fields.trainingFormat === 'in_person' ? writer.quickStart(sessionToken,(fields.clientId as string|null|undefined)??null,fields.operationId as string,'with_trainer',fields.trainingFormat) : writer.quickStart(sessionToken,(fields.clientId as string|null|undefined)??null,fields.operationId as string,fields.trainingFormat as 'self'|'with_trainer'|undefined),
       (started) => reply.header('cache-control', 'no-store').send({ workout: started }))
   })
 
@@ -4174,7 +4231,8 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
     )
   })
 
-  app.post('/v1/workouts/:workoutId/finish', async (request, reply) => {
+  for (const finishPath of ['/v1/workouts/:workoutId/finish','/v1/workouts/:workoutId/finish-single']) {
+  app.post(finishPath, async (request, reply) => {
     const sessionToken = readCompatibleYandexActorSession(request.headers)
     const { workoutId } = request.params as { workoutId?: unknown }
     const command = readFinishWorkoutRequest(request.body)
@@ -4185,6 +4243,7 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
       typeof workoutId !== 'string'
       || !uuidPattern.test(workoutId)
       || command === undefined
+      || (finishPath.endsWith('/finish-single') && !command?.attendance?.singleService)
     ) {
       return reply.code(400).send({ error: 'invalid_request' })
     }
@@ -4206,6 +4265,8 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
         .send({ workout: { id: workoutId, ...result } }),
     )
   })
+
+  }
 
   app.post('/v1/workouts/:workoutId/pause', async (request, reply) => {
     const sessionToken = readCompatibleYandexActorSession(request.headers)
