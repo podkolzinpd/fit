@@ -145,9 +145,25 @@ export function limeProfileSkinCases(){
    }else if(sample.mode==='photo'){
     const hero=page.getByRole('region',{name:'Мои данные'});await hero.locator('input[type=file]').setInputFiles('public/exercises/reference/close-grip-lat-pulldown.jpg');await expect.poll(()=>fixture.held()).toBe(1);await probe('photo-pending');fixture.release();await expect(hero.getByRole('alert')).toBeVisible();await probe('photo-error');await hero.getByRole('button',{name:'Повторить загрузку фото'}).click();await expect(hero.getByRole('img')).toBeVisible();await probe('photo-saved');expect(fixture.attempts()).toBe(2)
    }else if(sample.mode==='unpublish'||sample.mode==='publication-error'){
+    if(sample.mode==='publication-error'){
+     // Exercise the publication setting while rendered through its real disclosure.
+     // The closed-disclosure CI capture changed only native checkbox color after failure.
+     const publication=profile.locator('.trainer-publication-disclosure')
+     await publication.locator('summary').click();await expect(publication).toHaveAttribute('open','')
+     const catalog=publication.getByRole('switch',{name:'Показывать в каталоге',exact:true})
+     await expect(catalog).toBeVisible();await expect(catalog).toBeChecked();await expect(catalog).toBeEnabled()
+     await publication.locator('summary').click();await expect(publication).not.toHaveAttribute('open','')
+    }
     await profile.getByRole('button',{name:'Снять с публикации'}).click();await expect(page.getByRole('alertdialog')).toBeVisible();await probe('unpublish-confirm')
     if(sample.mode==='unpublish')await page.getByRole('alertdialog').getByRole('button',{name:'Отмена'}).click()
-    else{await page.getByRole('alertdialog').getByRole('button',{name:'Снять',exact:true}).click();await expect(profile.getByRole('alert')).toBeVisible();await probe('unpublish-error')}
+    else{
+     await page.getByRole('alertdialog').getByRole('button',{name:'Снять',exact:true}).click();await expect(profile.getByRole('alert')).toBeVisible()
+     await expect(page.getByRole('alertdialog')).toHaveCount(0)
+     const unpublish=profile.getByRole('button',{name:'Снять с публикации',exact:true}),publication=profile.locator('.trainer-publication-disclosure'),catalog=publication.locator('.switch-input')
+     await expect(unpublish).toBeEnabled();await expect(unpublish).toHaveAttribute('aria-busy','false')
+     await expect(publication).not.toHaveAttribute('open','');await expect(catalog).toBeChecked();await expect(catalog).toBeEnabled()
+     await probe('unpublish-error')
+    }
    }else if(sample.mode==='training'){
     const density=page.getByRole('radiogroup',{name:'Вид Live-тренировки'});await expect(density).toBeVisible();await density.getByRole('radio',{name:'Компактный',exact:true}).click();await expect(density.getByRole('radio',{name:'Компактный',exact:true})).toHaveAttribute('aria-checked','true')
     const animation=page.getByRole('switch',{name:sample.role==='client'?'Анимация в Live':'Анимация упражнения',exact:true});await animation.setChecked(false);await expect(animation).not.toBeChecked();await probe('training-off');await animation.setChecked(true);await probe('training-on');await page.reload();await expect(density.getByRole('radio',{name:'Компактный',exact:true})).toHaveAttribute('aria-checked','true');await expect(animation).toBeChecked();await probe('training-reloaded')

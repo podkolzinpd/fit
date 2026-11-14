@@ -12033,3 +12033,44 @@ codeSTRONG +2узкие caret-shaped полосы внутри focused plan inpu
 выдаются за browser. Реальных production writes0. CI текущего PR ещё гейт;
 после него — сводка владельцу, затем отдельное разрешение выпуска и очередь.
 Следующий MC без его приёмки не начинать.
+
+
+## 274. MC5.5 — исправление адаптера при проверке полного CI
+
+Полный CI head74b09e8e сохранил все raw failures. Два acceptance-shard
+(Chromium/WebKit) выявили десять одинаковых падений старой share-проверки:
+её список точных известных negative guards не учитывал homeMigrationGuard,
+поэтому `.sheet-overlay` и `.ui-identity .sheet-overlay` ошибочно выпадали из
+обнаруженных исходных семейств. В shareMigrationGuards добавлен только
+импорт и точное значение homeMigrationGuard. Исходные families/owners,
+unknown/positive-classifier проверки, абляция, before/after, backdrop и
+CSSOM/scroll assertions сохранены. Runtime и CSS этого исправления не менялись.
+
+Повторный целевой прогон всех пяти sample в двух движках:10PASS,0skip/
+retry/flaky,28.75с; run20261114-135015-6d01dc62. ESLint исправленного файла PASS.
+CI также сохранил один flaky native capture профиля publication-error.
+Raw artifact14109699643 (239554018bytes) сохранён целиком без распаковки
+лишних файлов в pinned run20261114-141120-6275878d; выбран capture-drift
+SHA39227352b669dfdc4ee34d5dfca8e2636d57e9463ff07d46ca29f73c6fe0c89d.
+Единственный изменившийся node77 — INPUT.switch-input, opacity0 в закрытом
+publication details:7 currentColor-полей170→255. Все остальные103nodes,
+checked/value/focus/disabled(false в обоих чтениях)/геометрия/scroll exact.
+Наблюдение не доказывает причину native paint и не объявляется исправленным
+product bug. Screenshot был animations allow; гипотеза fast-forward неверна.
+
+QA publication-error теперь сначала естественно раскрывает настоящую
+«Публикацию», проверяет visible/checked/enabled переключателя и сворачивает
+раздел ДО прежнего unpublish. Затем исходные closed confirm/error full probes
+сохранены; после503 явно проверяются dialog0, action enabled/aria-busyfalse,
+closed details и actual input checked/enabled. Никаких ожиданий нужного цвета,
+ручной прокрутки, masks, CSS, sleeps или ослабления assertions нет.
+Предварительный вариант с раскрытым error-состоянием дал3PASS Chromium/
+3FAIL WebKit (scroll254→369), сохранён в run20261114-141649-2e25ec90 и отклонён.
+Сначала ошибочный anchored grep не нашёл тестов (run141525), не считается PASS.
+Итоговый естественный open/close prerequisite с исходным закрытым путём:
+6PASS (3 независимых повтора ×2движка),0retry/skip/flaky,12.09с,
+run20261114-141800-c6996e7e. Это проверка уточнённого user-flow, не доказательство
+причины прежнего cold closed→error native color drift.
+
+Все изменения после74b09e8e — только QA и этот журнал; runtime3CSS прежний.
+Полный новый CI ещё требуется. Выпуск по-прежнему не разрешён.

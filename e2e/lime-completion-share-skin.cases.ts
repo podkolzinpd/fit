@@ -1,6 +1,7 @@
 import {libraryMigrationGuard} from './lime-library-skin.contract'
 import {editorMigrationGuard} from './lime-editor-skin.contract'
 import {resultMigrationGuard} from './lime-result-remainder-skin.contract'
+import {homeMigrationGuard} from './lime-home-skin.scope'
 import {captureLimeErrorSemantics,expectLimeErrorSemantics} from './lime-error-semantics'
 import {test,expect,type Page} from '@playwright/test'
 import {writeFile} from 'node:fs/promises'
@@ -14,6 +15,7 @@ const shareMigrationGuards=[
   libraryMigrationGuard,
   editorMigrationGuard,
   resultMigrationGuard,
+  homeMigrationGuard,
   ':where(:not(.fit-client-lime :is(.workout-completion-highlight, .workout-completion-missing, .workout-completion-muscles-line), .fit-client-lime :is(.workout-completion-highlight, .workout-completion-missing, .workout-completion-muscles-line) *))',
   ':where(:not(.fit-client-lime .workout-share-overlay, .fit-client-lime .workout-share-overlay *))',
   ':where(:not(.fit-lime-shell.workout-detail-history-identity :is(.workout-actual-duration,.workout-duration-dialog) button))',
