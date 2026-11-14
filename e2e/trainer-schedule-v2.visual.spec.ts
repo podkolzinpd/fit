@@ -280,12 +280,17 @@ test('Figma calendar Coach fortnight compares aligned weekdays and keeps every a
     expect(await scrollport.evaluate(el => el.getBoundingClientRect().bottom >= el.closest('.phone-frame')!.getBoundingClientRect().bottom - 2)).toBe(true)
     // Native focus must reveal a row even when it is already inside the
     // scrollport but visually covered by the floating navigation.
+    // Real keyboard input takes ownership from a pending navigation restore.
+    // Keep explicit native focus independent of Safari's Tab-focus preference.
+    await comparison.locator('.coach-fortnight-day').nth(12).evaluate(el => (el as HTMLElement).focus({ preventScroll: true }))
     await scrollport.evaluate(el => {
       const last = [...el.querySelectorAll('.coach-fortnight-day')].at(-1)!.getBoundingClientRect()
       const nav = document.querySelector('.trainer-tab-bar')!.getBoundingClientRect()
       el.scrollTop += last.bottom - nav.top - 12
     })
+    await page.keyboard.press('Shift')
     await comparison.locator('.coach-fortnight-day').last().evaluate(el => (el as HTMLElement).focus())
+    await expect(comparison.locator('.coach-fortnight-day').last()).toBeFocused()
     await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))))
     expect(await page.evaluate(() => {
       const last = [...document.querySelectorAll('.coach-fortnight-day')].at(-1)!.getBoundingClientRect()

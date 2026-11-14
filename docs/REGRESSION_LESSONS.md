@@ -389,3 +389,19 @@ Chromium response204/oktrue, затем net::ERR_ABORTED, если пустой 
 квалификация обязана связывать ТОТ ЖЕ Request с204 и проверять точный
 endpoint/method/count и успешное изменение UI/данных. Все другие requestfailed
 остаются ошибками. [Доказательства и узкая квалификация MC519](design/CLIENT_REFERENCE_SCREENS_20261029.md#244-mc519--полные-native-baseline-и-квалификация-http204).
+
+
+## MC5.5 — границы skin и семантические fallback
+
+Глобальный styles.css содержит также принятую общую графику и token/theme
+foundation. Расположение файла и отсутствие marker не доказывают старый skin.
+Общий sprite не дублировать в каждом scoped слое; при реальном переносе
+relative URL сохранять resolved resource/query/hash, а не сломанную строку.
+Проверка CSSOM/PNG должна ловить и ресурс ниже видимой области.
+
+Generic status paint используется также семантическим reference-контрактом
+fortnight: day-specific winners могут маскировать .schedule-event-current/
+.skipped. Перед guard проверить реальные состояния и существующие сравнения,
+не удалять/ослаблять assertion и не объявлять fallback dead по marker absence.
+Общая тема с custom properties сохраняется целым rule; её screen-часть не
+разбирать только ради ownership. [Проверки и исправления](design/CLIENT_REFERENCE_SCREENS_20261029.md#272-mc55--найденные-при-проверке-границы-и-исправления).
