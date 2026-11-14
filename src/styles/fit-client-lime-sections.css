@@ -1,3 +1,623 @@
+/* MC5.5 residual home/day/schedule authored paint. Zero-specificity route ownership; accepted Lime bytes stay below. */
+.button:where(:not(:is(:is(.fit-client-lime.client-profile-shell-identity,.fit-client-lime.client-profile-shell-identity *),:is(.fit-client-lime.client-card-edit-identity,.fit-client-lime.client-card-edit-identity *),:is(.fit-lime-shell.trainer-profile-identity > .content:is([data-viewport-route="/profile|"],[data-viewport-route="/profile/settings|"]),.fit-lime-shell.trainer-profile-identity > .content:is([data-viewport-route="/profile|"],[data-viewport-route="/profile/settings|"]) > .profile-page,.fit-lime-shell.trainer-profile-identity > .content:is([data-viewport-route="/profile|"],[data-viewport-route="/profile/settings|"]) > .profile-page *,.fit-lime-shell.trainer-profile-identity > .content:is([data-viewport-route="/profile|"],[data-viewport-route="/profile/settings|"]) ~ :is(.tab-bar,.modal-overlay,.sheet-overlay,.overflow-list,.coachmark-bubble),.fit-lime-shell.trainer-profile-identity > .content:is([data-viewport-route="/profile|"],[data-viewport-route="/profile/settings|"]) ~ :is(.tab-bar,.modal-overlay,.sheet-overlay,.overflow-list,.coachmark-bubble) *)))):where(:is(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *),:is(.fit-lime-shell.trainer-schedule-v2-shell,.fit-lime-shell.trainer-schedule-v2-shell *,:is(html.fit-lime-document .schedule-v2-sheet-backdrop,html.fit-lime-document .schedule-v2-sheet-backdrop *)))):where(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *)) {
+    border: 1px solid var(--border)
+}
+.button:where(:not(:is(:is(.fit-client-lime.client-profile-shell-identity,.fit-client-lime.client-profile-shell-identity *),:is(.fit-client-lime.client-card-edit-identity,.fit-client-lime.client-card-edit-identity *),:is(.fit-lime-shell.trainer-profile-identity > .content:is([data-viewport-route="/profile|"],[data-viewport-route="/profile/settings|"]),.fit-lime-shell.trainer-profile-identity > .content:is([data-viewport-route="/profile|"],[data-viewport-route="/profile/settings|"]) > .profile-page,.fit-lime-shell.trainer-profile-identity > .content:is([data-viewport-route="/profile|"],[data-viewport-route="/profile/settings|"]) > .profile-page *,.fit-lime-shell.trainer-profile-identity > .content:is([data-viewport-route="/profile|"],[data-viewport-route="/profile/settings|"]) ~ :is(.tab-bar,.modal-overlay,.sheet-overlay,.overflow-list,.coachmark-bubble),.fit-lime-shell.trainer-profile-identity > .content:is([data-viewport-route="/profile|"],[data-viewport-route="/profile/settings|"]) ~ :is(.tab-bar,.modal-overlay,.sheet-overlay,.overflow-list,.coachmark-bubble) *)))):where(:is(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *),:is(.fit-lime-shell.trainer-schedule-v2-shell,.fit-lime-shell.trainer-schedule-v2-shell *,:is(html.fit-lime-document .schedule-v2-sheet-backdrop,html.fit-lime-document .schedule-v2-sheet-backdrop *)))):where(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *)) {
+    text-decoration: none
+}
+h2:where(:is(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *),:is(.fit-lime-shell.trainer-schedule-v2-shell,.fit-lime-shell.trainer-schedule-v2-shell *,:is(html.fit-lime-document .schedule-v2-sheet-backdrop,html.fit-lime-document .schedule-v2-sheet-backdrop *)))):where(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *)) {
+    color: var(--fg-strong)
+}
+h3:where(:is(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *),:is(.fit-lime-shell.trainer-schedule-v2-shell,.fit-lime-shell.trainer-schedule-v2-shell *,:is(html.fit-lime-document .schedule-v2-sheet-backdrop,html.fit-lime-document .schedule-v2-sheet-backdrop *)))):where(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *)) {
+    color: var(--fg-strong)
+}
+strong:where(:is(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *),:is(.fit-lime-shell.trainer-schedule-v2-shell,.fit-lime-shell.trainer-schedule-v2-shell *,:is(html.fit-lime-document .schedule-v2-sheet-backdrop,html.fit-lime-document .schedule-v2-sheet-backdrop *)))):where(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *)) {
+    color: var(--fg-strong)
+}
+h2:where(:is(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *),:is(.fit-lime-shell.trainer-schedule-v2-shell,.fit-lime-shell.trainer-schedule-v2-shell *,:is(html.fit-lime-document .schedule-v2-sheet-backdrop,html.fit-lime-document .schedule-v2-sheet-backdrop *)))):where(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *)) {
+    letter-spacing: -.015em
+}
+.phone-frame:where(:is(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *),:is(.fit-lime-shell.trainer-schedule-v2-shell,.fit-lime-shell.trainer-schedule-v2-shell *,:is(html.fit-lime-document .schedule-v2-sheet-backdrop,html.fit-lime-document .schedule-v2-sheet-backdrop *)))):where(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *)) {
+    border: 1px solid var(--frame-border);
+    border-radius: 26px
+}
+.link:where(:is(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *),:is(.fit-lime-shell.trainer-schedule-v2-shell,.fit-lime-shell.trainer-schedule-v2-shell *,:is(html.fit-lime-document .schedule-v2-sheet-backdrop,html.fit-lime-document .schedule-v2-sheet-backdrop *)))):where(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *)) {
+    border: 0
+}
+.link:where(:not(:is(:is(.fit-client-lime.client-profile-shell-identity,.fit-client-lime.client-profile-shell-identity *),:is(.fit-client-lime.client-card-edit-identity,.fit-client-lime.client-card-edit-identity *),:is(.fit-lime-shell.trainer-profile-identity > .content:is([data-viewport-route="/profile|"],[data-viewport-route="/profile/settings|"]),.fit-lime-shell.trainer-profile-identity > .content:is([data-viewport-route="/profile|"],[data-viewport-route="/profile/settings|"]) > .profile-page,.fit-lime-shell.trainer-profile-identity > .content:is([data-viewport-route="/profile|"],[data-viewport-route="/profile/settings|"]) > .profile-page *,.fit-lime-shell.trainer-profile-identity > .content:is([data-viewport-route="/profile|"],[data-viewport-route="/profile/settings|"]) ~ :is(.tab-bar,.modal-overlay,.sheet-overlay,.overflow-list,.coachmark-bubble),.fit-lime-shell.trainer-profile-identity > .content:is([data-viewport-route="/profile|"],[data-viewport-route="/profile/settings|"]) ~ :is(.tab-bar,.modal-overlay,.sheet-overlay,.overflow-list,.coachmark-bubble) *)))):where(:is(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *),:is(.fit-lime-shell.trainer-schedule-v2-shell,.fit-lime-shell.trainer-schedule-v2-shell *,:is(html.fit-lime-document .schedule-v2-sheet-backdrop,html.fit-lime-document .schedule-v2-sheet-backdrop *)))):where(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *)) {
+    background: transparent
+}
+.link:where(:not(:is(:is(.fit-client-lime.client-profile-shell-identity,.fit-client-lime.client-profile-shell-identity *),:is(.fit-client-lime.client-card-edit-identity,.fit-client-lime.client-card-edit-identity *),:is(.fit-lime-shell.trainer-profile-identity > .content:is([data-viewport-route="/profile|"],[data-viewport-route="/profile/settings|"]),.fit-lime-shell.trainer-profile-identity > .content:is([data-viewport-route="/profile|"],[data-viewport-route="/profile/settings|"]) > .profile-page,.fit-lime-shell.trainer-profile-identity > .content:is([data-viewport-route="/profile|"],[data-viewport-route="/profile/settings|"]) > .profile-page *,.fit-lime-shell.trainer-profile-identity > .content:is([data-viewport-route="/profile|"],[data-viewport-route="/profile/settings|"]) ~ :is(.tab-bar,.modal-overlay,.sheet-overlay,.overflow-list,.coachmark-bubble),.fit-lime-shell.trainer-profile-identity > .content:is([data-viewport-route="/profile|"],[data-viewport-route="/profile/settings|"]) ~ :is(.tab-bar,.modal-overlay,.sheet-overlay,.overflow-list,.coachmark-bubble) *)))):where(:is(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *),:is(.fit-lime-shell.trainer-schedule-v2-shell,.fit-lime-shell.trainer-schedule-v2-shell *,:is(html.fit-lime-document .schedule-v2-sheet-backdrop,html.fit-lime-document .schedule-v2-sheet-backdrop *)))):where(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *)) {
+    box-shadow: none
+}
+.error:where(:not(:is(:is(.fit-client-lime.client-profile-shell-identity,.fit-client-lime.client-profile-shell-identity *),:is(.fit-client-lime.client-card-edit-identity,.fit-client-lime.client-card-edit-identity *),:is(.fit-lime-shell.trainer-profile-identity > .content:is([data-viewport-route="/profile|"],[data-viewport-route="/profile/settings|"]),.fit-lime-shell.trainer-profile-identity > .content:is([data-viewport-route="/profile|"],[data-viewport-route="/profile/settings|"]) > .profile-page,.fit-lime-shell.trainer-profile-identity > .content:is([data-viewport-route="/profile|"],[data-viewport-route="/profile/settings|"]) > .profile-page *,.fit-lime-shell.trainer-profile-identity > .content:is([data-viewport-route="/profile|"],[data-viewport-route="/profile/settings|"]) ~ :is(.tab-bar,.modal-overlay,.sheet-overlay,.overflow-list,.coachmark-bubble),.fit-lime-shell.trainer-profile-identity > .content:is([data-viewport-route="/profile|"],[data-viewport-route="/profile/settings|"]) ~ :is(.tab-bar,.modal-overlay,.sheet-overlay,.overflow-list,.coachmark-bubble) *)))):where(:is(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *),:is(.fit-lime-shell.trainer-schedule-v2-shell,.fit-lime-shell.trainer-schedule-v2-shell *,:is(html.fit-lime-document .schedule-v2-sheet-backdrop,html.fit-lime-document .schedule-v2-sheet-backdrop *)))):where(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *)) {
+    color: var(--danger)
+}
+.card:where(:not(:is(:is(.fit-client-lime.client-profile-shell-identity,.fit-client-lime.client-profile-shell-identity *),:is(.fit-client-lime.client-card-edit-identity,.fit-client-lime.client-card-edit-identity *),:is(.fit-lime-shell.trainer-profile-identity > .content:is([data-viewport-route="/profile|"],[data-viewport-route="/profile/settings|"]),.fit-lime-shell.trainer-profile-identity > .content:is([data-viewport-route="/profile|"],[data-viewport-route="/profile/settings|"]) > .profile-page,.fit-lime-shell.trainer-profile-identity > .content:is([data-viewport-route="/profile|"],[data-viewport-route="/profile/settings|"]) > .profile-page *,.fit-lime-shell.trainer-profile-identity > .content:is([data-viewport-route="/profile|"],[data-viewport-route="/profile/settings|"]) ~ :is(.tab-bar,.modal-overlay,.sheet-overlay,.overflow-list,.coachmark-bubble),.fit-lime-shell.trainer-profile-identity > .content:is([data-viewport-route="/profile|"],[data-viewport-route="/profile/settings|"]) ~ :is(.tab-bar,.modal-overlay,.sheet-overlay,.overflow-list,.coachmark-bubble) *)))):where(:is(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *),:is(.fit-lime-shell.trainer-schedule-v2-shell,.fit-lime-shell.trainer-schedule-v2-shell *,:is(html.fit-lime-document .schedule-v2-sheet-backdrop,html.fit-lime-document .schedule-v2-sheet-backdrop *)))):where(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *)) {
+    text-decoration: none;
+    color: inherit
+}
+.card p:where(:not(:is(:is(.fit-client-lime.client-profile-shell-identity,.fit-client-lime.client-profile-shell-identity *),:is(.fit-client-lime.client-card-edit-identity,.fit-client-lime.client-card-edit-identity *),:is(.fit-lime-shell.trainer-profile-identity > .content:is([data-viewport-route="/profile|"],[data-viewport-route="/profile/settings|"]),.fit-lime-shell.trainer-profile-identity > .content:is([data-viewport-route="/profile|"],[data-viewport-route="/profile/settings|"]) > .profile-page,.fit-lime-shell.trainer-profile-identity > .content:is([data-viewport-route="/profile|"],[data-viewport-route="/profile/settings|"]) > .profile-page *,.fit-lime-shell.trainer-profile-identity > .content:is([data-viewport-route="/profile|"],[data-viewport-route="/profile/settings|"]) ~ :is(.tab-bar,.modal-overlay,.sheet-overlay,.overflow-list,.coachmark-bubble),.fit-lime-shell.trainer-profile-identity > .content:is([data-viewport-route="/profile|"],[data-viewport-route="/profile/settings|"]) ~ :is(.tab-bar,.modal-overlay,.sheet-overlay,.overflow-list,.coachmark-bubble) *)))):where(:is(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *),:is(.fit-lime-shell.trainer-schedule-v2-shell,.fit-lime-shell.trainer-schedule-v2-shell *,:is(html.fit-lime-document .schedule-v2-sheet-backdrop,html.fit-lime-document .schedule-v2-sheet-backdrop *)))):where(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *)) {
+    font-size: var(--text-ui)
+}
+.tab-bar a:where(:is(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *),:is(.fit-lime-shell.trainer-schedule-v2-shell,.fit-lime-shell.trainer-schedule-v2-shell *,:is(html.fit-lime-document .schedule-v2-sheet-backdrop,html.fit-lime-document .schedule-v2-sheet-backdrop *)))):where(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *)) {
+    text-decoration: none
+}
+.coachmark-bubble:where(:not(:is(:is(.fit-client-lime.client-profile-shell-identity,.fit-client-lime.client-profile-shell-identity *),:is(.fit-client-lime.client-card-edit-identity,.fit-client-lime.client-card-edit-identity *),:is(.fit-lime-shell.trainer-profile-identity > .content:is([data-viewport-route="/profile|"],[data-viewport-route="/profile/settings|"]),.fit-lime-shell.trainer-profile-identity > .content:is([data-viewport-route="/profile|"],[data-viewport-route="/profile/settings|"]) > .profile-page,.fit-lime-shell.trainer-profile-identity > .content:is([data-viewport-route="/profile|"],[data-viewport-route="/profile/settings|"]) > .profile-page *,.fit-lime-shell.trainer-profile-identity > .content:is([data-viewport-route="/profile|"],[data-viewport-route="/profile/settings|"]) ~ :is(.tab-bar,.modal-overlay,.sheet-overlay,.overflow-list,.coachmark-bubble),.fit-lime-shell.trainer-profile-identity > .content:is([data-viewport-route="/profile|"],[data-viewport-route="/profile/settings|"]) ~ :is(.tab-bar,.modal-overlay,.sheet-overlay,.overflow-list,.coachmark-bubble) *)))):where(:is(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *),:is(.fit-lime-shell.trainer-schedule-v2-shell,.fit-lime-shell.trainer-schedule-v2-shell *,:is(html.fit-lime-document .schedule-v2-sheet-backdrop,html.fit-lime-document .schedule-v2-sheet-backdrop *)))):where(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *)) {
+    border: 1px solid var(--accent-border)
+}
+.today-profile-avatar:where(:is(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *),:is(.fit-lime-shell.trainer-schedule-v2-shell,.fit-lime-shell.trainer-schedule-v2-shell *,:is(html.fit-lime-document .schedule-v2-sheet-backdrop,html.fit-lime-document .schedule-v2-sheet-backdrop *)))):where(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *)) {
+    border: 1px solid var(--border);
+    text-decoration: none
+}
+.eyebrow:where(:is(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *),:is(.fit-lime-shell.trainer-schedule-v2-shell,.fit-lime-shell.trainer-schedule-v2-shell *,:is(html.fit-lime-document .schedule-v2-sheet-backdrop,html.fit-lime-document .schedule-v2-sheet-backdrop *)))):where(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *)) {
+    letter-spacing: .06em;
+    text-transform: uppercase
+}
+.voice-action-button:where(:is(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *),:is(.fit-lime-shell.trainer-schedule-v2-shell,.fit-lime-shell.trainer-schedule-v2-shell *,:is(html.fit-lime-document .schedule-v2-sheet-backdrop,html.fit-lime-document .schedule-v2-sheet-backdrop *)))):where(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *))::before {
+    border: 1px solid var(--voice-ring);
+    border-radius: 50%
+}
+.voice-action-ring:where(:is(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *),:is(.fit-lime-shell.trainer-schedule-v2-shell,.fit-lime-shell.trainer-schedule-v2-shell *,:is(html.fit-lime-document .schedule-v2-sheet-backdrop,html.fit-lime-document .schedule-v2-sheet-backdrop *)))):where(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *)) {
+    border-radius: 50%
+}
+.today-resume:where(:is(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *),:is(.fit-lime-shell.trainer-schedule-v2-shell,.fit-lime-shell.trainer-schedule-v2-shell *,:is(html.fit-lime-document .schedule-v2-sheet-backdrop,html.fit-lime-document .schedule-v2-sheet-backdrop *)))):where(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *)) {
+    border: 1px solid var(--accent-surface-border)
+}
+.today-resume small:where(:is(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *),:is(.fit-lime-shell.trainer-schedule-v2-shell,.fit-lime-shell.trainer-schedule-v2-shell *,:is(html.fit-lime-document .schedule-v2-sheet-backdrop,html.fit-lime-document .schedule-v2-sheet-backdrop *)))):where(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *)) {
+    color: var(--text-muted)
+}
+.first-run-copy h2:where(:is(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *),:is(.fit-lime-shell.trainer-schedule-v2-shell,.fit-lime-shell.trainer-schedule-v2-shell *,:is(html.fit-lime-document .schedule-v2-sheet-backdrop,html.fit-lime-document .schedule-v2-sheet-backdrop *)))):where(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *)) {
+    color: var(--voice-title)
+}
+.first-run-benefits:where(:is(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *),:is(.fit-lime-shell.trainer-schedule-v2-shell,.fit-lime-shell.trainer-schedule-v2-shell *,:is(html.fit-lime-document .schedule-v2-sheet-backdrop,html.fit-lime-document .schedule-v2-sheet-backdrop *)))):where(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *)) {
+    border-block: 1px solid var(--voice-context-divider)
+}
+.first-run-benefits > strong:where(:is(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *),:is(.fit-lime-shell.trainer-schedule-v2-shell,.fit-lime-shell.trainer-schedule-v2-shell *,:is(html.fit-lime-document .schedule-v2-sheet-backdrop,html.fit-lime-document .schedule-v2-sheet-backdrop *)))):where(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *)) {
+    color: var(--voice-title)
+}
+.first-run-connection strong:where(:is(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *),:is(.fit-lime-shell.trainer-schedule-v2-shell,.fit-lime-shell.trainer-schedule-v2-shell *,:is(html.fit-lime-document .schedule-v2-sheet-backdrop,html.fit-lime-document .schedule-v2-sheet-backdrop *)))):where(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *)) {
+    color: var(--voice-title)
+}
+.client-home-next h2:where(:is(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *),:is(.fit-lime-shell.trainer-schedule-v2-shell,.fit-lime-shell.trainer-schedule-v2-shell *,:is(html.fit-lime-document .schedule-v2-sheet-backdrop,html.fit-lime-document .schedule-v2-sheet-backdrop *)))):where(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *)) {
+    color: var(--voice-title)
+}
+.client-home-week h2:where(:is(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *),:is(.fit-lime-shell.trainer-schedule-v2-shell,.fit-lime-shell.trainer-schedule-v2-shell *,:is(html.fit-lime-document .schedule-v2-sheet-backdrop,html.fit-lime-document .schedule-v2-sheet-backdrop *)))):where(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *)) {
+    color: var(--voice-title)
+}
+.client-home-highlight h2:where(:is(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *),:is(.fit-lime-shell.trainer-schedule-v2-shell,.fit-lime-shell.trainer-schedule-v2-shell *,:is(html.fit-lime-document .schedule-v2-sheet-backdrop,html.fit-lime-document .schedule-v2-sheet-backdrop *)))):where(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *)) {
+    color: var(--voice-title)
+}
+.client-home-next-link:where(:is(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *),:is(.fit-lime-shell.trainer-schedule-v2-shell,.fit-lime-shell.trainer-schedule-v2-shell *,:is(html.fit-lime-document .schedule-v2-sheet-backdrop,html.fit-lime-document .schedule-v2-sheet-backdrop *)))):where(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *)) {
+    color: var(--voice-title);
+    text-decoration: none
+}
+.client-home-past-plan > a:where(:is(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *),:is(.fit-lime-shell.trainer-schedule-v2-shell,.fit-lime-shell.trainer-schedule-v2-shell *,:is(html.fit-lime-document .schedule-v2-sheet-backdrop,html.fit-lime-document .schedule-v2-sheet-backdrop *)))):where(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *)) {
+    color: var(--voice-title);
+    text-decoration: none
+}
+.client-home-section-head > a:where(:is(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *),:is(.fit-lime-shell.trainer-schedule-v2-shell,.fit-lime-shell.trainer-schedule-v2-shell *,:is(html.fit-lime-document .schedule-v2-sheet-backdrop,html.fit-lime-document .schedule-v2-sheet-backdrop *)))):where(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *)) {
+    text-decoration: none
+}
+.client-home-highlight > a:where(:is(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *),:is(.fit-lime-shell.trainer-schedule-v2-shell,.fit-lime-shell.trainer-schedule-v2-shell *,:is(html.fit-lime-document .schedule-v2-sheet-backdrop,html.fit-lime-document .schedule-v2-sheet-backdrop *)))):where(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *)) {
+    color: var(--voice-title);
+    text-decoration: none
+}
+.preset-workout-cta:where(:is(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *),:is(.fit-lime-shell.trainer-schedule-v2-shell,.fit-lime-shell.trainer-schedule-v2-shell *,:is(html.fit-lime-document .schedule-v2-sheet-backdrop,html.fit-lime-document .schedule-v2-sheet-backdrop *)))):where(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *)) {
+    border: 0;
+    background: var(--mono-primary);
+    color: var(--mono-on-primary);
+    box-shadow: none
+}
+.preset-workout-cta-icon:where(:is(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *),:is(.fit-lime-shell.trainer-schedule-v2-shell,.fit-lime-shell.trainer-schedule-v2-shell *,:is(html.fit-lime-document .schedule-v2-sheet-backdrop,html.fit-lime-document .schedule-v2-sheet-backdrop *)))):where(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *)) {
+    border-radius: 11px;
+    background: var(--mono-on-primary);
+    color: var(--mono-primary)
+}
+.preset-workout-cta-copy strong:where(:is(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *),:is(.fit-lime-shell.trainer-schedule-v2-shell,.fit-lime-shell.trainer-schedule-v2-shell *,:is(html.fit-lime-document .schedule-v2-sheet-backdrop,html.fit-lime-document .schedule-v2-sheet-backdrop *)))):where(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *)) {
+    color: var(--mono-on-primary);
+    font-size: 14.5px;
+    letter-spacing: -.008em
+}
+.preset-workout-cta-copy small:where(:is(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *),:is(.fit-lime-shell.trainer-schedule-v2-shell,.fit-lime-shell.trainer-schedule-v2-shell *,:is(html.fit-lime-document .schedule-v2-sheet-backdrop,html.fit-lime-document .schedule-v2-sheet-backdrop *)))):where(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *)) {
+    font-size: 11.5px;
+    font-weight: 500;
+    opacity: .78
+}
+.preset-workout-cta-chev:where(:is(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *),:is(.fit-lime-shell.trainer-schedule-v2-shell,.fit-lime-shell.trainer-schedule-v2-shell *,:is(html.fit-lime-document .schedule-v2-sheet-backdrop,html.fit-lime-document .schedule-v2-sheet-backdrop *)))):where(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *)) {
+    opacity: .7
+}
+.preset-workout-card strong:where(:not(:is(.fit-client-lime.client-workouts-identity:has(#workouts-presets-panel:not([hidden])),.fit-client-lime.client-workouts-identity:has(#workouts-presets-panel:not([hidden])) *,.fit-client-lime.workout-create-edit-identity:has(.favorite-workout-editor-page),.fit-client-lime.workout-create-edit-identity:has(.favorite-workout-editor-page) *,.fit-lime-shell:has(.workout-templates-page,.workout-template-source-page),.fit-lime-shell:has(.workout-templates-page,.workout-template-source-page) *,.fit-lime-shell.workout-create-edit-identity:has(.workout-template-editor-page),.fit-lime-shell.workout-create-edit-identity:has(.workout-template-editor-page) *))):where(:is(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *),:is(.fit-lime-shell.trainer-schedule-v2-shell,.fit-lime-shell.trainer-schedule-v2-shell *,:is(html.fit-lime-document .schedule-v2-sheet-backdrop,html.fit-lime-document .schedule-v2-sheet-backdrop *)))):where(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *)) {
+    font-size: 15px
+}
+.preset-workout-card p:where(:not(:is(.fit-client-lime.client-workouts-identity:has(#workouts-presets-panel:not([hidden])),.fit-client-lime.client-workouts-identity:has(#workouts-presets-panel:not([hidden])) *,.fit-client-lime.workout-create-edit-identity:has(.favorite-workout-editor-page),.fit-client-lime.workout-create-edit-identity:has(.favorite-workout-editor-page) *,.fit-lime-shell:has(.workout-templates-page,.workout-template-source-page),.fit-lime-shell:has(.workout-templates-page,.workout-template-source-page) *,.fit-lime-shell.workout-create-edit-identity:has(.workout-template-editor-page),.fit-lime-shell.workout-create-edit-identity:has(.workout-template-editor-page) *))):where(:is(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *),:is(.fit-lime-shell.trainer-schedule-v2-shell,.fit-lime-shell.trainer-schedule-v2-shell *,:is(html.fit-lime-document .schedule-v2-sheet-backdrop,html.fit-lime-document .schedule-v2-sheet-backdrop *)))):where(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *)) {
+    font-size: 13px
+}
+.preset-workout-card small:where(:not(:is(.fit-client-lime.client-workouts-identity:has(#workouts-presets-panel:not([hidden])),.fit-client-lime.client-workouts-identity:has(#workouts-presets-panel:not([hidden])) *,.fit-client-lime.workout-create-edit-identity:has(.favorite-workout-editor-page),.fit-client-lime.workout-create-edit-identity:has(.favorite-workout-editor-page) *,.fit-lime-shell:has(.workout-templates-page,.workout-template-source-page),.fit-lime-shell:has(.workout-templates-page,.workout-template-source-page) *,.fit-lime-shell.workout-create-edit-identity:has(.workout-template-editor-page),.fit-lime-shell.workout-create-edit-identity:has(.workout-template-editor-page) *))):where(:is(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *),:is(.fit-lime-shell.trainer-schedule-v2-shell,.fit-lime-shell.trainer-schedule-v2-shell *,:is(html.fit-lime-document .schedule-v2-sheet-backdrop,html.fit-lime-document .schedule-v2-sheet-backdrop *)))):where(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *)) {
+    color: var(--muted);
+    font-size: 12px
+}
+.body-progress-empty:where(:not(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *))):where(:is(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *),:is(.fit-lime-shell.trainer-schedule-v2-shell,.fit-lime-shell.trainer-schedule-v2-shell *,:is(html.fit-lime-document .schedule-v2-sheet-backdrop,html.fit-lime-document .schedule-v2-sheet-backdrop *)))):where(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *)) {
+    border: 1px dashed var(--border);
+    border-radius: var(--radius-md)
+}
+@media (max-width: 480px) {
+    .phone-frame:where(:is(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *),:is(.fit-lime-shell.trainer-schedule-v2-shell,.fit-lime-shell.trainer-schedule-v2-shell *,:is(html.fit-lime-document .schedule-v2-sheet-backdrop,html.fit-lime-document .schedule-v2-sheet-backdrop *)))):where(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *)) {
+        border: 0;
+        border-radius: 0
+    }
+}
+.ui-identity .coachmark-bubble:where(:not(:is(:is(.fit-client-lime.client-profile-shell-identity,.fit-client-lime.client-profile-shell-identity *),:is(.fit-client-lime.client-card-edit-identity,.fit-client-lime.client-card-edit-identity *),:is(.fit-lime-shell.trainer-profile-identity > .content:is([data-viewport-route="/profile|"],[data-viewport-route="/profile/settings|"]),.fit-lime-shell.trainer-profile-identity > .content:is([data-viewport-route="/profile|"],[data-viewport-route="/profile/settings|"]) > .profile-page,.fit-lime-shell.trainer-profile-identity > .content:is([data-viewport-route="/profile|"],[data-viewport-route="/profile/settings|"]) > .profile-page *,.fit-lime-shell.trainer-profile-identity > .content:is([data-viewport-route="/profile|"],[data-viewport-route="/profile/settings|"]) ~ :is(.tab-bar,.modal-overlay,.sheet-overlay,.overflow-list,.coachmark-bubble),.fit-lime-shell.trainer-profile-identity > .content:is([data-viewport-route="/profile|"],[data-viewport-route="/profile/settings|"]) ~ :is(.tab-bar,.modal-overlay,.sheet-overlay,.overflow-list,.coachmark-bubble) *)))):where(:is(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *),:is(.fit-lime-shell.trainer-schedule-v2-shell,.fit-lime-shell.trainer-schedule-v2-shell *,:is(html.fit-lime-document .schedule-v2-sheet-backdrop,html.fit-lime-document .schedule-v2-sheet-backdrop *)))):where(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *)) {
+    border-color: var(--border);
+    border-radius: 18px;
+    background: var(--surface-elevated);
+    box-shadow: none
+}
+.ui-identity .coachmark-bubble strong:where(:not(:is(:is(.fit-client-lime.client-profile-shell-identity,.fit-client-lime.client-profile-shell-identity *),:is(.fit-client-lime.client-card-edit-identity,.fit-client-lime.client-card-edit-identity *),:is(.fit-lime-shell.trainer-profile-identity > .content:is([data-viewport-route="/profile|"],[data-viewport-route="/profile/settings|"]),.fit-lime-shell.trainer-profile-identity > .content:is([data-viewport-route="/profile|"],[data-viewport-route="/profile/settings|"]) > .profile-page,.fit-lime-shell.trainer-profile-identity > .content:is([data-viewport-route="/profile|"],[data-viewport-route="/profile/settings|"]) > .profile-page *,.fit-lime-shell.trainer-profile-identity > .content:is([data-viewport-route="/profile|"],[data-viewport-route="/profile/settings|"]) ~ :is(.tab-bar,.modal-overlay,.sheet-overlay,.overflow-list,.coachmark-bubble),.fit-lime-shell.trainer-profile-identity > .content:is([data-viewport-route="/profile|"],[data-viewport-route="/profile/settings|"]) ~ :is(.tab-bar,.modal-overlay,.sheet-overlay,.overflow-list,.coachmark-bubble) *)))):where(:is(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *),:is(.fit-lime-shell.trainer-schedule-v2-shell,.fit-lime-shell.trainer-schedule-v2-shell *,:is(html.fit-lime-document .schedule-v2-sheet-backdrop,html.fit-lime-document .schedule-v2-sheet-backdrop *)))):where(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *)) {
+    color: var(--fg);
+    font-size: 16px
+}
+.ui-identity .coachmark-bubble p:where(:not(:is(:is(.fit-client-lime.client-profile-shell-identity,.fit-client-lime.client-profile-shell-identity *),:is(.fit-client-lime.client-card-edit-identity,.fit-client-lime.client-card-edit-identity *),:is(.fit-lime-shell.trainer-profile-identity > .content:is([data-viewport-route="/profile|"],[data-viewport-route="/profile/settings|"]),.fit-lime-shell.trainer-profile-identity > .content:is([data-viewport-route="/profile|"],[data-viewport-route="/profile/settings|"]) > .profile-page,.fit-lime-shell.trainer-profile-identity > .content:is([data-viewport-route="/profile|"],[data-viewport-route="/profile/settings|"]) > .profile-page *,.fit-lime-shell.trainer-profile-identity > .content:is([data-viewport-route="/profile|"],[data-viewport-route="/profile/settings|"]) ~ :is(.tab-bar,.modal-overlay,.sheet-overlay,.overflow-list,.coachmark-bubble),.fit-lime-shell.trainer-profile-identity > .content:is([data-viewport-route="/profile|"],[data-viewport-route="/profile/settings|"]) ~ :is(.tab-bar,.modal-overlay,.sheet-overlay,.overflow-list,.coachmark-bubble) *)))):where(:is(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *),:is(.fit-lime-shell.trainer-schedule-v2-shell,.fit-lime-shell.trainer-schedule-v2-shell *,:is(html.fit-lime-document .schedule-v2-sheet-backdrop,html.fit-lime-document .schedule-v2-sheet-backdrop *)))):where(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *)) {
+    color: var(--secondary-label-fg);
+    font-size: 14px;
+    font-weight: 400
+}
+.client-home-identity:where(:is(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *),:is(.fit-lime-shell.trainer-schedule-v2-shell,.fit-lime-shell.trainer-schedule-v2-shell *,:is(html.fit-lime-document .schedule-v2-sheet-backdrop,html.fit-lime-document .schedule-v2-sheet-backdrop *)))):where(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *)) {
+    box-shadow: none
+}
+.client-home-identity .today-profile-avatar:where(:is(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *),:is(.fit-lime-shell.trainer-schedule-v2-shell,.fit-lime-shell.trainer-schedule-v2-shell *,:is(html.fit-lime-document .schedule-v2-sheet-backdrop,html.fit-lime-document .schedule-v2-sheet-backdrop *)))):where(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *)) {
+    border-color: var(--border);
+    border-radius: 14px;
+    background: var(--surface-raised);
+    color: var(--fg);
+    font-size: 14px
+}
+.client-home-identity .today-profile-avatar:focus-visible:where(:is(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *),:is(.fit-lime-shell.trainer-schedule-v2-shell,.fit-lime-shell.trainer-schedule-v2-shell *,:is(html.fit-lime-document .schedule-v2-sheet-backdrop,html.fit-lime-document .schedule-v2-sheet-backdrop *)))):where(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *)) {
+    outline: 2px solid var(--fg);
+    outline-offset: 2px
+}
+.client-home-identity .today-greeting:where(:is(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *),:is(.fit-lime-shell.trainer-schedule-v2-shell,.fit-lime-shell.trainer-schedule-v2-shell *,:is(html.fit-lime-document .schedule-v2-sheet-backdrop,html.fit-lime-document .schedule-v2-sheet-backdrop *)))):where(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *)) {
+    color: var(--muted);
+    font-size: 14px;
+    font-weight: 400
+}
+.client-home-identity .voice-action-guidance:where(:is(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *),:is(.fit-lime-shell.trainer-schedule-v2-shell,.fit-lime-shell.trainer-schedule-v2-shell *,:is(html.fit-lime-document .schedule-v2-sheet-backdrop,html.fit-lime-document .schedule-v2-sheet-backdrop *)))):where(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *)) {
+    font-size: 12px;
+    font-weight: 400
+}
+.client-home-identity .voice-action-transcript:where(:is(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *),:is(.fit-lime-shell.trainer-schedule-v2-shell,.fit-lime-shell.trainer-schedule-v2-shell *,:is(html.fit-lime-document .schedule-v2-sheet-backdrop,html.fit-lime-document .schedule-v2-sheet-backdrop *)))):where(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *)) {
+    color: var(--mono-on-primary);
+    font-size: 12px;
+    font-weight: 400;
+    opacity: .76
+}
+.client-home-identity .voice-action-button:where(:is(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *),:is(.fit-lime-shell.trainer-schedule-v2-shell,.fit-lime-shell.trainer-schedule-v2-shell *,:is(html.fit-lime-document .schedule-v2-sheet-backdrop,html.fit-lime-document .schedule-v2-sheet-backdrop *)))):where(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *)) {
+    box-shadow: none
+}
+.client-home-identity .voice-action-button svg:where(:is(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *),:is(.fit-lime-shell.trainer-schedule-v2-shell,.fit-lime-shell.trainer-schedule-v2-shell *,:is(html.fit-lime-document .schedule-v2-sheet-backdrop,html.fit-lime-document .schedule-v2-sheet-backdrop *)))):where(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *)) {
+    stroke-width: 1.8
+}
+.client-home-identity .voice-action-button:focus-visible:where(:is(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *),:is(.fit-lime-shell.trainer-schedule-v2-shell,.fit-lime-shell.trainer-schedule-v2-shell *,:is(html.fit-lime-document .schedule-v2-sheet-backdrop,html.fit-lime-document .schedule-v2-sheet-backdrop *)))):where(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *)) {
+    outline: 2px solid var(--mono-on-primary);
+    outline-offset: 3px
+}
+.client-home-identity .voice-action-label strong:where(:is(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *),:is(.fit-lime-shell.trainer-schedule-v2-shell,.fit-lime-shell.trainer-schedule-v2-shell *,:is(html.fit-lime-document .schedule-v2-sheet-backdrop,html.fit-lime-document .schedule-v2-sheet-backdrop *)))):where(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *)) {
+    color: var(--mono-on-primary);
+    font-size: 14px
+}
+.client-home-identity .voice-action-label span:where(:is(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *),:is(.fit-lime-shell.trainer-schedule-v2-shell,.fit-lime-shell.trainer-schedule-v2-shell *,:is(html.fit-lime-document .schedule-v2-sheet-backdrop,html.fit-lime-document .schedule-v2-sheet-backdrop *)))):where(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *)) {
+    color: var(--mono-on-primary);
+    font-size: 14px;
+    font-weight: 500
+}
+.client-home-identity .voice-action-hitarea:focus-visible:where(:is(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *),:is(.fit-lime-shell.trainer-schedule-v2-shell,.fit-lime-shell.trainer-schedule-v2-shell *,:is(html.fit-lime-document .schedule-v2-sheet-backdrop,html.fit-lime-document .schedule-v2-sheet-backdrop *)))):where(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *)) {
+    outline: 2px solid var(--mono-on-primary);
+    outline-offset: -3px
+}
+.client-home-identity .today-voice-text-inline:where(:is(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *),:is(.fit-lime-shell.trainer-schedule-v2-shell,.fit-lime-shell.trainer-schedule-v2-shell *,:is(html.fit-lime-document .schedule-v2-sheet-backdrop,html.fit-lime-document .schedule-v2-sheet-backdrop *)))):where(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *)) {
+    box-shadow: none
+}
+.client-home-identity .today-voice-text-inline svg:where(:is(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *),:is(.fit-lime-shell.trainer-schedule-v2-shell,.fit-lime-shell.trainer-schedule-v2-shell *,:is(html.fit-lime-document .schedule-v2-sheet-backdrop,html.fit-lime-document .schedule-v2-sheet-backdrop *)))):where(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *)) {
+    stroke-width: 1.8
+}
+.client-home-identity .voice-action-recording-controls .wide:where(:is(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *),:is(.fit-lime-shell.trainer-schedule-v2-shell,.fit-lime-shell.trainer-schedule-v2-shell *,:is(html.fit-lime-document .schedule-v2-sheet-backdrop,html.fit-lime-document .schedule-v2-sheet-backdrop *)))):where(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *)) {
+    border: 1px solid var(--mono-on-primary);
+    background: var(--mono-on-primary);
+    color: var(--mono-primary)
+}
+.client-home-identity .voice-action-recording-controls .link:where(:is(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *),:is(.fit-lime-shell.trainer-schedule-v2-shell,.fit-lime-shell.trainer-schedule-v2-shell *,:is(html.fit-lime-document .schedule-v2-sheet-backdrop,html.fit-lime-document .schedule-v2-sheet-backdrop *)))):where(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *)) {
+    color: var(--mono-on-primary);
+    font-size: 14px;
+    font-weight: 500
+}
+.client-home-identity .voice-action-error:where(:is(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *),:is(.fit-lime-shell.trainer-schedule-v2-shell,.fit-lime-shell.trainer-schedule-v2-shell *,:is(html.fit-lime-document .schedule-v2-sheet-backdrop,html.fit-lime-document .schedule-v2-sheet-backdrop *)))):where(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *)) {
+    border-color: var(--mono-on-primary);
+    background: transparent;
+    color: var(--mono-on-primary);
+    font-size: 12px
+}
+.client-home-identity button:where(:is(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *),:is(.fit-lime-shell.trainer-schedule-v2-shell,.fit-lime-shell.trainer-schedule-v2-shell *,:is(html.fit-lime-document .schedule-v2-sheet-backdrop,html.fit-lime-document .schedule-v2-sheet-backdrop *)))):where(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *)) {
+    border-radius: 14px;
+    font-size: 14px
+}
+.client-home-identity button.primary:where(:is(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *),:is(.fit-lime-shell.trainer-schedule-v2-shell,.fit-lime-shell.trainer-schedule-v2-shell *,:is(html.fit-lime-document .schedule-v2-sheet-backdrop,html.fit-lime-document .schedule-v2-sheet-backdrop *)))):where(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *)) {
+    border-color: var(--mono-primary);
+    background: var(--mono-primary);
+    color: var(--mono-on-primary);
+    box-shadow: none
+}
+.client-home-identity .button.primary:where(:is(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *),:is(.fit-lime-shell.trainer-schedule-v2-shell,.fit-lime-shell.trainer-schedule-v2-shell *,:is(html.fit-lime-document .schedule-v2-sheet-backdrop,html.fit-lime-document .schedule-v2-sheet-backdrop *)))):where(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *)) {
+    border-color: var(--mono-primary);
+    background: var(--mono-primary);
+    color: var(--mono-on-primary);
+    box-shadow: none
+}
+.client-home-identity button.secondary:where(:is(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *),:is(.fit-lime-shell.trainer-schedule-v2-shell,.fit-lime-shell.trainer-schedule-v2-shell *,:is(html.fit-lime-document .schedule-v2-sheet-backdrop,html.fit-lime-document .schedule-v2-sheet-backdrop *)))):where(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *)) {
+    box-shadow: none
+}
+.client-home-identity .button.secondary:where(:is(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *),:is(.fit-lime-shell.trainer-schedule-v2-shell,.fit-lime-shell.trainer-schedule-v2-shell *,:is(html.fit-lime-document .schedule-v2-sheet-backdrop,html.fit-lime-document .schedule-v2-sheet-backdrop *)))):where(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *)) {
+    box-shadow: none
+}
+.client-home-identity button:disabled:where(:is(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *),:is(.fit-lime-shell.trainer-schedule-v2-shell,.fit-lime-shell.trainer-schedule-v2-shell *,:is(html.fit-lime-document .schedule-v2-sheet-backdrop,html.fit-lime-document .schedule-v2-sheet-backdrop *)))):where(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *)) {
+    box-shadow: none
+}
+.client-home-identity .link:where(:is(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *),:is(.fit-lime-shell.trainer-schedule-v2-shell,.fit-lime-shell.trainer-schedule-v2-shell *,:is(html.fit-lime-document .schedule-v2-sheet-backdrop,html.fit-lime-document .schedule-v2-sheet-backdrop *)))):where(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *)) {
+    color: var(--fg);
+    font-size: 14px
+}
+.client-home-identity .first-run-copy .eyebrow:where(:is(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *),:is(.fit-lime-shell.trainer-schedule-v2-shell,.fit-lime-shell.trainer-schedule-v2-shell *,:is(html.fit-lime-document .schedule-v2-sheet-backdrop,html.fit-lime-document .schedule-v2-sheet-backdrop *)))):where(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *)) {
+    color: var(--muted);
+    font-size: 12px;
+    letter-spacing: .06em
+}
+.client-home-identity .client-home-next .eyebrow:where(:is(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *),:is(.fit-lime-shell.trainer-schedule-v2-shell,.fit-lime-shell.trainer-schedule-v2-shell *,:is(html.fit-lime-document .schedule-v2-sheet-backdrop,html.fit-lime-document .schedule-v2-sheet-backdrop *)))):where(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *)) {
+    color: var(--muted);
+    font-size: 12px;
+    letter-spacing: .06em
+}
+.client-home-identity .client-home-past-plan .eyebrow:where(:is(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *),:is(.fit-lime-shell.trainer-schedule-v2-shell,.fit-lime-shell.trainer-schedule-v2-shell *,:is(html.fit-lime-document .schedule-v2-sheet-backdrop,html.fit-lime-document .schedule-v2-sheet-backdrop *)))):where(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *)) {
+    color: var(--muted);
+    font-size: 12px;
+    letter-spacing: .06em
+}
+.client-home-identity .client-home-week .eyebrow:where(:is(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *),:is(.fit-lime-shell.trainer-schedule-v2-shell,.fit-lime-shell.trainer-schedule-v2-shell *,:is(html.fit-lime-document .schedule-v2-sheet-backdrop,html.fit-lime-document .schedule-v2-sheet-backdrop *)))):where(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *)) {
+    color: var(--muted);
+    font-size: 12px;
+    letter-spacing: .06em
+}
+.client-home-identity .client-home-highlight .eyebrow:where(:is(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *),:is(.fit-lime-shell.trainer-schedule-v2-shell,.fit-lime-shell.trainer-schedule-v2-shell *,:is(html.fit-lime-document .schedule-v2-sheet-backdrop,html.fit-lime-document .schedule-v2-sheet-backdrop *)))):where(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *)) {
+    color: var(--muted);
+    font-size: 12px;
+    letter-spacing: .06em
+}
+.client-home-identity .app-install-card .eyebrow:where(:is(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *),:is(.fit-lime-shell.trainer-schedule-v2-shell,.fit-lime-shell.trainer-schedule-v2-shell *,:is(html.fit-lime-document .schedule-v2-sheet-backdrop,html.fit-lime-document .schedule-v2-sheet-backdrop *)))):where(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *)) {
+    color: var(--muted);
+    font-size: 12px;
+    letter-spacing: .06em
+}
+.client-home-identity .first-run-copy h2:where(:is(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *),:is(.fit-lime-shell.trainer-schedule-v2-shell,.fit-lime-shell.trainer-schedule-v2-shell *,:is(html.fit-lime-document .schedule-v2-sheet-backdrop,html.fit-lime-document .schedule-v2-sheet-backdrop *)))):where(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *)) {
+    font-size: 24px;
+    letter-spacing: -.018em
+}
+.client-home-identity .first-run-copy > p:last-child:where(:is(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *),:is(.fit-lime-shell.trainer-schedule-v2-shell,.fit-lime-shell.trainer-schedule-v2-shell *,:is(html.fit-lime-document .schedule-v2-sheet-backdrop,html.fit-lime-document .schedule-v2-sheet-backdrop *)))):where(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *)) {
+    color: var(--muted);
+    font-size: 14px;
+    font-weight: 400
+}
+.client-home-identity .first-run-benefits:where(:is(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *),:is(.fit-lime-shell.trainer-schedule-v2-shell,.fit-lime-shell.trainer-schedule-v2-shell *,:is(html.fit-lime-document .schedule-v2-sheet-backdrop,html.fit-lime-document .schedule-v2-sheet-backdrop *)))):where(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *)) {
+    border: 0;
+    background: var(--surface-raised)
+}
+.client-home-identity .first-run-benefits > strong:where(:is(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *),:is(.fit-lime-shell.trainer-schedule-v2-shell,.fit-lime-shell.trainer-schedule-v2-shell *,:is(html.fit-lime-document .schedule-v2-sheet-backdrop,html.fit-lime-document .schedule-v2-sheet-backdrop *)))):where(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *)) {
+    font-size: 16px
+}
+.client-home-identity .first-run-benefits ul:where(:is(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *),:is(.fit-lime-shell.trainer-schedule-v2-shell,.fit-lime-shell.trainer-schedule-v2-shell *,:is(html.fit-lime-document .schedule-v2-sheet-backdrop,html.fit-lime-document .schedule-v2-sheet-backdrop *)))):where(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *)) {
+    color: var(--secondary-label-fg)
+}
+.client-home-identity .first-run-benefits li:where(:is(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *),:is(.fit-lime-shell.trainer-schedule-v2-shell,.fit-lime-shell.trainer-schedule-v2-shell *,:is(html.fit-lime-document .schedule-v2-sheet-backdrop,html.fit-lime-document .schedule-v2-sheet-backdrop *)))):where(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *)) {
+    font-size: 14px;
+    font-weight: 400
+}
+.client-home-identity .first-run-benefits li:where(:is(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *),:is(.fit-lime-shell.trainer-schedule-v2-shell,.fit-lime-shell.trainer-schedule-v2-shell *,:is(html.fit-lime-document .schedule-v2-sheet-backdrop,html.fit-lime-document .schedule-v2-sheet-backdrop *)))):where(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *))::before {
+    color: var(--success-fg);
+    font-weight: 600
+}
+.client-home-identity .first-run-connection:where(:is(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *),:is(.fit-lime-shell.trainer-schedule-v2-shell,.fit-lime-shell.trainer-schedule-v2-shell *,:is(html.fit-lime-document .schedule-v2-sheet-backdrop,html.fit-lime-document .schedule-v2-sheet-backdrop *)))):where(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *)) {
+    border-top: 1px solid var(--border)
+}
+.client-home-identity .first-run-connection strong:where(:is(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *),:is(.fit-lime-shell.trainer-schedule-v2-shell,.fit-lime-shell.trainer-schedule-v2-shell *,:is(html.fit-lime-document .schedule-v2-sheet-backdrop,html.fit-lime-document .schedule-v2-sheet-backdrop *)))):where(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *)) {
+    font-size: 14px
+}
+.client-home-identity .first-run-connection small:where(:is(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *),:is(.fit-lime-shell.trainer-schedule-v2-shell,.fit-lime-shell.trainer-schedule-v2-shell *,:is(html.fit-lime-document .schedule-v2-sheet-backdrop,html.fit-lime-document .schedule-v2-sheet-backdrop *)))):where(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *)) {
+    color: var(--muted);
+    font-size: 12px;
+    font-weight: 500
+}
+.client-home-identity .client-home-next:where(:is(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *),:is(.fit-lime-shell.trainer-schedule-v2-shell,.fit-lime-shell.trainer-schedule-v2-shell *,:is(html.fit-lime-document .schedule-v2-sheet-backdrop,html.fit-lime-document .schedule-v2-sheet-backdrop *)))):where(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *)) {
+    border: 1px solid var(--border);
+    box-shadow: none
+}
+.client-home-identity .client-home-week:where(:is(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *),:is(.fit-lime-shell.trainer-schedule-v2-shell,.fit-lime-shell.trainer-schedule-v2-shell *,:is(html.fit-lime-document .schedule-v2-sheet-backdrop,html.fit-lime-document .schedule-v2-sheet-backdrop *)))):where(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *)) {
+    border: 1px solid var(--border);
+    background: var(--surface-raised);
+    box-shadow: none
+}
+.client-home-identity .client-home-highlight:where(:is(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *),:is(.fit-lime-shell.trainer-schedule-v2-shell,.fit-lime-shell.trainer-schedule-v2-shell *,:is(html.fit-lime-document .schedule-v2-sheet-backdrop,html.fit-lime-document .schedule-v2-sheet-backdrop *)))):where(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *)) {
+    border: 1px solid var(--border);
+    background: var(--surface-raised);
+    box-shadow: none
+}
+.client-home-identity .app-install-card.compact:where(:is(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *),:is(.fit-lime-shell.trainer-schedule-v2-shell,.fit-lime-shell.trainer-schedule-v2-shell *,:is(html.fit-lime-document .schedule-v2-sheet-backdrop,html.fit-lime-document .schedule-v2-sheet-backdrop *)))):where(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *)) {
+    border: 1px solid var(--border);
+    background: var(--surface-raised);
+    box-shadow: none
+}
+.client-home-identity .client-home-next.assigned:where(:is(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *),:is(.fit-lime-shell.trainer-schedule-v2-shell,.fit-lime-shell.trainer-schedule-v2-shell *,:is(html.fit-lime-document .schedule-v2-sheet-backdrop,html.fit-lime-document .schedule-v2-sheet-backdrop *)))):where(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *)) {
+    border-color: var(--border);
+    background: var(--surface-raised)
+}
+.client-home-identity .client-home-next h2:where(:is(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *),:is(.fit-lime-shell.trainer-schedule-v2-shell,.fit-lime-shell.trainer-schedule-v2-shell *,:is(html.fit-lime-document .schedule-v2-sheet-backdrop,html.fit-lime-document .schedule-v2-sheet-backdrop *)))):where(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *)) {
+    font-size: 16px;
+    letter-spacing: -.01em
+}
+.client-home-identity .client-home-week h2:where(:is(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *),:is(.fit-lime-shell.trainer-schedule-v2-shell,.fit-lime-shell.trainer-schedule-v2-shell *,:is(html.fit-lime-document .schedule-v2-sheet-backdrop,html.fit-lime-document .schedule-v2-sheet-backdrop *)))):where(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *)) {
+    font-size: 16px;
+    letter-spacing: -.01em
+}
+.client-home-identity .client-home-highlight h2:where(:is(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *),:is(.fit-lime-shell.trainer-schedule-v2-shell,.fit-lime-shell.trainer-schedule-v2-shell *,:is(html.fit-lime-document .schedule-v2-sheet-backdrop,html.fit-lime-document .schedule-v2-sheet-backdrop *)))):where(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *)) {
+    font-size: 16px;
+    letter-spacing: -.01em
+}
+.client-home-identity .client-home-self-training h2:where(:is(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *),:is(.fit-lime-shell.trainer-schedule-v2-shell,.fit-lime-shell.trainer-schedule-v2-shell *,:is(html.fit-lime-document .schedule-v2-sheet-backdrop,html.fit-lime-document .schedule-v2-sheet-backdrop *)))):where(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *)) {
+    letter-spacing: -.01em
+}
+.client-home-identity .client-home-next-time:where(:is(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *),:is(.fit-lime-shell.trainer-schedule-v2-shell,.fit-lime-shell.trainer-schedule-v2-shell *,:is(html.fit-lime-document .schedule-v2-sheet-backdrop,html.fit-lime-document .schedule-v2-sheet-backdrop *)))):where(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *)) {
+    color: var(--secondary-label-fg);
+    font-size: 14px;
+    font-weight: 400
+}
+.client-home-identity .client-home-next-exercises:where(:is(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *),:is(.fit-lime-shell.trainer-schedule-v2-shell,.fit-lime-shell.trainer-schedule-v2-shell *,:is(html.fit-lime-document .schedule-v2-sheet-backdrop,html.fit-lime-document .schedule-v2-sheet-backdrop *)))):where(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *)) {
+    color: var(--secondary-label-fg);
+    font-size: 14px
+}
+.client-home-identity .client-home-week > p:where(:is(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *),:is(.fit-lime-shell.trainer-schedule-v2-shell,.fit-lime-shell.trainer-schedule-v2-shell *,:is(html.fit-lime-document .schedule-v2-sheet-backdrop,html.fit-lime-document .schedule-v2-sheet-backdrop *)))):where(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *)) {
+    color: var(--secondary-label-fg);
+    font-size: 14px;
+    font-weight: 400
+}
+.client-home-identity .client-home-highlight h2:where(:is(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *),:is(.fit-lime-shell.trainer-schedule-v2-shell,.fit-lime-shell.trainer-schedule-v2-shell *,:is(html.fit-lime-document .schedule-v2-sheet-backdrop,html.fit-lime-document .schedule-v2-sheet-backdrop *)))):where(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *)) {
+    font-size: 16px
+}
+.client-home-identity .client-home-past-plan small:where(:is(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *),:is(.fit-lime-shell.trainer-schedule-v2-shell,.fit-lime-shell.trainer-schedule-v2-shell *,:is(html.fit-lime-document .schedule-v2-sheet-backdrop,html.fit-lime-document .schedule-v2-sheet-backdrop *)))):where(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *)) {
+    color: var(--secondary-label-fg);
+    font-size: 12px;
+    font-weight: 500
+}
+.client-home-identity .client-home-highlight small:where(:is(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *),:is(.fit-lime-shell.trainer-schedule-v2-shell,.fit-lime-shell.trainer-schedule-v2-shell *,:is(html.fit-lime-document .schedule-v2-sheet-backdrop,html.fit-lime-document .schedule-v2-sheet-backdrop *)))):where(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *)) {
+    color: var(--secondary-label-fg);
+    font-size: 12px;
+    font-weight: 500
+}
+.client-home-identity .client-home-next-link > svg:where(:is(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *),:is(.fit-lime-shell.trainer-schedule-v2-shell,.fit-lime-shell.trainer-schedule-v2-shell *,:is(html.fit-lime-document .schedule-v2-sheet-backdrop,html.fit-lime-document .schedule-v2-sheet-backdrop *)))):where(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *)) {
+    color: var(--muted)
+}
+.client-home-identity .client-home-highlight > a > svg:where(:is(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *),:is(.fit-lime-shell.trainer-schedule-v2-shell,.fit-lime-shell.trainer-schedule-v2-shell *,:is(html.fit-lime-document .schedule-v2-sheet-backdrop,html.fit-lime-document .schedule-v2-sheet-backdrop *)))):where(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *)) {
+    color: var(--muted)
+}
+.client-home-identity .client-home-past-plan h2:where(:is(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *),:is(.fit-lime-shell.trainer-schedule-v2-shell,.fit-lime-shell.trainer-schedule-v2-shell *,:is(html.fit-lime-document .schedule-v2-sheet-backdrop,html.fit-lime-document .schedule-v2-sheet-backdrop *)))):where(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *)) {
+    color: var(--fg);
+    font-size: 14px
+}
+.client-home-identity .client-home-past-plan b:where(:is(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *),:is(.fit-lime-shell.trainer-schedule-v2-shell,.fit-lime-shell.trainer-schedule-v2-shell *,:is(html.fit-lime-document .schedule-v2-sheet-backdrop,html.fit-lime-document .schedule-v2-sheet-backdrop *)))):where(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *)) {
+    color: var(--fg);
+    font-size: 12px
+}
+.client-home-identity .client-home-section-head > a:where(:is(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *),:is(.fit-lime-shell.trainer-schedule-v2-shell,.fit-lime-shell.trainer-schedule-v2-shell *,:is(html.fit-lime-document .schedule-v2-sheet-backdrop,html.fit-lime-document .schedule-v2-sheet-backdrop *)))):where(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *)) {
+    color: var(--fg);
+    font-size: 12px;
+    font-weight: 500
+}
+.client-home-identity .client-home-loading:where(:is(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *),:is(.fit-lime-shell.trainer-schedule-v2-shell,.fit-lime-shell.trainer-schedule-v2-shell *,:is(html.fit-lime-document .schedule-v2-sheet-backdrop,html.fit-lime-document .schedule-v2-sheet-backdrop *)))):where(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *)) {
+    color: var(--secondary-label-fg);
+    font-size: 14px
+}
+.client-home-identity .trainer-discovery-home-actions .link:where(:is(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *),:is(.fit-lime-shell.trainer-schedule-v2-shell,.fit-lime-shell.trainer-schedule-v2-shell *,:is(html.fit-lime-document .schedule-v2-sheet-backdrop,html.fit-lime-document .schedule-v2-sheet-backdrop *)))):where(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *)) {
+    font-size: 13px
+}
+.client-home-identity .today-resume:where(:is(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *),:is(.fit-lime-shell.trainer-schedule-v2-shell,.fit-lime-shell.trainer-schedule-v2-shell *,:is(html.fit-lime-document .schedule-v2-sheet-backdrop,html.fit-lime-document .schedule-v2-sheet-backdrop *)))):where(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *)) {
+    border-color: var(--border);
+    background: var(--surface-raised)
+}
+.client-home-identity .app-install-card h2:where(:is(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *),:is(.fit-lime-shell.trainer-schedule-v2-shell,.fit-lime-shell.trainer-schedule-v2-shell *,:is(html.fit-lime-document .schedule-v2-sheet-backdrop,html.fit-lime-document .schedule-v2-sheet-backdrop *)))):where(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *)) {
+    font-size: 16px
+}
+.client-home-identity .app-install-card.compact > div:first-child > p:last-child:where(:is(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *),:is(.fit-lime-shell.trainer-schedule-v2-shell,.fit-lime-shell.trainer-schedule-v2-shell *,:is(html.fit-lime-document .schedule-v2-sheet-backdrop,html.fit-lime-document .schedule-v2-sheet-backdrop *)))):where(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *)) {
+    color: var(--secondary-label-fg);
+    font-size: 12px;
+    font-weight: 500
+}
+.client-home-identity .tab-bar:where(:is(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *),:is(.fit-lime-shell.trainer-schedule-v2-shell,.fit-lime-shell.trainer-schedule-v2-shell *,:is(html.fit-lime-document .schedule-v2-sheet-backdrop,html.fit-lime-document .schedule-v2-sheet-backdrop *)))):where(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *)) {
+    box-shadow: none
+}
+.client-home-identity .tab-bar a svg:where(:is(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *),:is(.fit-lime-shell.trainer-schedule-v2-shell,.fit-lime-shell.trainer-schedule-v2-shell *,:is(html.fit-lime-document .schedule-v2-sheet-backdrop,html.fit-lime-document .schedule-v2-sheet-backdrop *)))):where(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *)) {
+    opacity: 1;
+    stroke-width: 1.8
+}
+@media (max-width:375px) {
+    .client-home-identity .first-run-copy h2:where(:is(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *),:is(.fit-lime-shell.trainer-schedule-v2-shell,.fit-lime-shell.trainer-schedule-v2-shell *,:is(html.fit-lime-document .schedule-v2-sheet-backdrop,html.fit-lime-document .schedule-v2-sheet-backdrop *)))):where(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *)) {
+        font-size: 18px
+    }
+}
+.client-home-identity .voice-action > .voice-action-hitarea:where(:is(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *),:is(.fit-lime-shell.trainer-schedule-v2-shell,.fit-lime-shell.trainer-schedule-v2-shell *,:is(html.fit-lime-document .schedule-v2-sheet-backdrop,html.fit-lime-document .schedule-v2-sheet-backdrop *)))):where(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *)) {
+    border: 0;
+    border-radius: inherit;
+    background: transparent;
+    color: transparent;
+    box-shadow: none
+}
+.client-home-identity .voice-action > .voice-action-hitarea:hover:where(:is(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *),:is(.fit-lime-shell.trainer-schedule-v2-shell,.fit-lime-shell.trainer-schedule-v2-shell *,:is(html.fit-lime-document .schedule-v2-sheet-backdrop,html.fit-lime-document .schedule-v2-sheet-backdrop *)))):where(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *)) {
+    border-radius: inherit;
+    background: transparent;
+    color: transparent;
+    box-shadow: none
+}
+.client-home-identity .voice-action > .voice-action-hitarea:disabled:where(:is(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *),:is(.fit-lime-shell.trainer-schedule-v2-shell,.fit-lime-shell.trainer-schedule-v2-shell *,:is(html.fit-lime-document .schedule-v2-sheet-backdrop,html.fit-lime-document .schedule-v2-sheet-backdrop *)))):where(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *)) {
+    border-radius: inherit;
+    background: transparent;
+    color: transparent;
+    box-shadow: none
+}
+.client-home-identity .voice-action > .voice-action-hitarea:focus-visible:where(:is(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *),:is(.fit-lime-shell.trainer-schedule-v2-shell,.fit-lime-shell.trainer-schedule-v2-shell *,:is(html.fit-lime-document .schedule-v2-sheet-backdrop,html.fit-lime-document .schedule-v2-sheet-backdrop *)))):where(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *)) {
+    outline: 2px solid var(--mono-on-primary);
+    outline-offset: -4px
+}
+.workout-load-map:where(:is(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *),:is(.fit-lime-shell.trainer-schedule-v2-shell,.fit-lime-shell.trainer-schedule-v2-shell *,:is(html.fit-lime-document .schedule-v2-sheet-backdrop,html.fit-lime-document .schedule-v2-sheet-backdrop *)))):where(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *)) {
+    border-top: 1px solid var(--border)
+}
+.workout-load-map h3:where(:is(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *),:is(.fit-lime-shell.trainer-schedule-v2-shell,.fit-lime-shell.trainer-schedule-v2-shell *,:is(html.fit-lime-document .schedule-v2-sheet-backdrop,html.fit-lime-document .schedule-v2-sheet-backdrop *)))):where(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *)) {
+    font-size: var(--type-section-size)
+}
+.workout-load-map p:where(:is(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *),:is(.fit-lime-shell.trainer-schedule-v2-shell,.fit-lime-shell.trainer-schedule-v2-shell *,:is(html.fit-lime-document .schedule-v2-sheet-backdrop,html.fit-lime-document .schedule-v2-sheet-backdrop *)))):where(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *)) {
+    font-size: var(--type-caption-size)
+}
+.workout-load-map > .body-progress-action-row:where(:is(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *),:is(.fit-lime-shell.trainer-schedule-v2-shell,.fit-lime-shell.trainer-schedule-v2-shell *,:is(html.fit-lime-document .schedule-v2-sheet-backdrop,html.fit-lime-document .schedule-v2-sheet-backdrop *)))):where(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *)) {
+    box-shadow: none
+}
+.body-progress-period:where(:is(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *),:is(.fit-lime-shell.trainer-schedule-v2-shell,.fit-lime-shell.trainer-schedule-v2-shell *,:is(html.fit-lime-document .schedule-v2-sheet-backdrop,html.fit-lime-document .schedule-v2-sheet-backdrop *)))):where(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *)) {
+    font-weight: 400
+}
+.chat-header-action:where(:is(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *),:is(.fit-lime-shell.trainer-schedule-v2-shell,.fit-lime-shell.trainer-schedule-v2-shell *,:is(html.fit-lime-document .schedule-v2-sheet-backdrop,html.fit-lime-document .schedule-v2-sheet-backdrop *)))):where(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *)) {
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    background: var(--surface-raised);
+    color: var(--fg);
+    text-decoration: none
+}
+.chat-unread-badge:where(:is(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *),:is(.fit-lime-shell.trainer-schedule-v2-shell,.fit-lime-shell.trainer-schedule-v2-shell *,:is(html.fit-lime-document .schedule-v2-sheet-backdrop,html.fit-lime-document .schedule-v2-sheet-backdrop *)))):where(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *)) {
+    border: 2px solid var(--frame-bg);
+    border-radius: var(--radius-pill);
+    background: var(--mono-primary);
+    color: var(--mono-on-primary);
+    font-size: 10px
+}
+.request-error-inline .request-diagnostic:where(:not(:is(:is(.fit-client-lime.client-profile-shell-identity,.fit-client-lime.client-profile-shell-identity *),:is(.fit-client-lime.client-card-edit-identity,.fit-client-lime.client-card-edit-identity *),:is(.fit-lime-shell.trainer-profile-identity > .content:is([data-viewport-route="/profile|"],[data-viewport-route="/profile/settings|"]),.fit-lime-shell.trainer-profile-identity > .content:is([data-viewport-route="/profile|"],[data-viewport-route="/profile/settings|"]) > .profile-page,.fit-lime-shell.trainer-profile-identity > .content:is([data-viewport-route="/profile|"],[data-viewport-route="/profile/settings|"]) > .profile-page *,.fit-lime-shell.trainer-profile-identity > .content:is([data-viewport-route="/profile|"],[data-viewport-route="/profile/settings|"]) ~ :is(.tab-bar,.modal-overlay,.sheet-overlay,.overflow-list,.coachmark-bubble),.fit-lime-shell.trainer-profile-identity > .content:is([data-viewport-route="/profile|"],[data-viewport-route="/profile/settings|"]) ~ :is(.tab-bar,.modal-overlay,.sheet-overlay,.overflow-list,.coachmark-bubble) *)))):where(:is(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *),:is(.fit-lime-shell.trainer-schedule-v2-shell,.fit-lime-shell.trainer-schedule-v2-shell *,:is(html.fit-lime-document .schedule-v2-sheet-backdrop,html.fit-lime-document .schedule-v2-sheet-backdrop *)))):where(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *)) {
+    color: var(--muted)
+}
+.request-error-inline .request-diagnostic-code:where(:not(:is(:is(.fit-client-lime.client-profile-shell-identity,.fit-client-lime.client-profile-shell-identity *),:is(.fit-client-lime.client-card-edit-identity,.fit-client-lime.client-card-edit-identity *),:is(.fit-lime-shell.trainer-profile-identity > .content:is([data-viewport-route="/profile|"],[data-viewport-route="/profile/settings|"]),.fit-lime-shell.trainer-profile-identity > .content:is([data-viewport-route="/profile|"],[data-viewport-route="/profile/settings|"]) > .profile-page,.fit-lime-shell.trainer-profile-identity > .content:is([data-viewport-route="/profile|"],[data-viewport-route="/profile/settings|"]) > .profile-page *,.fit-lime-shell.trainer-profile-identity > .content:is([data-viewport-route="/profile|"],[data-viewport-route="/profile/settings|"]) ~ :is(.tab-bar,.modal-overlay,.sheet-overlay,.overflow-list,.coachmark-bubble),.fit-lime-shell.trainer-profile-identity > .content:is([data-viewport-route="/profile|"],[data-viewport-route="/profile/settings|"]) ~ :is(.tab-bar,.modal-overlay,.sheet-overlay,.overflow-list,.coachmark-bubble) *)))):where(:is(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *),:is(.fit-lime-shell.trainer-schedule-v2-shell,.fit-lime-shell.trainer-schedule-v2-shell *,:is(html.fit-lime-document .schedule-v2-sheet-backdrop,html.fit-lime-document .schedule-v2-sheet-backdrop *)))):where(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *)) {
+    font-size: 12px
+}
+.request-error-inline .request-diagnostic-code strong:where(:not(:is(:is(.fit-client-lime.client-profile-shell-identity,.fit-client-lime.client-profile-shell-identity *),:is(.fit-client-lime.client-card-edit-identity,.fit-client-lime.client-card-edit-identity *),:is(.fit-lime-shell.trainer-profile-identity > .content:is([data-viewport-route="/profile|"],[data-viewport-route="/profile/settings|"]),.fit-lime-shell.trainer-profile-identity > .content:is([data-viewport-route="/profile|"],[data-viewport-route="/profile/settings|"]) > .profile-page,.fit-lime-shell.trainer-profile-identity > .content:is([data-viewport-route="/profile|"],[data-viewport-route="/profile/settings|"]) > .profile-page *,.fit-lime-shell.trainer-profile-identity > .content:is([data-viewport-route="/profile|"],[data-viewport-route="/profile/settings|"]) ~ :is(.tab-bar,.modal-overlay,.sheet-overlay,.overflow-list,.coachmark-bubble),.fit-lime-shell.trainer-profile-identity > .content:is([data-viewport-route="/profile|"],[data-viewport-route="/profile/settings|"]) ~ :is(.tab-bar,.modal-overlay,.sheet-overlay,.overflow-list,.coachmark-bubble) *)))):where(:is(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *),:is(.fit-lime-shell.trainer-schedule-v2-shell,.fit-lime-shell.trainer-schedule-v2-shell *,:is(html.fit-lime-document .schedule-v2-sheet-backdrop,html.fit-lime-document .schedule-v2-sheet-backdrop *)))):where(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *)) {
+    color: var(--fg);
+    font-size: 12px;
+    letter-spacing: .02em
+}
+.request-error-inline .request-diagnostic-copy:where(:not(:is(:is(.fit-client-lime.client-profile-shell-identity,.fit-client-lime.client-profile-shell-identity *),:is(.fit-client-lime.client-card-edit-identity,.fit-client-lime.client-card-edit-identity *),:is(.fit-lime-shell.trainer-profile-identity > .content:is([data-viewport-route="/profile|"],[data-viewport-route="/profile/settings|"]),.fit-lime-shell.trainer-profile-identity > .content:is([data-viewport-route="/profile|"],[data-viewport-route="/profile/settings|"]) > .profile-page,.fit-lime-shell.trainer-profile-identity > .content:is([data-viewport-route="/profile|"],[data-viewport-route="/profile/settings|"]) > .profile-page *,.fit-lime-shell.trainer-profile-identity > .content:is([data-viewport-route="/profile|"],[data-viewport-route="/profile/settings|"]) ~ :is(.tab-bar,.modal-overlay,.sheet-overlay,.overflow-list,.coachmark-bubble),.fit-lime-shell.trainer-profile-identity > .content:is([data-viewport-route="/profile|"],[data-viewport-route="/profile/settings|"]) ~ :is(.tab-bar,.modal-overlay,.sheet-overlay,.overflow-list,.coachmark-bubble) *)))):where(:is(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *),:is(.fit-lime-shell.trainer-schedule-v2-shell,.fit-lime-shell.trainer-schedule-v2-shell *,:is(html.fit-lime-document .schedule-v2-sheet-backdrop,html.fit-lime-document .schedule-v2-sheet-backdrop *)))):where(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *)) {
+    border: 1px solid var(--border)
+}
+.request-error-inline .request-diagnostic-status:where(:not(:is(:is(.fit-client-lime.client-profile-shell-identity,.fit-client-lime.client-profile-shell-identity *),:is(.fit-client-lime.client-card-edit-identity,.fit-client-lime.client-card-edit-identity *),:is(.fit-lime-shell.trainer-profile-identity > .content:is([data-viewport-route="/profile|"],[data-viewport-route="/profile/settings|"]),.fit-lime-shell.trainer-profile-identity > .content:is([data-viewport-route="/profile|"],[data-viewport-route="/profile/settings|"]) > .profile-page,.fit-lime-shell.trainer-profile-identity > .content:is([data-viewport-route="/profile|"],[data-viewport-route="/profile/settings|"]) > .profile-page *,.fit-lime-shell.trainer-profile-identity > .content:is([data-viewport-route="/profile|"],[data-viewport-route="/profile/settings|"]) ~ :is(.tab-bar,.modal-overlay,.sheet-overlay,.overflow-list,.coachmark-bubble),.fit-lime-shell.trainer-profile-identity > .content:is([data-viewport-route="/profile|"],[data-viewport-route="/profile/settings|"]) ~ :is(.tab-bar,.modal-overlay,.sheet-overlay,.overflow-list,.coachmark-bubble) *)))):where(:is(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *),:is(.fit-lime-shell.trainer-schedule-v2-shell,.fit-lime-shell.trainer-schedule-v2-shell *,:is(html.fit-lime-document .schedule-v2-sheet-backdrop,html.fit-lime-document .schedule-v2-sheet-backdrop *)))):where(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *)) {
+    color: var(--muted);
+    font-size: 12px
+}
+.quick-start-workout:where(:is(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *),:is(.fit-lime-shell.trainer-schedule-v2-shell,.fit-lime-shell.trainer-schedule-v2-shell *,:is(html.fit-lime-document .schedule-v2-sheet-backdrop,html.fit-lime-document .schedule-v2-sheet-backdrop *)))):where(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *)) {
+    background: var(--mono-primary, #202024);
+    color: var(--mono-on-primary, #faf9f6)
+}
+.client-home-identity .quick-start-copy h2:where(:is(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *),:is(.fit-lime-shell.trainer-schedule-v2-shell,.fit-lime-shell.trainer-schedule-v2-shell *,:is(html.fit-lime-document .schedule-v2-sheet-backdrop,html.fit-lime-document .schedule-v2-sheet-backdrop *)))):where(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *)) {
+    color: inherit
+}
+.quick-start-copy p:where(:is(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *),:is(.fit-lime-shell.trainer-schedule-v2-shell,.fit-lime-shell.trainer-schedule-v2-shell *,:is(html.fit-lime-document .schedule-v2-sheet-backdrop,html.fit-lime-document .schedule-v2-sheet-backdrop *)))):where(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *)) {
+    color: inherit;
+    font-size: 14px
+}
+.quick-start-button:where(:is(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *),:is(.fit-lime-shell.trainer-schedule-v2-shell,.fit-lime-shell.trainer-schedule-v2-shell *,:is(html.fit-lime-document .schedule-v2-sheet-backdrop,html.fit-lime-document .schedule-v2-sheet-backdrop *)))):where(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *)) {
+    border: 1px solid currentColor
+}
+.quick-start-status:where(:is(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *),:is(.fit-lime-shell.trainer-schedule-v2-shell,.fit-lime-shell.trainer-schedule-v2-shell *,:is(html.fit-lime-document .schedule-v2-sheet-backdrop,html.fit-lime-document .schedule-v2-sheet-backdrop *)))):where(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *)) {
+    color: inherit;
+    font-size: 13px
+}
+.quick-start-status button:where(:is(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *),:is(.fit-lime-shell.trainer-schedule-v2-shell,.fit-lime-shell.trainer-schedule-v2-shell *,:is(html.fit-lime-document .schedule-v2-sheet-backdrop,html.fit-lime-document .schedule-v2-sheet-backdrop *)))):where(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *)) {
+    color: inherit;
+    text-decoration: underline
+}
+.quick-start-status button:where(:is(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *),:is(.fit-lime-shell.trainer-schedule-v2-shell,.fit-lime-shell.trainer-schedule-v2-shell *,:is(html.fit-lime-document .schedule-v2-sheet-backdrop,html.fit-lime-document .schedule-v2-sheet-backdrop *)))):where(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *)) {
+    border: 0;
+    background: transparent
+}
+.client-home-identity .compose-workout-entry .voice-action:where(:is(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *),:is(.fit-lime-shell.trainer-schedule-v2-shell,.fit-lime-shell.trainer-schedule-v2-shell *,:is(html.fit-lime-document .schedule-v2-sheet-backdrop,html.fit-lime-document .schedule-v2-sheet-backdrop *)))):where(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *)) {
+    border: 1px solid var(--border);
+    background: var(--surface-raised);
+    color: var(--fg)
+}
+.client-home-identity .compose-workout-entry .voice-action-copy h2:where(:is(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *),:is(.fit-lime-shell.trainer-schedule-v2-shell,.fit-lime-shell.trainer-schedule-v2-shell *,:is(html.fit-lime-document .schedule-v2-sheet-backdrop,html.fit-lime-document .schedule-v2-sheet-backdrop *)))):where(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *)) {
+    color: var(--fg);
+    font-size: 16px
+}
+.client-home-identity .compose-workout-entry .voice-action-guidance:where(:is(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *),:is(.fit-lime-shell.trainer-schedule-v2-shell,.fit-lime-shell.trainer-schedule-v2-shell *,:is(html.fit-lime-document .schedule-v2-sheet-backdrop,html.fit-lime-document .schedule-v2-sheet-backdrop *)))):where(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *)) {
+    color: var(--muted);
+    opacity: 1
+}
+.client-home-identity .compose-workout-entry .voice-action-button:where(:is(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *),:is(.fit-lime-shell.trainer-schedule-v2-shell,.fit-lime-shell.trainer-schedule-v2-shell *,:is(html.fit-lime-document .schedule-v2-sheet-backdrop,html.fit-lime-document .schedule-v2-sheet-backdrop *)))):where(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *)) {
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--fg)
+}
+.client-home-identity .compose-workout-entry .today-voice-text-inline:where(:is(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *),:is(.fit-lime-shell.trainer-schedule-v2-shell,.fit-lime-shell.trainer-schedule-v2-shell *,:is(html.fit-lime-document .schedule-v2-sheet-backdrop,html.fit-lime-document .schedule-v2-sheet-backdrop *)))):where(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *)) {
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--fg)
+}
+.athlete-achievements-home:where(:is(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *),:is(.fit-lime-shell.trainer-schedule-v2-shell,.fit-lime-shell.trainer-schedule-v2-shell *,:is(html.fit-lime-document .schedule-v2-sheet-backdrop,html.fit-lime-document .schedule-v2-sheet-backdrop *)))):where(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *)) {
+    border: 1px solid #323238
+}
+.athlete-achievements-heading h2:where(:not(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *))):where(:is(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *),:is(.fit-lime-shell.trainer-schedule-v2-shell,.fit-lime-shell.trainer-schedule-v2-shell *,:is(html.fit-lime-document .schedule-v2-sheet-backdrop,html.fit-lime-document .schedule-v2-sheet-backdrop *)))):where(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *)) {
+    font-size: 18px;
+    letter-spacing: -.02em
+}
+.athlete-achievements-close:where(:is(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *),:is(.fit-lime-shell.trainer-schedule-v2-shell,.fit-lime-shell.trainer-schedule-v2-shell *,:is(html.fit-lime-document .schedule-v2-sheet-backdrop,html.fit-lime-document .schedule-v2-sheet-backdrop *)))):where(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *)) {
+    border: 0;
+    background: transparent;
+    box-shadow: none
+}
+.athlete-achievements-home-content strong:where(:is(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *),:is(.fit-lime-shell.trainer-schedule-v2-shell,.fit-lime-shell.trainer-schedule-v2-shell *,:is(html.fit-lime-document .schedule-v2-sheet-backdrop,html.fit-lime-document .schedule-v2-sheet-backdrop *)))):where(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *)) {
+    font-size: 17px
+}
+.athlete-achievements-home-content p:where(:is(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *),:is(.fit-lime-shell.trainer-schedule-v2-shell,.fit-lime-shell.trainer-schedule-v2-shell *,:is(html.fit-lime-document .schedule-v2-sheet-backdrop,html.fit-lime-document .schedule-v2-sheet-backdrop *)))):where(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *)) {
+    font-size: 13px
+}
+.athlete-achievements-home a:where(:is(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *),:is(.fit-lime-shell.trainer-schedule-v2-shell,.fit-lime-shell.trainer-schedule-v2-shell *,:is(html.fit-lime-document .schedule-v2-sheet-backdrop,html.fit-lime-document .schedule-v2-sheet-backdrop *)))):where(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *)) {
+    font-size: 14px;
+    text-decoration: none
+}
+.athlete-achievements-state:where(:not(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *))):where(:is(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *),:is(.fit-lime-shell.trainer-schedule-v2-shell,.fit-lime-shell.trainer-schedule-v2-shell *,:is(html.fit-lime-document .schedule-v2-sheet-backdrop,html.fit-lime-document .schedule-v2-sheet-backdrop *)))):where(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *)) {
+    font-size: 14px
+}
+.athlete-achievements-state button:where(:not(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *))):where(:is(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *),:is(.fit-lime-shell.trainer-schedule-v2-shell,.fit-lime-shell.trainer-schedule-v2-shell *,:is(html.fit-lime-document .schedule-v2-sheet-backdrop,html.fit-lime-document .schedule-v2-sheet-backdrop *)))):where(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *)) {
+    color: #19191c;
+    background: var(--fit-brand-accent)
+}
+.athlete-achievement-badge:where(:not(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *))):where(:is(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *),:is(.fit-lime-shell.trainer-schedule-v2-shell,.fit-lime-shell.trainer-schedule-v2-shell *,:is(html.fit-lime-document .schedule-v2-sheet-backdrop,html.fit-lime-document .schedule-v2-sheet-backdrop *)))):where(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *)) {
+    color: #f8f8f6
+}
+.athlete-achievement-badge.has-static-art:where(:is(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *),:is(.fit-lime-shell.trainer-schedule-v2-shell,.fit-lime-shell.trainer-schedule-v2-shell *,:is(html.fit-lime-document .schedule-v2-sheet-backdrop,html.fit-lime-document .schedule-v2-sheet-backdrop *)))):where(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *)) {
+    border: 0
+}
+.athlete-achievement-badge.has-static-art:where(:not(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *))):where(:is(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *),:is(.fit-lime-shell.trainer-schedule-v2-shell,.fit-lime-shell.trainer-schedule-v2-shell *,:is(html.fit-lime-document .schedule-v2-sheet-backdrop,html.fit-lime-document .schedule-v2-sheet-backdrop *)))):where(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *)) {
+    border-radius: 20%;
+    background: #232328;
+    box-shadow: none
+}
+.athlete-achievement-badge.has-static-art.is-earned:where(:is(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *),:is(.fit-lime-shell.trainer-schedule-v2-shell,.fit-lime-shell.trainer-schedule-v2-shell *,:is(html.fit-lime-document .schedule-v2-sheet-backdrop,html.fit-lime-document .schedule-v2-sheet-backdrop *)))):where(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *)) {
+    border: 0
+}
+.athlete-achievement-badge.has-static-art.is-earned:where(:not(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *))):where(:is(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *),:is(.fit-lime-shell.trainer-schedule-v2-shell,.fit-lime-shell.trainer-schedule-v2-shell *,:is(html.fit-lime-document .schedule-v2-sheet-backdrop,html.fit-lime-document .schedule-v2-sheet-backdrop *)))):where(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *)) {
+    box-shadow: none
+}
+.athlete-achievement-badge.has-static-art:not(.is-earned) .athlete-achievement-static-art:where(:not(:is(.fit-client-lime.progress-identity,.fit-client-lime.progress-identity *,.fit-lime-shell.trainer-progress-identity,.fit-lime-shell.trainer-progress-identity *))):where(:is(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *),:is(.fit-lime-shell.trainer-schedule-v2-shell,.fit-lime-shell.trainer-schedule-v2-shell *,:is(html.fit-lime-document .schedule-v2-sheet-backdrop,html.fit-lime-document .schedule-v2-sheet-backdrop *)))):where(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *)) {
+    filter: grayscale(1) brightness(.7);
+    opacity: .82
+}
+
 /* MC5.4 residual profile/settings authored paint. Zero-specificity route ownership; accepted Lime bytes stay below. */
 button.primary:where(:is(:is(.fit-client-lime.client-profile-shell-identity,.fit-client-lime.client-profile-shell-identity *),:is(.fit-client-lime.client-card-edit-identity,.fit-client-lime.client-card-edit-identity *),:is(.fit-lime-shell.trainer-profile-identity > .content:is([data-viewport-route="/profile|"],[data-viewport-route="/profile/settings|"]),.fit-lime-shell.trainer-profile-identity > .content:is([data-viewport-route="/profile|"],[data-viewport-route="/profile/settings|"]) > .profile-page,.fit-lime-shell.trainer-profile-identity > .content:is([data-viewport-route="/profile|"],[data-viewport-route="/profile/settings|"]) > .profile-page *,.fit-lime-shell.trainer-profile-identity > .content:is([data-viewport-route="/profile|"],[data-viewport-route="/profile/settings|"]) ~ :is(.tab-bar,.modal-overlay,.sheet-overlay,.overflow-list,.coachmark-bubble),.fit-lime-shell.trainer-profile-identity > .content:is([data-viewport-route="/profile|"],[data-viewport-route="/profile/settings|"]) ~ :is(.tab-bar,.modal-overlay,.sheet-overlay,.overflow-list,.coachmark-bubble) *))):where(:is(:is(.fit-client-lime.client-profile-shell-identity,.fit-client-lime.client-profile-shell-identity *),:is(.fit-client-lime.client-card-edit-identity,.fit-client-lime.client-card-edit-identity *))) {
     box-shadow: none
