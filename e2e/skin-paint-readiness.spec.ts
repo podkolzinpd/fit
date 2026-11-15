@@ -33,3 +33,13 @@ test('paint readiness fails instead of accepting continuously changing geometry'
  await expect(settleEditorPaint(page,'.probe',contract)).rejects.toThrow('Editor paint did not settle within 5000 ms')
  expect(await page.locator('style').textContent()).toBe(css)
 })
+
+test('paint readiness rejects continuously changing border paint with stable geometry',async({page})=>{
+ observeEditorImages(page)
+ await page.setContent('<style>@keyframes paint{from{border-color:red}to{border-color:blue}}.probe{animation:paint 1s linear infinite alternate;width:100px;height:20px;border:1px solid}</style><div class="phone-frame"><div class="probe">Painting</div></div>')
+ const geometry=()=>page.locator('.probe').evaluate(node=>{const rect=node.getBoundingClientRect();return[rect.x,rect.y,rect.width,rect.height]})
+ const before=await geometry(),css=await page.locator('style').textContent()
+ await expect(settleEditorPaint(page,'.probe',contract)).rejects.toThrow('Editor paint did not settle within 5000 ms')
+ expect(await geometry()).toEqual(before)
+ expect(await page.locator('style').textContent()).toBe(css)
+})

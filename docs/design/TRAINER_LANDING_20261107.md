@@ -815,3 +815,52 @@ storage receipt20261115-161425-3c076487; public-landing8/8; diff check.
 Тайминги финальных4 случаев:3.0s/7.8s/0.274s/5.1s. Сравнимого до/после на CI ещё нет.
 Дальше: полный CI, очередь GitHub (PR2121 активен на1ba90ef8), merge, mainCI,
 автовыпуск и публичный HTTPS/визуальный readback. Публикация всё ещё впереди.
+
+## Итерация32 — 15.11.2026 — локализация нового блокера выпуска, Codex/OpenAI
+Main обновился до231e132e, содержащего наш PR2119. Его CI43716972068 завершился
+failure: Chromium library favorite-editor/template-editor и editor clarify трижды
+превысили исходные30s; WebKit progress client-light-390-query-error был flaky
+(изменение геометрии). Автовыпуск43721798095 skipped. HTTPS readback15.11:
+trainer HTML/JS старые, concept-scenes.css/portrait404; athlete и landing.css прежние.
+Ни сайт, ни CI/gates не обходились. Локальный8799 восстановлен; вкладка32 показывает
+согласованную версию, снимок usp-current-local-20261115.png в прежнем outputs.
+
+Уточнение итерации31: полный capture на каждом readiness-кадре оказался дорогим
+экспериментом и не используется в итоговом варианте. На одной сборке исходный main:
+3 тяжёлых случая19.2/15.7/15.8s (receipt20261115-171335-ab9252e2), полный capture
+25.6/25.6/27.6s (18/18 PASS,20261115-170846-e3f63f73). Выбран один компактный
+native-readiness проход: реальные rect, шрифты и13 paint/font properties, статус
+шрифтов после layout; прежние images/network/scroll/viewport/finite-animation guards.
+Полные before/after captures, CSSOM/style-object/DOM/selection/scroll сравнения,
+исходные5000ms/2тихих кадра и test timeout30000ms сохранены без изменений.
+
+Классификатор раньше разбирал declarations для каждой CSS-ветки, даже не входящей
+в проверяемые семейства. Теперь полный обход selector/owner остаётся, declarations
+считаются после проверки семейства и один раз на CSS rule. Ни одно выбранное
+свойство/правило/отрицательный контроль не исключено. Сравнение старого и нового
+классификатора:2 library samples, суммарно26 состояний по18 полей, включая declarations,
+ancestors/pseudos/owners/guards и CSSOM SHA256 — точное равенство.
+
+Ветка обновлена от231e132e, единственный конфликт разрешён объединением contract
+в readiness и captureRootSelector из main. excludedPaintProperties и все входящие
+контракты/изменения сохранены. Собственный diff — probe, новый regression spec и план;
+UI/runtime, лендинг, Метрика, API/auth, сборочные флаги production и CI не менялись.
+Новые3 regression cases: поздно обнаруженный шрифт; бесконечная геометрия; бесконечный
+border paint при неизменной геометрии. Последние2 должны отказать по прежнему5s,
+CSS не замораживается и не меняется. Новые случаи только в общем Chromium наборе;
+18 целевых случаев проверены отдельно:8 native samples ×2 движка +2 новых случая.
+Дополнительный border case1/1 PASS, receipt20261115-171903-69a1fbaa.
+
+Финальный целевой набор18/18 PASS за1.8m (20261115-171605-f82a8599). Chromium
+тяжёлые случаи12.4/12.4/12.7s; WebKit10.8/10.6/12.3s. Это локальные измерения,
+CI ускорение ещё не доказано. Все3 прежних блокера и progress/profile случаи покрыты,
+legacy off-controls сохранены. Исходная локальная остановка clarify была отсутствующим
+тестовым SpeechKit relay flag; после приведения synthetic env к CI сценарий прошёл,
+ошибка не игнорировалась. Общий lint/docs/public-landing проверяются перед PR.
+Отвергнуто: полный readiness snapshot из-за замедления, увеличение timeout/retries,
+отключение screenshot/assertions/flake gate, публикация без успешного main CI.
+Очередь GitHub: PR2121 активен на1ba90ef8, все checks зелёные, updated13:46UTC;
+не обходить. Далее — собственный PR/full CI, очередь/current-main, main CI и выпуск.
+Физический телефон, полный CI нового head и публикация пока не проверены.
+
+Перед PR: общий npm run lint PASS, public-landing8/8 PASS, workflow docs/diff check PASS.
