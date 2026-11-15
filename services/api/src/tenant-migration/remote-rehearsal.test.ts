@@ -6,7 +6,6 @@ import {
   buildSupabaseSourceConfig,
   exportSelectedTenant,
   formatStageConflictDiagnostics,
-  isStageTenantConflict,
   readStageTenantConflictCode,
   readSourceDatabaseFailureCode,
   readRemoteTenantRehearsalSettings,
@@ -554,15 +553,14 @@ describe('automatic stage candidate selection', () => {
   )
 
   it('skips only checksum conflicts caused by an existing target tenant', () => {
-    expect(isStageTenantConflict(profileConflict)).toBe(true)
     expect(readStageTenantConflictCode(profileConflict))
       .toBe('target_validation_failed:public.profiles')
-    expect(isStageTenantConflict(new RemoteTenantRehearsalError(
+    expect(readStageTenantConflictCode(new RemoteTenantRehearsalError(
       'stage_request_failed:409:target_import_failed:public.profiles',
-    ))).toBe(false)
-    expect(isStageTenantConflict(new RemoteTenantRehearsalError(
+    ))).toBeUndefined()
+    expect(readStageTenantConflictCode(new RemoteTenantRehearsalError(
       'stage_request_failed:503',
-    ))).toBe(false)
+    ))).toBeUndefined()
   })
 
   it('reports every safe stage conflict reason without tenant identifiers', () => {
