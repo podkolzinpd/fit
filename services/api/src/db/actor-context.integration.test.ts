@@ -80,7 +80,10 @@ import { readClientWorkoutStats } from '../client-workout-stats.js'
 import { readActiveWorkout, readWorkoutHome } from '../workout-home-reader.js'
 import type { MediaObjectStorage } from '../object-storage-media.js'
 import { DatabasePilotTrainerProfiles, type TrainerProfileDraft } from '../trainer-profile.js'
-import type { YandexActorSession } from '../yandex-actor-session.js'
+import { withYandexActorSession, type YandexActorSession } from '../yandex-actor-session.js'
+import { DatabasePilotTrainingSummaries, type TrainingSummaryRequest } from '../training-summary.js'
+import * as summaryCore from '../training-summary-core.js'
+import { SUMMARY_ANALYSIS_VERSION } from '../legacy-summary/summary-contract.js'
 import {
   appendLiveExercise,
   appendLiveRound,
@@ -10818,6 +10821,157 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
         ) values ($1, $2, current_date, current_date, 'x', '{}'::jsonb, '{}'::jsonb,
           'model', 'prompt', 'fingerprint')`, [ACTOR_ID, CLIENT_ID])))
         .rejects.toMatchObject({ code: '42501' })
+    })
+
+    describe('native training summary access, source and cache', () => {
+      type Actor = { id: string; session: YandexActorSession }
+      let pool: PgDatabasePool
+      let summaries: DatabasePilotTrainingSummaries
+      let athlete: Actor, trainer: Actor, connected: Actor, outsider: Actor
+      let clientId: string
+      const profileIds: string[] = []
+      const request = (force = false): TrainingSummaryRequest => ({
+        clientId, periodStart: '2026-08-10', periodEnd: '2026-08-12',
+        force, triggerReason: 'manual_refresh',
+      })
+      const clientText = { headline: 'Synthetic client result', achievements: [], consistency: 'Synthetic',
+        encouragement: 'Synthetic', goalAlignment: 'Synthetic', nextSteps: [],
+        missingContext: [], analysisVersion: SUMMARY_ANALYSIS_VERSION }
+      const trainerText = { headline: 'Synthetic private trainer result', progress: [], consistency: 'Synthetic', attention: [] }
+
+      async function register(accountRole: 'trainer' | 'client'): Promise<Actor> {
+        const subject = randomBytes(32).toString('hex')
+        const result = await new DatabaseYandexNativeRegistrar(pool).register(subject, {
+          accountRole, firstName: 'Synthetic summary', timezone: 'Europe/Moscow',
+        })
+        profileIds.push(result.profileId)
+        const issued = await new DatabaseYandexAppSessionIssuer(pool).issue(subject)
+        if (!issued) throw new Error('Synthetic summary session not issued')
+        return { id: result.profileId, session: { accessMode: 'read_write', token: issued.session.token } }
+      }
+      async function workout(date: string, status = 'done', deleted = false): Promise<string> {
+        const id = randomUUID()
+        await ownerPool!.query(`insert into public.workouts(id,client_id,trainer_id,created_by,workout_date,status,completed_at,deleted_at)
+          values($1,$2,$3,$4,$5,$6,case when $6='done' then now() else null end,case when $7 then now() else null end)`,
+        [id, clientId, trainer.id, athlete.id, date, status, deleted])
+        return id
+      }
+      beforeEach(async () => {
+        const url = new URL(requireLocalTestDatabaseUrl())
+        url.username = 'fit_api'; url.password = RUNTIME_PASSWORD
+        pool = new PgDatabasePool({ connectionString: url.toString(), max: 4 })
+        summaries = new DatabasePilotTrainingSummaries(pool)
+        vi.spyOn(summaryCore, 'requestYandexSummary').mockResolvedValue({
+          summary: { trainer: trainerText, client: clientText },
+          modelUri: 'synthetic-model', modelVersion: 'synthetic', usage: { inputTextTokens: '1' },
+        })
+        vi.stubEnv('FIT_AI_SUMMARY_GENERATION_DISABLED', 'false')
+        clientId = randomUUID()
+        trainer = await register('trainer'); athlete = await register('client')
+        connected = await register('trainer'); outsider = await register('client')
+        await ownerPool!.query(`insert into public.clients(id,trainer_id,auth_user_id,full_name)
+          values($1,$2,$3,'Synthetic summary client')`, [clientId, trainer.id, athlete.id])
+        await ownerPool!.query('insert into public.client_trainer_relationships(client_id,trainer_id,connected_by) values($1,$2,$3)',
+          [clientId, trainer.id, athlete.id])
+      })
+      afterEach(async () => {
+        try {
+          await ownerPool!.query('delete from public.workouts where client_id=$1', [clientId])
+          await ownerPool!.query('delete from public.client_trainer_relationships where client_id=$1', [clientId])
+          await ownerPool!.query('delete from public.clients where id=$1', [clientId])
+          await ownerPool!.query('delete from public.trainers where profile_id=any($1::uuid[])', [profileIds])
+          await ownerPool!.query('delete from public.profiles where id=any($1::uuid[])', [profileIds])
+        } finally {
+          profileIds.length = 0
+          vi.restoreAllMocks(); vi.unstubAllEnvs()
+          await pool.end()
+        }
+      })
+
+      it('filters actual SQL source at both period boundaries and rejects an empty current period', async () => {
+        await workout('2026-08-07'); await workout('2026-08-09')
+        const current = [await workout('2026-08-10'), await workout('2026-08-12')]
+        await workout('2026-08-11', 'planned'); await workout('2026-08-11', 'done', true)
+        await workout('2026-08-06'); await workout('2026-08-13')
+        expect(await summaries.generate(athlete.session, request())).toMatchObject({ cached: false })
+        expect(summaryCore.requestYandexSummary).toHaveBeenCalledOnce()
+        expect(vi.mocked(summaryCore.requestYandexSummary).mock.calls[0]?.[0]).toMatchObject({
+          period: { start: '2026-08-10', end: '2026-08-12' },
+          consistency: { completed_workouts: 2, first_workout_date: '2026-08-10', last_workout_date: '2026-08-12' },
+          previous_period: {
+            period: { start: '2026-08-07', end: '2026-08-09' },
+            consistency: { completed_workouts: 2, first_workout_date: '2026-08-07', last_workout_date: '2026-08-09' },
+          },
+        })
+        expect((await ownerPool!.query('select input_stats from public.client_training_summaries where client_id=$1',
+          [clientId])).rows).toMatchObject([{ input_stats: { workouts: 4 } }])
+        await ownerPool!.query('delete from public.workouts where id=any($1::uuid[])', [current])
+        await expect(summaries.generate(athlete.session, request()))
+          .rejects.toMatchObject({ status: 422, code: 'no_completed_workouts' })
+        expect(summaryCore.requestYandexSummary).toHaveBeenCalledOnce()
+      })
+
+      it('keeps native client and current trainer responses private and rejects foreign or missing clients', async () => {
+        await workout('2026-08-11')
+        await summaries.generate(athlete.session, request())
+        const visible = await summaries.list(athlete.session, clientId)
+        expect(visible).toHaveLength(1)
+        expect(visible[0]).toMatchObject({ client_id: clientId, summary: clientText })
+        for (const field of ['trainer_summary', 'input_fingerprint', 'token_usage']) expect(visible[0]).not.toHaveProperty(field)
+        expect(JSON.stringify(visible)).not.toContain(trainerText.headline)
+        expect((await summaries.list(trainer.session, clientId))[0]).toMatchObject({ trainer_summary: trainerText })
+        for (const [actor, target] of [[outsider, clientId], [athlete, randomUUID()]] as const) {
+          await expect(summaries.list(actor.session, target)).rejects.toMatchObject({ status: 404, code: 'client_not_found' })
+          await expect(summaries.generate(actor.session, { ...request(), clientId: target }))
+            .rejects.toMatchObject({ status: 404, code: 'client_not_found' })
+        }
+        await ownerPool!.query(`update public.client_trainer_relationships set status='disconnected',disconnected_at=now(),disconnected_by=$2
+          where client_id=$1 and status='active'`, [clientId, athlete.id])
+        await ownerPool!.query('insert into public.client_trainer_relationships(client_id,trainer_id,connected_by) values($1,$2,$3)',
+          [clientId, connected.id, athlete.id])
+        expect((await summaries.list(connected.session, clientId))[0]).toMatchObject({ trainer_summary: trainerText })
+        expect(await summaries.generate(connected.session, request())).toMatchObject({ cached: true, data: { trainer_summary: trainerText } })
+        await expect(summaries.list(trainer.session, clientId)).rejects.toMatchObject({ code: 'client_not_found' })
+        expect(summaryCore.requestYandexSummary).toHaveBeenCalledOnce()
+      })
+
+      it('reuses the real fingerprint cache even with force and leaves a cache miss behind the disabled-model gate', async () => {
+        await workout('2026-08-11')
+        vi.stubEnv('FIT_AI_SUMMARY_GENERATION_DISABLED', 'true')
+        await expect(summaries.generate(athlete.session, request()))
+          .rejects.toMatchObject({ status: 503, message: 'summary_generation_disabled' })
+        expect(summaryCore.requestYandexSummary).not.toHaveBeenCalled()
+        vi.stubEnv('FIT_AI_SUMMARY_GENERATION_DISABLED', 'false')
+        expect(await summaries.generate(athlete.session, request())).toMatchObject({ cached: false })
+        vi.stubEnv('FIT_AI_SUMMARY_GENERATION_DISABLED', 'true')
+        const first = await summaries.generate(athlete.session, request(false)) as { cached: boolean; data: Record<string, unknown> }
+        expect(first).toMatchObject({ cached: true, data: { summary: clientText } })
+        expect(await summaries.generate(athlete.session, request(true))).toEqual(first)
+        for (const field of ['trainer_summary', 'input_fingerprint', 'token_usage']) expect(first.data).not.toHaveProperty(field)
+        expect((await ownerPool!.query('select id from public.client_training_summaries where client_id=$1', [clientId])).rows).toHaveLength(1)
+        expect((await ownerPool!.query('select status,model_calls_today from app_private.training_summary_generation_guards where client_id=$1',
+          [clientId])).rows).toEqual([{ status: 'succeeded', model_calls_today: 1 }])
+        expect(summaryCore.requestYandexSummary).toHaveBeenCalledOnce()
+      })
+
+      it('serializes simultaneous native generation claims into one paid-work reservation', async () => {
+        let entered = 0
+        let release!: () => void
+        const bothEntered = new Promise<void>(resolve => { release = resolve })
+        const claim = (actor: Actor) => withYandexActorSession(pool, actor.session, async client => {
+          entered += 1
+          if (entered === 2) release()
+          await bothEntered
+          const rows = await client.query<QueryResultRow & { result: { decision: string } }>(`
+            select public.claim_training_summary_generation($1,$2::date,$3::date,$4,$5,100,100) result`,
+          [clientId, request().periodStart, request().periodEnd, 'a'.repeat(64), randomUUID()])
+          return rows[0]!.result.decision
+        })
+        expect((await Promise.all([claim(athlete), claim(trainer)])).sort()).toEqual(['claimed', 'in_progress'])
+        expect((await ownerPool!.query('select status,model_calls_today from app_private.training_summary_generation_guards where client_id=$1',
+          [clientId])).rows).toEqual([{ status: 'pending', model_calls_today: 1 }])
+        expect(summaryCore.requestYandexSummary).not.toHaveBeenCalled()
+      })
     })
 
     it('keeps Assistant history and actions durable, idempotent and actor-scoped', async () => {

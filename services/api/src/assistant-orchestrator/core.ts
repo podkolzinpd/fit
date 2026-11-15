@@ -20,14 +20,6 @@ export type AssistantTurnResponse = { reply: string; action: AssistantAction | n
 
 type SummaryCandidate = { id: string; fullName: string }
 type SummaryPeriod = { periodStart: string; periodEnd: string; label: string }
-export type ClientDraft = {
-  fullName?: string | undefined
-  gender?: 'male' | 'female' | undefined
-  ageYears?: number | undefined
-  heightCm?: number | undefined
-  goal?: string | undefined
-  initialWeightKg?: number | undefined
-}
 
 const smallTalkSchema = {
   type: 'object', additionalProperties: false, required: ['reply', 'action'], properties: {
@@ -142,63 +134,9 @@ export function matchingSummaryClients(message: string, clients: readonly Client
   })
 }
 
-function summaryAction(title: string, description: string, status: AssistantAction['status'], payload: Record<string, unknown>): AssistantTurnResponse {
-  return { reply: description, action: { tool: 'summarize_progress', status, title, description, payload } }
-}
-
 export function isSummaryCancellation(message: string): boolean {
   const normalized = normalizeAssistantMessage(message)
   return ['отмена', 'отменить', 'не надо', 'стоп', 'закрыть', 'выход'].some((value) => normalized === value || normalized.startsWith(`${value} `))
-}
-
-export function summaryTurn(
-  message: string,
-  clients: readonly ClientContextRow[],
-  latestAction: unknown,
-  now: Date,
-): AssistantTurnResponse | undefined {
-  const previousAction = actionRecord(latestAction)
-  if (previousAction?.tool === 'summarize_progress' && isSummaryCancellation(message)) {
-    return { reply: 'Хорошо, сценарий формирования сводки отменён.', action: null }
-  }
-
-  const previousPayload = actionRecord(previousAction?.payload)
-  const previousStep = previousPayload?.step
-  const period = summaryPeriodFromMessage(message, now)
-
-  const previousCandidates = summaryCandidatesFromAction(latestAction)
-  const selectedByNumber = normalizeAssistantMessage(message).match(/^(?:выбрать )?(\d{1,2})$/u)
-  const numberedClient = selectedByNumber === null ? undefined : previousCandidates[Number(selectedByNumber[1]) - 1]
-  const matches = numberedClient === undefined
-    ? matchingSummaryClients(message, clients)
-    : clients.filter((client) => client.id === numberedClient.id)
-  const continuation = previousAction?.tool === 'summarize_progress' && (
-    (previousStep === 'client' && matches.length > 0)
-    || (previousStep === 'period' && period !== undefined)
-  )
-  if (!isSummaryRequest(message) && !continuation) return undefined
-  const selectedClient = matches.length === 1
-    ? matches[0]
-    : continuation ? summaryClientFromAction(latestAction, clients) : undefined
-
-  if (matches.length > 1) {
-    const candidates = matches.map(({ id, fullName }) => ({ id, fullName }))
-    return summaryAction('Выберите клиента', 'Нашла несколько клиентов с таким именем. Выберите одного из списка.', 'needs_input', { step: 'client', candidates })
-  }
-  if (!selectedClient) {
-    return summaryAction('Уточните клиента', 'Для кого сформировать сводку прогресса? Напишите имя или фамилию клиента.', 'needs_input', { step: 'client' })
-  }
-
-  if (!period) {
-    return summaryAction('Выберите период', `Клиент: ${selectedClient.fullName}. За какой период сформировать сводку?`, 'needs_input', {
-      step: 'period', clientId: selectedClient.id, clientName: selectedClient.fullName,
-      options: ['последние 7 дней', 'последние 30 дней', 'последние 90 дней'],
-    })
-  }
-  return summaryAction('Сводка прогресса готова к запуску', `Сформирую сводку для ${selectedClient.fullName} за ${period.label}.`, 'proposed', {
-    step: 'confirm', clientId: selectedClient.id, clientName: selectedClient.fullName,
-    periodStart: period.periodStart, periodEnd: period.periodEnd, periodLabel: period.label, force: false,
-  })
 }
 
 export { readAssistantTurnRequest }
@@ -264,20 +202,6 @@ function validProgramPayload(payload: Record<string, unknown>): boolean {
   })
 }
 
-export function allowsAssistantAction(message: string): boolean {
-  const normalized = normalizeAssistantMessage(message)
-  const words = normalized.split(' ')
-  const command = words.some((word) => [
-    'добавь', 'добавить', 'создай', 'создать', 'заведи', 'завести', 'составь', 'составить',
-    'запиши', 'записать', 'зафиксируй', 'зафиксировать', 'назначь', 'назначить',
-    'запланируй', 'запланировать', 'покажи', 'сформируй', 'сформировать', 'подготовь', 'подготовить',
-  ].includes(word))
-  const applicationObject = words.some((word) => [
-    'клиент', 'тренировк', 'программ', 'план', 'расписани', 'прогресс', 'сводк', 'подход', 'упражнен',
-  ].some((stem) => word.startsWith(stem)))
-  return command && applicationObject
-}
-
 function normalizeAssistantMessage(message: string): string {
   return message
     .toLocaleLowerCase('ru-RU')
@@ -300,101 +224,8 @@ export function isSummaryRequest(message: string): boolean {
   return ['сводк', 'прогресс', 'динамик'].some((stem) => normalized.includes(stem))
 }
 
-function isCreateClientRequest(message: string): boolean {
-  const normalized = normalizeAssistantMessage(message)
-  return /(?:добав|созда|завед|нов).{0,24}клиент/u.test(normalized)
-}
-
-function extractClientName(message: string): string | undefined {
-  const withoutCommand = message.trim()
-    .replace(/^(?:добав(?:ь|ить)|созда(?:й|ть)|завед(?:и|ть))\s+(?:(?:мне|нам|нов\p{L}*|карточк\p{L}*)\s+){0,2}клиент\p{L}*\s*/iu, '')
-    .replace(/^[\s,:;—-]+/u, '')
-  const fieldStart = withoutCommand.search(/\s+(?:пол\b|женщин\p{L}*|мужчин\p{L}*|женск\p{L}*|мужск\p{L}*|[жм](?=\s|[,;:]|$)|возраст\b|рост\b|цель\b|начальн\p{L}*\s+вес\b|вес\b)/iu)
-  const candidate = ((fieldStart < 0 ? withoutCommand : withoutCommand.slice(0, fieldStart))
-    .split(/[;,]/u)[0] ?? '')
-    .replace(/^(?:по имени|имя|клиент(?:а|ку)?(?: зовут)?)\s*[:—-]?\s*/iu, '')
-    .replace(/^[\s,:;—-]+|[\s,:;—-]+$/gu, '')
-    .trim()
-  if (!candidate || /^(?:пол|женщин\p{L}*|мужчин\p{L}*|женск\p{L}*|мужск\p{L}*|возраст|рост|цель|вес)$/iu.test(candidate)) return undefined
-  const words = candidate.split(/\s+/u)
-  if (words.length > 3 || words.some((word) => !/^[\p{L}-]+$/u.test(word))) return undefined
-  return candidate.length >= 2 ? candidate : undefined
-}
-
-function clientDraftFromAction(value: unknown): ClientDraft | undefined {
-  const payload = actionRecord(value)
-  if (!payload) return undefined
-  const draft: ClientDraft = {
-    fullName: typeof payload.fullName === 'string' ? payload.fullName : undefined,
-    gender: payload.gender === 'male' || payload.gender === 'female' ? payload.gender : undefined,
-    ageYears: typeof payload.ageYears === 'number' ? payload.ageYears : undefined,
-    heightCm: typeof payload.heightCm === 'number' ? payload.heightCm : undefined,
-    goal: typeof payload.goal === 'string' ? payload.goal : undefined,
-    initialWeightKg: typeof payload.initialWeightKg === 'number' ? payload.initialWeightKg : undefined,
-  }
-  return draft.fullName !== undefined || draft.gender !== undefined || draft.ageYears !== undefined || draft.heightCm !== undefined || draft.goal !== undefined || draft.initialWeightKg !== undefined ? draft : undefined
-}
-
-function clientDraftFromMessage(message: string, previous: ClientDraft): ClientDraft {
-  const normalized = normalizeAssistantMessage(message)
-  const explicitAge = normalized.match(/возраст\s*[:—-]?\s*(\d{1,3})(?:\s|$)/u)
-  const verbalAge = normalized.match(/(?:^|\s)(\d{1,3})\s*(?:лет|год|года)(?:\s|$)/u)
-  const ageValue = explicitAge?.[1] ?? verbalAge?.[1]
-  const explicitHeight = normalized.match(/рост\s*[:—-]?\s*(\d{2,3})(?:\s*(?:см|сантиметр\p{L}*))?(?:\s|$)/u)
-  const heightWithUnit = normalized.match(/(\d{2,3})\s*(?:см|сантиметр\p{L}*)/u)
-  const heightValue = explicitHeight?.[1] ?? heightWithUnit?.[1]
-  const weight = normalized.match(/(?:начальн\w*\s+)?вес\s*[:—-]?\s*(\d{1,3}(?:[.,]\d+)?)\s*(?:кг|килограмм\w*)?/u)
-  const goal = normalized.match(/(?:цель|хочу)\s*[:—-]?\s*(.+?)(?=\s*(?:[,;.]?\s*)(?:пол|женщин\p{L}*|мужчин\p{L}*|женск\p{L}*|мужск\p{L}*|возраст|рост|начальн\p{L}*\s+вес|вес)(?:\s|$)|$)/u)
-  const parsedGoal = goal?.[1]?.trim().replace(/[.,;:]+$/u, '')
-  return {
-    ...previous,
-    fullName: extractClientName(message) ?? previous.fullName,
-    gender: /(?:женщин\p{L}*|женск\p{L}*|девушк\p{L}*|(?:^|\s)ж(?:\s|$))/u.test(normalized) ? 'female' : /(?:мужчин\p{L}*|мужск\p{L}*|парень|(?:^|\s)м(?:\s|$))/u.test(normalized) ? 'male' : previous.gender,
-    ageYears: ageValue === undefined ? previous.ageYears : Number(ageValue),
-    heightCm: heightValue === undefined ? previous.heightCm : Number(heightValue),
-    goal: parsedGoal === undefined || parsedGoal.length === 0 ? previous.goal : parsedGoal,
-    initialWeightKg: weight === null ? previous.initialWeightKg : Number((weight[1] ?? '0').replace(',', '.')),
-  }
-}
-
-function clientDraftPayload(draft: ClientDraft): Record<string, unknown> {
-  return Object.fromEntries(Object.entries(draft).filter(([, value]) => value !== undefined))
-}
-
-function clientAction(title: string, description: string, status: AssistantAction['status'], payload: Record<string, unknown>): AssistantTurnResponse {
-  return { reply: description, action: { tool: 'create_client_draft', status, title, description, payload } }
-}
-
 function workoutAction(title: string, description: string, status: AssistantAction['status'], payload: Record<string, unknown>): AssistantTurnResponse {
   return { reply: description, action: { tool: 'record_workout', status, title, description, payload } }
-}
-
-function programAction(title: string, description: string, status: AssistantAction['status'], payload: Record<string, unknown>): AssistantTurnResponse {
-  return { reply: description, action: { tool: 'create_program_draft', status, title, description, payload } }
-}
-
-function isProgramRequest(message: string): boolean {
-  const normalized = normalizeAssistantMessage(message)
-  return ['состав', 'созда', 'подготов', 'сдела'].some((verb) => normalized.includes(verb))
-    && ['программ', 'план трениров'].some((stem) => normalized.includes(stem))
-}
-
-/** Первые шаги программы намеренно детерминированы: модель получает только полный brief. */
-export function createProgramTurn(message: string, clients: readonly ClientContextRow[], latestAction: unknown): AssistantTurnResponse | undefined {
-  const previousAction = actionRecord(latestAction)
-  const continuation = previousAction?.tool === 'create_program_draft'
-  if (!isProgramRequest(message) && !continuation) return undefined
-  if (continuation && isSummaryCancellation(message)) return { reply: 'Хорошо, создание программы отменено.', action: null }
-  const payload = actionRecord(previousAction?.payload)
-  const candidates = summaryCandidatesFromAction(latestAction)
-  const selectedByNumber = normalizeAssistantMessage(message).match(/^(?:выбрать )?(\d{1,2})$/u)
-  const numbered = selectedByNumber === null ? undefined : candidates[Number(selectedByNumber[1]) - 1]
-  const matches = numbered === undefined ? matchingSummaryClients(message, clients) : clients.filter((client) => client.id === numbered.id)
-  if (matches.length > 1) return programAction('Выберите клиента', 'Нашла несколько клиентов с таким именем. Выберите одного из списка.', 'needs_input', { step: 'client', candidates: matches.map(({ id, fullName }) => ({ id, fullName })) })
-  const client = matches.length === 1 ? matches[0] : summaryClientFromAction(latestAction, clients)
-  if (!client) return programAction('Уточните клиента', 'Для кого составить программу тренировок? Напишите имя или фамилию клиента.', 'needs_input', { step: 'client' })
-  if (payload?.step !== 'brief') return programAction('Данные для программы', `Клиент: ${client.fullName}. Укажите опыт, ограничения и доступные дни. Цель из карточки: ${client.goal ?? 'не указана'}.`, 'needs_input', { step: 'brief', clientId: client.id, clientName: client.fullName, goal: client.goal })
-  return programAction('Черновик программы', `Собрала данные для ${client.fullName}. Следующим шагом подготовлю программу на основе анкеты для проверки.`, 'proposed', { step: 'generate', clientId: client.id, clientName: client.fullName, goal: client.goal, brief: message.trim() })
 }
 
 function workoutCandidatesFromAction(value: unknown): SummaryCandidate[] {
@@ -602,21 +433,6 @@ export function recordWorkoutTurn(
   return workoutAction('Продолжайте диктовку', 'Добавила первый фрагмент. Продиктуйте следующее упражнение или перейдите к разбору.', 'needs_input', {
     step: 'workout', clientId: selectedClient.id, clientName: selectedClient.fullName, transcript: fragment,
   })
-}
-
-export function createClientTurn(message: string, latestAction: unknown): AssistantTurnResponse | undefined {
-  const previousAction = actionRecord(latestAction)
-  const continuation = previousAction?.tool === 'create_client_draft'
-  if (!isCreateClientRequest(message) && !continuation) return undefined
-  if (continuation && isSummaryCancellation(message)) return { reply: 'Хорошо, создание карточки клиента отменено.', action: null }
-  const previousDraft = clientDraftFromAction(previousAction?.payload) ?? {}
-  const draft = clientDraftFromMessage(message, previousDraft)
-  if (draft.fullName === undefined) {
-    return clientAction('Уточните имя', 'Напишите имя клиента, чтобы подготовить карточку.', 'needs_input', { step: 'name', ...clientDraftPayload(draft) })
-  }
-  const missing = [draft.gender === undefined ? 'пол' : undefined, draft.ageYears === undefined ? 'возраст' : undefined, draft.heightCm === undefined ? 'рост' : undefined].filter((value): value is string => value !== undefined)
-  if (missing.length > 0) return clientAction('Данные клиента', `Для ${draft.fullName} осталось уточнить: ${missing.join(', ')}.`, 'needs_input', { step: 'profile', ...clientDraftPayload(draft), missing })
-  return clientAction('Карточка клиента готова', `Проверьте данные ${draft.fullName} и подтвердите создание карточки.`, 'proposed', { step: 'confirm', ...clientDraftPayload(draft) })
 }
 
 export function usesInformalAddress(message: string): boolean {

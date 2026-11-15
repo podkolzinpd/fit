@@ -1,3 +1,4 @@
+import {chatMigrationGuard} from './lime-chat-skin.scope'
 import {homeMigrationGuard} from './lime-home-skin.scope'
 import {libraryMigrationGuard} from './lime-library-skin.contract'
 import {profileMigrationGuard} from './lime-profile-skin.scope'
@@ -23,6 +24,7 @@ const detailOwner = ':where(.fit-lime-shell.workout-detail-history-identity) '
 // Only these complete, reviewed migration guards may be normalized. Positive
 // :where owners and any unrelated/unknown :where filters retain their identity.
 const durationMigrationGuards = [
+  chatMigrationGuard,
   profileMigrationGuard,
   homeMigrationGuard,
   libraryMigrationGuard,

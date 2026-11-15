@@ -2,8 +2,25 @@ import { describe, expect, it, vi } from 'vitest'
 vi.mock('../yandex-llm-function-client.js', () => ({
   invokeYandexLlmCompletion: vi.fn(),
 }))
-import { allowsAssistantAction, assistantCapabilitiesReply, assistantModelMessages, assistantSmallTalkFallback, assistantSmallTalkPrompt, completeAssistantSmallTalk, createClientTurn, createProgramTurn, extractWorkoutTranscript, isAssistantCapabilityQuestion, isSummaryCancellation, isSummaryRequest, isTurnIdReuse, readAssistantTurnRequest, recordWorkoutTurn, summaryPeriodFromMessage, summaryTurn, usesInformalAddress, validateAssistantTurnResponse, validateEnabledAssistantTurnResponse } from './core.js'
+import { assistantCapabilitiesReply, assistantModelMessages, assistantSmallTalkFallback, assistantSmallTalkPrompt, completeAssistantSmallTalk, extractWorkoutTranscript, isAssistantCapabilityQuestion, isSummaryCancellation, isSummaryRequest, isTurnIdReuse, readAssistantTurnRequest, matchingSummaryClients, recordWorkoutTurn, summaryPeriodFromMessage, usesInformalAddress, validateAssistantTurnResponse, validateEnabledAssistantTurnResponse } from './core.js'
 import { invokeYandexLlmCompletion } from '../yandex-llm-function-client.js'
+import { assistantNavigationTurn } from './navigation.js'
+import { programPilotTurn } from './program/turn.js'
+import { buildProgramHistoryContext } from './program/context.js'
+import type { ClientContextRow } from './core.js'
+
+function programDependencies(clients: readonly ClientContextRow[]) {
+  return {
+    actorId: 'trainer', turnId: 'turn', today: '2026-08-27', duplicateTurn: false,
+    matchClients: (message: string) => matchingSummaryClients(message, clients),
+    loadContext: vi.fn().mockImplementation((client: ClientContextRow) => Promise.resolve({
+      ...buildProgramHistoryContext({ clientId: client.id, periodStart: '2026-07-28', periodEnd: '2026-08-27', workouts: [], exercises: [], sets: [] }),
+      capturedAt: '2026-08-27T12:00:00Z', profile: { ageYears: client.ageYears, goal: client.goal, latestWeight: null },
+    })),
+    extract: vi.fn().mockResolvedValue({ patch: {}, clear: [], evidence: {} }),
+    generate: vi.fn(),
+  }
+}
 
 describe('assistant orchestrator contract', () => {
   it('sends one bounded user prompt after the system message', () => {
@@ -31,12 +48,16 @@ describe('assistant orchestrator contract', () => {
     expect(validateAssistantTurnResponse({ reply: 'Готово', action: { tool: 'create_program_draft', status: 'proposed', title: 'Программа', description: '...', payload: { step: 'confirm', clientId: '6f0c4fb9-5f61-4d78-97aa-1f8b8d79c447', clientName: 'Антон', brief: 'Новичок', sessions: [{ title: 'Тренировка A', day: 'Понедельник', exercises: [{ name: 'Жим лёжа', sets: 0, reps: 8 }] }] } } })).toBeUndefined()
   })
 
-  it('allows action cards only for explicit application commands', () => {
-    expect(allowsAssistantAction('привет?')).toBe(false)
-    expect(allowsAssistantAction('Что ты умеешь')).toBe(false)
-    expect(allowsAssistantAction('какие функции вообще есть?')).toBe(false)
-    expect(allowsAssistantAction('Привет, составь программу')).toBe(true)
-    expect(allowsAssistantAction('Добавь нового клиента')).toBe(true)
+  it('keeps ordinary chat out of the live deterministic action flows', async () => {
+    const clients: ClientContextRow[] = []
+    const deps = programDependencies(clients)
+    for (const message of ['привет?', 'Что ты умеешь', 'какие функции вообще есть?']) {
+      expect(recordWorkoutTurn(message, clients, null)).toBeUndefined()
+      expect(await programPilotTurn(message, clients, null, deps)).toBeUndefined()
+    }
+    expect((await programPilotTurn('Привет, составь программу', clients, null, deps))?.action)
+      .toMatchObject({ tool: 'create_program_draft', status: 'needs_input', payload: { step: 'client' } })
+    expect(deps.generate).not.toHaveBeenCalled()
   })
 
   it('answers capability questions from the enabled product scope', () => {
@@ -108,64 +129,31 @@ describe('assistant orchestrator contract', () => {
     expect(usesInformalAddress('Что вы умеете?')).toBe(false)
   })
 
-  it('cancels a summary flow and does not continue it on unrelated chat', () => {
+  it('recognizes cancellation without starting a recording from unrelated chat', () => {
     const clients = [{ id: 'client-1', fullName: 'Сан Саныч', goal: null, ageYears: null, heightCm: null, gender: null }]
-    const waitingForClient = { tool: 'summarize_progress', status: 'needs_input', title: 'Уточните клиента', description: '...', payload: { step: 'client' } }
-    expect(summaryTurn('привет', clients, waitingForClient, new Date('2026-08-24T12:00:00Z'))).toBeUndefined()
-    const cancelled = summaryTurn('отмена', clients, waitingForClient, new Date('2026-08-24T12:00:00Z'))
-    expect(cancelled).toEqual({ reply: 'Хорошо, сценарий формирования сводки отменён.', action: null })
+    const waitingForClient = { tool: 'record_workout', status: 'needs_input', title: 'Уточните клиента', description: '...', payload: { step: 'client' } }
+    expect(isSummaryCancellation('привет')).toBe(false)
+    expect(recordWorkoutTurn('привет', clients, null)).toBeUndefined()
+    expect(recordWorkoutTurn('отмена', clients, waitingForClient)).toEqual({ reply: 'Хорошо, запись тренировки отменена.', action: null })
     expect(isSummaryCancellation('закрыть сценарий')).toBe(true)
   })
 
-  it('collects a client draft before proposing creation', () => {
-    const start = createClientTurn('Добавь нового клиента', null)
-    expect(start?.action?.payload).toEqual({ step: 'name' })
-    const name = createClientTurn('Анна Смирнова', start?.action)
-    expect(name?.action?.payload).toMatchObject({ step: 'profile', fullName: 'Анна Смирнова' })
-    const details = createClientTurn('женщина, 32 года, 168 см', name?.action)
-    expect(details?.action).toMatchObject({ status: 'proposed', payload: { step: 'confirm', fullName: 'Анна Смирнова', gender: 'female', ageYears: 32, heightCm: 168 } })
-    expect(createClientTurn('отмена', details?.action)).toEqual({ reply: 'Хорошо, создание карточки клиента отменено.', action: null })
+  it('opens client creation through reviewed navigation without proposing a write', () => {
+    const result = assistantNavigationTurn('Где добавить клиента?', 'trainer', [])
+    expect(result?.reply).toContain('[[fit-link:/clients/new|')
+    expect(result?.action).toBeNull()
   })
 
-  it('extracts a complete client draft from the first dictated request', () => {
-    const result = createClientTurn('Добавь нового клиента Анна Смирнова: женщина, 32 года, рост 168 см, цель: набрать силу, начальный вес 60 кг', null)
-    expect(result?.action).toMatchObject({
-      tool: 'create_client_draft', status: 'proposed', payload: {
-        step: 'confirm', fullName: 'Анна Смирнова', gender: 'female', ageYears: 32, heightCm: 168,
-        goal: 'набрать силу', initialWeightKg: 60,
-      },
-    })
-    const withPronoun = createClientTurn('Добавь мне нового клиента Анна Смирнова, женщина, 32 года, 168 см', null)
-    expect(withPronoun?.action).toMatchObject({ status: 'proposed', payload: { fullName: 'Анна Смирнова', gender: 'female', ageYears: 32, heightCm: 168 } })
-  })
-
-  it('understands labeled profile fields without relying on unit words', () => {
-    const result = createClientTurn('Добавь клиента Петр Иванов, пол мужской, возраст 41, рост 182, цель: восстановление, начальный вес 84', null)
-    expect(result?.action).toMatchObject({
-      status: 'proposed', payload: {
-        step: 'confirm', fullName: 'Петр Иванов', gender: 'male', ageYears: 41, heightCm: 182,
-        goal: 'восстановление', initialWeightKg: 84,
-      },
-    })
-  })
-
-  it('keeps fields from the first fragment and merges later client details', () => {
-    const first = createClientTurn('Создай клиента Анна Смирнова, женщина, цель: набрать силу', null)
-    expect(first?.action).toMatchObject({ status: 'needs_input', payload: { step: 'profile', fullName: 'Анна Смирнова', gender: 'female', goal: 'набрать силу' } })
-    const completed = createClientTurn('32 года, 168 см, вес 60 кг', first?.action)
-    expect(completed?.action).toMatchObject({
-      status: 'proposed', payload: {
-        step: 'confirm', fullName: 'Анна Смирнова', gender: 'female', ageYears: 32, heightCm: 168,
-        goal: 'набрать силу', initialWeightKg: 60,
-      },
-    })
-  })
-
-  it('preserves named fields while waiting for a missing name', () => {
-    const first = createClientTurn('Добавь клиента, женщина, 32 года, 168 см, цель: похудеть, вес 60 кг', null)
-    expect(first?.action).toMatchObject({ status: 'needs_input', payload: { step: 'name', gender: 'female', ageYears: 32, heightCm: 168, goal: 'похудеть', initialWeightKg: 60 } })
-    const completed = createClientTurn('Анна Смирнова', first?.action)
-    expect(completed?.action).toMatchObject({ status: 'proposed', payload: { step: 'confirm', fullName: 'Анна Смирнова', gender: 'female', ageYears: 32, heightCm: 168, goal: 'похудеть', initialWeightKg: 60 } })
+  it.each([
+    { fullName: 'Анна Смирнова', gender: 'female', ageYears: 32, heightCm: 168, goal: 'набрать силу', initialWeightKg: 60 },
+    { fullName: 'Петр Иванов', gender: 'male', ageYears: 41, heightCm: 182, goal: 'восстановление', initialWeightKg: 84 },
+  ])('preserves validated historical client payloads: $fullName', (fields) => {
+    const response = { reply: 'Проверьте данные', action: { tool: 'create_client_draft', status: 'proposed', title: 'Карточка клиента', description: 'Проверьте данные', payload: { step: 'confirm', ...fields } } }
+    expect(validateAssistantTurnResponse(response)?.action?.payload).toEqual(response.action.payload)
+    expect(validateEnabledAssistantTurnResponse(response)).toBeUndefined()
+    for (const patch of [{ fullName: '' }, { gender: 'unknown' }, { ageYears: 0 }, { heightCm: 260 }, { goal: '' }, { initialWeightKg: -1 }]) {
+      expect(validateAssistantTurnResponse({ ...response, action: { ...response.action, payload: { ...response.action.payload, ...patch } } })).toBeUndefined()
+    }
   })
 
   it('collects workout dictation in fragments before handing it to review', () => {
@@ -219,7 +207,7 @@ describe('assistant orchestrator contract', () => {
     expect(selected?.reply).toContain('Сохранила уже продиктованное')
   })
 
-  it('matches Russian client names in natural inflected commands', () => {
+  it('matches Russian client names in natural inflected commands', async () => {
     const clients = [{ id: 'client-1', fullName: 'Анна Смирнова', goal: 'Набрать силу', ageYears: 32, heightCm: 168, gender: 'female' }]
 
     const workout = recordWorkoutTurn('Запиши Анне Смирновой тренировку: жим гантелей лёжа 3 по 10 по 20 кг', clients, null)
@@ -231,16 +219,15 @@ describe('assistant orchestrator contract', () => {
       },
     })
 
-    const summary = summaryTurn('Покажи прогресс Анны Смирновой за последние 30 дней', clients, null, new Date('2026-08-27T12:00:00Z'))
-    expect(summary?.action).toMatchObject({ tool: 'summarize_progress', status: 'proposed', payload: { step: 'confirm', clientId: 'client-1' } })
+    expect(matchingSummaryClients('Покажи прогресс Анны Смирновой за последние 30 дней', clients)).toEqual(clients)
 
-    const program = createProgramTurn('Составь программу Анне Смирновой', clients, null)
+    const program = await programPilotTurn('Составь программу Анне Смирновой', clients, null, programDependencies(clients))
     expect(program?.action).toMatchObject({ tool: 'create_program_draft', status: 'needs_input', payload: { step: 'brief', clientId: 'client-1' } })
   })
 
-  it.each(['Составь программу', 'Подготовь план тренировок на месяц', 'Создай программу на четыре недели'])('asks for a client when a program command contains only shared alias words: %s', (message) => {
+  it.each(['Составь программу', 'Подготовь план тренировок на месяц', 'Создай программу на четыре недели'])('asks for a client when a program command contains only shared alias words: %s', async (message) => {
     const clients = ['Пилот программы', 'Программа', 'Тренировка'].map((fullName, index) => ({ id: `client-${index}`, fullName, goal: null, ageYears: null, heightCm: null, gender: null }))
-    const result = createProgramTurn(message, clients, null)
+    const result = await programPilotTurn(message, clients, null, programDependencies(clients))
     expect(result?.action).toMatchObject({ tool: 'create_program_draft', payload: { step: 'client' } })
     expect(result?.action?.payload).not.toHaveProperty('clientId')
   })
@@ -252,10 +239,10 @@ describe('assistant orchestrator contract', () => {
     expect(result?.action?.payload).not.toHaveProperty('clientId')
   })
 
-  it.each(['Составь программу для Пилот программы', 'Подготовить программу для Пилот программы', 'Пилот программы'])('keeps an explicit full alias selectable: %s', (message) => {
+  it.each(['Составь программу для Пилот программы', 'Подготовить программу для Пилот программы', 'Пилот программы'])('keeps an explicit full alias selectable: %s', async (message) => {
     const clients = [{ id: 'pilot', fullName: 'Пилот программы', goal: null, ageYears: null, heightCm: null, gender: null }]
-    const pending = { tool: 'create_program_draft', payload: { step: 'client', candidates: clients } }
-    expect(createProgramTurn(message, clients, pending)?.action?.payload).toMatchObject({ step: 'brief', clientId: 'pilot' })
+    const pending = { tool: 'create_program_draft', payload: { programPilot: true, step: 'client', candidates: clients } }
+    expect((await programPilotTurn(message, clients, pending, programDependencies(clients)))?.action?.payload).toMatchObject({ step: 'brief', clientId: 'pilot' })
   })
 
   it.each(['Запиши тренировку для клиента Тренировка', 'Записать тренировку для Тренировка', 'Тренировка'])('allows a command-word alias only as an explicit client choice: %s', (message) => {
@@ -348,13 +335,15 @@ describe('assistant orchestrator contract', () => {
     expect(validateEnabledAssistantTurnResponse(program)).toBeUndefined()
   })
 
-  it('collects a complete brief before proposing a training program', () => {
+  it('collects program answers through the live questionnaire and cancels without generation', async () => {
     const clients = [{ id: 'client-1', fullName: 'Антон Ковалёв', goal: 'Набрать силу', ageYears: 32, heightCm: 180, gender: 'male' }]
-    const start = createProgramTurn('Составь программу тренировок', clients, null)
-    const client = createProgramTurn('Антон Ковалёв', clients, start?.action)
-    expect(client?.action?.payload).toMatchObject({ step: 'brief', clientId: 'client-1' })
-    const brief = createProgramTurn('Новичок, без ограничений, понедельник и четверг', clients, client?.action)
-    expect(brief?.action).toMatchObject({ tool: 'create_program_draft', status: 'proposed', payload: { step: 'generate', clientId: 'client-1' } })
-    expect(createProgramTurn('отмена', clients, brief?.action)).toEqual({ reply: 'Хорошо, создание программы отменено.', action: null })
+    const deps = programDependencies(clients)
+    const start = await programPilotTurn('Составь программу тренировок', clients, null, deps)
+    expect(start?.action?.payload).toMatchObject({ step: 'client', candidates: [{ id: 'client-1' }] })
+    const client = await programPilotTurn('Антон Ковалёв', clients, start?.action, deps)
+    expect(client?.action?.payload).toMatchObject({ programPilot: true, step: 'brief', clientId: 'client-1', readyToGenerate: false })
+    expect(deps.loadContext).toHaveBeenCalledWith(clients[0])
+    expect(await programPilotTurn('отмена', clients, client?.action, deps)).toEqual({ reply: 'Создание программы отменено.', action: null })
+    expect(deps.generate).not.toHaveBeenCalled()
   })
 })
