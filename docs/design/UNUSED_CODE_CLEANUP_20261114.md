@@ -276,3 +276,61 @@ auto-merge и публикация не запускались»; PR2087 по-п
 слияние и production из своей задачи. Их head/ограничения проверены,
 чужие PR и чаты не изменялись. Это основание для выпуска разрешённого
 PR2121 после актуализации и зелёных проверок, не обход по возрасту PR.
+
+
+### Остаток вне Fit 16 — дополнительная оценка 15.11.2026
+
+Повторный адресный AST/текстовый просмотр 1607 tracked TS/JS-файлов дал три
+именованных экспорта с единственным вхождением: `chatRepository`,
+`trainerProfilesRepository`, `workoutTemplatesRepository` в
+`src/test/native-backend.ts`. Проверены все consumers модуля: используются
+`nativeBackend` и другие named exports, namespace/dynamic enumeration нет.
+Три aliases не имеют потребителей; сами соответствующие backend-сервисы
+работают и не предлагаются к удалению. Это три строки в тестовой заготовке,
+не заметный размер production bundle; отдельный большой PR ради них не нужен.
+В этом ходе они не удаляются: запрос на остаток — оценка, merge касается PR2121.
+
+Следующий крупный слой — завершение source/operations decommission:
+- PR2087 уже содержит снятие obsolete nutrition inspector/workflow и Supabase
+  Auth lookup из athlete restore. Не дублировать и не сливать без отдельного
+  поручения; сам PR явно удерживает выпуск.
+- Account history/links/deletion, private program/journal import и
+  email-audience/recovery имеют текущие workflow consumers и Supabase readers.
+  Это кандидаты на замещение/вывод после завершения нужных восстановлений,
+  а не доказанно мёртвые файлы.
+- `services/api/src/tenant-migration/` — 23 tracked файла, 208776 bytes.
+  Экспорт/импорт/rehearsal можно отделять от постоянно нужного обслуживания,
+  но `fingerprintTenant`/bundle используется native rollout/identity unlink,
+  а `migration-app` обслуживает maintenance. Каталог целиком не удалять.
+- `services/legacy-api-proxy` и `route-legacy-yandex-to-cloudru` сохраняют
+  совместимость прежних API-адресов; без traffic/version evidence и решения
+  по старым клиентам не считать их лишними. В этом ходе remote traffic/данные
+  и secrets не проверялись, production-записей не было.
+
+Не являются доказанным мусором: `legacy-workout-parser` импортируется сервером
+и pilot parser, `legacy-summary` — действующим training-summary core; старые
+ключи черновиков сохраняют чтение пользовательских данных. Объём файла и
+слово legacy сами по себе не дают основания удалять. Новая оценка не меняет
+зафиксированный результат 16/23 и границы Fit 16.
+
+
+Новый полный локальный `npm run check` для head `1ba90ef8` завершился exit 0:
+fit-storage `20261115-160130-ec54364f`. Source приложения/очистки не менялся
+после объединения с main. CI43716832357/Android43716832349 выполняются.
+
+CI43716832357, attempt1: `e2e-fit-lime (webkit, visual, 4/4)` job
+`132820172357` FAIL: 152 passed, 2 failed, 1 flaky. В
+`trainer-schedule-v2.visual.spec.ts:5945` контроль before был снят с начальным
+значением 15.11.2026/без времени, а после закрытия календаря уже загрузились
+данные fixture 24.09.2026/10:00–11:00. Другие попытки этого case и сценарии
+`:6974` доходили до 30s timeout / закрытия страницы; dark390 прошёл retry,
+light390 не уложился. Точный источник задержек без отдельного воспроизведения
+не объявляется установленным. Source приложения, API и e2e между прежним
+зелёным `3d61accc` и `1ba90ef8` побайтно прежний (git diff пуст); добавился
+только публичный landing и журнал. Fail-on-flaky/timeouts/assertions не
+меняются. После завершения attempt1 — один адресный повтор failed job и gate;
+изменения Fit16/shared visual tests в этот пакет не добавляются.
+
+Attempt1 завершён: 33 CI jobs SUCCESS, WebKit visual4/4 и зависимый e2e gate FAIL; Android SUCCESS / один штатный SKIPPED. Один адресный rerun job132820172357 принят 15.11 в16:50 МСК, зелёные jobs не перезапускались. Единственный watcher session14490, пауза90s. Исходный failure log перемещён в закреплённый fit-storage run20261115-160130-ec54364f как ci-webkit4-attempt1.log.
+
+Адресный повтор CI43716832357 завершился SUCCESS в17:07 МСК: всего36 checks SUCCESS /1 штатный Android SKIPPED для1ba90ef8. Визуальные тесты не менялись. Перед merge повторная проверка main выявила уже слитый PR2120 (MC5.5) в231e132eb03eef7555a1f353928df14014cc3fa7. Наша ветка обновлена без конфликтов; изменение Fit16 сохранено как upstream, самостоятельных правок skin нет. Прочитаны только изменившиеся CURRENT_STATE и новый раздел REGRESSION_LESSONS о границах skin/семантических fallback; другие обязательные инструкции не менялись. Новая совместная версия требует свежего local check и CI. PR2087 остаётся open с явным запретом выпуска в его задаче, других open PR перед обновлением нет.
