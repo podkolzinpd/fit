@@ -18,7 +18,7 @@ export function observeEditorImages(page:Page){
  page.on('requestfinished',request=>state.pending.delete(request));page.on('requestfailed',request=>state.pending.delete(request))
 }
 // Read native state each natural paint frame, with the same bounded deadline.
-async function settleEditorPaint(page:Page,selector:string){
+export async function settleEditorPaint(page:Page,selector:string,contract:NativeWorkoutSkinContract=editorSkinContract){
  const network=mediaRequests.get(page);if(!network)throw Error('Editor image observation must start before navigation')
  let timer:ReturnType<typeof setTimeout>|undefined,stopped=false
  const work=async()=>{
@@ -32,9 +32,15 @@ async function settleEditorPaint(page:Page,selector:string){
     const media=[...new Set(Array.from(document.querySelectorAll(selector)).flatMap(root=>Array.from(root.querySelectorAll('.exercise-image'))))]
     const mediaPending=media.some(node=>{const rect=node.getBoundingClientRect(),near=rect.width>0&&rect.height>0&&rect.bottom>=-320&&rect.top<=innerHeight+320;return near&&node.classList.contains('exercise-image-loading')||Array.from(node.querySelectorAll('img')).some(img=>img.loading==='eager'&&(!img.complete||img.naturalWidth<=0)||img.complete&&img.naturalWidth>0&&node.classList.contains('exercise-image-loading'))})
     const signature=JSON.stringify({media:media.map(node=>({class:node.className,images:Array.from(node.querySelectorAll('img')).map(img=>[img.currentSrc||img.src,img.loading,img.complete,img.naturalWidth,img.naturalHeight])})),scroll:[document.scrollingElement,...document.querySelectorAll('.content')].map(node=>node?[node.scrollLeft,node.scrollTop,node.scrollHeight,node.clientHeight]:null),viewport:visualViewport?[visualViewport.offsetTop,visualViewport.offsetLeft,visualViewport.width,visualViewport.height]:null})
-    return {active:active.length,mediaPending,signature}
+    return {active:active.length,mediaPending,signature,fontsReady:document.fonts.status==='loaded'}
    },selector)
-   quiet=!state.active&&!state.mediaPending&&!network.pending.size&&state.signature===previous?quiet+1:0;previous=state.signature
+   // Force style/layout first: this can discover fonts that were not requested
+   // when the initial document.fonts.ready promise resolved. Observe exactly
+   // the same properties as the strict before/after assertion, without masking
+   // changes or mutating styles, focus, hover, selection or scroll.
+   const capture=await captureEditorSkin(page,selector,contract.families,contract.additionalCaptureProperties??[],contract.captureSelectState??false)
+   const signature=JSON.stringify({layout:state.signature,capture})
+   quiet=state.fontsReady&&!state.active&&!state.mediaPending&&!network.pending.size&&signature===previous?quiet+1:0;previous=signature
   }
  }
  try{await Promise.race([work(),new Promise<never>((_,reject)=>{timer=setTimeout(()=>reject(Error('Editor paint did not settle within 5000 ms')),5000)})])}finally{stopped=true;clearTimeout(timer)}
@@ -61,7 +67,7 @@ async function captureEditorSkin(page:Page,selector:string,families:string[]=edi
 // and exact baseline/candidate capture prove isolation and preserved appearance.
 export async function probeEditorSkin(page:Page,screenshot?:string,selectorOverride?:string,contract:NativeWorkoutSkinContract=editorSkinContract){
  const selector=selectorOverride??contract.selector
- await settleEditorPaint(page,selector)
+ await settleEditorPaint(page,selector,contract)
  const dom=()=>page.locator(selector).evaluateAll(nodes=>nodes.map(node=>({tag:node.tagName,class:node.getAttribute('class')??'',html:node.outerHTML})))
  const cssom=()=>page.evaluate(()=>Array.from(document.styleSheets).map(s=>Array.from(s.cssRules).map(r=>r.cssText).join('\n')))
  const state=()=>page.evaluate(()=>({focus:document.activeElement?.outerHTML,scroll:[document.scrollingElement,...document.querySelectorAll('.content,.workout-form-page,.today-review')].filter((n):n is HTMLElement=>n instanceof HTMLElement).map(n=>({tag:n.tagName,class:n.className,x:n.scrollLeft,y:n.scrollTop,height:n.scrollHeight,client:n.clientHeight}))}))
@@ -109,7 +115,7 @@ export async function probeEditorSkin(page:Page,screenshot?:string,selectorOverr
  expect(result.classifierOwnerChecks).toHaveLength(contract.ownerSelectors.length);expect(result.classifierOwnerChecks.every(c=>c.retained&&!c.legacy)).toBe(true)
  const backdrop=await page.locator(selector).evaluateAll(nodes=>nodes.map(n=>getComputedStyle(n).backgroundColor)),frameBackground=await page.locator('.phone-frame').evaluate(n=>getComputedStyle(n).backgroundColor)
  if(screenshot)await page.screenshot({path:screenshot,animations:'allow',caret:'initial'})
- await settleEditorPaint(page,selector)
+ await settleEditorPaint(page,selector,contract)
  const after=await captureEditorSkin(page,selector,contract.families,contract.additionalCaptureProperties??[],contract.captureSelectState??false),stateAfter=await state()
  if(screenshot&&JSON.stringify(after)!==JSON.stringify(before))await writeFile(screenshot+'.capture-drift.json',JSON.stringify({before,after,stateBefore,stateAfter},null,2))
  expect(after).toEqual(before);expect(stateAfter).toEqual(stateBefore);expect(await cssom()).toEqual(cssomBefore);if(contract.captureDOM)expect(await dom()).toEqual(domBefore)
