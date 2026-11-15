@@ -1,3 +1,4 @@
+import {homeMigrationGuard} from './lime-home-skin.scope'
 import {libraryMigrationGuard} from './lime-library-skin.contract'
 import {profileMigrationGuard} from './lime-profile-skin.scope'
 import {editorMigrationGuard} from './lime-editor-skin.contract'
@@ -23,6 +24,7 @@ const detailOwner = ':where(.fit-lime-shell.workout-detail-history-identity) '
 // :where owners and any unrelated/unknown :where filters retain their identity.
 const durationMigrationGuards = [
   profileMigrationGuard,
+  homeMigrationGuard,
   libraryMigrationGuard,
   editorMigrationGuard,
   resultMigrationGuard,
