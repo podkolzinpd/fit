@@ -340,3 +340,47 @@ Attempt1 завершён: 33 CI jobs SUCCESS, WebKit visual4/4 и зависи�
 Итог15.11: headbeec7d34 прошёл CI43722951177 attempt1 (35SUCCESS) и Android43722951205 (assembleSUCCESS/штатный auth-smokeSKIPPED):36checksSUCCESS/1SKIPPED, без повторов этого head. Перед merge подтверждены origin/main231e132e, CLEAN/MERGEABLE, точный headbeec7d34. Очередь:2087 с прежним явным release hold;2122 позднее нашего2121. PR2121 MERGED в15:27:43UTC (18:27:43МСК), squash3140a1cb2da2bb8f9c48f489550e7a3cdc6d8675. Readback GitHub подтверждён. Слияние разрешено пользователем; отдельный production deploy не запускался, его результат не заявляется. Финальная квитанция добавлена локально после проверенного head и опубликована в PRbody; source head после CI не менялся.
 
 Продолжение15.11: актуализация2087 и аудит migration/recovery ведутся в существующем [плане вывода Supabase](SUPABASE_DECOMMISSION_PLAN_20261023.md#sb-native-ops-03--безопасная-актуализация-pr2087--15112026); рабочие пути и границы удаления зафиксированы там.
+
+
+## Итерация 4 — небольшой безопасный остаток после PR2087 — 15.11.2026
+
+Задача владельца: следующий безопасный пакет, рабочие сценарии и граница Fit16
+сохраняются. База main3bc55ab3 (2087 MERGED), своя прежняя копия переиспользована.
+
+| Объект | Доказательство отсутствия рабочего вызова | Сохранение контракта |
+| --- | --- | --- |
+| 13 named aliases в src/test/native-backend.ts | Все tracked imports, включая e2e harness, используют только nativeBackend/exercisesRepository/appFeedbackRepository | Эти3экспорта, сама composition и media fixture сохранены |
+| SYSTEM_EXERCISE_CATALOG_VERSION | Только импорт и toBe(16) в собственном тесте | Данные каталога,39test cases и содержательные assertions прежние |
+| readNutritionPilot | Старый UUID parser вызывается только собственным тестом; server использует readNativeNutritionPilot | Native fail-closed/cohort/duplicates/disabled tests, diary/draft UUID validation сохраняются |
+| diagnosticAllowed | Старый email gate истёк18.09 и не вызывается runtime | PrivateSummaryDiagnostic и2живых requestYandexSummary diagnostic tests остаются |
+
+Уточнение прежнего инвентаря: не3, а13 test aliases лишние. Поиск одинаковых имён
+по всему репозиторию ошибочно связывал остальные с несвязанными product/mock
+объявлениями. Проверены именно импорты модуля, namespace/dynamic enumeration нет.
+Удаление test aliases не удаляет ни один сервис nativeBackend.
+
+В API дополнительно найдены12 runtime-недостижимых экспортов, оставленных для
+следующего отдельного пакета после карты assertions к живым путям:
+-5self-service helpers (authorizeSummaryActor/clientVisibleSummary/cache/empty/
+HTTP-error) → DatabasePilotTrainingSummaryService/RLS; живой parseYandexJson
+сохранить. Старое разрешение connected trainer не переносить в более строгий
+нынешний приватный summary-контракт;
+-completedWorkoutsInPeriod → реальная SQL-выборка training-summary.ts;
+-requestYandexSummaryDeduplicated → действующий DB generation guard;
+-runNativePilotAssistantTurn → DatabasePilotAssistantTurnRunner.runTurn,
+сохранить idempotency/turn-id reuse/persisted action ID assertions;
+-summaryTurn/allowsAssistantAction/createProgramTurn/createClientTurn → живые
+programPilotTurn/assistantNavigationTurn/recordWorkoutTurn. Исторические tool
+validators и общие matching helpers всё ещё используются, их не удалять.
+
+Сохранены доказанно полезные test/операторские объекты: resetYandexPlatformRequestStateForTests,
+workoutHomeSummaries/computeClientStats (e2e fixtures),83-card reviewed media inventory,
+withActorTransaction, programPlanFromTemplate/prescribeProgram и USDA provenance.
+Direct program service имеет отдельный незакрытый cleanup-prechannel долг;
+его crypto client helpers не удаляем по одному отсутствию imports. Самостоятельный
+CLI аудита купленного media-каталога также не orphan. Рабочие recovery/migration
+сценарии из предыдущей итерации повторно не переписываются.
+
+CSS, JSX экранов, профиль/Progress, Fit16 визуальные тесты, CI/deploy, зависимости,
+БД/данные/реальные настройки не затрагиваются. Новые тесты/оси не добавляются;
+снятые self-tests относятся только к прекращённым реализациям. Приёмка впереди.

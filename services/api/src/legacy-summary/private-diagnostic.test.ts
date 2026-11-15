@@ -1,23 +1,10 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { diagnosticAllowed, PrivateSummaryDiagnostic } from './private-diagnostic.js'
+import { PrivateSummaryDiagnostic } from './private-diagnostic.js'
 import { requestYandexSummary } from '../training-summary-core.js'
 
 afterEach(() => { vi.restoreAllMocks(); vi.unstubAllEnvs(); vi.unstubAllGlobals() })
 
 describe('private summary diagnostic', () => {
-
-  it('denies unverified, unrelated and expired identities', () => {
-    const approved = { email: 'test@client-testgmail.com', email_confirmed_at: '2026-01-01' }
-    expect(diagnosticAllowed(approved, true, Date.parse('2026-09-11T10:00:00Z'))).toBe(true)
-    expect(diagnosticAllowed(approved, false, 0)).toBe(false)
-    expect(diagnosticAllowed({ email: approved.email }, true, 0)).toBe(false)
-    expect(diagnosticAllowed(approved, true, Date.parse('2026-09-18T00:00:00Z'))).toBe(false)
-    expect(diagnosticAllowed({}, true, 0)).toBe(false)
-    expect(diagnosticAllowed({ email: 'other@example.test', email_confirmed_at: '2026-01-01' }, true, 0)).toBe(false)
-    expect(diagnosticAllowed({ email: 'other@example.test', email_confirmed_at: '2026-01-01' }, false, 0)).toBe(false)
-    expect(diagnosticAllowed({}, true, Date.parse('2026-09-18T00:00:00Z'))).toBe(false)
-  })
-
   it('returns rejected text privately with one call and no raw logging', async () => {
     vi.stubEnv('YANDEX_CLOUD_API_KEY', 'test-key')
     vi.stubEnv('YANDEX_CLOUD_FOLDER_ID', 'test-folder')

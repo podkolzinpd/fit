@@ -42,17 +42,6 @@ interface FoodRow extends QueryResultRow {
 }
 interface ActorRow extends QueryResultRow { id: string; account_role: 'client' | 'trainer' }
 
-export function readNutritionPilot(enabled: string | undefined, clients: string | undefined, trainers: string | undefined): NutritionPilot | null {
-  const parse = (input: string | undefined, count: number) => {
-    const ids = input?.split(',').map((part) => part.trim().toLowerCase()).filter(Boolean) ?? []
-    return ids.length === count && new Set(ids).size === count && ids.every((id) => uuid.test(id)) ? ids : null
-  }
-  const clientIds = parse(clients, 3), trainerIds = parse(trainers, 2)
-  if (enabled !== 'true' || clientIds === null || trainerIds === null
-    || new Set([...clientIds, ...trainerIds]).size !== 5) return null
-  return { clients: clientIds, trainers: trainerIds }
-}
-
 function record(value: unknown): Record<string, unknown> | undefined {
   return typeof value === 'object' && value !== null && !Array.isArray(value) ? value as Record<string, unknown> : undefined
 }
