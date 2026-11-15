@@ -4,7 +4,6 @@ import type { QueryResultRow } from 'pg'
 import {
   assistantCapabilitiesReply,
   completeAssistantSmallTalk,
-  assistantSmallTalkFallback,
   isAssistantCapabilityQuestion,
   isTurnIdReuse,
   matchingSummaryClients,
@@ -78,10 +77,6 @@ export interface PilotAssistantTurnRunner {
     session: YandexActorSessionInput,
     command: AssistantTurnRequest,
   ): Promise<AssistantTurnResponse>
-}
-
-interface NativeAssistantTurnOptions {
-  createId?: () => string
 }
 
 export function activeAssistantToolForFeatureLinks(
@@ -218,60 +213,6 @@ async function readRecentHistory(
     limit 20
   `, [conversationId])
   return [...rows]
-}
-
-export async function runNativePilotAssistantTurn(
-  client: DatabaseClient,
-  command: AssistantTurnRequest,
-  options: NativeAssistantTurnOptions = {},
-): Promise<AssistantTurnResponse> {
-  const turnId = command.turnId ?? randomUUID()
-  const createId = options.createId ?? randomUUID
-  const stored = await readStoredAssistantResponse(client, command, turnId)
-  if (stored !== undefined) return stored
-
-  await appendAssistantUserMessage(
-    client,
-    command.conversationId,
-    turnId,
-    command.message,
-  )
-
-  if (isAssistantCapabilityQuestion(command.message)) {
-    return persistTurnResponse(
-      client,
-      command,
-      turnId,
-      { reply: assistantCapabilitiesReply(), action: null },
-      createId,
-    )
-  }
-
-  const role = (await readActor(client)).account_role
-  const clients = await readClients(client)
-  const history = await readRecentHistory(client, command.conversationId)
-  const latestAssistantAction = history.find((row) => row.author === 'assistant')?.action
-  const workoutDraft = recordWorkoutTurn(
-    command.message,
-    clients,
-    latestAssistantAction,
-    false,
-    role === 'client',
-  )
-  if (workoutDraft !== undefined) {
-    const response: AssistantTurnResponse = role === 'client' && clients.length === 0
-      ? { reply: 'Сначала заполните свою карточку в разделе «Кабинет», затем вернитесь к записи тренировки.', action: null }
-      : workoutDraft
-    return persistTurnResponse(client, command, turnId, response, createId)
-  }
-
-  return persistTurnResponse(
-    client,
-    command,
-    turnId,
-    { reply: assistantSmallTalkFallback(command.message), action: null },
-    createId,
-  )
 }
 
 export class DatabasePilotAssistantTurnRunner implements PilotAssistantTurnRunner {
