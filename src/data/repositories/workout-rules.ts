@@ -38,20 +38,6 @@ export function groupIntoBlocks(exercises: WorkoutExercise[]): ExerciseBlock[] {
   return blocks
 }
 
-// True, если подход — последний подтверждаемый в своём блоке: последний сет
-// последнего (по позиции) упражнения блока. Используется в live, чтобы отдых
-// стартовал только после всего блока (суперсет/трисет/круговая).
-export function isLastSetOfBlock(workout: Workout, exerciseId: string, setId: string): boolean {
-  const exercise = workout.exercises.find((item) => item.id === exerciseId)
-  if (!exercise) return false
-  const block = groupIntoBlocks(workout.exercises).find((b) => b.blockId === exercise.blockId)
-  if (!block) return false
-  const lastExercise = block.exercises[block.exercises.length - 1]
-  if (!lastExercise || lastExercise.id !== exerciseId) return false
-  const lastSet = [...exercise.sets].sort((a, b) => a.position - b.position)[exercise.sets.length - 1]
-  return Boolean(lastSet && lastSet.id === setId)
-}
-
 export interface BlockRound {
   round: number // 1-based номер круга
   items: { exercise: WorkoutExercise; set: WorkoutSet }[]
@@ -430,11 +416,6 @@ export function nextSetDraft(sets: WorkoutSetDraft[], inputKind: InputKind): Wor
   return inherit({ position, weightKg: last.weightKg, reps: last.reps, rpe: last.rpe })
 }
 
-export interface ExerciseChartPoint {
-  date: LocalDate
-  value: number
-}
-
 // Past plans still awaiting a decision are neither a completed result nor a
 // warning. They get their own calm action queue for both roles.
 export function splitClientWorkouts(workouts: Workout[], today: LocalDate): { upcoming: Workout[]; needsDecision: Workout[]; history: Workout[] } {
@@ -476,10 +457,6 @@ export function workoutStatusPresentation(workout: Workout, today: LocalDate, au
   return workout.workoutDate >= today
     ? { label: 'План', tone: 'planned' }
     : { label: 'План', tone: 'decision' }
-}
-
-export function clientWorkoutStatusLabel(workout: Workout, today: LocalDate): string {
-  return workoutStatusPresentation(workout, today).label
 }
 
 const ATTENTION_DAYS = 14
@@ -570,27 +547,6 @@ export function compactPlannedSetSummary(sets: readonly WorkoutSet[], showRpe = 
   const first = lines[0]
   if (!first || !lines.every((line) => line === first)) return null
   return sets.length === 1 ? first : `${sets.length} × ${first}`
-}
-
-function setCountLabel(count: number): string {
-  const lastTwo = count % 100
-  const last = count % 10
-  if (lastTwo >= 11 && lastTwo <= 14) return 'подходов'
-  if (last === 1) return 'подход'
-  if (last >= 2 && last <= 4) return 'подхода'
-  return 'подходов'
-}
-
-// Карточка плана всегда получает короткий читаемый итог. Одинаковые подходы
-// сворачиваются полностью, у разных показываем первые два значения и оставляем
-// полный порядок в раскрываемом списке.
-export function compactPlannedSetOverview(sets: readonly WorkoutSet[], showRpe = false, exerciseRef?: string): string {
-  const compact = compactPlannedSetSummary(sets, showRpe, exerciseRef)
-  if (compact) return compact
-  if (sets.length === 0) return 'Без подходов'
-  const lines = sets.map((set) => setLine(set.weightKg, set.reps, set.distanceKm, set.durationSec, set.durationMin, set.rpe, showRpe, exerciseRef) || 'без значений')
-  const preview = lines.slice(0, 2).join(' · ')
-  return `${sets.length} ${setCountLabel(sets.length)} · ${preview}${lines.length > 2 ? ' · …' : ''}`
 }
 
 // Итог тренировки — это чтение факта, а не таблица для редактирования. Одинаковые
@@ -884,38 +840,6 @@ export function tonnageLabel(kg: number): string {
   return `${Math.round(kg)} кг`
 }
 
-// Строго фактический результат подхода (без подмены планом): график прогрессии
-// отражает только реально выполненное. Подходы без факта отфильтровываются.
-function setMetric(inputKind: InputKind, set: WorkoutSet): number | undefined {
-  if (!set.confirmedAt) return undefined
-  if (inputKind === 'distance') return set.fact.distanceKm
-  if (inputKind === 'reps') return set.fact.reps
-  if (inputKind === 'duration') return durationSeconds(set.fact.durationSec, set.fact.durationMin)
-  return set.fact.weightKg
-}
-
-// Best result per ДЕНЬ for one exercise, oldest first, for the progression
-// chart. Только done-тренировки; если в один день несколько тренировок с этим
-// упражнением — берём лучший результат дня (иначе на графике дублируются даты
-// и линия «скачет»). Точки без значений пропускаются.
-export function exerciseChartPoints(workouts: Workout[], exerciseRef: string): ExerciseChartPoint[] {
-  const bestByDate = new Map<LocalDate, number>()
-  for (const workout of workouts) {
-    if (workout.status !== 'done') continue
-    const values = workout.exercises
-      .filter((item) => item.ref === exerciseRef)
-      .flatMap((exercise) => exercise.sets.map((set) => setMetric(exercise.inputKind, set)))
-      .filter((value): value is number => value !== undefined)
-    if (values.length === 0) continue
-    const best = Math.max(...values)
-    const current = bestByDate.get(workout.workoutDate)
-    if (current === undefined || best > current) bestByDate.set(workout.workoutDate, best)
-  }
-  return [...bestByDate.entries()]
-    .map(([date, value]) => ({ date, value }))
-    .sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0))
-}
-
 function normalizedPlanSet(set: WorkoutSetDraft, inputKind: InputKind): WorkoutSetDraft {
   const base = { position: set.position, sourceSetId: set.sourceSetId, rpe: set.rpe }
   if (inputKind === 'strength') return { ...base, weightKg: set.weightKg, reps: set.reps }
@@ -1057,8 +981,4 @@ export function favoriteTemplateToWorkoutDraft(exercises: WorkoutExerciseDraft[]
 export function truncateFavoriteTitle(title: string, max = 24): string {
   const trimmed = title.trim()
   return trimmed.length <= max ? trimmed : `${trimmed.slice(0, Math.max(0, max - 1)).trimEnd()}…`
-}
-
-export function canTransition(from: Workout['status'], to: Workout['status']): boolean {
-  return (from === 'planned' && to === 'in_progress') || (from === 'in_progress' && to === 'done')
 }

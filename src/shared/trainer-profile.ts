@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import type { TrainerCatalogPage, TrainerProfileDraft, TrainerProfessionalProfile } from './domain'
+import type { TrainerProfileDraft, TrainerProfessionalProfile } from './domain'
 
 // 2026-09-22: тренер указал, что реабилитация (после травм, требует
 // медицинское образование) и адаптивная физкультура (работа с ОВЗ, требует
@@ -156,10 +156,6 @@ export function emptyTrainerProfileDraft(displayName = ''): TrainerProfileDraft 
 
 export function parseTrainerProfile(value: unknown): TrainerProfessionalProfile {
   return trainerProfessionalProfileSchema.parse(value)
-}
-
-export function parseTrainerCatalogPage(value: unknown): TrainerCatalogPage {
-  return trainerCatalogPageSchema.parse(value)
 }
 
 export function validatePublishableTrainerProfile(draft: TrainerProfileDraft): string | null {

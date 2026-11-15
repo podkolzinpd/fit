@@ -20,11 +20,9 @@ describe('loaded duration and distance summaries', () => {
   })
 })
 import type { ExerciseSnapshot, InputKind, Workout, WorkoutExerciseDraft, WorkoutSet, WorkoutStatus, WorkoutSummary } from '../../shared/domain'
-import { applyRunningActiveRecoveryPreset, applyRunningIntervalPreset, bmiLabel, bmiValue, canTransition, chartUnitFor, clientWorkoutStatusLabel, compactCompletedSetSummary, compactExerciseDetailSummary, compactPlannedSetOverview, compactPlannedSetSummary, completedWorkoutDraft, computeClientStats, copyWorkout, createRunningFormatDrafts, ensureBlockIds, enteredFactLine, exerciseChartPoints, exerciseSummary, favoriteTemplateToWorkoutDraft, truncateFavoriteTitle, formatFactVsPlan, factLine, groupDraftsIntoBlocks, groupIntoBlocks, isLastSetOfBlock, blockRoundsView, currentRoundIndex, blockLabel, mergeBlockWithNext, moveBlock, muscleGroupLabels, performedMuscleGroupLabels, previousResultLine, replaceExercise, restSecondsAfterSet, resizeDraftBlockRounds, splitBlock, syncBlockRounds, draftBlockRoundsView, nextSetDraft, setBlockPreset, splitClientWorkouts, tonnageLabel, workoutFocusTitle, workoutStatusPresentation, workoutDurationLabel, workoutToFavoriteTemplate, workoutTonnage } from './workout-rules'
+import { applyRunningActiveRecoveryPreset, applyRunningIntervalPreset, bmiLabel, bmiValue, chartUnitFor, compactCompletedSetSummary, compactExerciseDetailSummary, compactPlannedSetSummary, completedWorkoutDraft, computeClientStats, copyWorkout, createRunningFormatDrafts, ensureBlockIds, enteredFactLine, exerciseSummary, favoriteTemplateToWorkoutDraft, truncateFavoriteTitle, formatFactVsPlan, factLine, groupDraftsIntoBlocks, groupIntoBlocks, blockRoundsView, currentRoundIndex, blockLabel, mergeBlockWithNext, moveBlock, muscleGroupLabels, performedMuscleGroupLabels, previousResultLine, replaceExercise, restSecondsAfterSet, resizeDraftBlockRounds, splitBlock, syncBlockRounds, draftBlockRoundsView, nextSetDraft, setBlockPreset, splitClientWorkouts, tonnageLabel, workoutFocusTitle, workoutStatusPresentation, workoutDurationLabel, workoutToFavoriteTemplate, workoutTonnage } from './workout-rules'
 import { localDate } from '../../shared/local-date'
 import { SYSTEM_EXERCISE_LEGACY_CATALOG, SYSTEM_EXERCISE_CATALOG } from '../../shared/system-exercises'
-
-
 
 function summary(date: string, status: WorkoutStatus, id = date): WorkoutSummary {
   return { id, workoutDate: localDate(date), status }
@@ -152,14 +150,6 @@ describe('workouts repository rules', () => {
     expect(compactPlannedSetSummary([{ id: 'run', position: 0, durationSec: 1800, distanceKm: 5, fact: {}, confirmedAt: null, version: 1 }])).toBe('5 км × 30:00 · темп 6:00/км')
   })
 
-  it('даёт короткий обзор разного плана и сохраняет полный порядок отдельно', () => {
-    const set = (position: number, weightKg?: number, reps?: number): WorkoutSet => ({ id: `overview-${position}`, position, weightKg, reps, fact: {}, confirmedAt: null, version: 1 })
-    expect(compactPlannedSetOverview([set(0, 35, 15), set(1, 35, 15), set(2, 35, 10)]))
-      .toBe('3 подхода · 35 кг × 15 повт. · 35 кг × 15 повт. · …')
-    expect(compactPlannedSetOverview([set(0), set(1)])).toBe('2 подхода · без значений · без значений')
-    expect(compactPlannedSetOverview([])).toBe('Без подходов')
-  })
-
   it('сворачивает одинаковый факт и кратко отмечает невыполненные подходы', () => {
     const base = (position: number, weight = 150, reps = 10, confirmed = true): WorkoutSet => ({ id: `done-${position}`, position, weightKg: 100, reps: 8, fact: { weightKg: weight, reps }, confirmedAt: confirmed ? 'now' : null, version: 1 })
     expect(compactCompletedSetSummary([base(0), base(1), base(2)])).toBe('3 × 150 кг × 10 повт.')
@@ -228,12 +218,6 @@ describe('workouts repository rules', () => {
       { position: 2, weightKg: 55, reps: 8, rpe: 8 },
     ])).toBe('55 кг × 8 повт.')
     expect(previousResultLine([{ position: 0 }])).toBeNull()
-  })
-
-  it('разрешает только последовательные переходы', () => {
-    expect(canTransition('planned', 'in_progress')).toBe(true)
-    expect(canTransition('planned', 'done')).toBe(false)
-    expect(canTransition('in_progress', 'done')).toBe(true)
   })
 
   it('копирует факт завершённой тренировки как план без идентификаторов', () => {
@@ -322,10 +306,6 @@ function set(fact: WorkoutSet['fact'], position = 0): WorkoutSet {
   return { id: `s${position}`, position, fact, confirmedAt: 'now', version: 1 }
 }
 
-function planSet(weightKg: number, position = 0): WorkoutSet {
-  return { id: `p${position}`, position, weightKg, fact: {}, confirmedAt: null, version: 1 }
-}
-
 function workoutWith(date: string, ref: string, inputKind: InputKind, sets: WorkoutSet[]): Workout {
   return {
     id: `w-${date}`, clientId: 'c1', clientName: 'Клиент', workoutDate: localDate(date),
@@ -333,69 +313,6 @@ function workoutWith(date: string, ref: string, inputKind: InputKind, sets: Work
     exercises: [{ id: `e-${date}`, source: 'system', ref, name: ref, muscleGroup: 'legs', inputKind, position: 0, blockId: `b-${date}`, blockType: 'single', blockPreset: 'set', blockRounds: 1, restBetweenExercisesSec: 0, restBetweenRoundsSec: 90, restBetweenSetsSec: 90, sets }],
   }
 }
-
-describe('exerciseChartPoints', () => {
-  it('берёт максимальный фактический вес за тренировку, сортирует по дате', () => {
-    const workouts = [
-      workoutWith('2026-07-18', 'squat', 'strength', [set({ weightKg: 60 }), set({ weightKg: 65 }, 1)]),
-      workoutWith('2026-07-05', 'squat', 'strength', [set({ weightKg: 50 }), set({ weightKg: 55 }, 1)]),
-    ]
-    expect(exerciseChartPoints(workouts, 'squat')).toEqual([
-      { date: '2026-07-05', value: 55 },
-      { date: '2026-07-18', value: 65 },
-    ])
-  })
-
-  it('несколько тренировок в один день → одна точка с лучшим результатом (без дублей дат)', () => {
-    const workouts = [
-      workoutWith('2026-07-27', 'squat', 'strength', [set({ weightKg: 100 })]),
-      workoutWith('2026-07-27', 'squat', 'strength', [set({ weightKg: 110 })]),
-      workoutWith('2026-07-27', 'squat', 'strength', [set({ weightKg: 95 })]),
-    ]
-    expect(exerciseChartPoints(workouts, 'squat')).toEqual([{ date: '2026-07-27', value: 110 }])
-  })
-
-  it('использует дистанцию для distance-упражнений', () => {
-    const workouts = [workoutWith('2026-07-10', 'run', 'distance', [set({ distanceKm: 5, durationMin: 30 })])]
-    expect(exerciseChartPoints(workouts, 'run')).toEqual([{ date: '2026-07-10', value: 5 }])
-  })
-
-  it('использует повторы для reps-упражнений', () => {
-    const workouts = [workoutWith('2026-07-10', 'burpee', 'reps', [set({ reps: 40, durationMin: 5 })])]
-    expect(exerciseChartPoints(workouts, 'burpee')).toEqual([{ date: '2026-07-10', value: 40 }])
-  })
-
-  it('пропускает тренировки без фактических данных', () => {
-    const workouts = [
-      workoutWith('2026-07-05', 'squat', 'strength', [set({ weightKg: 50 })]),
-      workoutWith('2026-07-12', 'squat', 'strength', [set({})]),
-    ]
-    expect(exerciseChartPoints(workouts, 'squat')).toEqual([{ date: '2026-07-05', value: 50 }])
-  })
-
-  it('строго по факту: подход только с планом (без факта) пропускается', () => {
-    const workouts = [workoutWith('2026-07-15', 'squat', 'strength', [planSet(70), planSet(75, 1)])]
-    expect(exerciseChartPoints(workouts, 'squat')).toEqual([])
-  })
-
-  it('строго по факту: плановая дистанция без факта не даёт точку', () => {
-    const plan: WorkoutSet = { id: 'pd', position: 0, distanceKm: 8, fact: {}, confirmedAt: null, version: 1 }
-    const workouts = [workoutWith('2026-07-15', 'run', 'distance', [plan])]
-    expect(exerciseChartPoints(workouts, 'run')).toEqual([])
-  })
-
-  it('строго по факту: плановые повторы без факта не дают точку', () => {
-    const plan: WorkoutSet = { id: 'pr', position: 0, reps: 30, fact: {}, confirmedAt: null, version: 1 }
-    const workouts = [workoutWith('2026-07-15', 'burpee', 'reps', [plan])]
-    expect(exerciseChartPoints(workouts, 'burpee')).toEqual([])
-  })
-
-  it('учитывает только завершённые тренировки', () => {
-    const planned = workoutWith('2026-07-20', 'squat', 'strength', [set({ weightKg: 80 })])
-    planned.status = 'planned'
-    expect(exerciseChartPoints([planned], 'squat')).toEqual([])
-  })
-})
 
 describe('workoutDurationLabel', () => {
   it('форматирует минуты', () => {
@@ -447,7 +364,7 @@ describe('splitClientWorkouts', () => {
   })
 })
 
-describe('clientWorkoutStatusLabel', () => {
+describe('workoutStatusPresentation', () => {
   it('uses one trainer completion status without changing the athlete presentation or stored facts', () => {
     const source = workoutWith('2026-07-20', 'squat', 'strength', [{ id: 'source-set', position: 0, weightKg: 30, reps: 10, fact: { weightKg: 35, reps: 8 }, confirmedAt: 'now', version: 1 }])
     const original = JSON.stringify(source)
@@ -474,12 +391,12 @@ describe('clientWorkoutStatusLabel', () => {
   })
 
   it('does not call a past plan or stale live workout completed', () => {
-    expect(clientWorkoutStatusLabel(bareWorkout('2026-07-30', 'planned'), TODAY)).toBe('План')
-    expect(clientWorkoutStatusLabel(bareWorkout('2026-07-20', 'planned'), TODAY)).toBe('План')
-    expect(clientWorkoutStatusLabel(bareWorkout('2026-07-22', 'in_progress'), TODAY)).toBe('Идёт')
-    expect(clientWorkoutStatusLabel(bareWorkout('2026-07-20', 'in_progress'), TODAY)).toBe('Не завершена')
-    expect(clientWorkoutStatusLabel(bareWorkout('2026-07-20', 'done'), TODAY)).toBe('Готово')
-    expect(clientWorkoutStatusLabel(bareWorkout('2026-07-20', 'cancelled'), TODAY)).toBe('Не состоялась')
+    expect(workoutStatusPresentation(bareWorkout('2026-07-30', 'planned'), TODAY).label).toBe('План')
+    expect(workoutStatusPresentation(bareWorkout('2026-07-20', 'planned'), TODAY).label).toBe('План')
+    expect(workoutStatusPresentation(bareWorkout('2026-07-22', 'in_progress'), TODAY).label).toBe('Идёт')
+    expect(workoutStatusPresentation(bareWorkout('2026-07-20', 'in_progress'), TODAY).label).toBe('Не завершена')
+    expect(workoutStatusPresentation(bareWorkout('2026-07-20', 'done'), TODAY).label).toBe('Готово')
+    expect(workoutStatusPresentation(bareWorkout('2026-07-20', 'cancelled'), TODAY).label).toBe('Не состоялась')
   })
 
   it('marks a completed workout with unconfirmed sets as partial', () => {
@@ -631,23 +548,6 @@ describe('groupIntoBlocks', () => {
       { type: 'group', ids: ['b', 'c'] },
       { type: 'single', ids: ['d'] },
     ])
-  })
-})
-
-describe('isLastSetOfBlock', () => {
-  const s = (id: string, position: number): WorkoutSet => ({ id, position, fact: {}, confirmedAt: null, version: 1 })
-  it('single-блок: последний сет упражнения — последний в блоке', () => {
-    const w = workoutWithExercises([exercise('a', 0, 'b1', 'single', [s('s1', 0), s('s2', 1)])])
-    expect(isLastSetOfBlock(w, 'a', 's2')).toBe(true)
-    expect(isLastSetOfBlock(w, 'a', 's1')).toBe(false)
-  })
-  it('суперсет: отдых только после последнего упражнения блока', () => {
-    const w = workoutWithExercises([
-      exercise('a', 0, 'b1', 'group', [s('a1', 0)]),
-      exercise('b', 1, 'b1', 'group', [s('b1', 0)]),
-    ])
-    expect(isLastSetOfBlock(w, 'a', 'a1')).toBe(false) // первое упражнение блока
-    expect(isLastSetOfBlock(w, 'b', 'b1')).toBe(true)  // последнее упражнение блока
   })
 })
 
