@@ -12222,3 +12222,18 @@ raw124301364bytes, /tmp/fit-mc55/probe-parity-summary.json. Полный94cases 
 дополнительное paired OFF сравнение выполняются; результат не заявляется
 заранее. ФизическийiPhone/публикация не проверены. До зелёного нового CI и
 разрешения на корректирующий PR приложение не публиковать.
+
+
+MC55Q2 локально: полный исходный editor/library набор94/94PASS в двухдвижках,
+original timeout30000ms, no retry/skip/flaky. Максимум15643ms; прежние три
+Chromium cases15643/15563/15083ms. Пин20261115-184033-7ed757e1,663641097bytes.
+Дополнительные два OFFcases×2engines:4/4PASS,12paired native states exact,
+пин20261115-184538-b42084e5. Итого84paired classifier states exact. Ненулевые
+legacyMatches/matchedLegacyPaint и пустые positiveowners остаются проверены.
+После этого integrated origin/main3140a1cb. Конфликты только собственных
+документов: сохранены локальные квитанции275–277/актуальный статус; все чужие
+изменения main сохранены. Diff отmain: одинe2e reader + собственные docs;
+application/runtime/workflows/dependencies diff пустой.94cases использовали
+прежнюю production-mode fixture build231e132e с теми же CSS; новая интегрированная
+сборка и адресные исходные checks запускаются отдельно. ESLint/diffcheck/
+workflowdocs PASS. Новый собственный CI ещё обязателен, успех remote не заявлен.
