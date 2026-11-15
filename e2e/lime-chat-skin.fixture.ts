@@ -26,11 +26,29 @@ export async function prepareChatSkin(page:Page,sample:ChatSkinSample){
  const partner=sample.role==='client'?trainerId:clientId
  await page.setViewportSize({width:sample.width,height:sample.width===1440?1000:844})
  await page.emulateMedia({reducedMotion:'reduce'})
- await page.addInitScript(({actor,theme})=>{
+ await page.addInitScript(({actor,theme,seedMessageIDs})=>{
   const NativeDate=Date,fixed=NativeDate.parse('2026-11-15T09:30:00Z')
   window.Date=new Proxy(NativeDate,{construct:(t,a,n)=>Reflect.construct(t,a.length?a:[fixed],n)as Date,apply:()=>new NativeDate(fixed).toString(),get:(t,k,r)=>k==='now'?()=>fixed:Reflect.get(t,k,r)as unknown})
   localStorage.setItem('fit.appTheme',theme);localStorage.setItem('fit.clientLime.theme.'+actor,theme)
- },{actor,theme:sample.theme})
+  // ChatPages.submit creates the pending message ID synchronously, before
+  // deliver starts request diagnostics. Seed only that one call during a real
+  // composer submit, not crypto used by requests/history/meetings. Every new
+  // submit gets a distinct ID; Retry must reuse the existing pending ID.
+  if(seedMessageIDs){
+   const nativeUUID=crypto.randomUUID.bind(crypto)
+   const evidence={submitted:0,consumed:[] as string[]}
+   Object.defineProperty(window,'__fitChatMessageUUIDEvidence',{value:evidence})
+   document.addEventListener('submit',event=>{
+    if(!(event.target instanceof HTMLFormElement)||!event.target.matches('.chat-composer')||!(event instanceof SubmitEvent)||!(event.submitter instanceof HTMLButtonElement)||event.submitter.getAttribute('aria-label')!=='Отправить')return
+    const id=`56000000-0000-4000-9000-${String(++evidence.submitted).padStart(12,'0')}` as ReturnType<Crypto['randomUUID']>
+    const once=()=>{crypto.randomUUID=nativeUUID;evidence.consumed.push(id);return id}
+    crypto.randomUUID=once
+    // If a future submit path consumes no ID, never leak the seed into an
+    // unrelated later request. This fixture timer does not alter app timers.
+    window.setTimeout(()=>{if(crypto.randomUUID===once)crypto.randomUUID=nativeUUID},0)
+   },true)
+  }
+ },{actor,theme:sample.theme,seedMessageIDs:sample.mode==='send-retry'||sample.mode==='upload'})
  await page.route('**/v1/**',route=>route.abort())
  const backend=await mockPilot(page,{role:sample.role,profileId:actor,clientLime:sample.role==='client'&&sample.lime,fitLime:sample.role==='trainer'&&sample.lime,pilot:true,questionWorkout:true,failWorkspace:sample.mode==='questions-error'})
  const workoutHistory=JSON.stringify(backend.getWorkouts())
@@ -43,17 +61,45 @@ export async function prepareChatSkin(page:Page,sample:ChatSkinSample){
  let blocked=sample.mode==='blocked',connected=sample.mode!=='connection',invited=false,sendAttempts=0,olderFailure=sample.mode==='pagination',queryFailure=sample.mode==='list-error'||sample.mode==='dialog-error',searchFailure=sample.mode==='search-error',meetingActive=false,notice=false,unreadCount=messages.length?2:0
  let release=()=>{},held=0
  const gate=new Promise<void>(resolve=>{release=resolve})
- const writes:{path:string;method:string;body:unknown}[]=[],reads:string[]=[],diagnostics:string[]=[]
+ const holdInitialRead=!sample.mode.startsWith('list')&&!['questions-error','loading','external-profile','dialog-empty'].includes(sample.mode)
+ let releaseRead=()=>{},readHeld=0,readAcks=0
+ const readGate=new Promise<void>(resolve=>{releaseRead=resolve})
+ if(!holdInitialRead)releaseRead()
+ // Athlete IO registration has an existing response-order race: if messages
+ // arrive before the other initial queries, AsyncView has no surface yet and
+ // the effect does not run again on its mount. This paint fixture explicitly
+ // selects the other valid order; it does not claim to fix or test that race.
+ const orderedInitialMessages=sample.role==='client'&&holdInitialRead
+ let openMessages=()=>{}
+ const messagesGate=new Promise<void>(resolve=>{openMessages=resolve})
+ if(!orderedInitialMessages)openMessages()
+ const prerequisitePaths=['/v1/chat/threads',`/v1/chat/conversations/${conversationId}/unread`,`/v1/chat/conversations/${conversationId}/connection`]
+ const fulfilledPrerequisites=new Set<string>(),finishedPrerequisites=new Set<string>()
+ const initialResponseOrder:{event:string;path?:string}[]=[]
+ let messagesReleased=!orderedInitialMessages,initialMessagesFulfilled=false
+ page.on('requestfinished',request=>{const path=new URL(request.url()).pathname;if(request.method()==='GET'&&prerequisitePaths.includes(path)&&!finishedPrerequisites.has(path)){finishedPrerequisites.add(path);initialResponseOrder.push({event:'finished',path})}})
+ const releaseInitialMessages=async()=>{
+  if(!orderedInitialMessages)return
+  await expect.poll(()=>prerequisitePaths.every(path=>fulfilledPrerequisites.has(path)&&finishedPrerequisites.has(path))).toBe(true)
+  // The responses must be consumed and React must get natural render frames
+  // before releasing messages. No browser/app clock or IO API is replaced.
+  await page.evaluate(async()=>{for(let frame=0;frame<3;frame++)await new Promise<void>(resolve=>requestAnimationFrame(()=>resolve()))})
+  initialResponseOrder.push({event:'release-messages-after-natural-frames'});messagesReleased=true;openMessages()
+ }
+ const writes:{path:string;method:string;body:unknown}[]=[],reads:string[]=[],diagnostics:string[]=[],seededDiagnosticIDs:string[]=[]
  page.on('pageerror',error=>diagnostics.push(error.message))
- page.on('request',request=>{const url=new URL(request.url());if(!url.pathname.startsWith('/v1/'))return;if(request.method()==='GET')reads.push(url.pathname+url.search);else if(request.method()!=='OPTIONS')writes.push({path:url.pathname,method:request.method(),body:request.postDataJSON()as unknown})})
+ page.on('request',request=>{const url=new URL(request.url());if(!url.pathname.startsWith('/v1/'))return;const diagnosticID=request.headers()['x-fit-request-id'];if(diagnosticID?.startsWith('56000000-0000-4000-9000-'))seededDiagnosticIDs.push(diagnosticID);if(request.method()==='GET')reads.push(url.pathname+url.search);else if(request.method()!=='OPTIONS')writes.push({path:url.pathname,method:request.method(),body:request.postDataJSON()as unknown})})
  const initialMessages=structuredClone(messages)
  await page.route('**/v1/chat/**',async route=>{
   const request=route.request(),url=new URL(request.url()),path=url.pathname,method=request.method()
-  const fail=()=>route.fulfill({status:503,json:{error:'unavailable'}})
+  const fulfillPrerequisite=async(json:unknown)=>{await route.fulfill({json});if(method==='GET'&&prerequisitePaths.includes(path)&&!fulfilledPrerequisites.has(path)){fulfilledPrerequisites.add(path);initialResponseOrder.push({event:'fulfilled',path})}}
+  // A synthetic backend response owns its stable diagnostic ID, just as the
+  // real API does. Do not replace request diagnostics or mask the visible code.
+  const fail=()=>route.fulfill({status:503,headers:{'x-fit-request-id':'56000000-0000-4000-a000-000000000503','access-control-expose-headers':'x-fit-request-id'},json:{error:'unavailable'}})
   if(path==='/v1/chat/threads'){
    if(sample.mode==='loading'){held++;await gate}
    if(queryFailure&&sample.mode==='list-error')return fail()
-   return route.fulfill({json:{threads:sample.mode==='list-empty'?[]:[{conversationId,clientId,trainerId,partnerUserId:partner,partnerName:sample.role==='client'?'Дмитрий Соколов':'Алексей Смирнов',activeConnection:connected,lastMessageBody:messages.at(-1)?.body??null,lastMessageAt:'2026-11-15T09:00:00Z',lastMessageSenderId:partner,unreadCount,canMessage:!blocked,blockedByMe:blocked,blockedByPartner:false}]}})
+   return fulfillPrerequisite({threads:sample.mode==='list-empty'?[]:[{conversationId,clientId,trainerId,partnerUserId:partner,partnerName:sample.role==='client'?'Дмитрий Соколов':'Алексей Смирнов',activeConnection:connected,lastMessageBody:messages.at(-1)?.body??null,lastMessageAt:'2026-11-15T09:00:00Z',lastMessageSenderId:partner,unreadCount,canMessage:!blocked,blockedByMe:blocked,blockedByPartner:false}]})
   }
   if(!path.startsWith('/v1/chat/conversations/'+conversationId))return route.fallback()
   if(path.endsWith('/messages')){
@@ -66,21 +112,26 @@ export async function prepareChatSkin(page:Page,sample:ChatSkinSample){
     if(!messages.some(item=>item.id===input.id))messages.push(value)
     return route.fulfill({json:{message:value}})
    }
+   await messagesGate
    if(queryFailure&&sample.mode==='dialog-error')return fail()
    if(url.searchParams.has('beforeId')){
     if(olderFailure)return fail()
     return route.fulfill({json:{messages:[context],nextCursor:null}})
    }
    const meeting:ChatMessage={...make(meetingId,actor,'Участник присоединился к видеовстрече'),meeting:{id:meetingId,active:meetingActive}}
-   return route.fulfill({json:{messages:notice?[...messages,meeting]:messages,nextCursor:sample.mode==='pagination'?{createdAt:'2026-11-15T09:00:00Z',id:chatPartnerMessageId}:null}})
+   await route.fulfill({json:{messages:notice?[...messages,meeting]:messages,nextCursor:sample.mode==='pagination'?{createdAt:'2026-11-15T09:00:00Z',id:chatPartnerMessageId}:null}})
+   if(!initialMessagesFulfilled){initialMessagesFulfilled=true;initialResponseOrder.push({event:'messages-fulfilled'});if(orderedInitialMessages)expect(messagesReleased).toBe(true)}
+   return
   }
-  if(path.endsWith('/unread'))return route.fulfill({json:{unread:{firstMessageId:unreadCount?chatPartnerMessageId:null,firstCreatedAt:unreadCount?'2026-11-15T09:00:00Z':null,unreadCount}}})
-  if(path.endsWith('/read')){unreadCount=0;return route.fulfill({status:204,body:''})}
+  if(path.endsWith('/unread'))return fulfillPrerequisite({unread:{firstMessageId:unreadCount?chatPartnerMessageId:null,firstCreatedAt:unreadCount?'2026-11-15T09:00:00Z':null,unreadCount}})
+  // Hold every initial in-flight acknowledgement until the real unread/reveal
+  // phase has been observed. The observer and its PUT requests still execute.
+  if(path.endsWith('/read')){readHeld++;await readGate;unreadCount=0;readAcks++;return route.fulfill({status:204,body:''})}
   if(path.endsWith('/block')){blocked=(request.postDataJSON()as{blocked:boolean}).blocked;return route.fulfill({json:{state:{canMessage:!blocked,blockedByMe:blocked,blockedByPartner:false}}})}
   if(path.includes('/connection')){
    if(path.endsWith('/invite'))invited=true
    if(path.endsWith('/accept'))connected=true
-   return route.fulfill({json:{state:{activeConnection:connected,invitationPending:invited||sample.role==='client',invitedAt:invited||sample.role==='client'?'2026-11-15T09:00:00Z':null,canInvite:!connected&&!invited,canAccept:!connected&&sample.role==='client',trainerSwitchRequired:false}}})
+   return fulfillPrerequisite({state:{activeConnection:connected,invitationPending:invited||sample.role==='client',invitedAt:invited||sample.role==='client'?'2026-11-15T09:00:00Z':null,canInvite:!connected&&!invited,canAccept:!connected&&sample.role==='client',trainerSwitchRequired:false}})
   }
   if(path.endsWith('/search')){
    if(searchFailure)return fail()
@@ -112,5 +163,5 @@ export async function prepareChatSkin(page:Page,sample:ChatSkinSample){
   const profile={...structuredClone(publicTrainerDraft),photos:publicTrainerDraft.photos.map(photo=>({...photo,url:imageURL,thumbnailUrl:imageURL}))}
   await page.route(`**/v1/trainers/${publicTrainerId}/public-profile`,route=>route.fulfill({json:{publicId:publicTrainerId,draft:profile,published:profile,listedInCatalog:true,publishedAt:'2026-11-15T09:00:00Z',updatedAt:'2026-11-15T09:00:00Z',version:1,isBrandTrainer:false}}))
  }
- return {actor,partner,initialMessages,writes,reads,diagnostics,workoutId,release,held:()=>held,messages:()=>structuredClone(messages),sendAttempts:()=>sendAttempts,recover:()=>{queryFailure=false;searchFailure=false;olderFailure=false;backend.setWorkspaceFailure(false)},historyUnchanged:()=>JSON.stringify(backend.getWorkouts())===workoutHistory}
+ return {actor,partner,initialMessages,writes,reads,diagnostics,seededDiagnosticIDs,workoutId,release,held:()=>held,releaseRead,readState:()=>({held:readHeld,acknowledged:readAcks,unreadCount}),releaseInitialMessages,initialResponseOrder,orderedInitialMessages,messages:()=>structuredClone(messages),sendAttempts:()=>sendAttempts,recover:()=>{queryFailure=false;searchFailure=false;olderFailure=false;backend.setWorkspaceFailure(false)},historyUnchanged:()=>JSON.stringify(backend.getWorkouts())===workoutHistory}
 }

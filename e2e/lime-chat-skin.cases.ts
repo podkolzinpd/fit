@@ -2,7 +2,7 @@ import {expect,test} from '@playwright/test'
 import {writeFile} from 'node:fs/promises'
 import {conversationId,publicTrainerId} from './fit-lime-fixtures'
 import {prepareChatSkin,chatOwnMessageId,chatPartnerMessageId,chatContextMessageId,type ChatSkinSample} from './lime-chat-skin.fixture'
-import {probeEditorSkin,assertEditorOwnership} from './lime-editor-skin.probe'
+import {probeEditorSkin,assertEditorOwnership,settleEditorPaint} from './lime-editor-skin.probe'
 import {chatContract} from './lime-chat-skin.contract'
 
 const samples:readonly ChatSkinSample[]=[
@@ -58,13 +58,33 @@ export function limeChatSkinCases(){
    // The product removes its initial/search highlight after 1600 ms. Observe
    // that real transition before a static capture; never mutate the class,
    // advance its timer, finish animations, or weaken native equality checks.
+   // Flush already scheduled natural frames before checking absence: a bare
+   // count=0 can pass just before revealMessage's RAF adds the highlight.
+   await settleEditorPaint(page,selector,contract)
    await expect(page.locator('.chat-message.highlighted')).toHaveCount(0)
    await page.mouse.move(0,0)
    states.push({...await probeEditorSkin(page,info.outputPath('chat-'+state+'.png'),selector,contract),state,url:new URL(page.url()).pathname+new URL(page.url()).search})
   }
   const composer=page.getByRole('textbox',{name:'Сообщение',exact:true}),own=page.locator(`[data-message-id="${chatOwnMessageId}"]`),partner=page.locator(`[data-message-id="${chatPartnerMessageId}"]`)
   const sheet=page.getByRole('dialog',{name:'Действия с сообщением',exact:true})
+  const observeUnread=async()=>{
+   const next=page.locator('.chat-new-button')
+   await expect(next).toBeVisible();await expect(page.locator('.chat-unread-divider')).toHaveCount(1)
+   await settleEditorPaint(page,selector,contract);await expect(page.locator('.chat-message.highlighted')).toHaveCount(0)
+   await next.click();await expect(partner).toHaveClass(/\bhighlighted\b/)
+   await expect(page.locator('.chat-message.highlighted')).toHaveCount(0)
+   await expect.poll(()=>fixture.readState().held).toBeGreaterThan(0)
+   expect(fixture.readState().acknowledged).toBe(0)
+   await settleEditorPaint(page,selector,contract)
+  }
+  const acknowledgeUnread=async()=>{
+   fixture.releaseRead();await expect.poll(()=>fixture.readState().acknowledged).toBeGreaterThan(0)
+   await expect(page.locator('.chat-new-button')).toHaveCount(0);await expect(page.locator('.chat-unread-divider')).toHaveCount(0)
+   expect(fixture.readState().unreadCount).toBe(0)
+   await settleEditorPaint(page,selector,contract)
+  }
   await page.goto(route)
+  await fixture.releaseInitialMessages()
   if(external){
    await page.getByRole('button',{name:'Открыть фото 1 из 2',exact:true}).click();const viewer=page.getByRole('dialog',{name:'Фотографии тренера',exact:true});await expect(viewer).toBeVisible();await probe('external-profile-viewer');await viewer.getByRole('button',{name:'Следующее фото'}).click();await expect(viewer.locator('.fullscreen-image-counter')).toHaveText('2 из 2');await probe('external-profile-next');await viewer.getByRole('button',{name:'Закрыть фото'}).click();await expect(viewer).toHaveCount(0)
   }else if(list){
@@ -75,12 +95,14 @@ export function limeChatSkinCases(){
    }else if(sample.mode==='list-empty'){await expect(page.getByText('Диалогов пока нет',{exact:true})).toBeVisible();await probe('empty')}
    else{await expect(page.locator('.chat-thread')).toHaveCount(1);await probe('list');await page.locator('.chat-thread').click();await expect(composer).toBeVisible();await page.getByRole('button',{name:'Назад',exact:true}).click();await expect(page).toHaveURL(/\/chat$/);await expect(page.locator('.chat-thread')).toHaveCount(1)}
   }else if(sample.mode==='dialog-error'){
-   await expect(page.getByRole('alert').first()).toBeVisible();await probe('dialog-error');fixture.recover();await page.getByRole('button',{name:'Повторить',exact:true}).click();await expect(composer).toBeVisible();await probe('dialog-recovered')
+   await expect(page.getByRole('alert').first()).toBeVisible();await probe('dialog-error');fixture.recover();await page.getByRole('button',{name:'Повторить',exact:true}).click();await expect(composer).toBeVisible();await observeUnread();await acknowledgeUnread();await probe('dialog-recovered')
   }else{
    if(sample.mode==='blocked')await expect(page.getByText('Диалог заблокирован',{exact:true})).toBeVisible()
    else await expect(composer).toBeVisible()
+   if(fixture.initialMessages.length){await observeUnread();if(sample.mode!=='dialog')await acknowledgeUnread()}
    if(sample.mode==='dialog'||sample.mode==='dialog-empty'){
-    await probe('dialog-ready');await composer.fill('Черновик MC56\nВторая строка без потери значения');await expect(composer).toHaveValue('Черновик MC56\nВторая строка без потери значения');await probe('composer-input');await page.getByRole('button',{name:'Назад',exact:true}).click();await expect(page).toHaveURL(/\/chat$/);await page.locator('.chat-thread').click();await expect(composer).toHaveValue('Черновик MC56\nВторая строка без потери значения')
+    // Deliberate server-pending unread capture, followed by acknowledged input.
+    await probe('dialog-ready');if(fixture.initialMessages.length)await acknowledgeUnread();await composer.fill('Черновик MC56\nВторая строка без потери значения');await expect(composer).toHaveValue('Черновик MC56\nВторая строка без потери значения');await probe('composer-input');await page.getByRole('button',{name:'Назад',exact:true}).click();await expect(page).toHaveURL(/\/chat$/);await page.locator('.chat-thread').click();await expect(composer).toHaveValue('Черновик MC56\nВторая строка без потери значения')
    }else if(sample.mode==='send-retry'){
     await composer.fill('Одно сообщение после повтора');await page.getByRole('button',{name:'Отправить',exact:true}).click();const pending=page.locator('.chat-message.own').filter({hasText:'Одно сообщение после повтора'});await expect(pending.getByText('Ошибка',{exact:true})).toBeVisible();await probe('send-error');await pending.getByRole('button',{name:'Повторить',exact:true}).click();await expect(pending.getByText('Отправлено',{exact:true})).toBeVisible();await expect(pending).toHaveCount(1);await probe('send-recovered');expect(fixture.sendAttempts()).toBe(2);const sends=fixture.writes.filter(write=>write.method==='POST'&&write.path.endsWith('/messages'));expect(sends).toHaveLength(2);expect(sends[0]!.body).toEqual(sends[1]!.body)
    }else if(sample.mode==='actions'){
@@ -90,7 +112,7 @@ export function limeChatSkinCases(){
    }else if(sample.mode==='search'||sample.mode==='search-error'){
     await page.getByRole('button',{name:'Поиск по переписке'}).click();const search=page.getByRole('region',{name:'Поиск по переписке'}),field=search.getByRole('searchbox',{name:'Текст для поиска'});await field.fill('восстановление');await search.getByRole('button',{name:'Найти',exact:true}).click()
     if(sample.mode==='search-error'){await expect(search.getByRole('alert')).toBeVisible();await probe('search-error');fixture.recover();await search.getByRole('button',{name:'Повторить'}).click()}
-    await expect(search.locator('.chat-search-results > button')).toHaveCount(1);await probe('search-results');await search.locator('.chat-search-results > button').click();await expect(search).toHaveCount(0);await expect(page.locator(`[data-message-id="${chatContextMessageId}"]`)).toBeVisible();await page.getByRole('button',{name:'Поиск по переписке'}).click();await field.fill('пусто');await search.getByRole('button',{name:'Найти',exact:true}).click();await expect(search.getByText('Ничего не найдено')).toBeVisible();await probe('search-empty');await page.getByRole('button',{name:'Закрыть поиск'}).click();await expect(search).toHaveCount(0)
+    await expect(search.locator('.chat-search-results > button')).toHaveCount(1);await probe('search-results');await search.locator('.chat-search-results > button').click();await expect(search).toHaveCount(0);const context=page.locator(`[data-message-id="${chatContextMessageId}"]`);await expect(context).toBeVisible();await expect(context).toHaveClass(/\bhighlighted\b/);await expect(page.locator('.chat-message.highlighted')).toHaveCount(0);await page.getByRole('button',{name:'Поиск по переписке'}).click();await field.fill('пусто');await search.getByRole('button',{name:'Найти',exact:true}).click();await expect(search.getByText('Ничего не найдено')).toBeVisible();await probe('search-empty');await page.getByRole('button',{name:'Закрыть поиск'}).click();await expect(search).toHaveCount(0)
    }else if(sample.mode==='pagination'){
     await page.getByRole('button',{name:'Ранее',exact:true}).click();await expect(page.getByText('Не удалось загрузить ранние сообщения')).toBeVisible();await probe('older-error');fixture.recover();await page.getByRole('button',{name:'Повторить загрузку ранних сообщений'}).click();await expect(page.locator(`[data-message-id="${chatContextMessageId}"]`)).toHaveCount(1);await expect(page.getByRole('button',{name:'Ранее',exact:true})).toHaveCount(0);await probe('older-recovered')
    }else if(sample.mode==='photo'){
@@ -113,8 +135,16 @@ export function limeChatSkinCases(){
    }
   }
   expect(states.length).toBeGreaterThan(0);expect(fixture.historyUnchanged()).toBe(true);expect(fixture.diagnostics).toEqual([])
+  const messageUUIDEvidence=await page.evaluate(()=>(window as Window&{__fitChatMessageUUIDEvidence?:{submitted:number;consumed:string[]}}).__fitChatMessageUUIDEvidence??null)
+  if(sample.mode==='send-retry'||sample.mode==='upload'){
+   const id='56000000-0000-4000-9000-000000000001'
+   expect(messageUUIDEvidence).toEqual({submitted:1,consumed:[id]})
+   expect(fixture.messages().filter(message=>message.id===id)).toHaveLength(1)
+   expect(fixture.writes.filter(write=>write.method==='POST'&&write.path.endsWith('/messages')).map(write=>(write.body as{id:string}).id)).toEqual(sample.mode==='send-retry'?[id,id]:[id])
+  }
+  expect(fixture.seededDiagnosticIDs).toEqual([])
   const persisted=await page.evaluate(({actor,id})=>({draft:localStorage.getItem(`fit:chat-draft:${actor}:${id}`),pending:localStorage.getItem(`fit:chat-pending:${actor}:${id}`)}),{actor:fixture.actor,id:conversationId})
-  await writeFile(info.outputPath('chat-skin.json'),JSON.stringify({sample,route,states,writes:fixture.writes,reads:fixture.reads,diagnostics:fixture.diagnostics,initialMessages:fixture.initialMessages,finalMessages:fixture.messages(),persisted,historyUnchanged:fixture.historyUnchanged()}))
+  await writeFile(info.outputPath('chat-skin.json'),JSON.stringify({sample,route,states,writes:fixture.writes,reads:fixture.reads,diagnostics:fixture.diagnostics,messageUUIDEvidence,seededDiagnosticIDs:fixture.seededDiagnosticIDs,orderedInitialMessages:fixture.orderedInitialMessages,initialResponseOrder:fixture.initialResponseOrder,initialMessages:fixture.initialMessages,finalMessages:fixture.messages(),persisted,historyUnchanged:fixture.historyUnchanged()}))
   for(const state of states){
    if(external){expect(state.owners).toEqual([]);continue}
    if(sample.lime&&process.env.FIT_CHAT_SKIN_BASELINE==='1'){
