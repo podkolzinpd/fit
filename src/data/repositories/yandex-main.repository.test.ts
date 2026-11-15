@@ -1215,6 +1215,36 @@ describe('Yandex main repository', () => {
     expect(calls[0]![1]?.body).toEqual(calls[1]![1]?.body)
   })
 
+  it('keeps native pagination offsets and stops on the final page', async () => {
+    installTrainingData()
+    const repository = createYandexMainRepository(apiBaseUrl, sessionToken, actor)
+    const first = await repository.workouts.listPage(undefined, undefined, clientId, 0, 1)
+    expect(first).toMatchObject({ items: [{ id: plannedWorkoutId }], nextOffset: 1, totalCount: 2 })
+    expect(first.items).toHaveLength(1)
+    const last = await repository.workouts.listPage(undefined, undefined, clientId, first.nextOffset, 1)
+    expect(last.items.map((item) => item.id)).toEqual([workoutId])
+    expect(last.nextOffset).toBeUndefined()
+    expect(pilot.listTrainingData).toHaveBeenLastCalledWith(apiBaseUrl, sessionToken, 'read_write', {
+      limit: 1, offset: 1, scope: 'workouts', clientId,
+    })
+  })
+
+  it('preserves custom metric ownership and empty values in native progress entries', async () => {
+    const otherProgressId = '10000000-0000-4000-8000-000000000001'
+    const otherMetricId = '10000000-0000-4000-8000-000000000002'
+    const base = { clientId, createdBy: actor.userId, weightKg: null, chestCm: null, waistCm: null, hipCm: null, notes: null, version: 1 }
+    const entries = [
+      { ...base, id: progressId, recordedOn: '2026-08-01', customMetrics: [{ metricId, value: 10 }, { metricId: otherMetricId, value: 30 }] },
+      { ...base, id: otherProgressId, recordedOn: '2026-08-02', customMetrics: [{ metricId: otherMetricId, value: 20 }] },
+      { ...base, id: '10000000-0000-4000-8000-000000000003', recordedOn: '2026-08-03', customMetrics: [] },
+    ]
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(jsonResponse({ entries, customMetrics: [], goal: null })))
+    const repository = createYandexMainRepository(apiBaseUrl, sessionToken, actor)
+    expect(await repository.progress.list(clientId)).toEqual(entries.map((entry) => ({
+      ...entry, weightKg: undefined, chestCm: undefined, waistCm: undefined, hipCm: undefined, notes: undefined,
+    })))
+  })
+
   it('implements the complete workout lifecycle and derived reads', async () => {
     const fetchMock = installContractFetch()
     vi.stubGlobal('fetch', fetchMock)

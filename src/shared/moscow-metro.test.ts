@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
-import { MOSCOW_METRO_STATIONS, moscowMetroStationById, searchMoscowMetroStations } from './moscow-metro'
+import { MOSCOW_METRO_STATIONS } from './moscow-metro'
+import { metroStationById, searchMetroStations } from './metro'
 
 describe('Moscow metro directory', () => {
   it('contains the current metro network without surface rail lines', () => {
@@ -13,11 +14,11 @@ describe('Moscow metro directory', () => {
   it('uses unique stable ids and resolves every station by id', () => {
     const ids = MOSCOW_METRO_STATIONS.map((station) => station.id)
     expect(new Set(ids).size).toBe(ids.length)
-    expect(ids.every((id) => moscowMetroStationById(id)?.id === id)).toBe(true)
+    expect(ids.every((id) => metroStationById(id)?.id === id)).toBe(true)
   })
 
   it('searches names without depending on the letter yo', () => {
-    expect(searchMoscowMetroStations('савеловская').map((station) => station.name)).toContain('Савёловская')
-    expect(searchMoscowMetroStations('троицкая').some((station) => station.name === 'Вавиловская')).toBe(true)
+    expect(searchMetroStations('савеловская', 'moscow').map((station) => station.name)).toContain('Савёловская')
+    expect(searchMetroStations('троицкая', 'moscow').some((station) => station.name === 'Вавиловская')).toBe(true)
   })
 })
