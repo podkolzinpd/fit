@@ -1,3 +1,226 @@
+/* MC5.6 residual chat authored paint. Exact route/portal ownership; accepted Lime bytes remain below unchanged. */
+.chat-connection-card:where(:is(.phone-frame.fit-lime-shell.chat-identity,.phone-frame.fit-lime-shell.chat-identity *,body > .chat-sheet-backdrop.fit-lime-chat-sheet,body > .chat-sheet-backdrop.fit-lime-chat-sheet *,#root:has(> .phone-frame.fit-lime-shell.chat-identity) ~ .fullscreen-image-viewer,#root:has(> .phone-frame.fit-lime-shell.chat-identity) ~ .fullscreen-image-viewer *)) {
+    border: 1px solid var(--border)
+}
+.chat-connection-card strong:where(:is(.phone-frame.fit-lime-shell.chat-identity,.phone-frame.fit-lime-shell.chat-identity *,body > .chat-sheet-backdrop.fit-lime-chat-sheet,body > .chat-sheet-backdrop.fit-lime-chat-sheet *,#root:has(> .phone-frame.fit-lime-shell.chat-identity) ~ .fullscreen-image-viewer,#root:has(> .phone-frame.fit-lime-shell.chat-identity) ~ .fullscreen-image-viewer *)) {
+    font-size: 14px
+}
+.chat-connection-card span:where(:is(.phone-frame.fit-lime-shell.chat-identity,.phone-frame.fit-lime-shell.chat-identity *,body > .chat-sheet-backdrop.fit-lime-chat-sheet,body > .chat-sheet-backdrop.fit-lime-chat-sheet *,#root:has(> .phone-frame.fit-lime-shell.chat-identity) ~ .fullscreen-image-viewer,#root:has(> .phone-frame.fit-lime-shell.chat-identity) ~ .fullscreen-image-viewer *)) {
+    font-size: 13px
+}
+.chat-blocked-state strong:where(:is(.phone-frame.fit-lime-shell.chat-identity,.phone-frame.fit-lime-shell.chat-identity *,body > .chat-sheet-backdrop.fit-lime-chat-sheet,body > .chat-sheet-backdrop.fit-lime-chat-sheet *,#root:has(> .phone-frame.fit-lime-shell.chat-identity) ~ .fullscreen-image-viewer,#root:has(> .phone-frame.fit-lime-shell.chat-identity) ~ .fullscreen-image-viewer *)) {
+    font-size: 14px
+}
+.chat-search form:where(:is(.phone-frame.fit-lime-shell.chat-identity,.phone-frame.fit-lime-shell.chat-identity *,body > .chat-sheet-backdrop.fit-lime-chat-sheet,body > .chat-sheet-backdrop.fit-lime-chat-sheet *,#root:has(> .phone-frame.fit-lime-shell.chat-identity) ~ .fullscreen-image-viewer,#root:has(> .phone-frame.fit-lime-shell.chat-identity) ~ .fullscreen-image-viewer *)) {
+    border: 1px solid var(--border)
+}
+.chat-search form svg:where(:is(.phone-frame.fit-lime-shell.chat-identity,.phone-frame.fit-lime-shell.chat-identity *,body > .chat-sheet-backdrop.fit-lime-chat-sheet,body > .chat-sheet-backdrop.fit-lime-chat-sheet *,#root:has(> .phone-frame.fit-lime-shell.chat-identity) ~ .fullscreen-image-viewer,#root:has(> .phone-frame.fit-lime-shell.chat-identity) ~ .fullscreen-image-viewer *)) {
+    color: var(--muted)
+}
+.chat-search input:where(:is(.phone-frame.fit-lime-shell.chat-identity,.phone-frame.fit-lime-shell.chat-identity *,body > .chat-sheet-backdrop.fit-lime-chat-sheet,body > .chat-sheet-backdrop.fit-lime-chat-sheet *,#root:has(> .phone-frame.fit-lime-shell.chat-identity) ~ .fullscreen-image-viewer,#root:has(> .phone-frame.fit-lime-shell.chat-identity) ~ .fullscreen-image-viewer *)) {
+    border: 0;
+    background: transparent
+}
+.chat-search form button:where(:is(.phone-frame.fit-lime-shell.chat-identity,.phone-frame.fit-lime-shell.chat-identity *,body > .chat-sheet-backdrop.fit-lime-chat-sheet,body > .chat-sheet-backdrop.fit-lime-chat-sheet *,#root:has(> .phone-frame.fit-lime-shell.chat-identity) ~ .fullscreen-image-viewer,#root:has(> .phone-frame.fit-lime-shell.chat-identity) ~ .fullscreen-image-viewer *)) {
+    border-radius: 11px
+}
+.chat-search-results:where(:is(.phone-frame.fit-lime-shell.chat-identity,.phone-frame.fit-lime-shell.chat-identity *,body > .chat-sheet-backdrop.fit-lime-chat-sheet,body > .chat-sheet-backdrop.fit-lime-chat-sheet *,#root:has(> .phone-frame.fit-lime-shell.chat-identity) ~ .fullscreen-image-viewer,#root:has(> .phone-frame.fit-lime-shell.chat-identity) ~ .fullscreen-image-viewer *)) {
+    border: 1px solid var(--border)
+}
+.chat-search-results > p:where(:is(.phone-frame.fit-lime-shell.chat-identity,.phone-frame.fit-lime-shell.chat-identity *,body > .chat-sheet-backdrop.fit-lime-chat-sheet,body > .chat-sheet-backdrop.fit-lime-chat-sheet *,#root:has(> .phone-frame.fit-lime-shell.chat-identity) ~ .fullscreen-image-viewer,#root:has(> .phone-frame.fit-lime-shell.chat-identity) ~ .fullscreen-image-viewer *)) {
+    color: var(--muted)
+}
+.chat-search-error:where(:is(.phone-frame.fit-lime-shell.chat-identity,.phone-frame.fit-lime-shell.chat-identity *,body > .chat-sheet-backdrop.fit-lime-chat-sheet,body > .chat-sheet-backdrop.fit-lime-chat-sheet *,#root:has(> .phone-frame.fit-lime-shell.chat-identity) ~ .fullscreen-image-viewer,#root:has(> .phone-frame.fit-lime-shell.chat-identity) ~ .fullscreen-image-viewer *)) {
+    color: var(--danger);
+    font-size: 12px
+}
+.chat-search-error button:where(:is(.phone-frame.fit-lime-shell.chat-identity,.phone-frame.fit-lime-shell.chat-identity *,body > .chat-sheet-backdrop.fit-lime-chat-sheet,body > .chat-sheet-backdrop.fit-lime-chat-sheet *,#root:has(> .phone-frame.fit-lime-shell.chat-identity) ~ .fullscreen-image-viewer,#root:has(> .phone-frame.fit-lime-shell.chat-identity) ~ .fullscreen-image-viewer *)) {
+    border-radius: 11px;
+    background: var(--surface-sunken)
+}
+.chat-search-results > button:where(:is(.phone-frame.fit-lime-shell.chat-identity,.phone-frame.fit-lime-shell.chat-identity *,body > .chat-sheet-backdrop.fit-lime-chat-sheet,body > .chat-sheet-backdrop.fit-lime-chat-sheet *,#root:has(> .phone-frame.fit-lime-shell.chat-identity) ~ .fullscreen-image-viewer,#root:has(> .phone-frame.fit-lime-shell.chat-identity) ~ .fullscreen-image-viewer *)) {
+    border-radius: 12px;
+    background: transparent;
+    color: var(--fg)
+}
+.chat-search-results strong:where(:is(.phone-frame.fit-lime-shell.chat-identity,.phone-frame.fit-lime-shell.chat-identity *,body > .chat-sheet-backdrop.fit-lime-chat-sheet,body > .chat-sheet-backdrop.fit-lime-chat-sheet *,#root:has(> .phone-frame.fit-lime-shell.chat-identity) ~ .fullscreen-image-viewer,#root:has(> .phone-frame.fit-lime-shell.chat-identity) ~ .fullscreen-image-viewer *)) {
+    font-size: 12px
+}
+.chat-search-results span:where(:is(.phone-frame.fit-lime-shell.chat-identity,.phone-frame.fit-lime-shell.chat-identity *,body > .chat-sheet-backdrop.fit-lime-chat-sheet,body > .chat-sheet-backdrop.fit-lime-chat-sheet *,#root:has(> .phone-frame.fit-lime-shell.chat-identity) ~ .fullscreen-image-viewer,#root:has(> .phone-frame.fit-lime-shell.chat-identity) ~ .fullscreen-image-viewer *)) {
+    font-size: 14px
+}
+.chat-search-results time:where(:is(.phone-frame.fit-lime-shell.chat-identity,.phone-frame.fit-lime-shell.chat-identity *,body > .chat-sheet-backdrop.fit-lime-chat-sheet,body > .chat-sheet-backdrop.fit-lime-chat-sheet *,#root:has(> .phone-frame.fit-lime-shell.chat-identity) ~ .fullscreen-image-viewer,#root:has(> .phone-frame.fit-lime-shell.chat-identity) ~ .fullscreen-image-viewer *)) {
+    color: var(--muted);
+    font-size: 11px
+}
+.chat-search-results mark:where(:is(.phone-frame.fit-lime-shell.chat-identity,.phone-frame.fit-lime-shell.chat-identity *,body > .chat-sheet-backdrop.fit-lime-chat-sheet,body > .chat-sheet-backdrop.fit-lime-chat-sheet *,#root:has(> .phone-frame.fit-lime-shell.chat-identity) ~ .fullscreen-image-viewer,#root:has(> .phone-frame.fit-lime-shell.chat-identity) ~ .fullscreen-image-viewer *)) {
+    border-radius: 3px;
+    background: color-mix(in srgb,var(--accent) 28%,transparent);
+    color: inherit
+}
+.chat-message:where(:is(.phone-frame.fit-lime-shell.chat-identity,.phone-frame.fit-lime-shell.chat-identity *,body > .chat-sheet-backdrop.fit-lime-chat-sheet,body > .chat-sheet-backdrop.fit-lime-chat-sheet *,#root:has(> .phone-frame.fit-lime-shell.chat-identity) ~ .fullscreen-image-viewer,#root:has(> .phone-frame.fit-lime-shell.chat-identity) ~ .fullscreen-image-viewer *)) {
+    border: 1px solid var(--border)
+}
+.chat-photo-link:where(:is(.phone-frame.fit-lime-shell.chat-identity,.phone-frame.fit-lime-shell.chat-identity *,body > .chat-sheet-backdrop.fit-lime-chat-sheet,body > .chat-sheet-backdrop.fit-lime-chat-sheet *,#root:has(> .phone-frame.fit-lime-shell.chat-identity) ~ .fullscreen-image-viewer,#root:has(> .phone-frame.fit-lime-shell.chat-identity) ~ .fullscreen-image-viewer *)) {
+    background: var(--surface-sunken)
+}
+.chat-photo-unavailable:where(:is(.phone-frame.fit-lime-shell.chat-identity,.phone-frame.fit-lime-shell.chat-identity *,body > .chat-sheet-backdrop.fit-lime-chat-sheet,body > .chat-sheet-backdrop.fit-lime-chat-sheet *,#root:has(> .phone-frame.fit-lime-shell.chat-identity) ~ .fullscreen-image-viewer,#root:has(> .phone-frame.fit-lime-shell.chat-identity) ~ .fullscreen-image-viewer *)) {
+    border-radius: 14px;
+    background: var(--surface-sunken);
+    color: var(--muted);
+    font-size: 13px
+}
+.chat-message > .link:where(:is(.phone-frame.fit-lime-shell.chat-identity,.phone-frame.fit-lime-shell.chat-identity *,body > .chat-sheet-backdrop.fit-lime-chat-sheet,body > .chat-sheet-backdrop.fit-lime-chat-sheet *,#root:has(> .phone-frame.fit-lime-shell.chat-identity) ~ .fullscreen-image-viewer,#root:has(> .phone-frame.fit-lime-shell.chat-identity) ~ .fullscreen-image-viewer *)) {
+    font-size: 11px
+}
+.chat-reply-quote:where(:is(.phone-frame.fit-lime-shell.chat-identity,.phone-frame.fit-lime-shell.chat-identity *,body > .chat-sheet-backdrop.fit-lime-chat-sheet,body > .chat-sheet-backdrop.fit-lime-chat-sheet *,#root:has(> .phone-frame.fit-lime-shell.chat-identity) ~ .fullscreen-image-viewer,#root:has(> .phone-frame.fit-lime-shell.chat-identity) ~ .fullscreen-image-viewer *)) {
+    border-left: 3px solid var(--accent);
+    color: var(--fg)
+}
+.chat-reply-quote strong:where(:is(.phone-frame.fit-lime-shell.chat-identity,.phone-frame.fit-lime-shell.chat-identity *,body > .chat-sheet-backdrop.fit-lime-chat-sheet,body > .chat-sheet-backdrop.fit-lime-chat-sheet *,#root:has(> .phone-frame.fit-lime-shell.chat-identity) ~ .fullscreen-image-viewer,#root:has(> .phone-frame.fit-lime-shell.chat-identity) ~ .fullscreen-image-viewer *)) {
+    font-size: 11px
+}
+.chat-reply-quote span:where(:is(.phone-frame.fit-lime-shell.chat-identity,.phone-frame.fit-lime-shell.chat-identity *,body > .chat-sheet-backdrop.fit-lime-chat-sheet,body > .chat-sheet-backdrop.fit-lime-chat-sheet *,#root:has(> .phone-frame.fit-lime-shell.chat-identity) ~ .fullscreen-image-viewer,#root:has(> .phone-frame.fit-lime-shell.chat-identity) ~ .fullscreen-image-viewer *)) {
+    font-size: 12px
+}
+.chat-day-divider:where(:is(.phone-frame.fit-lime-shell.chat-identity,.phone-frame.fit-lime-shell.chat-identity *,body > .chat-sheet-backdrop.fit-lime-chat-sheet,body > .chat-sheet-backdrop.fit-lime-chat-sheet *,#root:has(> .phone-frame.fit-lime-shell.chat-identity) ~ .fullscreen-image-viewer,#root:has(> .phone-frame.fit-lime-shell.chat-identity) ~ .fullscreen-image-viewer *)) {
+    border-radius: var(--radius-pill);
+    font-weight: var(--weight-semibold, 600)
+}
+.chat-unread-divider:where(:is(.phone-frame.fit-lime-shell.chat-identity,.phone-frame.fit-lime-shell.chat-identity *,body > .chat-sheet-backdrop.fit-lime-chat-sheet,body > .chat-sheet-backdrop.fit-lime-chat-sheet *,#root:has(> .phone-frame.fit-lime-shell.chat-identity) ~ .fullscreen-image-viewer,#root:has(> .phone-frame.fit-lime-shell.chat-identity) ~ .fullscreen-image-viewer *)) {
+    font-weight: var(--weight-bold)
+}
+.chat-new-button:where(:is(.phone-frame.fit-lime-shell.chat-identity,.phone-frame.fit-lime-shell.chat-identity *,body > .chat-sheet-backdrop.fit-lime-chat-sheet,body > .chat-sheet-backdrop.fit-lime-chat-sheet *,#root:has(> .phone-frame.fit-lime-shell.chat-identity) ~ .fullscreen-image-viewer,#root:has(> .phone-frame.fit-lime-shell.chat-identity) ~ .fullscreen-image-viewer *)) {
+    font-size: 12px
+}
+.chat-new-button b:where(:is(.phone-frame.fit-lime-shell.chat-identity,.phone-frame.fit-lime-shell.chat-identity *,body > .chat-sheet-backdrop.fit-lime-chat-sheet,body > .chat-sheet-backdrop.fit-lime-chat-sheet *,#root:has(> .phone-frame.fit-lime-shell.chat-identity) ~ .fullscreen-image-viewer,#root:has(> .phone-frame.fit-lime-shell.chat-identity) ~ .fullscreen-image-viewer *)) {
+    border-radius: var(--radius-pill);
+    font-size: 10px
+}
+.chat-composer-context:where(:is(.phone-frame.fit-lime-shell.chat-identity,.phone-frame.fit-lime-shell.chat-identity *,body > .chat-sheet-backdrop.fit-lime-chat-sheet,body > .chat-sheet-backdrop.fit-lime-chat-sheet *,#root:has(> .phone-frame.fit-lime-shell.chat-identity) ~ .fullscreen-image-viewer,#root:has(> .phone-frame.fit-lime-shell.chat-identity) ~ .fullscreen-image-viewer *)) {
+    border-left: 3px solid var(--accent);
+    border-radius: 10px
+}
+.chat-composer-context strong:where(:is(.phone-frame.fit-lime-shell.chat-identity,.phone-frame.fit-lime-shell.chat-identity *,body > .chat-sheet-backdrop.fit-lime-chat-sheet,body > .chat-sheet-backdrop.fit-lime-chat-sheet *,#root:has(> .phone-frame.fit-lime-shell.chat-identity) ~ .fullscreen-image-viewer,#root:has(> .phone-frame.fit-lime-shell.chat-identity) ~ .fullscreen-image-viewer *)) {
+    font-size: 12px
+}
+.chat-composer-context span:where(:is(.phone-frame.fit-lime-shell.chat-identity,.phone-frame.fit-lime-shell.chat-identity *,body > .chat-sheet-backdrop.fit-lime-chat-sheet,body > .chat-sheet-backdrop.fit-lime-chat-sheet *,#root:has(> .phone-frame.fit-lime-shell.chat-identity) ~ .fullscreen-image-viewer,#root:has(> .phone-frame.fit-lime-shell.chat-identity) ~ .fullscreen-image-viewer *)) {
+    color: var(--muted);
+    font-size: 12px
+}
+.chat-composer-context button:where(:is(.phone-frame.fit-lime-shell.chat-identity,.phone-frame.fit-lime-shell.chat-identity *,body > .chat-sheet-backdrop.fit-lime-chat-sheet,body > .chat-sheet-backdrop.fit-lime-chat-sheet *,#root:has(> .phone-frame.fit-lime-shell.chat-identity) ~ .fullscreen-image-viewer,#root:has(> .phone-frame.fit-lime-shell.chat-identity) ~ .fullscreen-image-viewer *)) {
+    background: transparent;
+    color: var(--muted)
+}
+.chat-photo-preview img:where(:is(.phone-frame.fit-lime-shell.chat-identity,.phone-frame.fit-lime-shell.chat-identity *,body > .chat-sheet-backdrop.fit-lime-chat-sheet,body > .chat-sheet-backdrop.fit-lime-chat-sheet *,#root:has(> .phone-frame.fit-lime-shell.chat-identity) ~ .fullscreen-image-viewer,#root:has(> .phone-frame.fit-lime-shell.chat-identity) ~ .fullscreen-image-viewer *)) {
+    border-radius: 14px
+}
+.chat-photo-preview button:where(:is(.phone-frame.fit-lime-shell.chat-identity,.phone-frame.fit-lime-shell.chat-identity *,body > .chat-sheet-backdrop.fit-lime-chat-sheet,body > .chat-sheet-backdrop.fit-lime-chat-sheet *,#root:has(> .phone-frame.fit-lime-shell.chat-identity) ~ .fullscreen-image-viewer,#root:has(> .phone-frame.fit-lime-shell.chat-identity) ~ .fullscreen-image-viewer *)) {
+    border: 2px solid var(--frame-bg);
+    border-radius: 50%;
+    background: var(--fg);
+    color: var(--frame-bg)
+}
+.chat-photo-error:where(:is(.phone-frame.fit-lime-shell.chat-identity,.phone-frame.fit-lime-shell.chat-identity *,body > .chat-sheet-backdrop.fit-lime-chat-sheet,body > .chat-sheet-backdrop.fit-lime-chat-sheet *,#root:has(> .phone-frame.fit-lime-shell.chat-identity) ~ .fullscreen-image-viewer,#root:has(> .phone-frame.fit-lime-shell.chat-identity) ~ .fullscreen-image-viewer *)) {
+    color: var(--danger);
+    font-size: 12px
+}
+.chat-action-sheet:where(:is(.phone-frame.fit-lime-shell.chat-identity,.phone-frame.fit-lime-shell.chat-identity *,body > .chat-sheet-backdrop.fit-lime-chat-sheet,body > .chat-sheet-backdrop.fit-lime-chat-sheet *,#root:has(> .phone-frame.fit-lime-shell.chat-identity) ~ .fullscreen-image-viewer,#root:has(> .phone-frame.fit-lime-shell.chat-identity) ~ .fullscreen-image-viewer *)) {
+    border: 1px solid var(--border)
+}
+.chat-sheet-handle:where(:is(.phone-frame.fit-lime-shell.chat-identity,.phone-frame.fit-lime-shell.chat-identity *,body > .chat-sheet-backdrop.fit-lime-chat-sheet,body > .chat-sheet-backdrop.fit-lime-chat-sheet *,#root:has(> .phone-frame.fit-lime-shell.chat-identity) ~ .fullscreen-image-viewer,#root:has(> .phone-frame.fit-lime-shell.chat-identity) ~ .fullscreen-image-viewer *)) {
+    border-radius: var(--radius-pill);
+    background: var(--border-strong)
+}
+.chat-action-sheet button:where(:is(.phone-frame.fit-lime-shell.chat-identity,.phone-frame.fit-lime-shell.chat-identity *,body > .chat-sheet-backdrop.fit-lime-chat-sheet,body > .chat-sheet-backdrop.fit-lime-chat-sheet *,#root:has(> .phone-frame.fit-lime-shell.chat-identity) ~ .fullscreen-image-viewer,#root:has(> .phone-frame.fit-lime-shell.chat-identity) ~ .fullscreen-image-viewer *)) {
+    border-radius: 13px;
+    background: transparent
+}
+.chat-action-sheet button:hover:where(:is(.phone-frame.fit-lime-shell.chat-identity,.phone-frame.fit-lime-shell.chat-identity *,body > .chat-sheet-backdrop.fit-lime-chat-sheet,body > .chat-sheet-backdrop.fit-lime-chat-sheet *,#root:has(> .phone-frame.fit-lime-shell.chat-identity) ~ .fullscreen-image-viewer,#root:has(> .phone-frame.fit-lime-shell.chat-identity) ~ .fullscreen-image-viewer *)) {
+    background: var(--surface-sunken)
+}
+.chat-action-sheet p:where(:is(.phone-frame.fit-lime-shell.chat-identity,.phone-frame.fit-lime-shell.chat-identity *,body > .chat-sheet-backdrop.fit-lime-chat-sheet,body > .chat-sheet-backdrop.fit-lime-chat-sheet *,#root:has(> .phone-frame.fit-lime-shell.chat-identity) ~ .fullscreen-image-viewer,#root:has(> .phone-frame.fit-lime-shell.chat-identity) ~ .fullscreen-image-viewer *)) {
+    color: var(--danger);
+    font-size: 12px
+}
+.fullscreen-image-viewer:where(:is(.phone-frame.fit-lime-shell.chat-identity,.phone-frame.fit-lime-shell.chat-identity *,body > .chat-sheet-backdrop.fit-lime-chat-sheet,body > .chat-sheet-backdrop.fit-lime-chat-sheet *,#root:has(> .phone-frame.fit-lime-shell.chat-identity) ~ .fullscreen-image-viewer,#root:has(> .phone-frame.fit-lime-shell.chat-identity) ~ .fullscreen-image-viewer *)) {
+    background: #111;
+    color: #fff
+}
+.fullscreen-image-viewer header button:where(:is(.phone-frame.fit-lime-shell.chat-identity,.phone-frame.fit-lime-shell.chat-identity *,body > .chat-sheet-backdrop.fit-lime-chat-sheet,body > .chat-sheet-backdrop.fit-lime-chat-sheet *,#root:has(> .phone-frame.fit-lime-shell.chat-identity) ~ .fullscreen-image-viewer,#root:has(> .phone-frame.fit-lime-shell.chat-identity) ~ .fullscreen-image-viewer *)) {
+    border-radius: 13px;
+    background: #2a2a2a;
+    color: #fff
+}
+.fullscreen-image-controls button:where(:is(.phone-frame.fit-lime-shell.chat-identity,.phone-frame.fit-lime-shell.chat-identity *,body > .chat-sheet-backdrop.fit-lime-chat-sheet,body > .chat-sheet-backdrop.fit-lime-chat-sheet *,#root:has(> .phone-frame.fit-lime-shell.chat-identity) ~ .fullscreen-image-viewer,#root:has(> .phone-frame.fit-lime-shell.chat-identity) ~ .fullscreen-image-viewer *)) {
+    border-radius: 50%;
+    background: #2a2a2a;
+    color: #fff;
+    font-size: 24px
+}
+.fullscreen-image-controls span:where(:is(.phone-frame.fit-lime-shell.chat-identity,.phone-frame.fit-lime-shell.chat-identity *,body > .chat-sheet-backdrop.fit-lime-chat-sheet,body > .chat-sheet-backdrop.fit-lime-chat-sheet *,#root:has(> .phone-frame.fit-lime-shell.chat-identity) ~ .fullscreen-image-viewer,#root:has(> .phone-frame.fit-lime-shell.chat-identity) ~ .fullscreen-image-viewer *)) {
+    color: #ddd;
+    font-size: 12px
+}
+.fullscreen-image-viewer > p:where(:is(.phone-frame.fit-lime-shell.chat-identity,.phone-frame.fit-lime-shell.chat-identity *,body > .chat-sheet-backdrop.fit-lime-chat-sheet,body > .chat-sheet-backdrop.fit-lime-chat-sheet *,#root:has(> .phone-frame.fit-lime-shell.chat-identity) ~ .fullscreen-image-viewer,#root:has(> .phone-frame.fit-lime-shell.chat-identity) ~ .fullscreen-image-viewer *)) {
+    color: #ffaaa4;
+    font-size: 12px
+}
+.chat-notice:where(:is(.phone-frame.fit-lime-shell.chat-identity,.phone-frame.fit-lime-shell.chat-identity *,body > .chat-sheet-backdrop.fit-lime-chat-sheet,body > .chat-sheet-backdrop.fit-lime-chat-sheet *,#root:has(> .phone-frame.fit-lime-shell.chat-identity) ~ .fullscreen-image-viewer,#root:has(> .phone-frame.fit-lime-shell.chat-identity) ~ .fullscreen-image-viewer *)) {
+    border-radius: var(--radius-pill);
+    background: var(--fg);
+    color: var(--frame-bg);
+    font-size: 12px
+}
+.chat-meeting-card:where(:is(.phone-frame.fit-lime-shell.chat-identity,.phone-frame.fit-lime-shell.chat-identity *,body > .chat-sheet-backdrop.fit-lime-chat-sheet,body > .chat-sheet-backdrop.fit-lime-chat-sheet *,#root:has(> .phone-frame.fit-lime-shell.chat-identity) ~ .fullscreen-image-viewer,#root:has(> .phone-frame.fit-lime-shell.chat-identity) ~ .fullscreen-image-viewer *)) {
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md,16px)
+}
+.chat-meeting-card time:where(:is(.phone-frame.fit-lime-shell.chat-identity,.phone-frame.fit-lime-shell.chat-identity *,body > .chat-sheet-backdrop.fit-lime-chat-sheet,body > .chat-sheet-backdrop.fit-lime-chat-sheet *,#root:has(> .phone-frame.fit-lime-shell.chat-identity) ~ .fullscreen-image-viewer,#root:has(> .phone-frame.fit-lime-shell.chat-identity) ~ .fullscreen-image-viewer *)) {
+    color: var(--text-muted);
+    font-size: 12px
+}
+.fit-video-meeting:where(:is(.phone-frame.fit-lime-shell.chat-identity,.phone-frame.fit-lime-shell.chat-identity *,body > .chat-sheet-backdrop.fit-lime-chat-sheet,body > .chat-sheet-backdrop.fit-lime-chat-sheet *,#root:has(> .phone-frame.fit-lime-shell.chat-identity) ~ .fullscreen-image-viewer,#root:has(> .phone-frame.fit-lime-shell.chat-identity) ~ .fullscreen-image-viewer *)) {
+    border: 0
+}
+.fit-video-meeting:where(:is(.phone-frame.fit-lime-shell.chat-identity,.phone-frame.fit-lime-shell.chat-identity *,body > .chat-sheet-backdrop.fit-lime-chat-sheet,body > .chat-sheet-backdrop.fit-lime-chat-sheet *,#root:has(> .phone-frame.fit-lime-shell.chat-identity) ~ .fullscreen-image-viewer,#root:has(> .phone-frame.fit-lime-shell.chat-identity) ~ .fullscreen-image-viewer *))::backdrop {
+    background: var(--bg)
+}
+.fit-video-meeting h2:where(:is(.phone-frame.fit-lime-shell.chat-identity,.phone-frame.fit-lime-shell.chat-identity *,body > .chat-sheet-backdrop.fit-lime-chat-sheet,body > .chat-sheet-backdrop.fit-lime-chat-sheet *,#root:has(> .phone-frame.fit-lime-shell.chat-identity) ~ .fullscreen-image-viewer,#root:has(> .phone-frame.fit-lime-shell.chat-identity) ~ .fullscreen-image-viewer *)) {
+    font-size: 20px
+}
+.fit-video-meeting header p:where(:is(.phone-frame.fit-lime-shell.chat-identity,.phone-frame.fit-lime-shell.chat-identity *,body > .chat-sheet-backdrop.fit-lime-chat-sheet,body > .chat-sheet-backdrop.fit-lime-chat-sheet *,#root:has(> .phone-frame.fit-lime-shell.chat-identity) ~ .fullscreen-image-viewer,#root:has(> .phone-frame.fit-lime-shell.chat-identity) ~ .fullscreen-image-viewer *)) {
+    color: var(--text-muted)
+}
+.meeting-stage:where(:is(.phone-frame.fit-lime-shell.chat-identity,.phone-frame.fit-lime-shell.chat-identity *,body > .chat-sheet-backdrop.fit-lime-chat-sheet,body > .chat-sheet-backdrop.fit-lime-chat-sheet *,#root:has(> .phone-frame.fit-lime-shell.chat-identity) ~ .fullscreen-image-viewer,#root:has(> .phone-frame.fit-lime-shell.chat-identity) ~ .fullscreen-image-viewer *)) {
+    background: var(--surface-sunken);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md,16px)
+}
+.meeting-stage video:where(:is(.phone-frame.fit-lime-shell.chat-identity,.phone-frame.fit-lime-shell.chat-identity *,body > .chat-sheet-backdrop.fit-lime-chat-sheet,body > .chat-sheet-backdrop.fit-lime-chat-sheet *,#root:has(> .phone-frame.fit-lime-shell.chat-identity) ~ .fullscreen-image-viewer,#root:has(> .phone-frame.fit-lime-shell.chat-identity) ~ .fullscreen-image-viewer *)) {
+    background: var(--surface-sunken)
+}
+.meeting-self-video:where(:is(.phone-frame.fit-lime-shell.chat-identity,.phone-frame.fit-lime-shell.chat-identity *,body > .chat-sheet-backdrop.fit-lime-chat-sheet,body > .chat-sheet-backdrop.fit-lime-chat-sheet *,#root:has(> .phone-frame.fit-lime-shell.chat-identity) ~ .fullscreen-image-viewer,#root:has(> .phone-frame.fit-lime-shell.chat-identity) ~ .fullscreen-image-viewer *)) {
+    border-radius: var(--radius-sm,12px);
+    border: 1px solid var(--border)
+}
+.meeting-placeholder:where(:is(.phone-frame.fit-lime-shell.chat-identity,.phone-frame.fit-lime-shell.chat-identity *,body > .chat-sheet-backdrop.fit-lime-chat-sheet,body > .chat-sheet-backdrop.fit-lime-chat-sheet *,#root:has(> .phone-frame.fit-lime-shell.chat-identity) ~ .fullscreen-image-viewer,#root:has(> .phone-frame.fit-lime-shell.chat-identity) ~ .fullscreen-image-viewer *)) {
+    color: var(--text-muted)
+}
+.meeting-camera-off:where(:is(.phone-frame.fit-lime-shell.chat-identity,.phone-frame.fit-lime-shell.chat-identity *,body > .chat-sheet-backdrop.fit-lime-chat-sheet,body > .chat-sheet-backdrop.fit-lime-chat-sheet *,#root:has(> .phone-frame.fit-lime-shell.chat-identity) ~ .fullscreen-image-viewer,#root:has(> .phone-frame.fit-lime-shell.chat-identity) ~ .fullscreen-image-viewer *)) {
+    background: var(--surface);
+    font-size: 12px
+}
+.meeting-controls button:where(:is(.phone-frame.fit-lime-shell.chat-identity,.phone-frame.fit-lime-shell.chat-identity *,body > .chat-sheet-backdrop.fit-lime-chat-sheet,body > .chat-sheet-backdrop.fit-lime-chat-sheet *,#root:has(> .phone-frame.fit-lime-shell.chat-identity) ~ .fullscreen-image-viewer,#root:has(> .phone-frame.fit-lime-shell.chat-identity) ~ .fullscreen-image-viewer *)) {
+    font-size: 12px
+}
+@media (min-width:760px) {
+    .fit-video-meeting:where(:is(.phone-frame.fit-lime-shell.chat-identity,.phone-frame.fit-lime-shell.chat-identity *,body > .chat-sheet-backdrop.fit-lime-chat-sheet,body > .chat-sheet-backdrop.fit-lime-chat-sheet *,#root:has(> .phone-frame.fit-lime-shell.chat-identity) ~ .fullscreen-image-viewer,#root:has(> .phone-frame.fit-lime-shell.chat-identity) ~ .fullscreen-image-viewer *)) {
+        border: 1px solid var(--border);
+        border-radius: var(--radius-lg,24px)
+    }
+}
+
 /* Stage 3, point 19: trainer conversation. Nothing outside the two-user flag changes. */
 .fit-lime-shell.chat-identity .content-immersive:has(.chat-conversation-page) {
   overflow: hidden;

@@ -6,7 +6,7 @@ import {createHash} from 'node:crypto'
 import {editorPageSelector,editorOwnerFilter,editorMigrationGuard,editorFamilies,editorOwnerSelectors,editorKnownGuards} from './lime-editor-skin.contract'
 // MC519 reuses this read-only reader with an explicit library contract. The
 // default contract and every existing editor assertion remain unchanged.
-export type NativeWorkoutSkinContract={selector:string;families:string[];knownGuards:string[];migrationGuard:string;ownerFilter:string;ownerSelectors:string[];additionalPaintProperties?:string[];additionalCaptureProperties?:string[];captureDOM?:boolean;captureSelectState?:boolean;captureRootSelector?:string;excludedPaintProperties?:string[]}
+export type NativeWorkoutSkinContract={selector:string;families:string[];knownGuards:string[];migrationGuard:string;ownerFilter:string;ownerSelectors:string[];additionalPaintProperties?:string[];additionalCaptureProperties?:string[];captureDOM?:boolean;captureSelectState?:boolean;captureRootSelector?:string;backgroundRootSelector?:string;excludedPaintProperties?:string[]}
 const editorSkinContract:NativeWorkoutSkinContract={selector:editorPageSelector,families:editorFamilies,knownGuards:[workoutListMigrationGuard,libraryMigrationGuard,...editorKnownGuards],migrationGuard:editorMigrationGuard,ownerFilter:editorOwnerFilter,ownerSelectors:editorOwnerSelectors}
 // Passive image-request metadata distinguishes real loading from untouched lazy
 // images. No image source/loading attribute or browser API is changed.
@@ -117,7 +117,7 @@ export async function probeEditorSkin(page:Page,screenshot?:string,selectorOverr
  expect(result.classifierBorderChecks).toEqual({fullZeroNeutral:true,sideZeroNeutral:true,colorPaint:true,borderPaint:true,explicitColorOnZeroPaint:true})
  expect(result.classifierGuardChecks).toEqual({known:true,unknownRetained:true});expect(result.selectedPositiveOwners).toEqual([])
  expect(result.classifierOwnerChecks).toHaveLength(contract.ownerSelectors.length);expect(result.classifierOwnerChecks.every(c=>c.retained&&!c.legacy)).toBe(true)
- const backdrop=await page.locator(selector).evaluateAll(nodes=>nodes.map(n=>getComputedStyle(n).backgroundColor)),frameBackground=await page.locator('.phone-frame').evaluate(n=>getComputedStyle(n).backgroundColor)
+ const backdrop=await page.locator(selector).evaluateAll(nodes=>nodes.map(n=>getComputedStyle(n).backgroundColor)),frameBackground=await page.locator(contract.backgroundRootSelector??'.phone-frame').evaluate(n=>getComputedStyle(n).backgroundColor)
  if(screenshot)await page.screenshot({path:screenshot,animations:'allow',caret:'initial'})
  await settleEditorPaint(page,selector,contract)
  const after=await captureEditorSkin(page,selector,contract.families,contract.additionalCaptureProperties??[],contract.captureSelectState??false,contract.captureRootSelector??'.phone-frame'),stateAfter=await state()
