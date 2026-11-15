@@ -341,6 +341,94 @@ Attempt1 завершён: 33 CI jobs SUCCESS, WebKit visual4/4 и зависи�
 
 Продолжение15.11: актуализация2087 и аудит migration/recovery ведутся в существующем [плане вывода Supabase](SUPABASE_DECOMMISSION_PLAN_20261023.md#sb-native-ops-03--безопасная-актуализация-pr2087--15112026); рабочие пути и границы удаления зафиксированы там.
 
+
+## Итерация 4 — небольшой безопасный остаток после PR2087 — 15.11.2026
+
+Задача владельца: следующий безопасный пакет, рабочие сценарии и граница Fit16
+сохраняются. База main3bc55ab3 (2087 MERGED), своя прежняя копия переиспользована.
+
+| Объект | Доказательство отсутствия рабочего вызова | Сохранение контракта |
+| --- | --- | --- |
+| 13 named aliases в src/test/native-backend.ts | Все tracked imports, включая e2e harness, используют только nativeBackend/exercisesRepository/appFeedbackRepository | Эти3экспорта, сама composition и media fixture сохранены |
+| SYSTEM_EXERCISE_CATALOG_VERSION | Только импорт и toBe(16) в собственном тесте | Данные каталога,39test cases и содержательные assertions прежние |
+| readNutritionPilot | Старый UUID parser вызывается только собственным тестом; server использует readNativeNutritionPilot | Native fail-closed/cohort/duplicates/disabled tests, diary/draft UUID validation сохраняются |
+| diagnosticAllowed | Старый email gate истёк18.09 и не вызывается runtime | PrivateSummaryDiagnostic и2живых requestYandexSummary diagnostic tests остаются |
+
+Уточнение прежнего инвентаря: не3, а13 test aliases лишние. Поиск одинаковых имён
+по всему репозиторию ошибочно связывал остальные с несвязанными product/mock
+объявлениями. Проверены именно импорты модуля, namespace/dynamic enumeration нет.
+Удаление test aliases не удаляет ни один сервис nativeBackend.
+
+В API дополнительно найдены12 runtime-недостижимых экспортов, оставленных для
+следующего отдельного пакета после карты assertions к живым путям:
+-5self-service helpers (authorizeSummaryActor/clientVisibleSummary/cache/empty/
+HTTP-error) → DatabasePilotTrainingSummaryService/RLS; живой parseYandexJson
+сохранить. Старое разрешение connected trainer не переносить в более строгий
+нынешний приватный summary-контракт;
+-completedWorkoutsInPeriod → реальная SQL-выборка training-summary.ts;
+-requestYandexSummaryDeduplicated → действующий DB generation guard;
+-runNativePilotAssistantTurn → DatabasePilotAssistantTurnRunner.runTurn,
+сохранить idempotency/turn-id reuse/persisted action ID assertions;
+-summaryTurn/allowsAssistantAction/createProgramTurn/createClientTurn → живые
+programPilotTurn/assistantNavigationTurn/recordWorkoutTurn. Исторические tool
+validators и общие matching helpers всё ещё используются, их не удалять.
+
+Сохранены доказанно полезные test/операторские объекты: resetYandexPlatformRequestStateForTests,
+workoutHomeSummaries/computeClientStats (e2e fixtures),83-card reviewed media inventory,
+withActorTransaction, programPlanFromTemplate/prescribeProgram и USDA provenance.
+Direct program service имеет отдельный незакрытый cleanup-prechannel долг;
+его crypto client helpers не удаляем по одному отсутствию imports. Самостоятельный
+CLI аудита купленного media-каталога также не orphan. Рабочие recovery/migration
+сценарии из предыдущей итерации повторно не переписываются.
+
+CSS, JSX экранов, профиль/Progress, Fit16 визуальные тесты, CI/deploy, зависимости,
+БД/данные/реальные настройки не затрагиваются. Новые тесты/оси не добавляются;
+снятые self-tests относятся только к прекращённым реализациям. Приёмка впереди.
+
+Итерация4 опубликована в PR2124, headc741d222a1e6e53c9063f8e3da267479c6edb804.
+Целевые39catalog+14API cases PASS. Независимый review подтвердил отсутствие
+живых consumers удалённых export/gates и сохранность session/RLS/privacy paths.
+Полный npm run check PASS, exit0; fit-storage20261115-200830-9bcca555 закреплён:
+frontend3207/359files, coverage83.21/78.2/82.19/88.07; API1638passed/475conditional
+skips без localPG (минус ровно2obsolete self-cases), infra475passed; lint/types/
+policies/build/startup PASS. Production frontend bundle index-B9-uzUoP.js прежний,
+ускорение/уменьшение runtime от этой небольшой уборки не заявляется.
+Классификатор exactbase3bc55ab3/headc741d222 требует полный browser/frontend CI.
+CI43739544083/Android43739544145 выполняются. Merge/deploy не выполнялись.
+
+CI43739544083 attempt1:33SUCCESS, job132890097212 e2e-yandex-auth(1/4)
+и зависимыйe2e FAIL. Причина job:3Fit16 library/editor skin cases превысили30s
+(467passed,44.5min): client-light-390-favorite-editor-true,
+trainer-dark-430-template-editor-true, trainer-dark-390-clarify-true-false.
+Timeout случался в CSSOM/state/style handle probes, а в одном retry после
+выбора уточнения упражнений. Эти тесты/UI/CSS не менялись; frontend bundle
+совпадает с предыдущим зелёным2087. Причина задержек не объявляется доказанной.
+После завершения всего первого workflow принят один адресный rerun failedjob
+и gate в21:16МСК, без изменения source/assertions/timeouts/retries. Log сохранён
+в pinnedrun20261115-200830-9bcca555/ci-auth1-attempt1.log. Повторное падение
+не будет скрыто очередными перезапусками или исправлениями чужой Fit16 области.
+
+Итог единственного повтора CI43739544083: job132908715736 FAIL, те же3cases
+превысили30s,467passed(43.1min). На этот раз stops в CSSOM/state/style-handle/
+fonts-ready probes; ни одна причина задержки не объявлена окончательно установленной.
+Лог pinnedrun20261115-200830-9bcca555/ci-auth1-attempt2.log. Проверенный checkout
+первогоjob c97011ab — mergec741d222 в3bc55ab3, база CI совпадала с локальной.
+GitHub exactheadc741d222:34checksSUCCESS/2FAILURE(job+gate)/1штатныйSKIPPED.
+Локальные проверкиPASS, но общая приёмкаBLOCKED; PR2124 переводится вdraft,
+merge/auto-merge/deploy не выполняются. Повторных rerun больше не запускаем,
+таймауты/гейты/тесты не ослабляем, Fit16 файлы не редактируем и его чат не читаем.
+Условие продолжения: устранён воспроизводимый timeout соответствующих Fit16
+probes или подтверждена/исправлена причина среды; затем актуальный main/head
+и штатная приёмка. Код текущей очистки сохраняется для review, готовность к
+слиянию не заявляется. Оба watcher завершены; новая автоматизация не создавалась.
+
+
+Уточнение 16.11: перечень 12 AI-кандидатов выше — историческое состояние
+итерации 4. Все 12 разобраны и сняты в уже слитом PR2126 (итерация 5 ниже),
+карта переноса assertions сохранена. Для connected trainer действует актуальная
+migration000149: сводку видит текущий активный тренер, прежний после disconnect
+теряет доступ. Это проверено реальным native/RLS-тестом; рабочая логика не менялась.
+
 ## Итерация 5 — оставшиеся 12 AI-кандидатов — 15.11.2026 — Codex / OpenAI
 
 Основание: Антон поручил разобрать 12 оставшихся AI-кандидатов, перенести
@@ -483,3 +571,33 @@ GitHub-очередь: открыты только 2124/2126. За время CI
 прочитан только изменившийся пункт CURRENT_STATE. Собственная очистка прежняя;
 новый main включается как upstream, без самостоятельных правок Fit16.
 Совместная версия проходит новую локальную проверку и CI до слияния.
+
+Совместный head `f81b1bbb39157df37059c32ca8d8eba37830a3e8` опубликован.
+Полный локальный `npm run check` завершён exit 0, закреплённая квитанция
+`20261115-233551-e192a777`: frontend/API lint/types/tests, policies,
+обе сборки и startup PASS. Код API/перенесённых summary-проверок относительно
+прошлого зелёного `619cc22f` побайтно прежний; PostgreSQL также проходит в
+новом CI. CI `43759043668` / Android `43759043641` выполняются, свой watcher
+с паузой 90s; эта локальная квитанция не меняет опубликованный head.
+
+16.11.2026: совместный `f81b1bbb` прошёл CI43759043668 (35 SUCCESS) и
+Android43759043641 (assemble SUCCESS / штатный auth-smoke SKIPPED), без rerun.
+Квитанция `20261115-233740-04d9344d` закрепляется. Перед merge подтверждены
+main `d6e1840a`, CLEAN/MERGEABLE, точный head, 36 SUCCESS / 1 SKIPPED.
+Очередь: открыты только наши 2124/2126; Антон прямо указал 2126 первым.
+PR2126 MERGED 16.11 в 00:20:23 МСК, squash
+`1568a09b55fa098f9aa943306008d79c5ce0dfcb`; readback GitHub подтверждён.
+Далее — актуализация/приёмка/merge PR2124, затем дополнительный аудит остатков.
+Слияние не выдаётся за подтверждённую production-доставку.
+
+
+### Приёмка PR2124 после слияния PR2126 — 16.11.2026
+
+Антон разрешил слияние обоих пакетов в порядке 2126 → 2124, затем дальнейший
+аудит остатков. PR2126 уже слит в main1568a09b. Ветка2124 актуализируется от
+этого main; единственный конфликт был в конце данного журнала. Сохранены
+итерации4/5 и обе карты assertions, локальные квитанции прежних запусков.
+Runtime/API/test-файлы объединились без конфликтов. Старое падение c741d222
+не является вердиктом новой версии: upstream включает passive UI checks
+из2122 и MC5.6; наши skin/UI-файлы не меняются. Для нового head выполняются
+полный local check и CI, гейты/таймауты/продуктовые механики не ослабляются.

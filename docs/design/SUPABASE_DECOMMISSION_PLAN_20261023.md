@@ -828,3 +828,25 @@ positive code assertion и двумя прямыми undefined assertions для
 SQL-история, зависимости и deploy не меняются. Единственное удаление workflow —
 прекращённый nutrition inspector. Главный список результатов этой итерации здесь;
 общий аудит UNUSED_CODE_CLEANUP ссылается на него. Проверки нового head впереди.
+
+Проверка head537ff7e0: целевые30Node cases PASS0.115s и33migration cases
+PASS0.207s; повторный review подтвердил byte-identical validator и8native
+callbacks, отсутствие restore diff и перенос обоих negative conflict assertions.
+Полный npm run check PASS, exit0, fit-storage20261115-183711-c8889505 закреплён:
+frontend3207/359files, coverage83.22/78.2/82.19/88.08; API1640passed/475conditional
+skips без localPG, infra475passed, остальные policy/lint/types/build/startup PASS.
+Прогон начат до правки только ошибочной цифры тестов в журнале; source идентичен,
+docs checker повторён после правки. Сравнение timing до/после не проводилось.
+PR2087 обновлён обычным non-force push с b7601e7b на537ff7e0, без нового
+параллельного PR. CI43731042828/Android43731043043 выполняются. Merge/deploy
+не выполнены, конфигурация и данные не менялись.
+
+Итоговая приёмка15.11: CI43731042828 — SUCCESS,35jobs; Android43731043043 —
+assembleSUCCESS и1штатный auth-smokeSKIPPED. Всего36SUCCESS/1SKIPPED, первый
+запуск head537ff7e07a8edbe8dd6103b393ff4e0a23ea9454 без повторов и ослаблений.
+Проверены PostgreSQL и полная browser/visual/native-auth матрица. GitHub readback
+подтверждает тот же head и OPEN PR2087. Слияние/production не выполнялись.
+Финальные квитанции добавлены локально после проверенного коммита и в PRbody;
+source head после CI не менялся.
+
+По следующему прямому разрешению Антона PR2087 слит15.11.2026 в19:59:20МСК: squash3bc55ab36c41189a62202a91b39bff8b6ca6e6b2. Перед merge подтверждены main3140a1cb, exact head537ff7e0 CLEAN/MERGEABLE и36SUCCESS/1штатныйSKIPPED; более ранних open PR нет. GitHub readback MERGED подтверждён. Проверки не повторялись: код и main не изменились. Отдельный production deploy не запускался; локальная квитанция и PRbody отражают merge, не доказательство доставки.

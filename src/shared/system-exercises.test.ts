@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { SYSTEM_EXERCISES, SYSTEM_EXERCISE_CATALOG, SYSTEM_EXERCISE_CATALOG_VERSION } from './system-exercises'
+import { SYSTEM_EXERCISES, SYSTEM_EXERCISE_CATALOG } from './system-exercises'
 import { IMPORTED_EXERCISES } from './system-exercises.generated'
 import { BASE_EXERCISES } from './system-exercises.base.generated'
 import { CATALOG_EXPANSION } from './system-exercises.expansion.generated'
@@ -32,7 +32,6 @@ const EXERCISE_VIDEO_PATHS = new Set(
 
 describe('system exercise catalog', () => {
   it('matches the current catalog contract', () => {
-    expect(SYSTEM_EXERCISE_CATALOG_VERSION).toBe(16)
     expect(SYSTEM_EXERCISES).toHaveLength(49)
     expect(new Set(SYSTEM_EXERCISES.map((exercise) => exercise.ref)).size).toBe(49)
     expect(new Set(SYSTEM_EXERCISES.map((exercise) => exercise.name)).size).toBe(49)
