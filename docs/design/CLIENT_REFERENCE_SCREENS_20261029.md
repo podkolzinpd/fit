@@ -12176,3 +12176,49 @@ MC55-CI-QUALIFIED-RETRY-01:после диагностики один контр
 не бесконечный подбор зелёного запуска. Доставка ещё не подтверждена; после
 зелёного CI дождаться API/frontend публикации и проверить immutable artifact
 против публичных HTTP bytes. Следующий MC без приёмки не начинать.
+
+
+## 277. MC5.5 — повторный timeout и эквивалентное ускорение QA
+
+15.11.2026 mainCI43716972068 attempt2: WebKit shard3 SUCCESS; Chromium
+shard1/job132841633966 повторил те же3cases favorite-editor/template-editor/
+clarify и30000ms budget. Дедлайн наступает на разных поздних пассивных чтениях
+(state/fonts/style identity/backdrop), поэтому зависание fonts или точная
+нагрузка runner не объявляются причиной. Сохранили исходный второй log:
+/tmp/fit-mc55/main-ci-second-failure.log. Нового слепого retry нет.
+PR2120 уже слит; публикация всё ещё НЕ выполнена. Публичный API health
+15.11 сообщает c736d4cadfea47a7712016737436c6776d03b116. Current main3140a1cb
+содержит231e132e; его pipeline дополнительно блокирует загрузка официального
+инструмента HTTP403 в frontend-infrastructure/job132860244881. Чужой код/CI
+не меняем, старый main в обход release gate не публикуем.
+
+Продолжение MC5.5, не следующий этап миграции. План QA follow-up:
+- MC55Q1: убрать повторную классификацию authored CSS declarations у ветвей,
+  которые не относятся к проверяемому семейству. Unconditional owner check
+  остаётся; для нужного CSSStyleRule declarations читаются один раз в рамках
+  синхронного evaluate. Между probes/состояниями/страницами кэша нет.
+- MC55Q2: доказать exact результат original/candidate на одном native DOM/CSSOM,
+  включая ненулевой OFF legacy match; затем исходный полный editor/library
+  набор в Chromium/WebKit с прежними30000ms, без skip/retry/новых ожиданий.
+- MC55Q3: сохранить app source, assertions, fixtures, CSSOM/DOM/focus/scroll,
+  media/supports, unknown/positive guards и лимиты. ESLint/diffcheck и новый
+  собственный PR CI; публикация QA follow-up только по MC-RELEASE-01.
+
+Подготовленный patch затрагивает только e2e/lime-editor-skin.probe.ts:
+family membership раньше paint classification, lazy declarations внутри одного
+CSSStyleRule. Алгоритм чистый; общий массив declaration records нигде не
+мутируется. Правила/порядок/active conditions/позитивные owners проверяются
+как прежде. Runtime приложения, workflow/config/deps/flags не менялись.
+Независимая review design_cleanup не нашла существенного риска; необходимый
+OFF контроль включён в приёмку. Не удалены ни snapshot, ни assertion.
+
+Парное чтение исходного и нового classifier в одном synchronous browser call
+на72исходных состояниях(6cases,2движка) дало exact все поля result. Исходные
+native captures/assertions также PASS; no retry/skip/flaky, timeout30000ms.
+Classifier-only сумма20233.3→7017.8ms, медиана280.5→82.4ms. Это измерение
+при фиксированном порядке legacy→candidate, не обещание3x всей CI и не
+доказательство устранения удалённого timeout. Пин20261115-183728-c3573667,
+raw124301364bytes, /tmp/fit-mc55/probe-parity-summary.json. Полный94cases и
+дополнительное paired OFF сравнение выполняются; результат не заявляется
+заранее. ФизическийiPhone/публикация не проверены. До зелёного нового CI и
+разрешения на корректирующий PR приложение не публиковать.

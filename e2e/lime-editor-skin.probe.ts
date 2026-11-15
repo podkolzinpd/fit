@@ -90,10 +90,13 @@ export async function probeEditorSkin(page:Page,screenshot?:string,selectorOverr
   const query=(s:string)=>{try{return Array.from(document.querySelectorAll(originating(s))).filter(n=>observed.has(n))}catch(error){if(CSS.supports('selector('+s+')'))throw error;unsupported.push(s);return []}}
   const selected:string[]=[],matches:string[]=[],ancestorMatches:string[]=[],pseudoMatches:string[]=[],activeMatches:string[]=[],ownerDefinitions=new Set<string>(),foundOwners=new Set<string>(),matchedLegacyPaint:{selector:string;active:boolean;nodes:number;ancestors:number;declarations:{property:string;value:string;important:boolean}[]}[]=[]
   const visit=(rules:CSSRuleList,active=true)=>{for(const rule of Array.from(rules)){
-   if(rule instanceof CSSStyleRule){for(const branch of split(rule.selectorText)){
+   if(rule instanceof CSSStyleRule){let declarations:{property:string;value:string;important:boolean}[]|undefined;for(const branch of split(rule.selectorText)){
     if(ownerSelectors.has(normalize(branch))){ownerDefinitions.add(normalize(branch));if(query(branch).length)foundOwners.add(normalize(branch))}
-    const declarations=Array.from(rule.style).filter(p=>paint(p,rule.style.getPropertyValue(p),rule.style)).map(p=>({property:p,value:rule.style.getPropertyValue(p),important:!!rule.style.getPropertyPriority(p)}))
-    if(!common.has(strip(branch))||!declarations.length)continue
+    if(!common.has(strip(branch)))continue
+    // Unrelated families need no paint classification; matching branches share
+    // this rule's immutable declarations within this synchronous read only.
+    declarations??=Array.from(rule.style).filter(p=>paint(p,rule.style.getPropertyValue(p),rule.style)).map(p=>({property:p,value:rule.style.getPropertyValue(p),important:!!rule.style.getPropertyPriority(p)}))
+    if(!declarations.length)continue
     selected.push(branch);const nodes=query(branch);if(!nodes.length)continue
     matches.push(branch);const ancestorCount=nodes.filter(n=>ancestors.has(n)).length;if(ancestorCount)ancestorMatches.push(branch);if(branch.includes('::'))pseudoMatches.push(branch);if(active)activeMatches.push(branch)
     matchedLegacyPaint.push({selector:branch,active,nodes:nodes.length,ancestors:ancestorCount,declarations})
