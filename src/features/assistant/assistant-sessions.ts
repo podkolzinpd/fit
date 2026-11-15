@@ -102,19 +102,6 @@ export function latestAssistantSurfaceAction(
     : active
 }
 
-export function latestActiveWorkoutAction(messages: readonly AssistantMessage[], conversationId?: string): AssistantActionMessage | undefined {
-  for (let index = messages.length - 1; index >= 0; index -= 1) {
-    const message = messages[index]
-    if (!message || message.conversation_id !== conversationId) continue
-    if (message.action) {
-      if (message.action.tool !== 'record_workout') return undefined
-      return isInteractiveAssistantAction(message.action) ? { message, action: message.action } : undefined
-    }
-    if (isWorkoutTerminalReply(message)) return undefined
-  }
-  return undefined
-}
-
 function isWorkoutTerminalReply(message: AssistantMessage): boolean {
   if (message.author !== 'assistant' || message.action !== null) return false
   const content = message.content.trim().toLocaleLowerCase('ru-RU')
