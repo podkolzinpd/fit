@@ -1,3 +1,4 @@
+import {chatMigrationGuard} from './lime-chat-skin.scope'
 import {homeMigrationGuard} from './lime-home-skin.scope'
 import {progressMigrationGuard} from './lime-progress-skin.scope'
 // Whole workout create/edit consumers; template editor and off gates stay legacy.
@@ -522,6 +523,7 @@ export const editorFamilies=[
   ".fit-lime-plan-dialog:has(.workout-template-picker)"
 ]
 export const editorKnownGuards=[
+  chatMigrationGuard,
   homeMigrationGuard,
   progressMigrationGuard,
   ":where(:not(.fit-lime-shell.workout-detail-history-identity .workout-detail-page:is(.workout-completion-page,:has(> .coach-workout-summary,> .workout-duration-surface)) *))",
