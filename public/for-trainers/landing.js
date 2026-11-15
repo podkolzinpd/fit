@@ -22,7 +22,7 @@
   const videos=[...document.querySelectorAll('video')];
   const mediaButton=document.querySelector('.play-media');
   const reduced=matchMedia('(prefers-reduced-motion: reduce)');
-  const stages=athlete?['trainer','plan','live','technique','result']:['trainer','schedule','plan','live','live','result'];
+  const stages=athlete?['trainer','plan','live','technique','result']:['trainer','finance','schedule','plan','live','live','result'];
   const clamp=(v,min=0,max=1)=>Math.max(min,Math.min(max,v));
   const smooth=v=>{v=clamp(v);return v*v*(3-2*v);};
   const staticMode=()=>reduced.matches || new URLSearchParams(location.search).get('motion')==='off';
@@ -66,6 +66,7 @@
     const fades=Array.from({length:count},(_,i)=>i+1).map(boundary=>smooth((p-boundary+.18)/.36));
     const weights=[1-fades[0],...fades.map((v,i)=>i===count-1?v:v-fades[i+1])];
     active=weights.indexOf(Math.max(...weights));
+    root.classList.toggle('concept-stage',!athlete && ['trainer','finance'].includes(stages[active]));
     if(innerWidth<=760 && copyHeights.length){
       const visibleWeight=weights.slice(0,count).reduce((sum,w)=>sum+w,0);
       const copyHeight=visibleWeight>.001?copyHeights.reduce((sum,h,i)=>sum+h*weights[i],0)/visibleWeight:copyHeights[count-1];
@@ -130,7 +131,8 @@
     // The outer frame always fits. Detail is enlarged inside it, not clipped outside it.
     const maxHeight=zone.clientHeight-12;
     const compact=root.classList.contains('compact');
-    const phoneWidth=compact?Math.min(330,zone.clientWidth-12):Math.min(mobile?330:370,(maxHeight-22)*390/844+22,zone.clientWidth-20);
+    const fitConcept=!athlete && ['trainer','finance'].includes(stages[active]);
+    const phoneWidth=compact&&!fitConcept?Math.min(330,zone.clientWidth-12):Math.min(mobile?330:370,(maxHeight-22)*390/844+22,zone.clientWidth-20);
     root.style.setProperty('--window-h',`${Math.max(180,maxHeight-12)}px`);
     root.style.setProperty('--phone-w',`${Math.max(120,phoneWidth)}px`);
   }
