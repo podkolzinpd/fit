@@ -12127,3 +12127,52 @@ production запись не проверялись. Реальных production
 Эта финальная квитанция сохраняется локальным docs-only коммитом; не отправлять
 её отдельным push исключительно ради повторного запуска уже зелёного CI.
 Проверенный remote release head остаётся d3f88faa.
+
+
+## 276. MC5.5 — разрешённый выпуск и диагностика main CI
+
+15.11.2026 Антон разрешил выпуск PR2120 для спортсмена и тренера в общей
+очереди. Main5325de7e и PR-head d3f88faa не изменились,37проверок завершены
+(36SUCCESS/1штатный auth-smoke SKIPPED). Старший PR2087 проверен по точному
+head/всем завершённым CI/описанию:слияние и production в его scope не выполняются.
+Новых активных старших выпусков нет;2121 позже. PR2120 готов и squash-слит
+15.11 в13:03:14UTC, merge231e132eb03eef7555a1f353928df14014cc3fa7.
+Полный Git tree merge и d3f88faa совпадает:532f1fb5d08c61fdde3f0a19d4639624cbb0716a.
+Локальные docs-only квитанции не отправлялись для сброса зелёного PR CI.
+
+Main CI43716972068 attempt1 завершён failure; публикация НЕ выполнена.
+Chromium shard1:3существующих native skin cases(favorite-editor/template-editor/
+clarify) превысили30000ms на пассивных CSSOM/state/native-read шагах в разных
+местах; semantic assertion mismatch нет. Точная причина нагрузки runner не
+измерена и не объявляется доказанной. Контроль исходных cases с родным
+30000ms в двухдвижках×3повтора:18PASS,0retry/skip/flaky,max17074ms,
+run20261115-170824-adbc4f4b.
+
+WebKit shard3:1flaky Progress query-error,469PASS. Точный raw подтверждает
+219→221nodes:только две BUTTON.link в ClientGoalFacts(обзор+скрытая ПРО-копия).
+При общей ошибке503 measurements Retry уже виден, но goal ещё loading, потому
+его loading объединяет goal/measurements/allWorkouts. Затем штатно показывается
+целевая ошибка с Retry. Test ждёт только measurement Retry и одновременно
+снимает всю страницу. Общие styles отличаются только height, формы/interaction
+exact; stateBefore/body уже после перехода и exact stateAfter. Это подтверждённый
+смешанный момент snapshot, не CSS-перекрас. Причина конкретного scheduling не
+измерялась. Исходный case с30000ms в двухдвижках×3повтора:6PASS без retry/skip/
+flaky,run20261115-171744-faf87a0e. Постоянное исправление observer race этим
+повтором не заявляется. При дальнейшей поддержке QA требуется явная готовность
+всех захваченных компонентов, сохраняя исходные checks.
+
+Raw artifact14164792300 сохранён через APFS-resume после сетевого300s timeout
+(исходный partial не менялся):полный233910275bytes иSHA
+3db3964a10b14aa34cfac80ef9c7a794ebfef476cf93c57670e491200a03a34c
+совпадают с upload digest. Run20261115-170822-e94f9c08; исходный partial
+run20261115-165837-ffeac47d сохранён. Полная квалификация
+/tmp/fit-mc55/main-CI-diagnosis.json; оригинальные logs/raw не нормализованы.
+
+MC55-CI-QUALIFIED-RETRY-01:после диагностики один контролируемый повтор ТОЛЬКО
+двух неуспешных main-наборов и зависимого агрегатора на том же231e132e.
+Успешные jobs не повторяются; app/source/fixtures/assertions/timeout/retry и
+--fail-on-flaky-tests неизменны. Это новое исполнение CI, не доказательство
+постоянного исправления flake. При повторном падении — новая диагностика,
+не бесконечный подбор зелёного запуска. Доставка ещё не подтверждена; после
+зелёного CI дождаться API/frontend публикации и проверить immutable artifact
+против публичных HTTP bytes. Следующий MC без приёмки не начинать.
