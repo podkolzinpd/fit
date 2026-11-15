@@ -2,7 +2,24 @@ import { createHash } from 'node:crypto'
 import { appendFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { readNutritionAccounts } from './inspect-nutrition-pilot.mjs'
+
+// Fingerprint of exactly the owner-approved three clients and two trainers.
+// Emails are held in a private GitHub secret, never in source/logs/artifacts.
+const approvedCohort = '18a070387b4d9b9dcfdfe65608f4b887cffb0a938b1c0ca1fa1221d14c25a668'
+export function readNutritionAccounts(raw, expected = approvedCohort, clientCount = 3) {
+  let accounts
+  try { accounts = JSON.parse(raw) } catch { throw new Error('Invalid private cohort') }
+  if (![3, 4, 5].includes(clientCount) || !Array.isArray(accounts) || accounts.length !== clientCount + 2 || accounts.some(a => !a
+    || Object.keys(a).sort().join(',') !== 'email,role'
+    || !['client', 'trainer'].includes(a.role) || typeof a.email !== 'string'
+    || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(a.email))) throw new Error('Invalid private cohort')
+  accounts = accounts.map(a => ({ role: a.role, email: a.email.trim().toLowerCase() }))
+  if (new Set(accounts.map(a => a.email)).size !== clientCount + 2
+    || accounts.filter(a => a.role === 'client').length !== clientCount) throw new Error('Invalid private cohort')
+  const digest = createHash('sha256').update(accounts.map(a => `${a.role}:${a.email}`).sort().join('\n')).digest('hex')
+  if (digest !== expected) throw new Error('Unapproved private cohort')
+  return accounts
+}
 
 // Owner-approved addition on 12.10.2026: four clients, same two trainers.
 // Contacts remain in the private candidate; no production secret update here.

@@ -573,10 +573,6 @@ export function readStageTenantConflictCode(
   return error.code.slice(STAGE_CONFLICT_ERROR_PREFIX.length)
 }
 
-export function isStageTenantConflict(error: unknown): boolean {
-  return readStageTenantConflictCode(error) !== undefined
-}
-
 export function formatStageConflictDiagnostics(
   conflicts: ReadonlyMap<string, number>,
 ): readonly string[] {
