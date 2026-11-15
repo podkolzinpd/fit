@@ -18,23 +18,29 @@ export function observeEditorImages(page:Page){
  page.on('requestfinished',request=>state.pending.delete(request));page.on('requestfailed',request=>state.pending.delete(request))
 }
 // Read native state each natural paint frame, with the same bounded deadline.
-async function settleEditorPaint(page:Page,selector:string){
+export async function settleEditorPaint(page:Page,selector:string,contract:NativeWorkoutSkinContract=editorSkinContract){
  const network=mediaRequests.get(page);if(!network)throw Error('Editor image observation must start before navigation')
  let timer:ReturnType<typeof setTimeout>|undefined,stopped=false
  const work=async()=>{
   await page.evaluate(()=>document.fonts.ready)
   let previous='',quiet=0
   while(quiet<2&&!stopped){
-   const state=await page.evaluate(async(selector:string)=>{
+   const state=await page.evaluate(async({selector,rootSelector}:{selector:string;rootSelector:string})=>{
     await new Promise<void>(resolve=>requestAnimationFrame(()=>resolve()))
-    for(const root of document.querySelectorAll(selector))for(const node of [root,...root.querySelectorAll('*')]){getComputedStyle(node).getPropertyValue('color');node.getBoundingClientRect()}
+    const root=document.querySelector(rootSelector),targets=root?Array.from(root.querySelectorAll(selector)):[]
+    const nodes=[...new Set(targets.flatMap(node=>{const ancestors:Element[]=[];for(let p=node.parentElement;p;p=p.parentElement)ancestors.push(p);return[node,...node.querySelectorAll('*'),...ancestors]}))]
+    // Observe native layout/font/paint readiness in the same frame. The full
+    // strict capture below remains unchanged; do not repeat its large payload
+    // on every readiness frame.
+    const properties=['font-family','font-size','font-weight','letter-spacing','line-height','color','background-color','border-top-color','border-right-color','border-bottom-color','border-left-color','opacity','transform']
+    const paint=nodes.map(node=>{const css=getComputedStyle(node),rect=node.getBoundingClientRect();return[node.className,rect.x,rect.y,rect.width,rect.height,...properties.map(property=>css.getPropertyValue(property))]})
     const active=document.getAnimations().filter(a=>(a.playState==='running'||a.pending)&&Number.isFinite(a.effect?.getTiming().iterations)&&Number.isFinite(a.effect?.getComputedTiming().endTime))
     const media=[...new Set(Array.from(document.querySelectorAll(selector)).flatMap(root=>Array.from(root.querySelectorAll('.exercise-image'))))]
     const mediaPending=media.some(node=>{const rect=node.getBoundingClientRect(),near=rect.width>0&&rect.height>0&&rect.bottom>=-320&&rect.top<=innerHeight+320;return near&&node.classList.contains('exercise-image-loading')||Array.from(node.querySelectorAll('img')).some(img=>img.loading==='eager'&&(!img.complete||img.naturalWidth<=0)||img.complete&&img.naturalWidth>0&&node.classList.contains('exercise-image-loading'))})
-    const signature=JSON.stringify({media:media.map(node=>({class:node.className,images:Array.from(node.querySelectorAll('img')).map(img=>[img.currentSrc||img.src,img.loading,img.complete,img.naturalWidth,img.naturalHeight])})),scroll:[document.scrollingElement,...document.querySelectorAll('.content')].map(node=>node?[node.scrollLeft,node.scrollTop,node.scrollHeight,node.clientHeight]:null),viewport:visualViewport?[visualViewport.offsetTop,visualViewport.offsetLeft,visualViewport.width,visualViewport.height]:null})
-    return {active:active.length,mediaPending,signature}
-   },selector)
-   quiet=!state.active&&!state.mediaPending&&!network.pending.size&&state.signature===previous?quiet+1:0;previous=state.signature
+    const signature=JSON.stringify({paint,media:media.map(node=>({class:node.className,images:Array.from(node.querySelectorAll('img')).map(img=>[img.currentSrc||img.src,img.loading,img.complete,img.naturalWidth,img.naturalHeight])})),scroll:[document.scrollingElement,...document.querySelectorAll('.content')].map(node=>node?[node.scrollLeft,node.scrollTop,node.scrollHeight,node.clientHeight]:null),viewport:visualViewport?[visualViewport.offsetTop,visualViewport.offsetLeft,visualViewport.width,visualViewport.height]:null})
+    return {active:active.length,mediaPending,signature,fontsReady:document.fonts.status==='loaded'}
+   },{selector,rootSelector:contract.captureRootSelector??'.phone-frame'})
+   quiet=state.fontsReady&&!state.active&&!state.mediaPending&&!network.pending.size&&state.signature===previous?quiet+1:0;previous=state.signature
   }
  }
  try{await Promise.race([work(),new Promise<never>((_,reject)=>{timer=setTimeout(()=>reject(Error('Editor paint did not settle within 5000 ms')),5000)})])}finally{stopped=true;clearTimeout(timer)}
@@ -61,7 +67,7 @@ async function captureEditorSkin(page:Page,selector:string,families:string[]=edi
 // and exact baseline/candidate capture prove isolation and preserved appearance.
 export async function probeEditorSkin(page:Page,screenshot?:string,selectorOverride?:string,contract:NativeWorkoutSkinContract=editorSkinContract){
  const selector=selectorOverride??contract.selector
- await settleEditorPaint(page,selector)
+ await settleEditorPaint(page,selector,contract)
  const dom=()=>page.locator(selector).evaluateAll(nodes=>nodes.map(node=>({tag:node.tagName,class:node.getAttribute('class')??'',html:node.outerHTML})))
  const cssom=()=>page.evaluate(()=>Array.from(document.styleSheets).map(s=>Array.from(s.cssRules).map(r=>r.cssText).join('\n')))
  const state=()=>page.evaluate(()=>({focus:document.activeElement?.outerHTML,scroll:[document.scrollingElement,...document.querySelectorAll('.content,.workout-form-page,.today-review')].filter((n):n is HTMLElement=>n instanceof HTMLElement).map(n=>({tag:n.tagName,class:n.className,x:n.scrollLeft,y:n.scrollTop,height:n.scrollHeight,client:n.clientHeight}))}))
@@ -90,10 +96,14 @@ export async function probeEditorSkin(page:Page,screenshot?:string,selectorOverr
   const query=(s:string)=>{try{return Array.from(document.querySelectorAll(originating(s))).filter(n=>observed.has(n))}catch(error){if(CSS.supports('selector('+s+')'))throw error;unsupported.push(s);return []}}
   const selected:string[]=[],matches:string[]=[],ancestorMatches:string[]=[],pseudoMatches:string[]=[],activeMatches:string[]=[],ownerDefinitions=new Set<string>(),foundOwners=new Set<string>(),matchedLegacyPaint:{selector:string;active:boolean;nodes:number;ancestors:number;declarations:{property:string;value:string;important:boolean}[]}[]=[]
   const visit=(rules:CSSRuleList,active=true)=>{for(const rule of Array.from(rules)){
-   if(rule instanceof CSSStyleRule){for(const branch of split(rule.selectorText)){
+   if(rule instanceof CSSStyleRule){let declarations:{property:string;value:string;important:boolean}[]|undefined;for(const branch of split(rule.selectorText)){
     if(ownerSelectors.has(normalize(branch))){ownerDefinitions.add(normalize(branch));if(query(branch).length)foundOwners.add(normalize(branch))}
-    const declarations=Array.from(rule.style).filter(p=>paint(p,rule.style.getPropertyValue(p),rule.style)).map(p=>({property:p,value:rule.style.getPropertyValue(p),important:!!rule.style.getPropertyPriority(p)}))
-    if(!common.has(strip(branch))||!declarations.length)continue
+    // Parse authored declarations only for a reviewed legacy family, once per
+    // rule. Owner discovery still covers every branch, and every selected
+    // declaration/intersection assertion is unchanged.
+    if(!common.has(strip(branch)))continue
+    declarations??=Array.from(rule.style).filter(p=>paint(p,rule.style.getPropertyValue(p),rule.style)).map(p=>({property:p,value:rule.style.getPropertyValue(p),important:!!rule.style.getPropertyPriority(p)}))
+    if(!declarations.length)continue
     selected.push(branch);const nodes=query(branch);if(!nodes.length)continue
     matches.push(branch);const ancestorCount=nodes.filter(n=>ancestors.has(n)).length;if(ancestorCount)ancestorMatches.push(branch);if(branch.includes('::'))pseudoMatches.push(branch);if(active)activeMatches.push(branch)
     matchedLegacyPaint.push({selector:branch,active,nodes:nodes.length,ancestors:ancestorCount,declarations})
@@ -109,7 +119,7 @@ export async function probeEditorSkin(page:Page,screenshot?:string,selectorOverr
  expect(result.classifierOwnerChecks).toHaveLength(contract.ownerSelectors.length);expect(result.classifierOwnerChecks.every(c=>c.retained&&!c.legacy)).toBe(true)
  const backdrop=await page.locator(selector).evaluateAll(nodes=>nodes.map(n=>getComputedStyle(n).backgroundColor)),frameBackground=await page.locator(contract.backgroundRootSelector??'.phone-frame').evaluate(n=>getComputedStyle(n).backgroundColor)
  if(screenshot)await page.screenshot({path:screenshot,animations:'allow',caret:'initial'})
- await settleEditorPaint(page,selector)
+ await settleEditorPaint(page,selector,contract)
  const after=await captureEditorSkin(page,selector,contract.families,contract.additionalCaptureProperties??[],contract.captureSelectState??false,contract.captureRootSelector??'.phone-frame'),stateAfter=await state()
  if(screenshot&&JSON.stringify(after)!==JSON.stringify(before))await writeFile(screenshot+'.capture-drift.json',JSON.stringify({before,after,stateBefore,stateAfter},null,2))
  expect(after).toEqual(before);expect(stateAfter).toEqual(stateBefore);expect(await cssom()).toEqual(cssomBefore);if(contract.captureDOM)expect(await dom()).toEqual(domBefore)
