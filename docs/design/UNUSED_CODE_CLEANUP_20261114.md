@@ -340,3 +340,98 @@ Attempt1 завершён: 33 CI jobs SUCCESS, WebKit visual4/4 и зависи�
 Итог15.11: headbeec7d34 прошёл CI43722951177 attempt1 (35SUCCESS) и Android43722951205 (assembleSUCCESS/штатный auth-smokeSKIPPED):36checksSUCCESS/1SKIPPED, без повторов этого head. Перед merge подтверждены origin/main231e132e, CLEAN/MERGEABLE, точный headbeec7d34. Очередь:2087 с прежним явным release hold;2122 позднее нашего2121. PR2121 MERGED в15:27:43UTC (18:27:43МСК), squash3140a1cb2da2bb8f9c48f489550e7a3cdc6d8675. Readback GitHub подтверждён. Слияние разрешено пользователем; отдельный production deploy не запускался, его результат не заявляется. Финальная квитанция добавлена локально после проверенного head и опубликована в PRbody; source head после CI не менялся.
 
 Продолжение15.11: актуализация2087 и аудит migration/recovery ведутся в существующем [плане вывода Supabase](SUPABASE_DECOMMISSION_PLAN_20261023.md#sb-native-ops-03--безопасная-актуализация-pr2087--15112026); рабочие пути и границы удаления зафиксированы там.
+
+## Итерация 5 — оставшиеся 12 AI-кандидатов — 15.11.2026 — Codex / OpenAI
+
+Основание: Антон поручил разобрать 12 оставшихся AI-кандидатов, перенести
+полезные проверки на действующие сценарии и убрать лишнее. Дополнительное
+условие: не менять механики ИИ-разбора. PR2124 (предыдущий пакет, итерация 4)
+остаётся отдельным удерживаемым черновиком и не сливается. Этот пакет начинается
+от main `2769acf597eb020673e9a51963f512f77cc38148`, без изменений PR2124.
+Собственная рабочая копия переиспользована; ветка `chore/ai-unused-code-20261115`.
+
+Расхождения: нет. Невызваемые реализации не являются действующим продуктовым
+контрактом. Поиск consumers включает tracked runtime, тесты, scripts и
+динамические входы; одного слова legacy или размера файла недостаточно.
+В production удаляются только недостижимые объявления и их закрытые helpers.
+Промпты, модели, распознавание, выбор упражнений, структура тренировок,
+доступ, сохранение, feature flags и исторические валидаторы не меняются.
+CSS, экраны и visual-проверки Fit 16 не затронуты.
+
+| Кандидат | Решение / действующий путь |
+| --- | --- |
+| `authorizeSummaryActor` | Удалён; доступ проверяет `DatabasePilotTrainingSummaries` через native session и PostgreSQL RLS |
+| `clientVisibleSummary` | Удалён; клиентский ответ формируют `list/readCache`, отдельная опубликованная сводка скрывает внутренние поля |
+| `hasCompletedWorkouts` | Удалён; реальный `readSource` отклоняет пустой текущий период |
+| `shouldUseClientCache` | Удалён; `generate` проверяет настоящий fingerprint-cache, в том числе при force |
+| `yandexHttpError` | Удалён старый formatter; действующий model client и его ошибки остаются |
+| `completedWorkoutsInPeriod` | Удалён orphan-модуль; текущий SQL выбирает выполненные, неудалённые тренировки текущего и предыдущего периодов |
+| `requestYandexSummaryDeduplicated` | Удалены wrapper и локальная Map; реальный путь защищён PostgreSQL generation guard |
+| `runNativePilotAssistantTurn` | Удалён старый runner; сервер использует `DatabasePilotAssistantTurnRunner.runTurn` |
+| `summaryTurn` | Удалён старый builder; живые matching/cancellation helpers и historical validators сохранены |
+| `allowsAssistantAction` | Удалён старый общий gate; реальные workout/program flows и navigation сохраняют свои проверки |
+| `createProgramTurn` | Удалён старый одношаговый builder; используется `programPilotTurn` с questionnaire |
+| `createClientTurn` | Удалён прежний диалог создания; действующая navigation открывает карточку, historical payload остаётся читаемым |
+
+### Перенос полезных проверок
+
+| Старое покрытие | Проверка действующего сценария |
+| --- | --- |
+| Capability reply, replay, конфликт turn ID, action UUID, собственная карточка | Пять прежних cases вызывают `DatabasePilotAssistantTurnRunner.runTurn`; настоящий native transaction wrapper, synthetic DatabasePool. Дополнительно replay не пишет повторный ответ |
+| Приветствия/вопросы, склонения имён, неоднозначные aliases, отмена программы | `recordWorkoutTurn`, `programPilotTurn` с настоящим matcher и `isSummaryCancellation`; questionnaire не запускает генерацию преждевременно |
+| Поля старой client-card action | Historical validator сохраняет мужской/женский payload и отклоняет недопустимые поля; enabled validator запрещает новые legacy actions. Navigation открывает создание без write-action |
+| Одновременный повтор генерации | `training-summary-generation.test.ts` вызывает реальный `generate`: один model call, второй запрос получает 409 in_progress; сохранение и завершение guard однократны, повтор force возвращает кэш |
+| Доступ, приватность, source filtering, пустой период, cache/force | Новые cases в PostgreSQL actor-context suite вызывают реальный summary service; отдельные native sessions и синтетические данные |
+| Блокировка конкурентной генерации | Две реальные PostgreSQL транзакции проверяют один claim и один in_progress для одного fingerprint |
+
+Снятые специфические ожидания: локальная dedup-Map возвращала общий Promise,
+но живой API отвечает 409 на незавершённый повтор; старый одношаговый program
+brief заменён действующим questionnaire; старый client-builder парсил реплику,
+а действующая navigation не создаёт карточку сама. Эти старые поведения не
+переносятся в продукт. Некорректные/null даты не являются допустимой строкой
+PostgreSQL `date NOT NULL`. Старые literal HTTP503/504 сообщения сняты вместе
+с formatter; действующий core сохраняет проверки unavailable и invalid JSON.
+`parseYandexJson` и его assertions сохранены без изменения.
+
+Отвергнуто: массовое удаление legacy-каталогов, изменение работающего ИИ ради
+упрощения тестов, новые production injection points, ослабление обязательных
+проверок. Реальные AI-вызовы и production операции не выполняются.
+
+Приёмка: целевые unit-наборы пройдены; полная локальная проверка и PostgreSQL
+ещё выполняются. Сквозная CI-проверка и слияние этого пакета пока не выполнены.
+Следующий шаг — завершить локальную/CI-приёмку и подготовить отдельный PR.
+
+Первый PostgreSQL-прогон новых fixtures выявил две проблемы. В новой cleanup
+заготовке не учитывался FK `client_trainer_relationships`; порядок удаления
+собственных синтетических строк исправляется. Отдельно обнаружен существующий
+дефект `DatabasePilotTrainingSummaries.diagnose`: прямой SELECT из
+`app_private.training_summary_generation_guards` недоступен роли `fit_api`
+после применения действующей цепочки миграций. Метод и grants не менялись
+в этом diff. Расширение прав/исправление diagnostic API исключено из безопасной
+очистки и остаётся отдельной задачей. Новые проверки переведены на действующие
+`generate/list` с синтетическим ответом модели; production AI не вызывается.
+Неуспешная первая квитанция: fit-storage `20261115-222232-c2e6d175`.
+
+Локальная приёмка: 3200 frontend tests, coverage 83,2% statements / 78,19%
+branches; lint/types и проверки политик прошли в общем `npm run check`
+(`20261115-222231-6eff0412`). Этот запуск остановился на типизации новых API
+тестовых mocks в ESLint. Исправлены только тестовые типы/Promise.resolve;
+оставшиеся API lint/types/tests/build и frontend build/startup прошли отдельным
+продолжением `20261115-222732-6e0074f8`: API **1638 passed / 479 skipped**
+(DB-тесты здесь условно пропущены). Успешные неизменные frontend этапы не
+повторялись. Workflow docs и whitespace checks прошли.
+
+Четыре новых PostgreSQL cases прошли на настоящей локальной PG17:
+`20261115-222516-0a6487f9`. Полный DB-прогон `20261115-222535-120a3ea9`
+завершился на прежнем assertion выбора индекса session cleanup: planner выбрал
+`yandex_app_sessions_profile_expiry_idx` вместо ожидаемого cleanup index;
+15 + 405 tests passed, 1 failed, 1 optional S3 skipped. Сам тест/индексы не
+менялись. Повтор с чистой базой требуется, чтобы исключить влияние данных
+предварительного прогона. Его первый старт `20261115-222732-8f5a1490` попал
+на незавершённую инициализацию PG; это ошибка подготовки среды, не PASS.
+
+Независимый review production AST: **0 изменений сохраняемых деклараций**;
+удалены 349 строк runtime в пяти файлах. Снятые инициализаторы — пустая Map
+и RegExp, без IO/регистраций. Имена всех 12 кандидатов отсутствуют в оставшемся
+tracked коде, включая строковые обращения. CI и полный DB-гейт остаются
+условиями приёмки; состояние отдельных прогонов не выдаётся за весь зелёный PR.

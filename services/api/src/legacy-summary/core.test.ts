@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-import { buildProgressData, requestYandexSummary, requestYandexSummaryDeduplicated } from '../training-summary-core.js'
+import { buildProgressData, requestYandexSummary } from '../training-summary-core.js'
 import { buildSummaryModelInput } from './summary-model-input.js'
 import { assessSummaryQuality, repairSummaryQuality } from './summary-quality.js'
 
@@ -167,21 +167,6 @@ describe('summary model core', () => {
 
     await expect(requestYandexSummary({}, '2026-08-01', '2026-08-25'))
       .rejects.toThrow('live_ai_disabled_in_tests')
-  })
-
-  it('shares one model call between concurrent requests with the same fingerprint', async () => {
-    vi.stubEnv('YANDEX_CLOUD_API_KEY', 'test-key')
-    vi.stubEnv('YANDEX_CLOUD_FOLDER_ID', 'test-folder')
-    const fetchImpl = vi.fn(() => Promise.resolve(completionResponse()))
-
-    const [first, second] = await Promise.all([
-      requestYandexSummaryDeduplicated('same-input', {}, '2026-08-01', '2026-08-25', { fetchImpl }),
-      requestYandexSummaryDeduplicated('same-input', {}, '2026-08-01', '2026-08-25', { fetchImpl }),
-    ])
-
-    expect(fetchImpl).toHaveBeenCalledOnce()
-    expect([first.shared, second.shared].sort()).toEqual([false, true])
-    expect(first.result.summary).toEqual(second.result.summary)
   })
 
   it('never turns one browser action into a second paid call after a rate limit', async () => {

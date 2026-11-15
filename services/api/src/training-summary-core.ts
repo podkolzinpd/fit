@@ -23,7 +23,6 @@ const YANDEX_COMPLETION_URL =
   "https://llm.api.cloud.yandex.net/foundationModels/v1/completion"
 export const MAX_SOURCE_ROWS = 10_000
 const MAX_DIRECT_MODEL_INPUT_CHARS = 80_000
-const inFlightSummaryRequests = new Map<string, Promise<YandexSummaryResult>>()
 
 export type WorkoutRow = {
   id: string
@@ -1060,23 +1059,4 @@ export async function requestYandexSummary(
     ...options,
     stage: options.stage ?? 'direct',
   })
-}
-
-export async function requestYandexSummaryDeduplicated(
-  key: string,
-  trainingData: unknown,
-  periodStart: string,
-  periodEnd: string,
-  options: YandexRequestOptions,
-): Promise<{ result: YandexSummaryResult; shared: boolean }> {
-  const existing = inFlightSummaryRequests.get(key)
-  if (existing) return { result: await existing, shared: true }
-
-  const pending = requestYandexSummary(trainingData, periodStart, periodEnd, options)
-  inFlightSummaryRequests.set(key, pending)
-  try {
-    return { result: await pending, shared: false }
-  } finally {
-    if (inFlightSummaryRequests.get(key) === pending) inFlightSummaryRequests.delete(key)
-  }
 }
