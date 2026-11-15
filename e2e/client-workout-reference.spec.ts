@@ -1,3 +1,4 @@
+import {limeChatSkinCases} from './lime-chat-skin.cases'
 import {limeHomeGestureSkinCases} from './lime-home-gesture-skin.cases'
 import {limeHomeSkinCases} from './lime-home-skin.cases'
 import {limeProfileSkinCases} from './lime-profile-skin.cases'
@@ -29,6 +30,7 @@ import { revealLiveSet, beginClientGesture, coachGestureWorkout, restTimerWorkou
 test.skip(process.env.FIT_CLIENT_WORKOUT_ACCEPTANCE !== '1', 'Dedicated native client-workout harness')
 
 // Own-profile fixtures require the same compiled client Lime/auth configuration.
+limeChatSkinCases()
 limeHomeSkinCases()
 limeHomeGestureSkinCases()
 limeProfileSkinCases()
