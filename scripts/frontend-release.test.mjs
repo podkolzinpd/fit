@@ -4,7 +4,7 @@ import { mkdtemp, mkdir, writeFile, rm, readFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { createServer } from 'node:http'
-import { packageRelease, planRelease, supportedRouting, verifyRelease } from './frontend-release.mjs'
+import { packageRelease, supportedRouting, verifyRelease } from './frontend-release.mjs'
 import { frontendHandler } from './frontend-rehearsal-server.mjs'
 import { gatewayPlan, gatewayUpload } from './frontend-gateway-plan.mjs'
 import { gunzipSync } from 'node:zlib'
@@ -154,17 +154,12 @@ test('source Vercel contract is explicitly supported', async () => {
   const { routes } = JSON.parse(await readFile(new URL('../vercel.json', import.meta.url)))
   assert.deepEqual(routes, supportedRouting)
 })
-test('release identity includes bytes, not just commit; upload plan cannot activate', async (t) => {
+test('release identity includes bytes, not just commit', async (t) => {
   const one = await release(t)
   const same = await release(t)
   const changed = await release(t, 'two')
   assert.equal(one.release, same.release)
   assert.notEqual(one.release, changed.release)
-  const plan = planRelease(one)
-  assert.equal(plan.deployable, false)
-  assert.equal(plan.activation, 'not-implemented')
-  assert.ok(plan.objects.every((file) => file.key.startsWith(`releases/${one.release}/`)
-    && file.overwrite === false && !('content' in file)))
 })
 test('corrupt bytes, metadata, identity and routing are rejected before serving', async (t) => {
   const original = await release(t)

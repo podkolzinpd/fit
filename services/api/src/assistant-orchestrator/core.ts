@@ -19,23 +19,12 @@ export type AssistantAction = { id?: string; tool: Tool; status: 'needs_input' |
 export type AssistantTurnResponse = { reply: string; action: AssistantAction | null }
 
 type SummaryCandidate = { id: string; fullName: string }
-type SummaryPeriod = { periodStart: string; periodEnd: string; label: string }
 
 const smallTalkSchema = {
   type: 'object', additionalProperties: false, required: ['reply', 'action'], properties: {
     reply: { type: 'string' },
     action: { type: 'null' },
   },
-}
-
-export class HttpError extends Error {
-  constructor(readonly status: number, readonly code: string) { super(code) }
-}
-
-export function required(name: string): string {
-  const value = process.env[name]?.trim()
-  if (!value) throw new HttpError(503, 'service_unavailable')
-  return value
 }
 
 export function record(value: unknown): value is Record<string, unknown> {
@@ -217,11 +206,6 @@ export function isAssistantCapabilityQuestion(message: string): boolean {
   // по питанию ты можешь дать?" is health chat, not a request for a feature
   // catalogue.
   return /^(?:что ты умеешь|что ты можешь(?: делать)?|какие (?:у тебя )?(?:функции|возможности)(?: вообще)? есть|чем ты можешь помочь|какую помощь ты можешь (?:оказать|дать))$/u.test(normalized)
-}
-
-export function isSummaryRequest(message: string): boolean {
-  const normalized = normalizeAssistantMessage(message)
-  return ['сводк', 'прогресс', 'динамик'].some((stem) => normalized.includes(stem))
 }
 
 function workoutAction(title: string, description: string, status: AssistantAction['status'], payload: Record<string, unknown>): AssistantTurnResponse {
@@ -438,24 +422,6 @@ export function recordWorkoutTurn(
 export function usesInformalAddress(message: string): boolean {
   const words = normalizeAssistantMessage(message).split(' ')
   return words.some((word) => ['ты', 'тебя', 'тебе', 'тебя', 'твой', 'твоя', 'твое', 'твои'].includes(word))
-}
-
-export function summaryPeriodFromMessage(message: string, now = new Date()): SummaryPeriod | undefined {
-  const normalized = normalizeAssistantMessage(message)
-  const end = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()))
-  const range = (days: number, label: string): SummaryPeriod => {
-    const start = new Date(end)
-    start.setUTCDate(start.getUTCDate() - (days - 1))
-    const date = (value: Date) => value.toISOString().slice(0, 10)
-    return { periodStart: date(start), periodEnd: date(end), label }
-  }
-  const exact = normalized.match(/с (\d{4} \d{2} \d{2}) по (\d{4} \d{2} \d{2})/u)
-  const [periodStartText, periodEndText] = exact?.slice(1) ?? []
-  if (periodStartText !== undefined && periodEndText !== undefined) return { periodStart: periodStartText.replaceAll(' ', '-'), periodEnd: periodEndText.replaceAll(' ', '-'), label: `${periodStartText.replaceAll(' ', '.')}—${periodEndText.replaceAll(' ', '.')}` }
-  if (normalized.includes('7 дней') || normalized.includes('недел')) return range(7, 'последние 7 дней')
-  if (normalized.includes('90 дней') || normalized.includes('квартал')) return range(90, 'последние 90 дней')
-  if (normalized.includes('30 дней') || normalized.includes('месяц')) return range(30, 'последние 30 дней')
-  return undefined
 }
 
 export function assistantCapabilitiesReply(options: { programEnabled?: boolean; navigationEnabled?: boolean; workoutRecordingEnabled?: boolean } = {}): string {

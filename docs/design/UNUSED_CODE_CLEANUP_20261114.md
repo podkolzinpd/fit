@@ -601,3 +601,126 @@ Runtime/API/test-файлы объединились без конфликтов
 не является вердиктом новой версии: upstream включает passive UI checks
 из2122 и MC5.6; наши skin/UI-файлы не меняются. Для нового head выполняются
 полный local check и CI, гейты/таймауты/продуктовые механики не ослабляются.
+
+Head `04f61298634c7490cbd4a52b82f494bebea97192` опубликован. Полный
+`npm run check` PASS, exit 0, закреплённая квитанция
+`20261116-002318-971dfe2b`: 3200 frontend / 1636 API tests passed,
+479 conditional API/DB skips локально; coverage 83,19% statements / 78,18%
+branches, lint/types/policies/build/startup PASS. Минус два obsolete API cases
+относительно PR2126 — только удалённые собственные проверки старых gate/parser.
+Независимый integration review не обнаружил изменённых сохраняемых деклараций,
+откатов PR2126 или потерь native cohort/UUID/privacy/diagnostic поведения.
+CI43763547818 / Android43763547784 выполняются; свой watcher с паузой90s.
+Публикация данной квитанции не меняет текущий проверяемый head.
+
+16.11 итог: head04f61298 прошёл CI43763547818 (35 SUCCESS) и Android43763547784
+(assemble SUCCESS / штатный auth-smoke SKIPPED), всего36 SUCCESS /1 SKIPPED,
+attempt1, без rerun. Старый блокировавший auth1 также прошёл на новой базе.
+Квитанция `20261116-002624-3277080b` закреплена; watcher завершён exit0.
+Перед merge подтверждены main1568a09b, CLEAN/MERGEABLE, точный head и очередь:
+единственный открытый PR —2124. PR2124 MERGED16.11 в01:20:39МСК, squash
+`5ff8ff6d93a0316929030332113c14233d11f8a1`, readbackGitHub подтверждён.
+Порядок владельца2126→2124 выполнен. Далее начинается аудит оставшегося кода
+на общей main5ff8ff6d; собственная рабочая копия переиспользована. Отдельный
+production deploy не выполнялся и его результат не заявляется.
+
+## Итерация 6 — аудит после обоих слияний — 16.11.2026
+
+База: `5ff8ff6d93a0316929030332113c14233d11f8a1`, уже включает PR2126 и
+PR2124. Рабочая копия переиспользована, ветка `chore/remaining-code-audit-20261116`.
+Это результат проверки: новых удалений, изменений runtime и нового PR нет.
+Проверены non-UI клиентские модули, серверные helpers, операторские инструменты,
+генераторы и runtime-зависимости. Fit16, экраны и CSS исключены из чистки.
+
+### Следующий безопасный пакет: 15 деклараций
+
+Строки ниже относятся к указанной базе. Поиск учитывал tracked imports,
+namespace/dynamic обращения, тесты, scripts/config/workflow и ручные entrypoints.
+Для серверных кандидатов дополнительно проверена идентичность TypeScript symbols:
+одноимённые функции в разных модулях не считаются одним потребителем.
+
+| Область | Кандидаты | Доказательство и границы удаления |
+| --- | --- | --- |
+| `services/api/src/assistant-orchestrator/core.ts:22,31,35` | `SummaryPeriod`, `HttpError`, `required` — 3 | `required` не вызывается, локальный `HttpError` нужен только ему; private type нужен только старому parser ниже. |
+| Тот же файл, `:222,443` | `isSummaryRequest`, `summaryPeriodFromMessage` — 2 | После удаления `summaryTurn` остались только два assertions в `core.test.ts:126–127`. Общий `normalizeAssistantMessage` и `usesInformalAddress` с его assertions `:128–129` сохранить. |
+| `services/api/src/training-summary-core.ts:24,67,261,301,307` | `MAX_SOURCE_ROWS`, `ProgressRow`, `fingerprint`, `addUtcDays`, `inclusivePeriodDays` — 5 | Нет импортов/вызовов, включая тесты. Одноимённые действующие расчёты в `training-summary.ts` — другие декларации, их не менять. |
+| `services/api/src/yandex-db-function-runtime.ts:5` | `yandexAiAuthorization` — 1 | Wrapper не вызывается; consumers модуля используют `actorSession`. Убрать можно wrapper и два ставших ненужными imports. Настоящие provider-классы, `buildYandexAiAuthorization` и `actorSession` сохранить. |
+| `src/shared/vital-gym-pro.generated.ts:13053,17575,17594` | `VITAL_GYM_PRO_LEGACY_ROOT_BY_REF`, `VITAL_GYM_PRO_EXCLUDED_PUBLIC_IDS`, `VITAL_GYM_PRO_REFS` — 3 | Есть только объявления и emitter `scripts/import-vital-gym-pro.mjs:202,207,208`; consumers не найдены. Убирать вместе с emitter и вычислением `legacyRoots:190`, иначе генератор вернёт их. Объём generated-объявлений: 261 строка / 13 420 байт исходника; выигрыш размера сборки не измерен. |
+| `scripts/frontend-release.mjs:72–81` | `planRelease` — 1 | Только собственный тест и исторический rehearsal-документ. CLI вызывает `packageRelease`, действующий upload использует `gatewayPlan`. Сохранить identity assertions `frontend-release.test.mjs:158–162`; проверки prefix/overwrite/checksum/immutable collision уже есть у действующих upload/gateway. |
+
+Удаление не требует изменения работающих AI prompts, моделей, парсинга,
+подбора упражнений, структуры ответов, сохранения, auth/RLS или флагов.
+Новые механики и диагностика в пакет не входят. При реализации: подтвердить
+неизменность сохраняемых деклараций/данных, выполнить положенную приёмку нового
+head; текущий аудит сам по себе не является проверкой будущего изменения.
+
+### Что сохраняется и почему
+
+- `VITAL_GYM_PRO_ASSETS` и исходный каталог с исключениями, alias/media mappings:
+  нужны действующим данным и проверке комплектности 670 упражнений / 2010 медиа.
+  Удаление трёх лишних generated exports не разрешает менять состав каталога.
+- `suggestGoalCriteria` в `src/data/queries/workout-ai.queries.ts:31` найден как
+  отдельный tests-only кандидат, но относится к целям/Fit16. В пакет не включён:
+  живой экран вызывает repository method с другим endpoint, полезные assertions
+  потребуют отдельной сверки в этой области.
+- Recovery/private-program/migration helpers и старый SpeechKit relay сохраняют
+  операторские или package/workflow entrypoints. Целых безопасно удаляемых orphan
+  модулей в проверенной области не подтверждено.
+- `workoutHomeSummaries`, `computeClientStats`, reviewed-media inventory и reset
+  diagnostics нужны действующим fixtures и изоляции тестов. `src/test/setup.ts`
+  включён конфигурацией Vite. Отсутствие runtime-импорта не означает ненужность.
+- Проверены 32 runtime-зависимости в четырёх manifests: подтверждённо лишних не
+  найдено. `@capacitor/ios` используется установленным Capacitor CLI при sync;
+  отсутствие JS-импорта не позволяет удалить платформу. Onest импортируется в
+  `src/main.tsx` и используется e2e fixtures; шрифты не входят в эту чистку.
+- Public URL assets, старые версии иконок, aliases и verification HTML не
+  объявляются мусором по отсутствию JS-импорта. Генератор иконок/его тесты
+  поддерживают aliases, существующий install-контракт сохраняет старые версии;
+  внешние потребители verification HTML этим аудитом не проверялись.
+
+Проверка read-only для приложения: новый source не менялся, тесты/CI повторно
+не запускались. В рабочей копии обновлён только этот журнал; предсуществующий
+`scripts/__pycache__/` не включён в изменения. Известная проблема diagnostic
+SELECT в `DatabasePilotTrainingSummaries.diagnose` остаётся отдельным дефектом,
+а не поводом менять работающие AI-механики в рамках удаления лишнего кода.
+
+## Итерация 7 — удаление 15 подтверждённых остатков — 16.11.2026 — Codex / OpenAI
+
+Задача: Антон разрешил удалить все 15 кандидатов итерации 6, сохранить рабочие
+сценарии/AI-механики, исключить Fit16, создать отдельный draft PR и запустить
+проверки. Следующим сообщением разрешил сразу слить после завершения и успешной
+приёмки; прежний запрет слияния нового PR снят. Расхождений нет. База `5ff8ff6d`
+свежая, перед началом GitHub-очередь открытых PR пуста. Рабочая копия прежняя.
+
+Сделано: удалены ровно 11 серверных деклараций, 3 неиспользуемых generated
+exports каталога и `planRelease`. Генератор больше не производит удалённые
+exports; вычисление `legacyRoots` снято. Остальные данные каталога, исходные
+исключения/медиа и работающий выпуск сохранены. Новых зависимостей нет.
+
+| ID | Удалено / сохранено | Проверка до полного прогона |
+| --- | --- | --- |
+| UC701 | 11 серверных деклараций; prompts/models/парсинг/выбор/сохранение/auth/RLS прежние | 88 сохраняемых top-level деклараций в трёх production-файлах побайтно неизменны по AST; 77 тестов в 6 целевых наборах PASS, ESLint 4 файлов PASS. |
+| UC702 | 3 generated exports, их emitter и вычисление `legacyRoots` | Все 7 остальных generated-деклараций побайтно прежние; изолированное вычисление строкового emitter точно даёт файл, без запуска media/IO-генератора. `node --check` PASS. |
+| UC703 | Только заглушка `planRelease` и её собственные assertions | 15/15 release tests PASS. Первый запуск был заблокирован запретом loopback-порта; повтор с разрешённым локальным сервером PASS, без изменений тестов/гейтов. |
+
+Карта сохранности assertions:
+
+- `core.test.ts`: сняты только `isSummaryRequest` и `summaryPeriodFromMessage`;
+  общий case переименован и сохраняет обе проверки `usesInformalAddress`.
+  Assertions 105 → 103, число cases прежнее. Это проверки удалённого parser;
+  текущий выбор периода в frontend и расчёты `training-summary.ts` не менялись.
+- `frontend-release.test.mjs`: сняты assertions `planRelease`; равенство
+  идентичности для одинаковых байтов и её смена для других байтов сохранены.
+  Действующие uploader/gateway по-прежнему проверяют prefix, повтор без
+  перезаписи, отказ доступа, checksum, `deployable:false` и immutable collision.
+  Исходные assets/Fit16 assertions в начале файла не менялись.
+
+Решение: узкое удаление доказанных остатков, без изменения сохраняемого кода.
+Отвергнуто: чистка соседних goals/Fit16, recovery/migration/compatibility,
+изменение механик AI и исправление отдельного diagnostic SELECT дефекта —
+вне согласованного пакета. Генератор с файловым/медиа IO не запускался.
+
+Полный локальный `npm run check` запущен; его итог и CI ещё не заявлены.
+Обязательный scope включает frontend/shared: полноценные frontend/browser
+и API/DB gates сохраняются. Production/реальный AI не вызываются локально.
+Перед merge требуется зелёный текущий head, свежий main и проверка очереди.

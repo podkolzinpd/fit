@@ -68,18 +68,6 @@ export async function packageRelease(directory, commit, routing) {
   })
 }
 
-// Upload instructions only: no credentials, network, writes or activation.
-export function planRelease(bundle) {
-  verifyRelease(bundle)
-  return {
-    schemaVersion: 1, deployable: false, release: bundle.release,
-    activation: 'not-implemented',
-    objects: bundle.files.map(({ content: _content, key, ...metadata }) => ({
-      ...metadata, key: `releases/${bundle.release}/${key}`, overwrite: false,
-    })),
-  }
-}
-
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   const [directory, commit, output] = process.argv.slice(2)
   if (!directory || !commit || !output) throw new Error('Usage: frontend-release.mjs DIST COMMIT OUTPUT')
