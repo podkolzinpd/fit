@@ -1124,3 +1124,9 @@ production-файлов неизменен. Whitespace PASS. Новых тест
 существующие assertions/timeouts/thresholds сохранены. Полный прогон и CI
 пока не заявлены. Дальше: независимый review потребителей, положенные
 проверки фактического head, отдельный PR и приёмка по очереди GitHub.
+
+Независимая проверка UC1001–UC1002: 1621 tracked JS/TS-файл, 38 обращений
+к семи модулям; named/namespace/reexport/dynamic/manual потребителей выбранных
+имён нет. Import-тип AnalyticsFilters в repository сохранён. Blockers: 0.
+Классификатор на diff f6fe8662→2281e2d9 требует полный frontend/browser набор;
+skip не применялся. Источники правил и main не изменились.
