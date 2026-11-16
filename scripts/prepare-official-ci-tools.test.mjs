@@ -45,6 +45,95 @@ for (const [name, response, error] of [
   assert.deepEqual(await readdir(root), [])
 }))
 
+test('reports only validated GitHub rate headers and a fixed classification without retrying', () => workspace(async root => {
+  let requests = 0
+  await assert.rejects(downloadVerifiedAsset(spec, join(root, 'archive.zip'), async () => {
+    requests++
+    const response = new Response('{"message":"API rate limit exceeded for synthetic-private-address","token":"synthetic-secret"}', {
+      status: 403, headers: { 'x-ratelimit-remaining': '0', 'x-ratelimit-reset': '1794826800', 'retry-after': '60' },
+    })
+    Object.defineProperty(response, 'url', { value: `${spec.url}?signature=synthetic-secret` })
+    return response
+  }), error => {
+    assert.equal(error.message, 'Official tool download failed: HTTP 403; host=api.github.com; x-ratelimit-remaining=0; x-ratelimit-reset=1794826800; retry-after=60; reason=api_rate_limit')
+    return true
+  })
+  assert.equal(requests, 1)
+  assert.deepEqual(await readdir(root), [])
+}))
+
+for (const [body, reason] of [
+  ['<Error>JWT: expired; signature=synthetic-secret</Error>', 'expired_token'],
+  ['<Code>ExpiredAuthenticationToken</Code><Detail>synthetic-secret</Detail>', 'expired_token'],
+  ['<Code>AuthenticationFailed</Code><Detail>Signature not valid in the specified time frame; synthetic-secret</Detail>', 'signature_time_invalid'],
+  ['<Code>AuthenticationFailed</Code><Detail>synthetic-secret</Detail>', 'authentication_failed'],
+  ['You have exceeded a secondary rate limit; synthetic-secret', 'secondary_rate_limit'],
+  ['Unrecognized upstream failure: synthetic-secret', 'unknown'],
+]) test(`classifies ${reason} without exposing the signed redirect or raw response`, () => workspace(async root => {
+  const response = new Response(body, { status: 403, headers: { 'x-ratelimit-remaining': '0' } })
+  Object.defineProperty(response, 'url', { value: 'https://release-assets.githubusercontent.com/private/path?jwt=synthetic-secret&sig=synthetic-signature' })
+  await assert.rejects(downloadVerifiedAsset(spec, join(root, 'archive.zip'), async () => response), error => {
+    assert.equal(error.message, `Official tool download failed: HTTP 403; host=release-assets.githubusercontent.com; reason=${reason}`)
+    return true
+  })
+  assert.deepEqual(await readdir(root), [])
+}))
+
+test('omits invalid rate headers and does not expose unrelated response headers', () => workspace(async root => {
+  const response = new Response('synthetic-private-body', { status: 429, headers: {
+    'x-ratelimit-remaining': '-1', 'x-ratelimit-reset': '99999999999999999999',
+    'retry-after': 'https://example.test/?secret=synthetic-secret', 'location': 'synthetic-secret',
+  } })
+  await assert.rejects(downloadVerifiedAsset(spec, join(root, 'archive.zip'), async () => response), error => {
+    assert.equal(error.message, 'Official tool download failed: HTTP 429; host=api.github.com; reason=unknown')
+    return true
+  })
+  assert.deepEqual(await readdir(root), [])
+}))
+
+for (const chunkSize of [1_024, 8_192]) test(`bounds error-body reading and classification for ${chunkSize}-byte chunks`, () => workspace(async root => {
+  let reads = 0, cancellations = 0
+  const response = new Response(new ReadableStream({
+    pull(controller) {
+      reads++
+      const chunk = Buffer.alloc(chunkSize, 32)
+      if (chunkSize > 4_096) chunk.write('API rate limit exceeded', 5_000)
+      if (reads > 4) chunk.write('API rate limit exceeded')
+      controller.enqueue(chunk)
+    },
+    cancel() { cancellations++ },
+  }, { highWaterMark: 0 }), { status: 403 })
+  await assert.rejects(downloadVerifiedAsset(spec, join(root, 'archive.zip'), async () => response), /HTTP 403; host=api.github.com; reason=unknown$/)
+  assert.equal(reads, chunkSize === 1_024 ? 4 : 1)
+  assert.equal(cancellations, 1)
+  assert.equal(response.body.locked, false)
+  assert.deepEqual(await readdir(root), [])
+}))
+
+test('retains the HTTP failure when diagnostic reading fails', () => workspace(async root => {
+  const response = new Response(new ReadableStream({ start(controller) {
+    controller.error(new Error('synthetic-secret-read-error'))
+  } }), { status: 502 })
+  await assert.rejects(downloadVerifiedAsset(spec, join(root, 'archive.zip'), async () => response), error => {
+    assert.equal(error.message, 'Official tool download failed: HTTP 502; host=api.github.com; reason=unknown')
+    return true
+  })
+  assert.equal(response.body.locked, false)
+  assert.deepEqual(await readdir(root), [])
+}))
+
+test('stops a stalled diagnostic read and suppresses cancellation errors', { timeout: 5_000 }, () => workspace(async root => {
+  let cancellations = 0
+  const response = new Response(new ReadableStream({
+    pull() { return new Promise(() => {}) },
+    cancel() { cancellations++; return Promise.reject(new Error('synthetic-secret-cancel-error')) },
+  }), { status: 403 })
+  await assert.rejects(downloadVerifiedAsset(spec, join(root, 'archive.zip'), async () => response), /HTTP 403; host=api.github.com; reason=unknown$/)
+  assert.equal(cancellations, 1)
+  assert.equal(response.body.locked, false)
+  assert.deepEqual(await readdir(root), [])
+}))
+
 test('does not overwrite a corrupted existing cache or hide the checksum error', () => workspace(async root => {
   const path = join(root, 'archive.zip'), corrupt = Buffer.alloc(bytes.length)
   await writeFile(path, corrupt)

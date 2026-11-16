@@ -72,6 +72,46 @@ async function verifyFile(path, spec) {
   if (hash.digest('hex') !== spec.sha256) throw new Error('Official tool SHA256 mismatch')
 }
 
+async function downloadFailure(response, sourceUrl) {
+  let host = 'unknown'
+  try { host = new URL(response.url || sourceUrl).hostname || 'unknown' } catch { /* Never include an invalid URL. */ }
+  let details = `; host=${host}`
+  if (host === 'api.github.com' || host === 'github.com') {
+    for (const name of ['x-ratelimit-remaining', 'x-ratelimit-reset', 'retry-after']) {
+      const value = response.headers.get(name)
+      if (/^(?:0|[1-9]\d{0,9})$/.test(value ?? '')) details += `; ${name}=${value}`
+    }
+  }
+  let text = '', reader, timer
+  const deadline = new Promise(resolve => { timer = setTimeout(() => resolve({ done: true }), 1_000) })
+  try {
+    reader = response.body?.getReader()
+    const decoder = new TextDecoder()
+    let remaining = 4_096
+    while (reader && remaining > 0) {
+      const { done, value } = await Promise.race([reader.read(), deadline])
+      if (done) break
+      const prefix = value.subarray(0, remaining)
+      remaining -= prefix.byteLength
+      text += decoder.decode(prefix, { stream: true })
+    }
+    text += decoder.decode()
+  } catch { /* A failed diagnostic read must retain the original HTTP failure. */ }
+  finally {
+    if (reader) {
+      await Promise.race([reader.cancel().catch(() => {}), deadline])
+      reader.releaseLock()
+    }
+    clearTimeout(timer)
+  }
+  const reason = /\bapi rate limit exceeded\b/i.test(text) ? 'api_rate_limit'
+    : /\bsecondary rate limit\b/i.test(text) ? 'secondary_rate_limit'
+      : /\bjwt\s*:?\s*expired\b|\bExpiredAuthenticationToken\b|\bExpiredToken\b/i.test(text) ? 'expired_token'
+        : /\bSignature not valid in the specified time frame\b/i.test(text) ? 'signature_time_invalid'
+          : /\bAuthenticationFailed\b/i.test(text) ? 'authentication_failed' : 'unknown'
+  return new Error(`Official tool download failed: HTTP ${response.status}${details}; reason=${reason}`)
+}
+
 export async function downloadVerifiedAsset(spec, destination, fetchAsset = fetch) {
   try { await verifyFile(destination, spec); return destination }
   catch (error) { if (error.code !== 'ENOENT') throw error }
@@ -83,7 +123,7 @@ export async function downloadVerifiedAsset(spec, destination, fetchAsset = fetc
       headers: { Accept: 'application/octet-stream', ...(new URL(spec.url).hostname === 'api.github.com' ? { 'X-GitHub-Api-Version': '2022-11-28' } : {}) },
       signal: AbortSignal.timeout(120_000),
     })
-    if (response.status !== 200 || !response.body) throw new Error(`Official tool download failed: HTTP ${response.status}`)
+    if (response.status !== 200 || !response.body) throw await downloadFailure(response, spec.url)
     file = await open(temporary, 'wx', 0o600)
     let size = 0
     const hash = createHash('sha256')
