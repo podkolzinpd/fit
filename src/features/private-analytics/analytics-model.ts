@@ -3,7 +3,7 @@ export type AnalyticsFilters = {
   from: string; to: string; section: string; sort: string; direction: 'asc' | 'desc'; page: number; pageSize: number;
   group: string; role: string; person: string; trainer: string; registration: string; feature: string; exercise: string; search: string; regularDays: number; cohort: string; status: string; entity: string; workout: string;
 }
-export type AnalyticsResult = {
+type AnalyticsResult = {
   computedAt: string; observationStartedAt: string; revision: string; retentionMeasured: boolean; total: number; rows: AnalyticsRow[];
   summary: Record<string, number>; trend: Array<{ date: string; actions: number; users: number; registrations: number }>;
   features: AnalyticsRow[];
@@ -57,7 +57,7 @@ export function csv(rows:AnalyticsRow[],columns:string[]) {
   return '\ufeff'+[columns.map(c=>cell(labels[c]??c)).join(';'),...rows.map(row=>columns.map(c=>cell(typeof row[c]==='number'?row[c]:display(row[c],c))).join(';'))].join('\r\n')
 }
 
-export type AnalyticsCard = { key:string; label:string; value:number|undefined; section:string; note:string; patch?:Partial<AnalyticsFilters> }
+type AnalyticsCard = { key:string; label:string; value:number|undefined; section:string; note:string; patch?:Partial<AnalyticsFilters> }
 export function sectionCards(filters:AnalyticsFilters,data:AnalyticsResult):AnalyticsCard[] {
   const metric=(key:string,label:string,note='За выбранный период',patch?:Partial<AnalyticsFilters>):AnalyticsCard=>({key,label,value:data.summary[key],section:filters.section,note,patch})
   const records=(label:string,note='По условиям таблицы, включая поиск'):AnalyticsCard=>({key:'total',label,value:data.total,section:filters.section,note})

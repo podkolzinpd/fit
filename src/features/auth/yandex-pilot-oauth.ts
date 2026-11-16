@@ -2,9 +2,9 @@ const OAUTH_STATE_KEY = 'fit.yandexIdPilot.oauthState'
 const OAUTH_VERIFIER_KEY = 'fit.yandexIdPilot.oauthVerifier'
 const OAUTH_INTENT_KEY = 'fit.yandexIdPilot.oauthIntent'
 const NATIVE_REGISTRATION_KEY = 'fit.yandexIdPilot.nativeRegistration'
-export type YandexAuthorizationIntent = 'pilot' | 'app' | 'register'
+type YandexAuthorizationIntent = 'pilot' | 'app' | 'register'
 
-export interface PendingYandexNativeRegistration {
+interface PendingYandexNativeRegistration {
   accountRole: 'trainer' | 'client'
   firstName: string
   timezone: string
@@ -58,7 +58,7 @@ export async function createYandexAuthorizationUrl(
   return url.toString()
 }
 
-export interface YandexAuthorizationCode {
+interface YandexAuthorizationCode {
   code: string
   codeVerifier: string
   intent: YandexAuthorizationIntent

@@ -344,7 +344,7 @@ const DEFAULT_GENERIC_QUERY_REFS: Readonly<Record<string, string>> = {
   присед: 'barbell-squat',
 }
 
-export interface RankedExerciseMatch {
+interface RankedExerciseMatch {
   exercise: ExerciseSnapshot
   score: number
   match: 'exact' | 'search'
@@ -459,7 +459,7 @@ export function matchesExerciseSearch(exercise: ExerciseSnapshot, search: string
   return queryTokens.every((token) => tokenMatches(token, searchableTokens, searchableTokenStems))
 }
 
-export interface ExerciseSearchConflict {
+interface ExerciseSearchConflict {
   phrase: string
   exerciseRefs: string[]
 }
