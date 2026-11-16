@@ -724,3 +724,95 @@ exports; вычисление `legacyRoots` снято. Остальные да�
 Обязательный scope включает frontend/shared: полноценные frontend/browser
 и API/DB gates сохраняются. Production/реальный AI не вызываются локально.
 Перед merge требуется зелёный текущий head, свежий main и проверка очереди.
+
+Опубликован [draft PR2127](https://github.com/podkolzinpd/fit/pull/2127), head
+`d10303e44255055bd6100ca25b6bb9d3b4c9f473`. Классификатор по точным SHA
+подтвердил `frontendRequired=true` / `browserRequired=true`; первоначальный
+вызов с literal HEAD вместо SHA дал консервативный полный scope, не skip.
+CI43813597656 и Android43813597819 наблюдаются одним процессом с паузой 90s.
+Независимый review: 0 blockers; 131 сохраняемая production-декларация побайтно
+прежняя, кроме целевого удаления трёх фрагментов строкового emitter. Его девять
+оставшихся фрагментов и все top-level executable statements прежние. Скан
+imports 1615 файлов не нашёл consumers удалённых named exports; два namespace
+импорта используют сохраняемые функции. Побочные IO/регистрации не удалены.
+
+Первый полный local check: `20261116-085511-7991f4c5`, lint/types PASS, затем
+3196/3200 frontend tests PASS и 4 timeout по прежнему лимиту 5000ms:
+DutyStatistics (конфликт/загрузка записи), ServicesPage (черновой период),
+два ExercisePicker (retired/search/дубли). Замер после прогона: load averages
+27.60/24.37/13.99; связь с нагрузкой была предположением, не доказанным дефектом
+приложения. Тесты, лимиты и код не менялись. Для новой причины — этих падений —
+полный coverage повторён с `--maxWorkers=2`, затем выполнены все оставшиеся
+шаги check; уже прошедшие lint/types повторно не запускались.
+
+Продолжение `20261116-090020-74297b9f` завершено exit 0: 3200 frontend /
+1636 API tests PASS, 479 условных API/DB skips локально; coverage 83,18%
+statements / 78,18% branches. Все четыре прежних timeout cases прошли,
+ios/media/infra/calendar/hosting policies, API lint/types/build и frontend
+build/startup PASS. Вместе с первым lint/types полный локальный набор check
+закрыт. Обе квитанции закреплены. Обязательная PostgreSQL/browser приёмка CI
+ещё выполняется; локальные skips не выданы за DB PASS.
+
+Сравнение 28 записей Vite output с принятой предыдущей сборкой PR2124:
+главный JS 4522,36 → 4505,99 kB (gzip 1049,32 → 1046,22 kB), CSS и media
+hashes прежние; зависимые JS chunk hashes изменились. Это сравнение вывода
+локальных сборок, не замер пользовательской производительности и не полное
+побайтовое сравнение dist. Эта квитанция добавлена после публикации и не меняет
+проверяемый head PR.
+
+Итог PR2127: CI43813597656 — 35 SUCCESS; Android43813597819 — assemble
+SUCCESS / штатный auth-smoke SKIPPED. Всего 36 SUCCESS / 1 SKIPPED, оба
+attempt 1, без rerun; полный API/PostgreSQL/Chromium/WebKit/visual/Lime/native
+auth/nutrition набор пройден. Квитанция `20261116-085902-a14ac96f` закреплена,
+единственный watcher завершён exit 0. Итоговая приёмка опубликована в PR body;
+`check-workflow-docs --pr-body` и whitespace check PASS.
+
+Перед merge свежий main оставался `5ff8ff6d`, он является ancestor принятого
+head `d10303e44255055bd6100ca25b6bb9d3b4c9f473`; единственный открытый PR —
+2127, CLEAN/MERGEABLE. После разрешённого ready выполнен squash с защитой
+`--match-head-commit`. GitHub подтвердил **MERGED 16.11.2026 в 09:46:53 МСК**,
+коммит `656ca0cf9e5be18de7054588a42f3ee2f1040bb8`.
+Все 15 кандидатов удалены, рабочих механик/Fit16 пакет не меняет. Отдельный
+production deploy и физические устройства не проверялись; merge не выдаётся
+за подтверждение доставки. Новых изменений или ожидающих проверок этого пакета нет.
+
+## Итерация 8 — отключённый lint plugin и лишние reexports — 16.11.2026 — Codex / OpenAI
+
+Задача: следующий безопасный пакет после PR2127; сохранить рабочие сценарии
+и механики AI, исключить Fit16. База `656ca0cf`, правила репозитория с предыдущего
+пакета не менялись. Рабочая копия переиспользована, ветка
+`chore/safe-unused-code-followup-20261116`. Расхождений нет.
+
+Новый аудит: 121 feature-local helper/hook/adaptor и 492 exports достижимы из
+приложения; новых безопасных удалений здесь нет. Серверный проход учёл 1615
+tracked JS/TS-файлов и 5768 деклараций, включая типы, shorthand, overloads,
+namespace/dynamic/deploy/manual entrypoints. Проверены также 116 служебных
+JS/MJS-файлов, 5 Python-скриптов и 29 devDependency-записей в двух manifests.
+Возраст, размер файла и использование только тестами не считались доказательством.
+
+| ID | Изменение | Доказательство / что сохраняется |
+| --- | --- | --- |
+| UC801 | Удалён `eslint-plugin-react-refresh` из config/devDependencies/lock | Его единственное правило было `off`, processors нет; других consumers/dependents нет. Все остальные effective rules/plugins/settings в четырёх представительных scopes после удаления совпадают; независимая модель пяти scopes подтвердила также parser/linter options. Рабочий `@vitejs/plugin-react` и браузерный HMR не менялись. JSON-сравнение manifest/lock подтвердило только целевое удаление, без смены других версий. |
+| UC802 | Удалены type-reexports `NutritionPilot` из `nutrition-diary.ts` и `ProgramSourceSnapshot` из `program/turn.ts` | Consumers обращаются к исходным модулям; исходные типы, локальные imports, constructors и все применения сохранены. |
+| UC803 | Удалён reexport `readAssistantTurnRequest` из assistant core и лишний import | Production `app.ts` уже читает parser напрямую; только `core.test.ts` использовал обходной путь. В тесте изменён источник импорта, все 23 cases и 103 assertions побайтно прежние, включая valid/invalid request. |
+
+AST-сверка API: все 86 остальных top-level узлов в затронутых файлах побайтно
+сохранены. Целевые core/nutrition/turn — 84 tests PASS; whitespace PASS.
+Ни один assertion не удалён, новый тест ради зеркалирования удаления не добавлен.
+Исходники parser, AI prompts/models/выбор/сохранение/auth/RLS не менялись.
+
+Решение: пакет ограничен одним отключённым инструментом разработки и тремя
+лишними путями импорта. Отвергнуто расширение на действующие операторские
+entrypoints, восстановление, migration/compatibility, `exerciseSearchConflicts`,
+Progress/goals/Fit16. `@testing-library/dom` нужен как peer тестового React,
+`@types/*` и coverage provider используются инструментами неявно — сохранены.
+Дополнительный `noUnusedLocals/noUnusedParameters` проход frontend показал только
+неиспользуемое имя callback-параметра в achievements test; этот косметический
+остаток не включён в пакет и не означает неработающий сценарий.
+
+Полный локальный набор `check` запущен с `--maxWorkers=2` только у coverage,
+учитывая подтверждённые таймауты при высокой параллельности прошлого пакета.
+Состав, timeout, assertions и thresholds прежние. Изменение root manifests/config
+требует полного CI; пропуски frontend/browser/native не назначаются вручную.
+Итог полного прогона и CI пока не заявлены. Следующий шаг — завершить приёмку
+и подготовить отдельный draft PR с проверенной версией и результатами.
