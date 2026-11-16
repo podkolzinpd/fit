@@ -2,7 +2,8 @@ import { describe, expect, it, vi } from 'vitest'
 vi.mock('../yandex-llm-function-client.js', () => ({
   invokeYandexLlmCompletion: vi.fn(),
 }))
-import { assistantCapabilitiesReply, assistantModelMessages, assistantSmallTalkFallback, assistantSmallTalkPrompt, completeAssistantSmallTalk, extractWorkoutTranscript, isAssistantCapabilityQuestion, isSummaryCancellation, isTurnIdReuse, readAssistantTurnRequest, matchingSummaryClients, recordWorkoutTurn, usesInformalAddress, validateAssistantTurnResponse, validateEnabledAssistantTurnResponse } from './core.js'
+import { assistantCapabilitiesReply, assistantModelMessages, assistantSmallTalkFallback, assistantSmallTalkPrompt, completeAssistantSmallTalk, extractWorkoutTranscript, isAssistantCapabilityQuestion, isSummaryCancellation, isTurnIdReuse, matchingSummaryClients, recordWorkoutTurn, usesInformalAddress, validateAssistantTurnResponse, validateEnabledAssistantTurnResponse } from './core.js'
+import { readAssistantTurnRequest } from '../assistant-state-request.js'
 import { invokeYandexLlmCompletion } from '../yandex-llm-function-client.js'
 import { assistantNavigationTurn } from './navigation.js'
 import { programPilotTurn } from './program/turn.js'

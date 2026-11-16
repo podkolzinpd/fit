@@ -1,4 +1,3 @@
-import { readAssistantTurnRequest } from '../assistant-state-request.js'
 import { invokeYandexLlmCompletion } from '../yandex-llm-function-client.js'
 import { readProgramBrief } from './program/brief.js'
 import { programSessionCount } from './program/context.js'
@@ -127,8 +126,6 @@ export function isSummaryCancellation(message: string): boolean {
   const normalized = normalizeAssistantMessage(message)
   return ['отмена', 'отменить', 'не надо', 'стоп', 'закрыть', 'выход'].some((value) => normalized === value || normalized.startsWith(`${value} `))
 }
-
-export { readAssistantTurnRequest }
 
 export function isTurnIdReuse(existingContent: unknown, requestedContent: string): boolean {
   return typeof existingContent === 'string' && existingContent !== requestedContent
