@@ -13086,3 +13086,98 @@ Source ownership проверен по104 raw состояниям кандид�
 и unit89/89 PASS остаются действительными, поскольку source844 не менялся.
 До выпуска ещё native residual qualification, protected/OFF controls,
 применимые прежние skin-regressions и полный CI точного head.
+
+
+## 295. MC5.8 — финальная локальная приёмка PR2132
+
+Финальный source3788fae48f98e4c004233b7437e7965830e49258. Source runtime844
+records в двух CSS, protected1939 files exact, порядок25720 global declarations
+и прежний components suffix точные. Runtime React/DOM/handlers/API/права/
+версии/rollout/CI/native/fonts прежние. Существующие guard-classifiers менялись
+только импортом и регистрацией нового точного negative guard.
+
+Baseline viewport68/68 и candidate viewport68/68 PASS, retries/skips/flaky0.
+104 состояния, каждое сохраняет минимум20 реальных computed nodes; до и
+после screenshot DOM/computed/form/rect/focus/scroll точные. Snapshot только
+реального viewport, исходники снимков не редактировались. Финальный строгий
+raw оставлен RED только из-за8 новых диагностических FIT-кодов. Все104
+computed/styles/geometry/form/focus/scroll состояния точные. Остальные DOM
+точны после адресной проверки ЕДИНСТВЕННОГО конкретного support-code leaf
+каждого из8 случаев; unchanged producers доказаны точными исходниками.
+PNG96/104 побайтно точные,8 имеют только пиксели внутри текущего блока кода
+поддержки; вне него каждый пиксель точен. Масок/замены UUID/raw rewrite нет.
+Рамка/Coachmark из прежнего неверного fullPagecapture в финальном наборе
+больше не различаются. Приложение ради этого не менялось.
+
+В каждом из104 состояний0 legacy-negative matches, положительные Lime
+owners присутствуют; это закреплено assertions обычного CI. Ранее34/34
+существующих native behavior cases PASS (свайпы/отмена/архив/restore/
+приглашения/права/ошибки/профиль/OFF),89 unit/component PASS; source844 тот же.
+Полный lint, build/types, docs и diff-check PASS. Browser API/медиа синтетические,
+production user writes0. Физический iPhone/настоящая клавиатура/микрофон и
+реальные OAuth/приглашения не проверялись и не объявляются проверенными.
+
+Индексы доказательств /tmp/fit-mc58: baseline-viewport-qualified,
+candidate-viewport-final-location, native-viewport-comparison(rawRED),
+native-viewport-qualification, source-proof, mechanics-regressions-location,
+unit-location. Фактические исходные пути — fit-storage fit-monochrome-cleanup:
+baseline20261116-161219-c5cf0fa8, candidate20261116-161605-c416393b. Старые
+неполные/failed прогоны сохранены с исходными статусами, не заменены приёмкой.
+
+PR2132 открыт, собственный CI выполняется на3788fae4; merge/deploy ещё нет.
+Дальше: зелёный полный CI этого head → проверка GitHub очереди/main →
+разрешённый merge → mainCI/публикация → actual web/API readback. Android
+проверяется отдельно с сохранением native guard. Следующий MC без приёмки
+владельца не начинать.
+
+
+### MC5.8 — CI выявил границу общей основы темы
+
+CI43873199211/head3788fae4: app-tests FAIL, зависимый app FAIL. Точная причина —
+существующий theme-css-contract.test.ts ожидал целый корневой блок
+.phone-frame.theme-light, .theme-light. Перенос разделил это общее правило.
+Это нарушение выбранной границы, а не повод ослабить тест. Корневые selectors
+исключены из переноса, исходный grouped block возвращён целиком; тест без
+изменений1/1 PASS. Полный набор unit/component после исправления3210/3210 PASS.
+
+Первый корректирующий вариант838 records лишился необходимой нейтральной
+компенсации mobile border:0/radius:0 и дал74 отличающихся native состояний.
+Этот raw FAIL сохранён, не квалифицирован как успешный. Общий .phone-frame
+reset оставлен исходным structural rule; те же2 neutral declarations
+сохранены внутри Lime owner как доказанная компенсация каскада. Это не
+отключает общую foundation и не меняет layout/handlers. Итоговый кандидат
+840 records/353groups: whole global25720 flow и components suffix точные;
+1939 прочих файлов точные. Native после этого ещё выполняется.
+
+Main обновился PR2131/506309d5:12 удалённых экспортов типов/fixture helper и
+одно устаревшее поле внутреннего типа. Diff просмотрен: действующие функции/
+CSS/пакеты/маршруты не менялись. Чужие изменения сохраняются; после окончания
+текущего CI обычный merge main и новые проверки собственного head. Старые
+запущенные jobs не отменяются. Новый выпуск пока не выполнен.
+
+
+### MC5.8 — корректирующая версия840 проверена
+
+Native840:68/68 PASS,104 состояния. Строгий raw RED только10 состояний:
+8 новых support-кодов и2 разных позиции first-visit Coachmark. Все остальные
+DOM/поля/computed/геометрия/фокус/scroll точны; для2 подсказок различаются
+только координаты самой bubble и её содержимого при той же геометрии
+якоря/остальных элементов и точных остальных стилях/тексте. PNG94/104 точные;
+в10 случаях каждый изменённый пиксель строго внутри реального изменённого
+элемента (support-code либо старая/новая bubble), вне этих элементов точны.
+
+Дрейф подсказки НЕ просто предположен:12 адресных повторов на неизменной
+исходной сборке воспроизвели обе те же позиции306.578px и335.766px в Chromium,
+WebKit сохраняет306.578125px. Приложение ради эксперимента не менялось;
+неизменные ui.tsx/diagnostic producers доказаны точными исходниками. Точная
+причина исходной нестабильности не объявляется установленной/исправленной.
+Это существующее ограничение, не новая разница миграции. Original raw и
+новая qualification-final сохранены, совпадение104PNG не заявляется.
+
+Полный unit/component3210/3210 PASS; исходный theme-css-contract не менялся.
+Сборка/types, sourceflow/protected1939, guard-only QA proof PASS. Историческая
+приёмка844 в§295 относится только к её hash, не подменяет исправленную840.
+Индексы: candidate-mask-final-location, native-mask-comparison(rawRED),
+native-mask-qualification-final, original-coachmark-repeat-evidence в/tmp/fit-mc58.
+Дальше обновление main2131, проверка фактической сборки нового head и его CI;
+разрешение самостоятельного выпуска сохраняется.
