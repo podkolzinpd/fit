@@ -9,7 +9,6 @@ import { addDays, materializeProgram, programBriefIssues, ProgramValidationError
 import { programIamToken, programModelAuthorization, programModelJson } from './model.js'
 import { explicitBriefAnswer, type BriefAnswerContext } from './answer.js'
 import type { ProgramSourceSnapshot } from './source-contract.js'
-export type { ProgramSourceSnapshot } from './source-contract.js'
 
 export type ProgramClient = { id: string; fullName: string; ageYears: number | null; goal: string | null }
 type Dependencies = {

@@ -4,7 +4,6 @@ import { withYandexActorSession, type YandexActorSession } from './yandex-actor-
 import { PilotDomainCommandError } from './domain-commands.js'
 import { NutritionCatalogUnavailableError, publicNutritionFood, type NutritionCatalog, type NutritionValues } from './nutrition-catalog.js'
 import { nutritionBarcodeProfileAllowed, nutritionProfileAllowed, type NutritionBarcodePilot, type NutritionPilot } from './nutrition-pilot.js'
-export type { NutritionPilot } from './nutrition-pilot.js'
 
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 export type Meal = 'breakfast' | 'lunch' | 'dinner' | 'snack'
