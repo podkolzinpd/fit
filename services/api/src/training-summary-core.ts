@@ -21,7 +21,6 @@ import { invokeYandexLlmCompletion } from "./yandex-llm-function-client.js"
 
 const YANDEX_COMPLETION_URL =
   "https://llm.api.cloud.yandex.net/foundationModels/v1/completion"
-export const MAX_SOURCE_ROWS = 10_000
 const MAX_DIRECT_MODEL_INPUT_CHARS = 80_000
 
 export type WorkoutRow = {
@@ -62,21 +61,6 @@ export type SetRow = {
   fact_distance_km: number | null
   fact_rpe: number | null
   confirmed_at: string | null
-}
-
-export type ProgressRow = {
-  id: string
-  recorded_on: string
-  weight_kg: number | null
-  chest_cm: number | null
-  waist_cm: number | null
-  hip_cm: number | null
-  custom_metrics?: Array<{
-    metric_id: string
-    name: string
-    unit: string | null
-    value: number
-  }>
 }
 
 type YandexCompletionResponse = {
@@ -258,14 +242,6 @@ export function configuredModelId(): string {
   return process.env.YANDEX_CLOUD_MODEL_ID ?? "yandexgpt"
 }
 
-export async function fingerprint(value: unknown): Promise<string> {
-  const bytes = new TextEncoder().encode(JSON.stringify(value))
-  const digest = await crypto.subtle.digest("SHA-256", bytes)
-  return Array.from(new Uint8Array(digest))
-    .map((byte) => byte.toString(16).padStart(2, "0"))
-    .join("")
-}
-
 type SessionMetrics = {
   date: string
   set_count: number
@@ -296,16 +272,6 @@ function rounded(value: number): number {
 function percentChange(start?: number, end?: number): number | undefined {
   if (start === undefined || end === undefined || start <= 0) return undefined
   return Math.round(((end - start) / start) * 100)
-}
-
-export function addUtcDays(value: string, amount: number): string {
-  const date = new Date(`${value}T00:00:00.000Z`)
-  date.setUTCDate(date.getUTCDate() + amount)
-  return date.toISOString().slice(0, 10)
-}
-
-export function inclusivePeriodDays(start: string, end: string): number {
-  return Math.round((Date.parse(`${end}T00:00:00.000Z`) - Date.parse(`${start}T00:00:00.000Z`)) / 86_400_000) + 1
 }
 
 function setValues(set: SetRow, kind: 'plan' | 'fact'): Record<string, number> | null {

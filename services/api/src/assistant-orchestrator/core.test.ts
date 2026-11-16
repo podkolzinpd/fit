@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest'
 vi.mock('../yandex-llm-function-client.js', () => ({
   invokeYandexLlmCompletion: vi.fn(),
 }))
-import { assistantCapabilitiesReply, assistantModelMessages, assistantSmallTalkFallback, assistantSmallTalkPrompt, completeAssistantSmallTalk, extractWorkoutTranscript, isAssistantCapabilityQuestion, isSummaryCancellation, isSummaryRequest, isTurnIdReuse, readAssistantTurnRequest, matchingSummaryClients, recordWorkoutTurn, summaryPeriodFromMessage, usesInformalAddress, validateAssistantTurnResponse, validateEnabledAssistantTurnResponse } from './core.js'
+import { assistantCapabilitiesReply, assistantModelMessages, assistantSmallTalkFallback, assistantSmallTalkPrompt, completeAssistantSmallTalk, extractWorkoutTranscript, isAssistantCapabilityQuestion, isSummaryCancellation, isTurnIdReuse, readAssistantTurnRequest, matchingSummaryClients, recordWorkoutTurn, usesInformalAddress, validateAssistantTurnResponse, validateEnabledAssistantTurnResponse } from './core.js'
 import { invokeYandexLlmCompletion } from '../yandex-llm-function-client.js'
 import { assistantNavigationTurn } from './navigation.js'
 import { programPilotTurn } from './program/turn.js'
@@ -122,9 +122,7 @@ describe('assistant orchestrator contract', () => {
     )
   })
 
-  it('recognizes summary requests, periods and informal address deterministically', () => {
-    expect(isSummaryRequest('Покажи динамику клиента')).toBe(true)
-    expect(summaryPeriodFromMessage('за последние 30 дней', new Date('2026-08-24T12:00:00Z'))).toEqual({ periodStart: '2026-07-26', periodEnd: '2026-08-24', label: 'последние 30 дней' })
+  it('recognizes informal address deterministically', () => {
     expect(usesInformalAddress('Что ты умеешь?')).toBe(true)
     expect(usesInformalAddress('Что вы умеете?')).toBe(false)
   })
