@@ -59,7 +59,7 @@ const certificateSchema = z.object({
   year: z.number().int().min(1950).max(new Date().getFullYear()).nullable(),
 })
 
-export const trainerProfilePhotoSchema = z.object({
+const trainerProfilePhotoSchema = z.object({
   id: z.uuid(),
   url: z.url().max(4_096).nullable(),
   thumbnailUrl: z.url().max(4_096),
@@ -122,7 +122,7 @@ export const trainerProfessionalProfileSchema = z.object({
   isBrandTrainer: z.boolean(),
 })
 
-export const trainerCatalogItemSchema = z.object({
+const trainerCatalogItemSchema = z.object({
   publicId: z.uuid(),
   profile: trainerProfileDraftSchema,
   isBrandTrainer: z.boolean(),

@@ -1,7 +1,7 @@
 export const TRAINER_PHOTO_MAX_BYTES = 850_000
-export const TRAINER_PHOTO_THUMBNAIL_MAX_BYTES = 160_000
+const TRAINER_PHOTO_THUMBNAIL_MAX_BYTES = 160_000
 
-export type TrainerPhotoUploadPart = {
+type TrainerPhotoUploadPart = {
   bytes: Uint8Array
   mimeType: 'image/jpeg'
   width: number

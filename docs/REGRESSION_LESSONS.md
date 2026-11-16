@@ -405,3 +405,15 @@ fortnight: day-specific winners могут маскировать .schedule-even
 не удалять/ослаблять assertion и не объявлять fallback dead по marker absence.
 Общая тема с custom properties сохраняется целым rule; её screen-часть не
 разбирать только ради ownership. [Проверки и исправления](design/CLIENT_REFERENCE_SCREENS_20261029.md#272-mc55--найденные-при-проверке-границы-и-исправления).
+
+
+### CI: публичный release asset всё равно расходует лимит GitHub API
+
+16.11.2026, PR2130: три infra-прогона остановились на HTTP403 до проверки
+Terraform. Контекст ошибки на runner подтвердил `api_rate_limit`, remaining0;
+локальный200 не доказывал доступность из CI. Штатный Actions token передаётся
+только download-шагам и HTTPS GitHub asset API; Maven и CDN не получают его.
+Права, официальный источник, версия, size/SHA256 и отказ при неполном файле
+сохраняются. Не лечить403 слепыми повторами, заменой источника или отключением
+проверки. Отдельный `ECONNRESET` — transport failure, не доказательство прежней
+причины. [Лог причины и приёмка](design/UNUSED_CODE_CLEANUP_20261114.md#продолжение-uc904--16112026--codex--openai).

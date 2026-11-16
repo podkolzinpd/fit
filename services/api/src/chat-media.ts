@@ -1,4 +1,4 @@
-export const CHAT_IMAGE_MAX_BYTES = 2 * 1024 * 1024
+const CHAT_IMAGE_MAX_BYTES = 2 * 1024 * 1024
 
 export type ChatImageUpload = {
   bytes: Uint8Array

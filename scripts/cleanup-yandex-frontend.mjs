@@ -20,7 +20,7 @@ const inventorySize = (item) => {
   return typeof item.size === 'number' || (typeof item.size === 'string' && /^\d+$/.test(item.size))
     ? Number(item.size) : NaN
 }
-export function referencedObjects(spec) {
+function referencedObjects(spec) {
   validateSpecification(spec)
   const objects = new Set()
   for (const route of Object.values(spec.paths)) {

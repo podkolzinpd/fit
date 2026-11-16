@@ -1,4 +1,4 @@
-export interface ParsedFoodLine {
+interface ParsedFoodLine {
   name: string
   grams: number | null
 }

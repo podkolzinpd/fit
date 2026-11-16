@@ -2,7 +2,7 @@ import { type BrowserPushSubscription, getCurrentPushSubscription, isPushSupport
 
 export type PushSubscriptionState = 'working' | 'needs-permission' | 'needs-connection' | 'denied' | 'unsupported'
 
-export type PushSubscriptionServerAdapter = {
+type PushSubscriptionServerAdapter = {
   hasServerSubscription: (endpoint: string) => Promise<boolean>
   saveSubscription: (subscription: BrowserPushSubscription) => Promise<void>
 }

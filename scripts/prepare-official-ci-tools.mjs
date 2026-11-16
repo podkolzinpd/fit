@@ -72,18 +72,36 @@ async function verifyFile(path, spec) {
   if (hash.digest('hex') !== spec.sha256) throw new Error('Official tool SHA256 mismatch')
 }
 
-export async function downloadVerifiedAsset(spec, destination, fetchAsset = fetch) {
+function downloadFailure(response, sourceUrl) {
+  let host = 'unknown'
+  try { host = new URL(response.url || sourceUrl).hostname || 'unknown' } catch { /* Never include an invalid URL. */ }
+  let details = `; host=${host}`
+  if (host === 'api.github.com' || host === 'github.com') {
+    for (const name of ['x-ratelimit-remaining', 'x-ratelimit-reset']) {
+      const value = response.headers.get(name)
+      if (/^(?:0|[1-9]\d{0,9})$/.test(value ?? '')) details += `; ${name}=${value}`
+    }
+  }
+  void response.body?.cancel().catch(() => {})
+  return new Error(`Official tool download failed: HTTP ${response.status}${details}`)
+}
+
+export async function downloadVerifiedAsset(spec, destination, fetchAsset = fetch, { githubToken } = {}) {
   try { await verifyFile(destination, spec); return destination }
   catch (error) { if (error.code !== 'ENOENT') throw error }
   await mkdir(dirname(destination), { recursive: true })
   const temporary = `${destination}.${randomUUID()}.part`
   let file
   try {
+    const url = new URL(spec.url)
+    const githubAsset = url.origin === 'https://api.github.com' && !url.username && !url.password
+      && /^\/repos\/[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+\/releases\/assets\/[1-9]\d*$/.test(url.pathname)
     const response = await fetchAsset(spec.url, {
-      headers: { Accept: 'application/octet-stream', ...(new URL(spec.url).hostname === 'api.github.com' ? { 'X-GitHub-Api-Version': '2022-11-28' } : {}) },
+      headers: { Accept: 'application/octet-stream', ...(url.hostname === 'api.github.com' ? { 'X-GitHub-Api-Version': '2022-11-28' } : {}),
+        ...(githubAsset && githubToken ? { Authorization: `Bearer ${githubToken}` } : {}) },
       signal: AbortSignal.timeout(120_000),
     })
-    if (response.status !== 200 || !response.body) throw new Error(`Official tool download failed: HTTP ${response.status}`)
+    if (response.status !== 200 || !response.body) throw downloadFailure(response, spec.url)
     file = await open(temporary, 'wx', 0o600)
     let size = 0
     const hash = createHash('sha256')
@@ -116,23 +134,23 @@ export function gradleCacheZip(properties, gradleHome) {
   return join(gradleHome, 'wrapper/dists/gradle-8.14.3-all', key, 'gradle-8.14.3-all.zip')
 }
 
-export async function prepareOfficialCiTool(mode, { root = process.cwd(), gradleHome = process.env.GRADLE_USER_HOME || join(homedir(), '.gradle'), temporaryRoot = process.env.RUNNER_TEMP, pluginRoot, fetchAsset = fetch } = {}) {
+export async function prepareOfficialCiTool(mode, { root = process.cwd(), gradleHome = process.env.GRADLE_USER_HOME || join(homedir(), '.gradle'), temporaryRoot = process.env.RUNNER_TEMP, pluginRoot, fetchAsset = fetch, githubToken = process.env.GITHUB_TOKEN } = {}) {
   if (mode === 'gradle') {
     if (!temporaryRoot) throw new Error('Gradle CI preparation requires a temporary runner directory')
     const properties = await readFile(join(root, 'android/gradle/wrapper/gradle-wrapper.properties'), 'utf8')
-    const archive = await downloadVerifiedAsset(officialTools.gradle, gradleCacheZip(properties, gradleHome), fetchAsset)
+    const archive = await downloadVerifiedAsset(officialTools.gradle, gradleCacheZip(properties, gradleHome), fetchAsset, { githubToken })
     const repository = join(temporaryRoot, 'fit-ci-kotlin-maven')
     for (const { version, jar, pom } of kotlinCompilerArtifacts) {
       const module = join(repository, `org/jetbrains/kotlin/kotlin-compiler-embeddable/${version}/kotlin-compiler-embeddable-${version}`)
-      await downloadVerifiedAsset(jar, `${module}.jar`, fetchAsset)
-      await downloadVerifiedAsset(pom, `${module}.pom`, fetchAsset)
+      await downloadVerifiedAsset(jar, `${module}.jar`, fetchAsset, { githubToken })
+      await downloadVerifiedAsset(pom, `${module}.pom`, fetchAsset, { githubToken })
     }
     await writeFile(join(temporaryRoot, 'fit-ci-kotlin.init.gradle'), gradleKotlinInit(repository), { mode: 0o600 })
     return archive
   }
   if (mode !== 'terraform' || !pluginRoot) throw new Error('Expected gradle or terraform with a temporary plugin directory')
   if (process.platform !== 'linux' || process.arch !== 'x64') throw new Error('Terraform CI provider requires linux/amd64')
-  const archive = await downloadVerifiedAsset(officialTools.terraform, join(pluginRoot, 'terraform-provider-yandex_0.215.0_linux_amd64.zip'), fetchAsset)
+  const archive = await downloadVerifiedAsset(officialTools.terraform, join(pluginRoot, 'terraform-provider-yandex_0.215.0_linux_amd64.zip'), fetchAsset, { githubToken })
   const directory = join(pluginRoot, 'registry.terraform.io/yandex-cloud/yandex/0.215.0/linux_amd64')
   await mkdir(directory, { recursive: true })
   const result = spawnSync('unzip', ['-j', '-o', archive, 'terraform-provider-yandex_v0.215.0', '-d', directory], { encoding: 'utf8' })

@@ -1,9 +1,9 @@
-export interface MeetingState {
+interface MeetingState {
   available: boolean
   mediaOrigin?: string
   meeting: { id: string; participantCount: number } | null
 }
-export interface MeetingCredentials {
+interface MeetingCredentials {
   origin: string
   domain: string
   muc: string
@@ -12,7 +12,7 @@ export interface MeetingCredentials {
   expiresAt: string
 }
 export interface MeetingResult extends MeetingState { credentials?: MeetingCredentials }
-export type MeetingAction = 'prepare' | 'joined' | 'heartbeat' | 'leave'
+type MeetingAction = 'prepare' | 'joined' | 'heartbeat' | 'leave'
 export interface MeetingTrack {
   id: string
   kind: 'audio' | 'video'

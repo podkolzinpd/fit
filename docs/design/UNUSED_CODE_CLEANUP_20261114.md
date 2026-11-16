@@ -816,3 +816,243 @@ Progress/goals/Fit16. `@testing-library/dom` нужен как peer тестов
 требует полного CI; пропуски frontend/browser/native не назначаются вручную.
 Итог полного прогона и CI пока не заявлены. Следующий шаг — завершить приёмку
 и подготовить отдельный draft PR с проверенной версией и результатами.
+
+Опубликован [draft PR2128](https://github.com/podkolzinpd/fit/pull/2128), head
+`25a0d75b3894678f0de50af1a2ce7e8d44218fba`. Автоматический scope по точным
+SHA подтвердил полный frontend/browser набор. CI43820661765 и Android43820661444
+запущены; один watcher с паузой 90s, без наблюдения за чужими чатами/CI.
+
+Локальный полный набор check прошёл с первого прогона, exit 0, квитанция
+`20261116-095633-abc85c41` закреплена: 3200 frontend / 1636 API tests PASS,
+479 условных API/DB skips; coverage 83,18% statements / 78,18% branches.
+Lint/types, ios/media/infra/calendar/hosting policies, API/frontend build и
+startup PASS. Отдельные CI/PostgreSQL/browser проверки ещё выполняются.
+Независимый общий review: 0 blockers, 83 сохраняемых API-объявления и тела
+тестов побайтно прежние; остальные 86 top-level узлов включают также imports.
+UI/assets/e2e/Fit16 не менялись, лишних lock-изменений нет.
+Квитанция добавлена после публикации без изменения проверяемого head.
+
+Итог PR2128: CI43820661765 — 35 SUCCESS; Android43820661444 — assemble
+SUCCESS / штатный auth-smoke SKIPPED, всего 36 SUCCESS / 1 SKIPPED, оба
+attempt 1, без rerun. Полный API/PostgreSQL/Chromium/WebKit/visual/Lime/native
+auth/nutrition набор пройден; watcher exit 0, квитанция
+`20261116-100103-6d9e7e75` закреплена. PR body обновлён полной приёмкой;
+workflow-docs acceptance check и whitespace PASS.
+
+Продолжен ранее разрешённый владельцем цикл «сразу сливать, как всё сделаешь»;
+это применение разрешения к следующему согласованному безопасному пакету было
+обозначено в чате до слияния. Перед merge: свежий main `656ca0cf` — ancestor
+проверенного head `25a0d75b3894678f0de50af1a2ce7e8d44218fba`; других открытых
+PR нет, CLEAN/MERGEABLE. После ready выполнен squash с `--match-head-commit`.
+GitHub подтвердил **MERGED 16.11.2026 в 10:40:00 МСК**, коммит
+`26178971a1adb1397fcff12196fb608672419472`. Отдельный production deploy и
+физические устройства не проверялись; слияние не выдаётся за доставку.
+
+Уточнение результата `noUnusedParameters`: callback-параметр `value` в
+`athlete-achievements.test.ts:246` сохраняет позицию используемого второго
+аргумента `index`. Это не кандидат на удаление аргумента; возможное изменение
+только его имени косметическое и не входит в пакет. Других крупных безопасно
+удаляемых блоков в проверенной non-UI/ops области этот проход не подтвердил.
+
+## Итерация 9 — лишняя внешняя видимость внутренних объявлений — 16.11.2026 — Codex / OpenAI
+
+Задача: вычистить мелкие точно неиспользуемые остатки после PR2128, сохранив
+рабочие сценарии/AI и не пересечься с Fit16. База `26178971`, инструкции с
+прошлого пакета не менялись; та же рабочая копия, новая собственная ветка
+`chore/small-unused-surface-20261116`. Локальные финальные квитанции PR2128
+сохранены и входят в журнал. Расхождений нет.
+
+Выбран узкий вид чистки: 34 объявления реально нужны внутри своих модулей,
+но внешний `export` никем не используется. Сняты только эти модификаторы;
+сами функции, типы, значения, схемы и все assertions оставлены. Это сокращение
+лишнего внешнего интерфейса модулей, а не удаление 34 функций или обещание
+меньшей сборки. Проект/API private, SDK export-map отсутствует.
+
+| ID | Область и изменения | Сохранность |
+| --- | --- | --- |
+| UC901 | 15 exports в 10 non-UI клиентских файлах: client-finance, yandex-main queries, collect-pages, notification storage/reconcile, nutrition free-text, corporate-duties, meeting, nutrition, trainer-profile | 11 вложенных типов, 3 внутренних Zod-схемы и ключ onboarding теперь локальные. Существующие публичные функции/схемы и consumers прежние; 81 top-level узел совпадает после снятия выбранных modifiers. |
+| UC902 | 15 exports в 5 API файлах: pilot-chat (7 типов), nutrition-diary (4 типа), chat-media (лимит), trainer-profile-media (лимит и вложенный тип), trainer-finance-request (внутренний helper) | Все 77 узлов сохранены. Вставка обратно 15 префиксов `export ` побайтно восстанавливает исходные файлы. PilotChat/ChatMessage, NutritionDraft, media/upload contracts и рабочие entrypoints прежние. |
+| UC903 | 4 exports в 3 scripts: `referencedObjects`, `VITAL_GYM_PRO_MEDIA_MAX_FILE_BYTES`, `expectedVitalGymProMediaPaths`, `ClientWorkoutProfilesNotReadyError` | Внутренние вызовы, лимит и точные media paths, readiness/fail-closed, rollback/manifest guards прежние. Тесты продолжают вызывать публичные planCleanup/validator/resolver; прочие байты файлов совпадают с базой. |
+
+Frontend-имена: `ClientFinancePayment`, `YandexMainHttpMethod`, `Page`,
+`onboardingSeenStorageKey`, `PushSubscriptionServerAdapter`, `ParsedFoodLine`,
+`CorporateDutyCounts`, `MeetingState`, `MeetingCredentials`, `MeetingAction`,
+`nutritionValuesSchema`, `NutritionMeal`, `NutritionSelection`,
+`trainerProfilePhotoSchema`, `trainerCatalogItemSchema`.
+API-имена: `ChatThread`, `ChatBlockState`, `ChatConnectionState`, `ChatStoredImage`,
+`ChatReplyPreview`, `ChatUnreadState`, `ChatCursor`, `Meal`, `FoodBasis`,
+`FoodSelection`, `NutritionEntry`, `CHAT_IMAGE_MAX_BYTES`,
+`TRAINER_PHOTO_THUMBNAIL_MAX_BYTES`, `TrainerPhotoUploadPart`,
+`readTrainerFinanceSingleService`.
+
+Проверка потребителей учитывала 1615 tracked JS/TS-файлов, named/namespace
+imports, reexports, dynamic import/require, import-типы, tests/e2e/scripts,
+workflow/deploy/manual обращения и одноимённые независимые декларации.
+Frontend проверил 49 imports в выбранные модули; API — 938 exports.
+Неиспользуемых локальных imports/bindings в 89 допустимых служебных MJS нет.
+E2E noUnused-проход показал только позиционный `exercise` перед используемым
+`position` в workout-copy-names fixture; аргумент нужен для позиции и сохранён.
+
+Отвергнуто: удалять работающие объявления вместо их лишней видимости,
+переписывать signatures/values, сокращать tests, включать Progress/goals/UI/CSS
+или Fit16. `readbackOta` сохранён: docs подтверждают ручные обращения именно
+к экспорту. Recovery/legacy/CLI entrypoints и известные нужные test helpers
+остаются. AI prompts/models/parser/подбор/сохранение/доступ не менялись.
+
+Whitespace check PASS. Полный check с двумя coverage workers выполняется;
+состав и таймауты прежние. Ни успешный полный прогон, ни CI пока не заявлены.
+Далее — отдельный PR, полная приёмка и слияние в ранее согласованном порядке
+после проверки актуального main/head и GitHub-очереди.
+
+Опубликован [draft PR2130](https://github.com/podkolzinpd/fit/pull/2130), head
+`33989dd33a85bfffec468bb052eb97c12ffaaaf5`. Exact-SHA scope требует полного
+frontend/browser набора; CI43830625621 / Android43830624880 запущены.
+Независимый review: 0 blockers, весь source diff — ровно 34 снятых `export `,
+остальные байты 18 файлов прежние. Проверены 80 imports этих модулей;
+единственный dynamic import использует сохранённый `readChatImageUpload`.
+
+Полный local check на базе `26178971` прошёл с первого прогона, exit 0,
+квитанция `20261116-111838-a5e11cfa` закреплена: 3200 frontend / 1636 API
+tests PASS, 479 conditional API/DB skips; coverage 83,18% statements / 78,18%
+branches. Lint/types/policies, API/frontend build и startup PASS. Все 28 строк
+Vite output (имена/hash/размеры) совпадают с принятой сборкой PR2128; это не
+отдельный побайтовый snapshot всего dist и не проверка физических устройств.
+
+В GitHub перед нашим пакетом открыт более ранний PR2129 MC5.7, head `5e62afbb`.
+Он проходит первым; чужой PR не сливается и не объявляется неактивным по возрасту.
+Свой CI наблюдается одним процессом с паузой 90s, только необходимое состояние
+merge PR2129 — тем же ограниченным процессом не чаще 5 минут. Другие чаты,
+их задачи и результаты не читаются. После его merge требуется обновление
+нашего head от фактического main и приёмка совместной версии, без своих правок
+Fit16. Текущие команды/CI не прерываются; результат текущего CI ещё не заявлен.
+
+CI attempt 1: `frontend-infrastructure`, job133174976709, упал на скачивании
+официального Terraform provider (`prepare-official-ci-tools.mjs:86`), HTTP 403
+от GitHub release asset API. До terraform validate шага прогон не дошёл.
+Этот script и workflow побайтно прежние относительно базы; причина текущего
+падения — недоступность загрузки, а не assertion изменённого приложения.
+Причина самого отказа 403 и его временность по имеющемуся логу не установлены.
+Сохранён job log в `20261116-112357-b3621ea1/frontend-infrastructure.log`.
+Остальные jobs не прерываются. После завершения — повтор только упавшей части
+при прежнем head либо обязательный новый CI совместной версии после merge2129;
+защитные проверки/источники/контрольные суммы не ослабляются.
+
+Итог текущей приёмки: первый CI завершился 33 SUCCESS / 2 FAILURE (infra и
+зависимый app gate). Выполнен `gh run rerun --failed` только для этих двух jobs;
+attempt 2 снова завершился тем же HTTP403 в job133192302394, затем отказом
+`Verify app checks`. Все 33 успешных CI jobs сохранились без повторного запуска;
+Android attempt 1 — assemble SUCCESS / штатный auth-smoke SKIPPED. GitHub
+rollup текущего head: **34 SUCCESS / 2 FAILURE / 1 SKIPPED**, не полный PASS.
+Оба watcher завершены, активных фоновых проверок нет. Квитанции
+`20261116-112357-b3621ea1` и `20261116-120054-e4800f5a` закреплены; второй
+job log сохранён в последней папке как `frontend-infrastructure.log`.
+
+Проверка того же официального URL вне CI получила HTTP200; архив не скачивался,
+подписанные query-параметры не выводились. Это подтверждает доступность с
+локального маршрута, но не объясняет повторяющийся отказ внутри GitHub runner.
+Независимый read-only разбор не нашёл штатной альтернативы: workflow всегда
+выполняет pre-download, cache restore и inputs нет, CLI принимает только mode
+и pluginRoot; Terraform mirror применяется позднее. Версии, source URL, hashes,
+авторизация и CI не менялись. Третий повтор без новой причины не запускался.
+
+Checkpoint: PR2130 остаётся OPEN/DRAFT на `33989dd3`, main по-прежнему `26178971`.
+Более ранний PR2129 открыт, его head продвинулся с `5e62afbb` на `695a4be4`;
+оснований считать его неактивным нет. Слияние2130 не выполнялось: мешают
+обязательный infra gate и очередь. Продолжение — восстановление штатной загрузки
+в CI либо отдельное согласованное инфраструктурное исправление; после merge2129
+включить фактический main в свою ветку, проверить неизменность 34 точечных
+правок и получить зелёную приёмку нового head. Собственный scope/Fit16 не расширять.
+Итоги и блокеры опубликованы в PR body; локальный журнал не меняет проверенный
+source head. Пакет подготовлен, слияние и delivery не объявлены завершёнными.
+
+
+### Продолжение UC904 — 16.11.2026 — Codex / OpenAI
+
+Антон явно поручил разобраться с ошибкой CI и слить PR2130 после PR2129,
+когда все обязательные проверки пройдут. Это разрешение распространяется
+на необходимое исправление загрузчика CI, без изменения версий инструментов,
+проверок целостности, продуктовых механик и границ Fit16.
+
+Read-only проверка exact API URL и URL с уникальным query дала локально
+302 → 200; оба редиректа ещё действовали, GitHub rate limit remaining 58/57.
+Это не устанавливает причину отказа в runner. Существующий лог теряет
+источник HTTP403, поэтому следующий шаг — ограниченная безопасная
+классификация отказа в самом загрузчике и проверка в CI. Сырые тела ответов,
+токены и подписанные URL не печатаются. Авторизация, зеркала, retry и pins
+на этом шаге не меняются; предположительный fix без подтверждения отвергнут.
+
+Открыто: установить конкретную причину на runner, затем исправить её,
+дождаться merge2129, включить актуальный main и принять окончательный head.
+
+Диагностический патч: приватный helper сообщает конечный hostname, числовые
+rate-limit headers и фиксированную категорию. Error body читается не более
+4096 байт/1 секунды; raw body/query/signature не выводятся. Happy path и
+контроль целостности прежние. 24/24 targeted downloader tests и 51/51
+CI/scope tests PASS, workflow-docs/node syntax/diff checks PASS. Старые
+продуктовые тесты не менялись; полный CI следующего head ещё не завершён.
+
+CI43839811634 на `15491136`, job frontend-infrastructure, 16.11.2026
+09:27:35UTC подтвердил точную причину: `HTTP403; host=api.github.com;
+x-ratelimit-remaining=0; x-ratelimit-reset=1794823160; reason=api_rate_limit`.
+Исчерпан лимит анонимного GitHub API на runner; гипотезы об истёкшей CDN
+подписи/недоступном архиве не подтвердились. Повтор прежнего анонимного
+запроса и локальный200 проблему не исправляют.
+
+Выбран штатный GITHUB_TOKEN текущего Actions job с прежним contents:read,
+только в шагах скачивания инструментов и только для HTTPS api.github.com.
+Новые секреты, права, внешние зеркала, версии и pins не нужны. Неавторизованный
+локальный путь остаётся доступен; неизвестные отказы и ошибки size/SHA256
+по-прежнему прерывают проверку. Временный body-reader/таймер/классификатор
+после установления причины удаляются, остаётся краткий HTTP-контекст.
+Новые тесты проверяют адресата Authorization и сохранение error redaction;
+продуктовые assertions не меняются. Текущий CI не отменяется; следующая
+публикация только после его завершения.
+
+Полный local check завершился exit0, квитанция `20261116-122748-a1e7da63`
+закреплена; запуск начат на15491136, продуктовые исходники весь прогон
+оставались прежними. Финальный token/downloader патч проверен отдельно:
+24/24 downloader tests; 46/46 CI/OTA contract tests, docs/diff checks PASS.
+Текущий own CI/watch receipt `20261116-122822-4b925125` закреплён и содержит
+лог подтверждённой причины403; его завершение ещё ожидается.
+
+Независимое review финального исправления: blockers0. Auth ограничен
+HTTPS GitHub asset API без URL credentials; redirect safety обеспечивается
+штатным Fetch, который снимает Authorization при смене origin. Все4consumer
+получают token только на нужном шаге, permissions/гейты прежние. AST/byte
+сверка18sourcefiles: ровно34export modifiers к26178971, остальные байты
+прежние; эти18файлов побайтно совпадают с33989dd3. Fit16/UI не затронуты.
+
+Диагностический CI43839811634 завершён:33SUCCESS/2FAILURE, Android
+43839811620:1SUCCESS/1штатныйSKIPPED. Два отказа — download и зависимыйapp;
+остальные сценарии PASS. После завершения всех jobs опубликован final fix
+`c25dc486a965aa24bc5616a95aaeac3c3fe2459b`, CI43847859621/Android43847859839.
+Base по свежему fetch всё ещё26178971; PR2129 активен, headb782910b.
+
+Новый infra job16.11.2026 10:20:52UTC завершился другим отказом:
+`TypeError: terminated`, cause `read ECONNRESET`, во время получения архива.
+Нового HTTP403/rate-limit сообщения нет. Лог сохранён в
+`20261116-132021-2dd1ede8/frontend-infrastructure.log`. Этот единичный
+transport failure не подтверждает регрессию авторизации и пока не является
+основанием добавлять downloader retry/framework. После завершения текущего
+CI — один failed-only retry либо приёмка нового head после merge2129.
+Гейты/integrity не ослабляются, частичный архив не признаётся успешным.
+
+PR2129 слит16.11.2026 10:39:19UTC, main `80f9006c41e34fa8245abc5442edda1ce8c32bc8`.
+Включён обычным merge без конфликтов; новых требований в инструкциях нет,
+CURRENT_STATE изменил только статус MC5.7. Все16входящих файлов Fit16
+приняты изmain без собственных правок. Исходные18cleanupfiles с ними
+не пересекаются. Старый c25 CI продолжает выполняться; повтор его failed
+job не нужен, следующий прогон будет на совместном head. Канонический
+урок GitHub API rate limit добавлен в REGRESSION_LESSONS отдельно от Fit16.
+Дальше — полный localcheck с логом и полный CI нового head, затем merge2130
+при зелёных гейтах и повторной сверке актуальногоmain.
+
+Совместный head244619c7, base80f9006c: полный localcheck exit0, закреплённая
+квитанция `20261116-134917-ef383b2a`, полный `check.log` содержит точныйHEAD.
+3210frontend/1636API PASS,479условныхAPI/DBskips;24downloader tests PASS;
+coverage81,88%statements/77%branches, прежние thresholds. Lint/types/policies,
+API/frontendbuild/startup/docs/diff PASS. Независимое review: blockers0,
+34export modifiers/18files,0внешнихпотребителей поsymbol-resolution на
+объединённомHEAD; все5CI-authfiles побайтно равныc25dc486, Fit16/UI overrides
+отсутствуют. Дальнейшее изменение этой записи не меняет проверенные source
+файлы; обязательный CI всё равно проверит окончательный опубликованныйHEAD.
