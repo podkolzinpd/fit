@@ -58,6 +58,7 @@ export function AssistantHistoryPage({ backend }: {
   const [savedSummaryIds, setSavedSummaryIds] = useState<string[]>([])
   const [actionVersions, setActionVersions] = useState<Record<string, number>>({})
   const [loadRetry, setLoadRetry] = useState(0)
+  const [conversationRevision, setConversationRevision] = useState(0)
   const [loadFailed, setLoadFailed] = useState(false)
   const conversationRef = useRef<string | undefined>(undefined)
   const loadSequence = useRef(0)
@@ -112,6 +113,9 @@ export function AssistantHistoryPage({ backend }: {
       const current = selectTodayConversation(available, actor.timezone, today)
       setTodayConversationId(current?.id ?? conversation.id)
       setConversationId(conversation.id)
+      // A fast retry can batch clearing and restoring the same ID. Reload
+      // messages only after this session list has been accepted, even then.
+      setConversationRevision((value) => value + 1)
       conversationRef.current = conversation.id
       setLoadFailed(false)
     })().catch(() => {
@@ -151,7 +155,7 @@ export function AssistantHistoryPage({ backend }: {
       setLoadFailed(true)
       setError('Не удалось загрузить сообщения. Попробуйте ещё раз.')
     })
-  }, [assistantRepository, conversationId])
+  }, [assistantRepository, conversationId, conversationRevision])
 
   const readOnly = isReadOnlyConversation(conversationId, todayConversationId)
   const voiceActive = voicePhase !== 'idle'
