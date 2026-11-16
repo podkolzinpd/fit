@@ -10,9 +10,9 @@ const SIGNING_RETRY_DELAYS_MS = [250, 1_000] as const
 
 const signedUrlCache = createSignedUrlCache(CACHE_TTL_MS)
 
-export type VitalMediaStatus = 'idle' | 'loading' | 'ready' | 'error'
+type VitalMediaStatus = 'idle' | 'loading' | 'ready' | 'error'
 
-export type VitalMediaState = {
+type VitalMediaState = {
   url: string | undefined
   status: VitalMediaStatus
   /** Returns false when the caller should show its normal fallback. */
