@@ -18,7 +18,7 @@ export interface ClientFinancePackage {
   paymentStatus: TrainerFinancePaymentStatus
 }
 
-export interface ClientFinancePayment {
+interface ClientFinancePayment {
   id: string
   packageId: string
   amountCents: number

@@ -816,3 +816,90 @@ Progress/goals/Fit16. `@testing-library/dom` нужен как peer тестов
 требует полного CI; пропуски frontend/browser/native не назначаются вручную.
 Итог полного прогона и CI пока не заявлены. Следующий шаг — завершить приёмку
 и подготовить отдельный draft PR с проверенной версией и результатами.
+
+Опубликован [draft PR2128](https://github.com/podkolzinpd/fit/pull/2128), head
+`25a0d75b3894678f0de50af1a2ce7e8d44218fba`. Автоматический scope по точным
+SHA подтвердил полный frontend/browser набор. CI43820661765 и Android43820661444
+запущены; один watcher с паузой 90s, без наблюдения за чужими чатами/CI.
+
+Локальный полный набор check прошёл с первого прогона, exit 0, квитанция
+`20261116-095633-abc85c41` закреплена: 3200 frontend / 1636 API tests PASS,
+479 условных API/DB skips; coverage 83,18% statements / 78,18% branches.
+Lint/types, ios/media/infra/calendar/hosting policies, API/frontend build и
+startup PASS. Отдельные CI/PostgreSQL/browser проверки ещё выполняются.
+Независимый общий review: 0 blockers, 83 сохраняемых API-объявления и тела
+тестов побайтно прежние; остальные 86 top-level узлов включают также imports.
+UI/assets/e2e/Fit16 не менялись, лишних lock-изменений нет.
+Квитанция добавлена после публикации без изменения проверяемого head.
+
+Итог PR2128: CI43820661765 — 35 SUCCESS; Android43820661444 — assemble
+SUCCESS / штатный auth-smoke SKIPPED, всего 36 SUCCESS / 1 SKIPPED, оба
+attempt 1, без rerun. Полный API/PostgreSQL/Chromium/WebKit/visual/Lime/native
+auth/nutrition набор пройден; watcher exit 0, квитанция
+`20261116-100103-6d9e7e75` закреплена. PR body обновлён полной приёмкой;
+workflow-docs acceptance check и whitespace PASS.
+
+Продолжен ранее разрешённый владельцем цикл «сразу сливать, как всё сделаешь»;
+это применение разрешения к следующему согласованному безопасному пакету было
+обозначено в чате до слияния. Перед merge: свежий main `656ca0cf` — ancestor
+проверенного head `25a0d75b3894678f0de50af1a2ce7e8d44218fba`; других открытых
+PR нет, CLEAN/MERGEABLE. После ready выполнен squash с `--match-head-commit`.
+GitHub подтвердил **MERGED 16.11.2026 в 10:40:00 МСК**, коммит
+`26178971a1adb1397fcff12196fb608672419472`. Отдельный production deploy и
+физические устройства не проверялись; слияние не выдаётся за доставку.
+
+Уточнение результата `noUnusedParameters`: callback-параметр `value` в
+`athlete-achievements.test.ts:246` сохраняет позицию используемого второго
+аргумента `index`. Это не кандидат на удаление аргумента; возможное изменение
+только его имени косметическое и не входит в пакет. Других крупных безопасно
+удаляемых блоков в проверенной non-UI/ops области этот проход не подтвердил.
+
+## Итерация 9 — лишняя внешняя видимость внутренних объявлений — 16.11.2026 — Codex / OpenAI
+
+Задача: вычистить мелкие точно неиспользуемые остатки после PR2128, сохранив
+рабочие сценарии/AI и не пересечься с Fit16. База `26178971`, инструкции с
+прошлого пакета не менялись; та же рабочая копия, новая собственная ветка
+`chore/small-unused-surface-20261116`. Локальные финальные квитанции PR2128
+сохранены и входят в журнал. Расхождений нет.
+
+Выбран узкий вид чистки: 34 объявления реально нужны внутри своих модулей,
+но внешний `export` никем не используется. Сняты только эти модификаторы;
+сами функции, типы, значения, схемы и все assertions оставлены. Это сокращение
+лишнего внешнего интерфейса модулей, а не удаление 34 функций или обещание
+меньшей сборки. Проект/API private, SDK export-map отсутствует.
+
+| ID | Область и изменения | Сохранность |
+| --- | --- | --- |
+| UC901 | 15 exports в 10 non-UI клиентских файлах: client-finance, yandex-main queries, collect-pages, notification storage/reconcile, nutrition free-text, corporate-duties, meeting, nutrition, trainer-profile | 11 вложенных типов, 3 внутренних Zod-схемы и ключ onboarding теперь локальные. Существующие публичные функции/схемы и consumers прежние; 81 top-level узел совпадает после снятия выбранных modifiers. |
+| UC902 | 15 exports в 5 API файлах: pilot-chat (7 типов), nutrition-diary (4 типа), chat-media (лимит), trainer-profile-media (лимит и вложенный тип), trainer-finance-request (внутренний helper) | Все 77 узлов сохранены. Вставка обратно 15 префиксов `export ` побайтно восстанавливает исходные файлы. PilotChat/ChatMessage, NutritionDraft, media/upload contracts и рабочие entrypoints прежние. |
+| UC903 | 4 exports в 3 scripts: `referencedObjects`, `VITAL_GYM_PRO_MEDIA_MAX_FILE_BYTES`, `expectedVitalGymProMediaPaths`, `ClientWorkoutProfilesNotReadyError` | Внутренние вызовы, лимит и точные media paths, readiness/fail-closed, rollback/manifest guards прежние. Тесты продолжают вызывать публичные planCleanup/validator/resolver; прочие байты файлов совпадают с базой. |
+
+Frontend-имена: `ClientFinancePayment`, `YandexMainHttpMethod`, `Page`,
+`onboardingSeenStorageKey`, `PushSubscriptionServerAdapter`, `ParsedFoodLine`,
+`CorporateDutyCounts`, `MeetingState`, `MeetingCredentials`, `MeetingAction`,
+`nutritionValuesSchema`, `NutritionMeal`, `NutritionSelection`,
+`trainerProfilePhotoSchema`, `trainerCatalogItemSchema`.
+API-имена: `ChatThread`, `ChatBlockState`, `ChatConnectionState`, `ChatStoredImage`,
+`ChatReplyPreview`, `ChatUnreadState`, `ChatCursor`, `Meal`, `FoodBasis`,
+`FoodSelection`, `NutritionEntry`, `CHAT_IMAGE_MAX_BYTES`,
+`TRAINER_PHOTO_THUMBNAIL_MAX_BYTES`, `TrainerPhotoUploadPart`,
+`readTrainerFinanceSingleService`.
+
+Проверка потребителей учитывала 1615 tracked JS/TS-файлов, named/namespace
+imports, reexports, dynamic import/require, import-типы, tests/e2e/scripts,
+workflow/deploy/manual обращения и одноимённые независимые декларации.
+Frontend проверил 49 imports в выбранные модули; API — 938 exports.
+Неиспользуемых локальных imports/bindings в 89 допустимых служебных MJS нет.
+E2E noUnused-проход показал только позиционный `exercise` перед используемым
+`position` в workout-copy-names fixture; аргумент нужен для позиции и сохранён.
+
+Отвергнуто: удалять работающие объявления вместо их лишней видимости,
+переписывать signatures/values, сокращать tests, включать Progress/goals/UI/CSS
+или Fit16. `readbackOta` сохранён: docs подтверждают ручные обращения именно
+к экспорту. Recovery/legacy/CLI entrypoints и известные нужные test helpers
+остаются. AI prompts/models/parser/подбор/сохранение/доступ не менялись.
+
+Whitespace check PASS. Полный check с двумя coverage workers выполняется;
+состав и таймауты прежние. Ни успешный полный прогон, ни CI пока не заявлены.
+Далее — отдельный PR, полная приёмка и слияние в ранее согласованном порядке
+после проверки актуального main/head и GitHub-очереди.

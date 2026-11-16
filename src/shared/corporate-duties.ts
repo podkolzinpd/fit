@@ -12,7 +12,7 @@ export interface CorporateDutyCommand {
  officeId?:string; startedAt?:string; endedAt?:string; reason?:string
 }
 export interface CorporateDutyOffice {id:string;name:string;city:string;archived:boolean;timeZone:string|null;zoneVersion:number}
-export interface CorporateDutyCounts {seconds:number;days:number;completed:number}
+interface CorporateDutyCounts {seconds:number;days:number;completed:number}
 export interface CorporateDutyReport extends CorporateDutyCounts {
  open:number;review:number;records:CorporateDuty[];nextCursor:{at:string;id:string}|null
  trainers:Array<{id:string;name:string}>;offices:CorporateDutyOffice[]

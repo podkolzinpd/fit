@@ -5,7 +5,7 @@ import {
 } from './request-diagnostics'
 import { fetchWithTimeout } from './request-timeout'
 
-export type YandexMainHttpMethod = 'DELETE' | 'PATCH' | 'POST' | 'PUT'
+type YandexMainHttpMethod = 'DELETE' | 'PATCH' | 'POST' | 'PUT'
 
 export const YANDEX_MAIN_READ_TIMEOUT_MS = 15_000
 

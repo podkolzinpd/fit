@@ -155,7 +155,7 @@ export function readTrainerFinanceManualSessionDraft(value: unknown): TrainerFin
     ...(singleService?{singleService}:{}),packageId: draft.packageId, comment: draft.comment, workoutDate: draft.workoutDate } : undefined
 }
 
-export function readTrainerFinanceSingleService(value: unknown): {priceCents:number;paidCents:number;receivedOn:string} | undefined {
+function readTrainerFinanceSingleService(value: unknown): {priceCents:number;paidCents:number;receivedOn:string} | undefined {
   const input=record(value)
   if (!input) return undefined
   const priceCents=integer(input.priceCents,0,100000000000)

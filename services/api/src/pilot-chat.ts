@@ -4,14 +4,14 @@ import type { DatabaseClient, DatabasePool } from './db/types.js'
 import { withYandexActorSession, type YandexActorSessionInput } from './yandex-actor-session.js'
 import { readTrainerDisplayNames } from './trainer-display-name.js'
 
-export type ChatThread = { conversationId: string | null; clientId: string; trainerId: string; partnerUserId: string; partnerName: string; activeConnection: boolean; lastMessageBody: string | null; lastMessageAt: string | null; lastMessageSenderId: string | null; unreadCount: number; canMessage: boolean; blockedByMe: boolean; blockedByPartner: boolean }
-export type ChatBlockState = { canMessage: boolean; blockedByMe: boolean; blockedByPartner: boolean }
-export type ChatConnectionState = { activeConnection: boolean; invitationPending: boolean; invitedAt: string | null; canInvite: boolean; canAccept: boolean; trainerSwitchRequired: boolean }
-export type ChatStoredImage = { path: string; mimeType: 'image/jpeg'; width: number; height: number; sizeBytes: number }
-export type ChatReplyPreview = { messageId: string; senderId: string | null; body: string | null; hasImage: boolean; deleted: boolean }
+type ChatThread = { conversationId: string | null; clientId: string; trainerId: string; partnerUserId: string; partnerName: string; activeConnection: boolean; lastMessageBody: string | null; lastMessageAt: string | null; lastMessageSenderId: string | null; unreadCount: number; canMessage: boolean; blockedByMe: boolean; blockedByPartner: boolean }
+type ChatBlockState = { canMessage: boolean; blockedByMe: boolean; blockedByPartner: boolean }
+type ChatConnectionState = { activeConnection: boolean; invitationPending: boolean; invitedAt: string | null; canInvite: boolean; canAccept: boolean; trainerSwitchRequired: boolean }
+type ChatStoredImage = { path: string; mimeType: 'image/jpeg'; width: number; height: number; sizeBytes: number }
+type ChatReplyPreview = { messageId: string; senderId: string | null; body: string | null; hasImage: boolean; deleted: boolean }
 export type ChatMessage = { meeting?: MeetingNotice; id: string; conversationId: string; senderId: string; body: string; image: ChatStoredImage | null; createdAt: string; editedAt: string | null; replyTo: ChatReplyPreview | null }
-export type ChatUnreadState = { firstMessageId: string | null; firstCreatedAt: string | null; unreadCount: number }
-export type ChatCursor = { createdAt: string; id: string }
+type ChatUnreadState = { firstMessageId: string | null; firstCreatedAt: string | null; unreadCount: number }
+type ChatCursor = { createdAt: string; id: string }
 type ThreadRow = QueryResultRow & { conversation_id: string | null; client_id: string; trainer_id: string; partner_user_id: string; partner_name: string; active_connection: boolean; last_message_body: string | null; last_message_at: string | null; last_message_sender_id: string | null; unread_count: string | number; can_message: boolean; blocked_by_me: boolean; blocked_by_partner: boolean }
 type MessageRow = QueryResultRow & { id: string; conversation_id: string; sender_id: string; body: string; image_path: string | null; image_mime_type: string | null; image_width: number | null; image_height: number | null; image_size_bytes: number | null; created_at: string; edited_at?: string | null; reply_to_message_id?: string | null; reply_to_sender_id?: string | null; reply_to_body?: string | null; reply_to_has_image?: boolean | null; reply_to_deleted?: boolean | null }
 type ConnectionRow = QueryResultRow & { active_connection: boolean; invitation_pending: boolean; invited_at: string | null; can_invite: boolean; can_accept: boolean; trainer_switch_required: boolean }

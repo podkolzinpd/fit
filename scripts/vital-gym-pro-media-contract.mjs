@@ -3,9 +3,9 @@ const SAFE_MEDIA_PATH = /^[a-z0-9][a-z0-9-]*(?:-end)?\.(?:jpg|mp4)$/
 export const VITAL_GYM_PRO_EXERCISE_COUNT = 670
 export const VITAL_GYM_PRO_MEDIA_FILE_COUNT = 2_010
 export const VITAL_GYM_PRO_MEDIA_TOTAL_BYTES = 71_514_430
-export const VITAL_GYM_PRO_MEDIA_MAX_FILE_BYTES = 1_048_576
+const VITAL_GYM_PRO_MEDIA_MAX_FILE_BYTES = 1_048_576
 
-export function expectedVitalGymProMediaPaths(exercises) {
+function expectedVitalGymProMediaPaths(exercises) {
   return exercises.flatMap(({ ref }) => [
     `${ref}.jpg`,
     `${ref}-end.jpg`,

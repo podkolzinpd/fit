@@ -10,7 +10,7 @@ export const pendingClientWorkoutLoginHash = '6d066220dea64fde80afc931c603074e99
 const approvedClientSetDigest = '09930ba8dfa6b41e5eee8f58b303ed4668594bc8ab3cfcad7c23e67f044caebf'
 const profileUuid = /^[a-f0-9]{8}-[a-f0-9]{4}-[1-5][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/
 
-export class ClientWorkoutProfilesNotReadyError extends Error {
+class ClientWorkoutProfilesNotReadyError extends Error {
   constructor(cohort, rows) {
     super('client_workout_profiles_not_ready')
     const ready = hashes => hashes.filter(hash => {

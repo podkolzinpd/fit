@@ -6,9 +6,9 @@ import { NutritionCatalogUnavailableError, publicNutritionFood, type NutritionCa
 import { nutritionBarcodeProfileAllowed, nutritionProfileAllowed, type NutritionBarcodePilot, type NutritionPilot } from './nutrition-pilot.js'
 
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
-export type Meal = 'breakfast' | 'lunch' | 'dinner' | 'snack'
-export type FoodBasis = '100g' | 'portion'
-export type FoodSelection = { kind: 'catalog'; id: string }
+type Meal = 'breakfast' | 'lunch' | 'dinner' | 'snack'
+type FoodBasis = '100g' | 'portion'
+type FoodSelection = { kind: 'catalog'; id: string }
   | { kind: 'recent'; entryId: string }
   | ({ kind: 'manual'; name: string; basis: FoodBasis } & NutritionValues)
 export interface NutritionDraft {
@@ -19,7 +19,7 @@ export interface NutritionDraft {
   grams: number | null
   food: FoodSelection
 }
-export interface NutritionEntry extends NutritionValues {
+interface NutritionEntry extends NutritionValues {
   id: string
   day: string
   meal: Meal

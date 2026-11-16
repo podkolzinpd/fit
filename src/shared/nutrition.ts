@@ -1,7 +1,7 @@
 import { z } from 'zod'
 import type { LocalDate } from './local-date'
 
-export const nutritionValuesSchema = z.object({ calories: z.number().finite().nonnegative(),
+const nutritionValuesSchema = z.object({ calories: z.number().finite().nonnegative(),
   protein: z.number().finite().nonnegative().nullable(), fat: z.number().finite().nonnegative().nullable(),
   carbs: z.number().finite().nonnegative().nullable() })
 export const nutritionFoodSchema = nutritionValuesSchema.extend({ id: z.uuid(), name: z.string().min(1).max(160), basis: z.literal('100g'),
@@ -22,8 +22,8 @@ export type NutritionFood = z.infer<typeof nutritionFoodSchema>
 export type NutritionEntry = z.infer<typeof nutritionEntrySchema>
 export type NutritionDay = z.infer<typeof nutritionDaySchema>
 export type NutritionConnection = z.infer<typeof nutritionConnectionSchema>
-export type NutritionMeal = NutritionEntry['meal']
-export type NutritionSelection = { kind: 'catalog'; id: string } | { kind: 'recent'; entryId: string }
+type NutritionMeal = NutritionEntry['meal']
+type NutritionSelection = { kind: 'catalog'; id: string } | { kind: 'recent'; entryId: string }
   | ({ kind: 'manual'; name: string; basis: '100g' | 'portion' } & NutritionValues)
 export interface NutritionDraft { id: string; expectedVersion: number; day: LocalDate; meal: NutritionMeal;
   grams: number | null; food: NutritionSelection }

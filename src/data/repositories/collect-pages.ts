@@ -1,4 +1,4 @@
-export interface Page<T> {
+interface Page<T> {
   items: T[]
   nextOffset?: number
 }
