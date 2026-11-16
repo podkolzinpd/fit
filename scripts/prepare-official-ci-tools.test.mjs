@@ -4,6 +4,7 @@ import { mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { test } from 'node:test'
+import { fileURLToPath } from 'node:url'
 import { downloadVerifiedAsset, gradleCacheZip, gradleKotlinInit, kotlinCompiler, kotlinCompilerArtifacts, kotlinCompilerPom, officialTools, prepareOfficialCiTool } from './prepare-official-ci-tools.mjs'
 
 const bytes = Buffer.from('verified synthetic archive')
@@ -32,6 +33,51 @@ test('accepts the complete verified archive and revalidates cache without anothe
   assert.deepEqual(await readdir(root), ['archive.zip'])
 }))
 
+test('uses the supplied Actions token only for an HTTPS GitHub release asset and still verifies bytes', () => workspace(async root => {
+  const destination = join(root, 'archive.zip')
+  await downloadVerifiedAsset(spec, destination, async (url, options) => {
+    assert.equal(url, spec.url)
+    assert.deepEqual(options.headers, { Accept: 'application/octet-stream', 'X-GitHub-Api-Version': '2022-11-28', Authorization: 'Bearer synthetic-actions-token' })
+    return new Response(bytes)
+  }, { githubToken: 'synthetic-actions-token' })
+  assert.deepEqual(await readFile(destination), bytes)
+}))
+
+for (const [name, url] of [
+  ['Maven', 'https://repo.maven.apache.org/maven2/synthetic/tool.jar'],
+  ['plain HTTP', 'http://api.github.com/repos/synthetic/tool/releases/assets/1'],
+  ['different host', 'https://api.github.com.example.test/repos/synthetic/tool/releases/assets/1'],
+  ['browser release URL', 'https://github.com/synthetic/tool/releases/download/1/tool.zip'],
+  ['other GitHub API', 'https://api.github.com/repos/synthetic/tool/issues'],
+  ['different port', 'https://api.github.com:8443/repos/synthetic/tool/releases/assets/1'],
+  ['URL credentials', 'https://synthetic-user:synthetic-password@api.github.com/repos/synthetic/tool/releases/assets/1'],
+]) test(`does not send the Actions token to ${name}`, () => workspace(async root => {
+  await downloadVerifiedAsset({ ...spec, url }, join(root, 'archive.zip'), async (requestedUrl, options) => {
+    assert.equal(requestedUrl, url)
+    assert.equal(options.headers.Authorization, undefined)
+    return new Response(bytes)
+  }, { githubToken: 'synthetic-actions-token' })
+  assert.deepEqual(await readFile(join(root, 'archive.zip')), bytes)
+}))
+
+test('passes the optional Actions token through CI preparation without exposing it on failure', () => workspace(async root => {
+  let requests = 0
+  await assert.rejects(prepareOfficialCiTool('gradle', {
+    root: fileURLToPath(new URL('..', import.meta.url)), gradleHome: join(root, 'gradle'), temporaryRoot: root,
+    githubToken: 'synthetic-actions-token',
+    fetchAsset: async (url, options) => {
+      requests++
+      assert.equal(url, officialTools.gradle.url)
+      assert.equal(options.headers.Authorization, 'Bearer synthetic-actions-token')
+      return new Response('synthetic-actions-token', { status: 403 })
+    },
+  }), error => {
+    assert.equal(error.message, 'Official tool download failed: HTTP 403; host=api.github.com')
+    return true
+  })
+  assert.equal(requests, 1)
+}))
+
 for (const [name, response, error] of [
   ['HTTP504', () => new Response('timeout', { status: 504 }), /HTTP 504/],
   ['partial HTTP206', () => new Response(bytes, { status: 206 }), /HTTP 206/],
@@ -45,35 +91,34 @@ for (const [name, response, error] of [
   assert.deepEqual(await readdir(root), [])
 }))
 
-test('reports only validated GitHub rate headers and a fixed classification without retrying', () => workspace(async root => {
-  let requests = 0
-  await assert.rejects(downloadVerifiedAsset(spec, join(root, 'archive.zip'), async () => {
+test('reports only hostname and validated GitHub rate headers without retrying or reading the body', () => workspace(async root => {
+  let requests = 0, reads = 0, cancellations = 0
+  await assert.rejects(downloadVerifiedAsset(spec, join(root, 'archive.zip'), async (_url, options) => {
     requests++
-    const response = new Response('{"message":"API rate limit exceeded for synthetic-private-address","token":"synthetic-secret"}', {
+    assert.equal(options.headers.Authorization, undefined)
+    const response = new Response(new ReadableStream({
+      pull(controller) { reads++; controller.enqueue(Buffer.from('synthetic-secret')) },
+      cancel() { cancellations++ },
+    }, { highWaterMark: 0 }), {
       status: 403, headers: { 'x-ratelimit-remaining': '0', 'x-ratelimit-reset': '1794826800', 'retry-after': '60' },
     })
     Object.defineProperty(response, 'url', { value: `${spec.url}?signature=synthetic-secret` })
     return response
   }), error => {
-    assert.equal(error.message, 'Official tool download failed: HTTP 403; host=api.github.com; x-ratelimit-remaining=0; x-ratelimit-reset=1794826800; retry-after=60; reason=api_rate_limit')
+    assert.equal(error.message, 'Official tool download failed: HTTP 403; host=api.github.com; x-ratelimit-remaining=0; x-ratelimit-reset=1794826800')
     return true
   })
   assert.equal(requests, 1)
+  assert.equal(reads, 0)
+  assert.equal(cancellations, 1)
   assert.deepEqual(await readdir(root), [])
 }))
 
-for (const [body, reason] of [
-  ['<Error>JWT: expired; signature=synthetic-secret</Error>', 'expired_token'],
-  ['<Code>ExpiredAuthenticationToken</Code><Detail>synthetic-secret</Detail>', 'expired_token'],
-  ['<Code>AuthenticationFailed</Code><Detail>Signature not valid in the specified time frame; synthetic-secret</Detail>', 'signature_time_invalid'],
-  ['<Code>AuthenticationFailed</Code><Detail>synthetic-secret</Detail>', 'authentication_failed'],
-  ['You have exceeded a secondary rate limit; synthetic-secret', 'secondary_rate_limit'],
-  ['Unrecognized upstream failure: synthetic-secret', 'unknown'],
-]) test(`classifies ${reason} without exposing the signed redirect or raw response`, () => workspace(async root => {
-  const response = new Response(body, { status: 403, headers: { 'x-ratelimit-remaining': '0' } })
+test('reports the final hostname without exposing signed redirects or non-GitHub rate headers', () => workspace(async root => {
+  const response = new Response('synthetic-private-body', { status: 403, headers: { 'x-ratelimit-remaining': '0' } })
   Object.defineProperty(response, 'url', { value: 'https://release-assets.githubusercontent.com/private/path?jwt=synthetic-secret&sig=synthetic-signature' })
   await assert.rejects(downloadVerifiedAsset(spec, join(root, 'archive.zip'), async () => response), error => {
-    assert.equal(error.message, `Official tool download failed: HTTP 403; host=release-assets.githubusercontent.com; reason=${reason}`)
+    assert.equal(error.message, 'Official tool download failed: HTTP 403; host=release-assets.githubusercontent.com')
     return true
   })
   assert.deepEqual(await readdir(root), [])
@@ -85,52 +130,9 @@ test('omits invalid rate headers and does not expose unrelated response headers'
     'retry-after': 'https://example.test/?secret=synthetic-secret', 'location': 'synthetic-secret',
   } })
   await assert.rejects(downloadVerifiedAsset(spec, join(root, 'archive.zip'), async () => response), error => {
-    assert.equal(error.message, 'Official tool download failed: HTTP 429; host=api.github.com; reason=unknown')
+    assert.equal(error.message, 'Official tool download failed: HTTP 429; host=api.github.com')
     return true
   })
-  assert.deepEqual(await readdir(root), [])
-}))
-
-for (const chunkSize of [1_024, 8_192]) test(`bounds error-body reading and classification for ${chunkSize}-byte chunks`, () => workspace(async root => {
-  let reads = 0, cancellations = 0
-  const response = new Response(new ReadableStream({
-    pull(controller) {
-      reads++
-      const chunk = Buffer.alloc(chunkSize, 32)
-      if (chunkSize > 4_096) chunk.write('API rate limit exceeded', 5_000)
-      if (reads > 4) chunk.write('API rate limit exceeded')
-      controller.enqueue(chunk)
-    },
-    cancel() { cancellations++ },
-  }, { highWaterMark: 0 }), { status: 403 })
-  await assert.rejects(downloadVerifiedAsset(spec, join(root, 'archive.zip'), async () => response), /HTTP 403; host=api.github.com; reason=unknown$/)
-  assert.equal(reads, chunkSize === 1_024 ? 4 : 1)
-  assert.equal(cancellations, 1)
-  assert.equal(response.body.locked, false)
-  assert.deepEqual(await readdir(root), [])
-}))
-
-test('retains the HTTP failure when diagnostic reading fails', () => workspace(async root => {
-  const response = new Response(new ReadableStream({ start(controller) {
-    controller.error(new Error('synthetic-secret-read-error'))
-  } }), { status: 502 })
-  await assert.rejects(downloadVerifiedAsset(spec, join(root, 'archive.zip'), async () => response), error => {
-    assert.equal(error.message, 'Official tool download failed: HTTP 502; host=api.github.com; reason=unknown')
-    return true
-  })
-  assert.equal(response.body.locked, false)
-  assert.deepEqual(await readdir(root), [])
-}))
-
-test('stops a stalled diagnostic read and suppresses cancellation errors', { timeout: 5_000 }, () => workspace(async root => {
-  let cancellations = 0
-  const response = new Response(new ReadableStream({
-    pull() { return new Promise(() => {}) },
-    cancel() { cancellations++; return Promise.reject(new Error('synthetic-secret-cancel-error')) },
-  }), { status: 403 })
-  await assert.rejects(downloadVerifiedAsset(spec, join(root, 'archive.zip'), async () => response), /HTTP 403; host=api.github.com; reason=unknown$/)
-  assert.equal(cancellations, 1)
-  assert.equal(response.body.locked, false)
   assert.deepEqual(await readdir(root), [])
 }))
 
@@ -188,11 +190,14 @@ test('retains immutable official versions and verifies both CI and release consu
   assert.equal(officialTools.terraform.sha256, '214ac0a04a4f31ee0e3eb04ab1db9213c3ecaee9d4ebfd3d05b57399081c9d25')
   const android = await readFile(new URL('../.github/workflows/android-build.yml', import.meta.url), 'utf8')
   assert.equal([...android.matchAll(/prepare-official-ci-tools.mjs gradle/g)].length, 2)
-  assert.match(android, /prepare-official-ci-tools.mjs gradle\n\s+- run: \.\/gradlew --init-script "\$RUNNER_TEMP\/fit-ci-kotlin.init.gradle" testDebugUnitTest assembleDebug/)
+  assert.equal([...android.matchAll(/prepare-official-ci-tools.mjs gradle\n\s+env:\n\s+GITHUB_TOKEN: \$\{\{ github\.token \}\}/g)].length, 2)
+  assert.match(android, /prepare-official-ci-tools.mjs gradle\n\s+env:\n\s+GITHUB_TOKEN: \$\{\{ github\.token \}\}\n\s+- run: \.\/gradlew --init-script "\$RUNNER_TEMP\/fit-ci-kotlin.init.gradle" testDebugUnitTest assembleDebug/)
   const release = await readFile(new URL('../.github/workflows/release-android-ota.yml', import.meta.url), 'utf8')
   assert.match(release, /prepare-official-ci-tools.mjs gradle\n\s+cd android\n\s+\.\/gradlew --init-script "\$RUNNER_TEMP\/fit-ci-kotlin.init.gradle" testDebugUnitTest assembleRelease/)
+  assert.match(release, /- name: Build and test native APK\n\s+if: inputs.make_apk == true\n\s+env:\n\s+GITHUB_TOKEN: \$\{\{ github\.token \}\}\n\s+run: \|\n\s+node scripts\/generate-android-ota-native-fixtures.mjs\n\s+node scripts\/prepare-official-ci-tools.mjs gradle/)
   const ci = await readFile(new URL('../.github/workflows/ci.yml', import.meta.url), 'utf8')
   assert.match(ci, /node --test scripts\/prepare-official-ci-tools.test.mjs/)
+  assert.match(ci, /prepare-official-ci-tools.mjs terraform "\$RUNNER_TEMP\/fit-ci-providers"\n\s+env:\n\s+GITHUB_TOKEN: \$\{\{ github\.token \}\}/)
   assert.match(ci, /init -backend=false -plugin-dir="\$RUNNER_TEMP\/fit-ci-providers"/)
   assert.match(ci, /terraform -chdir=infra\/yandex-frontend validate/)
   assert.match(ci, /terraform -chdir=infra\/yandex-frontend test/)

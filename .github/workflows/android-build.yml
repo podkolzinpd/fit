@@ -57,6 +57,8 @@ jobs:
       - run: npm run android:sync:local
       - run: node scripts/generate-android-ota-native-fixtures.mjs
       - run: node scripts/prepare-official-ci-tools.mjs gradle
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
       - run: ./gradlew --init-script "$RUNNER_TEMP/fit-ci-kotlin.init.gradle" testDebugUnitTest assembleDebug
         working-directory: android
       - uses: actions/upload-artifact@v4
@@ -111,6 +113,8 @@ jobs:
           VITE_NUTRITION_PILOT_USER_IDS: ${{ vars.VITE_NUTRITION_PILOT_USER_IDS || '' }}
           VITE_MAINTENANCE_MODE: 'false'
       - run: node scripts/prepare-official-ci-tools.mjs gradle
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
       - run: ./gradlew --init-script "$RUNNER_TEMP/fit-ci-kotlin.init.gradle" assembleDebug
         working-directory: android
       - uses: actions/upload-artifact@v4

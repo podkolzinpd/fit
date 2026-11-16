@@ -82,6 +82,8 @@ jobs:
         with:
           node-version: 22
       - run: node scripts/prepare-official-ci-tools.mjs terraform "$RUNNER_TEMP/fit-ci-providers"
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
       - run: terraform -chdir=infra/yandex-frontend init -backend=false -plugin-dir="$RUNNER_TEMP/fit-ci-providers"
       - run: terraform -chdir=infra/yandex-frontend validate
       - run: terraform -chdir=infra/yandex-frontend test
