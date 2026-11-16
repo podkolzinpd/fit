@@ -1021,3 +1021,28 @@ HTTPS GitHub asset API без URL credentials; redirect safety обеспечи�
 получают token только на нужном шаге, permissions/гейты прежние. AST/byte
 сверка18sourcefiles: ровно34export modifiers к26178971, остальные байты
 прежние; эти18файлов побайтно совпадают с33989dd3. Fit16/UI не затронуты.
+
+Диагностический CI43839811634 завершён:33SUCCESS/2FAILURE, Android
+43839811620:1SUCCESS/1штатныйSKIPPED. Два отказа — download и зависимыйapp;
+остальные сценарии PASS. После завершения всех jobs опубликован final fix
+`c25dc486a965aa24bc5616a95aaeac3c3fe2459b`, CI43847859621/Android43847859839.
+Base по свежему fetch всё ещё26178971; PR2129 активен, headb782910b.
+
+Новый infra job16.11.2026 10:20:52UTC завершился другим отказом:
+`TypeError: terminated`, cause `read ECONNRESET`, во время получения архива.
+Нового HTTP403/rate-limit сообщения нет. Лог сохранён в
+`20261116-132021-2dd1ede8/frontend-infrastructure.log`. Этот единичный
+transport failure не подтверждает регрессию авторизации и пока не является
+основанием добавлять downloader retry/framework. После завершения текущего
+CI — один failed-only retry либо приёмка нового head после merge2129.
+Гейты/integrity не ослабляются, частичный архив не признаётся успешным.
+
+PR2129 слит16.11.2026 10:39:19UTC, main `80f9006c41e34fa8245abc5442edda1ce8c32bc8`.
+Включён обычным merge без конфликтов; новых требований в инструкциях нет,
+CURRENT_STATE изменил только статус MC5.7. Все16входящих файлов Fit16
+приняты изmain без собственных правок. Исходные18cleanupfiles с ними
+не пересекаются. Старый c25 CI продолжает выполняться; повтор его failed
+job не нужен, следующий прогон будет на совместном head. Канонический
+урок GitHub API rate limit добавлен в REGRESSION_LESSONS отдельно от Fit16.
+Дальше — полный localcheck с логом и полный CI нового head, затем merge2130
+при зелёных гейтах и повторной сверке актуальногоmain.
