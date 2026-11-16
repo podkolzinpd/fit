@@ -12991,3 +12991,98 @@ web/API и Android результат выпуска проверять разд
 Большие прогоны через fit-storage fit-monochrome-cleanup; baseline закрепить.
 Дальше: исходная приёмка → перенос → native сравнение/регрессии/build/lint/types
 → CI → общая очередь GitHub → merge/main CI → доказательство доставки.
+
+
+## 294. MC5.8 — исходная приёмка и scoped кандидат
+
+Уточнение базы §293: между первым чтением и созданием ветки origin/main уже
+содержал завершённый PR2130/f6fe8662. Фактическая ветка и baseline построены
+отf6fe8662648952a24831229bea8b8ba533ec1ad8. 80f9006c — прежняя принятая
+публикация, не фактическая новая база. PR2130 не менялся/не откатывался.
+
+До CSS сохранены68 Chromium/WebKit samples,104 состояний: список/архив/
+создание/редактирование/карточка/пусто/ошибка/retry; поиск/clear, add-dialog,
+menu/Escape, раскрытие статистики; каталог/фильтры/apply, public/empty/error.
+Оба варианта темы спортсмена фактически проверены через actor-key и
+assertion theme-класса. Светлая настройка тренера сохраняет фактический dark.
+Исходные ошибки QA сохранены:4 name locator после добавления ошибки в
+accessible name,16 неправильно требовали карточку в empty/error. Адресные
+исправления прошли4/4 и16/16; assertions состояний не отключались. Первые
+14 client-light captures фактически были dark из-за пропуска actor-key:
+пересняты14/14 с правильным ключом; старые raw не переименованы в light.
+Компонентные89/89 existing tests обеих ролей PASS, адресный QA lint PASS.
+
+Кандидат: только src/styles.css и ранний префикс fit-lime-components.css.
+807 authored paint/reset records под точным zero-specificity route-owner,
+335 source groups. Сохраняются весь original поток25720 declarations при
+снятии только нового guard и полный прежний suffix components. URLs и
+font-family/font-variation/customtokens не переносились; structural остаётся
+общим. Корень ограничен trainer participant identities и phone-frame с
+реальным каталогом/public-page; html/body :has не добавлены. Common consumers
+сохраняют исходные правила. Runtime React/DOM/handlers/API/rollout неизменны.
+Это ещё не итоговая приёмка: candidate native comparison, source остатки
+условных веток, OFF/внешние controls, swipe/restore/сохранение/приглашения,
+регрессии/полныйCI и доставка ещё проверяются.
+
+По уроку MC57 новый точный negative guard зарегистрирован в существующих
+QA-classifiers отдельным leaf scope; expected families/assertions/unknown и
+positive scopes сохраняются. Новые source-proofs и raw-сравнения —/tmp/fit-mc58,
+результаты fit-storage task fit-monochrome-cleanup. Чужие чаты не опрашиваются.
+
+
+### MC5.8 — уточнение измерительного QA до публикации
+
+Кандидат844 records/355 groups добавил25 source-conditional families, чьи
+структурные origins доказаны native baseline; actual interaction regression
+обязательна отдельно. Source-proof:1939 защищённых файлов точные, original
+25720 declaration flow и components suffix точные. Existing guard readers
+изменены только импортом и регистрацией известного negative guard; обратное
+удаление этих добавок даёт побайтный исходник всех11 QA-файлов.
+
+34/34 существующих @lime-clients/@lime-profile browser cases PASS: свайпы/
+отмена/архив/restore/приглашения/данные/ошибки/права/профиль и OFF controls.
+89 component tests остаются PASS. Source/handlers/API/native/rollout прежние.
+
+Обнаружена ошибка НОВОГО измерительного QA: captureEditorSkin ищет selector
+внутри .phone-frame; передача самой .phone-frame дала0 captured descendants.
+Прежнее заявление о104 computed/geometry точных состояниях недействительно;
+эти raw прогоны НЕ приёмка стилей. DOM/PNG были реальными, но недостаточными:
+10 DOM различий (8 диагностических ID,2 положения coachmark) ещё не закрыты.
+Исправлен selector на все реальные descendants, добавлен обязательный
+assert data.length>10. Полные исходные и candidate состояния будут получены
+заново;2-case pilot уже PASS с ненулевым измерением. Реальная ошибка прибора
+не маскируется удалением данных или нормализацией результатов.
+
+Другой исходный сбой stable harness: не подключила observeEditorImages до
+навигации, все68 случаев бросили ошибку до capture. Сохранены raw FAIL;
+пассивный наблюдатель подключён, пилот прошёл. Dark theme корректно задаётся
+отсутствием theme-light, класса theme-dark нет; неверная проверка исправлена,
+14 адресных случаев PASS. Финальные полные проверки ещё впереди.
+
+
+### MC5.8 — проверка реальных остаточных различий
+
+Исправленный reader сохраняет минимум20 nodes на состояние; полный baseline
+и кандидат68/68 PASS. Строгий raw сравниватель сохранил13 разных состояний:
+8 новых диагностических FIT-кодов,4 положения first-visit coachmark и один
+WebKit hover border у light фильтра. Raw RED не объявлен точным совпадением.
+Номера/Coachmark producers побайтно равны базе; это не вывод о полной приёмке.
+Рамка отдельно закрыта6 точными состояниями при одинаковом реальном движении
+указателя: DOM и все computed/form/rect данные точные.
+
+Изучение исходных fullPage PNG выявило ещё эффект измерителя: screenshot
+изменяет viewport и вызывает существующий Coachmark resize handler; PNG
+показывает clipped bubble сверху, хотя DOM до capture имеет другую координату.
+Теперь screenshot только текущего viewport; после съёмки повторно сравниваются
+весь DOM и computed/form/rect/focus/scroll. Пилот2/2 PASS на кандидате, source
+не менялся. Финальный before/after с новым строгим capture ещё выполняется.
+
+Source ownership проверен по104 raw состояниям кандидата:0 пересечений с
+новым отрицательным guard, в каждом состоянии найдены положительные owners.
+Эти assertions закреплены в новых persistent QA, baseline-флаг действует
+только локально для записи исходного варианта; обычный CI требует ownership.
+Ни whitelist неизвестных scopes, ни существующие expected/assertions не
+ослаблены. Полный lint завершился PASS; сборка/types PASS. Механики34/34
+и unit89/89 PASS остаются действительными, поскольку source844 не менялся.
+До выпуска ещё native residual qualification, protected/OFF controls,
+применимые прежние skin-regressions и полный CI точного head.

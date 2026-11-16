@@ -1,3 +1,4 @@
+import {participantsMigrationGuard} from './lime-participants-skin.scope'
 import type {NativeWorkoutSkinContract} from './lime-editor-skin.probe'
 import {profileCaptureProperties} from './lime-profile-skin.contract'
 import {assistantOwnerFilter,assistantMigrationGuard} from './lime-assistant-skin.scope'
@@ -4224,6 +4225,7 @@ export const assistantFamilies=[
  ".finance-receipts-pages > span"
 ]
 export const assistantKnownGuards=[
+  participantsMigrationGuard,
  ":where(:not(:is(.phone-frame.fit-lime-shell.chat-identity,.phone-frame.fit-lime-shell.chat-identity *,body > .chat-sheet-backdrop.fit-lime-chat-sheet,body > .chat-sheet-backdrop.fit-lime-chat-sheet *,#root:has(> .phone-frame.fit-lime-shell.chat-identity) ~ .fullscreen-image-viewer,#root:has(> .phone-frame.fit-lime-shell.chat-identity) ~ .fullscreen-image-viewer *)))",
  ":where(:not(:is(:is(.fit-client-lime.client-home-identity,.fit-client-lime.client-home-identity *),:is(.fit-lime-shell.trainer-schedule-v2-shell,.fit-lime-shell.trainer-schedule-v2-shell *,:is(html.fit-lime-document .schedule-v2-sheet-backdrop,html.fit-lime-document .schedule-v2-sheet-backdrop *)))))",
  ":where(:not(:is(:is(.fit-client-lime.client-profile-shell-identity,.fit-client-lime.client-profile-shell-identity *),:is(.fit-client-lime.client-card-edit-identity,.fit-client-lime.client-card-edit-identity *),:is(.fit-lime-shell.trainer-profile-identity > .content:is([data-viewport-route=\"/profile|\"],[data-viewport-route=\"/profile/settings|\"]),.fit-lime-shell.trainer-profile-identity > .content:is([data-viewport-route=\"/profile|\"],[data-viewport-route=\"/profile/settings|\"]) > .profile-page,.fit-lime-shell.trainer-profile-identity > .content:is([data-viewport-route=\"/profile|\"],[data-viewport-route=\"/profile/settings|\"]) > .profile-page *,.fit-lime-shell.trainer-profile-identity > .content:is([data-viewport-route=\"/profile|\"],[data-viewport-route=\"/profile/settings|\"]) ~ :is(.tab-bar,.modal-overlay,.sheet-overlay,.overflow-list,.coachmark-bubble),.fit-lime-shell.trainer-profile-identity > .content:is([data-viewport-route=\"/profile|\"],[data-viewport-route=\"/profile/settings|\"]) ~ :is(.tab-bar,.modal-overlay,.sheet-overlay,.overflow-list,.coachmark-bubble) *))))",

@@ -1,3 +1,4 @@
+import {participantsMigrationGuard} from './lime-participants-skin.scope'
 import {editorMigrationGuard} from './lime-editor-skin.contract'
 import {resultMigrationGuard} from './lime-result-remainder-skin.contract'
 import {test,expect,type Page} from '@playwright/test'
@@ -23,6 +24,7 @@ const highlightFamilies=[
   ".workout-detail-history-identity button.secondary"
 ]
 const highlightMigrationGuards=[
+  participantsMigrationGuard,
   editorMigrationGuard,
   resultMigrationGuard,
   ':where(:not(.fit-client-lime :is(.workout-completion-highlight, .workout-completion-missing, .workout-completion-muscles-line), .fit-client-lime :is(.workout-completion-highlight, .workout-completion-missing, .workout-completion-muscles-line) *))',

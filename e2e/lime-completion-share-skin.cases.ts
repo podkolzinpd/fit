@@ -1,3 +1,4 @@
+import {participantsMigrationGuard} from './lime-participants-skin.scope'
 import {libraryMigrationGuard} from './lime-library-skin.contract'
 import {editorMigrationGuard} from './lime-editor-skin.contract'
 import {resultMigrationGuard} from './lime-result-remainder-skin.contract'
@@ -13,6 +14,7 @@ type ShareWindow=Window & {shareCalls?:number;shareRelease?:()=>void;shareFiles?
 const shareSelector='.workout-share-overlay'
 const shareFamilies=[".sheet-overlay", ".ui-identity .sheet-overlay", ".workout-detail-history-identity .workout-share-overlay", ".workout-detail-history-identity .workout-share-sheet", ".workout-detail-history-identity .workout-share-sheet h2", ".workout-detail-history-identity .workout-share-sheet .icon-button", ".workout-detail-history-identity .workout-share-sheet-intro", ".workout-detail-history-identity .workout-share-options > button", ".workout-detail-history-identity .workout-share-options > button.is-selected", ".workout-detail-history-identity .workout-share-options > button:disabled", ".workout-detail-history-identity .workout-share-options strong", ".workout-detail-history-identity .workout-share-options small", ".workout-detail-history-identity .workout-share-options b", ".workout-detail-history-identity .workout-share-options > button.is-selected b", ".workout-detail-history-identity button", ".workout-detail-history-identity button.primary", ".workout-detail-history-identity .workout-cta[data-variant='primary']", ".workout-detail-history-identity button.secondary", ".workout-detail-history-identity button:disabled"]
 const shareMigrationGuards=[
+  participantsMigrationGuard,
   libraryMigrationGuard,
   editorMigrationGuard,
   resultMigrationGuard,
