@@ -1046,3 +1046,13 @@ job не нужен, следующий прогон будет на совме�
 урок GitHub API rate limit добавлен в REGRESSION_LESSONS отдельно от Fit16.
 Дальше — полный localcheck с логом и полный CI нового head, затем merge2130
 при зелёных гейтах и повторной сверке актуальногоmain.
+
+Совместный head244619c7, base80f9006c: полный localcheck exit0, закреплённая
+квитанция `20261116-134917-ef383b2a`, полный `check.log` содержит точныйHEAD.
+3210frontend/1636API PASS,479условныхAPI/DBskips;24downloader tests PASS;
+coverage81,88%statements/77%branches, прежние thresholds. Lint/types/policies,
+API/frontendbuild/startup/docs/diff PASS. Независимое review: blockers0,
+34export modifiers/18files,0внешнихпотребителей поsymbol-resolution на
+объединённомHEAD; все5CI-authfiles побайтно равныc25dc486, Fit16/UI overrides
+отсутствуют. Дальнейшее изменение этой записи не меняет проверенные source
+файлы; обязательный CI всё равно проверит окончательный опубликованныйHEAD.
