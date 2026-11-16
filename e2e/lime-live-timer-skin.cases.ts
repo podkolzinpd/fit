@@ -1,5 +1,6 @@
 import {libraryMigrationGuard} from './lime-library-skin.contract'
 import {editorMigrationGuard,editorOwnerFilter,editorOwnerSelectors} from './lime-editor-skin.contract'
+import {assistantMigrationGuard} from './lime-assistant-skin.scope'
 import {ablateLiveSkinBranches,restoreLiveSkinBranches} from './lime-live-duration-skin.cases'
 import { test, expect } from '@playwright/test'
 import { writeFile } from 'node:fs/promises'
@@ -70,6 +71,7 @@ const liveTimerManifest = {
     ".workout-decision-sheet"
   ],
   "guards": [
+    assistantMigrationGuard,
     ":where(:not(.fit-lime-shell.workout-live-reference:has(.coach-live-v79,.client-live-v79) :is(.live-rest-sheet,.workout-duration-sheet,.workout-live-exit-sheet)))",
     ":where(:not(.fit-lime-shell.workout-live-reference:has(.coach-live-v79,.client-live-v79) .live-pinned))",
     ":where(:not(.fit-lime-shell.workout-live-reference:has(.coach-live-v79,.client-live-v79) .live-timer))",
