@@ -35,7 +35,6 @@ interface CustomExerciseRow extends QueryResultRow, CustomExercisePhotoColumns {
   description: string | null
   archived_at: Date | null
   version: string
-  trainer_id: string
 }
 
 interface WorkoutRow extends QueryResultRow {

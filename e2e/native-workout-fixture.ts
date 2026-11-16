@@ -9,7 +9,7 @@ const trainerId = '90000000-0000-4000-8000-000000000009'
 const clientId = '11111111-1111-4111-8111-111111111111'
 const emptyValues = { weightKg: null, reps: null, durationMin: null, durationSec: null, distanceKm: null, rpe: null }
 
-export function fixtureUuid(value: string): string {
+function fixtureUuid(value: string): string {
   if (/^[a-f0-9]{8}-[a-f0-9]{4}-[1-5][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/i.test(value)) return value
   const hash = createHash('sha256').update(value).digest('hex')
   return `${hash.slice(0, 8)}-${hash.slice(8, 12)}-4${hash.slice(13, 16)}-8${hash.slice(17, 20)}-${hash.slice(20, 32)}`

@@ -5,7 +5,7 @@ const PRODUCTION_RELAY_URL = 'wss://api.fit-training.ru/stt'
 const SOCKET_CONNECT_TIMEOUT_MS = 5_000
 const SOCKET_FLUSH_TIMEOUT_MS = 5_000
 
-export interface StreamingSpeechResult {
+interface StreamingSpeechResult {
   endOfUtterance?: boolean
 }
 

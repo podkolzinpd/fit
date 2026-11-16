@@ -1056,3 +1056,71 @@ API/frontendbuild/startup/docs/diff PASS. Независимое review: blocker
 объединённомHEAD; все5CI-authfiles побайтно равныc25dc486, Fit16/UI overrides
 отсутствуют. Дальнейшее изменение этой записи не меняет проверенные source
 файлы; обязательный CI всё равно проверит окончательный опубликованныйHEAD.
+
+Старый c25 CI43847859621 завершён31SUCCESS/4FAILURE: infraECONNRESET,
+зависимыйapp, e2e-yandex-auth1/4 и зависимыйe2e. Browser shard:487passed,
+1failed — Editor Lime skin ownership trainer-dark-390-clarify-true-false,
+30s timeout вlime-editor-skin.probe.ts73/126 на трёх попытках. Этот probe
+и productbuild не менялись нашимc25 CI-authfix; исходная чистка раньше
+проходила данныйнабор. Причина timing failure не доказана; он не объявляется
+успехом/безусловноflaky. Fit16probe/timeout/assertions не меняются, приёмка
+обновлённойbase80f9006c остаётся обязательной. Oldheadretry не выполняется
+после сменыmain; старые watcher/tests полностью завершены.
+
+Окончательный head `e1e167d12ca03d1e7b4744e50fa292125d57225c` принят в CI
+с первой попытки: CI43855556995 —35SUCCESS; Android43855557013 —assemble
+SUCCESS/auth-smoke штатныйSKIPPED. Infra download/init/validate/test PASS;
+предыдущий Editor timeout в полном наборе новогоhead не повторился.
+Ни testcase, ни30s timeout, ни обязательные гейты не ослаблены. Receipt
+`20261116-141226-10069540` закреплён, watcher завершёнexit0; активных
+фоновых проверок этой задачи нет. Перед merge — свежийmain/очередь/HEAD guard.
+
+PR2130 MERGED16.11.2026 12:09:16UTC (15:09:16МСК), squash
+`f6fe8662648952a24831229bea8b8ba533ec1ad8`, послеPR2129. Перед merge
+origin/main80f9006c был ancestor принятогоe1e167d1; в очереди не было
+более ранних открытыхPR, rollup36SUCCESS/1штатныйSKIPPED, pending/failures0,
+mergeStateCLEAN. PR переведён изdraft и слит с match-head guard, безadmin/force.
+Readback подтвердил MERGED/mergeCommit; tree принятогоe1e167d1 побайтно равен
+squashf6fe8662. ПриёмочныйPR body прошёл структурнуюпроверку.
+Слияние завершено, отдельный production deploy не выполнялся. Эти
+post-acceptance receipts остаются локальной записью журнала, не новым
+source head; дополнительныйCI ради записи не запускается.
+
+
+## Итерация 10 — внутренние типы и тестовый helper — 16.11.2026 — Codex / OpenAI
+
+Задача: следующий безопасный пакет, только доказанно неиспользуемое, без
+изменения рабочих сценариев/AI и без пересечения с Fit16. База `f6fe8662`
+(PR2130 MERGED), та же рабочая копия, ветка `chore/unused-internal-code-20261116`.
+Расхождений нет. Финальные квитанции предыдущего пакета сохранены выше.
+
+| ID | Изменение | Доказательство и сохранность |
+| --- | --- | --- |
+| UC1001 | Сняты 11 лишних export у внутренних типов в шести feature-модулях: OAuth (3), exercise-search (2), vitalMedia (2), app-install (1), analytics-model (2), speechkit-streaming-recognizer (1) | Прямых внешних ссылок на имена нет; функции, сигнатуры, значения, возвращаемые структуры, validators, storage и тесты прежние. Скомпилированный JS каждого модуля побайтно совпадает с базой. |
+| UC1002 | Снят export у fixtureUuid в e2e/native-workout-fixture.ts | Внешних потребителей нет; все внутренние вызовы сохранены. Другие байты helper и все сценарии/ожидания тестов прежние. |
+| UC1003 | Удалено поле trainer_id из приватного CustomExerciseRow в services/api/src/training-data.ts | Единственное применение — query с явным SELECT без этого поля. Mapper не читает его, владельца берёт из created_by. SQL, БД, WorkoutRow.trainer_id, ответ API, auth/RLS не менялись. Скомпилированный JS побайтно совпадает с базой. |
+
+Имена типов UC1001: YandexAuthorizationIntent, PendingYandexNativeRegistration,
+YandexAuthorizationCode, RankedExerciseMatch, ExerciseSearchConflict,
+VitalMediaStatus, VitalMediaState, BeforeInstallPromptEvent, AnalyticsResult,
+AnalyticsCard, StreamingSpeechResult. Это сокращение внешней видимости,
+а не удаление работающих функций или измеренное уменьшение сборки.
+
+Дополнительный аудит: 195 API source-модулей без unused-local диагностик;
+155 служебных MJS вне CI/workflow/Fit16 (включая 61 тестовый файл) без unused
+locals/imports/private members/labels и unreachable; в 17 Python infra/scripts
+не найдены неиспользуемые imports. Среди 50 проверенных non-lime/non-progress
+экспортов e2e только fixtureUuid не имел внешнего потребителя.
+
+Сохранены cache url/promise/expiresAt и actorId/id для инвалидизации,
+дедупликации и повторов; рабочие дубли mapConcurrent/run, scripts/data,
+manual/recovery/migration/SpeechKit entrypoints. Три ClientWorkoutHistory-типа
+исключены по границе календаря/Fit16. Внутреннее OCR ImageInput.sizeBytes
+не трогали: runtime-нормализация AI не входит в этот пакет.
+
+Проверка до полного прогона: восстановление 12 export-префиксов и одного
+поля побайтно возвращает восемь source-файлов к базе; emitted JS семи
+production-файлов неизменен. Whitespace PASS. Новых тестов не добавляли,
+существующие assertions/timeouts/thresholds сохранены. Полный прогон и CI
+пока не заявлены. Дальше: независимый review потребителей, положенные
+проверки фактического head, отдельный PR и приёмка по очереди GitHub.
