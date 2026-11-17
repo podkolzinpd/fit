@@ -888,3 +888,45 @@ native bindings и не разрешает выбор профиля. Опера
 В активных workflow, scripts и API нет прямых Supabase URLs и чтения
 SUPABASE_ACCESS_TOKEN / SUPABASE_PROJECT_ID / SUPABASE_DB_PASSWORD.
 PostgreSQL/RLS и полный exact-head CI — обязательные проверки PR.
+
+
+### Исправление CI PR2133 — 18.11.2026 — Codex / OpenAI
+
+После удаления tenant:migrate headf18a3b15 дважды получил одинаковые3timeouts
+в mobile-chromium: client favorite editor390, trainer template editor430,
+trainer clarify390. 517/520 остальных сценариев той части прошли.
+Runtime src, styles, browser конфигурация и assertions не менялись.
+Смена runner image коррелировала с замедлением, но причинность не доказана;
+повтор третьего прогона без исправления отвергнут.
+
+Измерение36probe на этих3случаях:46.9s суммарно,17.0s на передачу/сравнение
+полного CSSOM и DOM. Фикс сохраняет полные исходные строки в свежем browser
+JSHandle на каждый probe, сравнивает полные массивы в browser и возвращает
+точные flags/SHA256 прежнего JSON. Убирается только избыточная передача полного
+CSSOM в Node. DOM при captureDOM, source rule/style object identity, every
+computed property, геометрия, focus/scroll, ancestors/pseudos, active rules,
+negative controls и screenshots сохранены. DOM/stylesheets не мутируются.
+Selector queries memoized только внутри одного синхронного page.evaluate,
+не между пользовательскими действиями и не между probe.
+
+Старая cssom/DOM equality → полная JSON equality в browser; style objects
+→ прежнее сравнение объектов/selector/text; cssomSHA256 → тот же SHA256 UTF8
+JSON, вычисленный браузером. Новые3cases проверяют digest/fresh DOM snapshot,
+вставку CSS rule и изменение существующей declaration. Chromium/WebKit нужны
+для различий CSSOM/browser crypto;12случаев — по3 прежних paint и3новых
+в каждом движке, без новой постоянной CI-матрицы. Защищённый Fit Lime inventory,
+его SHA, PNG, timeouts/retries, fail-on-flaky и CI gates не меняются.
+Локальный замер того же набора после фикса:3/3passed35.9s против46.9s;
+это Darwin-замер, не доказательство итогового времени Linux CI.
+
+Целевые проверки исправления:3/3 затем6/6 повторений без retries;
+12/12 локальных browser regressions Chromium+WebKit29.1s. В CI постоянные
+дополнительные cases —3 в обычном Chromium наборе, не повторный auth shard.
+Новые оси тем/размеров/пользователей не добавлены. Lint и typecheck PASS.
+Full npm check и exact-head CI выполняются; итоги будут в PR.
+
+Общий локальный check:lint/types и359files/3210frontend PASS,
+coverage81.89/77/80.38/86.95. Infra389/390: прежний Mac mock-curl вызывает
+настоящий HTTP и падает, файл не менялся. Полный host check не зелёный.
+Calendar/hosting, API check и обе сборки/startup PASS отдельно.
+Source/SQL/runtime/deploy/секреты не менялись. Итог exact-head CI — в PR2133.
