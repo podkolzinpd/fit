@@ -1,3 +1,4 @@
+import {participantsMigrationGuard} from './lime-participants-skin.scope'
 import {libraryMigrationGuard} from './lime-library-skin.contract'
 import {editorMigrationGuard} from './lime-editor-skin.contract'
 import {expect,type Page} from '@playwright/test'
@@ -6,6 +7,7 @@ import {writeFile} from 'node:fs/promises'
 import {resultPageSelector,resultOwnerFilter,resultMigrationGuard,resultFamilies,resultOwnerSelectors} from './lime-result-remainder-skin.contract'
 const trainerFamilies=resultFamilies
 const trainerMigrationGuards=[
+  participantsMigrationGuard,
   libraryMigrationGuard,
   editorMigrationGuard,
  resultMigrationGuard,

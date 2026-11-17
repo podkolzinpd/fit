@@ -415,25 +415,27 @@ async function mockBodyMapClientGender(page: VisualPage, gender: 'male' | 'femal
 
 }
 
-test('body maps keep route, gender and saved-list preferences without AI requests', async ({ page }, testInfo) => {
-  test.setTimeout(120_000)
-  const trainer = testInfo.project.name === 'visual-trainer-1440'
-  const forbidden: string[] = []
-  await page.route('**/*', (route) => {
-    const url = new URL(route.request().url())
-    if (!['localhost', '127.0.0.1'].includes(url.hostname)
-      || /parse-workout|summarize-client-training|generate-program/.test(url.pathname)) {
-      forbidden.push(url.pathname)
-      return route.abort('blockedbyclient')
-    }
-    return route.fallback()
-  })
-  await signIn(page, trainer ? 'trainer@fit.local' : 'client@fit.local', trainer ? /\/today$/ : /\/me$/)
-  await mockClientWorkoutHistory(page, { includeBack: true, bestResults: true })
-  await mockProgressPeriodSummary(page, '2026-07-17', '2026-08-16')
-  await page.clock.install({ time: new Date('2026-08-16T18:00:00+03:00') })
+// Keep each gender's complete preference/route sequence in one case. Splitting
+// independent gender cases avoids sharing one deadline across 28 navigations.
+for (const gender of ['female', 'male', null] as const) {
+  test(`body maps keep route, gender and saved-list preferences without AI requests (${gender ?? 'unspecified'})`, async ({ page }, testInfo) => {
+    test.setTimeout(120_000)
+    const trainer = testInfo.project.name === 'visual-trainer-1440'
+    const forbidden: string[] = []
+    await page.route('**/*', (route) => {
+      const url = new URL(route.request().url())
+      if (!['localhost', '127.0.0.1'].includes(url.hostname)
+        || /parse-workout|summarize-client-training|generate-program/.test(url.pathname)) {
+        forbidden.push(url.pathname)
+        return route.abort('blockedbyclient')
+      }
+      return route.fallback()
+    })
+    await signIn(page, trainer ? 'trainer@fit.local' : 'client@fit.local', trainer ? /\/today$/ : /\/me$/)
+    await mockClientWorkoutHistory(page, { includeBack: true, bestResults: true })
+    await mockProgressPeriodSummary(page, '2026-07-17', '2026-08-16')
+    await page.clock.install({ time: new Date('2026-08-16T18:00:00+03:00') })
 
-  for (const gender of ['female', 'male', null] as const) {
     await mockBodyMapClientGender(page, gender, trainer)
     const modes = gender ? ['real', 'list', 'legacy-reset'] as const : ['list'] as const
     for (const mode of modes) {
@@ -499,9 +501,9 @@ test('body maps keep route, gender and saved-list preferences without AI request
         }
       }
     }
-  }
-  expect(forbidden).toEqual([])
-})
+    expect(forbidden).toEqual([])
+  })
+}
 
 test.beforeEach(async ({ page }) => {
   await mockAutomaticSummaryGeneration(page)

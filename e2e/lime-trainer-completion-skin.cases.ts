@@ -1,3 +1,4 @@
+import {participantsMigrationGuard} from './lime-participants-skin.scope'
 import {test,expect,type Page} from '@playwright/test'
 import {writeFile} from 'node:fs/promises'
 import {mockPilot,restTimerWorkout,workoutId,clientId} from './fit-lime-fixtures'
@@ -6,6 +7,7 @@ import {settleCompletionPaint} from './lime-live-completion-skin.probe'
 const trainerSelector='.workout-completion'
 const trainerFamilies=[".workout-completion", ".workout-completion-mark", ".workout-completion-kicker", ".workout-completion h2", ".workout-completion p", ".workout-completion-record strong", ".workout-completion-record span", ".workout-completion-next", ".workout-detail-history-identity .workout-completion", ".workout-detail-history-identity .workout-completion-mark", ".workout-detail-history-identity .workout-completion-kicker", ".workout-detail-history-identity .workout-completion h2", ".workout-detail-history-identity .workout-completion p", ".workout-detail-history-identity .workout-completion-record strong", ".workout-detail-history-identity .workout-completion-record span", ".workout-detail-history-identity .workout-completion-next"]
 const trainerMigrationGuards=[
+  participantsMigrationGuard,
   ':where(:not(.fit-lime-shell.workout-detail-history-identity .workout-completion, .fit-lime-shell.workout-detail-history-identity .workout-completion *))',
 ]
 const trainerOwnerPrefix='.workout-detail-history-identity:where(.fit-lime-shell) '

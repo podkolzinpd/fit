@@ -5300,3 +5300,6 @@ for (const role of ['trainer','client'] as const) for (const density of ['origin
   await expect(error).toHaveCount(0)
  })
 }
+
+import {limeParticipantsSkinCases} from './lime-participants-skin.cases'
+limeParticipantsSkinCases()

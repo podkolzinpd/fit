@@ -1,3 +1,4 @@
+import {participantsMigrationGuard} from './lime-participants-skin.scope'
 import {test,expect,type Page} from '@playwright/test'
 import {writeFile} from 'node:fs/promises'
 import {mockPilot,restTimerWorkout,workoutId,clientId,trainerId} from './fit-lime-fixtures'
@@ -11,6 +12,7 @@ const reportFamilies=[
   '.workout-completion-report-facts dt','.workout-completion-report-facts dd',
 ].map(selector=>'.workout-detail-history-identity '+selector)
 const reportMigrationGuards=[
+  participantsMigrationGuard,
   ':where(:not(.fit-client-lime .workout-completion-share-card, .fit-client-lime .workout-completion-share-card *))',
 ]
 const reportOwnerPrefix='.workout-detail-history-identity:where(.fit-client-lime) '

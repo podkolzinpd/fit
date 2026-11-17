@@ -1,3 +1,4 @@
+import {participantsMigrationGuard} from './lime-participants-skin.scope'
 import {chatMigrationGuard} from './lime-chat-skin.scope'
 import {homeMigrationGuard} from './lime-home-skin.scope'
 import {progressMigrationGuard} from './lime-progress-skin.scope'
@@ -523,6 +524,7 @@ export const editorFamilies=[
   ".fit-lime-plan-dialog:has(.workout-template-picker)"
 ]
 export const editorKnownGuards=[
+  participantsMigrationGuard,
   chatMigrationGuard,
   homeMigrationGuard,
   progressMigrationGuard,
