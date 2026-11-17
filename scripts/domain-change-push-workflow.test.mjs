@@ -1,5 +1,4 @@
 import assert from 'node:assert/strict'
-import { execFileSync } from 'node:child_process'
 import { readFile } from 'node:fs/promises'
 import test from 'node:test'
 
@@ -23,6 +22,8 @@ test('domain-change push workflow is manual, main-only, and confirmation-gated',
 test('Cloud.ru recovery sends only reviewed copy from main on the trusted runner', async () => {
   const workflow = await readFile(new URL('../.github/workflows/manage-cloudru-recovery-push.yml', import.meta.url), 'utf8')
   assert.match(workflow, /workflow_dispatch:/)
+  assert.match(workflow, /options: \[inspect, send\]/)
+  assert.doesNotMatch(workflow, /SUPABASE_|email-(?:audit|test|send)/)
   assert.doesNotMatch(workflow, /schedule:|^  push:|pull_request:/m)
   assert.match(workflow, /runs-on: \[self-hosted, cloudru-stage\]/)
   assert.match(workflow, /test "\$GITHUB_REF" = refs\/heads\/main/)
@@ -49,23 +50,4 @@ test('recovery frees only dangling image cache before checkout on a low-disk sen
   assert.ok(workflow.indexOf('sudo podman image prune') < workflow.indexOf('uses: actions/checkout'))
   assert.match(workflow, /test "\$available_kib" -ge 524288/)
   assert.doesNotMatch(workflow, /prune[^\n]*(?:--all|--volumes)|podman (?:system|volume) prune|rm -r[f ]/)
-})
-
-test('email audit uses GET and a read-only transaction and skips all delivery steps', async () => {
-  const workflow = await readFile(new URL('../.github/workflows/manage-cloudru-recovery-push.yml', import.meta.url), 'utf8')
-  const audit = await readFile(new URL('../services/api/src/email-audience-audit.ts', import.meta.url), 'utf8')
-  assert.match(workflow, /options: \[inspect, send, email-audit, email-test, email-send\]/)
-  assert.match(workflow, /inspect\|email-audit\|email-test\) test -z/)
-  assert.match(workflow, /if: inputs.action == 'email-audit'/)
-  assert.match(workflow, /if: inputs.action == 'inspect' \|\| inputs.action == 'send'/)
-  assert.match(audit, /method: 'GET', redirect: 'error'/)
-  assert.match(audit, /repeatable read read only/)
-  assert.match(audit, /sentEmails: 0/)
-  assert.doesNotMatch(audit, /console\.(?:log|error)\((?:users|keys|token|key|auth)\)|sendNotification|sendMail|writeFile/)
-  assert.match(audit, /private source details suppressed/)
-})
-
-
-test('recovery mail isolates each recipient and never retries uncertain SMTP attempts', () => {
-  execFileSync('python3', ['-B', '-m', 'unittest', 'discover', '-s', 'services/api/ops', '-p', 'test_send_recovery_email.py'], { stdio: 'pipe' })
 })

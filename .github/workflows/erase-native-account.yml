@@ -80,5 +80,5 @@ jobs:
             -v "$PWD/scripts/cloudru-native-account-erasure-cli.mjs:/erasure-cli.mjs:ro" \
             -v "$PWD/scripts/cloudru-native-account-erasure.mjs:/cloudru-native-account-erasure.mjs:ro" \
             -v "$PWD/scripts/cloudru-account-deletion.mjs:/cloudru-account-deletion.mjs:ro" \
-            -v "$PWD/scripts/cloudru-account-history-audit.mjs:/cloudru-account-history-audit.mjs:ro" \
+            -v "$PWD/scripts/cloudru-account-evidence.mjs:/cloudru-account-evidence.mjs:ro" \
             "localhost/fit-api:$revision" node /erasure-cli.mjs | tee -a "$GITHUB_STEP_SUMMARY"

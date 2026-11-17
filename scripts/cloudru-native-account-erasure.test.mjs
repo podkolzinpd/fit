@@ -5,6 +5,8 @@ import { createRequire } from 'node:module'
 import { fileURLToPath } from 'node:url'
 import { approvedErasureScope, runNativeErasure } from './cloudru-native-account-erasure.mjs'
 
+import { inspectDeletion, readDeletionScope } from './cloudru-account-deletion.mjs'
+
 const hash = text => createHash('sha256').update(text).digest('hex')
 const source = process.env.TEST_DATABASE_URL
 const { Client } = createRequire(new URL('../services/api/package.json', import.meta.url))('pg')
@@ -61,6 +63,20 @@ async function fixture() {
 test('requires an exact feedback scope before any deletion', () => {
   assert.throws(() => approvedErasureScope('a'.repeat(64)), /feedback_required/)
   assert.throws(() => approvedErasureScope('{}'), /target_invalid/)
+})
+
+test('Cloud.ru deletion preflight reads dependencies from proven feedback and leaves the account unchanged', { skip: !source }, async () => {
+  const f = await fixture()
+  const scope = readDeletionScope(f.rawScope)
+  const report = await inspectDeletion(db, scope)
+  assert.equal(report.identitySource, 'verified_feedback')
+  assert.equal(report.profilePresent, true)
+  assert.equal(report.role, 'client')
+  assert.equal(report.clientCards, 1)
+  assert.ok(report.references.some(ref => ref.table_name === 'app_feedback'))
+  assert.ok(!JSON.stringify(report).includes(f.target))
+  await assert.rejects(inspectDeletion(db, { ...scope, evidence: { ...scope.evidence, messageSha256: hash('wrong') } }), /feedback_mismatch/)
+  assert.equal(Number((await db.query('select count(*) n from public.profiles where id=$1', [f.target])).rows[0].n), 1)
 })
 
 test('inspect is readonly; apply erases only the target and verifies recovery receipt', { skip: !source }, async () => {

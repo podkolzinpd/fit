@@ -1,7 +1,6 @@
 import {createCipheriv,createDecipheriv,createHash,createPublicKey,createPrivateKey,generateKeyPairSync,randomBytes,publicEncrypt,privateDecrypt,constants} from 'node:crypto'
 import {readFileSync,writeFileSync,chmodSync,lstatSync,unlinkSync,readdirSync,fsyncSync,openSync,closeSync,existsSync} from 'node:fs'
 import {createRequire} from 'node:module'
-import {pathToFileURL} from 'node:url'
 
 const bucket='fit-cloudru-stage-media-c2ad3760',tenant='f071c7d5-cf0f-4538-9415-bbf9a9c94338'
 export const uploadBytes=131072
@@ -259,15 +258,3 @@ export async function cleanupUnreceivedCloudruUpload(target,digest,session,opera
   return {event:'client_restore_unreceived_preparation_cleaned',customerInputAbsent:true,localKeyRemoved:true}
  }finally{client.destroy()}
 }
-async function main() {
- if(process.env.GITHUB_REF!=='refs/heads/main'||process.env.GITHUB_REPOSITORY!=='podkolzinpd/fit')fail()
- const {readWorkoutHistoryTarget}=await import('./cloudru-account-history-audit.mjs')
- const target=readWorkoutHistoryTarget(process.env.FIT_WORKOUT_HISTORY_TARGET),digest=process.env.FIT_JOURNAL_IMPORT_SHA256
- const session=journalSession(process.env.FIT_JOURNAL_UPLOAD_SESSION),mode=process.env.FIT_JOURNAL_IMPORT_MODE
- const result=mode==='prepare'?await prepareCloudruUpload(target,digest,session,Buffer.from(process.env.FIT_JOURNAL_RECEIPT_PUBLIC_KEY_B64??'','base64').toString('utf8'))
-  :mode==='cleanup'?await cleanupCloudruUpload(target,digest,session):fail()
- console.log(JSON.stringify({event:'private_journal_upload',...result}))
-}
-if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href)main().catch(error=>{
- console.error(JSON.stringify({event:'private_journal_upload_failed',code:'upload_rejected',...safeJournalUploadFailure(error)}));process.exitCode=1
-})

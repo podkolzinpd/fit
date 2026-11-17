@@ -6,9 +6,8 @@ Private targets, IDs, контакты и ключи сюда не копиру�
 
 | Что уже известно | Существующий путь | Что считается результатом |
 | --- | --- | --- |
-| Точный адрес/login | `.github/workflows/inspect-account-links.yml`; `scripts/cloudru-account-links-audit.mjs`: `readAccountLinkTargets`, `readRetainedLoginBindings`, `inspectAccountLinks` | Уникальное сопоставление через legacy registry/retained login binding и native роль/identity; не совпадение имени |
-| Общий список клиентов тренера | Тот же workflow; `readRosterTargets` → `inspectRosterOwners` и `rosterOwnerQuery` | Каждое имя ровно в одной карточке, один полный trainer+Yandex owner; дополнительные клиенты допустимы, partial/duplicate не complete |
-| Уже известная ссылка/ID обращения, профиля или карточки | `.github/workflows/inspect-account-history.yml`; `scripts/cloudru-account-history-audit.mjs`: `resolveHistoryEvidence`, `readHistoryVisibility` | Точный тип ссылки/ID, для обращения — совпавший marker; одна client identity, фактический автор обращения, отдельное RLS чтение |
+| Общий список клиентов тренера | `.github/workflows/inspect-account-links.yml`; `readRosterTargets` → `inspectRosterOwners` и `rosterOwnerQuery` | Каждое имя ровно в одной карточке, один полный trainer+Yandex owner; дополнительные клиенты допустимы, partial/duplicate не complete |
+| Подтверждённое обращение спортсмена | `scripts/cloudru-account-evidence.mjs`: `resolveHistoryEvidence` для `restore-athlete-access` и `manage-account-deletion` | Точное совпадение ID и marker, одна client identity; ссылка на профиль или карточку сама по себе не подходит |
 | Подтверждённая пара и каноническая карточка | `.github/workflows/restore-client-history.yml`; `scripts/cloudru-client-restore.mjs`: `planClientRestore`, `applyClientRestore`, `verifyClientRestore` | Только нужный active period/membership; история/финансы прежние; trainer и current athlete читают точные сохранённые тренировки |
 | Подтверждённое native приглашение указывает на вторую занятую карточку, исходный import receipt и завершённый predecessor merge доказаны | Тот же `restore-client-history.yml` и отдельно подписанный `repairMode: merge_confirmed_cards` → schema3 план; AH-CONFIRMED-CARDS-03 | Содержание исторической карточки объединено в существующую нынешнюю; действующий период/membership, native identity, private профильная история и чаты прежние; exact financial conservation и оба fit_api reads |
 | Доказано, что история осталась у другого исторического профиля той же личности | `.github/workflows/restore-athlete-access.yml`; `scripts/cloudru-athlete-access-restore.mjs` | Сначала полный план обеих сторон: private refs, self-authored workouts, карточки/чаты/финансы; существующая native identity/userId сохраняются. Это не общий merge аккаунтов |
@@ -46,16 +45,16 @@ Private targets, IDs, контакты и ключи сюда не копиру�
    по Git blobs, включая workflow и все transitive imports. Не импортируй
    невыпущенный HEAD только потому, что он сейчас checkout; это не причина
    заново выпускать уже работающий поиск. Snapshot не расширяет возможности оператора.
-2. **Приватность до выбора транспорта.** `inspect-account-links` использует
-   `FIT_ACCOUNT_LINK_AUDIT_TARGETS`; account-history — четыре distinct target
-   hashes в `FIT_ACCOUNT_HISTORY_TARGETS` и optional `FIT_ACCOUNT_HISTORY_EVIDENCE`
-   со строгими `idSha256,messageSha256`. Не выдумывай отсутствующие четыре
-   адреса и не подставляй дубликаты. Эти схемы не принимают произвольный raw ID.
-   При отсутствии согласия на такой egress не создавай secret «потому что защищён».
-3. **Почта или roster.** Сначала прежний подтверждённый target/result. Для нового
-   разрешённого lookup — существующий bounded resolver. Нормализацию Yandex
-   бери из actual `nutritionLoginHash`, не угадывай домены или варианты.
-   После исчерпания тех же retained sources не повторяй пустой запрос.
+2. **Приватность до выбора транспорта.** `inspect-account-links` принимает только
+   закрытую подпись списка клиентов `rosterNameHashes` в прежнем secret. Для нового
+   athlete restore plan нужен отдельно настроенный `FIT_ATHLETE_RESTORE_TARGETS`
+   с уже подтверждёнными `historicalProfileId` и `trainerProfileId` в Cloud.ru.
+   Текущий профиль доказывает прежний `FIT_ACCOUNT_HISTORY_EVIDENCE` со строгими
+   `idSha256,messageSha256`. Не настраивай egress без отдельного разрешения.
+3. **Поиск и проверка перед удалением.** Прежний Supabase lookup выведен.
+   `manage-account-deletion` с одним хешем проверяет только число сохранённых
+   Cloud.ru bindings. Для выбора профиля необходим точный authenticated feedback.
+   Пустой поиск не доказывает отсутствие аккаунта; разбор исходных данных — по архиву.
 4. **Каноническая карточка.** Используй исходный import receipt и реальные
    `auth_user_id`, `merged_into_client_id`, memberships и active relationships.
    `clients.trainer_id` может быть корнем раздела и не является сам по себе

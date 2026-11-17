@@ -850,3 +850,41 @@ assembleSUCCESS и1штатный auth-smokeSKIPPED. Всего36SUCCESS/1SKIPPE
 source head после CI не менялся.
 
 По следующему прямому разрешению Антона PR2087 слит15.11.2026 в19:59:20МСК: squash3bc55ab36c41189a62202a91b39bff8b6ca6e6b2. Перед merge подтверждены main3140a1cb, exact head537ff7e0 CLEAN/MERGEABLE и36SUCCESS/1штатныйSKIPPED; более ранних open PR нет. GitHub readback MERGED подтверждён. Проверки не повторялись: код и main не изменились. Отдельный production deploy не запускался; локальная квитанция и PRbody отражают merge, не доказательство доставки.
+
+
+### SB-OPS-RETIRE-03 — вывод операций с Supabase — 17.11.2026
+
+Итерация 2026-11-17 — Codex / OpenAI. Владелец подтвердил завершение переноса и
+наличие архива у себя. Запрос: удалить старые импорты, сверки, репетицию и
+recovery-email, сохранить восстановление доступа и preflight удаления на
+Cloud.ru. Сама Supabase БД, хранилище, секреты, SQL-архив в Git и данные не
+меняются. Архив владельца не читался и не восстанавливался в этой задаче.
+
+Удалены ручные source workflows и их скрипты, legacy-ветки внутри operations
+и recovery push, remote/local migration rehearsal и CLI старого источника.
+Убраны тесты исключительно удалённых операций и соответствующие вызовы
+из package scripts; native push/roster, Cloud.ru restore, erasure, private
+upload transport, actor/RLS и stage artifact contracts сохранены и проверяются
+прежними тестами. Новые проверки: native feedback-путь входит в существующий
+PostgreSQL restore сценарий; deletion preflight проверяется на том же изолированном
+PostgreSQL, что и erasure; один hash-only lookup не выбирает профиль.
+
+Расхождение с PR2087: тот PR сохранил Supabase lookup, поскольку закрытого
+target не было. Теперь восстановление намеренно отвязано: для нового
+`plan` нужна подтверждённая пара профилей Cloud.ru в `FIT_ATHLETE_RESTORE_TARGETS`.
+Текущий профиль по-прежнему определяется через exact feedback; schema2,
+backup, apply/verify и проверки прав не меняются. Настройка target выполняется
+перед первым реальным планом с отдельно разрешённой передачей данных.
+Preflight удаления сохраняет прежний формат закрытого ввода: для чтения
+зависимостей нужен authenticated feedback; один хеш показывает только число
+native bindings и не разрешает выбор профиля. Оператор фактического удаления
+по-прежнему отдельно проверяет подтверждение, backup и целевой профиль.
+Отвергнуты догадки о личности, повторный импорт и автоматический перенос
+архивных контактов. Отключение remote источника и проверка live traffic —
+отдельные действия; проверки этого PR не подтверждают production изоляцию.
+
+Локально пройдены 76 профильных Node-тестов, YAML/Bash, migration safety
+(0 SQL migrations), проверка документации и поиск вызовов удалённых модулей.
+В активных workflow, scripts и API нет прямых Supabase URLs и чтения
+SUPABASE_ACCESS_TOKEN / SUPABASE_PROJECT_ID / SUPABASE_DB_PASSWORD.
+PostgreSQL/RLS и полный exact-head CI — обязательные проверки PR.

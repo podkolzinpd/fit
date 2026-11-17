@@ -1,5 +1,16 @@
 # Эксплуатация Fit V2
 
+> С 17.11.2026 старые Supabase импорты, сверки истории, репетиции, write gate и
+> recovery-email из кода выведены. Прежние команды этих операций ниже —
+> исторические. Native push и восстановление сохраняются.
+> Для нового `restore-athlete-access plan` настройте закрытый
+> `FIT_ATHLETE_RESTORE_TARGETS`: два разных подтверждённых native UUID,
+> `historicalProfileId` и `trainerProfileId`. Текущий профиль по-прежнему
+> доказывается `FIT_ACCOUNT_HISTORY_EVIDENCE`. Для `manage-account-deletion`
+> один хеш даёт только число native bindings; для чтения зависимостей нужен
+> прежний закрытый scope с authenticated feedback.
+> [Подробности](docs/design/SUPABASE_DECOMMISSION_PLAN_20261023.md#sb-ops-retire-03--вывод-операций-с-supabase--17112026).
+
 ## Coach Live v79 — YAFIT-653
 
 Согласованный план: `docs/design/COACH_LIVE_V79_INTEGRATION_20261025.md`.
