@@ -6932,46 +6932,55 @@ test('Client progress outside the Lime pilot retains its original surfaces', { t
   expect(await page.locator('.body-progress-modes').evaluate((element) => getComputedStyle(element, '::before').borderRadius)).toBe('9px')
 })
 
+// Isolate unrelated segment surfaces; keep each real preference/reload journey intact.
+async function clientSegmentsFixture(page: Page, theme: string, width: number, initialMode: 'real' | 'list' = 'real') {
+  await page.setViewportSize({ width, height: 844 })
+  await page.clock.setFixedTime(new Date('2026-10-08T09:00:00Z'))
+  const source = restTimerWorkout()
+  source.exercises[0]!.sets[0]!.fact = { weightKg: 20, reps: 10 }
+  source.exercises[0]!.sets[0]!.confirmedAt = '2026-10-08T08:30:00Z'
+  await mockPilot(page, { role: 'client', profileId: clientId, clientGender: 'male', workouts: [{ ...source, status: 'done', workoutDate: '2026-10-08', completedAt: '2026-10-08T09:00:00Z' }] })
+  await page.addInitScript(({ id, theme, initialMode }) => {
+    localStorage.setItem(`fit.clientLime.theme.${id}`, theme)
+    const modeKey = `fit.bodyMapDisplay.v2.client.${id}.${id}`
+    if (localStorage.getItem(modeKey) === null) localStorage.setItem(modeKey, initialMode)
+    localStorage.setItem(`fit.today-draft.${id}.plan.client-segments`, JSON.stringify({ screen: 'save', text: 'Приседания 2×10', choices: {}, clientId: id,
+      items: [{ line: 'Приседания', exercise: { ref: 'squat', name: 'Приседания', inputKind: 'strength' }, sets: [{ position: 0, reps: 10 }], hasValues: true }], recordMode: 'planned', workoutDate: '2026-10-08' }))
+  }, { id: clientId, theme, initialMode })
+}
+
 for (const theme of ['light', 'dark']) for (const width of [390, 430]) {
-  test(`Client Lime segments keep one geometry and visible body-map selection ${theme} ${width}`, { tag: ["@lime-progress"] }, async ({ page }, info) => {
-    await page.setViewportSize({ width, height: 844 })
-    await page.clock.setFixedTime(new Date('2026-10-08T09:00:00Z'))
-    const source = restTimerWorkout()
-    source.exercises[0]!.sets[0]!.fact = { weightKg: 20, reps: 10 }
-    source.exercises[0]!.sets[0]!.confirmedAt = '2026-10-08T08:30:00Z'
-    await mockPilot(page, { role: 'client', profileId: clientId, clientGender: 'male', workouts: [{ ...source, status: 'done', workoutDate: '2026-10-08', completedAt: '2026-10-08T09:00:00Z' }] })
-    await page.addInitScript(({ id, theme }) => {
-      localStorage.setItem(`fit.clientLime.theme.${id}`, theme)
-      localStorage.setItem(`fit.today-draft.${id}.plan.client-segments`, JSON.stringify({ screen: 'save', text: 'Приседания 2×10', choices: {}, clientId: id,
-        items: [{ line: 'Приседания', exercise: { ref: 'squat', name: 'Приседания', inputKind: 'strength' }, sets: [{ position: 0, reps: 10 }], hasValues: true }], recordMode: 'planned', workoutDate: '2026-10-08' }))
-    }, { id: clientId, theme })
+  for (const name of ['Список', 'Фигура']) test(`Client Lime body-map selection ${theme} ${width} ${name}`, { tag: ['@lime-progress'] }, async ({ page }, info) => {
+    await clientSegmentsFixture(page, theme, width, name === 'Список' ? 'real' : 'list')
     await page.goto('/me/settings')
     const options = page.locator('.body-map-appearance-options')
     await expect(options.getByRole('radio')).toHaveCount(2)
-    for (const name of ['Список', 'Фигура']) {
-      await options.getByRole('radio', { name, exact: true }).click()
-      await page.getByRole('heading').first().click()
-      await expect(options.getByRole('radio', { name, exact: true })).toHaveAttribute('aria-checked', 'true')
-      const metrics = await options.evaluate((element) => {
-        const selected = element.querySelector('[aria-checked="true"]')!
-        return { background: getComputedStyle(element).backgroundColor, selected: getComputedStyle(selected).backgroundColor, outer: getComputedStyle(element).borderRadius, inner: getComputedStyle(selected).borderRadius }
-      })
-      await info.attach(`body-selection-${name}`, { body: JSON.stringify(metrics), contentType: 'application/json' })
-      await page.screenshot({ path: info.outputPath(`body-selection-${name}.png`), fullPage: true })
-      expect(metrics.selected).not.toBe(metrics.background)
-      expect(metrics.outer).toBe('28px'); expect(metrics.inner).toBe('24px')
-      await page.reload()
-      await expect(options.getByRole('radio', { name, exact: true })).toHaveAttribute('aria-checked', 'true')
-      await page.goto('/me/progress')
-      await page.getByRole('tab', { name: 'ПРО', exact: true }).click()
-      await page.locator('.client-body-map-disclosure > summary').click()
-      const panel = page.locator('.client-body-map-disclosure .body-progress-panel')
-      await expect(panel).toBeVisible()
-      if (name === 'Список') await expect(panel).toHaveClass(/is-list/)
-      else await expect(panel.locator('.body-progress-figure-shell')).toBeVisible()
-      await page.goto('/me/settings')
-      await expect(options.getByRole('radio', { name, exact: true })).toHaveAttribute('aria-checked', 'true')
-    }
+    await expect(options.getByRole('radio', { name: name === 'Список' ? 'Фигура' : 'Список', exact: true })).toHaveAttribute('aria-checked', 'true')
+    await options.getByRole('radio', { name, exact: true }).click()
+    await page.getByRole('heading').first().click()
+    await expect(options.getByRole('radio', { name, exact: true })).toHaveAttribute('aria-checked', 'true')
+    const metrics = await options.evaluate((element) => {
+      const selected = element.querySelector('[aria-checked="true"]')!
+      return { background: getComputedStyle(element).backgroundColor, selected: getComputedStyle(selected).backgroundColor, outer: getComputedStyle(element).borderRadius, inner: getComputedStyle(selected).borderRadius }
+    })
+    await info.attach(`body-selection-${name}`, { body: JSON.stringify(metrics), contentType: 'application/json' })
+    await page.screenshot({ path: info.outputPath(`body-selection-${name}.png`), fullPage: true })
+    expect(metrics.selected).not.toBe(metrics.background)
+    expect(metrics.outer).toBe('28px'); expect(metrics.inner).toBe('24px')
+    await page.reload()
+    await expect(options.getByRole('radio', { name, exact: true })).toHaveAttribute('aria-checked', 'true')
+    await page.goto('/me/progress')
+    await page.getByRole('tab', { name: 'ПРО', exact: true }).click()
+    await page.locator('.client-body-map-disclosure > summary').click()
+    const panel = page.locator('.client-body-map-disclosure .body-progress-panel')
+    await expect(panel).toBeVisible()
+    if (name === 'Список') await expect(panel).toHaveClass(/is-list/)
+    else await expect(panel.locator('.body-progress-figure-shell')).toBeVisible()
+    await page.goto('/me/settings')
+    await expect(options.getByRole('radio', { name, exact: true })).toHaveAttribute('aria-checked', 'true')
+  })
+  test(`Client Lime history segments keep geometry ${theme} ${width}`, { tag: ['@lime-progress'] }, async ({ page }, info) => {
+    await clientSegmentsFixture(page, theme, width)
     await page.goto('/me/workouts')
     await page.getByRole('tab', { name: 'История' }).click()
     const history = page.getByRole('group', { name: 'Вид истории тренировок' })
@@ -6982,6 +6991,9 @@ for (const theme of ['light', 'dark']) for (const width of [390, 430]) {
       await expect(button).toHaveCSS('border-radius', '24px')
     }
     await page.screenshot({ path: info.outputPath('history-segments.png') })
+  })
+  test(`Client Lime save segments keep geometry ${theme} ${width}`, { tag: ['@lime-progress'] }, async ({ page }, info) => {
+    await clientSegmentsFixture(page, theme, width)
     await page.goto('/me?draft=segments&view=save')
     const mode = page.locator('.today-record-mode')
     await expect(mode).toHaveCSS('border-radius', '28px')

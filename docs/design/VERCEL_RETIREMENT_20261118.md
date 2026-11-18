@@ -182,3 +182,57 @@ frontend build/postbuild PASS. Docs budgets/links/history и diff-check PASS.
 skips0; целевой ESLint и diff-check PASS. Общий check предшествовал этим
 трём E2E assertions; app/API/hosting исходники не менялись. Это дополнение
 не разрешает flaky pass: полный CI актуального head остаётся обязательным.
+
+## Итерация5 — 18.11.2026 — Codex / OpenAI — segments budget
+
+На head7afa2810/run44322736983 обнаружена третья перегруженная семья:
+`Client Lime segments keep one geometry and visible body-map selection`.
+Все4 theme/width варианта исчерпали30s во всех попытках на поздней навигации
+или следующем assertion. WebKit visual4/4:4 failed+154 passed; первые editor
+сценарии не упали. Новых продуктовых дефектов эти логи не доказывают.
+Один case объединял settings→reload→progress→settings дважды, затем history
+и save. Локальный исходный WebKit4/4 PASS,38,3s wall, sum35,538s/max9,437s;
+детерминированный local red→green не заявляется.
+
+Сделано: body-map preference, history segments и save segments разделены.
+Для каждой темы/ширины —2 body-map режима и по1 history/save case. Body-map
+сохраняет реальное изменение выбора, reload, чтение progress и возврат settings.
+Чтобы «Фигура» проверяла именно изменение после «Списка», native fixture
+начинает с противоположного режима и это проверяется явно. Init script пишет
+изначальный выбор только при отсутствии ключа: последующие reload не затирают
+выбор пользователя. History/save fixture начинает с real, как конец прежнего
+body-map цикла. Продуктовый preference transport и UI не меняются.
+
+### Явный повторный аудит
+
+| Старые проверки | Сохраняющий case |
+| --- | --- |
+|2 radio, обе selections, selected/backdrop contrast,28/24px |body-map selection для каждого режима |
+|Выбор после reload, mode в progress и после возврата settings |Тот же самостоятельный preference round-trip |
+|History calendar/list pressed,28/24px и screenshot |history segments keep geometry |
+|Save completed/planned active,28/24px,screenshot,no overflow |save segments keep geometry |
+
+Все34 исходных expect call expressions сохранены; добавлены2 AST call nodes
+для проверки противоположного начального режима.172 остальных test callback
+bodies совпадают побайтно. Tags,2 themes,390/430, оба движка и screenshots
+сохранены. Layout matrix не повторяет history/save внутри preference journey.
+Full inventory766/engine (754−4+16), behavior121+visual645; итог1532 на двух
+движках. Guard явно проверяет все16 segment states; collection/disjoint union
+и остальные policy29/29 PASS. Исходный SHA scoped inventory не обновлялся,
+full CI и неизменные budgets/retries/workers обязательны.
+
+Локально Chromium/WebKit32/32 PASS, workers2/retries0; самый длинный case
+WebKit5,632s, Chromium4,359s. Sum WebKit вырос с35,538s до55,497s из-за
+изолированных контекстов; это не заявляется ускорением всей acceptance.
+Повтор8 WebKit preference states×2:16/16 PASS, retries0/skips0,
+wall68,5s,max4,504s. Новых user data/remote ресурсов нет.
+Финальный local check:lint/typecheck/frontend3210,media2,SpeechKit7 PASS;
+единственный исходный macOS mock-curl failure (infra389/390) прежний.
+Остаток отдельно:calendar22,hosting202,API1592 PASS+423 штатных opt-in skips,
+frontend build/postbuild PASS. Docs/diff-check PASS. В текущем CI7afa2810
+исправленный auth4/4 уже SUCCESS за32m32s; auth1/4 и3/4 ещё выполняются.
+Полный CI актуального segments patch впереди.
+Отвергнуто: принять случайный retry pass, увеличить30s, удалить темы/ширины
+или разорвать собственно preference/reload/progress round-trip.
+Открыто: проверить остальной текущий CI, завершить local check, отправить patch.
+Дальше: дождаться полного зелёного CI нового head, не сливать красный PR.

@@ -87,7 +87,7 @@ test('finance/template visual matrices cannot grow back into full business chain
   assert.doesNotMatch(bodies.get('template'), /page\.clock|page\.reload|commands|\/health|rows\.size/)
 })
 
-test('real Playwright partitions preserve the 754-case union without duplicates in either engine', () => {
+test('real Playwright partitions preserve the 766-case union without duplicates in either engine', () => {
   const collect = (args) => {
     const result = spawnSync(process.execPath, [join(root, 'node_modules/playwright/cli.js'), ...args, '--list', '--reporter=json'],
       { cwd: root, encoding: 'utf8', timeout: 60000, env: { ...process.env, FIT_SCHEDULE_V2_VISUAL: '1' } })
@@ -103,13 +103,17 @@ test('real Playwright partitions preserve the 754-case union without duplicates 
   }
   for (const { project } of engines) {
     const full = collect(fitLimeArgs(project, 'full').args)
-    assert.equal(full.length, 754) // Audited split: 743 - 2 combined cases + 12 independent routes + 1 save round-trip.
+    assert.equal(full.length, 766) // Audited splits: 743 - 2 editor chains + 12 routes + 1 save - 4 segment chains + 16 surfaces.
     for (const theme of ['light', 'dark']) for (const width of [390, 430]) {
       for (const route of ['/workouts/new', '/workouts/10000000-0000-4000-8000-000000000003/edit', '/workouts/10000000-0000-4000-8000-000000000003/history/fedb-barbell-squat']) {
         assert.equal(full.filter(key => key.endsWith(`Client Lime editor and exercise history ${theme} ${width} ${route}`)).length, 1)
       }
     }
     assert.equal(full.filter(key => key.endsWith('Client Lime editor validates midnight times and clears optional end after reload')).length, 1)
+    for (const theme of ['light', 'dark']) for (const width of [390, 430]) {
+      for (const mode of ['Список', 'Фигура']) assert.equal(full.filter(key => key.endsWith(`Client Lime body-map selection ${theme} ${width} ${mode}`)).length, 1)
+      for (const surface of ['history', 'save']) assert.equal(full.filter(key => key.endsWith(`Client Lime ${surface} segments keep geometry ${theme} ${width}`)).length, 1)
+    }
     assert.equal(full.filter(key => key.endsWith('Template search preserves names, editor return and picker focus without extra writes')).length, 1)
     for (const width of [375, 390, 430]) {
       assert.equal(full.filter(key => key.endsWith(`Client profile loads approved YS Geo at ${width}`)).length, 1)
