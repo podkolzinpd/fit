@@ -384,6 +384,7 @@ test('Yandex ready favorites rename conflict and keyboard keep the chosen title'
   await rename.getByRole('button', { name: 'Сохранить', exact: true }).click()
   await expect(rename).not.toBeVisible()
   expect(state.updates).toEqual([{ expectedVersion: 1, title: 'Силовая' }, { expectedVersion: 2, title: 'Силовая' }])
+  await expect(card.getByRole('button', { name: 'Действия с тренировкой Силовая' })).toBeVisible()
 })
 
 test('Yandex ready favorites editor adds reorders replaces and retries an independent copy', async ({ page }, testInfo) => {
@@ -436,6 +437,7 @@ test('Yandex ready favorites editor adds reorders replaces and retries an indepe
   await expect(page).toHaveURL(/\/me\/workouts\?tab=presets$/)
   await expect(card).toContainText('Моя силовая')
   expect(state.editAttempts).toBe(2)
+  await expect(card.getByRole('button', { name: 'Действия с тренировкой Моя силовая' })).toBeVisible()
 })
 
 test('Yandex ready favorites recovery preserves draft on cancel failure missing and pending read', async ({ page }) => {
@@ -589,6 +591,8 @@ test('Yandex ready favorites planning reconciles changed favorite and preserves 
   await page.getByText('Настройки плана', { exact: true }).click()
   await expect(page.getByLabel('Окончание', { exact: true })).toHaveValue('12:00')
   await expect(page.getByLabel('Заметка', { exact: true })).toHaveValue('Личная заметка')
+  await page.goto('/me/workouts?tab=presets')
+  await expect(card.getByRole('button', { name: 'Действия с тренировкой Моя силовая' })).toBeVisible()
 })
 
 test('Yandex ready favorites delete retries reconcile a lost response and reject missing source', async ({ page }) => {

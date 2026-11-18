@@ -171,3 +171,14 @@ frontend build/postbuild PASS. Docs budgets/links/history и diff-check PASS.
 поздние проверки missing/error; serial tests с общей страницей.
 Открыто: окончание локальных проверок, новый полный CI исправленного head.
 Дальше: один push стабилизированного исправления в PR2134 и ожидание CI.
+
+Дополнение реаудита границ: прежний следующий click также доказывал, что
+после rename/edit список обновил название, а после planning можно вернуться
+к исходному favorite. После split эти три перехода проверяются явно в конце
+соответствующих cases: точная доступная кнопка действий на карточке.
+Все178 исходных call expressions остаются; добавлены3 boundary assertions
+(6 AST call expressions, всего184). Case inventory прежний61; повтор12/12
+на заново собранном synthetic production bundle PASS за55,1s, retries0,
+skips0; целевой ESLint и diff-check PASS. Общий check предшествовал этим
+трём E2E assertions; app/API/hosting исходники не менялись. Это дополнение
+не разрешает flaky pass: полный CI актуального head остаётся обязательным.
