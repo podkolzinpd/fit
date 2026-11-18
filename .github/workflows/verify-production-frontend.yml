@@ -1,4 +1,4 @@
-name: Verify production domain redirect
+name: Verify production frontend
 
 on:
   schedule:
@@ -9,12 +9,12 @@ permissions:
   contents: read
 
 concurrency:
-  group: production-domain-redirect-monitor
+  group: production-frontend-monitor
   cancel-in-progress: true
 
 jobs:
   verify:
-    name: Verify legacy links and canonical frontend
+    name: Verify canonical frontend
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
@@ -24,21 +24,12 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - name: Verify permanent redirects and query preservation
-        run: node scripts/verify-production-domain-redirect.mjs --report production-domain-redirect.json
       - name: Measure canonical frontend DNS, TLS, HTML and assets
         if: always()
         run: node scripts/probe-production-frontend.mjs --report production-frontend-network.json
       - name: Publish the sanitized result
         if: always()
         run: |
-          if test -f production-domain-redirect.json; then
-            jq -r '
-              "Production domain redirect: " + .status
-              + "; passed=" + ([.results[] | select(.passed)] | length | tostring)
-              + "/" + (.results | length | tostring)
-            ' production-domain-redirect.json >>"$GITHUB_STEP_SUMMARY"
-          fi
           if test -f production-frontend-network.json; then
             jq -r '
               "Frontend network: " + .status
@@ -50,9 +41,8 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: production-domain-redirect-${{ github.run_id }}
+          name: production-frontend-${{ github.run_id }}
           path: |
-            production-domain-redirect.json
             production-frontend-network.json
           if-no-files-found: error
           retention-days: 7

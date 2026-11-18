@@ -11,7 +11,8 @@ Production Fit использует внешний Yandex ID; app-session/API/Po
 историй, запрета всех writers и отдельной полной репетиции≤120мин. Эти документы
 не разрешают production switch. Старые cutover-команды ниже не являются reverse
 migration Cloud.ru → Yandex Cloud.
-Vercel сохранён только для редиректа со старого адреса; PR Preview отключён.
+18.11.2026 владелец разрешил удалить Vercel-проект со старым редиректом;
+[вывод и фактические проверки](design/VERCEL_RETIREMENT_20261118.md). PR Preview отключён.
 Supabase остаётся временным legacy-источником для неперенесённых
 media, явных архивных репетиций и rollback — не вторым production backend новых функций.
 

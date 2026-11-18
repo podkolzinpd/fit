@@ -9,6 +9,8 @@ import { frontendHandler } from './frontend-rehearsal-server.mjs'
 import { gatewayPlan, gatewayUpload } from './frontend-gateway-plan.mjs'
 import { gunzipSync } from 'node:zlib'
 import { createHash } from 'node:crypto'
+import { execFileSync } from 'node:child_process'
+import { fileURLToPath } from 'node:url'
 import { uploadCandidate } from './upload-frontend-candidate.mjs'
 
 const commit = 'a'.repeat(40)
@@ -150,9 +152,43 @@ test('candidate uploader verifies remote bytes, skips existing objects and fails
   assert.equal(puts, bundle.files.length)
 })
 
-test('source Vercel contract is explicitly supported', async () => {
-  const { routes } = JSON.parse(await readFile(new URL('../vercel.json', import.meta.url)))
-  assert.deepEqual(routes, supportedRouting)
+test('packaging CLIs use native routing without a provider config file', async (t) => {
+  const dir = await mkdtemp(join(tmpdir(), 'fit-native-packaging-'))
+  t.after(() => rm(dir, { recursive: true, force: true }))
+  const source = join(dir, 'dist')
+  await mkdir(join(source, 'assets'), { recursive: true })
+  for (const [key, value] of Object.entries({
+    'index.html': '<html>native</html>', 'sw.js': '// sw',
+    'asset-recovery.js': '// recovery', 'site.webmanifest': '{}',
+    'assets/app-12345678.js': '// app',
+  })) await writeFile(join(source, key), value)
+  for (const script of ['frontend-release.mjs', 'prepare-yandex-frontend.mjs']) {
+    const output = join(dir, `${script}.json`)
+    execFileSync(process.execPath, [fileURLToPath(new URL(script, import.meta.url)), source, commit, output])
+    const result = JSON.parse(await readFile(output, 'utf8'))
+    assert.deepEqual(result.routing ?? result.requiredRouting, supportedRouting)
+    assert.doesNotMatch(JSON.stringify(result), /vercel/i)
+    if (result.routing) verifyRelease(result)
+  }
+})
+test('retained packages keep their original routing and identity for rollback', async (t) => {
+  const current = await release(t)
+  const routing = [{
+    src: '/(.*)',
+    has: [{ type: 'host', value: 'fit-drab.vercel.app' }],
+    headers: { Location: 'https://fit-training.ru/$1' },
+    status: 308,
+  }, ...supportedRouting]
+  const legacy = { ...current, routing }
+  legacy.release = `${legacy.commit}-${createHash('sha256').update(JSON.stringify({ routing, files: legacy.files })).digest('hex')}`
+  assert.equal(verifyRelease(legacy), legacy)
+  assert.notEqual(current.release, legacy.release)
+  const url = await server(t, current, [legacy])
+  assert.equal((await fetch(url + '/client')).status, 200)
+  const invalid = structuredClone(legacy)
+  invalid.routing[0].headers.Location = 'https://example.org/$1'
+  invalid.release = `${invalid.commit}-${createHash('sha256').update(JSON.stringify({ routing: invalid.routing, files: invalid.files })).digest('hex')}`
+  assert.throws(() => verifyRelease(invalid), /Unsupported rehearsal release/)
 })
 test('release identity includes bytes, not just commit', async (t) => {
   const one = await release(t)

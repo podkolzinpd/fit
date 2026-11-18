@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { test } from 'node:test'
 import { prepareFrontend } from './prepare-yandex-frontend.mjs'
+import { supportedRouting as routes } from './frontend-routing.mjs'
 
 const sha = 'a'.repeat(40)
 async function fixture(t) {
@@ -18,7 +19,6 @@ async function fixture(t) {
 
 test('deterministic checksums, MIME, cache and source routing without deployment', async (t) => {
   const root = await fixture(t)
-  const { routes } = JSON.parse(await readFile(new URL('../vercel.json', import.meta.url)))
   const manifest = await prepareFrontend(root, sha, routes)
   assert.deepEqual(manifest, await prepareFrontend(root, sha, routes))
   assert.equal(manifest.deployable, false)

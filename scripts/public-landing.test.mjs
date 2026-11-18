@@ -172,3 +172,9 @@ test('parallel app counters preserve privacy settings and excluded entry routes'
     assert.equal(result.calls.length, 0)
   }
 })
+
+// This assertion belonged to the retired redirect config test; analytics remain live.
+test('application analytics stay enabled on the canonical hostname', async () => {
+  const html = await readFile(new URL('../index.html', import.meta.url), 'utf8')
+  assert.match(html, /window\.location\.hostname === 'fit-training\.ru'/)
+})

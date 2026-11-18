@@ -5913,84 +5913,41 @@ test('Client Lime logout resets document scope and return preserves only its own
   await expect(page.locator('.phone-frame')).toHaveCSS('background-color', 'rgb(0, 0, 0)')
 })
 
-for (const theme of ['light', 'dark']) {
-  test(`Client Lime editor and exercise history ${theme}`, async ({ page }, testInfo) => {
-    const backend = await mockPilot(page, { role: 'client', profileId: clientId, workouts: [{ ...coachGestureWorkout(false, 1), status: 'planned', startedAt: null, createdBy: clientId, trainingFormat: 'self' }] })
+// Themes cover distinct tokens; widths cover responsive layout and calendar controls.
+// Give each independent route its own fixture and budget instead of one six-page chain.
+for (const theme of ['light', 'dark']) for (const width of [390, 430]) {
+  for (const [route, surface] of [
+    ['/workouts/new', '.workout-form-page'],
+    [`/workouts/${workoutId}/edit`, '.workout-form-page'],
+    [`/workouts/${workoutId}/history/fedb-barbell-squat`, '.exercise-card-tabs'],
+  ] as const) test(`Client Lime editor and exercise history ${theme} ${width} ${route}`, async ({ page }, testInfo) => {
+    await mockPilot(page, { role: 'client', profileId: clientId, workouts: [{ ...coachGestureWorkout(false, 1), status: 'planned', startedAt: null, createdBy: clientId, trainingFormat: 'self' }] })
     await page.addInitScript(({ id, theme }) => localStorage.setItem(`fit.clientLime.theme.${id}`, theme), { id: clientId, theme })
-    for (const width of [390, 430]) {
-      await page.setViewportSize({ width, height: 844 })
-      for (const [route, surface] of [
-        ['/workouts/new', '.workout-form-page'],
-        [`/workouts/${workoutId}/edit`, '.workout-form-page'],
-        [`/workouts/${workoutId}/history/fedb-barbell-squat`, '.exercise-card-tabs'],
-      ] as const) {
-        await page.goto(route)
-        await expect(page.locator('.phone-frame')).toHaveClass(/fit-client-lime/)
-        await expect(page.locator(surface)).toBeVisible()
-        expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
-        await page.screenshot({ path: testInfo.outputPath(`${route.replaceAll('/', '-')}-${width}.png`) })
-        if (route.endsWith('/edit')) {
-          const control = page.getByRole('button', { name: 'Выбрать дату и время', exact: true })
-          const before = await control.innerText()
-          await control.click()
-          const dates = page.getByRole('dialog', { name: 'Дата и время', exact: true })
-          await expect(dates.locator('.lime-calendar-day-marker').first()).toHaveCSS('width', '36px')
-          await dates.getByLabel('Начало', { exact: true }).fill('12:30')
-          await page.screenshot({ path: testInfo.outputPath(`client-editor-date-${theme}-${width}.png`) })
-          if (theme === 'light' && width === 390) {
-            // The stored app height can lag a reduced viewport during keyboard recovery.
-            await page.setViewportSize({ width, height: 450 })
-            await dates.getByLabel('Начало', { exact: true }).focus()
-            await expect.poll(async () => (await dates.boundingBox())!.y).toBeGreaterThanOrEqual(0)
-            await dates.getByRole('button', { name: 'Применить дату' }).scrollIntoViewIfNeeded()
-            await expect(dates.getByRole('button', { name: 'Применить дату' })).toBeInViewport()
-            await page.setViewportSize({ width, height: 844 })
-          }
-          await dates.getByRole('button', { name: 'Закрыть календарь' }).click()
-          await expect(control).toHaveText(before, { useInnerText: true })
-          if (theme === 'light' && width === 390) {
-            const updates: Array<{ workoutDate: string; startTime?: string | null; endTime?: string | null }> = []
-            // Unlike the generic visual fixture's 10:00/11:00 fallback, this
-            // contract check must read back cleared optional times as null.
-            await page.route(`**/v1/workouts/${workoutId}`, async (requestRoute) => {
-              if (requestRoute.request().method() !== 'PUT') return requestRoute.fallback()
-              const command = requestRoute.request().postDataJSON() as typeof updates[number]
-              updates.push(command)
-              const current = backend.getWorkouts().find((item) => item.id === workoutId)!
-              Object.assign(current, { workoutDate: command.workoutDate, startTime: command.startTime ?? null, endTime: command.endTime ?? null, version: current.version + 1 })
-              await requestRoute.fulfill({ json: { workout: { id: workoutId } } })
-            })
-            const addEnd = page.getByRole('button', { name: 'Добавить время окончания', exact: true })
-            if (await addEnd.isVisible()) await addEnd.click()
-            await control.click()
-            await dates.getByLabel('Начало', { exact: true }).fill('')
-            await dates.getByLabel('Окончание', { exact: true }).fill('14:00')
-            await dates.getByRole('button', { name: 'Применить дату' }).click()
-            const attempts = updates.length
-            await page.getByRole('button', { name: 'Сохранить план', exact: true }).click()
-            await expect(page.getByRole('alert')).toContainText('Укажите время начала тренировки')
-            expect(updates).toHaveLength(attempts)
-            await control.click()
-            await dates.getByLabel('Начало', { exact: true }).fill('23:30')
-            await dates.getByLabel('Окончание', { exact: true }).fill('00:15')
-            await dates.getByRole('button', { name: 'Применить дату' }).click()
-            await page.getByRole('button', { name: 'Сохранить план', exact: true }).click()
-            await expect(page).toHaveURL(new RegExp(`/workouts/${workoutId}$`))
-            await page.goto(route)
-            await expect(control).toContainText('23:30')
-            await expect(control).toContainText('00:15')
-            await page.getByRole('button', { name: 'Убрать окончание', exact: true }).click()
-            await control.click()
-            await expect(dates.getByLabel('Окончание', { exact: true })).toHaveCount(0)
-            await dates.getByRole('button', { name: 'Применить дату' }).click()
-            await page.getByRole('button', { name: 'Сохранить план', exact: true }).click()
-            await expect(page).toHaveURL(new RegExp(`/workouts/${workoutId}$`))
-            await page.goto(route)
-            await expect(page.getByRole('button', { name: 'Добавить время окончания', exact: true })).toBeVisible()
-          }
-        }
-
+    await page.setViewportSize({ width, height: 844 })
+    await page.goto(route)
+    await expect(page.locator('.phone-frame')).toHaveClass(/fit-client-lime/)
+    await expect(page.locator(surface)).toBeVisible()
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+    await page.screenshot({ path: testInfo.outputPath(`${route.replaceAll('/', '-')}-${width}.png`) })
+    if (route.endsWith('/edit')) {
+      const control = page.getByRole('button', { name: 'Выбрать дату и время', exact: true })
+      const before = await control.innerText()
+      await control.click()
+      const dates = page.getByRole('dialog', { name: 'Дата и время', exact: true })
+      await expect(dates.locator('.lime-calendar-day-marker').first()).toHaveCSS('width', '36px')
+      await dates.getByLabel('Начало', { exact: true }).fill('12:30')
+      await page.screenshot({ path: testInfo.outputPath(`client-editor-date-${theme}-${width}.png`) })
+      if (theme === 'light' && width === 390) {
+        // The stored app height can lag a reduced viewport during keyboard recovery.
+        await page.setViewportSize({ width, height: 450 })
+        await dates.getByLabel('Начало', { exact: true }).focus()
+        await expect.poll(async () => (await dates.boundingBox())!.y).toBeGreaterThanOrEqual(0)
+        await dates.getByRole('button', { name: 'Применить дату' }).scrollIntoViewIfNeeded()
+        await expect(dates.getByRole('button', { name: 'Применить дату' })).toBeInViewport()
+        await page.setViewportSize({ width, height: 844 })
       }
+      await dates.getByRole('button', { name: 'Закрыть календарь' }).click()
+      await expect(control).toHaveText(before, { useInnerText: true })
     }
   })
 }
@@ -6975,46 +6932,55 @@ test('Client progress outside the Lime pilot retains its original surfaces', { t
   expect(await page.locator('.body-progress-modes').evaluate((element) => getComputedStyle(element, '::before').borderRadius)).toBe('9px')
 })
 
+// Isolate unrelated segment surfaces; keep each real preference/reload journey intact.
+async function clientSegmentsFixture(page: Page, theme: string, width: number, initialMode: 'real' | 'list' = 'real') {
+  await page.setViewportSize({ width, height: 844 })
+  await page.clock.setFixedTime(new Date('2026-10-08T09:00:00Z'))
+  const source = restTimerWorkout()
+  source.exercises[0]!.sets[0]!.fact = { weightKg: 20, reps: 10 }
+  source.exercises[0]!.sets[0]!.confirmedAt = '2026-10-08T08:30:00Z'
+  await mockPilot(page, { role: 'client', profileId: clientId, clientGender: 'male', workouts: [{ ...source, status: 'done', workoutDate: '2026-10-08', completedAt: '2026-10-08T09:00:00Z' }] })
+  await page.addInitScript(({ id, theme, initialMode }) => {
+    localStorage.setItem(`fit.clientLime.theme.${id}`, theme)
+    const modeKey = `fit.bodyMapDisplay.v2.client.${id}.${id}`
+    if (localStorage.getItem(modeKey) === null) localStorage.setItem(modeKey, initialMode)
+    localStorage.setItem(`fit.today-draft.${id}.plan.client-segments`, JSON.stringify({ screen: 'save', text: 'Приседания 2×10', choices: {}, clientId: id,
+      items: [{ line: 'Приседания', exercise: { ref: 'squat', name: 'Приседания', inputKind: 'strength' }, sets: [{ position: 0, reps: 10 }], hasValues: true }], recordMode: 'planned', workoutDate: '2026-10-08' }))
+  }, { id: clientId, theme, initialMode })
+}
+
 for (const theme of ['light', 'dark']) for (const width of [390, 430]) {
-  test(`Client Lime segments keep one geometry and visible body-map selection ${theme} ${width}`, { tag: ["@lime-progress"] }, async ({ page }, info) => {
-    await page.setViewportSize({ width, height: 844 })
-    await page.clock.setFixedTime(new Date('2026-10-08T09:00:00Z'))
-    const source = restTimerWorkout()
-    source.exercises[0]!.sets[0]!.fact = { weightKg: 20, reps: 10 }
-    source.exercises[0]!.sets[0]!.confirmedAt = '2026-10-08T08:30:00Z'
-    await mockPilot(page, { role: 'client', profileId: clientId, clientGender: 'male', workouts: [{ ...source, status: 'done', workoutDate: '2026-10-08', completedAt: '2026-10-08T09:00:00Z' }] })
-    await page.addInitScript(({ id, theme }) => {
-      localStorage.setItem(`fit.clientLime.theme.${id}`, theme)
-      localStorage.setItem(`fit.today-draft.${id}.plan.client-segments`, JSON.stringify({ screen: 'save', text: 'Приседания 2×10', choices: {}, clientId: id,
-        items: [{ line: 'Приседания', exercise: { ref: 'squat', name: 'Приседания', inputKind: 'strength' }, sets: [{ position: 0, reps: 10 }], hasValues: true }], recordMode: 'planned', workoutDate: '2026-10-08' }))
-    }, { id: clientId, theme })
+  for (const name of ['Список', 'Фигура']) test(`Client Lime body-map selection ${theme} ${width} ${name}`, { tag: ['@lime-progress'] }, async ({ page }, info) => {
+    await clientSegmentsFixture(page, theme, width, name === 'Список' ? 'real' : 'list')
     await page.goto('/me/settings')
     const options = page.locator('.body-map-appearance-options')
     await expect(options.getByRole('radio')).toHaveCount(2)
-    for (const name of ['Список', 'Фигура']) {
-      await options.getByRole('radio', { name, exact: true }).click()
-      await page.getByRole('heading').first().click()
-      await expect(options.getByRole('radio', { name, exact: true })).toHaveAttribute('aria-checked', 'true')
-      const metrics = await options.evaluate((element) => {
-        const selected = element.querySelector('[aria-checked="true"]')!
-        return { background: getComputedStyle(element).backgroundColor, selected: getComputedStyle(selected).backgroundColor, outer: getComputedStyle(element).borderRadius, inner: getComputedStyle(selected).borderRadius }
-      })
-      await info.attach(`body-selection-${name}`, { body: JSON.stringify(metrics), contentType: 'application/json' })
-      await page.screenshot({ path: info.outputPath(`body-selection-${name}.png`), fullPage: true })
-      expect(metrics.selected).not.toBe(metrics.background)
-      expect(metrics.outer).toBe('28px'); expect(metrics.inner).toBe('24px')
-      await page.reload()
-      await expect(options.getByRole('radio', { name, exact: true })).toHaveAttribute('aria-checked', 'true')
-      await page.goto('/me/progress')
-      await page.getByRole('tab', { name: 'ПРО', exact: true }).click()
-      await page.locator('.client-body-map-disclosure > summary').click()
-      const panel = page.locator('.client-body-map-disclosure .body-progress-panel')
-      await expect(panel).toBeVisible()
-      if (name === 'Список') await expect(panel).toHaveClass(/is-list/)
-      else await expect(panel.locator('.body-progress-figure-shell')).toBeVisible()
-      await page.goto('/me/settings')
-      await expect(options.getByRole('radio', { name, exact: true })).toHaveAttribute('aria-checked', 'true')
-    }
+    await expect(options.getByRole('radio', { name: name === 'Список' ? 'Фигура' : 'Список', exact: true })).toHaveAttribute('aria-checked', 'true')
+    await options.getByRole('radio', { name, exact: true }).click()
+    await page.getByRole('heading').first().click()
+    await expect(options.getByRole('radio', { name, exact: true })).toHaveAttribute('aria-checked', 'true')
+    const metrics = await options.evaluate((element) => {
+      const selected = element.querySelector('[aria-checked="true"]')!
+      return { background: getComputedStyle(element).backgroundColor, selected: getComputedStyle(selected).backgroundColor, outer: getComputedStyle(element).borderRadius, inner: getComputedStyle(selected).borderRadius }
+    })
+    await info.attach(`body-selection-${name}`, { body: JSON.stringify(metrics), contentType: 'application/json' })
+    await page.screenshot({ path: info.outputPath(`body-selection-${name}.png`), fullPage: true })
+    expect(metrics.selected).not.toBe(metrics.background)
+    expect(metrics.outer).toBe('28px'); expect(metrics.inner).toBe('24px')
+    await page.reload()
+    await expect(options.getByRole('radio', { name, exact: true })).toHaveAttribute('aria-checked', 'true')
+    await page.goto('/me/progress')
+    await page.getByRole('tab', { name: 'ПРО', exact: true }).click()
+    await page.locator('.client-body-map-disclosure > summary').click()
+    const panel = page.locator('.client-body-map-disclosure .body-progress-panel')
+    await expect(panel).toBeVisible()
+    if (name === 'Список') await expect(panel).toHaveClass(/is-list/)
+    else await expect(panel.locator('.body-progress-figure-shell')).toBeVisible()
+    await page.goto('/me/settings')
+    await expect(options.getByRole('radio', { name, exact: true })).toHaveAttribute('aria-checked', 'true')
+  })
+  test(`Client Lime history segments keep geometry ${theme} ${width}`, { tag: ['@lime-progress'] }, async ({ page }, info) => {
+    await clientSegmentsFixture(page, theme, width)
     await page.goto('/me/workouts')
     await page.getByRole('tab', { name: 'История' }).click()
     const history = page.getByRole('group', { name: 'Вид истории тренировок' })
@@ -7025,6 +6991,9 @@ for (const theme of ['light', 'dark']) for (const width of [390, 430]) {
       await expect(button).toHaveCSS('border-radius', '24px')
     }
     await page.screenshot({ path: info.outputPath('history-segments.png') })
+  })
+  test(`Client Lime save segments keep geometry ${theme} ${width}`, { tag: ['@lime-progress'] }, async ({ page }, info) => {
+    await clientSegmentsFixture(page, theme, width)
     await page.goto('/me?draft=segments&view=save')
     const mode = page.locator('.today-record-mode')
     await expect(mode).toHaveCSS('border-radius', '28px')

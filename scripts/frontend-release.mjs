@@ -4,19 +4,18 @@ import { resolve, relative, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { isDeepStrictEqual } from 'node:util'
 import { prepareFrontend, frontendFileMetadata } from './prepare-yandex-frontend.mjs'
+import { supportedRouting } from './frontend-routing.mjs'
+export { supportedRouting } from './frontend-routing.mjs'
 
-// Deliberately fail closed when the source hosting contract changes.
-export const supportedRouting = [
+// Read compatibility for already published packages; never requires the old host.
+const legacyRouting = [
   {
     src: '/(.*)',
     has: [{ type: 'host', value: 'fit-drab.vercel.app' }],
     headers: { Location: 'https://fit-training.ru/$1' },
     status: 308,
   },
-  { handle: 'filesystem' },
-  { src: '/assets/.*\\.js', dest: '/asset-recovery.js' },
-  { src: '/assets/.*', status: 404 },
-  { src: '/(.*)', dest: '/index.html' },
+  ...supportedRouting,
 ]
 const sha256 = (bytes) => createHash('sha256').update(bytes).digest('hex')
 const safeKey = (key) => typeof key === 'string' && /^[a-zA-Z0-9_./-]+$/.test(key)
@@ -25,7 +24,8 @@ const safeKey = (key) => typeof key === 'string' && /^[a-zA-Z0-9_./-]+$/.test(ke
 export function verifyRelease(bundle) {
   if (bundle?.schemaVersion !== 1 || bundle.deployable !== false
       || !/^[a-f0-9]{40}$/.test(bundle.commit ?? '')
-      || !isDeepStrictEqual(bundle.routing, supportedRouting)
+      || (!isDeepStrictEqual(bundle.routing, supportedRouting)
+        && !isDeepStrictEqual(bundle.routing, legacyRouting))
       || !Array.isArray(bundle.files) || bundle.files.length === 0) {
     throw new Error('Unsupported rehearsal release')
   }
@@ -75,8 +75,7 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
   if (destination === '' || destination.split(sep)[0] !== '..') {
     throw new Error('Release package must be outside the build directory')
   }
-  const { routes } = JSON.parse(await readFile(new URL('../vercel.json', import.meta.url), 'utf8'))
-  const bundle = await packageRelease(directory, commit, routes)
+  const bundle = await packageRelease(directory, commit, supportedRouting)
   await writeFile(output, JSON.stringify(bundle) + '\n', { flag: 'wx' })
   console.log(`Verified ${bundle.files.length} files; offline release only, no deployment`)
 }

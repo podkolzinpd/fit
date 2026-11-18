@@ -1047,8 +1047,8 @@ delete/replace и любые сопутствующие изменения datab
 Новые numbered migrations в `services/api/db/migrations`
 применяет `.github/workflows/deploy-yandex-stage.yml` до переключения
 API-ревизии. Запуск SQL через Dashboard запрещён. Production frontend
-публикуется на `fit-training.ru` через Yandex Gateway/Object Storage; Vercel
-остаётся только для legacy redirect; новые Preview отключены. Service role и
+публикуется на `fit-training.ru` через Cloud.ru; Vercel выводится из
+эксплуатации по решению владельца18.11.2026; новые Preview отключены. Service role и
 DB password никогда не помещаются в публичный frontend build.
 
 Foundation UI Identity v1 является единственным production UI. Отдельного
@@ -1152,31 +1152,23 @@ Public read включён с этой ограничивающей полити
 
 Шлюз и frontend-бакет общие для технического адреса и `fit-training.ru`;
 DNS propagation не требуется для smoke через технический адрес. Vercel
-сохраняет только ранее опубликованный legacy redirect и этим workflow не
-управляется. План, IAM scope,
+выводится из эксплуатации и этим workflow не управляется. План, IAM scope,
 ограничения и ручной откат: `docs/design/YANDEX_FRONTEND_AUTODEPLOY.md`.
 
-### Vercel (только legacy redirect)
+### Вывод Vercel из эксплуатации — 18.11.2026
 
-Vercel больше не является точкой production-публикации `fit-training.ru`.
-GitHub repository отключён от Vercel-проекта `fit`; ранее опубликованный
-production deployment при этом остался активным. Дополнительно `vercel.json`
-устанавливает `git.deploymentEnabled=false` для всех веток на случай повторного
-подключения.
-Workflows для `/preview`, синхронизации старого пилотного preview и удаления
-preview-веток отключены; новых Vercel releases после merge или по комментарию
-быть не должно. Текущий production deployment и сам Vercel-проект сохраняются
-для `308`-редиректа `fit-drab.vercel.app` на `fit-training.ru` с путём и query.
-Проверка редиректа — `Verify production domain redirect` каждые шесть часов.
-Тот же read-only workflow замеряет `fit-training.ru/auth` через системный DNS,
-DNS Яндекса, Cloudflare и Google, обращаясь по каждому A-адресу с настоящими
-Host/SNI, затем проверяет критические JS/CSS assets. JSON artifact содержит
-UTC-время каждого запроса и DNS/TCP/TLS/TTFB/total, но не тело ответа, cookie,
-токены или идентификаторы пользователей. Локально запустить можно командой
-`node scripts/probe-production-frontend.mjs`; делать это следует из проблемной
-сети, поскольку переключение DNS на одном хосте не заменяет проверку из разных
-сетей. Порог 5 секунд делает job красным и помогает зафиксировать интермиттентный
-сбой, но сам по себе не устанавливает его источник.
+Владелец разрешил удаление старого проекта `fit`. Основной сайт, API и media
+работают в Cloud.ru. Проект удалён18.11.2026; `fit-drab.vercel.app` больше не
+перенаправляет старые ссылки: используйте `https://fit-training.ru`.
+
+Упаковка frontend и CI используют `scripts/frontend-routing.mjs`, без
+`vercel.json`, Vercel API или credentials. Проверка старого редиректа удалена;
+`Verify production frontend` каждые шесть часов сохраняет read-only проверку
+канонического DNS/TLS/HTML/assets. Старые release-пакеты принимаются по прежним
+точным routing/checksum для rollback; это не запрос к Vercel и не возврат
+production-хостинга туда. Vercel origins сняты из исходных CORS-конфигураций;
+текущие удалённые env/IAM/DNS/OAuth настройки этой правкой не меняются.
+Фактическое удаление проекта и проверки: [канонический журнал](docs/design/VERCEL_RETIREMENT_20261118.md).
 
 ### Frontend Gateway cold-start experiment
 
@@ -1291,8 +1283,8 @@ gateway: HTTP 5xx` (ошибки 5xx). Slow-response alert остаётся на
 восстановление сессии. Для обхода внешнего пути через GitHub runner без PII
 используйте ручной запуск этого workflow. Отсутствие 5xx-метрики при нуле
 ошибок — нормальное состояние, а не доказательство доставки уведомления.
-Не удаляйте проект, домен или текущий deployment. Если понадобится удалённый
-PR Preview, сначала спроектируйте отдельную Yandex-hosted среду.
+Прежний запрет удаления Vercel заменён решением владельца18.11.2026. Если понадобится удалённый
+PR Preview, сначала спроектируйте отдельную среду.
 
 Исторические настройки Vercel-проекта:
 
@@ -1868,9 +1860,7 @@ Program access (trainers and clients):
   conversation ownership, role and target ownership. Set in the build step of
   both `.github/workflows/deploy-yandex-frontend.yml` (production,
   `fit-training.ru`) and `.github/workflows/prepare-yandex-frontend.yml`
-  (offline rehearsal/candidate artifact, not a PR Preview site) -
-  `vercel.json`'s copy only affects the legacy `fit-drab.vercel.app` project,
-  which is redirect-only and no longer serves production traffic. A
+  (offline rehearsal/candidate artifact, not a PR Preview site). A
   variable missing from either Yandex workflow silently disables the flow for
   everyone on that channel with no error - `import.meta.env` reads it as
   `undefined`, not `false` (real incident: 2026-09-29, the flag was never

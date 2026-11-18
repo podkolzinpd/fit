@@ -2144,3 +2144,52 @@ for (const role of ['client', 'trainer'] as const) test(`Lime rollout honors ser
   await page.reload()
   await expect(page.locator('.phone-frame')).not.toHaveClass(new RegExp(scope))
 })
+
+// One native stateful round-trip; responsive/theme coverage stays in the visual matrix.
+test('Client Lime editor validates midnight times and clears optional end after reload', async ({ page }) => {
+  const backend = await mockPilot(page, { role: 'client', profileId: clientId, workouts: [{ ...coachGestureWorkout(false, 1), status: 'planned', startedAt: null, createdBy: clientId, trainingFormat: 'self' }] })
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.addInitScript(id => localStorage.setItem(`fit.clientLime.theme.${id}`, 'light'), clientId)
+  const route = `/workouts/${workoutId}/edit`
+  await page.goto(route)
+  const control = page.getByRole('button', { name: 'Выбрать дату и время', exact: true })
+  const dates = page.getByRole('dialog', { name: 'Дата и время', exact: true })
+  const updates: Array<{ workoutDate: string; startTime?: string | null; endTime?: string | null }> = []
+  // Unlike the generic visual fixture's 10:00/11:00 fallback, this
+  // contract check must read back cleared optional times as null.
+  await page.route(`**/v1/workouts/${workoutId}`, async (requestRoute) => {
+    if (requestRoute.request().method() !== 'PUT') return requestRoute.fallback()
+    const command = requestRoute.request().postDataJSON() as typeof updates[number]
+    updates.push(command)
+    const current = backend.getWorkouts().find((item) => item.id === workoutId)!
+    Object.assign(current, { workoutDate: command.workoutDate, startTime: command.startTime ?? null, endTime: command.endTime ?? null, version: current.version + 1 })
+    await requestRoute.fulfill({ json: { workout: { id: workoutId } } })
+  })
+  const addEnd = page.getByRole('button', { name: 'Добавить время окончания', exact: true })
+  if (await addEnd.isVisible()) await addEnd.click()
+  await control.click()
+  await dates.getByLabel('Начало', { exact: true }).fill('')
+  await dates.getByLabel('Окончание', { exact: true }).fill('14:00')
+  await dates.getByRole('button', { name: 'Применить дату' }).click()
+  const attempts = updates.length
+  await page.getByRole('button', { name: 'Сохранить план', exact: true }).click()
+  await expect(page.getByRole('alert')).toContainText('Укажите время начала тренировки')
+  expect(updates).toHaveLength(attempts)
+  await control.click()
+  await dates.getByLabel('Начало', { exact: true }).fill('23:30')
+  await dates.getByLabel('Окончание', { exact: true }).fill('00:15')
+  await dates.getByRole('button', { name: 'Применить дату' }).click()
+  await page.getByRole('button', { name: 'Сохранить план', exact: true }).click()
+  await expect(page).toHaveURL(new RegExp(`/workouts/${workoutId}$`))
+  await page.goto(route)
+  await expect(control).toContainText('23:30')
+  await expect(control).toContainText('00:15')
+  await page.getByRole('button', { name: 'Убрать окончание', exact: true }).click()
+  await control.click()
+  await expect(dates.getByLabel('Окончание', { exact: true })).toHaveCount(0)
+  await dates.getByRole('button', { name: 'Применить дату' }).click()
+  await page.getByRole('button', { name: 'Сохранить план', exact: true }).click()
+  await expect(page).toHaveURL(new RegExp(`/workouts/${workoutId}$`))
+  await page.goto(route)
+  await expect(page.getByRole('button', { name: 'Добавить время окончания', exact: true })).toBeVisible()
+})

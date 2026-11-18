@@ -67,7 +67,7 @@
   механики проверяется действием, не числом постоянно видимых контролов.
 - Не удалять legacy migrations, шрифты/fallback и rollback по возрасту:
   потребители и отдельное решение о выводе проверяются в соответствующей области.
-- Production — Cloud.ru, внешний вход — Yandex ID; Vercel только redirect,
+- Production — Cloud.ru, внешний вход — Yandex ID; Vercel выводится из эксплуатации,
   Supabase только ограниченный legacy. Локально — Podman, новые миграции —
   services/api/db/migrations. Детали и запреты данных — ENGINEERING_RULES/playbook.
 
@@ -251,3 +251,8 @@ YAFIT-708. Общие Live swipe/подтверждение, явное меню
 17.11 — SB-OPS-RETIRE-03: выведены импорты и сверки с Supabase, репетиции
 миграции, переключатель записи источника и recovery-email. Native restore,
 deletion preflight, roster и push сохранены. [Решение](design/SUPABASE_DECOMMISSION_PLAN_20261023.md#sb-ops-retire-03--вывод-операций-с-supabase--17112026).
+
+18.11 — VERCEL-RETIRE-01: владелец разрешил удалить проект Vercel вместе
+со старым редиректом. Cloud.ru упаковка отвязана от provider config;
+проверка канонического сайта и совместимость старых release-пакетов сохраняются.
+[Решение и фактические проверки](design/VERCEL_RETIREMENT_20261118.md).

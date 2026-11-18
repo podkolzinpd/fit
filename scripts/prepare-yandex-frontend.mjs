@@ -1,7 +1,8 @@
 import { createHash } from 'node:crypto'
 import { lstat, readdir, readFile, writeFile } from 'node:fs/promises'
-import { resolve, relative, extname, basename, dirname } from 'node:path'
+import { resolve, relative, extname, basename } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { supportedRouting } from './frontend-routing.mjs'
 
 const contentTypes = {
   '.html': 'text/html; charset=utf-8', '.js': 'application/javascript; charset=utf-8',
@@ -68,9 +69,7 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === resolve(process.argv[1
   if (target === root || relative(root, target).split('/')[0] !== '..') {
     throw new Error('Manifest must be outside the build directory')
   }
-  const repo = resolve(dirname(fileURLToPath(import.meta.url)), '..')
-  const { routes } = JSON.parse(await readFile(resolve(repo, 'vercel.json'), 'utf8'))
-  const manifest = await prepareFrontend(root, releaseId, routes)
+  const manifest = await prepareFrontend(root, releaseId, supportedRouting)
   await writeFile(target, JSON.stringify(manifest, null, 2) + '\n', { flag: 'wx' })
   console.log(`Prepared ${manifest.files.length} files; manifest ${basename(target)}; deployment disabled`)
 }
