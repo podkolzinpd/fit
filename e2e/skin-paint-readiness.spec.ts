@@ -1,5 +1,6 @@
+import {createHash} from 'node:crypto'
 import {test,expect} from '@playwright/test'
-import {observeEditorImages,settleEditorPaint,type NativeWorkoutSkinContract} from './lime-editor-skin.probe'
+import {observeEditorImages,settleEditorPaint,captureEditorSources,readEditorSourceProof,type NativeWorkoutSkinContract} from './lime-editor-skin.probe'
 
 const contract:NativeWorkoutSkinContract={selector:'.probe',families:[],knownGuards:[],migrationGuard:'',ownerFilter:'',ownerSelectors:[]}
 
@@ -43,3 +44,38 @@ test('paint readiness rejects continuously changing border paint with stable geo
  expect(await geometry()).toEqual(before)
  expect(await page.locator('style').textContent()).toBe(css)
 })
+
+// These target the new protocol boundary: source strings stay in the browser,
+// but stylesheet/DOM changes must remain visible to the existing assertions.
+test('source proof preserves the full CSSOM digest and takes a fresh snapshot',async({page})=>{
+ await page.goto('/')
+ await page.setContent('<style>.probe{color:red}</style><main class="probe">Original</main>')
+ const cssom=await page.evaluate(()=>Array.from(document.styleSheets).map(sheet=>Array.from(sheet.cssRules).map(rule=>rule.cssText).join('\n')))
+ const source=await captureEditorSources(page,'.probe',true)
+ try{
+  expect(await readEditorSourceProof(source)).toMatchObject({cssomUnchanged:true,domUnchanged:true,styleObjectsUnchanged:true,cssomSHA256:createHash('sha256').update(JSON.stringify(cssom)).digest('hex')})
+  await page.locator('.probe').evaluate(node=>node.textContent='Changed')
+  expect((await readEditorSourceProof(source)).domUnchanged).toBe(false)
+  const fresh=await captureEditorSources(page,'.probe',true)
+  try{expect((await readEditorSourceProof(fresh)).domUnchanged).toBe(true)}finally{await fresh.dispose()}
+ }finally{await source.dispose()}
+})
+
+for(const change of ['stylesheet','declaration'] as const){
+ test('source proof detects '+change+' mutation without changing its snapshot',async({page})=>{
+  await page.goto('/')
+  await page.setContent('<style>.probe{color:red}</style><main class="probe">Original</main>')
+  const source=await captureEditorSources(page,'.probe',true)
+  try{
+   await page.evaluate(change=>{
+    const sheet=document.styleSheets[0]!
+    if(change==='stylesheet')sheet.insertRule('.probe{background:blue}',sheet.cssRules.length)
+    else{const rule=sheet.cssRules[0];if(!(rule instanceof CSSStyleRule))throw Error('style rule required');rule.style.color='blue'}
+   },change)
+   const proof=await readEditorSourceProof(source)
+   expect(proof.cssomUnchanged).toBe(false)
+   expect(proof.domUnchanged).toBe(true)
+   expect(proof.styleObjectsUnchanged).toBe(change==='stylesheet')
+  }finally{await source.dispose()}
+ })
+}

@@ -850,3 +850,83 @@ assembleSUCCESS и1штатный auth-smokeSKIPPED. Всего36SUCCESS/1SKIPPE
 source head после CI не менялся.
 
 По следующему прямому разрешению Антона PR2087 слит15.11.2026 в19:59:20МСК: squash3bc55ab36c41189a62202a91b39bff8b6ca6e6b2. Перед merge подтверждены main3140a1cb, exact head537ff7e0 CLEAN/MERGEABLE и36SUCCESS/1штатныйSKIPPED; более ранних open PR нет. GitHub readback MERGED подтверждён. Проверки не повторялись: код и main не изменились. Отдельный production deploy не запускался; локальная квитанция и PRbody отражают merge, не доказательство доставки.
+
+
+### SB-OPS-RETIRE-03 — вывод операций с Supabase — 17.11.2026
+
+Итерация 2026-11-17 — Codex / OpenAI. Владелец подтвердил завершение переноса и
+наличие архива у себя. Запрос: удалить старые импорты, сверки, репетицию и
+recovery-email, сохранить восстановление доступа и preflight удаления на
+Cloud.ru. Сама Supabase БД, хранилище, секреты, SQL-архив в Git и данные не
+меняются. Архив владельца не читался и не восстанавливался в этой задаче.
+
+Удалены ручные source workflows и их скрипты, legacy-ветки внутри operations
+и recovery push, remote/local migration rehearsal и CLI старого источника.
+Убраны тесты исключительно удалённых операций и соответствующие вызовы
+из package scripts; native push/roster, Cloud.ru restore, erasure, private
+upload transport, actor/RLS и stage artifact contracts сохранены и проверяются
+прежними тестами. Новые проверки: native feedback-путь входит в существующий
+PostgreSQL restore сценарий; deletion preflight проверяется на том же изолированном
+PostgreSQL, что и erasure; один hash-only lookup не выбирает профиль.
+
+Расхождение с PR2087: тот PR сохранил Supabase lookup, поскольку закрытого
+target не было. Теперь восстановление намеренно отвязано: для нового
+`plan` нужна подтверждённая пара профилей Cloud.ru в `FIT_ATHLETE_RESTORE_TARGETS`.
+Текущий профиль по-прежнему определяется через exact feedback; schema2,
+backup, apply/verify и проверки прав не меняются. Настройка target выполняется
+перед первым реальным планом с отдельно разрешённой передачей данных.
+Preflight удаления сохраняет прежний формат закрытого ввода: для чтения
+зависимостей нужен authenticated feedback; один хеш показывает только число
+native bindings и не разрешает выбор профиля. Оператор фактического удаления
+по-прежнему отдельно проверяет подтверждение, backup и целевой профиль.
+Отвергнуты догадки о личности, повторный импорт и автоматический перенос
+архивных контактов. Отключение remote источника и проверка live traffic —
+отдельные действия; проверки этого PR не подтверждают production изоляцию.
+
+Локально пройдены 76 профильных Node-тестов, YAML/Bash, migration safety
+(0 SQL migrations), проверка документации и поиск вызовов удалённых модулей.
+В активных workflow, scripts и API нет прямых Supabase URLs и чтения
+SUPABASE_ACCESS_TOKEN / SUPABASE_PROJECT_ID / SUPABASE_DB_PASSWORD.
+PostgreSQL/RLS и полный exact-head CI — обязательные проверки PR.
+
+
+### Исправление CI PR2133 — 18.11.2026 — Codex / OpenAI
+
+После удаления tenant:migrate headf18a3b15 дважды получил одинаковые3timeouts
+в mobile-chromium: client favorite editor390, trainer template editor430,
+trainer clarify390. 517/520 остальных сценариев той части прошли.
+Runtime src, styles, browser конфигурация и assertions не менялись.
+Смена runner image коррелировала с замедлением, но причинность не доказана;
+повтор третьего прогона без исправления отвергнут.
+
+Измерение36probe на этих3случаях:46.9s суммарно,17.0s на передачу/сравнение
+полного CSSOM и DOM. Фикс сохраняет полные исходные строки в свежем browser
+JSHandle на каждый probe, сравнивает полные массивы в browser и возвращает
+точные flags/SHA256 прежнего JSON. Убирается только избыточная передача полного
+CSSOM в Node. DOM при captureDOM, source rule/style object identity, every
+computed property, геометрия, focus/scroll, ancestors/pseudos, active rules,
+negative controls и screenshots сохранены. DOM/stylesheets не мутируются.
+Selector queries memoized только внутри одного синхронного page.evaluate,
+не между пользовательскими действиями и не между probe.
+
+Старая cssom/DOM equality → полная JSON equality в browser; style objects
+→ прежнее сравнение объектов/selector/text; cssomSHA256 → тот же SHA256 UTF8
+JSON, вычисленный браузером. Новые3cases проверяют digest/fresh DOM snapshot,
+вставку CSS rule и изменение существующей declaration. Chromium/WebKit нужны
+для различий CSSOM/browser crypto;12случаев — по3 прежних paint и3новых
+в каждом движке, без новой постоянной CI-матрицы. Защищённый Fit Lime inventory,
+его SHA, PNG, timeouts/retries, fail-on-flaky и CI gates не меняются.
+Локальный замер того же набора после фикса:3/3passed35.9s против46.9s;
+это Darwin-замер, не доказательство итогового времени Linux CI.
+
+Целевые проверки исправления:3/3 затем6/6 повторений без retries;
+12/12 локальных browser regressions Chromium+WebKit29.1s. В CI постоянные
+дополнительные cases —3 в обычном Chromium наборе, не повторный auth shard.
+Новые оси тем/размеров/пользователей не добавлены. Lint и typecheck PASS.
+Full npm check и exact-head CI выполняются; итоги будут в PR.
+
+Общий локальный check:lint/types и359files/3210frontend PASS,
+coverage81.89/77/80.38/86.95. Infra389/390: прежний Mac mock-curl вызывает
+настоящий HTTP и падает, файл не менялся. Полный host check не зелёный.
+Calendar/hosting, API check и обе сборки/startup PASS отдельно.
+Source/SQL/runtime/deploy/секреты не менялись. Итог exact-head CI — в PR2133.

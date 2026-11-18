@@ -89,6 +89,15 @@ SB-PILOT-MANAGER-RETIRE-01 удаляет ручной workflow, который 
 и исторические SQL сохранены для остальных consumers. Это не запуск remote
 изменений и не изменение текущего пользовательского допуска.
 
+## Вывод операций со старой БД — 17.11.2026
+
+Перенос завершён, владелец сохранил архив. Выведены source workflows для
+импорта/сверок, репетиции, write gate и recovery-email. Поддерживаемые
+restore, deletion preflight, roster и push работают через Cloud.ru.
+Для нового athlete plan нужна закрытая подтверждённая native пара и прежнее
+feedback proof. Production и проект Supabase не отключаются в этом PR.
+[Контракт и проверки](design/SUPABASE_DECOMMISSION_PLAN_20261023.md#sb-ops-retire-03--вывод-операций-с-supabase--17112026).
+
 ## Общая методика продуктовой разработки
 
 ### Точечное восстановление подтверждённой связи — YAFIT-701

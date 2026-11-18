@@ -2,7 +2,6 @@ import {workoutListMigrationGuard} from './lime-workout-list-skin.scope'
 import {libraryMigrationGuard} from './lime-library-skin.contract'
 import {expect,type Page,type Request} from '@playwright/test'
 import {writeFile} from 'node:fs/promises'
-import {createHash} from 'node:crypto'
 import {editorPageSelector,editorOwnerFilter,editorMigrationGuard,editorFamilies,editorOwnerSelectors,editorKnownGuards} from './lime-editor-skin.contract'
 // MC519 reuses this read-only reader with an explicit library contract. The
 // default contract and every existing editor assertion remain unchanged.
@@ -61,6 +60,30 @@ export async function captureEditorSkin(page:Page,selector:string,families:strin
  }
 
 
+// Keep complete source snapshots in the browser. Serializing the entire CSSOM
+// over the protocol twice per probe was expensive in multi-state cases.
+// Each probe still takes a fresh snapshot and compares every source string.
+export async function captureEditorSources(page:Page,selector:string,captureDOM=false){
+ return page.evaluateHandle(({selector,captureDOM})=>{
+  const rules:{rule:CSSStyleRule;style:CSSStyleDeclaration;selector:string;text:string}[]=[]
+  const visit=(items:CSSRuleList)=>{for(const rule of Array.from(items)){if(rule instanceof CSSStyleRule)rules.push({rule,style:rule.style,selector:rule.selectorText,text:rule.style.cssText});if('cssRules'in rule)visit((rule as CSSGroupingRule).cssRules)}}
+  for(const sheet of Array.from(document.styleSheets))visit(sheet.cssRules)
+  return {rules,selector,cssom:Array.from(document.styleSheets).map(sheet=>Array.from(sheet.cssRules).map(rule=>rule.cssText).join('\n')),
+   dom:captureDOM?Array.from(document.querySelectorAll(selector)).map(node=>({tag:node.tagName,class:node.getAttribute('class')??'',html:node.outerHTML})):null}
+ },{selector,captureDOM})
+}
+
+export async function readEditorSourceProof(sources:Awaited<ReturnType<typeof captureEditorSources>>){
+ return sources.evaluate(async snapshot=>{
+  const cssom=Array.from(document.styleSheets).map(sheet=>Array.from(sheet.cssRules).map(rule=>rule.cssText).join('\n'))
+  const dom=snapshot.dom===null?null:Array.from(document.querySelectorAll(snapshot.selector)).map(node=>({tag:node.tagName,class:node.getAttribute('class')??'',html:node.outerHTML}))
+  const digest=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(JSON.stringify(snapshot.cssom)))
+  return {cssomUnchanged:JSON.stringify(cssom)===JSON.stringify(snapshot.cssom),domUnchanged:JSON.stringify(dom)===JSON.stringify(snapshot.dom),
+   styleObjectsUnchanged:snapshot.rules.every(s=>s.rule.style===s.style&&s.rule.selectorText===s.selector&&s.rule.style.cssText===s.text),
+   cssomSHA256:Array.from(new Uint8Array(digest),byte=>byte.toString(16).padStart(2,'0')).join(''),dom:snapshot.dom}
+ })
+}
+
 // No stylesheet, node, focus, selection or scroll mutation is used to prove
 // ownership. The complete legacy source/order is checked separately; native
 // selector intersection (including ancestors and originating pseudo elements)
@@ -68,17 +91,9 @@ export async function captureEditorSkin(page:Page,selector:string,families:strin
 export async function probeEditorSkin(page:Page,screenshot?:string,selectorOverride?:string,contract:NativeWorkoutSkinContract=editorSkinContract){
  const selector=selectorOverride??contract.selector
  await settleEditorPaint(page,selector,contract)
- const dom=()=>page.locator(selector).evaluateAll(nodes=>nodes.map(node=>({tag:node.tagName,class:node.getAttribute('class')??'',html:node.outerHTML})))
- const cssom=()=>page.evaluate(()=>Array.from(document.styleSheets).map(s=>Array.from(s.cssRules).map(r=>r.cssText).join('\n')))
  const state=()=>page.evaluate(()=>({focus:document.activeElement?.outerHTML,scroll:[document.scrollingElement,...document.querySelectorAll('.content,.workout-form-page,.today-review')].filter((n):n is HTMLElement=>n instanceof HTMLElement).map(n=>({tag:n.tagName,class:n.className,x:n.scrollLeft,y:n.scrollTop,height:n.scrollHeight,client:n.clientHeight}))}))
  const before=await captureEditorSkin(page,selector,contract.families,contract.additionalCaptureProperties??[],contract.captureSelectState??false,contract.captureRootSelector??'.phone-frame');expect(before.length).toBeGreaterThan(0)
- const cssomBefore=await cssom(),stateBefore=await state(),domBefore=contract.captureDOM?await dom():undefined
- const sources=await page.evaluateHandle(()=>{
-  const rules:{rule:CSSStyleRule;style:CSSStyleDeclaration;selector:string;text:string}[]=[]
-  const visit=(items:CSSRuleList)=>{for(const rule of Array.from(items)){if(rule instanceof CSSStyleRule)rules.push({rule,style:rule.style,selector:rule.selectorText,text:rule.style.cssText});if('cssRules'in rule)visit((rule as CSSGroupingRule).cssRules)}}
-  for(const sheet of Array.from(document.styleSheets))visit(sheet.cssRules)
-  return rules
- })
+ const stateBefore=await state(),sources=await captureEditorSources(page,selector,contract.captureDOM)
  const result=await page.evaluate(({families,guards,owners,ownerScope,selector,additionalPaintProperties,excludedPaintProperties})=>{
   const normalize=(s:string)=>s.replace(/,\s*/g,',').replace(/"/g,"'")
   const common=new Set(families.map(normalize)),allowed=new Set(guards.map(normalize)),ownerSelectors=new Set(owners.map(normalize))
@@ -93,7 +108,12 @@ export async function probeEditorSkin(page:Page,screenshot?:string,selectorOverr
   for(const node of owned)for(let p=node.parentElement;p;p=p.parentElement)if(!owned.has(p))ancestors.add(p)
   const observed=new Set([...owned,...ancestors]),unsupported:string[]=[]
   const originating=(s:string)=>s.replace(/::[\w-]+(?:\([^)]*\))?$/,'')
-  const query=(s:string)=>{try{return Array.from(document.querySelectorAll(originating(s))).filter(n=>observed.has(n))}catch(error){if(CSS.supports('selector('+s+')'))throw error;unsupported.push(s);return []}}
+  const queried=new Map<string,Element[]>()
+  const query=(s:string)=>{
+   const cached=queried.get(s);if(cached)return cached
+   try{const nodes=Array.from(document.querySelectorAll(originating(s))).filter(n=>observed.has(n));queried.set(s,nodes);return nodes}
+   catch(error){if(CSS.supports('selector('+s+')'))throw error;unsupported.push(s);return []}
+  }
   const selected:string[]=[],matches:string[]=[],ancestorMatches:string[]=[],pseudoMatches:string[]=[],activeMatches:string[]=[],ownerDefinitions=new Set<string>(),foundOwners=new Set<string>(),matchedLegacyPaint:{selector:string;active:boolean;nodes:number;ancestors:number;declarations:{property:string;value:string;important:boolean}[]}[]=[]
   const visit=(rules:CSSRuleList,active=true)=>{for(const rule of Array.from(rules)){
    if(rule instanceof CSSStyleRule){let declarations:{property:string;value:string;important:boolean}[]|undefined;for(const branch of split(rule.selectorText)){
@@ -122,10 +142,12 @@ export async function probeEditorSkin(page:Page,screenshot?:string,selectorOverr
  await settleEditorPaint(page,selector,contract)
  const after=await captureEditorSkin(page,selector,contract.families,contract.additionalCaptureProperties??[],contract.captureSelectState??false,contract.captureRootSelector??'.phone-frame'),stateAfter=await state()
  if(screenshot&&JSON.stringify(after)!==JSON.stringify(before))await writeFile(screenshot+'.capture-drift.json',JSON.stringify({before,after,stateBefore,stateAfter},null,2))
- expect(after).toEqual(before);expect(stateAfter).toEqual(stateBefore);expect(await cssom()).toEqual(cssomBefore);if(contract.captureDOM)expect(await dom()).toEqual(domBefore)
- expect(await sources.evaluate(rules=>rules.every(s=>s.rule.style===s.style&&s.rule.selectorText===s.selector&&s.rule.style.cssText===s.text))).toBe(true)
+ expect(after).toEqual(before);expect(stateAfter).toEqual(stateBefore)
+ const sourceProof=await readEditorSourceProof(sources)
+ expect(sourceProof.cssomUnchanged).toBe(true);if(contract.captureDOM)expect(sourceProof.domUnchanged).toBe(true)
+ expect(sourceProof.styleObjectsUnchanged).toBe(true)
  await sources.dispose()
- return {before,...(contract.captureDOM?{dom:domBefore}:{}),backdrop,frameBackground,...result,stateBefore,cssomSHA256:createHash('sha256').update(JSON.stringify(cssomBefore)).digest('hex'),cssomNeverMutated:true,styleObjectsUnchanged:true,nativeCaptureStable:true,focusScrollAnchorNeverMutated:true,method:'Native source/selector/ancestor/pseudo intersection + exact capture; no CSSOM or DOM mutation'}
+ return {before,...(contract.captureDOM?{dom:sourceProof.dom}:{}),backdrop,frameBackground,...result,stateBefore,cssomSHA256:sourceProof.cssomSHA256,cssomNeverMutated:true,styleObjectsUnchanged:true,nativeCaptureStable:true,focusScrollAnchorNeverMutated:true,method:'Native source/selector/ancestor/pseudo intersection + exact capture; no CSSOM or DOM mutation'}
 }
 
 export function assertEditorOwnership(result:Awaited<ReturnType<typeof probeEditorSkin>>,lime:boolean,contract:NativeWorkoutSkinContract=editorSkinContract){

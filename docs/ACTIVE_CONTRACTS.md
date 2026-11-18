@@ -247,3 +247,7 @@ YAFIT-708. Общие Live swipe/подтверждение, явное меню
 тренировки/оплаты сохраняются. [План](design/trainer-finance-cabinet-20260930.md#fin901906--исправление-начального-остатка--11112026).
 
 11.11 — OPN101–108: [открытые приглашения тренеров](design/CORPORATE_ADMIN_20261027.md#открытое-подключение-тестовых-тренеров--opn101108--2026-11-11). Два PR разрешены к реализации/выпуску. Валидная ссылка любому trainer заменяет single-target INV205; контактный email не identity. Явное admin approval/офисы, независимый cohort SRV/CPT/DUT/TPA, прежние pilot rows сохраняются, management ON отдельно.
+
+17.11 — SB-OPS-RETIRE-03: выведены импорты и сверки с Supabase, репетиции
+миграции, переключатель записи источника и recovery-email. Native restore,
+deletion preflight, roster и push сохранены. [Решение](design/SUPABASE_DECOMMISSION_PLAN_20261023.md#sb-ops-retire-03--вывод-операций-с-supabase--17112026).

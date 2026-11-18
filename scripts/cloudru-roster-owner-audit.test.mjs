@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
 import { inspectRosterOwners, readRosterTargets, rosterOwnerQuery } from './cloudru-account-links-audit.mjs'
-import { readAccountLinkTargets, inspectAccountLinks } from './cloudru-account-links-audit.mjs'
 
 const input = { rosterNameHashes: ['a'.repeat(64),'b'.repeat(64),'c'.repeat(64)] }
 const id = '11111111-1111-4111-8111-111111111111'
@@ -16,7 +16,7 @@ function fixture(rows = [owner], gate = { username: 'fit_owner', readonly: 'on' 
 }
 
 test('roster input accepts only a bounded exact private signature and is separate from email matching', () => {
-  assert.deepEqual(readAccountLinkTargets(JSON.stringify(input)), input)
+  assert.deepEqual(readRosterTargets(input), input)
   for (const value of [null,{}, {rosterNameHashes:[]}, {rosterNameHashes:input.rosterNameHashes.slice(0,2)},
     {rosterNameHashes:Array(31).fill('a'.repeat(64))}, {rosterNameHashes:['a'.repeat(64),'a'.repeat(64),'c'.repeat(64)]},
     {rosterNameHashes:['private name',...input.rosterNameHashes.slice(1)]}, {...input,trainerId:id}, {...input,emailHashes:[]}]) {
@@ -35,7 +35,7 @@ test('roster search requires fit_owner and active READ ONLY before reading appli
 
 test('all supplied clients may be a subset of a larger roster; no identity or private identifier is emitted', async () => {
   const db = fixture()
-  const result = await inspectAccountLinks(db,input,[])
+  const result = await inspectRosterOwners(db,input)
   assert.equal(result.completeMatches,1)
   assert.equal(result.candidates[0].activeClients,8)
   assert.equal(result.actorSelected,false)
@@ -70,4 +70,13 @@ test('overflow or malformed evidence rolls back without a partial owner result',
     await assert.rejects(inspectRosterOwners(db,input), /scope_exceeded/)
     assert.equal(db.calls.at(-1).sql,'rollback')
   }
+})
+
+
+test('Cloud.ru roster remains manual and runs without old Auth credentials', () => {
+  const workflow = readFileSync(new URL('../.github/workflows/inspect-account-links.yml', import.meta.url), 'utf8')
+  assert.match(workflow, /workflow_dispatch:/)
+  assert.match(workflow, /FIT_ACCOUNT_LINK_AUDIT_TARGETS/)
+  assert.match(workflow, /--read-only/)
+  assert.doesNotMatch(workflow, /SUPABASE_|account-history-audit/)
 })
