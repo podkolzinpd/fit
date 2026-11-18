@@ -5913,84 +5913,41 @@ test('Client Lime logout resets document scope and return preserves only its own
   await expect(page.locator('.phone-frame')).toHaveCSS('background-color', 'rgb(0, 0, 0)')
 })
 
-for (const theme of ['light', 'dark']) {
-  test(`Client Lime editor and exercise history ${theme}`, async ({ page }, testInfo) => {
-    const backend = await mockPilot(page, { role: 'client', profileId: clientId, workouts: [{ ...coachGestureWorkout(false, 1), status: 'planned', startedAt: null, createdBy: clientId, trainingFormat: 'self' }] })
+// Themes cover distinct tokens; widths cover responsive layout and calendar controls.
+// Give each independent route its own fixture and budget instead of one six-page chain.
+for (const theme of ['light', 'dark']) for (const width of [390, 430]) {
+  for (const [route, surface] of [
+    ['/workouts/new', '.workout-form-page'],
+    [`/workouts/${workoutId}/edit`, '.workout-form-page'],
+    [`/workouts/${workoutId}/history/fedb-barbell-squat`, '.exercise-card-tabs'],
+  ] as const) test(`Client Lime editor and exercise history ${theme} ${width} ${route}`, async ({ page }, testInfo) => {
+    await mockPilot(page, { role: 'client', profileId: clientId, workouts: [{ ...coachGestureWorkout(false, 1), status: 'planned', startedAt: null, createdBy: clientId, trainingFormat: 'self' }] })
     await page.addInitScript(({ id, theme }) => localStorage.setItem(`fit.clientLime.theme.${id}`, theme), { id: clientId, theme })
-    for (const width of [390, 430]) {
-      await page.setViewportSize({ width, height: 844 })
-      for (const [route, surface] of [
-        ['/workouts/new', '.workout-form-page'],
-        [`/workouts/${workoutId}/edit`, '.workout-form-page'],
-        [`/workouts/${workoutId}/history/fedb-barbell-squat`, '.exercise-card-tabs'],
-      ] as const) {
-        await page.goto(route)
-        await expect(page.locator('.phone-frame')).toHaveClass(/fit-client-lime/)
-        await expect(page.locator(surface)).toBeVisible()
-        expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
-        await page.screenshot({ path: testInfo.outputPath(`${route.replaceAll('/', '-')}-${width}.png`) })
-        if (route.endsWith('/edit')) {
-          const control = page.getByRole('button', { name: 'Выбрать дату и время', exact: true })
-          const before = await control.innerText()
-          await control.click()
-          const dates = page.getByRole('dialog', { name: 'Дата и время', exact: true })
-          await expect(dates.locator('.lime-calendar-day-marker').first()).toHaveCSS('width', '36px')
-          await dates.getByLabel('Начало', { exact: true }).fill('12:30')
-          await page.screenshot({ path: testInfo.outputPath(`client-editor-date-${theme}-${width}.png`) })
-          if (theme === 'light' && width === 390) {
-            // The stored app height can lag a reduced viewport during keyboard recovery.
-            await page.setViewportSize({ width, height: 450 })
-            await dates.getByLabel('Начало', { exact: true }).focus()
-            await expect.poll(async () => (await dates.boundingBox())!.y).toBeGreaterThanOrEqual(0)
-            await dates.getByRole('button', { name: 'Применить дату' }).scrollIntoViewIfNeeded()
-            await expect(dates.getByRole('button', { name: 'Применить дату' })).toBeInViewport()
-            await page.setViewportSize({ width, height: 844 })
-          }
-          await dates.getByRole('button', { name: 'Закрыть календарь' }).click()
-          await expect(control).toHaveText(before, { useInnerText: true })
-          if (theme === 'light' && width === 390) {
-            const updates: Array<{ workoutDate: string; startTime?: string | null; endTime?: string | null }> = []
-            // Unlike the generic visual fixture's 10:00/11:00 fallback, this
-            // contract check must read back cleared optional times as null.
-            await page.route(`**/v1/workouts/${workoutId}`, async (requestRoute) => {
-              if (requestRoute.request().method() !== 'PUT') return requestRoute.fallback()
-              const command = requestRoute.request().postDataJSON() as typeof updates[number]
-              updates.push(command)
-              const current = backend.getWorkouts().find((item) => item.id === workoutId)!
-              Object.assign(current, { workoutDate: command.workoutDate, startTime: command.startTime ?? null, endTime: command.endTime ?? null, version: current.version + 1 })
-              await requestRoute.fulfill({ json: { workout: { id: workoutId } } })
-            })
-            const addEnd = page.getByRole('button', { name: 'Добавить время окончания', exact: true })
-            if (await addEnd.isVisible()) await addEnd.click()
-            await control.click()
-            await dates.getByLabel('Начало', { exact: true }).fill('')
-            await dates.getByLabel('Окончание', { exact: true }).fill('14:00')
-            await dates.getByRole('button', { name: 'Применить дату' }).click()
-            const attempts = updates.length
-            await page.getByRole('button', { name: 'Сохранить план', exact: true }).click()
-            await expect(page.getByRole('alert')).toContainText('Укажите время начала тренировки')
-            expect(updates).toHaveLength(attempts)
-            await control.click()
-            await dates.getByLabel('Начало', { exact: true }).fill('23:30')
-            await dates.getByLabel('Окончание', { exact: true }).fill('00:15')
-            await dates.getByRole('button', { name: 'Применить дату' }).click()
-            await page.getByRole('button', { name: 'Сохранить план', exact: true }).click()
-            await expect(page).toHaveURL(new RegExp(`/workouts/${workoutId}$`))
-            await page.goto(route)
-            await expect(control).toContainText('23:30')
-            await expect(control).toContainText('00:15')
-            await page.getByRole('button', { name: 'Убрать окончание', exact: true }).click()
-            await control.click()
-            await expect(dates.getByLabel('Окончание', { exact: true })).toHaveCount(0)
-            await dates.getByRole('button', { name: 'Применить дату' }).click()
-            await page.getByRole('button', { name: 'Сохранить план', exact: true }).click()
-            await expect(page).toHaveURL(new RegExp(`/workouts/${workoutId}$`))
-            await page.goto(route)
-            await expect(page.getByRole('button', { name: 'Добавить время окончания', exact: true })).toBeVisible()
-          }
-        }
-
+    await page.setViewportSize({ width, height: 844 })
+    await page.goto(route)
+    await expect(page.locator('.phone-frame')).toHaveClass(/fit-client-lime/)
+    await expect(page.locator(surface)).toBeVisible()
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+    await page.screenshot({ path: testInfo.outputPath(`${route.replaceAll('/', '-')}-${width}.png`) })
+    if (route.endsWith('/edit')) {
+      const control = page.getByRole('button', { name: 'Выбрать дату и время', exact: true })
+      const before = await control.innerText()
+      await control.click()
+      const dates = page.getByRole('dialog', { name: 'Дата и время', exact: true })
+      await expect(dates.locator('.lime-calendar-day-marker').first()).toHaveCSS('width', '36px')
+      await dates.getByLabel('Начало', { exact: true }).fill('12:30')
+      await page.screenshot({ path: testInfo.outputPath(`client-editor-date-${theme}-${width}.png`) })
+      if (theme === 'light' && width === 390) {
+        // The stored app height can lag a reduced viewport during keyboard recovery.
+        await page.setViewportSize({ width, height: 450 })
+        await dates.getByLabel('Начало', { exact: true }).focus()
+        await expect.poll(async () => (await dates.boundingBox())!.y).toBeGreaterThanOrEqual(0)
+        await dates.getByRole('button', { name: 'Применить дату' }).scrollIntoViewIfNeeded()
+        await expect(dates.getByRole('button', { name: 'Применить дату' })).toBeInViewport()
+        await page.setViewportSize({ width, height: 844 })
       }
+      await dates.getByRole('button', { name: 'Закрыть календарь' }).click()
+      await expect(control).toHaveText(before, { useInnerText: true })
     }
   })
 }

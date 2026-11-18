@@ -61,3 +61,58 @@ provider config не требовалось для живого Cloud.ru сай�
 Открыто: CI и merge PR2134 с уборкой исходников. При проверке первого head:
 6 checks PASS,28 pending, failures0; это не завершённый зелёный CI.
 Дальше: дождаться обязательных проверок PR2134; красный PR не сливать.
+
+## Итерация3 — 18.11.2026 — Codex / OpenAI — CI2134
+
+Задача: исправить упавшие тесты PR2134.
+Расхождения: нет. На headc2049959/run44280961625 упала одна WebKit visual
+проверка `Client Lime editor and exercise history light`;154 других cases
+этой части PASS. Итоговый e2e красный по зависимости. Во всех трёх попытках
+исчерпан общий30s budget, в разных местах. Изменений приложения от Vercel
+не потребовалось. Retry trace:7 навигаций, включая прерванную последнюю,
+заняли суммарно22,1s; это длинная последовательная проверка, а не отдельный
+30s зависший запрос. Локальный исходный WebKit:light10,273s/dark6,772s PASS;
+детерминированный local red→green не заявляем.
+
+Сделано: независимые route/theme/width состояния получают отдельные cases;
+сохранение optional времени вынесено в behavior с собственной native fixture.
+Проверка reduced viewport остаётся только в light390/edit, как раньше.
+Тема проверяет разные токены, ширины390/430 — responsive layout/control.
+Новая бизнес-логика, ожидания, sleep, runtime, timeout/retry/workers и гейты
+CI не добавляются и не меняются.
+
+### Явный повторный аудит Fit Lime inventory
+
+| Прежняя проверка | Сохраняющее её покрытие |
+| --- | --- |
+|2 callback с обходом3 routes ×2 widths внутри каждого theme |12 независимых cases: те же2 themes ×2 widths ×3 routes, Chromium и WebKit |
+|class/surface/no overflow и screenshot каждого route |Те же assertions и16 диагностических снимков на движок (с календарём); snapshots без сравнения не выдаются за visual regression gate |
+|calendar marker36px, draft cancel, reduced viewport/focus/visible apply |Те же4 edit-состояния; reduced viewport толькоlight390 |
+|validation без PUT, midnight save/readback, remove end/save/reload |Один behavior case на движок с прежними точными assertions и native mock |
+
+AST-аудит:30/30 исходных expect call expressions текстуально сохранены после
+нормализации пробелов;172 visual и107 behavior посторонних callback bodies
+совпадают побайтно. Общая fixture не меняется. Внешние параметризованные helper
+cases сохранены. Реальная collection обоих движков:743→754 на движок
+(−2 старых combined+12 route+1 behavior);1486→1508 суммарно. Behavior120→121,
+visual623→633. Это разбиение прежних проверок, не новые бизнес-assertions.
+Duplicate keys0. Policy проверяет присутствие каждого из12 route states и
+единственного behavior, полный disjoint union остаётся обязательным.
+Исходный reviewed SHA256 в `fit-lime-ci-scope.mjs` не обновлён: scope остаётся
+full после изменения inventory/истечения временного окна. Никакого сокращения CI.
+
+Проверка: оба движка26/26 PASS, workers2/retries0; отдельно WebKit13×2=26/26
+PASS, workers1/retries0. Максимальный отдельный case4,673s; visual максимум1,909s.
+Повторный WebKit wall49,0s/2 прохода против исходных18,8s/1 проход:
+полная локальная работа выросла из-за изолированных BrowserContext, а длинный
+общий budget устранён. Это не заявление об ускорении всего CI.
+Policy/collection29/29 PASS, docs budgets/links/history и diff-check PASS.
+Полный local check:lint/typecheck/frontend coverage3210 PASS, media2 PASS,
+SpeechKit7 PASS; остановился на прежнем macOS mock-curl тесте (infra389/390).
+Остаток отдельно:calendar22,hosting202,API1592 PASS+423 штатных opt-in skips,
+frontend build/postbuild PASS. Тест mock-curl и production не менялись.
+Новый CI ещё гейт; зелёный результат не заявляется до окончания.
+Отвергнуто: слепой rerun, увеличение timeout, пропуск WebKit или удаление
+поведенческой проверки из visual без сохраняющего её case.
+Открыто: результаты полного check и CI исправленного head; PR не сливать красным.
+Дальше: отправить один стабилизированный diff в тот же PR, дождаться CI.
