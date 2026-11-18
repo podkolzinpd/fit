@@ -3,7 +3,7 @@ import { request as httpsRequest } from 'node:https'
 import { pathToFileURL } from 'node:url'
 
 const origins = ['https://fit-training.ru', 'https://www.fit-training.ru',
-  'https://fit-drab.vercel.app', 'capacitor://localhost', 'https://localhost', 'http://localhost']
+  'capacitor://localhost', 'https://localhost', 'http://localhost']
 const forwarded = ['origin', 'authorization', 'content-type', 'accept', 'x-fit-session',
   'x-fit-pilot-session', 'x-fit-request-id', 'x-supabase-authorization']
 const hopHeaders = new Set(['connection', 'keep-alive', 'proxy-authenticate', 'proxy-authorization',

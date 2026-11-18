@@ -68,7 +68,7 @@ test('runs E2E for browser application, Supabase, dependency and CI changes', ()
     'services/api/src/new-module.ts',
     'services/api/package-lock.json',
     'services/speechkit-relay/cloudru-server.mjs',
-    'vercel.json',
+    'scripts/frontend-routing.mjs',
   ]) {
     assert.equal(requiresE2E([path]), true, path)
   }

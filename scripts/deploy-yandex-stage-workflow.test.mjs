@@ -9,6 +9,7 @@ import { tmpdir } from 'node:os'
 import { promisify } from 'node:util'
 import { SMOKE_BUDGET_MS, runSmokeRequest, safeRequestMetadata, verifyFixtureBudget } from './yandex-stage-smoke.mjs'
 import { readImmutablePushMetadata, curlMetadataFetch } from './deploy-yandex-stage-workflow.mjs'
+import { supportedRouting } from './frontend-routing.mjs'
 
 const metadataEnvironment = { YC_PUSH_FOLDER_ID: 'd'.repeat(20), YC_PUSH_FUNCTION_NAME: 'fit-send-push-notifications',
   YC_PUSH_LOCKBOX_NAME: 'fit-send-push-notifications-secrets', YC_TOKEN: 'synthetic-iam-test-only' }
@@ -242,9 +243,6 @@ test('configures a fresh ephemeral Yandex CLI profile after every OIDC exchange'
   assert.doesNotMatch(workflow, /yc config profile create|yc config set token/)
 })
 
-const vercelConfig = JSON.parse(
-  readFileSync(join(import.meta.dirname, '..', 'vercel.json'), 'utf8'),
-)
 const startupHtml = readFileSync(join(import.meta.dirname, '..', 'index.html'), 'utf8')
 const assetRecoveryScript = readFileSync(
   join(import.meta.dirname, '..', 'public', 'asset-recovery.js'),
@@ -379,10 +377,10 @@ test('hardens backups on the existing database without provisioning a second sta
   assert.doesNotMatch(databaseTerraform, /dynamic "backup_window_start"/)
 })
 
-test('allows the reviewed local, Android, iOS, preview, and production frontend origins', () => {
+test('allows the reviewed local, Android, iOS, technical and canonical frontend origins', () => {
   assert.match(
     workflow,
-    /^  TF_VAR_api_cors_allowed_origins: '\["http:\/\/localhost:5173","https:\/\/localhost","capacitor:\/\/localhost","https:\/\/fit-git-codex-yandex-id-b494d5-uniteddispatch999-8643s-projects\.vercel\.app","https:\/\/fit-drab\.vercel\.app","https:\/\/d5drmhq5ovqk03jgsm8i\.wnq2w1o5\.apigw\.yandexcloud\.net","https:\/\/fit-training\.ru"\]'$/m,
+    /^  TF_VAR_api_cors_allowed_origins: '\["http:\/\/localhost:5173","https:\/\/localhost","capacitor:\/\/localhost","https:\/\/d5drmhq5ovqk03jgsm8i\.wnq2w1o5\.apigw\.yandexcloud\.net","https:\/\/fit-training\.ru"\]'$/m,
   )
 })
 
@@ -807,8 +805,7 @@ test('loads synthetic fixtures and verifies every read model through the runtime
   assert.doesNotMatch(workflow, /jq -r '\.session\.token'/)
 })
 
-test('keeps the legacy Vercel redirect without starting new Git deployments', () => {
-  assert.equal(vercelConfig.git?.deploymentEnabled, false)
+test('retired preview workflows stay absent', () => {
   for (const workflowName of [
     'deploy-pr-preview.yml',
     'sync-yandex-stage-preview.yml',
@@ -819,13 +816,7 @@ test('keeps the legacy Vercel redirect without starting new Git deployments', ()
 })
 
 test('recovers stale frontend bundles without leaving a blank screen', () => {
-  assert.deepEqual(vercelConfig.routes, [
-    {
-      src: '/(.*)',
-      has: [{ type: 'host', value: 'fit-drab.vercel.app' }],
-      headers: { Location: 'https://fit-training.ru/$1' },
-      status: 308,
-    },
+  assert.deepEqual(supportedRouting, [
     { handle: 'filesystem' },
     { src: '/assets/.*\\.js', dest: '/asset-recovery.js' },
     { src: '/assets/.*', status: 404 },

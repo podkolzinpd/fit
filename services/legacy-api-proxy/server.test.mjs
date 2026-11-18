@@ -41,8 +41,11 @@ test('legacy API streams method/body/session and original CORS origin only to th
     const before = connections
     const preflight = await fetch(base + '/v1/synthetic', { method: 'OPTIONS', headers: { origin: 'https://fit-training.ru' } })
     assert.equal(preflight.status, 204)
-    const denied = await fetch(base + '/v1/synthetic', { headers: { origin: 'https://untrusted.invalid' } })
-    assert.equal(denied.status, 403)
+    for (const origin of ['https://untrusted.invalid', 'https://fit-drab.vercel.app']) {
+      const denied = await fetch(base + '/v1/synthetic', { headers: { origin } })
+      assert.equal(denied.status, 403)
+      assert.equal(denied.headers.get('access-control-allow-origin'), null)
+    }
     assert.equal(connections, before)
   } finally { await Promise.all([server, target].map(value => new Promise(resolve => value.close(resolve)))) }
 })
