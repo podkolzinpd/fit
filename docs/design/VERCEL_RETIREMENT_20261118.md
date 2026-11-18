@@ -116,3 +116,58 @@ frontend build/postbuild PASS. Тест mock-curl и production не менял�
 поведенческой проверки из visual без сохраняющего её case.
 Открыто: результаты полного check и CI исправленного head; PR не сливать красным.
 Дальше: отправить один стабилизированный diff в тот же PR, дождаться CI.
+
+## Итерация4 — 18.11.2026 — Codex / OpenAI — второй CI blocker
+
+На head10066408/run44311031136 все десять Fit Lime частей PASS; прежняя
+WebKit visual4/4 прошла158/158, все12 перенесённых states с retry0,
+максимум4,905s. Остальные проверки также PASS, кроме auth4/4 и зависимого e2e.
+Auth3/4 успешно завершился за43m15s. Auth4/4:514 PASS+1 flaky, строгий
+`--fail-on-flaky-tests` вернул failure. Это не зелёный CI и не причина
+перезапускать неизменённый head до удачного результата.
+
+Выявлен второй перегруженный тест: `Yandex ready workouts edits, renames,
+plans and deletes an independent favorite with explicit retries` дважды
+исчерпал30s на позднем missing/error состоянии и прошёл толькоretry2 за27,18s.
+В одном budget смешаны rename, editor, recovery,4 layout states, planning и
+uncertain delete. Локальный исходный production-bundle case PASS за17,8s wall;
+детерминированный local red→green не заявляется.
+
+Сделано: один тест разделён на6 независимых сценариев, каждый с page-scoped
+native fixture состояния источника. Настоящие действия внутри каждого
+сценария сохранены, нет browser/page state между tests. Продуктовый код,
+таймауты/retries/workers, `--fail-on-flaky-tests` и список CI файлов прежние.
+
+| Прежние проверки | Сохраняющий case |
+| --- | --- |
+|Independent Ready при ошибке history, coachmark, rename focus/keyboard и409 |rename conflict and keyboard keep the chosen title |
+|Добавление/reorder/replace/remove упражнения, draft и503 retry сохранения |editor adds reorders replaces and retries an independent copy |
+|Recover cancel,503/missing, pending, запрет PUT, очистка draft без reload |recovery preserves draft on cancel failure missing and pending read |
+|Длинное имя, обе темы,390/430, touch44 и overflow |long-name layout keeps touch targets in both themes and widths |
+|Смена version при свежем cache, keep/reset draft,503 retry и source refresh, preset fields reload |planning reconciles changed favorite and preserves preset draft |
+|Delete503, потерянный ответ после commit, missing/error/retry прямого editor |delete retries reconcile a lost response and reject missing source |
+
+Явный аудит:178/178 expect call expressions совпадают после нормализации
+префикса `state.` и пробелов;29 остальных test callback bodies побайтно прежние.
+Themes/width matrix не размножает бизнес-цепочки;4 layout states остаются
+в одном коротком case. В этом spec существовал только iphone WebKit:
+его collection56→61, добавлены5 случаев за счёт split, новых движков нет.
+Локальная полная native auth collection2079→2084; четыре shard
+520/520/520/519→521/521/521/521, exact union PASS, duplicate keys0.
+Остальные E2E исходники baseline424be8e и maine6a98007 совпадают.
+Runtime inventory CI может отличаться по своим env/platform; его required gate
+и real execution не заменяются локальной collection.
+
+Проверка: native production bundle с synthetic stage origin;6/6 PASS,
+max6,571s и23,5s wall вместо исходных17,8s. Изоляция контекстов добавляет
+локальную работу, но устраняет общий30s budget разных функций. Повтор12/12
+PASS за43,3s, workers1/retries0. Assertions и диагностические screenshots
+сохранены. Финальный local check:lint/typecheck/frontend3210,media2,
+SpeechKit7 PASS; остановился на том же macOS mock-curl тесте (infra389/390).
+Остаток отдельно:calendar22,hosting202,API1592 PASS+423 штатных opt-in skipped,
+frontend build/postbuild PASS. Docs budgets/links/history и diff-check PASS.
+Новый CI исправленного head впереди; зелёный результат пока не заявляется.
+Отвергнуто: увеличивать budget, принимать flaky pass или выбрасывать
+поздние проверки missing/error; serial tests с общей страницей.
+Открыто: окончание локальных проверок, новый полный CI исправленного head.
+Дальше: один push стабилизированного исправления в PR2134 и ожидание CI.
