@@ -236,3 +236,8 @@ frontend build/postbuild PASS. Docs/diff-check PASS. В текущем CI7afa281
 или разорвать собственно preference/reload/progress round-trip.
 Открыто: проверить остальной текущий CI, завершить local check, отправить patch.
 Дальше: дождаться полного зелёного CI нового head, не сливать красный PR.
+
+Перед отправкой segments patch предыдущий CI7afa2810 дождались полностью:
+auth1/4 PASS38m34s,auth3/4 PASS39m49s,auth4/4 PASS32m32s; единственные
+failed jobs — WebKit visual4/4 с описанными4 segments budgets и зависимый e2e.
+Других failures/pending нет. Все ошибки этого завершённого запуска учтены.
