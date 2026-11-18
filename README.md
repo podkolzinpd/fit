@@ -31,7 +31,7 @@ npm run dev
 проверяет `/ready`, затем запускает frontend. Облачные ресурсы не меняются.
 Frontend во всех режимах использует native API. Для ручного входа задайте
 публичный `VITE_YANDEX_OAUTH_CLIENT_ID` локального OAuth-клиента.
-Production размещён в Cloud.ru. Старый адрес Vercel выводится из эксплуатации; используйте `https://fit-training.ru`.
+Production размещён в Cloud.ru. Проект Vercel удалён, старый адрес недоступен; используйте `https://fit-training.ru`.
 
 Подготовка контейнера и миграций без серверов разработки:
 

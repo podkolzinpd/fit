@@ -1158,8 +1158,8 @@ DNS propagation не требуется для smoke через техничес
 ### Вывод Vercel из эксплуатации — 18.11.2026
 
 Владелец разрешил удаление старого проекта `fit`. Основной сайт, API и media
-работают в Cloud.ru. После удаления `fit-drab.vercel.app` перестанет
-перенаправлять старые ссылки: используйте `https://fit-training.ru`.
+работают в Cloud.ru. Проект удалён18.11.2026; `fit-drab.vercel.app` больше не
+перенаправляет старые ссылки: используйте `https://fit-training.ru`.
 
 Упаковка frontend и CI используют `scripts/frontend-routing.mjs`, без
 `vercel.json`, Vercel API или credentials. Проверка старого редиректа удалена;
