@@ -27,7 +27,14 @@ export function liveWorkoutTitleCases() {
       const progress = page.locator('.live-session-progress-copy')
       const beforeProgress = await progress.textContent()
       const clock = page.locator('.coach-v79-large-clock')
-      await expect(clock).toHaveAttribute('aria-label', /01:/)
+      await expect(clock).toHaveAttribute('aria-label', /\d+:\d{2}/)
+      const readClock = async () => {
+        const time = (await clock.getAttribute('aria-label'))!.match(/\d+:\d{2}(?::\d{2})?/)![0]
+        return time.split(':').reduce((seconds, part) => seconds * 60 + Number(part), 0)
+      }
+      const beforeClock = await readClock()
+      const clockObservedAt = Date.now()
+      expect(beforeClock).toBeGreaterThanOrEqual(109)
       await trigger.click()
       const sheet = page.getByRole('dialog', { name: 'Переименовать тренировку', exact: true })
       await expect(sheet.getByLabel('Название', { exact: true })).toHaveValue('Ноги')
@@ -43,7 +50,9 @@ export function liveWorkoutTitleCases() {
       await expect(trigger).toHaveText('МКЦ 2 день 2: ноги и спина')
       await expect(page.getByRole('heading', { name: 'МКЦ 2 день 2: ноги и спина', exact: true })).toBeVisible()
       await expect(progress).toHaveText(beforeProgress!)
-      await expect(clock).toHaveAttribute('aria-label', /01:/)
+      const afterClock = await readClock()
+      expect(afterClock).toBeGreaterThanOrEqual(beforeClock)
+      expect(afterClock - beforeClock).toBeLessThanOrEqual(Math.ceil((Date.now() - clockObservedAt) / 1000) + 2)
       const renamed = backend.getWorkouts()[0]!
       expect({ ...renamed, title: original.title, version: original.version }).toEqual(original)
       expect(writes).toEqual([{ title: 'МКЦ 2 день 2: ноги и спина', expectedVersion: original.version }])
@@ -87,6 +96,22 @@ export function liveWorkoutTitleCases() {
     await expect(sheet).toHaveCount(0)
     expect(writes.map(write => write.expectedVersion)).toEqual([original.version, original.version + 1])
     expect(backend.getWorkouts()[0]!.exercises).toEqual(source.exercises)
+  })
+
+  test('ordinary trainer Live retains client context beside the editable workout title', async ({ page }) => {
+    const owner = 'c0ac0000-6010-4000-8000-000000000001'
+    await mockPilot(page, { profileId: owner, fitLime: false, workouts: [{ ...restTimerWorkout(), title: 'Ноги', createdBy: owner }] })
+    await page.goto(`/workouts/${workoutId}/live`)
+    const header = page.locator('.live-session-header')
+    await expect(header.getByRole('heading', { name: 'Ноги', exact: true })).toBeVisible()
+    await expect(header.getByText('Алексей Смирнов', { exact: true })).toBeVisible()
+    const trigger = header.getByRole('button', { name: 'Переименовать тренировку', exact: true })
+    await expect(trigger).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)')
+    await trigger.click()
+    const sheet = page.getByRole('dialog', { name: 'Переименовать тренировку', exact: true })
+    await expect(sheet.getByLabel('Название', { exact: true })).toHaveValue('Ноги')
+    await sheet.getByRole('button', { name: 'Отмена', exact: true }).click()
+    await expect(trigger).toBeFocused()
   })
 
   test('athlete cannot rename a trainer-owned Live workout', async ({ page }) => {
