@@ -1,3 +1,4 @@
+import { liveWorkoutTitleCases } from './live-workout-title.cases'
 import {limeAssistantSkinCases} from './lime-assistant-skin.cases'
 import {limeChatSkinCases} from './lime-chat-skin.cases'
 import {limeHomeGestureSkinCases} from './lime-home-gesture-skin.cases'
@@ -5303,3 +5304,5 @@ for (const role of ['trainer','client'] as const) for (const density of ['origin
 
 import {limeParticipantsSkinCases} from './lime-participants-skin.cases'
 limeParticipantsSkinCases()
+
+liveWorkoutTitleCases()
