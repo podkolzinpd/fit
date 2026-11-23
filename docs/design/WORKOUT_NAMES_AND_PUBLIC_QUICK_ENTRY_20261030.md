@@ -349,3 +349,7 @@ flag, origin mismatch и неполныевизуальныеflags исправ�
 минуте циферблата. Обязательные snapshot/assertions не сняты. Итог10/10browser
 Chromium/WebKit20.0s0retry/skip; build/startup/types/e2etypes/lint/diff PASS.
 ПервыйCI485 ещё завершается; новаяголова с этими уточнениями получит свойполныйCI.
+Уточнение ordinaryLive: название показывается одинраз вh2, прежняяmetadata-копия
+убрана только когдаauthor видит редактируемыйзаголовок; имяклиента и формат остаются.
+Отдельный целевой negative-control2/2Chromium/WebKit7.0s, прежниеостальные8сценариев
+не повторялись без причины. Это завершает локальныйdiff LN101–104.

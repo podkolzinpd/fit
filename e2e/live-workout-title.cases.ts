@@ -105,6 +105,7 @@ export function liveWorkoutTitleCases() {
     const header = page.locator('.live-session-header')
     await expect(header.getByRole('heading', { name: 'Ноги', exact: true })).toBeVisible()
     await expect(header.getByText('Алексей Смирнов', { exact: true })).toBeVisible()
+    await expect(header.getByText('Ноги', { exact: true })).toHaveCount(1)
     const trigger = header.getByRole('button', { name: 'Переименовать тренировку', exact: true })
     await expect(trigger).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)')
     await trigger.click()
