@@ -63,11 +63,11 @@ YAFIT-668 закрыт: PR1848–1851 в main c88f2c21;
 [итоги и ограничения проверок](design/COACH_LIVE_FINISH_AND_ROLLOUT_20261028.md).
 YAFIT-667 завершён: PR1847/main91ce5582, общие правила и архив сохранены.
 
-## Android OTA — выпуск1.1.4
+## Android OTA
 
-03.11: PR1944 изменил ABI; APK1.1.4/code9 разрешён после приёмки1954.
-Подготовка; CI/подпись/публикация впереди, телефон не проверен.
-[План, проверки и ограничения](design/ANDROID_OTA_RECOVERY_20261028.md).
+24.11: LN web/API=be40; OTA→APK1.1.5/code10; APK9 feed сохранён.
+[R11–13](design/ANDROID_OTA_RECOVERY_20261028.md): CI/подпись/10+10 впереди,
+телефон/OAuth/deviceOTA не проверены.
 
 ## Действующие границы
 
