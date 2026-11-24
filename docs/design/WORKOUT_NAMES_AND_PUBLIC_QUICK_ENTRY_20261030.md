@@ -386,3 +386,12 @@ Lint/e2e types/build/typecheck/startup PASS. В существующем baselin
 Дальше: correction PR→exactsourceCI→обычный squash→fullactualmainCI→
 официальные API/web/compatibleOTA→10public+10exactZIP и finalreadback.
 Физический телефон/OAuth/deviceOTA остаются непроверенными.
+
+Продолжение24.11: correctionPR2136/c1c3a217a516a58b492ddf6aa8598ba31d9cf17a
+прошёл fullsourceCI45345478067 SUCCESS attempt1,35/35job; Android45345477923
+SUCCESS. Все неизменённые legacy baseline shards зелёные. Без отмен и rerun.
+После свежих main/очереди (только собственный2136 OPEN) выполнен обычный squash
+с match-headc1c3: actualmainbe40ed59629e3a8e6066c433ff74be6cb6b39c9c,07:59:13UTC.
+Treesource=main5fceb58a482b0cac12d0beed65acc91475b2f784. FullmainCI45352240422
+запущен автоматически; API/web/compatibleOTA и actual10+10 ещё впереди.
+Эта квитанция остаётся локально/PR/checkpoint, без sourcepush ради записи.
