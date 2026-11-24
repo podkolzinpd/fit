@@ -302,3 +302,54 @@ lint/types. Полный CI корректирующего PR и итогово�
 до этого исправления; физический телефон не проверен.
 Дальше: обычный PR→зелёный CI→merge→зелёный current-main→API/site/OTA→all/readback;
 согласованный приоритет пакета и очередь остальных чатов сохраняются.
+
+## Дополнение LN101–104 — название во время Live, 23.11.2026
+
+Прямой запрос владельца со скриншотом запущенной тренировки: дать изменить
+название, оставаясь в Live. Прежний N202 уже допускает metadata-only rename
+in_progress; недоставало входа на самом экране. Это отдельная доработка после
+принятого PR2105, к созданию клиента/целям/подцелям не относится.
+
+| ID | Результат | Проверка |
+| --- | --- | --- |
+| LN101 | Нажатие на название с небольшим значком редактирования открывает существующий WorkoutRenameSheet | Обе роли, доступное имя/фокус/отмена/120символов |
+| LN102 | Существующий PUT title с expectedVersion; только title/version в Live cache | Полный snapshot фактов/часов/состава/статуса, прогресс до/после, reload |
+| LN103 | Права автора прежние; клиент не переименовывает план тренера | Отрицательная UI-проверка; прежний серверный ownership/RLS без изменений |
+| LN104 | Ошибка/конфликт сохраняют ввод, явное перечитывание перед повтором | Browser409/current-version retry и прежние component tests |
+
+Реализация: optional title action в WorkoutHeader используется только Live.
+Основное имя не превращается в отдельный постоянный ряд действий. Сохраняем
+прежний WorkoutRenameSheet и узкий repository.rename; никакого savePlanned /
+saveCompleted. После подтверждения metadata обновляются поверх текущего cache,
+не заменяя aggregate старым снимком. Чтение текущего workout отменяется без rollback cache перед
+metadata patch; версия и существующий reconcile защищают от старого ответа.
+Фоновое перечитывание подтверждает актуальную metadata при конкурирующих writes. Производные списки
+инвалидируются. Таймеры, пауза, подходы, жесты, цели, API/schema/flags прежние.
+Во время rename request root-действия Live используют прежний pending guard.
+
+Точка реализации: собственный checkout переиспользован, новая ветка
+feat/live-workout-title-20261123 от main19a103c0. Прежний docs-only closeout2105
+сохранён на прежней ветке. Проверки и actual выпуск новой доработки ещё впереди.
+
+Проверка LN101–104:36unit/component в4файлах; build/typecheck/startup, targeted
+eslint, полныйe2e TypeScript, docs/diff PASS. Browser8/8 Chromium/WebKit18.8s,
+retry/skip0: owner trainer/client, cancel/focus, title/version-only snapshot,
+clock/progress/reload,409draft→explicitreload→retry, чужойtrainer-plan read-only.
+Форма и сохранённыйLive WebKit PNG просмотрены. Production business writes не
+выполнялись; использован syntheticAPI с network/WS guards и тихим аудио.
+Первичные localharness попытки: неправильныйпутьconfig, пропущенный acceptance
+flag, origin mismatch и неполныевизуальныеflags исправлены в локальномharness;
+они не считаютсяпройденными. РеальноеWebKit-наблюдение focusпослеотмены исправлено
+явным focuspreventScroll у кнопки; исходныйassertionсохранён. Во всехфинальных
+сценариях доступное имяh2 сохраняет фактическийtitle. ОбщийCI/выпуск ещё не выполнены.
+
+Финальное уточнение LN: обычныйtrainerLive сохраняет имяклиента вmetadata рядом
+с редактируемым названием; добавлена отрицательнаяпроверка оформления безLime.
+Таймер проверяется монотонно и по фактическипрошедшему walltime, а не по конкретной
+минуте циферблата. Обязательные snapshot/assertions не сняты. Итог10/10browser
+Chromium/WebKit20.0s0retry/skip; build/startup/types/e2etypes/lint/diff PASS.
+ПервыйCI485 ещё завершается; новаяголова с этими уточнениями получит свойполныйCI.
+Уточнение ordinaryLive: название показывается одинраз вh2, прежняяmetadata-копия
+убрана только когдаauthor видит редактируемыйзаголовок; имяклиента и формат остаются.
+Отдельный целевой negative-control2/2Chromium/WebKit7.0s, прежниеостальные8сценариев
+не повторялись без причины. Это завершает локальныйdiff LN101–104.

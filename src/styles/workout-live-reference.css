@@ -292,3 +292,15 @@
 :where(.fit-lime-shell.workout-live-reference:has(.coach-live-v79,.client-live-v79)) .modal-message { color:var(--fg); font-size:14px; font-weight:400 }
 :where(.fit-lime-shell.workout-live-reference:has(.coach-live-v79,.client-live-v79)) .modal-dialog .actions button { border-radius:14px; font-size:14px; font-weight:500 }
 :where(.fit-lime-shell.workout-live-reference:has(.coach-live-v79,.client-live-v79)) .modal-dialog .actions .danger { border-color:var(--danger); background:var(--surface-elevated); color:var(--danger) }
+
+/* Metadata-only title editing stays in the existing Live heading. */
+.live-identity .live-session-header button.live-title-edit {
+  display: inline-flex; align-items: center; justify-content: inherit; gap: 8px;
+  max-width: 100%; min-height: 44px; padding: 4px 0; margin: 0;
+  border: 0; border-radius: 4px; background: transparent; box-shadow: none;
+  color: inherit; font: inherit; letter-spacing: inherit; line-height: inherit;
+  text-align: inherit; white-space: normal;
+}
+.live-identity .live-title-edit > span { min-width: 0; overflow-wrap: anywhere }
+.live-identity .live-title-edit > svg { width: 16px; height: 16px; flex: 0 0 16px; opacity: .65 }
+.live-identity .live-title-edit:focus-visible { outline: 2px solid currentColor; outline-offset: 3px }

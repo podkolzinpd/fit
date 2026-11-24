@@ -34,9 +34,11 @@ export function WorkoutStatus({ state, label }: { state: WorkoutUiState; label?:
   return <span className={`workout-status workout-status-${state} badge ${legacyTone}`} data-state={state} data-tone={STATUS_TONES[state]}>{label ?? STATUS_LABELS[state]}</span>
 }
 
-export function WorkoutHeader({ eyebrow, title, meta, state, statusLabel, action, showStatus = true, className = '' }: {
+export function WorkoutHeader({ eyebrow, title, meta, state, statusLabel, action, showStatus = true, className = '', onTitleClick, titleDisabled }: {
   eyebrow?: string
   title: string
+  onTitleClick?: () => void
+  titleDisabled?: boolean
   meta?: ReactNode
   state: WorkoutUiState
   statusLabel?: string
@@ -47,7 +49,9 @@ export function WorkoutHeader({ eyebrow, title, meta, state, statusLabel, action
   return <section className={`workout-header-contract workout-state-${state} ${className}`.trim()} data-state={state}>
     <div className="workout-header-copy">
       {eyebrow && <p className="workout-header-eyebrow">{eyebrow}</p>}
-      <h2>{title}</h2>
+      <h2 aria-label={onTitleClick ? title : undefined}>{onTitleClick ? <button type="button" className="live-title-edit" aria-label="Переименовать тренировку" disabled={titleDisabled} onClick={event => { event.currentTarget.focus({ preventScroll: true }); onTitleClick() }}>
+        <span>{title}</span><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="m15 5 4 4M4 20l4-1L20 7a2.8 2.8 0 0 0-4-4L4 15z" /></svg>
+      </button> : title}</h2>
       {meta && <div className="workout-header-meta">{meta}</div>}
     </div>
     {(showStatus || action) && <div className="workout-header-side">{showStatus && <WorkoutStatus state={state} label={statusLabel} />}{action}</div>}
