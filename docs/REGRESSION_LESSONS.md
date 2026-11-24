@@ -430,3 +430,14 @@ raw прежнего ошибочного измерения и явно ото�
 с ненулевым assertion проверяется заново. Внешний стабильный screenshot сам
 по себе не заменяет этот gate. История и исправление — CLIENT_REFERENCE_SCREENS,
 §294.
+
+## LN101 — новая Live action не расширяет границу reference
+
+24.11.2026, PR2135: sourceCI был зелёным, но полный actualmainCI обнаружил
+изменение legacy Mono Live: title-action условие подменило clientName и
+добавило высоту шапки. Dark430 имел одинаковый pixel mismatch в3attempt;
+это детерминированная регрессия, не причина повторять CI. Новый вход следует
+существующей visualReference-границе; legacy title/metadata и исходные PNG
+сохраняются. Проверять положительные reference роли/ownership и отрицательный
+ordinary путь, обе темы неизменённого pixel baseline.
+[Причина и корректировка](design/WORKOUT_NAMES_AND_PUBLIC_QUICK_ENTRY_20261030.md#ln101104--корректировка-границы-live-24112026).

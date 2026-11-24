@@ -353,3 +353,36 @@ Chromium/WebKit20.0s0retry/skip; build/startup/types/e2etypes/lint/diff PASS.
 убрана только когдаauthor видит редактируемыйзаголовок; имяклиента и формат остаются.
 Отдельный целевой negative-control2/2Chromium/WebKit7.0s, прежниеостальные8сценариев
 не повторялись без причины. Это завершает локальныйdiff LN101–104.
+
+### LN101–104 — корректировка границы Live, 24.11.2026
+
+Владелец разрешил выпуск («выпускай конечно»). PR2135 штатно squash-слит
+в12fc9a4c388fa751c2daddaff48cf43e89c0e135 после зелёного sourceCI45165556928
+и Android45165557323 на29f6667f. FullmainCI45339638956 выявил детерминированную
+регрессию старого Mono Live: вместо имени клиента появился редактируемый
+muscle fallback, шапка стала выше на16px; dark430 отличался на12439pixels
+во всех3attempt.32job успешны, visual и aggregate failed, PR-only migration-safety skipped.
+API/web/OTA этого main штатно skipped; публикации и фактической приёмки LN нет.
+Failure/log/expected/actual/diff сохранены локально, PNG просмотрены. Это UI
+regression, не flaky; слепого rerun не было.
+
+Причина — canRenameLive расширял оформление за пределы visualReference.
+Коррекция в fix/live-title-reference-scope-20261124 от actualmain12fc:
+новый вход доступен только существующему visualReference Live (trainer/client
+по прежним правам автора), как на исходном скриншоте. Старый Mono снова
+показывает прежние имя клиента, metadata и высоту; исходные PNG не меняются.
+Записи про новый ordinary заголовок выше — история отменённого варианта,
+не действующий контракт. N202 metadata rename через детали не меняется.
+API/schema/flags/native/приглашения/цели/подцели/факты/таймеры прежние.
+
+Проверка:10/10synthetic browser Chromium/WebKit32.8s, retry/skip0, включая
+отрицательный ordinary контроль с прежним заголовком/metadata и отсутствием
+новой кнопки; прежние8проверок прав/cancel/focus/409/clock/facts/reload сохранены.
+WebKit saved PNG просмотрен; fit-storage20261124-100135-9d8ff147.
+Lint/e2e types/build/typecheck/startup PASS. В существующем baseline case
+добавлены отрицательные assertions кнопки в обеих темах, без новых масок,
+таймаутов и замены PNG. Полное pixel-сравнение выполняется штатным CI с
+изолированным PostgreSQL; локально этот сервер не запускался.
+Дальше: correction PR→exactsourceCI→обычный squash→fullactualmainCI→
+официальные API/web/compatibleOTA→10public+10exactZIP и finalreadback.
+Физический телефон/OAuth/deviceOTA остаются непроверенными.
