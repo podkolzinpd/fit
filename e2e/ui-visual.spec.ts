@@ -2499,6 +2499,7 @@ test('client live workout keeps its visual baseline', async ({ page }, testInfo)
   test.skip(testInfo.project.name === 'visual-trainer-1440', 'Client Live uses mobile visual profiles')
   await openPreviewLiveWorkout(page)
   await expect(page.locator('.live-exercise.current')).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Переименовать тренировку', exact: true })).toHaveCount(0)
   await expect(page.locator('.phone-frame')).toHaveClass(/live-identity/)
   await expectVisualBaseline(page, 'client-live.png', [page.locator('.live-timer')])
 
@@ -2508,6 +2509,7 @@ test('client live workout keeps its visual baseline', async ({ page }, testInfo)
   await gotoStable(page, livePath)
   await expect(page.locator('.phone-frame')).toHaveClass(/live-identity/)
   await expect(page.locator('.live-exercise.current')).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Переименовать тренировку', exact: true })).toHaveCount(0)
   await expectVisualBaseline(page, 'client-live-dark.png', [page.locator('.live-timer')], false, '#1d1e21')
 
   // Visual projects share the seeded preview account. Restore both appearance
