@@ -395,3 +395,12 @@ SUCCESS. Все неизменённые legacy baseline shards зелёные. 
 Treesource=main5fceb58a482b0cac12d0beed65acc91475b2f784. FullmainCI45352240422
 запущен автоматически; API/web/compatibleOTA и actual10+10 ещё впереди.
 Эта квитанция остаётся локально/PR/checkpoint, без sourcepush ради записи.
+
+FullactualmainCI45352240422/be40 SUCCESS:34success/1штатныйPR-onlyskip;
+Android45352240465 SUCCESS. API45358464240/web45358464165 опубликованы штатно.
+OTA45359780047 FAILURE только publish/OTA_NATIVE_APK_REQUIRED: удаление dev
+зависимости ранее изменило полный lock ABI aa3a, при прежнем code9. Это не
+регрессия title/facts. Пропущенный preflight native совместимости исправляется
+необходимой упаковкой APK1.1.5/code10, без изменения приложения/API/lock/ключей
+и защит. [Точный план R11–13](ANDROID_OTA_RECOVERY_20261028.md#упаковка-ln101104--apk115code10-24112026).
+Actual10public+10ZIP остаются впереди; текущий be40 OTA не повторяется вслепую.

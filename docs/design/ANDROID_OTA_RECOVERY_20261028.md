@@ -238,3 +238,47 @@ native release tests и фактические R8/R9 ещё предстоят. 
 Дальше: полный CI exact-source, обычный merge/current-main CI, штатный подписанный
 APK1.1.4/code9 и OTA, публичные manifest/ZIP/API и интерфейс обоих режимов,
 финальная проверка неизменности канала APK8. Только затем квитанция R8/R9.
+
+
+## Упаковка LN101–104 — APK1.1.5/code10, 24.11.2026
+
+Продолжение разрешённого владельцем выпуска Live title (PR2135/2136), не новая
+функция. FullmainCI45352240422/be40ed59629e3a8e6066c433ff74be6cb6b39c9c
+SUCCESS attempt1,34success/1штатныйPR-onlyskip; Android45352240465 SUCCESS.
+Официальные API45358464240/web45358464165 SUCCESS. Автоматический OTA45359780047
+построил и подписал пакет, но publish138327481673 остановлен штатным
+OTA_NATIVE_APK_REQUIRED до активации manifest. Повтора этого run не было.
+
+Причина подтверждена Git diff от последнего успешного native source1568a09b:
+из корневого lock удалён dev eslint-plugin-react-refresh. Действующая политика
+консервативно хеширует весь lock; прежний ABI8922/code9 не равен aa3a/code9
+в be40. Это повтор уже известного R8: проверка native совместимости до первого
+выпуска LN была упущена. Возвращать удалённую зависимость или исключать её из
+ABI, применять --new-native-apk без фактического APK и переиспользовать code9
+нельзя. Защита версии остаётся прежней.
+
+Необходимая упаковка выпуска: только versionCode10/versionName1.1.5 и совпадающие
+APK-имя/artifact/точная package-info проверка штатного workflow. Публичный ключ,
+сертификат a933c356832d86e306408963056e3662094c3cd2cd7d779118dad86a79bb6978,
+API, lock/dependencies, native classes, права и вся бизнес-логика без изменений.
+Новый ABI после увеличения версии: ed8f6068086874b2919f5f793374d852cc5f7354293a789a56d2f8919dd21e38.
+
+| ID | Результат | Проверка |
+| --- | --- | --- |
+| R11 | Подписанный APK1.1.5/code10 прежним сертификатом | Full exactsource/main CI; native unit/release/signature/package-info/не-debuggable/ZIP align/SHA256 |
+| R12 | Новый signed OTA канал с min=max10 | Штатный make_apk=true, прежние RSA/ABI/version/anti-replay/API/current-main guards; allfiles/dualAPI/10public+10ZIP/readback LN |
+| R13 | Сохранён прежний канал APK9 | RSA before manifest8922/source1568/code9 и побайтный finalreadback; физическая установка остаётся непроверенной |
+
+Before proof: старый публичный manifest8922 проверен RSA, source1568a09b,
+sequence1794780261037, min=max9, bundle8bd1a7b4203d73ea923c9cf7be45c78aec81aa8623efd7e5ab68b5c02fd1f51d;
+SHA256manifest7ebbc73cc1e97472eefcb353aaa97d577817f7e54cba6bd5fbc0f71d340e2454.
+Сохранён один исходный manifest в outputs/live-workout-title-20261123.
+Локально15/15 android OTA contract/publisher PASS, включая запрет повторного
+versionCode для нового ABI. Первая ограниченная попытка получила localhost
+listenEPERM, её лог сохранён; после разрешённого localhost тот же набор прошёл.
+
+Дальше: узкий packaging PR→exactsourceCI→обычный squash→fullmainCI→авто API/web.
+Авто OTA без make_apk для нового ABI не заменяет APK; после его завершения
+официальный workflow_dispatch ci_run_id текущего greenmain/make_apk=true,
+без дублирования активных runs и без изменения release guards. Затем R11–13
+и actual LN10+10, PNG/finalreadback. Телефон/OAuth/deviceOTA не подтверждены.
