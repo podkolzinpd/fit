@@ -5,7 +5,7 @@ on:
       phase:
         type: choice
         default: inventory
-        options: [inventory]
+        options: [inventory, connectivity]
 permissions:
   contents: read
 concurrency:
@@ -23,4 +23,5 @@ jobs:
       - name: Inspect source without reading private values into logs
         env:
           COPY_PHASE: ${{ inputs.phase }}
+          COPY_SSH_PRIVATE_KEY: ${{ secrets.FIT_YC_COPY_SSH_KEY }}
         run: bash scripts/fit-yc-copy-source.sh

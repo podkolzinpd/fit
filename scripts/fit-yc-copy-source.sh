@@ -3,6 +3,14 @@ set -euo pipefail
 test "$GITHUB_REPOSITORY" = podkolzinpd/fit
 test "$GITHUB_REF" = refs/heads/codex/fit-yc-copy-20261128
 test "$(hostname)" = fit-stage-app
+if test "${COPY_PHASE:-inventory}" = connectivity; then
+  private="$RUNNER_TEMP/fit-yc-copy-$GITHUB_RUN_ID.key"
+  trap 'rm -f -- "$private"' EXIT
+  umask 077
+  printf '%s\n' "$COPY_SSH_PRIVATE_KEY" > "$private"
+  ssh -i "$private" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile="$PWD/scripts/fit-yc-copy-known-hosts" -o ConnectTimeout=15 deploy@89.169.148.38 'hostname; test -f /var/lib/fit-copy-bootstrap-ready; echo BOOTSTRAP_READY; df -h /'
+  exit
+fi
 test "${COPY_PHASE:-inventory}" = inventory
 printf 'SOURCE_RELEASE='; cat /opt/fit/RUNNING_SHA
 printf 'FRONTEND_RELEASE='; readlink -f /opt/fit/frontend/current || true
