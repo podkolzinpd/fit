@@ -5,7 +5,7 @@ on:
       phase:
         type: choice
         default: inventory
-        options: [inventory, connectivity, export, database, media, restore, runtime, verify, inspect-target, source-code, certificates, assets, acceptance, configure, finalize, validate, datalens, reboot-check, boot-check]
+        options: [inventory, connectivity, export, database, media, restore, runtime, verify, inspect-target, source-code, certificates, assets, acceptance, configure, finalize, validate, datalens, reboot-check, boot-check, cutover-preflight, cutover-sync, cutover-forward, cutover-activate]
 permissions:
   contents: read
 concurrency:
@@ -29,6 +29,7 @@ jobs:
           COPY_REPOSITORY_TOKEN: ${{ github.token }}
         run: |
           case "$COPY_PHASE" in
+            cutover-*) bash scripts/fit-yc-cutover.sh ;;
             inventory|connectivity) bash scripts/fit-yc-copy-source.sh ;;
             assets) for phase in media source-code certificates;do COPY_PHASE="$phase" bash scripts/fit-yc-copy-transfer.sh;done ;;
             finalize) for phase in certificates source-code configure acceptance;do COPY_PHASE="$phase" bash scripts/fit-yc-copy-transfer.sh;done ;;
