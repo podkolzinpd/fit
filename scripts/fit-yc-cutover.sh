@@ -41,7 +41,7 @@ NODE
     sudo install -d -m 755 /etc/systemd/system/fit-background.service.d
     printf '[Unit]\nConditionPathExists=/opt/fit-cutover/ALLOW_SOURCE_WRITES\n' | sudo tee /etc/systemd/system/fit-background.service.d/cutover.conf >/dev/null
     sudo systemctl daemon-reload
-    sudo podman update --restart=no fit-api-stage >/dev/null
+    # Existing unless-stopped policy respects an explicit stop, including reboot.
     sudo podman stop --time 20 fit-api-stage >/dev/null
     sudo systemctl stop fit-speechkit.service
     sudo systemctl disable --now certbot.timer
