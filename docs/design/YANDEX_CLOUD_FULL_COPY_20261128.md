@@ -66,3 +66,35 @@ PG extensions pgaudit/pg_stat_statements включены через managed API
 shared library подключена. Внешний IP89.169.148.38 зарезервирован и защищён.
 AI/SpeechKit credentials созданы в target folder с двумя точными execute scopes;
 прежний OAuth clientfdc7e12c472b475690fbb387d8698663 остаётся прежним.
+
+## Итерация 3 — 28.11.2026 — Codex / OpenAI
+
+Проверка46152984414 прошла:113таблиц/134053строки, общий digest
+79a18af469458966db18bce19f72820193b39e2124d32b60fd302dc48fcf42c2,
+RLS уprofiles/workouts/workout_sets, ownerfit_owner, SELECT уfit_api и отсутствие
+прямого UPDATE сохранены. Media46152797288:2326objects/89311624bytes,
+каждый object прочитан обратно и SHA256 совпал; общий manifest
+7dbe3e5e1f5664dfdecc53bcd4d16c9ac10526d5821d9712d520e6ab70aab0a8.
+У этого же combined run последующий source archive остановился на отсутствии
+gh в production; media-этап успешен и не повторялся.
+
+Certificates46153213773 переданы напрямую между VM, без вывода private keys.
+Первый runtime46153251935 получил503ready из-за отсутствующей managed-service
+permission наfit уfit_api. Это не SQL/RLS: разрешение подключения к точной БД
+выдано черезYandex API, отдельно fit_datalens. Runtime46153532330 прошёл:
+все семь units active, ready и meeting SDK проверены, чужой Origin получает403.
+FrontendFilesRelocated=0: опубликованный frontend не переписывался.
+
+Native backup вtarget завершён17:10:53МСК:backup
+c9q5ic9v0500c217e71n:mdb58lm37q6sn0efqbu5,23602005bytes.
+Долгий GitHub archive run46153291587 отменён только после готовности
+проверенного альтернативного архива. Точный git archive исходногоmain
+сохранён в отдельном приватном backup bucket:286845198bytes, SHA256
+dbda11620ba3838319ed125c937aec6aded32d162a2935260b4b085a91632b3a.
+Подписанный download URL и credentials не публикуются.
+
+Source/target OAuthClientID, web/API hostnames сохраняются. Target certbot
+renewal state копируется, но timer выключен доcutover, чтобы не выполнять
+HTTP-01 challenges против DNS, который всё ещё указывает наsource.
+DataLens proxy сохраняет точный allowlist, upstream меняется только наtargetPG;
+действующие DataLens connections не переключаются.

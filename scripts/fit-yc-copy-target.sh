@@ -82,6 +82,8 @@ PY_LIST
       try{const c=JSON.parse(await readFile("/copy/target.json","utf8"));if(c.folder!=="b1gt7dfqg9sht9slnno5")throw Error();const r=await fetch(c.source_archive_url,{signal:AbortSignal.timeout(300000)});if(!r.ok)throw Error();const h=createHash("sha256");let bytes=0;await pipeline(Readable.fromWeb(r.body),new Transform({transform(chunk,_enc,cb){bytes+=chunk.length;h.update(chunk);cb(null,chunk);}}),createWriteStream("/copy/source-code.part",{mode:0o600}));const sha256=h.digest("hex");if(sha256!==c.source_archive_sha256)throw Error();await rename("/copy/source-code.part","/copy/source-code.tar.gz");console.log(JSON.stringify({event:"source_archive_readback_verified",bytes,sha256}));}catch{console.log("source_archive_readback_failed");process.exitCode=1;}'
     install -d -m 755 "/opt/fit/source/$revision"
     tar -xzf /opt/fit-copy/source-code.tar.gz --strip-components=1 -C "/opt/fit/source/$revision"
+    install -d -m 755 /opt/fit/releases
+    if ! test -e "/opt/fit/releases/$revision";then ln -s "../source/$revision" "/opt/fit/releases/$revision";fi
     echo 'source_archive_extracted=true'
     ;;
   acceptance)
