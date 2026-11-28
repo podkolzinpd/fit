@@ -4,7 +4,7 @@ test "$GITHUB_REPOSITORY" = podkolzinpd/fit
 test "$GITHUB_REF" = refs/heads/codex/fit-yc-copy-20261128
 test "$(hostname)" = fit-stage-app
 phase=${COPY_PHASE:?}
-case "$phase" in export|database|media|restore|runtime|verify|inspect-target) ;; *) exit 2;; esac
+case "$phase" in export|database|media|restore|runtime|verify|inspect-target|source-code) ;; *) exit 2;; esac
 jq -e '.folder=="b1gt7dfqg9sht9slnno5" and .vm_ip=="89.169.148.38" and .db_id=="c9q5ic9v0500c217e71n"' <<<"$COPY_CONFIG_JSON" >/dev/null
 private="$RUNNER_TEMP/fit-yc-copy-$GITHUB_RUN_ID.key"
 envfile="$RUNNER_TEMP/fit-yc-copy-$GITHUB_RUN_ID.env"
@@ -45,6 +45,12 @@ elif test "$phase" = media; then
   printf 'COPY_CONFIG_JSON=%s\n' "$COPY_CONFIG_JSON" > "$envfile"
   revision=$(cat /opt/fit/RUNNING_SHA)
   sudo podman run --rm --read-only --memory=512m --cpus=0.5 --cap-drop=ALL --security-opt=no-new-privileges --env-file /opt/fit/secrets/api.env --env-file "$envfile" -v "$PWD/scripts/fit-yc-copy-media.mjs:/copy-media.mjs:ro" "localhost/fit-api:$revision" node /copy-media.mjs
+elif test "$phase" = source-code; then
+  revision=$(cat /opt/fit/RUNNING_SHA)
+  [[ "$revision" =~ ^[a-f0-9]{40}$ ]]
+  remote "sudo install -d -m 755 /opt/fit/source/$revision"
+  GH_TOKEN="$COPY_REPOSITORY_TOKEN" gh api "repos/podkolzinpd/fit/tarball/$revision" | remote "sudo tar -xz -C /opt/fit/source/$revision --strip-components=1"
+  printf 'source_code_copied_revision=%s\n' "$revision"
 else
   remote "sudo bash /opt/fit-copy/fit-yc-copy-target.sh '$phase'"
 fi

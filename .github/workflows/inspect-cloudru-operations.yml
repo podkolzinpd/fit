@@ -5,7 +5,7 @@ on:
       phase:
         type: choice
         default: inventory
-        options: [inventory, connectivity, export, database, media, restore, runtime, verify, inspect-target]
+        options: [inventory, connectivity, export, database, media, restore, runtime, verify, inspect-target, source-code]
 permissions:
   contents: read
 concurrency:
@@ -26,6 +26,7 @@ jobs:
           COPY_SSH_PRIVATE_KEY: ${{ secrets.FIT_YC_COPY_SSH_KEY }}
           COPY_CONFIG_JSON: ${{ secrets.FIT_YC_COPY_CONFIG_JSON }}
           SOURCE_DATABASE_CONFIG_JSON: ${{ secrets.CLOUDRU_STAGE_DATABASE_CONFIG_JSON }}
+          COPY_REPOSITORY_TOKEN: ${{ github.token }}
         run: |
           case "$COPY_PHASE" in
             inventory|connectivity) bash scripts/fit-yc-copy-source.sh ;;
