@@ -118,7 +118,7 @@ Wants=network-online.target
 [Service]
 Type=simple
 ExecStartPre=-/usr/bin/podman rm --force --ignore fit-api-stage
-ExecStart=/usr/bin/podman run --name fit-api-stage --publish 127.0.0.1:18080:8080 --env-file /opt/fit/secrets/api.env localhost/fit-api:{revision}
+ExecStart=/usr/bin/podman run --name fit-api-stage --publish 127.0.0.1:18080:8080 --env-file /opt/fit/secrets/api.env --env APP_ENV=stage --env PORT=8080 --env FIT_RELEASE_ID={revision} localhost/fit-api:{revision}
 ExecStop=/usr/bin/podman stop --time 10 fit-api-stage
 Restart=always
 RestartSec=5

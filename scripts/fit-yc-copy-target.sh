@@ -61,6 +61,7 @@ PY_LIST
     systemctl daemon-reload
     nginx -t -c /etc/nginx/fit-copy.conf
     systemctl enable --now fit-api.service fit-frontend-stage.service fit-speechkit.service fit-jitsi.service
+    systemctl restart fit-api.service
     systemctl unmask coturn.service
     systemctl enable --now nginx coturn fit-background.timer
     for attempt in $(seq 1 30);do
