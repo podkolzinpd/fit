@@ -4,7 +4,7 @@ test "$GITHUB_REPOSITORY" = podkolzinpd/fit
 test "$GITHUB_REF" = refs/heads/codex/fit-yc-copy-20261128
 test "$(hostname)" = fit-stage-app
 phase=${COPY_PHASE:?}
-case "$phase" in export|database|media|restore|runtime|verify|inspect-target|source-code|certificates) ;; *) exit 2;; esac
+case "$phase" in export|database|media|restore|runtime|verify|inspect-target|source-code|certificates|acceptance) ;; *) exit 2;; esac
 jq -e '.folder=="b1gt7dfqg9sht9slnno5" and .vm_ip=="89.169.148.38" and .db_id=="c9q5ic9v0500c217e71n"' <<<"$COPY_CONFIG_JSON" >/dev/null
 private="$RUNNER_TEMP/fit-yc-copy-$GITHUB_RUN_ID.key"
 envfile="$RUNNER_TEMP/fit-yc-copy-$GITHUB_RUN_ID.env"
@@ -45,6 +45,15 @@ elif test "$phase" = media; then
   printf 'COPY_CONFIG_JSON=%s\n' "$COPY_CONFIG_JSON" > "$envfile"
   revision=$(cat /opt/fit/RUNNING_SHA)
   sudo podman run --rm --read-only --memory=512m --cpus=0.5 --cap-drop=ALL --security-opt=no-new-privileges --env-file /opt/fit/secrets/api.env --env-file "$envfile" -v "$PWD/scripts/fit-yc-copy-media.mjs:/copy-media.mjs:ro" "localhost/fit-api:$revision" node /copy-media.mjs
+elif test "$phase" = acceptance; then
+  sudo python3 - <<'PY_FRONTEND' | remote 'sudo sh -c "umask 077; cat > /opt/fit-copy/frontend-manifest.json"'
+import json,hashlib,pathlib
+root=pathlib.Path('/opt/fit/frontend/current').resolve()
+print(json.dumps({str(p.relative_to(root)):hashlib.sha256(p.read_bytes()).hexdigest() for p in sorted(root.rglob('*')) if p.is_file()}))
+PY_FRONTEND
+  remote 'sudo bash /opt/fit-copy/fit-yc-copy-target.sh acceptance'
+  revision=$(cat /opt/fit/RUNNING_SHA)
+  sudo podman run --rm --read-only --memory=256m --cpus=0.5 --cap-drop=ALL --security-opt=no-new-privileges -v "$PWD/scripts/fit-yc-copy-acceptance.mjs:/copy-acceptance.mjs:ro" "localhost/fit-api:$revision" node /copy-acceptance.mjs
 elif test "$phase" = certificates; then
   paths=()
   for domain in fit-training.ru api.fit-training.ru;do
