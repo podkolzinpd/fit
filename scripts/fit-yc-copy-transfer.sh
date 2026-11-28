@@ -17,7 +17,7 @@ ssh_options=(-i "$private" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o
 remote(){ ssh "${ssh_options[@]}" deploy@89.169.148.38 "$@"; }
 remote 'sudo install -d -m 700 /opt/fit-copy; test -f /var/lib/fit-copy-bootstrap-ready'
 printf '%s' "$COPY_CONFIG_JSON" | remote 'sudo sh -c "umask 077; cat > /opt/fit-copy/target.json"'
-tar -cf - scripts/fit-yc-copy-target.sh scripts/fit-yc-copy-verify.mjs | remote 'sudo tar -xf - -C /opt/fit-copy --strip-components=1'
+tar -cf - scripts/fit-yc-copy-target.sh scripts/fit-yc-copy-verify.mjs scripts/fit-yc-copy-runtime.py | remote 'sudo tar -xf - -C /opt/fit-copy --strip-components=1'
 if test "$phase" = export; then
   printf 'copy_stage=runtime_files\n'
   # Only active app configuration is copied. Historical credentials and receipts stay on the source.

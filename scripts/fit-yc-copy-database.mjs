@@ -13,7 +13,11 @@ try {
   const snapshot=(await client.query('select pg_export_snapshot() snapshot')).rows[0].snapshot;
   const tables=(await client.query("select schemaname,tablename from pg_tables where schemaname not like 'pg_%' and schemaname<>'information_schema' order by 1,2")).rows;
   const quote=x=>'"'+x.replaceAll('"','""')+'"';
-  for(const table of tables) table.rows=(await client.query(`select count(*)::text n from ${quote(table.schemaname)}.${quote(table.tablename)}`)).rows[0].n;
+  await client.query("set local timezone='UTC'");
+  for(const table of tables){
+    const result=(await client.query(`select count(*)::text n,md5(coalesce(string_agg(row_to_json(t)::text,E'\\n' order by row_to_json(t)::text collate "C"),'')) digest from ${quote(table.schemaname)}.${quote(table.tablename)} t`)).rows[0];
+    table.rows=result.n;table.digest=result.digest;
+  }
   const roles=(await client.query("select rolname from pg_roles where rolname like 'fit_%' order by 1")).rows;
   const manifest={snapshot,at:new Date().toISOString(),tables,roles};
   await writeFile('/copy/source-manifest.json',JSON.stringify(manifest),{mode:0o600});
