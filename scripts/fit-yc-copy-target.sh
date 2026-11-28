@@ -75,6 +75,15 @@ PY_LIST
     touch /opt/fit-copy/RUNTIME_STARTED
     echo 'runtime_started_and_public_routes_verified=true'
     ;;
+  source-code)
+    revision=$(cat /opt/fit/RUNNING_SHA)
+    podman run --rm --read-only --user 0 --network host -v /opt/fit-copy:/copy "localhost/fit-api:$revision" node --input-type=module -e '
+      import {readFile,rename} from "node:fs/promises";import {createWriteStream} from "node:fs";import {Readable,Transform} from "node:stream";import {pipeline} from "node:stream/promises";import {createHash} from "node:crypto";
+      try{const c=JSON.parse(await readFile("/copy/target.json","utf8"));if(c.folder!=="b1gt7dfqg9sht9slnno5")throw Error();const r=await fetch(c.source_archive_url,{signal:AbortSignal.timeout(300000)});if(!r.ok)throw Error();const h=createHash("sha256");let bytes=0;await pipeline(Readable.fromWeb(r.body),new Transform({transform(chunk,_enc,cb){bytes+=chunk.length;h.update(chunk);cb(null,chunk);}}),createWriteStream("/copy/source-code.part",{mode:0o600}));const sha256=h.digest("hex");if(sha256!==c.source_archive_sha256)throw Error();await rename("/copy/source-code.part","/copy/source-code.tar.gz");console.log(JSON.stringify({event:"source_archive_readback_verified",bytes,sha256}));}catch{console.log("source_archive_readback_failed");process.exitCode=1;}'
+    install -d -m 755 "/opt/fit/source/$revision"
+    tar -xzf /opt/fit-copy/source-code.tar.gz --strip-components=1 -C "/opt/fit/source/$revision"
+    echo 'source_archive_extracted=true'
+    ;;
   acceptance)
     test -e /opt/fit-copy/RUNTIME_STARTED
     python3 - <<'PY_COMPARE'
