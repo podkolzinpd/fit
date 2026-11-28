@@ -87,6 +87,16 @@ PY_LIST
     if ! test -e "/opt/fit/releases/$revision";then ln -s "../source/$revision" "/opt/fit/releases/$revision";fi
     echo 'source_archive_extracted=true'
     ;;
+  datalens)
+    revision=$(cat /opt/fit/RUNNING_SHA)
+    podman run --rm --read-only --user 0 --network host -v /opt/fit-copy:/copy "localhost/fit-api:$revision" node --input-type=module -e '
+      import {readFileSync} from "node:fs";import {createRequire} from "node:module";
+      const c=JSON.parse(readFileSync("/copy/target.json","utf8"));const {Client}=createRequire("/app/package.json")("pg");
+      const client=new Client({host:"127.0.0.1",port:55432,user:"fit_datalens",password:c.datalens_password,database:"fit",connectionTimeoutMillis:5000,query_timeout:5000,ssl:{ca:readFileSync("/app/certs/yandex-cloud-ca.pem","utf8"),servername:c.db_host,rejectUnauthorized:true}});
+      try{await client.connect();await client.query("begin read only");await client.query("select count(*) from analytics.trainer_overview");await client.query("rollback");console.log(JSON.stringify({event:"datalens_proxy_readonly_tls_verified"}));}catch(e){console.log(JSON.stringify({event:"datalens_proxy_check_failed",code:/^[A-Z0-9]{5}$/.test(e.code??"")?e.code:"unknown"}));process.exitCode=1;}finally{await client.end();}'
+    test "$(systemctl is-enabled certbot.timer)" = disabled
+    echo 'certificate_renewal_held_until_cutover=true'
+    ;;
   acceptance)
     test -e /opt/fit-copy/RUNTIME_STARTED
     python3 - <<'PY_COMPARE'

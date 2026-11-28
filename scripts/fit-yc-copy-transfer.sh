@@ -4,7 +4,7 @@ test "$GITHUB_REPOSITORY" = podkolzinpd/fit
 test "$GITHUB_REF" = refs/heads/codex/fit-yc-copy-20261128
 test "$(hostname)" = fit-stage-app
 phase=${COPY_PHASE:?}
-case "$phase" in export|database|media|restore|runtime|verify|inspect-target|source-code|certificates|acceptance|configure) ;; *) exit 2;; esac
+case "$phase" in export|database|media|restore|runtime|verify|inspect-target|source-code|certificates|acceptance|configure|datalens) ;; *) exit 2;; esac
 jq -e '.folder=="b1gt7dfqg9sht9slnno5" and .vm_ip=="89.169.148.38" and .db_id=="c9q5ic9v0500c217e71n"' <<<"$COPY_CONFIG_JSON" >/dev/null
 private="$RUNNER_TEMP/fit-yc-copy-$GITHUB_RUN_ID.key"
 envfile="$RUNNER_TEMP/fit-yc-copy-$GITHUB_RUN_ID.env"
