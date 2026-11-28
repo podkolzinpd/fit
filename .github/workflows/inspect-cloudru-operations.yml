@@ -5,7 +5,7 @@ on:
       phase:
         type: choice
         default: inventory
-        options: [inventory, connectivity]
+        options: [inventory, connectivity, export, database, media, restore, runtime, verify, inspect-target]
 permissions:
   contents: read
 concurrency:
@@ -15,7 +15,7 @@ jobs:
   copy:
     if: github.ref == 'refs/heads/codex/fit-yc-copy-20261128'
     runs-on: [self-hosted, cloudru-stage]
-    timeout-minutes: 15
+    timeout-minutes: 40
     steps:
       - uses: actions/checkout@v4
         with:
@@ -24,4 +24,10 @@ jobs:
         env:
           COPY_PHASE: ${{ inputs.phase }}
           COPY_SSH_PRIVATE_KEY: ${{ secrets.FIT_YC_COPY_SSH_KEY }}
-        run: bash scripts/fit-yc-copy-source.sh
+          COPY_CONFIG_JSON: ${{ secrets.FIT_YC_COPY_CONFIG_JSON }}
+          SOURCE_DATABASE_CONFIG_JSON: ${{ secrets.CLOUDRU_STAGE_DATABASE_CONFIG_JSON }}
+        run: |
+          case "$COPY_PHASE" in
+            inventory|connectivity) bash scripts/fit-yc-copy-source.sh ;;
+            *) bash scripts/fit-yc-copy-transfer.sh ;;
+          esac
