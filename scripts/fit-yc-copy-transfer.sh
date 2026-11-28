@@ -56,7 +56,7 @@ elif test "$phase" = source-code; then
   revision=$(cat /opt/fit/RUNNING_SHA)
   [[ "$revision" =~ ^[a-f0-9]{40}$ ]]
   remote "sudo install -d -m 755 /opt/fit/source/$revision"
-  GH_TOKEN="$COPY_REPOSITORY_TOKEN" gh api "repos/podkolzinpd/fit/tarball/$revision" | remote "sudo tar -xz -C /opt/fit/source/$revision --strip-components=1"
+  curl --fail --silent --show-error --location -H "Authorization: Bearer $COPY_REPOSITORY_TOKEN" -H "Accept: application/vnd.github+json" "https://api.github.com/repos/podkolzinpd/fit/tarball/$revision" | remote "sudo tar -xz -C /opt/fit/source/$revision --strip-components=1"
   printf 'source_code_copied_revision=%s\n' "$revision"
 else
   remote "sudo bash /opt/fit-copy/fit-yc-copy-target.sh '$phase'"
