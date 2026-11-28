@@ -62,6 +62,7 @@ server {{
         proxy_ssl_server_name on;
         proxy_ssl_name {host};
         proxy_ssl_verify on;
+        proxy_ssl_verify_depth 4;
         proxy_ssl_trusted_certificate /etc/ssl/certs/ca-certificates.crt;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;

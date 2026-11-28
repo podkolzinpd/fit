@@ -61,7 +61,11 @@ NODE
     sudo python3 scripts/fit-yc-cutover-nginx.py forward
     sudo nginx -t
     sudo systemctl reload nginx
-    curl -fsS --max-time 15 --resolve fit-training.ru:443:127.0.0.1 https://fit-training.ru/api/ready >/dev/null
+    for n in $(seq 1 15);do
+      if curl -fsS --max-time 15 --resolve fit-training.ru:443:127.0.0.1 https://fit-training.ru/api/ready >/dev/null;then break;fi
+      test "$n" -lt 15
+      sleep 1
+    done
     curl -fsS --max-time 15 --resolve api.fit-training.ru:443:127.0.0.1 https://api.fit-training.ru/health | jq -e '.releaseId=="2874d3dfbe7ed9f2bb6ee670d47c2df48192df83"' >/dev/null
     echo 'old_public_ip_now_proxies_only_yandex_cloud=true'
     ;;
