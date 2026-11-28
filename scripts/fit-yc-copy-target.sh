@@ -104,7 +104,7 @@ PY_COMPARE
     podman run --rm --read-only --network host --env-file /opt/fit/secrets/api.env "localhost/fit-api:$revision" node --input-type=module -e '
       import {programModelJson} from "/app/dist/assistant-orchestrator/program/model.js";
       try{const value=await programModelJson({instruction:"Return the JSON object {\"ok\":true}.",data:{},schema:{type:"object",additionalProperties:false,required:["ok"],properties:{ok:{type:"boolean"}}},functionName:"fit-copy-synthetic-smoke",operationId:"standby-synthetic-smoke",maxTokens:20,timeoutMs:20000});if(value?.ok!==true)throw Error("invalid_result");console.log(JSON.stringify({event:"target_ai_smoke_passed"}));}catch(e){console.log(JSON.stringify({event:"target_ai_smoke_failed",reason:/^program_model_http_[1-5][0-9]{2}$/.test(e.message)?e.message:"request"}));process.exitCode=1;}'
-    timeout 10 openssl s_client -connect 127.0.0.1:5349 -servername api.fit-training.ru -verify_hostname api.fit-training.ru -verify_return_error </dev/null >/dev/null 2>&1
+    timeout 10 openssl s_client -connect 10.128.0.11:5349 -servername api.fit-training.ru -verify_hostname api.fit-training.ru -verify_return_error </dev/null >/dev/null 2>&1
     echo 'turn_tls_verified=true'
     systemctl is-active fit-api fit-frontend-stage fit-speechkit fit-jitsi nginx coturn fit-background.timer
     test ! -e /opt/fit-copy/ENABLE_BACKGROUND_DELIVERY
