@@ -5,7 +5,7 @@ on:
       phase:
         type: choice
         default: inventory
-        options: [inventory, connectivity, export, database, media, restore, runtime, verify, inspect-target, source-code, certificates, assets, acceptance, configure, finalize, validate, datalens]
+        options: [inventory, connectivity, export, database, media, restore, runtime, verify, inspect-target, source-code, certificates, assets, acceptance, configure, finalize, validate, datalens, reboot-check]
 permissions:
   contents: read
 concurrency:
