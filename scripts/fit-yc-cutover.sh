@@ -91,5 +91,24 @@ PY
     test "$(sudo systemctl is-enabled fit-background.timer)" = disabled
     remote 'set -e; sudo test -e /opt/fit-copy/cutover-20261128/SYNC_VERIFIED; for h in fit-training.ru www.fit-training.ru api.fit-training.ru;do test "$(getent ahostsv4 "$h" | awk "{print \$1}" | sort -u)" = 89.169.148.38;done; sudo touch /opt/fit-copy/ENABLE_BACKGROUND_DELIVERY; sudo systemctl enable --now fit-background.timer certbot.timer; sudo systemctl start fit-background.service; test "$(sudo systemctl show fit-background.service -p Result --value)" = success; sudo systemctl is-active --quiet fit-background.timer; sudo systemctl is-active --quiet certbot.timer; echo target_background_and_certbot_active=true'
     ;;
+  cutover-seal)
+    sudo test -e /opt/fit-cutover/TARGET_WRITES_ENABLED
+    test "$(sudo podman inspect fit-api-stage --format '{{.State.Running}}')" = false
+    test "$(sudo systemctl is-enabled fit-background.timer)" = disabled
+    remote 'sudo python3 -' <<'PY'
+import json,subprocess
+from pathlib import Path
+for name in ['fit-api','fit-frontend-stage','fit-speechkit','fit-jitsi','nginx','coturn','fit-background.timer','certbot.timer']:
+    subprocess.run(['systemctl','is-active','--quiet',name],check=True)
+assert Path('/opt/fit-copy/ENABLE_BACKGROUND_DELIVERY').exists()
+config=Path('/opt/fit-copy/target.json')
+c=json.loads(config.read_text())
+assert c['folder']=='b1gt7dfqg9sht9slnno5' and c['vm_id']=='fhm0ju8244ctffsq4lvd'
+c.update(mode='production',cutover_authorized=True)
+config.write_text(json.dumps(c));config.chmod(0o600)
+Path('/opt/fit-copy/PRODUCTION_ACTIVE').touch(mode=0o600)
+print(json.dumps({'event':'production_sealed','standby_refresh_disabled':True,'activeUnits':8}))
+PY
+    ;;
   *) exit 2;;
 esac

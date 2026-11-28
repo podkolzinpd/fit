@@ -15,6 +15,9 @@ cleanup(){ rm -f -- "$private" "$envfile"; }
 trap cleanup EXIT
 ssh_options=(-i "$private" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o "UserKnownHostsFile=$PWD/scripts/fit-yc-copy-known-hosts" -o ConnectTimeout=15 -o ServerAliveInterval=15)
 remote(){ ssh "${ssh_options[@]}" deploy@89.169.148.38 "$@"; }
+if test "$phase" != inspect-target;then
+  remote 'sudo test ! -e /opt/fit-copy/PRODUCTION_ACTIVE'
+fi
 remote 'sudo install -d -m 700 /opt/fit-copy; test -f /var/lib/fit-copy-bootstrap-ready'
 printf '%s' "$COPY_CONFIG_JSON" | remote 'sudo sh -c "umask 077; cat > /opt/fit-copy/target.json"'
 tar -cf - scripts/fit-yc-copy-target.sh scripts/fit-yc-copy-verify.mjs scripts/fit-yc-copy-runtime.py scripts/fit-yc-copy-background.mjs | remote 'sudo tar -xf - -C /opt/fit-copy --strip-components=1'

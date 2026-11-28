@@ -5,7 +5,7 @@ on:
       phase:
         type: choice
         default: inventory
-        options: [inventory, connectivity, export, database, media, restore, runtime, verify, inspect-target, source-code, certificates, assets, acceptance, configure, finalize, validate, datalens, reboot-check, boot-check, cutover-preflight, cutover-sync, cutover-forward, cutover-activate, cutover-abort-before-writes]
+        options: [inventory, connectivity, export, database, media, restore, runtime, verify, inspect-target, source-code, certificates, assets, acceptance, configure, finalize, validate, datalens, reboot-check, boot-check, cutover-preflight, cutover-sync, cutover-forward, cutover-activate, cutover-seal, cutover-abort-before-writes]
 permissions:
   contents: read
 concurrency:
