@@ -51,3 +51,18 @@ DNS, source writes и боевой background не переключаются. �
 Перед будущим cutover обязательно обновить snapshot/media после согласованной
 паузы единственного writer и сверить rollback checkpoint. Текущая standby-копия
 не является непрерывной репликой изменяемой production-базы.
+
+## Итерация 2 — 28.11.2026 — Codex / OpenAI
+
+Runtime-файлы, Android OTA и все шесть действующих container images переданы
+успешно46151620105. DB snapshot17:03:37МСК:113таблиц,134053строки;
+SHA256dump source/target одинаковый1f6fbcdd4c839e9246f6be0c4f6fd542a92078840634cae11a782cd329036a08.
+Restore46152733405 успешен. Первая сверка46152790732 подтвердила все таблицы
+по числу строк и digest, затем остановилась на ошибочном ожидании прямого
+UPDATE уfit_api. Миграция000008 явно оставляет толькоSELECT и защищённыеRPC.
+Исправлено ожидание проверки; права в target не расширялись.
+
+PG extensions pgaudit/pg_stat_statements включены через managed API, pgaudit
+shared library подключена. Внешний IP89.169.148.38 зарезервирован и защищён.
+AI/SpeechKit credentials созданы в target folder с двумя точными execute scopes;
+прежний OAuth clientfdc7e12c472b475690fbb387d8698663 остаётся прежним.
