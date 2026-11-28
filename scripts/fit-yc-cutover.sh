@@ -65,6 +65,22 @@ NODE
     curl -fsS --max-time 15 --resolve api.fit-training.ru:443:127.0.0.1 https://api.fit-training.ru/health | jq -e '.releaseId=="2874d3dfbe7ed9f2bb6ee670d47c2df48192df83"' >/dev/null
     echo 'old_public_ip_now_proxies_only_yandex_cloud=true'
     ;;
+  cutover-abort-before-writes)
+    sudo test ! -e /opt/fit-cutover/TARGET_WRITES_ENABLED
+    sudo python3 - <<'PY'
+import json,shutil
+from pathlib import Path
+for x in json.loads(Path('/opt/fit-cutover/ingress-files.json').read_text()):
+    shutil.copyfile(x['backup'],x['path'])
+PY
+    sudo nginx -t
+    sudo systemctl reload nginx
+    sudo podman start fit-api-stage >/dev/null
+    sudo touch /opt/fit-cutover/ALLOW_SOURCE_WRITES
+    sudo systemctl enable --now fit-background.timer certbot.timer
+    sudo systemctl start fit-speechkit.service
+    echo 'source_restored_before_any_target_writes=true'
+    ;;
   cutover-activate)
     sudo test -e /opt/fit-cutover/TARGET_WRITES_ENABLED
     test "$(sudo podman inspect fit-api-stage --format '{{.State.Running}}')" = false

@@ -2,6 +2,8 @@ import {request} from 'node:https';
 import {lookup} from 'node:dns/promises';
 const expected='2874d3dfbe7ed9f2bb6ee670d47c2df48192df83';
 const address='89.169.148.38';
+const mode=process.argv[2]??'standby';
+if(!['standby','production'].includes(mode))throw Error('acceptance_mode_rejected');
 const cases=[['fit-training.ru','/auth',200],['www.fit-training.ru','/auth',200],['api.fit-training.ru','/health',200],['api.fit-training.ru','/ready',200],['api.fit-training.ru','/v1/clients',401],['api.fit-training.ru','/v1/trainers/catalog',200],['fit-training.ru','/api/health',200],['fit-training.ru','/api/ready',200],['fit-training.ru','/api/v1/clients',401],['api.fit-training.ru','/libs/lib-jitsi-meet.min.js',200]];
 const probe=(host,path,status)=>new Promise(resolve=>{
  let done=false;const finish=x=>{if(!done){done=true;clearTimeout(timer);resolve(x);}};
@@ -16,7 +18,8 @@ const probe=(host,path,status)=>new Promise(resolve=>{
  const timer=setTimeout(()=>req.destroy(),15000);req.on('error',()=>finish({host,path,passed:false,error:'request'}));req.end();
 });
 const checks=await Promise.all(cases.map(x=>probe(...x)));
-const dns=[];for(const host of ['fit-training.ru','www.fit-training.ru','api.fit-training.ru']){const addresses=[...new Set((await lookup(host,{all:true})).map(x=>x.address))].sort();dns.push({host,addresses,sourcePreserved:addresses.length===1&&addresses[0]==='87.242.117.210'});}
-const passed=checks.every(x=>x.passed)&&dns.every(x=>x.sourcePreserved);
-console.log(JSON.stringify({event:'standby_public_acceptance',target:address,checkedAt:new Date().toISOString(),passed,checks,dns}));
+const expectedAddress=mode==='standby'?'87.242.117.210':address;
+const dns=[];for(const host of ['fit-training.ru','www.fit-training.ru','api.fit-training.ru']){const addresses=[...new Set((await lookup(host,{all:true})).map(x=>x.address))].sort();dns.push({host,addresses,passed:addresses.length===1&&addresses[0]===expectedAddress});}
+const passed=checks.every(x=>x.passed)&&dns.every(x=>x.passed);
+console.log(JSON.stringify({event:mode+'_public_acceptance',target:address,checkedAt:new Date().toISOString(),passed,checks,dns}));
 if(!passed)process.exitCode=1;
