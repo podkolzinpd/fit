@@ -1,5 +1,9 @@
 # Полная копия Fit в Yandex Cloud — 28.11.2026
 
+**Итог: standby подготовлен и принят.** Рабочий DNS остаётся на Cloud.ru;
+cutover разрешается только отдельной командой владельца. Приёмка46154567520,
+DataLens46154687472, после перезагрузки46155103326 — success.
+
 Поручение владельца: полностью скопировать действующий Fit, включая БД,
 архитектуру с ВМ и остальные сервисы, в каталог `b1gt7dfqg9sht9slnno5`.
 Владелец отдельно подтвердил автономное выполнение всей задачи.
@@ -98,3 +102,35 @@ renewal state копируется, но timer выключен доcutover, ч�
 HTTP-01 challenges против DNS, который всё ещё указывает наsource.
 DataLens proxy сохраняет точный allowlist, upstream меняется только наtargetPG;
 действующие DataLens connections не переключаются.
+
+## Итерация 4 — 28.11.2026 — Codex / OpenAI
+
+Архив исходногоmain прочитан обратно из приватного Yandex Storage и извлечён
+в target; его SHA256 совпал. Опубликованный frontend248/248 совпал побайтно,
+source/target locale C/C, timezoneUTC. SQL data digest, RLS и grants прежние.
+
+Полная приёмка46154567520 успешна:10/10 HTTPS-проверок с принудительным
+targetIP при прежних hostnames; API release2874d3df,401 безсессии, ready200,
+publiccatalog200, JitsiSDK200. SpeechKit upstream и authguard, targetAI,
+TURN/TLS успешны. Source DNS всех трёх имён сохранился87.242.117.210.
+
+Предыдущие два замечания приёмки исправлены по фактической конфигурации:
+TURN слушает privateIP, поэтому проверка направлена на10.128.0.11 вместо
+loopback. API получил исходные container flags APP_ENV,PORT,FIT_RELEASE_ID;
+это параметры запуска исходного release workflow, не новое приложение.
+
+DataLens46154687472: TLS через55432, fit_datalens, read-only запрос к
+analytics.trainer_overview успешен; certbot timer выключен доcutover.
+
+Перезагружена только targetVM. Смена bootID подтверждена46154832329;
+независимая строгая проверка46155103326 подтвердила каждый из7units и6containers,
+HTTPS/DB readiness/release и TURN/TLS. Проверка не полагается на агрегатный
+systemctl is-active нескольких units, который успешен при любом активном.
+
+Оригинальный source main и production release остались2874d3df. Existing media
+bucket fit-chat-media-b1gt7dfq сохранён; оба новых bucket находятся в точном
+folderb1gt7dfqg9sht9slnno5. Секретные значения в git/отчёты не включались.
+
+Граница приёмки: реальные OAuth/device/media-call проверки после смены DNS
+не выполнялись. Перед cutover нужны свежий snapshot, writer control и перенос
+CI/CD/внешних подключений; source продолжает принимать новые данные.
