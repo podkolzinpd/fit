@@ -96,6 +96,14 @@ if mount not in content:
     content = content.replace('--env-file /opt/fit/secrets/speech.env ', mount + '--env-file /opt/fit/secrets/speech.env ')
 write(launcher, content, 0o755)
 
+background_launcher = Path('/usr/local/libexec/fit-cloudru-background')
+background_content = background_launcher.read_text()
+background_mount = '--mount type=bind,source=/opt/fit-copy/fit-yc-copy-background.mjs,target=/copy-background.mjs,ro=true '
+if background_mount not in background_content:
+    background_content = background_content.replace('--env-file /opt/fit/secrets/background.env ', background_mount + '--env-file /opt/fit/secrets/background.env ')
+background_content = background_content.replace('node dist/cloudru-background-worker.js', 'node /copy-background.mjs')
+write(background_launcher, background_content, 0o755)
+(root / 'fit-yc-copy-background.mjs').chmod(0o644)
 # Retain the copied background schedule while preventing duplicate production deliveries.
 write('/etc/systemd/system/fit-background.service.d/copy-isolation.conf',
       '[Unit]\nConditionPathExists=/opt/fit-copy/ENABLE_BACKGROUND_DELIVERY\n', 0o644)
