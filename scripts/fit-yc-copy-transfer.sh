@@ -46,6 +46,13 @@ elif test "$phase" = media; then
   revision=$(cat /opt/fit/RUNNING_SHA)
   sudo podman run --rm --read-only --memory=512m --cpus=0.5 --cap-drop=ALL --security-opt=no-new-privileges --env-file /opt/fit/secrets/api.env --env-file "$envfile" -v "$PWD/scripts/fit-yc-copy-media.mjs:/copy-media.mjs:ro" "localhost/fit-api:$revision" node /copy-media.mjs
 elif test "$phase" = acceptance; then
+  sudo podman exec -i fit-api-stage node --input-type=module <<'NODE_META' | remote 'sudo sh -c "umask 077; cat > /opt/fit-copy/source-metadata.json"'
+import {buildDatabaseConnectionConfig} from '/app/dist/db/connection-config.js';
+import {createRequire} from 'node:module';
+const {Client}=createRequire('/app/package.json')('pg');
+const client=new Client({...buildDatabaseConnectionConfig('DATABASE'),connectionTimeoutMillis:5000,query_timeout:5000});
+try{await client.connect();console.log(JSON.stringify((await client.query("select datcollate,datctype,current_setting('server_version') version,current_setting('timezone') timezone from pg_database where datname=current_database()" )).rows[0]));}finally{await client.end();}
+NODE_META
   sudo python3 - <<'PY_FRONTEND' | remote 'sudo sh -c "umask 077; cat > /opt/fit-copy/frontend-manifest.json"'
 import json,hashlib,pathlib
 root=pathlib.Path('/opt/fit/frontend/current').resolve()

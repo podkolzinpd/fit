@@ -18,10 +18,13 @@ try{
  }
  const security=(await client.query("select c.relname,c.relrowsecurity,c.relforcerowsecurity,pg_get_userbyid(c.relowner) owner from pg_class c join pg_namespace n on n.oid=c.relnamespace where n.nspname='public' and c.relname in ('profiles','workouts','workout_sets') order by 1")).rows;
  if(security.length!==3||security.some(x=>!x.relrowsecurity||x.owner!=='fit_owner')) throw Error('security_mismatch');
+ const locale=(await client.query("select datcollate,datctype,current_setting('server_version') version,current_setting('timezone') timezone from pg_database where datname=current_database()")).rows[0];
+ let sourceLocale;try{sourceLocale=JSON.parse(await readFile('/copy/source-metadata.json','utf8'));}catch(e){if(e.code!=='ENOENT')throw e;}
+ if(sourceLocale&&(sourceLocale.datcollate!==locale.datcollate||sourceLocale.datctype!==locale.datctype)){console.log(JSON.stringify({event:'database_locale_comparison',source:sourceLocale,target:locale}));throw Error('locale_mismatch');}
  const grants=(await client.query("select has_table_privilege('fit_api','public.workouts','select') can_read,has_table_privilege('fit_api','public.workouts','update') can_update")).rows[0];
  // Source migration 000008 deliberately denies direct UPDATE; mutations use secured RPCs.
  if(!grants.can_read||grants.can_update) throw Error('grants_mismatch');
  await client.query('rollback');
- console.log(JSON.stringify({event:'database_copy_verified',tables:manifest.tables.length,rows,sha256:createHash('sha256').update(hashes.join('\n')).digest('hex'),rlsTables:security,grants}));
-}catch(e){console.log(JSON.stringify({event:'database_copy_verification_failed',code:/^[A-Z0-9]{5}$/.test(e.code??'')?e.code:'unknown',stage:['table_mismatch','security_mismatch','grants_mismatch'].includes(e.message)?e.message:'query'}));process.exitCode=1;}
+ console.log(JSON.stringify({event:'database_copy_verified',tables:manifest.tables.length,rows,sha256:createHash('sha256').update(hashes.join('\n')).digest('hex'),rlsTables:security,grants,locale}));
+}catch(e){console.log(JSON.stringify({event:'database_copy_verification_failed',code:/^[A-Z0-9]{5}$/.test(e.code??'')?e.code:'unknown',stage:['table_mismatch','security_mismatch','grants_mismatch','locale_mismatch'].includes(e.message)?e.message:'query'}));process.exitCode=1;}
 finally{await client.end();}
