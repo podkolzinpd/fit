@@ -155,3 +155,73 @@ targetIP возвращает ready и правильный release. Все тр
 к DNS source writes/background и publicDNS не меняются, downtime не начинается.
 Следующий шаг: обычный вход владельца в Cloud.ru, проверка точной зоны,
 подготовка синхронизации/единственного writer и production release маршрута.
+
+## Итерация 6 — 28.11.2026 — Codex / OpenAI — production cutover
+
+Владелец вошёл в Cloud.ru и подтвердил продолжение. Дополнительно уточнил:
+нужно полностью отказаться от Cloud.ru, включая authoritative DNS, а смену NS
+в Beget выполнит владелец регистрационного аккаунта по подготовленному тексту.
+Решение YC-PROD-20261128 заменяет standby-only границу этой задачи.
+
+Автовыкладки Cloud.ru API/frontend/stage и Android OTA приостановлены точными
+GitHub variables. Source background timer отключён, дополнительное условие
+запрещает его запуск без ALLOW_SOURCE_WRITES. Source API явно остановлен при
+прежнем unless-stopped, speech и source certbot timer остановлены. Старая БД
+не удалялась, её credentials и исторические backups сохранены.
+
+Свежий консистентный snapshot20:42МСК:113таблиц/134056строк, dumpSHA256
+1075699cc504964a6fdaf37e9187cb3ba83b3c17dbbafc6484434b7e7d264617
+совпал source/target. Standby до замены сохранён отдельным private dump.
+Транзакционный clean restore и полная сверка всех таблиц успешны46171886752;
+общий data digest1a8955d0b0d0abc16f401947cc9a4bd19c7f2538f1f868041c1f1f80e2766060.
+RLS/owner/select-only fit_api и localeC/C сохранены. Media2326/89311624
+повторно прочитаны с проверкой каждого SHA256, прежний общий manifest совпал.
+Target API поднят после завершения переноса; QA-карточка из standby заменена
+истинным source snapshot, её данные в production не переносились.
+
+Неуспешные попытки:46171673358 остановился на неподдерживаемом Podman update
+--restart до остановки API; команда удалена, используется прежний unless-stopped.
+46171745093 остановился на DB preflight; точная причина первого DB исключения
+не установлена. Добавлен drain сохранённых pool backends и безопасный SQLSTATE;
+следующий run восстановил и сверил БД успешно. Проверки не отключались.
+
+Source HTTPS ingress заменён только для Fit на TLS-verifying reverse proxy
+к89.169.148.38, включая WebSocket/uploads. При первом включении обнаружена
+недостаточная глубина проверки цепочки сертификата; verify_depth4 и ожидание
+reload исправили маршрут.46172357279 успешно проверил старый IP с остановленным
+source API. Обслуживание было временно прервано примерно20:40–20:48МСК.
+После TARGET_WRITES_ENABLED обратный DNS switch без переноса новых данных
+запрещён; это не обратимая смена старого snapshot на текущую production БД.
+
+В Cloud.ru DNS zonec3700123-0613-4865-bb80-1c6b9affeb47 через UI изменены
+три A-записи @/www/api на89.169.148.38 с прежнимTTL300. Read-back UI и прямые
+ответы обоих Cloud.ru authority подтвердили изменение. Первоначальный
+auto-review rejection из-за502/503 разрешён после успешной независимой проверки
+обоих IP; смена DNS проведена только после восстановления доступности.
+
+Public acceptance20:51МСК:10/10HTTPS/API/401/JitsiSDK и DNS трёх доменов
+успешны. Native PG backup завершён20:47:19МСК:
+c9q5ic9v0500c217e71n:mdbgc1e5ncmgja10he9i,25207923bytes.
+46172570933 включил только target background и certbot, подтвердив source
+API stopped и source timer disabled.46172750379 проверил8activeunits,
+перевёл private target config в production и установил PRODUCTION_ACTIVE.
+Старые standby export/restore/configure теперь fail-closed до любых remote
+config writes, чтобы случайно не перезаписать действующую production.
+
+Создана защищённая public DNS zone dnsanhiqgd4ljgoh8msg в точном target folder.
+Все13recordsets из исходной зоны сохранены по назначению: новые authority
+NS/SOA, триAна89.169.148.38, исходныеCNAME/MX/TXT и TTL. Прямые ответы
+ns1.yandexcloud.net/ns2.yandexcloud.net и list-records проверены, почтовые
+MX/SPF Beget сохранены. Делегация у Beget пока evo-cns01/evo-cns02.cloud.ru;
+владельцу передан текст заменить их наns1.yandexcloud.net/ns2.yandexcloud.net.
+
+Открыто: полный shutdown Cloud.ru НЕ выполнен. Текущий gh-доступ имеет push,
+admin=false; управление repository runners возвращает403. Поэтому перенос
+release/ops runner, scheduled host-monitor export и эксплуатационных jobs
+ещё не завершён. Не менять архитектуру выпуска ради обхода GitHub ACL.
+Нужен администратор podkolzinpd/fit для регистрации нового runner. Остаются
+проверка внешних DataLens/старых IP consumers, сохранение нужных старых backup
+archives, полная authenticated OAuth/workout/media/voice/AI приёмка и окно
+отката. Cloud.ru compute/DB/storage/DNS нельзя удалять до закрытия этих пунктов.
+Следующий шаг: смена NS владельцем Beget параллельно подготовке нового runner,
+дальше перенос/проверка эксплуатационных jobs и контролируемый вывод source.

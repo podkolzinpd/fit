@@ -67,7 +67,7 @@
   механики проверяется действием, не числом постоянно видимых контролов.
 - Не удалять legacy migrations, шрифты/fallback и rollback по возрасту:
   потребители и отдельное решение о выводе проверяются в соответствующей области.
-- Production — Cloud.ru, внешний вход — Yandex ID; Vercel выводится из эксплуатации,
+- Production — Yandex Cloud с28.11, внешний вход — прежний Yandex ID; [переход и остатки](design/YANDEX_CLOUD_FULL_COPY_20261128.md). Vercel выводится из эксплуатации,
   Supabase только ограниченный legacy. Локально — Podman, новые миграции —
   services/api/db/migrations. Детали и запреты данных — ENGINEERING_RULES/playbook.
 
