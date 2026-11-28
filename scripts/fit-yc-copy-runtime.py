@@ -11,7 +11,8 @@ web, api = c['domain'], c['api_domain']
 assert c['mode'] == 'standby' and c['cutover_authorized'] is False
 assert web == 'fit-training.ru' and api == 'api.fit-training.ru'
 replacements = [('87.242.117.210', c['vm_ip']),
-                ('10.70.10.4', c['vm_private_ip'])]
+                ('10.70.10.4', c['vm_private_ip']),
+                ('10.70.10.67:5432', c['db_host'] + ':6432')]
 
 def adapt(value):
     for old, new in replacements:
@@ -126,24 +127,8 @@ TimeoutStopSec=20
 WantedBy=multi-user.target
 ''', 0o644)
 
-# Keep the original public HTTP routes and meeting proxy. The old DataLens endpoint
-# is retained as a config copy and is not exposed using the source's TLS identity.
-write('/etc/nginx/fit-copy.conf', '''user www-data;
-worker_processes auto;
-pid /run/nginx.pid;
-events { worker_connections 768; }
-http {
- include /etc/nginx/mime.types;
- default_type application/octet-stream;
- sendfile on;
- tcp_nopush on;
- access_log /var/log/nginx/access.log;
- error_log /var/log/nginx/error.log warn;
- include /opt/fit-jitsi/nginx-origins.conf;
- include /etc/nginx/sites-available/fit-public-api;
- include /etc/nginx/sites-available/fit-public-web;
-}
-''', 0o644)
+# Preserve the complete original web/API/meeting and restricted DataLens proxy config.
+write('/etc/nginx/fit-copy.conf', Path('/etc/nginx/nginx.conf').read_text(), 0o644)
 write('/etc/systemd/system/nginx.service.d/fit-copy.conf', '''[Service]
 ExecStartPre=
 ExecStartPre=/usr/sbin/nginx -t -c /etc/nginx/fit-copy.conf

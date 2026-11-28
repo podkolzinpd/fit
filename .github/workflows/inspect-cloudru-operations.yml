@@ -5,7 +5,7 @@ on:
       phase:
         type: choice
         default: inventory
-        options: [inventory, connectivity, export, database, media, restore, runtime, verify, inspect-target, source-code, certificates, assets, acceptance]
+        options: [inventory, connectivity, export, database, media, restore, runtime, verify, inspect-target, source-code, certificates, assets, acceptance, configure, finalize]
 permissions:
   contents: read
 concurrency:
@@ -31,5 +31,6 @@ jobs:
           case "$COPY_PHASE" in
             inventory|connectivity) bash scripts/fit-yc-copy-source.sh ;;
             assets) for phase in media source-code certificates;do COPY_PHASE="$phase" bash scripts/fit-yc-copy-transfer.sh;done ;;
+            finalize) for phase in certificates configure acceptance;do COPY_PHASE="$phase" bash scripts/fit-yc-copy-transfer.sh;done ;;
             *) bash scripts/fit-yc-copy-transfer.sh ;;
           esac

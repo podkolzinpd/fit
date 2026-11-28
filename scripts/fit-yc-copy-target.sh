@@ -43,10 +43,12 @@ PY_LIST
     revision=$(cat /opt/fit/RUNNING_SHA)
     podman run --rm --read-only --user 0 --network host --env-file /opt/fit/secrets/copy-owner.env -v /opt/fit-copy:/copy "localhost/fit-api:$revision" node /copy/fit-yc-copy-verify.mjs
     ;;
-  runtime)
+  runtime|configure)
     test -e /opt/fit-copy/DATABASE_RESTORED
-    test ! -e /opt/fit-copy/RUNTIME_STARTED
+    if test "$1" = runtime;then test ! -e /opt/fit-copy/RUNTIME_STARTED;fi
     python3 /opt/fit-copy/fit-yc-copy-runtime.py
+    if ! test -f /usr/lib/nginx/modules/ngx_stream_module.so;then apt-get update -qq; DEBIAN_FRONTEND=noninteractive apt-get install -y libnginx-mod-stream >/dev/null;fi
+    systemctl disable --now certbot.timer
     systemctl stop nginx
     web=$(python3 -c 'import json;print(json.load(open("/opt/fit-copy/target.json"))["domain"])')
     api=$(python3 -c 'import json;print(json.load(open("/opt/fit-copy/target.json"))["api_domain"])')

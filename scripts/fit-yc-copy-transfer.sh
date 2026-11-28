@@ -4,7 +4,7 @@ test "$GITHUB_REPOSITORY" = podkolzinpd/fit
 test "$GITHUB_REF" = refs/heads/codex/fit-yc-copy-20261128
 test "$(hostname)" = fit-stage-app
 phase=${COPY_PHASE:?}
-case "$phase" in export|database|media|restore|runtime|verify|inspect-target|source-code|certificates|acceptance) ;; *) exit 2;; esac
+case "$phase" in export|database|media|restore|runtime|verify|inspect-target|source-code|certificates|acceptance|configure) ;; *) exit 2;; esac
 jq -e '.folder=="b1gt7dfqg9sht9slnno5" and .vm_ip=="89.169.148.38" and .db_id=="c9q5ic9v0500c217e71n"' <<<"$COPY_CONFIG_JSON" >/dev/null
 private="$RUNNER_TEMP/fit-yc-copy-$GITHUB_RUN_ID.key"
 envfile="$RUNNER_TEMP/fit-yc-copy-$GITHUB_RUN_ID.env"
@@ -62,11 +62,9 @@ PY_FRONTEND
   revision=$(cat /opt/fit/RUNNING_SHA)
   sudo podman run --rm --read-only --memory=256m --cpus=0.5 --cap-drop=ALL --security-opt=no-new-privileges -v "$PWD/scripts/fit-yc-copy-acceptance.mjs:/copy-acceptance.mjs:ro" "localhost/fit-api:$revision" node /copy-acceptance.mjs
 elif test "$phase" = certificates; then
-  paths=()
-  for domain in fit-training.ru api.fit-training.ru;do
-    for file in fullchain.pem privkey.pem cert.pem chain.pem;do paths+=("/etc/letsencrypt/live/$domain/$file");done
-  done
-  sudo rsync -aRL --rsync-path='sudo rsync' -e "ssh -i $private -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile=$PWD/scripts/fit-yc-copy-known-hosts" "${paths[@]}" deploy@89.169.148.38:/
+  # Preserve the complete existing renewal state, without enabling it before cutover.
+  sudo rsync -aR --rsync-path='sudo rsync' -e "ssh -i $private -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile=$PWD/scripts/fit-yc-copy-known-hosts" /etc/letsencrypt deploy@89.169.148.38:/
+  remote 'sudo systemctl disable --now certbot.timer'
   echo 'existing_domain_tls_copied_without_dns_changes=true'
 elif test "$phase" = source-code; then
   revision=$(cat /opt/fit/RUNNING_SHA)
