@@ -50,14 +50,12 @@ PY_LIST
     systemctl stop nginx
     web=$(python3 -c 'import json;print(json.load(open("/opt/fit-copy/target.json"))["domain"])')
     api=$(python3 -c 'import json;print(json.load(open("/opt/fit-copy/target.json"))["api_domain"])')
-    if ! test -f "/etc/letsencrypt/live/$web/fullchain.pem"; then
-      if ! certbot certonly --standalone --non-interactive --agree-tos --register-unsafely-without-email --cert-name "$web" -d "$web" -d "$api" >/opt/fit-copy/certbot-private.log 2>&1; then
-        echo 'certificate_issuance_failed';exit 1
-      fi
-    fi
-    if ! test -e "/etc/letsencrypt/live/$api"; then ln -s "$web" "/etc/letsencrypt/live/$api";fi
+    test -s "/etc/letsencrypt/live/$web/fullchain.pem"
+    test -s "/etc/letsencrypt/live/$api/fullchain.pem"
+    openssl x509 -noout -checkend 86400 -in "/etc/letsencrypt/live/$web/fullchain.pem" >/dev/null
+    openssl x509 -noout -checkend 86400 -in "/etc/letsencrypt/live/$api/fullchain.pem" >/dev/null
     install -d -m 750 -o root -g turnserver /etc/fit-jitsi
-    for file in fullchain.pem privkey.pem;do install -m 640 -o root -g turnserver "/etc/letsencrypt/live/$web/$file" "/etc/fit-jitsi/$file";done
+    for file in fullchain.pem privkey.pem;do install -m 640 -o root -g turnserver "/etc/letsencrypt/live/$api/$file" "/etc/fit-jitsi/$file";done
     systemctl daemon-reload
     nginx -t -c /etc/nginx/fit-copy.conf
     systemctl enable --now fit-api.service fit-frontend-stage.service fit-speechkit.service fit-jitsi.service
@@ -68,9 +66,9 @@ PY_LIST
       test "$attempt" -lt 30
       sleep 2
     done
-    curl -fsS --max-time 10 "https://$web/api/ready" >/dev/null
-    curl -fsS --max-time 10 "https://$api/libs/lib-jitsi-meet.min.js" >/dev/null
-    test "$(curl -sS --max-time 10 -H 'Origin: https://untrusted.invalid' -o /dev/null -w '%{http_code}' "https://$api/xmpp-websocket")" = 403
+    curl -fsS --max-time 10 --resolve "$web:443:127.0.0.1" "https://$web/api/ready" >/dev/null
+    curl -fsS --max-time 10 --resolve "$api:443:127.0.0.1" "https://$api/libs/lib-jitsi-meet.min.js" >/dev/null
+    test "$(curl -sS --max-time 10 --resolve "$api:443:127.0.0.1" -H 'Origin: https://untrusted.invalid' -o /dev/null -w '%{http_code}' "https://$api/xmpp-websocket")" = 403
     systemctl is-active fit-api fit-frontend-stage fit-speechkit fit-jitsi nginx coturn fit-background.timer
     touch /opt/fit-copy/RUNTIME_STARTED
     echo 'runtime_started_and_public_routes_verified=true'

@@ -8,8 +8,9 @@ c = json.loads((root / 'target.json').read_text())
 assert c['folder'] == 'b1gt7dfqg9sht9slnno5'
 assert c['vm_id'] == 'fhm0ju8244ctffsq4lvd'
 web, api = c['domain'], c['api_domain']
-replacements = [('www.fit-training.ru', web), ('api.fit-training.ru', api),
-                ('fit-training.ru', web), ('87.242.117.210', c['vm_ip']),
+assert c['mode'] == 'standby' and c['cutover_authorized'] is False
+assert web == 'fit-training.ru' and api == 'api.fit-training.ru'
+replacements = [('87.242.117.210', c['vm_ip']),
                 ('10.70.10.4', c['vm_private_ip'])]
 
 def adapt(value):
