@@ -47,17 +47,17 @@ elif test "$phase" = media; then
   sudo podman run --rm --read-only --memory=512m --cpus=0.5 --cap-drop=ALL --security-opt=no-new-privileges --env-file /opt/fit/secrets/api.env --env-file "$envfile" -v "$PWD/scripts/fit-yc-copy-media.mjs:/copy-media.mjs:ro" "localhost/fit-api:$revision" node /copy-media.mjs
 elif test "$phase" = reboot-check; then
   before=$(remote 'cat /proc/sys/kernel/random/boot_id')
-  remote 'test "$(curl -fsS --max-time 5 http://169.254.169.254/computeMetadata/v1/instance/id -H Metadata-Flavor:Google)" = fhm0ju8244ctffsq4lvd; sudo systemctl reboot' || test "$?" = 255
+  remote 'set -e; test "$(curl -fsS --max-time 5 http://169.254.169.254/computeMetadata/v1/instance/id -H Metadata-Flavor:Google)" = fhm0ju8244ctffsq4lvd; sudo systemctl reboot' || test "$?" = 255
   ready=false
   for attempt in $(seq 1 24);do
     sleep 10
-    if after=$(remote 'test -e /opt/fit-copy/RUNTIME_STARTED; systemctl is-active --quiet fit-api fit-frontend-stage fit-speechkit fit-jitsi nginx coturn fit-background.timer; test ! -e /opt/fit-copy/ENABLE_BACKGROUND_DELIVERY; curl -fsS --max-time 5 --resolve fit-training.ru:443:127.0.0.1 https://fit-training.ru/api/ready >/dev/null; cat /proc/sys/kernel/random/boot_id' 2>/dev/null);then
+    if after=$(remote 'set -e; test -e /opt/fit-copy/RUNTIME_STARTED; systemctl is-active --quiet fit-api fit-frontend-stage fit-speechkit fit-jitsi nginx coturn fit-background.timer; test ! -e /opt/fit-copy/ENABLE_BACKGROUND_DELIVERY; curl -fsS --max-time 5 --resolve fit-training.ru:443:127.0.0.1 https://fit-training.ru/api/ready >/dev/null; cat /proc/sys/kernel/random/boot_id' 2>/dev/null);then
       if test "$before" != "$after";then ready=true;break;fi
     fi
   done
   test "$ready" = true
   echo 'standby_reboot_services_and_readiness_verified=true'
-  remote 'test "$(systemctl is-enabled certbot.timer)" = disabled; test ! -e /opt/fit-copy/ENABLE_BACKGROUND_DELIVERY'
+  remote 'set -e; test "$(systemctl is-enabled certbot.timer)" = disabled; test ! -e /opt/fit-copy/ENABLE_BACKGROUND_DELIVERY'
 elif test "$phase" = acceptance; then
   sudo podman exec -i fit-api-stage node --input-type=module <<'NODE_META' | remote 'sudo sh -c "umask 077; cat > /opt/fit-copy/source-metadata.json"'
 import {buildDatabaseConnectionConfig} from '/app/dist/db/connection-config.js';
