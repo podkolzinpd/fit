@@ -87,6 +87,21 @@ PY_LIST
     if ! test -e "/opt/fit/releases/$revision";then ln -s "../source/$revision" "/opt/fit/releases/$revision";fi
     echo 'source_archive_extracted=true'
     ;;
+  boot-check)
+    for unit in fit-api fit-frontend-stage fit-speechkit fit-jitsi nginx coturn fit-background.timer;do
+      systemctl is-active --quiet "$unit"
+    done
+    for name in fit-api-stage fit-speechkit-cloudru fit-jitsi_prosody_1 fit-jitsi_jicofo_1 fit-jitsi_jvb_1 fit-jitsi_web_1;do
+      test "$(podman inspect "$name" --format '{{.State.Running}}')" = true
+    done
+    curl -fsS --max-time 10 --resolve fit-training.ru:443:127.0.0.1 https://fit-training.ru/api/ready >/dev/null
+    curl -fsS --max-time 10 --resolve api.fit-training.ru:443:127.0.0.1 https://api.fit-training.ru/libs/lib-jitsi-meet.min.js >/dev/null
+    curl -fsS --max-time 10 --resolve api.fit-training.ru:443:127.0.0.1 https://api.fit-training.ru/health | jq -e '.releaseId=="2874d3dfbe7ed9f2bb6ee670d47c2df48192df83"' >/dev/null
+    timeout 10 openssl s_client -connect 10.128.0.11:5349 -servername api.fit-training.ru -verify_hostname api.fit-training.ru -verify_return_error </dev/null >/dev/null 2>&1
+    test "$(systemctl is-enabled certbot.timer)" = disabled
+    test ! -e /opt/fit-copy/ENABLE_BACKGROUND_DELIVERY
+    echo 'standby_postboot_all_seven_units_six_containers_https_database_and_turn_verified=true'
+    ;;
   datalens)
     revision=$(cat /opt/fit/RUNNING_SHA)
     podman run --rm --read-only --user 0 --network host -v /opt/fit-copy:/copy "localhost/fit-api:$revision" node --input-type=module -e '

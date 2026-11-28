@@ -4,7 +4,7 @@ test "$GITHUB_REPOSITORY" = podkolzinpd/fit
 test "$GITHUB_REF" = refs/heads/codex/fit-yc-copy-20261128
 test "$(hostname)" = fit-stage-app
 phase=${COPY_PHASE:?}
-case "$phase" in export|database|media|restore|runtime|verify|inspect-target|source-code|certificates|acceptance|configure|datalens|reboot-check) ;; *) exit 2;; esac
+case "$phase" in export|database|media|restore|runtime|verify|inspect-target|source-code|certificates|acceptance|configure|datalens|reboot-check|boot-check) ;; *) exit 2;; esac
 jq -e '.folder=="b1gt7dfqg9sht9slnno5" and .vm_ip=="89.169.148.38" and .db_id=="c9q5ic9v0500c217e71n"' <<<"$COPY_CONFIG_JSON" >/dev/null
 private="$RUNNER_TEMP/fit-yc-copy-$GITHUB_RUN_ID.key"
 envfile="$RUNNER_TEMP/fit-yc-copy-$GITHUB_RUN_ID.env"
@@ -51,7 +51,7 @@ elif test "$phase" = reboot-check; then
   ready=false
   for attempt in $(seq 1 24);do
     sleep 10
-    if after=$(remote 'set -e; test -e /opt/fit-copy/RUNTIME_STARTED; systemctl is-active --quiet fit-api fit-frontend-stage fit-speechkit fit-jitsi nginx coturn fit-background.timer; test ! -e /opt/fit-copy/ENABLE_BACKGROUND_DELIVERY; curl -fsS --max-time 5 --resolve fit-training.ru:443:127.0.0.1 https://fit-training.ru/api/ready >/dev/null; cat /proc/sys/kernel/random/boot_id' 2>/dev/null);then
+    if after=$(remote 'set -e; test -e /opt/fit-copy/RUNTIME_STARTED; for unit in fit-api fit-frontend-stage fit-speechkit fit-jitsi nginx coturn fit-background.timer;do systemctl is-active --quiet "$unit";done; test ! -e /opt/fit-copy/ENABLE_BACKGROUND_DELIVERY; curl -fsS --max-time 5 --resolve fit-training.ru:443:127.0.0.1 https://fit-training.ru/api/ready >/dev/null; cat /proc/sys/kernel/random/boot_id' 2>/dev/null);then
       if test "$before" != "$after";then ready=true;break;fi
     fi
   done
